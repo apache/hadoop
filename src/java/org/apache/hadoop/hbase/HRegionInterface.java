@@ -28,10 +28,9 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.VersionedProtocol;
 
-/*******************************************************************************
- * Clients interact with HRegionServers using
- * a handle to the HRegionInterface.
- ******************************************************************************/
+/**
+ * Clients interact with HRegionServers using a handle to the HRegionInterface.
+ */
 public interface HRegionInterface extends VersionedProtocol {
   /** initial version */
   public static final long versionID = 1L;
@@ -100,120 +99,19 @@ public interface HRegionInterface extends VersionedProtocol {
   public MapWritable getRow(final Text regionName, final Text row)
   throws IOException;
 
-  //////////////////////////////////////////////////////////////////////////////
-  // Start an atomic row insertion/update.  No changes are committed until the 
-  // call to commit() returns. A call to abort() will abandon any updates in progress.
-  //
-  // Callers to this method are given a lease for each unique lockid; before the
-  // lease expires, either abort() or commit() must be called. If it is not 
-  // called, the system will automatically call abort() on the client's behalf.
-  //
-  // The client can gain extra time with a call to renewLease().
-  //////////////////////////////////////////////////////////////////////////////
-
-  /** 
-   * Start an atomic row insertion/update.  No changes are committed until the 
-   * call to commit() returns. A call to abort() will abandon any updates in progress.
-   *
-   * Callers to this method are given a lease for each unique lockid; before the
-   * lease expires, either abort() or commit() must be called. If it is not 
-   * called, the system will automatically call abort() on the client's behalf.
-   *
-   * The client can gain extra time with a call to renewLease().
-   * Start an atomic row insertion or update
-   * 
-   * @param regionName region name
-   * @param clientid a unique value to identify the client
-   * @param row Name of row to start update against.
-   * @return Row lockid.
-   * @throws IOException
-   * 
-   * Deprecated. Use @see {@link #batchUpdate(Text, long, BatchUpdate)} instead.
-   */
-  @Deprecated
-  public long startUpdate(final Text regionName, final long clientid,
-      final Text row)
-  throws IOException;
-  
-  /** 
-   * Change a value for the specified column
-   *
-   * @param regionName region name
-   * @param clientid a unique value to identify the client
-   * @param lockid lock id returned from startUpdate
-   * @param column column whose value is being set
-   * @param val new value for column
-   * @throws IOException
-   * 
-   * Deprecated. Use @see {@link #batchUpdate(Text, long, BatchUpdate)} instead.
-   */
-  @Deprecated
-  public void put(final Text regionName, final long clientid, final long lockid,
-      final Text column, final byte [] val)
-  throws IOException;
-  
-  /** 
-   * Delete the value for a column
-   *
-   * @param regionName region name
-   * @param clientid a unique value to identify the client
-   * @param lockid lock id returned from startUpdate
-   * @param column name of column whose value is to be deleted
-   * @throws IOException
-   * 
-   * Deprecated. Use @see {@link #batchUpdate(Text, long, BatchUpdate)} instead.
-   */
-  @Deprecated
-  public void delete(final Text regionName, final long clientid,
-      final long lockid, final Text column)
-  throws IOException;
-  
-  /** 
-   * Abort a row mutation
-   *
-   * @param regionName region name
-   * @param clientid a unique value to identify the client
-   * @param lockid lock id returned from startUpdate
-   * @throws IOException
-   * 
-   * Deprecated. Use @see {@link #batchUpdate(Text, long, BatchUpdate)} instead.
-   */
-  @Deprecated
-  public void abort(final Text regionName, final long clientid, 
-      final long lockid)
-  throws IOException;
-  
-  /** 
-   * Finalize a row mutation
-   *
-   * @param regionName region name
-   * @param clientid a unique value to identify the client
-   * @param lockid lock id returned from startUpdate
-   * @param timestamp the time (in milliseconds to associate with this change)
-   * @throws IOException
-   * 
-   * Deprecated. Use @see {@link #batchUpdate(Text, long, BatchUpdate)} instead.
-   */
-  @Deprecated
-  public void commit(final Text regionName, final long clientid,
-      final long lockid, final long timestamp)
-  throws IOException;
-  
   /**
-   * Renew lease on update
+   * Applies a batch of updates via one RPC
    * 
-   * @param lockid lock id returned from startUpdate
-   * @param clientid a unique value to identify the client
+   * @param regionName name of the region to update
+   * @param timestamp the time to be associated with the changes
+   * @param b BatchUpdate
    * @throws IOException
-   * 
-   * Deprecated. Use @see {@link #batchUpdate(Text, long, BatchUpdate)} instead.
    */
-  @Deprecated
-  public void renewLease(long lockid, long clientid) throws IOException;
-
-  //////////////////////////////////////////////////////////////////////////////
+  public void batchUpdate(Text regionName, long timestamp, BatchUpdate b) throws IOException;
+  
+  //
   // remote scanner interface
-  //////////////////////////////////////////////////////////////////////////////
+  //
 
   /**
    * Opens a remote scanner with a RowFilter.
@@ -231,16 +129,6 @@ public interface HRegionInterface extends VersionedProtocol {
       long timestamp, RowFilterInterface filter)
   throws IOException;
 
-  /**
-   * Applies a batch of updates via one RPC
-   * 
-   * @param regionName name of the region to update
-   * @param timestamp the time to be associated with the changes
-   * @param b BatchUpdate
-   * @throws IOException
-   */
-  public void batchUpdate(Text regionName, long timestamp, BatchUpdate b) throws IOException;
-  
   /**
    * Get the next set of values
    * 
