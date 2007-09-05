@@ -62,6 +62,7 @@ public class MigrationTool extends Configured implements Tool {
     if (args.length == 0) {
       System.err.println("Usage: MigrationTool <S3 file system URI>");
       System.err.println("\t<S3 file system URI>\tfilesystem to migrate");
+      ToolRunner.printGenericCommandUsage(System.err);
       return -1;
     }
     

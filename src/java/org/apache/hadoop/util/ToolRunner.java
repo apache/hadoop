@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.util;
 
+import java.io.PrintStream;
+
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -63,6 +65,11 @@ public class ToolRunner {
   public static int run(Tool tool, String[] args) 
     throws Exception{
     return run(tool.getConf(), tool, args);
+  }
+  
+  /** Delegates to GenericOptionsParser#printGenericCommandUsage() */
+  public static void printGenericCommandUsage(PrintStream out) {
+    GenericOptionsParser.printGenericCommandUsage(out);
   }
   
 }

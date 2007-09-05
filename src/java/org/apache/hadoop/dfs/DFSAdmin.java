@@ -213,6 +213,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(refreshNodes);
       System.out.println(upgradeProgress);
       System.out.println(help);
+      System.out.println();
+      ToolRunner.printGenericCommandUsage(System.out);
     }
 
   }
@@ -325,6 +327,8 @@ public class DFSAdmin extends FsShell {
       System.err.println("           [-upgradeProgress status | details | force]");
       System.err.println("           [-metasave filename]");
       System.err.println("           [-help [cmd]]");
+      System.err.println();
+      ToolRunner.printGenericCommandUsage(System.err);
     }
   }
 

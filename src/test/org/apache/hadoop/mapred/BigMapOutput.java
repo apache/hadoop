@@ -18,21 +18,26 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.util.Date;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.mapred.lib.*;
-import org.apache.hadoop.util.ToolBase;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSequenceFileInputFormat;
+import org.apache.hadoop.mapred.lib.IdentityMapper;
+import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
-public class BigMapOutput extends ToolBase {
+public class BigMapOutput extends Configured implements Tool {
   public static final Log LOG =
     LogFactory.getLog(BigMapOutput.class.getName());
   private static Random random = new Random();
@@ -95,6 +100,7 @@ public class BigMapOutput extends ToolBase {
   private static void usage() {
     System.err.println("BigMapOutput -input <input-dir> -output <output-dir> " +
                        "[-create <filesize in MB>]");
+    ToolRunner.printGenericCommandUsage(System.err);
     System.exit(1);
   }
   public int run(String[] args) throws Exception {    
@@ -118,8 +124,8 @@ public class BigMapOutput extends ToolBase {
       }
     }
     
-    FileSystem fs = FileSystem.get(conf);
-    JobConf jobConf = new JobConf(conf, BigMapOutput.class);
+    FileSystem fs = FileSystem.get(getConf());
+    JobConf jobConf = new JobConf(getConf(), BigMapOutput.class);
 
     jobConf.setJobName("BigMapOutput");
     jobConf.setInputFormat(NonSplitableSequenceFileInputFormat.class);
@@ -148,7 +154,7 @@ public class BigMapOutput extends ToolBase {
   }
 
   public static void main(String argv[]) throws Exception {
-    int res = new BigMapOutput().doMain(new Configuration(), argv);
+    int res = ToolRunner.run(new Configuration(), new BigMapOutput(), argv);
     System.exit(res);
   }
 

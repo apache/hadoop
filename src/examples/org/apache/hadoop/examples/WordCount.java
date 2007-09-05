@@ -18,20 +18,27 @@
 
 package org.apache.hadoop.examples;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.StringTokenizer;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.MapReduceBase;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This is an example Hadoop Map/Reduce application.
@@ -42,7 +49,7 @@ import org.apache.hadoop.mapred.MapReduceBase;
  * To run: bin/hadoop jar build/hadoop-examples.jar wordcount
  *            [-m <i>maps</i>] [-r <i>reduces</i>] <i>in-dir</i> <i>out-dir</i> 
  */
-public class WordCount {
+public class WordCount extends Configured implements Tool {
   
   /**
    * Counts the words in each line.
@@ -84,9 +91,10 @@ public class WordCount {
     }
   }
   
-  static void printUsage() {
+  static int printUsage() {
     System.out.println("wordcount [-m <maps>] [-r <reduces>] <input> <output>");
-    System.exit(1);
+    ToolRunner.printGenericCommandUsage(System.out);
+    return -1;
   }
   
   /**
@@ -95,8 +103,8 @@ public class WordCount {
    * @throws IOException When there is communication problems with the 
    *                     job tracker.
    */
-  public static void main(String[] args) throws IOException {
-    JobConf conf = new JobConf(WordCount.class);
+  public int run(String[] args) throws Exception {
+    JobConf conf = new JobConf(getConf(), WordCount.class);
     conf.setJobName("wordcount");
  
     // the keys are words (strings)
@@ -120,26 +128,30 @@ public class WordCount {
         }
       } catch (NumberFormatException except) {
         System.out.println("ERROR: Integer expected instead of " + args[i]);
-        printUsage();
+        return printUsage();
       } catch (ArrayIndexOutOfBoundsException except) {
         System.out.println("ERROR: Required parameter missing from " +
                            args[i-1]);
-        printUsage(); // exits
+        return printUsage();
       }
     }
     // Make sure there are exactly 2 parameters left.
     if (other_args.size() != 2) {
       System.out.println("ERROR: Wrong number of parameters: " +
                          other_args.size() + " instead of 2.");
-      printUsage();
+      return printUsage();
     }
-    conf.setInputPath(new Path((String) other_args.get(0)));
-    conf.setOutputPath(new Path((String) other_args.get(1)));
-    
-    // Uncomment to run locally in a single process
-    // conf.set("mapred.job.tracker", "local");
-    
+    conf.setInputPath(new Path(other_args.get(0)));
+    conf.setOutputPath(new Path(other_args.get(1)));
+        
     JobClient.runJob(conf);
+    return 0;
   }
   
+  
+  public static void main(String[] args) throws Exception {
+    int res = ToolRunner.run(new Configuration(), new WordCount(), args);
+    System.exit(res);
+  }
+
 }

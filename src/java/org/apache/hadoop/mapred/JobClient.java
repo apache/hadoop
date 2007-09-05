@@ -768,6 +768,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     System.out.printf("\t-kill\t<job-id>\n");
     System.out.printf("\t-events\t<job-id> <from-event-#> <#-of-events>\n");
     System.out.printf("\t-list\n\n");
+    ToolRunner.printGenericCommandUsage(System.out);
     throw new RuntimeException("JobClient: bad command-line arguments");
   }
     

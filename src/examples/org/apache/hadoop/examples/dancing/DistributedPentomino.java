@@ -19,10 +19,13 @@
 package org.apache.hadoop.examples.dancing;
 
 import java.io.*;
-import java.util.*;
+import java.util.List;
+import java.util.StringTokenizer;
 
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.*;
@@ -38,7 +41,7 @@ import org.apache.hadoop.util.*;
  * the previous choice. That file is given as the input to
  * map/reduce. The output key/value are the move prefix/solution as Text/Text.
  */
-public class DistributedPentomino {
+public class DistributedPentomino extends Configured implements Tool {
 
   /**
    * Each map takes a line, which represents a prefix move and finds all of 
@@ -98,6 +101,7 @@ public class DistributedPentomino {
       pent.solve(prefix);
     }
     
+    @Override
     public void configure(JobConf conf) {
       depth = conf.getInt("pent.depth", -1);
       width = conf.getInt("pent.width", -1);
@@ -146,56 +150,58 @@ public class DistributedPentomino {
    * This takes about 2.5 hours on 20 nodes with 2 cpus/node.
    * Splits the job into 2000 maps and 1 reduce.
    */
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws Exception {
+    int res = ToolRunner.run(new Configuration(), new DistributedPentomino(), args);
+    System.exit(res);
+  }
+
+  public int run(String[] args) throws Exception {
     JobConf conf;
     int depth = 5;
     int width = 9;
     int height = 10;
     Class pentClass;
     if (args.length == 0) {
-      System.out.println("pentomino <output> [conf]");
-      return;
+      System.out.println("pentomino <output>");
+      ToolRunner.printGenericCommandUsage(System.out);
+      return -1;
     }
-    if (args.length == 1) {
-      conf = new JobConf();
-      conf.setInt("pent.width", width);
-      conf.setInt("pent.height", height);
-      conf.setInt("pent.depth", depth);
-      pentClass = OneSidedPentomino.class;
-    } else {
-      conf = new JobConf(args[0]);
-      width = conf.getInt("pent.width", width);
-      height = conf.getInt("pent.height", height);
-      depth = conf.getInt("pent.depth", depth);
-      pentClass = conf.getClass("pent.class", OneSidedPentomino.class);
-    }
+    
+    conf = new JobConf(getConf());
+    width = conf.getInt("pent.width", width);
+    height = conf.getInt("pent.height", height);
+    depth = conf.getInt("pent.depth", depth);
+    pentClass = conf.getClass("pent.class", OneSidedPentomino.class);
+    
     Path output = new Path(args[0]);
     Path input = new Path(output + "_input");
-    conf.setInputPath(input);
-    conf.setOutputPath(output);
-    conf.setJarByClass(PentMap.class);
     FileSystem fileSys = FileSystem.get(conf);
-    conf.setJobName("dancingElephant");
-    Pentomino pent = (Pentomino) ReflectionUtils.newInstance(pentClass, conf);
-    pent.initialize(width, height);
-    createInputDirectory(fileSys, input, pent, depth);
- 
-    // the keys are the prefix strings
-    conf.setOutputKeyClass(Text.class);
-    // the values are puzzle solutions
-    conf.setOutputValueClass(Text.class);
-    
-    conf.setMapperClass(PentMap.class);        
-    conf.setReducerClass(IdentityReducer.class);
-    
-    conf.setNumMapTasks(2000);
-    conf.setNumReduceTasks(1);
-    
-    // Uncomment to run locally in a single process
-    //conf.set("mapred.job.tracker", "local");
-    
-    JobClient.runJob(conf);
-    fileSys.delete(input);
+    try {
+      conf.setInputPath(input);
+      conf.setOutputPath(output);
+      conf.setJarByClass(PentMap.class);
+      
+      conf.setJobName("dancingElephant");
+      Pentomino pent = (Pentomino) ReflectionUtils.newInstance(pentClass, conf);
+      pent.initialize(width, height);
+      createInputDirectory(fileSys, input, pent, depth);
+   
+      // the keys are the prefix strings
+      conf.setOutputKeyClass(Text.class);
+      // the values are puzzle solutions
+      conf.setOutputValueClass(Text.class);
+      
+      conf.setMapperClass(PentMap.class);        
+      conf.setReducerClass(IdentityReducer.class);
+      
+      conf.setNumMapTasks(2000);
+      conf.setNumReduceTasks(1);
+      
+      JobClient.runJob(conf);
+      } finally {
+      fileSys.delete(input);
+    }
+    return 0;
   }
 
 }

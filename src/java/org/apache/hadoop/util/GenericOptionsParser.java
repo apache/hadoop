@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.util;
 
+import java.io.PrintStream;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -210,4 +212,14 @@ public class GenericOptionsParser {
     return args;
   }
 
+  public static void printGenericCommandUsage(PrintStream out) {
+    out.println("Generic options supported are");
+    out.println("-conf <configuration file>     specify an application configuration file");
+    out.println("-D <property=value>            use value for given property");
+    out.println("-fs <local|namenode:port>      specify a namenod");
+    out.println("-jt <local|jobtracker:port>    specify a job tracker\n");
+    out.println("The general command line syntax is");
+    out.println("bin/hadoop command [genericOptions] [commandOptions]\n");
+  }
+  
 }

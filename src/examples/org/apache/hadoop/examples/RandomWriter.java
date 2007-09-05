@@ -23,11 +23,28 @@ import java.util.Date;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.ClusterStatus;
+import org.apache.hadoop.mapred.FileSplit;
+import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.mapred.InputSplit;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapReduceBase;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.RecordReader;
+import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolBase;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This program uses map/reduce to just run a distributed job where there is
@@ -64,7 +81,7 @@ import org.apache.hadoop.util.ToolBase;
  * Equivalently, {@link RandomWriter} also supports all the above options
  * and ones supported by {@link ToolBase} via the command-line.
  */
-public class RandomWriter extends ToolBase {
+public class RandomWriter extends Configured implements Tool {
   
   /**
    * User counters
@@ -186,6 +203,7 @@ public class RandomWriter extends ToolBase {
      * Save the values out of the configuaration that we need to write
      * the data.
      */
+    @Override
     public void configure(JobConf job) {
       numBytesToWrite = job.getLong("test.randomwrite.bytes_per_map",
                                     1*1024*1024*1024);
@@ -208,12 +226,13 @@ public class RandomWriter extends ToolBase {
    */
   public int run(String[] args) throws Exception {    
     if (args.length == 0) {
-      System.out.println("Usage: writer <out-dir> [<config>]");
+      System.out.println("Usage: writer <out-dir>");
+      ToolRunner.printGenericCommandUsage(System.out);
       return -1;
     }
     
     Path outDir = new Path(args[0]);
-    JobConf job = new JobConf(conf);
+    JobConf job = new JobConf(getConf());
     
     job.setJarByClass(RandomWriter.class);
     job.setJobName("random-writer");
@@ -263,7 +282,7 @@ public class RandomWriter extends ToolBase {
   }
   
   public static void main(String[] args) throws Exception {
-    int res = new RandomWriter().doMain(new Configuration(), args);
+    int res = ToolRunner.run(new Configuration(), new RandomWriter(), args);
     System.exit(res);
   }
 

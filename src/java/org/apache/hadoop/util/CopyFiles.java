@@ -39,8 +39,8 @@ import java.util.StringTokenizer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
@@ -828,6 +828,7 @@ public class CopyFiles implements Tool {
         logPath = new Path(toURI(args[++idx]).getPath());
       } else {
         System.out.println(usage);
+        ToolRunner.printGenericCommandUsage(System.out);
         return -1;
       }
     }
@@ -835,6 +836,7 @@ public class CopyFiles implements Tool {
     // mandatory command-line parameters
     if (srcPath == null || destPath == null) {
       System.out.println(usage);
+      ToolRunner.printGenericCommandUsage(System.out);
       return -1;
     }
   

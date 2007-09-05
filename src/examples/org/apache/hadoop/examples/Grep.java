@@ -17,73 +17,81 @@
  */
 package org.apache.hadoop.examples;
 
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.SequenceFileOutputFormat;
-import org.apache.hadoop.mapred.SequenceFileInputFormat;
-
-import org.apache.hadoop.mapred.lib.RegexMapper;
-import org.apache.hadoop.mapred.lib.InverseMapper;
-import org.apache.hadoop.mapred.lib.LongSumReducer;
-
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-
 import java.util.Random;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.mapred.lib.*;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+
 /* Extracts matching regexs from input files and counts them. */
-public class Grep {
+public class Grep extends Configured implements Tool {
   private Grep() {}                               // singleton
 
-  public static void main(String[] args) throws Exception {
+  public int run(String[] args) throws Exception {
     if (args.length < 3) {
       System.out.println("Grep <inDir> <outDir> <regex> [<group>]");
-      System.exit(-1);
+      ToolRunner.printGenericCommandUsage(System.out);
+      return -1;
     }
 
     Path tempDir =
       new Path("grep-temp-"+
-               Integer.toString(new Random().nextInt(Integer.MAX_VALUE)));
+          Integer.toString(new Random().nextInt(Integer.MAX_VALUE)));
 
-    JobConf grepJob = new JobConf(Grep.class);
-    grepJob.setJobName("grep-search");
-
-    grepJob.setInputPath(new Path(args[0]));
-
-    grepJob.setMapperClass(RegexMapper.class);
-    grepJob.set("mapred.mapper.regex", args[2]);
-    if (args.length == 4)
-      grepJob.set("mapred.mapper.regex.group", args[3]);
+    JobConf grepJob = new JobConf(getConf(), Grep.class);
     
-    grepJob.setCombinerClass(LongSumReducer.class);
-    grepJob.setReducerClass(LongSumReducer.class);
+    try {
+      
+      grepJob.setJobName("grep-search");
 
-    grepJob.setOutputPath(tempDir);
-    grepJob.setOutputFormat(SequenceFileOutputFormat.class);
-    grepJob.setOutputKeyClass(Text.class);
-    grepJob.setOutputValueClass(LongWritable.class);
+      grepJob.setInputPath(new Path(args[0]));
 
-    JobClient.runJob(grepJob);
+      grepJob.setMapperClass(RegexMapper.class);
+      grepJob.set("mapred.mapper.regex", args[2]);
+      if (args.length == 4)
+        grepJob.set("mapred.mapper.regex.group", args[3]);
 
-    JobConf sortJob = new JobConf(Grep.class);
-    sortJob.setJobName("grep-sort");
+      grepJob.setCombinerClass(LongSumReducer.class);
+      grepJob.setReducerClass(LongSumReducer.class);
 
-    sortJob.setInputPath(tempDir);
-    sortJob.setInputFormat(SequenceFileInputFormat.class);
+      grepJob.setOutputPath(tempDir);
+      grepJob.setOutputFormat(SequenceFileOutputFormat.class);
+      grepJob.setOutputKeyClass(Text.class);
+      grepJob.setOutputValueClass(LongWritable.class);
 
-    sortJob.setMapperClass(InverseMapper.class);
+      JobClient.runJob(grepJob);
 
-    sortJob.setNumReduceTasks(1);                 // write a single file
-    sortJob.setOutputPath(new Path(args[1]));
-    sortJob.setOutputKeyComparatorClass           // sort by decreasing freq
+      JobConf sortJob = new JobConf(Grep.class);
+      sortJob.setJobName("grep-sort");
+
+      sortJob.setInputPath(tempDir);
+      sortJob.setInputFormat(SequenceFileInputFormat.class);
+
+      sortJob.setMapperClass(InverseMapper.class);
+
+      sortJob.setNumReduceTasks(1);                 // write a single file
+      sortJob.setOutputPath(new Path(args[1]));
+      sortJob.setOutputKeyComparatorClass           // sort by decreasing freq
       (LongWritable.DecreasingComparator.class);
 
-    JobClient.runJob(sortJob);
+      JobClient.runJob(sortJob);
+    }
+    finally {
+      FileSystem.get(grepJob).delete(tempDir);
+    }
+    return 0;
+  }
 
-    FileSystem.get(grepJob).delete(tempDir);
+  public static void main(String[] args) throws Exception {
+    int res = ToolRunner.run(new Configuration(), new Grep(), args);
+    System.exit(res);
   }
 
 }

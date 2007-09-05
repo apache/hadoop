@@ -160,6 +160,9 @@ Trunk (unreleased changes)
     HADOOP-1825.  Create $HADOOP_PID_DIR when it does not exist.
     (Michael Bieniosek via cutting)
 
+    HADOOP-1425.  Replace uses of ToolBase with the Tool interface.
+    (Enis Soztutar via cutting)
+
 
 Release 0.14.1 - 2007-09-04
 

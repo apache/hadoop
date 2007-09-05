@@ -89,6 +89,7 @@ public class DFSck extends Configured implements Tool {
       System.err.println("\t-files\tprint out files being checked");
       System.err.println("\t-blocks\tprint out block report");
       System.err.println("\t-locations\tprint out locations for every block");
+      ToolRunner.printGenericCommandUsage(System.err);
       return -1;
     }
     StringBuffer url = new StringBuffer("http://"+fsName+"/fsck?path=");

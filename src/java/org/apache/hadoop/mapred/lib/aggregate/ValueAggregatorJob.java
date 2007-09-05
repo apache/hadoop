@@ -21,17 +21,18 @@ package org.apache.hadoop.mapred.lib.aggregate;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.jobcontrol.Job;
 import org.apache.hadoop.mapred.jobcontrol.JobControl;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.RunningJob;
+import org.apache.hadoop.util.GenericOptionsParser;
 
 /**
  * This is the main class for creating a map/reduce job using Aggregate
@@ -90,17 +91,26 @@ public class ValueAggregatorJob {
   /**
    * Create an Aggregate based map/reduce job.
    * 
-   * @param args the arguments used for job creation
+   * @param args the arguments used for job creation. Generic hadoop
+   * arguments are accepted.
    * @return a JobConf object ready for submission.
    * 
    * @throws IOException
+   * @see GenericOptionsParser
    */
   public static JobConf createValueAggregatorJob(String args[])
     throws IOException {
 
+    Configuration conf = new Configuration();
+    
+    GenericOptionsParser genericParser 
+      = new GenericOptionsParser(conf, args);
+    args = genericParser.getRemainingArgs();
+    
     if (args.length < 2) {
       System.out.println("usage: inputDirs outDir "
           + "[numOfReducer [textinputformat|seq [specfile [jobName]]]]");
+      GenericOptionsParser.printGenericCommandUsage(System.out);
       System.exit(1);
     }
     String inputDir = args[0];
@@ -131,7 +141,7 @@ public class ValueAggregatorJob {
       jobName = args[5];
     }
     
-    JobConf theJob = new JobConf();
+    JobConf theJob = new JobConf(conf);
     if (specFile != null) {
       theJob.addDefaultResource(specFile);
     }

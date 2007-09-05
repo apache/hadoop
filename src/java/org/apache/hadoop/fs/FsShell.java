@@ -1216,9 +1216,6 @@ public class FsShell extends Configured implements Tool {
                          " [-stat [format] <path>]");
     } else {
       System.err.println("Usage: java FsShell");
-      System.err.println("           [-fs <local | file system URI>]");
-      System.err.println("           [-conf <configuration file>]");
-      System.err.println("           [-D <[property=value>]");
       System.err.println("           [-ls <path>]");
       System.err.println("           [-lsr <path>]");
       System.err.println("           [-du <path>]");
@@ -1242,6 +1239,8 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [-test -[ezd] <path>]");
       System.err.println("           [-stat [format] <path>]");
       System.err.println("           [-help [cmd]]");
+      System.err.println();
+      ToolRunner.printGenericCommandUsage(System.err);
     }
   }
 
