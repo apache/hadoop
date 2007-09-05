@@ -58,7 +58,9 @@ public class HMemcache {
   /**
    * Constructor
    */
-  public HMemcache() {}
+  public HMemcache() {
+    super();
+  }
 
   /** represents the state of the memcache at a specified point in time */
   static class Snapshot {
@@ -68,7 +70,7 @@ public class HMemcache {
     Snapshot(final TreeMap<HStoreKey, byte[]> memcache, final Long i) {
       super();
       this.memcacheSnapshot = memcache;
-      this.sequenceId = i;
+      this.sequenceId = i.longValue();
     }
   }
   
@@ -95,7 +97,8 @@ public class HMemcache {
       if(memcache.size() == 0) {
         return null;
       }
-      Snapshot retval = new Snapshot(memcache, log.startCacheFlush());
+      Snapshot retval =
+        new Snapshot(memcache, Long.valueOf(log.startCacheFlush()));
       this.snapshot = memcache;
       history.add(memcache);
       memcache = new TreeMap<HStoreKey, byte []>();
@@ -294,18 +297,16 @@ public class HMemcache {
     final Iterator<HStoreKey> keyIterators[];
 
     @SuppressWarnings("unchecked")
-    HMemcacheScanner(long timestamp, Text targetCols[], Text firstRow)
-        throws IOException {
-      
+    HMemcacheScanner(final long timestamp, final Text targetCols[],
+        final Text firstRow)
+    throws IOException {
       super(timestamp, targetCols);
-      
       lock.obtainReadLock();
       try {
         this.backingMaps = new TreeMap[history.size() + 1];
         
         //NOTE: Since we iterate through the backing maps from 0 to n, we need
-        //      to put the memcache first, the newest history second, ..., etc.
-        
+        // to put the memcache first, the newest history second, ..., etc.
         backingMaps[0] = memcache;
         for(int i = history.size() - 1; i > 0; i--) {
           backingMaps[i] = history.elementAt(i);
@@ -364,13 +365,25 @@ public class HMemcache {
      */
     @Override
     boolean getNext(int i) {
-      if (!keyIterators[i].hasNext()) {
-        closeSubScanner(i);
-        return false;
+      boolean result = false;
+      while (true) {
+        if (!keyIterators[i].hasNext()) {
+          closeSubScanner(i);
+          break;
+        }
+        // Check key is < than passed timestamp for this scanner.
+        HStoreKey hsk = keyIterators[i].next();
+        if (hsk == null) {
+          throw new NullPointerException("Unexpected null key");
+        }
+        if (hsk.getTimestamp() <= this.timestamp) {
+          this.keys[i] = hsk;
+          this.vals[i] = backingMaps[i].get(keys[i]);
+          result = true;
+          break;
+        }
       }
-      this.keys[i] = keyIterators[i].next();
-      this.vals[i] = backingMaps[i].get(keys[i]);
-      return true;
+      return result;
     }
 
     /** Shut down an individual map iterator. */
