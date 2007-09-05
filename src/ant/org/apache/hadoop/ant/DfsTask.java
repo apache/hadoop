@@ -32,6 +32,7 @@ import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.Task;
 import org.apache.tools.ant.Project;
 import org.apache.tools.ant.types.Path;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * {@link org.apache.hadoop.fs.FsShell FsShell} wrapper for ant Task.
@@ -46,6 +47,7 @@ public class DfsTask extends Task {
       public void write(int b)    { /* ignore */ }
       public String toString()    { return ""; }
   };
+  private static final FsShell shell = new FsShell();
 
   protected AntClassLoader confloader;
   protected OutputStream out = nullOut;
@@ -180,7 +182,8 @@ public class DfsTask extends Task {
 
       Configuration conf = new Configuration();
       conf.setClassLoader(confloader);
-      exit_code = new FsShell().doMain(conf, argv.toArray(new String[argv.size()]));
+      exit_code = ToolRunner.run(conf, shell,
+          argv.toArray(new String[argv.size()]));
       exit_code = postCmd(exit_code);
 
       if (0 > exit_code) {

@@ -86,6 +86,9 @@ Trunk (unreleased changes)
     HADOOP-1810.  Fix incorrect value type in MRBench (SmallJobs)
     (Devaraj Das via tomwhite)
 
+    HADOOP-1806.  Fix ant task to compile again, also fix default
+    builds to compile ant tasks.  (Chris Douglas via cutting)
+
   IMPROVEMENTS
 
     HADOOP-1779. Replace INodeDirectory.getINode() by a getExistingPathINodes()

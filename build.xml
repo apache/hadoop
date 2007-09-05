@@ -307,7 +307,7 @@
      </subant>  	
   </target>
   
-  <target name="compile" depends="compile-core, compile-contrib">
+  <target name="compile" depends="compile-core, compile-contrib, compile-ant-tasks">
   </target>
 
   <target name="compile-examples" 
@@ -638,7 +638,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="jar, javadoc, examples, compile-core-test, deploy-contrib">
+  <target name="package" depends="jar, javadoc, examples, compile-core-test, deploy-contrib, ant-tasks">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
     <mkdir dir="${dist.dir}/contrib"/>
