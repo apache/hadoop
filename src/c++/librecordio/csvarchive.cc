@@ -76,31 +76,42 @@ void hadoop::ICsvArchive::deserialize(double& t, const char* tag)
   t = strtod(s.c_str(), NULL);
 }
 
-static void replaceAll(std::string s, const char *src, char c)
-{
-  std::string::size_type pos = 0;
-  while (pos != std::string::npos) {
-    pos = s.find(src);
-    if (pos != std::string::npos) {
-      s.replace(pos, strlen(src), 1, c);
-    }
-  }
-}
-
 void hadoop::ICsvArchive::deserialize(std::string& t, const char* tag)
 {
-  t = readUptoTerminator(stream);
-  if (t[0] != '\'') {
+  std::string temp = readUptoTerminator(stream);
+  if (temp[0] != '\'') {
     throw new IOException("Errror deserializing string.");
   }
-  t.erase(0, 1); /// erase first character
-  replaceAll(t, "%0D", 0x0D);
-  replaceAll(t, "%0A", 0x0A);
-  replaceAll(t, "%7D", 0x7D);
-  replaceAll(t, "%00", 0x00);
-  replaceAll(t, "%2C", 0x2C);
-  replaceAll(t, "%25", 0x25);
-
+  t.clear();
+  // skip first character, replace escaped characters 
+  int len = temp.length();
+  for (int i = 1; i < len; i++) {
+    char c = temp.at(i);
+    if (c == '%') {
+      // since we escape '%', there have to be at least two chars following a '%'
+      char ch1 = temp.at(i+1);
+      char ch2 = temp.at(i+2);
+      i += 2;
+	  if (ch1 == '0' && ch2 == '0') {
+	    t.append(1, '\0');
+	  } else if (ch1 == '0' && ch2 == 'A') {
+	    t.append(1, '\n');
+	  } else if (ch1 == '0' && ch2 == 'D') {
+	    t.append(1, '\r');
+	  } else if (ch1 == '2' && ch2 == 'C') {
+	    t.append(1, ',');
+	  } else if (ch1 == '7' && ch2 == 'D') {
+	    t.append(1, '}');
+	  } else if (ch1 == '2' && ch2 == '5') {
+	    t.append(1, '%');
+	  } else {
+	    throw new IOException("Error deserializing string.");
+	  }
+    } 
+    else {
+      t.append(1, c);
+    }
+  }
 }
 
 void hadoop::ICsvArchive::deserialize(std::string& t, size_t& len, const char* tag)

@@ -89,6 +89,9 @@ Trunk (unreleased changes)
     HADOOP-1806.  Fix ant task to compile again, also fix default
     builds to compile ant tasks.  (Chris Douglas via cutting)
 
+    HADOOP-1758.  Fix escape processing in librecordio to not be
+    quadratic.  (Vivek Ratan via cutting)
+
   IMPROVEMENTS
 
     HADOOP-1779. Replace INodeDirectory.getINode() by a getExistingPathINodes()
