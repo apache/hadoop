@@ -163,6 +163,9 @@ Trunk (unreleased changes)
     HADOOP-1425.  Replace uses of ToolBase with the Tool interface.
     (Enis Soztutar via cutting)
 
+    HADOOP-1569.  Reimplement DistCP to use the standard FileSystem/URI
+    code in Hadoop so that you can copy from and to all of the supported file 
+    systems.(Chris Douglas via omalley)
 
 Release 0.14.1 - 2007-09-04
 
