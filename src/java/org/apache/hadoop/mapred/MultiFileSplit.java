@@ -90,7 +90,7 @@ public class MultiFileSplit implements InputSplit {
     HashSet<String> hostSet = new HashSet<String>();
     for (Path file : paths) {
       String[][] hints = FileSystem.get(job)
-      .getFileCacheHints(file, 0, FileSystem.get(job).getLength(file));
+      .getFileCacheHints(file, 0, FileSystem.get(job).getFileStatus(file).getLen());
       if (hints != null && hints.length > 0) {
         addToSet(hostSet, hints[0]);
       }
@@ -104,6 +104,7 @@ public class MultiFileSplit implements InputSplit {
   }
 
   public void readFields(DataInput in) throws IOException {
+    totLength = in.readLong();
     int arrLength = in.readInt();
     lengths = new long[arrLength];
     for(int i=0; i<arrLength;i++) {
@@ -117,6 +118,7 @@ public class MultiFileSplit implements InputSplit {
   }
 
   public void write(DataOutput out) throws IOException {
+    out.writeLong(totLength);
     out.writeInt(lengths.length);
     for(long length : lengths)
       out.writeLong(length);
@@ -124,6 +126,19 @@ public class MultiFileSplit implements InputSplit {
     for(Path p : paths) {
       Text.writeString(out, p.toString());
     }
+  }
+  
+  @Override
+  public String toString() {
+    StringBuffer sb = new StringBuffer();
+    for(int i=0; i < paths.length; i++) {
+      sb.append(paths[i].toUri().getPath() + ":0+" + lengths[i]);
+      if (i < paths.length -1) {
+        sb.append("\n");
+      }
+    }
+
+    return sb.toString();
   }
 }
 

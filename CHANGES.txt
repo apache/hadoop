@@ -92,6 +92,10 @@ Trunk (unreleased changes)
     HADOOP-1758.  Fix escape processing in librecordio to not be
     quadratic.  (Vivek Ratan via cutting)
 
+    HADOOP-1817.  Fix MultiFileSplit to read and write the split
+    length, so that it is not always zero in map tasks.
+    (Thomas Friol via cutting)
+
   IMPROVEMENTS
 
     HADOOP-1779. Replace INodeDirectory.getINode() by a getExistingPathINodes()
