@@ -105,6 +105,9 @@ Trunk (unreleased changes)
     length, so that it is not always zero in map tasks.
     (Thomas Friol via cutting)
 
+    HADOOP-1853.  Fix contrib/streaming to accept multiple -cacheFile
+    options.  (Prachi Gupta via cutting)
+
   IMPROVEMENTS
 
     HADOOP-1779. Replace INodeDirectory.getINode() by a getExistingPathINodes()

@@ -492,6 +492,7 @@
 
   <target name="test-contrib" depends="compile-core, compile-core-test">
     <subant target="test">
+       <property name="version" value="${version}"/>
        <fileset file="${contrib.dir}/build.xml"/>
     </subant> 
   </target>
@@ -746,6 +747,7 @@
   <!-- ================================================================== -->
   <target name="deploy-contrib" depends="compile-core">
      <subant target="deploy">        
+        <property name="version" value="${version}"/>
         <fileset file="src/contrib/build.xml"/>
      </subant>  	
   </target>

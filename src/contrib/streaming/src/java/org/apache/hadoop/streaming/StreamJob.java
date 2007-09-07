@@ -396,7 +396,7 @@ public class StreamJob {
     Option inputreader = createOption("inputreader", 
                                       "Optional.", "spec", 1, false);
     Option cacheFile = createOption("cacheFile", 
-                                    "File name URI", "fileNameURI", 1, false);
+                                    "File name URI", "fileNameURI", Integer.MAX_VALUE, false);
     Option cacheArchive = createOption("cacheArchive", 
                                        "File name URI", "fileNameURI", 1, false);
     
