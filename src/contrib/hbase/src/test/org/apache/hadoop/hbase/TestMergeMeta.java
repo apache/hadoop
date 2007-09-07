@@ -19,19 +19,17 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+
 /** Tests region merging */
 public class TestMergeMeta extends AbstractMergeTestBase {
   
   /**
    * test case
+   * @throws IOException
    */
-  public void testMergeMeta() {
-    try {
-      HMerge.merge(conf, fs, HConstants.META_TABLE_NAME);
-      
-    } catch(Throwable t) {
-      t.printStackTrace();
-      fail();
-    }
+  public void testMergeMeta() throws IOException {
+    assertNotNull(dfsCluster);
+    HMerge.merge(conf, fs, HConstants.META_TABLE_NAME);
   }
 }  

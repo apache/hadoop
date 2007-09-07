@@ -38,17 +38,11 @@ public class TestMasterAdmin extends HBaseClusterTestCase {
     admin = null;
   }
   
-  /** the test */
-  public void testMasterAdmin() {
-    try {
-      admin = new HBaseAdmin(conf);
-      admin.createTable(testDesc);
-      admin.disableTable(testDesc.getName());
-      
-    } catch(Exception e) {
-      e.printStackTrace();
-      fail();
-    }
+  /** @throws Exception */
+  public void testMasterAdmin() throws Exception {
+    admin = new HBaseAdmin(conf);
+    admin.createTable(testDesc);
+    admin.disableTable(testDesc.getName());
 
     try {
       try {
@@ -76,13 +70,7 @@ public class TestMasterAdmin extends HBaseClusterTestCase {
       fail();
       
     } finally {
-      try {
-        admin.deleteTable(testDesc.getName());
-        
-      } catch(Exception e) {
-        e.printStackTrace();
-        fail();
-      }
+      admin.deleteTable(testDesc.getName());
     }
   }
 }

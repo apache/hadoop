@@ -61,7 +61,8 @@ public class MiniHBaseCluster implements HConstants {
    * @throws IOException 
    */
   public MiniHBaseCluster(Configuration conf, int nRegionNodes)
-  throws IOException {
+    throws IOException {
+    
     this(conf, nRegionNodes, true, true, true);
   }
 
@@ -76,6 +77,7 @@ public class MiniHBaseCluster implements HConstants {
    */
   public MiniHBaseCluster(Configuration conf, int nRegionNodes,
       final boolean miniHdfsFilesystem) throws IOException {
+    
     this(conf, nRegionNodes, miniHdfsFilesystem, true, true);
   }
 
@@ -88,8 +90,7 @@ public class MiniHBaseCluster implements HConstants {
    * @throws IOException 
    */
   public MiniHBaseCluster(Configuration conf, int nRegionNodes,
-      MiniDFSCluster dfsCluster)
-  throws IOException {
+      MiniDFSCluster dfsCluster) throws IOException {
 
     this.conf = conf;
     this.cluster = dfsCluster;
@@ -109,34 +110,24 @@ public class MiniHBaseCluster implements HConstants {
    */
   public MiniHBaseCluster(Configuration conf, int nRegionNodes,
       final boolean miniHdfsFilesystem, boolean format, boolean deleteOnExit) 
-  throws IOException {
+    throws IOException {
+    
     this.conf = conf;
     this.deleteOnExit = deleteOnExit;
     if (miniHdfsFilesystem) {
-      try {
-        this.cluster = new MiniDFSCluster(this.conf, 2, format, (String[])null);
-      } catch(Throwable t) {
-        LOG.error("Failed setup of mini dfs cluster", t);
-        t.printStackTrace();
-        return;
-      }
+      this.cluster = new MiniDFSCluster(this.conf, 2, format, (String[])null);
     }
     init(nRegionNodes);
   }
 
-  private void init(final int nRegionNodes)
-  throws IOException {
+  private void init(final int nRegionNodes) throws IOException {
     try {
-      try {
-        this.fs = FileSystem.get(conf);
-        this.parentdir = new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
-        fs.mkdirs(parentdir);
-      } catch(IOException e) {
-        LOG.error("Failed setup of FileSystem", e);
-        throw e;
-      }
+      this.fs = FileSystem.get(conf);
+      this.parentdir = new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
+      fs.mkdirs(parentdir);
       this.masterThread = startMaster(this.conf);
       this.regionThreads = startRegionServers(this.conf, nRegionNodes);
+
     } catch(IOException e) {
       shutdown();
       throw e;
@@ -199,7 +190,8 @@ public class MiniHBaseCluster implements HConstants {
    * @see #shutdown(org.apache.hadoop.hbase.MiniHBaseCluster.MasterThread, List)
    */
   public static MasterThread startMaster(final Configuration c)
-  throws IOException {
+    throws IOException {
+    
     if(c.get(MASTER_ADDRESS) == null) {
       c.set(MASTER_ADDRESS, "localhost:0");
     }
@@ -222,8 +214,8 @@ public class MiniHBaseCluster implements HConstants {
    * @see #startMaster(Configuration)
    */
   public static ArrayList<RegionServerThread> startRegionServers(
-    final Configuration c, final int count)
-  throws IOException {
+    final Configuration c, final int count) throws IOException {
+    
     // Start the HRegionServers.  Always have regionservers come up on
     // port '0' so there won't be clashes over default port as unit tests
     // start/stop ports at different times during the life of the test.
@@ -249,8 +241,8 @@ public class MiniHBaseCluster implements HConstants {
   }
   
   private static RegionServerThread startRegionServer(final Configuration c,
-    final int index)
-  throws IOException {
+    final int index) throws IOException {
+    
     final HRegionServer hsr = new HRegionServer(c);
     RegionServerThread t = new RegionServerThread(hsr, index);
     t.start();
@@ -362,25 +354,32 @@ public class MiniHBaseCluster implements HConstants {
   }
   
   void shutdown() {
-    shutdown(this.masterThread, this.regionThreads);
-    // Close the file system.  Will complain if files open so helps w/ leaks.
+    MiniHBaseCluster.shutdown(this.masterThread, this.regionThreads);
+    
     try {
-      if (this.cluster != null && this.cluster.getFileSystem() != null) {
-        this.cluster.getFileSystem().close();
+      if (cluster != null) {
+        FileSystem fs = cluster.getFileSystem();
+        
+        LOG.info("Shutting down Mini DFS cluster");
+        cluster.shutdown();
+
+        if (fs != null) {
+          LOG.info("Shutting down FileSystem");
+          fs.close();
+        }
       }
+      
     } catch (IOException e) {
-      LOG.error("Closing down dfs", e);
-    }
-    if(cluster != null) {
-      LOG.info("Shutting down Mini DFS cluster");
-      cluster.shutdown();
+      LOG.error("shutdown", e);
+      
+    } finally {
+      // Delete all DFS files
+      if(deleteOnExit) {
+        deleteFile(new File(System.getProperty(
+            StaticTestEnvironment.TEST_DIRECTORY_KEY), "dfs"));
+      }
     }
 
-    // Delete all DFS files
-    if(deleteOnExit) {
-      deleteFile(new File(System.getProperty(
-          StaticTestEnvironment.TEST_DIRECTORY_KEY), "dfs"));
-    }
   }
 
   private void deleteFile(File f) {

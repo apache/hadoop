@@ -40,15 +40,9 @@ public class TestMultipleUpdates extends HBaseClusterTestCase {
     super.setUp();
     this.desc = new HTableDescriptor("test");
     desc.addFamily(new HColumnDescriptor(CONTENTS_STR));
-    try {
-      HBaseAdmin admin = new HBaseAdmin(conf);
-      admin.createTable(desc);
-      table = new HTable(conf, desc.getName());
-      
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail();
-    }
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    admin.createTable(desc);
+    table = new HTable(conf, desc.getName());
   }
 
   /** the test */

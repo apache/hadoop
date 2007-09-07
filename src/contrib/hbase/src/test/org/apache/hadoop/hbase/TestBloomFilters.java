@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
@@ -146,50 +147,50 @@ public class TestBloomFilters extends HBaseClusterTestCase {
     conf.set("hbase.regionserver.maxlogentries", "90"); // and roll log too
   }
   
-  /** Test that specifies explicit parameters for the bloom filter */
-  public void testExplicitParameters() {
+  /**
+   * Test that specifies explicit parameters for the bloom filter
+   * @throws IOException
+   */
+  public void testExplicitParameters() throws IOException {
     HTable table = null;
-    try {
-      // Setup
-      HTableDescriptor desc = new HTableDescriptor(getName());
-      BloomFilterDescriptor bloomFilter =
-        new BloomFilterDescriptor(              // if we insert 1000 values
-            BloomFilterDescriptor.BloomFilterType.BLOOMFILTER,  // plain old bloom filter
-            12499,                              // number of bits
-            4                                   // number of hash functions
-        );
-            
-      desc.addFamily(
-          new HColumnDescriptor(CONTENTS,               // Column name
-              1,                                        // Max versions
-              HColumnDescriptor.CompressionType.NONE,   // no compression
-              HColumnDescriptor.DEFAULT_IN_MEMORY,      // not in memory
-              HColumnDescriptor.DEFAULT_MAX_VALUE_LENGTH,
-              bloomFilter
-          )
+
+    // Setup
+    
+    HTableDescriptor desc = new HTableDescriptor(getName());
+    BloomFilterDescriptor bloomFilter =
+      new BloomFilterDescriptor(              // if we insert 1000 values
+          BloomFilterDescriptor.BloomFilterType.BLOOMFILTER,  // plain old bloom filter
+          12499,                              // number of bits
+          4                                   // number of hash functions
       );
-      
-      // Create the table
-      
-      HBaseAdmin admin = new HBaseAdmin(conf);
-      admin.createTable(desc);
-      
-      // Open table
-      
-      table = new HTable(conf, desc.getName());
 
-      // Store some values
+    desc.addFamily(
+        new HColumnDescriptor(CONTENTS,               // Column name
+            1,                                        // Max versions
+            HColumnDescriptor.CompressionType.NONE,   // no compression
+            HColumnDescriptor.DEFAULT_IN_MEMORY,      // not in memory
+            HColumnDescriptor.DEFAULT_MAX_VALUE_LENGTH,
+            bloomFilter
+        )
+    );
 
-      for(int i = 0; i < 100; i++) {
-        Text row = rows[i];
-        String value = row.toString();
-        long lockid = table.startUpdate(rows[i]);
-        table.put(lockid, CONTENTS, value.getBytes(HConstants.UTF8_ENCODING));
-        table.commit(lockid);
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail();
+    // Create the table
+
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    admin.createTable(desc);
+
+    // Open table
+
+    table = new HTable(conf, desc.getName());
+
+    // Store some values
+
+    for(int i = 0; i < 100; i++) {
+      Text row = rows[i];
+      String value = row.toString();
+      long lockid = table.startUpdate(rows[i]);
+      table.put(lockid, CONTENTS, value.getBytes(HConstants.UTF8_ENCODING));
+      table.commit(lockid);
     }
     try {
       // Give cache flusher and log roller a chance to run
@@ -201,67 +202,60 @@ public class TestBloomFilters extends HBaseClusterTestCase {
     }
 
     
-    try {
-      if (table != null) {
-        for(int i = 0; i < testKeys.length; i++) {
-          byte[] value = table.get(testKeys[i], CONTENTS);
-          if(value != null && value.length != 0) {
-            LOG.info("non existant key: " + testKeys[i] + " returned value: " +
-                new String(value, HConstants.UTF8_ENCODING));
-          }
-        }
+    for(int i = 0; i < testKeys.length; i++) {
+      byte[] value = table.get(testKeys[i], CONTENTS);
+      if(value != null && value.length != 0) {
+        LOG.info("non existant key: " + testKeys[i] + " returned value: " +
+            new String(value, HConstants.UTF8_ENCODING));
       }
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail();
     }
   }
   
-  /** Test that uses computed for the bloom filter */
-  public void testComputedParameters() {
+  /**
+   * Test that uses computed for the bloom filter
+   * @throws IOException
+   */
+  public void testComputedParameters() throws IOException {
     HTable table = null;
-    try {
-      // Setup
-      HTableDescriptor desc = new HTableDescriptor(getName());
+
+    // Setup
+    
+    HTableDescriptor desc = new HTableDescriptor(getName());
       
-      BloomFilterDescriptor bloomFilter =
-        new BloomFilterDescriptor(
-            BloomFilterDescriptor.BloomFilterType.BLOOMFILTER,  // plain old bloom filter
-            1000                                  // estimated number of entries
-        );
-      LOG.info("vector size: " + bloomFilter.vectorSize);
-      
-      desc.addFamily(
-          new HColumnDescriptor(CONTENTS,               // Column name
-              1,                                        // Max versions
-              HColumnDescriptor.CompressionType.NONE,   // no compression
-              HColumnDescriptor.DEFAULT_IN_MEMORY,      // not in memory
-              HColumnDescriptor.DEFAULT_MAX_VALUE_LENGTH,
-              bloomFilter
-          )
+    BloomFilterDescriptor bloomFilter =
+      new BloomFilterDescriptor(
+          BloomFilterDescriptor.BloomFilterType.BLOOMFILTER,  // plain old bloom filter
+          1000                                  // estimated number of entries
       );
-      
-      // Create the table
-      
-      HBaseAdmin admin = new HBaseAdmin(conf);
-      admin.createTable(desc);
-      
-      // Open table
-      
-      table = new HTable(conf, desc.getName());
+    LOG.info("vector size: " + bloomFilter.vectorSize);
 
-      // Store some values
+    desc.addFamily(
+        new HColumnDescriptor(CONTENTS,               // Column name
+            1,                                        // Max versions
+            HColumnDescriptor.CompressionType.NONE,   // no compression
+            HColumnDescriptor.DEFAULT_IN_MEMORY,      // not in memory
+            HColumnDescriptor.DEFAULT_MAX_VALUE_LENGTH,
+            bloomFilter
+        )
+    );
 
-      for(int i = 0; i < 100; i++) {
-        Text row = rows[i];
-        String value = row.toString();
-        long lockid = table.startUpdate(rows[i]);
-        table.put(lockid, CONTENTS, value.getBytes(HConstants.UTF8_ENCODING));
-        table.commit(lockid);
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail();
+    // Create the table
+
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    admin.createTable(desc);
+
+    // Open table
+
+    table = new HTable(conf, desc.getName());
+
+    // Store some values
+
+    for(int i = 0; i < 100; i++) {
+      Text row = rows[i];
+      String value = row.toString();
+      long lockid = table.startUpdate(rows[i]);
+      table.put(lockid, CONTENTS, value.getBytes(HConstants.UTF8_ENCODING));
+      table.commit(lockid);
     }
     try {
       // Give cache flusher and log roller a chance to run
@@ -272,19 +266,12 @@ public class TestBloomFilters extends HBaseClusterTestCase {
       // ignore
     }
     
-    try {
-      if (table != null) {
-        for(int i = 0; i < testKeys.length; i++) {
-          byte[] value = table.get(testKeys[i], CONTENTS);
-          if(value != null && value.length != 0) {
-            LOG.info("non existant key: " + testKeys[i] + " returned value: " +
-                new String(value, HConstants.UTF8_ENCODING));
-          }
-        }
+    for(int i = 0; i < testKeys.length; i++) {
+      byte[] value = table.get(testKeys[i], CONTENTS);
+      if(value != null && value.length != 0) {
+        LOG.info("non existant key: " + testKeys[i] + " returned value: " +
+            new String(value, HConstants.UTF8_ENCODING));
       }
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail();
     }
   }
 }

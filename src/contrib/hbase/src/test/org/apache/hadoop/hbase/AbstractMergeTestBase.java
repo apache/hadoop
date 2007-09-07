@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.Random;
 
 import org.apache.hadoop.dfs.MiniDFSCluster;
@@ -32,7 +31,7 @@ import org.apache.hadoop.io.Text;
 /** Abstract base class for merge tests */
 public abstract class AbstractMergeTestBase extends HBaseTestCase {
   protected static final Text COLUMN_NAME = new Text("contents:");
-  protected Random rand;
+  protected final Random rand = new Random();
   protected HTableDescriptor desc;
   protected ImmutableBytesWritable value;
 
@@ -46,7 +45,6 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    rand = new Random();
     desc = new HTableDescriptor("test");
     desc.addFamily(new HColumnDescriptor(COLUMN_NAME.toString()));
     
@@ -57,24 +55,12 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
     while(val.length() < 1024) {
       val.append(partialValue);
     }
-    try {
-      value = new ImmutableBytesWritable(val.toString().getBytes(HConstants.UTF8_ENCODING));
-      
-    } catch(UnsupportedEncodingException e) {
-      fail();
-    }
+    
+    value = new ImmutableBytesWritable(
+        val.toString().getBytes(HConstants.UTF8_ENCODING));
 
-    try {
-      dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
-      fs = dfsCluster.getFileSystem();
-      dir = new Path("/hbase");
-      fs.mkdirs(dir);
+    dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
       
-    } catch(Throwable t) {
-      t.printStackTrace();
-      fail();
-    }
-
     // We create three data regions: The first is too large to merge since it 
     // will be > 64 MB in size. The second two will be smaller and will be 
     // selected for merging.
@@ -83,6 +69,10 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
     // least 65536 rows. We will make certain by writing 70000
 
     try {
+      fs = dfsCluster.getFileSystem();
+      dir = new Path("/hbase");
+      fs.mkdirs(dir);
+
       Text row_70001 = new Text("row_70001");
       Text row_80001 = new Text("row_80001");
       
@@ -95,8 +85,11 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
       // Now create the root and meta regions and insert the data regions
       // created above into the meta
       
-      HRegion root = createNewHRegion(dir, conf, HGlobals.rootTableDesc, 0L, null, null);
-      HRegion meta = createNewHRegion(dir, conf, HGlobals.metaTableDesc, 1L, null, null);
+      HRegion root =
+        createNewHRegion(dir, conf, HGlobals.rootTableDesc, 0L, null, null);
+      
+      HRegion meta =
+        createNewHRegion(dir, conf, HGlobals.metaTableDesc, 1L, null, null);
     
       HRegion.addRegionToMETA(root, meta);
       
@@ -109,12 +102,11 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
       meta.close();
       meta.getLog().closeAndDelete();
       
-    } catch(Throwable t) {
-      t.printStackTrace();
+    } catch (Exception e) {
       if(dfsCluster != null) {
         dfsCluster.shutdown();
       }
-      fail();
+      throw e;
     }
   }
 
@@ -124,13 +116,16 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
-    dfsCluster.shutdown();
+    if (dfsCluster != null) {
+      dfsCluster.shutdown();
+    }
   }
 
-  private HRegion createAregion(Text startKey, Text endKey, int firstRow, int nrows)
-      throws IOException {
+  private HRegion createAregion(Text startKey, Text endKey, int firstRow,
+      int nrows) throws IOException {
     
-    HRegion region = createNewHRegion(dir, conf, desc, rand.nextLong(), startKey, endKey);
+    HRegion region =
+      createNewHRegion(dir, conf, desc, rand.nextLong(), startKey, endKey);
     
     System.out.println("created region " + region.getRegionName());
 

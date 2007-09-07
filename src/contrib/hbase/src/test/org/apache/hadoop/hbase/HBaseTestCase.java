@@ -70,13 +70,9 @@ public abstract class HBaseTestCase extends TestCase {
   
   @Override
   protected void tearDown() throws Exception {
-    try {
-      if (this.localFs != null && this.testDir != null &&
-          this.localFs.exists(testDir)) {
-        this.localFs.delete(testDir);
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
+    if (this.localFs != null && this.testDir != null &&
+        this.localFs.exists(testDir)) {
+      this.localFs.delete(testDir);
     }
     super.tearDown();
   }

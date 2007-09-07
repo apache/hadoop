@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -46,11 +45,9 @@ public class TestHMemcache extends TestCase {
   
   private static final String COLUMN_FAMILY = "column";
 
-  /* (non-Javadoc)
-   * @see junit.framework.TestCase#setUp()
-   */
+  /** {@inheritDoc} */
   @Override
-  protected void setUp() throws Exception {
+  public void setUp() throws Exception {
     super.setUp();
     this.hmemcache = new HMemcache();
     // Set up a configuration that has configuration for a file
@@ -58,11 +55,9 @@ public class TestHMemcache extends TestCase {
     this.conf = new HBaseConfiguration();
   }
 
-  /* (non-Javadoc)
-   * @see junit.framework.TestCase#tearDown()
-   */
+  /** {@inheritDoc} */
   @Override
-  protected void tearDown() throws Exception {
+  public void tearDown() throws Exception {
     super.tearDown();
   }
 
@@ -70,10 +65,8 @@ public class TestHMemcache extends TestCase {
     return new Text("row" + Integer.toString(index));
   }
 
-  private Text getColumnName(final int rowIndex,
-      final int colIndex) {
-    return new Text(COLUMN_FAMILY + ":" +
-        Integer.toString(rowIndex) + ";" +
+  private Text getColumnName(final int rowIndex, final int colIndex) {
+    return new Text(COLUMN_FAMILY + ":" + Integer.toString(rowIndex) + ";" +
         Integer.toString(colIndex));
   }
 
@@ -81,16 +74,12 @@ public class TestHMemcache extends TestCase {
    * Adds {@link #ROW_COUNT} rows and {@link #COLUMNS_COUNT}
    * @param hmc Instance to add rows to.
    */
-  private void addRows(final HMemcache hmc) {
+  private void addRows(final HMemcache hmc) throws UnsupportedEncodingException {
     for (int i = 0; i < ROW_COUNT; i++) {
       TreeMap<Text, byte []> columns = new TreeMap<Text, byte []>();
       for (int ii = 0; ii < COLUMNS_COUNT; ii++) {
         Text k = getColumnName(i, ii);
-        try {
-          columns.put(k, k.toString().getBytes(HConstants.UTF8_ENCODING));
-        } catch (UnsupportedEncodingException e) {
-          fail();
-        }
+        columns.put(k, k.toString().getBytes(HConstants.UTF8_ENCODING));
       }
       hmc.add(getRowName(i), columns, System.currentTimeMillis());
     }
@@ -98,8 +87,8 @@ public class TestHMemcache extends TestCase {
 
   private HLog getLogfile() throws IOException {
     // Create a log file.
-    Path testDir = new Path(conf.get("hadoop.tmp.dir", System
-        .getProperty("java.tmp.dir")), "hbase");
+    Path testDir = new Path(conf.get("hadoop.tmp.dir", 
+        System.getProperty("java.tmp.dir")), "hbase");
     Path logFile = new Path(testDir, this.getName());
     FileSystem fs = testDir.getFileSystem(conf);
     // Cleanup any old log file.
@@ -110,7 +99,8 @@ public class TestHMemcache extends TestCase {
   }
 
   private Snapshot runSnapshot(final HMemcache hmc, final HLog log)
-      throws IOException {
+    throws IOException {
+    
     // Save off old state.
     int oldHistorySize = hmc.history.size();
     TreeMap<HStoreKey, byte []> oldMemcache = hmc.memcache;
@@ -151,12 +141,12 @@ public class TestHMemcache extends TestCase {
     log.closeAndDelete();
   }
   
-  private void isExpectedRow(final int rowIndex,
-      TreeMap<Text, byte []> row) throws UnsupportedEncodingException {
+  private void isExpectedRow(final int rowIndex, TreeMap<Text, byte []> row)
+    throws UnsupportedEncodingException {
+    
     int i = 0;
     for (Text colname: row.keySet()) {
-      String expectedColname =
-        getColumnName(rowIndex, i++).toString();
+      String expectedColname = getColumnName(rowIndex, i++).toString();
       String colnameStr = colname.toString();
       assertEquals("Column name", colnameStr, expectedColname);
       // Value is column name as bytes.  Usually result is
@@ -204,9 +194,7 @@ public class TestHMemcache extends TestCase {
       assertEquals("Count of columns", COLUMNS_COUNT,
           results.size());
       TreeMap<Text, byte []> row = new TreeMap<Text, byte []>();
-      for(Iterator<Map.Entry<Text, byte []>> it = results.entrySet().iterator();
-          it.hasNext(); ) {
-        Map.Entry<Text, byte []> e = it.next();
+      for(Map.Entry<Text, byte []> e: results.entrySet() ) {
         row.put(e.getKey(), e.getValue());
       }
       isExpectedRow(i, row);

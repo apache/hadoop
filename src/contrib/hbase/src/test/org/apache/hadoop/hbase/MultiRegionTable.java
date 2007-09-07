@@ -34,11 +34,12 @@ public class MultiRegionTable extends HBaseTestCase {
    */
   public static void makeMultiRegionTable(Configuration conf,
       MiniHBaseCluster cluster, FileSystem localFs, String tableName,
-      String columnName)
-  throws IOException {
+      String columnName) throws IOException {
+    
     // This size should make it so we always split using the addContent
     // below.  After adding all data, the first region is 1.3M. Should
     // set max filesize to be <= 1M.
+    
     assertTrue(conf.getLong("hbase.hregion.max.filesize",
       HConstants.DEFAULT_MAX_FILE_SIZE) <= 1024 * 1024);
 
@@ -46,24 +47,33 @@ public class MultiRegionTable extends HBaseTestCase {
     Path d = cluster.regionThreads.get(0).getRegionServer().rootDir;
     FileSystem fs = (cluster.getDFSCluster() == null) ?
       localFs : cluster.getDFSCluster().getFileSystem();
-    assertTrue(fs != null);
+    assertNotNull(fs);
 
     // Get connection on the meta table and get count of rows.
+    
     HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
     int count = count(meta, HConstants.COLUMN_FAMILY_STR);
     HTable t = new HTable(conf, new Text(tableName));
     addContent(new HTableLoader(t), columnName);
+    
     // All is running in the one JVM so I should be able to get the single
     // region instance and bring on a split.
+    
     HRegionInfo hri =
       t.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
     HRegion r = cluster.regionThreads.get(0).getRegionServer().
     onlineRegions.get(hri.getRegionName());
+    
     // Flush will provoke a split next time the split-checker thread runs.
+    
     r.flushcache(false);
+    
     // Now, wait until split makes it into the meta table.
-    for (int i = 0; i < retries &&
-    (count(meta, HConstants.COLUMN_FAMILY_STR) <= count); i++) {
+    
+    for (int i = 0;
+      i < retries && (count(meta, HConstants.COLUMN_FAMILY_STR) <= count);
+      i++) {
+      
       try {
         Thread.sleep(5000);
       } catch (InterruptedException e) {
@@ -75,9 +85,11 @@ public class MultiRegionTable extends HBaseTestCase {
     if (count <= oldCount) {
       throw new IOException("Failed waiting on splits to show up");
     }
+    
     // Get info on the parent from the meta table.  Pass in 'hri'. Its the
     // region we have been dealing with up to this. Its the parent of the
     // region split.
+    
     Map<Text, byte []> data = getSplitParentInfo(meta, hri);
     HRegionInfo parent =
       Writables.getHRegionInfoOrNull(data.get(HConstants.COL_REGIONINFO));
@@ -92,13 +104,19 @@ public class MultiRegionTable extends HBaseTestCase {
     LOG.info("Split happened. Parent is " + parent.getRegionName() +
         " and daughters are " + splitA.getRegionName() + ", " +
         splitB.getRegionName());
+    
     // Recalibrate will cause us to wait on new regions' deployment
+    
     recalibrate(t, new Text(columnName), retries);
+    
     // Compact a region at a time so we can test case where one region has
     // no references but the other still has some
+    
     compact(cluster, splitA);
+    
     // Wait till the parent only has reference to remaining split, one that
     // still has references.
+    
     while (getSplitParentInfo(meta, parent).size() == 3) {
       try {
         Thread.sleep(5000);
@@ -108,21 +126,28 @@ public class MultiRegionTable extends HBaseTestCase {
     }
     LOG.info("Parent split returned " +
         getSplitParentInfo(meta, parent).keySet().toString());
+    
     // Call second split.
+    
     compact(cluster, splitB);
+    
     // Now wait until parent disappears.
-    LOG.info("Waiting on parent " + parent.getRegionName() +
-    " to disappear");
-    for (int i = 0; i < retries &&
-    getSplitParentInfo(meta, parent) != null; i++) {
+    
+    LOG.info("Waiting on parent " + parent.getRegionName() + " to disappear");
+    for (int i = 0;
+      i < retries && getSplitParentInfo(meta, parent) != null;
+      i++) {
+      
       try {
         Thread.sleep(5000);
       } catch (InterruptedException e) {
         // continue
       }
     }
-    assertTrue(getSplitParentInfo(meta, parent) == null);
+    assertNull(getSplitParentInfo(meta, parent));
+    
     // Assert cleaned up.
+    
     for (int i = 0; i < retries && fs.exists(parentDir); i++) {
       try {
         Thread.sleep(5000);
@@ -141,7 +166,8 @@ public class MultiRegionTable extends HBaseTestCase {
    * @throws IOException
    */
   private static int count(final HTable t, final String column)
-  throws IOException {
+    throws IOException {
+    
     int size = 0;
     Text [] cols = new Text[] {new Text(column)};
     HScannerInterface s = t.obtainScanner(cols, HConstants.EMPTY_START_ROW,
@@ -162,29 +188,29 @@ public class MultiRegionTable extends HBaseTestCase {
    * @return Return row info for passed in region or null if not found in scan.
    */
   private static Map<Text, byte []> getSplitParentInfo(final HTable t,
-      final HRegionInfo parent)
-    throws IOException {
-      HScannerInterface s = t.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY,
+      final HRegionInfo parent) throws IOException {
+    
+    HScannerInterface s = t.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY,
         HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
-      try {
-        HStoreKey curKey = new HStoreKey();
-        TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
-        while(s.next(curKey, curVals)) {
-          HRegionInfo hri = Writables.
-            getHRegionInfoOrNull(curVals.get(HConstants.COL_REGIONINFO));
-          if (hri == null) {
-            continue;
-          }
-          if (hri.getRegionName().toString().
-              equals(parent.getRegionName().toString())) {
-            return curVals;
-          }
+    try {
+      HStoreKey curKey = new HStoreKey();
+      TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
+      while(s.next(curKey, curVals)) {
+        HRegionInfo hri = Writables.
+        getHRegionInfoOrNull(curVals.get(HConstants.COL_REGIONINFO));
+        if (hri == null) {
+          continue;
         }
-        return null;
-      } finally {
-        s.close();
-      }   
-    }
+        if (hri.getRegionName().toString().
+            equals(parent.getRegionName().toString())) {
+          return curVals;
+        }
+      }
+      return null;
+    } finally {
+      s.close();
+    }   
+  }
 
   /*
    * Recalibrate passed in HTable.  Run after change in region geography.
@@ -199,6 +225,7 @@ public class MultiRegionTable extends HBaseTestCase {
    */
   private static void recalibrate(final HTable t, final Text column,
       final int retries) throws IOException {
+    
     for (int i = 0; i < retries; i++) {
       try {
         HScannerInterface s =
@@ -229,14 +256,15 @@ public class MultiRegionTable extends HBaseTestCase {
    * @throws IOException
    */
   private static void compact(final MiniHBaseCluster cluster,
-      final HRegionInfo r)
-  throws IOException {
+      final HRegionInfo r) throws IOException {
+    
     LOG.info("Starting compaction");
     for (MiniHBaseCluster.RegionServerThread thread: cluster.regionThreads) {
-      SortedMap<Text, HRegion> regions =
-        thread.getRegionServer().onlineRegions;
+      SortedMap<Text, HRegion> regions = thread.getRegionServer().onlineRegions;
+      
       // Retry if ConcurrentModification... alternative of sync'ing is not
       // worth it for sake of unit test.
+      
       for (int i = 0; i < 10; i++) {
         try {
           for (HRegion online: regions.values()) {
