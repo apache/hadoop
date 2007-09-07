@@ -1101,13 +1101,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
       }
                 
-      // It is completely safe to ignore a 'duplicate' from a tracker
-      // since we are guaranteed that the tracker sends the same 
-      // 'heartbeat' when rpcs are lost. 
-      // {@see TaskTracker.transmitHeartbeat()}
+      // It is completely safe to not process a 'duplicate' heartbeat from a 
+      // {@link TaskTracker} since it resends the heartbeat when rpcs are lost - 
+      // @see {@link TaskTracker.transmitHeartbeat()};
+      // acknowledge it by re-sending the previous response to let the 
+      // {@link TaskTracker} go forward. 
       if (prevHeartbeatResponse.getResponseId() != responseId) {
         LOG.info("Ignoring 'duplicate' heartbeat from '" + 
-                 trackerName + "'");
+                 trackerName + "'; resending the previous 'lost' response");
         return prevHeartbeatResponse;
       }
     }
