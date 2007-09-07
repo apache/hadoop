@@ -83,7 +83,7 @@
         + " ?<h3><br><table border=\"0\"><tr><td width=\"100\">"
         + "<a href=\"" +  url + "&action=kill"
         + "\">Kill</a></td><td width=\"100\"><a href=\"" + url
-        + "\">Don't Kill</a></td></tr></table></body></html>");
+        + "\">Cancel </a></td></tr></table></body></html>");
   }
   
 %>       
@@ -245,7 +245,7 @@
   JobPriority jobPrio = job.getPriority();
   for (JobPriority prio : JobPriority.values()) {
     if(jobPrio != prio) {
-      %><a href="jobdetails.jsp?action=changeprio&jobid=<%=jobId%>&prio=<%=prio%>"> <%=prio%> </a><%
+      %> <a href="jobdetails.jsp?action=changeprio&jobid=<%=jobId%>&prio=<%=prio%>"> <%=prio%> </a> <%
     }
   }
 %>

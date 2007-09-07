@@ -33,20 +33,20 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.util.StringUtils;
 
 
-////////////////////////////////////////////////////////
-// TaskInProgress maintains all the info needed for a
-// Task in the lifetime of its owning Job.  A given Task
-// might be speculatively executed or reexecuted, so we
-// need a level of indirection above the running-id itself.
-//
-// A given TaskInProgress contains multiple taskids,
-// 0 or more of which might be executing at any one time.
-// (That's what allows speculative execution.)  A taskid
-// is now *never* recycled.  A TIP allocates enough taskids
-// to account for all the speculation and failures it will
-// ever have to handle.  Once those are up, the TIP is dead.
-//
-////////////////////////////////////////////////////////
+/*************************************************************
+ * TaskInProgress maintains all the info needed for a
+ * Task in the lifetime of its owning Job.  A given Task
+ * might be speculatively executed or reexecuted, so we
+ * need a level of indirection above the running-id itself.
+ * <br>
+ * A given TaskInProgress contains multiple taskids,
+ * 0 or more of which might be executing at any one time.
+ * (That's what allows speculative execution.)  A taskid
+ * is now *never* recycled.  A TIP allocates enough taskids
+ * to account for all the speculation and failures it will
+ * ever have to handle.  Once those are up, the TIP is dead.
+ * **************************************************************
+ */
 class TaskInProgress {
   static final int MAX_TASK_EXECS = 1;
   int maxTaskAttempts = 4;    
@@ -108,7 +108,10 @@ class TaskInProgress {
 
   private TreeSet<String> machinesWhereFailed = new TreeSet<String>();
   private TreeSet<String> tasksReportedClosed = new TreeSet<String>();
-    
+  
+  //list of tasks to kill, <taskid> -> <shouldFail> 
+  private TreeMap<String, Boolean> tasksToKill = new TreeMap<String, Boolean>();
+  
   private Counters counters = new Counters();
 
   /**
@@ -162,7 +165,7 @@ class TaskInProgress {
    * @return The unique string for this tip
    */
   private String makeUniqueString(String uniqueBase) {
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
     result.append(uniqueBase);
     if (isMapTask()) {
       result.append("_m_");
@@ -174,8 +177,8 @@ class TaskInProgress {
   }
     
   /**
-   * Return the index of the tip within the job, so "tip_0002_m_012345"
-   * would return 12345;
+   * Return the index of the tip within the job, so 
+   * "tip_200707121733_1313_0002_m_012345" would return 12345;
    * @return int the tip index
    */
   public int idWithinJob() {
@@ -239,7 +242,7 @@ class TaskInProgress {
    * @return <code>true</code> if taskid is complete, else <code>false</code>
    */
   public boolean isComplete(String taskid) {
-    TaskStatus status = (TaskStatus) taskStatuses.get(taskid);
+    TaskStatus status = taskStatuses.get(taskid);
     if (status == null) {
       return false;
     }
@@ -285,14 +288,15 @@ class TaskInProgress {
   }
   /**
    * Returns whether a component task-thread should be 
-   * closed because the containing JobInProgress has completed.
+   * closed because the containing JobInProgress has completed
+   * or the task is killed by the user
    */
-  public boolean shouldCloseForClosedJob(String taskid) {
+  public boolean shouldClose(String taskid) {
     // If the thing has never been closed,
     // and it belongs to this TIP,
     // and this TIP is somehow FINISHED,
     // then true
-    TaskStatus ts = (TaskStatus) taskStatuses.get(taskid);
+    TaskStatus ts = taskStatuses.get(taskid);
     if ((ts != null) &&
         (!tasksReportedClosed.contains(taskid)) &&
         (job.getStatus().getRunState() != JobStatus.RUNNING)) {
@@ -303,7 +307,7 @@ class TaskInProgress {
       tasksReportedClosed.add(taskid);
       return true; 
     } else {
-      return false;
+      return tasksToKill.keySet().contains(taskid);
     }
   }
 
@@ -364,7 +368,7 @@ class TaskInProgress {
   synchronized boolean updateStatus(TaskStatus status) {
     String taskid = status.getTaskId();
     String diagInfo = status.getDiagnosticInfo();
-    TaskStatus oldStatus = (TaskStatus) taskStatuses.get(taskid);
+    TaskStatus oldStatus = taskStatuses.get(taskid);
     boolean changed = true;
     if (diagInfo != null && diagInfo.length() > 0) {
       LOG.info("Error from "+taskid+": "+diagInfo);
@@ -578,7 +582,49 @@ class TaskInProgress {
   public boolean wasKilled() {
     return killed;
   }
-    
+  
+  /**
+   * Kill the given task
+   */
+  boolean killTask(String taskId, boolean shouldFail) {
+    TaskStatus st = taskStatuses.get(taskId);
+    if(st != null && st.getRunState() == TaskStatus.State.RUNNING
+        && tasksToKill.put(taskId, shouldFail) == null ) {
+      String logStr = "Request received to " + (shouldFail ? "fail" : "kill") 
+                      + " task '" + taskId + "' by user";
+      addDiagnosticInfo(taskId, logStr);
+      LOG.info(logStr);
+      return true;
+    }
+    return false;
+  }
+
+  /** Notification that a task with the given id has been killed */
+  void taskKilled(String taskId, String trackerName, JobStatus jobStatus) {
+    Boolean shouldFail = tasksToKill.remove(taskId);
+    if(shouldFail != null && !shouldFail) {
+      LOG.info("Task '" + taskId + "' has been killed");
+      this.activeTasks.remove(taskId);
+      taskStatuses.get(taskId).setRunState(TaskStatus.State.KILLED );
+      addDiagnosticInfo(taskId, "Task has been killed" );
+      // Discard task output
+      Task t = tasks.get(taskId);
+      try {
+        t.discardTaskOutput();
+      } catch (IOException ioe) {
+        LOG.info("Failed to discard output of task '" + taskId + "' with " +
+            StringUtils.stringifyException(ioe));
+      }
+      numKilledTasks++;
+      
+    }
+    else {
+      //set the task status as failed. 
+      taskStatuses.get(taskId).setRunState(TaskStatus.State.FAILED);
+      incompleteSubTask(taskId, trackerName, jobStatus);
+    }
+  }
+
   /**
    * This method is called whenever there's a status change
    * for one of the TIP's sub-tasks.  It recomputes the overall 
@@ -596,8 +642,8 @@ class TaskInProgress {
       double bestProgress = 0;
       String bestState = "";
       Counters bestCounters = new Counters();
-      for (Iterator it = taskStatuses.keySet().iterator(); it.hasNext();) {
-        String taskid = (String) it.next();
+      for (Iterator<String> it = taskStatuses.keySet().iterator(); it.hasNext();) {
+        String taskid = it.next();
         TaskStatus status = taskStatuses.get(taskid);
         if (status.getRunState() == TaskStatus.State.SUCCEEDED) {
           bestProgress = 1;

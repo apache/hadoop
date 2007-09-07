@@ -39,12 +39,13 @@ import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.util.StringUtils;
 
-///////////////////////////////////////////////////////
-// JobInProgress maintains all the info for keeping
-// a Job on the straight and narrow.  It keeps its JobProfile
-// and its latest JobStatus, plus a set of tables for 
-// doing bookkeeping of its Tasks.
-///////////////////////////////////////////////////////
+/*************************************************************
+ * JobInProgress maintains all the info for keeping
+ * a Job on the straight and narrow.  It keeps its JobProfile
+ * and its latest JobStatus, plus a set of tables for 
+ * doing bookkeeping of its Tasks.
+ * ***********************************************************
+ */
 class JobInProgress {
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobInProgress");
     
@@ -188,8 +189,7 @@ class JobInProgress {
       }
     }
   }
-  
-  
+    
   /**
    * Called when the job is complete
    */
@@ -455,8 +455,10 @@ class JobInProgress {
     //
     // Update JobInProgress status
     //
-    LOG.debug("Taking progress for " + tip.getTIPId() + " from " + 
-              oldProgress + " to " + tip.getProgress());
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("Taking progress for " + tip.getTIPId() + " from " + 
+                 oldProgress + " to " + tip.getProgress());
+    }
     double progressDelta = tip.getProgress() - oldProgress;
     if (tip.isMapTask()) {
       if (maps.length == 0) {
@@ -916,9 +918,14 @@ class JobInProgress {
                           TaskStatus status, String trackerName,
                           boolean wasRunning, boolean wasComplete,
                           JobTrackerMetrics metrics) {
-    // Mark the taskid as a 'failure'
-    tip.incompleteSubTask(taskid, trackerName, this.status);
-        
+    if(status.getRunState() == TaskStatus.State.KILLED ) {
+      tip.taskKilled(taskid, trackerName, this.status);
+    }
+    else {
+      // Mark the taskid as a 'failure'
+      tip.incompleteSubTask(taskid, trackerName, this.status);
+    }
+
     boolean isRunning = tip.isRunning();
     boolean isComplete = tip.isComplete();
         

@@ -86,6 +86,7 @@
                 r<%= VersionInfo.getRevision()%><br>
 <b>Compiled:</b> <%= VersionInfo.getDate()%> by 
                  <%= VersionInfo.getUser()%><br>
+<b>Identifier:</b> <%= tracker.getTrackerIdentifier()%><br>                 
                    
 <hr>
 <h2>Cluster Summary</h2>

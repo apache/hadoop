@@ -1404,7 +1404,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       Set<String> killJobIds = new TreeSet<String>(); 
       for (String killTaskId : taskIds) {
         TaskInProgress tip = taskidToTIPMap.get(killTaskId);
-        if (tip.shouldCloseForClosedJob(killTaskId)) {
+        if (tip.shouldClose(killTaskId)) {
           // 
           // This is how the JobTracker ends a task at the TaskTracker.
           // It may be successfully completed, or may be killed in
@@ -1668,6 +1668,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
             : (TaskInProgress) job.getTaskInProgress(tipid));
   }
     
+  /** Mark a Task to be killed */
+  public synchronized boolean killTask(String taskid, boolean shouldFail) throws IOException{
+    TaskInProgress tip = taskidToTIPMap.get(taskid);
+    if(tip != null) {
+      return tip.killTask(taskid, shouldFail);
+    }
+    else {
+      LOG.info("Kill task attempt failed since task " + taskid + " was not found");
+      return false;
+    }
+  }
+  
   /**
    * Get tracker name for a given task id.
    * @param taskId the name of the task

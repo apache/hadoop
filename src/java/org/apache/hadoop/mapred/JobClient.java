@@ -187,6 +187,17 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     public synchronized void killJob() throws IOException {
       jobSubmitClient.killJob(getJobID());
     }
+    
+    /**
+     * Kill indicated task attempt.
+     * @param taskId the id of the task to kill.
+     * @param shouldFail if true the task is failed and added to failed tasks list, otherwise
+     * it is just killed, w/o affecting job failure status.
+     */
+    public synchronized void killTask(String taskId, boolean shouldFail) throws IOException {
+      jobSubmitClient.killTask(taskId, shouldFail);
+    }
+
     /**
      * Fetch task completion events from jobtracker for this job. 
      */
@@ -767,7 +778,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     System.out.printf("\t-status\t<job-id>\n");
     System.out.printf("\t-kill\t<job-id>\n");
     System.out.printf("\t-events\t<job-id> <from-event-#> <#-of-events>\n");
-    System.out.printf("\t-list\n\n");
+    System.out.printf("\t-list\n");
+    System.out.printf("\t-kill-task <task-id>\n");
+    System.out.printf("\t-fail-task <task-id>\n\n");
     ToolRunner.printGenericCommandUsage(System.out);
     throw new RuntimeException("JobClient: bad command-line arguments");
   }
@@ -776,13 +789,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     // process arguments
     String submitJobFile = null;
     String jobid = null;
+    String taskid = null;
     int fromEvent = 0;
     int nEvents = 0;
     boolean getStatus = false;
     boolean killJob = false;
     boolean listEvents = false;
     boolean listJobs = false;
-
+    boolean killTask = false;
+    boolean failTask = false;
+    
     if (argv.length < 1)
       displayUsage();
 
@@ -809,6 +825,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       listEvents = true;
     } else if ("-list".equals(argv[0])) {
       listJobs = true;
+    } else if("-kill-task".equals(argv[0])) {
+      if(argv.length != 2)
+        displayUsage();
+      killTask = true;
+      taskid = argv[1];
+    } else if("-fail-task".equals(argv[0])) {
+      if(argv.length != 2)
+        displayUsage();
+      failTask = true;
+      taskid = argv[1];
     } else {
       displayUsage();
     }
@@ -853,6 +879,22 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       } else if (listJobs) {
         listJobs();
         exitCode = 0;
+      } else if(killTask) {
+        if(jobSubmitClient.killTask(taskid, false)) {
+          System.out.println("Killed task " + taskid);
+          exitCode = 0;
+        } else {
+          System.out.println("Could not kill task " + taskid);
+          exitCode = -1;
+        }
+      } else if(failTask) {
+        if(jobSubmitClient.killTask(taskid, true)) {
+          System.out.println("Killed task " + taskid + " by failing it");
+          exitCode = 0;
+        } else {
+          System.out.println("Could not fail task " + taskid);
+          exitCode = -1;
+        }
       }
     } finally {
       close();

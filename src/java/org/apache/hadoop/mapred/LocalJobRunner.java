@@ -283,6 +283,12 @@ class LocalJobRunner implements JobSubmissionProtocol {
     jobs.get(id).stop();
   }
 
+  /** Throws {@link UnsupportedOperationException} */
+  public boolean killTask(String taskId, boolean shouldFail) throws IOException {
+    throw new UnsupportedOperationException("Killing tasks in " +
+    "LocalJobRunner is not supported");
+  }
+
   public JobProfile getJobProfile(String id) {
     Job job = jobs.get(id);
     return job.getProfile();

@@ -39,6 +39,9 @@ Trunk (unreleased changes)
 
     HADOOP-1767.  Add "bin/hadoop job -list" sub-command. (taton via cutting)
 
+    HADOOP-1351.  Add "bin/hadoop job [-fail-task|-kill-task]" sub-commands
+    to terminate a particular task-attempt. (Enis Soztutar via acmurthy)
+
   OPTIMIZATIONS
 
     HADOOP-1565.  Reduce memory usage of NameNode by replacing 

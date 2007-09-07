@@ -584,7 +584,7 @@ public class JobHistory {
       }
     }
     /**
-     * Log task attempt failed event.  
+     * Log task attempt killed event.  
      * @param jobId jobid
      * @param taskId taskid
      * @param taskAttemptId task attempt id
@@ -679,7 +679,7 @@ public class JobHistory {
       }
     }
     /**
-     * Log failed reduce task attempt. 
+     * Log killed reduce task attempt. 
      * @param jobId job id 
      * @param taskId task id
      * @param taskAttemptId task attempt id

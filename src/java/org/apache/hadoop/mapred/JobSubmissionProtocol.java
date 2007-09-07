@@ -30,9 +30,10 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 public interface JobSubmissionProtocol extends VersionedProtocol {
   /*
    *Changing the versionID to 2L since the getTaskCompletionEvents method has
-   *changed
+   *changed.
+   *Changed to 4 since killTask(String,boolean) is added
    */
-  public static final long versionID = 3L;
+  public static final long versionID = 4L;
 
   /**
    * Allocate a name for the job.
@@ -59,6 +60,14 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
    */
   public void killJob(String jobid) throws IOException;
 
+  /**
+   * Kill indicated task attempt.
+   * @param taskId the id of the task to kill.
+   * @param shouldFail if true the task is failed and added to failed tasks list, otherwise
+   * it is just killed, w/o affecting job failure status.  
+   */ 
+  public boolean killTask(String taskId, boolean shouldFail) throws IOException;
+  
   /**
    * Grab a handle to a job that is already known to the JobTracker
    */

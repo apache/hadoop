@@ -825,10 +825,11 @@ public class TaskTracker
         // Send the heartbeat and process the jobtracker's directives
         HeartbeatResponse heartbeatResponse = transmitHeartBeat();
         TaskTrackerAction[] actions = heartbeatResponse.getActions();
-        LOG.debug("Got heartbeatResponse from JobTracker with responseId: " + 
-                  heartbeatResponse.getResponseId() + " and " + 
-                  ((actions != null) ? actions.length : 0) + " actions");
-            
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Got heartbeatResponse from JobTracker with responseId: " + 
+                    heartbeatResponse.getResponseId() + " and " + 
+                    ((actions != null) ? actions.length : 0) + " actions");
+        }
         if (reinitTaskTracker(actions)) {
           return State.STALE;
         }

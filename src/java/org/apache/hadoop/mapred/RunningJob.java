@@ -82,6 +82,14 @@ public interface RunningJob {
     
   public TaskCompletionEvent[] getTaskCompletionEvents(
                                                        int startFrom) throws IOException;
+  
+  /**
+   * Kill indicated task attempt.
+   * @param taskId the id of the task to kill.
+   * @param shouldFail if true the task is failed and added to failed tasks list, otherwise
+   * it is just killed, w/o affecting job failure status.  
+   */
+  public void killTask(String taskId, boolean shouldFail) throws IOException;
     
   /**
    * Gets the counters for this job.
