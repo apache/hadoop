@@ -122,8 +122,13 @@ case $startStop in
   (stop)
     if [ -f $pid ]; then
       if kill -0 `cat $pid` > /dev/null 2>&1; then
-        echo stopping $command
+        echo -n stopping $command
         nohup nice -n $HADOOP_NICENESS "$HBASE_HOME"/bin/hbase --config="${HADOOP_CONF_DIR}" --hbaseconfig="${HBASE_CONF_DIR}" $command $startStop "$@" > "$log" 2>&1 < /dev/null &
+        while kill -0 `cat $pid` > /dev/null 2>&1; do
+          echo -n "."
+          sleep 1;
+        done
+        echo
       else
         echo no $command to stop
       fi

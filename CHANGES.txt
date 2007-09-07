@@ -43,8 +43,10 @@ Trunk (unreleased changes)
     HADOOP-1793 (Phase 1) Remove TestHClient
     HADOOP-1794 Remove deprecated APIs
     HADOOP-1802 Startup scripts should wait until hdfs as cleared 'safe mode'
+    HADOOP-1833 bin/stop_hbase.sh returns before it completes
+                (Izaak Rubin via Stack) 
     HADOOP-1835 Updated Documentation for HBase setup/installation
-           (Izaak Rubin via Stack)
+                (Izaak Rubin via Stack)
 
 
 Below are the list of changes before 2007-08-18
