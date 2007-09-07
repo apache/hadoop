@@ -711,7 +711,7 @@ class FSNamesystem implements FSConstants {
    * of machines.  The first on this list should be where the client 
    * writes data.  Subsequent items in the list must be provided in
    * the connection to the first datanode.
-   * @return Return an array that consists of the block, plus a set
+   * Return an array that consists of the block, plus a set
    * of machines
    * @throws IOException if the filename is invalid
    *         {@link FSDirectory#isValidToCreate(String)}.
@@ -986,7 +986,7 @@ class FSNamesystem implements FSConstants {
         
     Collection<Block> blocks = pendingFile.getBlocks();
     int nrBlocks = blocks.size();
-    Block pendingBlocks[] = blocks.toArray(new Block[nrBlocks]);
+    Block pendingBlocks[] = new Block[nrBlocks];
 
     //
     // We have the pending blocks, but they won't have
@@ -994,12 +994,12 @@ class FSNamesystem implements FSConstants {
     // data-write took place). Find the block stored in
     // node descriptor.
     //
-    for (int i = 0; i < nrBlocks; i++) {
-      Block b = pendingBlocks[i];
+    int idx = 0;
+    for (Block b : blocks) {
       Block storedBlock = blocksMap.getStoredBlock(b);
-      if (storedBlock != null) {
-        pendingBlocks[i] = storedBlock;
-      }
+      // according to checkFileProgress() every block is present & replicated
+      assert storedBlock != null : "Missing block " + b.getBlockName();
+      pendingBlocks[idx++] = storedBlock;
     }
         
     //
@@ -1974,8 +1974,6 @@ class FSNamesystem implements FSConstants {
   }
 
   void unprotectedRemoveDatanode(DatanodeDescriptor nodeDescr) {
-    // datanodeMap.remove(nodeDescr.getStorageID());
-    // deaddatanodeMap.put(nodeDescr.getName(), nodeDescr);
     nodeDescr.resetBlocks();
     NameNode.stateChangeLog.debug(
                                   "BLOCK* NameSystem.unprotectedRemoveDatanode: "
@@ -1996,7 +1994,6 @@ class FSNamesystem implements FSConstants {
                                   + "node " + nodeDescr.getName() + " is added to datanodeMap.");
   }
 
-    
   /**
    * Physically remove node from datanodeMap.
    * 
@@ -2096,49 +2093,15 @@ class FSNamesystem implements FSConstants {
     // Modify the (block-->datanode) map, according to the difference
     // between the old and new block report.
     //
-    int newPos = 0;
-    Iterator<Block> iter = node.getBlockIterator();
-    Block oldblk = iter.hasNext() ? iter.next() : null;
-    Block newblk = (newReport != null && newReport.length > 0) ? 
-      newReport[0]	: null;
-
-    // common case is that most of the blocks from the datanode
-    // matches blocks in datanode descriptor.                
-    Collection<Block> toRemove = new LinkedList<Block>();
     Collection<Block> toAdd = new LinkedList<Block>();
+    Collection<Block> toRemove = new LinkedList<Block>();
+    node.reportDiff(blocksMap, newReport, toAdd, toRemove);
         
-    while (oldblk != null || newblk != null) {
-           
-      int cmp = (oldblk == null) ? 1 : 
-        ((newblk == null) ? -1 : oldblk.compareTo(newblk));
-
-      if (cmp == 0) {
-        // Do nothing, blocks are the same
-        newPos++;
-        oldblk = iter.hasNext() ? iter.next() : null;
-        newblk = (newPos < newReport.length)
-          ? newReport[newPos] : null;
-      } else if (cmp < 0) {
-        // The old report has a block the new one does not
-        toRemove.add(oldblk);
-        oldblk = iter.hasNext() ? iter.next() : null;
-      } else {
-        // The new report has a block the old one does not
-        toAdd.add(newblk);
-        newPos++;
-        newblk = (newPos < newReport.length)
-          ? newReport[newPos] : null;
-      }
-    }
-        
-    for (Iterator<Block> i = toRemove.iterator(); i.hasNext();) {
-      Block b = i.next();
+    for (Block b : toRemove) {
       removeStoredBlock(b, node);
-      node.removeBlock(b);
     }
-    for (Iterator<Block> i = toAdd.iterator(); i.hasNext();) {
-      Block b = i.next();
-      node.addBlock(addStoredBlock(b, node));
+    for (Block b : toAdd) {
+      addStoredBlock(b, node);
     }
         
     //
@@ -2444,7 +2407,7 @@ class FSNamesystem implements FSConstants {
     //
     // Modify the blocks->datanode map and node's map.
     // 
-    node.addBlock(addStoredBlock(block, node));
+    addStoredBlock(block, node);
     pendingReplications.remove(block);
   }
 
@@ -2534,9 +2497,10 @@ class FSNamesystem implements FSConstants {
       //
       // all the blocks that reside on this node have to be 
       // replicated.
-      Block decommissionBlocks[] = node.getBlocks();
-      for (int j = 0; j < decommissionBlocks.length; j++) {
-        updateNeededReplications(decommissionBlocks[j], -1, 0);
+      Iterator<Block> decommissionBlocks = node.getBlockIterator();
+      while(decommissionBlocks.hasNext()) {
+        Block block = decommissionBlocks.next();
+        updateNeededReplications(block, -1, 0);
       }
     }
   }
@@ -2714,10 +2678,10 @@ class FSNamesystem implements FSConstants {
    * yet reached their replication factor. Otherwise returns false.
    */
   private boolean isReplicationInProgress(DatanodeDescriptor srcNode) {
-    Block decommissionBlocks[] = srcNode.getBlocks();
     boolean status = false;
-    for (int i = 0; i < decommissionBlocks.length; i++) {
-      Block block = decommissionBlocks[i];
+    Iterator<Block> decommissionBlocks = srcNode.getBlockIterator();
+    while(decommissionBlocks.hasNext()) {
+      Block block = decommissionBlocks.next();
       INode fileINode = blocksMap.getINode(block);
 
       if (fileINode != null) {

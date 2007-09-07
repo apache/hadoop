@@ -19,6 +19,8 @@ package org.apache.hadoop.dfs;
 
 import java.util.*;
 
+import org.apache.hadoop.dfs.BlocksMap.BlockInfo;
+
 /**************************************************
  * DatanodeDescriptor tracks stats on a given DataNode,
  * such as available storage capacity, last update time, etc.,
@@ -32,7 +34,7 @@ import java.util.*;
  **************************************************/
 public class DatanodeDescriptor extends DatanodeInfo {
 
-  private volatile SortedMap<Block, Block> blocks = new TreeMap<Block, Block>();
+  private volatile BlockInfo blockList = null;
   // isAlive == heartbeats.contains(this)
   // This is an optimization, because contains takes O(n) time on Arraylist
   protected boolean isAlive = false;
@@ -130,26 +132,30 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
+   * Add block to the head of the list of blocks belonging to the data-node.
    */
-  void addBlock(Block b) {
-    blocks.put(b, b);
+  void addBlock(BlockInfo b) {
+    blockList = b.listInsert(blockList, this);
   }
   
-  void removeBlock(Block b) {
-    blocks.remove(b);
+  /**
+   * Remove block from the list of blocks belonging to the data-node.
+   */
+  void removeBlock(BlockInfo b) {
+    blockList = b.listRemove(blockList, this);
   }
 
   void resetBlocks() {
     this.capacity = 0;
     this.remaining = 0;
     this.xceiverCount = 0;
-    this.blocks.clear();
+    this.blockList = null;
   }
 
   int numBlocks() {
-    return blocks.size();
+    return blockList == null ? 0 : blockList.listCount(this);
   }
-  
+
   /**
    */
   void updateHeartbeat(long capacity, long dfsUsed, long remaining,
@@ -160,13 +166,33 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.lastUpdate = System.currentTimeMillis();
     this.xceiverCount = xceiverCount;
   }
-  
-  Block[] getBlocks() {
-    return (Block[]) blocks.keySet().toArray(new Block[blocks.size()]);
+
+  static private class BlockIterator implements Iterator<Block> {
+    private BlockInfo current;
+    private DatanodeDescriptor node;
+      
+    BlockIterator(BlockInfo head, DatanodeDescriptor dn) {
+      this.current = head;
+      this.node = dn;
+    }
+
+    public boolean hasNext() {
+      return current != null;
+    }
+
+    public BlockInfo next() {
+      BlockInfo res = current;
+      current = current.getNext(current.findDatanode(node));
+      return res;
+    }
+
+    public void remove()  {
+      throw new UnsupportedOperationException("Sorry. can't remove.");
+    }
   }
 
   Iterator<Block> getBlockIterator() {
-    return blocks.keySet().iterator();
+    return new BlockIterator(this.blockList, this);
   }
   
   /*
@@ -271,5 +297,32 @@ public class DatanodeDescriptor extends DatanodeInfo {
       assert(blocklist.length > 0);
       xferResults[0] = blocklist;
     }
+  }
+
+  void reportDiff(BlocksMap blocksMap,
+                  Block[] newReport,
+                  Collection<Block> toAdd,
+                  Collection<Block> toRemove) {
+    BlockInfo delimiter = new BlockInfo(new Block(), 1);
+    delimiter.addNode(this);
+    this.addBlock(delimiter); // add to the head of the list
+    if(newReport == null)
+      newReport = new Block[0];
+    for(Block blk : newReport) {
+      BlockInfo storedBlock = blocksMap.getStoredBlock(blk);
+      if(storedBlock == null || storedBlock.findDatanode(this) < 0) {
+        toAdd.add(blk);
+        continue;
+      }
+      // move block to the head of the list
+      this.removeBlock(storedBlock);
+      this.addBlock(storedBlock);
+    }
+    // collect blocks that have not been reported
+    // they are all next to the delimiter
+    Iterator<Block> it = new BlockIterator(delimiter.getNext(0), this);
+    while(it.hasNext())
+      toRemove.add(it.next());
+    this.removeBlock(delimiter);
   }
 }

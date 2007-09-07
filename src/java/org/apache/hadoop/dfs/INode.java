@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.dfs.BlocksMap.BlockInfo;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
@@ -291,21 +292,21 @@ class INodeDirectory extends INode {
    * following path components: ["","c1","c2","c3"],
    * 
    * <p>
-   * {@link #getExistingPathINodes(["","c1","c2"], [?])} should fill the
+   * <code>getExistingPathINodes(["","c1","c2"], [?])</code> should fill the
    * array with [c2] <br>
-   * {@link #getExistingPathINodes(["","c1","c2","c3"], [?])} should fill the
+   * <code>getExistingPathINodes(["","c1","c2","c3"], [?])</code> should fill the
    * array with [null]
    * 
    * <p>
-   * {@link #getExistingPathINodes(["","c1","c2"], [?,?])} should fill the
+   * <code>getExistingPathINodes(["","c1","c2"], [?,?])</code> should fill the
    * array with [c1,c2] <br>
-   * {@link #getExistingPathINodes(["","c1","c2","c3"], [?,?])} should fill
+   * <code>getExistingPathINodes(["","c1","c2","c3"], [?,?])</code> should fill
    * the array with [c2,null]
    * 
    * <p>
-   * {@link #getExistingPathINodes(["","c1","c2"], [?,?,?,?])} should fill
+   * <code>getExistingPathINodes(["","c1","c2"], [?,?,?,?])</code> should fill
    * the array with [rootINode,c1,c2,null], <br>
-   * {@link #getExistingPathINodes(["","c1","c2","c3"], [?,?,?,?])} should
+   * <code>getExistingPathINodes(["","c1","c2","c3"], [?,?,?,?])</code> should
    * fill the array with [rootINode,c1,c2,null]
    * @param components array of path component name
    * @param existing INode array to fill with existing INodes
@@ -325,7 +326,7 @@ class INodeDirectory extends INode {
         existing[index] = curNode;
       if (!curNode.isDirectory() || (count == components.length - 1))
         break; // no more child, stop here
-      INodeDirectory parentDir = (INodeDirectory) curNode;
+      INodeDirectory parentDir = (INodeDirectory)curNode;
       curNode = parentDir.getChildINode(components[count + 1]);
       count += 1;
       index += 1;
@@ -457,18 +458,18 @@ class INodeDirectory extends INode {
 }
 
 class INodeFile extends INode {
-  private Block blocks[] = null;
+  private BlockInfo blocks[] = null;
   protected short blockReplication;
   protected long preferredBlockSize;
 
   /**
    */
-  INodeFile(Block blocks[], short replication, long modificationTime,
+  INodeFile(int nrBlocks, short replication, long modificationTime,
             long preferredBlockSize) {
     super(modificationTime);
-    this.blocks = blocks;
     this.blockReplication = replication;
     this.preferredBlockSize = preferredBlockSize;
+    allocateBlocks(nrBlocks);
   }
 
   boolean isDirectory() {
@@ -496,10 +497,18 @@ class INodeFile extends INode {
   }
 
   /**
-   * Set file blocks 
+   * Allocate space for blocks.
+   * @param nrBlocks number of blocks
    */
-  void setBlocks(Block[] blockList) {
-    this.blocks = blockList;
+  void allocateBlocks(int nrBlocks) {
+    this.blocks = new BlockInfo[nrBlocks];
+  }
+
+  /**
+   * Set file block
+   */
+  void setBlock(int idx, BlockInfo blk) {
+    this.blocks[idx] = blk;
   }
 
   /**

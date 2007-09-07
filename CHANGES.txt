@@ -56,6 +56,9 @@ Trunk (unreleased changes)
     Block, and replace many uses of Block with BlockInfo.
     (Konstantin Shvachko via cutting)
 
+    HADOOP-1687.  Save memory in namenode by optimizing BlockMap
+    representation.  (Konstantin Shvachko via cutting)
+
   BUG FIXES
 
     HADOOP-1763. Too many lost task trackers on large clusters due to

@@ -150,16 +150,17 @@ class FSDirectory implements FSConstants {
     if (blocks == null)
       newNode = new INodeDirectory(modificationTime);
     else
-      newNode = new INodeFile(blocks, replication, modificationTime,
+      newNode = new INodeFile(blocks.length, replication, modificationTime,
                               preferredBlockSize);
     synchronized (rootDir) {
       try {
         newNode = rootDir.addNode(path, newNode);
-        if(newNode != null) {
-          int nrBlocks = (blocks == null) ? 0 : blocks.length;
+        if(newNode != null && blocks != null) {
+          int nrBlocks = blocks.length;
           // Add file->block mapping
+          INodeFile newF = (INodeFile)newNode;
           for (int i = 0; i < nrBlocks; i++) {
-            namesystem.blocksMap.addINode(blocks[i], (INodeFile)newNode);
+            newF.setBlock(i, namesystem.blocksMap.addINode(blocks[i], newF));
           }
         }
       } catch (FileNotFoundException e) {
@@ -187,9 +188,10 @@ class FSDirectory implements FSConstants {
       }
 
       // associate the new list of blocks with this file
-      fileNode.setBlocks(blocks);
+      fileNode.allocateBlocks(blocks.length);
       for (int i = 0; i < blocks.length; i++) {
-        namesystem.blocksMap.addINode(blocks[i], fileNode);
+        fileNode.setBlock(i, 
+            namesystem.blocksMap.addINode(blocks[i], fileNode));
       }
 
       // create two transactions. The first one deletes the empty

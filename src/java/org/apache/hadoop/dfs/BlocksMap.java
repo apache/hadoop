@@ -29,165 +29,342 @@ class BlocksMap {
   /**
    * Internal class for block metadata.
    */
-  private static class BlockInfo extends Block {
+  static class BlockInfo extends Block {
     private INodeFile          inode;
-      
-    /** nodes could contain some null entries at the end, so 
-     *  nodes.legth >= number of datanodes. 
-     *  if nodes != null then nodes[0] != null.
-     */
-    private DatanodeDescriptor[]           nodes;
 
-    BlockInfo(Block blk) {
+    /**
+     * This array contains trpilets of references.
+     * For each i-th data-node the block belongs to
+     * triplets[3*i] is the reference to the DatanodeDescriptor
+     * and triplets[3*i+1] and triplets[3*i+2] are references 
+     * to the previous and the next blocks, respectively, in the 
+     * list of blocks belonging to this data-node.
+     */
+    private Object[] triplets;
+
+    BlockInfo(Block blk, int replication) {
       super(blk);
+      this.triplets = new Object[3*replication];
+      this.inode = null;
+    }
+
+    INodeFile getINode() {
+      return inode;
+    }
+
+    DatanodeDescriptor getDatanode(int index) {
+      assert this.triplets != null : "BlockInfo is not initialized";
+      assert index >= 0 && index*3 < triplets.length : "Index is out of bound";
+      DatanodeDescriptor node = (DatanodeDescriptor)triplets[index*3];
+      assert node == null || 
+          DatanodeDescriptor.class.getName().equals(node.getClass().getName()) : 
+                "DatanodeDescriptor is expected at " + index*3;
+      return node;
+    }
+
+    BlockInfo getPrevious(int index) {
+      assert this.triplets != null : "BlockInfo is not initialized";
+      assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
+      BlockInfo info = (BlockInfo)triplets[index*3+1];
+      assert info == null || 
+          BlockInfo.class.getName().equals(info.getClass().getName()) : 
+                "BlockInfo is expected at " + index*3;
+      return info;
+    }
+
+    BlockInfo getNext(int index) {
+      assert this.triplets != null : "BlockInfo is not initialized";
+      assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
+      BlockInfo info = (BlockInfo)triplets[index*3+2];
+      assert info == null || 
+          BlockInfo.class.getName().equals(info.getClass().getName()) : 
+                "BlockInfo is expected at " + index*3;
+      return info;
+    }
+
+    void setDatanode(int index, DatanodeDescriptor node) {
+      assert this.triplets != null : "BlockInfo is not initialized";
+      assert index >= 0 && index*3 < triplets.length : "Index is out of bound";
+      triplets[index*3] = node;
+    }
+
+    void setPrevious(int index, BlockInfo to) {
+      assert this.triplets != null : "BlockInfo is not initialized";
+      assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
+      triplets[index*3+1] = to;
+    }
+
+    void setNext(int index, BlockInfo to) {
+      assert this.triplets != null : "BlockInfo is not initialized";
+      assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
+      triplets[index*3+2] = to;
+    }
+
+    private int getCapacity() {
+      assert this.triplets != null : "BlockInfo is not initialized";
+      assert triplets.length % 3 == 0 : "Malformed BlockInfo";
+      return triplets.length / 3;
+    }
+
+    /**
+     * Ensure that there is enough  space to include num more triplets.
+     *      * @return first free triplet index.
+     */
+    private int ensureCapacity(int num) {
+      assert this.triplets != null : "BlockInfo is not initialized";
+      int last = numNodes();
+      if(triplets.length >= (last+num)*3)
+        return last;
+      /* Not enough space left. Create a new array. Should normally 
+       * happen only when replication is manually increased by the user. */
+      Object[] old = triplets;
+      triplets = new Object[(last+num)*3];
+      for(int i=0; i < last*3; i++) {
+        triplets[i] = old[i];
+      }
+      return last;
+    }
+
+    /**
+     * Count the number of data-nodes the block belongs to.
+     */
+    int numNodes() {
+      assert this.triplets != null : "BlockInfo is not initialized";
+      assert triplets.length % 3 == 0 : "Malformed BlockInfo";
+      for(int idx = getCapacity()-1; idx >= 0; idx--) {
+        if(getDatanode(idx) != null)
+          return idx+1;
+      }
+      return 0;
+    }
+
+    /**
+     * Add data-node this block belongs to.
+     */
+    boolean addNode(DatanodeDescriptor node) {
+      int dnIndex = this.findDatanode(node);
+      if(dnIndex >= 0) // the node is already there
+        return false;
+      // find the last null node
+      int lastNode = ensureCapacity(1);
+      setDatanode(lastNode, node);
+      setNext(lastNode, null); 
+      setPrevious(lastNode, null); 
+      return true;
+    }
+
+    /**
+     * Remove data-node from the block.
+     */
+    boolean removeNode(DatanodeDescriptor node) {
+      int dnIndex = this.findDatanode(node);
+      if(dnIndex < 0) // the node is not found
+        return false;
+      // find the last not null node
+      int lastNode = numNodes()-1; 
+      // replace current node triplet by the lastNode one 
+      setDatanode(dnIndex, getDatanode(lastNode));
+      setNext(dnIndex, getNext(lastNode)); 
+      setPrevious(dnIndex, getPrevious(lastNode)); 
+      // set the last triplet to null
+      setDatanode(lastNode, null);
+      setNext(lastNode, null); 
+      setPrevious(lastNode, null); 
+      return true;
+    }
+
+    /**
+     * Find specified DatanodeDescriptor.
+     * @param dn
+     * @return index or -1 if not found.
+     */
+    int findDatanode(DatanodeDescriptor dn) {
+      int len = getCapacity();
+      for(int idx = 0; idx < len; idx++) {
+        DatanodeDescriptor cur = getDatanode(idx);
+        if(cur == dn)
+          return idx;
+        if(cur == null)
+          break;
+      }
+      return -1;
+    }
+
+    /**
+     * Insert this block into the head of the list of blocks 
+     * related to the specified DatanodeDescriptor.
+     * If the head is null then form a new list.
+     * @return current block as the new head of the list.
+     */
+    BlockInfo listInsert(BlockInfo head, DatanodeDescriptor dn) {
+      int dnIndex = this.findDatanode(dn);
+      assert dnIndex >= 0 : "Data node is not found: current";
+      this.setPrevious(dnIndex, null);
+      this.setNext(dnIndex, head);
+      if(head != null) {
+        int headDNIndex = head.findDatanode(dn);
+        assert headDNIndex >= 0 : "Data node is not found: head";
+        head.setPrevious(headDNIndex, this);
+      }
+      return this;
+    }
+
+    /**
+     * Remove this block from the list of blocks 
+     * related to the specified DatanodeDescriptor.
+     * If this block is the head of the list then return the next block as 
+     * the new head.
+     * @return the new head of the list or null if the list becomes
+     * empy after deletion.
+     */
+    BlockInfo listRemove(BlockInfo head, DatanodeDescriptor dn) {
+      if(head == null)
+        return null;
+      int dnIndex = this.findDatanode(dn);
+      if(dnIndex < 0) // this block is not on the data-node list
+        return head;
+
+      BlockInfo next = this.getNext(dnIndex);
+      BlockInfo prev = this.getPrevious(dnIndex);
+      this.setNext(dnIndex, null);
+      this.setPrevious(dnIndex, null);
+      if(prev != null) {
+        int prevDNIndex = prev.findDatanode(dn);
+        assert prevDNIndex >= 0 : "Data node is not found: previous";
+        prev.setNext(prevDNIndex, next);
+      }
+      if(next != null) {
+        int nextDNIndex = next.findDatanode(dn);
+        assert nextDNIndex >= 0 : "Data node is not found: next";
+        next.setPrevious(nextDNIndex, prev);
+      }
+      if(this == head)  // removing the head
+        head = next;
+      return head;
+    }
+
+    int listCount(DatanodeDescriptor dn) {
+      int count = 0;
+      for(BlockInfo cur = this; cur != null;
+            cur = cur.getNext(cur.findDatanode(dn)))
+        count++;
+      return count;
     }
   }
-      
+
   private static class NodeIterator implements Iterator<DatanodeDescriptor> {
-    NodeIterator(DatanodeDescriptor[] nodes) {
-      arr = nodes;
-    }
-    private DatanodeDescriptor[] arr;
+    private BlockInfo blockInfo;
     private int nextIdx = 0;
       
+    NodeIterator(BlockInfo blkInfo) {
+      this.blockInfo = blkInfo;
+    }
+
     public boolean hasNext() {
-      return arr != null && nextIdx < arr.length && arr[nextIdx] != null;
+      return blockInfo != null && nextIdx < blockInfo.getCapacity()
+              && blockInfo.getDatanode(nextIdx) != null;
     }
-      
+
     public DatanodeDescriptor next() {
-      return arr[nextIdx++];
+      return blockInfo.getDatanode(nextIdx++);
     }
-      
+
     public void remove()  {
       throw new UnsupportedOperationException("Sorry. can't remove.");
     }
   }
-      
+
   private Map<Block, BlockInfo> map = new HashMap<Block, BlockInfo>();
-      
-  /** add BlockInfo if mapping does not exist. */
-  private BlockInfo checkBlockInfo(Block b) {
+
+  /**
+   * Add BlockInfo if mapping does not exist. */
+  private BlockInfo checkBlockInfo(Block b, int replication) {
     BlockInfo info = map.get(b);
     if (info == null) {
-      info = new BlockInfo(b);
+      info = new BlockInfo(b, replication);
       map.put(b, info);
     }
     return info;
   }
-      
-  public INodeFile getINode(Block b) {
+
+  INodeFile getINode(Block b) {
     BlockInfo info = map.get(b);
     return (info != null) ? info.inode : null;
   }
-          
-  public void addINode(Block b, INodeFile iNode) {
-    BlockInfo info = checkBlockInfo(b);
+
+  /**
+   * Add block b belonging to the specified file inode to the map.
+   */
+  BlockInfo addINode(Block b, INodeFile iNode) {
+    BlockInfo info = checkBlockInfo(b, iNode.getReplication());
     info.inode = iNode;
+    return info;
   }
-    
+
+  /**
+   * Remove INode reference from block b.
+   * Remove the block from the block map
+   * only if it does not belong to any file and data-nodes.
+   */
   public void removeINode(Block b) {
     BlockInfo info = map.get(b);
     if (info != null) {
       info.inode = null;
-      if (info.nodes == null) {
-        map.remove(b);
+      if (info.getDatanode(0) == null) {  // no datanodes left
+        map.remove(b);  // remove block from the map
       }
     }
   }
-      
+
   /** Returns the block object it it exists in the map. */
-  public Block getStoredBlock(Block b) {
-    BlockInfo info = map.get(b);
-    return (info != null) ? info : null;
+  BlockInfo getStoredBlock(Block b) {
+    return map.get(b);
   }
-    
+
   /** Returned Iterator does not support. */
-  public Iterator<DatanodeDescriptor> nodeIterator(Block b) {
-    BlockInfo info = map.get(b);
-    return new NodeIterator((info != null) ? info.nodes : null);
+  Iterator<DatanodeDescriptor> nodeIterator(Block b) {
+    return new NodeIterator(map.get(b));
   }
-    
+
   /** counts number of containing nodes. Better than using iterator. */
-  public int numNodes(Block b) {
-    int count = 0;
+  int numNodes(Block b) {
     BlockInfo info = map.get(b);
-    if (info != null && info.nodes != null) {
-      count = info.nodes.length;
-      while (info.nodes[ count-1 ] == null) {// mostly false
-        count--;
-      }
-    }
-    return count;
+    return info == null ? 0 : info.numNodes();
   }
-      
+
   /** returns true if the node does not already exists and is added.
    * false if the node already exists.*/
-  public boolean addNode(Block b, 
-                         DatanodeDescriptor node,
-                         int replicationHint) {
-    BlockInfo info = checkBlockInfo(b);
-    if (info.nodes == null) {
-      info.nodes = new DatanodeDescriptor[ replicationHint ];
-    }
-      
-    DatanodeDescriptor[] arr = info.nodes;
-    for(int i=0; i < arr.length; i++) {
-      if (arr[i] == null) {
-        arr[i] = node;
-        return true;
-      }
-      if (arr[i] == node) {
-        return false;
-      }
-    }
-
-    /* Not enough space left. Create a new array. Should normally 
-     * happen only when replication is manually increased by the user. */
-    info.nodes = new DatanodeDescriptor[ arr.length + 1 ];
-    for(int i=0; i < arr.length; i++) {
-      info.nodes[i] = arr[i];
-    }
-    info.nodes[ arr.length ] = node;
-    return true;
+  boolean addNode(Block b, DatanodeDescriptor node, int replication) {
+    // insert into the map if not there yet
+    BlockInfo info = checkBlockInfo(b, replication);
+    // add node to the block info
+    boolean added = info.addNode(node);
+    // add to the data-node list
+    node.addBlock(info);
+    return added;
   }
-    
-  public boolean removeNode(Block b, DatanodeDescriptor node) {
-    BlockInfo info = map.get(b);
-    if (info == null || info.nodes == null) {
-      return false;
-    }
 
-    boolean removed = false;
-    // swap lastNode and node's location. set lastNode to null.
-    DatanodeDescriptor[] arr = info.nodes;
-    int lastNode = -1;
-    for(int i=arr.length-1; i >= 0; i--) {
-      if (lastNode < 0 && arr[i] != null) {
-        lastNode = i;
-      }
-      if (arr[i] == node) {
-        arr[i] = arr[ lastNode ];
-        arr[ lastNode ] = null;
-        removed = true;
-        break;
-      }
-    }
-        
-    /*
-     * if ((lastNode + 1) < arr.length/4) {
-     *    we could trim the array.
-     * } 
-     */
-    if (arr[0] == null) { // no datanodes left.
-      info.nodes = null;
-      if (info.inode == null) {
-        map.remove(b);
-      }
+  /**
+   * Remove data-node reference from the block.
+   * Remove the block from the block map
+   * only if it does not belong to any file and data-nodes.
+   */
+  boolean removeNode(Block b, DatanodeDescriptor node) {
+    BlockInfo info = map.get(b);
+    if (info == null)
+      return false;
+    // first remove block from the data-node list
+    node.removeBlock(info);
+    // remove node from the block info
+    boolean removed = info.removeNode(node);
+    if (info.getDatanode(0) == null     // no datanodes left
+              && info.inode == null) {  // does not belong to a file
+      map.remove(b);  // remove block from the map
     }
     return removed;
   }
 
-  public int size() {
+  int size() {
     return map.size();
   }
 }
