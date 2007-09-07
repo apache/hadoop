@@ -31,6 +31,7 @@ Trunk (unreleased changes)
     HADOOP-1821 Replace all String.getBytes() with String.getBytes("UTF-8")
     HADOOP-1832 listTables() returns duplicate tables
     HADOOP-1834 Scanners ignore timestamp passed on creation
+    HADOOP-1847 Many HBase tests do not fail well.
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable
@@ -39,6 +40,7 @@ Trunk (unreleased changes)
                 filter types
     HADOOP-1760 Use new MapWritable and SortedMapWritable classes from
                 org.apache.hadoop.io
+    HADOOP-1793 (Phase 1) Remove TestHClient
     HADOOP-1794 Remove deprecated APIs
     HADOOP-1802 Startup scripts should wait until hdfs as cleared 'safe mode'
     HADOOP-1835 Updated Documentation for HBase setup/installation

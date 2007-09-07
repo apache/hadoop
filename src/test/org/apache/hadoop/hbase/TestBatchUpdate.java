@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
 import java.util.TreeMap;
@@ -35,8 +36,9 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
   private HTableDescriptor desc = null;
   private HTable table = null;
 
-  /** constructor 
-   * @throws UnsupportedEncodingException */
+  /**
+   * @throws UnsupportedEncodingException
+   */
   public TestBatchUpdate() throws UnsupportedEncodingException {
     value = "abcd".getBytes(HConstants.UTF8_ENCODING);
   }
@@ -49,19 +51,15 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
     super.setUp();
     this.desc = new HTableDescriptor("test");
     desc.addFamily(new HColumnDescriptor(CONTENTS_STR));
-    try {
-      HBaseAdmin admin = new HBaseAdmin(conf);
-      admin.createTable(desc);
-      table = new HTable(conf, desc.getName());
-      
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail();
-    }
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    admin.createTable(desc);
+    table = new HTable(conf, desc.getName());
   }
 
-  /** the test case */
-  public void testBatchUpdate() {
+  /**
+   * @throws IOException
+   */
+  public void testBatchUpdate() throws IOException {
     try {
       table.commit(-1L);
       
@@ -75,36 +73,31 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
     long lockid = table.startUpdate(new Text("row1"));
     
     try {
-      try {
-        @SuppressWarnings("unused")
-        long dummy = table.startUpdate(new Text("row2"));
-      } catch (IllegalStateException e) {
-        // expected
-      } catch (Exception e) {
-        e.printStackTrace();
-        fail();
-      }
-      table.put(lockid, CONTENTS, value);
-      table.delete(lockid, CONTENTS);
-      table.commit(lockid);
-      
-      lockid = table.startUpdate(new Text("row2"));
-      table.put(lockid, CONTENTS, value);
-      table.commit(lockid);
- 
-      Text[] columns = { CONTENTS };
-      HScannerInterface scanner = table.obtainScanner(columns, new Text());
-      HStoreKey key = new HStoreKey();
-      TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-      while(scanner.next(key, results)) {
-        for(Map.Entry<Text, byte[]> e: results.entrySet()) {
-          System.out.println(key + ": row: " + e.getKey() + " value: " + 
-              new String(e.getValue(), HConstants.UTF8_ENCODING));
-        }
-      }
+      @SuppressWarnings("unused")
+      long dummy = table.startUpdate(new Text("row2"));
+    } catch (IllegalStateException e) {
+      // expected
     } catch (Exception e) {
       e.printStackTrace();
       fail();
+    }
+    table.put(lockid, CONTENTS, value);
+    table.delete(lockid, CONTENTS);
+    table.commit(lockid);
+
+    lockid = table.startUpdate(new Text("row2"));
+    table.put(lockid, CONTENTS, value);
+    table.commit(lockid);
+
+    Text[] columns = { CONTENTS };
+    HScannerInterface scanner = table.obtainScanner(columns, new Text());
+    HStoreKey key = new HStoreKey();
+    TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+    while(scanner.next(key, results)) {
+      for(Map.Entry<Text, byte[]> e: results.entrySet()) {
+        System.out.println(key + ": row: " + e.getKey() + " value: " + 
+            new String(e.getValue(), HConstants.UTF8_ENCODING));
+      }
     }
   }
 }

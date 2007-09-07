@@ -587,7 +587,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
   }
 
   // NOTE: This test depends on testBatchWrite succeeding
-  void splitAndMerge() throws IOException {
+  private void splitAndMerge() throws IOException {
     Text midKey = new Text();
 
     if(region.needsSplit(midKey)) {
@@ -829,8 +829,10 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     } catch (IOException e) {
       e.printStackTrace();
     }
-    cluster.shutdown();
-    cluster = null;
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
 
     // Delete all the DFS files
 

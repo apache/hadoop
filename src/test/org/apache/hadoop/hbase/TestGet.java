@@ -172,10 +172,6 @@ public class TestGet extends HBaseTestCase {
       r.close();
       log.closeAndDelete();
       
-    } catch(IOException e) {
-      e.printStackTrace();
-      throw e;
-      
     } finally {
       if(cluster != null) {
         cluster.shutdown();

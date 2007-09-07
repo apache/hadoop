@@ -108,10 +108,6 @@ public class TestScanner extends HBaseTestCase {
           results.clear();
         }
 
-      } catch(IOException e) {
-        e.printStackTrace();
-        throw e;
-      
       } finally {
         if(scanner != null) {
           scanner.close();
@@ -258,9 +254,6 @@ public class TestScanner extends HBaseTestCase {
       
       region.close();
       log.closeAndDelete();
-    } catch(IOException e) {
-      e.printStackTrace();
-      throw e;
       
     } finally {
       if(cluster != null) {
