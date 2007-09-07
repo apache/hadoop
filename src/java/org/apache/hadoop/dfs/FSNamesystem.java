@@ -182,6 +182,8 @@ class FSNamesystem implements FSConstants {
   private long replicationRecheckInterval;
   //decommissionRecheckInterval is how often namenode checks if a node has finished decommission
   private long decommissionRecheckInterval;
+  // default block size of a file
+  private long defaultBlockSize = 0;
   static int replIndex = 0; // last datanode used for replication work
   static int REPL_WORK_PER_ITERATION = 32; // max percent datanodes per iteration
 
@@ -200,7 +202,7 @@ class FSNamesystem implements FSConstants {
   private Daemon dnthread = null;
 
   /**
-   * dirs is a list oif directories where the filesystem directory state 
+   * dirs is a list of directories where the filesystem directory state 
    * is stored
    */
   public FSNamesystem(String hostname,
@@ -306,6 +308,7 @@ class FSNamesystem implements FSConstants {
     this.decommissionRecheckInterval = conf.getInt(
                                                    "dfs.namenode.decommission.interval",
                                                    5 * 60 * 1000);    
+    this.defaultBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
   }
 
   /** Return the FSNamesystem object
@@ -314,7 +317,7 @@ class FSNamesystem implements FSConstants {
   public static FSNamesystem getFSNamesystem() {
     return fsNamesystemObject;
   } 
-    
+
   NamespaceInfo getNamespaceInfo() {
     return new NamespaceInfo(dir.fsImage.getNamespaceID(),
                              dir.fsImage.getCTime(),
@@ -401,6 +404,10 @@ class FSNamesystem implements FSConstants {
 
     out.flush();
     out.close();
+  }
+
+  long getDefaultBlockSize() {
+    return defaultBlockSize;
   }
     
   /* get replication factor of a block */

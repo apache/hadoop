@@ -19,6 +19,9 @@ Trunk (unreleased changes)
     HADOOP-1656.  The blockSize of a file is stored persistently in the file
     inode. (Dhruba Borthakur via dhruba)
 
+    HADOOP-1838.  The blocksize of files created with an earlier release is
+    set to the default block size.  (Dhruba Borthakur via dhruba)
+
   NEW FEATURES
 
     HADOOP-1636.  Allow configuration of the number of jobs kept in

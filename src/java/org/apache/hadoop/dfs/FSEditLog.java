@@ -27,6 +27,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.lang.Math;
 
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.UTF8;
@@ -282,15 +283,17 @@ class FSEditLog {
 
             // Older versions of HDFS does not store the block size in inode.
             // If the file has more than one block, use the size of the
-            // first block as the blocksize. Otherwise leave the blockSize as 0
-            // to indicate that we do not really know the "true" blocksize of 
-            // this file.
-            if (-7 <= logVersion) {
-              assert blockSize == 0;
+            // first block as the blocksize. Otherwise use the default
+            // block size.
+            if (-8 <= logVersion && blockSize == 0) {
               if (blocks.length > 1) {
                 blockSize = blocks[0].getNumBytes();
+              } else {
+                long first = ((blocks.length == 1)? blocks[0].getNumBytes(): 0);
+                blockSize = Math.max(fsNamesys.getDefaultBlockSize(), first);
               }
             }
+
             // add to the file tree
             fsDir.unprotectedAddFile(name.toString(), blocks, replication, 
                                      mtime, blockSize);

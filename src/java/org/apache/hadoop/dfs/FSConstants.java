@@ -156,7 +156,7 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -8;
+  public static final int LAYOUT_VERSION = -9;
   // Current version: 
-  // added blocksize to inode
+  // files with one block uses the default blocksize
 }

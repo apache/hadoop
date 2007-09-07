@@ -35,6 +35,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.lang.Math;
 
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
 import org.apache.hadoop.dfs.FSConstants.NodeType;
@@ -693,13 +694,14 @@ class FSImage extends Storage {
         }
         // Older versions of HDFS does not store the block size in inode.
         // If the file has more than one block, use the size of the 
-        // first block as the blocksize. Otherwise leave the blockSize as 0
-        // to indicate that we do not really know the "true" blocksize of this
-        // file.
-        if (-7 <= imgVersion) {
-          assert blockSize == 0;
+        // first block as the blocksize. Otherwise use the default block size.
+        //
+        if (-8 <= imgVersion && blockSize == 0) {
           if (numBlocks > 1) {
             blockSize = blocks[0].getNumBytes();
+          } else {
+            long first = ((numBlocks == 1) ? blocks[0].getNumBytes(): 0);
+            blockSize = Math.max(fsNamesys.getDefaultBlockSize(), first);
           }
         }
         fsDir.unprotectedAddFile(name.toString(), blocks, replication,
