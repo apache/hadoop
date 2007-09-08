@@ -46,16 +46,18 @@ public class TestHStoreFile extends TestCase {
   private Configuration conf;
   private Path dir = null;
   
+  /** {@inheritDoc} */
   @Override
-  protected void setUp() throws Exception {
+  public void setUp() throws Exception {
     super.setUp();
     this.conf = new HBaseConfiguration();
     this.fs = FileSystem.getLocal(this.conf);
     this.dir = new Path(DIR, getName());
   }
   
+  /** {@inheritDoc} */
   @Override
-  protected void tearDown() throws Exception {
+  public void tearDown() throws Exception {
     if (this.fs.exists(this.dir)) {
       this.fs.delete(this.dir);
     }

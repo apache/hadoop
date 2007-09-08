@@ -25,11 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /** Tests table creation restrictions*/
 public class TestTable extends HBaseClusterTestCase {
-  /** constructor */
-  public TestTable() {
-    super(true);
-  }
-
   /**
    * the test
    * @throws IOException

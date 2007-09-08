@@ -43,11 +43,6 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
   static final Logger LOG =
     Logger.getLogger(TestHRegion.class.getName());
   
-  /** Constructor */
-  public TestHRegion() {
-    super();
-  }
-  
   /**
    * Since all the "tests" depend on the results of the previous test, they are
    * not Junit tests that can stand alone. Consequently we have a single Junit

@@ -32,6 +32,7 @@ Trunk (unreleased changes)
     HADOOP-1832 listTables() returns duplicate tables
     HADOOP-1834 Scanners ignore timestamp passed on creation
     HADOOP-1847 Many HBase tests do not fail well.
+    HADOOP-1847 Many HBase tests do not fail well. (phase 2)
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable

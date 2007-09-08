@@ -35,11 +35,6 @@ public class TestListTables extends HBaseClusterTestCase {
       new HTableDescriptor("table3")
   };
   
-  /** constructor */
-  public TestListTables() {
-    super();
-  }
-
   /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
