@@ -55,12 +55,6 @@ public class TestHMemcache extends TestCase {
     this.conf = new HBaseConfiguration();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void tearDown() throws Exception {
-    super.tearDown();
-  }
-
   private Text getRowName(final int index) {
     return new Text("row" + Integer.toString(index));
   }

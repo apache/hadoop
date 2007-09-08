@@ -57,12 +57,6 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     cleanup();
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void tearDown() throws Exception {
-    super.tearDown();
-  }
-
   private static final int FIRST_ROW = 1;
   private static final int NUM_VALS = 1000;
   private static final Text CONTENTS = new Text("contents:");

@@ -47,19 +47,24 @@ public abstract class HBaseTestCase extends TestCase {
   }
   
   protected volatile Configuration conf;
-  
-  protected HBaseTestCase() {
+
+  /** constructor */
+  public HBaseTestCase() {
     super();
     conf = new HBaseConfiguration();
   }
   
-  protected HBaseTestCase(String name) {
+  /**
+   * @param name
+   */
+  public HBaseTestCase(String name) {
     super(name);
     conf = new HBaseConfiguration();
   }
   
+  /** {@inheritDoc} */
   @Override
-  protected void setUp() throws Exception {
+  public void setUp() throws Exception {
     super.setUp();
     this.testDir = getUnitTestdir(getName());
     this.localFs = FileSystem.getLocal(this.conf);
@@ -68,8 +73,9 @@ public abstract class HBaseTestCase extends TestCase {
     }
   }
   
+  /** {@inheritDoc} */
   @Override
-  protected void tearDown() throws Exception {
+  public void tearDown() throws Exception {
     if (this.localFs != null && this.testDir != null &&
         this.localFs.exists(testDir)) {
       this.localFs.delete(testDir);

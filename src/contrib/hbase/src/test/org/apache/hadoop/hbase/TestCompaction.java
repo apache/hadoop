@@ -30,18 +30,6 @@ import org.apache.commons.logging.LogFactory;
 public class TestCompaction extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
 
-  /** {@inheritDoc} */
-  @Override
-  public void setUp() throws Exception {
-    super.setUp();
-  }
-  
-  /** {@inheritDoc} */
-  @Override
-  public void tearDown() throws Exception {
-    super.tearDown();
-  }
-  
   /**
    * Run compaction and flushing memcache
    * @throws Exception

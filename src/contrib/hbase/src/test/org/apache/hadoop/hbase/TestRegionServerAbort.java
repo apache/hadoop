@@ -43,14 +43,6 @@ public class TestRegionServerAbort extends HBaseClusterTestCase {
   }
   
   /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void setUp() throws Exception {
-    super.setUp();
-  }
-  
-  /**
    * The test
    * @throws IOException
    */

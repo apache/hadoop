@@ -28,26 +28,42 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
   final boolean miniHdfs;
   int regionServers;
   
-  protected HBaseClusterTestCase() {
+  /**
+   * constructor
+   */
+  public HBaseClusterTestCase() {
     this(true);
   }
   
-  protected HBaseClusterTestCase(int regionServers) {
+  /**
+   * @param regionServers
+   */
+  public HBaseClusterTestCase(int regionServers) {
     this(true);
     this.regionServers = regionServers;
   }
 
-  protected HBaseClusterTestCase(String name) {
+  /**
+   * @param name
+   */
+  public HBaseClusterTestCase(String name) {
     this(name, true);
   }
   
-  protected HBaseClusterTestCase(final boolean miniHdfs) {
+  /**
+   * @param miniHdfs
+   */
+  public HBaseClusterTestCase(final boolean miniHdfs) {
     super();
     this.miniHdfs = miniHdfs;
     this.regionServers = 1;
   }
 
-  protected HBaseClusterTestCase(String name, final boolean miniHdfs) {
+  /**
+   * @param name
+   * @param miniHdfs
+   */
+  public HBaseClusterTestCase(String name, final boolean miniHdfs) {
     super(name);
     this.miniHdfs = miniHdfs;
     this.regionServers = 1;
