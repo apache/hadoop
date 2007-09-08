@@ -310,6 +310,32 @@ public class MiniHBaseCluster implements HConstants {
   }
   
   /**
+   * Wait for Mini HBase Cluster to shut down.
+   */
+  public void join() {
+    if (regionThreads != null) {
+      synchronized(regionThreads) {
+        for(Thread t: regionThreads) {
+          if (t.isAlive()) {
+            try {
+              t.join();
+            } catch (InterruptedException e) {
+              // continue
+            }
+          }
+        }
+      }
+    }
+    if (masterThread != null && masterThread.isAlive()) {
+      try {
+        masterThread.join();
+      } catch(InterruptedException e) {
+        // continue
+      }
+    }
+  }
+  
+  /**
    * Shut down HBase cluster started by calling
    * {@link #startMaster(Configuration)} and then
    * {@link #startRegionServers(Configuration, int)};

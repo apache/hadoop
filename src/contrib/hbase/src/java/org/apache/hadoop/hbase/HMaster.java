@@ -56,6 +56,7 @@ import org.apache.hadoop.ipc.Server;
 
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
 
 
@@ -102,7 +103,8 @@ HMasterRegionInterface, Runnable {
 
   long metaRescanInterval;
 
-  final AtomicReference<HServerAddress> rootRegionLocation;
+  final AtomicReference<HServerAddress> rootRegionLocation =
+    new AtomicReference<HServerAddress>();
   
   Lock splitLogLock = new ReentrantLock();
 
@@ -359,8 +361,10 @@ HMasterRegionInterface, Runnable {
       for (Text family: split.getTableDesc().families().keySet()) {
         Path p = HStoreFile.getMapDir(fs.makeQualified(dir),
             split.getRegionName(), HStoreKey.extractFamily(family));
+
         // Look for reference files.  Call listPaths with an anonymous
         // instance of PathFilter.
+
         Path [] ps = fs.listPaths(p,
             new PathFilter () {
               public boolean accept(Path path) {
@@ -368,7 +372,7 @@ HMasterRegionInterface, Runnable {
               }
             }
         );
-        
+
         if (ps != null && ps.length > 0) {
           result = true;
           break;
@@ -393,7 +397,7 @@ HMasterRegionInterface, Runnable {
     }
 
     protected void checkAssigned(final HRegionInfo info,
-        final String serverName, final long startCode) {
+        final String serverName, final long startCode) throws IOException {
       
       // Skip region - if ...
       if(info.offLine                                     // offline
@@ -445,6 +449,7 @@ HMasterRegionInterface, Runnable {
             
           } catch (IOException e) {
             LOG.warn("unable to split region server log because: ", e);
+            throw e;
           }
         }
         
@@ -512,6 +517,14 @@ HMasterRegionInterface, Runnable {
           // at least log it rather than go out silently.
           LOG.error("Unexpected exception", e);
         }
+        
+        // We ran out of tries. Make sure the file system is still available
+        
+        if (!FSUtils.isFileSystemAvailable(fs)) {
+          LOG.fatal("Shutting down hbase cluster: file system not available");
+          closed = true;
+        }
+        
         if (!closed) {
           // sleep before retry
 
@@ -675,6 +688,13 @@ HMasterRegionInterface, Runnable {
           LOG.error("Unexpected exception", e);
         }
         
+        // We ran out of tries. Make sure the file system is still available
+        
+        if (!FSUtils.isFileSystemAvailable(fs)) {
+          LOG.fatal("Shutting down hbase cluster: file system not available");
+          closed = true;
+        }
+        
         if (!closed) {
           // sleep before retry
           try {
@@ -829,46 +849,56 @@ HMasterRegionInterface, Runnable {
    * @throws IOException
    */
   public HMaster(Path dir, HServerAddress address, Configuration conf)
-  throws IOException {
+    throws IOException {
+    
     this.closed = true;
     this.dir = dir;
     this.conf = conf;
     this.fs = FileSystem.get(conf);
     this.rand = new Random();
-
-    // Make sure the root directory exists!
-    if(! fs.exists(dir)) {
-      fs.mkdirs(dir);
-    }
-
+    
     Path rootRegionDir =
       HRegion.getRegionDir(dir, HGlobals.rootRegionInfo.regionName);
     LOG.info("Root region dir: " + rootRegionDir.toString());
 
-    if (!fs.exists(rootRegionDir)) {
-      LOG.info("bootstrap: creating ROOT and first META regions");
-      try {
-        HRegion root = HRegion.createHRegion(HGlobals.rootRegionInfo, this.dir,
-            this.conf, null);
-        
-        HRegion meta =
-          HRegion.createHRegion(new HRegionInfo(1L, HGlobals.metaTableDesc,
-              null, null), this.dir, this.conf, null);
-        
-        // Add first region from the META table to the ROOT region.
-        
-        HRegion.addRegionToMETA(root, meta);
-        root.close();
-        root.getLog().closeAndDelete();
-        meta.close();
-        meta.getLog().closeAndDelete();
-      
-      } catch (IOException e) {
-        if (e instanceof RemoteException) {
-          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-        }
-        LOG.error("bootstrap", e);
+    try {
+
+      // Make sure the root directory exists!
+
+      if(! fs.exists(dir)) {
+        fs.mkdirs(dir);
       }
+
+      if (!fs.exists(rootRegionDir)) {
+        LOG.info("bootstrap: creating ROOT and first META regions");
+        try {
+          HRegion root = HRegion.createHRegion(HGlobals.rootRegionInfo, this.dir,
+              this.conf, null);
+
+          HRegion meta =
+            HRegion.createHRegion(new HRegionInfo(1L, HGlobals.metaTableDesc,
+                null, null), this.dir, this.conf, null);
+
+          // Add first region from the META table to the ROOT region.
+
+          HRegion.addRegionToMETA(root, meta);
+          root.close();
+          root.getLog().closeAndDelete();
+          meta.close();
+          meta.getLog().closeAndDelete();
+
+        } catch (IOException e) {
+          if (e instanceof RemoteException) {
+            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+          }
+          LOG.error("bootstrap", e);
+          throw e;
+        }
+      }
+      
+    } catch (IOException e) {
+      LOG.fatal("Not starting HMaster because:", e);
+      return;
     }
 
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
@@ -898,7 +928,6 @@ HMasterRegionInterface, Runnable {
 
     // The root region
 
-    this.rootRegionLocation = new AtomicReference<HServerAddress>();
     this.rootScanned = false;
     this.rootScanner = new RootScanner();
     this.rootScannerThread = new Thread(rootScanner, "HMaster.rootScanner");
@@ -1038,8 +1067,14 @@ HMasterRegionInterface, Runnable {
                 (RemoteException) ex);
 
           } catch (IOException e) {
+            ex = e;
             LOG.warn("main processing loop: " + op.toString(), e);
           }
+        }
+        if (!FSUtils.isFileSystemAvailable(fs)) {
+          LOG.fatal("Shutting down hbase cluster: file system not available");
+          closed = true;
+          break;
         }
         LOG.warn("Processing pending operations: " + op.toString(), ex);
         try {
@@ -2627,6 +2662,13 @@ HMasterRegionInterface, Runnable {
 
         } catch (IOException e) {
           if (tries == numRetries - 1) {
+            // No retries left
+            
+            if (!FSUtils.isFileSystemAvailable(fs)) {
+              LOG.fatal("Shutting down hbase cluster: file system not available");
+              closed = true;
+            }
+
             if (e instanceof RemoteException) {
               e = RemoteExceptionHandler.decodeRemoteException(
                   (RemoteException) e);
@@ -2692,7 +2734,7 @@ HMasterRegionInterface, Runnable {
 
     @Override
     protected void postProcessMeta(MetaRegion m, HRegionInterface server)
-    throws IOException {
+      throws IOException {
       
       // Process regions not being served
       
@@ -2719,32 +2761,9 @@ HMasterRegionInterface, Runnable {
         updateRegionInfo(b, i);
         b.delete(lockid, COL_SERVER);
         b.delete(lockid, COL_STARTCODE);
-
-        for (int tries = 0; tries < numRetries; tries++) {
-          try {
-            server.batchUpdate(m.getRegionName(), System.currentTimeMillis(), b);
-            
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("updated columns in row: " + i.regionName);
-            }
-            break;
-
-          } catch (IOException e) {
-            if (tries == numRetries - 1) {
-              if (e instanceof RemoteException) {
-                e = RemoteExceptionHandler.decodeRemoteException(
-                    (RemoteException) e);
-              }
-              LOG.error("column update failed in row: " + i.regionName, e);
-              break;
-            }
-          }
-          try {
-            Thread.sleep(threadWakeFrequency);
-
-          } catch (InterruptedException e) {
-            // continue
-          }
+        server.batchUpdate(m.getRegionName(), System.currentTimeMillis(), b);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("updated columns in row: " + i.regionName);
         }
 
         if (online) {                           // Bring offline regions on-line
@@ -2795,7 +2814,7 @@ HMasterRegionInterface, Runnable {
     }
 
     protected void updateRegionInfo(final BatchUpdate b, final HRegionInfo i)
-    throws IOException {
+      throws IOException {
       
       i.offLine = !online;
       b.put(lockid, COL_REGIONINFO, Writables.getBytes(i));
@@ -2815,7 +2834,7 @@ HMasterRegionInterface, Runnable {
 
     @Override
     protected void postProcessMeta(MetaRegion m, HRegionInterface server)
-    throws IOException {
+      throws IOException {
 
       // For regions that are being served, mark them for deletion      
       
@@ -2853,6 +2872,7 @@ HMasterRegionInterface, Runnable {
   }
 
   private abstract class ColumnOperation extends TableOperation {
+    
     protected ColumnOperation(Text tableName) throws IOException {
       super(tableName);
     }
@@ -2874,31 +2894,9 @@ HMasterRegionInterface, Runnable {
       BatchUpdate b = new BatchUpdate(rand.nextLong());
       long lockid = b.startUpdate(i.regionName);
       b.put(lockid, COL_REGIONINFO, Writables.getBytes(i));
-      
-      for (int tries = 0; tries < numRetries; tries++) {
-        try {
-          server.batchUpdate(regionName, System.currentTimeMillis(), b);
-        
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("updated columns in row: " + i.regionName);
-          }
-          break;
-        
-        } catch (IOException e) {
-          if (tries == numRetries - 1) {
-            if (e instanceof RemoteException) {
-              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-            }
-            LOG.error("column update failed in row: " + i.regionName, e);
-            break;
-          }
-        }
-        try {
-          Thread.sleep(threadWakeFrequency);
-          
-        } catch (InterruptedException e) {
-          // continue
-        }
+      server.batchUpdate(regionName, System.currentTimeMillis(), b);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("updated columns in row: " + i.regionName);
       }
     }
   }
@@ -2914,7 +2912,7 @@ HMasterRegionInterface, Runnable {
 
     @Override
     protected void postProcessMeta(MetaRegion m, HRegionInterface server)
-    throws IOException {
+      throws IOException {
 
       for (HRegionInfo i: unservedRegions) {
         i.tableDesc.families().remove(columnName);
@@ -2922,27 +2920,8 @@ HMasterRegionInterface, Runnable {
 
         // Delete the directories used by the column
 
-        try {
-          fs.delete(HStoreFile.getMapDir(dir, i.regionName, columnName));
-
-        } catch (IOException e) {
-          if (e instanceof RemoteException) {
-            e = RemoteExceptionHandler.decodeRemoteException(
-                (RemoteException) e);
-          }
-          LOG.error("", e);
-        }
-
-        try {
-          fs.delete(HStoreFile.getInfoDir(dir, i.regionName, columnName));
-
-        } catch (IOException e) {
-          if (e instanceof RemoteException) {
-            e = RemoteExceptionHandler.decodeRemoteException(
-                (RemoteException) e);
-          }
-          LOG.error("", e);
-        }
+        fs.delete(HStoreFile.getMapDir(dir, i.regionName, columnName));
+        fs.delete(HStoreFile.getInfoDir(dir, i.regionName, columnName));
       }
     }
   }
@@ -2958,7 +2937,7 @@ HMasterRegionInterface, Runnable {
 
     @Override
     protected void postProcessMeta(MetaRegion m, HRegionInterface server)
-    throws IOException {
+      throws IOException {
 
       for (HRegionInfo i: unservedRegions) {
 
