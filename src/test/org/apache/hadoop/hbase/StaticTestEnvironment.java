@@ -61,31 +61,32 @@ public class StaticTestEnvironment {
     value = System.getenv("DEBUGGING");
     if(value != null && value.equalsIgnoreCase("TRUE")) {
       debugging = true;
+    }
       
-      Logger rootLogger = Logger.getRootLogger();
-      // rootLogger.setLevel(Level.WARN);
+    Logger rootLogger = Logger.getRootLogger();
+    rootLogger.setLevel(Level.WARN);
 
-      Level logLevel = Level.INFO;
-      value = System.getenv("LOGGING_LEVEL");
-      if(value != null && value.length() != 0) {
-        if(value.equalsIgnoreCase("ALL")) {
-          logLevel = Level.ALL;
-        } else if(value.equalsIgnoreCase("DEBUG")) {
-          logLevel = Level.DEBUG;
-        } else if(value.equalsIgnoreCase("ERROR")) {
-          logLevel = Level.ERROR;
-        } else if(value.equalsIgnoreCase("FATAL")) {
-          logLevel = Level.FATAL;
-        } else if(value.equalsIgnoreCase("INFO")) {
-          logLevel = Level.INFO;
-        } else if(value.equalsIgnoreCase("OFF")) {
-          logLevel = Level.OFF;
-        } else if(value.equalsIgnoreCase("TRACE")) {
-          logLevel = Level.TRACE;
-        } else if(value.equalsIgnoreCase("WARN")) {
-          logLevel = Level.WARN;
-        }
+    Level logLevel = Level.DEBUG;
+    value = System.getenv("LOGGING_LEVEL");
+    if(value != null && value.length() != 0) {
+      if(value.equalsIgnoreCase("ALL")) {
+        logLevel = Level.ALL;
+      } else if(value.equalsIgnoreCase("DEBUG")) {
+        logLevel = Level.DEBUG;
+      } else if(value.equalsIgnoreCase("ERROR")) {
+        logLevel = Level.ERROR;
+      } else if(value.equalsIgnoreCase("FATAL")) {
+        logLevel = Level.FATAL;
+      } else if(value.equalsIgnoreCase("INFO")) {
+        logLevel = Level.INFO;
+      } else if(value.equalsIgnoreCase("OFF")) {
+        logLevel = Level.OFF;
+      } else if(value.equalsIgnoreCase("TRACE")) {
+        logLevel = Level.TRACE;
+      } else if(value.equalsIgnoreCase("WARN")) {
+        logLevel = Level.WARN;
       }
+
       ConsoleAppender consoleAppender = null;
       for(Enumeration<Appender> e = rootLogger.getAllAppenders();
           e.hasMoreElements();) {
@@ -103,8 +104,8 @@ public class StaticTestEnvironment {
           consoleLayout.setConversionPattern("%d %-5p [%t] %l: %m%n");
         }
       }
-      Logger.getLogger(
-          HBaseTestCase.class.getPackage().getName()).setLevel(logLevel);
     }    
+    Logger.getLogger(
+        HBaseTestCase.class.getPackage().getName()).setLevel(logLevel);
   }
 }

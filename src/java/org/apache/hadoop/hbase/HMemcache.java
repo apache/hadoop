@@ -334,7 +334,9 @@ public class HMemcache {
       } catch (RuntimeException ex) {
         LOG.error("error initializing HMemcache scanner: ", ex);
         close();
-        throw ex;
+        IOException e = new IOException("error initializing HMemcache scanner");
+        e.initCause(ex);
+        throw e;
         
       } catch(IOException ex) {
         LOG.error("error initializing HMemcache scanner: ", ex);

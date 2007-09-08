@@ -52,20 +52,20 @@ import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
 
-/*******************************************************************************
+/**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
  * the HMaster. There are many HRegionServers in a single HBase deployment.
- ******************************************************************************/
+ */
 public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
-  /**
-   * {@inheritDoc}
-   */
+  /** {@inheritDoc} */
   public long getProtocolVersion(final String protocol, 
       @SuppressWarnings("unused") final long clientVersion)
-  throws IOException { 
+    throws IOException {
+    
     if (protocol.equals(HRegionInterface.class.getName())) {
       return HRegionInterface.versionID;
     }
@@ -79,7 +79,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // of HRegionServer in isolation.
   protected volatile boolean stopRequested;
   
-  // Go down hard.  Used debugging and in unit tests.
+  // Go down hard.  Used if file system becomes unavailable and also in
+  // debugging and unit tests.
   protected volatile boolean abortRequested;
   
   final Path rootDir;
@@ -146,23 +147,23 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
      * {@inheritDoc}
      */
     public void run() {
-      while(!stopRequested) {
+      while (!stopRequested) {
         long startTime = System.currentTimeMillis();
-        synchronized(splitOrCompactLock) { // Don't interrupt us while we're working
+        synchronized (splitOrCompactLock) { // Don't interrupt us while we're working
           // Grab a list of regions to check
-          Vector<HRegion> regionsToCheck = new Vector<HRegion>();
+          ArrayList<HRegion> regionsToCheck = new ArrayList<HRegion>();
           lock.readLock().lock();
           try {
             regionsToCheck.addAll(onlineRegions.values());
           } finally {
             lock.readLock().unlock();
           }
-          try {
-            for(HRegion cur: regionsToCheck) {
-              if(cur.isClosed()) {
-                // Skip if closed
-                continue;
-              }
+          for(HRegion cur: regionsToCheck) {
+            if(cur.isClosed()) {
+              // Skip if closed
+              continue;
+            }
+            try {
               if (cur.needsCompaction()) {
                 cur.compactStores();
               }
@@ -172,10 +173,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               if (cur.needsSplit(midKey)) {
                 split(cur, midKey);
               }
+            } catch(IOException e) {
+              //TODO: What happens if this fails? Are we toast?
+              LOG.error("Split or compaction failed", e);
+              if (!checkFileSystem()) {
+                break;
+              }
             }
-          } catch(IOException e) {
-            //TODO: What happens if this fails? Are we toast?
-            LOG.error("What happens if this fails? Are we toast?", e);
           }
         }
         
@@ -198,7 +202,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     
     private void split(final HRegion region, final Text midKey)
-    throws IOException {
+      throws IOException {
+      
       final HRegionInfo oldRegionInfo = region.getRegionInfo();
       final HRegion[] newRegions = region.closeAndSplit(midKey, this);
       
@@ -286,7 +291,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
         synchronized(cacheFlusherLock) {
           // Grab a list of items to flush
-          Vector<HRegion> toFlush = new Vector<HRegion>();
+          ArrayList<HRegion> toFlush = new ArrayList<HRegion>();
           lock.readLock().lock();
           try {
             toFlush.addAll(onlineRegions.values());
@@ -310,7 +315,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                   iex = x;
                 }
               }
-              LOG.error("", iex);
+              LOG.error("Cache flush failed", iex);
+              if (!checkFileSystem()) {
+                break;
+              }
             }
           }
         }
@@ -332,7 +340,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   // File paths
   
-  private FileSystem fs;
+  FileSystem fs;
   
   // Logging
   
@@ -368,7 +376,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                   iex = x;
                 }
               }
-              LOG.warn("", iex);
+              LOG.error("Log rolling failed", iex);
+              if (!checkFileSystem()) {
+                break;
+              }
             }
           }
         }
@@ -737,7 +748,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             e = ex;
           }
         }
-        LOG.warn("Abort close of log", e);
+        LOG.error("Unable to close log in abort", e);
       }
       closeAllRegions(); // Don't leave any open file handles
       LOG.info("aborting server at: " +
@@ -902,6 +913,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             }
           } else {
             LOG.error("unable to process message: " + e.msg.toString(), ie);
+            if (!checkFileSystem()) {
+              break;
+            }
           }
         }
       }
@@ -973,117 +987,246 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return regionsToClose;
   }
 
-  //////////////////////////////////////////////////////////////////////////////
+  //
   // HRegionInterface
-  //////////////////////////////////////////////////////////////////////////////
+  //
 
   /** {@inheritDoc} */
   public HRegionInfo getRegionInfo(final Text regionName)
-  throws NotServingRegionException {
+    throws NotServingRegionException {
+    
     requestCount.incrementAndGet();
     return getRegion(regionName).getRegionInfo();
   }
 
   /** {@inheritDoc} */
   public byte [] get(final Text regionName, final Text row,
-      final Text column)
-  throws IOException {
+      final Text column) throws IOException {
+    
     requestCount.incrementAndGet();
-    return getRegion(regionName).get(row, column);
+    try {
+      return getRegion(regionName).get(row, column);
+      
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
+    }
   }
 
   /** {@inheritDoc} */
   public byte [][] get(final Text regionName, final Text row,
-      final Text column, final int numVersions)
-  throws IOException {  
+      final Text column, final int numVersions) throws IOException {
+    
     requestCount.incrementAndGet();
-    return getRegion(regionName).get(row, column, numVersions);
+    try {
+      return getRegion(regionName).get(row, column, numVersions);
+      
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
+    }
   }
 
   /** {@inheritDoc} */
   public byte [][] get(final Text regionName, final Text row, final Text column, 
       final long timestamp, final int numVersions) throws IOException {
+    
     requestCount.incrementAndGet();
-    return getRegion(regionName).get(row, column, timestamp, numVersions);
+    try {
+      return getRegion(regionName).get(row, column, timestamp, numVersions);
+      
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
+    }
   }
 
   /** {@inheritDoc} */
   public MapWritable getRow(final Text regionName, final Text row)
-  throws IOException {
+    throws IOException {
+    
     requestCount.incrementAndGet();
-    HRegion region = getRegion(regionName);
-    MapWritable result = new MapWritable();
-    TreeMap<Text, byte[]> map = region.getFull(row);
-    for (Map.Entry<Text, byte []> es: map.entrySet()) {
-      result.put(new HStoreKey(row, es.getKey()),
-          new ImmutableBytesWritable(es.getValue()));
+    try {
+      HRegion region = getRegion(regionName);
+      MapWritable result = new MapWritable();
+      TreeMap<Text, byte[]> map = region.getFull(row);
+      for (Map.Entry<Text, byte []> es: map.entrySet()) {
+        result.put(new HStoreKey(row, es.getKey()),
+            new ImmutableBytesWritable(es.getValue()));
+      }
+      return result;
+      
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
     }
-    return result;
   }
 
   /** {@inheritDoc} */
-  public MapWritable next(final long scannerId)
-  throws IOException {
+  public MapWritable next(final long scannerId) throws IOException {
+    
     requestCount.incrementAndGet();
-    String scannerName = String.valueOf(scannerId);
-    HInternalScannerInterface s = scanners.get(scannerName);
-    if (s == null) {
-      throw new UnknownScannerException("Name: " + scannerName);
-    }
-    leases.renewLease(scannerId, scannerId);
-    
-    // Collect values to be returned here
-    
-    MapWritable values = new MapWritable();
-    
-    // Keep getting rows until we find one that has at least one non-deleted column value
-    
-    HStoreKey key = new HStoreKey();
-    TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
-    while (s.next(key, results)) {
-      for(Map.Entry<Text, byte []> e: results.entrySet()) {
-        HStoreKey k = new HStoreKey(key.getRow(), e.getKey(), key.getTimestamp());
-        byte [] val = e.getValue();
-        if (HGlobals.deleteBytes.compareTo(val) == 0) {
-          // Column value is deleted. Don't return it.
-          continue;
+    try {
+      String scannerName = String.valueOf(scannerId);
+      HInternalScannerInterface s = scanners.get(scannerName);
+      if (s == null) {
+        throw new UnknownScannerException("Name: " + scannerName);
+      }
+      leases.renewLease(scannerId, scannerId);
+
+      // Collect values to be returned here
+
+      MapWritable values = new MapWritable();
+
+      // Keep getting rows until we find one that has at least one non-deleted column value
+
+      HStoreKey key = new HStoreKey();
+      TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
+      while (s.next(key, results)) {
+        for(Map.Entry<Text, byte []> e: results.entrySet()) {
+          HStoreKey k = new HStoreKey(key.getRow(), e.getKey(), key.getTimestamp());
+          byte [] val = e.getValue();
+          if (HGlobals.deleteBytes.compareTo(val) == 0) {
+            // Column value is deleted. Don't return it.
+            continue;
+          }
+          values.put(k, new ImmutableBytesWritable(val));
         }
-        values.put(k, new ImmutableBytesWritable(val));
+
+        if(values.size() > 0) {
+          // Row has something in it. Return the value.
+          break;
+        }
+
+        // No data for this row, go get another.
+
+        results.clear();
       }
+      return values;
       
-      if(values.size() > 0) {
-        // Row has something in it. Return the value.
-        break;
-      }
-      
-      // No data for this row, go get another.
-      
-      results.clear();
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
     }
-    return values;
   }
 
   /** {@inheritDoc} */
   public void batchUpdate(Text regionName, long timestamp, BatchUpdate b)
-  throws IOException {
+    throws IOException {
+    
     requestCount.incrementAndGet();
-    long lockid = startUpdate(regionName, b.getRow());
-    for(BatchOperation op: b) {
-      switch(op.getOp()) {
-      case BatchOperation.PUT_OP:
-        put(regionName, lockid, op.getColumn(), op.getValue());
-        break;
+    try {
+      long lockid = startUpdate(regionName, b.getRow());
+      for(BatchOperation op: b) {
+        switch(op.getOp()) {
+        case BatchOperation.PUT_OP:
+          put(regionName, lockid, op.getColumn(), op.getValue());
+          break;
 
-      case BatchOperation.DELETE_OP:
-        delete(regionName, lockid, op.getColumn());
-        break;
+        case BatchOperation.DELETE_OP:
+          delete(regionName, lockid, op.getColumn());
+          break;
+        }
       }
+      commit(regionName, lockid, timestamp);
+      
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
     }
-    commit(regionName, lockid, timestamp);
   }
   
-  protected long startUpdate(Text regionName, Text row) 
-      throws IOException {
+  //
+  // remote scanner interface
+  //
+
+  /** {@inheritDoc} */
+  public long openScanner(Text regionName, Text[] cols, Text firstRow,
+      final long timestamp, final RowFilterInterface filter)
+    throws IOException {
+    
+    requestCount.incrementAndGet();
+    try {
+      HRegion r = getRegion(regionName);
+      long scannerId = -1L;
+      HInternalScannerInterface s =
+        r.getScanner(cols, firstRow, timestamp, filter);
+      scannerId = rand.nextLong();
+      String scannerName = String.valueOf(scannerId);
+      synchronized(scanners) {
+        scanners.put(scannerName, s);
+      }
+      leases.createLease(scannerId, scannerId, new ScannerListener(scannerName));
+      return scannerId;
+
+    } catch (IOException e) {
+      if (e instanceof RemoteException) {
+        try {
+          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+        } catch (IOException x) {
+          e = x;
+        }
+      }
+      LOG.error("", e);
+      checkFileSystem();
+      throw e;
+    }
+  }
+  
+  /** {@inheritDoc} */
+  public void close(final long scannerId) throws IOException {
+    requestCount.incrementAndGet();
+    try {
+      String scannerName = String.valueOf(scannerId);
+      HInternalScannerInterface s = null;
+      synchronized(scanners) {
+        s = scanners.remove(scannerName);
+      }
+      if(s == null) {
+        throw new UnknownScannerException(scannerName);
+      }
+      s.close();
+      leases.cancelLease(scannerId, scannerId);
+      
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
+    }
+  }
+
+  Map<String, HInternalScannerInterface> scanners =
+    Collections.synchronizedMap(new HashMap<String,
+      HInternalScannerInterface>());
+
+  /** 
+   * Instantiated as a scanner lease.
+   * If the lease times out, the scanner is closed
+   */
+  private class ScannerListener implements LeaseListener {
+    private final String scannerName;
+    
+    ScannerListener(final String n) {
+      this.scannerName = n;
+    }
+    
+    /** {@inheritDoc} */
+    public void leaseExpired() {
+      LOG.info("Scanner " + this.scannerName + " lease expired");
+      HInternalScannerInterface s = null;
+      synchronized(scanners) {
+        s = scanners.remove(this.scannerName);
+      }
+      if (s != null) {
+        s.close();
+      }
+    }
+  }
+  
+  //
+  // Methods that do the actual work for the remote API
+  //
+  
+  protected long startUpdate(Text regionName, Text row) throws IOException {
     
     HRegion region = getRegion(regionName);
     return region.startUpdate(row);
@@ -1097,7 +1240,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   protected void delete(Text regionName, long lockid, Text column) 
-  throws IOException {
+    throws IOException {
 
     HRegion region = getRegion(regionName);
     region.delete(lockid, column);
@@ -1117,7 +1260,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @throws NotServingRegionException
    */
   protected HRegion getRegion(final Text regionName)
-  throws NotServingRegionException {
+    throws NotServingRegionException {
+    
     return getRegion(regionName, false);
   }
   
@@ -1129,9 +1273,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @return {@link HRegion} for <code>regionName</code>
    * @throws NotServingRegionException
    */
-  protected HRegion getRegion(final Text regionName, 
-      final boolean checkRetiringRegions)
-  throws NotServingRegionException {
+  protected HRegion getRegion(final Text regionName,
+      final boolean checkRetiringRegions) throws NotServingRegionException {
+    
     HRegion region = null;
     this.lock.readLock().lock();
     try {
@@ -1154,91 +1298,28 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.lock.readLock().unlock();
     }
   }
-
-  //////////////////////////////////////////////////////////////////////////////
-  // remote scanner interface
-  //////////////////////////////////////////////////////////////////////////////
-
-  Map<String, HInternalScannerInterface> scanners =
-    Collections.synchronizedMap(new HashMap<String,
-      HInternalScannerInterface>());
-
-  /** 
-   * Instantiated as a scanner lease.
-   * If the lease times out, the scanner is closed
-   */
-  private class ScannerListener implements LeaseListener {
-    private final String scannerName;
-    
-    ScannerListener(final String n) {
-      this.scannerName = n;
-    }
-    
-    /**
-     * {@inheritDoc}
-     */
-    public void leaseExpired() {
-      LOG.info("Scanner " + this.scannerName + " lease expired");
-      HInternalScannerInterface s = null;
-      synchronized(scanners) {
-        s = scanners.remove(this.scannerName);
-      }
-      if (s != null) {
-        s.close();
-      }
-    }
-  }
   
   /**
-   * {@inheritDoc}
+   * Checks to see if the file system is still accessible.
+   * If not, sets abortRequested and stopRequested
+   * 
+   * @return false if file system is not available
    */
-  public long openScanner(Text regionName, Text[] cols, Text firstRow,
-      final long timestamp, final RowFilterInterface filter)
-  throws IOException {
-    requestCount.incrementAndGet();
-    HRegion r = getRegion(regionName);
-    long scannerId = -1L;
-    try {
-      HInternalScannerInterface s =
-        r.getScanner(cols, firstRow, timestamp, filter);
-      scannerId = rand.nextLong();
-      String scannerName = String.valueOf(scannerId);
-      synchronized(scanners) {
-        scanners.put(scannerName, s);
-      }
-      leases.createLease(scannerId, scannerId,
-        new ScannerListener(scannerName));
-    } catch (IOException e) {
-      if (e instanceof RemoteException) {
-        try {
-          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-        } catch (IOException x) {
-          e = x;
-        }
-      }
-      LOG.error("", e);
-      throw e;
+  protected boolean checkFileSystem() {
+    boolean fsOk = true;
+    if (!FSUtils.isFileSystemAvailable(fs)) {
+      LOG.fatal("Shutting down HRegionServer: file system not available");
+      abortRequested = true;
+      stopRequested = true;
+      fsOk = false;
     }
-    return scannerId;
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public void close(final long scannerId) throws IOException {
-    requestCount.incrementAndGet();
-    String scannerName = String.valueOf(scannerId);
-    HInternalScannerInterface s = null;
-    synchronized(scanners) {
-      s = scanners.remove(scannerName);
-    }
-    if(s == null) {
-      throw new UnknownScannerException(scannerName);
-    }
-    s.close();
-    leases.cancelLease(scannerId, scannerId);
+    return fsOk;
   }
 
+  //
+  // Main program and support routines
+  //
+  
   private static void printUsageAndExit() {
     printUsageAndExit(null);
   }
