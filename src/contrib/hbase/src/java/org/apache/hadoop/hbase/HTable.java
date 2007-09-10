@@ -35,7 +35,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -531,10 +530,11 @@ public class HTable implements HConstants {
   }
   
   /** 
-   * Delete the value for a column
-   *
-   * @param lockid              - lock id returned from startUpdate
-   * @param column              - name of column whose value is to be deleted
+   * Delete the value for a column.
+   * Deletes the cell whose row/column/commit-timestamp match those of the
+   * delete.
+   * @param lockid lock id returned from startUpdate
+   * @param column name of column whose value is to be deleted
    */
   public void delete(long lockid, Text column) {
     checkClosed();
@@ -543,9 +543,59 @@ public class HTable implements HConstants {
   }
   
   /** 
+   * Delete all values for a column
+   * 
+   * @param row Row to update
+   * @param column name of column whose value is to be deleted
+   * @throws IOException 
+   */
+  public void deleteAll(final Text row, final Text column) throws IOException {
+    deleteAll(row, column, LATEST_TIMESTAMP);
+  }
+  
+  /** 
+   * Delete all values for a column
+   * 
+   * @param row Row to update
+   * @param column name of column whose value is to be deleted
+   * @param ts Delete all cells of the same timestamp or older.
+   * @throws IOException 
+   */
+  public void deleteAll(final Text row, final Text column, final long ts)
+  throws IOException {
+    checkClosed();
+    for(int tries = 0; tries < numRetries; tries++) {
+      HRegionLocation r = getRegionLocation(row);
+      HRegionInterface server =
+        connection.getHRegionConnection(r.getServerAddress());
+      try {
+        server.deleteAll(r.getRegionInfo().getRegionName(), row, column, ts);
+        break;
+        
+      } catch (IOException e) {
+        if (e instanceof RemoteException) {
+          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+        }
+        if (tries == numRetries - 1) {
+          throw e;
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("reloading table servers because: " + e.getMessage());
+        }
+        tableServers = connection.reloadTableServers(tableName);
+      }
+      try {
+        Thread.sleep(this.pause);
+      } catch (InterruptedException x) {
+        // continue
+      }
+    }
+  }
+  
+  /** 
    * Abort a row mutation
    *
-   * @param lockid              - lock id returned from startUpdate
+   * @param lockid lock id returned from startUpdate
    */
   public synchronized void abort(long lockid) {
     checkClosed();
@@ -558,24 +608,26 @@ public class HTable implements HConstants {
   
   /** 
    * Finalize a row mutation
-   *
-   * @param lockid              - lock id returned from startUpdate
+   * When this method is specified, we pass the server a value that says use
+   * the 'latest' timestamp.  If we are doing a put, on the server-side, cells
+   * will be given the servers's current timestamp.  If the we are commiting
+   * deletes, then delete removes the most recently modified cell of stipulated
+   * column.
+   * @param lockid lock id returned from startUpdate
    * @throws IOException
    */
   public void commit(long lockid) throws IOException {
-    commit(lockid, System.currentTimeMillis());
+    commit(lockid, LATEST_TIMESTAMP);
   }
 
   /** 
    * Finalize a row mutation
-   *
-   * @param lockid              - lock id returned from startUpdate
-   * @param timestamp           - time to associate with the change
+   * @param lockid lock id returned from startUpdate
+   * @param timestamp time to associate with the change
    * @throws IOException
    */
   public synchronized void commit(long lockid, long timestamp)
   throws IOException {
-    
     checkClosed();
     updateInProgress(true);
     if (batch.get().getLockid() != lockid) {

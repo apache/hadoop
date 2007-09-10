@@ -8,6 +8,11 @@ Trunk (unreleased changes)
   NEW FEATURES
     HADOOP-1768 FS command using Hadoop FsShell operations
                 (Edward Yoon via Stack)
+    HADOOP-1784 Delete: Fix scanners and gets so they work properly in presence
+                of deletes. Added a deleteAll to remove all cells equal to or
+                older than passed timestamp.  Fixed compaction so deleted cells
+                do not make it out into compacted output.  Ensure also that
+                versions > column max are dropped compacting.
 
   OPTIMIZATIONS
 

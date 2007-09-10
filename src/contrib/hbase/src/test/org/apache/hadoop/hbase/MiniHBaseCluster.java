@@ -417,4 +417,15 @@ public class MiniHBaseCluster implements HConstants {
     }
     f.delete();
   }
+  
+  /**
+   * Call flushCache on all regions on all participating regionservers.
+   * @throws IOException
+   */
+  void flushcache() throws IOException {
+    HRegionServer s = this.regionThreads.get(0).getRegionServer();
+    for(HRegion r: s.onlineRegions.values() ) {
+      r.flushcache(false);
+    }
+  }
 }

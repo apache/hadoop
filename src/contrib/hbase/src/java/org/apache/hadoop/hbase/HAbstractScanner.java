@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Vector;
 import java.util.regex.Pattern;
@@ -205,7 +206,7 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
    * 
    * @see org.apache.hadoop.hbase.HScannerInterface#next(org.apache.hadoop.hbase.HStoreKey, java.util.SortedMap)
    */
-  public boolean next(HStoreKey key, TreeMap<Text, byte []> results)
+  public boolean next(HStoreKey key, SortedMap<Text, byte []> results)
   throws IOException {
     // Find the next row label (and timestamp)
     Text chosenRow = null;
@@ -218,7 +219,6 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
               || (keys[i].getRow().compareTo(chosenRow) < 0)
               || ((keys[i].getRow().compareTo(chosenRow) == 0)
                   && (keys[i].getTimestamp() > chosenTimestamp)))) {
-
         chosenRow = new Text(keys[i].getRow());
         chosenTimestamp = keys[i].getTimestamp();
       }

@@ -30,9 +30,12 @@ import java.util.SortedMap;
  */
 public interface HScannerInterface {
   /**
-   * Get the next set of values
+   * Grab the next row's worth of values. The scanner will return the most
+   * recent data value for each row that is not newer than the target time
+   * passed when the scanner was created.
    * @param key will contain the row and timestamp upon return
-   * @param results will contain an entry for each column family member and its value
+   * @param results will contain an entry for each column family member and its
+   * value
    * @return true if data was returned
    * @throws IOException
    */

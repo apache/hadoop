@@ -27,24 +27,40 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
 /**
- * batch update operation
+ * Batch update operations such as put, delete, and deleteAll.
  */
 public class BatchOperation implements Writable {
-  /** put operation */
-  public static final int PUT_OP = 1;
-  
-  /** delete operation */
-  public static final int DELETE_OP = 2;
-  
-  private int op;
+  /** 
+   * Operation types.
+   * @see org.apache.hadoop.io.SequenceFile.Writer
+   */
+  public static enum Operation {PUT, DELETE}
+
+  private Operation op;
   private Text column;
   private byte[] value;
   
   /** default constructor used by Writable */
   public BatchOperation() {
-    this.op = 0;
-    this.column = new Text();
-    this.value = null;
+    this(new Text());
+  }
+  /**
+   * Creates a DELETE operation
+   * 
+   * @param column column name
+   */
+  public BatchOperation(final Text column) {
+    this(Operation.DELETE, column, null);
+  }
+
+  /**
+   * Creates a PUT operation
+   * 
+   * @param column column name
+   * @param value column value
+   */
+  public BatchOperation(final Text column, final byte [] value) {
+    this(Operation.PUT, column, value);
   }
   
   /**
@@ -53,21 +69,11 @@ public class BatchOperation implements Writable {
    * @param column column name
    * @param value column value
    */
-  public BatchOperation(Text column, byte[] value) {
-    this.op = PUT_OP;
+  public BatchOperation(final Operation operation, final Text column,
+      final byte[] value) {
+    this.op = operation;
     this.column = column;
     this.value = value;
-  }
-  
-  /**
-   * Creates a delete operation
-   * 
-   * @param column name of column to delete
-   */
-  public BatchOperation(Text column) {
-    this.op = DELETE_OP;
-    this.column = column;
-    this.value = null;
   }
 
   /**
@@ -80,8 +86,8 @@ public class BatchOperation implements Writable {
   /**
    * @return the operation
    */
-  public int getOp() {
-    return op;
+  public Operation getOp() {
+    return this.op;
   }
 
   /**
@@ -99,9 +105,10 @@ public class BatchOperation implements Writable {
    * {@inheritDoc}
    */
   public void readFields(DataInput in) throws IOException {
-    op = in.readInt();
+    int ordinal = in.readInt();
+    this.op = Operation.values()[ordinal];
     column.readFields(in);
-    if(op == PUT_OP) {
+    if (this.op == Operation.PUT) {
       value = new byte[in.readInt()];
       in.readFully(value);
     }
@@ -111,9 +118,9 @@ public class BatchOperation implements Writable {
    * {@inheritDoc}
    */
   public void write(DataOutput out) throws IOException {
-    out.writeInt(op);
+    out.writeInt(this.op.ordinal());
     column.write(out);
-    if(op == PUT_OP) {
+    if (this.op == Operation.PUT) {
       out.writeInt(value.length);
       out.write(value);
     }

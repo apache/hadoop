@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.SortedMap;
@@ -1075,22 +1076,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       leases.renewLease(scannerId, scannerId);
 
       // Collect values to be returned here
-
       MapWritable values = new MapWritable();
-
-      // Keep getting rows until we find one that has at least one non-deleted column value
-
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
       while (s.next(key, results)) {
         for(Map.Entry<Text, byte []> e: results.entrySet()) {
-          HStoreKey k = new HStoreKey(key.getRow(), e.getKey(), key.getTimestamp());
-          byte [] val = e.getValue();
-          if (HGlobals.deleteBytes.compareTo(val) == 0) {
-            // Column value is deleted. Don't return it.
-            continue;
-          }
-          values.put(k, new ImmutableBytesWritable(val));
+          values.put(new HStoreKey(key.getRow(), e.getKey(), key.getTimestamp()),
+            new ImmutableBytesWritable(e.getValue()));
         }
 
         if(values.size() > 0) {
@@ -1099,7 +1091,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         }
 
         // No data for this row, go get another.
-
         results.clear();
       }
       return values;
@@ -1110,26 +1101,46 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
 
-  /** {@inheritDoc} */
   public void batchUpdate(Text regionName, long timestamp, BatchUpdate b)
-    throws IOException {
-    
+  throws IOException {  
     requestCount.incrementAndGet();
+    // If timestamp == LATEST_TIMESTAMP and we have deletes, then they need
+    // special treatment.  For these we need to first find the latest cell so
+    // when we write the delete, we write it with the latest cells' timestamp
+    // so the delete record overshadows.  This means deletes and puts do not
+    // happen within the same row lock.
+    List<Text> deletes = null;
     try {
       long lockid = startUpdate(regionName, b.getRow());
       for(BatchOperation op: b) {
         switch(op.getOp()) {
-        case BatchOperation.PUT_OP:
+        case PUT:
           put(regionName, lockid, op.getColumn(), op.getValue());
           break;
 
-        case BatchOperation.DELETE_OP:
-          delete(regionName, lockid, op.getColumn());
+        case DELETE:
+          if (timestamp == LATEST_TIMESTAMP) {
+            // Save off these deletes.
+            if (deletes == null) {
+              deletes = new ArrayList<Text>();
+            }
+            deletes.add(op.getColumn());
+          } else {
+            delete(regionName, lockid, op.getColumn());
+          }
           break;
         }
       }
-      commit(regionName, lockid, timestamp);
+      commit(regionName, lockid,
+        (timestamp == LATEST_TIMESTAMP)? System.currentTimeMillis(): timestamp);
       
+      if (deletes != null && deletes.size() > 0) {
+        // We have some LATEST_TIMESTAMP deletes to run.
+        HRegion r = getRegion(regionName);
+        for (Text column: deletes) {
+          r.deleteMultiple(b.getRow(), column, LATEST_TIMESTAMP, 1);
+        }
+      }
     } catch (IOException e) {
       checkFileSystem();
       throw e;
@@ -1158,7 +1169,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       leases.createLease(scannerId, scannerId, new ScannerListener(scannerName));
       return scannerId;
-
     } catch (IOException e) {
       if (e instanceof RemoteException) {
         try {
@@ -1217,7 +1227,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         s = scanners.remove(this.scannerName);
       }
       if (s != null) {
-        s.close();
+        try {
+          s.close();
+        } catch (IOException e) {
+          LOG.error("Closing scanner", e);
+        }
       }
     }
   }
@@ -1241,9 +1255,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   protected void delete(Text regionName, long lockid, Text column) 
     throws IOException {
-
     HRegion region = getRegion(regionName);
     region.delete(lockid, column);
+  }
+  
+  public void deleteAll(final Text regionName, final Text row,
+      final Text column, final long timestamp) 
+  throws IOException {
+    HRegion region = getRegion(regionName);
+    region.deleteAll(row, column, timestamp);
   }
 
   protected void commit(Text regionName, final long lockid,
