@@ -24,6 +24,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -86,7 +89,14 @@ class HStore implements HConstants {
 
   final HLocking lock = new HLocking();
 
+  /* Sorted Map of readers keyed by sequence id (Most recent should be last in
+   * in list).
+   */
   TreeMap<Long, HStoreFile> storefiles = new TreeMap<Long, HStoreFile>();
+  
+  /* Sorted Map of readers keyed by sequence id (Most recent should be last in
+   * in list).
+   */
   TreeMap<Long, MapFile.Reader> readers = new TreeMap<Long, MapFile.Reader>();
 
   Random rand = new Random();
@@ -176,7 +186,7 @@ class HStore implements HConstants {
     // MapFiles are in a reliable state.  Every entry in 'mapdir' must have a 
     // corresponding one in 'loginfodir'. Without a corresponding log info
     // file, the entry in 'mapdir' must be deleted.
-    Vector<HStoreFile> hstoreFiles 
+    Collection<HStoreFile> hstoreFiles 
       = HStoreFile.loadHStoreFiles(conf, dir, regionName, familyName, fs);
     for(HStoreFile hsf: hstoreFiles) {
       this.storefiles.put(Long.valueOf(hsf.loadInfo(fs)), hsf);
@@ -446,30 +456,23 @@ class HStore implements HConstants {
       MapFile.Writer out = flushedFile.getWriter(this.fs, this.compression,
         this.bloomFilter);
       
-      // hbase.hstore.compact.on.flush=true enables picking up an existing
-      // HStoreFIle from disk interlacing the memcache flush compacting as we
-      // go.  The notion is that interlacing would take as long as a pure
-      // flush with the added benefit of having one less file in the store. 
-      // Experiments show that it takes two to three times the amount of time
-      // flushing -- more column families makes it so the two timings come
-      // closer together -- but it also complicates the flush. Disabled for
-      // now.  Needs work picking which file to interlace (favor references
-      // first, etc.)
+      // Here we tried picking up an existing HStoreFile from disk and
+      // interlacing the memcache flush compacting as we go.  The notion was
+      // that interlacing would take as long as a pure flush with the added
+      // benefit of having one less file in the store.  Experiments showed that
+      // it takes two to three times the amount of time flushing -- more column
+      // families makes it so the two timings come closer together -- but it
+      // also complicates the flush. The code was removed.  Needed work picking
+      // which file to interlace (favor references first, etc.)
       //
       // Related, looks like 'merging compactions' in BigTable paper interlaces
       // a memcache flush.  We don't.
       try {
-        if (this.conf.getBoolean("hbase.hstore.compact.on.flush", false) &&
-            this.storefiles.size() > 0) {
-          compact(out, inputCache.entrySet().iterator(),
-              this.readers.get(this.storefiles.firstKey()));
-        } else {
-          for (Map.Entry<HStoreKey, byte []> es: inputCache.entrySet()) {
-            HStoreKey curkey = es.getKey();
-            if (this.familyName.
-                equals(HStoreKey.extractFamily(curkey.getColumn()))) {
-              out.append(curkey, new ImmutableBytesWritable(es.getValue()));
-            }
+        for (Map.Entry<HStoreKey, byte []> es: inputCache.entrySet()) {
+          HStoreKey curkey = es.getKey();
+          if (this.familyName.
+              equals(HStoreKey.extractFamily(curkey.getColumn()))) {
+            out.append(curkey, new ImmutableBytesWritable(es.getValue()));
           }
         }
       } finally {
@@ -546,7 +549,6 @@ class HStore implements HConstants {
    * 
    * We don't want to hold the structureLock for the whole time, as a compact() 
    * can be lengthy and we want to allow cache-flushes during this period.
-   * 
    * @throws IOException
    */
   void compact() throws IOException {
@@ -564,6 +566,8 @@ class HStore implements HConstants {
    * @param maxSeenSeqID We may have already calculated the maxSeenSeqID.  If
    * so, pass it here.  Otherwise, pass -1 and it will be calculated inside in
    * this method.
+   * @param deleteSequenceInfo
+   * @param maxSeenSeqID
    * @throws IOException
    */
   void compactHelper(final boolean deleteSequenceInfo, long maxSeenSeqID)
@@ -584,7 +588,7 @@ class HStore implements HConstants {
         }
       }
       try {
-        Vector<HStoreFile> toCompactFiles = getFilesToCompact();
+        List<HStoreFile> toCompactFiles = getFilesToCompact();
         HStoreFile compactedOutputFile =
           new HStoreFile(conf, this.compactionDir, regionName, familyName, -1);
         if (toCompactFiles.size() < 1 ||
@@ -664,17 +668,21 @@ class HStore implements HConstants {
   }
   
   /*
-   * @return list of files to compact
+   * @return list of files to compact sorted so most recent comes first.
    */
-  private Vector<HStoreFile> getFilesToCompact() {
-    Vector<HStoreFile> toCompactFiles = null;
+  private List<HStoreFile> getFilesToCompact() {
+    List<HStoreFile> filesToCompact = null;
     this.lock.obtainWriteLock();
     try {
-      toCompactFiles = new Vector<HStoreFile>(storefiles.values());
+      // Storefiles are keyed by sequence id.  The oldest file comes first.
+      // We need to return out of here a List that has the newest file as
+      // first.
+      filesToCompact = new ArrayList<HStoreFile>(this.storefiles.values());
+      Collections.reverse(filesToCompact);
     } finally {
       this.lock.releaseWriteLock();
     }
-    return toCompactFiles;
+    return filesToCompact;
   }
   
   /*
@@ -694,7 +702,7 @@ class HStore implements HConstants {
    * @throws IOException
    */
   void compact(final MapFile.Writer compactedOut,
-      final Vector<HStoreFile> toCompactFiles)
+      final List<HStoreFile> toCompactFiles)
   throws IOException {
     int size = toCompactFiles.size();
     CompactionReader[] rdrs = new CompactionReader[size];
@@ -842,8 +850,14 @@ class HStore implements HConstants {
     int timesSeen = 0;
     Text lastRow = new Text();
     Text lastColumn = new Text();
-    while(numDone < done.length) {
-      // Find the reader with the smallest key
+    // Map of a row deletes keyed by column with a list of timestamps for value
+    Map<Text, List<Long>> deletes = null;
+    while (numDone < done.length) {
+      // Find the reader with the smallest key.  If two files have same key
+      // but different values -- i.e. one is delete and other is non-delete
+      // value -- we will find the first, the one that was written later and
+      // therefore the one whose value should make it out to the compacted
+      // store file.
       int smallestKey = -1;
       for(int i = 0; i < rdrs.length; i++) {
         if(done[i]) {
@@ -865,23 +879,22 @@ class HStore implements HConstants {
         timesSeen++;
       } else {
         timesSeen = 1;
+        // We are on to a new row.  Create a new deletes list.
+        deletes = new HashMap<Text, List<Long>>();
       }
 
-      if(timesSeen <= family.getMaxVersions()) {
+      byte [] value = (vals[smallestKey] == null)?
+        null: vals[smallestKey].get();
+      if (!isDeleted(sk, value, null, deletes) &&
+          timesSeen <= family.getMaxVersions()) {
         // Keep old versions until we have maxVersions worth.
         // Then just skip them.
-        if(sk.getRow().getLength() != 0
-            && sk.getColumn().getLength() != 0) {
+        if (sk.getRow().getLength() != 0 && sk.getColumn().getLength() != 0) {
           // Only write out objects which have a non-zero length key and
           // value
           compactedOut.append(sk, vals[smallestKey]);
         }
       }
-
-      // TODO: I don't know what to do about deleted values.  I currently 
-      // include the fact that the item was deleted as a legitimate 
-      // "version" of the data.  Maybe it should just drop the deleted
-      // val?
 
       // Update last-seen items
       lastRow.set(sk.getRow());
@@ -899,6 +912,52 @@ class HStore implements HConstants {
     }
   }
 
+  /*
+   * Check if this is cell is deleted.
+   * If a memcache and a deletes, check key does not have an entry filled.
+   * Otherwise, check value is not the <code>HGlobals.deleteBytes</code> value.
+   * If passed value IS deleteBytes, then it is added to the passed
+   * deletes map.
+   * @param hsk
+   * @param value
+   * @param memcache Can be null.
+   * @param deletes Map keyed by column with a value of timestamp. Can be null.
+   * If non-null and passed value is HGlobals.deleteBytes, then we add to this
+   * map.
+   * @return True if this is a deleted cell.  Adds the passed deletes map if
+   * passed value is HGlobals.deleteBytes.
+  */
+  private boolean isDeleted(final HStoreKey hsk, final byte [] value,
+      final HMemcache memcache, final Map<Text, List<Long>> deletes) {
+    if (memcache != null && memcache.isDeleted(hsk)) {
+      return true;
+    }
+    List<Long> timestamps = (deletes == null)?
+      null: deletes.get(hsk.getColumn());
+    if (timestamps != null &&
+      timestamps.contains(Long.valueOf(hsk.getTimestamp()))) {
+      return true;
+    }
+    if (value == null) {
+      // If a null value, shouldn't be in here.  Mark it as deleted cell.
+      return true;
+    }
+    if (!HGlobals.deleteBytes.equals(value)) {
+      return false;
+    }
+    // Cell has delete value.  Save it into deletes.
+    if (deletes != null) {
+      if (timestamps == null) {
+        timestamps = new ArrayList<Long>();
+        deletes.put(hsk.getColumn(), timestamps);
+      }
+      // We know its not already in the deletes array else we'd have returned
+      // earlier so no need to test if timestamps already has this value.
+      timestamps.add(Long.valueOf(hsk.getTimestamp()));
+    }
+    return true;
+  }
+  
   /*
    * It's assumed that the compactLock  will be acquired prior to calling this 
    * method!  Otherwise, it is not thread-safe!
@@ -1061,22 +1120,37 @@ class HStore implements HConstants {
    * previous 'numVersions-1' values, as well.
    *
    * If 'numVersions' is negative, the method returns all available versions.
+   * @param key
+   * @param numVersions Number of versions to fetch.  Must be > 0.
+   * @param memcache Checked for deletions
+   * @return
+   * @throws IOException
    */
-  byte [][] get(HStoreKey key, int numVersions) throws IOException {
+  byte [][] get(HStoreKey key, int numVersions, final HMemcache memcache)
+  throws IOException {
     if (numVersions <= 0) {
       throw new IllegalArgumentException("Number of versions must be > 0");
     }
     
     List<byte []> results = new ArrayList<byte []>();
+    // Keep a list of deleted cell keys.  We need this because as we go through
+    // the store files, the cell with the delete marker may be in one file and
+    // the old non-delete cell value in a later store file. If we don't keep
+    // around the fact that the cell was deleted in a newer record, we end up
+    // returning the old value if user is asking for more than one version.
+    // This List of deletes should not large since we are only keeping rows
+    // and columns that match those set on the scanner and which have delete
+    // values.  If memory usage becomes an issue, could redo as bloom filter.
+    Map<Text, List<Long>> deletes = new HashMap<Text, List<Long>>();
+    // This code below is very close to the body of the getKeys method.
     this.lock.obtainReadLock();
     try {
       MapFile.Reader[] maparray = getReaders();
       for(int i = maparray.length - 1; i >= 0; i--) {
         MapFile.Reader map = maparray[i];
-
         synchronized(map) {
-          ImmutableBytesWritable readval = new ImmutableBytesWritable();
           map.reset();
+          ImmutableBytesWritable readval = new ImmutableBytesWritable();
           HStoreKey readkey = (HStoreKey)map.getClosest(key, readval);
           if (readkey == null) {
             // map.getClosest returns null if the passed key is > than the
@@ -1085,29 +1159,102 @@ class HStore implements HConstants {
             // BEFORE.
             continue;
           }
-          if (readkey.matchesRowCol(key)) {
-            if(readval.equals(HGlobals.deleteBytes)) {
+          if (!readkey.matchesRowCol(key)) {
+            continue;
+          }
+          if (!isDeleted(readkey, readval.get(), memcache, deletes)) {
+            results.add(readval.get());
+            // Perhaps only one version is wanted.  I could let this
+            // test happen later in the for loop test but it would cost
+            // the allocation of an ImmutableBytesWritable.
+            if (hasEnoughVersions(numVersions, results)) {
               break;
             }
-            results.add(readval.get());
-            readval = new ImmutableBytesWritable();
-            while(map.next(readkey, readval) && readkey.matchesRowCol(key)) {
-              if ((numVersions > 0 && (results.size() >= numVersions))
-                  || readval.equals(HGlobals.deleteBytes)) {
-                break;
-              }
+          }
+          while ((readval = new ImmutableBytesWritable()) != null &&
+              map.next(readkey, readval) &&
+              readkey.matchesRowCol(key) &&
+              !hasEnoughVersions(numVersions, results)) {
+            if (!isDeleted(readkey, readval.get(), memcache, deletes)) {
               results.add(readval.get());
-              readval = new ImmutableBytesWritable();
             }
           }
         }
-        if(results.size() >= numVersions) {
+        if (hasEnoughVersions(numVersions, results)) {
           break;
         }
       }
-
       return results.size() == 0 ?
         null : ImmutableBytesWritable.toArray(results);
+    } finally {
+      this.lock.releaseReadLock();
+    }
+  }
+  
+  private boolean hasEnoughVersions(final int numVersions,
+      final List<byte []> results) {
+    return numVersions > 0 && results.size() >= numVersions;
+  }
+
+  /**
+   * Get <code>versions</code> keys matching the origin key's
+   * row/column/timestamp and those of an older vintage
+   * Default access so can be accessed out of {@link HRegionServer}.
+   * @param origin Where to start searching.
+   * @param versions How many versions to return. Pass
+   * {@link HConstants.ALL_VERSIONS} to retrieve all. Versions will include
+   * size of passed <code>allKeys</code> in its count.
+   * @param allKeys List of keys prepopulated by keys we found in memcache.
+   * This method returns this passed list with all matching keys found in
+   * stores appended.
+   * @return The passed <code>allKeys</code> with <code>versions</code> of
+   * matching keys found in store files appended.
+   * @throws IOException
+   */
+  List<HStoreKey> getKeys(final HStoreKey origin, List<HStoreKey> allKeys,
+      final int versions)
+  throws IOException {
+    if (allKeys == null) {
+      allKeys = new ArrayList<HStoreKey>();
+    }
+    // This code below is very close to the body of the get method.
+    this.lock.obtainReadLock();
+    try {
+      MapFile.Reader[] maparray = getReaders();
+      for(int i = maparray.length - 1; i >= 0; i--) {
+        MapFile.Reader map = maparray[i];
+        synchronized(map) {
+          map.reset();
+          ImmutableBytesWritable readval = new ImmutableBytesWritable();
+          HStoreKey readkey = (HStoreKey)map.getClosest(origin, readval);
+          if (readkey == null) {
+            // map.getClosest returns null if the passed key is > than the
+            // last key in the map file.  getClosest is a bit of a misnomer
+            // since it returns exact match or the next closest key AFTER not
+            // BEFORE.
+            continue;
+          }
+          if (!readkey.matchesRowCol(origin)) {
+            continue;
+          }
+          if (!isDeleted(readkey, readval.get(), null, null) &&
+              !allKeys.contains(readkey)) {
+            allKeys.add(new HStoreKey(readkey));
+          }
+          while ((readval = new ImmutableBytesWritable()) != null &&
+              map.next(readkey, readval) &&
+              readkey.matchesRowCol(origin)) {
+            if (!isDeleted(readkey, readval.get(), null, null) &&
+                !allKeys.contains(readkey)) {
+              allKeys.add(new HStoreKey(readkey));
+              if (versions != ALL_VERSIONS && allKeys.size() >= versions) {
+                break;
+              }
+            }
+          }
+        }
+      }
+      return allKeys;
     } finally {
       this.lock.releaseReadLock();
     }

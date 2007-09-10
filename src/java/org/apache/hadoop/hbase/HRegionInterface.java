@@ -38,8 +38,8 @@ public interface HRegionInterface extends VersionedProtocol {
   /** 
    * Get metainfo about an HRegion
    * 
-   * @param regionName                  - name of the region
-   * @return                            - HRegionInfo object for region
+   * @param regionName name of the region
+   * @return HRegionInfo object for region
    * @throws NotServingRegionException
    */
   public HRegionInfo getRegionInfo(final Text regionName)
@@ -69,7 +69,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @throws IOException
    */
   public byte [][] get(final Text regionName, final Text row,
-      final Text column, final int numVersions)
+    final Text column, final int numVersions)
   throws IOException;
   
   /**
@@ -107,7 +107,21 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param b BatchUpdate
    * @throws IOException
    */
-  public void batchUpdate(Text regionName, long timestamp, BatchUpdate b) throws IOException;
+  public void batchUpdate(Text regionName, long timestamp, BatchUpdate b)
+  throws IOException;
+  
+  /**
+   * Delete all cells that match the passed row and column and whose
+   * timestamp is equal-to or older than the passed timestamp.
+   *
+   * @param regionName region name
+   * @param row row key
+   * @param column column key
+   * @param timestamp Delete all entries that have this timestamp or older
+   * @throws IOException
+   */
+  public void deleteAll(Text regionName, Text row, Text column, long timestamp)
+  throws IOException;
   
   //
   // remote scanner interface

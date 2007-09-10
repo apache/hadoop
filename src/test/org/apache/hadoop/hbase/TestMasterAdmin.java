@@ -45,32 +45,27 @@ public class TestMasterAdmin extends HBaseClusterTestCase {
     admin.disableTable(testDesc.getName());
 
     try {
-      try {
-        @SuppressWarnings("unused")
-        HTable table = new HTable(conf, testDesc.getName());
+      @SuppressWarnings("unused")
+      HTable table = new HTable(conf, testDesc.getName());
 
-      } catch(IllegalStateException e) {
-        // Expected
-      }
-
-      admin.addColumn(testDesc.getName(), new HColumnDescriptor("col2:"));
-      admin.enableTable(testDesc.getName());
-      try {
-        admin.deleteColumn(testDesc.getName(), new Text("col2:"));
-        
-      } catch(TableNotDisabledException e) {
-        // Expected
-      }
-
-      admin.disableTable(testDesc.getName());
-      admin.deleteColumn(testDesc.getName(), new Text("col2:"));
+    } catch(IllegalStateException e) {
+      // Expected
       
-    } catch(Exception e) {
-      e.printStackTrace();
-      fail();
-      
-    } finally {
-      admin.deleteTable(testDesc.getName());
+      // This exception is not actually thrown.  It doesn't look like it should
+      // thrown since the connection manager is already filled w/ data
+      // -- noticed by St.Ack 09/09/2007
     }
+
+    admin.addColumn(testDesc.getName(), new HColumnDescriptor("col2:"));
+    admin.enableTable(testDesc.getName());
+    try {
+      admin.deleteColumn(testDesc.getName(), new Text("col2:"));
+    } catch(TableNotDisabledException e) {
+      // Expected
+    }
+
+    admin.disableTable(testDesc.getName());
+    admin.deleteColumn(testDesc.getName(), new Text("col2:"));
+    admin.deleteTable(testDesc.getName());
   }
 }

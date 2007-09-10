@@ -153,6 +153,9 @@ public class ImmutableBytesWritable implements WritableComparable {
   /** {@inheritDoc} */
   @Override
   public boolean equals(Object right_obj) {
+    if (right_obj instanceof byte []) {
+      return compareTo((byte [])right_obj) == 0;
+    }
     if (right_obj instanceof ImmutableBytesWritable) {
       return compareTo(right_obj) == 0;
     }

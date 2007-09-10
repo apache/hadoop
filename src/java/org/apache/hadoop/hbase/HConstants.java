@@ -103,7 +103,7 @@ public interface HConstants {
   // be the first to be reassigned if the server(s) they are being served by
   // should go down.
 
-  /** The root table's name. */
+  /** The root table's name.*/
   static final Text ROOT_TABLE_NAME = new Text("-ROOT-");
 
   /** The META table's name. */
@@ -139,10 +139,28 @@ public interface HConstants {
   static final Text COL_SPLITB = new Text(COLUMN_FAMILY_STR + "splitB");
   // Other constants
 
-  /** used by scanners, etc when they want to start at the beginning of a region */
-  static final Text EMPTY_START_ROW = new Text();
+  /**
+   * An empty instance of Text.
+   */
+  static final Text EMPTY_TEXT = new Text();
+  
+  /**
+   * Used by scanners, etc when they want to start at the beginning of a region
+   */
+  static final Text EMPTY_START_ROW = EMPTY_TEXT;
 
   /** When we encode strings, we always specify UTF8 encoding */
   static final String UTF8_ENCODING = "UTF-8";
 
+  /**
+   * Timestamp to use when we want to refer to the latest cell.
+   * This is the timestamp sent by clients when no timestamp is specified on
+   * commit.
+   */
+  static final long LATEST_TIMESTAMP = Long.MAX_VALUE;
+  
+  /**
+   * Define for 'return-all-versions'.
+   */
+  static final int ALL_VERSIONS = -1;
 }

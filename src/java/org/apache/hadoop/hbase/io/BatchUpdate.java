@@ -61,7 +61,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    */
   public BatchUpdate(long lockid) {
     this.row = new Text();
-    this.lockid = Long.valueOf(Math.abs(lockid));
+    this.lockid = Math.abs(lockid);
     this.operations = new ArrayList<BatchOperation>();
   }
 
@@ -97,27 +97,28 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
   /** 
    * Change a value for the specified column
    *
-   * @param lockid              - lock id returned from startUpdate
-   * @param column              - column whose value is being set
-   * @param val                 - new value for column
+   * @param lid lock id returned from startUpdate
+   * @param column column whose value is being set
+   * @param val new value for column
    */
-  public synchronized void put(final long lockid, final Text column,
+  public synchronized void put(final long lid, final Text column,
       final byte val[]) {
-    if(this.lockid != lockid) {
-      throw new IllegalArgumentException("invalid lockid " + lockid);
+    if(this.lockid != lid) {
+      throw new IllegalArgumentException("invalid lockid " + lid);
     }
     operations.add(new BatchOperation(column, val));
   }
   
   /** 
    * Delete the value for a column
-   *
-   * @param lockid              - lock id returned from startUpdate
-   * @param column              - name of column whose value is to be deleted
+   * Deletes the cell whose row/column/commit-timestamp match those of the
+   * delete.
+   * @param lid lock id returned from startUpdate
+   * @param column name of column whose value is to be deleted
    */
-  public synchronized void delete(final long lockid, final Text column) {
-    if(this.lockid != lockid) {
-      throw new IllegalArgumentException("invalid lockid " + lockid);
+  public synchronized void delete(final long lid, final Text column) {
+    if(this.lockid != lid) {
+      throw new IllegalArgumentException("invalid lockid " + lid);
     }
     operations.add(new BatchOperation(column));
   }

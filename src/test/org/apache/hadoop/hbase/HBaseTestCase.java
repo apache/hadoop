@@ -26,6 +26,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -41,6 +42,7 @@ public abstract class HBaseTestCase extends TestCase {
   protected static final char LAST_CHAR = 'z';
   protected static final byte [] START_KEY_BYTES =
     {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
+  protected static final int MAXVERSIONS = 3;
   
   static {
     StaticTestEnvironment.initialize();
@@ -100,10 +102,18 @@ public abstract class HBaseTestCase extends TestCase {
   }
   
   protected HTableDescriptor createTableDescriptor(final String name) {
+    return createTableDescriptor(name, MAXVERSIONS);
+  }
+  
+  protected HTableDescriptor createTableDescriptor(final String name,
+      final int versions) {
     HTableDescriptor htd = new HTableDescriptor(name);
-    htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME1));
-    htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME2));
-    htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME3));
+    htd.addFamily(new HColumnDescriptor(new Text(COLFAMILY_NAME1), versions,
+      CompressionType.NONE, false, Integer.MAX_VALUE, null));
+    htd.addFamily(new HColumnDescriptor(new Text(COLFAMILY_NAME2), versions,
+      CompressionType.NONE, false, Integer.MAX_VALUE, null));
+    htd.addFamily(new HColumnDescriptor(new Text(COLFAMILY_NAME3), versions,
+      CompressionType.NONE, false, Integer.MAX_VALUE, null));
     return htd;
   }
   
@@ -123,18 +133,18 @@ public abstract class HBaseTestCase extends TestCase {
     if (startKeyBytes == null || startKeyBytes.length == 0) {
       startKeyBytes = START_KEY_BYTES;
     }
-    addContent(new HRegionLoader(r), column, startKeyBytes, endKey, -1);
+    addContent(new HRegionIncommon(r), column, startKeyBytes, endKey, -1);
   }
 
   /**
    * Add content to region <code>r</code> on the passed column
    * <code>column</code>.
    * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
-   * @param updater  An instance of {@link Loader}.
+   * @param updater  An instance of {@link Incommon}.
    * @param column
    * @throws IOException
    */
-  protected static void addContent(final Loader updater, final String column)
+  protected static void addContent(final Incommon updater, final String column)
   throws IOException {
     addContent(updater, column, START_KEY_BYTES, null);
   }
@@ -143,13 +153,13 @@ public abstract class HBaseTestCase extends TestCase {
    * Add content to region <code>r</code> on the passed column
    * <code>column</code>.
    * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
-   * @param updater  An instance of {@link Loader}.
+   * @param updater  An instance of {@link Incommon}.
    * @param column
    * @param startKeyBytes Where to start the rows inserted
    * @param endKey Where to stop inserting rows.
    * @throws IOException
    */
-  protected static void addContent(final Loader updater, final String column,
+  protected static void addContent(final Incommon updater, final String column,
       final byte [] startKeyBytes, final Text endKey)
   throws IOException {
     addContent(updater, column, startKeyBytes, endKey, -1);
@@ -159,14 +169,14 @@ public abstract class HBaseTestCase extends TestCase {
    * Add content to region <code>r</code> on the passed column
    * <code>column</code>.
    * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
-   * @param updater  An instance of {@link Loader}.
+   * @param updater  An instance of {@link Incommon}.
    * @param column
    * @param startKeyBytes Where to start the rows inserted
    * @param endKey Where to stop inserting rows.
    * @param ts Timestamp to write the content with.
    * @throws IOException
    */
-  protected static void addContent(final Loader updater, final String column,
+  protected static void addContent(final Incommon updater, final String column,
       final byte [] startKeyBytes, final Text endKey, final long ts)
   throws IOException {
     // Add rows of three characters.  The first character starts with the
@@ -207,23 +217,42 @@ public abstract class HBaseTestCase extends TestCase {
   }
   
   /**
-   * Interface used by the addContent methods so either a HTable or a HRegion
-   * can be passed to the methods.
+   * Implementors can flushcache.
    */
-  public static interface Loader {
-    public long startBatchUpdate(final Text row) throws IOException;
-    public void put(long lockid, Text column, byte val[]) throws IOException;
-    public void commit(long lockid) throws IOException;
-    public void commit(long lockid, long ts) throws IOException;
-    public void abort(long lockid) throws IOException;
+  public static interface FlushCache {
+    public void flushcache() throws IOException;
   }
   
   /**
-   * A class that makes a {@link Loader} out of a {@link HRegion}
+   * Interface used by tests so can do common operations against an HTable
+   * or an HRegion.
+   * 
+   * TOOD: Come up w/ a better name for this interface.
    */
-  public static class HRegionLoader implements Loader {
+  public static interface Incommon {
+    public byte [] get(Text row, Text column) throws IOException;
+    public byte [][] get(Text row, Text column, int versions)
+    throws IOException;
+    public byte [][] get(Text row, Text column, long ts, int versions)
+    throws IOException;
+    public long startBatchUpdate(final Text row) throws IOException;
+    public void put(long lockid, Text column, byte val[]) throws IOException;
+    public void delete(long lockid, Text column) throws IOException;
+    public void deleteAll(Text row, Text column, long ts) throws IOException;
+    public void commit(long lockid) throws IOException;
+    public void commit(long lockid, long ts) throws IOException;
+    public void abort(long lockid) throws IOException;
+    public HScannerInterface getScanner(Text [] columns, Text firstRow,
+      long ts)
+    throws IOException;
+  }
+  
+  /**
+   * A class that makes a {@link Incommon} out of a {@link HRegion}
+   */
+  public static class HRegionIncommon implements Incommon {
     final HRegion region;
-    public HRegionLoader(final HRegion HRegion) {
+    public HRegionIncommon(final HRegion HRegion) {
       super();
       this.region = HRegion;
     }
@@ -231,7 +260,7 @@ public abstract class HBaseTestCase extends TestCase {
       this.region.abort(lockid);
     }
     public void commit(long lockid) throws IOException {
-      this.region.commit(lockid, System.currentTimeMillis());
+      this.region.commit(lockid);
     }
     public void commit(long lockid, final long ts) throws IOException {
       this.region.commit(lockid, ts);
@@ -239,17 +268,38 @@ public abstract class HBaseTestCase extends TestCase {
     public void put(long lockid, Text column, byte[] val) throws IOException {
       this.region.put(lockid, column, val);
     }
+    public void delete(long lockid, Text column) throws IOException {
+      this.region.delete(lockid, column);
+    }
+    public void deleteAll(Text row, Text column, long ts) throws IOException {
+      this.region.deleteAll(row, column, ts);
+    }
     public long startBatchUpdate(Text row) throws IOException {
       return this.region.startUpdate(row);
+    }
+    public HScannerInterface getScanner(Text [] columns, Text firstRow,
+        long ts)
+    throws IOException {
+      return this.region.getScanner(columns, firstRow, ts, null);
+    }
+    public byte[] get(Text row, Text column) throws IOException {
+      return this.region.get(row, column);
+    }
+    public byte[][] get(Text row, Text column, int versions) throws IOException {
+      return this.region.get(row, column, versions);
+    }
+    public byte[][] get(Text row, Text column, long ts, int versions)
+        throws IOException {
+      return this.region.get(row, column, ts, versions);
     }
   }
 
   /**
-   * A class that makes a {@link Loader} out of a {@link HTable}
+   * A class that makes a {@link Incommon} out of a {@link HTable}
    */
-  public static class HTableLoader implements Loader {
+  public static class HTableIncommon implements Incommon {
     final HTable table;
-    public HTableLoader(final HTable table) {
+    public HTableIncommon(final HTable table) {
       super();
       this.table = table;
     }
@@ -265,8 +315,30 @@ public abstract class HBaseTestCase extends TestCase {
     public void put(long lockid, Text column, byte[] val) throws IOException {
       this.table.put(lockid, column, val);
     }
+    public void delete(long lockid, Text column) throws IOException {
+      this.table.delete(lockid, column);
+    }
+    public void deleteAll(Text row, Text column, long ts) throws IOException {
+      this.table.deleteAll(row, column, ts);
+    }
     public long startBatchUpdate(Text row) {
       return this.table.startUpdate(row);
+    }
+    public HScannerInterface getScanner(Text [] columns, Text firstRow,
+        long ts)
+    throws IOException {
+      return this.table.obtainScanner(columns, firstRow, ts, null);
+    }
+    public byte[] get(Text row, Text column) throws IOException {
+      return this.table.get(row, column);
+    }
+    public byte[][] get(Text row, Text column, int versions)
+    throws IOException {
+      return this.table.get(row, column, versions);
+    }
+    public byte[][] get(Text row, Text column, long ts, int versions)
+    throws IOException {
+      return this.table.get(row, column, ts, versions);
     }
   }
 }

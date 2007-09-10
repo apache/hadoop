@@ -54,7 +54,7 @@ public class MultiRegionTable extends HBaseTestCase {
     HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
     int count = count(meta, HConstants.COLUMN_FAMILY_STR);
     HTable t = new HTable(conf, new Text(tableName));
-    addContent(new HTableLoader(t), columnName);
+    addContent(new HTableIncommon(t), columnName);
     
     // All is running in the one JVM so I should be able to get the single
     // region instance and bring on a split.

@@ -172,11 +172,12 @@ public class TestScanner2 extends HBaseClusterTestCase {
    * @throws IOException
    */
   public void testSplitDeleteOneAddTwoRegions() throws IOException {
+    HTable metaTable = new HTable(conf, HConstants.META_TABLE_NAME);
     // First add a new table.  Its intial region will be added to META region.
     HBaseAdmin admin = new HBaseAdmin(conf);
     Text tableName = new Text(getName());
     admin.createTable(new HTableDescriptor(tableName.toString()));
-    List<HRegionInfo> regions = scan(conf, HConstants.META_TABLE_NAME);
+    List<HRegionInfo> regions = scan(conf, metaTable);
     assertEquals("Expected one region", regions.size(), 1);
     HRegionInfo region = regions.get(0);
     assertTrue("Expected region named for test",
@@ -196,10 +197,10 @@ public class TestScanner2 extends HBaseClusterTestCase {
         homedir, this.conf, null));
     try {
       for (HRegion r : newRegions) {
-        addRegionToMETA(conf, HConstants.META_TABLE_NAME, r,
-            this.cluster.getHMasterAddress(), -1L);
+        addRegionToMETA(conf, metaTable, r, this.cluster.getHMasterAddress(),
+          -1L);
       }
-      regions = scan(conf, HConstants.META_TABLE_NAME);
+      regions = scan(conf, metaTable);
       assertEquals("Should be two regions only", 2, regions.size());
     } finally {
       for (HRegion r : newRegions) {
@@ -209,14 +210,13 @@ public class TestScanner2 extends HBaseClusterTestCase {
     }
   }
   
-  private List<HRegionInfo> scan(final Configuration conf, final Text table)
+  private List<HRegionInfo> scan(final Configuration conf, final HTable t)
   throws IOException {
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
     HRegionInterface regionServer = null;
     long scannerId = -1L;
     try {
-      HTable t = new HTable(conf, table);
-      HRegionLocation rl = t.getRegionLocation(table);
+      HRegionLocation rl = t.getRegionLocation(t.getTableName());
       regionServer = t.getConnection().getHRegionConnection(rl.getServerAddress());
       scannerId = regionServer.openScanner(rl.getRegionInfo().getRegionName(),
           HConstants.COLUMN_FAMILY_ARRAY, new Text(),
@@ -263,25 +263,24 @@ public class TestScanner2 extends HBaseClusterTestCase {
   }
   
   private void addRegionToMETA(final Configuration conf,
-      final Text table, final HRegion region,
+      final HTable t, final HRegion region,
       final HServerAddress serverAddress,
       final long startCode)
   throws IOException {
-    HTable t = new HTable(conf, table);
-    try {
-      long lockid = t.startUpdate(region.getRegionName());
-      t.put(lockid, HConstants.COL_REGIONINFO,
-          Writables.getBytes(region.getRegionInfo()));
-      t.put(lockid, HConstants.COL_SERVER,
-        Writables.stringToBytes(serverAddress.toString()));
-      t.put(lockid, HConstants.COL_STARTCODE, Writables.longToBytes(startCode));
-      t.commit(lockid);
-      if (LOG.isDebugEnabled()) {
-        LOG.info("Added region " + region.getRegionName() + " to table " +
-            table);
-      }
-    } finally {
-      t.close();
+    long lockid = t.startUpdate(region.getRegionName());
+    t.put(lockid, HConstants.COL_REGIONINFO,
+      Writables.getBytes(region.getRegionInfo()));
+    t.put(lockid, HConstants.COL_SERVER,
+      Writables.stringToBytes(serverAddress.toString()));
+    t.put(lockid, HConstants.COL_STARTCODE, Writables.longToBytes(startCode));
+    t.commit(lockid);
+    // Assert added.
+    byte [] bytes = t.get(region.getRegionName(), HConstants.COL_REGIONINFO);
+    HRegionInfo hri = Writables.getHRegionInfo(bytes);
+    assertEquals(hri.getRegionId(), region.getRegionId());
+    if (LOG.isDebugEnabled()) {
+      LOG.info("Added region " + region.getRegionName() + " to table " +
+        t.getTableName());
     }
   }
   

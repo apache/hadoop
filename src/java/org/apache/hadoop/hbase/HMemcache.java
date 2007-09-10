@@ -175,18 +175,15 @@ public class HMemcache {
    * @return An array of byte arrays ordered by timestamp.
    */
   public byte [][] get(final HStoreKey key, final int numVersions) {
-    List<byte []> results = new ArrayList<byte[]>();
     this.lock.obtainReadLock();
     try {
-      ArrayList<byte []> result =
-        get(memcache, key, numVersions - results.size());
-      results.addAll(0, result);
+      ArrayList<byte []> results = get(memcache, key, numVersions);
       for (int i = history.size() - 1; i >= 0; i--) {
         if (numVersions > 0 && results.size() >= numVersions) {
           break;
         }
-        result = get(history.elementAt(i), key, numVersions - results.size());
-        results.addAll(results.size(), result);
+        results.addAll(results.size(),
+          get(history.elementAt(i), key, numVersions - results.size()));
       }
       return (results.size() == 0)?
         null: ImmutableBytesWritable.toArray(results);
@@ -194,7 +191,6 @@ public class HMemcache {
       this.lock.releaseReadLock();
     }
   }
-
   
   /**
    * Return all the available columns for the given key.  The key indicates a 
@@ -248,7 +244,8 @@ public class HMemcache {
    * @param map
    * @param key
    * @param numVersions
-   * @return Ordered list of items found in passed <code>map</code>
+   * @return Ordered list of items found in passed <code>map</code>.  If no
+   * matching values, returns an empty list (does not return null).
    */
   ArrayList<byte []> get(final TreeMap<HStoreKey, byte []> map,
       final HStoreKey key, final int numVersions) {
@@ -261,21 +258,87 @@ public class HMemcache {
     for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
       HStoreKey itKey = es.getKey();
       if (itKey.matchesRowCol(curKey)) {
-        if(HGlobals.deleteBytes.compareTo(es.getValue()) == 0) {
-          // TODO: Shouldn't this be a continue rather than a break?  Perhaps
-          // the intent is that this DELETE_BYTES is meant to suppress older
-          // info -- see 5.4 Compactions in BigTable -- but how does this jibe
-          // with being able to remove one version only?
-          break;
+        if (!isDeleted(es.getValue())) {
+          result.add(tailMap.get(itKey));
+          curKey.setVersion(itKey.getTimestamp() - 1);
         }
-        result.add(tailMap.get(itKey));
-        curKey.setVersion(itKey.getTimestamp() - 1);
       }
       if (numVersions > 0 && result.size() >= numVersions) {
         break;
       }
     }
     return result;
+  }
+
+  /**
+   * Get <code>versions</code> keys matching the origin key's
+   * row/column/timestamp and those of an older vintage
+   * Default access so can be accessed out of {@link HRegionServer}.
+   * @param origin Where to start searching.
+   * @param versions How many versions to return. Pass
+   * {@link HConstants.ALL_VERSIONS} to retrieve all.
+   * @return Ordered list of <code>versions</code> keys going from newest back.
+   * @throws IOException
+   */
+  List<HStoreKey> getKeys(final HStoreKey origin, final int versions) {
+    this.lock.obtainReadLock();
+    try {
+      List<HStoreKey> results = getKeys(this.memcache, origin, versions);
+      for (int i = history.size() - 1; i >= 0; i--) {
+        results.addAll(results.size(), getKeys(history.elementAt(i), origin,
+          versions == HConstants.ALL_VERSIONS? versions:
+           (results != null? versions - results.size(): versions)));
+      }
+      return results;
+    } finally {
+      this.lock.releaseReadLock();
+    }
+  }
+
+  /*
+   * @param origin Where to start searching.
+   * @param versions How many versions to return. Pass
+   * {@link HConstants.ALL_VERSIONS} to retrieve all.
+   * @return List of all keys that are of the same row and column and of
+   * equal or older timestamp.  If no keys, returns an empty List. Does not
+   * return null.
+   */
+  private List<HStoreKey> getKeys(final TreeMap<HStoreKey, byte []> map,
+      final HStoreKey origin, final int versions) {
+    List<HStoreKey> result = new ArrayList<HStoreKey>();
+    SortedMap<HStoreKey, byte []> tailMap = map.tailMap(origin);
+    for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
+      HStoreKey key = es.getKey();
+      if (!key.matchesRowCol(origin)) {
+        break;
+      }
+      if (!isDeleted(es.getValue())) {
+        result.add(key);
+        if (versions != HConstants.ALL_VERSIONS && result.size() >= versions) {
+          // We have enough results.  Return.
+          break;
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * @param key
+   * @return True if an entry and its content is {@link HGlobals.deleteBytes}.
+   * Use checking values in store. On occasion the memcache has the fact that
+   * the cell has been deleted.
+   */
+  boolean isDeleted(final HStoreKey key) {
+    return isDeleted(this.memcache.get(key));
+  }
+
+  /**
+   * @param value
+   * @return True if an entry and its content is {@link HGlobals.deleteBytes}.
+   */
+  boolean isDeleted(final byte [] value) {
+    return (value == null)? false: HGlobals.deleteBytes.compareTo(value) == 0;
   }
 
   /**

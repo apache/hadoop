@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.Vector;
@@ -581,6 +582,9 @@ public class HRegion implements HConstants {
     lock.obtainReadLock();
     try {
       HStore.HStoreSize biggest = largestHStore(midKey);
+      if (biggest == null) {
+        return false;
+      }
       long triggerSize =
         this.desiredMaxFileSize + (this.desiredMaxFileSize / 2);
       boolean split = (biggest.getAggregate() >= triggerSize);
@@ -911,26 +915,47 @@ public class HRegion implements HConstants {
     }
   }
 
-  /** Private implementation: get the value for the indicated HStoreKey */
-  private byte [][] get(HStoreKey key, int numVersions) throws IOException {
-
+  private byte [][] get(final HStoreKey key, final int numVersions)
+  throws IOException {
     lock.obtainReadLock();
     try {
       // Check the memcache
-      byte [][] result = memcache.get(key, numVersions);
-      if(result != null) {
-        return result;
+      byte [][] memcacheResult = this.memcache.get(key, numVersions);
+      // If we got sufficient versions from memcache, return.
+      if (memcacheResult != null && memcacheResult.length == numVersions) {
+        return memcacheResult;
       }
 
-      // If unavailable in memcache, check the appropriate HStore
+      // Check hstore for more versions.
       Text colFamily = HStoreKey.extractFamily(key.getColumn());
       HStore targetStore = stores.get(colFamily);
       if(targetStore == null) {
-        return null;
+        // There are no stores.  Return what we got from memcache.
+        return memcacheResult;
       }
-
-      return targetStore.get(key, numVersions);
       
+      // Update the number of versions we need to fetch from the store.
+      int amendedNumVersions = numVersions;
+      if (memcacheResult != null) {
+        amendedNumVersions -= memcacheResult.length;
+      }
+      byte [][] result =
+        targetStore.get(key, amendedNumVersions, this.memcache);
+      if (result == null) {
+        result = memcacheResult;
+      } else if (memcacheResult != null) {
+        // We have results from both memcache and from stores.  Put them
+        // together in an array in the proper order.
+        byte [][] storeResult = result;
+        result = new byte [memcacheResult.length + result.length][];
+        for (int i = 0; i < memcacheResult.length; i++) {
+          result[i] = memcacheResult[i];
+        }
+        for (int i = 0; i < storeResult.length; i++) {
+          result[i + memcacheResult.length] = storeResult[i];
+        }
+      }
+      return result;
     } finally {
       lock.releaseReadLock();
     }
@@ -960,6 +985,45 @@ public class HRegion implements HConstants {
     } finally {
       lock.releaseReadLock();
     }
+  }
+
+  /**
+   * Get all keys matching the origin key's row/column/timestamp and those
+   * of an older vintage
+   * Default access so can be accessed out of {@link HRegionServer}.
+   * @param origin Where to start searching.
+   * @return Ordered list of keys going from newest on back.
+   * @throws IOException
+   */
+  List<HStoreKey> getKeys(final HStoreKey origin) throws IOException {
+    return getKeys(origin, ALL_VERSIONS);
+  }
+  
+  /**
+   * Get <code>versions</code> keys matching the origin key's
+   * row/column/timestamp and those of an older vintage
+   * Default access so can be accessed out of {@link HRegionServer}.
+   * @param origin Where to start searching.
+   * @param versions How many versions to return. Pass
+   * {@link HConstants.ALL_VERSIONS} to retrieve all.
+   * @return Ordered list of <code>versions</code> keys going from newest back.
+   * @throws IOException
+   */
+  List<HStoreKey> getKeys(final HStoreKey origin, final int versions)
+  throws IOException {
+    List<HStoreKey> keys = this.memcache.getKeys(origin, versions);
+    if (versions != ALL_VERSIONS && keys.size() >= versions) {
+      return keys;
+    }
+    // Check hstore for more versions.
+    Text colFamily = HStoreKey.extractFamily(origin.getColumn());
+    HStore targetStore = stores.get(colFamily);
+    if (targetStore != null) {
+      // Pass versions without modification since in the store getKeys, it
+      // includes the size of the passed <code>keys</code> array when counting.
+      keys = targetStore.getKeys(origin, keys, versions);
+    }
+    return keys;
   }
 
   /**
@@ -1110,14 +1174,59 @@ public class HRegion implements HConstants {
   }
 
   /**
-   * Delete a value or write a value. This is a just a convenience method for put().
-   *
+   * Delete a value or write a value.
+   * This is a just a convenience method for put().
    * @param lockid lock id obtained from startUpdate
    * @param targetCol name of column to be deleted
    * @throws IOException
    */
   public void delete(long lockid, Text targetCol) throws IOException {
     localput(lockid, targetCol, HGlobals.deleteBytes.get());
+  }
+  
+  /**
+   * Delete all cells of the same age as the passed timestamp or older.
+   * @param row
+   * @param column
+   * @param ts Delete all entries that have this timestamp or older
+   * @throws IOException
+   */
+  public void deleteAll(final Text row, final Text column, final long ts)
+  throws IOException {
+    deleteMultiple(row, column, ts, ALL_VERSIONS);
+  }
+  
+  /**
+   * Delete one or many cells.
+   * Used to support {@link #deleteAll(Text, Text, long)} and deletion of
+   * latest cell.
+   * @param row
+   * @param column
+   * @param ts Timestamp to start search on.
+   * @param versions How many versions to delete. Pass
+   * {@link HConstants.ALL_VERSIONS} to delete all.
+   * @throws IOException
+   */
+  void deleteMultiple(final Text row, final Text column, final long ts,
+    final int versions)
+  throws IOException {
+    lock.obtainReadLock();
+    try {
+      checkColumn(column);
+      HStoreKey origin = new HStoreKey(row, column, ts);
+      synchronized(row) {
+        List<HStoreKey> keys = getKeys(origin, versions);
+        if (keys.size() > 0) {
+          TreeMap<Text, byte []> edits = new TreeMap<Text, byte []>();
+          edits.put(column, HGlobals.deleteBytes.get());
+          for (HStoreKey key: keys) {
+            update(row, key.getTimestamp(), edits);
+          }
+        }
+      }
+    } finally {
+      lock.releaseReadLock();
+    }
   }
 
   /**
@@ -1202,10 +1311,11 @@ public class HRegion implements HConstants {
    * Once updates hit the change log, they are safe.  They will either be moved 
    * into an HStore in the future, or they will be recovered from the log.
    * @param lockid Lock for row we're to commit.
-   * @param timestamp the time to associate with this change
+   * @param timestamp the time to associate with this change.
    * @throws IOException
    */
-  public void commit(final long lockid, long timestamp) throws IOException {
+  public void commit(final long lockid, final long timestamp)
+  throws IOException {
     // Remove the row from the pendingWrites list so 
     // that repeated executions won't screw this up.
     Text row = getRowFromLock(lockid);
@@ -1216,18 +1326,74 @@ public class HRegion implements HConstants {
     // This check makes sure that another thread from the client
     // hasn't aborted/committed the write-operation
     synchronized(row) {
-      // Add updates to the log and add values to the memcache.
       Long lid = Long.valueOf(lockid);
-      TreeMap<Text, byte []> columns =  this.targetColumns.get(lid);
-      if (columns != null && columns.size() > 0) {
-        log.append(regionInfo.regionName, regionInfo.tableDesc.getName(),
-          row, columns, timestamp);
-        memcache.add(row, columns, timestamp);
-        // OK, all done!
-      }
+      update(row, timestamp, this.targetColumns.get(lid));
       targetColumns.remove(lid);
       releaseRowLock(row);
     }
+  }
+  
+  /**
+   * This method for unit testing only.
+   * Does each operation individually so can do appropriate
+   * {@link HConstants#LATEST_TIMESTAMP} action.  Tries to mimic how
+   * {@link HRegionServer#batchUpdate(Text, long, org.apache.hadoop.hbase.io.BatchUpdate)}
+   * works when passed a timestamp of LATEST_TIMESTAMP.
+   * @param lockid Lock for row we're to commit.
+   * @throws IOException 
+   * @throws IOException
+   * @see {@link #commit(long, long)}
+   */
+  void commit(final long lockid) throws IOException {
+    // Remove the row from the pendingWrites list so 
+    // that repeated executions won't screw this up.
+    Text row = getRowFromLock(lockid);
+    if(row == null) {
+      throw new LockException("No write lock for lockid " + lockid);
+    }
+    
+    // This check makes sure that another thread from the client
+    // hasn't aborted/committed the write-operation
+    synchronized(row) {
+      Long lid = Long.valueOf(lockid);
+      TreeMap<Text, byte []> updatesByColumn = this.targetColumns.get(lid);
+      // Run updates one at a time so we can supply appropriate timestamp
+      long now = System.currentTimeMillis();
+      for (Map.Entry<Text, byte []>e: updatesByColumn.entrySet()) {
+        if (HGlobals.deleteBytes.equals(e.getValue())) {
+          // Its a delete.  Delete latest.  deleteMultiple calls update for us.
+          // Actually regets the row lock but since we already have it, should
+          // be fine.
+          deleteMultiple(row, e.getKey(), LATEST_TIMESTAMP, 1);
+          continue;
+        }
+        // Must be a 'put'.
+        TreeMap<Text, byte []> putEdit = new TreeMap<Text, byte []>();
+        putEdit.put(e.getKey(), e.getValue());
+        update(row, now, putEdit);
+      }
+      this.targetColumns.remove(lid);
+      releaseRowLock(row);
+    }
+  }
+   
+  /* 
+   * Add updates to the log and add values to the memcache.
+   * Warning: Assumption is caller has lock on passed in row.
+   * @param row Row to update.
+   * @param timestamp Timestamp to record the updates against
+   * @param updatesByColumn Cell updates by column
+   * @throws IOException
+   */
+  private void update(final Text row, final long timestamp,
+    final TreeMap<Text, byte []> updatesByColumn)
+  throws IOException {
+    if (updatesByColumn == null || updatesByColumn.size() <= 0) {
+      return;
+    }
+    this.log.append(regionInfo.regionName, regionInfo.tableDesc.getName(),
+        row, updatesByColumn, timestamp);
+    this.memcache.add(row, updatesByColumn, timestamp);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -1250,7 +1416,11 @@ public class HRegion implements HConstants {
     }
   }
   
-  /** Make sure this is a valid column for the current table */
+  /**
+   * Make sure this is a valid column for the current table
+   * @param columnName
+   * @throws IOException
+   */
   void checkColumn(Text columnName) throws IOException {
     Text family = new Text(HStoreKey.extractFamily(columnName) + ":");
     if(! regionInfo.tableDesc.hasFamily(family)) {
@@ -1359,10 +1529,6 @@ public class HRegion implements HConstants {
         dataFilter.reset();
       }
       this.scanners = new HInternalScannerInterface[stores.length + 1];
-      for(int i = 0; i < this.scanners.length; i++) {
-        this.scanners[i] = null;
-      }
-      
       this.resultSets = new TreeMap[scanners.length];
       this.keys = new HStoreKey[scanners.length];
       this.wildcardMatch = false;
@@ -1424,12 +1590,11 @@ public class HRegion implements HConstants {
     public boolean isMultipleMatchScanner() {
       return multipleMatchers;
     }
-    
-    /**
-     * {@inheritDoc}
-     */
-    public boolean next(HStoreKey key, TreeMap<Text, byte[]> results)
+
+    public boolean next(HStoreKey key, SortedMap<Text, byte[]> results)
     throws IOException {
+      // Filtered flag is set by filters.  If a cell has been 'filtered out'
+      // -- i.e. it is not to be returned to the caller -- the flag is 'true'.
       boolean filtered = true;
       boolean moreToFollow = true;
       while (filtered && moreToFollow) {
@@ -1446,19 +1611,27 @@ public class HRegion implements HConstants {
             chosenTimestamp = keys[i].getTimestamp();
           }
         }
-
+        
         // Filter whole row by row key?
         filtered = dataFilter != null? dataFilter.filter(chosenRow) : false;
 
         // Store the key and results for each sub-scanner. Merge them as
         // appropriate.
-        if (chosenTimestamp > 0 && !filtered) {
+        if (chosenTimestamp >= 0 && !filtered) {
+          // Here we are setting the passed in key with current row+timestamp
           key.setRow(chosenRow);
           key.setVersion(chosenTimestamp);
-          key.setColumn(new Text(""));
-
+          key.setColumn(HConstants.EMPTY_TEXT);
+          // Keep list of deleted cell keys within this row.  We need this
+          // because as we go through scanners, the delete record may be in an
+          // early scanner and then the same record with a non-delete, non-null
+          // value in a later. Without history of what we've seen, we'll return
+          // deleted values. This List should not ever grow too large since we
+          // are only keeping rows and columns that match those set on the
+          // scanner and which have delete values.  If memory usage becomes a
+          // problem, could redo as bloom filter.
+          List<HStoreKey> deletes = new ArrayList<HStoreKey>();
           for (int i = 0; i < scanners.length && !filtered; i++) {
-
             while ((scanners[i] != null
                 && !filtered
                 && moreToFollow)
@@ -1481,8 +1654,19 @@ public class HRegion implements HConstants {
               // but this had the effect of overwriting newer
               // values with older ones. So now we only insert
               // a result if the map does not contain the key.
+              HStoreKey hsk = new HStoreKey(key.getRow(), EMPTY_TEXT,
+                key.getTimestamp());
               for (Map.Entry<Text, byte[]> e : resultSets[i].entrySet()) {
-                if (!filtered && moreToFollow &&
+                hsk.setColumn(e.getKey());
+                if (HGlobals.deleteBytes.equals(e.getValue())) {
+                  if (!deletes.contains(hsk)) {
+                    // Key changes as we cycle the for loop so add a copy to
+                    // the set of deletes.
+                    deletes.add(new HStoreKey(hsk));
+                  }
+                } else if (!deletes.contains(hsk) &&
+                    !filtered &&
+                    moreToFollow &&
                     !results.containsKey(e.getKey())) {
                   if (dataFilter != null) {
                     // Filter whole row by column data?
@@ -1496,7 +1680,6 @@ public class HRegion implements HConstants {
                   results.put(e.getKey(), e.getValue());
                 }
               }
-
               resultSets[i].clear();
               if (!scanners[i].next(keys[i], resultSets[i])) {
                 closeScanner(i);
@@ -1516,8 +1699,8 @@ public class HRegion implements HConstants {
             }
           }
         }
-        
-        moreToFollow = chosenTimestamp > 0;
+
+        moreToFollow = chosenTimestamp >= 0;
         
         if (dataFilter != null) {
           if (moreToFollow) {
@@ -1533,6 +1716,17 @@ public class HRegion implements HConstants {
             LOG.debug("ROWKEY = " + chosenRow + ", FILTERED = " + filtered);
           }
         }
+        
+        if (results.size() <= 0 && !filtered) {
+          // There were no results found for this row.  Marked it as 
+          // 'filtered'-out otherwise we will not move on to the next row.
+          filtered = true;
+        }
+      }
+      
+      // If we got no results, then there is no more to follow.
+      if (results == null || results.size() <= 0) {
+        moreToFollow = false;
       }
       
       // Make sure scanners closed if no more results
@@ -1551,7 +1745,11 @@ public class HRegion implements HConstants {
     /** Shut down a single scanner */
     void closeScanner(int i) {
       try {
-        scanners[i].close();
+        try {
+          scanners[i].close();
+        } catch (IOException e) {
+          LOG.warn("Failed closeing scanner " + i, e);
+        }
       } finally {
         scanners[i] = null;
         keys[i] = null;
