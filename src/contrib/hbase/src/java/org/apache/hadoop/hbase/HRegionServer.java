@@ -448,7 +448,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.msgInterval = conf.getLong("hbase.regionserver.msginterval",
-      15 * 1000);
+      3 * 1000);
     this.splitOrCompactCheckFrequency =
       conf.getLong("hbase.regionserver.thread.splitcompactcheckfrequency",
       30 * 1000);
