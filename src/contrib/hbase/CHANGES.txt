@@ -47,7 +47,7 @@ Trunk (unreleased changes)
                 filter types
     HADOOP-1760 Use new MapWritable and SortedMapWritable classes from
                 org.apache.hadoop.io
-    HADOOP-1793 (Phase 1) Remove TestHClient
+    HADOOP-1793 (Phase 1) Remove TestHClient (Phase2) remove HClient.
     HADOOP-1794 Remove deprecated APIs
     HADOOP-1802 Startup scripts should wait until hdfs as cleared 'safe mode'
     HADOOP-1833 bin/stop_hbase.sh returns before it completes
