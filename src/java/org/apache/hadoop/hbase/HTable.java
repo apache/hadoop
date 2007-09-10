@@ -75,7 +75,7 @@ public class HTable implements HConstants {
     closed = true;
     this.connection = HConnectionManager.getConnection(conf);
     this.tableName = tableName;
-    this.pause = conf.getLong("hbase.client.pause", 30 * 1000);
+    this.pause = conf.getLong("hbase.client.pause", 10 * 1000);
     this.numRetries = conf.getInt("hbase.client.retries.number", 5);
     this.rand = new Random();
     tableServers = connection.getTableServers(tableName);
