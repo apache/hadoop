@@ -108,7 +108,9 @@ public class TestCompaction extends HBaseTestCase {
     t2.join();
     // Now assert that there are 4 versions of a record only: thats the
     // 3 versions that should be in the compacted store and then the one more
-    // we added when we compacted.
+    // we added when we flushed. But could be 3 only if the flush happened
+    // before the compaction started though we tried to have the threads run
+    // concurrently (On hudson this happens).
     byte [] secondRowBytes = new byte[START_KEY_BYTES.length];
     System.arraycopy(START_KEY_BYTES, 0, secondRowBytes, 0,
       START_KEY_BYTES.length);
@@ -116,7 +118,8 @@ public class TestCompaction extends HBaseTestCase {
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     Text secondRow = new Text(secondRowBytes);
     bytes = this.r.get(secondRow, COLUMN_FAMILY_TEXT, 100/*Too many*/);
-    assertTrue(bytes.length == 4);
+    LOG.info("Count of " + secondRow + ": " + bytes.length);
+    assertTrue(bytes.length == 3 || bytes.length == 4);
     // Now add deletes to memcache and then flush it.  That will put us over
     // the compaction threshold of 3 store files.  Compacting these store files
     // should result in a compacted store file that has no references to the
