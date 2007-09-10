@@ -19,6 +19,7 @@ package org.apache.hadoop.dfs;
 
 import org.apache.commons.logging.*;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import java.util.*;
 
@@ -62,10 +63,10 @@ class ReplicationTargetChooser {
    */
   DatanodeDescriptor[] chooseTarget(int numOfReplicas,
                                     DatanodeDescriptor writer,
-                                    List<DatanodeDescriptor> excludedNodes,
+                                    List<Node> excludedNodes,
                                     long blocksize) {
     if (excludedNodes == null) {
-      excludedNodes = new ArrayList<DatanodeDescriptor>();
+      excludedNodes = new ArrayList<Node>();
     }
       
     return chooseTarget(numOfReplicas, writer, 
@@ -88,14 +89,14 @@ class ReplicationTargetChooser {
   DatanodeDescriptor[] chooseTarget(int numOfReplicas,
                                     DatanodeDescriptor writer,
                                     List<DatanodeDescriptor> choosenNodes,
-                                    List<DatanodeDescriptor> excludedNodes,
+                                    List<Node> excludedNodes,
                                     long blocksize) {
     if (numOfReplicas == 0 || clusterMap.getNumOfLeaves()==0) {
       return new DatanodeDescriptor[0];
     }
       
     if (excludedNodes == null) {
-      excludedNodes = new ArrayList<DatanodeDescriptor>();
+      excludedNodes = new ArrayList<Node>();
     }
       
     int clusterSize = clusterMap.getNumOfLeaves();
@@ -129,7 +130,7 @@ class ReplicationTargetChooser {
   /* choose <i>numOfReplicas</i> from all data nodes */
   private DatanodeDescriptor chooseTarget(int numOfReplicas,
                                           DatanodeDescriptor writer,
-                                          List<DatanodeDescriptor> excludedNodes,
+                                          List<Node> excludedNodes,
                                           long blocksize,
                                           int maxNodesPerRack,
                                           List<DatanodeDescriptor> results) {
@@ -140,7 +141,7 @@ class ReplicationTargetChooser {
       
     int numOfResults = results.size();
     if (writer == null && (numOfResults==1 || numOfResults==2)) {
-      writer = results.get(0);
+      writer = (DatanodeDescriptor)results.get(0);
     }
       
     try {
@@ -186,7 +187,7 @@ class ReplicationTargetChooser {
    */
   private DatanodeDescriptor chooseLocalNode(
                                              DatanodeDescriptor localMachine,
-                                             List<DatanodeDescriptor> excludedNodes,
+                                             List<Node> excludedNodes,
                                              long blocksize,
                                              int maxNodesPerRack,
                                              List<DatanodeDescriptor> results)
@@ -220,7 +221,7 @@ class ReplicationTargetChooser {
    */
   private DatanodeDescriptor chooseLocalRack(
                                              DatanodeDescriptor localMachine,
-                                             List<DatanodeDescriptor> excludedNodes,
+                                             List<Node> excludedNodes,
                                              long blocksize,
                                              int maxNodesPerRack,
                                              List<DatanodeDescriptor> results)
@@ -273,7 +274,7 @@ class ReplicationTargetChooser {
     
   private void chooseRemoteRack(int numOfReplicas,
                                 DatanodeDescriptor localMachine,
-                                List<DatanodeDescriptor> excludedNodes,
+                                List<Node> excludedNodes,
                                 long blocksize,
                                 int maxReplicasPerRack,
                                 List<DatanodeDescriptor> results)
@@ -295,7 +296,7 @@ class ReplicationTargetChooser {
    */
   private DatanodeDescriptor chooseRandom(
                                           String nodes,
-                                          List<DatanodeDescriptor> excludedNodes,
+                                          List<Node> excludedNodes,
                                           long blocksize,
                                           int maxNodesPerRack,
                                           List<DatanodeDescriptor> results) 
@@ -318,7 +319,7 @@ class ReplicationTargetChooser {
    */
   private void chooseRandom(int numOfReplicas,
                             String nodes,
-                            List<DatanodeDescriptor> excludedNodes,
+                            List<Node> excludedNodes,
                             long blocksize,
                             int maxNodesPerRack,
                             List<DatanodeDescriptor> results)
@@ -331,7 +332,7 @@ class ReplicationTargetChooser {
         toContinue = false;
       }
       for(int i=0; i<selectedNodes.length; i++) {
-        DatanodeDescriptor result = (DatanodeDescriptor)(selectedNodes[i]);
+        DatanodeDescriptor result = selectedNodes[i];
         if (isGoodTarget(result, blocksize, maxNodesPerRack, results)) {
           numOfReplicas--;
           results.add(result);
@@ -350,7 +351,7 @@ class ReplicationTargetChooser {
    */
   private DatanodeDescriptor[] chooseRandom(int numOfReplicas, 
                                             String nodes,
-                                            List<DatanodeDescriptor> excludedNodes) {
+                                            List<Node> excludedNodes) {
     List<DatanodeDescriptor> results = 
       new ArrayList<DatanodeDescriptor>();
     int numOfAvailableNodes =
@@ -358,7 +359,8 @@ class ReplicationTargetChooser {
     numOfReplicas = (numOfAvailableNodes<numOfReplicas)?
       numOfAvailableNodes:numOfReplicas;
     while(numOfReplicas > 0) {
-      DatanodeDescriptor choosenNode = clusterMap.chooseRandom(nodes);
+      DatanodeDescriptor choosenNode = 
+        (DatanodeDescriptor)(clusterMap.chooseRandom(nodes));
       if (!excludedNodes.contains(choosenNode)) {
         results.add(choosenNode);
         excludedNodes.add(choosenNode);
@@ -387,14 +389,14 @@ class ReplicationTargetChooser {
     Log logr = FSNamesystem.LOG;
     // check if the node is (being) decommissed
     if (node.isDecommissionInProgress() || node.isDecommissioned()) {
-      logr.debug("Node "+node.getPath()+
+      logr.debug("Node "+NodeBase.getPath(node)+
                 " is not chosen because the node is (being) decommissioned");
       return false;
     }
 
     // check the remaining capacity of the target machine
     if (blockSize* FSConstants.MIN_BLOCKS_FOR_WRITE>node.getRemaining()) {
-      logr.debug("Node "+node.getPath()+
+      logr.debug("Node "+NodeBase.getPath(node)+
                 " is not chosen because the node does not have enough space");
       return false;
     }
@@ -407,7 +409,7 @@ class ReplicationTargetChooser {
         avgLoad = (double)fs.totalLoad()/size;
       }
       if (node.getXceiverCount() > (2.0 * avgLoad)) {
-        logr.debug("Node "+node.getPath()+
+        logr.debug("Node "+NodeBase.getPath(node)+
                   " is not chosen because the node is too busy");
         return false;
       }
@@ -418,13 +420,13 @@ class ReplicationTargetChooser {
     int counter=1;
     for(Iterator<DatanodeDescriptor> iter = results.iterator();
         iter.hasNext();) {
-      DatanodeDescriptor result = iter.next();
+      Node result = iter.next();
       if (rackname.equals(result.getNetworkLocation())) {
         counter++;
       }
     }
     if (counter>maxTargetPerLoc) {
-      logr.debug("Node "+node.getPath()+
+      logr.debug("Node "+NodeBase.getPath(node)+
                 " is not chosen because the rack has too many chosen nodes");
       return false;
     }

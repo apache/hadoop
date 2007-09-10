@@ -132,11 +132,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.location = NodeBase.normalize(location);
   }
   
-  public String getPath() {
-    return location+NodeBase.PATH_SEPARATOR_STR+name;
-  }
-
-  
   public String getHostName() {
     return (hostName == null || hostName.length()==0) ? getHost() : hostName;
   }

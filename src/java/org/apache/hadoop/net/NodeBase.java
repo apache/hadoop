@@ -85,13 +85,13 @@ public class NodeBase implements Node {
   public String getNetworkLocation() { return location; }
   
   /** Return this node's path */
-  public String getPath() {
-    return location+PATH_SEPARATOR_STR+name;
+  public static String getPath(Node node) {
+    return node.getNetworkLocation()+PATH_SEPARATOR_STR+node.getName();
   }
   
   /** Return this node's string representation */
   public String toString() {
-    return getPath();
+    return getPath(this);
   }
 
   /** Normalize a path */
@@ -114,8 +114,18 @@ public class NodeBase implements Node {
   /** Return this node's parent */
   public Node getParent() { return parent; }
   
+  /** Set this node's parent */
+  public void setParent(Node parent) {
+    this.parent = parent;
+  }
+  
   /** Return this node's level in the tree.
    * E.g. the root of a tree returns 0 and its children return 1
    */
   public int getLevel() { return level; }
+  
+  /** Set this node's level in the tree */
+  public void setLevel(int level) {
+    this.level = level;
+  }
 }

@@ -34,8 +34,12 @@ public interface Node {
   public String getName();
   /** Return this node's parent */
   public Node getParent();
+  /** Set this node's parent */
+  public void setParent(Node parent);
   /** Return this node's level in the tree.
    * E.g. the root of a tree returns 0 and its children return 1
    */
   public int getLevel();
+  /** Set this node's level in the tree.*/
+  public void setLevel(int i);
 }

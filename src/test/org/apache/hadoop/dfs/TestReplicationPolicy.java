@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.Node;
 
 import junit.framework.TestCase;
 
@@ -128,23 +129,23 @@ public class TestReplicationPolicy extends TestCase {
    * @throws Exception
    */
   public void testChooseTarget2() throws Exception { 
-    List<DatanodeDescriptor> excludedNodes;
+    List<Node> excludedNodes;
     DatanodeDescriptor[] targets;
     
-    excludedNodes = new ArrayList<DatanodeDescriptor>();
+    excludedNodes = new ArrayList<Node>();
     excludedNodes.add(dataNodes[1]); 
     targets = replicator.chooseTarget(
                                       0, dataNodes[0], excludedNodes, BLOCK_SIZE);
     assertEquals(targets.length, 0);
     
-    excludedNodes = new ArrayList<DatanodeDescriptor>();
+    excludedNodes.clear();
     excludedNodes.add(dataNodes[1]); 
     targets = replicator.chooseTarget(
                                       1, dataNodes[0], excludedNodes, BLOCK_SIZE);
     assertEquals(targets.length, 1);
     assertEquals(targets[0], dataNodes[0]);
     
-    excludedNodes = new ArrayList<DatanodeDescriptor>();
+    excludedNodes.clear();
     excludedNodes.add(dataNodes[1]); 
     targets = replicator.chooseTarget(
                                       2, dataNodes[0], excludedNodes, BLOCK_SIZE);
@@ -152,7 +153,7 @@ public class TestReplicationPolicy extends TestCase {
     assertEquals(targets[0], dataNodes[0]);
     assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
     
-    excludedNodes = new ArrayList<DatanodeDescriptor>();
+    excludedNodes.clear();
     excludedNodes.add(dataNodes[1]); 
     targets = replicator.chooseTarget(
                                       3, dataNodes[0], excludedNodes, BLOCK_SIZE);
@@ -161,7 +162,7 @@ public class TestReplicationPolicy extends TestCase {
     assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
     assertTrue(cluster.isOnSameRack(targets[1], targets[2]));
     
-    excludedNodes = new ArrayList<DatanodeDescriptor>();
+    excludedNodes.clear();
     excludedNodes.add(dataNodes[1]); 
     targets = replicator.chooseTarget(
                                       4, dataNodes[0], excludedNodes, BLOCK_SIZE);
