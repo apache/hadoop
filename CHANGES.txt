@@ -39,6 +39,8 @@ Trunk (unreleased changes)
     HADOOP-1834 Scanners ignore timestamp passed on creation
     HADOOP-1847 Many HBase tests do not fail well.
     HADOOP-1847 Many HBase tests do not fail well. (phase 2)
+    HADOOP-1870 Once file system failure has been detected, don't check it again
+                and get on with shutting down the hbase cluster.
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable

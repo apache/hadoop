@@ -84,6 +84,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // debugging and unit tests.
   protected volatile boolean abortRequested;
   
+  // If false, the file system has become unavailable
+  protected volatile boolean fsOk;
+  
   final Path rootDir;
   protected final HServerInfo serverInfo;
   protected final Configuration conf;
@@ -435,6 +438,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     // Basic setup
     this.stopRequested = false;
     this.abortRequested = false;
+    this.fsOk = true;
     this.rootDir = rootDir;
     this.conf = conf;
     this.rand = new Random();
@@ -510,6 +514,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       throw e;
     }
+  }
+
+  /** @return the HLog */
+  HLog getLog() {
+    return log;
   }
 
   /**
@@ -1101,6 +1110,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
 
+  /** {@inheritDoc} */
   public void batchUpdate(Text regionName, long timestamp, BatchUpdate b)
   throws IOException {  
     requestCount.incrementAndGet();
@@ -1259,6 +1269,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.delete(lockid, column);
   }
   
+  /** {@inheritDoc} */
   public void deleteAll(final Text regionName, final Text row,
       final Text column, final long timestamp) 
   throws IOException {
@@ -1326,12 +1337,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @return false if file system is not available
    */
   protected boolean checkFileSystem() {
-    boolean fsOk = true;
-    if (!FSUtils.isFileSystemAvailable(fs)) {
-      LOG.fatal("Shutting down HRegionServer: file system not available");
-      abortRequested = true;
-      stopRequested = true;
-      fsOk = false;
+    if (fsOk) {
+      if (!FSUtils.isFileSystemAvailable(fs)) {
+        LOG.fatal("Shutting down HRegionServer: file system not available");
+        abortRequested = true;
+        stopRequested = true;
+        fsOk = false;
+      }
     }
     return fsOk;
   }
