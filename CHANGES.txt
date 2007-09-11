@@ -108,6 +108,9 @@ Trunk (unreleased changes)
     HADOOP-1853.  Fix contrib/streaming to accept multiple -cacheFile
     options.  (Prachi Gupta via cutting)
 
+    HADOOP-1818. Fix MultiFileInputFormat so that it does not return 
+    empty splits when numPaths < numSplits.  (Thomas Friol via enis)
+
   IMPROVEMENTS
 
     HADOOP-1266. Remove dependency of package org.apache.hadoop.net on 
