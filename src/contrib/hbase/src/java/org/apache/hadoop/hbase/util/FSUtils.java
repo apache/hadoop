@@ -54,6 +54,15 @@ public class FSUtils {
       } catch (IOException e) {
         LOG.fatal("file system unavailable because: ", e);
       }
+
+      try {
+        if (!available) {
+          fs.close();
+        }
+        
+      } catch (IOException e) {
+        LOG.error("file system close", e);
+      }
       
     } else {
       available = true;

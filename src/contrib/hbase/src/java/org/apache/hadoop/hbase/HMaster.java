@@ -85,6 +85,7 @@ HMasterRegionInterface, Runnable {
   static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
   volatile boolean closed;
+  volatile boolean fsOk;
   Path dir;
   Configuration conf;
   FileSystem fs;
@@ -511,18 +512,17 @@ HMasterRegionInterface, Runnable {
             LOG.warn("Scan ROOT region", e);
           } else {
             LOG.error("Scan ROOT region", e);
+            
+            if (tries == numRetries - 1) {
+              // We ran out of tries. Make sure the file system is still available
+
+              checkFileSystem();
+            }
           }
         } catch (Exception e) {
           // If for some reason we get some other kind of exception, 
           // at least log it rather than go out silently.
           LOG.error("Unexpected exception", e);
-        }
-        
-        // We ran out of tries. Make sure the file system is still available
-        
-        if (!FSUtils.isFileSystemAvailable(fs)) {
-          LOG.fatal("Shutting down hbase cluster: file system not available");
-          closed = true;
         }
         
         if (!closed) {
@@ -681,20 +681,18 @@ HMasterRegionInterface, Runnable {
             LOG.warn("Scan one META region", e);
           } else {
             LOG.error("Scan one META region", e);
+            
+            if (tries == numRetries - 1) {
+              // We ran out of tries. Make sure the file system is still available
+
+              checkFileSystem();
+            }
           }
         } catch (Exception e) {
           // If for some reason we get some other kind of exception, 
           // at least log it rather than go out silently.
           LOG.error("Unexpected exception", e);
         }
-        
-        // We ran out of tries. Make sure the file system is still available
-        
-        if (!FSUtils.isFileSystemAvailable(fs)) {
-          LOG.fatal("Shutting down hbase cluster: file system not available");
-          closed = true;
-        }
-        
         if (!closed) {
           // sleep before retry
           try {
@@ -852,6 +850,7 @@ HMasterRegionInterface, Runnable {
     throws IOException {
     
     this.closed = true;
+    this.fsOk = true;
     this.dir = dir;
     this.conf = conf;
     this.fs = FileSystem.get(conf);
@@ -979,6 +978,23 @@ HMasterRegionInterface, Runnable {
     LOG.info("HMaster initialized on " + this.address.toString());
   }
 
+  /**
+   * Checks to see if the file system is still accessible.
+   * If not, sets closed
+   * 
+   * @return false if file system is not available
+   */
+  protected boolean checkFileSystem() {
+    if (fsOk) {
+      if (!FSUtils.isFileSystemAvailable(fs)) {
+        LOG.fatal("Shutting down HBase cluster: file system not available");
+        closed = true;
+        fsOk = false;
+      }
+    }
+    return fsOk;
+  }
+
   /** @return HServerAddress of the master server */
   public HServerAddress getMasterAddress() {
     return address;
@@ -1071,9 +1087,7 @@ HMasterRegionInterface, Runnable {
             LOG.warn("main processing loop: " + op.toString(), e);
           }
         }
-        if (!FSUtils.isFileSystemAvailable(fs)) {
-          LOG.fatal("Shutting down hbase cluster: file system not available");
-          closed = true;
+        if (!checkFileSystem()) {
           break;
         }
         LOG.warn("Processing pending operations: " + op.toString(), ex);
@@ -2664,10 +2678,7 @@ HMasterRegionInterface, Runnable {
           if (tries == numRetries - 1) {
             // No retries left
             
-            if (!FSUtils.isFileSystemAvailable(fs)) {
-              LOG.fatal("Shutting down hbase cluster: file system not available");
-              closed = true;
-            }
+            checkFileSystem();
 
             if (e instanceof RemoteException) {
               e = RemoteExceptionHandler.decodeRemoteException(
