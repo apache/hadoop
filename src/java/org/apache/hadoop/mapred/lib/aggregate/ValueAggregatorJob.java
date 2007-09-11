@@ -143,7 +143,7 @@ public class ValueAggregatorJob {
     
     JobConf theJob = new JobConf(conf);
     if (specFile != null) {
-      theJob.addDefaultResource(specFile);
+      theJob.addResource(specFile);
     }
     String userJarFile = theJob.get("user.jar.file");
     if (userJarFile == null) {

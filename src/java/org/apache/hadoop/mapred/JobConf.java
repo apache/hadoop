@@ -25,7 +25,6 @@ import java.util.StringTokenizer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.Map;
 
 import java.net.URL;
 import java.net.URLDecoder;
@@ -47,24 +46,17 @@ import org.apache.hadoop.util.ReflectionUtils;
  * {@link OutputFormat} implementations to be used.  It also indicates the set
  * of input files, and where the output files should be written. */
 public class JobConf extends Configuration {
-
-  private void initialize() {
-    addDefaultResource("mapred-default.xml");
-  }
   
   /**
    * Construct a map/reduce job configuration.
    */
-  public JobConf() {
-    initialize();
-  }
+  public JobConf() {}
 
   /** 
    * Construct a map/reduce job configuration.
    * @param exampleClass a class whose containing jar is used as the job's jar.
    */
   public JobConf(Class exampleClass) {
-    initialize();
     setJarByClass(exampleClass);
   }
   
@@ -75,7 +67,6 @@ public class JobConf extends Configuration {
    */
   public JobConf(Configuration conf) {
     super(conf);
-    initialize();
   }
 
 
@@ -86,7 +77,6 @@ public class JobConf extends Configuration {
    */
   public JobConf(Configuration conf, Class exampleClass) {
     this(conf);
-    initialize();
     setJarByClass(exampleClass);
   }
 
@@ -105,8 +95,7 @@ public class JobConf extends Configuration {
    */
   public JobConf(Path config) {
     super();
-    addDefaultResource("mapred-default.xml");
-    addDefaultResource(config);
+    addResource(config);
   }
 
   public String getJar() { return get("mapred.jar"); }

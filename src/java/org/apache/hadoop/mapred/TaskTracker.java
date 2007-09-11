@@ -1774,7 +1774,7 @@ public class TaskTracker
       TaskLog.cleanup(job.getInt("mapred.userlog.retain.hours", 24));
       task.setConf(job);
           
-      defaultConf.addFinalResource(new Path(task.getJobFile()));
+      defaultConf.addResource(new Path(task.getJobFile()));
       
       // Initiate Java VM metrics
       JvmMetrics.init(task.getPhase().toString(), job.getSessionId());

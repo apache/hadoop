@@ -177,7 +177,7 @@ public class GenericOptionsParser {
       conf.set("mapred.job.tracker", line.getOptionValue("jt"));
     }
     if (line.hasOption("conf")) {
-      conf.addFinalResource(new Path(line.getOptionValue("conf")));
+      conf.addResource(new Path(line.getOptionValue("conf")));
     }
     if (line.hasOption('D')) {
       String[] property = line.getOptionValues('D');

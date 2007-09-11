@@ -69,7 +69,7 @@ public class TestConfiguration extends TestCase {
     declareProperty("my.failsexpand", "a${my.undefvar}b", "a${my.undefvar}b");
     endConfig();
     Path fileResource = new Path(CONFIG);
-    conf.addDefaultResource(fileResource);
+    conf.addResource(fileResource);
 
     for (Prop p : props) {
       System.out.println("p=" + p.name);
@@ -106,7 +106,13 @@ public class TestConfiguration extends TestCase {
 
   void declareProperty(String name, String val, String expectEval)
     throws IOException {
-    appendProperty(name, val);
+    declareProperty(name, val, expectEval, false);
+  }
+
+  void declareProperty(String name, String val, String expectEval,
+                       boolean isFinal)
+    throws IOException {
+    appendProperty(name, val, isFinal);
     Prop p = new Prop();
     p.name = name;
     p.val = val;
@@ -115,6 +121,11 @@ public class TestConfiguration extends TestCase {
   }
 
   void appendProperty(String name, String val) throws IOException {
+    appendProperty(name, val, false);
+  }
+ 
+  void appendProperty(String name, String val, boolean isFinal)
+    throws IOException {
     out.write("<property>");
     out.write("<name>");
     out.write(name);
@@ -122,6 +133,9 @@ public class TestConfiguration extends TestCase {
     out.write("<value>");
     out.write(val);
     out.write("</value>");
+    if (isFinal) {
+      out.write("<final>true</final>");
+    }
     out.write("</property>\n");
   }
   
@@ -131,30 +145,31 @@ public class TestConfiguration extends TestCase {
     appendProperty("a","b");
     appendProperty("b","c");
     appendProperty("d","e");
+    appendProperty("e","f", true);
     endConfig();
 
     out=new BufferedWriter(new FileWriter(CONFIG2));
     startConfig();
     appendProperty("a","b");
     appendProperty("b","d");
+    appendProperty("e","e");
     endConfig();
-
-    
     
     Path fileResource = new Path(CONFIG);
-    conf.addDefaultResource(fileResource);
+    conf.addResource(fileResource);
     
     //set dynamically something
     conf.set("c","d");
     conf.set("a","d");
     
     Configuration clone=new Configuration(conf);
-    clone.addFinalResource(new Path(CONFIG2));
+    clone.addResource(new Path(CONFIG2));
     
     assertEquals(clone.get("a"), "d"); 
     assertEquals(clone.get("b"), "d"); 
     assertEquals(clone.get("c"), "d"); 
     assertEquals(clone.get("d"), "e"); 
+    assertEquals(clone.get("e"), "f"); 
     
   }
 

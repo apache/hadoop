@@ -46,13 +46,20 @@ import org.apache.hadoop.fs.Path;
  * File, then the local filesystem is examined directly, without referring to
  * the CLASSPATH.
  *
- * <p>Configuration resources are of two types: default and
- * final.  Default values are loaded first and final values are loaded last, and
- * thus override default values.
+ * <p>Configuration parameters may be declared 'final'.  Once a resource
+ * declares a value final, no subsequently-loaded resource may alter that
+ * value.  For example, one might define a final parameter with:
+ * <pre>
+ *  &lt;property&gt;
+ *    &lt;name&gt;dfs.client.buffer.dir&lt;/name&gt;
+ *    &lt;value&gt;/tmp/hadoop/dfs/client&lt;/value&gt;
+ *    &lt;final&gt;true&lt;/final&gt;
+ *  &lt;/property&gt;
+ * </pre>
  *
- * <p>Hadoop's default resource is the String "hadoop-default.xml" and its
- * final resource is the String "hadoop-site.xml".  Other tools built on Hadoop
- * may specify additional resources.
+ * <p>Hadoop by default specifies two resource strings: "hadoop-default.xml"
+ * and "hadoop-site.xml".  Other tools built on Hadoop may specify additional
+ * resources.
  * 
  * <p>The values returned by most <tt>get*</tt> methods are based on String representations. 
  * This String is processed for <b>variable expansion</b>. The available variables are the 
@@ -73,10 +80,27 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
   private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.conf.Configuration");
 
-  private boolean   quietmode = true;
+  private boolean quietmode = true;
+  
+  /**
+   * @deprecated Remove in hadoop-0.16.0 via HADOOP-1843
+   */
   private ArrayList<Object> defaultResources = new ArrayList<Object>();
+  /**
+   * @deprecated Remove in hadoop-0.16.0 via HADOOP-1843
+   */
   private ArrayList<Object> finalResources = new ArrayList<Object>();
+  
+  /**
+   * List of configuration resources.
+   */
+  private ArrayList<Object> resources = new ArrayList<Object>();
 
+  /**
+   * List of configuration parameters marked <b>final</b>. 
+   */
+  private Set<String> finalParameters = new HashSet<String>();
+  
   private Properties properties;
   private Properties overlay;
   private ClassLoader classLoader;
@@ -105,40 +129,84 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     }
     this.defaultResources = (ArrayList)other.defaultResources.clone();
     this.finalResources = (ArrayList)other.finalResources.clone();
+    this.resources = (ArrayList)other.resources.clone();
     if (other.properties != null)
       this.properties = (Properties)other.properties.clone();
     if (other.overlay!=null)
       this.overlay = (Properties)other.overlay.clone();
+    this.finalParameters = new HashSet<String>(other.finalParameters);
   }
 
-  /** Add a default resource. */
+  /** 
+   * Add a default resource.
+   * @deprecated Use {@link #addResource(String)} instead  
+   */
   public void addDefaultResource(String name) {
     addResource(defaultResources, name);
   }
 
-  /** Add a default resource. */
+  /** 
+   * Add a default resource.
+   * @deprecated Use {@link #addResource(URL)} instead
+   */
   public void addDefaultResource(URL url) {
     addResource(defaultResources, url);
   }
 
-  /** Add a default resource. */
+  /** 
+   * Add a default resource.
+   * @deprecated Use {@link #addResource(Path)} instead  
+   */
   public void addDefaultResource(Path file) {
     addResource(defaultResources, file);
   }
 
-  /** Add a final resource. */
+  /** 
+   * Add a final resource.
+   * @deprecated Use {@link #addResource(String)} instead
+   */
   public void addFinalResource(String name) {
     addResource(finalResources, name);
   }
 
-  /** Add a final resource. */
+  /** 
+   * Add a final resource.
+   * @deprecated Use {@link #addResource(URL)} instead  
+   */
   public void addFinalResource(URL url) {
     addResource(finalResources, url);
   }
 
-  /** Add a final resource. */
+  /** 
+   * Add a final resource.
+   * @deprecated Use {@link #addResource(Path)} instead
+   */
   public void addFinalResource(Path file) {
     addResource(finalResources, file);
+  }
+
+  /**
+   * Add a configuration resource.
+   * @param name resource to be added
+   */
+  public void addResource(String name) {
+    addResource(resources, name);
+  }
+
+  /**
+   * Add a configuration resource. 
+   * @param url url of the resource to be added
+   */
+  public void addResource(URL url) {
+    addResource(resources, url);
+  }
+
+  /**
+   * Add a configuration resource. 
+   * @param file file-path of resource to be added
+   */
+  public void addResource(Path file) {
+    addResource(resources, file);
   }
 
   private synchronized void addResource(ArrayList<Object> resources,
@@ -146,6 +214,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     
     resources.add(resource);                      // add to resources
     properties = null;                            // trigger reload
+    finalParameters.clear();                      // clear site-limits
   }
   
   /**
@@ -481,11 +550,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
 
   private synchronized Properties getProps() {
     if (properties == null) {
-      Properties newProps = new Properties();
-      loadResources(newProps, defaultResources, false, quietmode);
-      loadResources(newProps, finalResources, true, true);
-      properties = newProps;
-      if (overlay!=null)
+      properties = new Properties();
+      loadResources(properties, defaultResources, quietmode);
+      loadResources(properties, finalResources, quietmode);
+      loadResources(properties, resources, quietmode);
+      if (overlay!= null)
         properties.putAll(overlay);
     }
     return properties;
@@ -517,12 +586,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     return result.entrySet().iterator();
   }
 
-  private void loadResources(Properties props,
+  private void loadResources(Properties properties,
                              ArrayList resources,
-                             boolean reverse, boolean quiet) {
-    ListIterator i = resources.listIterator(reverse ? resources.size() : 0);
-    while (reverse ? i.hasPrevious() : i.hasNext()) {
-      loadResource(props, reverse ? i.previous() : i.next(), quiet);
+                             boolean quiet) {
+    for (Object resource : resources) {
+      loadResource(properties, resource, quiet);
     }
   }
 
@@ -587,18 +655,31 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
         NodeList fields = prop.getChildNodes();
         String attr = null;
         String value = null;
+        boolean finalParameter = false;
         for (int j = 0; j < fields.getLength(); j++) {
           Node fieldNode = fields.item(j);
           if (!(fieldNode instanceof Element))
             continue;
           Element field = (Element)fieldNode;
-          if ("name".equals(field.getTagName()))
+          if ("name".equals(field.getTagName()) && field.hasChildNodes())
             attr = ((Text)field.getFirstChild()).getData();
           if ("value".equals(field.getTagName()) && field.hasChildNodes())
             value = ((Text)field.getFirstChild()).getData();
+          if ("final".equals(field.getTagName()) && field.hasChildNodes())
+            finalParameter = "true".equals(((Text)field.getFirstChild()).getData());
         }
-        if (attr != null && value != null)
-          properties.setProperty(attr, value);
+        
+        // Ignore this parameter if it has already been marked as 'final'
+        if (attr != null && value != null) {
+          if (!finalParameters.contains(attr)) {
+            properties.setProperty(attr, value);
+            if (finalParameter)
+              finalParameters.add(attr);
+          } else {
+            LOG.warn(name+":a attempt to override final parameter: "+attr
+                     +";  Ignoring.");
+          }
+        }
       }
         
     } catch (Exception e) {

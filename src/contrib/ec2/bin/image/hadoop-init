@@ -29,15 +29,6 @@ cat > $HADOOP_HOME/conf/hadoop-site.xml <<EOF
   <value>$MASTER_HOST:50002</value>
 </property>
 
-</configuration>
-EOF
-
-cat > $HADOOP_HOME/conf/mapred-default.xml <<EOF
-<?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-
-<configuration>
-
 <property>
   <name>mapred.map.tasks</name>
   <value>$(( NO_INSTANCES * 10 ))</value>

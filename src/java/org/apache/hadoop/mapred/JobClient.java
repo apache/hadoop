@@ -724,7 +724,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         if (validate == null) {
           throw new RuntimeException(classpathFile + " not found on CLASSPATH");
         }
-        conf.addFinalResource(classpathFile);
+        conf.addResource(classpathFile);
       }
     }
     return conf;

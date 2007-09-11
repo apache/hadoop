@@ -346,7 +346,6 @@
         </section>
       </manifest>
       <fileset file="${conf.dir}/hadoop-default.xml"/>
-      <fileset file="${conf.dir}/mapred-default.xml"/>
       <fileset file="${conf.dir}/commons-logging.properties"/>
       <fileset file="${conf.dir}/log4j.properties"/>
       <fileset file="${conf.dir}/hadoop-metrics.properties"/>

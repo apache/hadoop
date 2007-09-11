@@ -12,6 +12,7 @@
   <name>hadoop.tmp.dir</name>
   <value>build/test</value>
   <description>A base for other temporary directories.</description>
+  <final>true</final>
 </property>
 
 <property>

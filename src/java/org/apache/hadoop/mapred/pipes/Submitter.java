@@ -341,7 +341,7 @@ public class Submitter {
       CommandLine results = parser.parse(args);
       JobConf conf = new JobConf();
       if (results.hasOption("-conf")) {
-        conf.addFinalResource(new Path((String) results.getValue("-conf")));
+        conf.addResource(new Path((String) results.getValue("-conf")));
       }
       if (results.hasOption("-input")) {
         conf.setInputPath(new Path((String) results.getValue("-input")));
