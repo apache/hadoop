@@ -75,22 +75,13 @@ public class TableOutputFormat
 
     /** {@inheritDoc} */
     public void write(Text key, MapWritable value) throws IOException {
-      LOG.debug("start write");
-
-      // start transaction
-      
-      long xid = m_table.startUpdate(key);
+      long xid = m_table.startUpdate(key);              // start transaction
 
       for (Map.Entry<Writable, Writable> e: value.entrySet()) {
         m_table.put(xid, (Text)e.getKey(),
             ((ImmutableBytesWritable)e.getValue()).get());
       }
-      
-      // end transaction
-      
-      m_table.commit(xid);
-
-      LOG.debug("end write");
+      m_table.commit(xid);                              // end transaction
     }
   }
   
@@ -105,7 +96,6 @@ public class TableOutputFormat
     
     // expecting exactly one path
     
-    LOG.debug("start get writer");
     Text tableName = new Text(job.get(OUTPUT_TABLE));
     HTable table = null;
     try {
@@ -114,7 +104,6 @@ public class TableOutputFormat
       LOG.error(e);
       throw e;
     }
-    LOG.debug("end get writer");
     return new TableRecordWriter(table);
   }
 

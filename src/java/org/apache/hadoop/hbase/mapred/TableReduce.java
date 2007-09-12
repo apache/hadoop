@@ -29,16 +29,12 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.log4j.Logger;
 
 /**
  * Write a table, sorting by the input key
  */
 @SuppressWarnings("unchecked")
 public abstract class TableReduce extends MapReduceBase implements Reducer {
-  private static final Logger LOG =
-    Logger.getLogger(TableReduce.class.getName());
-
   TableOutputCollector m_collector;
 
   /** Constructor */
@@ -71,12 +67,11 @@ public abstract class TableReduce extends MapReduceBase implements Reducer {
   @SuppressWarnings("unchecked")
   public void reduce(WritableComparable key, Iterator values,
       OutputCollector output, Reporter reporter) throws IOException {
-    LOG.debug("start reduce");
+
     if(m_collector.collector == null) {
       m_collector.collector = output;
     }
     reduce((Text)key, values, m_collector, reporter);
-    LOG.debug("end reduce");
   }
 
   /**
