@@ -125,6 +125,9 @@ Trunk (unreleased changes)
     HADOOP-1840. Fix race condition which leads to task's diagnostic
     messages getting lost. (acmurthy) 
 
+    HADOOP-1885. Fix race condition in MiniDFSCluster shutdown.
+    (Chris Douglas via nigel)
+
   IMPROVEMENTS
 
     HADOOP-1266. Remove dependency of package org.apache.hadoop.net on 

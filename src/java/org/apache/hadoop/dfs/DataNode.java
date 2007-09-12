@@ -119,7 +119,7 @@ public class DataNode implements FSConstants, Runnable {
   private DataNodeMetrics myMetrics;
   private static InetSocketAddress nameNodeAddr;
   private static DataNode datanodeObject = null;
-  private static Thread dataNodeThread = null;
+  private Thread dataNodeThread = null;
   String machineName;
   int defaultBytesPerChecksum = 512;
   private static class DataNodeMetrics implements Updater {
@@ -1334,10 +1334,10 @@ public class DataNode implements FSConstants, Runnable {
     String[] dataDirs = conf.getStrings("dfs.data.dir");
     DataNode dn = makeInstance(dataDirs, conf);
     if (dn != null) {
-      dataNodeThread = new Thread(dn, "DataNode: [" +
+      dn.dataNodeThread = new Thread(dn, "DataNode: [" +
                                   StringUtils.arrayToString(dataDirs) + "]");
-      dataNodeThread.setDaemon(true); // needed for JUnit testing
-      dataNodeThread.start();
+      dn.dataNodeThread.setDaemon(true); // needed for JUnit testing
+      dn.dataNodeThread.start();
     }
     return dn;
   }
