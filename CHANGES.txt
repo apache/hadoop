@@ -202,6 +202,9 @@ Trunk (unreleased changes)
     HADOOP-1018.  Improve documentation w.r.t handling of lost hearbeats between 
     TaskTrackers and JobTracker. (acmurthy)
 
+    HADOOP-1718.  Add ant targets for measuring code coverage with clover.
+    (simonwillnauer via nigel)
+
 Release 0.14.1 - 2007-09-04
 
   BUG FIXES

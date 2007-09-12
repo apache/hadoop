@@ -85,6 +85,18 @@
   <property name="javac.args" value=""/>
   <property name="javac.args.warnings" value="-Xlint:unchecked"/>
 
+  <property name="clover.db.dir" location="${build.dir}/test/clover/db"/>
+  <property name="clover.report.dir" location="${build.dir}/test/clover/reports"/>
+
+  <available property="clover.present" classname="com.cenqua.clover.tasks.CloverReportTask" />
+  <!-- check if clover reports should be generated -->
+  <condition property="clover.enabled">
+    <and>
+        <isset property="run.clover"/>
+        <isset property="clover.present"/>
+    </and>
+  </condition>
+
   <!-- the normal classpath -->
   <path id="classpath">
     <pathelement location="${build.classes}"/>
@@ -297,7 +309,7 @@
   </target>
 
   <target name="compile-core" 
-          depends="compile-core-classes,compile-core-native,compile-c++">
+          depends="clover,compile-core-classes,compile-core-native,compile-c++">
   </target>
 
   <target name="compile-contrib" depends="compile-core">
@@ -932,5 +944,47 @@
       <fileset dir="${build.anttasks}"/>
     </jar>
   </target>
+
+
+
+ <target name="clover" depends="clover.setup, clover.info" description="Instrument the Unit tests using Clover.  Requires a Clover license and clover.jar in the ANT classpath.  To use, specify -Drun.clover=true on the command line."/>
+
+<target name="clover.setup" if="clover.enabled">
+   <taskdef resource="clovertasks"/>
+   <mkdir dir="${clover.db.dir}"/>
+   <clover-setup initString="${clover.db.dir}/hadoop_coverage.db">
+     <fileset dir="src/java"/>
+   </clover-setup>
+</target>
+
+<target name="clover.info" unless="clover.present">
+  <echo>
+     Clover not found. Code coverage reports disabled.
+  </echo>
+</target>
+
+<target name="clover.check">
+  <fail unless="clover.present">
+  ##################################################################
+   Clover not found.
+   Please make sure clover.jar is in ANT_HOME/lib, or made available
+   to Ant using other mechanisms like -lib or CLASSPATH.
+  ##################################################################
+  </fail>
+</target>
+
+<target name="generate-clover-reports" depends="clover.check, clover">
+  <mkdir dir="${clover.report.dir}"/>
+  <clover-report>
+     <current outfile="${clover.report.dir}" title="${final.name}">
+     <format type="html"/>
+     </current>
+  </clover-report>
+  <clover-report>
+     <current outfile="${clover.report.dir}/clover.xml" title="${final.name}">
+     <format type="xml"/>
+     </current>
+  </clover-report>
+</target>
 
 </project>
