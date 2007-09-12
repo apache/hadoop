@@ -24,6 +24,7 @@ import java.net.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
 import org.apache.hadoop.util.*;
 
@@ -238,7 +239,7 @@ public class DistributedFileSystem extends FileSystem {
 
   /** Return statistics for each datanode. */
   public DatanodeInfo[] getDataNodeStats() throws IOException {
-    return dfs.datanodeReport();
+    return dfs.datanodeReport(DatanodeReportType.ALL);
   }
 
   /**

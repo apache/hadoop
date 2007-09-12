@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.net.*;
 import java.lang.InterruptedException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -169,7 +170,7 @@ public class TestDecommission extends TestCase {
                                   FileSystem localFileSys)
     throws IOException {
     DistributedFileSystem dfs = (DistributedFileSystem) filesys;
-    DatanodeInfo[] info = client.datanodeReport();
+    DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
 
     //
     // pick one datanode randomly.
@@ -277,7 +278,7 @@ public class TestDecommission extends TestCase {
     InetSocketAddress addr = new InetSocketAddress("localhost", 
                                                    cluster.getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);
-    DatanodeInfo[] info = client.datanodeReport();
+    DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
     assertEquals("Number of Datanodes ", numDatanodes, info.length);
     FileSystem fileSys = cluster.getFileSystem();
     DistributedFileSystem dfs = (DistributedFileSystem) fileSys;
@@ -302,7 +303,7 @@ public class TestDecommission extends TestCase {
         cleanupFile(localFileSys, dir);
       }
     } catch (IOException e) {
-      info = client.datanodeReport();
+      info = client.datanodeReport(DatanodeReportType.ALL);
       printDatanodeReport(info);
       throw e;
     } finally {

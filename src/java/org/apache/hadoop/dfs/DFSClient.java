@@ -450,8 +450,9 @@ class DFSClient implements FSConstants {
     return rawNums[1];
   }
 
-  public DatanodeInfo[] datanodeReport() throws IOException {
-    return namenode.getDatanodeReport();
+  public DatanodeInfo[] datanodeReport(DatanodeReportType type)
+  throws IOException {
+    return namenode.getDatanodeReport(type);
   }
     
   /**

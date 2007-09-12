@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -319,38 +320,15 @@ public class MiniDFSCluster {
                                                    getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);
 
-    //
-    // get initial state of datanodes
-    //  
-    DatanodeInfo[] oldinfo = client.datanodeReport();
-    while (oldinfo.length != dataNodes.size()) {
+    // make sure all datanodes are alive
+    while( client.datanodeReport(DatanodeReportType.LIVE).length
+        != dataNodes.size()) {
       try {
         Thread.sleep(500);
       } catch (Exception e) {
       }
-      oldinfo = client.datanodeReport();
     }
 
-    // 
-    // wait till all datanodes send at least yet another heartbeat
-    //
-    int numdead = 0;
-    while (numdead > 0) {
-      try {
-        Thread.sleep(500);
-      } catch (Exception e) {
-      }
-      DatanodeInfo[] info = client.datanodeReport();
-      if (info.length != dataNodes.size()) {
-        continue;
-      }
-      numdead = 0;
-      for (int i = 0; i < info.length; i++) {
-        if (oldinfo[i].getLastUpdate() >= info[i].getLastUpdate()) {
-          numdead++;
-        }
-      }
-    }
     client.close();
   }
 }

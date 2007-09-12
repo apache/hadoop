@@ -22,6 +22,7 @@ import java.io.*;
 import java.util.Random;
 import java.net.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -80,7 +81,7 @@ public class TestModTime extends TestCase {
     InetSocketAddress addr = new InetSocketAddress("localhost", 
                                                    cluster.getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);
-    DatanodeInfo[] info = client.datanodeReport();
+    DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
     assertEquals("Number of Datanodes ", numDatanodes, info.length);
     FileSystem fileSys = cluster.getFileSystem();
     int replicas = numDatanodes - 1;
@@ -170,7 +171,7 @@ public class TestModTime extends TestCase {
      cleanupFile(fileSys, dir1);
      cleanupFile(fileSys, dir2);
     } catch (IOException e) {
-      info = client.datanodeReport();
+      info = client.datanodeReport(DatanodeReportType.ALL);
       printDatanodeReport(info);
       throw e;
     } finally {

@@ -301,7 +301,8 @@ class FSNamesystem implements FSConstants {
                             + maxReplication);
     this.maxReplicationStreams = conf.getInt("dfs.max-repl-streams", 2);
     long heartbeatInterval = conf.getLong("dfs.heartbeat.interval", 3) * 1000;
-    this.heartbeatRecheckInterval = 5 * 60 * 1000; // 5 minutes
+    this.heartbeatRecheckInterval = conf.getInt(
+        "heartbeat.recheck.interval", 5 * 60 * 1000); // 5 minutes
     this.heartbeatExpireInterval = 2 * heartbeatRecheckInterval +
       10 * heartbeatInterval;
     this.replicationRecheckInterval = 3 * 1000; //  3 second
@@ -2446,15 +2447,29 @@ class FSNamesystem implements FSConstants {
     }
   }
 
-  public synchronized DatanodeInfo[] datanodeReport() {
-    DatanodeInfo results[] = null;
+  public synchronized DatanodeInfo[] datanodeReport( DatanodeReportType type ) {
+    ArrayList<DatanodeInfo> results = new ArrayList<DatanodeInfo>();
     synchronized (datanodeMap) {
-      results = new DatanodeInfo[datanodeMap.size()];
-      int i = 0;
-      for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); it.hasNext();)
-        results[i++] = new DatanodeInfo(it.next());
+      for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); it.hasNext();) {
+        DatanodeDescriptor tmp = it.next();
+        switch (type) {
+        case ALL: 
+          results.add(new DatanodeInfo(tmp));
+          break;
+        case DEAD: 
+          if(isDatanodeDead(tmp)) {
+            results.add(new DatanodeInfo(tmp));
+          }
+          break;
+        case LIVE:
+          if(!isDatanodeDead(tmp)) {
+            results.add(new DatanodeInfo(tmp));
+          }
+          break;
+        }
+      }
     }
-    return results;
+    return results.toArray(new DatanodeInfo[results.size()]);
   }
     
   /**

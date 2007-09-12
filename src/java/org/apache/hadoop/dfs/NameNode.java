@@ -471,9 +471,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
 
   /**
    */
-  public DatanodeInfo[] getDatanodeReport() throws IOException {
-    DatanodeInfo results[] = namesystem.datanodeReport();
-    if (results == null || results.length == 0) {
+  public DatanodeInfo[] getDatanodeReport(DatanodeReportType type)
+  throws IOException {
+    DatanodeInfo results[] = namesystem.datanodeReport(type);
+    if (results == null ) {
       throw new IOException("Cannot find datanode report");
     }
     return results;

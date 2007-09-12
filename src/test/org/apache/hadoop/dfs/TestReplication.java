@@ -25,6 +25,7 @@ import java.net.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -141,7 +142,7 @@ public class TestReplication extends TestCase {
                                                    cluster.getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);
     
-    DatanodeInfo[] info = client.datanodeReport();
+    DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
     assertEquals("Number of Datanodes ", numDatanodes, info.length);
     FileSystem fileSys = cluster.getFileSystem();
     try {

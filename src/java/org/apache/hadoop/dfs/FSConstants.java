@@ -131,6 +131,9 @@ public interface FSConstants {
   // Startup options
   public enum StartupOption{ FORMAT, REGULAR, UPGRADE, ROLLBACK; }
 
+  // type of the datanode report
+  public static enum DatanodeReportType {ALL, LIVE, DEAD }
+  
   /**
    * Type of the node
    */

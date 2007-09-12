@@ -33,8 +33,9 @@ interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * 16 : removed deprecated obtainLock() and releaseLock(). 
    * 17 : getBlockSize replaced by getPreferredBlockSize
+   * 18 : datanodereport returns dead, live or all nodes.
    */
-  public static final long versionID = 17L;
+  public static final long versionID = 18L;
   
   ///////////////////////////////////////
   // File contents
@@ -233,15 +234,19 @@ interface ClientProtocol extends VersionedProtocol {
    * Right now, only two values are returned.
    * [0] contains the total storage capacity of the system,
    *     in bytes.
-   * [1] contains the available storage of the system, in bytes.
+   * [1] contains the total used space of the system, in bytes.
+   * [2] contains the available storage of the system, in bytes.
    */
   public long[] getStats() throws IOException;
 
   /**
-   * Get a full report on the system's current datanodes.
+   * Get a report on the system's current datanodes.
    * One DatanodeInfo object is returned for each DataNode.
+   * Return live datanodes if type is LIVE; dead datanodes if type is DEAD;
+   * otherwise all datanodes if type is ALL.
    */
-  public DatanodeInfo[] getDatanodeReport() throws IOException;
+  public DatanodeInfo[] getDatanodeReport(FSConstants.DatanodeReportType type)
+  throws IOException;
 
   /**
    * Get the block size for the given file.

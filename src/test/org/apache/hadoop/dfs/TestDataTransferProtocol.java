@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.dfs.DFSClient.DFSDataInputStream;
+import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -132,7 +133,7 @@ public class TestDataTransferProtocol extends TestCase {
     DFSClient dfsClient = new DFSClient(
                  new InetSocketAddress("localhost", cluster.getNameNodePort()),
                  conf);                
-    datanode = dfsClient.datanodeReport()[0];
+    datanode = dfsClient.datanodeReport(DatanodeReportType.LIVE)[0];
     dnAddr = DataNode.createSocketAddr(datanode.getName());
     FileSystem fileSys = cluster.getFileSystem();
     

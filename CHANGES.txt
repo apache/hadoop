@@ -29,6 +29,10 @@ Trunk (unreleased changes)
     with a 'final' tag may not be overridden by subsequently loaded
     configuration files, e.g., by jobs.  (Arun C. Murthy via cutting)
 
+    HADOOP-1846. DatanodeReport in ClientProtocol can report live 
+    datanodes, dead datanodes or all datanodes. Client Protocol version
+    changed from 17 to 18.  (Hairong Kuang via dhruba)
+
   NEW FEATURES
 
     HADOOP-1636.  Allow configuration of the number of jobs kept in
