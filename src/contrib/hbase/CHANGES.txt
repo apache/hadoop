@@ -57,6 +57,7 @@ Trunk (unreleased changes)
     HADOOP-1835 Updated Documentation for HBase setup/installation
                 (Izaak Rubin via Stack)
     HADOOP-1868 Make default configuration more responsive
+    HADOOP-1884 Remove useless debugging log messages from hbase.mapred
 
 
 Below are the list of changes before 2007-08-18

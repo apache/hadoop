@@ -32,7 +32,6 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.log4j.Logger;
 
 /**
  * Scan an HBase table to sort by a specified sort column.
@@ -41,9 +40,6 @@ import org.apache.log4j.Logger;
  */
 @SuppressWarnings("unchecked")
 public abstract class TableMap extends MapReduceBase implements Mapper {
-
-  private static final Logger LOG = Logger.getLogger(TableMap.class.getName());
-
   private TableOutputCollector m_collector;
 
   /** constructor*/
@@ -86,12 +82,10 @@ public abstract class TableMap extends MapReduceBase implements Mapper {
   public void map(WritableComparable key, Writable value,
       OutputCollector output, Reporter reporter) throws IOException {
     
-    LOG.debug("start map");
     if(m_collector.collector == null) {
       m_collector.collector = output;
     }
     map((HStoreKey)key, (MapWritable)value, m_collector, reporter);
-    LOG.debug("end map");
   }
 
   /**

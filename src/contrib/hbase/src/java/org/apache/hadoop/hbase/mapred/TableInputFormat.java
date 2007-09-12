@@ -77,18 +77,14 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
      * @throws IOException
      */
     public TableRecordReader(Text startRow, Text endRow) throws IOException {
-      LOG.debug("start construct");
       m_row = new TreeMap<Text, byte[]>();
       m_scanner = m_table.obtainScanner(m_cols, startRow);
       m_endRow = endRow;
-      LOG.debug("end construct");
     }
 
     /** {@inheritDoc} */
     public void close() throws IOException {
-      LOG.debug("start close");
       m_scanner.close();
-      LOG.debug("end close");
     }
 
     /**
@@ -135,7 +131,6 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
      */
     @SuppressWarnings("unchecked")
     public boolean next(HStoreKey key, MapWritable value) throws IOException {
-      LOG.debug("start next");
       m_row.clear();
       HStoreKey tKey = key;
       boolean hasMore = m_scanner.next(tKey, m_row);
@@ -152,7 +147,6 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
           }
         }
       }
-      LOG.debug("end next");
       return hasMore;
     }
 
@@ -175,8 +169,6 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
    */
   @SuppressWarnings("unused")
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
-    LOG.debug("start getSplits");
-
     Text[] startKeys = m_table.getStartKeys();
     if(startKeys == null || startKeys.length == 0) {
       throw new IOException("Expecting at least one region");
@@ -185,15 +177,15 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
     for(int i = 0; i < startKeys.length; i++) {
       splits[i] = new TableSplit(m_tableName, startKeys[i],
           ((i + 1) < startKeys.length) ? startKeys[i + 1] : new Text());
-      LOG.debug("split: " + i + "->" + splits[i]);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("split: " + i + "->" + splits[i]);
+      }
     }
-    LOG.debug("end splits");
     return splits;
   }
 
   /** {@inheritDoc} */
   public void configure(JobConf job) {
-    LOG.debug("start configure");
     Path[] tableNames = job.getInputPaths();
     m_tableName = new Text(tableNames[0].getName());
     String colArg = job.get(COLUMN_LIST);
@@ -207,7 +199,6 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
     } catch (Exception e) {
       LOG.error(e);
     }
-    LOG.debug("end configure");
   }
 
   /** {@inheritDoc} */
