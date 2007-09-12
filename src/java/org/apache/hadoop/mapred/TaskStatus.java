@@ -80,7 +80,10 @@ abstract class TaskStatus implements Writable, Cloneable {
   public void setTaskTracker(String tracker) { this.taskTracker = tracker;}
   public void setRunState(State runState) { this.runState = runState; }
   public String getDiagnosticInfo() { return diagnosticInfo; }
-  public void setDiagnosticInfo(String info) { this.diagnosticInfo = info; }
+  public void setDiagnosticInfo(String info) { 
+    diagnosticInfo = 
+      ((diagnosticInfo == null) ? info : diagnosticInfo.concat(info)); 
+  }
   public String getStateString() { return stateString; }
   public void setStateString(String stateString) { this.stateString = stateString; }
   /**
@@ -231,9 +234,10 @@ abstract class TaskStatus implements Writable, Cloneable {
   synchronized void statusUpdate(TaskStatus status) {
     this.progress = status.getProgress();
     this.runState = status.getRunState();
-    this.diagnosticInfo = status.getDiagnosticInfo();
     this.stateString = status.getStateString();
-      
+
+    setDiagnosticInfo(status.getDiagnosticInfo());
+    
     if (status.getStartTime() != 0) {
       this.startTime = status.getStartTime(); 
     }
@@ -246,10 +250,14 @@ abstract class TaskStatus implements Writable, Cloneable {
   }
   
   /**
-   * Clear out transient information after sending out a status update
-   * to the {@link TaskTracker}.
+   * Clear out transient information after sending out a status-update
+   * from either the {@link Task} to the {@link TaskTracker} or from the
+   * {@link TaskTracker} to the {@link JobTracker}. 
    */
-  synchronized void clearStatus() {}
+  synchronized void clearStatus() {
+    // Clear diagnosticInfo
+    diagnosticInfo = "";
+  }
 
   public Object clone() {
     try {

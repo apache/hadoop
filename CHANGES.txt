@@ -118,6 +118,9 @@ Trunk (unreleased changes)
     HADOOP-1818. Fix MultiFileInputFormat so that it does not return 
     empty splits when numPaths < numSplits.  (Thomas Friol via enis)
 
+    HADOOP-1840. Fix race condition which leads to task's diagnostic
+    messages getting lost. (acmurthy) 
+
   IMPROVEMENTS
 
     HADOOP-1266. Remove dependency of package org.apache.hadoop.net on 
