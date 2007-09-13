@@ -19,36 +19,32 @@
  */
 package org.apache.hadoop.hbase.shell;
 
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.io.Text;
+
 /**
- * @see <a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseShell">HBaseShell</a>
+ * Enables tables.
  */
-public abstract class BasicCommand implements Command, CommandFactory {
-  
-  public BasicCommand getBasicCommand() {
-    return this;
-  }
-  
-  /** basic commands are their own factories. */
-  public Command getCommand() {
-    return this;
-  }
-  
-  protected String extractErrMsg(String msg) {
-    int index = msg.indexOf(":");
-    int eofIndex = msg.indexOf("\n");
-    return msg.substring(index + 1, eofIndex);
-  }
-  
-  protected String extractErrMsg(Exception e) {
-    return extractErrMsg(e.getMessage());
-  }
+public class EnableCommand extends BasicCommand {
+  private String tableName;
  
-  /**
-   * Appends, if it does not exist, a delimiter (colon) 
-   * at the end of the column name.
-   */
-  protected String appendDelimiter(String column) {
-    return (!column.endsWith(FAMILY_INDICATOR))?
-      column + FAMILY_INDICATOR: column;
-  } 
+  public ReturnMsg execute(Configuration conf) {
+    assert tableName != null;
+    try {
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      admin.enableTable(new Text(tableName));
+      
+      return new ReturnMsg(1, "Table enabled successfully.");
+    } catch (IOException e) {
+      String[] msg = e.getMessage().split("[\n]");
+      return new ReturnMsg(0, msg[0]);
+    }
+  }
+
+  public void setTable(String table) {
+    this.tableName = table;
+  }
 }

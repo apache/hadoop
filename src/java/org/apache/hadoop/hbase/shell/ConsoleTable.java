@@ -26,7 +26,11 @@ import java.io.UnsupportedEncodingException;
  * Manufactures console table, but stupid.
  */
 public class ConsoleTable {
+  
   private static PrintStream out;
+  private static final String sBar = "+------+----------------------+";
+  private static final String lBar = "----------------------+----------------------+";
+  
   static {
     try {
       out = new PrintStream(System.out, true, "UTF-8");
@@ -36,29 +40,24 @@ public class ConsoleTable {
   }
   
   public static void printHead(String name) {
-    out.println("+------+----------------------+");
+    out.println(sBar);
     out.print("| No.  | ");
-    out.printf("%-20s", name);
-    out.println(" |");
+    printCell(name, " |", true);
   }
 
   public static void printFoot() {
-    out.println("+------+----------------------+");
+    out.println(sBar);
     out.println();
   }
 
   public static void printTable(int count, String name) {
-    out.println("+------+----------------------+");
-
+    out.println(sBar);
     if (name.length() > 20) {
       int interval = 20;
-
       out.print("| ");
-      out.printf("%-4s", count + 1);
+      out.printf("%-4s", Integer.valueOf(count + 1));
       out.print(" | ");
-      out.printf("%-20s", name.substring(0, interval));
-      out.println(" |");
-
+      printCell(name.substring(0, interval), " |", true);
       for (int i = 0; i < name.length() / interval; i++) {
         out.print("| ");
         out.printf("%-4s", "");
@@ -66,64 +65,42 @@ public class ConsoleTable {
 
         int end = ((interval * i) + interval + interval);
         if (end > name.length()) {
-          out.printf("%-20s", name.substring(end - interval,
-            name.length()));
+          printCell(name.substring(end - interval, name.length()), " |", true);
         } else {
-          out.printf("%-20s", name.substring(end - interval, end));
+          printCell(name.substring(end - interval, end), " |", true);
         }
-        out.println(" |");
       }
-
     } else {
       out.print("| ");
-      out.printf("%-4s", count + 1);
+      out.printf("%-4s", Integer.valueOf(count + 1));
       out.print(" | ");
-      out.printf("%-20s", name);
-      out.println(" |");
+      printCell(name, " |", true);
     }
   }
 
   public static void selectHead() {
-    out.println("+------+----------------------+" +
-      "----------------------+----------------------+");
+    out.println(sBar + lBar);
     out.print("| No.  | ");
-    out.printf("%-20s", "Row");
-    out.printf(" | ");
-    out.printf("%-20s", "Column");
-    out.printf(" | ");
-    out.printf("%-20s", "Cell");
-    out.println(" | ");
+    printCell("Row", " | ", false);
+    printCell("Column", " | ", false);
+    printCell("Cell", " | ", true);
   }
 
   public static void printLine(int count, String key, String column,
       String cellData) {
-    out.println("+------+----------------------+" +
-      "----------------------+----------------------+");
-
+    out.println(sBar + lBar);
     if (key.length() > 20 || column.length() > 20 || cellData.length() > 20) {
       int interval = 20;
       out.print("| ");
-      out.printf("%-4s", count + 1);
+      out.printf("%-4s", Integer.valueOf(count + 1));
       out.print(" | ");
-      if (key.length() > 20)
-        out.printf("%-20s", key.substring(0, interval));
-      else
-        out.printf("%-20s", key);
-      out.print(" | ");
-      if (column.length() > 20)
-        out.printf("%-20s", column.substring(0, interval));
-      else
-        out.printf("%-20s", column);
-      out.print(" | ");
-      if (cellData.length() > 20)
-        out.printf("%-20s", cellData.substring(0, interval));
-      else
-        out.printf("%-20s", cellData);
-      out.println(" |");
 
-      // out.println(getBiggerInt(new int[]{ 3, 1, 9}));
+      printLongCell(key, interval);
+      printLongCell(column, interval);
+      printLongCell(cellData, interval);
+
       int biggerStrLength = getBiggerInt(new int[] { key.length(),
-        column.length(), cellData.length() });
+          column.length(), cellData.length() });
 
       for (int i = 0; i < (biggerStrLength / interval); i++) {
         out.print("| ");
@@ -132,56 +109,48 @@ public class ConsoleTable {
 
         int end = ((interval * i) + interval + interval);
 
-        if (end > key.length()) {
-          if (key.length() > interval && end - interval < key.length()) {
-            out.printf("%-20s", key.substring(end - interval,
-              key.length()));
-          } else {
-            out.printf("%-20s", "");
-          }
-        } else {
-          out.printf("%-20s", key.substring(end - interval, end));
-        }
-
-        out.print(" | ");
-
-        if (end > column.length()) {
-          if (column.length() > interval && end - interval < column.length()) {
-            out.printf("%-20s", column.substring(end - interval,
-              column.length()));
-          } else {
-            out.printf("%-20s", "");
-          }
-        } else {
-          out.printf("%-20s", column.substring(end - interval, end));
-        }
-
-        out.print(" | ");
-        if (end > cellData.length()) {
-          if (cellData.length() > interval &&
-              end - interval < cellData.length()) {
-            out.printf("%-20s",
-              cellData.substring(end - interval, cellData.length()));
-          } else {
-            out.printf("%-20s", "");
-          }
-        } else {
-          out.printf("%-20s", cellData.substring(end - interval, end));
-        }
-        out.println(" |");
+        printLongCellData(key, end, interval, false);
+        printLongCellData(column, end, interval, false);
+        printLongCellData(cellData, end, interval, false);
       }
-
     } else {
       out.print("| ");
-      out.printf("%-4s", count + 1);
+      out.printf("%-4s", Integer.valueOf(count + 1));
       out.print(" | ");
-      out.printf("%-20s", key);
-      out.print(" | ");
-      out.printf("%-20s", column);
-      out.print(" | ");
-      out.printf("%-20s", cellData);
-      out.println(" |");
+      printCell(key, " | ", false);
+      printCell(column, " | ", false);
+      printCell(cellData, " |", true);
     }
+  }
+
+  private static void printLongCellData(String key, int end, int interval,
+      boolean newLine) {
+    if (end > key.length()) {
+      if (key.length() > interval && end - interval < key.length()) {
+        out.printf("%-20s", key.substring(end - interval, key.length()));
+      } else {
+        out.printf("%-20s", "");
+      }
+    } else {
+      out.printf("%-20s", key.substring(end - interval, end));
+    }
+    out.print(" | ");
+    if (newLine)
+      out.println();
+  }
+
+  private static void printLongCell(String iKey, int interval) {
+    if (iKey.length() > 20)
+      printCell(iKey.substring(0, interval), " | ", true);
+    else
+      printCell(iKey, " | ", true);
+  }
+
+  private static void printCell(String data, String end, boolean newLine) {
+    out.printf("%-20s", data);
+    out.printf(end);
+    if (newLine)
+      out.println();
   }
 
   public static int getBiggerInt(int[] integers) {
@@ -195,9 +164,7 @@ public class ConsoleTable {
   }
 
   public static void selectFoot() {
-    out.println("+------+----------------------+" +
-      "----------------------+----------------------+");
+    out.println(sBar + lBar);
     out.println();
   }
-  
 }

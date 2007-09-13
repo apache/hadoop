@@ -19,60 +19,58 @@
  */
 package org.apache.hadoop.hbase.shell;
 
-import java.io.IOException;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConnection;
-import org.apache.hadoop.hbase.HConnectionManager;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.io.Text;
 
-public class CreateCommand extends BasicCommand {
+/**
+ * Creates tables.
+ */
+public class CreateCommand extends SchemaModificationCommand {
   
-  private Text table;
-  private List<String> columnfamilies;
-  @SuppressWarnings("unused")
-  private int limit;
+  private String tableName;
+  private Map<String, Map<String, Object>> columnSpecMap =
+    new HashMap<String, Map<String, Object>>();
 
   public ReturnMsg execute(Configuration conf) {
-    if (this.table == null || this.columnfamilies == null)
-      return new ReturnMsg(0, "Syntax error : Please check 'Create' syntax.");
-
     try {
-      HConnection conn = HConnectionManager.getConnection(conf);
       HBaseAdmin admin = new HBaseAdmin(conf);
+      HTableDescriptor tableDesc = new HTableDescriptor(tableName);
+      HColumnDescriptor columnDesc = null;
+      Set<String> columns = columnSpecMap.keySet();
+      for (String column : columns) {
+        columnDesc = getColumnDescriptor(column, columnSpecMap.get(column));
+        tableDesc.addFamily(columnDesc);
+      }
       
-      if (conn.tableExists(this.table)) {
-        return new ReturnMsg(0, "Table was already exsits.");
-      }
-      HTableDescriptor desc = new HTableDescriptor(this.table.toString());
-      for (int i = 0; i < this.columnfamilies.size(); i++) {
-        String columnFamily = columnfamilies.get(i);
-        if (columnFamily.lastIndexOf(':') == (columnFamily.length() - 1)) {
-          columnFamily = columnFamily.substring(0, columnFamily.length() - 1);
-        }
-        desc.addFamily(new HColumnDescriptor(columnFamily + FAMILY_INDICATOR));
-      }
-      admin.createTable(desc);
-      return new ReturnMsg(1, "Table created successfully.");
-    } catch (IOException e) {
-      return new ReturnMsg(0, "error msg : " + e.toString());
+      System.out.println("Creating table... Please wait.");
+      
+      admin.createTable(tableDesc);
+      return new ReturnMsg(0, "Table created successfully.");
+    }
+    catch (Exception e) {
+      return new ReturnMsg(0, extractErrMsg(e));
     }
   }
 
+  /**
+   * Sets the table to be created.
+   * @param table Table to be created
+   */
   public void setTable(String table) {
-    this.table = new Text(table);
+    this.tableName = table;
   }
 
-  public void setColumnfamilies(List<String> columnfamilies) {
-    this.columnfamilies = columnfamilies;
-  }
-
-  public void setLimit(int limit) {
-    this.limit = limit;
-  }
-  
+  /**
+   * Adds a column specification.  
+   * @param columnSpec Column specification
+   */
+  public void addColumnSpec(String column, Map<String, Object> columnSpec) {
+    columnSpecMap.put(column, columnSpec);
+  } 
 }

@@ -20,31 +20,38 @@
 package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.io.Text;
 
+/**
+ * Drops tables.
+ */
 public class DropCommand extends BasicCommand {
-  
-  private Text table;
+  private List<String> tableList;
 
   public ReturnMsg execute(Configuration conf) {
-    if (this.table == null) 
-      return new ReturnMsg(0, "Syntax error : Please check 'Drop' syntax.");
-
+    if (tableList == null) {
+      throw new IllegalArgumentException("List of tables is null");
+    }
+ 
     try {
       HBaseAdmin admin = new HBaseAdmin(conf);
-      admin.deleteTable(this.table);
       
-      return new ReturnMsg(1, "Table droped successfully.");
+      for (String table : tableList) {
+        System.out.println("Dropping " + table + "... Please wait.");
+        admin.deleteTable(new Text(table));
+      }
+      
+      return new ReturnMsg(1, "Table(s) dropped successfully.");
     } catch (IOException e) {
-      return new ReturnMsg(0, "error msg : " + e.toString());
+      return new ReturnMsg(0, extractErrMsg(e));
     }
   }
 
-  public void setArgument(String table) {
-    this.table = new Text(table);
+  public void setTableList(List<String> tableList) {
+    this.tableList = tableList;
   }
-  
 }

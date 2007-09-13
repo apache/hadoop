@@ -20,64 +20,84 @@
 package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.io.Text;
 
+/**
+ * Deletes values from tables.
+ */
 public class DeleteCommand extends BasicCommand {
   
-  private Text table;
-  private Map<String, List<String>> condition;
+  private String tableName;
+  private String rowKey;
+  private List<String> columnList;
 
   public ReturnMsg execute(Configuration conf) {
-    if (this.table == null || condition == null)
-      return new ReturnMsg(0, "Syntax error : Please check 'Delete' syntax.");
-
+    if (columnList == null) {
+      throw new IllegalArgumentException("Column list is null");
+    }
     try {
-      HTable table = new HTable(conf, this.table);
-      long lockId = table.startUpdate(getRow());
-
-      if (getColumn() != null) {
-        table.delete(lockId, getColumn());
-      } else {
-        Set<Text> keySet = table.getRow(getRow()).keySet();
-        Text[] columnKey = keySet.toArray(new Text[keySet.size()]);
-
-        for (int i = 0; i < columnKey.length; i++) {
-          table.delete(lockId, columnKey[i]);
-        }
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      HTable hTable = new HTable(conf, new Text(tableName));
+      long lockID = hTable.startUpdate(new Text(rowKey));
+      for (Text column : getColumnList(admin, hTable)) {
+        hTable.delete(lockID, new Text(column));
       }
-
-      table.commit(lockId);
-
-      return new ReturnMsg(1, "1 deleted successfully. ");
+      hTable.commit(lockID);
+      return new ReturnMsg(1, "Column(s) deleted successfully.");
     } catch (IOException e) {
-      return new ReturnMsg(0, "error msg : " + e.toString());
+      String[] msg = e.getMessage().split("[\n]");
+      return new ReturnMsg(0, msg[0]);
     }
   }
 
   public void setTable(String table) {
-    this.table = new Text(table);
+    this.tableName = table;
   }
 
-  public void setCondition(Map<String, List<String>> cond) {
-    this.condition = cond;
+  public void setRow(String row) {
+    this.rowKey = row;
   }
 
-  public Text getRow() {
-    return new Text(this.condition.get("row").get(1));
+  /**
+   * Sets the column list.
+   * @param columnList
+   */
+  public void setColumnList(List<String> columnList) {
+    this.columnList = columnList;
   }
 
-  public Text getColumn() {
-    if (this.condition.containsKey("column")) {
-      return new Text(this.condition.get("column").get(1));
-    } else {
-      return null;
+  /**
+   * @param admin
+   * @param hTable
+   * @return return the column list.
+   */
+  public Text[] getColumnList(HBaseAdmin admin, HTable hTable) {
+    Text[] columns = null;
+    try {
+      if (this.columnList.contains("*")) {
+        columns = hTable.getRow(new Text(this.rowKey)).keySet().toArray(new Text[] {});
+      } else {
+        List<Text> tmpList = new ArrayList<Text>();
+        for (int i = 0; i < this.columnList.size(); i++) {
+          Text column = null;
+          if (this.columnList.get(i).contains(":"))
+            column = new Text(this.columnList.get(i));
+          else
+            column = new Text(this.columnList.get(i) + ":");
+
+          tmpList.add(column);
+        }
+        columns = tmpList.toArray(new Text[] {});
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
     }
+    return columns;
   }
-  
 }

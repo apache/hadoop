@@ -19,36 +19,23 @@
  */
 package org.apache.hadoop.hbase.shell;
 
+import junit.framework.TestCase;
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
+
 /**
- * @see <a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseShell">HBaseShell</a>
+ * Test the console table class
+ * TODO: Console table needs fixing.
  */
-public abstract class BasicCommand implements Command, CommandFactory {
-  
-  public BasicCommand getBasicCommand() {
-    return this;
+public class TestConsoleTable extends TestCase {
+  public void testPrintLine() {
+    ConsoleTable.printLine(0, "smallkey", "smallcolumn", "smallcelldata");
+    ConsoleTable.printLine(0, "a large key too big for column", "smallcolumn",
+      "smallcelldata");
+    ConsoleTable.printLine(0, "smallkey", "smallcolumn", "smallcelldata");
   }
   
-  /** basic commands are their own factories. */
-  public Command getCommand() {
-    return this;
+  public static void main(String[] args) {
+    TestRunner.run(new TestSuite(TestConsoleTable.class));
   }
-  
-  protected String extractErrMsg(String msg) {
-    int index = msg.indexOf(":");
-    int eofIndex = msg.indexOf("\n");
-    return msg.substring(index + 1, eofIndex);
-  }
-  
-  protected String extractErrMsg(Exception e) {
-    return extractErrMsg(e.getMessage());
-  }
- 
-  /**
-   * Appends, if it does not exist, a delimiter (colon) 
-   * at the end of the column name.
-   */
-  protected String appendDelimiter(String column) {
-    return (!column.endsWith(FAMILY_INDICATOR))?
-      column + FAMILY_INDICATOR: column;
-  } 
 }

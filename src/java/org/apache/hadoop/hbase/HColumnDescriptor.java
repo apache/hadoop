@@ -214,10 +214,13 @@ public class HColumnDescriptor implements WritableComparable {
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return "(" + name + ", max versions: " + maxVersions + ", compression: "
-      + this.compressionType + ", in memory: " + inMemory +
-      ", max value length: " + maxValueLength + ", bloom filter: "
-      + (bloomFilterSpecified ? bloomFilter.toString() : "none") + ")";
+    // Output a name minus ':'.
+    String tmp = name.toString();
+    return "{name: " + tmp.substring(0, tmp.length() - 1) +
+      ", max versions: " + maxVersions +
+      ", compression: " + this.compressionType + ", in memory: " + inMemory +
+      ", max length: " + maxValueLength + ", bloom filter: " +
+      (bloomFilterSpecified ? bloomFilter.toString() : "none") + "}";
   }
   
   /** {@inheritDoc} */

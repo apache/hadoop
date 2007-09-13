@@ -25,10 +25,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.util.ToolRunner;
 
+/**
+ * Run hadoop filesystem commands.
+ */
 public class FsCommand extends BasicCommand {
   private List<String> query;
 
-  public ReturnMsg execute(Configuration conf) {
+  public ReturnMsg execute(@SuppressWarnings("unused") Configuration conf) {
     FsShell shell = new FsShell();
     try {
       ToolRunner.run(shell, getQuery());

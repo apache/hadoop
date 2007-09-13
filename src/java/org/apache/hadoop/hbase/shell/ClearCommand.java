@@ -23,9 +23,11 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 
+/**
+ * Clears the console screen. 
+ */
 public class ClearCommand extends BasicCommand {
-
-  public ReturnMsg execute(Configuration conf) {
+  public ReturnMsg execute(@SuppressWarnings("unused") Configuration conf) {
     clear();
     return null;
   }
@@ -42,5 +44,4 @@ public class ClearCommand extends BasicCommand {
       System.out.print("\033c");
     }
   }
-
 }

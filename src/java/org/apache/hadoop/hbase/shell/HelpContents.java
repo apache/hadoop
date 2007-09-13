@@ -30,36 +30,77 @@ public class HelpContents {
   public static Map<? extends String, ? extends String[]> Load() {
     Map<String, String[]> load = new HashMap<String, String[]>();
 
-    load.put("SHOW", new String[] { "List all tables.", "SHOW TABLES;" });
+    String columnName = "column_name: " 
+      + "\n\t  column_family_name"
+      + "\n\t| column_family_name:column_label_name";    
+    String columnList = "{column_name, [, column_name] ... | *}";
+
+    load.put("SHOW", new String[] {"List all available tables", "SHOW TABLES;"});
+
     load.put("FS", new String[] { "Hadoop FsShell operations.",
       "FS -copyFromLocal /home/user/backup.dat fs/user/backup;" });
-    load.put("CLEAR", new String[] {"Clear the screen.", "CLEAR;"} );
-    load.put("DESCRIBE", new String[] { "Describe a table's columnfamilies.",
-        "DESCRIBE <table_name>;" });
+    
+    load.put("CLEAR", new String[] {"Clear the screen", "CLEAR;"} );
+    
+    load.put("DESCRIBE", new String[] { "Print information about tables",
+    "[DESCRIBE|DESC] table_name;" });
+    
     load.put("CREATE", new String[] {
-        "Create a table",
-        "CREATE <table_name>"
-            + "\n\t  COLUMNFAMILIES('cf_name1'[, 'cf_name2', ...]);"
-            + "\n    [LIMIT=versions_limit];" });
+        "Create tables",
+        "CREATE TABLE table_name"
+            + "\n\t(column_family_spec [, column_family_spec] ...);"
+            + "\n\n"
+      + "column_family_spec:"
+      + "\n\tcolumn_family_name"
+      + "\n\t[MAX_VERSIONS=n]"
+      + "\n\t[MAX_LENGTH=n]"
+      + "\n\t[COMPRESSION=NONE|RECORD|BLOCK]"
+      + "\n\t[IN_MEMORY]"
+      + "\n\t[BLOOMFILTER=NONE|BLOOM|COUNTING|RETOUCHED VECTOR_SIZE=n NUM_HASH=n]"
+    });
+    
     load.put("DROP", new String[] {
-        "Drop columnfamilie(s) from a table or drop table(s)",
-        "DROP table_name1[, table_name2, ...] | cf_name1[, cf_name2, ...];" });
+        "Drop tables",
+        "DROP TABLE table_name [, table_name] ...;" });
+    
     load.put("INSERT", new String[] {
-        "Insert row into table",
-        "INSERT <table_name>" + "\n\t('column_name1'[, 'column_name2', ...])"
-            + "\n\t    VALUES('entry1'[, 'entry2', ...])"
-            + "\n    WHERE row='row_key';" });
+        "Insert values into tables",
+        "INSERT INTO table_name"
+            + "\n\t(column_name, ...) VALUES ('value', ...)"
+            + "\n\tWHERE row='row_key';"
+            + "\n\n" + columnName            
+    });
+    
     load.put("DELETE", new String[] {
-        "Delete cell or row in table.",
-        "DELETE <table_name>" + "\n\t    WHERE row='row_key;"
-            + "\n    [AND column='column_name'];" });
+        "Delete a subset of the data in a table",
+        "DELETE " + columnList 
+            + "\n\tFROM table_name"
+            + "\n\tWHERE row='row-key';" 
+            + "\n\n"
+            + columnName
+    });
+    
     load.put("SELECT",
         new String[] {
-            "Select values from a table",
-            "SELECT <table_name>" + "\n\t    [WHERE row='row_key']"
-                + "\n    [AND column='column_name'];"
-                + "\n    [AND time='timestamp'];"
-                + "\n    [LIMIT=versions_limit];" });
+            "Select values from tables",
+            "SELECT " + columnList + " FROM table_name" 
+                + "\n\t[WHERE row='row_key' | STARTING FROM 'row-key']"
+                + "\n\t[NUM_VERSIONS = version_count]"
+                + "\n\t[TIMESTAMP 'timestamp']"
+                + "\n\t[LIMIT = row_count]"
+                + "\n\t[INTO FILE 'file_name'];"
+    });
+                
+    load.put("ALTER",
+        new String[] {
+            "Alter the structure of a table",
+            "ALTER TABLE table_name" 
+                + "\n\t  ADD column_spec"
+                + "\n\t| ADD (column_spec, column_spec, ...)"
+                + "\n\t| DROP column_family_name"
+                + "\n\t| CHANGE column_spec;" 
+    });
+
     load.put("EXIT", new String[] { "Exit shell", "EXIT;" });
 
     return load;
