@@ -246,7 +246,7 @@
   JobPriority jobPrio = job.getPriority();
   for (JobPriority prio : JobPriority.values()) {
     if(jobPrio != prio) {
-      %> <a href="jobdetails.jsp?action=changeprio&jobid=<%=jobId%>&prio=<%=prio%>"> <%=prio%> </a> <%
+      %> <a style="margin-left: 5px; margin-right: 5px;" href="jobdetails.jsp?action=changeprio&jobid=<%=jobId%>&prio=<%=prio%>"> <%=prio%> </a> <%
     }
   }
 %>
