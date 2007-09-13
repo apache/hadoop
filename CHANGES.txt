@@ -81,6 +81,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-1890. Removed debugging prints introduced by HADOOP-1774.
+    (Raghu Angadi via dhruba)
+
     HADOOP-1763. Too many lost task trackers on large clusters due to
     insufficient number of RPC handler threads on the JobTracker.
     (Devaraj Das)

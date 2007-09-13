@@ -26,7 +26,6 @@ import java.util.Collection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
-import org.apache.hadoop.fs.Command;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.ToolRunner;
@@ -125,9 +124,6 @@ public class MiniDFSCluster {
     // Format and clean out DataNode directories
     if (format) {
       if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
-        String[] cmd = { "find", data_dir.toString() };
-        String reply = Command.execCommand(cmd);
-        System.err.print("Reply from find : " + reply);
         throw new IOException("Cannot remove data directory: " + data_dir);
       }
       NameNode.format(conf); 
