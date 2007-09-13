@@ -23,34 +23,28 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactory;
-import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Summarizes the size and current state of the cluster.
  */
 public class ClusterStatus implements Writable {
 
-  static {                                        // register a ctor
-    WritableFactories.setFactory
-      (ClusterStatus.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new ClusterStatus(); }
-       });
-  }
-
   private int task_trackers;
   private int map_tasks;
   private int reduce_tasks;
   private int max_tasks;
+  private JobTracker.State state;
 
   ClusterStatus() {}
   
-  ClusterStatus(int trackers, int maps, int reduces, int max) {
+  ClusterStatus(int trackers, int maps, int reduces, int max,
+                JobTracker.State state) {
     task_trackers = trackers;
     map_tasks = maps;
     reduce_tasks = reduces;
     max_tasks = max;
+    this.state = state;
   }
   
 
@@ -81,12 +75,17 @@ public class ClusterStatus implements Writable {
   public int getMaxTasks() {
     return max_tasks;
   }
-  
+
+  public JobTracker.State getJobTrackerState() {
+    return state;
+  }
+
   public void write(DataOutput out) throws IOException {
     out.writeInt(task_trackers);
     out.writeInt(map_tasks);
     out.writeInt(reduce_tasks);
     out.writeInt(max_tasks);
+    WritableUtils.writeEnum(out, state);
   }
 
   public void readFields(DataInput in) throws IOException {
@@ -94,6 +93,7 @@ public class ClusterStatus implements Writable {
     map_tasks = in.readInt();
     reduce_tasks = in.readInt();
     max_tasks = in.readInt();
+    state = WritableUtils.readEnum(in, JobTracker.State.class);
   }
 
 }

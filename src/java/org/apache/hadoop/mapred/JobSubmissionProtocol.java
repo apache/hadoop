@@ -32,6 +32,7 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
    *Changing the versionID to 2L since the getTaskCompletionEvents method has
    *changed.
    *Changed to 4 since killTask(String,boolean) is added
+   *Version 4: added jobtracker state to ClusterStatus
    */
   public static final long versionID = 4L;
 

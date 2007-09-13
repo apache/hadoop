@@ -11,15 +11,15 @@
 %>
 <%! static SimpleDateFormat dateFormat = new SimpleDateFormat("d-MMM-yyyy HH:mm:ss") ; %>
 <%
+  JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
+  String trackerName = 
+           StringUtils.simpleHostname(tracker.getJobTrackerMachine());
   String jobid = request.getParameter("jobid");
   String type = request.getParameter("type");
   String pagenum = request.getParameter("pagenum");
   int pnum = Integer.parseInt(pagenum);
   int next_page = pnum+1;
   int numperpage = 2000;
-  JobTracker tracker = JobTracker.getTracker();
-  String trackerLabel = 
-           StringUtils.simpleHostname(tracker.getJobTrackerMachine());
   JobInProgress job = (JobInProgress) tracker.getJob(jobid);
   JobProfile profile = (job != null) ? (job.getProfile()) : null;
   JobStatus status = (job != null) ? (job.getStatus()) : null;
@@ -37,12 +37,12 @@
 
 <html>
   <head>
-    <title>Hadoop <%=type%> task list for <%=jobid%> on <%=trackerLabel%></title>
+    <title>Hadoop <%=type%> task list for <%=jobid%> on <%=trackerName%></title>
   </head>
 <body>
 <h1>Hadoop <%=type%> task list for 
 <a href="jobdetails.jsp?jobid=<%=jobid%>"><%=jobid%></a> on 
-<a href="jobtracker.jsp"><%=trackerLabel%></a></h1>
+<a href="jobtracker.jsp"><%=trackerName%></a></h1>
 <%
   if (job == null) {
     out.print("<b>Job " + jobid + " not found.</b><br>\n");

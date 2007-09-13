@@ -8,11 +8,12 @@
   import="org.apache.hadoop.util.*"
 %>
 
-<%!
-  JobTracker tracker = JobTracker.getTracker();
+<%
+  JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
   String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
-          
+%>
+<%!       
   private void printBlackListedTrackers(JspWriter out, 
                              JobInProgress job) throws IOException {
     Map<String, Integer> trackerErrors = job.getTaskTrackerErrors();

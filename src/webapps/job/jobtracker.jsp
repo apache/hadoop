@@ -8,10 +8,12 @@
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
 %>
-<%!
-  JobTracker tracker = JobTracker.getTracker();
-  String trackerLabel = 
+<%
+  JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
+  String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
+%>
+<%!
   private static DecimalFormat percentFormat = new DecimalFormat("##0.00");
 
   public void generateJobTable(JspWriter out, String label, Vector jobs, int refresh) throws IOException {
@@ -60,7 +62,8 @@
       out.print("</center>\n");
   }
 
-  public void generateSummaryTable(JspWriter out) throws IOException {
+  public void generateSummaryTable(JspWriter out,
+                                   JobTracker tracker) throws IOException {
     ClusterStatus status = tracker.getClusterStatus();
     out.print("<table border=\"2\" cellpadding=\"5\" cellspacing=\"2\">\n"+
               "<tr><th>Maps</th><th>Reduces</th>" + 
@@ -76,11 +79,12 @@
 
 <html>
 
-<title><%= trackerLabel %> Hadoop Map/Reduce Administration</title>
+<title><%= trackerName %> Hadoop Map/Reduce Administration</title>
 
 <body>
-<h1><%= trackerLabel %> Hadoop Map/Reduce Administration</h1>
+<h1><%= trackerName %> Hadoop Map/Reduce Administration</h1>
 
+<b>State:</b> <%= tracker.getClusterStatus().getJobTrackerState() %><br>
 <b>Started:</b> <%= new Date(tracker.getStartTime())%><br>
 <b>Version:</b> <%= VersionInfo.getVersion()%>,
                 r<%= VersionInfo.getRevision()%><br>
@@ -92,7 +96,7 @@
 <h2>Cluster Summary</h2>
 <center>
 <% 
-   generateSummaryTable(out); 
+   generateSummaryTable(out, tracker); 
 %>
 </center>
 <hr>

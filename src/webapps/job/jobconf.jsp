@@ -10,6 +10,7 @@
 
 
 <%
+  JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
   String jobId = request.getParameter("jobid");
   if (jobId == null) {
     out.println("<h2>Missing 'jobid' for fetching job configuration!</h2>");
@@ -25,8 +26,6 @@
 <h2>Job Configuration: JobId - <%= jobId %></h2><br>
 
 <%
-  JobTracker tracker = JobTracker.getTracker();
-  
   JobInProgress job = (JobInProgress)tracker.getJob(jobId);
   if (job == null) {
     out.print("<h4>Job '" + jobId + "' not found!</h4><br>\n");

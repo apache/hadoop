@@ -8,12 +8,14 @@
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
 %>
-<%!
-  JobTracker tracker = JobTracker.getTracker();
-  String trackerLabel = 
+<%
+  JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
+  String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
-
-  public void generateTaskTrackerTable(JspWriter out) throws IOException {
+%>
+<%!
+  public void generateTaskTrackerTable(JspWriter out,
+                                       JobTracker tracker) throws IOException {
     Collection c = tracker.taskTrackers();
 
     if (c.size() == 0) {
@@ -63,14 +65,14 @@
 
 <html>
 
-<title><%=trackerLabel%> Hadoop Machine List</title>
+<title><%=trackerName%> Hadoop Machine List</title>
 
 <body>
-<h1><a href="jobtracker.jsp"><%=trackerLabel%></a> Hadoop Machine List</h1>
+<h1><a href="jobtracker.jsp"><%=trackerName%></a> Hadoop Machine List</h1>
 
 <h2>Task Trackers</h2>
 <%
-  generateTaskTrackerTable(out);
+  generateTaskTrackerTable(out, tracker);
 %>
 
 <hr>

@@ -218,6 +218,12 @@ Trunk (unreleased changes)
     HADOOP-1718.  Add ant targets for measuring code coverage with clover.
     (simonwillnauer via nigel)
 
+    HADOOP-1819.  Jobtracker cleanups, including binding ports before
+    clearing state directories, so that inadvertently starting a
+    second jobtracker doesn't trash one that's already running.
+    (omalley via cutting)
+
+
 Release 0.14.1 - 2007-09-04
 
   BUG FIXES

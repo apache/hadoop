@@ -12,8 +12,10 @@
   import="org.apache.hadoop.util.*"
 %>
 <%
+  JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
+  String trackerName = 
+           StringUtils.simpleHostname(tracker.getJobTrackerMachine());
   String jobid = request.getParameter("jobid");
-  JobTracker tracker = JobTracker.getTracker();
   JobInProgress job = (JobInProgress) tracker.getJob(jobid);
   String tipid = request.getParameter("tipid");
   String taskid = request.getParameter("taskid");

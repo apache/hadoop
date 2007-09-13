@@ -265,7 +265,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
   public LocalJobRunner(JobConf conf) throws IOException {
     this.fs = FileSystem.get(conf);
     this.conf = conf;
-    myMetrics = new JobTrackerMetrics(new JobConf(conf));
+    myMetrics = new JobTrackerMetrics(null, new JobConf(conf));
   }
 
   // JobSubmissionProtocol methods
@@ -316,7 +316,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
   }
   
   public ClusterStatus getClusterStatus() {
-    return new ClusterStatus(1, map_tasks, reduce_tasks, 1);
+    return new ClusterStatus(1, map_tasks, reduce_tasks, 1, 
+                             JobTracker.State.RUNNING);
   }
 
   public JobStatus[] jobsToComplete() {return null;}

@@ -27,8 +27,9 @@
         + "\">Cancel</a></td></tr></table></body></html>");
   }%>
 <%
-    JobTracker tracker = JobTracker.getTracker();
+    JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
     String jobid = request.getParameter("jobid");
+    JobInProgress job = (JobInProgress) tracker.getJob(jobid);
     String tipid = request.getParameter("tipid");
     String taskid = request.getParameter("taskid");
 
@@ -57,7 +58,6 @@
         }
       }
     }
-    JobInProgress job = (JobInProgress) tracker.getJob(jobid);
     TaskStatus[] ts = (job != null) ? tracker.getTaskStatuses(jobid, tipid)
         : null;
 %>

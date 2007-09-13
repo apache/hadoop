@@ -11,15 +11,16 @@
   import="org.apache.hadoop.dfs.JspHelper"
 %>
 
+<%
+  JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
+  String trackerName = 
+           StringUtils.simpleHostname(tracker.getJobTrackerMachine());
+%>
 <%!
   
 	private static final String PRIVATE_ACTIONS_KEY 
 		= "webinterface.private.actions";
-
-  JobTracker tracker = JobTracker.getTracker();
-  String trackerName = 
-           StringUtils.simpleHostname(tracker.getJobTrackerMachine());
-  
+ 
   private void printTaskSummary(JspWriter out,
                                 String jobId,
                                 String kind,

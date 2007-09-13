@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.BufferedOutputStream;
-import java.io.StringWriter;
-import java.io.PrintWriter;
 import java.io.ByteArrayInputStream;
 
 import java.nio.ByteBuffer;
@@ -32,9 +30,14 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
+import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 
 import java.util.Collections;
 import java.util.LinkedList;
@@ -44,7 +47,6 @@ import java.util.Random;
 
 import org.apache.commons.logging.*;
 
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
@@ -142,7 +144,35 @@ public abstract class Server {
   private Listener listener = null;
   private int numConnections = 0;
   private Handler[] handlers = null;
-  
+
+  /**
+   * A convience method to bind to a given address and report 
+   * better exceptions if the address is not a valid host.
+   * @param socket the socket to bind
+   * @param address the address to bind to
+   * @param backlog the number of connections allowed in the queue
+   * @throws BindException if the address can't be bound
+   * @throws UnknownHostException if the address isn't a valid host name
+   * @throws IOException other random errors from bind
+   */
+  static void bind(ServerSocket socket, InetSocketAddress address, 
+                   int backlog) throws IOException {
+    try {
+      socket.bind(address, backlog);
+    } catch (BindException e) {
+      throw new BindException("Problem binding to " + address);
+    } catch (SocketException e) {
+      // If they try to bind to a different host's address, give a better
+      // error message.
+      if ("Unresolved address".equals(e.getMessage())) {
+        throw new UnknownHostException("Invalid hostname for server: " + 
+                                       address.getHostName());
+      } else {
+        throw e;
+      }
+    }
+  }
+
   /** A call queued for handling. */
   private static class Call {
     private int id;                               // the client's call id
@@ -182,7 +212,7 @@ public abstract class Server {
       acceptChannel.configureBlocking(false);
 
       // Bind the server socket to the local host and port
-      acceptChannel.socket().bind(address, backlogLength);
+      bind(acceptChannel.socket(), address, backlogLength);
       port = acceptChannel.socket().getLocalPort(); //Could be an ephemeral port
       // create a selector;
       selector= Selector.open();

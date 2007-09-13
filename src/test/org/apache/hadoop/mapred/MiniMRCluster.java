@@ -20,11 +20,15 @@ package org.apache.hadoop.mapred;
 import java.io.*;
 import java.util.*;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * This class creates a single-process Map-Reduce cluster for junit testing.
  * One thread is created for each server.
  */
 public class MiniMRCluster {
+  private static final Log LOG = LogFactory.getLog(MiniMRCluster.class);
     
   private Thread jobTrackerThread;
   private JobTrackerRunner jobTracker;
@@ -43,19 +47,20 @@ public class MiniMRCluster {
    * An inner class that runs a job tracker.
    */
   class JobTrackerRunner implements Runnable {
+    private JobTracker tracker = null;
 
     JobConf jc = null;
         
     public boolean isUp() {
-      return (JobTracker.getTracker() != null);
+      return (tracker != null);
     }
         
     public int getJobTrackerPort() {
-      return JobTracker.getAddress(jc).getPort();
+      return tracker.getTrackerPort();
     }
 
     public int getJobTrackerInfoPort() {
-      return jc.getInt("mapred.job.tracker.info.port", 50030);
+      return tracker.getInfoPort();
     }
         
     /**
@@ -65,10 +70,10 @@ public class MiniMRCluster {
       try {
         jc = createJobConf();
         jc.set("mapred.local.dir","build/test/mapred/local");
-        JobTracker.startTracker(jc);
+        tracker = JobTracker.startTracker(jc);
+        tracker.offerService();
       } catch (Throwable e) {
-        System.err.println("Job tracker crashed:");
-        e.printStackTrace();
+        LOG.error("Job tracker crashed", e);
       }
     }
         
@@ -77,10 +82,11 @@ public class MiniMRCluster {
      */
     public void shutdown() {
       try {
-        JobTracker.stopTracker();
+        if (tracker != null) {
+          tracker.stopTracker();
+        }
       } catch (Throwable e) {
-        System.err.println("Unable to shut down job tracker:");
-        e.printStackTrace();
+        LOG.error("Problem shutting down job tracker", e);
       }
     }
   }
@@ -91,16 +97,40 @@ public class MiniMRCluster {
   class TaskTrackerRunner implements Runnable {
     volatile TaskTracker tt;
     int trackerId;
+    JobConf conf = createJobConf();
     // the localDirs for this taskTracker
-    String[] localDir;
+    String[] localDirs;
     volatile boolean isInitialized = false;
     volatile boolean isDead = false;
-    int numDir;       
-    TaskTrackerRunner(int trackerId, int numDir) {
+    int numDir;
+
+    TaskTrackerRunner(int trackerId, int numDir) throws IOException {
       this.trackerId = trackerId;
       this.numDir = numDir;
-      // a maximum of 10 local dirs can be specified in MinMRCluster
-      localDir = new String[10];
+      localDirs = new String[numDir];
+      conf = createJobConf();
+      conf.setInt("mapred.task.tracker.info.port", 0);
+      conf.setInt("mapred.task.tracker.report.port", taskTrackerPort);
+      File localDirBase = 
+        new File(conf.get("mapred.local.dir")).getAbsoluteFile();
+      localDirBase.mkdirs();
+      StringBuffer localPath = new StringBuffer();
+      for(int i=0; i < numDir; ++i) {
+        File ttDir = new File(localDirBase, 
+                              Integer.toString(trackerId) + "_" + 0);
+        if (!ttDir.mkdirs()) {
+          if (!ttDir.isDirectory()) {
+            throw new IOException("Mkdirs failed to create " + ttDir);
+          }
+        }
+        localDirs[i] = ttDir.toString();
+        if (i != 0) {
+          localPath.append(",");
+        }
+        localPath.append(localDirs[i]);
+      }
+      conf.set("mapred.local.dir", localPath.toString());
+      LOG.info("mapred.local.dir is " +  localPath);
     }
         
     /**
@@ -108,40 +138,13 @@ public class MiniMRCluster {
      */
     public void run() {
       try {
-        JobConf jc = createJobConf();
-        jc.setInt("mapred.task.tracker.info.port", 0);
-        jc.setInt("mapred.task.tracker.report.port", taskTrackerPort);
-        File localDir = new File(jc.get("mapred.local.dir"));
-        String mapredDir = "";
-        File ttDir = new File(localDir, Integer.toString(trackerId) + "_" + 0);
-        if (!ttDir.mkdirs()) {
-          if (!ttDir.isDirectory()) {
-            throw new IOException("Mkdirs failed to create " + ttDir.toString());
-          }
-        }
-        this.localDir[0] = ttDir.getAbsolutePath();
-        mapredDir = ttDir.getAbsolutePath();
-        for (int i = 1; i < numDir; i++){
-          ttDir = new File(localDir, Integer.toString(trackerId) + "_" + i);
-          ttDir.mkdirs();
-          if (!ttDir.mkdirs()) {
-            if (!ttDir.isDirectory()) {
-              throw new IOException("Mkdirs failed to create " + ttDir.toString());
-            }
-          }
-          this.localDir[i] = ttDir.getAbsolutePath();
-          mapredDir = mapredDir + "," + ttDir.getAbsolutePath();
-        }
-        jc.set("mapred.local.dir", mapredDir);
-        System.out.println("mapred.local.dir is " +  mapredDir);
-        tt = new TaskTracker(jc);
+        tt = new TaskTracker(conf);
         isInitialized = true;
         tt.run();
       } catch (Throwable e) {
         isDead = true;
         tt = null;
-        System.err.println("Task tracker crashed:");
-        e.printStackTrace();
+        LOG.error("task tracker " + trackerId + " crashed", e);
       }
     }
         
@@ -152,11 +155,11 @@ public class MiniMRCluster {
      * @return the absolute pathname
      */
     public String getLocalDir() {
-      return localDir[0];
+      return localDirs[0];
     }
        
     public String[] getLocalDirs(){
-      return localDir;
+      return localDirs;
     } 
     /**
      * Shut down the server and wait for it to finish.
@@ -166,8 +169,8 @@ public class MiniMRCluster {
         try {
           tt.shutdown();
         } catch (Throwable e) {
-          System.err.println("Unable to shut down task tracker:");
-          e.printStackTrace();
+          LOG.error("task tracker " + trackerId + " could not shut down",
+                    e);
         }
       }
     }
@@ -198,10 +201,10 @@ public class MiniMRCluster {
       TaskTrackerRunner runner = (TaskTrackerRunner) itr.next();
       while (!runner.isDead && (!runner.isInitialized || !runner.tt.isIdle())) {
         if (!runner.isInitialized) {
-          System.out.println("Waiting for task tracker to start.");
+          LOG.info("Waiting for task tracker to start.");
         } else {
-          System.out.println("Waiting for task tracker " + runner.tt.getName() +
-                             " to be idle.");
+          LOG.info("Waiting for task tracker " + runner.tt.getName() +
+                   " to be idle.");
         }
         try {
           Thread.sleep(1000);
@@ -270,6 +273,19 @@ public class MiniMRCluster {
     jobTracker = new JobTrackerRunner();
     jobTrackerThread = new Thread(jobTracker);
         
+    jobTrackerThread.start();
+    while (!jobTracker.isUp()) {
+      try {                                     // let daemons get started
+        LOG.info("Waiting for JobTracker to start...");
+        Thread.sleep(1000);
+      } catch(InterruptedException e) {
+      }
+    }
+        
+    // Set the configuration for the task-trackers
+    this.jobTrackerPort = jobTracker.getJobTrackerPort();
+    this.jobTrackerInfoPort = jobTracker.getJobTrackerInfoPort();
+
     // Create the TaskTrackers
     for (int idx = 0; idx < numTaskTrackers; idx++) {
       TaskTrackerRunner taskTracker = new TaskTrackerRunner(idx, numDir);
@@ -286,19 +302,6 @@ public class MiniMRCluster {
       }
     }
         
-    jobTrackerThread.start();
-    while (!jobTracker.isUp()) {
-      try {                                     // let daemons get started
-        System.err.println("Waiting for JobTracker to start...");
-        Thread.sleep(1000);
-      } catch(InterruptedException e) {
-      }
-    }
-        
-    // Set the configuration for the task-trackers
-    this.jobTrackerPort = jobTracker.getJobTrackerPort();
-    this.jobTrackerInfoPort = jobTracker.getJobTrackerInfoPort();
-
     if (!taskTrackerFirst) {
       for (Thread taskTrackerThread : taskTrackerThreadList){
         taskTrackerThread.start();
@@ -323,7 +326,7 @@ public class MiniMRCluster {
         try {
           taskTrackerThread.join();
         } catch (InterruptedException ex) {
-          ex.printStackTrace();
+          LOG.error("Problem shutting down task tracker", ex);
         }
       }
       jobTracker.shutdown();
@@ -331,7 +334,7 @@ public class MiniMRCluster {
       try {
         jobTrackerThread.join();
       } catch (InterruptedException ex) {
-        ex.printStackTrace();
+        LOG.error("Problem waiting for job tracker to finish", ex);
       }
     } finally {
       File configDir = new File("build", "minimr");
@@ -341,11 +344,11 @@ public class MiniMRCluster {
   }
     
   public static void main(String[] args) throws IOException {
-    System.out.println("Bringing up Jobtracker and tasktrackers.");
+    LOG.info("Bringing up Jobtracker and tasktrackers.");
     MiniMRCluster mr = new MiniMRCluster(4, "local", 1);
-    System.out.println("JobTracker and TaskTrackers are up.");
+    LOG.info("JobTracker and TaskTrackers are up.");
     mr.shutdown();
-    System.out.println("JobTracker and TaskTrackers brought down.");
+    LOG.info("JobTracker and TaskTrackers brought down.");
   }
 }
 

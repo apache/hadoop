@@ -8,12 +8,14 @@
   import="org.apache.hadoop.util.*"
 %>
 
-<%!
-  JobTracker tracker = JobTracker.getTracker();
+<%
+  JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
   String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
-  
+%>
+<%! 
   private void printFailedAttempts(JspWriter out,
+                                   JobTracker tracker,
                                    String jobId,
                                    TaskInProgress tip,
                                    TaskStatus.State failState) throws IOException {
@@ -75,6 +77,7 @@
   }
              
   private void printFailures(JspWriter out, 
+                             JobTracker tracker,
                              String jobId,
                              String kind, 
                              String cause) throws IOException {
@@ -122,13 +125,13 @@
     if (includeMap) {
       TaskInProgress[] tips = job.getMapTasks();
       for(int i=0; i < tips.length; ++i) {
-        printFailedAttempts(out, jobId, tips[i], state);
+        printFailedAttempts(out, tracker, jobId, tips[i], state);
       }
     }
     if (includeReduce) {
       TaskInProgress[] tips = job.getReduceTasks();
       for(int i=0; i < tips.length; ++i) {
-        printFailedAttempts(out, jobId, tips[i], state);
+        printFailedAttempts(out, tracker, jobId, tips[i], state);
       }
     }
     out.print("</table>\n");
@@ -148,7 +151,7 @@
 failures on <a href="jobtracker.jsp"><%=trackerName%></a></h1>
 
 <% 
-    printFailures(out, jobId, kind, cause); 
+    printFailures(out, tracker, jobId, kind, cause); 
 %>
 
 <hr>
