@@ -171,7 +171,7 @@ class HRegiondirReader {
     HRegion r = new HRegion(this.parentdir, null,
         FileSystem.get(this.conf), conf, info, null);
     Text [] families = info.tableDesc.families().keySet().toArray(
-        new Text [info.tableDesc.families.size()]);
+        new Text [info.tableDesc.getFamilies().size()]);
     HInternalScannerInterface scanner =
       r.getScanner(families, new Text(), System.currentTimeMillis(), null);
     

@@ -22,11 +22,12 @@ package org.apache.hadoop.hbase.shell;
 import org.apache.hadoop.conf.Configuration;
 
 public interface Command {
-  
   /** family indicator */
   public static final String FAMILY_INDICATOR = ":";
 
-  /** Execute a command */
+  /** Execute a command
+   * @param conf Configuration
+   * @return Result of command execution
+   */
   public ReturnMsg execute(Configuration conf);
-  
 }

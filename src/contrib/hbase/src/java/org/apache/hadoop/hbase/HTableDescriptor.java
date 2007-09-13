@@ -22,8 +22,10 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -36,8 +38,9 @@ import org.apache.hadoop.io.WritableComparable;
  * column families.
  */
 public class HTableDescriptor implements WritableComparable {
-  Text name;
-  TreeMap<Text, HColumnDescriptor> families;
+  private Text name;
+  // TODO: Does this need to be a treemap?  Can it be a HashMap?
+  private final TreeMap<Text, HColumnDescriptor> families;
   
   /*
    * Legal table names can only contain 'word characters':
@@ -182,5 +185,12 @@ public class HTableDescriptor implements WritableComparable {
       }
     }
     return result;
+  }
+
+  /**
+   * @return Immutable sorted map of families.
+   */
+  public SortedMap<Text, HColumnDescriptor> getFamilies() {
+    return Collections.unmodifiableSortedMap(this.families);
   }
 }

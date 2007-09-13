@@ -23,7 +23,5 @@ package org.apache.hadoop.hbase.shell;
  * Parser uses command factories to create command.
  */
 public interface CommandFactory {
-  
   Command getCommand();
-  
 }

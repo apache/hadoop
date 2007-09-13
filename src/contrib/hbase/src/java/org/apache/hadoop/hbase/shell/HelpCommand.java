@@ -22,10 +22,9 @@ package org.apache.hadoop.hbase.shell;
 import org.apache.hadoop.conf.Configuration;
 
 public class HelpCommand extends BasicCommand {
-  
   private String argument;
 
-  public ReturnMsg execute(Configuration conf) {
+  public ReturnMsg execute(@SuppressWarnings("unused") Configuration conf) {
     HelpManager.printHelp(this.argument);
     return null;
   }
@@ -33,5 +32,4 @@ public class HelpCommand extends BasicCommand {
   public void setArgument(String argument) {
     this.argument = argument;
   }
-  
 }

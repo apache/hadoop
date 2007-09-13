@@ -19,10 +19,13 @@
  */
 package org.apache.hadoop.hbase.shell;
 
+/**
+ * Message returned when a {@link Command} is
+ * {@link Command#execute(org.apache.hadoop.conf.Configuration)}'ed.
+ */
 public class ReturnMsg {
-  
-  private String msg;
-  private int type;
+  private final String msg;
+  private final int type;
 
   public ReturnMsg(int i, String string) {
     this.type = i;
@@ -41,5 +44,4 @@ public class ReturnMsg {
   public int getType() {
     return this.type;
   }
-  
 }

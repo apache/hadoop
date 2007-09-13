@@ -13,6 +13,11 @@ Trunk (unreleased changes)
                 older than passed timestamp.  Fixed compaction so deleted cells
                 do not make it out into compacted output.  Ensure also that
                 versions > column max are dropped compacting.
+    HADOOP-1720 Addition of HQL (Hbase Query Language) support in Hbase Shell.
+                The old shell syntax has been replaced by HQL, a small SQL-like
+                set of operators, for creating, altering, dropping, inserting,
+                deleting, and selecting, etc., data in hbase.
+                (Inchul Song and Edward Yoon via Stack)
 
   OPTIMIZATIONS
 

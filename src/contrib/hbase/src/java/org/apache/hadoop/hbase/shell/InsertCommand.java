@@ -21,21 +21,23 @@ package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.io.Text;
 
+/**
+ * Inserts values into tables.
+ */
 public class InsertCommand extends BasicCommand {
   
-  private Text table;
+  private Text tableName;
   private List<String> columnfamilies;
   private List<String> values;
-  private Map<String, List<String>> condition;
+  private String rowKey;
 
   public ReturnMsg execute(Configuration conf) {
-    if (this.table == null || this.values == null || this.condition == null)
+    if (this.tableName == null || this.values == null || this.rowKey == null)
       return new ReturnMsg(0, "Syntax error : Please check 'Insert' syntax.");
 
     if (this.columnfamilies.size() != this.values.size())
@@ -43,12 +45,16 @@ public class InsertCommand extends BasicCommand {
           "Mismatch between values list and columnfamilies list");
 
     try {
-      HTable table = new HTable(conf, this.table);
+      HTable table = new HTable(conf, this.tableName);
       long lockId = table.startUpdate(getRow());
 
       for (int i = 0; i < this.values.size(); i++) {
-        table.put(lockId, getColumn(i), getValue(i));
-        
+        Text column = null;
+        if(getColumn(i).toString().contains(":"))
+          column = getColumn(i);
+        else
+          column = new Text(getColumn(i) + ":");
+        table.put(lockId, column, getValue(i));
       }
       table.commit(lockId);
 
@@ -60,7 +66,7 @@ public class InsertCommand extends BasicCommand {
   }
 
   public void setTable(String table) {
-    this.table = new Text(table);
+    this.tableName = new Text(table);
   }
 
   public void setColumnfamilies(List<String> columnfamilies) {
@@ -71,12 +77,12 @@ public class InsertCommand extends BasicCommand {
     this.values = values;
   }
 
-  public void setCondition(Map<String, List<String>> cond) {
-    this.condition = cond;
+  public void setRow(String row) {
+    this.rowKey = row;
   }
 
   public Text getRow() {
-    return new Text(this.condition.get("row").get(1));
+    return new Text(this.rowKey);
   }
 
   public Text getColumn(int i) {
@@ -85,5 +91,5 @@ public class InsertCommand extends BasicCommand {
 
   public byte[] getValue(int i) {
     return this.values.get(i).getBytes();
-  }
+  } 
 }

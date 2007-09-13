@@ -27,13 +27,14 @@ import java.util.Map;
  */
 public class HelpManager {
   /** application name */
-  public static final String APP_NAME = "HBase Shell";
+  public static final String APP_NAME = "Hbase Shell";
 
   /** version of the code */
-  public static final String APP_VERSION = "0.0.1";
+  public static final String APP_VERSION = "0.0.2";
 
   /** help contents map */
-  public static final Map<String, String[]> help = new HashMap<String, String[]>();
+  public static final Map<String, String[]> help =
+    new HashMap<String, String[]>();
 
   public HelpManager() {
     help.putAll(HelpContents.Load());
@@ -41,7 +42,6 @@ public class HelpManager {
 
   /** Print out the program version. */
   public void printVersion() {
-    ClearCommand.clear();
     System.out.println(APP_NAME + ", " + APP_VERSION + " version.\n"
         + "Copyright (c) 2007 by udanax, "
         + "licensed to Apache Software Foundation.\n"
@@ -55,12 +55,13 @@ public class HelpManager {
       for (Map.Entry<String, String[]> helpMap : help.entrySet()) {
         wrapping(helpMap.getKey(), helpMap.getValue(), false);
       }
+      System.out.println();
     } else {
       if (help.containsKey(cmd.toUpperCase())) {
         String[] msg = help.get(cmd.toUpperCase());
         wrapping(cmd.toUpperCase(), msg, true);
       } else {
-        System.out.println("Unknown Command : Type 'help' for usage.");
+        System.out.println("Unknown Command : Type 'help;' for usage.");
       }
     }
   }
@@ -76,6 +77,6 @@ public class HelpManager {
     }
 
     if (example)
-      System.out.println("\n>>> " + cmdType[1]);
+      System.out.println("\nSyntax:\n" + cmdType[1] + "\n");
   }
 }

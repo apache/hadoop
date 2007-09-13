@@ -25,6 +25,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HTableDescriptor;
 
+/**
+ * Shows all available tables.
+ */
 public class ShowCommand extends BasicCommand {
 
   private String command;
@@ -62,5 +65,4 @@ public class ShowCommand extends BasicCommand {
   public void setArgument(String argument) {
     this.command = argument;
   }
-
 }

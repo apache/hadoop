@@ -34,18 +34,19 @@ import org.apache.hadoop.hbase.shell.generated.TokenMgrError;
 /**
  * An hbase shell.
  * 
- * @see <a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseShell">HBaseShell</a>
+ * @see <a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseShell">HbaseShell</a>
  */
 public class Shell {
   /** audible keyboard bells */
   public static final boolean DEFAULT_BELL_ENABLED = true;
 
-  /** Main method
-   * 
+  /**
+   * Main method
    * @param args not used
    * @throws IOException
    */
-  public static void main(@SuppressWarnings("unused") String args[]) throws IOException {
+  public static void main(@SuppressWarnings("unused") String args[])
+  throws IOException {
     Configuration conf = new HBaseConfiguration();
     ConsoleReader reader = new ConsoleReader();
     reader.setBellEnabled(conf.getBoolean("hbaseshell.jline.bell.enabled",
@@ -73,7 +74,6 @@ public class Shell {
         }
 
         long end = System.currentTimeMillis();
-
         if (rs != null && rs.getType() > -1)
           System.out.println(rs.getMsg()
               + executeTime((rs.getType() == 1), start, end));
@@ -92,7 +92,7 @@ public class Shell {
 
   /** Return the string of prompt start string */
   private static String getPrompt(final StringBuilder queryStr) {
-    return (queryStr.toString().equals("")) ? "HBase > " : "    --> ";
+    return (queryStr.toString().equals("")) ? "Hbase > " : "    --> ";
   }
 
   /**
