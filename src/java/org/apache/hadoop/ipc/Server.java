@@ -252,7 +252,7 @@ public abstract class Server {
           Connection c;
           synchronized (connectionList) {
             try {
-              c = (Connection)connectionList.get(i);
+              c = connectionList.get(i);
             } catch (Exception e) {return;}
           }
           if (c.timedOut(currentTime)) {
@@ -526,7 +526,7 @@ public abstract class Server {
       Call call = new Call(id, param, this);
       synchronized (callQueue) {
         if (callQueue.size() >= maxQueueSize) {
-          Call oldCall = (Call) callQueue.removeFirst();
+          Call oldCall = callQueue.removeFirst();
           LOG.warn("Call queue overflow discarding oldest call " + oldCall);
         }
         callQueue.addLast(call);              // queue the call
@@ -570,7 +570,7 @@ public abstract class Server {
               callQueue.wait(timeout);
             }
             if (!running) break;
-            call = (Call)callQueue.removeFirst(); // pop the queue
+            call = callQueue.removeFirst(); // pop the queue
           }
 
           // throw the message away if it is too old

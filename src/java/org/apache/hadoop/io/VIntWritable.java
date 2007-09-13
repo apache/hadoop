@@ -55,7 +55,7 @@ public class VIntWritable implements WritableComparable {
   }
 
   public int hashCode() {
-    return (int)value;
+    return value;
   }
 
   /** Compares two VIntWritables. */

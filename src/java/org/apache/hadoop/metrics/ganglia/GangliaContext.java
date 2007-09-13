@@ -119,7 +119,7 @@ public class GangliaContext extends AbstractMetricsContext {
     // emit each metric in turn
     for (String metricName : outRec.getMetricNames()) {
       Object metric = outRec.getMetric(metricName);
-      String type = (String) typeTable.get(metric.getClass());
+      String type = typeTable.get(metric.getClass());
       emitMetric(metricName, type, metric.toString());
     }
         
@@ -151,7 +151,7 @@ public class GangliaContext extends AbstractMetricsContext {
   }
     
   private String getUnits(String metricName) {
-    String result = (String) unitsTable.get(metricName);
+    String result = unitsTable.get(metricName);
     if (result == null) {
       result = DEFAULT_UNITS;
     }
@@ -159,7 +159,7 @@ public class GangliaContext extends AbstractMetricsContext {
   }
     
   private int getSlope(String metricName) {
-    String slopeString = (String) slopeTable.get(metricName);
+    String slopeString = slopeTable.get(metricName);
     if (slopeString == null) {
       slopeString = DEFAULT_SLOPE; 
     }
@@ -167,7 +167,7 @@ public class GangliaContext extends AbstractMetricsContext {
   }
     
   private int getTmax(String metricName) {
-    String tmaxString = (String) tmaxTable.get(metricName);
+    String tmaxString = tmaxTable.get(metricName);
     if (tmaxString == null) {
       return DEFAULT_TMAX;
     }
@@ -177,7 +177,7 @@ public class GangliaContext extends AbstractMetricsContext {
   }
     
   private int getDmax(String metricName) {
-    String dmaxString = (String) dmaxTable.get(metricName);
+    String dmaxString = dmaxTable.get(metricName);
     if (dmaxString == null) {
       return DEFAULT_DMAX;
     }

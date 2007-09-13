@@ -267,7 +267,7 @@ public class StringUtils {
     while (tokenizer.hasMoreTokens()) {
       values.add(tokenizer.nextToken());
     }
-    return (String[])values.toArray(new String[values.size()]);
+    return values.toArray(new String[values.size()]);
   }
 
   /**

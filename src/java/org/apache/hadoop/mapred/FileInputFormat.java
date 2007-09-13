@@ -95,7 +95,7 @@ public abstract class FileInputFormat<K extends WritableComparable,
       }
     }
 
-    return (Path[])result.toArray(new Path[result.size()]);
+    return result.toArray(new Path[result.size()]);
   }
 
   public void validateInput(JobConf job) throws IOException {

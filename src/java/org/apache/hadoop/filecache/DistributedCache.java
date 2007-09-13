@@ -108,7 +108,7 @@ public class DistributedCache {
     throws IOException {
     String cacheId = makeRelative(cache, conf);
     synchronized (cachedArchives) {
-      CacheStatus lcacheStatus = (CacheStatus) cachedArchives.get(cacheId);
+      CacheStatus lcacheStatus = cachedArchives.get(cacheId);
       if (lcacheStatus == null)
         return;
       synchronized (lcacheStatus) {
@@ -124,7 +124,7 @@ public class DistributedCache {
     synchronized (cachedArchives) {
       for (Iterator it = cachedArchives.keySet().iterator(); it.hasNext();) {
         String cacheId = (String) it.next();
-        CacheStatus lcacheStatus = (CacheStatus) cachedArchives.get(cacheId);
+        CacheStatus lcacheStatus = cachedArchives.get(cacheId);
         synchronized (lcacheStatus) {
           if (lcacheStatus.refcount == 0) {
             // delete this cache entry

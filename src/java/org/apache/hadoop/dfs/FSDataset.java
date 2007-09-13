@@ -558,7 +558,7 @@ class FSDataset implements FSConstants {
       //
       if (ongoingCreates.containsKey(b)) {
         // check how old is the temp file - wait 1 hour
-        File tmp = (File)ongoingCreates.get(b);
+        File tmp = ongoingCreates.get(b);
         if ((System.currentTimeMillis() - tmp.lastModified()) < 3600 * 1000) {
           throw new IOException("Block " + b +
                                 " has already been started (though not completed), and thus cannot be created.");

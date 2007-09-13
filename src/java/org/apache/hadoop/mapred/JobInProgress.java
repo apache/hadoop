@@ -131,7 +131,7 @@ class JobInProgress {
     this.jobtracker = jobtracker;
     this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
     this.startTime = System.currentTimeMillis();
-    this.localFs = (LocalFileSystem)FileSystem.getLocal(default_conf);
+    this.localFs = FileSystem.getLocal(default_conf);
 
     JobConf default_job_conf = new JobConf(default_conf);
     this.localJobFile = default_job_conf.getLocalPath(JobTracker.SUBDIR 
@@ -1142,8 +1142,7 @@ class JobInProgress {
     if (taskCompletionEvents.size() > fromEventId) {
       int actualMax = Math.min(maxEvents, 
                                (taskCompletionEvents.size() - fromEventId));
-      events = (TaskCompletionEvent[])taskCompletionEvents.subList(
-                                                                   fromEventId, actualMax + fromEventId).toArray(events);        
+      events = taskCompletionEvents.subList(fromEventId, actualMax + fromEventId).toArray(events);        
     }
     return events; 
   }

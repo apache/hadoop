@@ -531,7 +531,7 @@ public abstract class FileSystem extends Configured {
     for(int i=0; i<files.length; i++) {
       listPaths(results, files[i], filter);
     }
-    return (Path[]) results.toArray(new Path[results.size()]);
+    return results.toArray(new Path[results.size()]);
   }
     
   /**

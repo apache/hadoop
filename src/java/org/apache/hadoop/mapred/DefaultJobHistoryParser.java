@@ -165,7 +165,7 @@ public class DefaultJobHistoryParser {
         currentTracker = values.get(Keys.START_TIME);
         jobTrackerToJobs.put(currentTracker, activeJobs);
       } else if (recType.equals(JobHistory.RecordTypes.Job)) {
-        String jobId = (String) values.get(Keys.JOBID);
+        String jobId = values.get(Keys.JOBID);
         JobHistory.JobInfo job = activeJobs.get(jobId);
         if (null == job) {
           job = new JobHistory.JobInfo(jobId);

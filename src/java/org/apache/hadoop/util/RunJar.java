@@ -149,7 +149,7 @@ public class RunJar {
     Method main = mainClass.getMethod("main", new Class[] {
       Array.newInstance(String.class, 0).getClass()
     });
-    String[] newArgs = (String[])Arrays.asList(args)
+    String[] newArgs = Arrays.asList(args)
       .subList(firstArg, args.length).toArray(new String[0]);
     try {
       main.invoke(null, new Object[] { newArgs });

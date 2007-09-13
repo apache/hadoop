@@ -261,7 +261,7 @@ public class Client {
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + " got value #" + id);
 
-          Call call = (Call)calls.remove(id);
+          Call call = calls.remove(id);
           boolean isError = in.readBoolean();     // read if error
           if (isError) {
             call.setResult(null, WritableUtils.readString(in),
@@ -515,7 +515,7 @@ public class Client {
     throws IOException {
     Connection connection;
     synchronized (connections) {
-      connection = (Connection)connections.get(address);
+      connection = connections.get(address);
       if (connection == null) {
         connection = new Connection(address);
         connections.put(address, connection);

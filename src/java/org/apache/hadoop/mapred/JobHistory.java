@@ -369,7 +369,7 @@ public class JobHistory {
         }
         
         String logFileName =  JOBTRACKER_START_TIME + "_" + jobId; 
-        PrintWriter writer = (PrintWriter)openJobs.get(logFileName); 
+        PrintWriter writer = openJobs.get(logFileName); 
         
         if (null != writer){
           JobHistory.log(writer, RecordTypes.Job, 
@@ -430,7 +430,7 @@ public class JobHistory {
                                        String.valueOf(finishedReduces)}); 
         }
         String logFileName =  JOBTRACKER_START_TIME + "_" + jobid; 
-        PrintWriter writer = (PrintWriter)openJobs.get(logFileName); 
+        PrintWriter writer = openJobs.get(logFileName); 
         if (null != writer){
           JobHistory.log(writer, RecordTypes.Job,
                          new Enum[] {Keys.JOBID, Keys.FINISH_TIME, Keys.JOB_STATUS, Keys.FINISHED_MAPS, Keys.FINISHED_REDUCES },
@@ -460,7 +460,7 @@ public class JobHistory {
     public static void logStarted(String jobId, String taskId, String taskType, 
                                   long startTime){
       if (!disableHistory){
-        PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId); 
+        PrintWriter writer = openJobs.get(JOBTRACKER_START_TIME + "_" + jobId); 
         if (null != writer){
           JobHistory.log(writer, RecordTypes.Task, new Enum[]{Keys.TASKID, Keys.TASK_TYPE , Keys.START_TIME}, 
                          new String[]{taskId, taskType, String.valueOf(startTime)});
@@ -477,7 +477,7 @@ public class JobHistory {
     public static void logFinished(String jobId, String taskId, String taskType, 
                                    long finishTime){
       if (!disableHistory){
-        PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId); 
+        PrintWriter writer = openJobs.get(JOBTRACKER_START_TIME + "_" + jobId); 
         if (null != writer){
           JobHistory.log(writer, RecordTypes.Task, new Enum[]{Keys.TASKID, Keys.TASK_TYPE, 
                                                               Keys.TASK_STATUS, Keys.FINISH_TIME}, 
@@ -495,7 +495,7 @@ public class JobHistory {
      */
     public static void logFailed(String jobId, String taskId, String taskType, long time, String error){
       if (!disableHistory){
-        PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId); 
+        PrintWriter writer = openJobs.get(JOBTRACKER_START_TIME + "_" + jobId); 
         if (null != writer){
           JobHistory.log(writer, RecordTypes.Task, new Enum[]{Keys.TASKID, Keys.TASK_TYPE, 
                                                               Keys.TASK_STATUS, Keys.FINISH_TIME, Keys.ERROR}, 
@@ -531,7 +531,7 @@ public class JobHistory {
      */
     public static void logStarted(String jobId, String taskId, String taskAttemptId, long startTime, String hostName){
       if (!disableHistory){
-        PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
+        PrintWriter writer = openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
         if (null != writer){
           JobHistory.log(writer, RecordTypes.MapAttempt, 
                          new Enum[]{ Keys.TASK_TYPE, Keys.TASKID, 
@@ -551,7 +551,7 @@ public class JobHistory {
      */
     public static void logFinished(String jobId, String taskId, String taskAttemptId, long finishTime, String hostName){
       if (!disableHistory){
-        PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
+        PrintWriter writer = openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
         if (null != writer){
           JobHistory.log(writer, RecordTypes.MapAttempt, 
                          new Enum[]{ Keys.TASK_TYPE, Keys.TASKID, Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
@@ -573,7 +573,7 @@ public class JobHistory {
     public static void logFailed(String jobId, String taskId, String taskAttemptId, 
                                  long timestamp, String hostName, String error){
       if (!disableHistory){
-        PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
+        PrintWriter writer = openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
         if (null != writer){
           JobHistory.log(writer, RecordTypes.MapAttempt, 
                          new Enum[]{Keys.TASK_TYPE, Keys.TASKID, Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
@@ -595,7 +595,7 @@ public class JobHistory {
     public static void logKilled(String jobId, String taskId, String taskAttemptId, 
                                  long timestamp, String hostName, String error){
       if (!disableHistory){
-        PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
+        PrintWriter writer = openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
         if (null != writer){
           JobHistory.log(writer, RecordTypes.MapAttempt, 
                          new Enum[]{Keys.TASK_TYPE, Keys.TASKID, Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
@@ -622,7 +622,7 @@ public class JobHistory {
     public static void logStarted(String jobId, String taskId, String taskAttemptId, 
                                   long startTime, String hostName){
       if (!disableHistory){
-        PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
+        PrintWriter writer = openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
         if (null != writer){
           JobHistory.log(writer, RecordTypes.ReduceAttempt, 
                          new Enum[]{  Keys.TASK_TYPE, Keys.TASKID, 
@@ -645,7 +645,7 @@ public class JobHistory {
     public static void logFinished(String jobId, String taskId, String taskAttemptId, 
                                    long shuffleFinished, long sortFinished, long finishTime, String hostName){
       if (!disableHistory){
-        PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
+        PrintWriter writer = openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
         if (null != writer){
           JobHistory.log(writer, RecordTypes.ReduceAttempt, 
                          new Enum[]{ Keys.TASK_TYPE, Keys.TASKID, Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
@@ -668,7 +668,7 @@ public class JobHistory {
     public static void logFailed(String jobId, String taskId, String taskAttemptId, long timestamp, 
                                  String hostName, String error){
       if (!disableHistory){
-        PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
+        PrintWriter writer = openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
         if (null != writer){
           JobHistory.log(writer, RecordTypes.ReduceAttempt, 
                          new Enum[]{  Keys.TASK_TYPE, Keys.TASKID, Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 
@@ -690,7 +690,7 @@ public class JobHistory {
     public static void logKilled(String jobId, String taskId, String taskAttemptId, long timestamp, 
                                  String hostName, String error){
       if (!disableHistory){
-        PrintWriter writer = (PrintWriter)openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
+        PrintWriter writer = openJobs.get(JOBTRACKER_START_TIME + "_" + jobId);
         if (null != writer){
           JobHistory.log(writer, RecordTypes.ReduceAttempt, 
                          new Enum[]{  Keys.TASK_TYPE, Keys.TASKID, Keys.TASK_ATTEMPT_ID, Keys.TASK_STATUS, 

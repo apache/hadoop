@@ -226,6 +226,8 @@ Trunk (unreleased changes)
     HADOOP-1592.  Log error messages to the client console when tasks
     fail.  (Amar Kamat via cutting)
 
+    HADOOP-1879.  Remove some unneeded casts.  (Nilay Vaish via cutting)
+
 
 Release 0.14.1 - 2007-09-04
 

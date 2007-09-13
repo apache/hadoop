@@ -97,7 +97,7 @@ public class DNS {
         Enumeration e = netIF.getInetAddresses();
         while (e.hasMoreElements())
           ips.add(((InetAddress) e.nextElement()).getHostAddress());
-        return (String[]) ips.toArray(new String[] {});
+        return ips.toArray(new String[] {});
       }
     } catch (SocketException e) {
       return new String[] { InetAddress.getLocalHost().getHostAddress() };
@@ -146,7 +146,7 @@ public class DNS {
     if (hosts.size() == 0)
       return new String[] { InetAddress.getLocalHost().getCanonicalHostName() };
     else
-      return (String[]) hosts.toArray(new String[] {});
+      return hosts.toArray(new String[] {});
   }
 
   /**

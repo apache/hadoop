@@ -549,8 +549,7 @@ public class TaskTracker
           int actualMax = Math.min(max, (allMapEvents.size() - fromId));
           List <TaskCompletionEvent> eventSublist = 
             allMapEvents.subList(fromId, actualMax + fromId);
-          mapEvents = 
-            (TaskCompletionEvent[])eventSublist.toArray(mapEvents);
+          mapEvents = eventSublist.toArray(mapEvents);
         }
       }
       return mapEvents;
@@ -1580,9 +1579,9 @@ public class TaskTracker
    * Called upon startup by the child process, to fetch Task data.
    */
   public synchronized Task getTask(String taskid) throws IOException {
-    TaskInProgress tip = (TaskInProgress) tasks.get(taskid);
+    TaskInProgress tip = tasks.get(taskid);
     if (tip != null) {
-      return (Task) tip.getTask();
+      return tip.getTask();
     } else {
       return null;
     }
@@ -1594,7 +1593,7 @@ public class TaskTracker
   public synchronized boolean statusUpdate(String taskid, 
                                               TaskStatus taskStatus) 
   throws IOException {
-    TaskInProgress tip = (TaskInProgress) tasks.get(taskid);
+    TaskInProgress tip = tasks.get(taskid);
     if (tip != null) {
       tip.reportProgress(taskStatus);
       return true;
@@ -1609,7 +1608,7 @@ public class TaskTracker
    * diagnostic info
    */
   public synchronized void reportDiagnosticInfo(String taskid, String info) throws IOException {
-    TaskInProgress tip = (TaskInProgress) tasks.get(taskid);
+    TaskInProgress tip = tasks.get(taskid);
     if (tip != null) {
       tip.reportDiagnosticInfo(info);
     } else {
@@ -1626,7 +1625,7 @@ public class TaskTracker
    * The task is done.
    */
   public synchronized void done(String taskid) throws IOException {
-    TaskInProgress tip = (TaskInProgress) tasks.get(taskid);
+    TaskInProgress tip = tasks.get(taskid);
     if (tip != null) {
       tip.reportDone();
     } else {
@@ -1685,7 +1684,7 @@ public class TaskTracker
   void reportTaskFinished(String taskid) {
     TaskInProgress tip;
     synchronized (this) {
-      tip = (TaskInProgress) tasks.get(taskid);
+      tip = tasks.get(taskid);
     }
     if (tip != null) {
       tip.taskFinished();
@@ -1703,7 +1702,7 @@ public class TaskTracker
    */
   public synchronized void mapOutputLost(String taskid,
                                          String errorMsg) throws IOException {
-    TaskInProgress tip = (TaskInProgress) tasks.get(taskid);
+    TaskInProgress tip = tasks.get(taskid);
     if (tip != null) {
       tip.mapOutputLost(errorMsg);
     } else {

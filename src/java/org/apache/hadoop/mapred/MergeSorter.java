@@ -40,7 +40,7 @@ implements Comparator<IntWritable> {
     MergeSort m = new MergeSort(this);
     int count = super.count;
     if (count == 0) return null;
-    int [] pointers = (int[])super.pointers;
+    int [] pointers = super.pointers;
     int [] pointersCopy = new int[count];
     System.arraycopy(pointers, 0, pointersCopy, 0, count);
     m.mergeSort(pointers, pointersCopy, 0, count);

@@ -66,7 +66,7 @@ public class OutputRecord {
    * Returns the metric object which can be a Float, Integer, Short or Byte.
    */
   public Number getMetric(String name) {
-    return (Number) metricMap.get(name);
+    return metricMap.get(name);
   }
     
 }

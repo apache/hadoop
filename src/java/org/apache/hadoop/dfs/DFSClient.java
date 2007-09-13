@@ -685,7 +685,7 @@ class DFSClient implements FSConstants {
                               firstChunkOffset + " != " + chunkOffset);
       }
       
-      int chunkLen = (int) in.readInt();
+      int chunkLen = in.readInt();
       
       // Sanity check the lengths
       if ( chunkLen < 0 || chunkLen > bytesPerChecksum ||

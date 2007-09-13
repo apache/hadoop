@@ -308,7 +308,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.xceiverCount = in.readInt();
     this.location = Text.readString(in);
     this.hostName = Text.readString(in);
-    AdminStates newState = (AdminStates) WritableUtils.readEnum(in,
+    AdminStates newState = WritableUtils.readEnum(in,
                                                                 AdminStates.class);
     setAdminState(newState);
   }

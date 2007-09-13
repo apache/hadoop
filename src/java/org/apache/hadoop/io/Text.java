@@ -522,17 +522,17 @@ public class Text implements WritableComparable {
     bytes.mark();
     byte b = bytes.get();
     bytes.reset();
-    int extraBytesToRead = bytesFromUTF8[(int)(b & 0xFF)];
+    int extraBytesToRead = bytesFromUTF8[(b & 0xFF)];
     if (extraBytesToRead < 0) return -1; // trailing byte!
     int ch = 0;
 
     switch (extraBytesToRead) {
-    case 5: ch += (int)(bytes.get() & 0xFF); ch <<= 6; /* remember, illegal UTF-8 */
-    case 4: ch += (int)(bytes.get() & 0xFF); ch <<= 6; /* remember, illegal UTF-8 */
-    case 3: ch += (int)(bytes.get() & 0xFF); ch <<= 6;
-    case 2: ch += (int)(bytes.get() & 0xFF); ch <<= 6;
-    case 1: ch += (int)(bytes.get() & 0xFF); ch <<= 6;
-    case 0: ch += (int)(bytes.get() & 0xFF);
+    case 5: ch += (bytes.get() & 0xFF); ch <<= 6; /* remember, illegal UTF-8 */
+    case 4: ch += (bytes.get() & 0xFF); ch <<= 6; /* remember, illegal UTF-8 */
+    case 3: ch += (bytes.get() & 0xFF); ch <<= 6;
+    case 2: ch += (bytes.get() & 0xFF); ch <<= 6;
+    case 1: ch += (bytes.get() & 0xFF); ch <<= 6;
+    case 0: ch += (bytes.get() & 0xFF);
     }
     ch -= offsetsFromUTF8[extraBytesToRead];
 

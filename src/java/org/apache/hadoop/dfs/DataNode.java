@@ -877,7 +877,7 @@ public class DataNode implements FSConstants, Runnable {
           // Read one data chunk in each loop.
           
           long offset = lastOffset + lastLen;
-          int len = (int) in.readInt();
+          int len = in.readInt();
           if ( len < 0 || len > bytesPerChecksum ) {
             LOG.warn( "Got wrong length during writeBlock(" +
                       block + ") from " + s.getRemoteSocketAddress() +

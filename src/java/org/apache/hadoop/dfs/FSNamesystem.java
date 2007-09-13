@@ -581,7 +581,7 @@ class FSNamesystem implements FSConstants {
     client = host2DataNodeMap.getDatanodeByHost(clientMachine);
     for (Iterator<LocatedBlock> it = blocks.getLocatedBlocks().iterator();
          it.hasNext();) {
-      LocatedBlock block = (LocatedBlock) it.next();
+      LocatedBlock block = it.next();
       clusterMap.pseudoSortByDistance(client, 
                                 (DatanodeDescriptor[])(block.getLocations()));
     }
@@ -1136,7 +1136,7 @@ class FSNamesystem implements FSConstants {
                 values.size() + " datanodes.");
     while (it.hasNext()) {
       Map.Entry<String,Collection<Block>> entry = it.next();
-      String storageId = (String) entry.getKey();
+      String storageId = entry.getKey();
       DatanodeDescriptor node = datanodeMap.get(storageId);
       Collection<Block> blklist = entry.getValue();
       if (blklist.size() > 0) {
@@ -2149,7 +2149,7 @@ class FSNamesystem implements FSConstants {
                                       +"ask "+nodeID.getName()+" to delete "+b.getBlockName());
       }
     }
-    return (Block[]) obsolete.toArray(new Block[obsolete.size()]);
+    return obsolete.toArray(new Block[obsolete.size()]);
   }
 
   /**
@@ -2841,8 +2841,7 @@ class FSNamesystem implements FSConstants {
           int i = 0;
           for (Iterator<Block> it = replicateBlocks.iterator(); it.hasNext(); i++) {
             Block block = it.next();
-            DatanodeDescriptor targets[] = 
-              (DatanodeDescriptor[]) replicateTargetSets.get(i);
+            DatanodeDescriptor targets[] = replicateTargetSets.get(i);
             int numCurrentReplica = numCurrentReplicas.get(i).liveReplicas();
             int numExpectedReplica = blocksMap.getINode(block).getReplication(); 
             if (numCurrentReplica + targets.length >= numExpectedReplica) {

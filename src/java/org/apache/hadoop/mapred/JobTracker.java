@@ -650,7 +650,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       Properties p = System.getProperties();
       for (Iterator it = p.keySet().iterator(); it.hasNext();) {
         String key = (String) it.next();
-        String val = (String) p.getProperty(key);
+        String val = p.getProperty(key);
         LOG.debug("Property '" + key + "' is " + val);
       }
     }
@@ -1694,8 +1694,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    */
   private TaskInProgress getTip(String jobid, String tipid) {
     JobInProgress job = jobs.get(jobid);
-    return (job == null ? null 
-            : (TaskInProgress) job.getTaskInProgress(tipid));
+    return (job == null ? null : job.getTaskInProgress(tipid));
   }
     
   /** Mark a Task to be killed */

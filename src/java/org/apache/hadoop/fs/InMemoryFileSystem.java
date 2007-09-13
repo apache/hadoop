@@ -194,7 +194,7 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
         if (exists(f) && !overwrite) {
           throw new IOException("File already exists:"+f);
         }
-        FileAttributes fAttr =(FileAttributes) tempFileAttribs.remove(getPath(f));
+        FileAttributes fAttr = tempFileAttribs.remove(getPath(f));
         if (fAttr != null)
           return create(f, fAttr);
         return null;

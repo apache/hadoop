@@ -51,7 +51,7 @@ public class IntWritable implements WritableComparable {
   }
 
   public int hashCode() {
-    return (int)value;
+    return value;
   }
 
   /** Compares two IntWritables. */
