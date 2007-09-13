@@ -335,4 +335,12 @@ class LocalJobRunner implements JobSubmissionProtocol {
     idFormat.setGroupingUsed(false);
   }
   
+  /**
+   * Returns the diagnostic information for a particular task in the given job.
+   * To be implemented
+   */
+  public String[] getTaskDiagnostics(String jobid, String tipId, String taskid)
+  		throws IOException{
+	  return new String [0];
+  }
 }

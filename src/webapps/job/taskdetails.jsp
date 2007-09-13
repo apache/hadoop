@@ -123,15 +123,15 @@
           .getFinishTime(), status.getStartTime()) + "</td>");
 
         out.print("<td><pre>");
-        List<String> failures = tracker.getTaskDiagnostics(jobid, tipid,
+        String [] failures = tracker.getTaskDiagnostics(jobid, tipid,
           status.getTaskId());
         if (failures == null) {
           out.print("&nbsp;");
         } else {
-          for (Iterator<String> itr = failures.iterator(); itr.hasNext();) {
-            out.print(itr.next());
-            if (itr.hasNext()) {
-                out.print("\n-------\n");
+          for(int j = 0 ; j < failures.length ; j++){
+            out.print(failures[j]);
+            if (j < (failures.length - 1)) {
+              out.print("\n-------\n");
             }
           }
         }

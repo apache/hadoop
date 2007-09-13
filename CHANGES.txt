@@ -223,6 +223,9 @@ Trunk (unreleased changes)
     second jobtracker doesn't trash one that's already running.
     (omalley via cutting)
 
+    HADOOP-1592.  Log error messages to the client console when tasks
+    fail.  (Amar Kamat via cutting)
+
 
 Release 0.14.1 - 2007-09-04
 

@@ -785,4 +785,11 @@ class TaskInProgress {
   public int getSuccessEventNumber() {
     return successEventNumber;
   }
+  
+  /**
+   * Gets the tip id for the given taskid
+   * */
+  public static String getTipId(String taskId){
+	  return taskId.substring(0, taskId.lastIndexOf('_')).replace("task", "tip");
+  }
 }

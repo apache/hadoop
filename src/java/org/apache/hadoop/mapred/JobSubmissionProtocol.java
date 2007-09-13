@@ -121,4 +121,12 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
   public TaskCompletionEvent[] getTaskCompletionEvents(
                                                        String jobid, int fromEventId, int maxEvents) throws IOException;
     
+  /**
+   * Get the diagnostics for a given task in a given job
+   * @param jobId the id of the job
+   * @return an array of the diagnostic messages
+   */
+  public String[] getTaskDiagnostics(String jobId, String tipId, String taskId) 
+  throws IOException;  
+  
 }
