@@ -17,8 +17,9 @@
  */
 
 package org.apache.hadoop.examples;
+import org.apache.hadoop.examples.dancing.DistributedPentomino;
+import org.apache.hadoop.examples.dancing.Sudoku;
 import org.apache.hadoop.util.ProgramDriver;
-import org.apache.hadoop.examples.dancing.*;
 
 /**
  * A description of an example program based on its class and a 
@@ -42,6 +43,7 @@ public class ExampleDriver {
       pgd.addClass("pentomino", DistributedPentomino.class,
       "A map/reduce tile laying program to find solutions to pentomino problems.");
       pgd.addClass("sudoku", Sudoku.class, "A sudoku solver.");
+      pgd.addClass("sleep", SleepJob.class, "A job that sleeps at each map and reduce task.");
       pgd.driver(argv);
     }
     catch(Throwable e){
