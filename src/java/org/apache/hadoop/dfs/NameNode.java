@@ -663,7 +663,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
 
   public BlockCrcInfo blockCrcUpgradeGetBlockLocations(Block block) 
                                                        throws IOException {
-    return namesystem.blockCrcInfo(block, true);
+    return namesystem.blockCrcInfo(block, null, true);
   }
 
   /** 

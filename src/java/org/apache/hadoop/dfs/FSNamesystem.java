@@ -443,8 +443,10 @@ class FSNamesystem implements FSConstants {
    * <li> replication for crc file.
    * When replicas is true, it includes replicas of the block.
    */
-  public synchronized BlockCrcInfo blockCrcInfo(Block block, 
-                                                boolean replicas) {
+  public synchronized BlockCrcInfo blockCrcInfo(
+                           Block block,
+                           BlockCrcUpgradeObjectNamenode namenodeUpgradeObj,
+                           boolean replicas) {
     BlockCrcInfo crcInfo = new BlockCrcInfo();
     crcInfo.status = BlockCrcInfo.STATUS_ERROR;
     
@@ -459,7 +461,7 @@ class FSNamesystem implements FSConstants {
       return crcInfo;
     }
 
-    crcInfo.fileName = fileINode.getAbsoluteName();
+    crcInfo.fileName = "localName:" + fileINode.getLocalName();
     
     // Find the offset and length for this block.
     Block[] fileBlocks = fileINode.getBlocks();
@@ -502,15 +504,25 @@ class FSNamesystem implements FSConstants {
     } else {
 
       //Find CRC file
+      BlockCrcUpgradeObjectNamenode.INodeMapEntry entry =
+                                namenodeUpgradeObj.getINodeMapEntry(fileINode);
+      
+      if (entry == null || entry.parent == null) {
+        LOG.warn("Could not find parent INode for " + fileName + "  " + block);
+        return crcInfo;
+      }
+      
+      crcInfo.fileName = entry.getAbsoluteName();
+      
       String crcName = "." + fileName + ".crc";
-      INodeFile crcINode = (INodeFile)fileINode.getParent().getChild(crcName);
-
-      if (crcINode == null ) {
+      INode iNode = entry.getParentINode().getChild(crcName);
+      if (iNode == null || iNode.isDirectory()) {
         // Should we log this?
         crcInfo.status = BlockCrcInfo.STATUS_NO_CRC_DATA;
         return crcInfo;
       }
 
+      INodeFile crcINode = (INodeFile)iNode;
       Block[] blocks = crcINode.getBlocks();
       if ( blocks == null )  {
         LOG.warn("getBlockCrcInfo(): could not find blocks for crc file for " +

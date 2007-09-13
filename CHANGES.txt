@@ -76,6 +76,9 @@ Trunk (unreleased changes)
     HADOOP-1687.  Save memory in namenode by optimizing BlockMap
     representation.  (Konstantin Shvachko via cutting)
 
+    HADOOP-1774. Remove use of INode.parent in Block CRC upgrade.
+    (Raghu Angadi via dhruba)
+
   BUG FIXES
 
     HADOOP-1763. Too many lost task trackers on large clusters due to

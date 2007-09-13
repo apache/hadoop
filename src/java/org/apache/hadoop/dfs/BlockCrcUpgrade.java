@@ -1636,6 +1636,8 @@ class BlockCrcUpgradeObjectNamenode extends UpgradeObjectNamenode {
   HashMap<DatanodeID, DnInfo> unfinishedDnMap = 
                                       new HashMap<DatanodeID, DnInfo>();  
 
+  HashMap<INodeMapEntry, INodeMapEntry> iNodeParentMap = null;
+  
   Daemon monitorThread;
   double avgDatanodeCompletionPct = 0;
   
@@ -1673,6 +1675,8 @@ class BlockCrcUpgradeObjectNamenode extends UpgradeObjectNamenode {
   public UpgradeCommand startUpgrade() throws IOException {
     
     assert monitorThread == null;
+    
+    buildINodeToParentMap();
     
     lastNodeCompletionTime = System.currentTimeMillis();
     
@@ -1792,6 +1796,7 @@ class BlockCrcUpgradeObjectNamenode extends UpgradeObjectNamenode {
                    (BlockCrcUpgradeUtils.CrcInfoCommand)cmd;
     
     BlockCrcInfo crcInfo = getFSNamesystem().blockCrcInfo(crcCmd.block,
+                                                          this,
                                                           false);
     return new BlockCrcUpgradeUtils.CrcInfoCommandReply(crcInfo);
   }
@@ -1830,6 +1835,84 @@ class BlockCrcUpgradeObjectNamenode extends UpgradeObjectNamenode {
   }
   
   public BlockCrcUpgradeObjectNamenode() {
+  }
+  
+  /* This is a wrapper class so that we can control equals() and hashCode().
+   * INode's equals() and hashCode() are not suitable for INodeToParent
+   * HashMap.
+   */
+  static class INodeMapEntry {
+    INode iNode;
+    INodeMapEntry parent;
+    
+    INodeMapEntry(INode iNode, INodeMapEntry parent) {
+      this.iNode = iNode;
+      this.parent = parent;
+    }
+    
+    public int hashCode() {
+      return System.identityHashCode(iNode);
+    }
+    public boolean equals(Object entry) {
+      return entry instanceof INodeMapEntry &&
+             ((INodeMapEntry)entry).iNode == iNode;
+    }
+    
+    private StringBuilder getName() {
+      StringBuilder str = (parent.parent == null) ? new StringBuilder() : 
+                          parent.getName();
+      str.append(Path.SEPARATOR);
+      return str.append(iNode.getLocalName());
+    }
+    String getAbsoluteName() {
+      return (parent == null) ? "/" : getName().toString();
+    }
+    
+    INodeDirectory getParentINode() {
+      return (parent == null) ? null : (INodeDirectory)parent.iNode;
+    }
+  }
+  
+  private INodeMapEntry addINodeParentEntry(INode inode, INodeMapEntry parent) {
+    INodeMapEntry entry = new INodeMapEntry(inode, parent);
+    iNodeParentMap.put(entry, entry);
+    return entry;
+  }
+
+  private long addToINodeParentMap(INodeMapEntry parent) {
+    long count = 0;
+    INodeDirectory dir = ((INodeDirectory)parent.iNode);
+    for(Iterator<INode> it = dir.getChildren().iterator(); it.hasNext();) {
+      INode inode = it.next();
+      if ( inode.isDirectory() ) {
+        count += 1 + addToINodeParentMap( addINodeParentEntry(inode, parent) );
+      } else {
+        // add only files that have associated ".crc" files.
+        if ( dir.getChild("." + inode.getLocalName() + ".crc") != null ) {
+          addINodeParentEntry(inode, parent);
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+  
+  INodeMapEntry getINodeMapEntry(INode iNode) {
+    return iNodeParentMap.get(new INodeMapEntry(iNode, null));
+  }
+  
+  // builds INode to parent map for non ".crc" files.
+  private void buildINodeToParentMap() {
+    //larger intitial value should be ok for small clusters also.
+    iNodeParentMap = new HashMap<INodeMapEntry, INodeMapEntry>(256*1024);
+    
+    LOG.info("Building INode to parent map.");
+    
+    //Iterate over the whole INode tree.
+    INodeDirectory dir = getFSNamesystem().dir.rootDir;
+    long numAdded = 1 + addToINodeParentMap(addINodeParentEntry(dir, null));
+    
+    LOG.info("Added " + numAdded + " entries to INode to parent map.");
   }
   
   // For now we will wait for all the nodes to complete upgrade.
