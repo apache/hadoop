@@ -137,6 +137,9 @@ Trunk (unreleased changes)
     HADOOP-1885. Fix race condition in MiniDFSCluster shutdown.
     (Chris Douglas via nigel)
 
+    HADOOP-1889.  Fix path in EC2 scripts for building your own AMI.
+    (tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-1266. Remove dependency of package org.apache.hadoop.net on 

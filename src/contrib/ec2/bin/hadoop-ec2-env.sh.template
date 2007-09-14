@@ -25,7 +25,7 @@ PRIVATE_KEY_PATH=`echo "$EC2_KEYDIR"/"id_rsa-$KEY_NAME"`
 SSH_OPTS=`echo -i "$PRIVATE_KEY_PATH" -o StrictHostKeyChecking=no`
 
 # The version of Hadoop to use.
-HADOOP_VERSION=0.11.2
+HADOOP_VERSION=0.14.1
 
 # The Amazon S3 bucket where the Hadoop AMI is stored.
 # The default value is for public images, so can be left if you are using running a public image.
@@ -47,8 +47,8 @@ NO_INSTANCES=2
 # The following variables are only used when creating an AMI.
 #
 
-# The download URL for the Sun JDK. Visit http://java.sun.com/javase/downloads/index_jdk5.jsp and get the URL for the "Linux self-extracting file".
+# The download URL for the Sun JDK. Visit http://java.sun.com/javase/downloads/index.jsp and get the URL for the "Linux self-extracting file".
 JAVA_BINARY_URL=''
 
 # The version number of the installed JDK.
-JAVA_VERSION=1.5.0_11
+JAVA_VERSION=1.6.0_02
