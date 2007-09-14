@@ -897,7 +897,7 @@ HMasterRegionInterface, Runnable {
       
     } catch (IOException e) {
       LOG.fatal("Not starting HMaster because:", e);
-      return;
+      throw e;
     }
 
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
@@ -1145,6 +1145,11 @@ HMasterRegionInterface, Runnable {
    * by remote region servers have expired.
    */
   private void letRegionServersShutdown() {
+    if (!fsOk) {
+      // Forget waiting for the region servers if the file system has gone
+      // away. Just exit as quickly as possible.
+      return;
+    }
     synchronized (serversToServerInfo) {
       while (this.serversToServerInfo.size() > 0) {
         LOG.info("Waiting on following regionserver(s) to go down (or " +
