@@ -46,6 +46,7 @@ Trunk (unreleased changes)
     HADOOP-1847 Many HBase tests do not fail well. (phase 2)
     HADOOP-1870 Once file system failure has been detected, don't check it again
                 and get on with shutting down the hbase cluster.
+    HADOOP-1888 NullPointerException in HMemcacheScanner
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable

@@ -676,8 +676,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 if (LOG.isDebugEnabled()) {
                   LOG.debug("Got call server startup message");
                 }
-                closeAllRegions();
-                restart = true;
+                if (fsOk) {
+                  closeAllRegions();
+                  restart = true;
+                }
                 break;
 
               case HMsg.MSG_REGIONSERVER_STOP:
@@ -689,10 +691,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 break;
 
               default:
-                try {
-                  toDo.put(new ToDoEntry(msgs[i]));
-                } catch (InterruptedException e) {
-                  throw new RuntimeException("Putting into msgQueue was interrupted.", e);
+                if (fsOk) {
+                  try {
+                    toDo.put(new ToDoEntry(msgs[i]));
+                  } catch (InterruptedException e) {
+                    throw new RuntimeException("Putting into msgQueue was interrupted.", e);
+                  }
                 }
               }
             }
@@ -747,20 +751,24 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
 
     if (abortRequested) {
-      try {
-        log.close();
-        LOG.info("On abort, closed hlog");
-      } catch (IOException e) {
-        if (e instanceof RemoteException) {
-          try {
-            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-          } catch (IOException ex) {
-            e = ex;
+      if (fsOk) {
+        // Only try to clean up if the file system is available
+
+        try {
+          log.close();
+          LOG.info("On abort, closed hlog");
+        } catch (IOException e) {
+          if (e instanceof RemoteException) {
+            try {
+              e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+            } catch (IOException ex) {
+              e = ex;
+            }
           }
+          LOG.error("Unable to close log in abort", e);
         }
-        LOG.error("Unable to close log in abort", e);
+        closeAllRegions(); // Don't leave any open file handles
       }
-      closeAllRegions(); // Don't leave any open file handles
       LOG.info("aborting server at: " +
         serverInfo.getServerAddress().toString());
     } else {
