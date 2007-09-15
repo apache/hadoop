@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase;
 
+import junit.framework.TestSuite;
+import junit.textui.TestRunner;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -40,10 +43,8 @@ public class TestDFSAbort extends HBaseClusterTestCase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    
     HTableDescriptor desc = new HTableDescriptor(getName());
     desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY_STR));
-    
     HBaseAdmin admin = new HBaseAdmin(conf);
     admin.createTable(desc);
   }
@@ -52,14 +53,14 @@ public class TestDFSAbort extends HBaseClusterTestCase {
    * @throws Exception
    */
   public void testDFSAbort() throws Exception {
-    
     // By now the Mini DFS is running, Mini HBase is running and we have
     // created a table. Now let's yank the rug out from HBase
-    
     cluster.getDFSCluster().shutdown();
-    
     // Now wait for Mini HBase Cluster to shut down
-    
     cluster.join();
+  }
+  
+  public static void main(String[] args) {
+    TestRunner.run(new TestSuite(TestDFSAbort.class));
   }
 }

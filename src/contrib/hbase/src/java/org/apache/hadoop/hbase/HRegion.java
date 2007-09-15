@@ -834,37 +834,45 @@ public class HRegion implements HConstants {
     // When execution returns from snapshotMemcacheForLog() with a non-NULL
     // value, the HMemcache will have a snapshot object stored that must be
     // explicitly cleaned up using a call to deleteSnapshot().
+    //
     HMemcache.Snapshot retval = memcache.snapshotMemcacheForLog(log);
     if(retval == null || retval.memcacheSnapshot == null) {
       LOG.debug("Finished memcache flush; empty snapshot");
       return;
     }
-    long logCacheFlushId = retval.sequenceId;
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("Snapshotted memcache for region " +
-        this.regionInfo.regionName + " with sequence id " + retval.sequenceId +
-        " and entries " + retval.memcacheSnapshot.size());
-    }
+    try {
+      long logCacheFlushId = retval.sequenceId;
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Snapshotted memcache for region " +
+            this.regionInfo.regionName + " with sequence id " +
+            retval.sequenceId + " and entries " +
+            retval.memcacheSnapshot.size());
+      }
 
-    // A.  Flush memcache to all the HStores.
-    // Keep running vector of all store files that includes both old and the
-    // just-made new flush store file.
-    for(HStore hstore: stores.values()) {
-      hstore.flushCache(retval.memcacheSnapshot, retval.sequenceId);
-    }
+      // A.  Flush memcache to all the HStores.
+      // Keep running vector of all store files that includes both old and the
+      // just-made new flush store file.
+      for(HStore hstore: stores.values()) {
+        hstore.flushCache(retval.memcacheSnapshot, retval.sequenceId);
+      }
 
-    // B.  Write a FLUSHCACHE-COMPLETE message to the log.
-    //     This tells future readers that the HStores were emitted correctly,
-    //     and that all updates to the log for this regionName that have lower 
-    //     log-sequence-ids can be safely ignored.
+      // B.  Write a FLUSHCACHE-COMPLETE message to the log.
+      //     This tells future readers that the HStores were emitted correctly,
+      //     and that all updates to the log for this regionName that have lower 
+      //     log-sequence-ids can be safely ignored.
+
+      log.completeCacheFlush(this.regionInfo.regionName,
+          regionInfo.tableDesc.getName(), logCacheFlushId);
+    } catch (IOException e) {
+      LOG.fatal("Interrupted while flushing. Edits lost. FIX! HADOOP-1903", e);
+      log.abort();
+      throw e;
+    } finally {
+      // C. Delete the now-irrelevant memcache snapshot; its contents have been 
+      //    dumped to disk-based HStores.
+      memcache.deleteSnapshot();
+    }
     
-    log.completeCacheFlush(this.regionInfo.regionName,
-      regionInfo.tableDesc.getName(), logCacheFlushId);
-
-    // C. Delete the now-irrelevant memcache snapshot; its contents have been 
-    //    dumped to disk-based HStores.
-    memcache.deleteSnapshot();
-
     // D. Finally notify anyone waiting on memcache to clear:
     // e.g. checkResources().
     synchronized(this) {

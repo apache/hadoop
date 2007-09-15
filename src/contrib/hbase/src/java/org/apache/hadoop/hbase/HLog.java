@@ -219,7 +219,6 @@ public class HLog implements HConstants {
         // cache-flush.  Otherwise, the log sequence number for
         // the CACHEFLUSH operation will appear in a "newer" log file
         // than it should.
-        
         while(insideCacheFlush) {
           try {
             wait();
@@ -402,14 +401,14 @@ public class HLog implements HConstants {
    * @see #completeCacheFlush(Text, Text, long)
    */
   synchronized long startCacheFlush() {
-    while (insideCacheFlush) {
+    while (this.insideCacheFlush) {
       try {
         wait();
       } catch (InterruptedException ie) {
         // continue
       }
     }
-    insideCacheFlush = true;
+    this.insideCacheFlush = true;
     notifyAll();
     return obtainSeqNum();
   }
@@ -427,7 +426,7 @@ public class HLog implements HConstants {
       return;
     }
     
-    if(! insideCacheFlush) {
+    if (!this.insideCacheFlush) {
       throw new IOException("Impossible situation: inside " +
         "completeCacheFlush(), but 'insideCacheFlush' flag is false");
     }
@@ -442,6 +441,16 @@ public class HLog implements HConstants {
     regionToLastFlush.put(regionName, logSeqId);
 
     insideCacheFlush = false;
+    notifyAll();
+  }
+  
+  /**
+   * Abort a cache flush.
+   * This method will clear waits on {@link #insideCacheFlush} but if this
+   * method is called, we are losing data.  TODO: Fix.
+   */
+  synchronized void abort() {
+    this.insideCacheFlush = false;
     notifyAll();
   }
 

@@ -30,7 +30,29 @@ import org.apache.hadoop.ipc.RemoteException;
  * org.apache.hadoop.ipc.RemoteException exceptions.
  */
 public class RemoteExceptionHandler {
-  private RemoteExceptionHandler(){}                    // not instantiable
+  /* Not instantiable */
+  private RemoteExceptionHandler() {super();}
+  
+  /**
+   * Examine passed IOException.  See if its carrying a RemoteException. If so,
+   * run {@link #decodeRemoteException(RemoteException)} on it.  Otherwise,
+   * pass back <code>e</code> unaltered.
+   * @param e Exception to examine.
+   * @return Decoded RemoteException carried by <code>e</code> or
+   * <code>e</code> unaltered.
+   */
+  public static IOException checkIOException(final IOException e) {
+    IOException result = e;
+    if (e instanceof RemoteException) {
+      try {
+        result = RemoteExceptionHandler.decodeRemoteException(
+            (RemoteException) e);
+      } catch (IOException ex) {
+        result = ex;
+      }
+    }
+    return result;
+  }
   
   /**
    * Converts org.apache.hadoop.ipc.RemoteException into original exception,
@@ -69,10 +91,15 @@ public class RemoteExceptionHandler {
       }
 
     } catch (ClassNotFoundException x) {
+      // continue
     } catch (NoSuchMethodException x) {
+      // continue
     } catch (IllegalAccessException x) {
+      // continue
     } catch (InvocationTargetException x) {
+      // continue
     } catch (InstantiationException x) {
+      // continue
     }
     return i;
   }
