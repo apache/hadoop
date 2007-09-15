@@ -101,6 +101,7 @@ public class HMemcache {
       }
       Snapshot retval =
         new Snapshot(memcache, Long.valueOf(log.startCacheFlush()));
+      // From here on, any failure is catastrophic requiring replay of hlog
       this.snapshot = memcache;
       history.add(memcache);
       memcache = new TreeMap<HStoreKey, byte []>();

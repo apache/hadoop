@@ -292,6 +292,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       for(HRegion cur: nonClosedRegionsToFlush) {
         try {
           cur.optionallyFlush();
+        } catch (DroppedSnapshotException e) {
+          // Cache flush can fail in a few places.  If it fails in a critical
+          // section, we get a DroppedSnapshotException and a replay of hlog
+          // is required. Currently the only way to do this is a restart of
+          // the server.
+          LOG.fatal("Replay of hlog required. Forcing server restart", e);
+          if (!checkFileSystem()) {
+            break;
+          }
+          HRegionServer.this.stop();
         } catch (IOException iex) {
           LOG.error("Cache flush failed",
             RemoteExceptionHandler.checkIOException(iex));
@@ -442,11 +452,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /**
    * Sets a flag that will cause all the HRegionServer threads to shut down
-   * in an orderly fashion.
-   * <p>FOR DEBUGGING ONLY
+   * in an orderly fashion.  Used by unit tests and called by {@link Flusher}
+   * if it judges server needs to be restarted.
    */
   synchronized void stop() {
-    stopRequested.set(true);
+    this.stopRequested.set(true);
     notifyAll();                        // Wakes run() if it is sleeping
   }
   
@@ -457,7 +467,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * from under hbase or we OOME.
    */
   synchronized void abort() {
-    abortRequested = true;
+    this.abortRequested = true;
     stop();
   }
 
@@ -621,7 +631,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       if (this.fsOk) {
         // Only try to clean up if the file system is available
         try {
-          log.close();
+          this.log.close();
           LOG.info("On abort, closed hlog");
         } catch (IOException e) {
           LOG.error("Unable to close log in abort",
@@ -661,7 +671,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
 
     join(); 
-    LOG.info("main thread exiting");
+    LOG.info(Thread.currentThread().getName() + " exiting");
   }
 
   /*
@@ -674,7 +684,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * run.  On its way out, this server will shut down Server.  Leases are sort
    * of inbetween. It has an internal thread that while it inherits from
    * Chore, it keeps its own internal stop mechanism so needs to be stopped
-   * by this hosting server.
+   * by this hosting server.  Worker logs the exception and exits.
    */
   private void startAllServices() {
     String n = Thread.currentThread().getName();
@@ -730,6 +740,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       LOG.debug("Done telling master we are up");
     }
   }
+
 
   /** Add to the outbound message buffer */
   private void reportOpen(HRegion region) {
@@ -790,58 +801,58 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     
     public void run() {
       try {
-      for(ToDoEntry e = null; !stopRequested.get(); ) {
-        try {
-          e = toDo.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException ex) {
-          // continue
-        }
-        if(e == null || stopRequested.get()) {
-          continue;
-        }
-        try {
-          LOG.info(e.msg.toString());
-          
-          switch(e.msg.getMsg()) {
-
-          case HMsg.MSG_REGION_OPEN:
-            // Open a region
-            openRegion(e.msg.getRegionInfo());
-            break;
-
-          case HMsg.MSG_REGION_CLOSE:
-            // Close a region
-            closeRegion(e.msg.getRegionInfo(), true);
-            break;
-
-          case HMsg.MSG_REGION_CLOSE_WITHOUT_REPORT:
-            // Close a region, don't reply
-            closeRegion(e.msg.getRegionInfo(), false);
-            break;
-
-          default:
-            throw new AssertionError(
-                "Impossible state during msg processing.  Instruction: "
-                + e.msg.toString());
+        for(ToDoEntry e = null; !stopRequested.get(); ) {
+          try {
+            e = toDo.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
+          } catch (InterruptedException ex) {
+            // continue
           }
-        } catch (IOException ie) {
-          ie = RemoteExceptionHandler.checkIOException(ie);
-          if(e.tries < numRetries) {
-            LOG.warn(ie);
-            e.tries++;
-            try {
-              toDo.put(e);
-            } catch (InterruptedException ex) {
-              throw new RuntimeException("Putting into msgQueue was interrupted.", ex);
-            }
-          } else {
-            LOG.error("unable to process message: " + e.msg.toString(), ie);
-            if (!checkFileSystem()) {
+          if(e == null || stopRequested.get()) {
+            continue;
+          }
+          try {
+            LOG.info(e.msg.toString());
+            switch(e.msg.getMsg()) {
+
+            case HMsg.MSG_REGION_OPEN:
+              // Open a region
+              openRegion(e.msg.getRegionInfo());
               break;
+
+            case HMsg.MSG_REGION_CLOSE:
+              // Close a region
+              closeRegion(e.msg.getRegionInfo(), true);
+              break;
+
+            case HMsg.MSG_REGION_CLOSE_WITHOUT_REPORT:
+              // Close a region, don't reply
+              closeRegion(e.msg.getRegionInfo(), false);
+              break;
+
+            default:
+              throw new AssertionError(
+                  "Impossible state during msg processing.  Instruction: "
+                  + e.msg.toString());
+            }
+          } catch (IOException ie) {
+            ie = RemoteExceptionHandler.checkIOException(ie);
+            if(e.tries < numRetries) {
+              LOG.warn(ie);
+              e.tries++;
+              try {
+                toDo.put(e);
+              } catch (InterruptedException ex) {
+                throw new RuntimeException("Putting into msgQueue was " +
+                  "interrupted.", ex);
+              }
+            } else {
+              LOG.error("unable to process message: " + e.msg.toString(), ie);
+              if (!checkFileSystem()) {
+                break;
+              }
             }
           }
         }
-      }
       } catch(Throwable t) {
         LOG.fatal("Unhandled exception", t);
       } finally {

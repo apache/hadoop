@@ -721,6 +721,9 @@ public class HRegion implements HConstants {
   /**
    * Each HRegion is given a periodic chance to flush the cache, which it should
    * only take if there have been a lot of uncommitted writes.
+   * @throws IOException
+   * @throws DroppedSnapshotException Thrown when replay of hlog is required
+   * because a Snapshot was not properly persisted.
    */
   void optionallyFlush() throws IOException {
     if(this.memcache.getSize() > this.memcacheFlushSize) {
@@ -754,6 +757,9 @@ public class HRegion implements HConstants {
    * close() the HRegion shortly, so the HRegion should not take on any new and 
    * potentially long-lasting disk operations. This flush() should be the final
    * pre-close() disk operation.
+   * @throws IOException
+   * @throws DroppedSnapshotException Thrown when replay of hlog is required
+   * because a Snapshot was not properly persisted.
    */
   void flushcache(boolean disableFutureWrites)
   throws IOException {
@@ -815,6 +821,9 @@ public class HRegion implements HConstants {
    * routes.
    * 
    * <p> This method may block for some time.
+   * @throws IOException
+   * @throws DroppedSnapshotException Thrown when replay of hlog is required
+   * because a Snapshot was not properly persisted.
    */
   void internalFlushcache() throws IOException {
     long startTime = -1;
@@ -833,13 +842,19 @@ public class HRegion implements HConstants {
     //
     // When execution returns from snapshotMemcacheForLog() with a non-NULL
     // value, the HMemcache will have a snapshot object stored that must be
-    // explicitly cleaned up using a call to deleteSnapshot().
+    // explicitly cleaned up using a call to deleteSnapshot() or by calling
+    // abort.
     //
     HMemcache.Snapshot retval = memcache.snapshotMemcacheForLog(log);
     if(retval == null || retval.memcacheSnapshot == null) {
       LOG.debug("Finished memcache flush; empty snapshot");
       return;
     }
+
+    // Any failure from here on out will be catastrophic requiring server
+    // restart so hlog content can be replayed and put back into the memcache.
+    // Otherwise, the snapshot content while backed up in the hlog, it will not
+    // be part of the current running servers state.
     try {
       long logCacheFlushId = retval.sequenceId;
       if(LOG.isDebugEnabled()) {
@@ -852,7 +867,7 @@ public class HRegion implements HConstants {
       // A.  Flush memcache to all the HStores.
       // Keep running vector of all store files that includes both old and the
       // just-made new flush store file.
-      for(HStore hstore: stores.values()) {
+      for (HStore hstore: stores.values()) {
         hstore.flushCache(retval.memcacheSnapshot, retval.sequenceId);
       }
 
@@ -860,17 +875,18 @@ public class HRegion implements HConstants {
       //     This tells future readers that the HStores were emitted correctly,
       //     and that all updates to the log for this regionName that have lower 
       //     log-sequence-ids can be safely ignored.
-
-      log.completeCacheFlush(this.regionInfo.regionName,
-          regionInfo.tableDesc.getName(), logCacheFlushId);
+      this.log.completeCacheFlush(this.regionInfo.regionName,
+        regionInfo.tableDesc.getName(), logCacheFlushId);
     } catch (IOException e) {
-      LOG.fatal("Interrupted while flushing. Edits lost. FIX! HADOOP-1903", e);
-      log.abort();
-      throw e;
+      // An exception here means that the snapshot was not persisted.
+      // The hlog needs to be replayed so its content is restored to memcache.
+      // Currently, only a server restart will do this.
+      this.log.abortCacheFlush();
+      throw new DroppedSnapshotException(e.getMessage());
     } finally {
       // C. Delete the now-irrelevant memcache snapshot; its contents have been 
-      //    dumped to disk-based HStores.
-      memcache.deleteSnapshot();
+      //    dumped to disk-based HStores or, if error, clear aborted snapshot.
+      this.memcache.deleteSnapshot();
     }
     
     // D. Finally notify anyone waiting on memcache to clear:
@@ -1386,7 +1402,7 @@ public class HRegion implements HConstants {
   }
    
   /* 
-   * Add updates to the log and add values to the memcache.
+   * Add updates first to the hlog and then add values to memcache.
    * Warning: Assumption is caller has lock on passed in row.
    * @param row Row to update.
    * @param timestamp Timestamp to record the updates against

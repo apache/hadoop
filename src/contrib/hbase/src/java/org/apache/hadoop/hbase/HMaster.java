@@ -657,7 +657,7 @@ HMasterRegionInterface {
               if (checkFileSystem()) {
                 // If filesystem is OK, is the exception a ConnectionException?
                 // If so, mark the server as down.  No point scanning either
-                // if no server to put meta region on.
+                // if no server to put meta region on. TODO.
                 if (e instanceof ConnectException) {
                   LOG.debug("Region hosting server is gone.");
                 }
