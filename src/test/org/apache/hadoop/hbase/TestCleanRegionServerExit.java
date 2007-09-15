@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.TreeMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -30,6 +32,7 @@ import org.apache.log4j.Logger;
  * Tests region server failover when a region server exits.
  */
 public class TestCleanRegionServerExit extends HBaseClusterTestCase {
+  private final Log LOG = LogFactory.getLog(this.getClass());
   private HTable table;
 
   /** constructor */
@@ -65,14 +68,13 @@ public class TestCleanRegionServerExit extends HBaseClusterTestCase {
     table.commit(lockid);
     // Start up a new region server to take over serving of root and meta
     // after we shut down the current meta/root host.
-    this.cluster.startRegionServer();
+    LOG.info("Started " + this.cluster.startRegionServer());
     // Now shutdown the region server and wait for it to go down.
     this.cluster.stopRegionServer(0);
-    this.cluster.waitOnRegionServer(0);
+    LOG.info(this.cluster.waitOnRegionServer(0) + " is down");
     
     // Verify that the client can find the data after the region has been moved
     // to a different server
-
     HScannerInterface scanner =
       table.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY, new Text());
 

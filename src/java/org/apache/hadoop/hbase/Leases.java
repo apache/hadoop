@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import java.io.*;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Leases
@@ -41,14 +42,13 @@ import java.util.*;
 public class Leases {
   protected static final Log LOG = LogFactory.getLog(Leases.class.getName());
 
-  protected final long leasePeriod;
-  protected final long leaseCheckFrequency;
-  private final LeaseMonitor leaseMonitor;
+  protected final int leasePeriod;
+  protected final int leaseCheckFrequency;
   private final Thread leaseMonitorThread;
   protected final Map<LeaseName, Lease> leases =
     new HashMap<LeaseName, Lease>();
   protected final TreeSet<Lease> sortedLeases = new TreeSet<Lease>();
-  protected boolean running = true;
+  protected AtomicBoolean stop = new AtomicBoolean(false);
 
   /**
    * Creates a lease
@@ -57,17 +57,24 @@ public class Leases {
    * @param leaseCheckFrequency - how often the lease should be checked
    * (milliseconds)
    */
-  public Leases(long leasePeriod, long leaseCheckFrequency) {
+  public Leases(final int leasePeriod, final int leaseCheckFrequency) {
     this.leasePeriod = leasePeriod;
     this.leaseCheckFrequency = leaseCheckFrequency;
-    this.leaseMonitor = new LeaseMonitor();
-    this.leaseMonitorThread = new Thread(leaseMonitor);
-    this.leaseMonitorThread.setName("Lease.monitor");
+    this.leaseMonitorThread =
+      new LeaseMonitor(this.leaseCheckFrequency, this.stop);
+    this.leaseMonitorThread.setDaemon(true);
   }
   
   /** Starts the lease monitor */
   public void start() {
     leaseMonitorThread.start();
+  }
+  
+  /**
+   * @param name Set name on the lease checking daemon thread.
+   */
+  public void setName(final String name) {
+    this.leaseMonitorThread.setName(name);
   }
 
   /**
@@ -99,8 +106,7 @@ public class Leases {
    */
   public void close() {
     LOG.info("closing leases");
-
-    this.running = false;
+    this.stop.set(true);
     try {
       this.leaseMonitorThread.interrupt();
       this.leaseMonitorThread.join();
@@ -196,36 +202,32 @@ public class Leases {
         sortedLeases.remove(lease);
         leases.remove(name);
       }
-    }     
-//    if (LOG.isDebugEnabled()) {
-//      LOG.debug("Cancel lease " + name);
-//    }
+    }
   }
 
-  /** LeaseMonitor is a thread that expires Leases that go on too long. */
-  class LeaseMonitor implements Runnable {
-    /** {@inheritDoc} */
-    public void run() {
-      while(running) {
-        synchronized(leases) {
-          synchronized(sortedLeases) {
-            Lease top;
-            while((sortedLeases.size() > 0)
-                && ((top = sortedLeases.first()) != null)) {
-              if(top.shouldExpire()) {
-                leases.remove(top.getLeaseName());
-                sortedLeases.remove(top);
-                top.expired();
-              } else {
-                break;
-              }
+  /**
+   * LeaseMonitor is a thread that expires Leases that go on too long.
+   * Its a daemon thread.
+   */
+  class LeaseMonitor extends Chore {
+    public LeaseMonitor(int p, AtomicBoolean s) {
+      super(p, s);
+    }
+
+    protected void chore() {
+      synchronized(leases) {
+        synchronized(sortedLeases) {
+          Lease top;
+          while((sortedLeases.size() > 0)
+              && ((top = sortedLeases.first()) != null)) {
+            if(top.shouldExpire()) {
+              leases.remove(top.getLeaseName());
+              sortedLeases.remove(top);
+              top.expired();
+            } else {
+              break;
             }
           }
-        }
-        try {
-          Thread.sleep(leaseCheckFrequency);
-        } catch (InterruptedException ie) {
-          // continue
         }
       }
     }

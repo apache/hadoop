@@ -77,7 +77,6 @@ public class MiniHBaseCluster implements HConstants {
    */
   public MiniHBaseCluster(Configuration conf, int nRegionNodes,
       final boolean miniHdfsFilesystem) throws IOException {
-    
     this(conf, nRegionNodes, miniHdfsFilesystem, true, true);
   }
 
@@ -127,7 +126,6 @@ public class MiniHBaseCluster implements HConstants {
       fs.mkdirs(parentdir);
       this.masterThread = startMaster(this.conf);
       this.regionThreads = startRegionServers(this.conf, nRegionNodes);
-
     } catch(IOException e) {
       shutdown();
       throw e;
@@ -233,18 +231,22 @@ public class MiniHBaseCluster implements HConstants {
    * Starts a region server thread running
    * 
    * @throws IOException
+   * @return Name of regionserver started.
    */
-  public void startRegionServer() throws IOException {
+  public String startRegionServer() throws IOException {
     RegionServerThread t =
       startRegionServer(this.conf, this.regionThreads.size());
     this.regionThreads.add(t);
+    return t.getName();
   }
   
   private static RegionServerThread startRegionServer(final Configuration c,
-    final int index) throws IOException {
-    
-    final HRegionServer hsr = new HRegionServer(c);
-    RegionServerThread t = new RegionServerThread(hsr, index);
+    final int index)
+  throws IOException {  
+    final HRegionServer hrs = new HRegionServer(c);
+    RegionServerThread t = new RegionServerThread(hrs, index);
+    t.setName("regionserver" +
+      t.getRegionServer().server.getListenerAddress().toString());
     t.start();
     return t;
   }
@@ -296,8 +298,9 @@ public class MiniHBaseCluster implements HConstants {
    * Wait for the specified region server to stop
    * Removes this thread from list of running threads.
    * @param serverNumber
+   * @return Name of region server that just went down.
    */
-  public void waitOnRegionServer(int serverNumber) {
+  public String waitOnRegionServer(int serverNumber) {
     RegionServerThread regionServerThread =
       this.regionThreads.remove(serverNumber);
     try {
@@ -307,6 +310,7 @@ public class MiniHBaseCluster implements HConstants {
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
+    return regionServerThread.getName();
   }
   
   /**
@@ -353,14 +357,16 @@ public class MiniHBaseCluster implements HConstants {
     if(masterThread != null) {
       masterThread.getMaster().shutdown();
     }
-    synchronized(regionServerThreads) {
-      if (regionServerThreads != null) {
-        for(Thread t: regionServerThreads) {
-          if (t.isAlive()) {
-            try {
-              t.join();
-            } catch (InterruptedException e) {
-              // continue
+    if (regionServerThreads != null) {
+      synchronized(regionServerThreads) {
+        if (regionServerThreads != null) {
+          for(Thread t: regionServerThreads) {
+            if (t.isAlive()) {
+              try {
+                t.join();
+              } catch (InterruptedException e) {
+                // continue
+              }
             }
           }
         }

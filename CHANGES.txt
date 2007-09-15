@@ -38,6 +38,7 @@ Trunk (unreleased changes)
                 (Ning Li via Stack)
     HADOOP-1800 output should default utf8 encoding
     HADOOP-1801 When hdfs is yanked out from under hbase, hbase should go down gracefully
+    HADOOP-1813 OOME makes zombie of region server
     HADOOP-1814	TestCleanRegionServerExit fails too often on Hudson
     HADOOP-1821 Replace all String.getBytes() with String.getBytes("UTF-8")
     HADOOP-1832 listTables() returns duplicate tables
