@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
 import junit.framework.TestCase;
@@ -97,7 +98,7 @@ public class TestHMemcache extends TestCase {
     
     // Save off old state.
     int oldHistorySize = hmc.history.size();
-    TreeMap<HStoreKey, byte []> oldMemcache = hmc.memcache;
+    SortedMap<HStoreKey, byte []> oldMemcache = hmc.memcache;
     // Run snapshot.
     Snapshot s = hmc.snapshotMemcacheForLog(log);
     // Make some assertions about what just happened.

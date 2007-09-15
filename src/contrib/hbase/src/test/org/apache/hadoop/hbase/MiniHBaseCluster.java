@@ -50,7 +50,8 @@ public class MiniHBaseCluster implements HConstants {
   private FileSystem fs;
   private Path parentdir;
   private MasterThread masterThread = null;
-  ArrayList<RegionServerThread> regionThreads;
+  ArrayList<RegionServerThread> regionThreads =
+    new ArrayList<RegionServerThread>();
   private boolean deleteOnExit = true;
 
   /**
@@ -125,7 +126,7 @@ public class MiniHBaseCluster implements HConstants {
       this.parentdir = new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
       fs.mkdirs(parentdir);
       this.masterThread = startMaster(this.conf);
-      this.regionThreads = startRegionServers(this.conf, nRegionNodes);
+      this.regionThreads.addAll(startRegionServers(this.conf, nRegionNodes));
     } catch(IOException e) {
       shutdown();
       throw e;
@@ -357,17 +358,15 @@ public class MiniHBaseCluster implements HConstants {
     if(masterThread != null) {
       masterThread.getMaster().shutdown();
     }
-    if (regionServerThreads != null) {
-      synchronized(regionServerThreads) {
-        if (regionServerThreads != null) {
-          for(Thread t: regionServerThreads) {
-            if (t.isAlive()) {
-              try {
-                t.join();
-              } catch (InterruptedException e) {
-                // continue
-              }
-            }
+    // regionServerThreads can never be null because they are initialized when
+    // the class is constructed.
+    synchronized(regionServerThreads) {
+      for(Thread t: regionServerThreads) {
+        if (t.isAlive()) {
+          try {
+            t.join();
+          } catch (InterruptedException e) {
+            // continue
           }
         }
       }
@@ -381,8 +380,7 @@ public class MiniHBaseCluster implements HConstants {
     }
     LOG.info("Shutdown " +
       ((masterThread != null)? masterThread.getName(): "0 masters") + " " +
-      ((regionServerThreads == null)? 0: regionServerThreads.size()) +
-      " region server(s)");
+      regionServerThreads.size() + " region server(s)");
   }
   
   void shutdown() {
