@@ -1615,6 +1615,7 @@ public class HRegion implements HConstants {
       return multipleMatchers;
     }
 
+    /** {@inheritDoc} */
     public boolean next(HStoreKey key, SortedMap<Text, byte[]> results)
     throws IOException {
       // Filtered flag is set by filters.  If a cell has been 'filtered out'

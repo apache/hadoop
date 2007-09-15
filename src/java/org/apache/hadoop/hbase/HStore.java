@@ -31,6 +31,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Vector;
 import java.util.Map.Entry;
@@ -439,13 +440,13 @@ class HStore implements HConstants {
    * @param logCacheFlushId flush sequence number
    * @throws IOException
    */
-  void flushCache(final TreeMap<HStoreKey, byte []> inputCache,
+  void flushCache(final SortedMap<HStoreKey, byte []> inputCache,
     final long logCacheFlushId)
   throws IOException {
     flushCacheHelper(inputCache, logCacheFlushId, true);
   }
   
-  void flushCacheHelper(TreeMap<HStoreKey, byte []> inputCache,
+  void flushCacheHelper(SortedMap<HStoreKey, byte []> inputCache,
       long logCacheFlushId, boolean addToAvailableMaps)
   throws IOException {
     synchronized(flushLock) {
@@ -1123,7 +1124,7 @@ class HStore implements HConstants {
    * @param key
    * @param numVersions Number of versions to fetch.  Must be > 0.
    * @param memcache Checked for deletions
-   * @return
+   * @return values for the specified versions
    * @throws IOException
    */
   byte [][] get(HStoreKey key, int numVersions, final HMemcache memcache)
@@ -1171,10 +1172,11 @@ class HStore implements HConstants {
               break;
             }
           }
-          while ((readval = new ImmutableBytesWritable()) != null &&
+          for (readval = new ImmutableBytesWritable();
               map.next(readkey, readval) &&
               readkey.matchesRowCol(key) &&
-              !hasEnoughVersions(numVersions, results)) {
+              !hasEnoughVersions(numVersions, results);
+              readval = new ImmutableBytesWritable()) {
             if (!isDeleted(readkey, readval.get(), memcache, deletes)) {
               results.add(readval.get());
             }
@@ -1212,10 +1214,11 @@ class HStore implements HConstants {
    * @throws IOException
    */
   List<HStoreKey> getKeys(final HStoreKey origin, List<HStoreKey> allKeys,
-      final int versions)
-  throws IOException {
-    if (allKeys == null) {
-      allKeys = new ArrayList<HStoreKey>();
+      final int versions) throws IOException {
+    
+    List<HStoreKey> keys = allKeys;
+    if (keys == null) {
+      keys = new ArrayList<HStoreKey>();
     }
     // This code below is very close to the body of the get method.
     this.lock.obtainReadLock();
@@ -1238,23 +1241,24 @@ class HStore implements HConstants {
             continue;
           }
           if (!isDeleted(readkey, readval.get(), null, null) &&
-              !allKeys.contains(readkey)) {
-            allKeys.add(new HStoreKey(readkey));
+              !keys.contains(readkey)) {
+            keys.add(new HStoreKey(readkey));
           }
-          while ((readval = new ImmutableBytesWritable()) != null &&
+          for (readval = new ImmutableBytesWritable();
               map.next(readkey, readval) &&
-              readkey.matchesRowCol(origin)) {
+              readkey.matchesRowCol(origin);
+              readval = new ImmutableBytesWritable()) {
             if (!isDeleted(readkey, readval.get(), null, null) &&
-                !allKeys.contains(readkey)) {
-              allKeys.add(new HStoreKey(readkey));
-              if (versions != ALL_VERSIONS && allKeys.size() >= versions) {
+                !keys.contains(readkey)) {
+              keys.add(new HStoreKey(readkey));
+              if (versions != ALL_VERSIONS && keys.size() >= versions) {
                 break;
               }
             }
           }
         }
       }
-      return allKeys;
+      return keys;
     } finally {
       this.lock.releaseReadLock();
     }
