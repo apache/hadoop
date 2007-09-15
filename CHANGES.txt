@@ -140,6 +140,10 @@ Trunk (unreleased changes)
     HADOOP-1889.  Fix path in EC2 scripts for building your own AMI.
     (tomwhite)
 
+    HADOOP-1892.  Fix a NullPointerException in the JobTracker when
+    trying to fetch a task's diagnostic messages from the JobClient.
+    (Amar Kamat via acmurthy)
+
   IMPROVEMENTS
 
     HADOOP-1266. Remove dependency of package org.apache.hadoop.net on 

@@ -1653,9 +1653,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    * @param taskId the id of the task
    * @return an array of the diagnostic messages
    */
-  public synchronized String[] getTaskDiagnostics(String jobId,
-                                                      String tipId,
-                                                      String taskId) throws IOException {
+  public synchronized String[] getTaskDiagnostics(String jobId, 
+                                                  String tipId, 
+                                                  String taskId) 
+  throws IOException {
     JobInProgress job = jobs.get(jobId);
     if (job == null) {
       throw new IllegalArgumentException("Job " + jobId + " not found.");
@@ -1664,7 +1665,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     if (tip == null) {
       throw new IllegalArgumentException("TIP " + tipId + " not found.");
     }
-    return tip.getDiagnosticInfo(taskId).toArray(new String[0]);
+    List<String> taskDiagnosticInfo = tip.getDiagnosticInfo(taskId);
+    return ((taskDiagnosticInfo == null) ? null 
+            : taskDiagnosticInfo.toArray(new String[0]));
   }
     
   /** Get all the TaskStatuses from the tipid. */
