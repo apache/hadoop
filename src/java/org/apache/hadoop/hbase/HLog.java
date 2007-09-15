@@ -399,6 +399,7 @@ public class HLog implements HConstants {
    * the flush will not appear in the correct logfile.
    * @return sequence ID to pass {@link #completeCacheFlush(Text, Text, long)}
    * @see #completeCacheFlush(Text, Text, long)
+   * @see #abortCacheFlush()
    */
   synchronized long startCacheFlush() {
     while (this.insideCacheFlush) {
@@ -422,7 +423,7 @@ public class HLog implements HConstants {
   synchronized void completeCacheFlush(final Text regionName,
     final Text tableName, final long logSeqId)
   throws IOException {
-    if(closed) {
+    if(this.closed) {
       return;
     }
     
@@ -430,17 +431,32 @@ public class HLog implements HConstants {
       throw new IOException("Impossible situation: inside " +
         "completeCacheFlush(), but 'insideCacheFlush' flag is false");
     }
-    
-    writer.append(new HLogKey(regionName, tableName, HLog.METAROW, logSeqId),
+    HLogKey key = new HLogKey(regionName, tableName, HLog.METAROW, logSeqId);
+    this.writer.append(key,
       new HLogEdit(HLog.METACOLUMN, HGlobals.completeCacheFlush.get(),
         System.currentTimeMillis()));
-    numEntries.getAndIncrement();
+    this.numEntries.getAndIncrement();
 
     // Remember the most-recent flush for each region.
     // This is used to delete obsolete log files.
-    regionToLastFlush.put(regionName, logSeqId);
+    this.regionToLastFlush.put(regionName, Long.valueOf(logSeqId));
 
-    insideCacheFlush = false;
+    cleanup();
+  }
+  
+  /**
+   * Abort a cache flush.
+   * This method will clear waits on {@link #insideCacheFlush}.  Call if the
+   * flush fails.  Note that the only recovery for an aborted flush currently
+   * is a restart of the regionserver so the snapshot content dropped by the
+   * failure gets restored to the  memcache.
+   */
+  synchronized void abortCacheFlush() {
+    cleanup();
+  }
+  
+  private synchronized void cleanup() {
+    this.insideCacheFlush = false;
     notifyAll();
   }
   
