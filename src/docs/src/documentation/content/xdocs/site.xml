@@ -37,6 +37,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <issues    label="Issue Tracking"     href="issue_tracking.html" />
     <vcs       label="Version Control"    href="version_control.html" />
     <nightly   label="Nightly Build"      href="ext:nightly" />
+    <irc       label="IRC Channel"        href="irc.html" />
   </resources>
 
   <external-refs>

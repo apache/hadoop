@@ -56,6 +56,8 @@ Trunk (unreleased changes)
     HADOOP-1880. SleepJob : An example job that sleeps at each map and 
     reduce task. (enis)
 
+    HADOOP-1809. Add a link in web site to #hadoop IRC channel. (enis)
+
   OPTIMIZATIONS
 
     HADOOP-1565.  Reduce memory usage of NameNode by replacing 

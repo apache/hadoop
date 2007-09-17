@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" 
+          "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document>
+  
+  <header>
+    <title>Hadoop IRC Channel</title>
+  </header>
+  
+  <body>
+
+    <p>There is an IRC channel dedicated to hadoop at <strong>irc.freenode.org</strong>. 
+    The name of the channel is <strong>#hadoop</strong>.</p> 
+    
+    <p>
+      The IRC channel can be used for online discussion about hadoop related stuff, but developers should be careful to transfer all the official decisions or useful discussions to the issue tracking system.
+    </p>  
+
+  </body>
+  
+</document>
