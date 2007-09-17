@@ -13,53 +13,54 @@ public interface ParserConstants {
   int CREATE = 11;
   int DROP = 12;
   int FS = 13;
-  int EXIT = 14;
-  int INSERT = 15;
-  int INTO = 16;
-  int TABLE = 17;
-  int DELETE = 18;
-  int SELECT = 19;
-  int ENABLE = 20;
-  int DISABLE = 21;
-  int STARTING = 22;
-  int WHERE = 23;
-  int FROM = 24;
-  int ROW = 25;
-  int VALUES = 26;
-  int COLUMNFAMILIES = 27;
-  int TIMESTAMP = 28;
-  int NUM_VERSIONS = 29;
-  int LIMIT = 30;
-  int AND = 31;
-  int OR = 32;
-  int COMMA = 33;
-  int DOT = 34;
-  int LPAREN = 35;
-  int RPAREN = 36;
-  int EQUALS = 37;
-  int NOTEQUAL = 38;
-  int ASTERISK = 39;
-  int MAX_VERSIONS = 40;
-  int MAX_LENGTH = 41;
-  int COMPRESSION = 42;
-  int NONE = 43;
-  int BLOCK = 44;
-  int RECORD = 45;
-  int IN_MEMORY = 46;
-  int BLOOMFILTER = 47;
-  int COUNTING_BLOOMFILTER = 48;
-  int RETOUCHED_BLOOMFILTER = 49;
-  int VECTOR_SIZE = 50;
-  int NUM_HASH = 51;
-  int NUM_ENTRIES = 52;
-  int ADD = 53;
-  int CHANGE = 54;
-  int ID = 55;
-  int INTEGER_LITERAL = 56;
-  int FLOATING_POINT_LITERAL = 57;
-  int EXPONENT = 58;
-  int QUOTED_IDENTIFIER = 59;
-  int STRING_LITERAL = 60;
+  int JAR = 14;
+  int EXIT = 15;
+  int INSERT = 16;
+  int INTO = 17;
+  int TABLE = 18;
+  int DELETE = 19;
+  int SELECT = 20;
+  int ENABLE = 21;
+  int DISABLE = 22;
+  int STARTING = 23;
+  int WHERE = 24;
+  int FROM = 25;
+  int ROW = 26;
+  int VALUES = 27;
+  int COLUMNFAMILIES = 28;
+  int TIMESTAMP = 29;
+  int NUM_VERSIONS = 30;
+  int LIMIT = 31;
+  int AND = 32;
+  int OR = 33;
+  int COMMA = 34;
+  int DOT = 35;
+  int LPAREN = 36;
+  int RPAREN = 37;
+  int EQUALS = 38;
+  int NOTEQUAL = 39;
+  int ASTERISK = 40;
+  int MAX_VERSIONS = 41;
+  int MAX_LENGTH = 42;
+  int COMPRESSION = 43;
+  int NONE = 44;
+  int BLOCK = 45;
+  int RECORD = 46;
+  int IN_MEMORY = 47;
+  int BLOOMFILTER = 48;
+  int COUNTING_BLOOMFILTER = 49;
+  int RETOUCHED_BLOOMFILTER = 50;
+  int VECTOR_SIZE = 51;
+  int NUM_HASH = 52;
+  int NUM_ENTRIES = 53;
+  int ADD = 54;
+  int CHANGE = 55;
+  int ID = 56;
+  int INTEGER_LITERAL = 57;
+  int FLOATING_POINT_LITERAL = 58;
+  int EXPONENT = 59;
+  int QUOTED_IDENTIFIER = 60;
+  int STRING_LITERAL = 61;
 
   int DEFAULT = 0;
 
@@ -78,6 +79,7 @@ public interface ParserConstants {
     "\"create\"",
     "\"drop\"",
     "\"fs\"",
+    "\"jar\"",
     "\"exit\"",
     "\"insert\"",
     "\"into\"",

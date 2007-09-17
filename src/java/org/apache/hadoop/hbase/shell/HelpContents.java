@@ -37,8 +37,11 @@ public class HelpContents {
 
     load.put("SHOW", new String[] {"List all available tables", "SHOW TABLES;"});
 
-    load.put("FS", new String[] { "Hadoop FsShell operations.",
+    load.put("FS", new String[] { "Hadoop FsShell operations",
       "FS -copyFromLocal /home/user/backup.dat fs/user/backup;" });
+    
+    load.put("JAR", new String[] { "Hadoop RunJar util", 
+      "JAR ./build/hadoop-examples.jar pi 10 10;" });
     
     load.put("CLEAR", new String[] {"Clear the screen", "CLEAR;"} );
     
