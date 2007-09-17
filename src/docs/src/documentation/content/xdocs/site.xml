@@ -18,6 +18,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
 
   <project label="Project">
     <releases  label="Releases"           href="releases.html" />
+    <about     label="About"              href="about.html" />
     <news      label="News"               href="releases.html#News" />
     <credits   label="Credits"            href="credits.html" /> 
     <store     label="Buy Stuff"          href="ext:store" />    
@@ -48,6 +49,8 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <store     href="http://www.cafepress.com/hadoop/" />
     <api       href="api/index.html" />
     <overview  href="api/overview-summary.html#overview_description" />
+    <lucene    href="http://lucene.apache.org/" />
+    <nutch     href="http://lucene.apache.org/nutch/" />
   </external-refs>
  
 </site>

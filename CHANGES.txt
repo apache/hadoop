@@ -146,6 +146,9 @@ Trunk (unreleased changes)
     trying to fetch a task's diagnostic messages from the JobClient.
     (Amar Kamat via acmurthy)
 
+    HADOOP-1897.  Fix links to about.html page from other pages in 
+    the web site. (enis)
+
   IMPROVEMENTS
 
     HADOOP-1266. Remove dependency of package org.apache.hadoop.net on 
