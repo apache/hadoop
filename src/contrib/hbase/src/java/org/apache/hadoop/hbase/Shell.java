@@ -68,9 +68,10 @@ public class Shell {
           }
         } catch (ParseException pe) {
           String[] msg = pe.getMessage().split("[\n]");
-          System.out.println("Syntax error : Type 'help' for usage: " + msg[0]);
+          System.out.println("Syntax error : Type 'help;' for usage.\nMessage : " + msg[0]);
         } catch (TokenMgrError te) {
-          System.out.println("Lexical error : Type 'help' for usage.");
+          String[] msg = te.getMessage().split("[\n]");
+          System.out.println("Lexical error : Type 'help;' for usage.\nMessage : " + msg[0]);
         }
 
         long end = System.currentTimeMillis();

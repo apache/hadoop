@@ -72,6 +72,7 @@ TOKEN: /** for HQL statements */
    | <CREATE: "create">   
    | <DROP: "drop">
    | <FS: "fs">
+   | <JAR: "jar">
    | <EXIT: "exit">
    | <INSERT: "insert">
    | <INTO: "into">
@@ -117,7 +118,7 @@ TOKEN: /** for HQL statements */
 
 TOKEN : /** Literals */
 {
-   <ID: (["A"-"Z","a"-"z","_","-",".",":","/"])+ >
+   <ID: (["A"-"Z","a"-"z","0"-"9","_","-",".",":","/"])+ >
  | <INTEGER_LITERAL: (["0"-"9"])+ >
  | <FLOATING_POINT_LITERAL:
    (["0"-"9"])+ "." (["0"-"9"])+ (<EXPONENT>)?
@@ -164,6 +165,7 @@ Command cmdStatement() :
       | cmd = disableCommand()
       | cmd = clearCommand()
       | cmd = fsCommand()
+      | cmd = jarCommand()
   )
    {
        return cmd;
@@ -197,6 +199,25 @@ FsCommand fsCommand() :
   }
 }
 
+JarCommand jarCommand() :
+{
+  Token t = null;
+  JarCommand jar = new JarCommand();
+  List<String> query = new ArrayList<String>();
+}
+{
+  <JAR>
+  (
+      ( t = <ID> | t = <INTEGER_LITERAL> )
+      { query.add(t.image.toString()); }
+  )*
+  
+  {
+    jar.setQuery(query);
+    return jar;
+  }
+}
+
 HelpCommand helpCommand() :
 {
   Token t = null;
@@ -218,6 +239,7 @@ HelpCommand helpCommand() :
        | t=<ALTER>
        | t=<CLEAR>
        | t=<FS>
+       | t=<JAR>
        | t=<ID>
      ) { argument = t.image.toString(); }
    ]
