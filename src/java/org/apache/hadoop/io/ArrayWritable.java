@@ -21,16 +21,29 @@ package org.apache.hadoop.io;
 import java.io.*;
 import java.lang.reflect.Array;
 
-/** A Writable for arrays containing instances of a class. */
+/** 
+ * A Writable for arrays containing instances of a class. The elements of this
+ * writable must all be instances of the same class. If this writable will be
+ * the input for a Reducer, you will need to create a subclass that sets the
+ * value to be of the proper type.
+ *
+ * For example:
+ * <code>
+ * public class IntArrayWritable extends ArrayWritable {
+ *   public IntArrayWritable() { 
+ *     super(IntWritable.class); 
+ *   }	
+ * }
+ * </code>
+ */
 public class ArrayWritable implements Writable {
   private Class valueClass;
   private Writable[] values;
 
-  public ArrayWritable() {
-    this.valueClass = null;
-  }
-
   public ArrayWritable(Class valueClass) {
+    if (valueClass == null) { 
+      throw new IllegalArgumentException("null valueClass"); 
+    }    
     this.valueClass = valueClass;
   }
 
@@ -46,13 +59,6 @@ public class ArrayWritable implements Writable {
     }
   }
 
-  public void setValueClass(Class valueClass) {
-    if (valueClass != this.valueClass) {
-      this.valueClass = valueClass;
-      this.values = null;
-    }
-  }
-  
   public Class getValueClass() {
     return valueClass;
   }

@@ -249,6 +249,9 @@ Trunk (unreleased changes)
     HADOOP-1878.  Add space between priority links on job details
     page. (Thomas Friol via cutting)
 
+    HADOOP-120.  In ArrayWritable, prevent creation with null value
+    class, and improve documentation.  (Cameron Pope via cutting)
+
 
 Release 0.14.1 - 2007-09-04
 
