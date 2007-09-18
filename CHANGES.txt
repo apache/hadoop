@@ -83,6 +83,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-1762. The Namenode fsimage does not contain a list of
+    Datanodes.  (Raghu Angadi via dhruba)
+
     HADOOP-1890. Removed debugging prints introduced by HADOOP-1774.
     (Raghu Angadi via dhruba)
 

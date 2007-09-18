@@ -36,6 +36,8 @@ import org.apache.hadoop.dfs.DatanodeProtocol;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.Updater;
@@ -337,6 +339,36 @@ public class DataNode implements FSConstants, Runnable {
     return "<namenode>";
   }
 
+  private void setNewStorageID(DatanodeRegistration dnReg) {
+    /* Return 
+     * "DS-randInt-ipaddr-currentTimeMillis"
+     * It is considered extermely rare for all these numbers to match
+     * on a different machine accidentally for the following 
+     * a) SecureRandom(INT_MAX) is pretty much random (1 in 2 billion), and
+     * b) Good chance ip address would be different, and
+     * c) Even on the same machine, Datanode is designed to use different ports.
+     * d) Good chance that these are started at different times.
+     * For a confict to occur all the 4 above have to match!.
+     * The format of this string can be changed anytime in future without
+     * affecting its functionality.
+     */
+    String ip = "unknownIP";
+    try {
+      ip = DNS.getDefaultIP("default");
+    } catch (UnknownHostException ignored) {
+      LOG.warn("Could not find ip address of \"default\" inteface.");
+    }
+    
+    int rand = 0;
+    try {
+      rand = SecureRandom.getInstance("SHA1PRNG").nextInt(Integer.MAX_VALUE);
+    } catch (NoSuchAlgorithmException e) {
+      LOG.warn("Could not use SecureRandom");
+      rand = (new Random()).nextInt(Integer.MAX_VALUE);
+    }
+    dnReg.storageID = "DS-" + rand + "-"+ ip + "-" + dnReg.getPort() + "-" + 
+                      System.currentTimeMillis();
+  }
   /**
    * Register datanode
    * <p>
@@ -349,6 +381,9 @@ public class DataNode implements FSConstants, Runnable {
    * @throws IOException
    */
   private void register() throws IOException {
+    if (dnRegistration.getStorageID().equals("")) {
+      setNewStorageID(dnRegistration);
+    }
     while(shouldRun) {
       try {
         // reset name to machineName. Mainly for web interface.

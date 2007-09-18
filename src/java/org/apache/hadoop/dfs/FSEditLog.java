@@ -43,8 +43,9 @@ class FSEditLog {
   private static final byte OP_DELETE = 2;
   private static final byte OP_MKDIR = 3;
   private static final byte OP_SET_REPLICATION = 4;
-  private static final byte OP_DATANODE_ADD = 5;
-  private static final byte OP_DATANODE_REMOVE = 6;
+  //the following two are used only for backword compatibility :
+  @Deprecated private static final byte OP_DATANODE_ADD = 5;
+  @Deprecated private static final byte OP_DATANODE_REMOVE = 6;
 
   private ArrayList<EditLogOutputStream> editStreams = null;
   private FSImage fsimage = null;
@@ -383,8 +384,7 @@ class FSEditLog {
                                     + " for version " + logVersion);
             FSImage.DatanodeImage nodeimage = new FSImage.DatanodeImage();
             nodeimage.readFields(in);
-            DatanodeDescriptor node = nodeimage.getDatanodeDescriptor();
-            fsNamesys.unprotectedAddDatanode(node);
+            //Datnodes are not persistent any more.
             break;
           }
           case OP_DATANODE_REMOVE: {
@@ -394,11 +394,7 @@ class FSEditLog {
             DatanodeID nodeID = new DatanodeID();
             nodeID.readFields(in);
             DatanodeDescriptor node = fsNamesys.getDatanode(nodeID);
-            if (node != null) {
-              fsNamesys.unprotectedRemoveDatanode(node);
-              // physically remove node from datanodeMap
-              fsNamesys.wipeDatanode(nodeID);
-            }
+            //Datanodes are not persistent any more.
             break;
           }
           default: {
@@ -550,22 +546,6 @@ class FSEditLog {
       new UTF8(src),
       FSEditLog.toLogLong(timestamp)};
     logEdit(OP_DELETE, new ArrayWritable(UTF8.class, info), null);
-  }
-  
-  /** 
-   * Creates a record in edit log corresponding to a new data node
-   * registration event.
-   */
-  void logAddDatanode(DatanodeDescriptor node) {
-    logEdit(OP_DATANODE_ADD, new FSImage.DatanodeImage(node), null);
-  }
-  
-  /** 
-   * Creates a record in edit log corresponding to a data node
-   * removal event.
-   */
-  void logRemoveDatanode(DatanodeID nodeID) {
-    logEdit(OP_DATANODE_REMOVE, new DatanodeID(nodeID), null);
   }
   
   static UTF8 toLogReplication(short replication) {

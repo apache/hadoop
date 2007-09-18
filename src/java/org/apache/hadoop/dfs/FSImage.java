@@ -850,32 +850,25 @@ class FSImage extends Storage {
   }
 
   /**
-   * Save list of datanodes contained in {@link FSNamesystem#datanodeMap}.
-   * Only the {@link DatanodeInfo} part is stored.
-   * The {@link DatanodeDescriptor#blocks} is transient.
+   * Earlier version used to store all the known datanodes.
+   * DFS don't store datanodes anymore.
    * 
    * @param out output stream
    * @throws IOException
    */
   void saveDatanodes(DataOutputStream out) throws IOException {
-    Map datanodeMap = FSNamesystem.getFSNamesystem().datanodeMap;
-    int size = datanodeMap.size();
-    out.writeInt(size);
-    for(Iterator it = datanodeMap.values().iterator(); it.hasNext();) {
-      DatanodeImage nodeImage = new DatanodeImage((DatanodeDescriptor) it.next());
-      nodeImage.write(out);
-    }
+    // we don't store datanodes anymore.
+    out.writeInt(0);    
   }
 
   void loadDatanodes(int version, DataInputStream in) throws IOException {
     if (version > -3) // pre datanode image version
       return;
-    FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
     int size = in.readInt();
     for(int i = 0; i < size; i++) {
       DatanodeImage nodeImage = new DatanodeImage();
       nodeImage.readFields(in);
-      fsNamesys.unprotectedAddDatanode(nodeImage.getDatanodeDescriptor());
+      // We don't need to add these descriptors any more.
     }
   }
 

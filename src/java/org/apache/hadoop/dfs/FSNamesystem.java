@@ -1557,15 +1557,7 @@ class FSNamesystem implements FSConstants {
    * 
    * @see DataNode#register()
    */
-  public void registerDatanode(DatanodeRegistration nodeReg,
-                                            String networkLocation
-                                            ) throws IOException {
-    registerDatanodeInternal(nodeReg, networkLocation);
-    getEditLog().logSync();
-  }
-
-  private synchronized void registerDatanodeInternal(
-                                            DatanodeRegistration nodeReg,
+  public synchronized void registerDatanode(DatanodeRegistration nodeReg,
                                             String networkLocation
                                             ) throws IOException {
 
@@ -1604,8 +1596,6 @@ class FSNamesystem implements FSConstants {
       removeDatanode(nodeN);
       // physically remove node from datanodeMap
       wipeDatanode(nodeN);
-      // and log removal
-      getEditLog().logRemoveDatanode(nodeN);
       nodeN = null;
     }
 
@@ -1618,13 +1608,19 @@ class FSNamesystem implements FSConstants {
                                       + "node restarted.");
       } else {
         // nodeS is found
-        // The registering datanode is a replacement node for the existing 
-        // data storage, which from now on will be served by a new node.
-        NameNode.stateChangeLog.debug(
-                                      "BLOCK* NameSystem.registerDatanode: "
+        /* The registering datanode is a replacement node for the existing 
+          data storage, which from now on will be served by a new node.
+          If this message repeats, both nodes might have same storageID 
+          by (insanely rare) random chance. User needs to restart one of the
+          nodes with its data cleared (or user can just remove the StorageID
+          value in "VERSION" file under the data directory of the datanode,
+          but this is might not work if VERSION file format has changed 
+       */        
+        NameNode.stateChangeLog.info( "BLOCK* NameSystem.registerDatanode: "
                                       + "node " + nodeS.getName()
-                                      + " is replaced by " + nodeReg.getName() + ".");
-        getEditLog().logRemoveDatanode(nodeS);
+                                      + " is replaced by " + nodeReg.getName() + 
+                                      " with the same storageID " +
+                                      nodeReg.getStorageID());
       }
       // update cluster map
       clusterMap.remove(nodeS);
@@ -1632,9 +1628,6 @@ class FSNamesystem implements FSConstants {
       nodeS.setNetworkLocation(networkLocation);
       clusterMap.add(nodeS);
       nodeS.setHostName(hostName);
-      if ( nodeS != nodeN ) {
-        getEditLog().logAddDatanode( nodeS );
-      }
         
       // also treat the registration message as a heartbeat
       synchronized(heartbeats) {
@@ -1662,7 +1655,6 @@ class FSNamesystem implements FSConstants {
       = new DatanodeDescriptor(nodeReg, networkLocation, hostName);
     unprotectedAddDatanode(nodeDescr);
     clusterMap.add(nodeDescr);
-    getEditLog().logAddDatanode(nodeDescr);
       
     // also treat the registration message as a heartbeat
     synchronized(heartbeats) {
