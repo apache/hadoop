@@ -685,7 +685,11 @@ class FSImage extends Storage {
         }
         int numBlocks = in.readInt();
         Block blocks[] = null;
-        if (numBlocks > 0) {
+
+        // for older versions, a blocklist of size 0
+        // indicates a directory.
+        if ((-9 <= imgVersion && numBlocks > 0) ||
+            (imgVersion < -9 && numBlocks >= 0)) {
           blocks = new Block[numBlocks];
           for (int j = 0; j < numBlocks; j++) {
             blocks[j] = new Block();
@@ -842,7 +846,7 @@ class FSImage extends Storage {
       out.writeShort(0);  // replication
       out.writeLong(inode.getModificationTime());
       out.writeLong(0);   // preferred block size
-      out.writeInt(0);    // # of blocks
+      out.writeInt(-1);    // # of blocks
     }
     for(INode child : ((INodeDirectory)inode).getChildren()) {
       saveImage(fullName, child, out);

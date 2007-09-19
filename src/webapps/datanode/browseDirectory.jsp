@@ -41,9 +41,13 @@
         List<LocatedBlock> blocks = 
           dfs.namenode.getBlockLocations(dir, 0, 1).getLocatedBlocks();
 	      
-        LocatedBlock firstBlock = blocks.get(0);
-        DatanodeInfo [] locations = firstBlock.getLocations();
-        if (locations.length == 0) {
+        LocatedBlock firstBlock = null;
+        DatanodeInfo [] locations = null;
+        if (blocks.size() > 0) {
+          firstBlock = blocks.get(0);
+          locations = firstBlock.getLocations();
+        }
+        if (locations == null || locations.length == 0) {
           out.print("Empty file");
         } else {
           DatanodeInfo chosenNode = jspHelper.bestNode(firstBlock);
@@ -100,8 +104,11 @@
           if (!files[i].isDir()) {
             List<LocatedBlock> blocks = 
               dfs.namenode.getBlockLocations(files[i].getPath().toString(), 0, 1).getLocatedBlocks();
-            DatanodeInfo [] locations = blocks.get(0).getLocations();
-            if (locations.length == 0) {
+            DatanodeInfo [] locations = null;
+            if (blocks.size() != 0) {
+              locations = blocks.get(0).getLocations();
+            }
+            if (locations == null || locations.length == 0) {
               cols[0] = files[i].getName();
             } else {
               String datanodeUrl = req.getRequestURL()+"?dir="+

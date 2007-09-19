@@ -599,7 +599,9 @@ class FSNamesystem implements FSConstants {
     if (blocks == null) {
       return null;
     }
-    assert blocks.length > 0 : "Array of blocks is empty.";
+    if (blocks.length == 0) {
+      return new LocatedBlocks(inode, new ArrayList<LocatedBlock>(blocks.length));
+    }
     List<LocatedBlock> results;
     results = new ArrayList<LocatedBlock>(blocks.length);
 

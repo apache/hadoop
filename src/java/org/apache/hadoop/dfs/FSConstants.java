@@ -159,7 +159,7 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -9;
+  public static final int LAYOUT_VERSION = -10;
   // Current version: 
-  // files with one block uses the default blocksize
+  // a directory has a block list length of -1
 }
