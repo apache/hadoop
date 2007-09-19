@@ -27,14 +27,16 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSDataInputStream;
 
 /**
- * This class tests the FileStatus API.
+ * This class tests that a file need not be closed before its
+ * data can be read by another client.
  */
 public class TestFileCreation extends TestCase {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
-  static final int fileSize = 16384;
+  static final int fileSize = 2 * blockSize;
 
   private static String TEST_ROOT_DIR =
     new Path(System.getProperty("test.build.data","/tmp"))
@@ -78,11 +80,27 @@ public class TestFileCreation extends TestCase {
         }
       }
     }
+    FSDataInputStream stm = fileSys.open(name);
+    byte[] expected = new byte[fileSize];
+    Random rand = new Random(seed);
+    rand.nextBytes(expected);
+    // do a sanity check. Read the file
+    byte[] actual = new byte[fileSize];
+    stm.readFully(0, actual);
+    checkData(actual, 0, expected, "Read 1");
   }
 
+  private void checkData(byte[] actual, int from, byte[] expected, String message) {
+    for (int idx = 0; idx < actual.length; idx++) {
+      this.assertEquals(message+" byte "+(from+idx)+" differs. expected "+
+                        expected[from+idx]+" actual "+actual[idx],
+                        actual[idx], expected[from+idx]);
+      actual[idx] = 0;
+    }
+  }
 
   /**
-   * Tests various options of File creation.
+   * Test that file data becomes available before file is closed.
    */
   public void testFileCreation() throws IOException {
     Configuration conf = new Configuration();
@@ -115,9 +133,13 @@ public class TestFileCreation extends TestCase {
       // write to file
       writeFile(stm);
 
-      // close file. This makes all file data visible to clients.
-      stm.close();
+      // verify that file size has changed
+      assertTrue(file1 + " should be of size " + fileSize, 
+                  fs.getFileStatus(file1).getLen() == fileSize);
+
+      // Make sure a client can read it before it is closed.
       checkFile(fs, file1, 1);
+      stm.close();
 
     } finally {
       fs.close();

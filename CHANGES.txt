@@ -35,6 +35,10 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HADOOP-89.  A client can access file data even before the creator
+    has closed the file. Introduce a new command "tail" from dfs shell.
+    (Dhruba Borthakur via dhruba)
+
     HADOOP-1636.  Allow configuration of the number of jobs kept in
     memory by the JobTracker.  (Michael Bieniosek via omalley)
 

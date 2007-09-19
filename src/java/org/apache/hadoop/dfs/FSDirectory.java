@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.MetricsContext;
+import org.apache.hadoop.dfs.BlocksMap.BlockInfo;
 
 /*************************************************
  * FSDirectory stores the filesystem directory state.
@@ -114,31 +115,43 @@ class FSDirectory implements FSConstants {
   /**
    * Add the given filename to the fs.
    */
-  public boolean addFile(String path, Block[] blocks, short replication,
-                         long preferredBlockSize) {
+  INode addFile(String path, 
+                short replication,
+                long preferredBlockSize,
+                String clientName,
+                String clientMachine,
+                DatanodeDescriptor clientNode) 
+                throws IOException {
     waitForReady();
 
     // Always do an implicit mkdirs for parent directory tree.
     long modTime = FSNamesystem.now();
     if (!mkdirs(new Path(path).getParent().toString(), modTime)) {
-      return false;
+      return null;
     }
-    INodeFile newNode = (INodeFile)unprotectedAddFile(path, blocks, replication,
-                                                      modTime, 
-                                                      preferredBlockSize);
+    INodeFile newNode = new INodeFileUnderConstruction(replication, 
+                                 preferredBlockSize, modTime, clientName, 
+                                 clientMachine, clientNode);
+    synchronized (rootDir) {
+      try {
+        newNode = rootDir.addNode(path, newNode);
+      } catch (FileNotFoundException e) {
+        newNode = null;
+      }
+    }
     if (newNode == null) {
       NameNode.stateChangeLog.info("DIR* FSDirectory.addFile: "
-                                   +"failed to add "+path+" with "
-                                   +blocks.length+" blocks to the file system");
-      return false;
+                                   +"failed to add "+path
+                                   +" to the file system");
+      return null;
     }
     // add create file record to log
     fsImage.getEditLog().logCreateFile(path, newNode);
     NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
-                                  +path+" with "+blocks.length+" blocks is added to the file system");
-    return true;
+                                  +path+" is added to the file system");
+    return newNode;
   }
-    
+
   /**
    */
   INode unprotectedAddFile( String path, 
@@ -171,28 +184,35 @@ class FSDirectory implements FSConstants {
   }
 
   /**
-   * Add blocks to the file.
+   * Add a block to the file. Returns a reference to the added block.
    */
-  boolean addBlocks(String path, Block[] blocks) throws IOException {
+  Block addBlock(String path, INode file, Block block) throws IOException {
     waitForReady();
 
     synchronized (rootDir) {
-      INodeFile fileNode = this.getFileINode(path);
-      if (fileNode == null) {
-        throw new IOException("Unknown file: " + path);
-      }
-      if (fileNode.getBlocks() != null &&
-          fileNode.getBlocks().length != 0) {
-        throw new IOException("Cannot add new blocks to " +
-                              "already existing file.");
-      }
+      INodeFile fileNode = (INodeFile) file;
 
       // associate the new list of blocks with this file
-      fileNode.allocateBlocks(blocks.length);
-      for (int i = 0; i < blocks.length; i++) {
-        fileNode.setBlock(i, 
-            namesystem.blocksMap.addINode(blocks[i], fileNode));
-      }
+      namesystem.blocksMap.addINode(block, fileNode);
+      BlockInfo blockInfo = namesystem.blocksMap.getStoredBlock(block);
+      fileNode.addBlock(blockInfo);
+
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
+                                    + path + " with " + block
+                                    + " block is added to the in-memory "
+                                    + "file system");
+    }
+    return block;
+  }
+
+  /**
+   * Persist the block list for the inode.
+   */
+  void persistBlocks(String path, INode file) throws IOException {
+    waitForReady();
+
+    synchronized (rootDir) {
+      INodeFile fileNode = (INodeFile) file;
 
       // create two transactions. The first one deletes the empty
       // file and the second transaction recreates the same file
@@ -202,8 +222,37 @@ class FSDirectory implements FSConstants {
       // re-add create file record to log
       fsImage.getEditLog().logCreateFile(path, fileNode);
       NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
-                                    +path+" with "+blocks.length
-                                    +" blocks is added to the file system");
+                                    +path+" with "+ fileNode.getBlocks().length 
+                                    +" blocks is persisted to the file system");
+    }
+  }
+
+  /**
+   * Remove a block to the file.
+   */
+  boolean removeBlock(String path, INode file, Block block) throws IOException {
+    waitForReady();
+
+    synchronized (rootDir) {
+      INodeFile fileNode = (INodeFile) file;
+      if (fileNode == null) {
+        throw new IOException("Unknown file: " + path);
+      }
+
+      // modify file-> block and blocksMap
+      fileNode.removeBlock(block);
+      namesystem.blocksMap.removeINode(block);
+
+      // create two transactions. The first one deletes the empty
+      // file and the second transaction recreates the same file
+      // with the appropriate set of blocks.
+      fsImage.getEditLog().logDelete(path, fileNode.getModificationTime());
+
+      // re-add create file record to log
+      fsImage.getEditLog().logCreateFile(path, fileNode);
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
+                                    +path+" with "+block
+                                    +" block is added to the file system");
     }
     return true;
   }
@@ -372,6 +421,28 @@ class FSDirectory implements FSConstants {
           }
           return v.toArray(new Block[v.size()]);
         }
+      }
+    }
+  }
+
+  /**
+   * Replaces the specified inode with the specified one.
+   */
+  void replaceNode(String path, INodeFile oldnode, INodeFile newnode) 
+                      throws IOException {
+    synchronized (rootDir) {
+      //
+      // Remove the node from the namespace 
+      //
+      if (!oldnode.removeNode()) {
+        NameNode.stateChangeLog.warn("DIR* FSDirectory.replaceNode: " +
+                                     "failed to remove " + path);
+        throw new IOException("FSDirectory.replaceNode: " +
+                              "failed to remove " + path);
+      } 
+      rootDir.addNode(path, newnode); 
+      for (Block b : newnode.getBlocks()) {
+        namesystem.blocksMap.addINode(b, newnode);
       }
     }
   }

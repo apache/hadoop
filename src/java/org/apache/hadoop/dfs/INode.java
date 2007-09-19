@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Arrays;
 import java.util.List;
+import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.dfs.BlocksMap.BlockInfo;
@@ -472,6 +473,14 @@ class INodeFile extends INode {
     allocateBlocks(nrBlocks);
   }
 
+  protected INodeFile(BlockInfo[] blklist, short replication, long modificationTime,
+                      long preferredBlockSize) {
+    super(modificationTime);
+    this.blockReplication = replication;
+    this.preferredBlockSize = preferredBlockSize;
+    blocks = blklist;
+  }
+
   boolean isDirectory() {
     return false;
   }
@@ -492,7 +501,7 @@ class INodeFile extends INode {
    * Get file blocks 
    * @return file blocks
    */
-  Block[] getBlocks() {
+  BlockInfo[] getBlocks() {
     return this.blocks;
   }
 
@@ -502,6 +511,45 @@ class INodeFile extends INode {
    */
   void allocateBlocks(int nrBlocks) {
     this.blocks = new BlockInfo[nrBlocks];
+  }
+
+  /**
+   * add a block to the block list
+   */
+  void addBlock(BlockInfo newblock) {
+    if (this.blocks == null) {
+      this.blocks = new BlockInfo[1];
+      this.blocks[0] = newblock;
+    } else {
+      int size = this.blocks.length;
+      BlockInfo[] newlist = new BlockInfo[size + 1];
+      for (int i = 0; i < size; i++) {
+        newlist[i] = this.blocks[i];
+      }
+      newlist[size] = newblock;
+      this.blocks = newlist;
+    }
+  }
+
+  /**
+   * remove a block from the block list. This block should be
+   * the last one on the list.
+   */
+  void removeBlock(Block oldblock) throws IOException {
+    if (this.blocks == null) {
+      throw new IOException("Trying to delete non-existant block " +
+                            oldblock);
+    }
+    int size = this.blocks.length;
+    if (!this.blocks[size-1].equals(oldblock)) {
+      throw new IOException("Trying to delete non-existant block " +
+                            oldblock);
+    }
+    BlockInfo[] newlist = new BlockInfo[size - 1];
+    for (int i = 0; i < size-1; i++) {
+        newlist[i] = this.blocks[i];
+    }
+    this.blocks = newlist;
   }
 
   /**
@@ -536,5 +584,58 @@ class INodeFile extends INode {
    */
   long getPreferredBlockSize() {
     return preferredBlockSize;
+  }
+
+  /**
+   * Return the penultimate allocated block for this file.
+   */
+  Block getPenultimateBlock() {
+    if (blocks == null || blocks.length <= 1) {
+      return null;
+    }
+    return blocks[blocks.length - 2];
+  }
+}
+
+class INodeFileUnderConstruction extends INodeFile {
+  protected StringBytesWritable clientName;         // lease holder
+  protected StringBytesWritable clientMachine;
+  protected DatanodeDescriptor clientNode; // if client is a cluster node too.
+
+  INodeFileUnderConstruction(short replication,
+                             long preferredBlockSize,
+                             long modTime,
+                             String clientName,
+                             String clientMachine,
+                             DatanodeDescriptor clientNode) 
+                             throws IOException {
+    super(0, replication, modTime, preferredBlockSize);
+    this.clientName = new StringBytesWritable(clientName);
+    this.clientMachine = new StringBytesWritable(clientMachine);
+    this.clientNode = clientNode;
+  }
+
+  String getClientName() throws IOException {
+    return clientName.getString();
+  }
+
+  String getClientMachine() throws IOException {
+    return clientMachine.getString();
+  }
+
+  DatanodeDescriptor getClientNode() {
+    return clientNode;
+  }
+
+  //
+  // converts a INodeFileUnderConstruction into a INodeFile
+  //
+  INodeFile convertToInodeFile() {
+    INodeFile obj = new INodeFile(getBlocks(),
+                                  getReplication(),
+                                  getModificationTime(),
+                                  getPreferredBlockSize());
+    return obj;
+    
   }
 }

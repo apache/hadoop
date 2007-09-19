@@ -44,6 +44,7 @@ public class FsShell extends Configured implements Tool {
     modifFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
   }
   static final String SETREP_SHORT_USAGE="-setrep [-R] [-w] <rep> <path/file>";
+  static final String TAIL_USAGE="-tail [-f] <file>";
   private static final DecimalFormat decimalFormat = 
     new DecimalFormat("#*0.0#*");
 
@@ -881,6 +882,54 @@ public class FsShell extends Configured implements Tool {
   }
 
   /**
+   * Parse the incoming command string
+   * @param cmd
+   * @param pos ignore anything before this pos in cmd
+   * @throws IOException 
+   */
+  private void tail(String[] cmd, int pos) throws IOException {
+    CommandFormat c = new CommandFormat("tail", 1, 1, "f");
+    String src = null;
+    Path path = null;
+    short rep = 0;
+
+    try {
+      List<String> parameters = c.parse(cmd, pos);
+      src = parameters.get(0);
+    } catch(IllegalArgumentException iae) {
+      System.err.println("Usage: java FsShell " + TAIL_USAGE);
+      throw iae;
+    }
+    boolean foption = c.options.get("f") ? true: false;
+    path = new Path(src);
+
+    if (fs.isDirectory(path)) {
+      throw new IOException("Source must be a file.");
+    }
+
+    long fileSize = fs.getFileStatus(path).getLen();
+    long offset = (fileSize > 1024) ? fileSize - 1024: 0;
+
+    while (true) {
+      FSDataInputStream in = fs.open(path);
+      in.seek(offset);
+      IOUtils.copyBytes(in, System.out, 1024, false);
+      offset = in.getPos();
+      in.close();
+      if (!foption) {
+        break;
+      }
+      fileSize = fs.getFileStatus(path).getLen();
+      offset = (fileSize > offset) ? offset: fileSize;
+      try {
+        Thread.sleep(5000);
+      } catch (InterruptedException e) {
+        break;
+      }
+    }
+  }
+
+  /**
    * Return an abbreviated English-language desc of the byte length
    */
   public static String byteDesc(long len) {
@@ -926,6 +975,7 @@ public class FsShell extends Configured implements Tool {
       "[-copyToLocal <src><localdst>] [-moveToLocal <src> <localdst>]\n\t" +
       "[-mkdir <path>] [-report] [" + SETREP_SHORT_USAGE + "]\n\t" +
       "[-touchz <path>] [-test -[ezd] <path>] [-stat [format] <path>]\n\t" +
+      "[-tail [-f] <path>]\n\t" +
       "[-help [cmd]]\n";
 
     String conf ="-conf <configuration file>:  Specify an application configuration file.";
@@ -1025,6 +1075,10 @@ public class FsShell extends Configured implements Tool {
       "\t\tin the specified format. Format accepts filesize in blocks (%b), filename (%n),\n" +
       "\t\tblock size (%o), replication (%r), modification date (%y, %Y)\n";
 
+    String tail = TAIL_USAGE
+      + ":  Show the last 1KB of the file. \n"
+      + "\t\tThe -f option shows apended data as the file grows. \n";
+
     String help = "-help [cmd]: \tDisplays help for given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -1078,6 +1132,8 @@ public class FsShell extends Configured implements Tool {
       System.out.println(test);
     } else if ("stat".equals(cmd)) {
       System.out.println(stat);
+    } else if ("tail".equals(cmd)) {
+      System.out.println(tail);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -1214,6 +1270,8 @@ public class FsShell extends Configured implements Tool {
     } else if ("-stat".equals(cmd)) {
       System.err.println("Usage: java FsShell" +
                          " [-stat [format] <path>]");
+    } else if ("-tail".equals(cmd)) {
+      System.err.println("Usage: java FsShell [" + TAIL_USAGE + "]");
     } else {
       System.err.println("Usage: java FsShell");
       System.err.println("           [-ls <path>]");
@@ -1238,6 +1296,7 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [-touchz <path>]");
       System.err.println("           [-test -[ezd] <path>]");
       System.err.println("           [-stat [format] <path>]");
+      System.err.println("           [" + TAIL_USAGE + "]");
       System.err.println("           [-help [cmd]]");
       System.err.println();
       ToolRunner.printGenericCommandUsage(System.err);
@@ -1370,6 +1429,8 @@ public class FsShell extends Configured implements Tool {
         } else {
           printHelp("");
         }
+      } else if ("-tail".equals(cmd)) {
+        tail(argv, i);           
       } else {
         exitCode = -1;
         System.err.println(cmd.substring(1) + ": Unknown command");
