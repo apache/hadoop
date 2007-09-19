@@ -152,6 +152,9 @@ Trunk (unreleased changes)
     HADOOP-1897.  Fix links to about.html page from other pages in 
     the web site. (enis)
 
+    HADOOP-1907.  Fix null pointer exception when getting task diagnostics
+    in JobClient. (Christian Kunz via omalley)
+
   IMPROVEMENTS
 
     HADOOP-1266. Remove dependency of package org.apache.hadoop.net on 

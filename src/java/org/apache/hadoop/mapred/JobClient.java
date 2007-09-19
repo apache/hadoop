@@ -648,8 +648,10 @@ public class JobClient extends Configured implements MRConstants, Tool  {
                   String[] taskDiagnostics = 
                 	  jc.jobSubmitClient.getTaskDiagnostics(jobId, tipId, 
                 			                                taskId); 
-                  for(String diagnostics : taskDiagnostics){
-                   	System.err.println(diagnostics);
+                  if (taskDiagnostics != null) {
+                    for(String diagnostics : taskDiagnostics){
+                   	  System.err.println(diagnostics);
+                    }
                   }
                   // Displaying the task logs
                   displayTaskLogs(event.getTaskId(), event.getTaskTrackerHttp());
