@@ -83,6 +83,10 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-1904. The Namenode encounters an exception because the
+    list of blocks per datanode-descriptor was corrupted.
+    (Konstantin Shvachko via dhruba)
+
     HADOOP-1762. The Namenode fsimage does not contain a list of
     Datanodes.  (Raghu Angadi via dhruba)
 

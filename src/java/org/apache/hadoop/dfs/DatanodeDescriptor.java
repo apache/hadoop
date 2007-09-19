@@ -132,17 +132,32 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
+   * Add data-node to the block.
    * Add block to the head of the list of blocks belonging to the data-node.
    */
-  void addBlock(BlockInfo b) {
+  boolean addBlock(BlockInfo b) {
+    if(!b.addNode(this))
+      return false;
+    // add to the head of the data-node list
     blockList = b.listInsert(blockList, this);
+    return true;
   }
   
   /**
    * Remove block from the list of blocks belonging to the data-node.
+   * Remove data-node from the block.
    */
-  void removeBlock(BlockInfo b) {
+  boolean removeBlock(BlockInfo b) {
     blockList = b.listRemove(blockList, this);
+    return b.removeNode(this);
+  }
+
+  /**
+   * Move block to the head of the list of blocks belonging to the data-node.
+   */
+  void moveBlockToHead(BlockInfo b) {
+    blockList = b.listRemove(blockList, this);
+    blockList = b.listInsert(blockList, this);
   }
 
   void resetBlocks() {
@@ -167,6 +182,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.xceiverCount = xceiverCount;
   }
 
+  /**
+   * Iterates over the list of blocks belonging to the data-node.
+   */
   static private class BlockIterator implements Iterator<Block> {
     private BlockInfo current;
     private DatanodeDescriptor node;
@@ -303,11 +321,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
                   Block[] newReport,
                   Collection<Block> toAdd,
                   Collection<Block> toRemove) {
+    // place a deilimiter in the list which separates blocks 
+    // that have been reported from those that have not
     BlockInfo delimiter = new BlockInfo(new Block(), 1);
-    delimiter.addNode(this);
-    this.addBlock(delimiter); // add to the head of the list
+    boolean added = this.addBlock(delimiter);
+    assert added : "Delimiting block cannot be present in the node";
     if(newReport == null)
       newReport = new Block[0];
+    // scan the report and collect newly reported blocks
     for(Block blk : newReport) {
       BlockInfo storedBlock = blocksMap.getStoredBlock(blk);
       if(storedBlock == null || storedBlock.findDatanode(this) < 0) {
@@ -315,11 +336,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
         continue;
       }
       // move block to the head of the list
-      this.removeBlock(storedBlock);
-      this.addBlock(storedBlock);
+      this.moveBlockToHead(storedBlock);
     }
     // collect blocks that have not been reported
-    // they are all next to the delimiter
+    // all of them are next to the delimiter
     Iterator<Block> it = new BlockIterator(delimiter.getNext(0), this);
     while(it.hasNext())
       toRemove.add(it.next());

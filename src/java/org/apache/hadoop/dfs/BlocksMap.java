@@ -142,14 +142,13 @@ class BlocksMap {
      * Add data-node this block belongs to.
      */
     boolean addNode(DatanodeDescriptor node) {
-      int dnIndex = this.findDatanode(node);
-      if(dnIndex >= 0) // the node is already there
+      if(findDatanode(node) >= 0) // the node is already there
         return false;
       // find the last null node
       int lastNode = ensureCapacity(1);
       setDatanode(lastNode, node);
-      setNext(lastNode, null); 
-      setPrevious(lastNode, null); 
+      setNext(lastNode, null);
+      setPrevious(lastNode, null);
       return true;
     }
 
@@ -160,6 +159,8 @@ class BlocksMap {
       int dnIndex = this.findDatanode(node);
       if(dnIndex < 0) // the node is not found
         return false;
+      assert getPrevious(dnIndex) == null && getNext(dnIndex) == null : 
+        "Block is still in the list and must be removed first.";
       // find the last not null node
       int lastNode = numNodes()-1; 
       // replace current node triplet by the lastNode one 
@@ -199,13 +200,12 @@ class BlocksMap {
     BlockInfo listInsert(BlockInfo head, DatanodeDescriptor dn) {
       int dnIndex = this.findDatanode(dn);
       assert dnIndex >= 0 : "Data node is not found: current";
+      assert getPrevious(dnIndex) == null && getNext(dnIndex) == null : 
+              "Block is already in the list and cannot be inserted.";
       this.setPrevious(dnIndex, null);
       this.setNext(dnIndex, head);
-      if(head != null) {
-        int headDNIndex = head.findDatanode(dn);
-        assert headDNIndex >= 0 : "Data node is not found: head";
-        head.setPrevious(headDNIndex, this);
-      }
+      if(head != null)
+        head.setPrevious(head.findDatanode(dn), this);
       return this;
     }
 
@@ -228,16 +228,10 @@ class BlocksMap {
       BlockInfo prev = this.getPrevious(dnIndex);
       this.setNext(dnIndex, null);
       this.setPrevious(dnIndex, null);
-      if(prev != null) {
-        int prevDNIndex = prev.findDatanode(dn);
-        assert prevDNIndex >= 0 : "Data node is not found: previous";
-        prev.setNext(prevDNIndex, next);
-      }
-      if(next != null) {
-        int nextDNIndex = next.findDatanode(dn);
-        assert nextDNIndex >= 0 : "Data node is not found: next";
-        next.setPrevious(nextDNIndex, prev);
-      }
+      if(prev != null)
+        prev.setNext(prev.findDatanode(dn), next);
+      if(next != null)
+        next.setPrevious(next.findDatanode(dn), prev);
       if(this == head)  // removing the head
         head = next;
       return head;
@@ -249,6 +243,26 @@ class BlocksMap {
             cur = cur.getNext(cur.findDatanode(dn)))
         count++;
       return count;
+    }
+
+    boolean listIsConsistent(DatanodeDescriptor dn) {
+      // going forward
+      int count = 0;
+      BlockInfo next, nextPrev;
+      BlockInfo cur = this;
+      while(cur != null) {
+        next = cur.getNext(cur.findDatanode(dn));
+        if(next != null) {
+          nextPrev = next.getPrevious(next.findDatanode(dn));
+          if(cur != nextPrev) {
+            System.out.println("Inconsistent list: cur->next->prev != cur");
+            return false;
+          }
+        }
+        cur = next;
+        count++;
+      }
+      return true;
     }
   }
 
@@ -277,7 +291,8 @@ class BlocksMap {
   private Map<Block, BlockInfo> map = new HashMap<Block, BlockInfo>();
 
   /**
-   * Add BlockInfo if mapping does not exist. */
+   * Add BlockInfo if mapping does not exist.
+   */
   private BlockInfo checkBlockInfo(Block b, int replication) {
     BlockInfo info = map.get(b);
     if (info == null) {
@@ -337,11 +352,8 @@ class BlocksMap {
   boolean addNode(Block b, DatanodeDescriptor node, int replication) {
     // insert into the map if not there yet
     BlockInfo info = checkBlockInfo(b, replication);
-    // add node to the block info
-    boolean added = info.addNode(node);
-    // add to the data-node list
-    node.addBlock(info);
-    return added;
+    // add block to the data-node list and the node to the block info
+    return node.addBlock(info);
   }
 
   /**
@@ -353,10 +365,10 @@ class BlocksMap {
     BlockInfo info = map.get(b);
     if (info == null)
       return false;
-    // first remove block from the data-node list
-    node.removeBlock(info);
-    // remove node from the block info
-    boolean removed = info.removeNode(node);
+
+    // remove block from the data-node list and the node from the block info
+    boolean removed = node.removeBlock(info);
+
     if (info.getDatanode(0) == null     // no datanodes left
               && info.inode == null) {  // does not belong to a file
       map.remove(b);  // remove block from the map
