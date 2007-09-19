@@ -48,8 +48,10 @@ Trunk (unreleased changes)
     HADOOP-1870 Once file system failure has been detected, don't check it again
                 and get on with shutting down the hbase cluster.
     HADOOP-1888 NullPointerException in HMemcacheScanner (reprise)
-    HADOOP-1903 Possible data loss if Exception happens between snapshot and flush
-                to disk.
+    HADOOP-1903 Possible data loss if Exception happens between snapshot and
+                flush to disk.
+    HADOOP-1920 Wrapper scripts broken when hadoop in one location and hbase in
+                another
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable

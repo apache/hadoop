@@ -33,7 +33,8 @@
 #
 # Modelled after $HADOOP_HOME/bin/slaves.sh.
 
-usage="Usage: regionservers [--config=<confdir>] [--hbaseconfig=<hbase-confdir>] command..."
+usage="Usage: regionservers [--config=<hadoop-confdir>]\
+ [--hbaseconfig=<hbase-confdir>] command..."
 
 # if no args specified, show usage
 if [ $# -le 0 ]; then

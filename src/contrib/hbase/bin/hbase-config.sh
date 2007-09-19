@@ -81,4 +81,4 @@ HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
 # Allow alternate hbase conf dir location.
 HBASE_CONF_DIR="${HBASE_CONF_DIR:-$HBASE_HOME/conf}"
 # List of hbase regions servers.
-HBASE_REGIONSERVERS="${HBASE_REGIONSERVERS:-$HBASE_HOME/conf/regionservers}"
+HBASE_REGIONSERVERS="${HBASE_REGIONSERVERS:-$HBASE_CONF_DIR/regionservers}"
