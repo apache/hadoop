@@ -87,7 +87,7 @@
     
     String percentUsed;
     if (c > 0) 
-      percentUsed = FsShell.limitDecimal(((1.0 * u)/c)*100, 2);
+      percentUsed = FsShell.limitDecimalTo2(((1.0 * u)/c)*100);
     else
       percentUsed = "100";
 
@@ -102,10 +102,10 @@
 	      "<td class=\"adminstate\">" +
               adminState +
 	      "<td class=\"size\">" +
-              FsShell.limitDecimal(c*1.0/diskBytes, 2) +
+              FsShell.limitDecimalTo2(c*1.0/diskBytes) +
 	      "<td class=\"pcused\">" + percentUsed +
 	      "<td class=\"size\">" +
-              FsShell.limitDecimal(d.getRemaining()*1.0/diskBytes, 2) +
+              FsShell.limitDecimalTo2(d.getRemaining()*1.0/diskBytes) +
           "<td class=\"blocks\">" + d.numBlocks() + "\n");
   }
 
@@ -153,8 +153,8 @@
 	       rowTxt() + colTxt() + "DFS Used" + colTxt() + ":" + colTxt() +
 	       FsShell.byteDesc( fsn.totalDfsUsed() ) +
 	       rowTxt() + colTxt() + "DFS Used%" + colTxt() + ":" + colTxt() +
-	       FsShell.limitDecimal((fsn.totalDfsUsed())*100.0/
-				     (fsn.totalCapacity() + 1e-10), 2) + " %" +
+	       FsShell.limitDecimalTo2((fsn.totalDfsUsed())*100.0/
+				       (fsn.totalCapacity() + 1e-10)) + " %" +
 	       rowTxt() + colTxt() +
                "<a href=\"#LiveNodes\">Live Nodes</a> " +
                colTxt() + ":" + colTxt() + live.size() +

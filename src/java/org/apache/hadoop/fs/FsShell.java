@@ -45,8 +45,7 @@ public class FsShell extends Configured implements Tool {
   }
   static final String SETREP_SHORT_USAGE="-setrep [-R] [-w] <rep> <path/file>";
   static final String TAIL_USAGE="-tail [-f] <file>";
-  private static final DecimalFormat decimalFormat = 
-    new DecimalFormat("#*0.0#*");
+  private static final DecimalFormat decimalFormat = new DecimalFormat("#.##");
 
   /**
    */
@@ -951,16 +950,11 @@ public class FsShell extends Configured implements Tool {
       val = (1.0 * len) / (1024L * 1024 * 1024 * 1024 * 1024);
       ending = " PB";
     }
-    return limitDecimal(val, 2) + ending;
+    return limitDecimalTo2(val) + ending;
   }
 
-  public static String limitDecimal(double d, int placesAfterDecimal) {
-    String strVal = decimalFormat.format(d);
-    int decpt = strVal.indexOf(".");
-    if (decpt >= 0) {
-      strVal = strVal.substring(0, Math.min(strVal.length(), decpt + 1 + placesAfterDecimal));
-    }
-    return strVal;
+  public static synchronized String limitDecimalTo2(double d) {
+    return decimalFormat.format(d);
   }
 
   private void printHelp(String cmd) {

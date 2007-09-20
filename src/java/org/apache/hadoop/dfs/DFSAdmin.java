@@ -75,7 +75,7 @@ public class DFSAdmin extends FsShell {
       System.out.println("Used raw bytes: " + rawUsed
                          + " (" + byteDesc(rawUsed) + ")");
       System.out.println("% used: "
-                         + limitDecimal(((1.0 * rawUsed) / raw) * 100, 2)
+                         + limitDecimalTo2(((1.0 * rawUsed) / raw) * 100)
                          + "%");
       System.out.println();
       System.out.println("Total effective bytes: " + used

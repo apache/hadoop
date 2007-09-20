@@ -160,7 +160,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     buffer.append("Total raw bytes: "+c+" ("+FsShell.byteDesc(c)+")"+"\n");
     buffer.append("Remaining raw bytes: " +r+ "("+FsShell.byteDesc(r)+")"+"\n");
     buffer.append("Used raw bytes: "+u+" ("+FsShell.byteDesc(u)+")"+"\n");
-    buffer.append("% used: "+FsShell.limitDecimal(((1.0*u)/c)*100, 2)+"%"+"\n");
+    buffer.append("% used: "+FsShell.limitDecimalTo2(((1.0*u)/c)*100)+"%"+"\n");
     buffer.append("Last contact: "+new Date(lastUpdate)+"\n");
     return buffer.toString();
   }
@@ -184,7 +184,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     }
     buffer.append(" " + c + "(" + FsShell.byteDesc(c)+")");
     buffer.append(" " + u + "(" + FsShell.byteDesc(u)+")");
-    buffer.append(" " + FsShell.limitDecimal(((1.0*u)/c)*100, 2)+"%");
+    buffer.append(" " + FsShell.limitDecimalTo2(((1.0*u)/c)*100)+"%");
     buffer.append(" " + r + "(" + FsShell.byteDesc(r)+")");
     buffer.append(" " + new Date(lastUpdate));
     return buffer.toString();

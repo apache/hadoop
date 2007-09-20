@@ -167,6 +167,9 @@ Trunk (unreleased changes)
     HADOOP-1907.  Fix null pointer exception when getting task diagnostics
     in JobClient. (Christian Kunz via omalley)
 
+    HADOOP-1882.  Remove spurious asterisks from decimal number displays.
+    (Raghu Angadi via cutting)
+
   IMPROVEMENTS
 
     HADOOP-1266. Remove dependency of package org.apache.hadoop.net on 
