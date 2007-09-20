@@ -1336,7 +1336,7 @@ class HStore implements HConstants {
         midKey.set(((HStoreKey)midkey).getRow());
       }
     } catch(IOException e) {
-      LOG.warn("", e);
+      LOG.warn("Failed getting store size", e);
     } finally {
       this.lock.releaseReadLock();
     }

@@ -67,6 +67,7 @@ import org.apache.hadoop.util.StringUtils;
 public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   static final Log LOG = LogFactory.getLog(HRegionServer.class);
   
+  /** {@inheritDoc} */
   public long getProtocolVersion(final String protocol, 
       @SuppressWarnings("unused") final long clientVersion)
   throws IOException {  
@@ -141,11 +142,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     private HTable root = null;
     private HTable meta = null;
 
+    /**
+     * @param stop
+     */
     public SplitOrCompactChecker(final AtomicBoolean stop) {
       super(conf.getInt("hbase.regionserver.thread.splitcompactcheckfrequency",
         30 * 1000), stop);
     }
 
+    /** {@inheritDoc} */
     public void closing(final Text regionName) {
       lock.writeLock().lock();
       try {
@@ -161,6 +166,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
     }
     
+    /** {@inheritDoc} */
     public void closed(final Text regionName) {
       lock.writeLock().lock();
       try {
@@ -176,6 +182,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     /**
      * Scan for splits or compactions to run.  Run any we find.
      */
+    @Override
     protected void chore() {
       // Don't interrupt us while we're working
       synchronized (splitOrCompactLock) {
@@ -275,10 +282,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /* Runs periodically to flush memcache.
    */
   class Flusher extends Chore {
+    /**
+     * @param period
+     * @param stop
+     */
     public Flusher(final int period, final AtomicBoolean stop) {
       super(period, stop);
     }
     
+    /** {@inheritDoc} */
+    @Override
     protected void chore() {
       synchronized(cacheFlusherLock) {
         checkForFlushesToRun();
@@ -323,10 +336,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     private int MAXLOGENTRIES =
       conf.getInt("hbase.regionserver.maxlogentries", 30 * 1000);
     
+    /**
+     * @param period
+     * @param stop
+     */
     public LogRoller(final int period, final AtomicBoolean stop) {
       super(period, stop);
     }
  
+    /** {@inheritDoc} */
+    @Override
     protected void chore() {
       synchronized(logRollerLock) {
         checkForLogRoll();
@@ -592,7 +611,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             } catch (IOException e) {
               e = RemoteExceptionHandler.checkIOException(e);
               if(tries < this.numRetries) {
-                LOG.warn("", e);
+                LOG.warn("Processing message (Retry: " + tries + ")", e);
                 tries++;
               } else {
                 LOG.error("Exceeded max retries: " + this.numRetries, e);
@@ -646,7 +665,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       try {
         log.closeAndDelete();
       } catch (IOException e) {
-        LOG.error("", RemoteExceptionHandler.checkIOException(e));
+        LOG.error("Close and delete failed",
+            RemoteExceptionHandler.checkIOException(e));
       }
       try {
         if (!masterRequestedStop && closedRegions != null) {
@@ -664,7 +684,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           hbaseMaster.regionServerReport(serverInfo, exitMsg);
         }
       } catch (IOException e) {
-        LOG.warn("", RemoteExceptionHandler.checkIOException(e));
+        LOG.warn("Failed to send exiting message to master: ",
+            RemoteExceptionHandler.checkIOException(e));
       }
       LOG.info("stopping server at: " +
         serverInfo.getServerAddress().toString());
@@ -799,6 +820,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
     }
     
+    /** {@inheritDoc} */
     public void run() {
       try {
         for(ToDoEntry e = null; !stopRequested.get(); ) {
@@ -1101,7 +1123,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       leases.createLease(scannerId, scannerId, new ScannerListener(scannerName));
       return scannerId;
     } catch (IOException e) {
-      LOG.error("", RemoteExceptionHandler.checkIOException(e));
+      LOG.error("Opening scanner (fsOk: " + this.fsOk + ")",
+          RemoteExceptionHandler.checkIOException(e));
       checkFileSystem();
       throw e;
     }
@@ -1243,14 +1266,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.lock.readLock().unlock();
     }
   }
-  
+
   /**
    * Checks to see if the file system is still accessible.
    * If not, sets abortRequested and stopRequested
    * 
    * @return false if file system is not available
    */
-  protected synchronized boolean checkFileSystem() {
+  protected boolean checkFileSystem() {
     if (this.fsOk) {
       if (!FSUtils.isFileSystemAvailable(fs)) {
         LOG.fatal("Shutting down HRegionServer: file system not available");

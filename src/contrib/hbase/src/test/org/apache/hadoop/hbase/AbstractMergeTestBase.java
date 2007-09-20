@@ -119,6 +119,9 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
     if (dfsCluster != null) {
       dfsCluster.shutdown();
     }
+    if (fs != null) {
+      fs.close();
+    }
   }
 
   private HRegion createAregion(Text startKey, Text endKey, int firstRow,

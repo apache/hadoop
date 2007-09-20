@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.dfs.DistributedFileSystem;
 
 /**
@@ -32,7 +33,10 @@ import org.apache.hadoop.dfs.DistributedFileSystem;
 public class FSUtils {
   private static final Log LOG = LogFactory.getLog(FSUtils.class);
 
-  private FSUtils() {}                                  // not instantiable
+  /**
+   * Not instantiable
+   */
+  private FSUtils() {}
   
   /**
    * Checks to see if the specified file system is available
@@ -41,31 +45,37 @@ public class FSUtils {
    * @return true if the specified file system is available.
    */
   public static boolean isFileSystemAvailable(FileSystem fs) {
+    if (!(fs instanceof DistributedFileSystem)) {
+      return true;
+    }
     boolean available = false;
-    if (fs instanceof DistributedFileSystem) {
+    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    int maxTries = dfs.getConf().getInt("hbase.client.retries.number", 3);
+    Path root = new Path(dfs.getConf().get("hbase.dir", "/"));
+    for (int i = 0; i < maxTries; i++) {
+      IOException ex = null;
       try {
-        if (((DistributedFileSystem) fs).getDataNodeStats().length > 0) {
+        if (dfs.exists(root)) {
           available = true;
-          
-        } else {
-          LOG.fatal("file system unavailable: no data nodes");
+          break;
         }
-        
       } catch (IOException e) {
-        LOG.fatal("file system unavailable because: ", e);
+        ex = e;
       }
-
-      try {
-        if (!available) {
-          fs.close();
-        }
+      String exception = "";
+      if (ex != null) {
+        exception = ": " + ex.getMessage();
+      }
+      LOG.info("Failed exists test on " + root + " (Attempt " + i + ")" +
+          exception);
+    }
+    try {
+      if (!available) {
+        fs.close();
+      }
         
-      } catch (IOException e) {
-        LOG.error("file system close", e);
-      }
-      
-    } else {
-      available = true;
+    } catch (IOException e) {
+        LOG.error("file system close failed: ", e);
     }
     return available;
   }

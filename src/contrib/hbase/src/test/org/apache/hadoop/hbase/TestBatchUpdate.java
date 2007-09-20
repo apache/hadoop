@@ -40,6 +40,7 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
    * @throws UnsupportedEncodingException
    */
   public TestBatchUpdate() throws UnsupportedEncodingException {
+    super();
     value = "abcd".getBytes(HConstants.UTF8_ENCODING);
   }
   
