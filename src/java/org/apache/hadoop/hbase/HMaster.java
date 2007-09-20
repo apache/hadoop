@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
-import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -73,6 +72,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 HMasterRegionInterface {
   static final Log LOG = LogFactory.getLog(HMaster.class.getName());
 
+  /** {@inheritDoc} */
   public long getProtocolVersion(String protocol,
       @SuppressWarnings("unused") long clientVersion)
   throws IOException {
@@ -655,12 +655,7 @@ HMasterRegionInterface {
               // We ran out of tries. Make sure the file system is still
               // available
               if (checkFileSystem()) {
-                // If filesystem is OK, is the exception a ConnectionException?
-                // If so, mark the server as down.  No point scanning either
-                // if no server to put meta region on. TODO.
-                if (e instanceof ConnectException) {
-                  LOG.debug("Region hosting server is gone.");
-                }
+                continue;                       // avoid sleeping
               }
             }
           }
@@ -962,6 +957,7 @@ HMasterRegionInterface {
   }
 
   /** Main processing loop */
+  @Override
   public void run() {
     final String threadName = "HMaster";
     Thread.currentThread().setName(threadName);
@@ -1201,11 +1197,17 @@ HMasterRegionInterface {
       // Note that cancelling the server's lease takes care of updating
       // serversToServerInfo, etc.
 
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Region server " + serverName +
+            ": MSG_REPORT_EXITING -- cancelling lease");
+      }
+      
       if (cancelLease(serverName, serverLabel)) {
         // Only process the exit message if the server still has a lease.
         // Otherwise we could end up processing the server exit twice.
 
-        LOG.info("Region server " + serverName + ": MSG_REPORT_EXITING");
+        LOG.info("Region server " + serverName +
+            ": MSG_REPORT_EXITING -- lease cancelled");
 
         // Get all the regions the server was serving reassigned
         // (if we are not shutting down).
@@ -1244,8 +1246,8 @@ HMasterRegionInterface {
     synchronized (serversToServerInfo) {
       storedInfo = serversToServerInfo.get(serverName);
     }
-    if(storedInfo == null) {
-      if(LOG.isDebugEnabled()) {
+    if (storedInfo == null) {
+      if (LOG.isDebugEnabled()) {
         LOG.debug("received server report from unknown server: " + serverName);
       }
 
@@ -2564,7 +2566,7 @@ HMasterRegionInterface {
                     server.close(scannerId);
                   } catch (IOException e) {
                     e = RemoteExceptionHandler.checkIOException(e);
-                    LOG.error("", e);
+                    LOG.error("closing scanner", e);
                   }
                 }
                 scannerId = -1L;

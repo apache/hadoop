@@ -45,7 +45,8 @@ import org.apache.hadoop.hbase.mapred.IdentityTableReduce;
 /**
  * Test Map/Reduce job over HBase tables
  */
-public class TestTableMapReduce extends HBaseTestCase {
+public class TestTableMapReduce extends MultiRegionTable {
+  @SuppressWarnings("hiding")
   private static final Log LOG =
     LogFactory.getLog(TestTableMapReduce.class.getName());
   
@@ -114,6 +115,10 @@ public class TestTableMapReduce extends HBaseTestCase {
     
     if (dfsCluster != null) {
       dfsCluster.shutdown();
+    }
+    
+    if (fs != null) {
+      fs.close();
     }
   }
 
@@ -254,7 +259,7 @@ public class TestTableMapReduce extends HBaseTestCase {
     admin.createTable(desc);
 
     // Populate a table into multiple regions
-    MultiRegionTable.makeMultiRegionTable(conf, hCluster, null,
+    MultiRegionTable.makeMultiRegionTable(conf, hCluster, fs,
         MULTI_REGION_TABLE_NAME, INPUT_COLUMN);
     
     // Verify table indeed has multiple regions

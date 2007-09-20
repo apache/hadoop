@@ -84,6 +84,9 @@ public class MiniHBaseCluster implements HConstants {
   /**
    * Starts a MiniHBaseCluster on top of an existing HDFSCluster
    * 
+   * Note that if you use this constructor, you should shut down the mini dfs
+   * cluster in your test case.
+   * 
    * @param conf
    * @param nRegionNodes
    * @param dfsCluster
@@ -93,7 +96,8 @@ public class MiniHBaseCluster implements HConstants {
       MiniDFSCluster dfsCluster) throws IOException {
 
     this.conf = conf;
-    this.cluster = dfsCluster;
+    this.fs = dfsCluster.getFileSystem();
+    this.cluster = null;
     init(nRegionNodes);
   }
 
@@ -116,13 +120,16 @@ public class MiniHBaseCluster implements HConstants {
     this.deleteOnExit = deleteOnExit;
     if (miniHdfsFilesystem) {
       this.cluster = new MiniDFSCluster(this.conf, 2, format, (String[])null);
+      this.fs = cluster.getFileSystem();
+    } else {
+      this.cluster = null;
+      this.fs = FileSystem.get(conf);
     }
     init(nRegionNodes);
   }
 
   private void init(final int nRegionNodes) throws IOException {
     try {
-      this.fs = FileSystem.get(conf);
       this.parentdir = new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
       fs.mkdirs(parentdir);
       this.masterThread = startMaster(this.conf);

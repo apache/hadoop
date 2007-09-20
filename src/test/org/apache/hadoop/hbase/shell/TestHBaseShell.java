@@ -43,10 +43,12 @@ public class TestHBaseShell extends HBaseClusterTestCase {
   private ByteArrayOutputStream baos;
   private HBaseAdmin admin;
   
+  /** constructor */
   public TestHBaseShell() {
     super(1 /*One region server only*/);
   }
   
+  /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -100,6 +102,9 @@ public class TestHBaseShell extends HBaseClusterTestCase {
         sglQuotedColumnFamily + "');", tmpTableName, sglQuotedColumnFamily);
   }
 
+  /**
+   * @throws Exception
+   */
   public void testInsertSelectDelete() throws Exception {
     final String tableName = getName();
     final String columnFamily = tableName;

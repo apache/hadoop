@@ -60,7 +60,10 @@ public class TestDFSAbort extends HBaseClusterTestCase {
     cluster.join();
   }
   
-  public static void main(String[] args) {
+  /**
+   * @param args unused
+   */
+  public static void main(@SuppressWarnings("unused") String[] args) {
     TestRunner.run(new TestSuite(TestDFSAbort.class));
   }
 }

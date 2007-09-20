@@ -31,7 +31,6 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
@@ -177,7 +176,7 @@ public class TestScanner2 extends HBaseClusterTestCase {
     HBaseAdmin admin = new HBaseAdmin(conf);
     Text tableName = new Text(getName());
     admin.createTable(new HTableDescriptor(tableName.toString()));
-    List<HRegionInfo> regions = scan(conf, metaTable);
+    List<HRegionInfo> regions = scan(metaTable);
     assertEquals("Expected one region", regions.size(), 1);
     HRegionInfo region = regions.get(0);
     assertTrue("Expected region named for test",
@@ -197,10 +196,10 @@ public class TestScanner2 extends HBaseClusterTestCase {
         homedir, this.conf, null));
     try {
       for (HRegion r : newRegions) {
-        addRegionToMETA(conf, metaTable, r, this.cluster.getHMasterAddress(),
+        addRegionToMETA(metaTable, r, this.cluster.getHMasterAddress(),
           -1L);
       }
-      regions = scan(conf, metaTable);
+      regions = scan(metaTable);
       assertEquals("Should be two regions only", 2, regions.size());
     } finally {
       for (HRegion r : newRegions) {
@@ -210,7 +209,7 @@ public class TestScanner2 extends HBaseClusterTestCase {
     }
   }
   
-  private List<HRegionInfo> scan(final Configuration conf, final HTable t)
+  private List<HRegionInfo> scan(final HTable t)
   throws IOException {
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
     HRegionInterface regionServer = null;
@@ -262,8 +261,7 @@ public class TestScanner2 extends HBaseClusterTestCase {
     return regions;
   }
   
-  private void addRegionToMETA(final Configuration conf,
-      final HTable t, final HRegion region,
+  private void addRegionToMETA(final HTable t, final HRegion region,
       final HServerAddress serverAddress,
       final long startCode)
   throws IOException {

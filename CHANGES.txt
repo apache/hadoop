@@ -52,6 +52,8 @@ Trunk (unreleased changes)
                 flush to disk.
     HADOOP-1920 Wrapper scripts broken when hadoop in one location and hbase in
                 another
+    HADOOP-1923, HADOOP-1924 a) tests fail sporadically because set up and tear
+                 down is inconsistent b) TestDFSAbort failed in nightly #242
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable
