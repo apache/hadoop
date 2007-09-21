@@ -33,8 +33,8 @@
 #
 # Modelled after $HADOOP_HOME/bin/hadoop-daemon.sh
 
-usage="Usage: hbase-daemon.sh [--config=<hadoop-conf-dir>]\
- [--hbaseconfig=<hbase-conf-dir>] <hbase-command> (start|stop)\
+usage="Usage: hbase-daemon.sh [--config <hadoop-conf-dir>]\
+ [--hbaseconfig <hbase-conf-dir>] <hbase-command> (start|stop)\
  <args...>"
 
 # if no args specified, show usage
@@ -117,8 +117,8 @@ case $startStop in
     hbase_rotate_log $log
     echo starting $command, logging to $log
     nohup nice -n $HADOOP_NICENESS "$HBASE_HOME"/bin/hbase \
-        --hadoop="${HADOOP_HOME}" \
-        --config="${HADOOP_CONF_DIR}" --hbaseconfig="${HBASE_CONF_DIR}" \
+        --hadoop "${HADOOP_HOME}" \
+        --config "${HADOOP_CONF_DIR}" --hbaseconfig "${HBASE_CONF_DIR}" \
         $command $startStop "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid
     sleep 1; head "$log"
@@ -129,8 +129,8 @@ case $startStop in
       if kill -0 `cat $pid` > /dev/null 2>&1; then
         echo -n stopping $command
         nohup nice -n $HADOOP_NICENESS "$HBASE_HOME"/bin/hbase \
-            --hadoop="${HADOOP_HOME}" \
-            --config="${HADOOP_CONF_DIR}" --hbaseconfig="${HBASE_CONF_DIR}" \
+            --hadoop "${HADOOP_HOME}" \
+            --config "${HADOOP_CONF_DIR}" --hbaseconfig "${HBASE_CONF_DIR}" \
             $command $startStop "$@" > "$log" 2>&1 < /dev/null &
         while kill -0 `cat $pid` > /dev/null 2>&1; do
           echo -n "."
