@@ -4,6 +4,8 @@ HBase Change Log
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
+    HADOOP-1931 Hbase scripts take --ARG=ARG_VALUE when should be like hadoop
+                and do ---ARG ARG_VALUE
 
   NEW FEATURES
     HADOOP-1768 FS command using Hadoop FsShell operations

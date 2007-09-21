@@ -49,29 +49,34 @@ export HBASE_HOME=`dirname "$this"`/..
 #check to see if the conf dir or hadoop home are given as an optional arguments
 while [ $# -gt 1 ]
 do
-  case $1 in
-    --config=*)
-        HADOOP_CONF_DIR=`echo $1|sed 's/[^=]*=\(.*\)/\1/'`
-        shift
-      ;;
-    --hbaseconfig=*)
-        HBASE_CONF_DIR=`echo $1|sed 's/[^=]*=\(.*\)/\1/'`
-        shift
-      ;;
-
-    --hadoop=*)
-        HADOOP_HOME=`echo $1|sed 's/[^=]*=\(.*\)/\1/'`
-        shift
-      ;;
-    --hosts=*)
-        HBASE_REGIONSERVERS=`echo $1|sed 's/[^=]*=\(.*\)/\1/'`
-        shift
-      ;;
-
-    *)
-      break
-      ;; 
-  esac
+  if [ "--config" = "$1" ]
+  then
+    shift
+    confdir=$1
+    shift
+    HADOOP_CONF_DIR=$confdir
+  elif [ "--hbaseconfig" = "$1" ]
+  then
+    shift
+    confdir=$1
+    shift
+    HBASE_CONF_DIR=$confdir
+  elif [ "--hadoop" = "$1" ]
+  then
+    shift
+    home=$1
+    shift
+    HADOOP_HOME=$home
+  elif [ "--hosts" = "$1" ]
+  then
+    shift
+    hosts=$1
+    shift
+    HBASE_REGIONSERVERS=$hosts
+  else
+    # Presume we are at end of options and break
+    break
+  fi
 done
  
 # If no hadoop home specified, then we assume its above this directory.
