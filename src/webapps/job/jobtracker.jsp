@@ -23,12 +23,12 @@
       if (jobs.size() > 0) {
         out.print("<tr><td><b>Jobid</b></td><td><b>User</b></td>");
         out.print("<td><b>Name</b></td>");
-        out.print("<td><b>Map % complete</b></td>");
-        out.print("<td><b>Map total</b></td>");
-        out.print("<td><b>Maps completed</b></td>");
-        out.print("<td><b>Reduce % complete</b></td>");
-        out.print("<td><b>Reduce total</b></td>");
-        out.print("<td><b>Reduces completed</b></td></tr>\n");
+        out.print("<td><b>Map % Complete</b></td>");
+        out.print("<td><b>Map Total</b></td>");
+        out.print("<td><b>Maps Completed</b></td>");
+        out.print("<td><b>Reduce % Complete</b></td>");
+        out.print("<td><b>Reduce Total</b></td>");
+        out.print("<td><b>Reduces Completed</b></td></tr>\n");
         for (Iterator it = jobs.iterator(); it.hasNext(); ) {
           JobInProgress job = (JobInProgress) it.next();
           JobProfile profile = job.getProfile();
@@ -126,6 +126,6 @@
 Job Tracker History</a>
 
 <hr>
-<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
+<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2007.<br>
 </body>
 </html>

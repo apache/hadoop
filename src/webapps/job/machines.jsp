@@ -19,14 +19,14 @@
     Collection c = tracker.taskTrackers();
 
     if (c.size() == 0) {
-      out.print("There are currently no known TaskTracker(s).");
+      out.print("There are currently no known Task Trackers.");
     } else {
       out.print("<center>\n");
       out.print("<table border=\"2\" cellpadding=\"5\" cellspacing=\"2\">\n");
       out.print("<tr><td align=\"center\" colspan=\"5\"><b>Task Trackers</b></td></tr>\n");
       out.print("<tr><td><b>Name</b></td><td><b>Host</b></td>" +
                 "<td><b># running tasks</b></td><td><b>Failures</b></td>" +
-                "<td><b>Secs since heartbeat</b></td></tr>\n");
+                "<td><b>Seconds since heartbeat</b></td></tr>\n");
       int maxFailures = 0;
       String failureKing = null;
       for (Iterator it = c.iterator(); it.hasNext(); ) {
@@ -76,6 +76,6 @@
 %>
 
 <hr>
-<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
+<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2007.<br>
 </body>
 </html>

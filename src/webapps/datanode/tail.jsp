@@ -29,7 +29,7 @@
 
     String filename = req.getParameter("filename");
     if (filename == null) {
-      out.print("Invalid input (filename absent)");
+      out.print("Invalid input (file name absent)");
       return;
     }
 
@@ -52,7 +52,7 @@
     else {
       out.print("<h3>" + filename + "</h3>");
     }
-    out.print("<b>Chunk Size to view (in bytes, upto file's DFS blocksize): </b>");
+    out.print("<b>Chunk size to view (in bytes, up to file's DFS block size): </b>");
     out.print("<input type=\"text\" name=\"chunkSizeToView\" value=" +
               chunkSizeToView + " size=10 maxlength=10>");
     out.print("&nbsp;&nbsp;<input type=\"submit\" name=\"submit\" value=\"Refresh\"><hr>");
@@ -117,6 +117,6 @@
 <a href="/logs/">Log</a> directory
 
 <hr>
-<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
+<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2007.<br>
 </body>
 </html>

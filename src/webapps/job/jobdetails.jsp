@@ -160,7 +160,7 @@
     } else {
       if (runState == JobStatus.SUCCEEDED) {
         out.print("<b>Status:</b> Succeeded<br>\n");
-        out.print("<b>Started at :</b> " + new Date(job.getStartTime()) + "<br>\n");
+        out.print("<b>Started at:</b> " + new Date(job.getStartTime()) + "<br>\n");
         out.print("<b>Finished at:</b> " + new Date(job.getFinishTime()) +
                   "<br>\n");
         out.print("<b>Finished in:</b> " + StringUtils.formatTimeDiff(
@@ -168,9 +168,9 @@
       } else if (runState == JobStatus.FAILED) {
         out.print("<b>Status:</b> Failed<br>\n");
         out.print("<b>Started at:</b> " + new Date(job.getStartTime()) + "<br>\n");
-        out.print("<b>Failed at :</b> " + new Date(job.getFinishTime()) +
+        out.print("<b>Failed at:</b> " + new Date(job.getFinishTime()) +
                   "<br>\n");
-        out.print("<b>Failed in :</b> " + StringUtils.formatTimeDiff(
+        out.print("<b>Failed in:</b> " + StringUtils.formatTimeDiff(
             job.getFinishTime(), job.getStartTime()) + "<br>\n");
       }
     }
@@ -258,6 +258,6 @@
 <% } %>
 <hr>
 <a href="jobtracker.jsp">Go back to JobTracker</a><br>
-<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
+<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2007.<br>
 </body>
 </html>

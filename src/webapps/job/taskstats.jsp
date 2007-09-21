@@ -78,6 +78,6 @@
 <hr>
 <a href="jobdetails.jsp?jobid=<%=jobid%>">Go back to the job</a><br>
 <a href="jobtracker.jsp">Go back to JobTracker</a><br>
-<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
+<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2007.<br>
 </body>
 </html>

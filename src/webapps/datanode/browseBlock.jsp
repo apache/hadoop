@@ -99,10 +99,10 @@
                  "&referrer=" + 
           URLEncoder.encode(req.getRequestURL() + "?" + req.getQueryString(),
                             "UTF-8");
-    out.print("<a href=\"" + tailUrl + "\">TAIL this file</a><br>");
+    out.print("<a href=\"" + tailUrl + "\">Tail this file</a><br>");
 
     out.print("<form action=\"/browseBlock.jsp\" method=GET>");
-    out.print("<b>Chunk Size to view (in bytes, upto file's DFS blocksize): </b>");
+    out.print("<b>Chunk size to view (in bytes, up to file's DFS block size): </b>");
     out.print("<input type=\"hidden\" name=\"blockId\" value=\"" + currBlockId +
               "\">");
     out.print("<input type=\"hidden\" name=\"blockSize\" value=\"" + 
@@ -359,6 +359,6 @@
 <a href="/logs/">Log</a> directory
 
 <hr>
-<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
+<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2007.<br>
 </body>
 </html>

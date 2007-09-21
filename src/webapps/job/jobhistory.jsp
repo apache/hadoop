@@ -33,7 +33,7 @@
       String trackerStartTime = entry.getKey();
       Map<String, JobInfo> jobs = entry.getValue();
 %>
-<h2>JobTracker started at : <%=new Date(Long.parseLong(trackerStartTime)) %></h2>
+<h2>JobTracker started at: <%=new Date(Long.parseLong(trackerStartTime)) %></h2>
 <hr/>
 <h3>Completed Jobs </h3>
 <center>

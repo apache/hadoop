@@ -250,6 +250,6 @@
 <a href="/logs/">Log</a> directory
 
 <hr>
-<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2006.<br>
+<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2007.<br>
 </body>
 </html>

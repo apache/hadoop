@@ -22,13 +22,13 @@
 <html><body>
 <h2>Hadoop Job <%=jobid %> </h2>
 
-<b>User : </b> <%=job.get(Keys.USER) %><br/> 
-<b>JobName : </b> <%=job.get(Keys.JOBNAME) %><br/> 
-<b>JobConf : </b> <%=job.get(Keys.JOBCONF) %><br/> 
-<b>Submitted At : </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.SUBMIT_TIME), 0 )  %><br/> 
-<b>Launched At : </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.LAUNCH_TIME), job.getLong(Keys.SUBMIT_TIME)) %><br/>
-<b>Finished At : </b>  <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.FINISH_TIME), job.getLong(Keys.LAUNCH_TIME)) %><br/>
-<b>Status : </b> <%= ((job.get(Keys.JOB_STATUS) == null)?"Incomplete" :job.get(Keys.JOB_STATUS)) %><br/> 
+<b>User: </b> <%=job.get(Keys.USER) %><br/> 
+<b>JobName: </b> <%=job.get(Keys.JOBNAME) %><br/> 
+<b>JobConf: </b> <%=job.get(Keys.JOBCONF) %><br/> 
+<b>Submitted At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.SUBMIT_TIME), 0 )  %><br/> 
+<b>Launched At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.LAUNCH_TIME), job.getLong(Keys.SUBMIT_TIME)) %><br/>
+<b>Finished At: </b>  <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.FINISH_TIME), job.getLong(Keys.LAUNCH_TIME)) %><br/>
+<b>Status: </b> <%= ((job.get(Keys.JOB_STATUS) == null)?"Incomplete" :job.get(Keys.JOB_STATUS)) %><br/> 
 <%
 	Map<String, JobHistory.Task> tasks = job.getAllTasks();
 	int totalMaps = 0 ; 
