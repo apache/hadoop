@@ -54,10 +54,10 @@ to call at top-level: ant deploy-contrib compile-core-test
 	
   <!-- Override jar target to specify main class -->
   <target name="jar" depends="compile">
-    <jar
-      jarfile="${build.dir}/hadoop-${version}-${name}.jar"
-      basedir="${build.classes}"      
-    />
+    <jar jarfile="${build.dir}/hadoop-${version}-${name}.jar"
+        basedir="${build.classes}" >
+      <fileset file="${root}/conf/hbase-default.xml"/>
+    </jar>
   </target>
 
   <!-- Override compile-test  target so can generate a hbase 
