@@ -61,11 +61,15 @@ public class TestPipes extends TestCase {
       mr = new MiniMRCluster(numSlaves, fs.getName(), 1);
       writeInputFile(fs, inputPath);
       runProgram(mr, fs, new Path(cppExamples, "bin/wordcount-simple"), 
-                 inputPath, outputPath, twoSplitOutput);
+                 inputPath, outputPath, 3, 2, twoSplitOutput);
+      FileUtil.fullyDelete(fs, outputPath);
+      assertFalse("output not cleaned up", fs.exists(outputPath));
+      runProgram(mr, fs, new Path(cppExamples, "bin/wordcount-simple"), 
+                 inputPath, outputPath, 3, 0, noSortOutput);
       FileUtil.fullyDelete(fs, outputPath);
       assertFalse("output not cleaned up", fs.exists(outputPath));
       runProgram(mr, fs, new Path(cppExamples, "bin/wordcount-part"),
-                 inputPath, outputPath, fixedPartitionOutput);
+                 inputPath, outputPath, 3, 2, fixedPartitionOutput);
       runNonPipedProgram(mr, fs, new Path(cppExamples, "bin/wordcount-nopipe"));
       mr.waitUntilIdle();
     } finally {
@@ -83,6 +87,20 @@ public class TestPipes extends TestCase {
     "Alice\t2\n`without\t1\nbank,\t1\nbook,'\t1\nconversations\t1\nget\t1\n" +
     "into\t1\nis\t1\nreading,\t1\nshe\t1\nsister\t2\nsitting\t1\ntired\t1\n" +
     "twice\t1\nvery\t1\nwhat\t1\n"
+  };
+
+  final static String[] noSortOutput = new String[] {
+    "it,\t1\n`and\t1\nwhat\t1\nis\t1\nthe\t1\nuse\t1\nof\t1\na\t1\n" +
+    "book,'\t1\nthought\t1\nAlice\t1\n`without\t1\npictures\t1\nor\t1\n"+
+    "conversation?'\t1\n",
+
+    "Alice\t1\nwas\t1\nbeginning\t1\nto\t1\nget\t1\nvery\t1\ntired\t1\n"+
+    "of\t1\nsitting\t1\nby\t1\nher\t1\nsister\t1\non\t1\nthe\t1\nbank,\t1\n"+
+    "and\t1\nof\t1\nhaving\t1\nnothing\t1\nto\t1\ndo:\t1\nonce\t1\n", 
+
+    "or\t1\ntwice\t1\nshe\t1\nhad\t1\npeeped\t1\ninto\t1\nthe\t1\nbook\t1\n"+
+    "her\t1\nsister\t1\nwas\t1\nreading,\t1\nbut\t1\nit\t1\nhad\t1\nno\t1\n"+
+    "pictures\t1\nor\t1\nconversations\t1\nin\t1\n"
   };
   
   final static String[] fixedPartitionOutput = new String[] {
@@ -110,14 +128,14 @@ public class TestPipes extends TestCase {
 
   private void runProgram(MiniMRCluster mr, FileSystem fs, 
                           Path program, Path inputPath, Path outputPath,
-                          String[] expectedResults
+                          int numMaps, int numReduces, String[] expectedResults
                          ) throws IOException {
     Path wordExec = new Path("/testing/bin/application");
     FileUtil.fullyDelete(fs, wordExec.getParent());
     fs.copyFromLocalFile(program, wordExec);                                         
     JobConf job = mr.createJobConf();
-    job.setNumMapTasks(3);
-    job.setNumReduceTasks(expectedResults.length);
+    job.setNumMapTasks(numMaps);
+    job.setNumReduceTasks(numReduces);
     Submitter.setExecutable(job, fs.makeQualified(wordExec).toString());
     Submitter.setIsJavaRecordReader(job, true);
     Submitter.setIsJavaRecordWriter(job, true);

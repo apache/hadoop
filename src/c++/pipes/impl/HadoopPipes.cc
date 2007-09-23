@@ -628,9 +628,11 @@ namespace HadoopPipes {
         value = new string();
       }
       mapper = factory->createMapper(*this);
-      reducer = factory->createCombiner(*this);
-      partitioner = factory->createPartitioner(*this);
       numReduces = _numReduces;
+      if (numReduces != 0) { 
+        reducer = factory->createCombiner(*this);
+        partitioner = factory->createPartitioner(*this);
+      }
       if (reducer != NULL) {
         int64_t spillSize = 100;
         if (jobConf->hasKey("io.sort.mb")) {
