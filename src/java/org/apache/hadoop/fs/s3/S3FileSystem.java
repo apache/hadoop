@@ -173,7 +173,7 @@ public class S3FileSystem extends FileSystem {
     }
     ArrayList<FileStatus> ret = new ArrayList<FileStatus>();
     for (Path p : store.listSubPaths(absolutePath)) {
-      ret.add(getFileStatus(p));
+      ret.add(getFileStatus(p.makeQualified(this)));
     }
     return ret.toArray(new FileStatus[0]);
   }

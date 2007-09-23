@@ -176,6 +176,9 @@ Trunk (unreleased changes)
     HADOOP-1882.  Remove spurious asterisks from decimal number displays.
     (Raghu Angadi via cutting)
 
+    HADOOP-1783.  Make S3 FileSystem return Paths fully-qualified with
+    scheme and host.  (tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-1266. Remove dependency of package org.apache.hadoop.net on 
