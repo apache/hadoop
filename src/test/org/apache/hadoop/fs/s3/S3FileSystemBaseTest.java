@@ -111,17 +111,21 @@ public abstract class S3FileSystemBaseTest extends TestCase {
     Path[] paths = s3FileSystem.listPaths(new Path("/"));
 
     assertEquals(1, paths.length);
-    assertEquals(new Path("/test"), paths[0]);
+    assertEquals(new Path("/test").makeQualified(s3FileSystem), paths[0]);
 
     paths = s3FileSystem.listPaths(new Path("/test"));
     assertEquals(1, paths.length);
-    assertEquals(new Path("/test/hadoop"), paths[0]);
+    assertEquals(new Path("/test/hadoop").makeQualified(s3FileSystem),
+        paths[0]);
 
     paths = s3FileSystem.listPaths(new Path("/test/hadoop"));
     assertEquals(3, paths.length);
-    assertEquals(new Path("/test/hadoop/a"), paths[0]);
-    assertEquals(new Path("/test/hadoop/b"), paths[1]);
-    assertEquals(new Path("/test/hadoop/c"), paths[2]);
+    assertEquals(new Path("/test/hadoop/a").makeQualified(s3FileSystem),
+        paths[0]);
+    assertEquals(new Path("/test/hadoop/b").makeQualified(s3FileSystem),
+        paths[1]);
+    assertEquals(new Path("/test/hadoop/c").makeQualified(s3FileSystem),
+        paths[2]);
 
     paths = s3FileSystem.listPaths(new Path("/test/hadoop/a"));
     assertEquals(0, paths.length);

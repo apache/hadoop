@@ -56,7 +56,7 @@ class InMemoryFileSystemStore implements FileSystemStore {
   }
 
   public void deleteINode(Path path) throws IOException {
-    inodes.remove(path);
+    inodes.remove(normalize(path));
   }
 
   public void deleteBlock(Block block) throws IOException {
@@ -64,7 +64,7 @@ class InMemoryFileSystemStore implements FileSystemStore {
   }
 
   public boolean inodeExists(Path path) throws IOException {
-    return inodes.containsKey(path);
+    return inodes.containsKey(normalize(path));
   }
 
   public boolean blockExists(long blockId) throws IOException {
@@ -72,7 +72,7 @@ class InMemoryFileSystemStore implements FileSystemStore {
   }
 
   public INode retrieveINode(Path path) throws IOException {
-    return inodes.get(path);
+    return inodes.get(normalize(path));
   }
 
   public File retrieveBlock(Block block, long byteRangeStart) throws IOException {
@@ -101,10 +101,11 @@ class InMemoryFileSystemStore implements FileSystemStore {
   }
 
   public Set<Path> listSubPaths(Path path) throws IOException {
+    Path normalizedPath = normalize(path);
     // This is inefficient but more than adequate for testing purposes.
     Set<Path> subPaths = new LinkedHashSet<Path>();
-    for (Path p : inodes.tailMap(path).keySet()) {
-      if (path.equals(p.getParent())) {
+    for (Path p : inodes.tailMap(normalizedPath).keySet()) {
+      if (normalizedPath.equals(p.getParent())) {
         subPaths.add(p);
       }
     }
@@ -112,13 +113,14 @@ class InMemoryFileSystemStore implements FileSystemStore {
   }
 
   public Set<Path> listDeepSubPaths(Path path) throws IOException {
-    String pathString = path.toUri().getPath();
+    Path normalizedPath = normalize(path);    
+    String pathString = normalizedPath.toUri().getPath();
     if (!pathString.endsWith("/")) {
       pathString += "/";
     }
     // This is inefficient but more than adequate for testing purposes.
     Set<Path> subPaths = new LinkedHashSet<Path>();
-    for (Path p : inodes.tailMap(path).keySet()) {
+    for (Path p : inodes.tailMap(normalizedPath).keySet()) {
       if (p.toUri().getPath().startsWith(pathString)) {
         subPaths.add(p);
       }
@@ -127,7 +129,7 @@ class InMemoryFileSystemStore implements FileSystemStore {
   }
 
   public void storeINode(Path path, INode inode) throws IOException {
-    inodes.put(path, inode);
+    inodes.put(normalize(path), inode);
   }
 
   public void storeBlock(Block block, File file) throws IOException {
@@ -146,6 +148,13 @@ class InMemoryFileSystemStore implements FileSystemStore {
       }
     }
     blocks.put(block.getId(), out.toByteArray());
+  }
+  
+  private Path normalize(Path path) {
+    if (!path.isAbsolute()) {
+      throw new IllegalArgumentException("Path must be absolute: " + path);
+    }
+    return new Path(path.toUri().getPath());
   }
 
   public void purge() throws IOException {

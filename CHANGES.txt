@@ -1,6 +1,13 @@
 Hadoop Change Log
 
 
+Release 0.14.2 (unreleased changes)
+
+  BUG FIXES
+
+    HADOOP-1783.  Make S3 FileSystem return Paths fully-qualified with
+    scheme and host.  (tomwhite)
+
 
 Release 0.14.1 - 2007-09-04
 

@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -169,8 +170,11 @@ public class S3FileSystem extends FileSystem {
     } else if (inode.isFile()) {
       return new Path[] { absolutePath };
     } else { // directory
-      Set<Path> paths = store.listSubPaths(absolutePath);
-      return paths.toArray(new Path[0]);
+      ArrayList<Path> ret = new ArrayList<Path>();
+      for (Path p : store.listSubPaths(absolutePath)) {
+        ret.add(p.makeQualified(this));
+      }
+      return ret.toArray(new Path[0]);
     }
   }
 
