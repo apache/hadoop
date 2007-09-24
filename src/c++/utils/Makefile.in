@@ -38,10 +38,12 @@ NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
 host_triplet = @host@
-DIST_COMMON = config.guess config.sub $(srcdir)/Makefile.in \
-	$(srcdir)/Makefile.am $(top_srcdir)/configure \
-	$(am__configure_deps) $(top_srcdir)/impl/config.h.in depcomp \
-	ltmain.sh config.guess config.sub $(api_HEADERS)
+DIST_COMMON = config.guess config.guess config.sub config.sub \
+	$(srcdir)/Makefile.in $(srcdir)/Makefile.am \
+	$(top_srcdir)/configure $(am__configure_deps) \
+	$(top_srcdir)/impl/config.h.in depcomp depcomp ltmain.sh \
+	ltmain.sh config.guess config.guess config.sub config.sub \
+	$(api_HEADERS)
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/hadoop_utils.m4 \

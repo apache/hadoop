@@ -50,4 +50,6 @@ AC_FUNC_STRERROR_R
 
 # Checks for library functions.
 AC_CHECK_FUNCS([mkdir uname])
+AC_CHECK_LIB([socket],[shutdown])
+AC_CHECK_LIB([nsl],[xdr_float])
 AC_OUTPUT

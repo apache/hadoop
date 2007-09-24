@@ -179,6 +179,9 @@ Trunk (unreleased changes)
     HADOOP-1783.  Make S3 FileSystem return Paths fully-qualified with
     scheme and host.  (tomwhite)
 
+    HADOOP-1925.  Make pipes' autoconf script look for libsocket and libnsl, so
+    that it can compile under Solaris. (omalley)
+
   IMPROVEMENTS
 
     HADOOP-1266. Remove dependency of package org.apache.hadoop.net on 
