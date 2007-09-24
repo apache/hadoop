@@ -76,6 +76,15 @@ public class TestTableMapReduce extends MultiRegionTable {
       fail();
     }
   }
+  
+  /** constructor */
+  public TestTableMapReduce() {
+    super();
+
+    // Make lease timeout longer, lease checks less frequent
+    conf.setInt("hbase.master.lease.period", 10 * 1000);
+    conf.setInt("hbase.master.lease.thread.wakefrequency", 5 * 1000);
+  }
 
   /**
    * {@inheritDoc}

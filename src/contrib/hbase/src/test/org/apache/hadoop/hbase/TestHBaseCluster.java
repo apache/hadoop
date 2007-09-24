@@ -25,6 +25,8 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.hadoop.io.Text;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 /**
  * Test HBase Master and Region servers, client API 
@@ -41,6 +43,14 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     this.desc = null;
     this.admin = null;
     this.table = null;
+    Logger.getRootLogger().setLevel(Level.INFO);
+
+    // Make lease timeout longer, lease checks less frequent
+    conf.setInt("hbase.master.lease.period", 10 * 1000);
+    conf.setInt("hbase.master.lease.thread.wakefrequency", 5 * 1000);
+    
+    // Increase the amount of time between client retries
+    conf.setLong("hbase.client.pause", 15 * 1000);
   }
 
   /**
