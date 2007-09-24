@@ -20,6 +20,8 @@ Trunk (unreleased changes)
                 set of operators, for creating, altering, dropping, inserting,
                 deleting, and selecting, etc., data in hbase.
                 (Inchul Song and Edward Yoon via Stack)
+    HADOOP-1913 Build a Lucene index on an HBase table
+                (Ning Li via Stack)
 
   OPTIMIZATIONS
 
