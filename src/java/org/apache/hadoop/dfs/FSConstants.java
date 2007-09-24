@@ -133,7 +133,10 @@ public interface FSConstants {
 
   // type of the datanode report
   public static enum DatanodeReportType {ALL, LIVE, DEAD }
-  
+
+  // checkpoint states
+  public enum CheckpointStates{ START, ROLLED_EDITS, UPLOAD_START, UPLOAD_DONE; }
+
   /**
    * Type of the node
    */

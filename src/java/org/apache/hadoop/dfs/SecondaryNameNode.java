@@ -223,11 +223,12 @@ public class SecondaryNameNode implements FSConstants, Runnable {
   /**
    * Copy the new fsimage into the NameNode
    */
-  private void putFSImage() throws IOException {
+  private void putFSImage(long token) throws IOException {
     String fsName = getInfoServer();
     String fileid = "putimage=1&port=" + infoPort +
       "&machine=" +
-      InetAddress.getLocalHost().getHostAddress();
+      InetAddress.getLocalHost().getHostAddress() +
+      "&token=" + token;
     LOG.info("Posted URL " + fsName + fileid);
     TransferFsImage.getFileClient(fsName, fileid, (File[])null);
   }
@@ -257,8 +258,9 @@ public class SecondaryNameNode implements FSConstants, Runnable {
 
     //
     // Tell the namenode to start logging transactions in a new edit file
+    // Retuns a token that would be used to upload the merged image.
     //
-    namenode.rollEditLog();
+    long token = namenode.rollEditLog();
 
     //
     // error simulation code for junit test
@@ -276,7 +278,7 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     // Upload the new image into the NameNode. Then tell the Namenode
     // to make this new uploaded image as the most current image.
     //
-    putFSImage();
+    putFSImage(token);
 
     //
     // error simulation code for junit test

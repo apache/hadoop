@@ -34,8 +34,9 @@ interface ClientProtocol extends VersionedProtocol {
    * 16 : removed deprecated obtainLock() and releaseLock(). 
    * 17 : getBlockSize replaced by getPreferredBlockSize
    * 18 : datanodereport returns dead, live or all nodes.
+   * 19 : rollEditLog() returns a token to uniquely identify the editfile.
    */
-  public static final long versionID = 18L;
+  public static final long versionID = 19L;
   
   ///////////////////////////////////////
   // File contents
@@ -326,11 +327,11 @@ interface ClientProtocol extends VersionedProtocol {
 
   /**
    * Closes the current edit log and opens a new one. The 
-   * call fails if there are already two or more edits log files or
-   * if the file system is in SafeMode.
+   * call fails if the file system is in SafeMode.
+   * Returns a unique token to identify this transaction.
    * @throws IOException
    */
-  public void rollEditLog() throws IOException;
+  public long rollEditLog() throws IOException;
 
   /**
    * Rolls the fsImage log. It removes the old fsImage, copies the

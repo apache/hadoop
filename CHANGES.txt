@@ -93,6 +93,9 @@ Trunk (unreleased changes)
     HADOOP-1500. Fix typographical errors in the DFS WebUI.
     (Nigel Daley via dhruba)
 
+    HADOOP-1076. Periodic checkpoint can continue even if an earlier
+    checkpoint encountered an error.  (Dhruba Borthakur via dhruba)
+
     HADOOP-1887. The Namenode encounters an ArrayIndexOutOfBoundsException
     while listing a directory that had a file that was
     being actively written to.  (Dhruba Borthakur via dhruba)

@@ -190,8 +190,7 @@ public class TestCheckpoint extends TestCase {
     try {
       assertTrue(!fileSys.exists(file1));
       //
-      // Make the checkpoint fail after rolling the
-      // edit log.
+      // Make the checkpoint fail after uploading the new fsimage.
       //
       SecondaryNameNode secondary = new SecondaryNameNode(conf);
       secondary.initializeErrorSimulationEvent(2);
@@ -220,6 +219,72 @@ public class TestCheckpoint extends TestCase {
     // namenode restart accounted for the rolled edit logs.
     //
     System.out.println("Starting testSecondaryNamenodeError 22");
+    cluster = new MiniDFSCluster(conf, numDatanodes, false, null);
+    cluster.waitActive();
+    fileSys = cluster.getFileSystem();
+    try {
+      checkFile(fileSys, file1, replication);
+      cleanupFile(fileSys, file1);
+      SecondaryNameNode secondary = new SecondaryNameNode(conf);
+      secondary.doCheckpoint();
+      secondary.shutdown();
+    } finally {
+      fileSys.close();
+      cluster.shutdown();
+    }
+  }
+
+  /*
+   * Simulate a secondary namenode crash after rolling the edit log.
+   */
+  private void testSecondaryNamenodeError3(Configuration conf)
+    throws IOException {
+    System.out.println("Starting testSecondaryNamenodeError 31");
+    Path file1 = new Path("checkpointzz.dat");
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, 
+                                                false, null);
+    cluster.waitActive();
+    FileSystem fileSys = cluster.getFileSystem();
+    try {
+      assertTrue(!fileSys.exists(file1));
+      //
+      // Make the checkpoint fail after rolling the edit log.
+      //
+      SecondaryNameNode secondary = new SecondaryNameNode(conf);
+      secondary.initializeErrorSimulationEvent(2);
+      secondary.setErrorSimulation(0);
+
+      try {
+        secondary.doCheckpoint();  // this should fail
+        assertTrue(false);      
+      } catch (IOException e) {
+      }
+      secondary.shutdown(); // secondary namenode crash!
+
+      // start new instance of secondary and verify that 
+      // a new rollEditLog suceedes inspite of the fact that 
+      // edits.new already exists.
+      //
+      secondary = new SecondaryNameNode(conf);
+      secondary.doCheckpoint();  // this should work correctly
+      secondary.shutdown();
+
+      //
+      // Create a new file
+      //
+      writeFile(fileSys, file1, replication);
+      checkFile(fileSys, file1, replication);
+    } finally {
+      fileSys.close();
+      cluster.shutdown();
+    }
+
+    //
+    // Restart cluster and verify that file exists.
+    // Then take another checkpoint to verify that the 
+    // namenode restart accounted for the twice-rolled edit logs.
+    //
+    System.out.println("Starting testSecondaryNamenodeError 32");
     cluster = new MiniDFSCluster(conf, numDatanodes, false, null);
     cluster.waitActive();
     fileSys = cluster.getFileSystem();
@@ -322,6 +387,7 @@ public class TestCheckpoint extends TestCase {
 
     testSecondaryNamenodeError1(conf);
     testSecondaryNamenodeError2(conf);
+    testSecondaryNamenodeError3(conf);
     testNamedirError(conf, namedirs);
   }
 }

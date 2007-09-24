@@ -521,8 +521,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
   /**
    * Roll the edit log.
    */
-  public void rollEditLog() throws IOException {
-    namesystem.rollEditLog();
+  public long rollEditLog() throws IOException {
+    return namesystem.rollEditLog();
   }
 
   /**
@@ -709,6 +709,20 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
    */
   public File[] getFsImageNameCheckpoint() throws IOException {
     return getFSImage().getFsImageNameCheckpoint();
+  }
+
+  /**
+   * Validates that this is a valid checkpoint upload request
+   */
+  public void validateCheckpointUpload(long token) throws IOException {
+    namesystem.validateCheckpointUpload(token);
+  }
+
+  /**
+   * Indicates that a new checkpoint has been successfully uploaded.
+   */
+  public void checkpointUploadDone() {
+    namesystem.checkpointUploadDone();
   }
 
   /**

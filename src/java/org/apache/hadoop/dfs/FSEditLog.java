@@ -393,7 +393,6 @@ class FSEditLog {
                                     + " for version " + logVersion);
             DatanodeID nodeID = new DatanodeID();
             nodeID.readFields(in);
-            DatanodeDescriptor node = fsNamesys.getDatanode(nodeID);
             //Datanodes are not persistent any more.
             break;
           }
@@ -577,13 +576,21 @@ class FSEditLog {
  
   /**
    * Closes the current edit log and opens edits.new. 
+   * Returns the lastModified time of the edits log.
    */
   synchronized void rollEditLog() throws IOException {
     //
-    // If edits.new already exists, then return error.
+    // If edits.new already exists in some directory, verify it
+    // exists in all directories.
     //
     if (existsNew()) {
-      throw new IOException("Attempt to roll edit log but edits.new exists");
+      for (int idx = 0; idx < getNumStorageDirs(); idx++) {
+        if (!getEditNewFile(idx).exists()) { 
+          throw new IOException("Inconsistent existance of edits.new " +
+                                getEditNewFile(idx));
+        }
+      }
+      return; // nothing to do, edits.new exists!
     }
 
     close();                     // close existing edit log
@@ -644,5 +651,12 @@ class FSEditLog {
    */
   synchronized File getFsEditName() throws IOException {
     return getEditFile(0);
+  }
+
+  /**
+   * Returns the timestamp of the edit log
+   */
+  synchronized long getFsEditTime() throws IOException {
+    return getEditFile(0).lastModified();
   }
 }

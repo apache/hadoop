@@ -20,8 +20,6 @@ package org.apache.hadoop.dfs;
 import java.util.*;
 import java.io.*;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.mapred.StatusHttpServer;
 import org.apache.commons.logging.*;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -58,8 +56,10 @@ public class GetImageServlet extends HttpServlet {
                                       nn.getFsEditName());
       } else if (ff.putImage()) {
         // issue a HTTP get request to download the new fsimage 
+        nn.validateCheckpointUpload(ff.getToken());
         TransferFsImage.getFileClient(ff.getInfoServer(), "getimage=1", 
                                       nn.getFsImageNameCheckpoint());
+        nn.checkpointUploadDone();
       }
     } catch (IOException ie) {
       StringUtils.stringifyException(ie);

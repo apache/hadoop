@@ -34,6 +34,7 @@ class TransferFsImage implements FSConstants {
   private boolean isPutImage;
   private int remoteport;
   private String machineName;
+  private long token;
   
   /**
    * File downloader.
@@ -50,6 +51,7 @@ class TransferFsImage implements FSConstants {
     isGetImage = isGetEdit = isPutImage = false;
     remoteport = 0;
     machineName = null;
+    token = 0;
 
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
       String key = it.next();
@@ -63,6 +65,8 @@ class TransferFsImage implements FSConstants {
         remoteport = new Integer(pmap.get("port")[0]).intValue();
       } else if (key.equals("machine")) { 
         machineName = pmap.get("machine")[0];
+      } else if (key.equals("token")) { 
+        token = new Long(pmap.get("token")[0]).longValue();
       }
     }
     if ((isGetImage && isGetEdit) ||
@@ -81,6 +85,10 @@ class TransferFsImage implements FSConstants {
 
   boolean putImage() {
     return isPutImage;
+  }
+
+  long getToken() {
+    return token;
   }
 
   String getInfoServer() throws IOException{

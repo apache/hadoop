@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
 import java.util.Map.Entry;
+import java.text.SimpleDateFormat;
 
 /***************************************************
  * FSNamesystem does the actual bookkeeping work for the
@@ -194,6 +195,13 @@ class FSNamesystem implements FSConstants {
 
   private HostsFileReader hostsReader; 
   private Daemon dnthread = null;
+
+  // can fs-image be rolled?
+  volatile private CheckpointStates ckptState = CheckpointStates.START; 
+
+  private static final SimpleDateFormat DATE_FORM =
+    new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
 
   /**
    * dirs is a list of directories where the filesystem directory state 
@@ -3447,13 +3455,15 @@ class FSNamesystem implements FSConstants {
     return getEditLog().getEditLogSize();
   }
 
-  synchronized void rollEditLog() throws IOException {
+  synchronized long rollEditLog() throws IOException {
     if (isInSafeMode()) {
       throw new SafeModeException("Checkpoint not created",
                                   safeMode);
     }
     LOG.info("Roll Edit Log from " + Server.getRemoteAddress());
     getEditLog().rollEditLog();
+    ckptState = CheckpointStates.ROLLED_EDITS;
+    return getEditLog().getFsEditTime();
   }
 
   synchronized void rollFSImage() throws IOException {
@@ -3462,13 +3472,46 @@ class FSNamesystem implements FSConstants {
       throw new SafeModeException("Checkpoint not created",
                                   safeMode);
     }
+    if (ckptState != CheckpointStates.UPLOAD_DONE) {
+      throw new IOException("Cannot roll fsImage before rolling edits log.");
+    }
     dir.fsImage.rollFSImage();
+    ckptState = CheckpointStates.START;
   }
 
   File getFsEditName() throws IOException {
     return getEditLog().getFsEditName();
   }
-    
+
+  /*
+   * This is called just before a new checkpoint is uploaded to the
+   * namenode.
+   */
+  synchronized void validateCheckpointUpload(long token) throws IOException {
+    if (ckptState != CheckpointStates.ROLLED_EDITS) {
+      throw new IOException("Namenode is not expecting an new image " +
+                             ckptState);
+    } 
+    // verify token
+    long modtime = getEditLog().getFsEditTime();
+    if (token != modtime) {
+      throw new IOException("Namenode has an edit log with timestamp of " +
+                            DATE_FORM.format(new Date(modtime)) +
+                            " but new checkpoint was created using editlog " +
+                            " with timestamp " + 
+                            DATE_FORM.format(new Date(token)) + 
+                            ". Checkpoint Aborted.");
+    }
+    ckptState = CheckpointStates.UPLOAD_START;
+  }
+
+  /*
+   * This is called when a checkpoint upload finishes successfully.
+   */
+  synchronized void checkpointUploadDone() {
+    ckptState = CheckpointStates.UPLOAD_DONE;
+  }
+
   /**
    * Returns whether the given block is one pointed-to by a file.
    */
