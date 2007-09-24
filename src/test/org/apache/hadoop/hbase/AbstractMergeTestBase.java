@@ -27,9 +27,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.log4j.Logger;
 
 /** Abstract base class for merge tests */
 public abstract class AbstractMergeTestBase extends HBaseTestCase {
+  static final Logger LOG =
+    Logger.getLogger(AbstractMergeTestBase.class.getName());
   protected static final Text COLUMN_NAME = new Text("contents:");
   protected final Random rand = new Random();
   protected HTableDescriptor desc;
@@ -119,8 +122,12 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
     if (dfsCluster != null) {
       dfsCluster.shutdown();
     }
-    if (fs != null) {
-      fs.close();
+    if (this.fs != null) {
+      try {
+        this.fs.close();
+      } catch (IOException e) {
+        LOG.info("During tear down got a " + e.getMessage());
+      }
     }
   }
 
@@ -151,5 +158,4 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
     region.getRegionInfo().offLine = true;
     return region;
   }
-
 }

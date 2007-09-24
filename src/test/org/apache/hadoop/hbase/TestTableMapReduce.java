@@ -118,7 +118,11 @@ public class TestTableMapReduce extends MultiRegionTable {
     }
     
     if (fs != null) {
-      fs.close();
+      try {
+        fs.close();
+      } catch (IOException e) {
+        LOG.info("During tear down got a " + e.getMessage());
+      }
     }
   }
 

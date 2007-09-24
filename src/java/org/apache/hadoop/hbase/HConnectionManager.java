@@ -92,7 +92,8 @@ public class HConnectionManager implements HConstants {
   
   /* encapsulates finding the servers for an HBase instance */
   private static class TableServers implements HConnection, HConstants {
-    private final Log LOG = LogFactory.getLog(this.getClass().getName());
+    private static final Log LOG = LogFactory.getLog(TableServers.class.
+      getName());
     private final Class<? extends HRegionInterface> serverInterfaceClass;
     private final long threadWakeFrequency;
     private final long pause;

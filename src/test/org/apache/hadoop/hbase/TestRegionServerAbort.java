@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.TreeMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -30,6 +32,7 @@ import org.apache.log4j.Logger;
  * Tests region server failover when a region server exits.
  */
 public class TestRegionServerAbort extends HBaseClusterTestCase {
+  private final Log LOG = LogFactory.getLog(this.getClass().getName());
   private HTable table;
 
   /** constructor */
@@ -39,7 +42,8 @@ public class TestRegionServerAbort extends HBaseClusterTestCase {
     conf.setInt("ipc.client.connect.max.retries", 5);   // and number of retries
     conf.setInt("hbase.client.retries.number", 5);      // reduce HBase retries
     Logger.getRootLogger().setLevel(Level.WARN);
-    Logger.getLogger(this.getClass().getPackage().getName()).setLevel(Level.DEBUG);
+    Logger.getLogger(this.getClass().getPackage().getName()).
+      setLevel(Level.DEBUG);
   }
   
   /**
@@ -68,14 +72,14 @@ public class TestRegionServerAbort extends HBaseClusterTestCase {
     this.cluster.startRegionServer();
     // Now shutdown the region server and wait for it to go down.
     this.cluster.abortRegionServer(0);
-    this.cluster.waitOnRegionServer(0);
-    
-    // Verify that the client can find the data after the region has been moved
-    // to a different server
-    HScannerInterface scanner =
-      table.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY, new Text());
-
+    LOG.info(this.cluster.waitOnRegionServer(0) + " has been shutdown");
+    HScannerInterface scanner = null;
     try {
+      // Verify that the client can find the data after the region has moved
+      // to a different server
+      scanner =
+        table.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY, new Text());
+      LOG.info("Obtained scanner " + scanner);
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
       while (scanner.next(key, results)) {
@@ -83,10 +87,12 @@ public class TestRegionServerAbort extends HBaseClusterTestCase {
         assertEquals(1, results.size());
         byte[] bytes = results.get(HConstants.COLUMN_FAMILY);
         assertNotNull(bytes);
-        assertTrue(tableName.equals(new String(bytes, HConstants.UTF8_ENCODING)));
+        assertTrue(tableName.equals(new String(bytes,
+            HConstants.UTF8_ENCODING)));
       }
-      System.out.println("Success!");
+      LOG.info("Success!");
     } finally {
+      LOG.info("Closing scanner " + scanner);
       scanner.close();
     }
   }

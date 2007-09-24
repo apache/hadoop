@@ -97,7 +97,7 @@ public class MiniHBaseCluster implements HConstants {
 
     this.conf = conf;
     this.fs = dfsCluster.getFileSystem();
-    this.cluster = null;
+    this.cluster = dfsCluster;
     init(nRegionNodes);
   }
 
@@ -390,7 +390,7 @@ public class MiniHBaseCluster implements HConstants {
       regionServerThreads.size() + " region server(s)");
   }
   
-  void shutdown() {
+  public void shutdown() {
     MiniHBaseCluster.shutdown(this.masterThread, this.regionThreads);
     
     try {
