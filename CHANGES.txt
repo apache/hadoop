@@ -87,6 +87,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-1932. TestFileCreation fails with message saying filestatus.dat
+    is of incorrect size.  (Dhruba Borthakur via dhruba)
+
     HADOOP-1573. Support for 0 reducers in PIPES. 
     (Owen O'Malley via devaraj)
 

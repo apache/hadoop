@@ -36,7 +36,12 @@ import org.apache.hadoop.fs.FSDataInputStream;
 public class TestFileCreation extends TestCase {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
-  static final int fileSize = 2 * blockSize;
+  static final int numBlocks = 2;
+  static final int fileSize = numBlocks * blockSize + 1;
+
+  // The test file is 2 times the blocksize plus one. This means that when the
+  // entire file is written, the first two blocks definitely get flushed to
+  // the datanodes.
 
   private static String TEST_ROOT_DIR =
     new Path(System.getProperty("test.build.data","/tmp"))
@@ -64,15 +69,24 @@ public class TestFileCreation extends TestCase {
     stm.write(buffer);
   }
 
+  //
+  // verify that the data written to the full blocks are sane
+  // 
   private void checkFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     boolean done = false;
+
+    // wait till all full blocks are confirmed by the datanodes.
     while (!done) {
       try {
         Thread.sleep(1000);
       } catch (InterruptedException e) {}
       done = true;
       String[][] locations = fileSys.getFileCacheHints(name, 0, fileSize);
+      if (locations.length < numBlocks) {
+        done = false;
+        continue;
+      }
       for (int idx = 0; idx < locations.length; idx++) {
         if (locations[idx].length < repl) {
           done = false;
@@ -81,11 +95,11 @@ public class TestFileCreation extends TestCase {
       }
     }
     FSDataInputStream stm = fileSys.open(name);
-    byte[] expected = new byte[fileSize];
+    byte[] expected = new byte[numBlocks * blockSize];
     Random rand = new Random(seed);
     rand.nextBytes(expected);
     // do a sanity check. Read the file
-    byte[] actual = new byte[fileSize];
+    byte[] actual = new byte[numBlocks * blockSize];
     stm.readFully(0, actual);
     checkData(actual, 0, expected, "Read 1");
   }
@@ -118,7 +132,7 @@ public class TestFileCreation extends TestCase {
       assertTrue("/ should be a directory", 
                  fs.getFileStatus(path).isDir() == true);
       
-      // create a new a file in home directory. Do not close it.
+      // create a new file in home directory. Do not close it.
       //
       Path file1 = new Path("filestatus.dat");
       FSDataOutputStream stm = createFile(fs, file1, 1);
@@ -133,13 +147,22 @@ public class TestFileCreation extends TestCase {
       // write to file
       writeFile(stm);
 
-      // verify that file size has changed
-      assertTrue(file1 + " should be of size " + fileSize, 
-                  fs.getFileStatus(file1).getLen() == fileSize);
-
       // Make sure a client can read it before it is closed.
       checkFile(fs, file1, 1);
+
+      // verify that file size has changed
+      long len = fs.getFileStatus(file1).getLen();
+      assertTrue(file1 + " should be of size " + (numBlocks * blockSize) +
+                 " but found to be of size " + len, 
+                  len == numBlocks * blockSize);
+
       stm.close();
+
+      // verify that file size has changed to the full size
+      len = fs.getFileStatus(file1).getLen();
+      assertTrue(file1 + " should be of size " + fileSize +
+                 " but found to be of size " + len, 
+                  len == fileSize);
 
     } finally {
       fs.close();
