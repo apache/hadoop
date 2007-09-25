@@ -26,28 +26,12 @@
 <h2>Job Configuration: JobId - <%= jobId %></h2><br>
 
 <%
-  JobInProgress job = (JobInProgress)tracker.getJob(jobId);
-  if (job == null) {
-    out.print("<h4>Job '" + jobId + "' not found!</h4><br>\n");
-    return;
-  }
-  
-  JobStatus status = job.getStatus();
-  int runState = status.getRunState();
-  if (runState != JobStatus.RUNNING) {
-    out.print("<h4>Job '" + jobId + "' not running!</h4><br>\n");
-    return;
-  }
-  
+  String jobFilePath = tracker.getLocalJobFilePath(jobId);
   try {
-    JobConf jobConf = job.getJobConf();
-    ByteArrayOutputStream jobConfXML = new ByteArrayOutputStream();
-    jobConf.write(jobConfXML);
+    JobConf jobConf = new JobConf(jobFilePath);
     XMLUtils.transform(
         jobConf.getConfResourceAsInputStream("webapps/static/jobconf.xsl"),
-	    new ByteArrayInputStream(jobConfXML.toByteArray()), 
-	    out
-	  );
+        new FileInputStream(jobFilePath), out);
   } catch (Exception e) {
     out.println("Failed to retreive job configuration for job '" + jobId + "!");
     out.println(e);

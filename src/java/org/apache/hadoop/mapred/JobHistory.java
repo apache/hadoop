@@ -316,23 +316,34 @@ public class JobHistory {
     public Map<String, Task> getAllTasks() { return allTasks; }
     
     /**
+     * Get the path of the locally stored job file
+     * @param jobId id of the job
+     * @return the path of the job file on the local file system 
+     */
+    public static String getLocalJobFilePath(String jobId){
+      return LOG_DIR + File.separator + jobId + "_conf.xml";
+    }
+    
+    /**
      * Log job submitted event to history. Creates a new file in history 
      * for the job. if history file creation fails, it disables history 
      * for all other events. 
-     * @param jobId job id assigned by job tracker. 
-     * @param jobName job name as given by user in job conf
-     * @param user user name
+     * @param jobId job id assigned by job tracker.
+     * @param jobConf job conf of the job
+     * @param jobConfPath path to job conf xml file in HDFS.
      * @param submitTime time when job tracker received the job
-     * @param jobConf path to job conf xml file in HDFS. 
      */
-    public static void logSubmitted(String jobId, String jobName, String user, 
-                                    long submitTime, String jobConf){
-      
+    public static void logSubmitted(String jobId, JobConf jobConf, 
+                                    String jobConfPath, long submitTime) {
+      String jobName = jobConf.getJobName();
+      String user = jobConf.getUser(); 
       if (!disableHistory){
         synchronized(MASTER_INDEX_LOG_FILE){
           JobHistory.log(masterIndex, RecordTypes.Job, 
                          new Enum[]{Keys.JOBID, Keys.JOBNAME, Keys.USER, Keys.SUBMIT_TIME, Keys.JOBCONF }, 
-                         new String[]{jobId, jobName, user, String.valueOf(submitTime), jobConf });
+                         new String[]{jobId, jobName, user, 
+                                      String.valueOf(submitTime), jobConfPath}
+                        );
         }
         // setup the history log file for this job
         String logFileName =  JOBTRACKER_START_TIME + "_" + jobId; 
@@ -344,12 +355,27 @@ public class JobHistory {
           // add to writer as well 
           JobHistory.log(writer, RecordTypes.Job, 
                          new Enum[]{Keys.JOBID, Keys.JOBNAME, Keys.USER, Keys.SUBMIT_TIME, Keys.JOBCONF }, 
-                         new String[]{jobId, jobName, user, String.valueOf(submitTime) , jobConf}); 
+                         new String[]{jobId, jobName, user, 
+                                      String.valueOf(submitTime) , jobConfPath}
+                        ); 
              
         }catch(IOException e){
           LOG.error("Failed creating job history log file, disabling history", e);
           disableHistory = true; 
         }
+      }
+      /* Storing the job conf on the local file system */
+      String localJobFilePath =  JobInfo.getLocalJobFilePath(jobId); 
+      File localJobFile = new File(localJobFilePath);
+      try {
+        FileOutputStream jobOut = new FileOutputStream(localJobFile);
+        jobConf.write(jobOut);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Job conf for " + jobId + " stored at " 
+                    + localJobFile.getAbsolutePath());
+        }
+      } catch (IOException ioe) {
+        LOG.error("Failed to store job conf on the local filesystem ", ioe);
       }
     }
     /**

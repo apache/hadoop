@@ -24,7 +24,8 @@
 
 <b>User: </b> <%=job.get(Keys.USER) %><br/> 
 <b>JobName: </b> <%=job.get(Keys.JOBNAME) %><br/> 
-<b>JobConf: </b> <%=job.get(Keys.JOBCONF) %><br/> 
+<b>JobConf: </b> <a href="jobconf.jsp?jobid=<%=jobid %>"> 
+                 <%=job.get(Keys.JOBCONF) %></a><br/> 
 <b>Submitted At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.SUBMIT_TIME), 0 )  %><br/> 
 <b>Launched At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.LAUNCH_TIME), job.getLong(Keys.SUBMIT_TIME)) %><br/>
 <b>Finished At: </b>  <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.FINISH_TIME), job.getLong(Keys.LAUNCH_TIME)) %><br/>

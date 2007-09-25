@@ -1832,6 +1832,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
   }
 
+  /**
+   * Get the localized job file path on the job trackers local file system
+   * @param jobId id of the job
+   * @return the path of the job conf file on the local file system
+   */
+  public static String getLocalJobFilePath(String jobId){
+    return JobHistory.JobInfo.getLocalJobFilePath(jobId);
+  }
   ////////////////////////////////////////////////////////////
   // main()
   ////////////////////////////////////////////////////////////

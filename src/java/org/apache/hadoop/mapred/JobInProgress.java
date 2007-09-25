@@ -159,9 +159,8 @@ class JobInProgress {
     this.mapFailuresPercent = conf.getMaxMapTaskFailuresPercent();
     this.reduceFailuresPercent = conf.getMaxReduceTaskFailuresPercent();
         
-    JobHistory.JobInfo.logSubmitted(jobid, conf.getJobName(), conf.getUser(), 
-                                    System.currentTimeMillis(), 
-                                    jobFile.toString()); 
+    JobHistory.JobInfo.logSubmitted(jobid, conf, jobFile.toString(), 
+                                    System.currentTimeMillis()); 
         
     MetricsContext metricsContext = MetricsUtil.getContext("mapred");
     this.jobMetrics = MetricsUtil.createRecord(metricsContext, "job");

@@ -190,6 +190,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-1921. Save the configuration of completed/failed jobs and make them
+    available via the web-ui. (Amar Kamat via devaraj)
+
     HADOOP-1266. Remove dependency of package org.apache.hadoop.net on 
     org.apache.hadoop.dfs.  (Hairong Kuang via dhruba)
 
