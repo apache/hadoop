@@ -188,6 +188,9 @@ Trunk (unreleased changes)
     HADOOP-1925.  Make pipes' autoconf script look for libsocket and libnsl, so
     that it can compile under Solaris. (omalley)
 
+    HADOOP-1940.  TestDFSUpgradeFromImage must shut down its MiniDFSCluster.
+    (Chris Douglas via nigel)
+
   IMPROVEMENTS
 
     HADOOP-1921. Save the configuration of completed/failed jobs and make them

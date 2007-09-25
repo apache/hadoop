@@ -175,23 +175,27 @@ public class TestDFSUpgradeFromImage extends TestCase {
   }
   
   public void testUpgradeFromImage() throws IOException {
-    
-    Configuration conf = new Configuration();
-    MiniDFSCluster cluster = new MiniDFSCluster(0, conf, numDataNodes, false,
-                                                true, StartupOption.UPGRADE,
-                                                null);
-    cluster.waitActive();
-    DFSClient dfsClient = new DFSClient(new InetSocketAddress("localhost", 
-                                                  cluster.getNameNodePort()),
-                                        conf);
-    //Safemode will be off only after upgrade is complete. Wait for it.
-    while ( dfsClient.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET) ) {
-      LOG.info("Waiting for SafeMode to be OFF.");
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException ignored) {}
-    }
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new Configuration();
+      cluster = new MiniDFSCluster(0, conf, numDataNodes, false,
+                                                  true, StartupOption.UPGRADE,
+                                                  null);
+      cluster.waitActive();
+      DFSClient dfsClient = new DFSClient(new InetSocketAddress("localhost",
+                                                    cluster.getNameNodePort()),
+                                          conf);
+      //Safemode will be off only after upgrade is complete. Wait for it.
+      while ( dfsClient.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET) ) {
+        LOG.info("Waiting for SafeMode to be OFF.");
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException ignored) {}
+      }
 
-    verifyFileSystem(dfsClient);
+      verifyFileSystem(dfsClient);
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
   }
 }
