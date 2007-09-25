@@ -98,6 +98,12 @@ public class StopRowFilter implements RowFilterInterface {
 
   /** {@inheritDoc} */
   public boolean filter(final Text rowKey) {
+    if (rowKey == null) {
+      if (this.stopRowKey == null) {
+        return true;
+      }
+      return false;
+    }
     boolean result = this.stopRowKey.compareTo(rowKey) <= 0;
     if (LOG.isDebugEnabled()) {
       LOG.debug("Filter result for rowKey: " + rowKey + ".  Result: " + 

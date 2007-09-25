@@ -87,5 +87,7 @@ public class TestStopRowFilter extends TestCase {
 
     assertFalse("FilterAllRemaining", filter.filterAllRemaining());
     assertFalse("FilterNotNull", filter.filterNotNull(null));
+    
+    assertFalse("Filter a null", filter.filter(null));
   }
 }
