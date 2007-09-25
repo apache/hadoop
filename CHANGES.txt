@@ -61,6 +61,7 @@ Trunk (unreleased changes)
     HADOOP-1923, HADOOP-1924 a) tests fail sporadically because set up and tear
                  down is inconsistent b) TestDFSAbort failed in nightly #242
     HADOOP-1929 Add hbase-default.xml to hbase jar
+    HADOOP-1941 StopRowFilter throws NPE when passed null row
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable
