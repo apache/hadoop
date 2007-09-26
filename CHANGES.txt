@@ -191,6 +191,9 @@ Trunk (unreleased changes)
     HADOOP-1940.  TestDFSUpgradeFromImage must shut down its MiniDFSCluster.
     (Chris Douglas via nigel)
 
+    HADOOP-1930.  Fix the blame for failed fetchs on the right host. (Arun C.
+    Murthy via omalley)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 

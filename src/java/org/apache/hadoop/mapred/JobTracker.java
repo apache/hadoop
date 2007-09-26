@@ -201,8 +201,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                                      tip.isMapTask()? TaskStatus.Phase.MAP:
                                      TaskStatus.Phase.STARTING,
                                      TaskStatus.State.FAILED,
-                                     trackerStatus.getHost(), trackerName,
-                                     myMetrics);
+                                     trackerName, myMetrics);
                   }
                   itr.remove();
                 } else {
@@ -294,8 +293,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                     if (now - newProfile.getLastSeen() > TASKTRACKER_EXPIRY_INTERVAL) {
                       // Remove completely
                       updateTaskTrackerStatus(trackerName, null);
-                      lostTaskTracker(leastRecent.getTrackerName(),
-                                      leastRecent.getHost());
+                      lostTaskTracker(leastRecent.getTrackerName());
                     } else {
                       // Update time by inserting latest profile
                       trackerExpiryQueue.add(newProfile);
@@ -1242,7 +1240,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           // If it's first contact, then clear out 
           // any state hanging around
           if (seenBefore) {
-            lostTaskTracker(trackerName, trackerStatus.getHost());
+            lostTaskTracker(trackerName);
           }
         } else {
           // If not first contact, there should be some record of the tracker
@@ -1771,11 +1769,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       if (failedFetchMaps != null) {
         for (String mapTaskId : failedFetchMaps) {
           TaskInProgress failedFetchMap = taskidToTIPMap.get(mapTaskId);
+          
           if (failedFetchMap != null) {
+            // Gather information about the map which has to be failed, if need be
+            String failedFetchTrackerName = getAssignedTracker(mapTaskId);
+            if (failedFetchTrackerName == null) {
+              failedFetchTrackerName = "Lost task tracker";
+            }
             failedFetchMap.getJob().fetchFailureNotification(failedFetchMap, 
                                                              mapTaskId, 
-                                                             status.getHost(), 
-                                                             trackerName, 
+                                                             failedFetchTrackerName, 
                                                              myMetrics);
           }
         }
@@ -1788,7 +1791,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    * already been updated.  Just process the contained tasks and any
    * jobs that might be affected.
    */
-  void lostTaskTracker(String trackerName, String hostname) {
+  void lostTaskTracker(String trackerName) {
     LOG.info("Lost tracker '" + trackerName + "'");
     Set<String> lostTasks = trackerToTaskMap.get(trackerName);
     trackerToTaskMap.remove(trackerName);
@@ -1805,12 +1808,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           JobInProgress job = tip.getJob();
           // if the job is done, we don't want to change anything
           if (job.getStatus().getRunState() == JobStatus.RUNNING) {
-            job.failedTask(tip, taskId, "Lost task tracker", 
+            job.failedTask(tip, taskId, ("Lost task tracker: " + trackerName), 
                            (tip.isMapTask() ? 
                                TaskStatus.Phase.MAP : 
                                TaskStatus.Phase.REDUCE), 
-                           TaskStatus.State.KILLED,
-                           hostname, trackerName, myMetrics);
+                           TaskStatus.State.KILLED, trackerName, myMetrics);
             jobsWithFailures.add(job);
           }
         } else if (!tip.isMapTask() && tip.isComplete()) {

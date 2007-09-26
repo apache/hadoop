@@ -407,7 +407,7 @@ class JobInProgress {
                          TaskStatus.Phase.MAP : 
                          TaskStatus.Phase.REDUCE), 
                      TaskStatus.State.FAILED, 
-                     ttStatus.getHost(), status.getTaskTracker(), null);
+                     status.getTaskTracker(), null);
           LOG.info("Failed to copy the output of " + status.getTaskId() + 
                    " with: " + StringUtils.stringifyException(ioe));
           return;
@@ -1046,8 +1046,7 @@ class JobInProgress {
    */
   public void failedTask(TaskInProgress tip, String taskid, String reason, 
                          TaskStatus.Phase phase, TaskStatus.State state, 
-                         String hostname, String trackerName,
-                         JobTrackerMetrics metrics) {
+                         String trackerName, JobTrackerMetrics metrics) {
     TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), 
                                                     taskid,
                                                     0.0f,
@@ -1148,7 +1147,7 @@ class JobInProgress {
   
   synchronized void fetchFailureNotification(TaskInProgress tip, 
                                              String mapTaskId, 
-                                             String hostname, String trackerName, 
+                                             String trackerName, 
                                              JobTrackerMetrics metrics) {
     Integer fetchFailures = mapTaskIdToFetchFailuresMap.get(mapTaskId);
     fetchFailures = (fetchFailures == null) ? 1 : (fetchFailures+1);
@@ -1163,7 +1162,7 @@ class JobInProgress {
       failedTask(tip, mapTaskId, "Too many fetch-failures",                            
                  (tip.isMapTask() ? TaskStatus.Phase.MAP : 
                                     TaskStatus.Phase.REDUCE), 
-                 TaskStatus.State.FAILED, hostname, trackerName, metrics);
+                 TaskStatus.State.FAILED, trackerName, metrics);
       
       mapTaskIdToFetchFailuresMap.remove(mapTaskId);
     }
