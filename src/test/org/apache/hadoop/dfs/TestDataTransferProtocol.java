@@ -171,7 +171,9 @@ public class TestDataTransferProtocol extends TestCase {
     byteBuf.put((byte)DataChecksum.CHECKSUM_CRC32);
     
     byteBuf.putInt(-1-random.nextInt(oneMil));
-    sendRecvData("wrong bytesPerChecksum while writing", true);
+    recvByteBuf.position(0);
+    recvByteBuf.putShort((short)FSConstants.OP_STATUS_ERROR);
+    sendRecvData("wrong bytesPerChecksum while writing", false);
     byteBuf.putInt(checksumPos+1, 512);
     
     byteBuf.putInt(targetPos, -1-random.nextInt(oneMil));
@@ -204,14 +206,11 @@ public class TestDataTransferProtocol extends TestCase {
     byteBuf.putLong(0L);
     int lenPos = byteBuf.position();
     byteBuf.putLong(fileLen);
-    /* We should change DataNode to return ERROR_INVALID instead of closing 
-     * the connection.
-     */
-    sendRecvData("Wrong block ID for read", true); 
+    recvByteBuf.position(0);
+    recvByteBuf.putShort((short)FSConstants.OP_STATUS_ERROR);
+    sendRecvData("Wrong block ID for read", false); 
     byteBuf.putLong(blockPos, firstBlock.getBlockId());
     
-    recvByteBuf.position(0);
-    recvByteBuf.putShort((short)FSConstants.OP_STATUS_ERROR_INVALID);
     byteBuf.putLong(startOffsetPos, -1-random.nextInt(oneMil));
     sendRecvData("Negative start-offset for read", false);
     
@@ -224,7 +223,7 @@ public class TestDataTransferProtocol extends TestCase {
     byteBuf.putLong(lenPos, -1-random.nextInt(oneMil));
     sendRecvData("Negative length for read", false);
     
-    recvByteBuf.putShort(0, (short)FSConstants.OP_STATUS_ERROR_INVALID);
+    recvByteBuf.putShort(0, (short)FSConstants.OP_STATUS_ERROR);
     byteBuf.putLong(lenPos, fileLen+1);
     sendRecvData("Wrong length for read", false);
     byteBuf.putLong(lenPos, fileLen);

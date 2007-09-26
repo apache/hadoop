@@ -193,6 +193,10 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-1908. Restructure data node code so that block sending and 
+    receiving are seperated from data transfer header handling.
+    (Hairong Kuang via dhruba)
+
     HADOOP-1921. Save the configuration of completed/failed jobs and make them
     available via the web-ui. (Amar Kamat via devaraj)
 

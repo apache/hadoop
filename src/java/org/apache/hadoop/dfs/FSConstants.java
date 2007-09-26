@@ -97,7 +97,13 @@ public interface FSConstants {
    * This should change when serialization of DatanodeInfo, not just
    * when protocol changes. It is not very obvious. 
    */
-  public static final int DATA_TRANFER_VERSION = 5; //Should it be 1?
+  /* Version 6: 
+   * 0 marks the end of a block not an EMPTY_CHUNK
+   * OP_READ_BLOCK: return OP_STATUS_ERROR if received an invalid block id
+   *                return OP_STATUS_ERROR if received an invalid length
+   * OP_WRITE_BLOCK: return OP_STATUS_ERROR if illegal bytesPerChecksum
+   */
+  public static final int DATA_TRANFER_VERSION = 6; //Should it be 1?
 
   // Return codes for file create
   public static final int OPERATION_FAILED = 0;

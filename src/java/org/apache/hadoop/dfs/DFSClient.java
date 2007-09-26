@@ -1619,24 +1619,20 @@ class DFSClient implements FSConstants {
         
         try {
 
-          while ( bytesLeft >= 0 ) {
+          while ( bytesLeft > 0 ) {
             int len = (int) Math.min( bytesLeft, bytesPerChecksum );
-            if ( len > 0 ) {
-              IOUtils.readFully( in, buf, 0, len + checksumSize);
-            }
+            IOUtils.readFully( in, buf, 0, len + checksumSize);
 
             blockStream.writeInt( len );
             blockStream.write( buf, 0, len + checksumSize );
 
-            if ( bytesLeft == 0 ) {
-              break;
-            }
-              
             bytesLeft -= len;
 
             if (progress != null) { progress.progress(); }
           }
-          
+
+          // write 0 to mark the end of a block
+          blockStream.writeInt(0);
           blockStream.flush();
           
           numSuccessfulWrites++;
