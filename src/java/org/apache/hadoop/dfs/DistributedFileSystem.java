@@ -117,13 +117,6 @@ public class DistributedFileSystem extends FileSystem {
   public FSDataOutputStream create(Path f, boolean overwrite,
     int bufferSize, short replication, long blockSize,
     Progressable progress) throws IOException {
-    if (exists(f) && !overwrite) {
-      throw new IOException("File already exists:"+f);
-    }
-    Path parent = f.getParent();
-    if (parent != null && !mkdirs(parent)) {
-      throw new IOException("Mkdirs failed to create " + parent);
-    }
 
     return new FSDataOutputStream( dfs.create(getPathName(f), overwrite, 
                                               replication, blockSize, 

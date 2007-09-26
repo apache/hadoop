@@ -64,6 +64,9 @@ Trunk (unreleased changes)
 
   OPTIMIZATIONS
 
+    HADOOP-1910.  Reduce the number of RPCs that DistributedFileSystem.create()
+    makes to the namenode. (Raghu Angadi via dhruba)
+
     HADOOP-1565.  Reduce memory usage of NameNode by replacing 
     TreeMap in HDFS Namespace with ArrayList.  
     (Dhruba Borthakur via dhruba)
