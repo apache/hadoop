@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.io.Text;
 
@@ -42,9 +41,9 @@ public class OOMERegionServer extends HRegionServer {
     super(conf);
   }
 
-  public OOMERegionServer(Path rootDir, HServerAddress address,
-      Configuration conf) throws IOException {
-    super(rootDir, address, conf);
+  public OOMERegionServer(HServerAddress address, Configuration conf)
+  throws IOException {
+    super(address, conf);
   }
   
   @Override

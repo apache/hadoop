@@ -94,6 +94,7 @@ to call at top-level: ant deploy-contrib compile-core-test
     <pathelement location="${conf.dir}"/>
     <pathelement location="${hadoop.root}/build"/>
     <pathelement location="${src.test}"/>
+    <pathelement location="${root}/conf"/>
     <path refid="classpath"/>
   </path>
   

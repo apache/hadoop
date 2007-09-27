@@ -63,10 +63,10 @@ public class MultiRegionTable extends HBaseTestCase {
       HConstants.DEFAULT_MAX_FILE_SIZE) <= 1024 * 1024);
 
     final int retries = 10; 
-    Path d = cluster.regionThreads.get(0).getRegionServer().rootDir;
     FileSystem fs = (cluster.getDFSCluster() == null) ?
       localFs : cluster.getDFSCluster().getFileSystem();
     assertNotNull(fs);
+    Path d = fs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
 
     // Get connection on the meta table and get count of rows.
     
