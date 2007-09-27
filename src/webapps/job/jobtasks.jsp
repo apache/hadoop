@@ -35,16 +35,18 @@
   }
 %>
 
+<%@page import="org.apache.hadoop.dfs.JspHelper"%>
 <html>
   <head>
     <title>Hadoop <%=type%> task list for <%=jobid%> on <%=trackerName%></title>
+    <link rel="stylesheet" type="text/css" href="/static/hadoop.css">
   </head>
 <body>
 <h1>Hadoop <%=type%> task list for 
 <a href="jobdetails.jsp?jobid=<%=jobid%>"><%=jobid%></a> on 
 <a href="jobtracker.jsp"><%=trackerName%></a></h1>
 <%
-  if (job == null) {
+    if (job == null) {
     out.print("<b>Job " + jobid + " not found.</b><br>\n");
     return;
   }
@@ -67,8 +69,8 @@
           out.print("<tr><td><a href=\"taskdetails.jsp?jobid=" + jobid + 
                     "&tipid=" + report.getTaskId() + "\">"  + 
                     report.getTaskId() + "</a></td>");
-         out.print("<td>" + StringUtils.formatPercent(report.getProgress(),2) + 
-                   "</td>");
+         out.print("<td>" + StringUtils.formatPercent(report.getProgress(),2) +
+        		   JspHelper.percentageGraph(report.getProgress() * 100f, 80) + "</td>");
          out.print("<td>"  + report.getState() + "<br/></td>");
          out.println("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, report.getStartTime(),0) + "<br/></td>");
          out.println("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, 

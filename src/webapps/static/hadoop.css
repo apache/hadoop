@@ -27,8 +27,7 @@ div#dfsnodetable td, th {
 }
 
 div#dfsnodetable A:link, A:visited {
-	text-decoration : none;
-        color : black;
+	text-decoration : none;       
 }
 
 div#dfsnodetable th.header, th.headerASC, th.headerDSC {
@@ -60,3 +59,17 @@ div#dfsnodetable td, div#dfsnodetable th, div#dfstable td {
 	padding-left : 10px;
 	padding-right : 10px;
 }
+
+td.perc_filled {
+  background-color:#AAAAFF;
+}
+
+td.perc_nonfilled {
+  background-color:#FFFFFF;
+}
+
+line.taskgraphline {
+  stroke-width:1;stroke-linecap:round;  
+}
+
+

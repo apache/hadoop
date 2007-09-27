@@ -47,10 +47,12 @@
                   "<td>" + profile.getUser() + "</td>" 
                     + "<td>" + ("".equals(name) ? "&nbsp;" : name) + "</td>" + 
                     "<td>" + 
-                    StringUtils.formatPercent(status.mapProgress(),2) + 
+                    StringUtils.formatPercent(status.mapProgress(),2) +
+                    JspHelper.percentageGraph(status.mapProgress()  * 100, 80) +
                     "</td><td>" + 
                     desiredMaps + "</td><td>" + completedMaps + "</td><td>" + 
-                    StringUtils.formatPercent(status.reduceProgress(),2) + 
+                    StringUtils.formatPercent(status.reduceProgress(),2) +
+                    JspHelper.percentageGraph(status.reduceProgress() * 100, 80) +
                     "</td><td>" + 
                     desiredReduces + "</td><td> " + completedReduces + 
                     "</td></tr>\n");
@@ -74,13 +76,14 @@
               status.getMaxTasks() + "</td><td>" +
               tracker.getTotalSubmissions() + "</td><td><a href=\"machines.jsp\">" +
               status.getTaskTrackers() + "</a></td></tr></table>\n");
-  }
-%>
+  }%>
 
+<%@page import="org.apache.hadoop.dfs.JspHelper"%>
 <html>
-
+<head>
 <title><%= trackerName %> Hadoop Map/Reduce Administration</title>
-
+<link rel="stylesheet" type="text/css" href="/static/hadoop.css">
+</head>
 <body>
 <h1><%= trackerName %> Hadoop Map/Reduce Administration</h1>
 
@@ -103,7 +106,7 @@
 
 <h2>Running Jobs</h2>
 <%
-    generateJobTable(out, "Running", tracker.runningJobs(), 10);
+    generateJobTable(out, "Running", tracker.runningJobs(), 30);
 %>
 <hr>
 

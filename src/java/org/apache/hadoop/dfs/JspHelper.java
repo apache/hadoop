@@ -18,16 +18,21 @@
 
 package org.apache.hadoop.dfs;
 
-import javax.servlet.*;
-import javax.servlet.jsp.*;
-import javax.servlet.http.*;
-import java.io.*;
-import java.util.*;
-import java.net.*;
-import org.apache.hadoop.dfs.*;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Random;
+import java.util.TreeSet;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.jsp.JspWriter;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.conf.*;
 
 public class JspHelper {
   static FSNamesystem fsn = null;
@@ -276,4 +281,28 @@ public class JspHelper {
     out.print("<title>HDFS:" + file + "</title>");
   }
 
+  public static String percentageGraph(int perc, int width) 
+    throws IOException {
+    
+    assert perc >= 0; assert perc <= 100;
+
+    StringBuilder builder = new StringBuilder();
+
+    builder.append("<table border=\"1px\" width=\""); builder.append(width);
+    builder.append("px\"><tr>");
+    if(perc > 0) {
+      builder.append("<td cellspacing=\"0\" class=\"perc_filled\" width=\"");
+      builder.append(perc); builder.append("%\"></td>");
+    }if(perc < 100) {
+      builder.append("<td cellspacing=\"0\" class=\"perc_nonfilled\" width=\"");
+      builder.append(100 - perc); builder.append("%\"></td>");
+    }
+    builder.append("</tr></table>");
+    return builder.toString();
+  }
+  
+  public static String percentageGraph(float perc, int width) throws IOException {
+  	return percentageGraph((int)perc, width);
+  }
+  
 }

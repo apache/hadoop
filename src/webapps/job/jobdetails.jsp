@@ -17,8 +17,7 @@
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
 %>
 <%!
-  
-	private static final String PRIVATE_ACTIONS_KEY 
+  private static final String PRIVATE_ACTIONS_KEY 
 		= "webinterface.private.actions";
  
   private void printTaskSummary(JspWriter out,
@@ -49,6 +48,7 @@
               "&type="+ kind + "&pagenum=1\">" + kind + 
               "</a></th><td align=\"right\">" + 
               StringUtils.formatPercent(completePercent, 2) +
+              JspHelper.percentageGraph((int)(completePercent * 100), 80) +
               "</td><td align=\"right\">" + 
               totalTasks + 
               "</td><td align=\"right\">" + 
@@ -121,6 +121,7 @@
     }
 %>
 
+<%@page import="org.apache.hadoop.mapred.StatusHttpServer.TaskGraphServlet"%>
 <html>
 <head>
   <% 
@@ -131,6 +132,7 @@
   }
   %>
 <title>Hadoop <%=jobId%> on <%=trackerName%></title>
+<link rel="stylesheet" type="text/css" href="/static/hadoop.css">
 </head>
 <body>
 <h1>Hadoop <%=jobId%> on <a href="jobtracker.jsp"><%=trackerName%></a></h1>
@@ -236,6 +238,41 @@
     %>
     </table>
 
+<hr>Map Completion Graph - 
+<%
+if("off".equals(request.getParameter("map.graph"))) {
+  session.setAttribute("map.graph", "off");
+} else if("on".equals(request.getParameter("map.graph"))){
+  session.setAttribute("map.graph", "on");
+}
+if("off".equals(request.getParameter("reduce.graph"))) {
+  session.setAttribute("reduce.graph", "off");
+} else if("on".equals(request.getParameter("reduce.graph"))){
+  session.setAttribute("reduce.graph", "on");
+}
+
+if("off".equals(session.getAttribute("map.graph"))) { %>
+<a href="/jobdetails.jsp?jobid=<%=jobId%>&refresh=<%=refresh%>&map.graph=on" > open </a>
+<%} else { %> 
+<a href="/jobdetails.jsp?jobid=<%=jobId%>&refresh=<%=refresh%>&map.graph=off" > close </a>
+<br><embed src="/taskgraph?type=map&jobid=<%=jobId%>" 
+       width="<%=StatusHttpServer.TaskGraphServlet.width + 2 * StatusHttpServer.TaskGraphServlet.xmargin%>" 
+       height="<%=StatusHttpServer.TaskGraphServlet.height + 3 * StatusHttpServer.TaskGraphServlet.ymargin%>"
+       style="width:100%" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/" />
+<%}%>
+
+<%if(job.getReduceTasks().length > 0) { %>
+<hr>Reduce Completion Graph -
+<%if("off".equals(session.getAttribute("reduce.graph"))) { %>
+<a href="/jobdetails.jsp?jobid=<%=jobId%>&refresh=<%=refresh%>&reduce.graph=on" > open </a>
+<%} else { %> 
+<a href="/jobdetails.jsp?jobid=<%=jobId%>&refresh=<%=refresh%>&reduce.graph=off" > close </a>
+ 
+ <br><embed src="/taskgraph?type=reduce&jobid=<%=jobId%>" 
+       width="<%=StatusHttpServer.TaskGraphServlet.width + 2 * StatusHttpServer.TaskGraphServlet.xmargin%>" 
+       height="<%=StatusHttpServer.TaskGraphServlet.height + 3 * StatusHttpServer.TaskGraphServlet.ymargin%>" 
+       style="width:100%" type="image/svg+xml" pluginspage="http://www.adobe.com/svg/viewer/install/" />
+<%} }%>
 
 <hr>Change priority from <%=job.getPriority()%> to: 
 <%
@@ -252,6 +289,9 @@
     	&& runState == JobStatus.RUNNING) { %>
 	<br/><a href="jobdetails.jsp?action=confirm&jobid=<%=jobId%>"> Kill this job </a>
 <% } %>
+
+<hr>
+
 <hr>
 <a href="jobtracker.jsp">Go back to JobTracker</a><br>
 <a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2007.<br>

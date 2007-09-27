@@ -62,8 +62,12 @@
         : null;
 %>
 
+<%@page import="org.apache.hadoop.dfs.JspHelper"%>
 <html>
-<title>Hadoop Task Details</title>
+<head>
+  <link rel="stylesheet" type="text/css" href="/static/hadoop.css">
+  <title>Hadoop Task Details</title>
+</head>
 <body>
 <h1>Job <a href="/jobdetails.jsp?jobid=<%=jobid%>"><%=jobid%></a></h1>
 
@@ -105,7 +109,7 @@
         }
         out.print("<td>" + status.getRunState() + "</td>");
         out.print("<td>" + StringUtils.formatPercent(status.getProgress(), 2)
-          + "</td>");
+          + JspHelper.percentageGraph(status.getProgress() * 100f, 80) + "</td>");
         out.print("<td>"
           + StringUtils.getFormattedTimeWithDiff(dateFormat, status
           .getStartTime(), 0) + "</td>");

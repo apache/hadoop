@@ -62,6 +62,10 @@ Trunk (unreleased changes)
 
     HADOOP-1809. Add a link in web site to #hadoop IRC channel. (enis)
 
+    HADOOP-1894. Add percentage graphs and mapred task completion graphs 
+    to Web User Interface. Users not using Firefox may install a plugin to 
+    their browsers to see svg graphics. (enis)
+
   OPTIMIZATIONS
 
     HADOOP-1910.  Reduce the number of RPCs that DistributedFileSystem.create()

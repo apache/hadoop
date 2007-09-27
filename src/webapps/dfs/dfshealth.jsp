@@ -11,8 +11,7 @@
   import="java.lang.Math"
   import="java.net.URLEncoder"
 %>
-<%!
-  FSNamesystem fsn = FSNamesystem.getFSNamesystem();
+<%!FSNamesystem fsn = FSNamesystem.getFSNamesystem();
   String namenodeLabel = fsn.getDFSNameNodeMachine() + ":" + fsn.getDFSNameNodePort();
   JspHelper jspHelper = new JspHelper();
 
@@ -90,7 +89,7 @@
       percentUsed = FsShell.limitDecimalTo2(((1.0 * u)/c)*100);
     else
       percentUsed = "100";
-
+    
     String adminState = (d.isDecommissioned() ? "Decommissioned" :
                          (d.isDecommissionInProgress() ? "Decommission In Progress":
                           "In Service"));
@@ -103,7 +102,8 @@
               adminState +
 	      "<td class=\"size\">" +
               FsShell.limitDecimalTo2(c*1.0/diskBytes) +
-	      "<td class=\"pcused\">" + percentUsed +
+	      "<td class=\"pcused\">" + percentUsed +"<td class=\"pcused\">" +
+	      JspHelper.percentageGraph( (int)Double.parseDouble(percentUsed) , 100) +
 	      "<td class=\"size\">" +
               FsShell.limitDecimalTo2(d.getRemaining()*1.0/diskBytes) +
           "<td class=\"blocks\">" + d.numBlocks() + "\n");
@@ -188,7 +188,8 @@
                        NodeHeaderStr("adminstate") + "> Admin State <th " +
                        NodeHeaderStr("size") + "> Size (" + diskByteStr +
                        ") <th " + NodeHeaderStr("pcused") +
-                       "> Used (%) <th " + 
+                       "> Used (%) <th " + NodeHeaderStr("pcused") +
+                       "> Used (%) <th " +
                        NodeHeaderStr("remaining") + "> Remaining (" + 
                        diskByteStr + ") <th " +
                        NodeHeaderStr("blocks") + "> Blocks\n" );
@@ -216,8 +217,7 @@
 	}
 	out.print("</div>");
     }
-  }
-%>
+  }%>
 
 <html>
 
