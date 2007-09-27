@@ -33,8 +33,6 @@ public class TestDFSAbort extends HBaseClusterTestCase {
   /** constructor */
   public TestDFSAbort() {
     super();
-//    conf.setInt("ipc.client.timeout", 5000);            // reduce ipc client timeout
-//    conf.setInt("ipc.client.connect.max.retries", 5);   // and number of retries
     Logger.getRootLogger().setLevel(Level.WARN);
     Logger.getLogger(this.getClass().getPackage().getName()).setLevel(Level.DEBUG);
   }

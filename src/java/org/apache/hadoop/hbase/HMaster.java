@@ -937,12 +937,11 @@ HMasterRegionInterface {
   /**
    * Checks to see if the file system is still accessible.
    * If not, sets closed
-   * 
    * @return false if file system is not available
    */
   protected boolean checkFileSystem() {
     if (fsOk) {
-      if (!FSUtils.isFileSystemAvailable(fs)) {
+      if (!FSUtils.isFileSystemAvailable(fs, closed)) {
         LOG.fatal("Shutting down HBase cluster: file system not available");
         closed.set(true);
         fsOk = false;
@@ -1127,9 +1126,9 @@ HMasterRegionInterface {
    * HMasterRegionInterface
    */
 
-  /** {@inheritDoc} */
   @SuppressWarnings("unused")
-  public void regionServerStartup(HServerInfo serverInfo) throws IOException {
+  public MapWritable regionServerStartup(HServerInfo serverInfo)
+  throws IOException {
     String s = serverInfo.getServerAddress().toString().trim();
     HServerInfo storedInfo = null;
     LOG.info("received start message from: " + s);
@@ -1137,11 +1136,9 @@ HMasterRegionInterface {
     // If we get the startup message but there's an old server by that
     // name, then we can timeout the old one right away and register
     // the new one.
-
     synchronized (serversToServerInfo) {
       storedInfo = serversToServerInfo.remove(s);
       HServerLoad load = serversToLoad.remove(s);
-    
       if (load != null) {
         Set<String> servers = loadToServers.get(load);
         if (servers != null) {
@@ -1160,7 +1157,6 @@ HMasterRegionInterface {
     }
 
     // Either way, record the new server
-
     synchronized (serversToServerInfo) {
       HServerLoad load = new HServerLoad();
       serverInfo.setLoad(load);
@@ -1178,6 +1174,22 @@ HMasterRegionInterface {
       long serverLabel = getServerLabel(s);
       serverLeases.createLease(serverLabel, serverLabel, new ServerExpirer(s));
     }
+    
+    return createConfigurationSubset();
+  }
+  
+  /**
+   * @return Subset of configuration to pass initializing regionservers: e.g.
+   * the filesystem to use and root directory to use.
+   */
+  protected MapWritable createConfigurationSubset() {
+    MapWritable mw = addConfig(new MapWritable(), HConstants.HBASE_DIR);
+    return addConfig(mw, "fs.default.name");
+  }
+
+  private MapWritable addConfig(final MapWritable mw, final String key) {
+    mw.put(new Text(key), new Text(this.conf.get(key)));
+    return mw;
   }
 
   private long getServerLabel(final String s) {

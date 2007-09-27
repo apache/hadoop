@@ -20,11 +20,13 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.dfs.DistributedFileSystem;
 
 /**
@@ -36,23 +38,28 @@ public class FSUtils {
   /**
    * Not instantiable
    */
-  private FSUtils() {}
+  private FSUtils() {super();}
   
   /**
    * Checks to see if the specified file system is available
    * 
    * @param fs
+   * @param closed Optional flag.  If non-null and set, will abort test of
+   * filesytem.  Presumption is a flag shared by multiple threads.  Another
+   * may have already determined the filesystem -- or something else -- bad.
    * @return true if the specified file system is available.
    */
-  public static boolean isFileSystemAvailable(FileSystem fs) {
+  public static boolean isFileSystemAvailable(final FileSystem fs,
+      final AtomicBoolean closed) {
     if (!(fs instanceof DistributedFileSystem)) {
       return true;
     }
     boolean available = false;
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
     int maxTries = dfs.getConf().getInt("hbase.client.retries.number", 3);
-    Path root = new Path(dfs.getConf().get("hbase.dir", "/"));
-    for (int i = 0; i < maxTries; i++) {
+    Path root =
+      fs.makeQualified(new Path(dfs.getConf().get(HConstants.HBASE_DIR, "/")));
+    for (int i = 0; i < maxTries && (closed == null || !closed.get()); i++) {
       IOException ex = null;
       try {
         if (dfs.exists(root)) {
@@ -62,12 +69,10 @@ public class FSUtils {
       } catch (IOException e) {
         ex = e;
       }
-      String exception = "";
-      if (ex != null) {
-        exception = ": " + ex.getMessage();
-      }
-      LOG.info("Failed exists test on " + root + " (Attempt " + i + ")" +
-          exception);
+      String exception = (ex == null)? "": ": " + ex.getMessage();
+      LOG.info("Failed exists test on " + root + " by thread " +
+        Thread.currentThread().getName() + " (Attempt " + i + " of " +
+        maxTries  +"): " + exception);
     }
     try {
       if (!available) {

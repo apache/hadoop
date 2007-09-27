@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.ipc.VersionedProtocol;
 
 /**
@@ -34,8 +36,10 @@ public interface HMasterRegionInterface extends VersionedProtocol {
    * Called when a region server first starts
    * @param info
    * @throws IOException
+   * @return Configuration for the regionserver to use: e.g. filesystem,
+   * hbase rootdir, etc.
    */
-  public void regionServerStartup(HServerInfo info) throws IOException;
+  public MapWritable regionServerStartup(HServerInfo info) throws IOException;
   
   /**
    * Called to renew lease, tell master what the region server is doing and to
