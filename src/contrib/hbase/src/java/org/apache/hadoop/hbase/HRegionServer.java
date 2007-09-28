@@ -1093,11 +1093,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // remote scanner interface
   //
 
-  /** {@inheritDoc} */
   public long openScanner(Text regionName, Text[] cols, Text firstRow,
-      final long timestamp, final RowFilterInterface filter)
-    throws IOException {
-    
+    final long timestamp, final RowFilterInterface filter)
+  throws IOException {
     requestCount.incrementAndGet();
     try {
       HRegion r = getRegion(regionName);

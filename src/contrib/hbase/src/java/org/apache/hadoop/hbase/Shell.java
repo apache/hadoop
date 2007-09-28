@@ -93,7 +93,7 @@ public class Shell {
 
   /** Return the string of prompt start string */
   private static String getPrompt(final StringBuilder queryStr) {
-    return (queryStr.toString().equals("")) ? "Hbase > " : "    --> ";
+    return (queryStr.toString().equals("")) ? "Hbase> " : "   --> ";
   }
 
   /**
@@ -102,8 +102,9 @@ public class Shell {
    * @param end end of time interval
    * @return a string of code execution time. */
   public static String executeTime(boolean watch, long start, long end) {
-    return (watch) ?
-        "(" + String.format("%.2f", (end - start) * 0.001) + " sec)" :
-          "";
+    return watch?
+      " (" + String.format("%.2f", Double.valueOf((end - start) * 0.001)) +
+        " sec)":
+      "";
   }
 }

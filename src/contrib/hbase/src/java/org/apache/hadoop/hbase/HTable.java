@@ -322,8 +322,8 @@ public class HTable implements HConstants {
   /** 
    * Get all the data for the specified row
    * 
-   * @param row         - row key
-   * @return            - map of colums to values
+   * @param row row key
+   * @return map of colums to values
    * @throws IOException
    */
   public SortedMap<Text, byte[]> getRow(Text row) throws IOException {
@@ -373,7 +373,11 @@ public class HTable implements HConstants {
    * Get a scanner on the current table starting at the specified row.
    * Return the specified columns.
    *
-   * @param columns array of columns to return
+   * @param columns columns to scan. If column name is a column family, all
+   * columns of the specified column family are returned.  Its also possible
+   * to pass a regex in the column qualifier. A column qualifier is judged to
+   * be a regex if it contains at least one of the following characters:
+   * <code>\+|^&*$[]]}{)(</code>.
    * @param startRow starting row in table to scan
    * @return scanner
    * @throws IOException
@@ -388,7 +392,11 @@ public class HTable implements HConstants {
    * Get a scanner on the current table starting at the specified row.
    * Return the specified columns.
    *
-   * @param columns array of columns to return
+   * @param columns columns to scan. If column name is a column family, all
+   * columns of the specified column family are returned.  Its also possible
+   * to pass a regex in the column qualifier. A column qualifier is judged to
+   * be a regex if it contains at least one of the following characters:
+   * <code>\+|^&*$[]]}{)(</code>.
    * @param startRow starting row in table to scan
    * @param timestamp only return results whose timestamp <= this value
    * @return scanner
@@ -404,7 +412,11 @@ public class HTable implements HConstants {
    * Get a scanner on the current table starting at the specified row.
    * Return the specified columns.
    *
-   * @param columns array of columns to return
+   * @param columns columns to scan. If column name is a column family, all
+   * columns of the specified column family are returned.  Its also possible
+   * to pass a regex in the column qualifier. A column qualifier is judged to
+   * be a regex if it contains at least one of the following characters:
+   * <code>\+|^&*$[]]}{)(</code>.
    * @param startRow starting row in table to scan
    * @param filter a row filter using row-key regexp and/or column data filter.
    * @return scanner
@@ -420,7 +432,11 @@ public class HTable implements HConstants {
    * Get a scanner on the current table starting at the specified row.
    * Return the specified columns.
    *
-   * @param columns array of columns to return
+   * @param columns columns to scan. If column name is a column family, all
+   * columns of the specified column family are returned.  Its also possible
+   * to pass a regex in the column qualifier. A column qualifier is judged to
+   * be a regex if it contains at least one of the following characters:
+   * <code>\+|^&*$[]]}{)(</code>.
    * @param startRow starting row in table to scan
    * @param timestamp only return results whose timestamp <= this value
    * @param filter a row filter using row-key regexp and/or column data filter.

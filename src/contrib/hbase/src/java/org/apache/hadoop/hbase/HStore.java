@@ -1447,7 +1447,6 @@ class HStore implements HConstants {
         }
         
       } catch (Exception ex) {
-        LOG.error("Failed construction", ex);
         close();
         IOException e = new IOException("HStoreScanner failed construction");
         e.initCause(ex);

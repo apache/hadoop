@@ -676,6 +676,7 @@ public class Parser implements ParserConstants {
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case NUM_VERSIONS:
       jj_consume_token(NUM_VERSIONS);
+      jj_consume_token(EQUALS);
       numVersion = Number();
         select.setVersion(numVersion);
       break;
@@ -969,6 +970,11 @@ public class Parser implements ParserConstants {
     finally { jj_save(0, xla); }
   }
 
+  final private boolean jj_3R_11() {
+    if (jj_scan_token(ID)) return true;
+    return false;
+  }
+
   final private boolean jj_3R_10() {
     Token xsp;
     xsp = jj_scanpos;
@@ -992,11 +998,6 @@ public class Parser implements ParserConstants {
     jj_scanpos = xsp;
     if (jj_scan_token(61)) return true;
     }
-    return false;
-  }
-
-  final private boolean jj_3R_11() {
-    if (jj_scan_token(ID)) return true;
     return false;
   }
 

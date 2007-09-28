@@ -19,19 +19,24 @@
  */
 package org.apache.hadoop.hbase.shell;
 
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
-import junit.textui.TestRunner;
-
 /**
- * Test the console table class
+ * Interface implemented by table formatters outputting select results.
  */
-public class TestConsoleTable extends TestCase {
-  public void testPrintTable() {
-    
-  }
+public interface TableFormatter {
+  /**
+   * Output header.
+   * @param titles Titles to emit.
+   */
+  public void header(final String [] titles);
   
-  public static void main(String[] args) {
-    TestRunner.run(new TestSuite(TestConsoleTable.class));
-  }
+  /**
+   * Output footer.
+   */
+  public void footer();
+  
+  /**
+   * Output a row.
+   * @param cells
+   */
+  public void row(final String [] cells);
 }
