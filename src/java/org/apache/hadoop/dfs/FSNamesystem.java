@@ -2474,43 +2474,83 @@ class FSNamesystem implements FSConstants {
     }
   }
 
-  public synchronized DatanodeInfo[] datanodeReport( DatanodeReportType type ) {
-    ArrayList<DatanodeInfo> results = new ArrayList<DatanodeInfo>();
-    synchronized (datanodeMap) {
-      for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); it.hasNext();) {
-        DatanodeDescriptor tmp = it.next();
-        switch (type) {
-        case ALL: 
-          results.add(new DatanodeInfo(tmp));
-          break;
-        case DEAD: 
-          if(isDatanodeDead(tmp)) {
-            results.add(new DatanodeInfo(tmp));
-          }
-          break;
-        case LIVE:
-          if(!isDatanodeDead(tmp)) {
-            results.add(new DatanodeInfo(tmp));
-          }
-          break;
-        }
+  private synchronized ArrayList<DatanodeDescriptor> getDatanodeListForReport(
+                                                      DatanodeReportType type) {                  
+    
+    boolean listLiveNodes = type == DatanodeReportType.ALL ||
+                            type == DatanodeReportType.LIVE;
+    boolean listDeadNodes = type == DatanodeReportType.ALL ||
+                            type == DatanodeReportType.DEAD;
+
+    HashMap<String, String> mustList = new HashMap<String, String>();
+    
+    if (listDeadNodes) {
+      //first load all the nodes listed in include and exclude files.
+      for (Iterator<String> it = hostsReader.getHosts().iterator(); 
+           it.hasNext();) {
+        mustList.put(it.next(), "");
+      }
+      for (Iterator<String> it = hostsReader.getExcludedHosts().iterator(); 
+           it.hasNext();) {
+        mustList.put(it.next(), "");
       }
     }
-    return results.toArray(new DatanodeInfo[results.size()]);
+   
+    ArrayList<DatanodeDescriptor> nodes = null;
+    
+    synchronized (datanodeMap) {
+      nodes = new ArrayList<DatanodeDescriptor>(datanodeMap.size() + 
+                                                mustList.size());
+      
+      for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); 
+                                                               it.hasNext();) {
+        DatanodeDescriptor dn = it.next();
+        boolean isDead = isDatanodeDead(dn);
+        if ( (isDead && listDeadNodes) || (!isDead && listLiveNodes) ) {
+          nodes.add(dn);
+        }
+        //Remove any form of the this datanode in include/exclude lists.
+        mustList.remove(dn.getName());
+        mustList.remove(dn.getHost());
+        mustList.remove(dn.getHostName());
+      }
+    }
+    
+    if (listDeadNodes) {
+      for (Iterator<String> it = mustList.keySet().iterator(); it.hasNext();) {
+        DatanodeDescriptor dn = 
+            new DatanodeDescriptor(new DatanodeID(it.next(), "", 0));
+        dn.setLastUpdate(0);
+        nodes.add(dn);
+      }
+    }
+    
+    return nodes;
+  }
+
+  public synchronized DatanodeInfo[] datanodeReport( DatanodeReportType type ) {
+
+    ArrayList<DatanodeDescriptor> results = getDatanodeListForReport(type);
+    DatanodeInfo[] arr = new DatanodeInfo[results.size()];
+    for (int i=0; i<arr.length; i++) {
+      arr[i] = new DatanodeInfo(results.get(i));
+    }
+    return arr;
   }
     
   /**
    */
   public synchronized void DFSNodesStatus(ArrayList<DatanodeDescriptor> live, 
                                           ArrayList<DatanodeDescriptor> dead) {
-    synchronized (datanodeMap) {
-      for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); it.hasNext();) {
-        DatanodeDescriptor node = it.next();
-        if (isDatanodeDead(node))
-          dead.add(node);
-        else
-          live.add(node);
-      }
+
+    ArrayList<DatanodeDescriptor> results = 
+                            getDatanodeListForReport(DatanodeReportType.ALL);    
+    for(Iterator<DatanodeDescriptor> it = results.iterator(); it.hasNext();) {
+      DatanodeDescriptor node = it.next();
+      if (isDatanodeDead(node))
+        dead.add(node);
+      else
+        live.add(node);
     }
   }
 

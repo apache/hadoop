@@ -49,7 +49,9 @@ public class HostsFileReader {
         String[] nodes = line.split("[ \t\n\f\r]+");
         if (nodes != null) {
           for (int i = 0; i < nodes.length; i++) {
-            set.add(nodes[i]);  // might need to add canonical name
+            if (!nodes[i].equals("")) {
+              set.add(nodes[i]);  // might need to add canonical name
+            }
           }
         }
       }   
