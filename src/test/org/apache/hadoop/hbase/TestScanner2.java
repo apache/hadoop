@@ -71,6 +71,57 @@ public class TestScanner2 extends HBaseClusterTestCase {
   }
   
   /**
+   * Test getting scanners with regexes for column names.
+   * @throws IOException 
+   */
+  public void testRegexForColumnName() throws IOException {
+    // Setup HClient, ensure that it is running correctly
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    
+    // Setup colkeys to be inserted
+    Text tableName = new Text(getName());
+    createTable(admin, tableName);
+    HTable table = new HTable(this.conf, tableName);
+    // Add a row to columns without qualifiers and then two with.  Make one
+    // numbers only so easy to find w/ a regex.
+    long id = table.startUpdate(new Text(getName()));
+    final String firstColkeyFamily = Character.toString(FIRST_COLKEY) + ":";
+    table.put(id, new Text(firstColkeyFamily + getName()), GOOD_BYTES);
+    table.put(id, new Text(firstColkeyFamily + "22222"), GOOD_BYTES);
+    table.put(id, new Text(firstColkeyFamily), GOOD_BYTES);
+    table.commit(id);
+    // Now do a scan using a regex for a column name.
+    checkRegexingScanner(table, firstColkeyFamily + "\\d+");
+    // Do a new scan that only matches on column family.
+    checkRegexingScanner(table, firstColkeyFamily + "$");
+  }
+  
+  /*
+   * Create a scanner w/ passed in column name regex.  Assert we only get
+   * back one column that matches.
+   * @param table
+   * @param regexColumnname
+   * @throws IOException
+   */
+  private void checkRegexingScanner(final HTable table,
+      final String regexColumnname) throws IOException {
+    Text [] regexCol = new Text [] {new Text(regexColumnname)};
+    HScannerInterface scanner =
+      table.obtainScanner(regexCol, HConstants.EMPTY_START_ROW);
+    HStoreKey key = new HStoreKey();
+    TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
+    int count = 0;
+    while (scanner.next(key, results)) {
+      for (Text c: results.keySet()) {
+        assertTrue(c.toString().matches(regexColumnname));
+        count++;
+      }
+    }
+    assertTrue(count == 1);
+    scanner.close();
+  }
+
+  /**
    * Test the scanner's handling of various filters.  
    * 
    * @throws Exception
@@ -80,17 +131,8 @@ public class TestScanner2 extends HBaseClusterTestCase {
     HBaseAdmin admin = new HBaseAdmin(conf);
     
     // Setup colkeys to be inserted
-    HTableDescriptor htd = new HTableDescriptor(getName());
     Text tableName = new Text(getName());
-    Text[] colKeys = new Text[(LAST_COLKEY - FIRST_COLKEY) + 1];
-    for (char i = 0; i < colKeys.length; i++) {
-      colKeys[i] = new Text(new String(new char[] { 
-        (char)(FIRST_COLKEY + i), ':' }));
-      htd.addFamily(new HColumnDescriptor(colKeys[i].toString()));
-    }
-    admin.createTable(htd);
-    assertTrue("Table with name " + tableName + " created successfully.", 
-        admin.tableExists(tableName));
+    Text [] colKeys = createTable(admin, tableName);
     assertTrue("Master is running.", admin.isMasterRunning());
     
     // Enter data
@@ -107,6 +149,28 @@ public class TestScanner2 extends HBaseClusterTestCase {
     
     regExpFilterTest(table, colKeys);
     rowFilterSetTest(table, colKeys);
+  }
+  
+  /**
+   * @param admin
+   * @param tableName
+   * @return Returns column keys used making table.
+   * @throws IOException
+   */
+  private Text [] createTable(final HBaseAdmin admin, final Text tableName)
+  throws IOException {
+    // Setup colkeys to be inserted
+    HTableDescriptor htd = new HTableDescriptor(getName());
+    Text[] colKeys = new Text[(LAST_COLKEY - FIRST_COLKEY) + 1];
+    for (char i = 0; i < colKeys.length; i++) {
+      colKeys[i] = new Text(new String(new char[] { 
+        (char)(FIRST_COLKEY + i), ':' }));
+      htd.addFamily(new HColumnDescriptor(colKeys[i].toString()));
+    }
+    admin.createTable(htd);
+    assertTrue("Table with name " + tableName + " created successfully.", 
+      admin.tableExists(tableName));
+    return colKeys;
   }
   
   private void regExpFilterTest(HTable table, Text[] colKeys) 

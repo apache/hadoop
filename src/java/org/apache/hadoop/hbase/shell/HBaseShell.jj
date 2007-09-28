@@ -118,7 +118,7 @@ TOKEN: /** for HQL statements */
 
 TOKEN : /** Literals */
 {
-   <ID: (["A"-"Z","a"-"z","0"-"9","_","-",".",":","/"])+ >
+   <ID: ["A"-"Z","a"-"z","_","-",".",":","/"] (["A"-"Z","a"-"z","0"-"9","_","-",".",":","/"])* >
  | <INTEGER_LITERAL: (["0"-"9"])+ >
  | <FLOATING_POINT_LITERAL:
    (["0"-"9"])+ "." (["0"-"9"])+ (<EXPONENT>)?
@@ -555,8 +555,7 @@ SelectCommand selectCommand() :
   ]
    
   [
-     <NUM_VERSIONS>
-      numVersion = Number()
+     <NUM_VERSIONS><EQUALS> numVersion = Number()
       {
         select.setVersion(numVersion);
       }

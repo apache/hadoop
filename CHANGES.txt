@@ -81,7 +81,8 @@ Trunk (unreleased changes)
     HADOOP-1884 Remove useless debugging log messages from hbase.mapred
     HADOOP-1856 Add Jar command to hbase shell using Hadoop RunJar util
                 (Edward Yoon via Stack)
-    HADOOP-1928 ] Have master pass the regionserver the filesystem to use
+    HADOOP-1928 Have master pass the regionserver the filesystem to use
+    HADOOP-1789 Output formatting
 
 
 Below are the list of changes before 2007-08-18

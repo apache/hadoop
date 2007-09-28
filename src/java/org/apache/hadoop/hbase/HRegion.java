@@ -1052,9 +1052,14 @@ public class HRegion implements HConstants {
 
   /**
    * Return an iterator that scans over the HRegion, returning the indicated 
-   * columns for only the rows that match the data filter.  This Iterator must be closed by the caller.
+   * columns for only the rows that match the data filter.  This Iterator must
+   * be closed by the caller.
    *
-   * @param cols columns desired in result set
+   * @param cols columns to scan. If column name is a column family, all
+   * columns of the specified column family are returned.  Its also possible
+   * to pass a regex in the column qualifier. A column qualifier is judged to
+   * be a regex if it contains at least one of the following characters:
+   * <code>\+|^&*$[]]}{)(</code>.
    * @param firstRow row which is the starting point of the scan
    * @param timestamp only return rows whose timestamp is <= this value
    * @param filter row filter
@@ -1070,7 +1075,6 @@ public class HRegion implements HConstants {
       for(int i = 0; i < cols.length; i++) {
         families.add(HStoreKey.extractFamily(cols[i]));
       }
-
       List<HStore> storelist = new ArrayList<HStore>();
       for (Text family: families) {
         HStore s = stores.get(family);
@@ -1540,8 +1544,8 @@ public class HRegion implements HConstants {
     private HInternalScannerInterface[] scanners;
     private TreeMap<Text, byte []>[] resultSets;
     private HStoreKey[] keys;
-    private boolean wildcardMatch;
-    private boolean multipleMatchers;
+    private boolean wildcardMatch = false;
+    private boolean multipleMatchers = false;
     private RowFilterInterface dataFilter;
 
     /** Create an HScanner with a handle on many HStores. */
@@ -1555,8 +1559,6 @@ public class HRegion implements HConstants {
       this.scanners = new HInternalScannerInterface[stores.length + 1];
       this.resultSets = new TreeMap[scanners.length];
       this.keys = new HStoreKey[scanners.length];
-      this.wildcardMatch = false;
-      this.multipleMatchers = false;
 
       // Advance to the first key in each store.
       // All results will match the required column-set and scanTime.
@@ -1601,21 +1603,14 @@ public class HRegion implements HConstants {
       }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public boolean isWildcardScanner() {
       return wildcardMatch;
     }
     
-    /**
-     * {@inheritDoc}
-     */
     public boolean isMultipleMatchScanner() {
       return multipleMatchers;
     }
 
-    /** {@inheritDoc} */
     public boolean next(HStoreKey key, SortedMap<Text, byte[]> results)
     throws IOException {
       // Filtered flag is set by filters.  If a cell has been 'filtered out'

@@ -21,19 +21,22 @@ package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.io.DataInputBuffer;
+import org.apache.hadoop.hbase.shell.generated.ParseException;
+import org.apache.hadoop.hbase.shell.generated.Parser;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -48,122 +51,190 @@ public class SelectCommand extends BasicCommand {
   private List<String> columns;
   private long timestamp;
   private int limit;
+  // Count of versions to return.
   private int version;
   private boolean whereClause = false;
+  private static final String [] HEADER_ROW_CELL =
+    new String [] {"Row", "Cell"};
+  private static final String [] HEADER_COLUMN_CELL =
+    new String [] {"Column", "Cell"};
+  private static final String [] HEADER =
+    new String [] {"Row", "Column", "Cell"};
 
   public ReturnMsg execute(Configuration conf) {
     if (this.tableName.equals("") || this.rowKey == null ||
         this.columns.size() == 0) {
       return new ReturnMsg(0, "Syntax error : Please check 'Select' syntax.");
     } 
-    
     try {
       HTable table = new HTable(conf, this.tableName);
       HBaseAdmin admin = new HBaseAdmin(conf);
+      int count = 0;
       if (this.whereClause) {
-        compoundWherePrint(table, admin);
+        count = compoundWherePrint(table, admin);
       } else {
-        scanPrint(table, admin);
+        count = scanPrint(table, admin);
       }
-      return new ReturnMsg(1, "Successfully print out the selected data.");
+      return new ReturnMsg(1, Integer.toString(count) + " row(s) in set");
     } catch (IOException e) {
       String[] msg = e.getMessage().split("[,]");
       return new ReturnMsg(0, msg[0]);
     }
   }
 
-  private void compoundWherePrint(HTable table, HBaseAdmin admin) {
+  private int compoundWherePrint(HTable table, HBaseAdmin admin) {
+    int count = 0;
+    TableFormatter formatter = TableFormatterFactory.get();
     try {
       if (this.version != 0) {
+        // A number of versions has been specified.
         byte[][] result = null;
-        Text[] cols = getColumns(admin);
-        for (int i = 0; i < cols.length; i++) {
-          if (this.timestamp == 0) {
-            result = table.get(this.rowKey, cols[i], this.timestamp, this.version);
+        ParsedColumns parsedColumns = getColumns(admin, false);
+        boolean multiple = parsedColumns.isMultiple() || this.version > 1;
+        formatter.header(multiple? HEADER_COLUMN_CELL: null);
+        for (Text column: parsedColumns.getColumns()) {
+          if (this.timestamp != 0) {
+            result = table.get(this.rowKey, column, this.timestamp,
+              this.version);
           } else {
-            result = table.get(this.rowKey, cols[i], this.version);
+            result = table.get(this.rowKey, column, this.version);
           }
-
-          ConsoleTable.selectHead();
-          for (int ii = 0; ii < result.length; ii++) {
-            ConsoleTable.printLine(i, this.rowKey.toString(), cols[i].toString(),
-                new String(result[ii], HConstants.UTF8_ENCODING));
-          }
-          ConsoleTable.selectFoot();
-        }
-      } else {
-        int count = 0;
-        ConsoleTable.selectHead();
-        
-        for (Map.Entry<Text, byte[]> entry : table.getRow(this.rowKey).entrySet()) {
-          byte[] value = entry.getValue();
-          String cellData = new String(value, HConstants.UTF8_ENCODING);
-
-          if (entry.getKey().equals(HConstants.COL_REGIONINFO)) {
-            DataInputBuffer inbuf = new DataInputBuffer();
-            HRegionInfo info = new HRegionInfo();
-            inbuf.reset(value, value.length);
-            info.readFields(inbuf);
-            cellData = String.valueOf(info.getRegionId());
-          }
-
-          if (columns.contains(entry.getKey().toString()) || columns.contains("*")) {
-            ConsoleTable.printLine(count, this.rowKey.toString(), entry.getKey()
-                .toString(), cellData);
+          for (int ii = 0; result != null && ii < result.length; ii++) {
+            if (multiple) {
+              formatter.row(new String [] {column.toString(),
+                toString(column, result[ii])});
+            } else {
+              formatter.row(new String [] {toString(column, result[ii])});
+            }
             count++;
           }
         }
-        ConsoleTable.selectFoot();
+      } else {
+        formatter.header(isMultiple()? HEADER_COLUMN_CELL: null);
+        for (Map.Entry<Text, byte[]> e: table.getRow(this.rowKey).entrySet()) {
+          Text key = e.getKey();
+          if (!this.columns.contains(key.toString())) {
+            continue;
+          }
+          String cellData = toString(key, e.getValue());
+          if (isMultiple()) {
+            formatter.row(new String [] {key.toString(), cellData});
+          } else {
+            formatter.row(new String [] {cellData});
+          }
+          count++;
+        }
       }
+      formatter.footer();
     } catch (IOException e) {
       e.printStackTrace();
     }
+    return count;
   }
-
-  private void scanPrint(HTable table, HBaseAdmin admin) {
+  
+  private String toString(final Text columnName, final byte [] cell)
+  throws IOException {
+    String result = null;
+    if (columnName.equals(HConstants.COL_REGIONINFO) ||
+        columnName.equals(HConstants.COL_SPLITA) ||
+        columnName.equals(HConstants.COL_SPLITA)) {
+      result = Writables.getHRegionInfoOrNull(cell).toString();
+    } else if (columnName.equals(HConstants.COL_STARTCODE)) {
+      result = Long.toString(Writables.bytesToLong(cell));
+    } else {
+      result = Writables.bytesToString(cell);
+    }
+    return result;
+  }
+  
+  /**
+   * Data structure with columns to use scanning and whether or not the
+   * scan could return more than one column.
+   */
+  class ParsedColumns {
+    private final List<Text> cols;
+    private final boolean isMultiple;
+    
+    ParsedColumns(final List<Text> columns) {
+      this(columns, true);
+    }
+    
+    ParsedColumns(final List<Text> columns, final boolean isMultiple) {
+      this.cols = columns;
+      this.isMultiple = isMultiple;
+    }
+    
+    public List<Text> getColumns() {
+      return this.cols;
+    }
+    
+    public boolean isMultiple() {
+      return this.isMultiple;
+    }
+  }
+  
+  private int scanPrint(HTable table, HBaseAdmin admin) {
+    int count = 0;
     HScannerInterface scan = null;
     try {
+      ParsedColumns parsedColumns = getColumns(admin, true);
+      Text [] cols = parsedColumns.getColumns().toArray(new Text [] {});
       if (this.timestamp == 0) {
-        scan = table.obtainScanner(getColumns(admin), this.rowKey);
+        scan = table.obtainScanner(cols, this.rowKey);
       } else {
-        scan = table.obtainScanner(getColumns(admin), this.rowKey, this.timestamp);
+        scan = table.obtainScanner(cols, this.rowKey, this.timestamp);
       }
-
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-
-      ConsoleTable.selectHead();
-      int count = 0;
-
+      TableFormatter formatter = TableFormatterFactory.get();
+      // If only one column in query, then don't print out the column.
+      formatter.header((parsedColumns.isMultiple())? HEADER: HEADER_ROW_CELL);
       while (scan.next(key, results) && checkLimit(count)) {
-        Text rowKey = key.getRow();
-
+        Text r = key.getRow();
         for (Text columnKey : results.keySet()) {
-          String cellData = new String(results.get(columnKey), HConstants.UTF8_ENCODING);
-          ConsoleTable.printLine(count, rowKey.toString(), columnKey.toString(), cellData);
+          String cellData = toString(columnKey, results.get(columnKey));
+          if (parsedColumns.isMultiple()) {
+            formatter.row(new String [] {r.toString(), columnKey.toString(),
+              cellData});
+          } else {
+            // Don't print out the column since only one specified in query.
+            formatter.row(new String [] {r.toString(), cellData});
+          }
+          count++;
+          if (this.limit > 0 && count >= this.limit) {
+            break;
+          }
         }
-        count++;
       }
-      ConsoleTable.selectFoot();
+      formatter.footer();
       scan.close();
     } catch (IOException e) {
       e.printStackTrace();
     }
+    return count;
   }
 
-  public Text[] getColumns(HBaseAdmin admin) {
-    Text[] cols = null;
-
+  /**
+   * Make sense of the supplied list of columns.
+   * @param admin Admin to use.
+   * @return Interpretation of supplied list of columns.
+   */
+  public ParsedColumns getColumns(final HBaseAdmin admin,
+      final boolean scanning) {
+    ParsedColumns result = null;
     try {
       if (this.columns.contains("*")) {
-        HTableDescriptor[] tables = admin.listTables();
         if (this.tableName.equals(HConstants.ROOT_TABLE_NAME)
             || this.tableName.equals(HConstants.META_TABLE_NAME)) {
-          cols = HConstants.COLUMN_FAMILY_ARRAY;
+          result =
+            new ParsedColumns(Arrays.asList(HConstants.COLUMN_FAMILY_ARRAY));
         } else {
+          HTableDescriptor[] tables = admin.listTables();
           for (int i = 0; i < tables.length; i++) {
             if (tables[i].getName().equals(this.tableName)) {
-              cols = tables[i].families().keySet().toArray(new Text[] {});
+              result = new ParsedColumns(new ArrayList<Text>(tables[i].
+                families().keySet()));
+              break;
             }
           }
         }
@@ -171,19 +242,30 @@ public class SelectCommand extends BasicCommand {
         List<Text> tmpList = new ArrayList<Text>();
         for (int i = 0; i < this.columns.size(); i++) {
           Text column = null;
-          if(this.columns.get(i).contains(":"))
-            column = new Text(this.columns.get(i));
-          else
-            column = new Text(this.columns.get(i) + ":");
-          
+          // Add '$' to column name if we are scanning.  Scanners support
+          // regex column names.  Adding '$', the column becomes a
+          // regex that does an explicit match on the supplied column name.
+          // Otherwise, if the specified column is a column family, then
+          // default behavior is to fetch all columns that have a matching
+          // column family.
+          column = (this.columns.get(i).contains(":"))?
+            new Text(this.columns.get(i) + (scanning? "$": "")):
+            new Text(this.columns.get(i) + ":" + (scanning? "$": ""));
           tmpList.add(column);
         }
-        cols = tmpList.toArray(new Text[] {});
+        result = new ParsedColumns(tmpList, tmpList.size() > 1);
       }
     } catch (IOException e) {
       e.printStackTrace();
     }
-    return cols;
+    return result;
+  }
+  
+  /*
+   * @return True if query contains multiple columns.
+   */
+  private boolean isMultiple() {
+    return this.columns.size() > 1 || this.columns.contains("*");
   }
 
   private boolean checkLimit(int count) {
@@ -218,7 +300,17 @@ public class SelectCommand extends BasicCommand {
       this.rowKey = new Text(rowKey);
   }
 
+  /**
+   * @param version Set maximum versions for this selection
+   */
   public void setVersion(int version) {
     this.version = version;
+  }
+  
+  public static void main(String[] args) throws ParseException {
+    // For debugging
+    Parser parser = new Parser("select * from -ROOT-;");
+    Command cmd = parser.terminatedCommand();
+    ReturnMsg rm = cmd.execute(new HBaseConfiguration());
   }
 }

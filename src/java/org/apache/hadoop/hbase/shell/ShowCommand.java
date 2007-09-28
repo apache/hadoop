@@ -29,34 +29,32 @@ import org.apache.hadoop.hbase.HTableDescriptor;
  * Shows all available tables.
  */
 public class ShowCommand extends BasicCommand {
-
+  private static final String [] HEADER = new String [] {"Table Name"};
   private String command;
 
   public ReturnMsg execute(Configuration conf) {
-    if (this.command == null)
-      return new ReturnMsg(0, "Syntax error : Please check 'Show' syntax.");
-
+    if (this.command == null) {
+      return new ReturnMsg(0, "Syntax error : Please check 'Show' syntax");
+    }
     try {
       HBaseAdmin admin = new HBaseAdmin(conf);
-
       int tableLength = 0;
       if ("tables".equals(this.command)) {
         HTableDescriptor[] tables = admin.listTables();
         tableLength = tables.length;
         if (tableLength == 0) {
-          return new ReturnMsg(0, "Table not found.");
+          return new ReturnMsg(0, "Table not found");
         }
-
-        ConsoleTable.printHead("Table Name");
+        TableFormatter formatter = TableFormatterFactory.get();
+        formatter.header(HEADER);
         for (int i = 0; i < tableLength; i++) {
           String tableName = tables[i].getName().toString();
-          ConsoleTable.printTable(i, tableName);
+          formatter.row(new String [] {tableName});
         }
-        ConsoleTable.printFoot();
-
-        return new ReturnMsg(1, tableLength + " table(s) found.");
+        formatter.footer();
+        return new ReturnMsg(1, tableLength + " table(s) in set");
       }
-      return new ReturnMsg(0, "Missing parameters. Please check 'Show' syntax.");
+      return new ReturnMsg(0, "Missing parameters. Please check 'Show' syntax");
     } catch (IOException e) {
       return new ReturnMsg(0, "error msg : " + e.toString());
     }

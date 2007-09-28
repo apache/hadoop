@@ -55,9 +55,11 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
   /**
    * This class provides column matching functions that are more sophisticated
    * than a simple string compare. There are three types of matching:
-   * 1. Match on the column family name only
-   * 2. Match on the column family + column key regex
-   * 3. Simple match: compare column family + column key literally
+   * <ol>
+   * <li>Match on the column family name only</li>
+   * <li>Match on the column family + column key regex</li>
+   * <li>Simple match: compare column family + column key literally</li>
+   * </ul>
    */
   private static class ColumnMatcher {
     private boolean wildCardmatch;
@@ -137,11 +139,11 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
         matchers = new Vector<ColumnMatcher>();
       }
       ColumnMatcher matcher = new ColumnMatcher(targetCols[i]);
-      if(matcher.isWildCardMatch()) {
+      if (matcher.isWildCardMatch()) {
         this.wildcardMatch = true;
       }
       matchers.add(matcher);
-      if(matchers.size() > 1) {
+      if (matchers.size() > 1) {
         this.multipleMatchers = true;
       }
       okCols.put(family, matchers);

@@ -32,16 +32,17 @@ import org.apache.hadoop.io.Text;
  * Prints information about tables.
  */
 public class DescCommand extends BasicCommand {
-  
+  private static final String [] HEADER =
+    new String [] {"Column Family Descriptor"};
   private Text tableName;
 
   public ReturnMsg execute(Configuration conf) {
     if (this.tableName == null) 
-      return new ReturnMsg(0, "Syntax error : Please check 'Describe' syntax.");
+      return new ReturnMsg(0, "Syntax error : Please check 'Describe' syntax");
     try {
       HConnection conn = HConnectionManager.getConnection(conf);
       if (!conn.tableExists(this.tableName)) {
-        return new ReturnMsg(0, "Table not found.");
+        return new ReturnMsg(0, "Table not found");
       }
       HTableDescriptor [] tables = conn.listTables();
       HColumnDescriptor [] columns = null;
@@ -52,13 +53,21 @@ public class DescCommand extends BasicCommand {
           break;
         }
       }
-      ConsoleTable.printHead("ColumnFamily");
-      for (int ii = 0; ii < columns.length; ii++) {
-        String tmp = columns[ii].toString();
-        ConsoleTable.printTable(ii, tmp.substring(1, tmp.length() - 1));
+      TableFormatter formatter = TableFormatterFactory.get();
+      formatter.header(HEADER);
+      // Do a toString on the HColumnDescriptors
+      String [] columnStrs = new String[columns.length];
+      for (int i = 0; i < columns.length; i++) {
+        String tmp = columns[i].toString();
+        // Strip the curly-brackets if present.
+        if (tmp.length() > 2 && tmp.startsWith("{") && tmp.endsWith("}")) {
+          tmp = tmp.substring(1, tmp.length() - 1);
+        }
+        columnStrs[i] = tmp;
       }
-      ConsoleTable.printFoot();
-      return new ReturnMsg(1, columns.length + " columnfamilie(s) found.");
+      formatter.row(columnStrs);
+      formatter.footer();
+      return new ReturnMsg(1, columns.length + " columnfamily(s) in set");
     } catch (IOException e) {
       return new ReturnMsg(0, "error msg : " + e.toString());
     }

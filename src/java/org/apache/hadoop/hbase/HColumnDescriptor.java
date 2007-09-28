@@ -211,7 +211,6 @@ public class HColumnDescriptor implements WritableComparable {
     return this.bloomFilter;
   }
 
-  /** {@inheritDoc} */
   @Override
   public String toString() {
     // Output a name minus ':'.
