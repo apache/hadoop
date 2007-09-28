@@ -94,6 +94,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-1953. The job tracker should wait beteween calls to try and delete 
+    the system directory (Owen O'Malley via devaraj)
+
     HADOOP-1932. TestFileCreation fails with message saying filestatus.dat
     is of incorrect size.  (Dhruba Borthakur via dhruba)
 
