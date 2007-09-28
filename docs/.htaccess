@@ -1,0 +1,1 @@
+RedirectMatch Permanent ^/hadoop/about(.*) http://lucene.apache.org/hadoop/index$1

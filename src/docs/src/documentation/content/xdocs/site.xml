@@ -18,7 +18,6 @@ See http://forrest.apache.org/docs/linking.html for more info.
 
   <project label="Project">
     <releases  label="Releases"           href="releases.html" />
-    <about     label="About"              href="about.html" />
     <news      label="News"               href="releases.html#News" />
     <credits   label="Credits"            href="credits.html" /> 
     <store     label="Buy Stuff"          href="ext:store" />    
