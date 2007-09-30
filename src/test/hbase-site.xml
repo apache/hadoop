@@ -75,4 +75,8 @@
     the master will notice a dead region server sooner. The default is 15 seconds.
     </description>
   </property>
+  <property>
+  	<name>hbase.rootdir</name>
+  	<value>/hbase</value>
+  	<description>location of HBase instance in dfs</description></property>
 </configuration>

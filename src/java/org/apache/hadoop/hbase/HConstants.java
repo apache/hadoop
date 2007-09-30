@@ -71,9 +71,6 @@ public interface HConstants {
   /** Used to construct the name of the directory in which a HRegion resides */
   static final String HREGIONDIR_PREFIX = "hregion_";
   
-  // TODO: Someone may try to name a column family 'log'.  If they
-  // do, it will clash with the HREGION log dir subdirectory. FIX.
-  
   /** Used to construct the name of the log directory for a region server */
   static final String HREGION_LOGDIR_NAME = "log";
 

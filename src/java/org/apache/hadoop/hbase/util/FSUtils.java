@@ -26,7 +26,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.dfs.DistributedFileSystem;
 
 /**
@@ -38,48 +37,37 @@ public class FSUtils {
   /**
    * Not instantiable
    */
-  private FSUtils() {super();}
+  private FSUtils() {}
   
   /**
    * Checks to see if the specified file system is available
    * 
    * @param fs
-   * @param closed Optional flag.  If non-null and set, will abort test of
-   * filesytem.  Presumption is a flag shared by multiple threads.  Another
-   * may have already determined the filesystem -- or something else -- bad.
    * @return true if the specified file system is available.
    */
-  public static boolean isFileSystemAvailable(final FileSystem fs,
-      final AtomicBoolean closed) {
+  public static boolean isFileSystemAvailable(final FileSystem fs) {
     if (!(fs instanceof DistributedFileSystem)) {
       return true;
     }
+    String exception = "";
     boolean available = false;
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
-    int maxTries = dfs.getConf().getInt("hbase.client.retries.number", 3);
-    Path root =
-      fs.makeQualified(new Path(dfs.getConf().get(HConstants.HBASE_DIR, "/")));
-    for (int i = 0; i < maxTries && (closed == null || !closed.get()); i++) {
-      IOException ex = null;
-      try {
-        if (dfs.exists(root)) {
-          available = true;
-          break;
-        }
-      } catch (IOException e) {
-        ex = e;
+    try {
+      if (dfs.exists(new Path("/"))) {
+        available = true;
       }
-      String exception = (ex == null)? "": ": " + ex.getMessage();
-      LOG.info("Failed exists test on " + root + " by thread " +
-        Thread.currentThread().getName() + " (Attempt " + i + " of " +
-        maxTries  +"): " + exception);
+    } catch (IOException e) {
+      exception = e.getMessage();
     }
+    LOG.info("Failed file system available test. Thread: " +
+        Thread.currentThread().getName() + ": " + exception);
+    
     try {
       if (!available) {
         fs.close();
       }
         
-    } catch (IOException e) {
+    } catch (Exception e) {
         LOG.error("file system close failed: ", e);
     }
     return available;

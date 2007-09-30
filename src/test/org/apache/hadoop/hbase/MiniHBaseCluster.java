@@ -33,14 +33,14 @@ import org.apache.log4j.Logger;
 /**
  * This class creates a single process HBase cluster for junit testing.
  * One thread is created for each server.
- * 
+ *
  * <p>TestCases do not need to subclass to start a HBaseCluster.  Call
  * {@link #startMaster(Configuration)} and
  * {@link #startRegionServers(Configuration, int)} to startup master and
  * region servers.  Save off the returned values and pass them to
  * {@link #shutdown(org.apache.hadoop.hbase.MiniHBaseCluster.MasterThread, List)}
  * to shut it all down when done.
- * 
+ *
  */
 public class MiniHBaseCluster implements HConstants {
   static final Logger LOG =
@@ -48,6 +48,7 @@ public class MiniHBaseCluster implements HConstants {
   private Configuration conf;
   private MiniDFSCluster cluster;
   private FileSystem fs;
+  private boolean shutdownDFS;
   private Path parentdir;
   private MasterThread masterThread = null;
   ArrayList<RegionServerThread> regionThreads =
@@ -56,21 +57,21 @@ public class MiniHBaseCluster implements HConstants {
 
   /**
    * Starts a MiniHBaseCluster on top of a new MiniDFSCluster
-   * 
+   *
    * @param conf
    * @param nRegionNodes
-   * @throws IOException 
+   * @throws IOException
    */
   public MiniHBaseCluster(Configuration conf, int nRegionNodes)
     throws IOException {
-    
+
     this(conf, nRegionNodes, true, true, true);
   }
 
   /**
    * Start a MiniHBaseCluster. Use the native file system unless
    * miniHdfsFilesystem is set to true.
-   * 
+   *
    * @param conf
    * @param nRegionNodes
    * @param miniHdfsFilesystem
@@ -83,14 +84,20 @@ public class MiniHBaseCluster implements HConstants {
 
   /**
    * Starts a MiniHBaseCluster on top of an existing HDFSCluster
-   * 
-   * Note that if you use this constructor, you should shut down the mini dfs
-   * cluster in your test case.
-   * 
+   *
+   ****************************************************************************
+   *            *  *  *  *  *  N O T E  *  *  *  *  *
+   *
+   * If you use this constructor, you should shut down the mini dfs cluster
+   * in your test case.
+   *
+   *            *  *  *  *  *  N O T E  *  *  *  *  *
+   ****************************************************************************
+   *
    * @param conf
    * @param nRegionNodes
    * @param dfsCluster
-   * @throws IOException 
+   * @throws IOException
    */
   public MiniHBaseCluster(Configuration conf, int nRegionNodes,
       MiniDFSCluster dfsCluster) throws IOException {
@@ -98,6 +105,7 @@ public class MiniHBaseCluster implements HConstants {
     this.conf = conf;
     this.fs = dfsCluster.getFileSystem();
     this.cluster = dfsCluster;
+    this.shutdownDFS = false;
     init(nRegionNodes);
   }
 
@@ -110,17 +118,19 @@ public class MiniHBaseCluster implements HConstants {
    * filesystem configured in <code>conf</code>.
    * @param format the mini hdfs cluster
    * @param deleteOnExit clean up mini hdfs files
-   * @throws IOException 
+   * @throws IOException
    */
   public MiniHBaseCluster(Configuration conf, int nRegionNodes,
-      final boolean miniHdfsFilesystem, boolean format, boolean deleteOnExit) 
+      final boolean miniHdfsFilesystem, boolean format, boolean deleteOnExit)
     throws IOException {
-    
+
     this.conf = conf;
     this.deleteOnExit = deleteOnExit;
+    this.shutdownDFS = false;
     if (miniHdfsFilesystem) {
       this.cluster = new MiniDFSCluster(this.conf, 2, format, (String[])null);
       this.fs = cluster.getFileSystem();
+      this.shutdownDFS = true;
     } else {
       this.cluster = null;
       this.fs = FileSystem.get(conf);
@@ -139,7 +149,7 @@ public class MiniHBaseCluster implements HConstants {
       throw e;
     }
   }
-  
+
   /** runs the master server */
   public static class MasterThread extends Thread {
     private final HMaster master;
@@ -147,20 +157,20 @@ public class MiniHBaseCluster implements HConstants {
       super(m, "Master:" + m.getMasterAddress().toString());
       this.master = m;
     }
-    
+
     /** {@inheritDoc} */
     @Override
     public void run() {
       LOG.info("Starting " + getName());
       super.run();
     }
-    
+
     /** @return master server */
     public HMaster getMaster() {
       return this.master;
     }
   }
-  
+
   /** runs region servers */
   public static class RegionServerThread extends Thread {
     private final HRegionServer regionServer;
@@ -168,20 +178,20 @@ public class MiniHBaseCluster implements HConstants {
       super(r, "RegionServer:" + index);
       this.regionServer = r;
     }
-    
+
     /** {@inheritDoc} */
     @Override
     public void run() {
       LOG.info("Starting " + getName());
       super.run();
     }
-    
+
     /** @return the region server */
     public HRegionServer getRegionServer() {
       return this.regionServer;
     }
   }
-  
+
   /**
    * Use this method to start a master.
    * If you want to start an hbase cluster
@@ -197,7 +207,7 @@ public class MiniHBaseCluster implements HConstants {
    */
   public static MasterThread startMaster(final Configuration c)
     throws IOException {
-    
+
     if(c.get(MASTER_ADDRESS) == null) {
       c.set(MASTER_ADDRESS, "localhost:0");
     }
@@ -221,7 +231,7 @@ public class MiniHBaseCluster implements HConstants {
    */
   public static ArrayList<RegionServerThread> startRegionServers(
     final Configuration c, final int count) throws IOException {
-    
+
     // Start the HRegionServers.  Always have regionservers come up on
     // port '0' so there won't be clashes over default port as unit tests
     // start/stop ports at different times during the life of the test.
@@ -234,10 +244,10 @@ public class MiniHBaseCluster implements HConstants {
     }
     return threads;
   }
-  
+
   /**
    * Starts a region server thread running
-   * 
+   *
    * @throws IOException
    * @return Name of regionserver started.
    */
@@ -247,10 +257,10 @@ public class MiniHBaseCluster implements HConstants {
     this.regionThreads.add(t);
     return t.getName();
   }
-  
+
   private static RegionServerThread startRegionServer(final Configuration c,
     final int index)
-  throws IOException {  
+  throws IOException {
     final HRegionServer hrs = new HRegionServer(c);
     RegionServerThread t = new RegionServerThread(hrs, index);
     t.setName("regionserver" +
@@ -261,14 +271,14 @@ public class MiniHBaseCluster implements HConstants {
 
   /**
    * Get the cluster on which this HBase cluster is running
-   * 
+   *
    * @return MiniDFSCluster
    */
   public MiniDFSCluster getDFSCluster() {
     return cluster;
   }
 
-  /** 
+  /**
    * @return Returns the rpc address actually used by the master server, because
    * the supplied port is not necessarily the actual port used.
    */
@@ -278,7 +288,7 @@ public class MiniHBaseCluster implements HConstants {
 
   /**
    * Cause a region server to exit without cleaning up
-   * 
+   *
    * @param serverNumber
    */
   public void abortRegionServer(int serverNumber) {
@@ -290,7 +300,7 @@ public class MiniHBaseCluster implements HConstants {
 
   /**
    * Shut down the specified region server cleanly
-   * 
+   *
    * @param serverNumber
    * @return the region server that was stopped
    */
@@ -320,7 +330,7 @@ public class MiniHBaseCluster implements HConstants {
     }
     return regionServerThread.getName();
   }
-  
+
   /**
    * Wait for Mini HBase Cluster to shut down.
    */
@@ -346,7 +356,7 @@ public class MiniHBaseCluster implements HConstants {
       }
     }
   }
-  
+
   /**
    * Shut down HBase cluster started by calling
    * {@link #startMaster(Configuration)} and then
@@ -389,14 +399,17 @@ public class MiniHBaseCluster implements HConstants {
       ((masterThread != null)? masterThread.getName(): "0 masters") + " " +
       regionServerThreads.size() + " region server(s)");
   }
-  
+
+  /**
+   * Shut down the mini HBase cluster
+   */
   public void shutdown() {
     MiniHBaseCluster.shutdown(this.masterThread, this.regionThreads);
-    
+
     try {
-      if (cluster != null) {
+      if (shutdownDFS && cluster != null) {
         FileSystem fs = cluster.getFileSystem();
-        
+
         LOG.info("Shutting down Mini DFS cluster");
         cluster.shutdown();
 
@@ -405,10 +418,10 @@ public class MiniHBaseCluster implements HConstants {
           fs.close();
         }
       }
-      
+
     } catch (IOException e) {
       LOG.error("shutdown", e);
-      
+
     } finally {
       // Delete all DFS files
       if(deleteOnExit) {
@@ -428,7 +441,7 @@ public class MiniHBaseCluster implements HConstants {
     }
     f.delete();
   }
-  
+
   /**
    * Call flushCache on all regions on all participating regionservers.
    * @throws IOException

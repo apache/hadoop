@@ -139,6 +139,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         30 * 1000), stop);
     }
 
+    /** {@inheritDoc} */
     public void closing(final Text regionName) {
       lock.writeLock().lock();
       try {
@@ -154,6 +155,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
     }
     
+    /** {@inheritDoc} */
     public void closed(final Text regionName) {
       lock.writeLock().lock();
       try {
@@ -458,9 +460,17 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                   // get it when the master is panicing because for instance
                   // the HDFS has been yanked out from under it.  Be wary of
                   // this message.
-                  if (checkFileSystem()) {
-                    closeAllRegions();
-                    restart = true;
+                  try {
+                    if (checkFileSystem()) {
+                      closeAllRegions();
+                      restart = true;
+                    }
+                  } catch (Exception e) {
+                    LOG.fatal("file system available check failed. " +
+                        "Shutting down server.", e);
+                    this.stopRequested.set(true);
+                    this.fsOk = false;
+                    this.abortRequested = true;
                   }
                   
                   break;
@@ -944,7 +954,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** {@inheritDoc} */
   public byte [] get(final Text regionName, final Text row,
       final Text column) throws IOException {
-    
+
+    checkOpen();
     requestCount.incrementAndGet();
     try {
       return getRegion(regionName).get(row, column);
@@ -958,7 +969,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** {@inheritDoc} */
   public byte [][] get(final Text regionName, final Text row,
       final Text column, final int numVersions) throws IOException {
-    
+
+    checkOpen();
     requestCount.incrementAndGet();
     try {
       return getRegion(regionName).get(row, column, numVersions);
@@ -972,7 +984,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** {@inheritDoc} */
   public byte [][] get(final Text regionName, final Text row, final Text column, 
       final long timestamp, final int numVersions) throws IOException {
-    
+
+    checkOpen();
     requestCount.incrementAndGet();
     try {
       return getRegion(regionName).get(row, column, timestamp, numVersions);
@@ -986,7 +999,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** {@inheritDoc} */
   public MapWritable getRow(final Text regionName, final Text row)
     throws IOException {
-    
+
+    checkOpen();
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
@@ -1006,7 +1020,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /** {@inheritDoc} */
   public MapWritable next(final long scannerId) throws IOException {
-    
+
+    checkOpen();
     requestCount.incrementAndGet();
     try {
       String scannerName = String.valueOf(scannerId);
@@ -1044,7 +1059,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /** {@inheritDoc} */
   public void batchUpdate(Text regionName, long timestamp, BatchUpdate b)
-  throws IOException {  
+    throws IOException {
+
+    checkOpen();
     requestCount.incrementAndGet();
     // If timestamp == LATEST_TIMESTAMP and we have deletes, then they need
     // special treatment.  For these we need to first find the latest cell so
@@ -1093,9 +1110,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // remote scanner interface
   //
 
+  /** {@inheritDoc} */
   public long openScanner(Text regionName, Text[] cols, Text firstRow,
-    final long timestamp, final RowFilterInterface filter)
-  throws IOException {
+      final long timestamp, final RowFilterInterface filter)
+    throws IOException {
+
+    checkOpen();
     requestCount.incrementAndGet();
     try {
       HRegion r = getRegion(regionName);
@@ -1110,7 +1130,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       leases.createLease(scannerId, scannerId, new ScannerListener(scannerName));
       return scannerId;
     } catch (IOException e) {
-      LOG.error("Opening scanner (fsOk: " + this.fsOk + ")",
+      LOG.error("Error opening scanner (fsOk: " + this.fsOk + ")",
           RemoteExceptionHandler.checkIOException(e));
       checkFileSystem();
       throw e;
@@ -1119,6 +1139,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   /** {@inheritDoc} */
   public void close(final long scannerId) throws IOException {
+    checkOpen();
     requestCount.incrementAndGet();
     try {
       String scannerName = String.valueOf(scannerId);
@@ -1255,6 +1276,20 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /**
+   * Called to verify that this server is up and running.
+   * 
+   * @throws IOException
+   */
+  private void checkOpen() throws IOException {
+    if (stopRequested.get() || abortRequested) {
+      throw new IOException("Server not running");
+    }
+    if (!fsOk) {
+      throw new IOException("File system not available");
+    }
+  }
+  
+  /**
    * Checks to see if the file system is still accessible.
    * If not, sets abortRequested and stopRequested
    * 
@@ -1265,10 +1300,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       FileSystem fs = null;
       try {
         fs = FileSystem.get(this.conf);
-      } catch (IOException e) {
+        if (fs != null && !FSUtils.isFileSystemAvailable(fs)) {
+          LOG.fatal("Shutting down HRegionServer: file system not available");
+          this.abortRequested = true;
+          this.stopRequested.set(true);
+          fsOk = false;
+        }
+      } catch (Exception e) {
         LOG.error("Failed get of filesystem", e);
-      }
-      if (fs != null && !FSUtils.isFileSystemAvailable(fs, stopRequested)) {
         LOG.fatal("Shutting down HRegionServer: file system not available");
         this.abortRequested = true;
         this.stopRequested.set(true);
@@ -1301,6 +1340,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return regionsToCheck;
   }
 
+  /** {@inheritDoc} */
   public long getProtocolVersion(final String protocol, 
       @SuppressWarnings("unused") final long clientVersion)
   throws IOException {  
