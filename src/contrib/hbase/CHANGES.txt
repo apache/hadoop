@@ -45,7 +45,7 @@ Trunk (unreleased changes)
     HADOOP-1813 OOME makes zombie of region server
     HADOOP-1814	TestCleanRegionServerExit fails too often on Hudson
     HADOOP-1820 Regionserver creates hlogs without bound
-                (reverted 2007/09/25)
+                (reverted 2007/09/25) (Fixed 2007/09/30)
     HADOOP-1821 Replace all String.getBytes() with String.getBytes("UTF-8")
     HADOOP-1832 listTables() returns duplicate tables
     HADOOP-1834 Scanners ignore timestamp passed on creation
