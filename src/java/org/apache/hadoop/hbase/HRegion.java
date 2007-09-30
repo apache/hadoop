@@ -210,6 +210,7 @@ public class HRegion implements HConstants {
   final int memcacheFlushSize;
   final int blockingMemcacheSize;
   protected final long threadWakeFrequency;
+  protected final int optionalFlushCount;
   private final HLocking lock = new HLocking();
   private long desiredMaxFileSize;
   private final long maxSequenceId;
@@ -247,6 +248,8 @@ public class HRegion implements HConstants {
     this.regionInfo = regionInfo;
     this.memcache = new HMemcache();
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
+    this.optionalFlushCount =
+      conf.getInt("hbase.hregion.memcache.optionalflushcount", 10);
 
     // Declare the regionName.  This is a unique string for the region, used to 
     // build a unique filename.
@@ -728,11 +731,13 @@ public class HRegion implements HConstants {
   void optionallyFlush() throws IOException {
     if(this.memcache.getSize() > this.memcacheFlushSize) {
       flushcache(false);
-    } else if (this.memcache.getSize() > 0 && this.noFlushCount >= 10) {
-      LOG.info("Optional flush called " + this.noFlushCount +
-        " times when data present without flushing.  Forcing one.");
-      flushcache(false);
-      if (this.memcache.getSize() > 0) {
+    } else if (this.memcache.getSize() > 0) {
+      if (this.noFlushCount >= this.optionalFlushCount) {
+        LOG.info("Optional flush called " + this.noFlushCount +
+            " times when data present without flushing.  Forcing one.");
+        flushcache(false);
+        
+      } else {
         // Only increment if something in the cache.
         // Gets zero'd when a flushcache is called.
         this.noFlushCount++;
@@ -864,25 +869,31 @@ public class HRegion implements HConstants {
             retval.memcacheSnapshot.size());
       }
 
-      // A.  Flush memcache to all the HStores.
-      // Keep running vector of all store files that includes both old and the
-      // just-made new flush store file.
-      for (HStore hstore: stores.values()) {
-        hstore.flushCache(retval.memcacheSnapshot, retval.sequenceId);
+      try {
+        // A.  Flush memcache to all the HStores.
+        // Keep running vector of all store files that includes both old and the
+        // just-made new flush store file.
+        for (HStore hstore: stores.values()) {
+          hstore.flushCache(retval.memcacheSnapshot, retval.sequenceId);
+        }
+      } catch (IOException e) {
+        // An exception here means that the snapshot was not persisted.
+        // The hlog needs to be replayed so its content is restored to memcache.
+        // Currently, only a server restart will do this.
+        this.log.abortCacheFlush();
+        throw new DroppedSnapshotException(e.getMessage());
       }
+
+      // If we get to here, the HStores have been written. If we get an
+      // error in completeCacheFlush it will release the lock it is holding
 
       // B.  Write a FLUSHCACHE-COMPLETE message to the log.
       //     This tells future readers that the HStores were emitted correctly,
       //     and that all updates to the log for this regionName that have lower 
       //     log-sequence-ids can be safely ignored.
       this.log.completeCacheFlush(this.regionInfo.regionName,
-        regionInfo.tableDesc.getName(), logCacheFlushId);
-    } catch (IOException e) {
-      // An exception here means that the snapshot was not persisted.
-      // The hlog needs to be replayed so its content is restored to memcache.
-      // Currently, only a server restart will do this.
-      this.log.abortCacheFlush();
-      throw new DroppedSnapshotException(e.getMessage());
+          regionInfo.tableDesc.getName(), logCacheFlushId);
+
     } finally {
       // C. Delete the now-irrelevant memcache snapshot; its contents have been 
       //    dumped to disk-based HStores or, if error, clear aborted snapshot.
