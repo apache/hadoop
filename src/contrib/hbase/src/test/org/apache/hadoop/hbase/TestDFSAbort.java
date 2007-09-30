@@ -30,32 +30,35 @@ import org.apache.log4j.Logger;
  */
 public class TestDFSAbort extends HBaseClusterTestCase {
 
-  /** constructor */
-  public TestDFSAbort() {
-    super();
-    Logger.getRootLogger().setLevel(Level.WARN);
-    Logger.getLogger(this.getClass().getPackage().getName()).setLevel(Level.DEBUG);
-  }
-  
   /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
-    super.setUp();
-    HTableDescriptor desc = new HTableDescriptor(getName());
-    desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY_STR));
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    admin.createTable(desc);
+    try {
+      super.setUp();
+      HTableDescriptor desc = new HTableDescriptor(getName());
+      desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY_STR));
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      admin.createTable(desc);
+    } catch (Exception e) {
+      e.printStackTrace();
+      throw e;
+    }
   }
   
   /**
    * @throws Exception
    */
   public void testDFSAbort() throws Exception {
-    // By now the Mini DFS is running, Mini HBase is running and we have
-    // created a table. Now let's yank the rug out from HBase
-    cluster.getDFSCluster().shutdown();
-    // Now wait for Mini HBase Cluster to shut down
-    cluster.join();
+    try {
+      // By now the Mini DFS is running, Mini HBase is running and we have
+      // created a table. Now let's yank the rug out from HBase
+      cluster.getDFSCluster().shutdown();
+      // Now wait for Mini HBase Cluster to shut down
+      cluster.join();
+    } catch (Exception e) {
+      e.printStackTrace();
+      throw e;
+    }
   }
   
   /**

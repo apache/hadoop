@@ -504,7 +504,7 @@ HMasterRegionInterface {
             LOG.error("Scan ROOT region", e);
             if (tries == numRetries - 1) {
               // We ran out of tries. Make sure the file system is still available
-              if (checkFileSystem()) {
+              if (!checkFileSystem()) {
                 continue; // Avoid sleeping.
               }
             }
@@ -654,7 +654,7 @@ HMasterRegionInterface {
             if (tries == numRetries - 1) {
               // We ran out of tries. Make sure the file system is still
               // available
-              if (checkFileSystem()) {
+              if (!checkFileSystem()) {
                 continue;                       // avoid sleeping
               }
             }
@@ -941,7 +941,7 @@ HMasterRegionInterface {
    */
   protected boolean checkFileSystem() {
     if (fsOk) {
-      if (!FSUtils.isFileSystemAvailable(fs, closed)) {
+      if (!FSUtils.isFileSystemAvailable(fs)) {
         LOG.fatal("Shutting down HBase cluster: file system not available");
         closed.set(true);
         fsOk = false;
