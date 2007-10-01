@@ -8,6 +8,8 @@ Release 0.14.2 (unreleased changes)
     HADOOP-1783.  Make S3 FileSystem return Paths fully-qualified with
     scheme and host.  (tomwhite)
 
+    HADOOP-1948. Removed spurious error message during block crc upgrade.
+    (Raghu Angadi via dhruba)
 
 Release 0.14.1 - 2007-09-04
 
