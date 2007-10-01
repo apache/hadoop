@@ -54,7 +54,7 @@ public class HServerAddress implements WritableComparable {
    * @param hostAndPort format 'hostname:port'
    */
   public HServerAddress(String hostAndPort) {
-    int colonIndex = hostAndPort.indexOf(':');
+    int colonIndex = hostAndPort.lastIndexOf(':');
     if(colonIndex < 0) {
       throw new IllegalArgumentException("Not a host:port pair: " + hostAndPort);
     }
