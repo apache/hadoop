@@ -5,6 +5,9 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-1708.  Make files appear in namespace as soon as they are
+    created.  (Dhruba Borthakur via dhruba)
+
     HADOOP-999.  A HDFS Client immediately informs the NameNode of a new
     file creation.  ClientProtocol version changed from 14 to 15.
     (Tsz Wo (Nicholas), SZE via dhruba)
@@ -48,9 +51,6 @@ Trunk (unreleased changes)
 
     HADOOP-1610.  Add metrics for failed tasks.
     (Devaraj Das via tomwhite)
-
-    HADOOP-1708.  Make files appear in namespace as soon as they are
-    created.  (Dhruba Borthakur via dhruba)
 
     HADOOP-1767.  Add "bin/hadoop job -list" sub-command. (taton via cutting)
 
