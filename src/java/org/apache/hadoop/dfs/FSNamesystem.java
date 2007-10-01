@@ -1487,6 +1487,13 @@ class FSNamesystem implements FSConstants {
   private void internalReleaseCreate(String src, String holder) throws IOException {
     INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) dir.getFileINode(src);
 
+    if (pendingFile == null) {
+      NameNode.stateChangeLog.warn("DIR* NameSystem.internalReleaseCreate: "
+                                   + "attempt to release a create lock on "
+                                   + src + " file does not exist.");
+      return;
+    }
+
     // The last block that was allocated migth not have been used by the
     // client. In this case, the size of the last block would be 0. A fsck
     // will report this block as a missing block because no datanodes have it.

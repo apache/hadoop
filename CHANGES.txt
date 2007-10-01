@@ -94,6 +94,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-1935. Fix a NullPointerException in internalReleaseCreate.
+    (Dhruba Borthakur)
+
     HADOOP-1933. The nodes listed in include and exclude files 
     are always listed in the datanode report.
     (Raghu Angadi via dhruba)
