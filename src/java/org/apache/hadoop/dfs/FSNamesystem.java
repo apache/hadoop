@@ -480,7 +480,7 @@ class FSNamesystem implements FSConstants {
       }
     }
 
-    if ( crcInfo.blockLen <= 0 ) {
+    if ( crcInfo.blockLen < 0 ) {
       LOG.warn("blockCrcInfo(): " + block + 
                " could not be found in blocks for " + crcInfo.fileName);
       return crcInfo;
