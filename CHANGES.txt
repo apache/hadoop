@@ -214,9 +214,6 @@ Trunk (unreleased changes)
     HADOOP-1930.  Fix the blame for failed fetchs on the right host. (Arun C.
     Murthy via omalley)
 
-    HADOOP-1948. Removed spurious error message during block crc upgrade.
-    (Raghu Angadi via dhruba)
-
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
@@ -324,6 +321,10 @@ Trunk (unreleased changes)
     HADOOP-120.  In ArrayWritable, prevent creation with null value
     class, and improve documentation.  (Cameron Pope via cutting)
 
+Release 0.14.2 - unreleased
+
+    HADOOP-1948. Removed spurious error message during block crc upgrade.
+    (Raghu Angadi via dhruba)
 
 Release 0.14.1 - 2007-09-04
 
