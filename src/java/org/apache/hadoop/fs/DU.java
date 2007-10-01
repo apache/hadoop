@@ -25,17 +25,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants;
 
 /** Filesystem disk space usage statistics.  Uses the unix 'du' program*/
-public class DU extends Command {
+public class DU extends ShellCommand {
   private String  dirPath;
-  private long    duInterval; // DU refresh interval in msec
-  private long    lastDU;   // last time doDU() was performed
 
   private long used;
   
   public DU(File path, long interval) throws IOException {
+    super(interval);
     this.dirPath = path.getCanonicalPath();
-    this.duInterval = interval;
-    run();
   }
   
   public DU(File path, Configuration conf) throws IOException {
@@ -52,9 +49,7 @@ public class DU extends Command {
   }
   
   synchronized public long getUsed() throws IOException { 
-    if (lastDU + duInterval > System.currentTimeMillis()) {
-      run();
-    }
+    run();
     return used;
   }
 
@@ -83,7 +78,6 @@ public class DU extends Command {
       throw new IOException("Illegal du output");
     }
     this.used = Long.parseLong(tokens[0])*1024;
-    this.lastDU = System.currentTimeMillis();
   }
 
   public static void main(String[] args) throws Exception {

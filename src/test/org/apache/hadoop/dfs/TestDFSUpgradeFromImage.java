@@ -27,7 +27,7 @@ import java.util.TreeMap;
 import java.util.zip.CRC32;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Command;
+import org.apache.hadoop.fs.ShellCommand;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.UTF8;
@@ -72,7 +72,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
                  FileUtil.makeShellPath(dataDir) + "' ; tar -xf -)";
     LOG.info("Unpacking the tar file. Cmd : " + cmd);
     String[] shellCmd = { "bash", "-c", cmd };
-    Command.execCommand(shellCmd);
+    ShellCommand.execCommand(shellCmd);
     
     //Now read the reference info
     

@@ -19,7 +19,6 @@ package org.apache.hadoop.fs;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.BufferedReader;
 
 import java.util.StringTokenizer;
@@ -28,13 +27,10 @@ import org.apache.hadoop.conf.Configuration;
 
 /** Filesystem disk space usage statistics.  Uses the unix 'df' program.
  * Tested on Linux, FreeBSD, Cygwin. */
-public class DF extends Command {
+public class DF extends ShellCommand {
   public static final long DF_INTERVAL_DEFAULT = 3 * 1000; // default DF refresh interval 
   
   private String  dirPath;
-  private long    dfInterval;	// DF refresh interval in msec
-  private long    lastDF;		// last time doDF() was performed
-  
   private String filesystem;
   private long capacity;
   private long used;
@@ -47,18 +43,10 @@ public class DF extends Command {
   }
 
   public DF(File path, long dfInterval) throws IOException {
+    super(dfInterval);
     this.dirPath = path.getCanonicalPath();
-    this.dfInterval = dfInterval;
-    lastDF = (dfInterval < 0) ? 0 : -dfInterval;
-    this.doDF();
   }
   
-  private void doDF() throws IOException { 
-    if (lastDF + dfInterval > System.currentTimeMillis())
-      return;
-    super.run();
-  }
-
   /// ACCESSORS
 
   public String getDirPath() {
@@ -66,32 +54,32 @@ public class DF extends Command {
   }
   
   public String getFilesystem() throws IOException { 
-    doDF(); 
+    run(); 
     return filesystem; 
   }
   
   public long getCapacity() throws IOException { 
-    doDF(); 
+    run(); 
     return capacity; 
   }
   
   public long getUsed() throws IOException { 
-    doDF(); 
+    run(); 
     return used;
   }
   
   public long getAvailable() throws IOException { 
-    doDF(); 
+    run(); 
     return available;
   }
   
   public int getPercentUsed() throws IOException {
-    doDF();
+    run();
     return percentUsed;
   }
 
   public String getMount() throws IOException {
-    doDF();
+    run();
     return mount;
   }
   
@@ -133,7 +121,6 @@ public class DF extends Command {
     this.available = Long.parseLong(tokens.nextToken()) * 1024;
     this.percentUsed = Integer.parseInt(tokens.nextToken());
     this.mount = tokens.nextToken();
-    this.lastDF = System.currentTimeMillis();
   }
 
   public static void main(String[] args) throws Exception {

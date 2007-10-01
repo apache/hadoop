@@ -257,7 +257,7 @@ public class FileUtil {
   /**
    * This class is only used on windows to invoke the cygpath command.
    */
-  private static class CygPathCommand extends Command {
+  private static class CygPathCommand extends ShellCommand {
     String[] command;
     String result;
     CygPathCommand(String path) throws IOException {

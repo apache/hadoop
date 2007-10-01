@@ -94,6 +94,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-1946.  The Datanode code does not need to invoke du on
+    every heartbeat.  (Hairong Kuang via dhruba)
+
     HADOOP-1935. Fix a NullPointerException in internalReleaseCreate.
     (Dhruba Borthakur)
 
