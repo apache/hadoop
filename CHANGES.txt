@@ -348,12 +348,15 @@ Release 0.14.2 - unreleased
 
     HADOOP-1862.  reduces are getting stuck trying to find map outputs. 
     (Arun C. Murthy via ddas)
-
+ 
     HADOOP-1977. Fixed handling of ToolBase cli options in JobClient.
     (enis via omalley)
 
     HADOOP-1972.  Fix LzoCompressor to ensure the user has actually asked
     to finish compression. (arun via omalley)
+
+    HADOOP-1970.  Fix deadlock in progress reporting in the task. (Vivek
+    Ratan via omalley)
 
 Release 0.14.1 - 2007-09-04
 
