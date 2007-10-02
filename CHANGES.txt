@@ -70,6 +70,11 @@ Trunk (unreleased changes)
     namenodes and rebalancing processes to communicate with a primary 
     namenode.  (Hairong Kuang via dhruba)
 
+    HADOOP-1851.  Permit specification of map output compression type
+    and codec, independent of the final output's compression
+    parameters.  (Arun C Murthy via cutting)
+
+
   OPTIMIZATIONS
 
     HADOOP-1910.  Reduce the number of RPCs that DistributedFileSystem.create()

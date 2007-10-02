@@ -722,15 +722,22 @@ creations/deletions), or "all".</description>
 <property>
   <name>mapred.output.compress</name>
   <value>false</value>
-  <description>Should the outputs of the reduces be compressed?
+  <description>Should the job outputs be compressed?
+  </description>
+</property>
+
+<property>
+  <name>mapred.output.compression.type</name>
+  <value>RECORD</value>
+  <description>If the job outputs are to compressed as SequenceFiles, how should
+               they be compressed? Should be one of NONE, RECORD or BLOCK.
   </description>
 </property>
 
 <property>
   <name>mapred.output.compression.codec</name>
   <value>org.apache.hadoop.io.compress.DefaultCodec</value>
-  <description>If the reduce outputs are compressed, how should they be 
-               compressed?
+  <description>If the job outputs are compressed, how should they be compressed?
   </description>
 </property>
 
@@ -739,6 +746,22 @@ creations/deletions), or "all".</description>
   <value>false</value>
   <description>Should the outputs of the maps be compressed before being
                sent across the network. Uses SequenceFile compression.
+  </description>
+</property>
+
+<property>
+  <name>mapred.map.output.compression.type</name>
+  <value>RECORD</value>
+  <description>If the map outputs are to compressed, how should they
+               be compressed? Should be one of NONE, RECORD or BLOCK.
+  </description>
+</property>
+
+<property>
+  <name>mapred.map.output.compression.codec</name>
+  <value>org.apache.hadoop.io.compress.DefaultCodec</value>
+  <description>If the map outputs are compressed, how should they be 
+               compressed?
   </description>
 </property>
 

@@ -24,6 +24,8 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.DefaultCodec;
 
 /** A file-based map from keys to values.
  * 
@@ -87,6 +89,16 @@ public class MapFile {
 
     /** Create the named map for keys of the named class. */
     public Writer(Configuration conf, FileSystem fs, String dirName,
+                  Class keyClass, Class valClass,
+                  CompressionType compress, CompressionCodec codec,
+                  Progressable progress)
+      throws IOException {
+      this(conf, fs, dirName, WritableComparator.get(keyClass), valClass,
+           compress, codec, progress);
+    }
+
+    /** Create the named map for keys of the named class. */
+    public Writer(Configuration conf, FileSystem fs, String dirName,
                   Class keyClass, Class valClass, CompressionType compress)
       throws IOException {
       this(conf, fs, dirName, WritableComparator.get(keyClass), valClass, compress);
@@ -112,6 +124,15 @@ public class MapFile {
                   SequenceFile.CompressionType compress,
                   Progressable progress)
       throws IOException {
+      this(conf, fs, dirName, comparator, valClass, 
+           compress, new DefaultCodec(), progress);
+    }
+    /** Create the named map using the named key comparator. */
+    public Writer(Configuration conf, FileSystem fs, String dirName,
+                  WritableComparator comparator, Class valClass,
+                  SequenceFile.CompressionType compress, CompressionCodec codec,
+                  Progressable progress)
+      throws IOException {
 
       this.comparator = comparator;
       this.lastKey = comparator.newKey();
@@ -126,7 +147,7 @@ public class MapFile {
       Class keyClass = comparator.getKeyClass();
       this.data =
         SequenceFile.createWriter
-        (fs, conf, dataFile, keyClass, valClass, compress, progress);
+        (fs, conf, dataFile, keyClass, valClass, compress, codec, progress);
       this.index =
         SequenceFile.createWriter
         (fs, conf, indexFile, keyClass, LongWritable.class,

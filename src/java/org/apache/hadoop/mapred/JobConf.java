@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
 
 import org.apache.hadoop.mapred.lib.IdentityMapper;
@@ -296,6 +297,7 @@ public class JobConf extends Configuration {
   /**
    * Should the map outputs be compressed before transfer?
    * Uses the SequenceFile compression.
+   * @param compress should the map outputs be compressed?
    */
   public void setCompressMapOutput(boolean compress) {
     setBoolean("mapred.compress.map.output", compress);
@@ -303,60 +305,64 @@ public class JobConf extends Configuration {
   
   /**
    * Are the outputs of the maps be compressed?
-   * @return are they compressed?
+   * @return <code>true</code> if the outputs of the maps are to be compressed,
+   *         <code>false</code> otherwise
    */
   public boolean getCompressMapOutput() {
     return getBoolean("mapred.compress.map.output", false);
   }
 
   /**
-   * Set the compression type for the map outputs.
-   * @param style NONE, RECORD, or BLOCK to control how the map outputs are 
-   *        compressed
+   * Set the {@link CompressionType} for the map outputs.
+   * @param style the {@link CompressionType} to control how the map outputs  
+   *              are compressed
    */
-  public void setMapOutputCompressionType(SequenceFile.CompressionType style) {
-    set("map.output.compression.type", style.toString());
+  public void setMapOutputCompressionType(CompressionType style) {
+    set("mapred.map.output.compression.type", style.toString());
   }
   
   /**
-   * Get the compression type for the map outputs.
-   * @return the compression type, defaulting to job output compression type
+   * Get the {@link CompressionType} for the map outputs.
+   * @return the {@link CompressionType} for map outputs, defaulting to 
+   *         {@link CompressionType#RECORD} 
    */
-  public SequenceFile.CompressionType getMapOutputCompressionType() {
-    String val = get("map.output.compression.type", "RECORD");
-    return SequenceFile.CompressionType.valueOf(val);
+  public CompressionType getMapOutputCompressionType() {
+    String val = get("mapred.map.output.compression.type", 
+                     CompressionType.RECORD.toString());
+    return CompressionType.valueOf(val);
   }
-  
+
   /**
-   * Set the given class as the  compression codec for the map outputs.
-   * @param codecClass the CompressionCodec class that will compress the 
-   *                   map outputs
+   * Set the given class as the  {@link CompressionCodec} for the map outputs.
+   * @param codecClass the {@link CompressionCodec} class that will compress  
+   *                   the map outputs
    */
-  public void setMapOutputCompressorClass(Class<? extends CompressionCodec> codecClass) {
-    setCompressMapOutput(true);
-    setClass("mapred.output.compression.codec", codecClass, 
+  public void 
+  setMapOutputCompressorClass(Class<? extends CompressionCodec> codecClass) {
+    setClass("mapred.map.output.compression.codec", codecClass, 
              CompressionCodec.class);
   }
   
   /**
-   * Get the codec for compressing the map outputs
-   * @param defaultValue the value to return if it is not set
-   * @return the CompressionCodec class that should be used to compress the 
-   *   map outputs
+   * Get the {@link CompressionCodec} for compressing the map outputs.
+   * @param defaultValue the {@link CompressionCodec} to return if not set
+   * @return the {@link CompressionCodec} class that should be used to compress the 
+   *         map outputs
    * @throws IllegalArgumentException if the class was specified, but not found
    */
-  public Class<? extends CompressionCodec> getMapOutputCompressorClass(Class<? extends CompressionCodec> defaultValue) {
-    String name = get("mapred.output.compression.codec");
-    if (name == null) {
-      return defaultValue;
-    } else {
+  public Class<? extends CompressionCodec> 
+  getMapOutputCompressorClass(Class<? extends CompressionCodec> defaultValue) {
+    Class<? extends CompressionCodec> codecClass = defaultValue;
+    String name = get("mapred.map.output.compression.codec");
+    if (name != null) {
       try {
-        return getClassByName(name).asSubclass(CompressionCodec.class);
+        codecClass = getClassByName(name).asSubclass(CompressionCodec.class);
       } catch (ClassNotFoundException e) {
         throw new IllegalArgumentException("Compression codec " + name + 
                                            " was not found.", e);
       }
     }
+    return codecClass;
   }
   
   /**

@@ -28,8 +28,12 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /** An {@link OutputFormat} that writes {@link MapFile}s. */
 public class MapFileOutputFormat extends OutputFormatBase {
@@ -39,13 +43,25 @@ public class MapFileOutputFormat extends OutputFormatBase {
     throws IOException {
 
     Path file = new Path(job.getOutputPath(), name);
+    
+    CompressionCodec codec = null;
+    CompressionType compressionType = CompressionType.NONE;
+    if (getCompressOutput(job)) {
+      // find the kind of compression to do
+      compressionType = SequenceFileOutputFormat.getOutputCompressionType(job);
 
+      // find the right codec
+      Class codecClass = getOutputCompressorClass(job, DefaultCodec.class);
+      codec = (CompressionCodec) 
+        ReflectionUtils.newInstance(codecClass, job);
+    }
+    
     // ignore the progress parameter, since MapFile is local
     final MapFile.Writer out =
       new MapFile.Writer(job, file.getFileSystem(job), file.toString(),
                          job.getOutputKeyClass(),
                          job.getOutputValueClass(),
-                         SequenceFile.getCompressionType(job),
+                         compressionType, codec,
                          progress);
 
     return new RecordWriter() {

@@ -259,8 +259,7 @@ public class TestMapRed extends TestCase {
       
     public void configure(JobConf conf) {
       this.conf = conf;
-      compressInput = conf.getBoolean("mapred.compress.map.output", 
-                                      false);
+      compressInput = conf.getCompressMapOutput();
       taskId = conf.get("mapred.task.id");
     }
       

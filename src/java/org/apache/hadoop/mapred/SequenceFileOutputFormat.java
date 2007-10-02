@@ -46,7 +46,7 @@ public class SequenceFileOutputFormat extends OutputFormatBase {
     CompressionType compressionType = CompressionType.NONE;
     if (getCompressOutput(job)) {
       // find the kind of compression to do
-      compressionType = SequenceFile.getCompressionType(job);
+      compressionType = getOutputCompressionType(job);
 
       // find the right codec
       Class codecClass = getOutputCompressorClass(job, DefaultCodec.class);
@@ -88,5 +88,29 @@ public class SequenceFileOutputFormat extends OutputFormatBase {
     }
     return parts;
   }
+
+  /**
+   * Get the {@link CompressionType} for the output {@link SequenceFile}.
+   * @param conf the {@link JobConf}
+   * @return the {@link CompressionType} for the output {@link SequenceFile}, 
+   *         defaulting to {@link CompressionType#RECORD}
+   */
+  public static CompressionType getOutputCompressionType(JobConf conf) {
+    String val = conf.get("mapred.output.compression.type", 
+                          CompressionType.RECORD.toString());
+    return CompressionType.valueOf(val);
+  }
+  
+  /**
+   * Set the {@link CompressionType} for the output {@link SequenceFile}.
+   * @param conf the {@link JobConf} to modify
+   * @param style the {@link CompressionType} for the output
+   *              {@link SequenceFile} 
+   */
+  public static void setOutputCompressionType(JobConf conf, 
+		                                          CompressionType style) {
+    conf.set("mapred.output.compression.type", style.toString());
+  }
+
 }
 
