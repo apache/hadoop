@@ -768,7 +768,7 @@ public class JobClient extends ToolBase implements MRConstants  {
     if (submitJobFile != null) {
       conf = new JobConf(submitJobFile);
     } else {
-      conf = new JobConf();
+      conf = new JobConf(getConf());
     }
     init(conf);
         

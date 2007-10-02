@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.*;
+import java.io.IOException;
 
 import org.apache.hadoop.ipc.VersionedProtocol;
 
@@ -60,12 +60,14 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
   public void killJob(String jobid) throws IOException;
 
   /**
-   * Grab a handle to a job that is already known to the JobTracker
+   * Grab a handle to a job that is already known to the JobTracker.
+   * @return Profile of the job, or null if not found. 
    */
   public JobProfile getJobProfile(String jobid) throws IOException;
 
   /**
-   * Grab a handle to a job that is already known to the JobTracker
+   * Grab a handle to a job that is already known to the JobTracker.
+   * @return Status of the job, or null if not found.
    */
   public JobStatus getJobStatus(String jobid) throws IOException;
 
