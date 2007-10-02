@@ -28,7 +28,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.mapred.JobTracker.JobTrackerMetrics;
 
 /** Implements MapReduce locally, in-process, for debugging. */ 
@@ -97,6 +98,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
       return profile;
     }
     
+    @Override
     public void run() {
       try {
         // split input into minimum number of splits
@@ -291,7 +293,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
   public JobProfile getJobProfile(String id) {
     Job job = jobs.get(id);
-    return job.getProfile();
+    if(job != null)
+      return job.getProfile();
+    else 
+      return null;
   }
 
   public TaskReport[] getMapTaskReports(String id) {
@@ -303,7 +308,10 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
   public JobStatus getJobStatus(String id) {
     Job job = jobs.get(id);
-    return job.status;
+    if(job != null)
+      return job.status;
+    else 
+      return null;
   }
   
   public Counters getJobCounters(String id) {

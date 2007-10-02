@@ -862,7 +862,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     if (submitJobFile != null) {
       conf = new JobConf(submitJobFile);
     } else {
-      conf = new JobConf();
+      conf = new JobConf(getConf());
     }
     init(conf);
         
