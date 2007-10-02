@@ -256,7 +256,7 @@ public class LzoCompressor implements Compressor {
   public synchronized boolean finished() {
     // Check if 'lzo' says its 'finished' and
     // all compressed data has been consumed
-    return (finished && compressedDirectBuf.remaining() == 0); 
+    return (finish && finished && compressedDirectBuf.remaining() == 0); 
   }
 
   public synchronized int compress(byte[] b, int off, int len) 
