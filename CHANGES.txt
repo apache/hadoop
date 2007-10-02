@@ -85,6 +85,8 @@ Trunk (unreleased changes)
                 (Edward Yoon via Stack)
     HADOOP-1928 Have master pass the regionserver the filesystem to use
     HADOOP-1789 Output formatting
+    HADOOP-1960 If a region server cannot talk to the master before its lease
+                times out, it should shut itself down
 
 
 Below are the list of changes before 2007-08-18

@@ -153,21 +153,26 @@ public class TestSplit extends MultiRegionTable {
   /**
    * Test that a region is cleaned up after its daughter splits release all
    * references.
-   * @throws IOException
+   * @throws Exception
    */
-  public void testSplitRegionIsDeleted() throws IOException {
-    // Start up a hbase cluster
-    MiniHBaseCluster cluster = new MiniHBaseCluster(conf, 1, true);
+  public void testSplitRegionIsDeleted() throws Exception {
     try {
-      // Create a table.
-      HBaseAdmin admin = new HBaseAdmin(this.conf);
-      admin.createTable(createTableDescriptor(getName()));
-      // This builds a multi-region table by splitting.  It will assert
-      // the parent region gets cleaned-up.
-      MultiRegionTable.makeMultiRegionTable(conf, cluster,
-        this.localFs, getName(), COLFAMILY_NAME3);
-    } finally {
-      cluster.shutdown();
+      // Start up a hbase cluster
+      MiniHBaseCluster cluster = new MiniHBaseCluster(conf, 1, true);
+      try {
+        // Create a table.
+        HBaseAdmin admin = new HBaseAdmin(this.conf);
+        admin.createTable(createTableDescriptor(getName()));
+        // This builds a multi-region table by splitting.  It will assert
+        // the parent region gets cleaned-up.
+        MultiRegionTable.makeMultiRegionTable(conf, cluster,
+            this.localFs, getName(), COLFAMILY_NAME3);
+      } finally {
+        cluster.shutdown();
+      }
+    } catch (Exception e) {
+      LOG.error("test failed", e);
+      throw e;
     }
   }
   

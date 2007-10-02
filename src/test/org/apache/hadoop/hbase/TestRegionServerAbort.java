@@ -25,8 +25,6 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 
 /**
  * Tests region server failover when a region server exits.
@@ -41,9 +39,6 @@ public class TestRegionServerAbort extends HBaseClusterTestCase {
     conf.setInt("ipc.client.timeout", 5000);            // reduce client timeout
     conf.setInt("ipc.client.connect.max.retries", 5);   // and number of retries
     conf.setInt("hbase.client.retries.number", 5);      // reduce HBase retries
-    Logger.getRootLogger().setLevel(Level.WARN);
-    Logger.getLogger(this.getClass().getPackage().getName()).
-      setLevel(Level.DEBUG);
   }
   
   /**
@@ -92,8 +87,10 @@ public class TestRegionServerAbort extends HBaseClusterTestCase {
       }
       LOG.info("Success!");
     } finally {
-      LOG.info("Closing scanner " + scanner);
-      scanner.close();
+      if (scanner != null) {
+        LOG.info("Closing scanner " + scanner);
+        scanner.close();
+      }
     }
   }
 }
