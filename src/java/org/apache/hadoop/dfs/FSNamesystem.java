@@ -20,6 +20,7 @@ package org.apache.hadoop.dfs;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.dfs.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.mapred.StatusHttpServer;
 import org.apache.hadoop.net.NetworkTopology;
@@ -550,6 +551,81 @@ class FSNamesystem implements FSConstants {
     return crcInfo;
   }
   
+  /////////////////////////////////////////////////////////
+  //
+  // These methods are called by secondary namenodes
+  //
+  /////////////////////////////////////////////////////////
+  /**
+   * return a list of blocks & their locations on <code>datanode</code> whose
+   * total size is <code>size</code>
+   * 
+   * @param datanode on which blocks are located
+   * @parm size total size of blocks
+   */
+  synchronized BlocksWithLocations getBlocks(DatanodeID datanode, long size)
+      throws IOException {
+    DatanodeDescriptor node = getDatanode(datanode);
+    if (node == null) {
+      NameNode.stateChangeLog.warn("BLOCK* NameSystem.getBlocks: "
+          + "Asking for blocks from an unrecorded node " + datanode.getName());
+      throw new IllegalArgumentException(
+          "Unexpected exception.  Got getBlocks message for datanode " + 
+          datanode.getName() + ", but there is no info for it");
+    }
+
+    int numBlocks = node.numBlocks();
+    if(numBlocks == 0) {
+      return new BlocksWithLocations(new BlockWithLocations[0]);
+    }
+    Iterator<Block> iter = node.getBlockIterator();
+    int startBlock = r.nextInt(numBlocks); // starting from a random block
+    // skip blocks
+    for(int i=0; i<startBlock; i++) {
+      iter.next();
+    }
+    List<BlockWithLocations> results = new ArrayList<BlockWithLocations>();
+    long totalSize = 0;
+    while(totalSize<size && iter.hasNext()) {
+      totalSize += addBlock(iter.next(), results);
+    }
+    if(totalSize<size) {
+      iter = node.getBlockIterator(); // start from the beginning
+      for(int i=0; i<startBlock&&totalSize<size; i++) {
+        totalSize += addBlock(iter.next(), results);
+      }
+    }
+    
+    return new BlocksWithLocations(
+        results.toArray(new BlockWithLocations[results.size()]));
+  }
+  
+  /* Get all valid locations of the block & add the block to results
+   * return the length of the added block; 0 if the block is not added
+   */
+  private long addBlock(Block block, List<BlockWithLocations> results) {
+    int numNodes = blocksMap.numNodes(block);
+    String[] machineSet = new String[numNodes];
+    if (numNodes > 0) {
+      numNodes = 0;
+      for(Iterator<DatanodeDescriptor> it = 
+          blocksMap.nodeIterator(block); it.hasNext();) {
+        String storageID = it.next().getStorageID();
+        // filter invalidate replicas
+        Collection<Block> blocks = recentInvalidateSets.get(storageID); 
+        if(blocks==null || !blocks.contains(block)) {
+          machineSet[numNodes++] = storageID;
+        }
+      }
+    }
+    if(numNodes == 0) {
+      return 0;
+    } else {
+      results.add(new BlockWithLocations(block, machineSet));
+      return block.getNumBytes();
+    }
+  }
+
   /////////////////////////////////////////////////////////
   //
   // These methods are called by HadoopFS clients

@@ -67,14 +67,20 @@ import org.apache.hadoop.metrics.jvm.JvmMetrics;
  * methods are invoked repeatedly and automatically by all the
  * DataNodes in a DFS deployment.
  *
+ * NameNode also implements the NamenodeProtocol interface, used by
+ * secondary namenodes or rebalancing processes to get partial namenode's
+ * state, for example partial blocksMap etc.
  **********************************************************/
-public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
+public class NameNode implements ClientProtocol, DatanodeProtocol,
+                                 NamenodeProtocol, FSConstants {
   public long getProtocolVersion(String protocol, 
                                  long clientVersion) throws IOException { 
     if (protocol.equals(ClientProtocol.class.getName())) {
       return ClientProtocol.versionID; 
     } else if (protocol.equals(DatanodeProtocol.class.getName())){
       return DatanodeProtocol.versionID;
+    } else if (protocol.equals(NamenodeProtocol.class.getName())){
+      return NamenodeProtocol.versionID;
     } else {
       throw new IOException("Unknown protocol to name node: " + protocol);
     }
@@ -254,7 +260,27 @@ public class NameNode implements ClientProtocol, DatanodeProtocol, FSConstants {
       server.stop();
     }
   }
+  
+  /////////////////////////////////////////////////////
+  // NamenodeProtocol
+  /////////////////////////////////////////////////////
+  /**
+   * return a list of blocks & their locations on <code>datanode</code> whose
+   * total size is <code>size</code>
+   * 
+   * @param datanode on which blocks are located
+   * @param size total size of blocks
+   */
+  public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
+  throws IOException {
+    if(size <= 0) {
+      throw new IllegalArgumentException(
+        "Unexpected not positive size: "+size);
+    }
 
+    return namesystem.getBlocks(datanode, size); 
+  }
+  
   /////////////////////////////////////////////////////
   // ClientProtocol
   /////////////////////////////////////////////////////

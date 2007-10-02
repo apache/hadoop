@@ -66,6 +66,10 @@ Trunk (unreleased changes)
     to Web User Interface. Users not using Firefox may install a plugin to 
     their browsers to see svg graphics. (enis)
 
+    HADOOP-1914. Introduce a new NamenodeProtocol to allow secondary 
+    namenodes and rebalancing processes to communicate with a primary 
+    namenode.  (Hairong Kuang via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-1910.  Reduce the number of RPCs that DistributedFileSystem.create()
