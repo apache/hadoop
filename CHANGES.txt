@@ -334,6 +334,9 @@ Release 0.14.2 - unreleased
     HADOOP-1977. Fixed handling of ToolBase cli options in JobClient.
     (enis via omalley)
 
+    HADOOP-1972.  Fix LzoCompressor to ensure the user has actually asked
+    to finish compression. (arun via omalley)
+
 Release 0.14.1 - 2007-09-04
 
   BUG FIXES
