@@ -64,10 +64,19 @@ public class Progress {
   }
 
   /** Completes this node, moving the parent node to its next child. */
-  public synchronized void complete() {
-    progress = 1.0f;
-    if (parent != null) {
-      parent.startNextPhase();
+  public void complete() {
+    // we have to traverse up to our parent, so be careful about locking.
+    Progress myParent;
+    synchronized(this) {
+      progress = 1.0f;
+      myParent = parent;
+    }
+    if (myParent != null) {
+      // this will synchronize on the parent, so we make sure we release
+      // our lock before getting the parent's, since we're traversing 
+      // against the normal traversal direction used by get() or toString().
+      // We don't need transactional semantics, so we're OK doing this. 
+      myParent.startNextPhase();
     }
   }
 
