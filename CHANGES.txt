@@ -218,6 +218,9 @@ Trunk (unreleased changes)
     HADOOP-1930.  Fix the blame for failed fetchs on the right host. (Arun C.
     Murthy via omalley)
 
+    HADOOP-1934.  Fix the platform name on Mac to use underscores rather than
+    spaces. (omalley)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 

@@ -36,8 +36,13 @@
   <property name="build.examples" value="${build.dir}/examples"/>
   <property name="build.anttasks" value="${build.dir}/ant"/>
   <property name="build.libhdfs" value="${build.dir}/libhdfs"/>
+  <!-- convert spaces to _ so that mac os doesn't break things -->
+  <exec executable="sed" inputstring="${os.name}" 
+        outputproperty="nonspace.os">
+     <arg value="s/ /_/g"/>
+  </exec>
   <property name="build.platform" 
-            value="${os.name}-${os.arch}-${sun.arch.data.model}"/>
+            value="${nonspace.os}-${os.arch}-${sun.arch.data.model}"/>
   <property name="build.native" value="${build.dir}/native/${build.platform}"/>
   <property name="build.c++" value="${build.dir}/c++-build/${build.platform}"/>
   <property name="build.c++.utils" value="${build.c++}/utils"/>
