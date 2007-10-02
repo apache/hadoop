@@ -38,6 +38,8 @@ public class ExampleDriver {
                    "A map/reduce program that counts the matches of a regex in the input.");
       pgd.addClass("randomwriter", RandomWriter.class, 
                    "A map/reduce program that writes 10GB of random data per node.");
+      pgd.addClass("randomtextwriter", RandomTextWriter.class, 
+      "A map/reduce program that writes 10GB of random textual data per node.");
       pgd.addClass("sort", Sort.class, "A map/reduce program that sorts the data written by the random writer.");
       pgd.addClass("pi", PiEstimator.class, "A map/reduce program that estimates Pi using monte-carlo method.");
       pgd.addClass("pentomino", DistributedPentomino.class,

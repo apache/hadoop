@@ -25,6 +25,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
@@ -36,12 +38,22 @@ import org.apache.hadoop.util.ToolRunner;
  * other than use the framework to fragment and sort the input values.
  *
  * To run: bin/hadoop jar build/hadoop-examples.jar sort
- *            [-m <i>maps</i>] [-r <i>reduces</i>] <i>in-dir</i> <i>out-dir</i> 
+ *            [-m <i>maps</i>] [-r <i>reduces</i>]
+ *            [-inFormat <i>input format class</i>] 
+ *            [-outFormat <i>output format class</i>] 
+ *            [-outKey <i>output key class</i>] 
+ *            [-outValue <i>output value class</i>] 
+ *            <i>in-dir</i> <i>out-dir</i> 
  */
 public class Sort extends Configured implements Tool {
 
   static int printUsage() {
-    System.out.println("sort [-m <maps>] [-r <reduces>] <input> <output>");
+    System.out.println("sort [-m <maps>] [-r <reduces>] " +
+                       "[-inFormat <input format class>] " +
+                       "[-outFormat <output format class>] " + 
+                       "[-outKey <output key class>] " +
+                       "[-outValue <output value class>] " +
+                       "<input> <output>");
     ToolRunner.printGenericCommandUsage(System.out);
     return -1;
   }
@@ -57,12 +69,6 @@ public class Sort extends Configured implements Tool {
     JobConf jobConf = new JobConf(getConf(), Sort.class);
     jobConf.setJobName("sorter");
 
-    jobConf.setInputFormat(SequenceFileInputFormat.class);
-    jobConf.setOutputFormat(SequenceFileOutputFormat.class);
-
-    jobConf.setOutputKeyClass(BytesWritable.class);
-    jobConf.setOutputValueClass(BytesWritable.class);
-
     jobConf.setMapperClass(IdentityMapper.class);        
     jobConf.setReducerClass(IdentityReducer.class);
 
@@ -72,6 +78,12 @@ public class Sort extends Configured implements Tool {
     jobConf.getInt("test.sort.maps_per_host", 10);
     int num_reduces = cluster.getTaskTrackers() * 
     jobConf.getInt("test.sort.reduces_per_host", cluster.getMaxTasks());
+    Class<? extends InputFormat> inputFormatClass = 
+      SequenceFileInputFormat.class;
+    Class<? extends OutputFormat> outputFormatClass = 
+      SequenceFileOutputFormat.class;
+    Class<? extends WritableComparable> outputKeyClass = BytesWritable.class;
+    Class<? extends Writable> outputValueClass = BytesWritable.class;
     List<String> otherArgs = new ArrayList<String>();
     for(int i=0; i < args.length; ++i) {
       try {
@@ -79,6 +91,18 @@ public class Sort extends Configured implements Tool {
           num_maps = Integer.parseInt(args[++i]);
         } else if ("-r".equals(args[i])) {
           num_reduces = Integer.parseInt(args[++i]);
+        } else if ("-inFormat".equals(args[i])) {
+          inputFormatClass = 
+            Class.forName(args[++i]).asSubclass(InputFormat.class);
+        } else if ("-outFormat".equals(args[i])) {
+          outputFormatClass = 
+            Class.forName(args[++i]).asSubclass(OutputFormat.class);
+        } else if ("-outKey".equals(args[i])) {
+          outputKeyClass = 
+            Class.forName(args[++i]).asSubclass(WritableComparable.class);
+        } else if ("-outValue".equals(args[i])) {
+          outputValueClass = 
+            Class.forName(args[++i]).asSubclass(Writable.class);
         } else {
           otherArgs.add(args[i]);
         }
@@ -92,8 +116,15 @@ public class Sort extends Configured implements Tool {
       }
     }
 
+    // Set user-supplied (possibly default) job configs
     jobConf.setNumMapTasks(num_maps);
     jobConf.setNumReduceTasks(num_reduces);
+
+    jobConf.setInputFormat(inputFormatClass);
+    jobConf.setOutputFormat(outputFormatClass);
+
+    jobConf.setOutputKeyClass(outputKeyClass);
+    jobConf.setOutputValueClass(outputValueClass);
 
     // Make sure there are exactly 2 parameters left.
     if (otherArgs.size() != 2) {

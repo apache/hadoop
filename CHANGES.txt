@@ -336,6 +336,9 @@ Trunk (unreleased changes)
     HADOOP-120.  In ArrayWritable, prevent creation with null value
     class, and improve documentation.  (Cameron Pope via cutting)
 
+    HADOOP-1926. Add a random text writer example/benchmark so that we can
+    benchmark compression codecs on random data.
+
 Release 0.14.2 - unreleased
 
   BUG FIXES
