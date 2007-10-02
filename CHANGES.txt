@@ -221,6 +221,9 @@ Trunk (unreleased changes)
     HADOOP-1934.  Fix the platform name on Mac to use underscores rather than
     spaces. (omalley)
 
+    HADOOP-1959.  Use "/" instead of File.separator in the StatusHttpServer.
+    (jimk via omalley)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 

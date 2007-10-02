@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.mapred;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -91,7 +90,7 @@ public class StatusHttpServer {
 
     // set up the context for "/" jsp files
     webAppContext = 
-      webServer.addWebApplication("/", appDir + File.separator + name);
+      webServer.addWebApplication("/", appDir + "/" + name);
     addServlet("stacks", "/stacks", StackServlet.class);
     addServlet("reducegraph", "/taskgraph", TaskGraphServlet.class);
   }
