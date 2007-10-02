@@ -522,14 +522,6 @@ public class TaskTracker
     private IntWritable fromEventId;
     /** This is the cache of map events for a given job */ 
     private List<TaskCompletionEvent> allMapEvents;
-    /** This array will store indexes to "SUCCEEDED" map events from
-     * allMapEvents. The array is indexed by the mapId. 
-     * The reason why we store the indexes is to quickly reset SUCCEEDED 
-     * events to OBSOLETE. Thus ReduceTasks might also get to know about 
-     * OBSOLETE events and avoid fetching map outputs from the corresponding 
-     * locations.
-     */ 
-    private int indexToEventsCache[];
     /** What jobid this fetchstatus object is for*/
     private String jobId;
      
@@ -537,7 +529,6 @@ public class TaskTracker
       this.fromEventId = new IntWritable(0);
       this.jobId = jobId;
       this.allMapEvents = new ArrayList<TaskCompletionEvent>(numMaps);
-      this.indexToEventsCache = new int[numMaps];
     }
       
     public TaskCompletionEvent[] getMapEvents(int fromId, int max) {
@@ -559,32 +550,7 @@ public class TaskTracker
       List <TaskCompletionEvent> recentMapEvents = 
         queryJobTracker(fromEventId, jobId, jobClient);
       synchronized (allMapEvents) {
-        for (TaskCompletionEvent t : recentMapEvents) {
-          TaskCompletionEvent.Status status = t.getTaskStatus();
-          allMapEvents.add(t);
-            
-          if (status == TaskCompletionEvent.Status.SUCCEEDED) {
-            //store the index of the events cache for this success event.
-            indexToEventsCache[t.idWithinJob()] = allMapEvents.size();
-          }
-          else if (status == TaskCompletionEvent.Status.FAILED || 
-                   status == TaskCompletionEvent.Status.OBSOLETE) {
-            int idx = indexToEventsCache[t.idWithinJob()];
-            //if this map task was declared a success earlier, we will have
-            //idx > 0
-            if (idx > 0) {
-              //Mark the event as OBSOLETE and reset the index to 0. Note 
-              //we access the 'idx - 1' entry. This is because while storing
-              //the idx in indexToEventsCache, we store the 'actual idx + 1'
-              //Helps us to eliminate the index array elements initialization
-              //to something like '-1'
-              TaskCompletionEvent obsoleteEvent = allMapEvents.get(idx - 1);
-              obsoleteEvent.setTaskStatus(
-                                          TaskCompletionEvent.Status.OBSOLETE);
-              indexToEventsCache[t.idWithinJob()] = 0;
-            }
-          }
-        }
+        allMapEvents.addAll(recentMapEvents);
       }
     }
   }

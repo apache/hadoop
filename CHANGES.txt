@@ -214,6 +214,9 @@ Trunk (unreleased changes)
     HADOOP-1930.  Fix the blame for failed fetchs on the right host. (Arun C.
     Murthy via omalley)
 
+    HADOOP-1862.  reduces are getting stuck trying to find map outputs. 
+    (Arun C. Murthy via ddas)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
@@ -325,6 +328,9 @@ Release 0.14.2 - unreleased
 
     HADOOP-1948. Removed spurious error message during block crc upgrade.
     (Raghu Angadi via dhruba)
+
+    HADOOP-1862.  reduces are getting stuck trying to find map outputs. 
+    (Arun C. Murthy via ddas)
 
 Release 0.14.1 - 2007-09-04
 

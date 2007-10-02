@@ -456,10 +456,16 @@ class ReduceTask extends Task {
       new ArrayList<MapOutputLocation>();
     
     /** 
-     * a TreeSet for needed map outputs
+     * The set of required map outputs
      */
     private Set <Integer> neededOutputs = 
       Collections.synchronizedSet(new TreeSet<Integer>());
+    
+    /** 
+     * The set of obsolete map taskids.
+     */
+    private Set <String> obsoleteMapIds = 
+      Collections.synchronizedSet(new TreeSet<String>());
     
     private Random random = null;
     
@@ -663,6 +669,9 @@ class ReduceTask extends Task {
                        loc.getMapTaskId() + " from " + loc.getHost());
               LOG.warn(StringUtils.stringifyException(e));
               shuffleClientMetrics.failedFetch();
+              
+              // Reset 
+              size = -1;
             } finally {
               shuffleClientMetrics.threadFree();
               finish(size);
@@ -676,7 +685,7 @@ class ReduceTask extends Task {
         }
       }
       
-      /** Copies a a map output from a remote host, using raw RPC. 
+      /** Copies a a map output from a remote host, via HTTP. 
        * @param currentLocation the map output location to be copied
        * @return the path (fully qualified) of the copied file
        * @throws IOException if there is an error copying the file
@@ -684,9 +693,12 @@ class ReduceTask extends Task {
        */
       private long copyOutput(MapOutputLocation loc
                               ) throws IOException, InterruptedException {
-        if (!neededOutputs.contains(loc.getMapId())) {
+        // check if we still need to copy the output from this location
+        if (!neededOutputs.contains(loc.getMapId()) || 
+            obsoleteMapIds.contains(loc.getMapTaskId())) {
           return CopyResult.OBSOLETE;
-        }
+        } 
+ 
         String reduceId = reduceTask.getTaskId();
         LOG.info(reduceId + " Copying " + loc.getMapTaskId() +
                  " output from " + loc.getHost() + ".");
@@ -893,18 +905,22 @@ class ReduceTask extends Task {
             // tasktracker and put the mapId hashkeys with new 
             // MapOutputLocations as values
             knownOutputs.addAll(retryFetches);
-            // The call getsMapCompletionEvents will modify fromEventId to a val
-            // that it should be for the next call to getSuccessMapEvents
-            List <MapOutputLocation> locs = getMapCompletionEvents(fromEventId);
+             
+            // The call getMapCompletionEvents will update fromEventId to
+            // used for the next call to getMapCompletionEvents
+            int currentNumKnownMaps = knownOutputs.size();
+            int currentNumObsoleteMapIds = obsoleteMapIds.size();
+            getMapCompletionEvents(fromEventId, knownOutputs);
 
-            // put discovered them on the known list
-            for (int i=0; i < locs.size(); i++) {
-              knownOutputs.add(locs.get(i));
-            }
-            LOG.info(reduceTask.getTaskId() +
-                    " Got " + locs.size() + 
-                    " new map outputs from tasktracker and " + retryFetches.size()
-                    + " map outputs from previous failures");
+            
+            LOG.info(reduceTask.getTaskId() + ": " +  
+                     "Got " + (knownOutputs.size()-currentNumKnownMaps) + 
+                     " new map-outputs & " + 
+                     (obsoleteMapIds.size()-currentNumObsoleteMapIds) + 
+                     " obsolete map-outputs from tasktracker and " + 
+                     retryFetches.size() + " map-outputs from previous failures"
+                     );
+            
             // clear the "failed" fetches hashmap
             retryFetches.clear();
           }
@@ -932,6 +948,13 @@ class ReduceTask extends Task {
             while (locIt.hasNext()) {
               
               MapOutputLocation loc = (MapOutputLocation)locIt.next();
+              
+              // Do not schedule fetches from OBSOLETE maps
+              if (obsoleteMapIds.contains(loc.getMapTaskId())) {
+                locIt.remove();
+                continue;
+              }
+              
               Long penaltyEnd = penaltyBox.get(loc.getHost());
               boolean penalized = false, duplicate = false;
               
@@ -1027,7 +1050,7 @@ class ReduceTask extends Task {
                   // did we have too many unique failed-fetch maps?
                   if (fetchFailedMaps.size() >= MAX_FAILED_UNIQUE_FETCHES) {
                     LOG.fatal("Shuffle failed with too many fetch failures! " +
-                             "Killing task " + getTaskId() + ".");
+                              "Killing task " + getTaskId() + ".");
                     umbilical.shuffleError(getTaskId(), 
                                            "Exceeded MAX_FAILED_UNIQUE_FETCHES;"
                                            + " bailing-out.");
@@ -1172,15 +1195,19 @@ class ReduceTask extends Task {
       }    
     }
     
-    /** Queries the task tracker for a set of outputs ready to be copied
+    /** 
+     * Queries the {@link TaskTracker} for a set of map-completion events from
+     * a given event ID.
+     * 
      * @param fromEventId the first event ID we want to start from, this is
-     * modified by the call to this method
-     * @param jobClient the job tracker
-     * @return a set of locations to copy outputs from
+     *                     modified by the call to this method
+     * @param jobClient the {@link JobTracker}
+     * @return the set of map-completion events from the given event ID 
      * @throws IOException
      */  
-    private List <MapOutputLocation> getMapCompletionEvents(IntWritable fromEventId)
-      throws IOException {
+    private void getMapCompletionEvents(IntWritable fromEventId, 
+                                        List<MapOutputLocation> knownOutputs)
+    throws IOException {
       
       long currentTime = System.currentTimeMillis();    
       long pollTime = lastPollTime + MIN_POLL_INTERVAL;
@@ -1190,31 +1217,54 @@ class ReduceTask extends Task {
         } catch (InterruptedException ie) { } // IGNORE
         currentTime = System.currentTimeMillis();
       }
+      
+      TaskCompletionEvent events[] = 
+        umbilical.getMapCompletionEvents(reduceTask.getJobId(), 
+                                         fromEventId.get(), probe_sample_size);
+      
+      // Note the last successful poll time-stamp
       lastPollTime = currentTime;
+
+      // Update the last seen event ID
+      fromEventId.set(fromEventId.get() + events.length);
       
-      TaskCompletionEvent t[] = umbilical.getMapCompletionEvents(
-                                                                 reduceTask.getJobId(),
-                                                                 fromEventId.get(),
-                                                                 probe_sample_size);
-      
-      List <MapOutputLocation> mapOutputsList = 
-        new ArrayList<MapOutputLocation>();
-      for (TaskCompletionEvent event : t) {
-        if (event.getTaskStatus() == TaskCompletionEvent.Status.SUCCEEDED) {
-          URI u = URI.create(event.getTaskTrackerHttp());
-          String host = u.getHost();
-          int port = u.getPort();
-          String taskId = event.getTaskId();
-          int mId = event.idWithinJob();
-          mapOutputsList.add(new MapOutputLocation(taskId, mId, host, port));
-        } else if (event.getTaskStatus() == TaskCompletionEvent.Status.TIPFAILED) {
-          neededOutputs.remove(event.idWithinJob());
-          LOG.info("Ignoring output of failed map: '" + event.getTaskId() + "'");
+      // Process the TaskCompletionEvents:
+      // 1. Save the SUCCEEDED maps in knownOutputs to fetch the outputs.
+      // 2. Save the OBSOLETE/FAILED/KILLED maps in obsoleteOutputs to stop fetching
+      //    from those maps.
+      // 3. Remove TIPFAILED maps from neededOutputs since we don't need their
+      //    outputs at all.
+      for (TaskCompletionEvent event : events) {
+        switch (event.getTaskStatus()) {
+          case SUCCEEDED:
+          {
+            URI u = URI.create(event.getTaskTrackerHttp());
+            String host = u.getHost();
+            int port = u.getPort();
+            String taskId = event.getTaskId();
+            int mId = event.idWithinJob();
+            knownOutputs.add(new MapOutputLocation(taskId, mId, host, port));
+          }
+          break;
+          case FAILED:
+          case KILLED:
+          case OBSOLETE:
+          {
+            obsoleteMapIds.add(event.getTaskId());
+            LOG.info("Ignoring obsolete output of " + event.getTaskStatus() + 
+                     " map-task: '" + event.getTaskId() + "'");
+          }
+          break;
+          case TIPFAILED:
+          {
+            neededOutputs.remove(event.idWithinJob());
+            LOG.info("Ignoring output of failed map TIP: '" +  
+            		 event.getTaskId() + "'");
+          }
+          break;
         }
       }
-    
-      fromEventId.set(fromEventId.get() + t.length);
-      return mapOutputsList;
+
     }
     
     
