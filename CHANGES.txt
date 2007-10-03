@@ -74,6 +74,8 @@ Trunk (unreleased changes)
     and codec, independent of the final output's compression
     parameters.  (Arun C Murthy via cutting)
 
+    HADOOP-1963.  Add a FileSystem implementation for the Kosmos
+    Filesystem (KFS).  (Sriram Rao via cutting)
 
   OPTIMIZATIONS
 

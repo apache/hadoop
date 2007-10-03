@@ -145,6 +145,12 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>fs.kfs.impl</name>
+  <value>org.apache.hadoop.fs.kfs.KosmosFileSystem</value>
+  <description>The FileSystem for kfs: uris.</description>
+</property>
+
+<property>
   <name>fs.hftp.impl</name>
   <value>org.apache.hadoop.dfs.HftpFileSystem</value>
 </property>
