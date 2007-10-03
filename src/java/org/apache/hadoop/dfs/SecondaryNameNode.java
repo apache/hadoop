@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.mapred.StatusHttpServer;
+import org.apache.hadoop.net.NetUtils;
 
 import java.io.*;
 import java.net.*;
@@ -93,8 +94,10 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     nameNodeAddr = DataNode.createSocketAddr(
                                              conf.get("fs.default.name", "local"));
     this.conf = conf;
-    this.namenode = (ClientProtocol) RPC.getProxy(ClientProtocol.class,
-                                                  ClientProtocol.versionID, nameNodeAddr, conf);
+    this.namenode =
+        (ClientProtocol) RPC.getProxy(ClientProtocol.class,
+            ClientProtocol.versionID, nameNodeAddr, conf, NetUtils
+                .getSocketFactory(conf, ClientProtocol.class));
 
     //
     // initialize the webserver for uploading files.

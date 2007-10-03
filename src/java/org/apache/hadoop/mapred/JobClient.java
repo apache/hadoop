@@ -55,6 +55,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.TaskInProgress;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -267,9 +268,10 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   private JobSubmissionProtocol createProxy(InetSocketAddress addr,
                                             Configuration conf
                                             ) throws IOException {
-    JobSubmissionProtocol raw = (JobSubmissionProtocol) 
-      RPC.getProxy(JobSubmissionProtocol.class,
-                   JobSubmissionProtocol.versionID, addr, conf);
+    JobSubmissionProtocol raw =
+        (JobSubmissionProtocol) RPC.getProxy(JobSubmissionProtocol.class,
+            JobSubmissionProtocol.versionID, addr, conf, NetUtils
+                .getSocketFactory(conf, JobSubmissionProtocol.class));
     RetryPolicy backoffPolicy =
       RetryPolicies.retryUpToMaximumCountWithProportionalSleep
       (5, 10, java.util.concurrent.TimeUnit.SECONDS);

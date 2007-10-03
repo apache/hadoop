@@ -28,10 +28,15 @@ import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.io.*;
+import java.util.Map;
+import java.util.HashMap;
+
+import javax.net.SocketFactory;
 
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.conf.*;
 
 /** A simple RPC mechanism.
@@ -126,37 +131,51 @@ public class RPC {
 
   }
 
-  private static Client CLIENT;
+  private static Map<SocketFactory, Client> CLIENTS =
+      new HashMap<SocketFactory, Client>();
 
-  private static synchronized Client getClient(Configuration conf) {
+  private static synchronized Client getClient(Configuration conf,
+      SocketFactory factory) {
     // Construct & cache client.  The configuration is only used for timeout,
     // and Clients have connection pools.  So we can either (a) lose some
     // connection pooling and leak sockets, or (b) use the same timeout for all
     // configurations.  Since the IPC is usually intended globally, not
     // per-job, we choose (a).
-    if (CLIENT == null) {
-      CLIENT = new Client(ObjectWritable.class, conf);
+    Client client = CLIENTS.get(factory);
+    if (client == null) {
+      client = new Client(ObjectWritable.class, conf, factory);
+      CLIENTS.put(factory, client);
     }
-    return CLIENT;
+    return client;
+  }
+  
+  /**
+   * Construct & cache client with the default SocketFactory.
+   * @param conf
+   * @return
+   */
+  private static Client getClient(Configuration conf) {
+    return getClient(conf, SocketFactory.getDefault());
   }
 
   /**
    * Stop all RPC client connections
    */
   public static synchronized void stopClient(){
-    if (CLIENT != null) {
-      CLIENT.stop();
-      CLIENT = null;
-    }
+    for (Client client : CLIENTS.values())
+      client.stop();
+    CLIENTS.clear();
   }
 
   private static class Invoker implements InvocationHandler {
     private InetSocketAddress address;
     private Client client;
 
-    public Invoker(InetSocketAddress address, Configuration conf) {
+    public Invoker(InetSocketAddress address, Configuration conf,
+        SocketFactory factory) {
+
       this.address = address;
-      this.client = getClient(conf);
+      this.client = getClient(conf, factory);
     }
 
     public Object invoke(Object proxy, Method method, Object[] args)
@@ -239,12 +258,14 @@ public class RPC {
   }
   /** Construct a client-side proxy object that implements the named protocol,
    * talking to a server at the named address. */
-  public static VersionedProtocol getProxy(Class protocol, long clientVersion,
-                                           InetSocketAddress addr, Configuration conf) throws IOException {
-    VersionedProtocol proxy = (VersionedProtocol) Proxy.newProxyInstance(
-                                                                         protocol.getClassLoader(),
-                                                                         new Class[] { protocol },
-                                                                         new Invoker(addr, conf));
+  public static VersionedProtocol getProxy(Class<?> protocol,
+      long clientVersion, InetSocketAddress addr, Configuration conf,
+      SocketFactory factory) throws IOException {
+
+    VersionedProtocol proxy =
+        (VersionedProtocol) Proxy.newProxyInstance(
+            protocol.getClassLoader(), new Class[] { protocol },
+            new Invoker(addr, conf, factory));
     long serverVersion = proxy.getProtocolVersion(protocol.getName(), 
                                                   clientVersion);
     if (serverVersion == clientVersion) {
@@ -253,6 +274,24 @@ public class RPC {
       throw new VersionMismatch(protocol.getName(), clientVersion, 
                                 serverVersion);
     }
+  }
+
+  /**
+   * Construct a client-side proxy object with the default SocketFactory
+   * 
+   * @param protocol
+   * @param clientVersion
+   * @param addr
+   * @param conf
+   * @return a proxy instance
+   * @throws IOException
+   */
+  public static VersionedProtocol getProxy(Class<?> protocol,
+      long clientVersion, InetSocketAddress addr, Configuration conf)
+      throws IOException {
+
+    return getProxy(protocol, clientVersion, addr, conf, NetUtils
+        .getDefaultSocketFactory(conf));
   }
 
   /** Expert: Make multiple, parallel calls to a set of servers. */

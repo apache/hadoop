@@ -23,6 +23,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.ipc.*;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.dfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.util.*;
@@ -35,6 +36,8 @@ import java.util.*;
 import java.util.zip.CRC32;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
+
+import javax.net.SocketFactory;
 
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and 
@@ -60,6 +63,7 @@ class DFSClient implements FSConstants {
   private long defaultBlockSize;
   private short defaultReplication;
   private LocalDirAllocator dirAllocator;
+  private SocketFactory socketFactory;
     
   /**
    * A map from name -> DFSOutputStream of files that are currently being
@@ -142,7 +146,8 @@ class DFSClient implements FSConstants {
 
     return (ClientProtocol) RetryProxy.create(ClientProtocol.class,
         RPC.getProxy(ClientProtocol.class,
-            ClientProtocol.versionID, nameNodeAddr, conf),
+            ClientProtocol.versionID, nameNodeAddr, conf,
+            NetUtils.getSocketFactory(conf, ClientProtocol.class)),
         methodNameToPolicyMap);
   }
         
@@ -152,6 +157,7 @@ class DFSClient implements FSConstants {
   public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf)
     throws IOException {
     this.conf = conf;
+    this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     this.namenode = createNamenode(nameNodeAddr, conf);
     String taskId = conf.get("mapred.task.id");
     if (taskId != null) {
@@ -984,7 +990,7 @@ class DFSClient implements FSConstants {
         InetSocketAddress targetAddr = retval.addr;
 
         try {
-          s = new Socket();
+          s = socketFactory.createSocket();
           s.connect(targetAddr, READ_TIMEOUT);
           s.setSoTimeout(READ_TIMEOUT);
           Block blk = targetBlock.getBlock();
@@ -1161,7 +1167,7 @@ class DFSClient implements FSConstants {
         InetSocketAddress targetAddr = retval.addr;
             
         try {
-          dn = new Socket();
+          dn = socketFactory.createSocket();
           dn.connect(targetAddr, READ_TIMEOUT);
           dn.setSoTimeout(READ_TIMEOUT);
               
@@ -1490,7 +1496,7 @@ class DFSClient implements FSConstants {
         //
         InetSocketAddress target = DataNode.createSocketAddr(nodes[0].getName());
         try {
-          s = new Socket();
+          s = socketFactory.createSocket();
           s.connect(target, READ_TIMEOUT);
           s.setSoTimeout(replication * READ_TIMEOUT);
         } catch (IOException ie) {

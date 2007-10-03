@@ -31,19 +31,20 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.FilterInputStream;
 import java.io.FilterOutputStream;
-import java.io.OutputStream;
 
 import java.util.Hashtable;
 import java.util.Iterator;
 
+import javax.net.SocketFactory;
+
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.dfs.FSConstants;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -71,6 +72,7 @@ public class Client {
   private int maxIdleTime; //connections will be culled if it was idle for 
                            //maxIdleTime msecs
   private int maxRetries; //the max. no. of retries for socket connections
+  private SocketFactory socketFactory;           // how to create sockets
 
   /** A call waiting for a value. */
   private class Call {
@@ -146,7 +148,7 @@ public class Client {
       short failures = 0;
       while (true) {
         try {
-          this.socket = new Socket();
+          this.socket = socketFactory.createSocket();
           this.socket.connect(address, FSConstants.READ_TIMEOUT);
           break;
         } catch (IOException ie) { //SocketTimeoutException is also caught 
@@ -426,19 +428,29 @@ public class Client {
 
   /** Construct an IPC client whose values are of the given {@link Writable}
    * class. */
-  public Client(Class valueClass, Configuration conf) {
+  public Client(Class valueClass, Configuration conf, 
+      SocketFactory factory) {
     this.valueClass = valueClass;
     this.timeout = conf.getInt("ipc.client.timeout", 10000);
     this.maxIdleTime = conf.getInt("ipc.client.connection.maxidletime", 1000);
     this.maxRetries = conf.getInt("ipc.client.connect.max.retries", 10);
     this.conf = conf;
-
+    this.socketFactory = factory;
     Thread t = new ConnectionCuller();
     t.setDaemon(true);
     t.setName(valueClass.getName() + " Connection Culler");
     LOG.debug(valueClass.getName() + 
               "Connection culler maxidletime= " + maxIdleTime + "ms");
     t.start();
+  }
+
+  /**
+   * Construct an IPC client with the default SocketFactory
+   * @param valueClass
+   * @param conf
+   */
+  public Client(Class<?> valueClass, Configuration conf) {
+    this(valueClass, conf, NetUtils.getDefaultSocketFactory(conf));
   }
  
   /** Stop all threads related to this client.  No further calls may be made

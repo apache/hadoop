@@ -954,4 +954,39 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<!-- Proxy Configuration -->
+
+<property>
+  <name>hadoop.rpc.socket.factory.class.default</name>
+  <value>org.apache.hadoop.net.StandardSocketFactory</value>
+  <description> Default SocketFactory to use. This parameter is expected to be
+    formatted as "package.FactoryClassName".
+  </description>
+</property>
+
+<property>
+  <name>hadoop.rpc.socket.factory.class.ClientProtocol</name>
+  <value></value>
+  <description> SocketFactory to use to connect to a DFS. If null or empty, use
+    hadoop.rpc.socket.class.default. This socket factory is also used by
+    DFSClient to create sockets to DataNodes.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.rpc.socket.factory.class.JobSubmissionProtocol</name>
+  <value></value>
+  <description> SocketFactory to use to connect to a Map/Reduce master
+    (JobTracker). If null or empty, then use hadoop.rpc.socket.class.default.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.socks.server</name>
+  <value></value>
+  <description> Address (host:port) of the SOCKS server to be used by the
+    SocksSocketFactory.
+  </description>
+</property>
+
 </configuration>

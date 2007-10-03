@@ -77,6 +77,10 @@ Trunk (unreleased changes)
     HADOOP-1963.  Add a FileSystem implementation for the Kosmos
     Filesystem (KFS).  (Sriram Rao via cutting)
 
+    HADOOP-1822.  Allow the specialization and configuration of socket
+    factories. Provide a StandardSocketFactory, and a SocksSocketFactory to
+    allow the use of SOCKS proxies. (taton).
+
   OPTIMIZATIONS
 
     HADOOP-1910.  Reduce the number of RPCs that DistributedFileSystem.create()
