@@ -169,31 +169,45 @@ public class DFSAdmin extends FsShell {
   }
 
   private void printHelp(String cmd) {
-    String summary = "hadoop dfsadmin is the command to execute dfs administrative commands.\n" +
+    String summary = "hadoop dfsadmin is the command to execute DFS administrative commands.\n" +
       "The full syntax is: \n\n" +
       "hadoop dfsadmin [-report] [-safemode <enter | leave | get | wait>]\n" +
       "\t[-refreshNodes] [-help [cmd]]\n";
 
     String report ="-report: \tReports basic filesystem information and statistics.\n";
         
-    String safemode = "-safemode <enter|leave|get|wait>:  Safemode maintenance command.\n" + 
-      "\t\tSafe mode is a name node state when it\n" +
-      "\t\t\t1.  does not accept changes to name space (read-only)\n" +
+    String safemode = "-safemode <enter|leave|get|wait>:  Safe mode maintenance command.\n" + 
+      "\t\tSafe mode is a Namenode state in which it\n" +
+      "\t\t\t1.  does not accept changes to the name space (read-only)\n" +
       "\t\t\t2.  does not replicate or delete blocks.\n" +
-      "\t\tSafe mode is entered automatically at name node startup, and\n" +
+      "\t\tSafe mode is entered automatically at Namenode startup, and\n" +
       "\t\tleaves safe mode automatically when the configured minimum\n" +
-      "\t\tpercentage of blocks satisfies the minimal replication\n" +
+      "\t\tpercentage of blocks satisfies the minimum replication\n" +
       "\t\tcondition.  Safe mode can also be entered manually, but then\n" +
-      "\t\tcan only be turned off manually as well.\n";
+      "\t\tit can only be turned off manually as well.\n";
 
-    String refreshNodes = "-refreshNodes: \tReread the hosts and exclude files to update the set\n" +
-      "\t\tof datanodes that are allowed to connect to the namenode\n" +
-      "\t\tand those that should be decommissioned/recommissioned.\n";
+    String refreshNodes = "-refreshNodes: \tRe-read the hosts and exclude files to update the set\n" +
+      "\t\tof Datanodes that are allowed to connect to the Namenode\n" +
+      "\t\tand those that should be decommissioned of recommissioned.\n";
 
-    String upgradeProgress = "-upgradeProgress <status|details|force>: request current\n"
-      + "distributed upgrade status, a detailed status or force the upgrade to proceed.";
+    String finalizeUpgrade = "-finalizeUpgrade: Finalize upgrade of DFS.\n" +
+      "\t\tDatanodes delete their previous version working directories,\n" +
+      "\t\tfollowed by Namenode doing the same.\n" + 
+      "\t\tThis completes the upgrade process.\n";
 
-    String help = "-help [cmd]: \tDisplays help for given command or all commands if none\n" +
+    String upgradeProgress = "-upgradeProgress <status|details|force>: \n" +
+      "\t\trequest current distributed upgrade status, \n" +
+      "\t\ta detailed status or force the upgrade to proceed.\n";
+
+    String metaSave = "-metasave <filename>: \tSave Namenode's primary data structures\n" +
+      "\t\tto <filename> in the directory specified by hadoop.log.dir property.\n" +
+      "\t\t<filename> will contain one line for each of the following\n" +
+      "\t\t\t1. Datanodes heart beating with Namenode\n" +
+      "\t\t\t2. Blocks waiting to be replicated\n" +
+      "\t\t\t3. Blocks currrently being replicated\n" +
+      "\t\t\t4. Blocks waiting to be deleted\n";
+
+    String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
 
     if ("report".equals(cmd)) {
@@ -202,8 +216,12 @@ public class DFSAdmin extends FsShell {
       System.out.println(safemode);
     } else if ("refreshNodes".equals(cmd)) {
       System.out.println(refreshNodes);
+    } else if ("finalizeUpgrade".equals(cmd)) {
+      System.out.println(finalizeUpgrade);
     } else if ("upgradeProgress".equals(cmd)) {
       System.out.println(upgradeProgress);
+    } else if ("metasave".equals(cmd)) {
+      System.out.println(metaSave);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -211,7 +229,9 @@ public class DFSAdmin extends FsShell {
       System.out.println(report);
       System.out.println(safemode);
       System.out.println(refreshNodes);
+      System.out.println(finalizeUpgrade);
       System.out.println(upgradeProgress);
+      System.out.println(metaSave);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);

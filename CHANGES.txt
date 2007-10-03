@@ -229,6 +229,9 @@ Trunk (unreleased changes)
     HADOOP-1959.  Use "/" instead of File.separator in the StatusHttpServer.
     (jimk via omalley)
 
+    HADOOP-1626.  Improve dfsadmin help messages.
+    (Lohit Vijayarenu via dhruba)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
