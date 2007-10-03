@@ -22,7 +22,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.File;
-import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -54,19 +53,16 @@ class FSEditLog {
   private long lastSyncTime;
   
   static class EditLogOutputStream extends DataOutputStream {
-    private FileDescriptor fd;
-
     EditLogOutputStream(File name) throws IOException {
       super(new FileOutputStream(name, true)); // open for append
-      this.fd = ((FileOutputStream)out).getFD();
     }
 
     void flushAndSync() throws IOException {
-      this.flush();
-      this.fd.sync();
+      ((FileOutputStream)out).getChannel().force(true);
     }
 
     void create() throws IOException {
+      ((FileOutputStream)out).getChannel().truncate(0);
       writeInt(FSConstants.LAYOUT_VERSION);
       flushAndSync();
     }
@@ -124,7 +120,6 @@ class FSEditLog {
   synchronized void createEditLogFile(File name) throws IOException {
     EditLogOutputStream eStream = new EditLogOutputStream(name);
     eStream.create();
-    eStream.flushAndSync();
     eStream.close();
   }
 

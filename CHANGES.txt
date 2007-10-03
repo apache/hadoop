@@ -367,6 +367,9 @@ Release 0.14.2 - unreleased
     HADOOP-1970.  Fix deadlock in progress reporting in the task. (Vivek
     Ratan via omalley)
 
+    HADOOP-1978.  Name-node removes edits.new after a successful startup.
+    (Konstantin Shvachko via dhruba)
+
 Release 0.14.1 - 2007-09-04
 
   BUG FIXES

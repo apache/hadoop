@@ -22,6 +22,7 @@ import java.io.*;
 import java.util.Collection;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.FSImage.NameNodeFile;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -163,6 +164,19 @@ public class TestCheckpoint extends TestCase {
     System.out.println("Starting testSecondaryNamenodeError 2");
     cluster = new MiniDFSCluster(conf, numDatanodes, false, null);
     cluster.waitActive();
+    // Also check that the edits file is empty here
+    // and that temporary checkpoint files are gone.
+    FSImage image = cluster.getNameNode().getFSImage();
+    int nrDirs = image.getNumStorageDirs();
+    for(int idx = 0; idx < nrDirs; idx++) {
+      assertFalse(image.getImageFile(idx, NameNodeFile.IMAGE_NEW).exists());
+      assertFalse(image.getEditNewFile(idx).exists());
+      File edits = image.getEditFile(idx);
+      assertTrue(edits.exists()); // edits should exist and be empty
+      assertTrue(
+        (new RandomAccessFile(edits, "r")).length() == Integer.SIZE/Byte.SIZE);
+    }
+    
     fileSys = cluster.getFileSystem();
     try {
       checkFile(fileSys, file1, replication);

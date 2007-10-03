@@ -762,6 +762,7 @@ class FSImage extends Storage {
 
   /**
    * Save the contents of the FS image
+   * and create empty edits.
    */
   void saveFSImage() throws IOException {
     editLog.createNewIfMissing();
@@ -769,6 +770,9 @@ class FSImage extends Storage {
       StorageDirectory sd = getStorageDir(idx);
       saveFSImage(getImageFile(sd, NameNodeFile.IMAGE_NEW));
       editLog.createEditLogFile(getImageFile(sd, NameNodeFile.EDITS));
+      File editsNew = getImageFile(sd, NameNodeFile.EDITS_NEW);
+      if (editsNew.exists()) 
+        editLog.createEditLogFile(editsNew);
     }
     rollFSImage();
   }
