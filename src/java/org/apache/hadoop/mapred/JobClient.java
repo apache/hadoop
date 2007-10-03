@@ -39,7 +39,7 @@ import java.util.*;
  *******************************************************/
 public class JobClient extends ToolBase implements MRConstants  {
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobClient");
-  public static enum TaskStatusFilter { NONE, FAILED, SUCCEEDED, ALL }
+  public static enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }
   private TaskStatusFilter taskOutputFilter = TaskStatusFilter.FAILED; 
 
   static long MAX_JOBPROFILE_AGE = 1000 * 2;
@@ -602,6 +602,11 @@ public class JobClient extends ToolBase implements MRConstants  {
                     TaskCompletionEvent.Status.FAILED){
                   LOG.info(event.toString());
                   displayTaskLogs(event.getTaskId(), event.getTaskTrackerHttp());
+                }
+                break; 
+              case KILLED:
+                if (event.getTaskStatus() == TaskCompletionEvent.Status.KILLED){
+                  LOG.info(event.toString());
                 }
                 break; 
               case ALL:

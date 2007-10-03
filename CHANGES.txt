@@ -11,6 +11,9 @@ Release 0.14.2 (unreleased changes)
     HADOOP-1948. Removed spurious error message during block crc upgrade.
     (Raghu Angadi via dhruba)
 
+    HADOOP-1862.  reduces are getting stuck trying to find map outputs. 
+    (Arun C. Murthy via ddas)
+
     HADOOP-1977. Fixed handling of ToolBase cli options in JobClient.
     (enis via omalley)
 

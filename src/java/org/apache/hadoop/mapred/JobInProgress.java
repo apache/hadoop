@@ -381,6 +381,7 @@ class JobInProgress {
 
       TaskCompletionEvent taskEvent = null;
       if (state == TaskStatus.State.SUCCEEDED) {
+        boolean complete = false;
         taskEvent = new TaskCompletionEvent(
                                             taskCompletionEventTracker, 
                                             status.getTaskId(),
@@ -388,9 +389,9 @@ class JobInProgress {
                                             status.getIsMap(),
                                             TaskCompletionEvent.Status.SUCCEEDED,
                                             httpTaskLogLocation 
-                                            );
+                                           );
         try {
-          completedTask(tip, status, metrics);
+          complete = completedTask(tip, status, metrics);
         } catch (IOException ioe) {
           // Oops! Failed to copy the task's output to its final place;
           // fail the task!
@@ -405,7 +406,12 @@ class JobInProgress {
                    " with: " + StringUtils.stringifyException(ioe));
           return;
         }
-        tip.setSuccessEventNumber(taskCompletionEventTracker);
+        
+        if (complete) {
+          tip.setSuccessEventNumber(taskCompletionEventTracker);
+        } else {
+          taskEvent.setTaskStatus(TaskCompletionEvent.Status.KILLED);
+        }
       } else if (state == TaskStatus.State.FAILED ||
                  state == TaskStatus.State.KILLED) {
         // Get the event number for the (possibly) previously successful
@@ -424,7 +430,9 @@ class JobInProgress {
 
         // Did the task failure lead to tip failure?
         TaskCompletionEvent.Status taskCompletionStatus = 
-          TaskCompletionEvent.Status.FAILED;
+          (state == TaskStatus.State.FAILED) ?
+              TaskCompletionEvent.Status.FAILED :
+              TaskCompletionEvent.Status.KILLED;
         if (tip.isFailed()) {
           taskCompletionStatus = TaskCompletionEvent.Status.TIPFAILED;
         }
@@ -751,7 +759,7 @@ class JobInProgress {
   /**
    * A taskid assigned to this JobInProgress has reported in successfully.
    */
-  public synchronized void completedTask(TaskInProgress tip, 
+  public synchronized boolean completedTask(TaskInProgress tip, 
                                          TaskStatus status,
                                          JobTrackerMetrics metrics) 
   throws IOException {
@@ -766,7 +774,7 @@ class JobInProgress {
       if (this.status.getRunState() != JobStatus.RUNNING) {
         jobtracker.markCompletedTaskAttempt(status.getTaskTracker(), taskid);
       }
-      return;
+      return false;
     } 
 
     LOG.info("Task '" + taskid + "' has completed " + tip.getTIPId() + 
@@ -818,7 +826,10 @@ class JobInProgress {
       // The job has been killed/failed, 
       // JobTracker should cleanup this task
       jobtracker.markCompletedTaskAttempt(status.getTaskTracker(), taskid);
+      return false;
     }
+    
+    return true;
   }
 
   /**

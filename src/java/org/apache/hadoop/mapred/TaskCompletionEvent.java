@@ -29,7 +29,7 @@ import org.apache.hadoop.io.WritableUtils;
  * job tracker. 
  */
 public class TaskCompletionEvent implements Writable{
-  static public enum Status {FAILED, SUCCEEDED, OBSOLETE, TIPFAILED};
+  static public enum Status {FAILED, KILLED, SUCCEEDED, OBSOLETE, TIPFAILED};
     
   private int eventId; 
   private String taskTrackerHttp;
