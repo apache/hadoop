@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -59,11 +58,11 @@ public class FSUtils {
     } catch (IOException e) {
       exception = e.getMessage();
     }
-    LOG.info("Failed file system available test. Thread: " +
-        Thread.currentThread().getName() + ": " + exception);
     
     try {
       if (!available) {
+        LOG.info("Failed file system available test. Thread: " +
+            Thread.currentThread().getName() + ": " + exception);
         fs.close();
       }
         

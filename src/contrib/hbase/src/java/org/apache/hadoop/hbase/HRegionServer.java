@@ -729,12 +729,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     join(this.logRollerThread);
     join(this.cacheFlusherThread);
     join(this.splitOrCompactCheckerThread);
-    try {
-      this.server.join();
-    } catch (InterruptedException e) {
-      // No means of asking server if its done... .so just assume it is even
-      // if an interrupt.
-    }
   }
 
   private void join(final Thread t) {
