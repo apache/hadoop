@@ -117,7 +117,9 @@ public class MiniDFSCluster {
       conf.set("dfs.name.dir", new File(base_dir, "name1").getPath()+","+
                new File(base_dir, "name2").getPath());
     }
-    conf.setInt("dfs.replication", Math.min(3, numDataNodes));
+    
+    int replication = conf.getInt("dfs.replication", 3);
+    conf.setInt("dfs.replication", Math.min(replication, numDataNodes));
     conf.setInt("dfs.safemode.extension", 0);
     conf.setInt("dfs.namenode.decommission.interval", 3 * 1000); // 3 second
     

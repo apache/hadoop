@@ -467,7 +467,9 @@ class FSDataset implements FSConstants {
   private HashMap<Block,FSVolume> volumeMap = null;
   private HashMap<Block,File> blockMap = null;
   static  Random random = new Random();
-
+  
+  long blockWriteTimeout = 3600 * 1000;
+  
   /**
    * An FSDataset has a directory where it loads its data files.
    */
@@ -482,6 +484,8 @@ class FSDataset implements FSConstants {
     volumes.getVolumeMap(volumeMap);
     blockMap = new HashMap<Block,File>();
     volumes.getBlockMap(blockMap);
+    blockWriteTimeout = Math.max(
+         conf.getInt("dfs.datanode.block.write.timeout.sec", 3600), 1) * 1000;
   }
 
   /**
@@ -559,7 +563,8 @@ class FSDataset implements FSConstants {
       if (ongoingCreates.containsKey(b)) {
         // check how old is the temp file - wait 1 hour
         File tmp = ongoingCreates.get(b);
-        if ((System.currentTimeMillis() - tmp.lastModified()) < 3600 * 1000) {
+        if ((System.currentTimeMillis() - tmp.lastModified()) < 
+            blockWriteTimeout) {
           throw new IOException("Block " + b +
                                 " has already been started (though not completed), and thus cannot be created.");
         } else {
