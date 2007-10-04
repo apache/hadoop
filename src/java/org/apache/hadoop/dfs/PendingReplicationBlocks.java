@@ -49,12 +49,14 @@ class PendingReplicationBlocks {
   private long defaultRecheckInterval = 5 * 60 * 1000;
 
   PendingReplicationBlocks(long timeoutPeriod) {
-    this.timeout = timeoutPeriod;
-    init();
+    this(null, timeoutPeriod);
   }
 
-  PendingReplicationBlocks(Log log) {
+  PendingReplicationBlocks(Log log, long timeoutPeriod) {
     this.LOG = log;
+    if ( timeoutPeriod > 0 ) {
+      this.timeout = timeoutPeriod;
+    }
     init();
   }
 

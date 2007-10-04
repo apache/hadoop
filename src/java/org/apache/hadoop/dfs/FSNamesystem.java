@@ -183,7 +183,7 @@ class FSNamesystem implements FSConstants {
   private long replicationRecheckInterval;
   //decommissionRecheckInterval is how often namenode checks if a node has finished decommission
   private long decommissionRecheckInterval;
-  static int replIndex = 0; // last datanode used for replication work
+  private int replIndex = 0; // last datanode used for replication work
   static int REPL_WORK_PER_ITERATION = 32; // max percent datanodes per iteration
 
   public static FSNamesystem fsNamesystemObject;
@@ -217,7 +217,9 @@ class FSNamesystem implements FSConstants {
     this.dir.loadFSImage(getNamespaceDirs(conf), startOpt);
     this.safeMode = new SafeModeInfo(conf);
     setBlockTotal();
-    pendingReplications = new PendingReplicationBlocks(LOG);
+    pendingReplications = new PendingReplicationBlocks(LOG,
+                          conf.getInt("dfs.replication.pending.timeout.sec",
+                                      -1) * 1000);
     this.hbthread = new Daemon(new HeartbeatMonitor());
     this.lmthread = new Daemon(new LeaseMonitor());
     this.replthread = new Daemon(new ReplicationMonitor());
@@ -1886,6 +1888,7 @@ class FSNamesystem implements FSConstants {
     int numiter = 0;
     int foundwork = 0;
     int hsize = 0;
+    int lastReplIndex = -1;
 
     while (true) {
       DatanodeDescriptor node = null;
@@ -1897,6 +1900,11 @@ class FSNamesystem implements FSConstants {
       synchronized (heartbeats) {
         hsize = heartbeats.size();
         if (numiter++ >= hsize) {
+          // no change in replIndex.
+          if (lastReplIndex >= 0) {
+            //next time, start after where the last replication was scheduled
+            replIndex = lastReplIndex;
+          }
           break;
         }
         if (replIndex >= hsize) {
@@ -1922,6 +1930,7 @@ class FSNamesystem implements FSConstants {
           doReplication = true;
           addBlocksToBeReplicated(node, (Block[])replsets[0], 
                                   (DatanodeDescriptor[][])replsets[1]);
+          lastReplIndex = replIndex;
         }
       }
       if (!doReplication) {
