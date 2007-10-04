@@ -238,6 +238,9 @@ Trunk (unreleased changes)
     HADOOP-1626.  Improve dfsadmin help messages.
     (Lohit Vijayarenu via dhruba)
 
+    HADOOP-1695.  The SecondaryNamenode waits for the Primary NameNode to
+    start up.  (Dhruba Borthakur)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 

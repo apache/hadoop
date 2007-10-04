@@ -95,9 +95,8 @@ public class SecondaryNameNode implements FSConstants, Runnable {
                                              conf.get("fs.default.name", "local"));
     this.conf = conf;
     this.namenode =
-        (ClientProtocol) RPC.getProxy(ClientProtocol.class,
-            ClientProtocol.versionID, nameNodeAddr, conf, NetUtils
-                .getSocketFactory(conf, ClientProtocol.class));
+        (ClientProtocol) RPC.waitForProxy(ClientProtocol.class,
+            ClientProtocol.versionID, nameNodeAddr, conf);
 
     //
     // initialize the webserver for uploading files.
