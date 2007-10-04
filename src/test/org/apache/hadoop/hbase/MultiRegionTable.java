@@ -55,6 +55,10 @@ public class MultiRegionTable extends HBaseTestCase {
       MiniHBaseCluster cluster, FileSystem localFs, String tableName,
       String columnName) throws IOException {
     
+    final int retries = 10; 
+    final long waitTime =
+      conf.getLong("hbase.master.meta.thread.rescanfrequency", 10L * 1000L);
+    
     // This size should make it so we always split using the addContent
     // below.  After adding all data, the first region is 1.3M. Should
     // set max filesize to be <= 1M.
@@ -62,7 +66,6 @@ public class MultiRegionTable extends HBaseTestCase {
     assertTrue(conf.getLong("hbase.hregion.max.filesize",
       HConstants.DEFAULT_MAX_FILE_SIZE) <= 1024 * 1024);
 
-    final int retries = 10; 
     FileSystem fs = (cluster.getDFSCluster() == null) ?
       localFs : cluster.getDFSCluster().getFileSystem();
     assertNotNull(fs);
@@ -89,18 +92,18 @@ public class MultiRegionTable extends HBaseTestCase {
     
     // Now, wait until split makes it into the meta table.
     
-    for (int i = 0;
-      i < retries && (count(meta, HConstants.COLUMN_FAMILY_STR) <= count);
-      i++) {
-      
+    int oldCount = count;
+    for (int i = 0; i < retries;  i++) {
+      count = count(meta, HConstants.COLUMN_FAMILY_STR);
+      if (count > oldCount) {
+        break;
+      }
       try {
-        Thread.sleep(5000);
+        Thread.sleep(waitTime);
       } catch (InterruptedException e) {
         // continue
       }
     }
-    int oldCount = count;
-    count = count(meta, HConstants.COLUMN_FAMILY_STR);
     if (count <= oldCount) {
       throw new IOException("Failed waiting on splits to show up");
     }
@@ -126,7 +129,7 @@ public class MultiRegionTable extends HBaseTestCase {
     
     // Recalibrate will cause us to wait on new regions' deployment
     
-    recalibrate(t, new Text(columnName), retries);
+    recalibrate(t, new Text(columnName), retries, waitTime);
     
     // Compact a region at a time so we can test case where one region has
     // no references but the other still has some
@@ -138,7 +141,7 @@ public class MultiRegionTable extends HBaseTestCase {
     
     while (getSplitParentInfo(meta, parent).size() == 3) {
       try {
-        Thread.sleep(5000);
+        Thread.sleep(waitTime);
       } catch (InterruptedException e) {
         // continue
       }
@@ -153,12 +156,13 @@ public class MultiRegionTable extends HBaseTestCase {
     // Now wait until parent disappears.
     
     LOG.info("Waiting on parent " + parent.getRegionName() + " to disappear");
-    for (int i = 0;
-      i < retries && getSplitParentInfo(meta, parent) != null;
-      i++) {
+    for (int i = 0; i < retries; i++) {
+      if (getSplitParentInfo(meta, parent) == null) {
+        break;
+      }
       
       try {
-        Thread.sleep(5000);
+        Thread.sleep(waitTime);
       } catch (InterruptedException e) {
         // continue
       }
@@ -167,9 +171,12 @@ public class MultiRegionTable extends HBaseTestCase {
     
     // Assert cleaned up.
     
-    for (int i = 0; i < retries && fs.exists(parentDir); i++) {
+    for (int i = 0; i < retries; i++) {
+      if (!fs.exists(parentDir)) {
+        break;
+      }
       try {
-        Thread.sleep(5000);
+        Thread.sleep(waitTime);
       } catch (InterruptedException e) {
         // continue
       }
@@ -243,7 +250,7 @@ public class MultiRegionTable extends HBaseTestCase {
    * @param retries
    */
   private static void recalibrate(final HTable t, final Text column,
-      final int retries) throws IOException {
+      final int retries, final long waitTime) throws IOException {
     
     for (int i = 0; i < retries; i++) {
       try {
@@ -260,7 +267,7 @@ public class MultiRegionTable extends HBaseTestCase {
       } catch (NotServingRegionException x) {
         System.out.println("it's alright");
         try {
-          Thread.sleep(5000);
+          Thread.sleep(waitTime);
         } catch (InterruptedException e) {
           // continue
         }

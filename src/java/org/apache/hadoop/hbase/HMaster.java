@@ -1049,15 +1049,6 @@ HMasterRegionInterface {
     } catch(Exception iex) {
       LOG.warn("meta scanner", iex);
     }
-    try {
-      // TODO: Maybe do in parallel in its own thread as is done in TaskTracker
-      // if its taking a long time to go down.
-      
-      server.join();                    // Wait for server to finish.
-    } catch(InterruptedException iex) {
-      LOG.warn("server", iex);
-    }
-
     LOG.info("HMaster main thread exiting");
   }
   

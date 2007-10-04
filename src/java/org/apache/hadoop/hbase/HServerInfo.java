@@ -87,6 +87,13 @@ public class HServerInfo implements Writable {
     return startCode;
   }
   
+  /**
+   * @param startCode the startCode to set
+   */
+  public void setStartCode(long startCode) {
+    this.startCode = startCode;
+  }
+
   /** {@inheritDoc} */
   @Override
   public String toString() {

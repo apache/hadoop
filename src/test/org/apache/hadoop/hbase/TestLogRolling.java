@@ -68,6 +68,10 @@ public class TestLogRolling extends HBaseTestCase {
       // Increase the amount of time between client retries
       conf.setLong("hbase.client.pause", 15 * 1000);
 
+      // Reduce thread wake frequency so that other threads can get
+      // a chance to run.
+      conf.setInt(HConstants.THREAD_WAKE_FREQUENCY, 2 * 1000);
+      
       String className = this.getClass().getName();
       StringBuilder v = new StringBuilder(className);
       while (v.length() < 1000) {

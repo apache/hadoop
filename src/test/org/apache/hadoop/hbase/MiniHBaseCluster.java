@@ -85,6 +85,7 @@ public class MiniHBaseCluster implements HConstants {
   /**
    * Starts a MiniHBaseCluster on top of an existing HDFSCluster
    *
+   *<pre>
    ****************************************************************************
    *            *  *  *  *  *  N O T E  *  *  *  *  *
    *
@@ -93,6 +94,7 @@ public class MiniHBaseCluster implements HConstants {
    *
    *            *  *  *  *  *  N O T E  *  *  *  *  *
    ****************************************************************************
+   *</pre>
    *
    * @param conf
    * @param nRegionNodes
@@ -286,6 +288,13 @@ public class MiniHBaseCluster implements HConstants {
     return this.masterThread.getMaster().getMasterAddress();
   }
 
+  /**
+   * @return the thread running the HMaster
+   */
+  public MasterThread getMasterThread() {
+    return this.masterThread;
+  }
+  
   /**
    * Cause a region server to exit without cleaning up
    *

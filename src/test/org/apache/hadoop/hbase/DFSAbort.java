@@ -22,14 +22,27 @@ package org.apache.hadoop.hbase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import java.io.PrintWriter;
+import org.apache.hadoop.util.ReflectionUtils;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Test ability of HBase to handle DFS failure
  */
-public class TestDFSAbort extends HBaseClusterTestCase {
+public class DFSAbort extends HBaseClusterTestCase {
+  private static final Log LOG =
+    LogFactory.getLog(DFSAbort.class.getName());
 
+  /** constructor */
+  public DFSAbort() {
+    super();
+    
+    // For less frequently updated regions flush after every 2 flushes
+    conf.setInt("hbase.hregion.memcache.optionalflushcount", 2);
+  }
+  
   /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
@@ -54,17 +67,47 @@ public class TestDFSAbort extends HBaseClusterTestCase {
       // created a table. Now let's yank the rug out from HBase
       cluster.getDFSCluster().shutdown();
       // Now wait for Mini HBase Cluster to shut down
-      cluster.join();
+//      cluster.join();
+      join();
     } catch (Exception e) {
       e.printStackTrace();
       throw e;
     }
   }
   
+  private void join() {
+    if (this.cluster.regionThreads != null) {
+      synchronized(this.cluster.regionThreads) {
+        for(Thread t: this.cluster.regionThreads) {
+          join(t);
+        }
+      }
+    }
+    join(this.cluster.getMasterThread());
+  }
+
+  private void join(final Thread t) {
+    if (t == null) {
+      return;
+    }
+    for (int i = 0; t.isAlive(); i++) {
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        LOG.info("Continuing...", e);
+      }
+      if (i != 0 && i % 30 == 0) {
+        ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
+            "Automatic Stack Trace every 30 seconds waiting on " +
+            t.getName());
+      }
+    }
+  }
+
   /**
    * @param args unused
    */
   public static void main(@SuppressWarnings("unused") String[] args) {
-    TestRunner.run(new TestSuite(TestDFSAbort.class));
+    TestRunner.run(new TestSuite(DFSAbort.class));
   }
 }

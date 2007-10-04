@@ -86,25 +86,25 @@ public class StaticTestEnvironment {
       } else if(value.equalsIgnoreCase("WARN")) {
         logLevel = Level.WARN;
       }
+    }
 
-      ConsoleAppender consoleAppender = null;
-      for(Enumeration<Appender> e = rootLogger.getAllAppenders();
-          e.hasMoreElements();) {
+    ConsoleAppender consoleAppender = null;
+    for(Enumeration<Appender> e = rootLogger.getAllAppenders();
+    e.hasMoreElements();) {
 
-        Appender a = e.nextElement();
-        if(a instanceof ConsoleAppender) {
-          consoleAppender = (ConsoleAppender)a;
-          break;
-        }
+      Appender a = e.nextElement();
+      if(a instanceof ConsoleAppender) {
+        consoleAppender = (ConsoleAppender)a;
+        break;
       }
-      if(consoleAppender != null) {
-        Layout layout = consoleAppender.getLayout();
-        if(layout instanceof PatternLayout) {
-          PatternLayout consoleLayout = (PatternLayout)layout;
-          consoleLayout.setConversionPattern("%d %-5p [%t] %l: %m%n");
-        }
+    }
+    if(consoleAppender != null) {
+      Layout layout = consoleAppender.getLayout();
+      if(layout instanceof PatternLayout) {
+        PatternLayout consoleLayout = (PatternLayout)layout;
+        consoleLayout.setConversionPattern("%d %-5p [%t] %l: %m%n");
       }
-    }    
+    }
     Logger.getLogger(
         HBaseTestCase.class.getPackage().getName()).setLevel(logLevel);
   }
