@@ -173,8 +173,16 @@ public class TestCheckpoint extends TestCase {
       assertFalse(image.getEditNewFile(idx).exists());
       File edits = image.getEditFile(idx);
       assertTrue(edits.exists()); // edits should exist and be empty
-      assertTrue(
-        (new RandomAccessFile(edits, "r")).length() == Integer.SIZE/Byte.SIZE);
+      long editsLen = -1;
+      RandomAccessFile eF = null;
+      try {
+        eF = new RandomAccessFile(edits, "r");
+        editsLen = eF.length();
+      } finally {
+        if(eF != null)
+          eF.close();
+      }
+      assertTrue(editsLen == Integer.SIZE/Byte.SIZE);
     }
     
     fileSys = cluster.getFileSystem();

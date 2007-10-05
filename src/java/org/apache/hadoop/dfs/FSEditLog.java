@@ -159,7 +159,7 @@ class FSEditLog {
    * server to exit
    */
   synchronized void processIOError(int index) throws IOException {
-    if (editStreams == null || editStreams.size() == 1) {
+    if (editStreams == null || editStreams.size() <= 1) {
       throw new IOException("Checkpoint directories inaccessible.");
     }
     assert(index < getNumStorageDirs());
@@ -619,7 +619,7 @@ class FSEditLog {
         //
         getEditFile(idx).delete();
         if (!getEditNewFile(idx).renameTo(getEditFile(idx))) {
-          processIOError(idx); 
+          fsimage.processIOError(idx); 
           idx--; 
         }
       }
