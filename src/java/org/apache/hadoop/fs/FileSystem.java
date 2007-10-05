@@ -574,6 +574,14 @@ public abstract class FileSystem extends Configured {
    *    <dt> <tt> \<i>c</i> </tt>
    *    <dd> Removes (escapes) any special meaning of character <i>c</i>.
    *
+   *    <p>
+   *    <dt> <tt> {ab,cd} </tt>
+   *    <dd> Matches a string from the string set <tt>{<i>ab, cd</i>} </tt>
+   *    
+   *    <p>
+   *    <dt> <tt> {ab,c{de,fh}} </tt>
+   *    <dd> Matches a string from the string set <tt>{<i>ab, cde, cfh</i>}</tt>
+   *
    *   </dl>
    *  </dd>
    * </dl>
@@ -652,11 +660,18 @@ public abstract class FileSystem extends Configured {
       setRegex(filePattern);
     }
       
+    private boolean isJavaRegexSpecialChar(char pChar) {
+      return pChar == '.' || pChar == '$' || pChar == '(' || pChar == ')' ||
+             pChar == '|' || pChar == '+';
+    }
     void setRegex(String filePattern) throws IOException {
       int len;
       int setOpen;
+      int curlyOpen;
       boolean setRange;
-      StringBuffer fileRegex = new StringBuffer();
+      boolean expectGroup;
+
+      StringBuilder fileRegex = new StringBuilder();
 
       // Validate the pattern
       len = filePattern.length();
@@ -665,7 +680,9 @@ public abstract class FileSystem extends Configured {
 
       setOpen = 0;
       setRange = false;
-        
+      curlyOpen = 0;
+      expectGroup = false;
+
       for (int i = 0; i < len; i++) {
         char pCh;
           
@@ -677,7 +694,7 @@ public abstract class FileSystem extends Configured {
           if (i >= len)
             error("An escaped character does not present", filePattern, i);
           pCh = filePattern.charAt(i);
-        } else if (pCh == '.') {
+        } else if (isJavaRegexSpecialChar(pCh)) {
           fileRegex.append(PAT_ESCAPE);
         } else if (pCh == '*') {
           fileRegex.append(PAT_ANY);
@@ -685,6 +702,21 @@ public abstract class FileSystem extends Configured {
         } else if (pCh == '?') {
           pCh = PAT_ANY;
           hasPattern = true;
+        } else if (pCh == '{') {
+          fileRegex.append('(');
+          pCh = '(';
+          curlyOpen++;
+        } else if (pCh == ',' && curlyOpen > 0) {
+          fileRegex.append(")|");
+          pCh = '(';
+          expectGroup = true;
+        } else if (pCh == '}' && curlyOpen > 0) {
+          // End of a group
+          if (expectGroup)
+            error("Unexpected end of a group", filePattern, i);
+          curlyOpen--;
+          fileRegex.append(")");
+          pCh = ')';
         } else if (pCh == '[' && setOpen == 0) {
           setOpen++;
           hasPattern = true;
@@ -704,15 +736,17 @@ public abstract class FileSystem extends Configured {
           // Normal character, or the end of a character set range
           setOpen++;
           setRange = false;
+        } else if (curlyOpen > 0) {
+          expectGroup = false;
         }
         fileRegex.append(pCh);
       }
         
       // Check for a well-formed pattern
-      if (setOpen > 0 || setRange) {
+      if (setOpen > 0 || setRange || curlyOpen > 0) {
         // Incomplete character set or character range
-        error("Expecting set closure character or end of range", filePattern,
-              len);
+        error("Expecting set closure character or end of range, or }", 
+            filePattern, len);
       }
       regex = Pattern.compile(fileRegex.toString());
     }

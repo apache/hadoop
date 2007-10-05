@@ -43,30 +43,29 @@ public class TestGlobPaths extends TestCase {
   }
   
   protected void tearDown() throws Exception {
-    dfsCluster.shutdown();
+    if(dfsCluster!=null) {
+      dfsCluster.shutdown();
+    }
   }
   
-  public void testGlob() {
-    try {
-      pTestLiteral();
-      pTestAny();
-      pTestClosure();
-      pTestSet();
-      pTestRange();
-      pTestSetExcl();
-      pTestCombination();
-      pTestRelativePath();
-    } catch(IOException e) {
-      e.printStackTrace();
-    } 
+  public void testGlob() throws Exception {
+    //pTestEscape(); // need to wait until HADOOP-1995 is fixed
+    pTestJavaRegexSpecialChars();
+    pTestCurlyBracket();
+    pTestLiteral();
+    pTestAny();
+    pTestClosure();
+    pTestSet();
+    pTestRange();
+    pTestSetExcl();
+    pTestCombination();
+    pTestRelativePath();
   }
   
   private void pTestLiteral() throws IOException {
     try {
-      String [] files = new String[2];
-      files[0] = USER_DIR+"/a2c";
-      files[1] = USER_DIR+"/ab\\[c.d";
-      Path[] matchedPath = prepareTesting(USER_DIR+"/ab\\[c.d", files);
+      String [] files = new String[] {USER_DIR+"/a2c", USER_DIR+"/abc.d"};
+      Path[] matchedPath = prepareTesting(USER_DIR+"/abc.d", files);
       assertEquals(matchedPath.length, 1);
       assertEquals(matchedPath[0], path[1]);
     } finally {
@@ -74,13 +73,21 @@ public class TestGlobPaths extends TestCase {
     }
   }
   
+  private void pTestEscape() throws IOException {
+    try {
+      String [] files = new String[] {USER_DIR+"/ab\\[c.d"};
+      Path[] matchedPath = prepareTesting(USER_DIR+"/ab\\[c.d", files);
+      assertEquals(matchedPath.length, 1);
+      assertEquals(matchedPath[0], path[0]);
+    } finally {
+      cleanupDFS();
+    }
+  }
+  
   private void pTestAny() throws IOException {
     try {
-      String [] files = new String[4];
-      files[0] = USER_DIR+"/abc";
-      files[1] = USER_DIR+"/a2c";
-      files[2] = USER_DIR+"/a.c";
-      files[3] = USER_DIR+"/abcd";
+      String [] files = new String[] { USER_DIR+"/abc", USER_DIR+"/a2c",
+                                       USER_DIR+"/a.c", USER_DIR+"/abcd"};
       Path[] matchedPath = prepareTesting(USER_DIR+"/a?c", files);
       assertEquals(matchedPath.length, 3);
       assertEquals(matchedPath[0], path[2]);
@@ -99,11 +106,8 @@ public class TestGlobPaths extends TestCase {
   
   private void pTestClosure1() throws IOException {
     try {
-      String [] files = new String[4];
-      files[0] = USER_DIR+"/a";
-      files[1] = USER_DIR+"/abc";
-      files[2] = USER_DIR+"/abc.p";
-      files[3] = USER_DIR+"/bacd";
+      String [] files = new String[] {USER_DIR+"/a", USER_DIR+"/abc",
+                                      USER_DIR+"/abc.p", USER_DIR+"/bacd"};
       Path[] matchedPath = prepareTesting(USER_DIR+"/a*", files);
       assertEquals(matchedPath.length, 3);
       assertEquals(matchedPath[0], path[0]);
@@ -116,11 +120,8 @@ public class TestGlobPaths extends TestCase {
   
   private void pTestClosure2() throws IOException {
     try {
-      String [] files = new String[4];
-      files[0] = USER_DIR+"/a.";
-      files[1] = USER_DIR+"/a.txt";
-      files[2] = USER_DIR+"/a.old.java";
-      files[3] = USER_DIR+"/.java";
+      String [] files = new String[] {USER_DIR+"/a.", USER_DIR+"/a.txt",
+                                     USER_DIR+"/a.old.java", USER_DIR+"/.java"};
       Path[] matchedPath = prepareTesting(USER_DIR+"/a.*", files);
       assertEquals(matchedPath.length, 3);
       assertEquals(matchedPath[0], path[0]);
@@ -133,11 +134,8 @@ public class TestGlobPaths extends TestCase {
   
   private void pTestClosure3() throws IOException {
     try {    
-      String [] files = new String[4];
-      files[0] = USER_DIR+"/a.txt.x";
-      files[1] = USER_DIR+"/ax";
-      files[2] = USER_DIR+"/ab37x";
-      files[3] = USER_DIR+"/bacd";
+      String [] files = new String[] {USER_DIR+"/a.txt.x", USER_DIR+"/ax",
+                                      USER_DIR+"/ab37x", USER_DIR+"/bacd"};
       Path[] matchedPath = prepareTesting(USER_DIR+"/a*x", files);
       assertEquals(matchedPath.length, 3);
       assertEquals(matchedPath[0], path[0]);
@@ -150,11 +148,8 @@ public class TestGlobPaths extends TestCase {
   
   private void pTestSet() throws IOException {
     try {    
-      String [] files = new String[4];
-      files[0] = USER_DIR+"/a.c";
-      files[1] = USER_DIR+"/a.cpp";
-      files[2] = USER_DIR+"/a.hlp";
-      files[3] = USER_DIR+"/a.hxy";
+      String [] files = new String[] {USER_DIR+"/a.c", USER_DIR+"/a.cpp",
+                                      USER_DIR+"/a.hlp", USER_DIR+"/a.hxy"};
       Path[] matchedPath = prepareTesting(USER_DIR+"/a.[ch]??", files);
       assertEquals(matchedPath.length, 3);
       assertEquals(matchedPath[0], path[1]);
@@ -167,11 +162,8 @@ public class TestGlobPaths extends TestCase {
   
   private void pTestRange() throws IOException {
     try {    
-      String [] files = new String[4];
-      files[0] = USER_DIR+"/a.d";
-      files[1] = USER_DIR+"/a.e";
-      files[2] = USER_DIR+"/a.f";
-      files[3] = USER_DIR+"/a.h";
+      String [] files = new String[] {USER_DIR+"/a.d", USER_DIR+"/a.e",
+                                      USER_DIR+"/a.f", USER_DIR+"/a.h"};
       Path[] matchedPath = prepareTesting(USER_DIR+"/a.[d-fm]", files);
       assertEquals(matchedPath.length, 3);
       assertEquals(matchedPath[0], path[0]);
@@ -184,11 +176,8 @@ public class TestGlobPaths extends TestCase {
   
   private void pTestSetExcl() throws IOException {
     try {    
-      String [] files = new String[4];
-      files[0] = USER_DIR+"/a.d";
-      files[1] = USER_DIR+"/a.e";
-      files[2] = USER_DIR+"/a.0";
-      files[3] = USER_DIR+"/a.h";
+      String [] files = new String[] {USER_DIR+"/a.d", USER_DIR+"/a.e",
+                                      USER_DIR+"/a.0", USER_DIR+"/a.h"};
       Path[] matchedPath = prepareTesting(USER_DIR+"/a.[^a-cg-z0-9]", files);
       assertEquals(matchedPath.length, 2);
       assertEquals(matchedPath[0], path[0]);
@@ -200,15 +189,11 @@ public class TestGlobPaths extends TestCase {
 
   private void pTestCombination() throws IOException {
     try {    
-      String [] files = new String[4];
-      files[0] = "/user/aa/a.c";
-      files[1] = "/user/bb/a.cpp";
-      files[2] = "/user1/cc/b.hlp";
-      files[3] = "/user/dd/a.hxy";
-      Path[] matchedPath = prepareTesting("/use?/*/a.[ch]??", files);
-      assertEquals(matchedPath.length, 2);
-      assertEquals(matchedPath[0], path[1]);
-      assertEquals(matchedPath[1], path[3]);
+      String [] files = new String[] {"/user/aa/a.c", "/user/bb/a.cpp",
+                                      "/user1/cc/b.hlp", "/user/dd/a.hxy"};
+      Path[] matchedPath = prepareTesting("/use?/*/a.[ch]{lp,xy}", files);
+      assertEquals(matchedPath.length, 1);
+      assertEquals(matchedPath[0], path[3]);
     } finally {
       cleanupDFS();
     }
@@ -216,11 +201,7 @@ public class TestGlobPaths extends TestCase {
   
   private void pTestRelativePath() throws IOException {
     try {
-      String [] files = new String[4];
-      files[0] = "a";
-      files[1] = "abc";
-      files[2] = "abc.p";
-      files[3] = "bacd";
+      String [] files = new String[] {"a", "abc", "abc.p", "bacd"};
       Path[] matchedPath = prepareTesting("a*", files);
       assertEquals(matchedPath.length, 3);
       assertEquals(matchedPath[0], new Path(USER_DIR, path[0]));
@@ -231,15 +212,91 @@ public class TestGlobPaths extends TestCase {
     }
   }
   
+  /* Test {xx,yy} */
+  private void pTestCurlyBracket() throws IOException {
+    Path[] matchedPath;
+    String [] files;
+    try {
+      files = new String[] { USER_DIR+"/a.abcxx", USER_DIR+"/a.abxy",
+                             USER_DIR+"/a.hlp", USER_DIR+"/a.jhyy"};
+      matchedPath = prepareTesting(USER_DIR+"/a.{abc,jh}??", files);
+      assertEquals(matchedPath.length, 2);
+      assertEquals(matchedPath[0], path[0]);
+      assertEquals(matchedPath[1], path[3]);
+    } finally {
+      cleanupDFS();
+    }
+    // nested curlies
+    try {
+      files = new String[] { USER_DIR+"/a.abcxx", USER_DIR+"/a.abdxy",
+                             USER_DIR+"/a.hlp", USER_DIR+"/a.jhyy" };
+      matchedPath = prepareTesting(USER_DIR+"/a.{ab{c,d},jh}??", files);
+      assertEquals(matchedPath.length, 3);
+      assertEquals(matchedPath[0], path[0]);
+      assertEquals(matchedPath[1], path[1]);
+      assertEquals(matchedPath[2], path[3]);
+    } finally {
+      cleanupDFS();
+    }
+    try {
+      // test standalone }
+      files = new String[] {USER_DIR+"/}bc"};
+      matchedPath = prepareTesting(USER_DIR+"/}{a,b}c", files);
+      assertEquals(matchedPath.length, 1);
+      // test {b}
+      matchedPath = prepareTesting(USER_DIR+"/}{b}c", files);
+      assertEquals(matchedPath.length, 1);
+      // test {}
+      matchedPath = prepareTesting(USER_DIR+"}{}bc", files);
+      assertEquals(matchedPath.length, 1);
+
+      // test ill-formed curly
+      boolean hasException = false;
+      try {
+        prepareTesting(USER_DIR+"}{b,}c", files);
+      } catch (IOException e) {
+        assertTrue(e.getMessage().startsWith("Illegal file pattern:") );
+        hasException = true;
+      }
+      assertTrue(hasException);
+      hasException = false;
+      try {
+        prepareTesting(USER_DIR+"}{bc", files);
+      } catch (IOException e) {
+        assertTrue(e.getMessage().startsWith("Illegal file pattern:") );
+        hasException = true;
+      }
+      assertTrue(hasException);
+    } finally {
+      cleanupDFS();
+    }
+  }
+  
+  /* test that a path name can contain Java regex special characters */
+  private void pTestJavaRegexSpecialChars() throws IOException {
+    try {
+      String[] files = new String[] {USER_DIR+"/($.|+)bc", USER_DIR+"/abc"};
+      Path[] matchedPath = prepareTesting(USER_DIR+"/($.|+)*", files);
+      assertEquals(matchedPath.length, 1);
+      assertEquals(matchedPath[0], path[0]);
+    } finally {
+      cleanupDFS();
+    }
+
+  }
   private Path[] prepareTesting(String pattern, String[] files)
     throws IOException {
     for(int i=0; i<Math.min(NUM_OF_PATHS, files.length); i++) {
-      path[i] = new Path(files[i]);
+      path[i] = new Path(files[i]).makeQualified(fs);
       if (!fs.mkdirs(path[i])) {
         throw new IOException("Mkdirs failed to create " + path[i].toString());
       }
     }
-    return fs.globPaths(new Path(pattern));
+    Path[] globResults = fs.globPaths(new Path(pattern));
+    for(int i=0; i<globResults.length; i++) {
+      globResults[i] = globResults[i].makeQualified(fs);
+    }
+    return globResults;
   }
   
   private void cleanupDFS() throws IOException {

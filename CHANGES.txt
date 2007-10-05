@@ -81,6 +81,9 @@ Trunk (unreleased changes)
     factories. Provide a StandardSocketFactory, and a SocksSocketFactory to
     allow the use of SOCKS proxies. (taton).
 
+    HADOOP-1968. FileSystem supports wildcard input syntax "{ }".
+    (Hairong Kuang via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-1910.  Reduce the number of RPCs that DistributedFileSystem.create()
