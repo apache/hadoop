@@ -195,18 +195,22 @@ public class TestDFSShell extends TestCase {
         //   + sub
         //      |- f3
         //      |- f4
+        //   ROOT2
+        //   |- f1
         Path root = mkdir(dfs, new Path("/test/copyToLocal"));
         Path sub = mkdir(dfs, new Path(root, "sub"));
+        Path root2 = mkdir(dfs, new Path("/test/copyToLocal2"));        
 
         writeFile(fs, new Path(root, "f1"));
         writeFile(fs, new Path(root, "f2"));
         writeFile(fs, new Path(sub, "f3"));
         writeFile(fs, new Path(sub, "f4"));
+        writeFile(fs, new Path(root2, "f1"));        
       }
 
       // Verify copying the tree
       {
-        String[] args = {"-copyToLocal", "/test/copyToLocal", TEST_ROOT_DIR};
+        String[] args = {"-copyToLocal", "/test/copyToLocal*", TEST_ROOT_DIR};
         try {
           assertEquals(0, shell.run(args));
         } catch (Exception e) {
@@ -214,13 +218,16 @@ public class TestDFSShell extends TestCase {
                              e.getLocalizedMessage());
         }
 
-        File f1 = new File(TEST_ROOT_DIR, "f1");
+        File localroot = new File(TEST_ROOT_DIR, "copyToLocal");
+        File localroot2 = new File(TEST_ROOT_DIR, "copyToLocal2");        
+        
+        File f1 = new File(localroot, "f1");
         assertTrue("Copying failed.", f1.isFile());
 
-        File f2 = new File(TEST_ROOT_DIR, "f2");
+        File f2 = new File(localroot, "f2");
         assertTrue("Copying failed.", f2.isFile());
 
-        File sub = new File(TEST_ROOT_DIR, "sub");
+        File sub = new File(localroot, "sub");
         assertTrue("Copying failed.", sub.isDirectory());
 
         File f3 = new File(sub, "f3");
@@ -228,11 +235,15 @@ public class TestDFSShell extends TestCase {
 
         File f4 = new File(sub, "f4");
         assertTrue("Copying failed.", f4.isFile());
+        
+        File f5 = new File(localroot2, "f1");
+        assertTrue("Copying failed.", f5.isFile());        
 
         f1.delete();
         f2.delete();
         f3.delete();
         f4.delete();
+        f5.delete();
         sub.delete();
       }
     } finally {
@@ -290,7 +301,7 @@ public class TestDFSShell extends TestCase {
 
       // Verify that we can get with and without crc
       {
-        File testFile = new File(TEST_ROOT_DIR, "myFile");
+        File testFile = new File(TEST_ROOT_DIR, "mkdirs/myFile");
         File checksumFile = new File(fileSys.getChecksumFile(
                                                              new Path(testFile.getAbsolutePath())).toString());
         testFile.delete();
@@ -313,7 +324,7 @@ public class TestDFSShell extends TestCase {
         testFile.delete();
       }
       {
-        File testFile = new File(TEST_ROOT_DIR, "myFile");
+        File testFile = new File(TEST_ROOT_DIR, "mkdirs/myFile");
         File checksumFile = new File(fileSys.getChecksumFile(
                                                              new Path(testFile.getAbsolutePath())).toString());
         testFile.delete();

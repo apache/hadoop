@@ -378,6 +378,9 @@ Release 0.14.2 - unreleased
     block and that source Datanode had failed.
     (Raghu Angadi via dhruba)
 
+    HADOOP-1961.  The -get option to dfs-shell works when a single filename
+    is specified.  (Raghu Angadi via dhruba)
+
 Release 0.14.1 - 2007-09-04
 
   BUG FIXES

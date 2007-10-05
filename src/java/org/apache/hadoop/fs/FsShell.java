@@ -146,7 +146,18 @@ public class FsShell extends Configured implements Tool {
       }
       cat(srcf);
     } else {
-      copyToLocal(fs, new Path(srcf), new File(dstf), copyCrc);
+      File dst = new File(dstf);      
+      Path src = new Path(srcf);
+      Path [] srcs = fs.globPaths(src);
+      boolean dstIsDir = dst.isDirectory(); 
+      if (srcs.length > 1 && !dstIsDir) {
+        throw new IOException("When copying multiple files, "
+                              + "destination should be a directory.");
+      }
+      for (Path srcPath : srcs) {
+        File dstFile = (dstIsDir ? new File(dst, srcPath.getName()) : dst);
+        copyToLocal(fs, srcPath, dstFile, copyCrc);
+      }
     }
   }
 
@@ -168,61 +179,42 @@ public class FsShell extends Configured implements Tool {
   private void copyToLocal(final FileSystem srcFS, final Path src,
                            final File dst, final boolean copyCrc)
     throws IOException {
-    if (srcFS.isDirectory(src)) { //src is a directory
-      dst.mkdir();
-      if (!dst.isDirectory()) {
-        throw new IOException("cannot create directory for local destination \""
-                              + dst + "\".");
+    /* Keep the structure similar to ChecksumFileSystem.copyToLocal(). 
+     * Ideal these two should just invoke FileUtil.copy() and not repeat
+     * recursion here. Of course, copy() should support two more options :
+     * copyCrc and useTmpFile (may be useTmpFile need not be an option).
+     */
+    
+    if (!srcFS.isDirectory(src)) {
+      if (dst.exists()) {
+        // match the error message in FileUtil.checkDest():
+        throw new IOException("Target " + dst + " already exists");
       }
-      for(Path p : srcFS.listPaths(src)) {
-        copyToLocal(srcFS, p,
-                srcFS.isDirectory(p)? new File(dst, p.getName()): dst, copyCrc);
+      
+      // use absolute name so that tmp file is always created under dest dir
+      File tmp = FileUtil.createLocalTempFile(dst.getAbsoluteFile(),
+                                              COPYTOLOCAL_PREFIX, true);
+      if (!FileUtil.copy(srcFS, src, tmp, false, srcFS.getConf())) {
+        throw new IOException("Failed to copy " + src + " to " + dst); 
       }
-    }
-    else {
-      Path [] srcs = srcFS.globPaths(src);
-      if (dst.isDirectory()) { //dst is a directory but src is not
-        for (Path p : srcs) {
-          copyToLocal(srcFS, p, new File(dst, p.getName()), copyCrc);
-        }
-      } else if (srcs.length == 1)
-      {
-        if (dst.exists()) {
-          throw new IOException("local destination \"" + dst
-                                + "\" already exists.");
-        }
-        if (!srcFS.exists(src)) {
-          throw new IOException("src \"" + src + "\" does not exist.");
-        }
+      
+      if (!tmp.renameTo(dst)) {
+        throw new IOException("Failed to rename tmp file " + tmp + 
+                              " to local destination \"" + dst + "\".");
+      }
 
-        File tmp = FileUtil.createLocalTempFile(dst, COPYTOLOCAL_PREFIX, true);
-        if (FileUtil.copy(srcFS, src, tmp, false, srcFS.getConf())) {
-          if (!tmp.renameTo(dst)) {
-          //try to reanme tmp to another file since tmp will be deleted on exit
-            File another = FileUtil.createLocalTempFile(dst, COPYTOLOCAL_PREFIX,
-                                                        false);
-            another.delete();
-            if (tmp.renameTo(another)) {
-              throw new IOException(
-                  "Failed to rename tmp file to local destination \"" + dst
-                  + "\".  Remote source file \"" + src + "\" is saved to \""
-                  + another + "\".");
-            } else {
-              throw new IOException("Failed to rename tmp file.");
-            }
-          }
-        }
-
-        if (copyCrc) {
-          ChecksumFileSystem csfs = (ChecksumFileSystem) srcFS;
-          File dstcs = FileSystem.getLocal(srcFS.getConf())
-            .pathToFile(csfs.getChecksumFile(new Path(dst.getCanonicalPath())));
-          copyToLocal(csfs.getRawFileSystem(), csfs.getChecksumFile(src),
-                      dstcs, false);
-        }
-      } else {
-        throw new IOException("When copying multiple files, "
-                              + "destination should be a directory.");
+      if (copyCrc) {
+        ChecksumFileSystem csfs = (ChecksumFileSystem) srcFS;
+        File dstcs = FileSystem.getLocal(srcFS.getConf())
+          .pathToFile(csfs.getChecksumFile(new Path(dst.getCanonicalPath())));
+        copyToLocal(csfs.getRawFileSystem(), csfs.getChecksumFile(src),
+                    dstcs, false);
+      } 
+    } else {
+      // once FileUtil.copy() supports tmp file, we don't need to mkdirs().
+      dst.mkdirs();
+      for(Path path : srcFS.listPaths(src)) {
+        copyToLocal(srcFS, path, new File(dst, path.getName()), copyCrc);
       }
     }
   }
