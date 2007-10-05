@@ -96,7 +96,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final Vector<HMsg> outboundMsgs = new Vector<HMsg>();
 
-  int numRetries;
+  final int numRetries;
   protected final int threadWakeFrequency;
   private final int msgInterval;
   private final int serverLeaseTimeout;
@@ -314,7 +314,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
     }
   }
-  
+
   // HLog and HLog roller.  log is protected rather than private to avoid
   // eclipse warning when accessed by inner classes
   protected HLog log;
@@ -472,19 +472,27 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                   // get it when the master is panicing because for instance
                   // the HDFS has been yanked out from under it.  Be wary of
                   // this message.
-                  try {
-                    if (checkFileSystem()) {
-                      closeAllRegions();
-                      restart = true;
+                  if (checkFileSystem()) {
+                    closeAllRegions();
+                    synchronized (logRollerLock) {
+                      try {
+                        log.closeAndDelete();
+                        serverInfo.setStartCode(rand.nextLong());
+                        log = setupHLog();
+                      } catch (IOException e) {
+                        this.abortRequested = true;
+                        this.stopRequested.set(true);
+                        e = RemoteExceptionHandler.checkIOException(e); 
+                        LOG.fatal("error restarting server", e);
+                        break;
+                      }
                     }
-                  } catch (Exception e) {
+                    reportForDuty();
+                    restart = true;
+                  } else {
                     LOG.fatal("file system available check failed. " +
-                        "Shutting down server.", e);
-                    this.stopRequested.set(true);
-                    this.fsOk = false;
-                    this.abortRequested = true;
+                        "Shutting down server.");
                   }
-                  
                   break;
 
                 case HMsg.MSG_REGIONSERVER_STOP:
@@ -604,7 +612,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Run init. Sets up hlog and starts up all server threads.
    * @param c Extra configuration.
    */
-  private void init(final MapWritable c) {
+  private void init(final MapWritable c) throws IOException {
     try {
       for (Map.Entry<Writable, Writable> e: c.entrySet()) {
         String key = e.getKey().toString();
@@ -618,18 +626,22 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       startServiceThreads();
     } catch (IOException e) {
       this.stopRequested.set(true);
-      LOG.fatal("Failed init",
-        RemoteExceptionHandler.checkIOException(e));
+      e = RemoteExceptionHandler.checkIOException(e); 
+      LOG.fatal("Failed init", e);
+      IOException ex = new IOException("region server startup failed");
+      ex.initCause(e);
+      throw ex;
     }
   }
   
-  private HLog setupHLog()
-  throws RegionServerRunningException, IOException {
+  private HLog setupHLog() throws RegionServerRunningException,
+    IOException {
+    
     String rootDir = this.conf.get(HConstants.HBASE_DIR);
     LOG.info("Root dir: " + rootDir);
-    Path logdir = new Path(new Path(rootDir),
-      "log" + "_" + getThisIP() + "_" +
-      this.serverInfo.getServerAddress().getPort());
+    Path logdir = new Path(new Path(rootDir), "log" + "_" + getThisIP() + "_" +
+        this.serverInfo.getStartCode() + "_" + 
+        this.serverInfo.getServerAddress().getPort());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Log dir " + logdir);
     }
@@ -762,6 +774,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         }
         break;
       } catch(IOException e) {
+        LOG.warn("error telling master we are up", e);
         this.sleeper.sleep(lastMsg);
         continue;
       }
