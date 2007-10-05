@@ -29,6 +29,8 @@ import java.util.Enumeration;
 import java.net.URL;
 import java.net.URLDecoder;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
@@ -48,16 +50,21 @@ import org.apache.hadoop.util.ReflectionUtils;
  * of input files, and where the output files should be written. */
 public class JobConf extends Configuration {
   
+  private static final Log LOG = LogFactory.getLog(JobConf.class);
+
   /**
    * Construct a map/reduce job configuration.
    */
-  public JobConf() {}
+  public JobConf() {
+	  checkWarnAndLoadMapredDefault();
+  }
 
   /** 
    * Construct a map/reduce job configuration.
    * @param exampleClass a class whose containing jar is used as the job's jar.
    */
   public JobConf(Class exampleClass) {
+    checkWarnAndLoadMapredDefault();
     setJarByClass(exampleClass);
   }
   
@@ -68,6 +75,7 @@ public class JobConf extends Configuration {
    */
   public JobConf(Configuration conf) {
     super(conf);
+    checkWarnAndLoadMapredDefault();
   }
 
 
@@ -96,9 +104,24 @@ public class JobConf extends Configuration {
    */
   public JobConf(Path config) {
     super();
+    checkWarnAndLoadMapredDefault();
     addResource(config);
   }
 
+  /**
+   * Checks if <b>mapred-default.xml</b> is on the CLASSPATH, if so
+   * it warns the user and loads it as a {@link Configuration} resource.
+   * @deprecated Remove in hadoop-0.16.0 via HADOOP-1843
+   */
+  private void checkWarnAndLoadMapredDefault() {
+    URL mapredDefaultConf = getClassLoader().getResource("mapred-default.xml");
+    if (mapredDefaultConf != null) {
+      LOG.warn("Deprecated resource 'mapred-default.xml' is being loaded, " +
+          "please discontinue its usage!");
+      addResource("mapred-default.xml");
+    }
+  }
+  
   public String getJar() { return get("mapred.jar"); }
   public void setJar(String jar) { set("mapred.jar", jar); }
   
