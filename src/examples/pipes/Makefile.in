@@ -39,11 +39,10 @@ POST_UNINSTALL = :
 host_triplet = @host@
 bin_PROGRAMS = wordcount-simple$(EXEEXT) wordcount-part$(EXEEXT) \
 	wordcount-nopipe$(EXEEXT)
-DIST_COMMON = config.guess config.guess config.sub config.sub \
-	$(srcdir)/Makefile.in $(srcdir)/Makefile.am \
-	$(top_srcdir)/configure $(am__configure_deps) \
-	$(top_srcdir)/impl/config.h.in depcomp depcomp ltmain.sh \
-	ltmain.sh config.guess config.guess config.sub config.sub
+DIST_COMMON = config.guess config.sub $(srcdir)/Makefile.in \
+	$(srcdir)/Makefile.am $(top_srcdir)/configure \
+	$(am__configure_deps) $(top_srcdir)/impl/config.h.in depcomp \
+	ltmain.sh config.guess config.sub
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \

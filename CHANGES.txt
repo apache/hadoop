@@ -244,6 +244,9 @@ Trunk (unreleased changes)
     HADOOP-1695.  The SecondaryNamenode waits for the Primary NameNode to
     start up.  (Dhruba Borthakur)
 
+    HADOOP-1983.  Have Pipes flush the command socket when progress is sent
+    to prevent timeouts during long computations. (omalley)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 

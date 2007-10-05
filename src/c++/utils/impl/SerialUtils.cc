@@ -144,6 +144,11 @@ namespace HadoopUtils {
     return (ret == 0);
   }
 
+  void FileOutStream::flush()
+  {
+    fflush(mFile);
+  }
+
   FileOutStream::~FileOutStream()
   {
     if (mFile != NULL) {

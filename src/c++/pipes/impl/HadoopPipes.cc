@@ -287,6 +287,7 @@ namespace HadoopPipes {
     virtual void progress(float progress) {
       serializeInt(PROGRESS, *stream);
       serializeFloat(progress, *stream);
+      stream->flush();
     }
 
     virtual void done() {
@@ -758,11 +759,11 @@ namespace HadoopPipes {
         uint64_t now = getCurrentMillis();
         if (now - lastProgress > 1000) {
           lastProgress = now;
-          uplink->progress(progressFloat);
           if (statusSet) {
             uplink->status(status);
             statusSet = false;
           }
+          uplink->progress(progressFloat);
         }
       }
     }

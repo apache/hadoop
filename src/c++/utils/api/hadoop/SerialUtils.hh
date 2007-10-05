@@ -73,6 +73,7 @@ namespace HadoopUtils {
      * @throws Error if there are problems reading
      */
     virtual void read(void *buf, size_t len) = 0;
+    virtual ~InStream() {}
   };
 
   /**
@@ -87,6 +88,11 @@ namespace HadoopUtils {
      * @throws Error if there are problems writing
      */
     virtual void write(const void *buf, size_t len) = 0;
+    /**
+     * Flush the data to the underlying store.
+     */
+    virtual void flush() = 0;
+    virtual ~OutStream() {}
   };
 
   /**
@@ -130,6 +136,7 @@ namespace HadoopUtils {
     bool open(FILE* file);
     void write(const void* buf, size_t len);
     bool advance(size_t nbytes);
+    void flush();
     bool close();
     virtual ~FileOutStream();
   private:
