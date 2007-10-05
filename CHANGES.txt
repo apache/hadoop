@@ -360,6 +360,9 @@ Trunk (unreleased changes)
     HADOOP-1906. Warn the user if they have an obsolete madred-default.xml
     file in their configuration directory. (acmurthy via omalley)
 
+    HADOOP-1971.  Warn when job does not specify a jar. (enis via cutting)
+
+
 Release 0.14.2 - unreleased
 
   BUG FIXES

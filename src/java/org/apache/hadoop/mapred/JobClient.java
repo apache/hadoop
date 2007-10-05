@@ -377,6 +377,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       job.setJar(submitJarFile.toString());
       fs.copyFromLocalFile(new Path(originalJarPath), submitJarFile);
       fs.setReplication(submitJarFile, replication);
+    } else {
+      LOG.warn("No job jar file set.  User classes may not be found. "+
+               "See JobConf(Class) or JobConf#setJar(String).");
     }
 
     // Set the user's name and working directory
