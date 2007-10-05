@@ -44,6 +44,11 @@
       <title>News</title>
 
       <section>
+        <title> 9 October, 2007: release 0.14.2 available </title>
+	<p>This release fixes critical bugs in release 0.14.1.</p>
+      </section>
+
+      <section>
         <title> 4 September, 2007: release 0.14.1 available </title>
 	<p>New features in release 0.14 include:</p>
 
