@@ -26,6 +26,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -39,9 +40,10 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public class TestHStoreFile extends TestCase {
   static final Log LOG = LogFactory.getLog(TestHStoreFile.class);
-  private static String DIR = System.getProperty("test.build.data", ".");
+  private static String DIR = "/";
   private static final char FIRST_CHAR = 'a';
   private static final char LAST_CHAR = 'z';
+  private MiniDFSCluster cluster;
   private FileSystem fs;
   private Configuration conf;
   private Path dir = null;
@@ -51,15 +53,17 @@ public class TestHStoreFile extends TestCase {
   public void setUp() throws Exception {
     super.setUp();
     this.conf = new HBaseConfiguration();
-    this.fs = FileSystem.getLocal(this.conf);
+    this.cluster = null;
+    this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
+    this.fs = cluster.getFileSystem();
     this.dir = new Path(DIR, getName());
   }
   
   /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
-    if (this.fs.exists(this.dir)) {
-      this.fs.delete(this.dir);
+    if (this.cluster != null) {
+      this.cluster.shutdown();
     }
     super.tearDown();
   }

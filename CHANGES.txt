@@ -65,6 +65,7 @@ Trunk (unreleased changes)
     HADOOP-1966 Make HBase unit tests more reliable in the Hudson environment.
     HADOOP-1975 HBase tests failing with java.lang.NumberFormatException
     HADOOP-1990 Regression test instability affects nightly and patch builds
+    HADOOP-1996 TestHStoreFile fails on windows if run multiple times
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable
