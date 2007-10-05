@@ -381,6 +381,10 @@ Release 0.14.2 - unreleased
     HADOOP-1961.  The -get option to dfs-shell works when a single filename
     is specified.  (Raghu Angadi via dhruba)
 
+    HADOOP-1997.  TestCheckpoint closes the edits file after writing to it,
+    otherwise the rename of this file on Windows fails.
+    (Konstantin Shvachko via dhruba)
+
 Release 0.14.1 - 2007-09-04
 
   BUG FIXES

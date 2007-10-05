@@ -446,7 +446,7 @@ class FSImage extends Storage {
   void processIOError(int index) throws IOException {
     int nrDirs = getNumStorageDirs();
     assert(index >= 0 && index < nrDirs);
-    if (nrDirs == 1)
+    if (nrDirs <= 1)
       throw new IOException("Checkpoint directories inaccessible.");
     storageDirs.remove(index);
   }
