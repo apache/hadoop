@@ -116,6 +116,9 @@ fi
 if [ -d "$HADOOP_HOME/build/classes" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/classes
 fi
+if [ -d "$HADOOP_HOME/build/contrib/hbase/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/contrib/hbase/
+fi
 if [ -d "$HADOOP_HOME/build/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build
 fi

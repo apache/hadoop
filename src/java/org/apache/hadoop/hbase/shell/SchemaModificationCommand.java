@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.shell;
 
+import java.io.Writer;
 import java.util.Map;
 import java.util.Set;
 
@@ -32,7 +33,6 @@ import org.apache.hadoop.io.Text;
  * Command. Provides utility methods for alteration operations.
  */
 public abstract class SchemaModificationCommand extends BasicCommand {
-
   private int maxVersions;
   private int maxLength;
   private HColumnDescriptor.CompressionType compression;
@@ -42,6 +42,10 @@ public abstract class SchemaModificationCommand extends BasicCommand {
   private int vectorSize;
   private int numHash;
   private int numEntries;
+  
+  public SchemaModificationCommand(Writer o) {
+    super(o);
+  }
 
   private void initOptions() {
     maxVersions = HColumnDescriptor.DEFAULT_N_VERSIONS;

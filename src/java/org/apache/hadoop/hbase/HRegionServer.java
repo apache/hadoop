@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
@@ -116,6 +117,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   // A sleeper that sleeps for msgInterval.
   private final Sleeper sleeper;
+
+  // Info server.  Default access so can be used by unit tests.  REGIONSERVER
+  // is name of the webapp and the attribute name used stuffing this instance
+  // into web context.
+  InfoServer infoServer;
+  public static final String REGIONSERVER = "regionserver";
 
   // Check to see if regions should be split
   private final Thread splitOrCompactCheckerThread;
@@ -408,7 +415,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       false, conf);
     this.serverInfo = new HServerInfo(new HServerAddress(
       new InetSocketAddress(getThisIP(),
-      this.server.getListenerAddress().getPort())), this.rand.nextLong());
+      this.server.getListenerAddress().getPort())), this.rand.nextLong(),
+      this.conf.getInt("hbase.regionserver.info.port", 60030));
      this.leases = new Leases(
        conf.getInt("hbase.regionserver.lease.period", 3 * 60 * 1000),
        this.threadWakeFrequency);
@@ -546,7 +554,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.leases.closeAfterLeasesExpire();
     this.worker.stop();
     this.server.stop();
-    
+    if (this.infoServer != null) {
+      LOG.info("Stopping infoServer");
+      try {
+        this.infoServer.stop();
+      } catch (InterruptedException ex) {
+        ex.printStackTrace();
+      }
+    }
+
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive?  If OOME could have exited already
     synchronized(logRollerLock) {
@@ -689,6 +705,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     // an unhandled exception, it will just exit.
     this.leases.setName(n + ".leaseChecker");
     this.leases.start();
+    // Put up info server.
+    int port = this.conf.getInt("hbase.regionserver.info.port", 60030);
+    if (port >= 0) {
+      String a = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
+      this.infoServer = new InfoServer("regionserver", a, port, false);
+      this.infoServer.setAttribute("regionserver", this);
+      this.infoServer.start();
+    }
     // Start Server.  This service is like leases in that it internally runs
     // a thread.
     this.server.start();
@@ -1050,7 +1074,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       if (s == null) {
         throw new UnknownScannerException("Name: " + scannerName);
       }
-      leases.renewLease(scannerId, scannerId);
+      this.leases.renewLease(scannerId, scannerId);
 
       // Collect values to be returned here
       MapWritable values = new MapWritable();
@@ -1131,11 +1155,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // remote scanner interface
   //
 
-  /** {@inheritDoc} */
   public long openScanner(Text regionName, Text[] cols, Text firstRow,
       final long timestamp, final RowFilterInterface filter)
     throws IOException {
-
     checkOpen();
     requestCount.incrementAndGet();
     try {
@@ -1148,7 +1170,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       synchronized(scanners) {
         scanners.put(scannerName, s);
       }
-      leases.createLease(scannerId, scannerId, new ScannerListener(scannerName));
+      this.leases.
+        createLease(scannerId, scannerId, new ScannerListener(scannerName));
       return scannerId;
     } catch (IOException e) {
       LOG.error("Error opening scanner (fsOk: " + this.fsOk + ")",
@@ -1172,8 +1195,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         throw new UnknownScannerException(scannerName);
       }
       s.close();
-      leases.cancelLease(scannerId, scannerId);
-      
+      this.leases.cancelLease(scannerId, scannerId);
     } catch (IOException e) {
       checkFileSystem();
       throw e;
@@ -1250,6 +1272,24 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.commit(lockid, timestamp);
   }
 
+  /**
+   * @return Info on this server.
+   */
+  public HServerInfo getServerInfo() {
+    return this.serverInfo;
+  }
+
+  /**
+   * @return Immutable list of this servers regions.
+   */
+  public SortedMap<Text, HRegion> getOnlineRegions() {
+    return Collections.unmodifiableSortedMap(this.onlineRegions);
+  }
+
+  public AtomicInteger getRequestCount() {
+    return this.requestCount;
+  }
+  
   /** 
    * Protected utility method for safely obtaining an HRegion handle.
    * @param regionName Name of online {@link HRegion} to return

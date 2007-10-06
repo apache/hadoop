@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.shell;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Writer;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -40,8 +41,11 @@ import org.apache.hadoop.util.RunJar;
  * Run hadoop jar commands.
  */
 public class JarCommand extends BasicCommand {
-  
   private List<String> query;
+  
+  public JarCommand(Writer o) {
+    super(o);
+  }
 
   @SuppressWarnings("deprecation")
   public ReturnMsg execute(@SuppressWarnings("unused") Configuration conf) {
@@ -98,6 +102,7 @@ public class JarCommand extends BasicCommand {
             try {
               FileUtil.fullyDelete(workDir);
             } catch (IOException e) {
+              e.printStackTrace();
             }
           }
         });
@@ -122,7 +127,7 @@ public class JarCommand extends BasicCommand {
       Method main = mainClass.getMethod("main", new Class[] {
         Array.newInstance(String.class, 0).getClass()
       });
-      String[] newArgs = (String[])Arrays.asList(args)
+      String[] newArgs = Arrays.asList(args)
         .subList(firstArg, args.length).toArray(new String[0]);
       try {
         main.invoke(null, new Object[] { newArgs });
@@ -143,5 +148,10 @@ public class JarCommand extends BasicCommand {
 
   private String[] getQuery() {
     return query.toArray(new String[] {});
+  }
+  
+  @Override
+  public CommandType getCommandType() {
+    return CommandType.SHELL;
   }
 }

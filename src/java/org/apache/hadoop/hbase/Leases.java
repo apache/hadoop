@@ -87,7 +87,8 @@ public class Leases {
   public void closeAfterLeasesExpire() {
     synchronized(this.leases) {
       while (this.leases.size() > 0) {
-        LOG.info(Integer.toString(leases.size()) + " lease(s) " +
+        LOG.info(Thread.currentThread().getName() + " " +
+          Integer.toString(leases.size()) + " lease(s) " +
           "outstanding. Waiting for them to expire.");
         try {
           this.leases.wait(this.leaseCheckFrequency);
@@ -105,7 +106,7 @@ public class Leases {
    * without any cancellation calls.
    */
   public void close() {
-    LOG.info("closing leases");
+    LOG.info(Thread.currentThread().getName() + " closing leases");
     this.stop.set(true);
     try {
       this.leaseMonitorThread.interrupt();
@@ -119,7 +120,7 @@ public class Leases {
         sortedLeases.clear();
       }
     }
-    LOG.info("leases closed");
+    LOG.info(Thread.currentThread().getName() + " closed leases");
   }
 
   /* A client obtains a lease... */
@@ -330,8 +331,8 @@ public class Leases {
     }
     
     void expired() {
-      LOG.info("Lease expired " + getLeaseName());
-
+      LOG.info(Thread.currentThread().getName() + " lease expired " +
+        getLeaseName());
       listener.leaseExpired();
     }
     

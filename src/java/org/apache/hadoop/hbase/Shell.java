@@ -20,13 +20,16 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 
 import jline.ConsoleReader;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.shell.Command;
-import org.apache.hadoop.hbase.shell.HelpManager;
+import org.apache.hadoop.hbase.shell.HelpCommand;
 import org.apache.hadoop.hbase.shell.ReturnMsg;
+import org.apache.hadoop.hbase.shell.TableFormatterFactory;
 import org.apache.hadoop.hbase.shell.generated.ParseException;
 import org.apache.hadoop.hbase.shell.generated.Parser;
 import org.apache.hadoop.hbase.shell.generated.TokenMgrError;
@@ -39,7 +42,31 @@ import org.apache.hadoop.hbase.shell.generated.TokenMgrError;
 public class Shell {
   /** audible keyboard bells */
   public static final boolean DEFAULT_BELL_ENABLED = true;
+  
 
+  /** Return the boolean value indicating whether end of command or not */
+  static boolean isEndOfCommand(String line) {
+    return (line.lastIndexOf(';') > -1) ? true : false;
+  }
+
+  /** Return the string of prompt start string */
+  private static String getPrompt(final StringBuilder queryStr) {
+    return (queryStr.toString().equals("")) ? "Hbase> " : "   --> ";
+  }
+
+  /**
+   * @param watch true if execution time should be computed and returned
+   * @param start start of time interval
+   * @param end end of time interval
+   * @return a string of code execution time. */
+  public static String executeTime(boolean watch, long start, long end) {
+    return watch?
+      " (" + String.format("%.2f", Double.valueOf((end - start) * 0.001)) +
+        " sec)":
+      "";
+  }
+
+ 
   /**
    * Main method
    * @param args not used
@@ -50,8 +77,10 @@ public class Shell {
     Configuration conf = new HBaseConfiguration();
     ConsoleReader reader = new ConsoleReader();
     reader.setBellEnabled(conf.getBoolean("hbaseshell.jline.bell.enabled",
-        DEFAULT_BELL_ENABLED));
-    HelpManager help = new HelpManager();
+      DEFAULT_BELL_ENABLED));
+    Writer out = new OutputStreamWriter(System.out, "UTF-8");
+    TableFormatterFactory tff = new TableFormatterFactory(out, conf);
+    HelpCommand help = new HelpCommand(out, tff.get());
     help.printVersion();
     StringBuilder queryStr = new StringBuilder();
     String extendedLine;
@@ -59,7 +88,7 @@ public class Shell {
       if (isEndOfCommand(extendedLine)) {
         queryStr.append(" " + extendedLine);
         long start = System.currentTimeMillis();
-        Parser parser = new Parser(queryStr.toString());
+        Parser parser = new Parser(queryStr.toString(), out, tff.get());
         ReturnMsg rs = null;
         try {
           Command cmd = parser.terminatedCommand();
@@ -84,27 +113,5 @@ public class Shell {
       }
     }
     System.out.println();
-  }
-
-  /** Return the boolean value indicating whether end of command or not */
-  static boolean isEndOfCommand(String line) {
-    return (line.lastIndexOf(';') > -1) ? true : false;
-  }
-
-  /** Return the string of prompt start string */
-  private static String getPrompt(final StringBuilder queryStr) {
-    return (queryStr.toString().equals("")) ? "Hbase> " : "   --> ";
-  }
-
-  /**
-   * @param watch true if execution time should be computed and returned
-   * @param start start of time interval
-   * @param end end of time interval
-   * @return a string of code execution time. */
-  public static String executeTime(boolean watch, long start, long end) {
-    return watch?
-      " (" + String.format("%.2f", Double.valueOf((end - start) * 0.001)) +
-        " sec)":
-      "";
   }
 }

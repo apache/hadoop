@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.io.StringReader;
 import java.io.Reader;
+import java.io.Writer;
 import org.apache.hadoop.hbase.shell.*;
 
 public class ParserTokenManager implements ParserConstants

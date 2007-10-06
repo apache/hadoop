@@ -26,20 +26,44 @@ to call at top-level: ant deploy-contrib compile-core-test
 <project name="hbase" default="jar">
   <import file="../build-contrib.xml"/>
 
-<target name="javacc" if="javacc.home">
-<echo message="javacc.home: ${javacc.home}"/>
-<property name="hbaseshell.src.dir" 
-   value="${src.dir}/org/apache/hadoop/hbase/shell" /> 
- <mkdir dir="${hbaseshell.src.dir}/generated" />
-  <javacc
-         target="${hbaseshell.src.dir}/HBaseShell.jj"
-       outputdirectory="${hbaseshell.src.dir}/generated"
-        javacchome="${javacc.home}"
-   />
-</target>
+  <property name="build.webapps" value="${build.dir}/webapps"/>
+  <property name="src.webapps" value="${basedir}/src/webapps" />
 
-<target name="compile" depends="init,javacc">
+  <target name="init">
+    <antcall target="hadoopbuildcontrib.init"/>
+    <!--Version is set only if called from hadoop build.xml. Set a default-->
+    <condition property="version" value="0.15.0-dev">
+      <not>
+        <isset property="version" />
+      </not>
+    </condition>
+    <!--Copy webapps over to build dir. Exclude jsp and generated-src java
+      classes -->
+    <mkdir dir="${build.webapps}"/>
+    <copy todir="${build.webapps}">
+      <fileset dir="${src.webapps}">
+        <exclude name="**/*.jsp" />
+        <exclude name="**/.*" />
+        <exclude name="**/*~" />
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="javacc" if="javacc.home">
+  <echo message="javacc.home: ${javacc.home}"/>
+  <property name="hbaseshell.src.dir" 
+       value="${src.dir}/org/apache/hadoop/hbase/shell" /> 
+     <mkdir dir="${hbaseshell.src.dir}/generated" />
+     <javacc
+       target="${hbaseshell.src.dir}/HBaseShell.jj"
+       outputdirectory="${hbaseshell.src.dir}/generated"
+       javacchome="${javacc.home}"
+     />
+  </target>
+
+  <target name="compile" depends="init,javacc">
    <echo message="contrib: ${name}"/>
+   <!--Compile whats under src and generated java classes made from jsp-->
    <javac
     encoding="${build.encoding}"
     srcdir="${src.dir}"
@@ -50,13 +74,14 @@ to call at top-level: ant deploy-contrib compile-core-test
      <classpath refid="classpath"/>
      <classpath path="path"/>
    </javac>
-</target>
+  </target>
 	
   <!-- Override jar target to specify main class -->
   <target name="jar" depends="compile">
     <jar jarfile="${build.dir}/hadoop-${version}-${name}.jar"
         basedir="${build.classes}" >
       <fileset file="${root}/conf/hbase-default.xml"/>
+      <zipfileset dir="${build.webapps}" prefix="webapps"/>
     </jar>
   </target>
 
@@ -85,21 +110,17 @@ to call at top-level: ant deploy-contrib compile-core-test
   </target>
 
   <!-- the unit test classpath
-    Copied from ../build-contrib.xml so can add 
-  -->
+    Copied from ../build-contrib.xml so can add to it.
+   -->
   <path id="test.classpath">
     <pathelement location="${build.test}" />
+    <pathelement location="${src.test}"/>
     <pathelement location="${hadoop.root}/build/test/classes"/>
     <pathelement location="${hadoop.root}/src/contrib/test"/>
     <pathelement location="${conf.dir}"/>
     <pathelement location="${hadoop.root}/build"/>
-    <pathelement location="${src.test}"/>
     <pathelement location="${root}/conf"/>
+    <pathelement location="${build.dir}"/>
     <path refid="classpath"/>
   </path>
-  
-  <target name="test">
-    <antcall target="hadoopbuildcontrib.test"/>
-  </target>  
-
 </project>

@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
+import java.io.Writer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseAdmin;
@@ -30,6 +31,10 @@ import org.apache.hadoop.io.Text;
  */
 public class DisableCommand extends BasicCommand {
   private String tableName;
+  
+  public DisableCommand(Writer o) {
+    super(o);
+  }
  
   public ReturnMsg execute(Configuration conf) {
     assert tableName != null;
@@ -47,5 +52,10 @@ public class DisableCommand extends BasicCommand {
 
   public void setTable(String table) {
     this.tableName = table;
-  } 
+  }
+  
+  @Override
+  public CommandType getCommandType() {
+    return CommandType.DDL;
+  }
 }

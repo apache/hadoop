@@ -44,4 +44,9 @@ public class ReturnMsg {
   public int getType() {
     return this.type;
   }
+  
+  @Override
+  public String toString() {
+    return this.msg;
+  }
 }

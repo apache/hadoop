@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
+import java.io.Writer;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,11 +31,14 @@ import org.apache.hadoop.io.Text;
  * Inserts values into tables.
  */
 public class InsertCommand extends BasicCommand {
-  
   private Text tableName;
   private List<String> columnfamilies;
   private List<String> values;
   private String rowKey;
+
+  public InsertCommand(Writer o) {
+    super(o);
+  }
 
   public ReturnMsg execute(Configuration conf) {
     if (this.tableName == null || this.values == null || this.rowKey == null)
@@ -91,5 +95,10 @@ public class InsertCommand extends BasicCommand {
 
   public byte[] getValue(int i) {
     return this.values.get(i).getBytes();
-  } 
+  }
+  
+  @Override
+  public CommandType getCommandType() {
+    return CommandType.INSERT;
+  }
 }

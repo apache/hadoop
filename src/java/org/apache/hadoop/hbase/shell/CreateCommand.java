@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.shell;
 
+import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -32,11 +33,14 @@ import org.apache.hadoop.hbase.HTableDescriptor;
  * Creates tables.
  */
 public class CreateCommand extends SchemaModificationCommand {
-  
   private String tableName;
   private Map<String, Map<String, Object>> columnSpecMap =
     new HashMap<String, Map<String, Object>>();
-
+  
+  public CreateCommand(Writer o) {
+    super(o);
+  }
+  
   public ReturnMsg execute(Configuration conf) {
     try {
       HBaseAdmin admin = new HBaseAdmin(conf);
@@ -48,7 +52,7 @@ public class CreateCommand extends SchemaModificationCommand {
         tableDesc.addFamily(columnDesc);
       }
       
-      System.out.println("Creating table... Please wait.");
+      println("Creating table... Please wait.");
       
       admin.createTable(tableDesc);
       return new ReturnMsg(0, "Table created successfully.");
@@ -72,5 +76,10 @@ public class CreateCommand extends SchemaModificationCommand {
    */
   public void addColumnSpec(String column, Map<String, Object> columnSpec) {
     columnSpecMap.put(column, columnSpec);
-  } 
+  }
+  
+  @Override
+  public CommandType getCommandType() {
+    return CommandType.DDL;
+  }
 }

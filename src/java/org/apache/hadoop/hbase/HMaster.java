@@ -51,19 +51,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.InfoServer;
+import org.apache.hadoop.hbase.util.Sleeper;
+import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
-
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.Sleeper;
-import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.util.Writables;
 
 
 /**
@@ -120,6 +120,11 @@ HMasterRegionInterface {
   
   // A Sleeper that sleeps for threadWakeFrequency
   protected Sleeper sleeper;
+  
+  // Default access so accesible from unit tests. MASTER is name of the webapp
+  // and the attribute name used stuffing this instance into web context.
+  InfoServer infoServer;
+  public static final String MASTER = "master";
 
   /**
    * Base HRegion scanner class. Holds utilty common to <code>ROOT</code> and
@@ -538,7 +543,7 @@ HMasterRegionInterface {
   Integer rootScannerLock = new Integer(0);
 
   @SuppressWarnings("unchecked")
-  static class MetaRegion implements Comparable {
+  public static class MetaRegion implements Comparable {
     private HServerAddress server;
     private Text regionName;
     private Text startKey;
@@ -959,13 +964,48 @@ HMasterRegionInterface {
   public HServerAddress getMasterAddress() {
     return address;
   }
+  
+  /**
+   * @return Hbase root dir.
+   */
+  public Path getRootDir() {
+    return this.dir;
+  }
+
+  /**
+   * @return Read-only map of servers to serverinfo.
+   */
+  public Map<String, HServerInfo> getServersToServerInfo() {
+    return Collections.unmodifiableMap(this.serversToServerInfo);
+  }
+
+  /**
+   * @return Read-only map of servers to load.
+   */
+  public Map<String, HServerLoad> getServersToLoad() {
+    return Collections.unmodifiableMap(this.serversToLoad);
+  }
+
+  /**
+   * @return Location of the <code>-ROOT-</code> region.
+   */
+  public HServerAddress getRootRegionLocation() {
+    return this.rootRegionLocation.get();
+  }
+  
+  /**
+   * @return Read-only map of online regions.
+   */
+  public Map<Text, MetaRegion> getOnlineMetaRegions() {
+    return Collections.unmodifiableSortedMap(this.onlineMetaRegions);
+  }
 
   /** Main processing loop */
   @Override
   public void run() {
     final String threadName = "HMaster";
     Thread.currentThread().setName(threadName);
-    startAllServices();
+    startServiceThreads();
     /*
      * Main processing loop
      */
@@ -1042,11 +1082,18 @@ HMasterRegionInterface {
     synchronized(metaScannerLock) {
       metaScannerThread.interrupt();    // Wake meta scanner
     }
+    if (this.infoServer != null) {
+      LOG.info("Stopping infoServer");
+      try {
+        this.infoServer.stop();
+      } catch (InterruptedException ex) {
+        ex.printStackTrace();
+      }
+    }
     server.stop();                      // Stop server
     serverLeases.close();               // Turn off the lease monitor
 
     // Join up with all threads
-
     try {
       rootScannerThread.join();         // Wait for the root scanner to finish.
     } catch (Exception iex) {
@@ -1067,7 +1114,7 @@ HMasterRegionInterface {
    *  as OOMEs; it should be lightly loaded. See what HRegionServer does if
    *  need to install an unexpected exception handler.
    */
-  private void startAllServices() {
+  private void startServiceThreads() {
     String threadName = Thread.currentThread().getName();
     try {
       Threads.setDaemonThreadRunning(this.rootScannerThread,
@@ -1077,7 +1124,15 @@ HMasterRegionInterface {
       // Leases are not the same as Chore threads. Set name differently.
       this.serverLeases.setName(threadName + ".leaseChecker");
       this.serverLeases.start();
-      // Start the server last so everything else is running before we start
+      // Put up info server.
+      int port = this.conf.getInt("hbase.master.info.port", 60010);
+      if (port >= 0) {
+        String a = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
+        this.infoServer = new InfoServer(MASTER, a, port, false);
+        this.infoServer.setAttribute(MASTER, this);
+        this.infoServer.start();
+      }
+      // Start the server so everything else is running before we start
       // receiving requests.
       this.server.start();
     } catch (IOException e) {

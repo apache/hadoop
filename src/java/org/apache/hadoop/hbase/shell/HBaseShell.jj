@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.io.StringReader;
 import java.io.Reader;
+import java.io.Writer;
 
 import org.apache.hadoop.hbase.shell.*;
 
@@ -40,10 +41,14 @@ import org.apache.hadoop.hbase.shell.*;
  */
 public class Parser {
   private String QueryString;
+  private TableFormatter formatter;
+  private Writer out;
   
-  public Parser(String query) {
+  public Parser(final String query, final Writer o, final TableFormatter f) {
     this((Reader)(new StringReader(query)));
     this.QueryString = query;
+    this.formatter = f;
+    this.out = o;
   }
   
   public String getQueryStr() {
@@ -174,7 +179,7 @@ Command cmdStatement() :
 
 ExitCommand exitCommand() :
 {
-  ExitCommand exit = new ExitCommand();
+  ExitCommand exit = new ExitCommand(this.out);
 }
 {
    <EXIT>  { return exit; }
@@ -183,7 +188,7 @@ ExitCommand exitCommand() :
 FsCommand fsCommand() :
 {
   Token t = null;
-  FsCommand fs = new FsCommand();
+  FsCommand fs = new FsCommand(this.out);
   List<String> query = new ArrayList<String>();
 }
 {
@@ -202,7 +207,7 @@ FsCommand fsCommand() :
 JarCommand jarCommand() :
 {
   Token t = null;
-  JarCommand jar = new JarCommand();
+  JarCommand jar = new JarCommand(this.out);
   List<String> query = new ArrayList<String>();
 }
 {
@@ -221,7 +226,7 @@ JarCommand jarCommand() :
 HelpCommand helpCommand() :
 {
   Token t = null;
-  HelpCommand help = new HelpCommand();
+  HelpCommand help = new HelpCommand(this.out, this.formatter);
   String argument = "";
 }
 {
@@ -252,7 +257,7 @@ HelpCommand helpCommand() :
 
 ShowCommand showCommand() :
 {
-  ShowCommand show = new ShowCommand();
+  ShowCommand show = new ShowCommand(this.out, this.formatter);
   String argument = null;
 }
 {
@@ -268,7 +273,7 @@ ShowCommand showCommand() :
 
 DescCommand descCommand() :
 {
-  DescCommand desc = new DescCommand();
+  DescCommand desc = new DescCommand(this.out, this.formatter);
   String argument = null;
 }
 {
@@ -347,7 +352,7 @@ Map<String, Object> ColumnSpec() :
 
 CreateCommand createCommand() :
 {
-  CreateCommand createCommand = new CreateCommand();
+  CreateCommand createCommand = new CreateCommand(this.out);
   String table = null;
   Map<String, Object> columnSpec = null;
   String column = null;
@@ -383,7 +388,7 @@ CreateCommand createCommand() :
 
 AlterCommand alterCommand() :
 {
-  AlterCommand alterCommand = new AlterCommand();
+  AlterCommand alterCommand = new AlterCommand(this.out);
   String table = null;
   String column = null;
   Map<String, Object> columnSpec = null;
@@ -439,7 +444,7 @@ AlterCommand alterCommand() :
 
 DropCommand dropCommand() :
 {
-  DropCommand drop = new DropCommand();
+  DropCommand drop = new DropCommand(this.out);
   List<String> tableList = null;
 }
 {
@@ -454,7 +459,7 @@ DropCommand dropCommand() :
 
 InsertCommand insertCommand() :
 {
-  InsertCommand in = new InsertCommand();
+  InsertCommand in = new InsertCommand(this.out);
   List<String> columnfamilies = null;
   List<String> values = null;
   String table = null;
@@ -490,7 +495,7 @@ InsertCommand insertCommand() :
 
 DeleteCommand deleteCommand() :
 {
-  DeleteCommand deleteCommand = new DeleteCommand();
+  DeleteCommand deleteCommand = new DeleteCommand(this.out);
   List<String> columnList = null;
   Token t = null;
   String table = null;
@@ -519,7 +524,7 @@ DeleteCommand deleteCommand() :
 
 SelectCommand selectCommand() :
 {
-  SelectCommand select = new SelectCommand();
+  SelectCommand select = new SelectCommand(this.out, this.formatter);
   List<String> columns = null;
   String rowKey = "";
   String timestamp = null;
@@ -573,7 +578,7 @@ SelectCommand selectCommand() :
 
 EnableCommand enableCommand() :
 {
-  EnableCommand enableCommand = new EnableCommand();
+  EnableCommand enableCommand = new EnableCommand(this.out);
   String table = null;
 }
 {
@@ -587,7 +592,7 @@ EnableCommand enableCommand() :
 
 DisableCommand disableCommand() :
 {
-  DisableCommand disableCommand = new DisableCommand();
+  DisableCommand disableCommand = new DisableCommand(this.out);
   String table = null;
 }
 {
@@ -601,7 +606,7 @@ DisableCommand disableCommand() :
 
 ClearCommand clearCommand() :
 {
-  ClearCommand clear = new ClearCommand();
+  ClearCommand clear = new ClearCommand(this.out);
 }
 {
    <CLEAR>

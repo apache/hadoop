@@ -84,7 +84,6 @@ public class MiniHBaseCluster implements HConstants {
 
   /**
    * Starts a MiniHBaseCluster on top of an existing HDFSCluster
-   *
    *<pre>
    ****************************************************************************
    *            *  *  *  *  *  N O T E  *  *  *  *  *
@@ -181,7 +180,6 @@ public class MiniHBaseCluster implements HConstants {
       this.regionServer = r;
     }
 
-    /** {@inheritDoc} */
     @Override
     public void run() {
       LOG.info("Starting " + getName());
@@ -460,5 +458,9 @@ public class MiniHBaseCluster implements HConstants {
     for(HRegion r: s.onlineRegions.values() ) {
       r.flushcache(false);
     }
+  }
+
+  public ArrayList<RegionServerThread> getRegionThreads() {
+    return this.regionThreads;
   }
 }
