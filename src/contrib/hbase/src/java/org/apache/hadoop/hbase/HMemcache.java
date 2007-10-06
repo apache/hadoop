@@ -481,14 +481,13 @@ public class HMemcache {
 
     /** Shut down map iterators, and release the lock */
     public void close() {
-      if(! scannerClosed) {
+      if (!scannerClosed) {
         try {
-          for(int i = 0; i < keys.length; i++) {
+          for (int i = 0; i < keys.length; i++) {
             if(keyIterators[i] != null) {
               closeSubScanner(i);
             }
           }
-          
         } finally {
           lock.releaseReadLock();
           scannerClosed = true;

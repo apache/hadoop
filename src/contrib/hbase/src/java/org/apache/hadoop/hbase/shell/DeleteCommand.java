@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,7 +33,10 @@ import org.apache.hadoop.io.Text;
  * Deletes values from tables.
  */
 public class DeleteCommand extends BasicCommand {
-  
+  public DeleteCommand(Writer o) {
+    super(o);
+  }
+
   private String tableName;
   private String rowKey;
   private List<String> columnList;
@@ -99,5 +103,10 @@ public class DeleteCommand extends BasicCommand {
       e.printStackTrace();
     }
     return columns;
+  }
+  
+  @Override
+  public CommandType getCommandType() {
+    return CommandType.DELETE;
   }
 }

@@ -19,11 +19,32 @@
  */
 package org.apache.hadoop.hbase.shell;
 
+import java.io.IOException;
+import java.io.Writer;
+
 /**
+ * Takes the lowest-common-denominator {@link Writer} doing its own printlns,
+ * etc.
  * @see <a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseShell">HBaseShell</a>
  */
 public abstract class BasicCommand implements Command, CommandFactory {
+  private final Writer out;
+  public final String LINE_SEPARATOR = System.getProperty("line.separator");
+
+  // Shutdown constructor.
+  @SuppressWarnings("unused")
+  private BasicCommand() {
+    this(null);
+  }
   
+  /**
+   * Constructor
+   * @param o A Writer.
+   */
+  public BasicCommand(final Writer o) {
+    this.out = o;
+  }
+
   public BasicCommand getBasicCommand() {
     return this;
   }
@@ -50,5 +71,26 @@ public abstract class BasicCommand implements Command, CommandFactory {
   protected String appendDelimiter(String column) {
     return (!column.endsWith(FAMILY_INDICATOR))?
       column + FAMILY_INDICATOR: column;
-  } 
+  }
+
+  /**
+   * @return Writer to use outputting.
+   */
+  public Writer getOut() {
+    return this.out;
+  }
+  
+  public void print(final String msg) throws IOException {
+    this.out.write(msg);
+  }
+  
+  public void println(final String msg) throws IOException {
+    print(msg);
+    print(LINE_SEPARATOR);
+    this.out.flush();
+  }
+  
+  public CommandType getCommandType() {
+    return CommandType.SELECT;
+  }
 }

@@ -66,7 +66,7 @@ public abstract class HBaseTestCase extends TestCase {
   
   /** {@inheritDoc} */
   @Override
-  public void setUp() throws Exception {
+  protected void setUp() throws Exception {
     super.setUp();
     this.testDir = getUnitTestdir(getName());
     this.localFs = FileSystem.getLocal(this.conf);
@@ -77,7 +77,7 @@ public abstract class HBaseTestCase extends TestCase {
   
   /** {@inheritDoc} */
   @Override
-  public void tearDown() throws Exception {
+  protected void tearDown() throws Exception {
     if (this.localFs != null && this.testDir != null &&
         this.localFs.exists(testDir)) {
       this.localFs.delete(testDir);

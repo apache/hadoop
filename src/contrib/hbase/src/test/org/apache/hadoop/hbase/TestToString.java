@@ -34,7 +34,7 @@ public class TestToString extends TestCase {
     final String hostport = "127.0.0.1:9999";
     HServerAddress address = new HServerAddress(hostport);
     assertEquals("HServerAddress toString", address.toString(), hostport);
-    HServerInfo info = new HServerInfo(address, -1);
+    HServerInfo info = new HServerInfo(address, -1, 60030);
     assertEquals("HServerInfo", "address: " + hostport + ", startcode: -1" +
         ", load: (requests: 0 regions: 0)", info.toString());
   }

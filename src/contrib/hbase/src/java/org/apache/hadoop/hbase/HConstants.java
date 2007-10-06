@@ -46,12 +46,16 @@ public interface HConstants {
   
   /** Default master address */
   static final String DEFAULT_MASTER_ADDRESS = DEFAULT_HOST + ":60000";
+  
+  static final int DEFAULT_MASTER_INFOPORT = 60010;
 
   /** Parameter name for hbase.regionserver address. */
   static final String REGIONSERVER_ADDRESS = "hbase.regionserver";
   
   /** Default region server address */
-  static final String DEFAULT_REGIONSERVER_ADDRESS = DEFAULT_HOST + ":60010";  
+  static final String DEFAULT_REGIONSERVER_ADDRESS = DEFAULT_HOST + ":60020";
+  
+  static final int DEFAULT_REGIONSERVER_INFOPORT = 60030;
 
   /** Parameter name for what region server interface to use. */
   static final String REGION_SERVER_CLASS = "hbase.regionserver.class";

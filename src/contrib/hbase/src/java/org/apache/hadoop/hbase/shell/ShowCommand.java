@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
+import java.io.Writer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseAdmin;
@@ -29,10 +30,28 @@ import org.apache.hadoop.hbase.HTableDescriptor;
  * Shows all available tables.
  */
 public class ShowCommand extends BasicCommand {
-  private static final String [] HEADER = new String [] {"Table Name"};
+  private static final String [] HEADER = new String [] {"Name", "Descriptor"};
   private String command;
+  private final TableFormatter formatter;
+  
+  // Not instantiable
+  @SuppressWarnings("unused")
+  private ShowCommand() {
+    this(null, null);
+  }
+  
+  public ShowCommand(final Writer o, final TableFormatter f) {
+    this(o, f, null);
+  }
 
-  public ReturnMsg execute(Configuration conf) {
+  public ShowCommand(final Writer o, final TableFormatter f,
+      final String argument) {
+    super(o);
+    this.formatter = f;
+    this.command = argument;
+  }
+
+  public ReturnMsg execute(final Configuration conf) {
     if (this.command == null) {
       return new ReturnMsg(0, "Syntax error : Please check 'Show' syntax");
     }
@@ -43,13 +62,12 @@ public class ShowCommand extends BasicCommand {
         HTableDescriptor[] tables = admin.listTables();
         tableLength = tables.length;
         if (tableLength == 0) {
-          return new ReturnMsg(0, "Table not found");
+          return new ReturnMsg(0, "No tables found");
         }
-        TableFormatter formatter = TableFormatterFactory.get();
         formatter.header(HEADER);
         for (int i = 0; i < tableLength; i++) {
           String tableName = tables[i].getName().toString();
-          formatter.row(new String [] {tableName});
+          formatter.row(new String [] {tableName, tables[i].toString()});
         }
         formatter.footer();
         return new ReturnMsg(1, tableLength + " table(s) in set");

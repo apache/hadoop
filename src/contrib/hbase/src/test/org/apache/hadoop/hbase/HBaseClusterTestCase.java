@@ -71,7 +71,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
 
   /** {@inheritDoc} */
   @Override
-  public void setUp() throws Exception {
+  protected void setUp() throws Exception {
     super.setUp();
     this.cluster =
       new MiniHBaseCluster(this.conf, this.regionServers, this.miniHdfs);
@@ -79,7 +79,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
 
   /** {@inheritDoc} */
   @Override
-  public void tearDown() throws Exception {
+  protected void tearDown() throws Exception {
     super.tearDown();
     if (this.cluster != null) {
       this.cluster.shutdown();

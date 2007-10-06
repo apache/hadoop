@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
+import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -33,13 +34,16 @@ import org.apache.hadoop.io.Text;
  * Alters tables.
  */
 public class AlterCommand extends SchemaModificationCommand {
-  
   public enum OperationType {ADD, DROP, CHANGE, NOOP}
   private OperationType operationType = OperationType.NOOP;
   private Map<String, Map<String, Object>> columnSpecMap =
     new HashMap<String, Map<String, Object>>();
   private String table;
   private String column; // column to be dropped
+
+  public AlterCommand(Writer o) {
+    super(o);
+  }
 
   public ReturnMsg execute(Configuration conf) {
     try {
@@ -52,7 +56,7 @@ public class AlterCommand extends SchemaModificationCommand {
         columns = columnSpecMap.keySet();
         for (String c : columns) {
           columnDesc = getColumnDescriptor(c, columnSpecMap.get(c));
-          System.out.println("Adding " + c + " to " + table +
+          println("Adding " + c + " to " + table +
             "... Please wait.");
           admin.addColumn(new Text(table), columnDesc);
         }
@@ -60,7 +64,7 @@ public class AlterCommand extends SchemaModificationCommand {
         break;
       case DROP:
         disableTable(admin, table);
-        System.out.println("Dropping " + column + " from " + table +
+        println("Dropping " + column + " from " + table +
           "... Please wait.");
         column = appendDelimiter(column);
         admin.deleteColumn(new Text(table), new Text(column));
@@ -79,12 +83,12 @@ public class AlterCommand extends SchemaModificationCommand {
   }
 
   private void disableTable(HBaseAdmin admin, String t) throws IOException {
-    System.out.println("Disabling " + t + "... Please wait.");
+    println("Disabling " + t + "... Please wait.");
     admin.disableTable(new Text(t));
   }
 
   private void enableTable(HBaseAdmin admin, String t) throws IOException {
-    System.out.println("Enabling " + t + "... Please wait.");
+    println("Enabling " + t + "... Please wait.");
     admin.enableTable(new Text(t));
   }
 
@@ -123,5 +127,10 @@ public class AlterCommand extends SchemaModificationCommand {
    */
   public void setOperationType(OperationType operationType) {
     this.operationType = operationType;
+  }
+  
+  @Override
+  public CommandType getCommandType() {
+    return CommandType.DDL;
   }
 }

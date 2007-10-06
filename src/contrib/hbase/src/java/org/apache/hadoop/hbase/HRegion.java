@@ -314,7 +314,7 @@ public class HRegion implements HConstants {
   }
 
   /** Returns a HRegionInfo object for this region */
-  HRegionInfo getRegionInfo() {
+  public HRegionInfo getRegionInfo() {
     return this.regionInfo;
   }
 

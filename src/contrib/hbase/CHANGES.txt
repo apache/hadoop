@@ -22,6 +22,7 @@ Trunk (unreleased changes)
                 (Inchul Song and Edward Yoon via Stack)
     HADOOP-1913 Build a Lucene index on an HBase table
                 (Ning Li via Stack)
+    HADOOP-1957 Web UI with report on cluster state and basic browsing of tables
 
   OPTIMIZATIONS
 

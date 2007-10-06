@@ -34,23 +34,25 @@ public class HServerInfo implements Writable {
   private HServerAddress serverAddress;
   private long startCode;
   private HServerLoad load;
+  private int infoPort;
 
   /** default constructor - used by Writable */
   public HServerInfo() {
-    this.serverAddress = new HServerAddress();
-    this.startCode = 0;
-    this.load = new HServerLoad();
+    this(new HServerAddress(), 0, HConstants.DEFAULT_REGIONSERVER_INFOPORT);
   }
   
   /**
    * Constructor
    * @param serverAddress
    * @param startCode
+   * @param infoPort Port the info server is listening on.
    */
-  public HServerInfo(HServerAddress serverAddress, long startCode) {
-    this.serverAddress = new HServerAddress(serverAddress);
+  public HServerInfo(HServerAddress serverAddress, long startCode,
+      final int infoPort) {
+    this.serverAddress = serverAddress;
     this.startCode = startCode;
     this.load = new HServerLoad();
+    this.infoPort = infoPort;
   }
   
   /**
@@ -61,6 +63,7 @@ public class HServerInfo implements Writable {
     this.serverAddress = new HServerAddress(other.getServerAddress());
     this.startCode = other.getStartCode();
     this.load = other.getLoad();
+    this.infoPort = other.getInfoPort();
   }
   
   /**
@@ -88,6 +91,13 @@ public class HServerInfo implements Writable {
   }
   
   /**
+   * @return Port the info server is listening on.
+   */
+  public int getInfoPort() {
+    return this.infoPort;
+  }
+  
+  /**
    * @param startCode the startCode to set
    */
   public void setStartCode(long startCode) {
@@ -101,13 +111,40 @@ public class HServerInfo implements Writable {
     + ", load: (" + this.load.toString() + ")";
   }
 
-  // Writable
+  @Override
+  public boolean equals(Object obj) {
+    if (!(obj instanceof HServerInfo)) {
+      return false;
+    }
+    HServerInfo that = (HServerInfo)obj;
+    if (!this.serverAddress.equals(that.serverAddress)) {
+      return false;
+    }
+    if (this.infoPort != that.infoPort) {
+      return false;
+    }
+    if (this.startCode != that.startCode) {
+      return false;
+    }
+    return true;
+  }
 
+  @Override
+  public int hashCode() {
+    int result = this.serverAddress.hashCode();
+    result ^= this.infoPort;
+    result ^= this.startCode;
+    return result;
+  }
+
+
+  // Writable
   /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.serverAddress.readFields(in);
     this.startCode = in.readLong();
     this.load.readFields(in);
+    this.infoPort = in.readInt();
   }
 
   /** {@inheritDoc} */
@@ -115,5 +152,6 @@ public class HServerInfo implements Writable {
     this.serverAddress.write(out);
     out.writeLong(this.startCode);
     this.load.write(out);
+    out.writeInt(this.infoPort);
   }
 }

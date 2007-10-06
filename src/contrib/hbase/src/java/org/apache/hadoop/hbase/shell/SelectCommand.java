@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -34,7 +36,6 @@ import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.shell.generated.ParseException;
 import org.apache.hadoop.hbase.shell.generated.Parser;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
@@ -60,8 +61,22 @@ public class SelectCommand extends BasicCommand {
     new String [] {"Column", "Cell"};
   private static final String [] HEADER =
     new String [] {"Row", "Column", "Cell"};
+  private static final String STAR = "*";
+  
+  private final TableFormatter formatter;
+  
+  // Not instantiable
+  @SuppressWarnings("unused")
+  private SelectCommand() {
+    this(null, null);
+  }
+  
+  public SelectCommand(final Writer o, final TableFormatter f) {
+    super(o);
+    this.formatter = f;
+  }
 
-  public ReturnMsg execute(Configuration conf) {
+  public ReturnMsg execute(final Configuration conf) {
     if (this.tableName.equals("") || this.rowKey == null ||
         this.columns.size() == 0) {
       return new ReturnMsg(0, "Syntax error : Please check 'Select' syntax.");
@@ -84,7 +99,6 @@ public class SelectCommand extends BasicCommand {
 
   private int compoundWherePrint(HTable table, HBaseAdmin admin) {
     int count = 0;
-    TableFormatter formatter = TableFormatterFactory.get();
     try {
       if (this.version != 0) {
         // A number of versions has been specified.
@@ -113,7 +127,8 @@ public class SelectCommand extends BasicCommand {
         formatter.header(isMultiple()? HEADER_COLUMN_CELL: null);
         for (Map.Entry<Text, byte[]> e: table.getRow(this.rowKey).entrySet()) {
           Text key = e.getKey();
-          if (!this.columns.contains(key.toString())) {
+          String keyStr = key.toString();
+          if (!this.columns.contains(STAR) && !this.columns.contains(keyStr)) {
             continue;
           }
           String cellData = toString(key, e.getValue());
@@ -173,7 +188,8 @@ public class SelectCommand extends BasicCommand {
     }
   }
   
-  private int scanPrint(HTable table, HBaseAdmin admin) {
+  private int scanPrint(HTable table,
+      HBaseAdmin admin) {
     int count = 0;
     HScannerInterface scan = null;
     try {
@@ -186,7 +202,6 @@ public class SelectCommand extends BasicCommand {
       }
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-      TableFormatter formatter = TableFormatterFactory.get();
       // If only one column in query, then don't print out the column.
       formatter.header((parsedColumns.isMultiple())? HEADER: HEADER_ROW_CELL);
       while (scan.next(key, results) && checkLimit(count)) {
@@ -265,7 +280,7 @@ public class SelectCommand extends BasicCommand {
    * @return True if query contains multiple columns.
    */
   private boolean isMultiple() {
-    return this.columns.size() > 1 || this.columns.contains("*");
+    return this.columns.size() > 1 || this.columns.contains(STAR);
   }
 
   private boolean checkLimit(int count) {
@@ -307,10 +322,17 @@ public class SelectCommand extends BasicCommand {
     this.version = version;
   }
   
-  public static void main(String[] args) throws ParseException {
+  public static void main(String[] args) throws Exception {
+    Writer out = new OutputStreamWriter(System.out, "UTF-8");
+    HBaseConfiguration c = new HBaseConfiguration();
     // For debugging
-    Parser parser = new Parser("select * from -ROOT-;");
+    TableFormatterFactory tff =
+      new TableFormatterFactory(out, c);
+    Parser parser = new Parser("select * from 'x' where row='x';", out,  tff.get());
     Command cmd = parser.terminatedCommand();
-    ReturnMsg rm = cmd.execute(new HBaseConfiguration());
+    
+    ReturnMsg rm = cmd.execute(c);
+    out.write(rm == null? "": rm.toString());
+    out.flush();
   }
 }

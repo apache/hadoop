@@ -30,9 +30,35 @@
     </description>
   </property>
   <property>
+    <name>hbase.master.info.port</name>
+    <value>60010</value>
+    <description>The port for the hbase master web UI
+    Set to -1 if you do not want the info server to run.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.info.bindAddress</name>
+    <value>0.0.0.0</value>
+    <description>The address for the hbase master web UI
+    </description>
+  </property>
+  <property>
     <name>hbase.regionserver</name>
-    <value>0.0.0.0:60010</value>
+    <value>0.0.0.0:60020</value>
     <description>The host and port a HBase region server runs at.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.info.port</name>
+    <value>60030</value>
+    <description>The port for the hbase regionserver web UI
+    Set to -1 if you do not want the info server to run.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.info.bindAddress</name>
+    <value>0.0.0.0</value>
+    <description>The address for the hbase regionserver web UI
     </description>
   </property>
   <property>
@@ -174,6 +200,12 @@
   	<value>true</value>
   	<description>
   		if true, enable audible keyboard bells if an alert is required.
+  	</description>
+  </property>  
+  <property>
+ 	<name>hbaseshell.formatter</name>
+  	<value>org.apache.hadoop.hbase.shell.formatter.AsciiTableFormatter</value>
+  	<description>TableFormatter to use outputting HQL result sets.
   	</description>
   </property>  
 </configuration>

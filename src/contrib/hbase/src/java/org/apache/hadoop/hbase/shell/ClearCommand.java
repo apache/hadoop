@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
+import java.io.Writer;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -27,21 +28,38 @@ import org.apache.hadoop.conf.Configuration;
  * Clears the console screen. 
  */
 public class ClearCommand extends BasicCommand {
+  public ClearCommand(Writer o) {
+    super(o);
+  }
+
   public ReturnMsg execute(@SuppressWarnings("unused") Configuration conf) {
     clear();
     return null;
   }
 
-  static void clear() {
+  private void clear() {
     String osName = System.getProperty("os.name");
     if (osName.length() > 7 && osName.subSequence(0, 7).equals("Windows")) {
       try {
         Runtime.getRuntime().exec("cmd /C cls");
       } catch (IOException e) {
-        System.out.println("Can't clear." + e.toString());
+        try {
+          println("Can't clear." + e.toString());
+        } catch (IOException e1) {
+          e1.printStackTrace();
+        }
       }
     } else {
-      System.out.print("\033c");
+      try {
+        print("\033c");
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
     }
+  }
+  
+  @Override
+  public CommandType getCommandType() {
+    return CommandType.SHELL;
   }
 }

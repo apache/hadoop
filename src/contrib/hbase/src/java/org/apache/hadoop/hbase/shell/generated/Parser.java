@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.io.StringReader;
 import java.io.Reader;
+import java.io.Writer;
 
 import org.apache.hadoop.hbase.shell.*;
 
@@ -35,10 +36,14 @@ import org.apache.hadoop.hbase.shell.*;
  */
 public class Parser implements ParserConstants {
   private String QueryString;
+  private TableFormatter formatter;
+  private Writer out;
 
-  public Parser(String query) {
+  public Parser(final String query, final Writer o, final TableFormatter f) {
     this((Reader)(new StringReader(query)));
     this.QueryString = query;
+    this.formatter = f;
+    this.out = o;
   }
 
   public String getQueryStr() {
@@ -164,7 +169,7 @@ public class Parser implements ParserConstants {
   }
 
   final public ExitCommand exitCommand() throws ParseException {
-  ExitCommand exit = new ExitCommand();
+  ExitCommand exit = new ExitCommand(this.out);
     jj_consume_token(EXIT);
              {if (true) return exit;}
     throw new Error("Missing return statement in function");
@@ -172,7 +177,7 @@ public class Parser implements ParserConstants {
 
   final public FsCommand fsCommand() throws ParseException {
   Token t = null;
-  FsCommand fs = new FsCommand();
+  FsCommand fs = new FsCommand(this.out);
   List<String> query = new ArrayList<String>();
     jj_consume_token(FS);
     label_1:
@@ -195,7 +200,7 @@ public class Parser implements ParserConstants {
 
   final public JarCommand jarCommand() throws ParseException {
   Token t = null;
-  JarCommand jar = new JarCommand();
+  JarCommand jar = new JarCommand(this.out);
   List<String> query = new ArrayList<String>();
     jj_consume_token(JAR);
     label_2:
@@ -230,7 +235,7 @@ public class Parser implements ParserConstants {
 
   final public HelpCommand helpCommand() throws ParseException {
   Token t = null;
-  HelpCommand help = new HelpCommand();
+  HelpCommand help = new HelpCommand(this.out, this.formatter);
   String argument = "";
     jj_consume_token(HELP);
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -304,7 +309,7 @@ public class Parser implements ParserConstants {
   }
 
   final public ShowCommand showCommand() throws ParseException {
-  ShowCommand show = new ShowCommand();
+  ShowCommand show = new ShowCommand(this.out, this.formatter);
   String argument = null;
     jj_consume_token(SHOW);
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
@@ -323,7 +328,7 @@ public class Parser implements ParserConstants {
   }
 
   final public DescCommand descCommand() throws ParseException {
-  DescCommand desc = new DescCommand();
+  DescCommand desc = new DescCommand(this.out, this.formatter);
   String argument = null;
     switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
     case DESCRIBE:
@@ -450,7 +455,7 @@ public class Parser implements ParserConstants {
   }
 
   final public CreateCommand createCommand() throws ParseException {
-  CreateCommand createCommand = new CreateCommand();
+  CreateCommand createCommand = new CreateCommand(this.out);
   String table = null;
   Map<String, Object> columnSpec = null;
   String column = null;
@@ -483,7 +488,7 @@ public class Parser implements ParserConstants {
   }
 
   final public AlterCommand alterCommand() throws ParseException {
-  AlterCommand alterCommand = new AlterCommand();
+  AlterCommand alterCommand = new AlterCommand(this.out);
   String table = null;
   String column = null;
   Map<String, Object> columnSpec = null;
@@ -547,7 +552,7 @@ public class Parser implements ParserConstants {
   }
 
   final public DropCommand dropCommand() throws ParseException {
-  DropCommand drop = new DropCommand();
+  DropCommand drop = new DropCommand(this.out);
   List<String> tableList = null;
     jj_consume_token(DROP);
     jj_consume_token(TABLE);
@@ -558,7 +563,7 @@ public class Parser implements ParserConstants {
   }
 
   final public InsertCommand insertCommand() throws ParseException {
-  InsertCommand in = new InsertCommand();
+  InsertCommand in = new InsertCommand(this.out);
   List<String> columnfamilies = null;
   List<String> values = null;
   String table = null;
@@ -593,7 +598,7 @@ public class Parser implements ParserConstants {
   }
 
   final public DeleteCommand deleteCommand() throws ParseException {
-  DeleteCommand deleteCommand = new DeleteCommand();
+  DeleteCommand deleteCommand = new DeleteCommand(this.out);
   List<String> columnList = null;
   Token t = null;
   String table = null;
@@ -624,7 +629,7 @@ public class Parser implements ParserConstants {
   }
 
   final public SelectCommand selectCommand() throws ParseException {
-  SelectCommand select = new SelectCommand();
+  SelectCommand select = new SelectCommand(this.out, this.formatter);
   List<String> columns = null;
   String rowKey = "";
   String timestamp = null;
@@ -704,7 +709,7 @@ public class Parser implements ParserConstants {
   }
 
   final public EnableCommand enableCommand() throws ParseException {
-  EnableCommand enableCommand = new EnableCommand();
+  EnableCommand enableCommand = new EnableCommand(this.out);
   String table = null;
     jj_consume_token(ENABLE);
     table = Identifier();
@@ -714,7 +719,7 @@ public class Parser implements ParserConstants {
   }
 
   final public DisableCommand disableCommand() throws ParseException {
-  DisableCommand disableCommand = new DisableCommand();
+  DisableCommand disableCommand = new DisableCommand(this.out);
   String table = null;
     jj_consume_token(DISABLE);
     table = Identifier();
@@ -724,7 +729,7 @@ public class Parser implements ParserConstants {
   }
 
   final public ClearCommand clearCommand() throws ParseException {
-  ClearCommand clear = new ClearCommand();
+  ClearCommand clear = new ClearCommand(this.out);
     jj_consume_token(CLEAR);
      {if (true) return clear;}
     throw new Error("Missing return statement in function");
@@ -970,6 +975,16 @@ public class Parser implements ParserConstants {
     finally { jj_save(0, xla); }
   }
 
+  final private boolean jj_3R_12() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_scan_token(60)) {
+    jj_scanpos = xsp;
+    if (jj_scan_token(61)) return true;
+    }
+    return false;
+  }
+
   final private boolean jj_3R_11() {
     if (jj_scan_token(ID)) return true;
     return false;
@@ -988,16 +1003,6 @@ public class Parser implements ParserConstants {
   final private boolean jj_3_1() {
     if (jj_scan_token(ADD)) return true;
     if (jj_3R_10()) return true;
-    return false;
-  }
-
-  final private boolean jj_3R_12() {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_scan_token(60)) {
-    jj_scanpos = xsp;
-    if (jj_scan_token(61)) return true;
-    }
     return false;
   }
 

@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
+import java.io.Writer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -35,8 +36,20 @@ public class DescCommand extends BasicCommand {
   private static final String [] HEADER =
     new String [] {"Column Family Descriptor"};
   private Text tableName;
-
-  public ReturnMsg execute(Configuration conf) {
+  private final TableFormatter formatter;
+  
+  // Not instantiable
+  @SuppressWarnings("unused")
+  private DescCommand() {
+    this(null, null);
+  }
+  
+  public DescCommand(final Writer o, final TableFormatter f) {
+    super(o);
+    this.formatter = f;
+  }
+  
+  public ReturnMsg execute(final Configuration conf) {
     if (this.tableName == null) 
       return new ReturnMsg(0, "Syntax error : Please check 'Describe' syntax");
     try {
@@ -53,7 +66,6 @@ public class DescCommand extends BasicCommand {
           break;
         }
       }
-      TableFormatter formatter = TableFormatterFactory.get();
       formatter.header(HEADER);
       // Do a toString on the HColumnDescriptors
       String [] columnStrs = new String[columns.length];
@@ -75,5 +87,5 @@ public class DescCommand extends BasicCommand {
 
   public void setArgument(String table) {
     this.tableName = new Text(table);
-  } 
+  }
 }

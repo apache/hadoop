@@ -21,8 +21,10 @@ package org.apache.hadoop.hbase.shell;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import java.io.Writer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -157,7 +159,9 @@ public class TestHBaseShell extends HBaseClusterTestCase {
   private ReturnMsg runCommand(final String cmdStr)
   throws ParseException, UnsupportedEncodingException {
     LOG.info("Running command: " + cmdStr);
-    Parser parser = new Parser(cmdStr);
+    Writer out = new OutputStreamWriter(System.out, "UTF-8");
+    TableFormatterFactory tff = new TableFormatterFactory(out, this.conf);
+    Parser parser = new Parser(cmdStr, out, tff.get());
     Command cmd = parser.terminatedCommand();
     ReturnMsg rm = cmd.execute(this.conf);
     dumpStdout();

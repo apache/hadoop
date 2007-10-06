@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
+import java.io.Writer;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -31,6 +32,10 @@ import org.apache.hadoop.io.Text;
  */
 public class DropCommand extends BasicCommand {
   private List<String> tableList;
+  
+  public DropCommand(Writer o) {
+    super(o);
+  }
 
   public ReturnMsg execute(Configuration conf) {
     if (tableList == null) {
@@ -41,7 +46,7 @@ public class DropCommand extends BasicCommand {
       HBaseAdmin admin = new HBaseAdmin(conf);
       
       for (String table : tableList) {
-        System.out.println("Dropping " + table + "... Please wait.");
+        println("Dropping " + table + "... Please wait.");
         admin.deleteTable(new Text(table));
       }
       
@@ -53,5 +58,10 @@ public class DropCommand extends BasicCommand {
 
   public void setTableList(List<String> tableList) {
     this.tableList = tableList;
+  }
+  
+  @Override
+  public CommandType getCommandType() {
+    return CommandType.DDL;
   }
 }
