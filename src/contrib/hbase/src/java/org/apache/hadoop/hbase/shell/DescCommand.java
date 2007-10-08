@@ -76,8 +76,8 @@ public class DescCommand extends BasicCommand {
           tmp = tmp.substring(1, tmp.length() - 1);
         }
         columnStrs[i] = tmp;
+        formatter.row(new String [] {columnStrs[i]});
       }
-      formatter.row(columnStrs);
       formatter.footer();
       return new ReturnMsg(1, columns.length + " columnfamily(s) in set");
     } catch (IOException e) {

@@ -1,6 +1,7 @@
 package org.apache.hadoop.hbase.shell.formatter;
 
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
 
 import org.apache.hadoop.hbase.shell.TableFormatter;
@@ -8,14 +9,14 @@ import org.znerd.xmlenc.LineBreak;
 import org.znerd.xmlenc.XMLOutputter;
 
 /**
- * Formatter that outputs data inside an HTML table.
- * If only a single cell result, then no formatting is done.  Presumption is
- * that client manages serial access outputting tables.  Does not close passed
- * {@link Writer}.
+ * Formatter that outputs data inside an HTML table. If only a single cell
+ * result, then no formatting is done.  Presumption is that client manages
+ * serial access outputting tables.  Does not close passed {@link Writer}.
+ * Since hbase columns have no typing, the formatter presumes a type of
+ * UTF-8 String.  If cells contain images, etc., this formatter will mangle
+ * their display.
  * <p>TODO: Uses xmlenc. Hopefully it flushes every so often (Claims its a 
  * stream-based outputter).  Verify.
- * <p>For now, invoke it this way (until shell starts to take cmdline params);
- * <code>$ HBASE_OPTS='-Dhbaseshell.formatter=org.apache.hadoop.hbase.shell.TableFormatterFactory$HtmlTableFormatter' ./bin/hbase shell</code>
  */
 public class HtmlTableFormatter implements TableFormatter {
   private final XMLOutputter outputter;
@@ -70,7 +71,7 @@ public class HtmlTableFormatter implements TableFormatter {
 
   public void row(String [] cells) throws IOException{
     if (isNoFormatting()) {
-      this.outputter.pcdata(cells[0]);
+      getOut().write(cells[0]);
       return;
     }
     this.outputter.startTag("tr");
@@ -107,5 +108,13 @@ public class HtmlTableFormatter implements TableFormatter {
 
   public void setNoFormatting(boolean noFormatting) {
     this.noFormatting = noFormatting;
+  }
+  
+  public static void main(String[] args) throws IOException {
+    HtmlTableFormatter f =
+      new HtmlTableFormatter(new OutputStreamWriter(System.out, "UTF-8"));
+    f.header(new String [] {"a", "b"});
+    f.row(new String [] {"a", "b"});
+    f.footer();
   }
 }
