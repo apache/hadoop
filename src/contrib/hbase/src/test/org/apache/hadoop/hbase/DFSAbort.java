@@ -68,39 +68,10 @@ public class DFSAbort extends HBaseClusterTestCase {
       cluster.getDFSCluster().shutdown();
       // Now wait for Mini HBase Cluster to shut down
 //      cluster.join();
-      join();
+      threadDumpingJoin();
     } catch (Exception e) {
       e.printStackTrace();
       throw e;
-    }
-  }
-  
-  private void join() {
-    if (this.cluster.regionThreads != null) {
-      synchronized(this.cluster.regionThreads) {
-        for(Thread t: this.cluster.regionThreads) {
-          join(t);
-        }
-      }
-    }
-    join(this.cluster.getMasterThread());
-  }
-
-  private void join(final Thread t) {
-    if (t == null) {
-      return;
-    }
-    for (int i = 0; t.isAlive(); i++) {
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-        LOG.info("Continuing...", e);
-      }
-      if (i != 0 && i % 30 == 0) {
-        ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
-            "Automatic Stack Trace every 30 seconds waiting on " +
-            t.getName());
-      }
     }
   }
 

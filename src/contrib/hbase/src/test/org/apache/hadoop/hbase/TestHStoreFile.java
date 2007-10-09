@@ -21,11 +21,8 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -38,22 +35,17 @@ import org.apache.hadoop.io.WritableComparable;
 /**
  * Test HStoreFile
  */
-public class TestHStoreFile extends TestCase {
+public class TestHStoreFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestHStoreFile.class);
   private static String DIR = "/";
-  private static final char FIRST_CHAR = 'a';
-  private static final char LAST_CHAR = 'z';
   private MiniDFSCluster cluster;
   private FileSystem fs;
-  private Configuration conf;
   private Path dir = null;
   
   /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    this.conf = new HBaseConfiguration();
-    this.cluster = null;
     this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
     this.fs = cluster.getFileSystem();
     this.dir = new Path(DIR, getName());

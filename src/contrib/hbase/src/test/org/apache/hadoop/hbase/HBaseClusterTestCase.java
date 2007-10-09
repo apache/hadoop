@@ -19,11 +19,19 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.PrintWriter;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.util.ReflectionUtils;
+
 /**
  * Abstract base class for HBase cluster junit tests.  Spins up cluster on
  * {@link #setUp()} and takes it down again in {@link #tearDown()}.
  */
 public abstract class HBaseClusterTestCase extends HBaseTestCase {
+  private static final Log LOG =
+    LogFactory.getLog(HBaseClusterTestCase.class.getName());
   protected MiniHBaseCluster cluster;
   final boolean miniHdfs;
   int regionServers;
@@ -69,7 +77,6 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     this.regionServers = 1;
   }
 
-  /** {@inheritDoc} */
   @Override
   protected void setUp() throws Exception {
     super.setUp();
@@ -77,7 +84,6 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
       new MiniHBaseCluster(this.conf, this.regionServers, this.miniHdfs);
   }
 
-  /** {@inheritDoc} */
   @Override
   protected void tearDown() throws Exception {
     super.tearDown();
@@ -85,5 +91,42 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
       this.cluster.shutdown();
     }
     HConnectionManager.deleteConnection(conf);
+  }
+
+  
+  /**
+   * Use this utility method debugging why cluster won't go down.  On a
+   * period it throws a thread dump.  Method ends when all cluster
+   * regionservers and master threads are no long alive.
+   */
+  public void threadDumpingJoin() {
+    if (this.cluster.regionThreads != null) {
+      synchronized(this.cluster.regionThreads) {
+        for(Thread t: this.cluster.regionThreads) {
+          threadDumpingJoin(t);
+        }
+      }
+    }
+    threadDumpingJoin(this.cluster.getMasterThread());
+  }
+
+  public void threadDumpingJoin(final Thread t) {
+    if (t == null) {
+      return;
+    }
+    long startTime = System.currentTimeMillis();
+    while (t.isAlive()) {
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        LOG.info("Continuing...", e);
+      }
+      if (System.currentTimeMillis() - startTime > 60000) {
+        startTime = System.currentTimeMillis();
+        ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
+            "Automatic Stack Trace every 60 seconds waiting on " +
+            t.getName());
+      }
+    }
   }
 }
