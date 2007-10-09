@@ -247,6 +247,9 @@ Trunk (unreleased changes)
     HADOOP-1983.  Have Pipes flush the command socket when progress is sent
     to prevent timeouts during long computations. (omalley)
 
+    HADOOP-1875.  Non-existant directories or read-only directories are
+    filtered from dfs.client.buffer.dir.  (Hairong Kuang via dhruba)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 

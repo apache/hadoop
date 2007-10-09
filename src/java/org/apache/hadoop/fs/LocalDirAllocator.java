@@ -190,13 +190,31 @@ public class LocalDirAllocator {
         localDirs = conf.getStrings(contextCfgItemName);
         localFS = FileSystem.getLocal(conf);
         int numDirs = localDirs.length;
-        dirDF = new DF[numDirs];
+        ArrayList<String> dirs = new ArrayList<String>(numDirs);
+        ArrayList<DF> dfList = new ArrayList<DF>(numDirs);
         for (int i = 0; i < numDirs; i++) {
           try {
-            localFS.mkdirs(new Path(localDirs[i]));
-          } catch (IOException ie) { } //ignore
-          dirDF[i] = new DF(new File(localDirs[i]), 30000);
+            // filter problematic directories
+            Path tmpDir = new Path(localDirs[i]);
+            if(localFS.mkdirs(tmpDir)|| localFS.exists(tmpDir)) {
+              try {
+                DiskChecker.checkDir(new File(localDirs[i]));
+                dirs.add(localDirs[i]);
+                dfList.add(new DF(new File(localDirs[i]), 30000));
+              } catch (DiskErrorException de) {
+                LOG.warn( localDirs[i] + "is not writable\n" +
+                    StringUtils.stringifyException(de));
+              }
+            } else {
+              LOG.warn( "Failed to create " + localDirs[i]);
+            }
+          } catch (IOException ie) { 
+            LOG.warn( "Failed to create " + localDirs[i] + ": " +
+                ie.getMessage() + "\n" + StringUtils.stringifyException(ie));
+          } //ignore
         }
+        localDirs = dirs.toArray(new String[dirs.size()]);
+        dirDF = dfList.toArray(new DF[dirs.size()]);
         dirNumLastAccessed = 0;
         savedLocalDirs = newLocalDirs;
       }
