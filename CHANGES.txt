@@ -70,6 +70,8 @@ Trunk (unreleased changes)
     HADOOP-1937 When the master times out a region server's lease, it is too 
                 aggressive in reclaiming the server's log.
     HADOOP-2004 webapp hql formatting bugs 
+    HADOOP_2011 Make hbase daemon scripts take args in same order as hadoop
+                daemon scripts
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable
