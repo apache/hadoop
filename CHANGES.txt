@@ -250,6 +250,9 @@ Trunk (unreleased changes)
     HADOOP-1875.  Non-existant directories or read-only directories are
     filtered from dfs.client.buffer.dir.  (Hairong Kuang via dhruba)
 
+    HADOOP-1992.  Fix the performance degradation in the sort validator. 
+    (acmurthy via omalley)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
