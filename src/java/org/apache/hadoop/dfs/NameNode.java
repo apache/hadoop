@@ -31,12 +31,6 @@ import java.net.*;
 import java.util.Collection;
 import java.util.Iterator;
 
-import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.Updater;
-import org.apache.hadoop.metrics.jvm.JvmMetrics;
-
 /**********************************************************
  * NameNode serves as both directory namespace manager and
  * "inode table" for the Hadoop DFS.  There is a single NameNode
@@ -105,62 +99,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     format(conf, false);
   }
 
-  private static class NameNodeMetrics implements Updater {
-    private final MetricsRecord metricsRecord;
-    
-    private int numFilesCreated = 0;
-    private int numFilesOpened = 0;
-    private int numFilesRenamed = 0;
-    private int numFilesListed = 0;
-      
-    NameNodeMetrics(Configuration conf) {
-      String sessionId = conf.get("session.id");
-      // Initiate Java VM metrics
-      JvmMetrics.init("NameNode", sessionId);
-      // Create a record for NameNode metrics
-      MetricsContext metricsContext = MetricsUtil.getContext("dfs");
-      metricsRecord = MetricsUtil.createRecord(metricsContext, "namenode");
-      metricsRecord.setTag("sessionId", sessionId);
-      metricsContext.registerUpdater(this);
-    }
-      
-    /**
-     * Since this object is a registered updater, this method will be called
-     * periodically, e.g. every 5 seconds.
-     */
-    public void doUpdates(MetricsContext unused) {
-      synchronized (this) {
-        metricsRecord.incrMetric("files_created", numFilesCreated);
-        metricsRecord.incrMetric("files_opened", numFilesOpened);
-        metricsRecord.incrMetric("files_renamed", numFilesRenamed);
-        metricsRecord.incrMetric("files_listed", numFilesListed);
-              
-        numFilesCreated = 0;
-        numFilesOpened = 0;
-        numFilesRenamed = 0;
-        numFilesListed = 0;
-      }
-      metricsRecord.update();
-    }
-      
-    synchronized void createFile() {
-      ++numFilesCreated;
-    }
-      
-    synchronized void openFile() {
-      ++numFilesOpened;
-    }
-      
-    synchronized void renameFile() {
-      ++numFilesRenamed;
-    }
-      
-    synchronized void listFile(int nfiles) {
-      numFilesListed += nfiles;
-    }
+  static NameNodeMetrics myMetrics;
+
+  public static NameNodeMetrics getNameNodeMetrics() {
+    return myMetrics;
   }
-    
-  private NameNodeMetrics myMetrics;
     
   /**
    * Initialize the server
