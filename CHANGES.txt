@@ -72,6 +72,8 @@ Trunk (unreleased changes)
     HADOOP-2004 webapp hql formatting bugs 
     HADOOP_2011 Make hbase daemon scripts take args in same order as hadoop
                 daemon scripts
+    HADOOP-2017 TestRegionServerAbort failure in patch build #903 and
+                nightly #266
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable

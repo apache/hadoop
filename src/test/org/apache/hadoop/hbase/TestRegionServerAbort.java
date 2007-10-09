@@ -30,15 +30,15 @@ import org.apache.hadoop.io.Text;
  * Tests region server failover when a region server exits.
  */
 public class TestRegionServerAbort extends HBaseClusterTestCase {
-  private final Log LOG = LogFactory.getLog(this.getClass().getName());
-  private HTable table;
+  final Log LOG = LogFactory.getLog(this.getClass().getName());
+  HTable table;
 
   /** constructor */
   public TestRegionServerAbort() {
     super(2);
-    conf.setInt("ipc.client.timeout", 5000);            // reduce client timeout
-    conf.setInt("ipc.client.connect.max.retries", 5);   // and number of retries
-    conf.setInt("hbase.client.retries.number", 5);      // reduce HBase retries
+    conf.setInt("ipc.client.timeout", 10000);          // reduce client timeout
+    conf.setInt("ipc.client.connect.max.retries", 5);  // and number of retries
+    conf.setInt("hbase.client.retries.number", 5);     // reduce HBase retries
   }
   
   /**
@@ -50,14 +50,14 @@ public class TestRegionServerAbort extends HBaseClusterTestCase {
     @SuppressWarnings("unused")
     HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
     // Put something into the meta table.
-    String tableName = getName();
+    final String tableName = getName();
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
     HBaseAdmin admin = new HBaseAdmin(conf);
     admin.createTable(desc);
     // put some values in the table
     this.table = new HTable(conf, new Text(tableName));
-    Text row = new Text("row1");
+    final Text row = new Text("row1");
     long lockid = table.startUpdate(row);
     table.put(lockid, HConstants.COLUMN_FAMILY,
         tableName.getBytes(HConstants.UTF8_ENCODING));
@@ -68,29 +68,45 @@ public class TestRegionServerAbort extends HBaseClusterTestCase {
     // Now shutdown the region server and wait for it to go down.
     this.cluster.abortRegionServer(0);
     LOG.info(this.cluster.waitOnRegionServer(0) + " has been shutdown");
-    HScannerInterface scanner = null;
-    try {
-      // Verify that the client can find the data after the region has moved
-      // to a different server
-      scanner =
-        table.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY, new Text());
-      LOG.info("Obtained scanner " + scanner);
-      HStoreKey key = new HStoreKey();
-      TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-      while (scanner.next(key, results)) {
-        assertTrue(key.getRow().equals(row));
-        assertEquals(1, results.size());
-        byte[] bytes = results.get(HConstants.COLUMN_FAMILY);
-        assertNotNull(bytes);
-        assertTrue(tableName.equals(new String(bytes,
-            HConstants.UTF8_ENCODING)));
+    // Run verification in a thread so I can concurrently run a thread-dumper
+    // while we're waiting (because in this test sometimes the meta scanner
+    // looks to be be stuck).
+    Runnable runnable = new Runnable() {
+      public void run() {
+        HScannerInterface scanner = null;
+        try {
+          // Verify that the client can find the data after the region has moved
+          // to a different server
+          scanner =
+            table.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY, new Text());
+          LOG.info("Obtained scanner " + scanner);
+          HStoreKey key = new HStoreKey();
+          TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+          while (scanner.next(key, results)) {
+            assertTrue(key.getRow().equals(row));
+            assertEquals(1, results.size());
+            byte[] bytes = results.get(HConstants.COLUMN_FAMILY);
+            assertNotNull(bytes);
+            assertTrue(tableName.equals(new String(bytes,
+                HConstants.UTF8_ENCODING)));
+          }
+          LOG.info("Success!");
+        } catch (IOException e) {
+          e.printStackTrace();
+        } finally {
+          if (scanner != null) {
+            LOG.info("Closing scanner " + scanner);
+            try {
+              scanner.close();
+            } catch (IOException e) {
+              e.printStackTrace();
+            }
+          }
+        }
       }
-      LOG.info("Success!");
-    } finally {
-      if (scanner != null) {
-        LOG.info("Closing scanner " + scanner);
-        scanner.close();
-      }
-    }
+    };
+    Thread t = new Thread(runnable);
+    t.start();
+    threadDumpingJoin(t);
   }
 }
