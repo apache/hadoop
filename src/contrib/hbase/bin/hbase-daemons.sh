@@ -26,7 +26,7 @@
 usage="Usage: hbase-daemons.sh [--hadoop <hadoop-home>]
  [--config <hadoop-confdir>] [--hbase <hbase-home>]\
  [--hbaseconfig <hbase-confdir>] [--hosts regionserversfile]\
- command [start|stop] args..."
+ [start|stop] command args..."
 
 # if no args specified, show usage
 if [ $# -le 1 ]; then

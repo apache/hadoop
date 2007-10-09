@@ -34,7 +34,7 @@
 # Modelled after $HADOOP_HOME/bin/hadoop-daemon.sh
 
 usage="Usage: hbase-daemon.sh [--config <hadoop-conf-dir>]\
- [--hbaseconfig <hbase-conf-dir>] <hbase-command> (start|stop)\
+ [--hbaseconfig <hbase-conf-dir>] (start|stop) <hbase-command> \
  <args...>"
 
 # if no args specified, show usage
@@ -49,10 +49,10 @@ bin=`cd "$bin"; pwd`
 . "$bin"/hbase-config.sh
 
 # get arguments
-command=$1
+startStop=$1
 shift
 
-startStop=$1
+command=$1
 shift
 
 hbase_rotate_log ()

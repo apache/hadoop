@@ -106,10 +106,6 @@ public class IndexOutputFormat extends
       throws IOException {
         // unwrap and index doc
         Document doc = value.get();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(" Indexing [" + doc + "]");
-        }
-
         writer.addDocument(doc);
         docCount++;
         progress.progress();

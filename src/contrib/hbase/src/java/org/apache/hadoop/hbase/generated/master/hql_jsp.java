@@ -47,12 +47,12 @@ public final class hql_jsp extends org.apache.jasper.runtime.HttpJspBase
       _jspx_out = out;
 
       out.write("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \n  \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\"> \n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head><meta http-equiv=\"Content-Type\" content=\"text/html;charset=UTF-8\"/>\n<title>HQL</title>\n<link rel=\"stylesheet\" type=\"text/css\" href=\"/static/hbase.css\" />\n</head>\n\n<body>\n<h1><a href=\"http://wiki.apache.org/lucene-hadoop/Hbase/HbaseShell\">HQL</a></h1>\n<p><a href=\"/master.jsp\">Home</a></p>\n");
- String query = request.getParameter("query");
+ String query = request.getParameter("q");
    if (query == null) {
      query = "";
    }
 
-      out.write("\n<form action=\"/hql.jsp\" method=\"post\">\n    <p>\n    <label for=\"query\">Query: </label>\n    <input type=\"text\" name=\"query\" id=\"query\" size=\"40\" value=\"");
+      out.write("\n<form action=\"/hql.jsp\" method=\"get\">\n    <p>\n    <label for=\"query\">Query: </label>\n    <input type=\"text\" name=\"q\" id=\"q\" size=\"40\" value=\"");
       out.print( query );
       out.write("\" />\n    <input type=\"submit\" value=\"submit\" />\n    </p>\n </form>\n <p>Enter 'help;' -- thats 'help' plus a semi-colon -- for a list of <em>HQL</em> commands.\n Data Definition, SHELL, INSERTS, DELETES, and UPDATE commands are disabled in this interface\n </p>\n \n ");
 
@@ -78,7 +78,7 @@ public final class hql_jsp extends org.apache.jasper.runtime.HttpJspBase
  } 
   }
  
-      out.write("\n</body>\n</html>");
+      out.write("\n</body>\n</html>\n");
     } catch (Throwable t) {
       if (!(t instanceof SkipPageException)){
         out = _jspx_out;

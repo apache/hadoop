@@ -18,15 +18,15 @@
 <body>
 <h1><a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseShell">HQL</a></h1>
 <p><a href="/master.jsp">Home</a></p>
-<% String query = request.getParameter("query");
+<% String query = request.getParameter("q");
    if (query == null) {
      query = "";
    }
 %>
-<form action="/hql.jsp" method="post">
+<form action="/hql.jsp" method="get">
     <p>
     <label for="query">Query: </label>
-    <input type="text" name="query" id="query" size="40" value="<%= query %>" />
+    <input type="text" name="q" id="q" size="40" value="<%= query %>" />
     <input type="submit" value="submit" />
     </p>
  </form>
