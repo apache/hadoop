@@ -1545,7 +1545,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   /**
    * Sort jobs by priority and then by start time.
    */
-  public void resortPriority() {
+  private synchronized void resortPriority() {
     Comparator<JobInProgress> comp = new Comparator<JobInProgress>() {
       public int compare(JobInProgress o1, JobInProgress o2) {
         int res = o1.getPriority().compareTo(o2.getPriority());
@@ -1761,6 +1761,23 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     return jobs.get(jobid);
   }
 
+  /**
+   * Change the run-time priority of the given job.
+   * @param jobId job id
+   * @param priority new {@link JobPriority} for the job
+   */
+  synchronized void setJobPriority(String jobId, JobPriority priority) {
+    JobInProgress job = jobs.get(jobId);
+    if (job != null) {
+      job.setPriority(priority);
+      
+      // Re-sort jobs to reflect this change
+      resortPriority();
+    } else {
+      LOG.warn("Trying to change the priority of an unknown job: " + jobId);
+    }
+  }
+  
   ////////////////////////////////////////////////////
   // Methods to track all the TaskTrackers
   ////////////////////////////////////////////////////

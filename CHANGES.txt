@@ -259,6 +259,10 @@ Trunk (unreleased changes)
     otherwise may lead to lost tasktrackers if the NameNode is unresponsive.
     (Devaraj Das via acmurthy)
 
+    HADOOP-2001.  Make the job priority updates and job kills synchronized on
+    the JobTracker. Deadlock was seen in the JobTracker because of the lack of
+    this synchronization.  (Arun C Murthy via ddas)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
