@@ -37,7 +37,6 @@ import org.apache.hadoop.mapred.JobTracker.JobTrackerMetrics;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.util.StringUtils;
 
 /*************************************************************
  * JobInProgress maintains all the info for keeping
@@ -380,6 +379,16 @@ class JobInProgress {
       TaskTrackerStatus ttStatus = 
         this.jobtracker.getTaskTracker(status.getTaskTracker());
       String httpTaskLogLocation = null; 
+
+      if (state == TaskStatus.State.COMMIT_PENDING ||
+          state == TaskStatus.State.FAILED ||
+          state == TaskStatus.State.KILLED) {
+        JobWithTaskContext j = new JobWithTaskContext(this, tip, 
+                                                      status.getTaskId(),
+                                                      metrics);
+        jobtracker.addToCommitQueue(j);
+      }
+
       if (null != ttStatus){
         httpTaskLogLocation = "http://" + ttStatus.getHost() + ":" + 
           ttStatus.getHttpPort() + "/tasklog?plaintext=true&taskid=" +
@@ -388,7 +397,7 @@ class JobInProgress {
 
       TaskCompletionEvent taskEvent = null;
       if (state == TaskStatus.State.SUCCEEDED) {
-        boolean complete = false;
+        completedTask(tip, status, metrics);
         taskEvent = new TaskCompletionEvent(
                                             taskCompletionEventTracker, 
                                             status.getTaskId(),
@@ -397,28 +406,14 @@ class JobInProgress {
                                             TaskCompletionEvent.Status.SUCCEEDED,
                                             httpTaskLogLocation 
                                            );
-        try {
-          complete = completedTask(tip, status, metrics);
-        } catch (IOException ioe) {
-          // Oops! Failed to copy the task's output to its final place;
-          // fail the task!
-          failedTask(tip, status.getTaskId(), 
-                     "Failed to copy reduce's output", 
-                     (tip.isMapTask() ? 
-                         TaskStatus.Phase.MAP : 
-                         TaskStatus.Phase.REDUCE), 
-                     TaskStatus.State.FAILED, 
-                     status.getTaskTracker(), null);
-          LOG.info("Failed to copy the output of " + status.getTaskId() + 
-                   " with: " + StringUtils.stringifyException(ioe));
-          return;
-        }
-        
-        if (complete) {
-          tip.setSuccessEventNumber(taskCompletionEventTracker);
-        } else {
-          taskEvent.setTaskStatus(TaskCompletionEvent.Status.KILLED);
-        }
+        tip.setSuccessEventNumber(taskCompletionEventTracker); 
+      }
+      //For a failed task update the JT datastructures.For the task state where
+      //only the COMMIT is pending, delegate everything to the JT thread. For
+      //failed tasks we want the JT to schedule a reexecution ASAP (and not go
+      //via the queue for the datastructures' updates).
+      else if (state == TaskStatus.State.COMMIT_PENDING) {
+        return;
       } else if (state == TaskStatus.State.FAILED ||
                  state == TaskStatus.State.KILLED) {
         // Get the event number for the (possibly) previously successful
@@ -771,7 +766,7 @@ class JobInProgress {
   public synchronized boolean completedTask(TaskInProgress tip, 
                                          TaskStatus status,
                                          JobTrackerMetrics metrics) 
-  throws IOException {
+  {
     String taskid = status.getTaskId();
         
     // Sanity check: is the TIP already complete? 
@@ -928,14 +923,10 @@ class JobInProgress {
                           TaskStatus status, String trackerName,
                           boolean wasRunning, boolean wasComplete,
                           JobTrackerMetrics metrics) {
-    if(status.getRunState() == TaskStatus.State.KILLED ) {
-      tip.taskKilled(taskid, trackerName, this.status);
-    }
-    else {
-      // Mark the taskid as a 'failure'
-      tip.incompleteSubTask(taskid, trackerName, this.status);
-    }
-
+    
+    // Mark the taskid as FAILED or KILLED
+    tip.incompleteSubTask(taskid, trackerName, this.status);
+   
     boolean isRunning = tip.isRunning();
     boolean isComplete = tip.isComplete();
         
@@ -1065,7 +1056,7 @@ class JobInProgress {
                                                     reason,
                                                     reason,
                                                     trackerName, phase,
-                                                    tip.getCounters());
+                                                    null);
     updateTaskStatus(tip, status, metrics);
     JobHistory.Task.logFailed(profile.getJobId(), tip.getTIPId(), 
                               tip.isMapTask() ? Values.MAP.name() : Values.REDUCE.name(), 
@@ -1176,6 +1167,32 @@ class JobInProgress {
                  TaskStatus.State.FAILED, trackerName, metrics);
       
       mapTaskIdToFetchFailuresMap.remove(mapTaskId);
+    }
+  }
+  
+  static class JobWithTaskContext {
+    private JobInProgress job;
+    private TaskInProgress tip;
+    private String taskId;
+    private JobTrackerMetrics metrics;
+    JobWithTaskContext(JobInProgress job, TaskInProgress tip, 
+        String taskId, JobTrackerMetrics metrics) {
+      this.job = job;
+      this.tip = tip;
+      this.taskId = taskId;
+      this.metrics = metrics;
+    }
+    JobInProgress getJob() {
+      return job;
+    }
+    TaskInProgress getTIP() {
+      return tip;
+    }
+    String getTaskId() {
+      return taskId;
+    }
+    JobTrackerMetrics getJobTrackerMetrics() {
+      return metrics;
     }
   }
 }

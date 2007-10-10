@@ -1368,7 +1368,7 @@ public class TaskTracker
      * The task is reporting that it's done running
      */
     public synchronized void reportDone() {
-      this.taskStatus.setRunState(TaskStatus.State.SUCCEEDED);
+      this.taskStatus.setRunState(TaskStatus.State.COMMIT_PENDING);
       this.taskStatus.setProgress(1.0f);
       this.taskStatus.setFinishTime(System.currentTimeMillis());
       this.done = true;
@@ -1400,7 +1400,7 @@ public class TaskTracker
       boolean needCleanup = false;
       synchronized (this) {
         if (done) {
-          taskStatus.setRunState(TaskStatus.State.SUCCEEDED);
+          taskStatus.setRunState(TaskStatus.State.COMMIT_PENDING);
         } else {
           if (!wasKilled) {
             failures += 1;
@@ -1477,7 +1477,10 @@ public class TaskTracker
      */
     private synchronized void mapOutputLost(String failure
                                            ) throws IOException {
-      if (taskStatus.getRunState() == TaskStatus.State.SUCCEEDED) {
+      //The check for COMMIT_PENDING should actually be a check for SUCCESS
+      //however for that, we have to introduce another Action type from the
+      //JT to the TT (SuccessTaskAction in the lines of KillTaskAction).
+      if (taskStatus.getRunState() == TaskStatus.State.COMMIT_PENDING) {
         // change status to failure
         LOG.info("Reporting output lost:"+task.getTaskId());
         taskStatus.setRunState(TaskStatus.State.FAILED);

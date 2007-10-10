@@ -155,7 +155,7 @@
         }
         out.print("</td><td>" + "<a href=\"/taskstats.jsp?jobid=" + jobid
           + "&tipid=" + tipid + "&taskid=" + status.getTaskId() + "\">"
-          + status.getCounters().size() + "</a></td>");
+          + ((status.getCounters() != null) ? status.getCounters().size() : 0) + "</a></td>");
         out.print("<td>");
         if (privateActions
           && status.getRunState() == TaskStatus.State.RUNNING) {

@@ -40,7 +40,8 @@ abstract class TaskStatus implements Writable, Cloneable {
   public static enum Phase{STARTING, MAP, SHUFFLE, SORT, REDUCE}
 
   // what state is the task in?
-  public static enum State {RUNNING, SUCCEEDED, FAILED, UNASSIGNED, KILLED}
+  public static enum State {RUNNING, SUCCEEDED, FAILED, UNASSIGNED, KILLED, 
+                            COMMIT_PENDING}
     
   private String taskid;
   private float progress;

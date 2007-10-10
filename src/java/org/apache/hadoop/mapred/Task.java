@@ -438,21 +438,32 @@ abstract class Task implements Writable, Configurable {
   
   private Path getFinalPath(Path jobOutputDir, Path taskOutput) {
     URI relativePath = taskOutputPath.toUri().relativize(taskOutput.toUri());
-    return new Path(jobOutputDir, relativePath.getPath());
+    if (relativePath.getPath().length() > 0) {
+      return new Path(jobOutputDir, relativePath.getPath());
+    } else {
+      return jobOutputDir;
+    }
   }
   
   private void moveTaskOutputs(FileSystem fs, Path jobOutputDir, Path taskOutput) 
   throws IOException {
     if (fs.isFile(taskOutput)) {
       Path finalOutputPath = getFinalPath(jobOutputDir, taskOutput);
-      fs.mkdirs(finalOutputPath.getParent());
       if (!fs.rename(taskOutput, finalOutputPath)) {
-        throw new IOException("Failed to save output of task: " + 
-                getTaskId());
+        if (!fs.delete(finalOutputPath)) {
+          throw new IOException("Failed to delete earlier output of task: " + 
+                  getTaskId());
+        }
+        if (!fs.rename(taskOutput, finalOutputPath)) {
+          throw new IOException("Failed to save output of task: " + 
+                  getTaskId());
+        }
       }
       LOG.debug("Moved " + taskOutput + " to " + finalOutputPath);
     } else if(fs.isDirectory(taskOutput)) {
       Path[] paths = fs.listPaths(taskOutput);
+      Path finalOutputPath = getFinalPath(jobOutputDir, taskOutput);
+      fs.mkdirs(finalOutputPath);
       if (paths != null) {
         for (Path path : paths) {
           moveTaskOutputs(fs, jobOutputDir, path);

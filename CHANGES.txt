@@ -253,6 +253,12 @@ Trunk (unreleased changes)
     HADOOP-1992.  Fix the performance degradation in the sort validator. 
     (acmurthy via omalley)
 
+    HADOOP-1874.  Move task-outputs' promotion/discard to a separate thread
+    distinct from the main heartbeat-processing thread. The main upside being 
+    that we do not lock-up the JobTracker during HDFS operations, which
+    otherwise may lead to lost tasktrackers if the NameNode is unresponsive.
+    (Devaraj Das via acmurthy)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
