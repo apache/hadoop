@@ -89,6 +89,9 @@ class TaskInProgress {
   // The 'next' usable taskid of this tip
   int nextTaskId = 0;
     
+  // The taskid that took this TIP to SUCCESS
+  private String successfulTaskId;
+  
   // Map from task Id -> TaskTracker Id, contains tasks that are
   // currently runnings
   private TreeMap<String, String> activeTasks = new TreeMap<String, String>();
@@ -243,6 +246,18 @@ class TaskInProgress {
     return !activeTasks.isEmpty();
   }
     
+  private String getSuccessfulTaskid() {
+    return successfulTaskId;
+  }
+  
+  private void setSuccessfulTaskid(String successfulTaskId) {
+    this.successfulTaskId = successfulTaskId; 
+  }
+  
+  private void resetSuccessfulTaskid() {
+    this.successfulTaskId = ""; 
+  }
+  
   /**
    * Is this tip complete?
    * 
@@ -253,18 +268,14 @@ class TaskInProgress {
   }
 
   /**
-   * Is the given taskid in this tip complete?
+   * Is the given taskid the one that took this tip to completion?
    * 
    * @param taskid taskid of attempt to check for completion
    * @return <code>true</code> if taskid is complete, else <code>false</code>
    */
   public boolean isComplete(String taskid) {
-    TaskStatus status = taskStatuses.get(taskid);
-    if (status == null) {
-      return false;
-    }
     return ((completes > 0) && 
-            (status.getRunState() == TaskStatus.State.SUCCEEDED));
+             getSuccessfulTaskid().equals(taskid));
   }
 
   /**
@@ -473,6 +484,9 @@ class TaskInProgress {
     if (this.isMapTask() && isComplete(taskid) && 
         jobStatus.getRunState() != JobStatus.SUCCEEDED) {
       this.completes--;
+      
+      // Reset the successfulTaskId since we don't have a SUCCESSFUL task now
+      resetSuccessfulTaskid();
     }
 
 
@@ -529,6 +543,9 @@ class TaskInProgress {
     //
     completedTask(taskid, TaskStatus.State.SUCCEEDED);
         
+    // Note the successful taskid
+    setSuccessfulTaskid(taskid);
+    
     //
     // Now that the TIP is complete, the other speculative 
     // subtasks will be closed when the owning tasktracker 

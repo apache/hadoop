@@ -271,6 +271,12 @@ Trunk (unreleased changes)
     information via taskdetails.jsp. This bug was introduced by HADOOP-1874.
     (Amar Kamat via acmurthy)
                                 
+    HADOOP-2031.  Correctly maintain the taskid which takes the TIP to 
+    completion, failing which the case of lost tasktrackers isn't handled
+    properly i.e. the map TIP is incorrectly left marked as 'complete' and it
+    is never rescheduled elsewhere, leading to hung reduces.
+    (Devaraj Das via acmurthy)
+                                
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
