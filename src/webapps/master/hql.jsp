@@ -16,8 +16,10 @@
 </head>
 
 <body>
-<h1><a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseShell">HQL</a></h1>
-<p><a href="/master.jsp">Home</a></p>
+<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="Hbase Logo" title="Hbase Logo" /></a>
+<h1 id="page_title"><a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseShell">HQL</a></h1>
+<p id="links_menu"><a href="/master.jsp">Home</a></p>
+<hr id="head_rule" />
 <% String query = request.getParameter("q");
    if (query == null) {
      query = "";
