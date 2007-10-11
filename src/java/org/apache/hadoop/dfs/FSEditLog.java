@@ -209,6 +209,7 @@ class FSEditLog {
     fsimage = image;
     isSyncRunning = false;
     metrics = NameNode.getNameNodeMetrics();
+    lastPrintTime = FSNamesystem.now();
   }
 
   private File getEditFile(int idx) {
@@ -718,7 +719,7 @@ class FSEditLog {
   //
   private void printStatistics(boolean force) {
     long now = FSNamesystem.now();
-    if (lastPrintTime + 60000 < now && !force) {
+    if (lastPrintTime + 60000 > now && !force) {
       return;
     }
     if (editStreams == null) {

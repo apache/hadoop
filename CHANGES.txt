@@ -382,6 +382,9 @@ Trunk (unreleased changes)
     edits log. Reduce the number of syncs by double-buffering the changes
     to the transaction log. (Dhruba Borthakur)
 
+    HADOOP-2026. Namenode prints out one log line for "Number of transactions"
+    at most once every minute. (Dhruba Borthakur)
+
 
 Release 0.14.2 - 2007-10-09
 
