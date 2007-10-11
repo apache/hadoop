@@ -276,6 +276,10 @@ Trunk (unreleased changes)
     properly i.e. the map TIP is incorrectly left marked as 'complete' and it
     is never rescheduled elsewhere, leading to hung reduces.
     (Devaraj Das via acmurthy)
+
+    HADOOP-2018. The source datanode of a data transfer waits for
+    a response from the target datanode before closing the data stream.
+    (Hairong Kuang via dhruba)
                                 
   IMPROVEMENTS
 
