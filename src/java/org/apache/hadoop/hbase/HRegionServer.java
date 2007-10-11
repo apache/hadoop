@@ -1104,10 +1104,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /** {@inheritDoc} */
   public void batchUpdate(Text regionName, long timestamp, BatchUpdate b)
-    throws IOException {
-
+  throws IOException {
     checkOpen();
-    requestCount.incrementAndGet();
+    this.requestCount.incrementAndGet();
     // If timestamp == LATEST_TIMESTAMP and we have deletes, then they need
     // special treatment.  For these we need to first find the latest cell so
     // when we write the delete, we write it with the latest cells' timestamp
@@ -1116,7 +1115,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     List<Text> deletes = null;
     try {
       long lockid = startUpdate(regionName, b.getRow());
-      for(BatchOperation op: b) {
+      for (BatchOperation op: b) {
         switch(op.getOp()) {
         case PUT:
           put(regionName, lockid, op.getColumn(), op.getValue());
@@ -1239,20 +1238,19 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   //
   
   protected long startUpdate(Text regionName, Text row) throws IOException {
-    
-    HRegion region = getRegion(regionName);
+    HRegion region = getRegion(regionName, false);
     return region.startUpdate(row);
   }
 
   protected void put(final Text regionName, final long lockid,
-      final Text column, final byte [] val) throws IOException {
-
+      final Text column, final byte [] val)
+  throws IOException {
     HRegion region = getRegion(regionName, true);
     region.put(lockid, column, val);
   }
 
   protected void delete(Text regionName, long lockid, Text column) 
-    throws IOException {
+  throws IOException {
     HRegion region = getRegion(regionName);
     region.delete(lockid, column);
   }
@@ -1297,8 +1295,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @throws NotServingRegionException
    */
   protected HRegion getRegion(final Text regionName)
-    throws NotServingRegionException {
-    
+  throws NotServingRegionException {
     return getRegion(regionName, false);
   }
   
@@ -1311,8 +1308,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @throws NotServingRegionException
    */
   protected HRegion getRegion(final Text regionName,
-      final boolean checkRetiringRegions) throws NotServingRegionException {
-    
+      final boolean checkRetiringRegions)
+  throws NotServingRegionException {
     HRegion region = null;
     this.lock.readLock().lock();
     try {
@@ -1342,7 +1339,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @throws IOException
    */
   private void checkOpen() throws IOException {
-    if (stopRequested.get() || abortRequested) {
+    if (this.stopRequested.get() || this.abortRequested) {
       throw new IOException("Server not running");
     }
     if (!fsOk) {
