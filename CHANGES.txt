@@ -263,6 +263,9 @@ Trunk (unreleased changes)
     the JobTracker. Deadlock was seen in the JobTracker because of the lack of
     this synchronization.  (Arun C Murthy via ddas)
 
+    HADOOP-2026. Namenode prints out one log line for "Number of transactions"
+    at most once every minute. (Dhruba Borthakur)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
@@ -381,9 +384,6 @@ Trunk (unreleased changes)
     HADOOP-1942. Increase the concurrency of transaction logging to 
     edits log. Reduce the number of syncs by double-buffering the changes
     to the transaction log. (Dhruba Borthakur)
-
-    HADOOP-2026. Namenode prints out one log line for "Number of transactions"
-    at most once every minute. (Dhruba Borthakur)
 
 
 Release 0.14.2 - 2007-10-09
