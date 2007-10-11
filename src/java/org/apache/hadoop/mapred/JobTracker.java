@@ -1962,15 +1962,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                   //saving the output,the JT would have called updateTaskStatus
                   //and we don't need to call it again
                   if (status.getRunState() == TaskStatus.State.COMMIT_PENDING){
-                    newStatus = TaskStatus.createTaskStatus(
-                        tip.isMapTask(), 
-                        taskid,
-                        state == TaskStatus.State.SUCCEEDED ? 1.0f : 0.0f,
-                            state,
-                            status.getDiagnosticInfo(),
-                            status.getStateString(),
-                            status.getTaskTracker(), status.getPhase(),
-                            status.getCounters());
+                    newStatus = (TaskStatus)status.clone();
+                    newStatus.setRunState(state);
+                    newStatus.setProgress((state == TaskStatus.State.SUCCEEDED) ? 1.0f : 0.0f);
                   }
                 }
                 if (newStatus != null) {

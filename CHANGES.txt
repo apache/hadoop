@@ -266,6 +266,11 @@ Trunk (unreleased changes)
     HADOOP-2026. Namenode prints out one log line for "Number of transactions"
     at most once every minute. (Dhruba Borthakur)
 
+    HADOOP-2022.  Ensure that status information for successful tasks is correctly
+    recorded at the JobTracker, so that, for example, one may view correct
+    information via taskdetails.jsp. This bug was introduced by HADOOP-1874.
+    (Amar Kamat via acmurthy)
+                                
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
