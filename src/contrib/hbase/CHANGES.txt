@@ -98,6 +98,7 @@ Trunk (unreleased changes)
     HADOOP-1789 Output formatting
     HADOOP-1960 If a region server cannot talk to the master before its lease
                 times out, it should shut itself down
+    HADOOP-2035 Add logo to webapps
 
 
 Below are the list of changes before 2007-08-18

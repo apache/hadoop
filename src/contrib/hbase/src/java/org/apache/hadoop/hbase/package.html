@@ -5,7 +5,7 @@
 Provides HBase, the <a href="http://lucene.apache.org/hadoop">Hadoop</a>
 simple database.
 
-<h2>Requirements</h2>
+<h2><a name="requirements">Requirements</a></h2>
 <ul>
 <li>Java 1.5.x, preferably from <a href="http://www.java.com/en/download/">Sun</a>.</li>
 <li>HBase runs on top of <a href="http://lucene.apache.org/hadoop">Hadoop</a>.  Hadoop has its own set of
@@ -15,7 +15,7 @@ requirements and instructions</a>.  Make sure to set
 </li>
 </ul>
 
-<h2>Getting Started</h2>
+<h2><a name="getting_started" >Getting Started</a></h2>
 <p>
 Start by defining the following directory variables for your convenience:
 </p>
@@ -29,7 +29,7 @@ If you are running a standalone operation, proceed to <a href=#runandconfirm>Run
 and Confirming Your Installation</a>.  If you are running a distributed operation, continue below.
 </p>
 
-<h2>Distributed Operation</h2>
+<h2><a name="distributed" >Distributed Operation</a></h2>
 <p>
 Make sure you have followed
 <a href="http://lucene.apache.org/hadoop/api/overview-summary.html#overview_description">
@@ -63,14 +63,14 @@ The <code>regionserver</code> file lists all the hosts running HRegionServers, o
 host per line  (This file is synonymous to the slaves file at 
 <code>${HADOOP_HOME}/conf/slaves</code>).
 </p>
-<h3>Additional Notes on Distributed Operation</h3>
+<h3><a name="additional" >Additional Notes on Distributed Operation</a></h3>
 <ul>
 <li>Hadoop and HBase must be set up on each host you plan to use.</li>
 <li>Additional (optional) HBase-specific variables such as HBASE_HEAPSIZE and HBASE_CLASSPATH 
 can be set in <code>${HBASE_HOME}/conf/hbase-env.sh</code>.</li>
 </ul>
 
-<h2><a name="runandconfirm"/>Running and Confirming Your Installation</h2>
+<h2><a name="runandconfirm">Running and Confirming Your Installation</a></h2>
 <p>
 If you are running a distributed operation you will need to start the Hadoop daemons 
 before starting HBase and stop the daemons after HBase has shut down.  Start and 
@@ -87,7 +87,7 @@ shell against HBase from which you can execute HBase commands.  In the HBase she
 <code>help;</code> to see a list of supported commands.  Note that all commands in the HBase 
 shell must end with <code>;</code>.  Test your installation by creating, viewing, and dropping 
 a table, as per the help instructions.  Be patient with the <code>create</code> and 
-<code>drop</code> operations as they may each take 30 seconds or more.  To stop hbase, exit the 
+<code>drop</code> operations as they may each take 10 seconds or more.  To stop hbase, exit the 
 HBase shell and enter:
 </p>
 <pre>
@@ -100,8 +100,10 @@ before stopping the Hadoop daemons.
 <p>
 The default location for logs is <code>${HADOOP_HOME}/logs</code>.
 </p>
+<p>HBase also puts up a UI listing vital attributes.  By default its deployed on the master host
+at port 60010.</p>
 
-<h2>Related Documentation</h2>
+<h2><a name="related" >Related Documentation</a></h2>
 <ul>
   <li><a href="http://wiki.apache.org/lucene-hadoop/Hbase">HBase Home Page</a>
   <li><a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseArchitecture">HBase Architecture</a>

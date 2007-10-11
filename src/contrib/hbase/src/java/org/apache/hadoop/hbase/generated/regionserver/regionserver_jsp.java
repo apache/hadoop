@@ -53,9 +53,9 @@ public final class regionserver_jsp extends org.apache.jasper.runtime.HttpJspBas
 
       out.write("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \n  \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\"> \n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head><meta http-equiv=\"Content-Type\" content=\"text/html;charset=UTF-8\"/>\n<title>Hbase Region Server: ");
       out.print( serverInfo.getServerAddress().toString() );
-      out.write("</title>\n<link rel=\"stylesheet\" type=\"text/css\" href=\"/static/hbase.css\" />\n</head>\n\n<body>\n<h1><a href=\"http://wiki.apache.org/lucene-hadoop/Hbase\">Hbase</a> Region Server: ");
+      out.write("</title>\n<link rel=\"stylesheet\" type=\"text/css\" href=\"/static/hbase.css\" />\n</head>\n\n<body>\n<a id=\"logo\" href=\"http://wiki.apache.org/lucene-hadoop/Hbase\"><img src=\"/static/hbase_logo_med.gif\" alt=\"Hbase Logo\" title=\"Hbase Logo\" /></a>\n<h1 id=\"page_title\">Region Server: ");
       out.print( serverInfo.getServerAddress().toString() );
-      out.write("</h1>\n<p><a href=\"/logs/\">Local logs</a>, <a href=\"/stacks\">Thread Dump</a></p>\n\n<h2>Region Server Attributes</h2>\n<table>\n<tr><th>Attribute Name</th><th>Value</th></tr>\n<tr><td>Load</td><td>");
+      out.write("</h1>\n<p id=\"links_menu\"><a href=\"/logs/\">Local logs</a>, <a href=\"/stacks\">Thread Dump</a></p>\n<hr id=\"head_rule\" />\n\n<h2>Region Server Attributes</h2>\n<table>\n<tr><th>Attribute Name</th><th>Value</th></tr>\n<tr><td>Load</td><td>");
       out.print( serverInfo.getLoad().toString() );
       out.write("</td></tr>\n</table>\n\n<h2>Online Regions</h2>\n");
  if (onlineRegions != null && onlineRegions.size() > 0) { 
@@ -73,7 +73,7 @@ public final class regionserver_jsp extends org.apache.jasper.runtime.HttpJspBas
  } else { 
       out.write("\n<p>Not serving regions</p>\n");
  } 
-      out.write("\n</body>\n</html>");
+      out.write("\n</body>\n</html>\n");
     } catch (Throwable t) {
       if (!(t instanceof SkipPageException)){
         out = _jspx_out;

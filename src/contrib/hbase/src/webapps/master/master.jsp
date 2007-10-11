@@ -32,9 +32,11 @@
 </head>
 
 <body>
-<h1><a href="http://wiki.apache.org/lucene-hadoop/Hbase">Hbase</a> Master: <%=master.getMasterAddress()%></h1>
-<p><a href="/hql.jsp">HQL</a>,
-<a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a></p>
+
+<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="Hbase Logo" title="Hbase Logo" /></a>
+<h1 id="page_title">Master: <%=master.getMasterAddress()%></h1>
+<p id="links_menu"><a href="/hql.jsp">HQL</a>, <a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a></p>
+<hr id="head_rule" />
 
 <h2>Master Attributes</h2>
 <table>
