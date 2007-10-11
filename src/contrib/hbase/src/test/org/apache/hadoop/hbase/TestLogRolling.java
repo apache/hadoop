@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
@@ -128,9 +126,10 @@ public class TestLogRolling extends HBaseTestCase {
     try {
       Thread.sleep(10 * 1000);                  // Wait for region server to start
     } catch (InterruptedException e) {
+      // continue
     }
 
-    logdir = cluster.regionThreads.get(0).getRegionServer().getLog().dir;
+    this.logdir = cluster.regionThreads.get(0).getRegionServer().getLog().dir;
     
     // When the META table can be opened, the region servers are running
     @SuppressWarnings("unused")
@@ -155,13 +154,14 @@ public class TestLogRolling extends HBaseTestCase {
         try {
           Thread.sleep(2000);
         } catch (InterruptedException e) {
+          // continue
         }
       }
     }
   }
   
-  private int countLogFiles(boolean print) throws IOException {
-    Path[] logfiles = dfs.getFileSystem().listPaths(new Path[] {logdir});
+  private int countLogFiles(final boolean print) throws Exception {
+    Path[] logfiles = dfs.getFileSystem().listPaths(new Path[] {this.logdir});
     if (print) {
       for (int i = 0; i < logfiles.length; i++) {
         if (LOG.isDebugEnabled()) {
@@ -186,15 +186,18 @@ public class TestLogRolling extends HBaseTestCase {
     conf.setLong("hbase.hregion.max.filesize", 768L * 1024L);
     try {
       startAndWriteData();
-      LOG.info("Finished writing. Sleeping to let cache flusher and log roller run");
-      try {
-        // Wait for log roller and cache flusher to run a few times...
-        Thread.sleep(30L * 1000L);
-      } catch (InterruptedException e) {
-        LOG.info("Sleep interrupted", e);
+      int count = countLogFiles(true);
+      LOG.info("Finished writing. There are " + count + " log files. " +
+        "Sleeping to let cache flusher and log roller run");
+      while (count > 2) {
+        try {
+          Thread.sleep(1000L);
+        } catch (InterruptedException e) {
+          LOG.info("Sleep interrupted", e);
+        }
+        count = countLogFiles(true);
       }
-      LOG.info("Wake from sleep");
-      assertTrue(countLogFiles(true) <= 2);
+      assertTrue(count <= 2);
     } catch (Exception e) {
       LOG.fatal("unexpected exception", e);
       throw e;
