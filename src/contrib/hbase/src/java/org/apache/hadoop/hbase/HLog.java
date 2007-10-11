@@ -319,8 +319,10 @@ public class HLog implements HConstants {
           // Now remove old log files (if any)
           LOG.debug("Found " + sequenceNumbers.size() + " logs to remove " +
             "using oldest outstanding seqnum of " + oldestOutstandingSeqNum);
-          for (Long seq : sequenceNumbers) {
-            deleteLogFile(this.outputfiles.remove(seq), seq);
+          if (sequenceNumbers.size() > 0) {
+            for (Long seq : sequenceNumbers) {
+              deleteLogFile(this.outputfiles.remove(seq), seq);
+            }
           }
         }
       }
