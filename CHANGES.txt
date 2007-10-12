@@ -284,6 +284,8 @@ Trunk (unreleased changes)
     HADOOP-2023. Disable TestLocalDirAllocator on Windows.
     (Hairong Kuang via nigel)
 
+    HADOOP-2036. Fix a NullPointerException in JvmMetrics class. (nigel)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 

@@ -126,6 +126,8 @@ public class JvmMetrics implements Updater {
         int threadsTerminated = 0;
         
         for (ThreadInfo threadInfo : threadInfos) {
+            // threadInfo is null if the thread is not alive or doesn't exist
+            if (threadInfo == null) continue;
             Thread.State state = threadInfo.getThreadState();
             if (state == NEW) {
                 threadsNew++;
