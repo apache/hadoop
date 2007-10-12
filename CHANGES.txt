@@ -294,6 +294,10 @@ Trunk (unreleased changes)
     HADOOP-1771. Fix a NullPointerException in streaming caused by an 
     IOException in MROutputThread. (lohit vijayarenu via nigel)
 
+    HADOOP-2028. Fix distcp so that the log dir does not need to be 
+    specified and the destination does not need to exist.
+    (Chris Douglas via nigel)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
