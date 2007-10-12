@@ -353,13 +353,23 @@ public abstract class PipeMapRed {
             logflush();
           }
         }
-      } catch (IOException io) {
-        io.printStackTrace(log_);
-        outerrThreadsThrowable = io;
+        if (clientIn_ != null) {
+          clientIn_.close();
+          clientIn_ = null;
+          LOG.info("MROutputThread done");
+        }
       } catch (Throwable th) {
         outerrThreadsThrowable = th;
+        LOG.warn(StringUtils.stringifyException(th));
+        try {
+          if (clientIn_ != null) {
+            clientIn_.close();
+            clientIn_ = null;
+          }
+        } catch (IOException io) {
+          LOG.info(StringUtils.stringifyException(io));
+        }
       }
-      logprintln("MROutputThread done");
     }
 
     OutputCollector output;
@@ -388,11 +398,22 @@ public abstract class PipeMapRed {
             reporter.progress();
           }
         }
-      } catch (IOException io) {
-        logStackTrace(io);
-        outerrThreadsThrowable = io;
+	if (clientErr_ != null) {
+          clientErr_.close();
+          clientErr_ = null;
+          LOG.info("MRErrorThread done");
+        }
       } catch (Throwable th) {
         outerrThreadsThrowable = th;
+        LOG.warn(StringUtils.stringifyException(th));
+        try {
+          if (clientErr_ != null) {
+            clientErr_.close();
+            clientErr_ = null;
+          }
+        } catch (IOException io) {
+          LOG.info(StringUtils.stringifyException(io));
+        }
       }
     }
     long lastStderrReport = 0;
