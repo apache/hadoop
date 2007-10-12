@@ -75,6 +75,7 @@ Trunk (unreleased changes)
     HADOOP-2017 TestRegionServerAbort failure in patch build #903 and
                 nightly #266
     HADOOP-2029 TestLogRolling fails too often in patch and nightlies
+    HADOOP-2038 TestCleanRegionExit failed in patch build #927
 
   IMPROVEMENTS
     HADOOP-1737 Make HColumnDescriptor data publically members settable
