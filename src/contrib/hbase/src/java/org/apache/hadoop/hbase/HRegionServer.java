@@ -926,14 +926,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
   
-  void openRegion(HRegionInfo regionInfo) throws IOException {
+  void openRegion(final HRegionInfo regionInfo) throws IOException {
     HRegion region = onlineRegions.get(regionInfo.regionName);
     if(region == null) {
       region = new HRegion(new Path(this.conf.get(HConstants.HBASE_DIR)),
         this.log, FileSystem.get(conf), conf, regionInfo, null);
       this.lock.writeLock().lock();
       try {
-        this.log.setSequenceNumber(region.getMaxSequenceId());
+        this.log.setSequenceNumber(region.getMinSequenceId());
         this.onlineRegions.put(region.getRegionName(), region);
       } finally {
         this.lock.writeLock().unlock();
@@ -1238,7 +1238,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   //
   
   protected long startUpdate(Text regionName, Text row) throws IOException {
-    HRegion region = getRegion(regionName, false);
+    HRegion region = getRegion(regionName);
     return region.startUpdate(row);
   }
 
