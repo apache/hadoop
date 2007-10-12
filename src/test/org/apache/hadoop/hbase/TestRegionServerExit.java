@@ -27,14 +27,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 
 /**
- * Tests region server failover when a region server exits.
+ * Tests region server failover when a region server exits both cleanly and
+ * when it aborts.
  */
-public class TestRegionServerAbort extends HBaseClusterTestCase {
+public class TestRegionServerExit extends HBaseClusterTestCase {
   final Log LOG = LogFactory.getLog(this.getClass().getName());
   HTable table;
 
   /** constructor */
-  public TestRegionServerAbort() {
+  public TestRegionServerExit() {
     super(2);
     conf.setInt("ipc.client.timeout", 10000);          // reduce client timeout
     conf.setInt("ipc.client.connect.max.retries", 5);  // and number of retries
@@ -42,15 +43,48 @@ public class TestRegionServerAbort extends HBaseClusterTestCase {
   }
   
   /**
-   * The test
+   * Test abort of region server.
    * @throws IOException
    */
-  public void testRegionServerAbort() throws IOException {
+  public void testAbort() throws IOException {
     // When the META table can be opened, the region servers are running
-    @SuppressWarnings("unused")
-    HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
-    // Put something into the meta table.
+    new HTable(conf, HConstants.META_TABLE_NAME);
+    // Create table and add a row.
     final String tableName = getName();
+    Text row = createTableAndAddRow(tableName);
+    // Start up a new region server to take over serving of root and meta
+    // after we shut down the current meta/root host.
+    this.cluster.startRegionServer();
+    // Now abort the region server and wait for it to go down.
+    this.cluster.abortRegionServer(0);
+    LOG.info(this.cluster.waitOnRegionServer(0) + " has been aborted");
+    Thread t = startVerificationThread(tableName, row);
+    t.start();
+    threadDumpingJoin(t);
+  }
+  
+  /**
+   * Test abort of region server.
+   * @throws IOException
+   */
+  public void REMOVEtestCleanExit() throws IOException {
+    // When the META table can be opened, the region servers are running
+    new HTable(this.conf, HConstants.META_TABLE_NAME);
+    // Create table and add a row.
+    final String tableName = getName();
+    Text row = createTableAndAddRow(tableName);
+    // Start up a new region server to take over serving of root and meta
+    // after we shut down the current meta/root host.
+    this.cluster.startRegionServer();
+    // Now shutdown the region server and wait for it to go down.
+    this.cluster.stopRegionServer(0);
+    LOG.info(this.cluster.waitOnRegionServer(0) + " has been shutdown");
+    Thread t = startVerificationThread(tableName, row);
+    t.start();
+    threadDumpingJoin(t);
+  }
+  
+  private Text createTableAndAddRow(final String tableName) throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
     HBaseAdmin admin = new HBaseAdmin(conf);
@@ -62,15 +96,19 @@ public class TestRegionServerAbort extends HBaseClusterTestCase {
     table.put(lockid, HConstants.COLUMN_FAMILY,
         tableName.getBytes(HConstants.UTF8_ENCODING));
     table.commit(lockid);
-    // Start up a new region server to take over serving of root and meta
-    // after we shut down the current meta/root host.
-    this.cluster.startRegionServer();
-    // Now shutdown the region server and wait for it to go down.
-    this.cluster.abortRegionServer(0);
-    LOG.info(this.cluster.waitOnRegionServer(0) + " has been shutdown");
-    // Run verification in a thread so I can concurrently run a thread-dumper
-    // while we're waiting (because in this test sometimes the meta scanner
-    // looks to be be stuck).
+    return row;
+  }
+  
+  /*
+   * Run verification in a thread so I can concurrently run a thread-dumper
+   * while we're waiting (because in this test sometimes the meta scanner
+   * looks to be be stuck).
+   * @param tableName Name of table to find.
+   * @param row Row we expect to find.
+   * @return Verification thread.  Caller needs to calls start on it.
+   */
+  private Thread startVerificationThread(final String tableName,
+      final Text row) {
     Runnable runnable = new Runnable() {
       public void run() {
         HScannerInterface scanner = null;
@@ -105,8 +143,6 @@ public class TestRegionServerAbort extends HBaseClusterTestCase {
         }
       }
     };
-    Thread t = new Thread(runnable);
-    t.start();
-    threadDumpingJoin(t);
+    return new Thread(runnable);
   }
 }

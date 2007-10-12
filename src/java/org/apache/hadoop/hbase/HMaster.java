@@ -822,7 +822,8 @@ HMasterRegionInterface {
    * Access to this map and loadToServers and serversToLoad must be synchronized
    * on this object
    */
-  Map<String, HServerInfo> serversToServerInfo;
+  final Map<String, HServerInfo> serversToServerInfo =
+    new HashMap<String, HServerInfo>();
 
   /** SortedMap server load -> Set of server names */
   SortedMap<HServerLoad, Set<String>> loadToServers;
@@ -871,27 +872,22 @@ HMasterRegionInterface {
         LOG.info("bootstrap: creating ROOT and first META regions");
         try {
           HRegion root = HRegion.createHRegion(HGlobals.rootRegionInfo, this.dir,
-              this.conf, null);
-
-          HRegion meta =
-            HRegion.createHRegion(new HRegionInfo(1L, HGlobals.metaTableDesc,
-                null, null), this.dir, this.conf, null);
+            this.conf, null);
+          HRegion meta = HRegion.createHRegion(new HRegionInfo(1L,
+            HGlobals.metaTableDesc, null, null), this.dir, this.conf, null);
 
           // Add first region from the META table to the ROOT region.
-
           HRegion.addRegionToMETA(root, meta);
           root.close();
           root.getLog().closeAndDelete();
           meta.close();
           meta.getLog().closeAndDelete();
-
         } catch (IOException e) {
           e = RemoteExceptionHandler.checkIOException(e);
           LOG.error("bootstrap", e);
           throw e;
         }
       }
-      
     } catch (IOException e) {
       LOG.fatal("Not starting HMaster because:", e);
       throw e;
@@ -905,7 +901,7 @@ HMasterRegionInterface {
     this.shutdownQueue = new DelayQueue<PendingServerShutdown>();
     this.msgQueue = new LinkedBlockingQueue<PendingOperation>();
 
-    this.leaseTimeout = conf.getInt("hbase.master.lease.period", 30 * 1000); 
+    this.leaseTimeout = conf.getInt("hbase.master.lease.period", 30 * 1000);
     this.serverLeases = new Leases(this.leaseTimeout, 
         conf.getInt("hbase.master.lease.thread.wakefrequency", 15 * 1000));
     
@@ -914,7 +910,6 @@ HMasterRegionInterface {
         false, conf);
 
     //  The rpc-server port can be ephemeral... ensure we have the correct info
-    
     this.address = new HServerAddress(server.getListenerAddress());
     conf.set(MASTER_ADDRESS, address.toString());
 
@@ -924,7 +919,6 @@ HMasterRegionInterface {
       conf.getInt("hbase.master.meta.thread.rescanfrequency", 60 * 1000);
 
     // The root region
-
     this.rootScanned = false;
     this.rootScannerThread = new RootScanner();
 
@@ -948,7 +942,6 @@ HMasterRegionInterface {
     this.regionsToDelete =
       Collections.synchronizedSet(new HashSet<Text>());
 
-    this.serversToServerInfo = new HashMap<String, HServerInfo>();
     this.loadToServers = new TreeMap<HServerLoad, Set<String>>();
     this.serversToLoad = new HashMap<String, HServerLoad>();
 
@@ -1042,7 +1035,7 @@ HMasterRegionInterface {
      */
     try {
       for (PendingOperation op = null; !closed.get(); ) {
-        op = shutdownQueue.poll();
+        op = this.shutdownQueue.poll();
         if (op == null ) {
           try {
             op = msgQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
@@ -1720,8 +1713,10 @@ HMasterRegionInterface {
   }
   
   /*
-   * Assign all to the only server. An unlikely case but still possible. @param
-   * regionsToAssign @param serverName @param returnMsgs
+   * Assign all to the only server. An unlikely case but still possible.
+   * @param regionsToAssign
+   * @param serverName
+   * @param returnMsgs
    */
   private void assignRegionsToOneServer(final TreeSet<Text> regionsToAssign,
       final String serverName, final ArrayList<HMsg> returnMsgs) {
@@ -1768,8 +1763,8 @@ HMasterRegionInterface {
    * serving, and the regions need to get reassigned.
    */
   private class PendingServerShutdown extends PendingOperation
-    implements Delayed {
-    private long delay;
+  implements Delayed {
+    private final long expire;
     private HServerAddress deadServer;
     private String deadServerName;
     private Path oldLogDir;
@@ -1793,7 +1788,6 @@ HMasterRegionInterface {
 
     PendingServerShutdown(HServerInfo serverInfo) {
       super();
-      this.delay = leaseTimeout / 2;
       this.deadServer = serverInfo.getServerAddress();
       this.deadServerName = this.deadServer.toString();
       this.logSplit = false;
@@ -1806,11 +1800,15 @@ HMasterRegionInterface {
       dirName.append("_");
       dirName.append(deadServer.getPort());
       this.oldLogDir = new Path(dir, dirName.toString());
+      // Set the future time at which we expect to be released from the
+      // DelayQueue we're inserted in on lease expiration.
+      this.expire = System.currentTimeMillis() + leaseTimeout / 2;
     }
 
     /** {@inheritDoc} */
     public long getDelay(TimeUnit unit) {
-      return unit.convert(delay, TimeUnit.MILLISECONDS);
+      return unit.convert(this.expire - System.currentTimeMillis(),
+        TimeUnit.MILLISECONDS);
     }
     
     /** {@inheritDoc} */
