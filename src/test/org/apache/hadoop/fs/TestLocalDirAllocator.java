@@ -26,7 +26,11 @@ import junit.framework.TestCase;
 
 /** This test LocalDirAllocator works correctly;
  * Every test case uses different buffer dirs to 
- * enforce the AllocatorPerContext initialization*/ 
+ * enforce the AllocatorPerContext initialization.
+ * This test does not run on Cygwin because under Cygwin
+ * a directory can be created in a read-only directory
+ * which breaks this test.
+ */ 
 public class TestLocalDirAllocator extends TestCase {
   final static private Configuration conf = new Configuration();
   final static private String BUFFER_DIR_ROOT = "build/test/temp";
@@ -43,8 +47,8 @@ public class TestLocalDirAllocator extends TestCase {
   final static private LocalDirAllocator dirAllocator = 
     new LocalDirAllocator(CONTEXT);
   static LocalFileSystem localFs;
-  
-  /** constructor */
+  final static private boolean isWindows =
+    System.getProperty("os.name").startsWith("Windows");
   
   static {
     try {
@@ -64,7 +68,8 @@ public class TestLocalDirAllocator extends TestCase {
   
   private void validateTempDirCreation(int i) throws IOException {
     File result = createTempFile();
-    assertTrue(result.getPath().startsWith(BUFFER_DIR[i]+"/"+FILENAME));
+    assertTrue(result.getPath().startsWith(
+        new File(BUFFER_DIR[i], FILENAME).getPath()));
   }
   
   private File createTempFile() throws IOException {
@@ -77,6 +82,7 @@ public class TestLocalDirAllocator extends TestCase {
    * @throws Exception
    */
   public void test0() throws Exception {
+    if (isWindows) return;
     try {
       conf.set(CONTEXT, BUFFER_DIR[0]+","+BUFFER_DIR[1]);
       assertTrue(localFs.mkdirs(BUFFER_PATH[1]));
@@ -94,6 +100,7 @@ public class TestLocalDirAllocator extends TestCase {
    * @throws Exception
    */
   public void test1() throws Exception {
+    if (isWindows) return;
     try {
       conf.set(CONTEXT, BUFFER_DIR[1]+","+BUFFER_DIR[2]);
       assertTrue(localFs.mkdirs(BUFFER_PATH[2]));
@@ -109,6 +116,7 @@ public class TestLocalDirAllocator extends TestCase {
    * Check if tmp dirs are allocated in a round-robin 
    */
   public void test2() throws Exception {
+    if (isWindows) return;
     try {
       conf.set(CONTEXT, BUFFER_DIR[2]+","+BUFFER_DIR[3]);
       validateTempDirCreation(2);
@@ -125,6 +133,7 @@ public class TestLocalDirAllocator extends TestCase {
    * @throws Exception
    */
   public void test3() throws Exception {
+    if (isWindows) return;
     try {
       conf.set(CONTEXT, BUFFER_DIR[3]+","+BUFFER_DIR[4]);
       assertTrue(localFs.mkdirs(BUFFER_PATH[3]));

@@ -281,6 +281,9 @@ Trunk (unreleased changes)
     a response from the target datanode before closing the data stream.
     (Hairong Kuang via dhruba)
                                 
+    HADOOP-2023. Disable TestLocalDirAllocator on Windows.
+    (Hairong Kuang via nigel)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
