@@ -1324,14 +1324,21 @@ public class TaskTracker
      */
     public synchronized void reportProgress(TaskStatus taskStatus) 
     {
-      if (this.done) {
+      LOG.info(task.getTaskId() + " " + taskStatus.getProgress() + 
+          "% " + taskStatus.getStateString());
+      
+      if (this.done || 
+          this.taskStatus.getRunState() != TaskStatus.State.RUNNING) {
         //make sure we ignore progress messages after a task has 
-        //invoked TaskUmbilicalProtocol.done()
+        //invoked TaskUmbilicalProtocol.done() or if the task has been
+        //KILLED/FAILED
+        LOG.info(task.getTaskId() + " Ignoring status-update since " +
+                 ((this.done) ? "task is 'done'" : 
+                                ("runState: " + this.taskStatus.getRunState()))
+                 ); 
         return;
       }
       
-      LOG.info(task.getTaskId() + " " + taskStatus.getProgress() + 
-               "% " + taskStatus.getStateString());
       this.taskStatus.statusUpdate(taskStatus);
       this.lastProgressReport = System.currentTimeMillis();
     }

@@ -286,6 +286,11 @@ Trunk (unreleased changes)
 
     HADOOP-2036. Fix a NullPointerException in JvmMetrics class. (nigel)
 
+    HADOOP-2016.  Ignore status-updates from FAILED/KILLED tasks at the 
+    TaskTracker. This fixes a race-condition which caused the tasks to wrongly 
+    remain in the RUNNING state even after being killed by the JobTracker and
+    thus handicap the cleanup of the task's output sub-directory. (acmurthy)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
