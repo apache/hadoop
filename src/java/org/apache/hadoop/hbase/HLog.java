@@ -223,7 +223,8 @@ public class HLog implements HConstants {
    * sequence numbers are always greater than the latest sequence number of the
    * region being brought on-line.
    *
-   * @param newvalue
+   * @param newvalue We'll set log edit/sequence number to this value if it
+   * is greater than the current value.
    */
   void setSequenceNumber(long newvalue) {
     synchronized (sequenceLock) {
@@ -317,8 +318,19 @@ public class HLog implements HConstants {
           sequenceNumbers.addAll(this.outputfiles.headMap(
               Long.valueOf(oldestOutstandingSeqNum)).keySet());
           // Now remove old log files (if any)
-          LOG.debug("Found " + sequenceNumbers.size() + " logs to remove " +
-            "using oldest outstanding seqnum of " + oldestOutstandingSeqNum);
+          if (LOG.isDebugEnabled()) {
+            // Find region associated with oldest key -- helps debugging.
+            Text oldestRegion = null;
+            for (Map.Entry<Text, Long> e: this.lastSeqWritten.entrySet()) {
+              if (e.getValue().longValue() == oldestOutstandingSeqNum) {
+                oldestRegion = e.getKey();
+                break;
+              }
+            }
+            LOG.debug("Found " + sequenceNumbers.size() + " logs to remove " +
+              "using oldest outstanding seqnum of " + oldestOutstandingSeqNum +
+              " from region " + oldestRegion);
+          }
           if (sequenceNumbers.size() > 0) {
             for (Long seq : sequenceNumbers) {
               deleteLogFile(this.outputfiles.remove(seq), seq);

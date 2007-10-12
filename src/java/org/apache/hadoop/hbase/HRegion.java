@@ -213,7 +213,7 @@ public class HRegion implements HConstants {
   protected final int optionalFlushCount;
   private final HLocking lock = new HLocking();
   private long desiredMaxFileSize;
-  private final long maxSequenceId;
+  private final long minSequenceId;
 
   //////////////////////////////////////////////////////////////////////////////
   // Constructor
@@ -278,10 +278,10 @@ public class HRegion implements HConstants {
         maxSeqId = storeSeqId;
       }
     }
-    this.maxSequenceId = maxSeqId;
+    this.minSequenceId = maxSeqId;
     if (LOG.isDebugEnabled()) {
-      LOG.debug("maximum sequence id for region " + regionInfo.getRegionName() +
-          " is " + this.maxSequenceId);
+      LOG.debug("Next sequence id for region " + regionInfo.getRegionName() +
+        " is " + this.minSequenceId);
     }
 
     // Get rid of any splits or merges that were lost in-progress
@@ -309,8 +309,12 @@ public class HRegion implements HConstants {
     LOG.info("region " + this.regionInfo.regionName + " available");
   }
   
-  long getMaxSequenceId() {
-    return this.maxSequenceId;
+  /**
+   * @return Updates to this region need to have a sequence id that is >= to
+   * the this number.
+   */
+  long getMinSequenceId() {
+    return this.minSequenceId;
   }
 
   /** Returns a HRegionInfo object for this region */
@@ -378,12 +382,12 @@ public class HRegion implements HConstants {
       // outstanding row locks to come in before we close so we do not drop
       // outstanding updates.
       waitOnRowLocks();
-      
+
       if (!abort) {
         // Don't flush the cache if we are aborting during a test.
         internalFlushcache();
       }
-      
+
       Vector<HStoreFile> result = new Vector<HStoreFile>();
       for (HStore store: stores.values()) {
         result.addAll(store.close());
@@ -407,8 +411,8 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   HRegion[] closeAndSplit(final Text midKey,
-      final RegionUnavailableListener listener) throws IOException {
-    
+      final RegionUnavailableListener listener)
+  throws IOException {
     checkMidKey(midKey);
     long startTime = System.currentTimeMillis();
     Path splits = getSplitsDir();
@@ -432,7 +436,6 @@ public class HRegion implements HConstants {
       listener.closing(getRegionName());
     }
 
-    
     // Now close the HRegion.  Close returns all store files or null if not
     // supposed to close (? What to do in this case? Implement abort of close?)
     // Close also does wait on outstanding rows and calls a flush just-in-case.
@@ -736,7 +739,6 @@ public class HRegion implements HConstants {
         LOG.info("Optional flush called " + this.noFlushCount +
             " times when data present without flushing.  Forcing one.");
         flushcache(false);
-        
       } else {
         // Only increment if something in the cache.
         // Gets zero'd when a flushcache is called.
@@ -1127,15 +1129,14 @@ public class HRegion implements HConstants {
     // will be extremely rare; we'll deal with it when it happens.
     checkResources();
 
-    if (this.closed.get()) {
-      throw new IOException("Region " + this.getRegionName().toString() +
-        " closed");
-    }
-
     // Get a read lock. We will not be able to get one if we are closing or
     // if this region is being split.  In neither case should we be allowing
     // updates.
     this.lock.obtainReadLock();
+    if (this.closed.get()) {
+      throw new IOException("Region " + this.getRegionName().toString() +
+        " closed");
+    }
     try {
       // We obtain a per-row lock, so other clients will block while one client
       // performs an update. The read lock is released by the client calling
@@ -1179,8 +1180,8 @@ public class HRegion implements HConstants {
       }
     }
     if (blocked) {
-      LOG.info("Unblocking updates for '" + Thread.currentThread().getName() +
-          "'");
+      LOG.info("Unblocking updates for region " + getRegionName() + " '" + 
+        Thread.currentThread().getName() + "'");
     }
   }
   
