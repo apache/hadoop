@@ -415,6 +415,12 @@ Branch 0.15 (unreleased changes)
     edits log. Reduce the number of syncs by double-buffering the changes
     to the transaction log. (Dhruba Borthakur)
 
+Release 0.14.3 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-2053. Fixed a dangling reference to a memory buffer in the map 
+    output sorter. (acmurthy via omalley)
 
     HADOOP-2036. Fix a NullPointerException in JvmMetrics class. (nigel)
 
