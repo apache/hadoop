@@ -421,6 +421,13 @@ Branch 0.15 (unreleased changes)
     to the transaction log. (Dhruba Borthakur)
 
 
+Release 0.14.3 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-2053. Fixed a dangling reference to a memory buffer in the map 
+    output sorter. (acmurthy via omalley)
+
 Release 0.14.2 - 2007-10-09
 
   BUG FIXES
