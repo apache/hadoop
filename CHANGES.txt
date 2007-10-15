@@ -287,8 +287,6 @@ Branch 0.15 (unreleased changes)
     HADOOP-2023. Disable TestLocalDirAllocator on Windows.
     (Hairong Kuang via nigel)
 
-    HADOOP-2036. Fix a NullPointerException in JvmMetrics class. (nigel)
-
     HADOOP-2016.  Ignore status-updates from FAILED/KILLED tasks at the 
     TaskTracker. This fixes a race-condition which caused the tasks to wrongly 
     remain in the RUNNING state even after being killed by the JobTracker and
@@ -427,6 +425,8 @@ Release 0.14.3 - Unreleased
 
     HADOOP-2053. Fixed a dangling reference to a memory buffer in the map 
     output sorter. (acmurthy via omalley)
+
+    HADOOP-2036. Fix a NullPointerException in JvmMetrics class. (nigel)
 
 Release 0.14.2 - 2007-10-09
 
