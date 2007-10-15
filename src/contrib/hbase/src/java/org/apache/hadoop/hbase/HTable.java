@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -543,6 +544,20 @@ public class HTable implements HConstants {
     }
     updateInProgress(true);
     batch.get().put(lockid, column, val);
+  }
+  
+  /** 
+   * Change a value for the specified column.
+   * Runs {@link #abort(long)} if exception thrown.
+   *
+   * @param lockid lock id returned from startUpdate
+   * @param column column whose value is being set
+   * @param val new value for column
+   * @throws IOException throws this if the writable can't be
+   * converted into a byte array 
+   */
+  public void put(long lockid, Text column, Writable val) throws IOException {    
+    put(lockid, column, Writables.getBytes(val));
   }
   
   /** 
