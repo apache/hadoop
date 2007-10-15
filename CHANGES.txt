@@ -8,6 +8,8 @@ Release 0.14.3 - Unreleased
     HADOOP-2053. Fixed a dangling reference to a memory buffer in the map 
     output sorter. (acmurthy via omalley)
 
+    HADOOP-2036. Fix a NullPointerException in JvmMetrics class. (nigel)
+
 Release 0.14.2 - 2007-10-09
 
   BUG FIXES
