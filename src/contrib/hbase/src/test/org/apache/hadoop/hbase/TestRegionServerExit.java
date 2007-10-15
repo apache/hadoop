@@ -67,7 +67,7 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
    * Test abort of region server.
    * @throws IOException
    */
-  public void REMOVEtestCleanExit() throws IOException {
+  public void testCleanExit() throws IOException {
     // When the META table can be opened, the region servers are running
     new HTable(this.conf, HConstants.META_TABLE_NAME);
     // Create table and add a row.
