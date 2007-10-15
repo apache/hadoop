@@ -79,18 +79,24 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
 
   @Override
   protected void setUp() throws Exception {
-    super.setUp();
     this.cluster =
       new MiniHBaseCluster(this.conf, this.regionServers, this.miniHdfs);
+    super.setUp();
   }
 
   @Override
   protected void tearDown() throws Exception {
     super.tearDown();
-    if (this.cluster != null) {
-      this.cluster.shutdown();
-    }
     HConnectionManager.deleteConnection(conf);
+    if (this.cluster != null) {
+      try {
+        this.cluster.shutdown();
+      } catch (Exception e) {
+        LOG.warn("Closing mini dfs", e);
+      }
+    }
+    // ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
+    //  "Temporary end-of-test thread dump debugging HADOOP-2040: " + getName());
   }
 
   

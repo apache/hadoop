@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +32,7 @@ import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Test HStoreFile
@@ -45,19 +47,25 @@ public class TestHStoreFile extends HBaseTestCase {
   /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
-    super.setUp();
     this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
     this.fs = cluster.getFileSystem();
     this.dir = new Path(DIR, getName());
+    super.setUp();
   }
   
   /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
-    if (this.cluster != null) {
-      this.cluster.shutdown();
-    }
     super.tearDown();
+    if (this.cluster != null) {
+      try {
+        this.cluster.shutdown();
+      } catch (Exception e) {
+        LOG.warn("Closing down mini DFS", e);
+      }
+    }
+    // ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
+    //  "Temporary end-of-test thread dump debugging HADOOP-2040: " + getName());
   }
   
   private Path writeMapFile(final String name)
