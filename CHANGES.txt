@@ -2,6 +2,19 @@ HBase Change Log
 
 
 Trunk (unreleased changes)
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+  IMPROVEMENTS
+    HADOOP-2401 Add convenience put method that takes writable
+                (Johan Oskarsson via Stack)
+
+Branch 0.15 (unreleased changes)
 
   INCOMPATIBLE CHANGES
     HADOOP-1931 Hbase scripts take --ARG=ARG_VALUE when should be like hadoop
