@@ -120,6 +120,10 @@ abstract class BasicTypeSorterBase implements BufferSorter {
     pointers = null;
     maxKeyLength = 0;
     maxValLength = 0;
+    
+    //release the large key-value buffer so that the GC, if necessary,
+    //can collect it away
+    keyValBuffer = null;
   }
   //A compare method that references the keyValBuffer through the indirect
   //pointers
