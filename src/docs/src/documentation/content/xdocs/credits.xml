@@ -13,18 +13,134 @@
 
 <section>
 <title>Committers</title>
+
+<p>Hadoop's active committers are:</p>
+
+<table>
+
+  <tr>
+    <th>username</th>
+    <th>name</th>
+    <th>organization</th>
+    <th>roles</th>
+    <th>timezone</th>
+  </tr>
+
+  <tr>
+    <td>ab</td>
+    <td>Andrzej Bialecki</td>
+    <td>Getopt</td>
+    <td></td>
+    <td>+1</td>
+  </tr>
+
+  <tr>
+    <td>acmurthy</td>
+    <td><a href="http://people.apache.org/~acmurthy">Arun C Murthy</a></td>
+    <td>Yahoo!</td>
+    <td></td>
+    <td>+5.5</td>
+  </tr>
+
+  <tr>
+    <td>cutting</td>
+    <td><a href="http://blog.lucene.com/">Doug Cutting</a></td>
+    <td>Yahoo!</td>
+    <td></td>
+    <td>-8</td>
+  </tr>
+
+  <tr>
+    <td>ddas</td>
+    <td><a href="http://people.apache.org/~ddas">Devaraj Das</a></td>
+    <td>Yahoo!</td>
+    <td></td>
+    <td>+5.5</td>
+  </tr>
+
+  <tr>
+    <td>dhruba</td>
+    <td>Dhruba Borthakur</td>
+    <td>Yahoo!</td>
+    <td></td>
+    <td>-8</td>
+  </tr>
+
+  <tr>
+    <td>enis</td>
+    <td><a href="http://people.apache.org/~enis">Enis Soztutar</a></td>
+    <td>Agmlab</td>
+    <td></td>
+    <td>+2</td>
+  </tr>
+
+  <tr>
+    <td>jimk</td>
+    <td>Jim Kellerman</td>
+    <td>Powerset</td>
+    <td>HBase</td>
+    <td>-8</td>
+  </tr>
+
+  <tr>
+    <td>nigel</td>
+    <td><a href="http://people.apache.org/~nigel">Nigel Daley</a></td>
+    <td>Yahoo!</td>
+    <td>QA</td>
+    <td>-8</td>
+  </tr>
+    
+  <tr>
+    <td>omalley</td>
+    <td><a href="http://people.apache.org/~omalley">Owen O'Malley</a></td>
+    <td>Yahoo!</td>
+    <td></td>
+    <td>-8</td>
+  </tr>
+    
+  <tr>
+    <td>stack</td>
+    <td>Michael Stack</td>
+    <td>Powerset</td>
+    <td>HBase</td>
+    <td>-8</td>
+  </tr>
+    
+  <tr>
+    <td>taton</td>
+    <td><a href="http://people.apache.org/~taton">Christophe Taton</a></td>
+    <td>INRIA</td>
+    <td></td>
+    <td>+1</td>
+  </tr>
+    
+  <tr>
+    <td>tomwhite</td>
+    <td><a href="http://weblogs.java.net/blog/tomwhite/">Tom White</a></td>
+    <td></td>
+    <td></td>
+    <td>0</td>
+  </tr>
+
+</table>
+</section>
+
+<section>
+<title>Contributors</title>
+
+<p>A list of Hadoop contributors and their contributions is available from
+<a href="https://issues.apache.org/jira/secure/ConfigureReport.jspa?versionId=-2&amp;selectedProjectId=12310240&amp;reportKey=com.sourcelabs.jira.plugin.report.contributions%3Acontributionreport&amp;Next=Next">Jira</a>
+</p>
+
+</section>
+
+<section>
+<title>Emeriti</title>
+
+<p>Committers who are no longer active on Hadoop are:</p>
+
 <ul>
-  <li>Andrzej Bialecki</li>
   <li>Mike Cafarella</li>
-  <li><a href="http://blog.lucene.com/">Doug Cutting</a></li>
-  <li><a href="http://people.apache.org/~nigel">Nigel Daley</a></li>
-  <li>Jim Kellerman (contrib/hbase)</li>
-  <li><a href="http://people.apache.org/~omalley">Owen O'Malley</a></li>
-  <li><a href="http://weblogs.java.net/blog/tomwhite/">Tom White</a></li>
-  <li><a href="http://people.apache.org/~acmurthy">Arun C Murthy</a></li>
-  <li><a href="http://people.apache.org/~ddas">Devaraj Das</a></li>
-  <li><a href="http://people.apache.org/~enis">Enis Soztutar</a></li>
-  <li><a href="http://people.apache.org/~taton">Christophe Taton</a></li>
 </ul>
 </section>
 
