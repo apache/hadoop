@@ -44,6 +44,12 @@
       <title>News</title>
 
       <section>
+        <title>19 October, 2007: release 0.14.3 available </title>
+	<p>This release fixes critical bugs in release 0.14.2.</p>
+      </section>
+
+
+      <section>
         <title> 9 October, 2007: release 0.14.2 available </title>
 	<p>This release fixes critical bugs in release 0.14.1.</p>
       </section>
@@ -70,9 +76,9 @@
 	and new features.  Performance and reliability are better than
 	ever.</p>
 
-	<note>When upgrading an existing HDFS filesystem to this
-	release, you should first start HDFS with 'bin/start-dfs.sh
-	-upgrade'.  See the <a
+	<note>When upgrading an existing HDFS filesystem to a 0.14.x
+	release from a 0.13.x or earlier release, you should first
+	start HDFS with 'bin/start-dfs.sh -upgrade'.  See the <a
 	href="http://wiki.apache.org/lucene-hadoop/Hadoop_0.14_Upgrade">Hadoop
 	0.14 Upgrade</a> page for details.</note>
 
