@@ -427,7 +427,7 @@ Branch 0.15 (unreleased changes)
     to the transaction log. (Dhruba Borthakur)
 
 
-Release 0.14.3 - Unreleased
+Release 0.14.3 - 2007-10-19
 
   BUG FIXES
 
@@ -435,6 +435,10 @@ Release 0.14.3 - Unreleased
     output sorter. (acmurthy via omalley)
 
     HADOOP-2036. Fix a NullPointerException in JvmMetrics class. (nigel)
+
+    HADOOP-2043. Release 0.14.2 was compiled with Java 1.6 rather than
+    Java 1.5.  (cutting)
+
 
 Release 0.14.2 - 2007-10-09
 
