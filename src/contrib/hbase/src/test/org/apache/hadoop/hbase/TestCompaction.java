@@ -119,11 +119,12 @@ public class TestCompaction extends HBaseTestCase {
     Text secondRow = new Text(secondRowBytes);
     bytes = this.r.get(secondRow, COLUMN_FAMILY_TEXT, 100/*Too many*/);
     LOG.info("Count of " + secondRow + ": " + bytes.length);
-    // Commented out because fails on an hp+ubuntu though passes on all local
+    // Commented out because fails on an hp+ubuntu single-processor w/ 1G and
+    // "Intel(R) Pentium(R) 4 CPU 3.20GHz" though passes on all local
     // machines and even on hudson.  On said machine, its reporting in the
     // LOG line above that there are 3 items in row so it should pass the
     // below test.
-    // assertTrue(bytes.length == 3 || bytes.length == 4);
+    assertTrue(bytes.length == 3 || bytes.length == 4);
 
     // Now add deletes to memcache and then flush it.  That will put us over
     // the compaction threshold of 3 store files.  Compacting these store files
@@ -136,9 +137,13 @@ public class TestCompaction extends HBaseTestCase {
     assertNull(this.r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/));
     this.r.flushcache(false);
     assertNull(this.r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/));
-    // Commenting out to fix build.  Failing on hp+ubunutu combination
-    // "Intel(R) Pentium(R) 4 CPU 3.20GHz".   
-    // assertTrue(this.r.needsCompaction());
+    // Add a bit of data and flush it so we for sure have the compaction limit
+    // for store files.  Usually by this time we will have but if compaction
+    // included the flush that ran 'concurrently', there may be just the
+    // compacted store and the flush above when we added deletes.  Add more
+    // content to be certain.
+    createBunchOfSmallStoreFiles(this.r);
+    assertTrue(this.r.needsCompaction());
     this.r.compactStores();
     // Assert that the first row is still deleted.
     bytes = this.r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);
@@ -161,5 +166,17 @@ public class TestCompaction extends HBaseTestCase {
       addContent(loader, COLUMN_FAMILY);
     }
     region.flushcache(false);
+  }
+
+  private void createBunchOfSmallStoreFiles(final HRegion region)
+  throws IOException {
+    final String xyz = new String("xyz");
+    byte [] bytes = xyz.getBytes();
+    for (int i = 0; i < 1; i++) {
+      long lid = region.startUpdate(new Text(xyz));
+      region.put(lid, COLUMN_FAMILY_TEXT, bytes);
+      region.commit(lid);
+      region.flushcache(false);
+    }
   }
 }
