@@ -118,6 +118,9 @@ Branch 0.15 (unreleased changes)
     HADOOP-1774. Remove use of INode.parent in Block CRC upgrade.
     (Raghu Angadi via dhruba)
 
+    HADOOP-1788.  Increase the buffer size on the Pipes command socket.
+    (Amareshwari Sri Ramadasu and Christian Kunz via omalley)
+
   BUG FIXES
 
     HADOOP-1946.  The Datanode code does not need to invoke du on
