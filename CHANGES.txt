@@ -38,6 +38,7 @@ Branch 0.15 (unreleased changes)
     HADOOP-1913 Build a Lucene index on an HBase table
                 (Ning Li via Stack)
     HADOOP-1957 Web UI with report on cluster state and basic browsing of tables
+    HADOOP-2061 Add new Base64 dialects
 
   OPTIMIZATIONS
 
