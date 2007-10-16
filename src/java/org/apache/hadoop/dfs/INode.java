@@ -116,6 +116,13 @@ abstract class INode implements Comparable<byte[]> {
   }
 
   /**
+   * Is this inode being constructed?
+   */
+  boolean isUnderConstruction() {
+    return false;
+  }
+
+  /**
    * Breaks file path into components.
    * @param path
    * @return array of byte arrays each of which represents 
@@ -625,6 +632,14 @@ class INodeFileUnderConstruction extends INodeFile {
 
   DatanodeDescriptor getClientNode() {
     return clientNode;
+  }
+
+  /**
+   * Is this inode being constructed?
+   */
+  @Override
+  boolean isUnderConstruction() {
+    return true;
   }
 
   //
