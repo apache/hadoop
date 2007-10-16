@@ -44,6 +44,11 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
   implements DownwardProtocol<K1, V1> {
   
   public static final int CURRENT_PROTOCOL_VERSION = 0;
+  /**
+   * The buffer size for the command socket
+   */
+  private static final int BUFFER_SIZE = 128*1024;
+
   private DataOutputStream stream;
   private DataOutputBuffer buffer = new DataOutputBuffer();
   private static final Log LOG = 
@@ -87,7 +92,8 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
     public UplinkReaderThread(InputStream stream,
                               UpwardProtocol<K2, V2> handler, 
                               K2 key, V2 value) throws IOException{
-      inStream = new DataInputStream(stream);
+      inStream = new DataInputStream(new BufferedInputStream(stream, 
+                                                             BUFFER_SIZE));
       this.handler = handler;
       this.key = key;
       this.value = value;
@@ -207,7 +213,8 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
     if (Submitter.getKeepCommandFile(config)) {
       raw = new TeeOutputStream("downlink.data", raw);
     }
-    stream = new DataOutputStream(raw);
+    stream = new DataOutputStream(new BufferedOutputStream(raw, 
+                                                           BUFFER_SIZE)) ;
     uplink = new UplinkReaderThread<K2, V2>(sock.getInputStream(),
                                             handler, key, value);
     uplink.setName("pipe-uplink-handler");
@@ -287,6 +294,7 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
   public void close() throws IOException {
     WritableUtils.writeVInt(stream, MessageType.CLOSE.code);
     LOG.debug("Sent close command");
+    stream.flush();
   }
   
   public void abort() throws IOException {

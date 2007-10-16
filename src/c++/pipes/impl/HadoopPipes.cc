@@ -855,6 +855,8 @@ namespace HadoopPipes {
       int sock = -1;
       FILE* stream = NULL;
       FILE* outStream = NULL;
+      char *bufin = NULL;
+      char *bufout = NULL;
       if (portStr) {
         sock = socket(PF_INET, SOCK_STREAM, 0);
         HADOOP_ASSERT(sock != - 1,
@@ -866,8 +868,22 @@ namespace HadoopPipes {
         HADOOP_ASSERT(connect(sock, (sockaddr*) &addr, sizeof(addr)) == 0,
                       string("problem connecting command socket: ") +
                       strerror(errno));
+
         stream = fdopen(sock, "r");
         outStream = fdopen(sock, "w");
+
+        // increase buffer size
+        int bufsize = 128*1024;
+        int setbuf;
+        bufin = new char[bufsize];
+        bufout = new char[bufsize];
+        setbuf = setvbuf(stream, bufin, _IOFBF, bufsize);
+        HADOOP_ASSERT(setbuf == 0, string("problem with setvbuf for inStream: ")
+                                     + strerror(errno));
+        setbuf = setvbuf(outStream, bufout, _IOFBF, bufsize);
+        HADOOP_ASSERT(setbuf == 0, string("problem with setvbuf for outStream: ")
+                                     + strerror(errno));
+
         connection = new BinaryProtocol(stream, context, outStream);
       } else if (getenv("hadoop.pipes.command.file")) {
         char* filename = getenv("hadoop.pipes.command.file");
@@ -907,6 +923,8 @@ namespace HadoopPipes {
       if (outStream != NULL) {
         //fclose(outStream);
       } 
+      delete bufin;
+      delete bufout;
       return true;
     } catch (Error& err) {
       fprintf(stderr, "Hadoop Pipes Exception: %s\n", 
