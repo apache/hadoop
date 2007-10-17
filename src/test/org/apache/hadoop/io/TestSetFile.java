@@ -30,7 +30,7 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 
 /** Support for flat files of binary key/value pairs. */
 public class TestSetFile extends TestCase {
-  private static Log LOG = SequenceFile.LOG;
+  private static final Log LOG = LogFactory.getLog(TestSetFile.class);
   private static String FILE =
     System.getProperty("test.build.data",".") + "/test.set";
 

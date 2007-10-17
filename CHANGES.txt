@@ -321,6 +321,10 @@ Branch 0.15 (unreleased changes)
     null was missing and hence NPE would be thrown sometimes. This issue fixes
     that problem.  (Amareshwari Sri Ramadasu via ddas) 
 
+    HADOOP-2033.  The SequenceFile.Writer.sync method was a no-op, which caused
+    very uneven splits for applications like distcp that count on them.
+    (omalley)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 

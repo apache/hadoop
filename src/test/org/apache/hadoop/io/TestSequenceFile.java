@@ -35,7 +35,7 @@ import org.apache.hadoop.conf.*;
 
 /** Support for flat files of binary key/value pairs. */
 public class TestSequenceFile extends TestCase {
-  private static Log LOG = SequenceFile.LOG;
+  private static final Log LOG = LogFactory.getLog(TestSequenceFile.class);
 
   private static Configuration conf = new Configuration();
   

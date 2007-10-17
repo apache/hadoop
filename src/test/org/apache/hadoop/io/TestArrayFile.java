@@ -28,7 +28,7 @@ import org.apache.hadoop.conf.*;
 
 /** Support for flat files of binary key/value pairs. */
 public class TestArrayFile extends TestCase {
-  private static Log LOG = SequenceFile.LOG;
+  private static final Log LOG = LogFactory.getLog(TestArrayFile.class);
   private static String FILE =
     System.getProperty("test.build.data",".") + "/test.array";
 

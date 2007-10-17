@@ -19,6 +19,9 @@
 package org.apache.hadoop.io;
 
 import java.io.*;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.Progressable;
@@ -44,6 +47,8 @@ import org.apache.hadoop.io.compress.DefaultCodec;
  * SequenceFile.Sorter}.
  */
 public class MapFile {
+  private static final Log LOG = LogFactory.getLog(MapFile.class);
+
   /** The name of the index file. */
   public static final String INDEX_FILE_NAME = "index";
 
@@ -302,7 +307,7 @@ public class MapFile {
           count++;
         }
       } catch (EOFException e) {
-        SequenceFile.LOG.warn("Unexpected EOF reading " + index +
+        LOG.warn("Unexpected EOF reading " + index +
                               " at entry #" + count + ".  Ignoring.");
       } finally {
 	indexClosed = true;
