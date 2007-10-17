@@ -51,8 +51,8 @@ public class MiniHBaseCluster implements HConstants {
   private boolean shutdownDFS;
   private Path parentdir;
   private MasterThread masterThread = null;
-  ArrayList<RegionServerThread> regionThreads =
-    new ArrayList<RegionServerThread>();
+  List<RegionServerThread> regionThreads =
+    java.util.Collections.synchronizedList(new ArrayList<RegionServerThread>());
   private boolean deleteOnExit = true;
 
   /**
@@ -460,7 +460,7 @@ public class MiniHBaseCluster implements HConstants {
     }
   }
 
-  public ArrayList<RegionServerThread> getRegionThreads() {
+  public List<RegionServerThread> getRegionThreads() {
     return this.regionThreads;
   }
 }

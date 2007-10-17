@@ -40,10 +40,10 @@ public class MultiRegionTable extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(MultiRegionTable.class.getName());
 
   /**
-   * Make a multi-region table.  Presumption is that table already exists.
-   * Makes it multi-region by filling with data and provoking splits.
-   * Asserts parent region is cleaned up after its daughter splits release all
-   * references.
+   * Make a multi-region table.  Presumption is that table already exists and
+   * that there is only one regionserver. Makes it multi-region by filling with
+   * data and provoking splits. Asserts parent region is cleaned up after its
+   * daughter splits release all references.
    * @param conf
    * @param cluster
    * @param localFs
@@ -75,14 +75,28 @@ public class MultiRegionTable extends HBaseTestCase {
     int count = count(meta, tableName);
     HTable t = new HTable(conf, new Text(tableName));
     addContent(new HTableIncommon(t), columnName);
+    LOG.info("Finished content loading");
     
     // All is running in the one JVM so I should be able to get the single
     // region instance and bring on a split.
-    HRegionInfo hri =
-      t.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
-    HRegion r = cluster.regionThreads.get(0).getRegionServer().
-      onlineRegions.get(hri.getRegionName());
-    
+    // Presumption is that there is only one regionserver.
+    HRegionInfo hri = null;
+    HRegion r = null;
+    for (int i = 0; i < 30; i++) {
+      hri = t.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
+      LOG.info("Region location: " + hri);
+      r = cluster.getRegionThreads().get(0).getRegionServer().
+          onlineRegions.get(hri.getRegionName());
+      if (r != null) {
+        break;
+      }
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        LOG.warn("Waiting on region to come online", e);
+      }
+    }
+
     // Flush will provoke a split next time the split-checker thread runs.
     r.flushcache(false);
     
@@ -109,6 +123,7 @@ public class MultiRegionTable extends HBaseTestCase {
     Map<Text, byte []> data = getSplitParentInfo(meta, hri);
     HRegionInfo parent =
       Writables.getHRegionInfoOrNull(data.get(HConstants.COL_REGIONINFO));
+    LOG.info("Found parent region: " + parent);
     assertTrue(parent.isOffline());
     assertTrue(parent.isSplit());
     HRegionInfo splitA =
@@ -227,7 +242,8 @@ public class MultiRegionTable extends HBaseTestCase {
         }
         // Make sure I get the parent.
         if (hri.getRegionName().toString().
-            equals(parent.getRegionName().toString())) {
+            equals(parent.getRegionName().toString()) &&
+              hri.getRegionId() == parent.getRegionId()) {
           return curVals;
         }
       }
