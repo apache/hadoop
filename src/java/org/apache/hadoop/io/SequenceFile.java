@@ -20,7 +20,6 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 import java.util.*;
-import java.net.InetAddress;
 import java.rmi.server.UID;
 import java.security.MessageDigest;
 import org.apache.commons.logging.*;
@@ -43,8 +42,7 @@ import org.apache.hadoop.util.PriorityQueue;
 
 /** Support for flat files of binary key/value pairs. */
 public class SequenceFile {
-  public static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.io.SequenceFile");
+  private static final Log LOG = LogFactory.getLog(SequenceFile.class);
 
   private SequenceFile() {}                         // no public ctor
 
@@ -757,6 +755,11 @@ public class SequenceFile {
     
     /** create a sync point */
     public void sync() throws IOException {
+      if (sync != null && lastSyncPos != out.getPos()) {
+        out.writeInt(SYNC_ESCAPE);                // mark the start of the sync
+        out.write(sync);                          // write sync
+        lastSyncPos = out.getPos();               // update lastSyncPos
+      }
     }
 
     /** Returns the configuration of this file. */
@@ -780,10 +783,7 @@ public class SequenceFile {
     synchronized void checkAndWriteSync() throws IOException {
       if (sync != null &&
           out.getPos() >= lastSyncPos+SYNC_INTERVAL) { // time to emit sync
-        lastSyncPos = out.getPos();               // update lastSyncPos
-        //LOG.info("sync@"+lastSyncPos);
-        out.writeInt(SYNC_ESCAPE);                // escape it
-        out.write(sync);                          // write sync
+        sync();
       }
     }
 
@@ -955,10 +955,6 @@ public class SequenceFile {
       val.writeCompressedBytes(out);              // 'value' data
     }
     
-
-    public void sync() throws IOException {
-    }
-   
   } // RecordCompressionWriter
 
   /** Write compressed key/value blocks to a sequence-format file. */
@@ -1045,13 +1041,9 @@ public class SequenceFile {
     }
     
     /** Compress and flush contents to dfs */
-    private synchronized void writeBlock() throws IOException {
+    public synchronized void sync() throws IOException {
       if (noBufferedRecords > 0) {
-        // Write 'sync' marker
-        if (sync != null) {
-          out.writeInt(SYNC_ESCAPE);
-          out.write(sync);
-        }
+        super.sync();
         
         // No. of records
         WritableUtils.writeVInt(out, noBufferedRecords);
@@ -1080,13 +1072,9 @@ public class SequenceFile {
     /** Close the file. */
     public synchronized void close() throws IOException {
       if (out != null) {
-        writeBlock();
+        sync();
       }
       super.close();
-    }
-
-    public void sync() throws IOException {
-      writeBlock();
     }
 
     /** Append a key/value pair. */
@@ -1116,7 +1104,7 @@ public class SequenceFile {
       // Compress and flush?
       int currentBlockSize = keyBuffer.getLength() + valBuffer.getLength();
       if (currentBlockSize >= compressionBlockSize) {
-        writeBlock();
+        sync();
       }
     }
     
@@ -1144,7 +1132,7 @@ public class SequenceFile {
       // Compress and flush?
       int currentBlockSize = keyBuffer.getLength() + valBuffer.getLength(); 
       if (currentBlockSize >= compressionBlockSize) {
-        writeBlock();
+        sync();
       }
     }
   
@@ -1586,15 +1574,26 @@ public class SequenceFile {
       return more;
     }
     
-    private synchronized int checkAndReadSync(int length) 
-      throws IOException {
+    /**
+     * Read and return the next record length, potentially skipping over 
+     * a sync block.
+     * @return the length of the next record or -1 if there is no next record
+     * @throws IOException
+     */
+    private synchronized int readRecordLength() throws IOException {
+      if (in.getPos() >= end) {
+        return -1;
+      }      
+      int length = in.readInt();
       if (version > 1 && sync != null &&
           length == SYNC_ESCAPE) {              // process a sync entry
-        //LOG.info("sync@"+in.getPos());
         in.readFully(syncCheck);                // read syncCheck
         if (!Arrays.equals(sync, syncCheck))    // check it
           throw new IOException("File is corrupt!");
         syncSeen = true;
+        if (in.getPos() >= end) {
+          return -1;
+        }
         length = in.readInt();                  // re-read length
       } else {
         syncSeen = false;
@@ -1614,11 +1613,11 @@ public class SequenceFile {
         throw new IOException("Unsupported call for block-compressed" +
                               " SequenceFiles - use SequenceFile.Reader.next(DataOutputStream, ValueBytes)");
       }
-      if (in.getPos() >= end)
-        return -1;
-
       try {
-        int length = checkAndReadSync(in.readInt());
+        int length = readRecordLength();
+        if (length == -1) {
+          return -1;
+        }
         int keyLength = in.readInt();
         buffer.write(in, length);
         return keyLength;
@@ -1642,16 +1641,16 @@ public class SequenceFile {
      * Read 'raw' records.
      * @param key - The buffer into which the key is read
      * @param val - The 'raw' value
-     * @return Returns the total record length
+     * @return Returns the total record length or -1 for end of file
      * @throws IOException
      */
     public synchronized int nextRaw(DataOutputBuffer key, ValueBytes val) 
       throws IOException {
       if (!blockCompressed) {
-        if (in.getPos() >= end) 
+        int length = readRecordLength();
+        if (length == -1) {
           return -1;
-
-        int length = checkAndReadSync(in.readInt());
+        }
         int keyLength = in.readInt();
         int valLength = length - keyLength;
         key.write(in, keyLength);
@@ -1701,16 +1700,16 @@ public class SequenceFile {
     /**
      * Read 'raw' keys.
      * @param key - The buffer into which the key is read
-     * @return Returns the key length
+     * @return Returns the key length or -1 for end of file
      * @throws IOException
      */
     public int nextRawKey(DataOutputBuffer key) 
       throws IOException {
       if (!blockCompressed) {
-        if (in.getPos() >= end) 
+        recordLength = readRecordLength();
+        if (recordLength == -1) {
           return -1;
-
-        recordLength = checkAndReadSync(in.readInt());
+        }
         keyLength = in.readInt();
         key.write(in, keyLength);
         return keyLength;
