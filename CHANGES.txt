@@ -299,6 +299,10 @@ Branch 0.15 (unreleased changes)
     specified and the destination does not need to exist.
     (Chris Douglas via nigel)
 
+    HADOOP-2051. The TaskCommit thread should not die for exceptions other
+    than the InterruptedException. This behavior is there for the other long
+    running threads in the JobTracker. (Arun C Murthy via ddas)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
