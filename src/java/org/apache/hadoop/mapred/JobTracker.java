@@ -1471,6 +1471,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    * Grab the local fs name
    */
   public synchronized String getFilesystemName() throws IOException {
+    if (fs == null) {
+      throw new IllegalStateException("FileSystem object not available yet");
+    }
     return fs.getName();
   }
 
