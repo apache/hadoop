@@ -314,6 +314,11 @@ Branch 0.15 (unreleased changes)
     than the InterruptedException. This behavior is there for the other long
     running threads in the JobTracker. (Arun C Murthy via ddas)
 
+    HADOOP-1973. The FileSystem object would be accessed on the JobTracker
+    through a RPC in the InterTrackerProtocol. The check for the object being
+    null was missing and hence NPE would be thrown sometimes. This issue fixes
+    that problem.  (Amareshwari Sri Ramadasu via ddas) 
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
