@@ -299,6 +299,9 @@ Branch 0.15 (unreleased changes)
     specified and the destination does not need to exist.
     (Chris Douglas via nigel)
 
+    HADOOP-2044. The namenode protects all lease manipulations using a 
+    sortedLease lock.  (Dhruba Borthakur)
+
     HADOOP-2051. The TaskCommit thread should not die for exceptions other
     than the InterruptedException. This behavior is there for the other long
     running threads in the JobTracker. (Arun C Murthy via ddas)

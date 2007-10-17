@@ -835,7 +835,7 @@ class FSNamesystem implements FSConstants {
     }
     try {
       INode myFile = dir.getFileINode(src);
-      if (myFile != null && (myFile instanceof INodeFileUnderConstruction)) {
+      if (myFile != null && myFile.isUnderConstruction()) {
         INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) myFile;
         //
         // If the file is under construction , then it must be in our
@@ -868,12 +868,14 @@ class FSNamesystem implements FSConstants {
         // to proceed. Otherwise, prevent this request from creating file.
         //
         if (lease.expiredSoftLimit()) {
-          lease.releaseLocks();
-          removeLease(lease.getHolder());
-          LOG.info("Removing lease " + lease + " ");
-          if (!sortedLeases.remove(lease)) {
-            LOG.error("Unknown failure trying to remove " + lease + 
-                      " from lease set.");
+          synchronized (sortedLeases) {
+            lease.releaseLocks();
+            removeLease(lease.getHolder());
+            LOG.info("startFile: Removing lease " + lease + " ");
+            if (!sortedLeases.remove(lease)) {
+              LOG.error("startFile: Unknown failure trying to remove " + lease + 
+                        " from lease set.");
+            }
           }
         } else {
           throw new AlreadyBeingCreatedException(
@@ -903,7 +905,7 @@ class FSNamesystem implements FSConstants {
       DatanodeDescriptor clientNode = 
         host2DataNodeMap.getDatanodeByHost(clientMachine);
 
-      synchronized (leases) {
+      synchronized (sortedLeases) {
         Lease lease = getLease(holder);
         if (lease == null) {
           lease = new Lease(holder);
@@ -969,10 +971,11 @@ class FSNamesystem implements FSConstants {
       //
       // make sure that we still have the lease on this file
       //
-      INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) dir.getFileINode(src);
-      if (pendingFile == null) {
+      INodeFile iFile = dir.getFileINode(src);
+      if (iFile == null || !iFile.isUnderConstruction()) {
         throw new LeaseExpiredException("No lease on " + src);
       }
+      INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) iFile;
       if (!pendingFile.getClientName().equals(clientName)) {
         throw new LeaseExpiredException("Lease mismatch on " + src + " owned by "
                                         + pendingFile.getClientName()
@@ -1032,7 +1035,7 @@ class FSNamesystem implements FSConstants {
                                                  String holder
                                                  ) throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.abandonFileInProgress:" + src);
-    synchronized (leases) {
+    synchronized (sortedLeases) {
       // find the lease
       Lease lease = getLease(holder);
       if (lease != null) {
@@ -1067,9 +1070,14 @@ class FSNamesystem implements FSConstants {
     NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " + src + " for " + holder);
     if (isInSafeMode())
       throw new SafeModeException("Cannot complete file " + src, safeMode);
-    INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) dir.getFileINode(src);
+    INode iFile = dir.getFileINode(src);
+    INodeFileUnderConstruction pendingFile = null;
+    Block[] fileBlocks = null;
 
-    Block[] fileBlocks =  dir.getFileBlocks(src);
+    if (iFile != null && iFile.isUnderConstruction()) {
+      pendingFile = (INodeFileUnderConstruction) iFile;
+      fileBlocks =  dir.getFileBlocks(src);
+    }
     if (fileBlocks == null || fileBlocks.length == 0 ||
         pendingFile == null) {    
       NameNode.stateChangeLog.warn("DIR* NameSystem.completeFile: "
@@ -1097,7 +1105,7 @@ class FSNamesystem implements FSConstants {
     NameNode.stateChangeLog.debug("DIR* NameSystem.completeFile: " + src
                                   + " blocklist persisted");
 
-    synchronized (leases) {
+    synchronized (sortedLeases) {
       Lease lease = getLease(holder);
       if (lease != null) {
         lease.completedCreate(src);
@@ -1517,7 +1525,7 @@ class FSNamesystem implements FSConstants {
       try {
         while (fsRunning) {
           synchronized (FSNamesystem.this) {
-            synchronized (leases) {
+            synchronized (sortedLeases) {
               Lease top;
               while ((sortedLeases.size() > 0) &&
                      ((top = sortedLeases.first()) != null)) {
@@ -1563,14 +1571,20 @@ class FSNamesystem implements FSConstants {
    * @param holder The datanode that was creating the file
    */
   private void internalReleaseCreate(String src, String holder) throws IOException {
-    INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) dir.getFileINode(src);
-
-    if (pendingFile == null) {
+    INodeFile iFile = dir.getFileINode(src);
+    if (iFile == null) {
       NameNode.stateChangeLog.warn("DIR* NameSystem.internalReleaseCreate: "
                                    + "attempt to release a create lock on "
                                    + src + " file does not exist.");
       return;
     }
+    if (!iFile.isUnderConstruction()) {
+      NameNode.stateChangeLog.warn("DIR* NameSystem.internalReleaseCreate: "
+                                   + "attempt to release a create lock on "
+                                   + src + " but file is already closed.");
+      return;
+    }
+    INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) iFile;
 
     // The last block that was allocated migth not have been used by the
     // client. In this case, the size of the last block would be 0. A fsck
@@ -1601,7 +1615,7 @@ class FSNamesystem implements FSConstants {
    * Renew the lease(s) held by the given client
    */
   public void renewLease(String holder) throws IOException {
-    synchronized (leases) {
+    synchronized (sortedLeases) {
       if (isInSafeMode())
         throw new SafeModeException("Cannot renew lease for " + holder, safeMode);
       Lease lease = getLease(holder);
@@ -2297,7 +2311,7 @@ class FSNamesystem implements FSConstants {
     // if file is being actively written to, then do not check 
     // replication-factor here. It will be checked when the file is closed.
     //
-    if (fileINode == null || fileINode instanceof INodeFileUnderConstruction) {
+    if (fileINode == null || fileINode.isUnderConstruction()) {
       return block;
     }
         
