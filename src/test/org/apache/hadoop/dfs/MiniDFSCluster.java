@@ -153,7 +153,7 @@ public class MiniDFSCluster {
   }
   
   /**
-   * Modify the config and start up the DataNodes.  The info port for
+   * Modify the config and start up additional DataNodes.  The info port for
    * DataNodes is guaranteed to use a free port.
    *
    * @param conf the base configuration to use in starting the DataNodes.  This
@@ -173,6 +173,11 @@ public class MiniDFSCluster {
     if (nameNode == null) {
       throw new IllegalStateException("NameNode is not running");
     }
+    
+    if (racks != null && numDataNodes > racks.length ) {
+      throw new IllegalArgumentException( "The length of racks [" + racks.length
+          + "] is less than the number of datanodes [" + numDataNodes + "].");
+    }
 
     // Set up the right ports for the datanodes
     conf.setInt("dfs.datanode.info.port", 0);
@@ -187,7 +192,8 @@ public class MiniDFSCluster {
                     null : new String[] {"-"+operation.toString()};
     String [] dnArgs = (operation == StartupOption.UPGRADE) ? null : args;
     
-    for (int i = 0; i < numDataNodes; i++) {
+    int curDatanodesNum = dataNodes.size();
+    for (int i = curDatanodesNum; i < curDatanodesNum+numDataNodes; i++) {
       Configuration dnConf = new Configuration(conf);
       if (manageDfsDirs) {
         File dir1 = new File(data_dir, "data"+(2*i+1));
@@ -200,8 +206,8 @@ public class MiniDFSCluster {
         }
         dnConf.set("dfs.data.dir", dir1.getPath() + "," + dir2.getPath()); 
       }
-      if (racks != null && i < racks.length) {
-        dnConf.set("dfs.datanode.rack", racks[i]);
+      if (racks != null) {
+        dnConf.set("dfs.datanode.rack", racks[i-curDatanodesNum]);
       }
       System.out.println("Starting DataNode " + i + " with dfs.data.dir: " 
                          + dnConf.get("dfs.data.dir"));
