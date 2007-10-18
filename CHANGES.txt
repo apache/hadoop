@@ -325,6 +325,10 @@ Branch 0.15 (unreleased changes)
     very uneven splits for applications like distcp that count on them.
     (omalley)
 
+    HADOOP-2070.  Added a flush method to pipes' DownwardProtocol and call
+    that before waiting for the application to finish to ensure all buffered
+    data is flushed. (Owen O'Malley via acmurthy)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 

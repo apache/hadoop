@@ -76,7 +76,7 @@ class PipesMapRunner<K1 extends WritableComparable, V1 extends Writable,
           // map pair to output
           downlink.mapItem(key, value);
         }
-        downlink.close();
+        downlink.endOfInput();
       }
       application.waitForFinish();
     } catch (Throwable t) {

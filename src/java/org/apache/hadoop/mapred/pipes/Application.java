@@ -51,7 +51,7 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
   private Process process;
   private Socket clientSocket;
   private OutputHandler<K2, V2> handler;
-  private BinaryProtocol<K1, V1, K2, V2> downlink;
+  private DownwardProtocol<K1, V1> downlink;
 
   /**
    * Start the child process to handle the task for us.
@@ -109,6 +109,7 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
    * @throws Throwable
    */
   boolean waitForFinish() throws Throwable {
+    downlink.flush();
     return handler.waitForFinish();
   }
 
@@ -121,6 +122,7 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     LOG.info("Aborting because of " + StringUtils.stringifyException(t));
     try {
       downlink.abort();
+      downlink.flush();
     } catch (IOException e) {
       // IGNORE cleanup problems
     }
@@ -141,7 +143,7 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
   void cleanup() throws IOException {
     serverSocket.close();
     try {
-      downlink.closeConnection();
+      downlink.close();
     } catch (InterruptedException ie) {
       Thread.currentThread().interrupt();
     }      

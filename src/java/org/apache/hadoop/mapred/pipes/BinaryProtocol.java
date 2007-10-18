@@ -226,7 +226,7 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
    * @throws IOException
    * @throws InterruptedException
    */
-  public void closeConnection() throws IOException, InterruptedException {
+  public void close() throws IOException, InterruptedException {
     LOG.debug("closing connection");
     stream.close();
     uplink.closeConnection();
@@ -291,15 +291,18 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
     writeObject(value);
   }
 
-  public void close() throws IOException {
+  public void endOfInput() throws IOException {
     WritableUtils.writeVInt(stream, MessageType.CLOSE.code);
     LOG.debug("Sent close command");
-    stream.flush();
   }
   
   public void abort() throws IOException {
     WritableUtils.writeVInt(stream, MessageType.ABORT.code);
     LOG.debug("Sent abort command");
+  }
+
+  public void flush() throws IOException {
+    stream.flush();
   }
 
   /**
