@@ -33,23 +33,23 @@ public class TestTable extends HBaseClusterTestCase {
     final HBaseAdmin admin = new HBaseAdmin(conf);
     String msg = null;
     try {
-      admin.createTable(HGlobals.rootTableDesc);
+      admin.createTable(HTableDescriptor.rootTableDesc);
     } catch (IllegalArgumentException e) {
       msg = e.toString();
     }
     assertTrue("Unexcepted exception message " + msg, msg != null &&
       msg.startsWith(IllegalArgumentException.class.getName()) &&
-      msg.contains(HGlobals.rootTableDesc.getName().toString()));
+      msg.contains(HTableDescriptor.rootTableDesc.getName().toString()));
     
     msg = null;
     try {
-      admin.createTable(HGlobals.metaTableDesc);
+      admin.createTable(HTableDescriptor.metaTableDesc);
     } catch(IllegalArgumentException e) {
       msg = e.toString();
     }
     assertTrue("Unexcepted exception message " + msg, msg != null &&
       msg.startsWith(IllegalArgumentException.class.getName()) &&
-      msg.contains(HGlobals.metaTableDesc.getName().toString()));
+      msg.contains(HTableDescriptor.metaTableDesc.getName().toString()));
     
     // Try doing a duplicate database create.
     msg = null;

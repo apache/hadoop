@@ -122,6 +122,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // is name of the webapp and the attribute name used stuffing this instance
   // into web context.
   InfoServer infoServer;
+  
+  /** region server process name */
   public static final String REGIONSERVER = "regionserver";
 
   // Check to see if regions should be split
@@ -220,7 +222,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // splitting a 'normal' region, and the ROOT table needs to be
       // updated if we are splitting a META region.
       HTable t = null;
-      if (region.getRegionInfo().tableDesc.getName().equals(META_TABLE_NAME)) {
+      if (region.getRegionInfo().getTableDesc().getName().equals(META_TABLE_NAME)) {
         // We need to update the root region
         if (this.root == null) {
           this.root = new HTable(conf, ROOT_TABLE_NAME);
@@ -238,8 +240,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // Mark old region as offline and split in META.
       // NOTE: there is no need for retry logic here. HTable does it for us.
       long lockid = t.startUpdate(oldRegionInfo.getRegionName());
-      oldRegionInfo.offLine = true;
-      oldRegionInfo.split = true;
+      oldRegionInfo.setOffline(true);
+      oldRegionInfo.setSplit(true);
       t.put(lockid, COL_REGIONINFO, Writables.getBytes(oldRegionInfo));
       t.put(lockid, COL_SPLITA, Writables.getBytes(
         newRegions[0].getRegionInfo()));
@@ -927,7 +929,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
   
   void openRegion(final HRegionInfo regionInfo) throws IOException {
-    HRegion region = onlineRegions.get(regionInfo.regionName);
+    HRegion region = onlineRegions.get(regionInfo.getRegionName());
     if(region == null) {
       region = new HRegion(new Path(this.conf.get(HConstants.HBASE_DIR)),
         this.log, FileSystem.get(conf), conf, regionInfo, null);
@@ -947,7 +949,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.lock.writeLock().lock();
     HRegion region = null;
     try {
-      region = onlineRegions.remove(hri.regionName);
+      region = onlineRegions.remove(hri.getRegionName());
     } finally {
       this.lock.writeLock().unlock();
     }
@@ -1154,6 +1156,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // remote scanner interface
   //
 
+  /** {@inheritDoc} */
   public long openScanner(Text regionName, Text[] cols, Text firstRow,
       final long timestamp, final RowFilterInterface filter)
     throws IOException {
@@ -1284,6 +1287,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return Collections.unmodifiableSortedMap(this.onlineRegions);
   }
 
+  /** @return the request count */
   public AtomicInteger getRequestCount() {
     return this.requestCount;
   }

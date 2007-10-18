@@ -244,19 +244,19 @@ public class TestScanner2 extends HBaseClusterTestCase {
     assertEquals("Expected one region", regions.size(), 1);
     HRegionInfo region = regions.get(0);
     assertTrue("Expected region named for test",
-      region.regionName.toString().startsWith(getName()));
+      region.getRegionName().toString().startsWith(getName()));
     // Now do what happens at split time; remove old region and then add two
     // new ones in its place.
     removeRegionFromMETA(new HTable(conf, HConstants.META_TABLE_NAME),
-      region.regionName);
-    HTableDescriptor desc = region.tableDesc;
+      region.getRegionName());
+    HTableDescriptor desc = region.getTableDesc();
     Path homedir = new Path(getName());
     List<HRegion> newRegions = new ArrayList<HRegion>(2);
     newRegions.add(HRegion.createHRegion(
-      new HRegionInfo(2L, desc, null, new Text("midway")),
+      new HRegionInfo(desc, null, new Text("midway")),
       homedir, this.conf, null));
     newRegions.add(HRegion.createHRegion(
-      new HRegionInfo(3L, desc, new Text("midway"), null),
+      new HRegionInfo(desc, new Text("midway"), null),
         homedir, this.conf, null));
     try {
       for (HRegion r : newRegions) {

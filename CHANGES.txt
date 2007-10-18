@@ -13,6 +13,7 @@ Trunk (unreleased changes)
    HADOOP-2059 In tests, exceptions in min dfs shutdown should not fail test
                (e.g. nightly #272)
    HADOOP-2064 TestSplit assertion and NPE failures (Patch build #952 and #953)
+   HADOOP-2056 A table with row keys containing colon fails to split regions
 
   IMPROVEMENTS
     HADOOP-2401 Add convenience put method that takes writable

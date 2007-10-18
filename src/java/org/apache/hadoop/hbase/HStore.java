@@ -72,7 +72,7 @@ class HStore implements HConstants {
   private static final String BLOOMFILTER_FILE_NAME = "filter";
 
   Path dir;
-  Text regionName;
+  String encodedRegionName;
   HColumnDescriptor family;
   Text familyName;
   SequenceFile.CompressionType compression;
@@ -131,24 +131,23 @@ class HStore implements HConstants {
    * file will be deleted (by whoever has instantiated the HStore).
    *
    * @param dir log file directory
-   * @param regionName name of region
+   * @param encodedRegionName filename friendly name of region
    * @param family name of column family
    * @param fs file system object
    * @param reconstructionLog existing log file to apply if any
    * @param conf configuration object
    * @throws IOException
    */
-  HStore(Path dir, Text regionName, HColumnDescriptor family, 
+  HStore(Path dir, String encodedRegionName, HColumnDescriptor family, 
       FileSystem fs, Path reconstructionLog, Configuration conf)
   throws IOException {  
     this.dir = dir;
     this.compactionDir = new Path(dir, "compaction.dir");
-    this.regionName = regionName;
+    this.encodedRegionName = encodedRegionName;
     this.family = family;
     this.familyName = HStoreKey.extractFamily(this.family.getName());
     this.compression = SequenceFile.CompressionType.NONE;
-    this.storeName = this.regionName.toString() + "/" +
-      this.familyName.toString();
+    this.storeName = this.encodedRegionName + "/" + this.familyName.toString();
     
     if(family.getCompression() != HColumnDescriptor.CompressionType.NONE) {
       if(family.getCompression() == HColumnDescriptor.CompressionType.BLOCK) {
@@ -163,15 +162,16 @@ class HStore implements HConstants {
     
     this.fs = fs;
     this.conf = conf;
-    this.mapdir = HStoreFile.getMapDir(dir, regionName, familyName);
+    this.mapdir = HStoreFile.getMapDir(dir, encodedRegionName, familyName);
     fs.mkdirs(mapdir);
-    this.loginfodir = HStoreFile.getInfoDir(dir, regionName, familyName);
+    this.loginfodir = HStoreFile.getInfoDir(dir, encodedRegionName, familyName);
     fs.mkdirs(loginfodir);
     if(family.getBloomFilter() == null) {
       this.filterDir = null;
       this.bloomFilter = null;
     } else {
-      this.filterDir = HStoreFile.getFilterDir(dir, regionName, familyName);
+      this.filterDir =
+        HStoreFile.getFilterDir(dir, encodedRegionName, familyName);
       fs.mkdirs(filterDir);
       loadOrCreateBloomFilter();
     }
@@ -187,8 +187,8 @@ class HStore implements HConstants {
     // MapFiles are in a reliable state.  Every entry in 'mapdir' must have a 
     // corresponding one in 'loginfodir'. Without a corresponding log info
     // file, the entry in 'mapdir' must be deleted.
-    Collection<HStoreFile> hstoreFiles 
-      = HStoreFile.loadHStoreFiles(conf, dir, regionName, familyName, fs);
+    Collection<HStoreFile> hstoreFiles = HStoreFile.loadHStoreFiles(conf, dir,
+        encodedRegionName, familyName, fs);
     for(HStoreFile hsf: hstoreFiles) {
       this.storefiles.put(Long.valueOf(hsf.loadInfo(fs)), hsf);
     }
@@ -265,6 +265,7 @@ class HStore implements HConstants {
     SequenceFile.Reader login =
       new SequenceFile.Reader(this.fs, reconstructionLog, this.conf);
     try {
+      Text thisRegionName = HRegionInfo.decodeRegionName(encodedRegionName);
       HLogKey key = new HLogKey();
       HLogEdit val = new HLogEdit();
       while (login.next(key, val)) {
@@ -281,13 +282,13 @@ class HStore implements HConstants {
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
         Text column = val.getColumn();
         if (column.equals(HLog.METACOLUMN)
-            || !key.getRegionName().equals(this.regionName)
+            || !key.getRegionName().equals(thisRegionName)
             || !HStoreKey.extractFamily(column).equals(this.familyName)) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Passing on edit " + key.getRegionName() + ", " +
                 column.toString() + ": " + 
                 new String(val.getVal(), UTF8_ENCODING) +
-                ", my region: " + this.regionName + ", my column: " +
+                ", my region: " + thisRegionName + ", my column: " +
                 this.familyName);
           }
           continue;
@@ -452,7 +453,7 @@ class HStore implements HConstants {
     synchronized(flushLock) {
       // A. Write the TreeMap out to the disk
       HStoreFile flushedFile = HStoreFile.obtainNewHStoreFile(conf, dir,
-        regionName, familyName, fs);
+        encodedRegionName, familyName, fs);
       String name = flushedFile.toString();
       MapFile.Writer out = flushedFile.getWriter(this.fs, this.compression,
         this.bloomFilter);
@@ -575,8 +576,8 @@ class HStore implements HConstants {
   throws IOException {
     long maxId = maxSeenSeqID;
     synchronized(compactLock) {
-      Path curCompactStore =
-        HStoreFile.getHStoreDir(this.compactionDir, regionName, familyName);
+      Path curCompactStore = HStoreFile.getHStoreDir(this.compactionDir,
+          encodedRegionName, familyName);
       if(LOG.isDebugEnabled()) {
         LOG.debug("started compaction of " + storefiles.size() + " files in " +
           curCompactStore.toString());
@@ -590,8 +591,8 @@ class HStore implements HConstants {
       }
       try {
         List<HStoreFile> toCompactFiles = getFilesToCompact();
-        HStoreFile compactedOutputFile =
-          new HStoreFile(conf, this.compactionDir, regionName, familyName, -1);
+        HStoreFile compactedOutputFile = new HStoreFile(conf,
+            this.compactionDir, encodedRegionName, familyName, -1);
         if (toCompactFiles.size() < 1 ||
             (toCompactFiles.size() == 1 &&
               !toCompactFiles.get(0).isReference())) {
@@ -943,7 +944,7 @@ class HStore implements HConstants {
       // If a null value, shouldn't be in here.  Mark it as deleted cell.
       return true;
     }
-    if (!HGlobals.deleteBytes.equals(value)) {
+    if (!HLogEdit.isDeleted(value)) {
       return false;
     }
     // Cell has delete value.  Save it into deletes.
@@ -981,8 +982,8 @@ class HStore implements HConstants {
    */
   void processReadyCompaction() throws IOException {
     // 1. Acquiring the write-lock
-    Path curCompactStore =
-      HStoreFile.getHStoreDir(this.compactionDir, regionName, familyName);
+    Path curCompactStore = HStoreFile.getHStoreDir(this.compactionDir,
+        encodedRegionName, familyName);
     this.lock.obtainWriteLock();
     try {
       Path doneFile = new Path(curCompactStore, COMPACTION_DONE);
@@ -1010,12 +1011,12 @@ class HStore implements HConstants {
       }
 
       // 3. Moving the new MapFile into place.
-      HStoreFile compactedFile 
-        = new HStoreFile(conf, this.compactionDir, regionName, familyName, -1);
+      HStoreFile compactedFile = new HStoreFile(conf, this.compactionDir,
+          encodedRegionName, familyName, -1);
       // obtainNewHStoreFile does its best to generate a filename that does not
       // currently exist.
-      HStoreFile finalCompactedFile 
-        = HStoreFile.obtainNewHStoreFile(conf, dir, regionName, familyName, fs);
+      HStoreFile finalCompactedFile = HStoreFile.obtainNewHStoreFile(conf, dir,
+          encodedRegionName, familyName, fs);
       if(LOG.isDebugEnabled()) {
         LOG.debug("moving " + compactedFile.toString() + " in " +
             this.compactionDir.toString() +
@@ -1093,7 +1094,7 @@ class HStore implements HConstants {
             Text readcol = readkey.getColumn();
             if (results.get(readcol) == null
                 && key.matchesWithoutColumn(readkey)) {
-              if(readval.equals(HGlobals.deleteBytes)) {
+              if(HLogEdit.isDeleted(readval.get())) {
                 break;
               }
               results.put(new Text(readcol), readval.get());

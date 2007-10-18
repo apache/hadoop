@@ -159,7 +159,9 @@ public class HLog implements HConstants {
             SequenceFile.Writer w = logWriters.get(regionName);
             if (w == null) {
               Path logfile = new Path(HRegion.getRegionDir(rootDir,
-                regionName), HREGION_OLDLOGFILE_NAME);
+                HRegionInfo.rootRegionInfo.getEncodedName()),
+                HREGION_OLDLOGFILE_NAME);
+              
               if (LOG.isDebugEnabled()) {
                 LOG.debug("getting new log file writer for path " + logfile);
               }
@@ -498,7 +500,7 @@ public class HLog implements HConstants {
         return;
       }
       this.writer.append(new HLogKey(regionName, tableName, HLog.METAROW, logSeqId),
-        new HLogEdit(HLog.METACOLUMN, HGlobals.completeCacheFlush.get(),
+        new HLogEdit(HLog.METACOLUMN, HLogEdit.completeCacheFlush.get(),
           System.currentTimeMillis()));
       this.numEntries++;
       Long seq = this.lastSeqWritten.get(regionName);

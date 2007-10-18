@@ -38,6 +38,21 @@ import org.apache.hadoop.io.WritableComparable;
  * column families.
  */
 public class HTableDescriptor implements WritableComparable {
+  /** table descriptor for root table */
+  public static final HTableDescriptor rootTableDesc =
+    new HTableDescriptor(HConstants.ROOT_TABLE_NAME,
+        new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
+            HColumnDescriptor.CompressionType.NONE, false, Integer.MAX_VALUE,
+            null));
+  
+  /** table descriptor for meta table */
+  public static final HTableDescriptor metaTableDesc =
+    new HTableDescriptor(HConstants.META_TABLE_NAME,
+        new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
+            HColumnDescriptor.CompressionType.NONE, false, Integer.MAX_VALUE,
+            null));
+  
+
   private Text name;
   // TODO: Does this need to be a treemap?  Can it be a HashMap?
   private final TreeMap<Text, HColumnDescriptor> families;
@@ -51,6 +66,13 @@ public class HTableDescriptor implements WritableComparable {
    */
   private static final Pattern LEGAL_TABLE_NAME =
     Pattern.compile("^[\\w-.]+$");
+
+  /** Used to construct the table descriptors for root and meta tables */
+  private HTableDescriptor(Text name, HColumnDescriptor family) {
+    this.name = new Text(name);
+    this.families = new TreeMap<Text, HColumnDescriptor>();
+    families.put(family.getName(), family);
+  }
 
   /** Constructs an empty object */
   public HTableDescriptor() {

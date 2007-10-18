@@ -46,9 +46,9 @@ public class TestScanner extends HBaseTestCase {
     HConstants.COL_STARTCODE
   };
   
-  private static final Text ROW_KEY = new Text(HGlobals.rootRegionInfo.regionName);
-  private static final HRegionInfo REGION_INFO = 
-    new HRegionInfo(0L, HGlobals.rootTableDesc, null, null);
+  private static final Text ROW_KEY =
+    new Text(HRegionInfo.rootRegionInfo.getRegionName());
+  private static final HRegionInfo REGION_INFO = HRegionInfo.rootRegionInfo;
   
   private static final long START_CODE = Long.MAX_VALUE;
 
@@ -59,11 +59,11 @@ public class TestScanner extends HBaseTestCase {
     HRegionInfo info =
       (HRegionInfo) Writables.getWritable(regionBytes, new HRegionInfo());
     
-    assertEquals(REGION_INFO.regionId, info.regionId);
-    assertEquals(0, info.startKey.getLength());
-    assertEquals(0, info.endKey.getLength());
-    assertEquals(0, info.regionName.compareTo(REGION_INFO.regionName));
-    assertEquals(0, info.tableDesc.compareTo(REGION_INFO.tableDesc));
+    assertEquals(REGION_INFO.getRegionId(), info.getRegionId());
+    assertEquals(0, info.getStartKey().getLength());
+    assertEquals(0, info.getEndKey().getLength());
+    assertEquals(0, info.getRegionName().compareTo(REGION_INFO.getRegionName()));
+    assertEquals(0, info.getTableDesc().compareTo(REGION_INFO.getTableDesc()));
   }
   
   /** Use a scanner to get the region info and then validate the results */
@@ -109,9 +109,10 @@ public class TestScanner extends HBaseTestCase {
         }
 
       } finally {
-        if(scanner != null) {
-          scanner.close();
-          scanner = null;
+        HInternalScannerInterface s = scanner;
+        scanner = null;
+        if(s != null) {
+          s.close();
         }
       }
     }
@@ -140,7 +141,7 @@ public class TestScanner extends HBaseTestCase {
       Path dir = new Path("/hbase");
       fs.mkdirs(dir);
       
-      Path regionDir = HRegion.getRegionDir(dir, REGION_INFO.regionName);
+      Path regionDir = HRegion.getRegionDir(dir, REGION_INFO.getEncodedName());
       fs.mkdirs(regionDir);
       
       HLog log = new HLog(fs, new Path(regionDir, "log"), conf);
@@ -153,7 +154,7 @@ public class TestScanner extends HBaseTestCase {
 
       ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
       DataOutputStream s = new DataOutputStream(byteStream);
-      HGlobals.rootRegionInfo.write(s);
+      HRegionInfo.rootRegionInfo.write(s);
       region.put(lockid, HConstants.COL_REGIONINFO, byteStream.toByteArray());
       region.commit(lockid, System.currentTimeMillis());
 

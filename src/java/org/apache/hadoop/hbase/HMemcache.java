@@ -267,7 +267,7 @@ public class HMemcache {
     for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
       HStoreKey itKey = es.getKey();
       if (itKey.matchesRowCol(curKey)) {
-        if (!isDeleted(es.getValue())) {
+        if (!HLogEdit.isDeleted(es.getValue())) {
           result.add(tailMap.get(itKey));
           curKey.setVersion(itKey.getTimestamp() - 1);
         }
@@ -323,7 +323,7 @@ public class HMemcache {
       if (!key.matchesRowCol(origin)) {
         break;
       }
-      if (!isDeleted(es.getValue())) {
+      if (!HLogEdit.isDeleted(es.getValue())) {
         result.add(key);
         if (versions != HConstants.ALL_VERSIONS && result.size() >= versions) {
           // We have enough results.  Return.
@@ -341,15 +341,7 @@ public class HMemcache {
    * the cell has been deleted.
    */
   boolean isDeleted(final HStoreKey key) {
-    return isDeleted(this.memcache.get(key));
-  }
-
-  /**
-   * @param value
-   * @return True if an entry and its content is {@link HGlobals.deleteBytes}.
-   */
-  boolean isDeleted(final byte [] value) {
-    return (value == null)? false: HGlobals.deleteBytes.compareTo(value) == 0;
+    return HLogEdit.isDeleted(this.memcache.get(key));
   }
 
   /**

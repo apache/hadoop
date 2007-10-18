@@ -130,7 +130,7 @@ public class MultiRegionTable extends HBaseTestCase {
       Writables.getHRegionInfoOrNull(data.get(HConstants.COL_SPLITA));
     HRegionInfo splitB =
       Writables.getHRegionInfoOrNull(data.get(HConstants.COL_SPLITB));
-    Path parentDir = HRegion.getRegionDir(d, parent.getRegionName());
+    Path parentDir = HRegion.getRegionDir(d, parent.getEncodedName());
     assertTrue(fs.exists(parentDir));
     LOG.info("Split happened. Parent is " + parent.getRegionName() +
         " and daughters are " + splitA.getRegionName() + ", " +

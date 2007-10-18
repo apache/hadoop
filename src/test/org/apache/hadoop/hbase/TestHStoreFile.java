@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,7 +31,6 @@ import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Test HStoreFile
@@ -125,7 +123,7 @@ public class TestHStoreFile extends HBaseTestCase {
   public void testReference()
   throws IOException {
     // Make a store file and write data to it.
-    HStoreFile hsf = new HStoreFile(this.conf, this.dir, new Text(getName()),
+    HStoreFile hsf = new HStoreFile(this.conf, this.dir, getName(),
         new Text("colfamily"), 1234567890L);
     MapFile.Writer writer =
       hsf.getWriter(this.fs, SequenceFile.CompressionType.NONE, null);
@@ -140,10 +138,10 @@ public class TestHStoreFile extends HBaseTestCase {
     Text finalKey = hsk.getRow();
     // Make a reference for the bottom half of the just written file.
     HStoreFile.Reference reference =
-      new HStoreFile.Reference(hsf.getRegionName(), hsf.getFileId(), midkey,
-          HStoreFile.Range.top);
+      new HStoreFile.Reference(hsf.getEncodedRegionName(), hsf.getFileId(),
+          midkey, HStoreFile.Range.top);
     HStoreFile refHsf = new HStoreFile(this.conf, new Path(DIR, getName()),
-        new Text(getName() + "_reference"), hsf.getColFamily(), 456,
+        getName() + "_reference", hsf.getColFamily(), 456,
         reference);
     // Assert that reference files are written and that we can write and
     // read the info reference file at least.
@@ -152,8 +150,8 @@ public class TestHStoreFile extends HBaseTestCase {
     assertTrue(this.fs.exists(refHsf.getInfoFilePath()));
     HStoreFile.Reference otherReference =
       HStoreFile.readSplitInfo(refHsf.getInfoFilePath(), this.fs);
-    assertEquals(reference.getRegionName().toString(),
-        otherReference.getRegionName().toString());
+    assertEquals(reference.getEncodedRegionName(),
+        otherReference.getEncodedRegionName());
     assertEquals(reference.getFileId(),
         otherReference.getFileId());
     assertEquals(reference.getMidkey().toString(),

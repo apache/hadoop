@@ -104,7 +104,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     desc.addFamily(new HColumnDescriptor("contents:"));
     desc.addFamily(new HColumnDescriptor("anchor:"));
     region = new HRegion(parentdir, log, fs, conf, 
-        new HRegionInfo(1, desc, null, null), null);
+        new HRegionInfo(desc, null, null), null);
   }
 
   // Test basic functionality. Writes to contents:basic and anchor:anchornum-*

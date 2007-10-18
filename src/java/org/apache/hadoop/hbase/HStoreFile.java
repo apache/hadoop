@@ -118,7 +118,7 @@ public class HStoreFile implements HConstants, WritableComparable {
   private static Random rand = new Random();
 
   private Path dir;
-  private Text regionName;
+  private String encodedRegionName;
   private Text colFamily;
   private long fileId;
   private final Configuration conf;
@@ -126,7 +126,7 @@ public class HStoreFile implements HConstants, WritableComparable {
 
   /** Shutdown constructor used by Writable */
   HStoreFile(Configuration conf) {
-    this(conf, new Path(Path.CUR_DIR), new Text(), new Text(), 0);
+    this(conf, new Path(Path.CUR_DIR), "", new Text(), 0);
   }
   
   /**
@@ -137,25 +137,25 @@ public class HStoreFile implements HConstants, WritableComparable {
    * @param colFamily name of the column family
    * @param fileId file identifier
    */
-  HStoreFile(final Configuration conf, final Path dir, final Text regionName, 
-      final Text colFamily, final long fileId) {
-    this(conf, dir, regionName, colFamily, fileId, null);
+  HStoreFile(final Configuration conf, final Path dir, 
+      final String encodedRegionName, final Text colFamily, final long fileId) {
+    this(conf, dir, encodedRegionName, colFamily, fileId, null);
   }
 
   /**
    * Constructor that fully initializes the object
    * @param conf Configuration object
    * @param dir directory path
-   * @param regionName name of the region
+   * @param encodedRegionName file name friendly name of the region
    * @param colFamily name of the column family
    * @param fileId file identifier
    * @param ref Reference to another HStoreFile.
    */
-  HStoreFile(Configuration conf, Path dir, Text regionName, 
+  HStoreFile(Configuration conf, Path dir, String encodedRegionName, 
       Text colFamily, long fileId, final Reference ref) {
     this.conf = conf;
     this.dir = dir;
-    this.regionName = new Text(regionName);
+    this.encodedRegionName = encodedRegionName;
     this.colFamily = new Text(colFamily);
     this.fileId = fileId;
     // If a reference, construction does not write the pointer files.  Thats
@@ -168,14 +168,14 @@ public class HStoreFile implements HConstants, WritableComparable {
    * Data structure to hold reference to a store file over in another region.
    */
   static class Reference implements Writable {
-    Text regionName;
-    long fileid;
-    Range region;
-    HStoreKey midkey;
+    private String encodedRegionName;
+    private long fileid;
+    private Range region;
+    private HStoreKey midkey;
     
-    Reference(final Text rn, final long fid, final HStoreKey m,
+    Reference(final String ern, final long fid, final HStoreKey m,
         final Range fr) {
-      this.regionName = rn;
+      this.encodedRegionName = ern;
       this.fileid = fid;
       this.region = fr;
       this.midkey = m;
@@ -197,21 +197,21 @@ public class HStoreFile implements HConstants, WritableComparable {
       return this.midkey;
     }
     
-    Text getRegionName() {
-      return this.regionName;
+    String getEncodedRegionName() {
+      return this.encodedRegionName;
     }
    
     /** {@inheritDoc} */
     @Override
     public String toString() {
-      return this.regionName + "/" + this.fileid + "/" + this.region;
+      return this.encodedRegionName + "/" + this.fileid + "/" + this.region;
     }
 
     // Make it serializable.
 
     /** {@inheritDoc} */
     public void write(DataOutput out) throws IOException {
-      this.regionName.write(out);
+      out.writeUTF(this.encodedRegionName);
       out.writeLong(this.fileid);
       // Write true if we're doing top of the file.
       out.writeBoolean(isTopFileRegion(this.region));
@@ -220,8 +220,7 @@ public class HStoreFile implements HConstants, WritableComparable {
 
     /** {@inheritDoc} */
     public void readFields(DataInput in) throws IOException {
-      this.regionName = new Text();
-      this.regionName.readFields(in);
+      this.encodedRegionName = in.readUTF();
       this.fileid = in.readLong();
       boolean tmp = in.readBoolean();
       // If true, set region to top.
@@ -244,8 +243,8 @@ public class HStoreFile implements HConstants, WritableComparable {
     return this.reference;
   }
 
-  Text getRegionName() {
-    return this.regionName;
+  String getEncodedRegionName() {
+    return this.encodedRegionName;
   }
 
   /** @return the column family */
@@ -262,43 +261,45 @@ public class HStoreFile implements HConstants, WritableComparable {
   /** @return path for MapFile */
   Path getMapFilePath() {
     return isReference()?
-      getMapFilePath(this.regionName, this.fileId,
-        this.reference.getRegionName()):
-      getMapFilePath(this.regionName, this.fileId);
+      getMapFilePath(this.encodedRegionName, this.fileId,
+        this.reference.getEncodedRegionName()):
+      getMapFilePath(this.encodedRegionName, this.fileId);
   }
 
   private Path getMapFilePath(final Reference r) {
     return r == null?
       getMapFilePath():
-      getMapFilePath(r.getRegionName(), r.getFileId());
+      getMapFilePath(r.getEncodedRegionName(), r.getFileId());
   }
 
-  private Path getMapFilePath(final Text name, final long fid) {
-    return new Path(HStoreFile.getMapDir(dir, name, colFamily), 
+  private Path getMapFilePath(final String encodedName, final long fid) {
+    return new Path(HStoreFile.getMapDir(dir, encodedName, colFamily), 
       createHStoreFilename(fid, null));
   }
   
-  private Path getMapFilePath(final Text name, final long fid, final Text rn) {
-    return new Path(HStoreFile.getMapDir(dir, name, colFamily), 
-      createHStoreFilename(fid, rn));
+  private Path getMapFilePath(final String encodedName, final long fid,
+      final String ern) {
+    return new Path(HStoreFile.getMapDir(dir, encodedName, colFamily), 
+      createHStoreFilename(fid, ern));
   }
 
   /** @return path for info file */
   Path getInfoFilePath() {
     return isReference()?
-      getInfoFilePath(this.regionName, this.fileId,
-        this.reference.getRegionName()):
-      getInfoFilePath(this.regionName, this.fileId);
+      getInfoFilePath(this.encodedRegionName, this.fileId,
+        this.reference.getEncodedRegionName()):
+      getInfoFilePath(this.encodedRegionName, this.fileId);
   }
   
-  private Path getInfoFilePath(final Text name, final long fid) {
-    return new Path(HStoreFile.getInfoDir(dir, name, colFamily), 
+  private Path getInfoFilePath(final String encodedName, final long fid) {
+    return new Path(HStoreFile.getInfoDir(dir, encodedName, colFamily), 
       createHStoreFilename(fid, null));
   }
   
-  private Path getInfoFilePath(final Text name, final long fid, final Text rn) {
-    return new Path(HStoreFile.getInfoDir(dir, name, colFamily), 
-      createHStoreFilename(fid, rn));
+  private Path getInfoFilePath(final String encodedName, final long fid,
+      final String ern) {
+    return new Path(HStoreFile.getInfoDir(dir, encodedName, colFamily), 
+      createHStoreFilename(fid, ern));
   }
 
   // Static methods to build partial paths to internal directories.  Useful for 
@@ -308,35 +309,35 @@ public class HStoreFile implements HConstants, WritableComparable {
   }
   
   private static String createHStoreFilename(final long fid,
-      final Text regionName) {
+      final String encodedRegionName) {
     return Long.toString(fid) +
-      ((regionName != null)? "." + regionName.toString(): "");
+      ((encodedRegionName != null) ? "." + encodedRegionName : "");
   }
   
   private static String createHStoreInfoFilename(final long fid) {
     return createHStoreFilename(fid, null);
   }
   
-  static Path getMapDir(Path dir, Text regionName, Text colFamily) {
-    return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName, 
+  static Path getMapDir(Path dir, String encodedRegionName, Text colFamily) {
+    return new Path(dir, new Path(HREGIONDIR_PREFIX + encodedRegionName, 
         new Path(colFamily.toString(), HSTORE_DATFILE_DIR)));
   }
 
   /** @return the info directory path */
-  static Path getInfoDir(Path dir, Text regionName, Text colFamily) {
-    return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName, 
+  static Path getInfoDir(Path dir, String encodedRegionName, Text colFamily) {
+    return new Path(dir, new Path(HREGIONDIR_PREFIX + encodedRegionName, 
         new Path(colFamily.toString(), HSTORE_INFO_DIR)));
   }
 
   /** @return the bloom filter directory path */
-  static Path getFilterDir(Path dir, Text regionName, Text colFamily) {
-    return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName,
+  static Path getFilterDir(Path dir, String encodedRegionName, Text colFamily) {
+    return new Path(dir, new Path(HREGIONDIR_PREFIX + encodedRegionName,
         new Path(colFamily.toString(), HSTORE_FILTER_DIR)));
   }
 
   /** @return the HStore directory path */
-  static Path getHStoreDir(Path dir, Text regionName, Text colFamily) {
-    return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName, 
+  static Path getHStoreDir(Path dir, String encodedRegionName, Text colFamily) {
+    return new Path(dir, new Path(HREGIONDIR_PREFIX + encodedRegionName, 
         colFamily.toString()));
   }
 
@@ -347,9 +348,10 @@ public class HStoreFile implements HConstants, WritableComparable {
    * will keep generating names until it generates a name that does not exist.
    */
   static HStoreFile obtainNewHStoreFile(Configuration conf, Path dir, 
-      Text regionName, Text colFamily, FileSystem fs) throws IOException {
+      String encodedRegionName, Text colFamily, FileSystem fs)
+      throws IOException {
     
-    Path mapdir = HStoreFile.getMapDir(dir, regionName, colFamily);
+    Path mapdir = HStoreFile.getMapDir(dir, encodedRegionName, colFamily);
     long fileId = Math.abs(rand.nextLong());
 
     Path testpath1 = new Path(mapdir, createHStoreFilename(fileId));
@@ -359,7 +361,7 @@ public class HStoreFile implements HConstants, WritableComparable {
       testpath1 = new Path(mapdir, createHStoreFilename(fileId));
       testpath2 = new Path(mapdir, createHStoreInfoFilename(fileId));
     }
-    return new HStoreFile(conf, dir, regionName, colFamily, fileId);
+    return new HStoreFile(conf, dir, encodedRegionName, colFamily, fileId);
   }
 
   /*
@@ -376,11 +378,11 @@ public class HStoreFile implements HConstants, WritableComparable {
    * @throws IOException
    */
   static Vector<HStoreFile> loadHStoreFiles(Configuration conf, Path dir, 
-      Text regionName, Text colFamily, FileSystem fs)
+      String encodedRegionName, Text colFamily, FileSystem fs)
   throws IOException {
     // Look first at info files.  If a reference, these contain info we need
     // to create the HStoreFile.
-    Path infodir = HStoreFile.getInfoDir(dir, regionName, colFamily);
+    Path infodir = HStoreFile.getInfoDir(dir, encodedRegionName, colFamily);
     Path infofiles[] = fs.listPaths(new Path[] {infodir});
     Vector<HStoreFile> results = new Vector<HStoreFile>(infofiles.length);
     Vector<Path> mapfiles = new Vector<Path>(infofiles.length);
@@ -392,10 +394,10 @@ public class HStoreFile implements HConstants, WritableComparable {
       HStoreFile curfile = null;
       if (isReference) {
         Reference reference = readSplitInfo(infofiles[i], fs);
-        curfile = new HStoreFile(conf, dir, regionName, colFamily, fid,
+        curfile = new HStoreFile(conf, dir, encodedRegionName, colFamily, fid,
           reference);
       } else {
-        curfile = new HStoreFile(conf, dir, regionName, colFamily, fid);
+        curfile = new HStoreFile(conf, dir, encodedRegionName, colFamily, fid);
       }
       Path mapfile = curfile.getMapFilePath();
       if (!fs.exists(mapfile)) {
@@ -415,7 +417,7 @@ public class HStoreFile implements HConstants, WritableComparable {
       mapfiles.add(qualified);
     }
     
-    Path mapdir = HStoreFile.getMapDir(dir, regionName, colFamily);
+    Path mapdir = HStoreFile.getMapDir(dir, encodedRegionName, colFamily);
     // List paths by experience returns fully qualified names -- at least when
     // running on a mini hdfs cluster.
     Path datfiles[] = fs.listPaths(new Path[] {mapdir});
@@ -486,14 +488,13 @@ public class HStoreFile implements HConstants, WritableComparable {
    * @param fs
    * @throws IOException
    */
-  private void writeSplitInfo(final FileSystem fs)
-  throws IOException {
+  private void writeSplitInfo(final FileSystem fs) throws IOException {
     Path p = getInfoFilePath();
     if (fs.exists(p)) {
       throw new IOException("File already exists " + p.toString());
     }
     FSDataOutputStream out = fs.create(p);
-    getReference().getRegionName().write(out);
+    out.writeUTF(getReference().getEncodedRegionName());
     getReference().getMidkey().write(out);
     out.writeLong(getReference().getFileId());
     out.writeBoolean(isTopFileRegion(getReference().getFileRegion()));
@@ -506,8 +507,7 @@ public class HStoreFile implements HConstants, WritableComparable {
   static Reference readSplitInfo(final Path p, final FileSystem fs)
   throws IOException {
     FSDataInputStream in = fs.open(p);
-    Text rn = new Text();
-    rn.readFields(in);
+    String rn = in.readUTF();
     HStoreKey midkey = new HStoreKey();
     midkey.readFields(in);
     long fid = in.readLong();
@@ -580,10 +580,10 @@ public class HStoreFile implements HConstants, WritableComparable {
    * @throws IOException
    */
   long loadInfo(FileSystem fs) throws IOException {
-    Path p = isReference()?
-      getInfoFilePath(this.reference.getRegionName(),
-        this.reference.getFileId()):
-      getInfoFilePath();
+    Path p = isReference() ?
+        getInfoFilePath(this.reference.getEncodedRegionName(),
+            this.reference.getFileId()) :
+              getInfoFilePath();
     DataInputStream in = new DataInputStream(fs.open(p));
     try {
       byte flag = in.readByte();
@@ -930,7 +930,7 @@ public class HStoreFile implements HConstants, WritableComparable {
   throws IOException {
     return isReference()?
       new HStoreFile.HalfMapFileReader(fs,
-        getMapFilePath(getReference().getRegionName(),
+        getMapFilePath(getReference().getEncodedRegionName(),
           getReference().getFileId()).toString(),
         this.conf, getReference().getFileRegion(), getReference().getMidkey(),
         bloomFilter):
@@ -975,7 +975,7 @@ public class HStoreFile implements HConstants, WritableComparable {
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return this.regionName.toString() + "/" + this.colFamily.toString() +
+    return this.encodedRegionName.toString() + "/" + this.colFamily.toString() +
       "/" + this.fileId +
       (isReference()? "/" + this.reference.toString(): "");
   }
@@ -990,7 +990,7 @@ public class HStoreFile implements HConstants, WritableComparable {
   @Override
   public int hashCode() {
     int result = this.dir.hashCode();
-    result ^= this.regionName.hashCode();
+    result ^= this.encodedRegionName.hashCode();
     result ^= this.colFamily.hashCode();
     result ^= Long.valueOf(this.fileId).hashCode();
     return result;
@@ -1001,7 +1001,7 @@ public class HStoreFile implements HConstants, WritableComparable {
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     out.writeUTF(dir.toString());
-    this.regionName.write(out);
+    out.writeUTF(this.encodedRegionName);
     this.colFamily.write(out);
     out.writeLong(fileId);
     out.writeBoolean(isReference());
@@ -1013,7 +1013,7 @@ public class HStoreFile implements HConstants, WritableComparable {
   /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.dir = new Path(in.readUTF());
-    this.regionName.readFields(in);
+    this.encodedRegionName = in.readUTF();
     this.colFamily.readFields(in);
     this.fileId = in.readLong();
     this.reference = null;
@@ -1031,7 +1031,7 @@ public class HStoreFile implements HConstants, WritableComparable {
     HStoreFile other = (HStoreFile) o;
     int result = this.dir.compareTo(other.dir);    
     if(result == 0) {
-      this.regionName.compareTo(other.regionName);
+      this.encodedRegionName.compareTo(other.encodedRegionName);
     }
     if(result == 0) {
       result = this.colFamily.compareTo(other.colFamily);
