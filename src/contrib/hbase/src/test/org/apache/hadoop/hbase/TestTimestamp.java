@@ -320,7 +320,7 @@ public class TestTimestamp extends HBaseTestCase {
     HTableDescriptor htd = createTableDescriptor(getName());
     htd.addFamily(new HColumnDescriptor(COLUMN, VERSIONS,
       CompressionType.NONE, false, Integer.MAX_VALUE, null));
-    HRegionInfo hri = new HRegionInfo(1, htd, null, null);
+    HRegionInfo hri = new HRegionInfo(htd, null, null);
     return new HRegion(testDir, hlog, this.localFs, this.conf, hri, null);
   }
 }

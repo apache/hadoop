@@ -261,8 +261,8 @@ public class HConnectionManager implements HConstants {
                     ((ImmutableBytesWritable) e.getValue()).get(), info);
 
                 // Only examine the rows where the startKey is zero length   
-                if (info.startKey.getLength() == 0) {
-                  uniqueTables.add(info.tableDesc);
+                if (info.getStartKey().getLength() == 0) {
+                  uniqueTables.add(info.getTableDesc());
                 }
               }
             }
@@ -603,7 +603,7 @@ public class HConnectionManager implements HConstants {
         HRegionInterface rootRegion = getHRegionConnection(rootRegionLocation);
 
         try {
-          rootRegion.getRegionInfo(HGlobals.rootRegionInfo.regionName);
+          rootRegion.getRegionInfo(HRegionInfo.rootRegionInfo.getRegionName());
           break;
         } catch (IOException e) {
           if (tries == numRetries - 1) {
@@ -640,7 +640,7 @@ public class HConnectionManager implements HConstants {
         new TreeMap<Text, HRegionLocation>();
       
       rootServer.put(EMPTY_START_ROW,
-          new HRegionLocation(HGlobals.rootRegionInfo, rootRegionLocation));
+          new HRegionLocation(HRegionInfo.rootRegionInfo, rootRegionLocation));
       
       return rootServer;
     }
@@ -707,7 +707,7 @@ public class HConnectionManager implements HConstants {
             HRegionInfo regionInfo = (HRegionInfo) Writables.getWritable(
               results.get(COL_REGIONINFO), new HRegionInfo());
 
-            if (!regionInfo.tableDesc.getName().equals(tableName)) {
+            if (!regionInfo.getTableDesc().getName().equals(tableName)) {
               // We're done
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Found " + servers.size() + " servers for table " +
@@ -736,7 +736,7 @@ public class HConnectionManager implements HConstants {
             }
             
             String serverAddress = Writables.bytesToString(bytes);
-            servers.put(regionInfo.startKey, new HRegionLocation(
+            servers.put(regionInfo.getStartKey(), new HRegionLocation(
                 regionInfo, new HServerAddress(serverAddress)));
           }
         } catch (IOException e) {

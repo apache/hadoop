@@ -26,6 +26,8 @@ import java.io.IOException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
+import org.apache.hadoop.hbase.util.Base64;
+
 /**
  * HRegion information.
  * Contains HRegion id, start and end keys, a reference to this
@@ -33,7 +35,15 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public class HRegionInfo implements WritableComparable {
   /** delimiter used between portions of a region name */
-  public static final char DELIMITER = ',';
+  public static final String DELIMITER = ",";
+
+  /** HRegionInfo for root region */
+  public static final HRegionInfo rootRegionInfo =
+    new HRegionInfo(0L, HTableDescriptor.rootTableDesc);
+
+  /** HRegionInfo for first meta region */
+  public static final HRegionInfo firstMetaRegionInfo =
+    new HRegionInfo(1L, HTableDescriptor.metaTableDesc);
   
   /**
    * Extracts table name prefix from a region name.
@@ -42,61 +52,92 @@ public class HRegionInfo implements WritableComparable {
    * @return The table prefix of a region name.
    */
   public static Text getTableNameFromRegionName(final Text regionName) {
-    int index = -1;
-    byte [] bytes = regionName.getBytes();
-    for (int i = 0; i < bytes.length; i++) {
-      if (((char) bytes[i]) == DELIMITER) {
-        index = i;
-        break;
-      }
-    }
-    if (index == -1) {
+    int offset = regionName.find(DELIMITER);
+    if (offset == -1) {
       throw new IllegalArgumentException(regionName.toString() + " does not " +
-        "contain " + DELIMITER + " character");
+        "contain '" + DELIMITER + "' character");
     }
-    byte [] tableName = new byte[index];
-    System.arraycopy(bytes, 0, tableName, 0, index);
+    byte [] tableName = new byte[offset];
+    System.arraycopy(regionName.getBytes(), 0, tableName, 0, offset);
     return new Text(tableName);
   }
-
-  Text regionName;
-  long regionId;
-  Text startKey;
-  Text endKey;
-  boolean offLine;
-  boolean split;
-  HTableDescriptor tableDesc;
   
+  /**
+   * Converts an encoded region name to its unencoded form
+   * 
+   * @param encodedName 
+   * @return unencoded region name
+   */
+  public static Text decodeRegionName(String encodedName) {
+    int offset = encodedName.indexOf(DELIMITER);
+    if (offset == -1) {
+      throw new IllegalArgumentException(
+          "encoded region name does not contain '" + DELIMITER + "': " +
+          encodedName);
+    }
+    String regionName = encodedName.substring(0, offset++);
+    String remainder = encodedName.substring(offset);
+    offset = remainder.indexOf(DELIMITER);
+    if (offset == -1) {
+      throw new IllegalArgumentException(
+          "improperly formatted encoded region name " + encodedName);
+    }
+    Text startKey = new Text();
+    if (offset != 0) {
+      startKey.set(Base64.decode(remainder.substring(0, offset), Base64.ORDERED));
+    }
+    offset += 1;
+    return new Text(regionName + DELIMITER + startKey.toString() + DELIMITER +
+      remainder.substring(offset));
+  }
+
+  private Text endKey;
+  private boolean offLine;
+  private long regionId;
+  private Text regionName;
+  private boolean split;
+  private Text startKey;
+  private HTableDescriptor tableDesc;
+
+  /** Used to construct the HRegionInfo for the root and first meta regions */
+  private HRegionInfo(long regionId, HTableDescriptor tableDesc) {
+    this.regionId = regionId;
+    this.tableDesc = tableDesc;
+    this.endKey = new Text();
+    this.offLine = false;
+    this.regionName = new Text(tableDesc.getName().toString() + DELIMITER +
+        DELIMITER + regionId);
+    this.split = false;
+    this.startKey = new Text();
+  }
+
   /** Default constructor - creates empty object */
   public HRegionInfo() {
-    this.regionId = 0;
-    this.tableDesc = new HTableDescriptor();
-    this.startKey = new Text();
     this.endKey = new Text();
-    this.regionName = new Text();
     this.offLine = false;
+    this.regionId = 0;
+    this.regionName = new Text();
     this.split = false;
+    this.startKey = new Text();
+    this.tableDesc = new HTableDescriptor();
   }
   
   /**
    * Construct HRegionInfo with explicit parameters
    * 
-   * @param regionId the region id
    * @param tableDesc the table descriptor
    * @param startKey first key in region
    * @param endKey end of key range
    * @throws IllegalArgumentException
    */
-  public HRegionInfo(long regionId, HTableDescriptor tableDesc, Text startKey,
-      Text endKey)
-  throws IllegalArgumentException {
-    this(regionId, tableDesc, startKey, endKey, false);
+  public HRegionInfo(HTableDescriptor tableDesc, Text startKey, Text endKey)
+    throws IllegalArgumentException {
+    this(tableDesc, startKey, endKey, false);
   }
 
   /**
    * Construct HRegionInfo with explicit parameters
    * 
-   * @param regionId the region id
    * @param tableDesc the table descriptor
    * @param startKey first key in region
    * @param endKey end of key range
@@ -104,34 +145,33 @@ public class HRegionInfo implements WritableComparable {
    * regions that may or may not hold references to this region.
    * @throws IllegalArgumentException
    */
-  public HRegionInfo(long regionId, HTableDescriptor tableDesc, Text startKey,
-      Text endKey, final boolean split)
-  throws IllegalArgumentException {
-    
-    this.regionId = regionId;
-    
+  public HRegionInfo(HTableDescriptor tableDesc, Text startKey, Text endKey,
+      final boolean split) throws IllegalArgumentException {
+
     if(tableDesc == null) {
       throw new IllegalArgumentException("tableDesc cannot be null");
     }
-    
-    this.tableDesc = tableDesc;
-    
-    this.startKey = new Text();
-    if(startKey != null) {
-      this.startKey.set(startKey);
-    }
-    
+
     this.endKey = new Text();
     if(endKey != null) {
       this.endKey.set(endKey);
     }
     
-    this.regionName = new Text(tableDesc.getName().toString() + DELIMITER +
-      (startKey == null ? "" : startKey.toString()) + DELIMITER +
-      regionId);
-    
     this.offLine = false;
+    this.regionId = System.currentTimeMillis();
+    
+    this.regionName = new Text(tableDesc.getName().toString() + DELIMITER +
+        (startKey == null ? "" : startKey.toString()) + DELIMITER +
+        regionId);
+      
     this.split = split;
+
+    this.startKey = new Text();
+    if(startKey != null) {
+      this.startKey.set(startKey);
+    }
+    
+    this.tableDesc = tableDesc;
   }
   
   /** @return the endKey */
@@ -147,6 +187,16 @@ public class HRegionInfo implements WritableComparable {
   /** @return the regionName */
   public Text getRegionName(){
     return regionName;
+  }
+
+  /**
+   * @return the encodedName
+   */
+  public String getEncodedName() {
+    return tableDesc.getName().toString() + DELIMITER +
+    (startKey == null || startKey.getLength() == 0 ? "" : 
+      Base64.encodeBytes(startKey.getBytes(), Base64.ORDERED)) + DELIMITER +
+    regionId;
   }
 
   /** @return the startKey */
@@ -167,10 +217,24 @@ public class HRegionInfo implements WritableComparable {
   }
   
   /**
+   * @param split set split status
+   */
+  public void setSplit(boolean split) {
+    this.split = split;
+  }
+
+  /**
    * @return True if this region is offline.
    */
   public boolean isOffline() {
     return this.offLine;
+  }
+
+  /**
+   * @param offLine set online - offline status
+   */
+  public void setOffline(boolean offLine) {
+    this.offLine = offLine;
   }
 
   /**
@@ -215,26 +279,26 @@ public class HRegionInfo implements WritableComparable {
    * {@inheritDoc}
    */
   public void write(DataOutput out) throws IOException {
-    out.writeLong(regionId);
-    tableDesc.write(out);
-    startKey.write(out);
     endKey.write(out);
-    regionName.write(out);
     out.writeBoolean(offLine);
+    out.writeLong(regionId);
+    regionName.write(out);
     out.writeBoolean(split);
+    startKey.write(out);
+    tableDesc.write(out);
   }
   
   /**
    * {@inheritDoc}
    */
   public void readFields(DataInput in) throws IOException {
-    this.regionId = in.readLong();
-    this.tableDesc.readFields(in);
-    this.startKey.readFields(in);
     this.endKey.readFields(in);
-    this.regionName.readFields(in);
     this.offLine = in.readBoolean();
+    this.regionId = in.readLong();
+    this.regionName.readFields(in);
     this.split = in.readBoolean();
+    this.startKey.readFields(in);
+    this.tableDesc.readFields(in);
   }
   
   //

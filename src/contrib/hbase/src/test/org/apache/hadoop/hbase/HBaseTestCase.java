@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 
 import junit.framework.TestCase;
 
@@ -40,8 +41,10 @@ public abstract class HBaseTestCase extends TestCase {
   protected FileSystem localFs = null;
   protected static final char FIRST_CHAR = 'a';
   protected static final char LAST_CHAR = 'z';
+  protected static final String PUNCTUATION = "~`@#$%^&*()-_+=:;',.<>/?[]{}|";
   protected static final byte [] START_KEY_BYTES =
     {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
+  protected String START_KEY;
   protected static final int MAXVERSIONS = 3;
   
   static {
@@ -50,10 +53,18 @@ public abstract class HBaseTestCase extends TestCase {
   
   protected volatile Configuration conf;
 
-  /** constructor */
+  /**
+   * constructor
+   */
   public HBaseTestCase() {
     super();
     conf = new HBaseConfiguration();
+    try {
+      START_KEY =
+        new String(START_KEY_BYTES, HConstants.UTF8_ENCODING) + PUNCTUATION;
+    } catch (UnsupportedEncodingException e) {
+      fail();
+    }
   }
   
   /**
@@ -62,6 +73,12 @@ public abstract class HBaseTestCase extends TestCase {
   public HBaseTestCase(String name) {
     super(name);
     conf = new HBaseConfiguration();
+    try {
+      START_KEY =
+        new String(START_KEY_BYTES, HConstants.UTF8_ENCODING) + PUNCTUATION;
+    } catch (UnsupportedEncodingException e) {
+      fail();
+    }
   }
   
   /** {@inheritDoc} */
@@ -90,10 +107,13 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   protected HRegion createNewHRegion(Path dir, Configuration c,
-    HTableDescriptor desc, long regionId, Text startKey, Text endKey)
-  throws IOException {
-    HRegionInfo info = new HRegionInfo(regionId, desc, startKey, endKey);
-    Path regionDir = HRegion.getRegionDir(dir, info.regionName);
+      HTableDescriptor desc, Text startKey, Text endKey) throws IOException {
+    return createNewHRegion(dir, c, new HRegionInfo(desc, startKey, endKey));
+  }
+  
+  protected HRegion createNewHRegion(Path dir, Configuration c,
+        HRegionInfo info) throws IOException {
+    Path regionDir = HRegion.getRegionDir(dir, info.getEncodedName());
     FileSystem fs = dir.getFileSystem(c);
     fs.mkdirs(regionDir);
     return new HRegion(dir,
@@ -189,7 +209,9 @@ public abstract class HBaseTestCase extends TestCase {
       for (char d = secondCharStart; d <= LAST_CHAR; d++) {
         for (char e = thirdCharStart; e <= LAST_CHAR; e++) {
           byte [] bytes = new byte [] {(byte)c, (byte)d, (byte)e};
-          Text t = new Text(new String(bytes, HConstants.UTF8_ENCODING));
+          String s = new String(bytes, HConstants.UTF8_ENCODING) + PUNCTUATION;
+          bytes = s.getBytes(HConstants.UTF8_ENCODING);
+          Text t = new Text(s);
           if (endKey != null && endKey.getLength() > 0
               && endKey.compareTo(t) <= 0) {
             break EXIT;

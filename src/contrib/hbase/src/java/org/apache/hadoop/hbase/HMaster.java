@@ -124,6 +124,8 @@ HMasterRegionInterface {
   // Default access so accesible from unit tests. MASTER is name of the webapp
   // and the attribute name used stuffing this instance into web context.
   InfoServer infoServer;
+  
+  /** Name of master server */
   public static final String MASTER = "master";
 
   /**
@@ -294,7 +296,7 @@ HMasterRegionInterface {
         return false;
       }
       if (!info.isOffline()) {
-        LOG.warn("Region is split but not offline: " + info.regionName);
+        LOG.warn("Region is split but not offline: " + info.getRegionName());
       }
       return true;
     }
@@ -324,7 +326,7 @@ HMasterRegionInterface {
       if (!hasReferencesA && !hasReferencesB) {
         LOG.info("Deleting region " + parent.getRegionName() +
         " because daughter splits no longer hold references");
-        if (!HRegion.deleteRegion(fs, dir, parent.getRegionName())) {
+        if (!HRegion.deleteRegion(fs, dir, parent.getEncodedName())) {
           LOG.warn("Deletion of " + parent.getRegionName() + " failed");
         }
         
@@ -368,7 +370,7 @@ HMasterRegionInterface {
       }
       for (Text family: split.getTableDesc().families().keySet()) {
         Path p = HStoreFile.getMapDir(fs.makeQualified(dir),
-            split.getRegionName(), HStoreKey.extractFamily(family));
+            split.getEncodedName(), HStoreKey.extractFamily(family));
 
         // Look for reference files.  Call listPaths with an anonymous
         // instance of PathFilter.
@@ -408,22 +410,23 @@ HMasterRegionInterface {
       final String serverName, final long startCode)
     throws IOException {
       // Skip region - if ...
-      if(info.offLine                                     // offline
-          || killedRegions.contains(info.regionName)      // queued for offline
-          || regionsToDelete.contains(info.regionName)) { // queued for delete
-        unassignedRegions.remove(info.regionName);
-        assignAttempts.remove(info.regionName);
+      if(info.isOffline()                                 // offline
+          || killedRegions.contains(info.getRegionName()) // queued for offline
+          || regionsToDelete.contains(info.getRegionName())) { // queued for delete
+        unassignedRegions.remove(info.getRegionName());
+        assignAttempts.remove(info.getRegionName());
         return;
       }
       HServerInfo storedInfo = null;
       if (serverName.length() != 0) {
         Map<Text, HRegionInfo> regionsToKill = killList.get(serverName);
         if (regionsToKill != null &&
-            regionsToKill.containsKey(info.regionName)) {
+            regionsToKill.containsKey(info.getRegionName())) {
           
           // Skip if region is on kill list
           if(LOG.isDebugEnabled()) {
-            LOG.debug("not assigning region (on kill list): " + info.regionName);
+            LOG.debug("not assigning region (on kill list): " +
+                info.getRegionName());
           }
           return;
         }
@@ -432,14 +435,15 @@ HMasterRegionInterface {
         }
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Checking " + info.regionName + " is assigned");
+        LOG.debug("Checking " + info.getRegionName() + " is assigned");
       }
-      if (!(unassignedRegions.containsKey(info.regionName) ||
-            pendingRegions.contains(info.regionName))
+      if (!(unassignedRegions.containsKey(info.getRegionName()) ||
+            pendingRegions.contains(info.getRegionName()))
           && (storedInfo == null || storedInfo.getStartCode() != startCode)) {
         // The current assignment is no good
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Current assignment of " + info.regionName + " is no good");
+          LOG.debug("Current assignment of " + info.getRegionName() +
+              " is no good");
         }
         // Recover the region server's log if there is one.
         if (serverName.length() != 0) {
@@ -464,8 +468,8 @@ HMasterRegionInterface {
           }
         }
         // Now get the region assigned
-        unassignedRegions.put(info.regionName, info);
-        assignAttempts.put(info.regionName, Long.valueOf(0L));
+        unassignedRegions.put(info.getRegionName(), info);
+        assignAttempts.put(info.getRegionName(), Long.valueOf(0L));
       }
     }
   }
@@ -503,7 +507,7 @@ HMasterRegionInterface {
           // Don't interrupt us while we're working
           synchronized(rootScannerLock) {
             scanRegion(new MetaRegion(rootRegionLocation.get(),
-                HGlobals.rootRegionInfo.regionName, null));
+                HRegionInfo.rootRegionInfo.getRegionName(), null));
           }
           succeeded = true;
           break;
@@ -552,6 +556,7 @@ HMasterRegionInterface {
   private RootScanner rootScannerThread;
   Integer rootScannerLock = new Integer(0);
 
+  /** Describes a meta region and its server */
   @SuppressWarnings("unchecked")
   public static class MetaRegion implements Comparable {
     private HServerAddress server;
@@ -575,6 +580,7 @@ HMasterRegionInterface {
       }
     }
     
+    /** {@inheritDoc} */
     @Override
     public String toString() {
       return "regionname: " + this.regionName.toString() + ", startKey: <" +
@@ -859,7 +865,7 @@ HMasterRegionInterface {
     this.rand = new Random();
     
     Path rootRegionDir =
-      HRegion.getRegionDir(dir, HGlobals.rootRegionInfo.regionName);
+      HRegion.getRegionDir(dir, HRegionInfo.rootRegionInfo.getEncodedName());
     LOG.info("Root region dir: " + rootRegionDir.toString());
 
     try {
@@ -871,10 +877,10 @@ HMasterRegionInterface {
       if (!fs.exists(rootRegionDir)) {
         LOG.info("bootstrap: creating ROOT and first META regions");
         try {
-          HRegion root = HRegion.createHRegion(HGlobals.rootRegionInfo, this.dir,
-            this.conf, null);
-          HRegion meta = HRegion.createHRegion(new HRegionInfo(1L,
-            HGlobals.metaTableDesc, null, null), this.dir, this.conf, null);
+          HRegion root = HRegion.createHRegion(HRegionInfo.rootRegionInfo,
+              this.dir, this.conf, null);
+          HRegion meta = HRegion.createHRegion(HRegionInfo.firstMetaRegionInfo,
+            this.dir, this.conf, null);
 
           // Add first region from the META table to the ROOT region.
           HRegion.addRegionToMETA(root, meta);
@@ -961,9 +967,9 @@ HMasterRegionInterface {
    */
   void unassignRootRegion() {
     this.rootRegionLocation.set(null);
-    this.unassignedRegions.put(HGlobals.rootRegionInfo.regionName,
-        HGlobals.rootRegionInfo);
-    this.assignAttempts.put(HGlobals.rootRegionInfo.regionName,
+    this.unassignedRegions.put(HRegionInfo.rootRegionInfo.getRegionName(),
+        HRegionInfo.rootRegionInfo);
+    this.assignAttempts.put(HRegionInfo.rootRegionInfo.getRegionName(),
         Long.valueOf(0L));
     // TODO: If the old root region server had a log, it needs splitting.
   }
@@ -1300,14 +1306,14 @@ HMasterRegionInterface {
         if (!closed.get()) {
           for (int i = 1; i < msgs.length; i++) {
             HRegionInfo info = msgs[i].getRegionInfo();
-            if (info.tableDesc.getName().equals(ROOT_TABLE_NAME)) {
+            if (info.getTableDesc().getName().equals(ROOT_TABLE_NAME)) {
               rootRegionLocation.set(null);
-            } else if (info.tableDesc.getName().equals(META_TABLE_NAME)) {
+            } else if (info.getTableDesc().getName().equals(META_TABLE_NAME)) {
               onlineMetaRegions.remove(info.getStartKey());
             }
 
-            this.unassignedRegions.put(info.regionName, info);
-            this.assignAttempts.put(info.regionName, Long.valueOf(0L));
+            this.unassignedRegions.put(info.getRegionName(), info);
+            this.assignAttempts.put(info.getRegionName(), Long.valueOf(0L));
           }
         }
       }
@@ -1449,13 +1455,13 @@ HMasterRegionInterface {
       switch (incomingMsgs[i].getMsg()) {
 
       case HMsg.MSG_REPORT_OPEN:
-        HRegionInfo regionInfo = unassignedRegions.get(region.regionName);
+        HRegionInfo regionInfo = unassignedRegions.get(region.getRegionName());
 
         if (regionInfo == null) {
 
           if (LOG.isDebugEnabled()) {
             LOG.debug("region server " + info.getServerAddress().toString()
-                + " should not have opened region " + region.regionName);
+                + " should not have opened region " + region.getRegionName());
           }
 
           // This Region should not have been opened.
@@ -1467,12 +1473,12 @@ HMasterRegionInterface {
 
         } else {
           LOG.info(info.getServerAddress().toString() + " serving " +
-              region.regionName);
+              region.getRegionName());
           // Remove from unassigned list so we don't assign it to someone else
-          this.unassignedRegions.remove(region.regionName);
-          this.assignAttempts.remove(region.regionName);
-          if (region.regionName.compareTo(
-              HGlobals.rootRegionInfo.regionName) == 0) {
+          this.unassignedRegions.remove(region.getRegionName());
+          this.assignAttempts.remove(region.getRegionName());
+          if (region.getRegionName().compareTo(
+              HRegionInfo.rootRegionInfo.getRegionName()) == 0) {
             // Store the Root Region location (in memory)
             synchronized (rootRegionLocation) {
               this.rootRegionLocation.
@@ -1485,7 +1491,7 @@ HMasterRegionInterface {
           // Note that the table has been assigned and is waiting for the meta
           // table to be updated.
 
-          pendingRegions.add(region.regionName);
+          pendingRegions.add(region.getRegionName());
 
           // Queue up an update to note the region location.
 
@@ -1499,26 +1505,26 @@ HMasterRegionInterface {
 
       case HMsg.MSG_REPORT_CLOSE:
         LOG.info(info.getServerAddress().toString() + " no longer serving " +
-            region.regionName);
+            region.getRegionName());
 
-        if (region.regionName.compareTo(
-            HGlobals.rootRegionInfo.regionName) == 0) {
+        if (region.getRegionName().compareTo(
+            HRegionInfo.rootRegionInfo.getRegionName()) == 0) {
           
           // Root region
           
           rootRegionLocation.set(null);
-          unassignedRegions.put(region.regionName, region);
-          assignAttempts.put(region.regionName, Long.valueOf(0L));
+          unassignedRegions.put(region.getRegionName(), region);
+          assignAttempts.put(region.getRegionName(), Long.valueOf(0L));
 
         } else {
           boolean reassignRegion = true;
           boolean deleteRegion = false;
 
-          if (killedRegions.remove(region.regionName)) {
+          if (killedRegions.remove(region.getRegionName())) {
             reassignRegion = false;
           }
 
-          if (regionsToDelete.remove(region.regionName)) {
+          if (regionsToDelete.remove(region.getRegionName())) {
             reassignRegion = false;
             deleteRegion = true;
           }
@@ -1527,8 +1533,8 @@ HMasterRegionInterface {
           //       could create a race with the pending close if it gets 
           //       reassigned before the close is processed.
 
-          unassignedRegions.remove(region.regionName);
-          assignAttempts.remove(region.regionName);
+          unassignedRegions.remove(region.getRegionName());
+          assignAttempts.remove(region.getRegionName());
 
           try {
             msgQueue.put(new PendingCloseReport(region, reassignRegion,
@@ -1551,10 +1557,11 @@ HMasterRegionInterface {
         unassignedRegions.put(newRegionB.getRegionName(), newRegionB);
         assignAttempts.put(newRegionB.getRegionName(), Long.valueOf(0L));
 
-        LOG.info("region " + region.regionName + " split. New regions are: "
-            + newRegionA.regionName + ", " + newRegionB.regionName);
+        LOG.info("region " + region.getRegionName() +
+            " split. New regions are: " + newRegionA.getRegionName() + ", " +
+            newRegionB.getRegionName());
 
-        if (region.tableDesc.getName().equals(META_TABLE_NAME)) {
+        if (region.getTableDesc().getName().equals(META_TABLE_NAME)) {
           // A meta region has split.
 
           onlineMetaRegions.remove(region.getStartKey());
@@ -1574,7 +1581,7 @@ HMasterRegionInterface {
     if (regionsToKill != null) {
       for (HRegionInfo i: regionsToKill.values()) {
         returnMsgs.add(new HMsg(HMsg.MSG_REGION_CLOSE, i));
-        killedRegions.add(i.regionName);
+        killedRegions.add(i.getRegionName());
       }
     }
 
@@ -1899,7 +1906,7 @@ HMasterRegionInterface {
               serverName + "> (or server is null). Marking unassigned if " +
           "meta and clearing pendingRegions");
 
-          if (info.tableDesc.getName().equals(META_TABLE_NAME)) {
+          if (info.getTableDesc().getName().equals(META_TABLE_NAME)) {
             onlineMetaRegions.remove(info.getStartKey());
           }
 
@@ -1910,14 +1917,14 @@ HMasterRegionInterface {
             HashMap<Text, HRegionInfo> regionsToKill =
               killList.get(deadServerName);
 
-            if (regionsToKill.containsKey(info.regionName)) {
-              regionsToKill.remove(info.regionName);
+            if (regionsToKill.containsKey(info.getRegionName())) {
+              regionsToKill.remove(info.getRegionName());
               killList.put(deadServerName, regionsToKill);
-              unassignedRegions.remove(info.regionName);
-              assignAttempts.remove(info.regionName);
-              if (regionsToDelete.contains(info.regionName)) {
+              unassignedRegions.remove(info.getRegionName());
+              assignAttempts.remove(info.getRegionName());
+              if (regionsToDelete.contains(info.getRegionName())) {
                 // Delete this region
-                regionsToDelete.remove(info.regionName);
+                regionsToDelete.remove(info.getRegionName());
                 todo.deleteRegion = true;
               } else {
                 // Mark region offline
@@ -1927,7 +1934,7 @@ HMasterRegionInterface {
             
           } else {
             // Get region reassigned
-            regions.put(info.regionName, info);
+            regions.put(info.getRegionName(), info);
            
             // If it was pending, remove.
             // Otherwise will obstruct its getting reassigned.
@@ -1952,7 +1959,7 @@ HMasterRegionInterface {
         if (e.deleteRegion) {
           b.delete(lockid, COL_REGIONINFO);
         } else if (e.regionOffline) {
-          e.info.offLine = true;
+          e.info.setOffline(true);
           b.put(lockid, COL_REGIONINFO, Writables.getBytes(e.info));
         }
         b.delete(lockid, COL_SERVER);
@@ -1997,10 +2004,10 @@ HMasterRegionInterface {
             deadServer.equals(rootRegionLocation.get())) {
 
           rootRegionLocation.set(null);
-          unassignedRegions.put(HGlobals.rootRegionInfo.regionName,
-              HGlobals.rootRegionInfo);
+          unassignedRegions.put(HRegionInfo.rootRegionInfo.getRegionName(),
+              HRegionInfo.rootRegionInfo);
 
-          assignAttempts.put(HGlobals.rootRegionInfo.regionName,
+          assignAttempts.put(HRegionInfo.rootRegionInfo.getRegionName(),
               Long.valueOf(0L));
         }
         rootChecked = true;
@@ -2032,11 +2039,13 @@ HMasterRegionInterface {
               LOG.debug("process server shutdown scanning root region on " +
                   rootRegionLocation.get().getBindAddress());
             }
-            scannerId = server.openScanner(HGlobals.rootRegionInfo.regionName,
-                COLUMN_FAMILY_ARRAY, EMPTY_START_ROW,
-                System.currentTimeMillis(), null);
+            scannerId =
+              server.openScanner(HRegionInfo.rootRegionInfo.getRegionName(),
+                  COLUMN_FAMILY_ARRAY, EMPTY_START_ROW,
+                  System.currentTimeMillis(), null);
             
-            scanMetaRegion(server, scannerId, HGlobals.rootRegionInfo.regionName);
+            scanMetaRegion(server, scannerId,
+                HRegionInfo.rootRegionInfo.getRegionName());
             break;
 
           } catch (IOException e) {
@@ -2132,7 +2141,7 @@ HMasterRegionInterface {
       // If the region closing down is a meta region then we need to update
       // the ROOT table
 
-      if (this.regionInfo.tableDesc.getName().equals(META_TABLE_NAME)) {
+      if (this.regionInfo.getTableDesc().getName().equals(META_TABLE_NAME)) {
         this.rootRegion = true;
 
       } else {
@@ -2152,7 +2161,7 @@ HMasterRegionInterface {
         if (closed.get()) {
           return true;
         }
-        LOG.info("region closed: " + regionInfo.regionName);
+        LOG.info("region closed: " + regionInfo.getRegionName());
 
         // Mark the Region as unavailable in the appropriate meta table
 
@@ -2164,7 +2173,7 @@ HMasterRegionInterface {
             // scanned
             return false;
           }
-          metaRegionName = HGlobals.rootRegionInfo.regionName;
+          metaRegionName = HRegionInfo.rootRegionInfo.getRegionName();
           server = connection.getHRegionConnection(rootRegionLocation.get());
           onlineMetaRegions.remove(regionInfo.getStartKey());
 
@@ -2200,13 +2209,13 @@ HMasterRegionInterface {
 
         try {
           BatchUpdate b = new BatchUpdate(rand.nextLong());
-          long lockid = b.startUpdate(regionInfo.regionName);
+          long lockid = b.startUpdate(regionInfo.getRegionName());
 
           if (deleteRegion) {
             b.delete(lockid, COL_REGIONINFO);
 
           } else if (!reassignRegion ) {
-            regionInfo.offLine = true;
+            regionInfo.setOffline(true);
             b.put(lockid, COL_REGIONINFO, Writables.getBytes(regionInfo));
           }
           b.delete(lockid, COL_SERVER);
@@ -2224,17 +2233,17 @@ HMasterRegionInterface {
       }
 
       if (reassignRegion) {
-        LOG.info("reassign region: " + regionInfo.regionName);
+        LOG.info("reassign region: " + regionInfo.getRegionName());
 
-        unassignedRegions.put(regionInfo.regionName, regionInfo);
-        assignAttempts.put(regionInfo.regionName, Long.valueOf(0L));
+        unassignedRegions.put(regionInfo.getRegionName(), regionInfo);
+        assignAttempts.put(regionInfo.getRegionName(), Long.valueOf(0L));
 
       } else if (deleteRegion) {
         try {
-          HRegion.deleteRegion(fs, dir, regionInfo.regionName);
+          HRegion.deleteRegion(fs, dir, regionInfo.getEncodedName());
         } catch (IOException e) {
           e = RemoteExceptionHandler.checkIOException(e);
-          LOG.error("failed delete region " + regionInfo.regionName, e);
+          LOG.error("failed delete region " + regionInfo.getRegionName(), e);
           throw e;
         }
       }
@@ -2258,12 +2267,13 @@ HMasterRegionInterface {
       // If true, the region which just came on-line is a META region.
       // We need to look in the ROOT region for its information.  Otherwise,
       // its just an ordinary region. Look for it in the META table.
-      this.rootRegion = region.tableDesc.getName().equals(META_TABLE_NAME);
+      this.rootRegion = region.getTableDesc().getName().equals(META_TABLE_NAME);
       this.region = region;
       this.serverAddress = info.getServerAddress();
       this.startCode = Writables.longToBytes(info.getStartCode());
     }
 
+    /** {@inheritDoc} */
     @Override
     public String toString() {
       return "PendingOpenOperation from " + serverAddress.toString();
@@ -2292,7 +2302,7 @@ HMasterRegionInterface {
             }
             return false;
           }
-          metaRegionName = HGlobals.rootRegionInfo.regionName;
+          metaRegionName = HRegionInfo.rootRegionInfo.getRegionName();
           server = connection.getHRegionConnection(rootRegionLocation.get());
         } else {
           if (!rootScanned ||
@@ -2329,10 +2339,10 @@ HMasterRegionInterface {
             Writables.stringToBytes(serverAddress.toString()));
           b.put(lockid, COL_STARTCODE, startCode);
           server.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
-          if (region.tableDesc.getName().equals(META_TABLE_NAME)) {
+          if (region.getTableDesc().getName().equals(META_TABLE_NAME)) {
             // It's a meta region.
             MetaRegion m = new MetaRegion(this.serverAddress,
-              this.region.regionName, this.region.startKey);
+              this.region.getRegionName(), this.region.getRegionName());
             if (!initialMetaScanComplete) {
               // Put it on the queue to be scanned for the first time.
               try {
@@ -2345,7 +2355,7 @@ HMasterRegionInterface {
             } else {
               // Add it to the online meta regions
               LOG.debug("Adding to onlineMetaRegions: " + m.toString());
-              onlineMetaRegions.put(this.region.startKey, m);
+              onlineMetaRegions.put(this.region.getRegionName(), m);
             }
           }
           // If updated successfully, remove from pending list.
@@ -2393,7 +2403,7 @@ HMasterRegionInterface {
     if (!isMasterRunning()) {
       throw new MasterNotRunningException();
     }
-    HRegionInfo newRegion = new HRegionInfo(rand.nextLong(), desc, null, null);
+    HRegionInfo newRegion = new HRegionInfo(desc, null, null);
 
     for (int tries = 0; tries < numRetries; tries++) {
       try {
@@ -2418,7 +2428,7 @@ HMasterRegionInterface {
   private Set<Text> tableInCreation = new HashSet<Text>();
 
   private void createTable(final HRegionInfo newRegion) throws IOException {
-    Text tableName = newRegion.tableDesc.getName();
+    Text tableName = newRegion.getTableDesc().getName();
     synchronized (tableInCreation) {
       if (tableInCreation.contains(tableName)) {
         throw new TableExistsException("Table " + tableName + " in process "
@@ -2432,8 +2442,8 @@ HMasterRegionInterface {
       // for the table we want to create already exists, then table already
       // created. Throw already-exists exception.
       
-      MetaRegion m = (onlineMetaRegions.containsKey(newRegion.regionName) ?
-          onlineMetaRegions.get(newRegion.regionName) :
+      MetaRegion m = (onlineMetaRegions.containsKey(newRegion.getRegionName()) ?
+          onlineMetaRegions.get(newRegion.getRegionName()) :
             onlineMetaRegions.get(onlineMetaRegions.headMap(
                 newRegion.getTableDesc().getName()).lastKey()));
           
@@ -2631,7 +2641,7 @@ HMasterRegionInterface {
                     throw new IOException(COL_REGIONINFO + " not found");
                   }
 
-                  if (info.tableDesc.getName().compareTo(tableName) > 0) {
+                  if (info.getTableDesc().getName().compareTo(tableName) > 0) {
                     break;               // Beyond any more entries for this table
                   }
 
@@ -2690,7 +2700,7 @@ HMasterRegionInterface {
     }
 
     protected boolean isEnabled(HRegionInfo info) {
-      return !info.offLine;
+      return !info.isOffline();
     }
 
     protected abstract void processScanItem(String serverName, long startCode,
@@ -2738,7 +2748,7 @@ HMasterRegionInterface {
         LOG.debug("processing unserved regions");
       }
       for (HRegionInfo i: unservedRegions) {
-        if (i.offLine && i.isSplit()) {
+        if (i.isOffline() && i.isSplit()) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Skipping region " + i.toString() + " because it is " +
                 "offline because it has been split");
@@ -2749,28 +2759,28 @@ HMasterRegionInterface {
         // Update meta table
         
         if (LOG.isDebugEnabled()) {
-          LOG.debug("updating columns in row: " + i.regionName);
+          LOG.debug("updating columns in row: " + i.getRegionName());
         }
 
         BatchUpdate b = new BatchUpdate(rand.nextLong());
-        lockid = b.startUpdate(i.regionName);
+        lockid = b.startUpdate(i.getRegionName());
         updateRegionInfo(b, i);
         b.delete(lockid, COL_SERVER);
         b.delete(lockid, COL_STARTCODE);
         server.batchUpdate(m.getRegionName(), System.currentTimeMillis(), b);
         if (LOG.isDebugEnabled()) {
-          LOG.debug("updated columns in row: " + i.regionName);
+          LOG.debug("updated columns in row: " + i.getRegionName());
         }
 
         if (online) {                           // Bring offline regions on-line
-          if (!unassignedRegions.containsKey(i.regionName)) {
-            unassignedRegions.put(i.regionName, i);
-            assignAttempts.put(i.regionName, Long.valueOf(0L));
+          if (!unassignedRegions.containsKey(i.getRegionName())) {
+            unassignedRegions.put(i.getRegionName(), i);
+            assignAttempts.put(i.getRegionName(), Long.valueOf(0L));
           }
 
         } else {                                // Prevent region from getting assigned.
-          unassignedRegions.remove(i.regionName);
-          assignAttempts.remove(i.regionName);
+          unassignedRegions.remove(i.getRegionName());
+          assignAttempts.remove(i.getRegionName());
         }
       }
 
@@ -2794,9 +2804,10 @@ HMasterRegionInterface {
         }
         for (HRegionInfo i: e.getValue()) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("adding region " + i.regionName + " to local kill list");
+            LOG.debug("adding region " + i.getRegionName() +
+                " to local kill list");
           }
-          localKillList.put(i.regionName, i);
+          localKillList.put(i.getRegionName(), i);
         }
         if (localKillList.size() > 0) {
           if (LOG.isDebugEnabled()) {
@@ -2812,7 +2823,7 @@ HMasterRegionInterface {
     protected void updateRegionInfo(final BatchUpdate b, final HRegionInfo i)
       throws IOException {
       
-      i.offLine = !online;
+      i.setOffline(!online);
       b.put(lockid, COL_REGIONINFO, Writables.getBytes(i));
     }
   }
@@ -2836,7 +2847,7 @@ HMasterRegionInterface {
       
       for (HashSet<HRegionInfo> s: servedRegions.values()) {
         for (HRegionInfo i: s) {
-          regionsToDelete.add(i.regionName);
+          regionsToDelete.add(i.getRegionName());
         }
       }
 
@@ -2846,10 +2857,10 @@ HMasterRegionInterface {
         // Delete the region
       
         try {
-          HRegion.deleteRegion(fs, dir, i.regionName);
+          HRegion.deleteRegion(fs, dir, i.getEncodedName());
         
         } catch (IOException e) {
-          LOG.error("failed to delete region " + i.regionName,
+          LOG.error("failed to delete region " + i.getRegionName(),
             RemoteExceptionHandler.checkIOException(e));
         }
       }
@@ -2885,11 +2896,11 @@ HMasterRegionInterface {
         HRegionInfo i) throws IOException {
 
       BatchUpdate b = new BatchUpdate(rand.nextLong());
-      long lockid = b.startUpdate(i.regionName);
+      long lockid = b.startUpdate(i.getRegionName());
       b.put(lockid, COL_REGIONINFO, Writables.getBytes(i));
       server.batchUpdate(regionName, System.currentTimeMillis(), b);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("updated columns in row: " + i.regionName);
+        LOG.debug("updated columns in row: " + i.getRegionName());
       }
     }
   }
@@ -2908,13 +2919,13 @@ HMasterRegionInterface {
       throws IOException {
 
       for (HRegionInfo i: unservedRegions) {
-        i.tableDesc.families().remove(columnName);
+        i.getTableDesc().families().remove(columnName);
         updateRegionInfo(server, m.getRegionName(), i);
 
         // Delete the directories used by the column
 
-        fs.delete(HStoreFile.getMapDir(dir, i.regionName, columnName));
-        fs.delete(HStoreFile.getInfoDir(dir, i.regionName, columnName));
+        fs.delete(HStoreFile.getMapDir(dir, i.getEncodedName(), columnName));
+        fs.delete(HStoreFile.getInfoDir(dir, i.getEncodedName(), columnName));
       }
     }
   }
@@ -2938,7 +2949,7 @@ HMasterRegionInterface {
         // When the region is brought on-line, it will find the column missing
         // and create it.
 
-        i.tableDesc.addFamily(newColumn);
+        i.getTableDesc().addFamily(newColumn);
         updateRegionInfo(server, m.getRegionName(), i);
       }
     }

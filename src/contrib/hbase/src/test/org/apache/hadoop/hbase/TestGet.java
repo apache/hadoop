@@ -40,7 +40,7 @@ public class TestGet extends HBaseTestCase {
   
   private static final Text CONTENTS = new Text("contents:");
   private static final Text ROW_KEY =
-    new Text(HGlobals.rootRegionInfo.regionName);
+    new Text(HRegionInfo.rootRegionInfo.getRegionName());
   private static final String SERVER_ADDRESS = "foo.bar.com:1234";
 
   
@@ -88,8 +88,8 @@ public class TestGet extends HBaseTestCase {
       desc.addFamily(new HColumnDescriptor(CONTENTS.toString()));
       desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
       
-      HRegionInfo info = new HRegionInfo(0L, desc, null, null);
-      Path regionDir = HRegion.getRegionDir(dir, info.regionName);
+      HRegionInfo info = new HRegionInfo(desc, null, null);
+      Path regionDir = HRegion.getRegionDir(dir, info.getEncodedName());
       fs.mkdirs(regionDir);
       
       HLog log = new HLog(fs, new Path(regionDir, "log"), conf);
@@ -105,10 +105,10 @@ public class TestGet extends HBaseTestCase {
       r.put(lockid, CONTENTS, bytes.toByteArray());
 
       bytes.reset();
-      HGlobals.rootRegionInfo.write(s);
+      HRegionInfo.rootRegionInfo.write(s);
       
       r.put(lockid, HConstants.COL_REGIONINFO, 
-          Writables.getBytes(HGlobals.rootRegionInfo));
+          Writables.getBytes(HRegionInfo.rootRegionInfo));
       
       r.commit(lockid, System.currentTimeMillis());
       

@@ -225,8 +225,8 @@ class HMerge implements HConstants {
         HRegionInfo region =
           (HRegionInfo) Writables.getWritable(bytes, new HRegionInfo());
 
-        if(!region.offLine) {
-          throw new TableNotDisabledException("region " + region.regionName
+        if(!region.isOffline()) {
+          throw new TableNotDisabledException("region " + region.getRegionName()
               + " is not disabled");
         }
         return region;
@@ -267,7 +267,7 @@ class HMerge implements HConstants {
           oldRegion2
       };
       for(int r = 0; r < regionsToDelete.length; r++) {
-        if(regionsToDelete[r].equals(latestRegion.regionName)) {
+        if(regionsToDelete[r].equals(latestRegion.getRegionName())) {
           latestRegion = null;
         }
         long lockid = -1L;
@@ -290,7 +290,7 @@ class HMerge implements HConstants {
       }
       ByteArrayOutputStream byteValue = new ByteArrayOutputStream();
       DataOutputStream s = new DataOutputStream(byteValue);
-      newRegion.getRegionInfo().offLine = true;
+      newRegion.getRegionInfo().setOffline(true);
       newRegion.getRegionInfo().write(s);
       long lockid = -1L;
       try {
@@ -326,7 +326,7 @@ class HMerge implements HConstants {
       // Scan root region to find all the meta regions
       
       HRegion root =
-        new HRegion(dir, hlog,fs, conf, HGlobals.rootRegionInfo, null);
+        new HRegion(dir, hlog,fs, conf, HRegionInfo.rootRegionInfo, null);
 
       HInternalScannerInterface rootScanner =
         root.getScanner(META_COLS, new Text(), System.currentTimeMillis(), null);
@@ -362,7 +362,7 @@ class HMerge implements HConstants {
         HRegion newRegion) throws IOException {
       
       HRegion root =
-        new HRegion(dir, hlog, fs, conf, HGlobals.rootRegionInfo, null);
+        new HRegion(dir, hlog, fs, conf, HRegionInfo.rootRegionInfo, null);
 
       Text[] regionsToDelete = {
           oldRegion1,
@@ -394,7 +394,7 @@ class HMerge implements HConstants {
       }
       ByteArrayOutputStream byteValue = new ByteArrayOutputStream();
       DataOutputStream s = new DataOutputStream(byteValue);
-      newRegion.getRegionInfo().offLine = true;
+      newRegion.getRegionInfo().setOffline(true);
       newRegion.getRegionInfo().write(s);
       long lockid = -1L;
       try {

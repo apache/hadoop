@@ -192,7 +192,7 @@ public class HBaseAdmin implements HConstants {
             info = (HRegionInfo) Writables.getWritable(
                   ((ImmutableBytesWritable) e.getValue()).get(), info);
             
-            if (info.tableDesc.getName().equals(tableName)) {
+            if (info.getTableDesc().getName().equals(tableName)) {
               found = true;
             }
           }
@@ -280,7 +280,7 @@ public class HBaseAdmin implements HConstants {
               info = (HRegionInfo) Writables.getWritable(
                     ((ImmutableBytesWritable) e.getValue()).get(), info);
             
-              isenabled = !info.offLine;
+              isenabled = !info.isOffline();
               break;
             }
           }
@@ -380,7 +380,7 @@ public class HBaseAdmin implements HConstants {
               info = (HRegionInfo) Writables.getWritable(
                     ((ImmutableBytesWritable) e.getValue()).get(), info);
             
-              disabled = info.offLine;
+              disabled = info.isOffline();
               break;
             }
           }

@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.*;
 
 import java.io.*;
@@ -30,7 +31,35 @@ import java.io.*;
  * The table and row are already identified in HLogKey.
  * This just indicates the column and value.
  */
-public class HLogEdit implements Writable {
+public class HLogEdit implements Writable, HConstants {
+
+  /** Value stored for a deleted item */
+  public static ImmutableBytesWritable deleteBytes = null;
+
+  /** Value written to HLog on a complete cache flush */
+  public static ImmutableBytesWritable completeCacheFlush = null;
+
+  static {
+    try {
+      deleteBytes =
+        new ImmutableBytesWritable("HBASE::DELETEVAL".getBytes(UTF8_ENCODING));
+    
+      completeCacheFlush =
+        new ImmutableBytesWritable("HBASE::CACHEFLUSH".getBytes(UTF8_ENCODING));
+      
+    } catch (UnsupportedEncodingException e) {
+      assert(false);
+    }
+  }
+  
+  /**
+   * @param value
+   * @return True if an entry and its content is {@link #deleteBytes}.
+   */
+  public static boolean isDeleted(final byte [] value) {
+    return (value == null)? false: deleteBytes.compareTo(value) == 0;
+  }
+
   private Text column = new Text();
   private byte [] val;
   private long timestamp;

@@ -120,9 +120,9 @@ public class HRegion implements HConstants {
       fs.mkdirs(merges);
     }
     
-    HRegionInfo newRegionInfo
-      = new HRegionInfo(Math.abs(rand.nextLong()), tabledesc, startKey, endKey);
-    Path newRegionDir = HRegion.getRegionDir(merges, newRegionInfo.regionName);
+    HRegionInfo newRegionInfo = new HRegionInfo(tabledesc, startKey, endKey);
+    Path newRegionDir =
+      HRegion.getRegionDir(merges, newRegionInfo.getEncodedName());
     if(fs.exists(newRegionDir)) {
       throw new IOException("Cannot merge; target file collision at " +
         newRegionDir);
@@ -138,7 +138,8 @@ public class HRegion implements HConstants {
     for (Map.Entry<Text, Vector<HStoreFile>> es : byFamily.entrySet()) {
       Text colFamily = es.getKey();
       Vector<HStoreFile> srcFiles = es.getValue();
-      HStoreFile dst = new HStoreFile(conf, merges, newRegionInfo.regionName,
+      HStoreFile dst =
+        new HStoreFile(conf, merges, newRegionInfo.getEncodedName(),
         colFamily, Math.abs(rand.nextLong()));
       dst.mergeStoreFiles(srcFiles, fs, conf);
     }
@@ -253,7 +254,8 @@ public class HRegion implements HConstants {
 
     // Declare the regionName.  This is a unique string for the region, used to 
     // build a unique filename.
-    this.regiondir = HRegion.getRegionDir(rootDir, this.regionInfo.regionName);
+    this.regiondir =
+      HRegion.getRegionDir(rootDir, this.regionInfo.getEncodedName());
     Path oldLogFile = new Path(regiondir, HREGION_OLDLOGFILE_NAME);
 
     // Move prefab HStore files into place (if any).  This picks up split files
@@ -265,10 +267,10 @@ public class HRegion implements HConstants {
     // Load in all the HStores.
     long maxSeqId = -1;
     for(Map.Entry<Text, HColumnDescriptor> e :
-        this.regionInfo.tableDesc.families().entrySet()) {
+        this.regionInfo.getTableDesc().families().entrySet()) {
       Text colFamily = HStoreKey.extractFamily(e.getKey());
       
-      HStore store = new HStore(rootDir, this.regionInfo.regionName, 
+      HStore store = new HStore(rootDir, this.regionInfo.getEncodedName(), 
           e.getValue(), fs, oldLogFile, conf); 
       
       stores.put(colFamily, store);
@@ -306,7 +308,7 @@ public class HRegion implements HConstants {
 
     // HRegion is ready to go!
     this.writestate.compacting = false;
-    LOG.info("region " + this.regionInfo.regionName + " available");
+    LOG.info("region " + this.regionInfo.getRegionName() + " available");
   }
   
   /**
@@ -317,7 +319,7 @@ public class HRegion implements HConstants {
     return this.minSequenceId;
   }
 
-  /** Returns a HRegionInfo object for this region */
+  /** @return a HRegionInfo object for this region */
   public HRegionInfo getRegionInfo() {
     return this.regionInfo;
   }
@@ -360,7 +362,7 @@ public class HRegion implements HConstants {
    */
   Vector<HStoreFile> close(boolean abort) throws IOException {
     if (isClosed()) {
-      LOG.info("region " + this.regionInfo.regionName + " already closed");
+      LOG.info("region " + this.regionInfo.getRegionName() + " already closed");
       return null;
     }
     lock.obtainWriteLock();
@@ -393,7 +395,7 @@ public class HRegion implements HConstants {
         result.addAll(store.close());
       }
       this.closed.set(true);
-      LOG.info("closed " + this.regionInfo.regionName);
+      LOG.info("closed " + this.regionInfo.getRegionName());
       return result;
     } finally {
       lock.releaseWriteLock();
@@ -416,15 +418,15 @@ public class HRegion implements HConstants {
     checkMidKey(midKey);
     long startTime = System.currentTimeMillis();
     Path splits = getSplitsDir();
-    HRegionInfo regionAInfo = new HRegionInfo(Math.abs(rand.nextLong()),
-      this.regionInfo.tableDesc, this.regionInfo.startKey, midKey);
-    Path dirA = getSplitRegionDir(splits, regionAInfo.regionName);
+    HRegionInfo regionAInfo = new HRegionInfo(this.regionInfo.getTableDesc(),
+        this.regionInfo.getStartKey(), midKey);
+    Path dirA = getSplitRegionDir(splits, regionAInfo.getEncodedName());
     if(fs.exists(dirA)) {
       throw new IOException("Cannot split; target file collision at " + dirA);
     }
-    HRegionInfo regionBInfo = new HRegionInfo(Math.abs(rand.nextLong()),
-      this.regionInfo.tableDesc, midKey, null);
-    Path dirB = getSplitRegionDir(splits, regionBInfo.regionName);
+    HRegionInfo regionBInfo = new HRegionInfo(this.regionInfo.getTableDesc(),
+        midKey, null);
+    Path dirB = getSplitRegionDir(splits, regionBInfo.getEncodedName());
     if(this.fs.exists(dirB)) {
       throw new IOException("Cannot split; target file collision at " + dirB);
     }
@@ -455,18 +457,18 @@ public class HRegion implements HConstants {
     for(HStoreFile h: hstoreFilesToSplit) {
       // A reference to the bottom half of the hsf store file.
       HStoreFile.Reference aReference = new HStoreFile.Reference(
-        getRegionName(), h.getFileId(), new HStoreKey(midKey),
+        this.regionInfo.getEncodedName(), h.getFileId(), new HStoreKey(midKey),
         HStoreFile.Range.bottom);
       HStoreFile a = new HStoreFile(this.conf, splits,
-        regionAInfo.regionName, h.getColFamily(), Math.abs(rand.nextLong()),
-        aReference);
+          regionAInfo.getEncodedName(), h.getColFamily(),
+          Math.abs(rand.nextLong()), aReference);
       // Reference to top half of the hsf store file.
       HStoreFile.Reference bReference = new HStoreFile.Reference(
-        getRegionName(), h.getFileId(), new HStoreKey(midKey),
+        this.regionInfo.getEncodedName(), h.getFileId(), new HStoreKey(midKey),
         HStoreFile.Range.top);
       HStoreFile b = new HStoreFile(this.conf, splits,
-        regionBInfo.regionName, h.getColFamily(), Math.abs(rand.nextLong()),
-        bReference);
+        regionBInfo.getEncodedName(), h.getColFamily(),
+        Math.abs(rand.nextLong()), bReference);
       h.splitStoreFile(a, b, this.fs);
     }
 
@@ -482,25 +484,25 @@ public class HRegion implements HConstants {
       LOG.debug("Cleaned up " + splits.toString() + " " + deleted);
     }
     HRegion regions[] = new HRegion [] {regionA, regionB};
-    LOG.info("Region split of " + this.regionInfo.regionName + " complete; " +
-      "new regions: " + regions[0].getRegionName() + ", " +
-      regions[1].getRegionName() + ". Split took " +
-      StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
+    LOG.info("Region split of " + this.regionInfo.getRegionName() +
+        " complete; " + "new regions: " + regions[0].getRegionName() + ", " +
+        regions[1].getRegionName() + ". Split took " +
+        StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
     return regions;
   }
   
   private void checkMidKey(final Text midKey) throws IOException {
-    if(((this.regionInfo.startKey.getLength() != 0)
-        && (this.regionInfo.startKey.compareTo(midKey) > 0))
-        || ((this.regionInfo.endKey.getLength() != 0)
-            && (this.regionInfo.endKey.compareTo(midKey) < 0))) {
+    if(((this.regionInfo.getStartKey().getLength() != 0)
+        && (this.regionInfo.getStartKey().compareTo(midKey) > 0))
+        || ((this.regionInfo.getEndKey().getLength() != 0)
+            && (this.regionInfo.getEndKey().compareTo(midKey) < 0))) {
       throw new IOException("Region splitkey must lie within region " +
         "boundaries.");
     }
   }
   
-  private Path getSplitRegionDir(final Path splits, final Text regionName) {
-    return HRegion.getRegionDir(splits, regionName);
+  private Path getSplitRegionDir(final Path splits, final String region) {
+    return HRegion.getRegionDir(splits, region);
   }
   
   private Path getSplitsDir() throws IOException {
@@ -517,22 +519,22 @@ public class HRegion implements HConstants {
 
   /** @return start key for region */
   public Text getStartKey() {
-    return this.regionInfo.startKey;
+    return this.regionInfo.getStartKey();
   }
 
   /** @return end key for region */
   public Text getEndKey() {
-    return this.regionInfo.endKey;
+    return this.regionInfo.getEndKey();
   }
 
   /** @return region id */
   public long getRegionId() {
-    return this.regionInfo.regionId;
+    return this.regionInfo.getRegionId();
   }
 
   /** @return region name */
   public Text getRegionName() {
-    return this.regionInfo.regionName;
+    return this.regionInfo.getRegionName();
   }
 
   /** @return root directory path */
@@ -542,7 +544,7 @@ public class HRegion implements HConstants {
 
   /** @return HTableDescriptor for this region */
   public HTableDescriptor getTableDesc() {
-    return this.regionInfo.tableDesc;
+    return this.regionInfo.getTableDesc();
   }
 
   /** @return HLog in use for this region */
@@ -788,7 +790,7 @@ public class HRegion implements HConstants {
     if(!shouldFlush) {
       if(LOG.isDebugEnabled()) {
         LOG.debug("NOT flushing memcache for region " +
-          this.regionInfo.regionName);
+          this.regionInfo.getRegionName());
       }
       return;  
     }
@@ -837,7 +839,7 @@ public class HRegion implements HConstants {
     if(LOG.isDebugEnabled()) {
       startTime = System.currentTimeMillis();
       LOG.debug("Started memcache flush for region " +
-        this.regionInfo.regionName + ". Size " +
+        this.regionInfo.getRegionName() + ". Size " +
         StringUtils.humanReadableInt(this.memcache.getSize()));
     }
 
@@ -866,7 +868,7 @@ public class HRegion implements HConstants {
       long logCacheFlushId = retval.sequenceId;
       if(LOG.isDebugEnabled()) {
         LOG.debug("Snapshotted memcache for region " +
-            this.regionInfo.regionName + " with sequence id " +
+            this.regionInfo.getRegionName() + " with sequence id " +
             retval.sequenceId + " and entries " +
             retval.memcacheSnapshot.size());
       }
@@ -893,8 +895,8 @@ public class HRegion implements HConstants {
       //     This tells future readers that the HStores were emitted correctly,
       //     and that all updates to the log for this regionName that have lower 
       //     log-sequence-ids can be safely ignored.
-      this.log.completeCacheFlush(this.regionInfo.regionName,
-          regionInfo.tableDesc.getName(), logCacheFlushId);
+      this.log.completeCacheFlush(this.regionInfo.getRegionName(),
+          regionInfo.getTableDesc().getName(), logCacheFlushId);
 
     } finally {
       // C. Delete the now-irrelevant memcache snapshot; its contents have been 
@@ -909,7 +911,7 @@ public class HRegion implements HConstants {
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Finished memcache flush for region " +
-        this.regionInfo.regionName + " in " +
+        this.regionInfo.getRegionName() + " in " +
           (System.currentTimeMillis() - startTime) + "ms");
     }
   }
@@ -1207,7 +1209,7 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public void put(long lockid, Text targetCol, byte [] val) throws IOException {
-    if (HGlobals.deleteBytes.compareTo(val) == 0) {
+    if (HLogEdit.isDeleted(val)) {
       throw new IOException("Cannot insert value: " + val);
     }
     localput(lockid, targetCol, val);
@@ -1221,7 +1223,7 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public void delete(long lockid, Text targetCol) throws IOException {
-    localput(lockid, targetCol, HGlobals.deleteBytes.get());
+    localput(lockid, targetCol, HLogEdit.deleteBytes.get());
   }
   
   /**
@@ -1258,7 +1260,7 @@ public class HRegion implements HConstants {
         List<HStoreKey> keys = getKeys(origin, versions);
         if (keys.size() > 0) {
           TreeMap<Text, byte []> edits = new TreeMap<Text, byte []>();
-          edits.put(column, HGlobals.deleteBytes.get());
+          edits.put(column, HLogEdit.deleteBytes.get());
           for (HStoreKey key: keys) {
             update(row, key.getTimestamp(), edits);
           }
@@ -1400,7 +1402,7 @@ public class HRegion implements HConstants {
       // Run updates one at a time so we can supply appropriate timestamp
       long now = System.currentTimeMillis();
       for (Map.Entry<Text, byte []>e: updatesByColumn.entrySet()) {
-        if (HGlobals.deleteBytes.equals(e.getValue())) {
+        if (HLogEdit.isDeleted(e.getValue())) {
           // Its a delete.  Delete latest.  deleteMultiple calls update for us.
           // Actually regets the row lock but since we already have it, should
           // be fine.
@@ -1431,8 +1433,8 @@ public class HRegion implements HConstants {
     if (updatesByColumn == null || updatesByColumn.size() <= 0) {
       return;
     }
-    this.log.append(regionInfo.regionName, regionInfo.tableDesc.getName(),
-        row, updatesByColumn, timestamp);
+    this.log.append(regionInfo.getRegionName(),
+        regionInfo.getTableDesc().getName(), row, updatesByColumn, timestamp);
     this.memcache.add(row, updatesByColumn, timestamp);
   }
 
@@ -1442,17 +1444,17 @@ public class HRegion implements HConstants {
 
   /** Make sure this is a valid row for the HRegion */
   void checkRow(Text row) throws IOException {
-    if(((regionInfo.startKey.getLength() == 0)
-        || (regionInfo.startKey.compareTo(row) <= 0))
-        && ((regionInfo.endKey.getLength() == 0)
-            || (regionInfo.endKey.compareTo(row) > 0))) {
+    if(((regionInfo.getStartKey().getLength() == 0)
+        || (regionInfo.getStartKey().compareTo(row) <= 0))
+        && ((regionInfo.getEndKey().getLength() == 0)
+            || (regionInfo.getEndKey().compareTo(row) > 0))) {
       // all's well
       
     } else {
       throw new WrongRegionException("Requested row out of range for " +
-        "HRegion " + regionInfo.regionName + ", startKey='" +
-        regionInfo.startKey + "', endKey='" + regionInfo.endKey + "', row='" +
-        row + "'");
+        "HRegion " + regionInfo.getRegionName() + ", startKey='" +
+        regionInfo.getStartKey() + "', getEndKey()='" + regionInfo.getEndKey() +
+        "', row='" + row + "'");
     }
   }
   
@@ -1463,10 +1465,10 @@ public class HRegion implements HConstants {
    */
   void checkColumn(Text columnName) throws IOException {
     Text family = new Text(HStoreKey.extractFamily(columnName) + ":");
-    if(! regionInfo.tableDesc.hasFamily(family)) {
+    if(! regionInfo.getTableDesc().hasFamily(family)) {
       throw new IOException("Requested column family " + family 
-          + " does not exist in HRegion " + regionInfo.regionName
-          + " for table " + regionInfo.tableDesc.getName());
+          + " does not exist in HRegion " + regionInfo.getRegionName()
+          + " for table " + regionInfo.getTableDesc().getName());
     }
   }
 
@@ -1615,14 +1617,17 @@ public class HRegion implements HConstants {
       }
     }
 
+    /** @return true if the scanner is a wild card scanner */
     public boolean isWildcardScanner() {
       return wildcardMatch;
     }
-    
+
+    /** @return true if the scanner is a multiple match scanner */
     public boolean isMultipleMatchScanner() {
       return multipleMatchers;
     }
 
+    /** {@inheritDoc} */
     public boolean next(HStoreKey key, SortedMap<Text, byte[]> results)
     throws IOException {
       // Filtered flag is set by filters.  If a cell has been 'filtered out'
@@ -1690,7 +1695,7 @@ public class HRegion implements HConstants {
                 key.getTimestamp());
               for (Map.Entry<Text, byte[]> e : resultSets[i].entrySet()) {
                 hsk.setColumn(e.getKey());
-                if (HGlobals.deleteBytes.equals(e.getValue())) {
+                if (HLogEdit.isDeleted(e.getValue())) {
                   if (!deletes.contains(hsk)) {
                     // Key changes as we cycle the for loop so add a copy to
                     // the set of deletes.
@@ -1817,10 +1822,9 @@ public class HRegion implements HConstants {
    * 
    * @throws IOException
    */
-  static HRegion createHRegion(final HRegionInfo info,
-    final Path rootDir, final Configuration conf, final Path initialFiles)
-  throws IOException {
-    Path regionDir = HRegion.getRegionDir(rootDir, info.regionName);
+  static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
+      final Configuration conf, final Path initialFiles) throws IOException {
+    Path regionDir = HRegion.getRegionDir(rootDir, info.getEncodedName());
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
     return new HRegion(rootDir,
@@ -1851,13 +1855,13 @@ public class HRegion implements HConstants {
    * 
    * @param fs the file system object
    * @param baseDirectory base directory for HBase
-   * @param regionName name of the region to delete
+   * @param name region file name
    * @throws IOException
    * @return True if deleted.
    */
-  static boolean deleteRegion(FileSystem fs, Path baseDirectory,
-      Text regionName) throws IOException {
-    Path p = HRegion.getRegionDir(fs.makeQualified(baseDirectory), regionName);
+  static boolean deleteRegion(FileSystem fs, Path baseDirectory, String name)
+    throws IOException {
+    Path p = HRegion.getRegionDir(fs.makeQualified(baseDirectory), name);
     return fs.delete(p);
   }
 
@@ -1865,10 +1869,10 @@ public class HRegion implements HConstants {
    * Computes the Path of the HRegion
    * 
    * @param dir hbase home directory
-   * @param regionName name of the region
+   * @param name region file name
    * @return Path of HRegion directory
    */
-  public static Path getRegionDir(final Path dir, final Text regionName) {
-    return new Path(dir, new Path(HREGIONDIR_PREFIX + regionName));
+  public static Path getRegionDir(final Path dir, final String name) {
+    return new Path(dir, new Path(HREGIONDIR_PREFIX + name));
   }
 }

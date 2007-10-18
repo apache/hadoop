@@ -46,7 +46,8 @@ public interface HConstants {
   
   /** Default master address */
   static final String DEFAULT_MASTER_ADDRESS = DEFAULT_HOST + ":60000";
-  
+
+  /** default port for master web api */
   static final int DEFAULT_MASTER_INFOPORT = 60010;
 
   /** Parameter name for hbase.regionserver address. */
@@ -54,7 +55,8 @@ public interface HConstants {
   
   /** Default region server address */
   static final String DEFAULT_REGIONSERVER_ADDRESS = DEFAULT_HOST + ":60020";
-  
+
+  /** default port for region server web api */
   static final int DEFAULT_REGIONSERVER_INFOPORT = 60030;
 
   /** Parameter name for what region server interface to use. */

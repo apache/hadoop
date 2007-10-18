@@ -30,7 +30,7 @@ import java.util.TreeMap;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HGlobals;
+import org.apache.hadoop.hbase.HLogEdit;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -186,7 +186,7 @@ public class TestRegExpRowFilter extends TestCase {
     // that maps to a null value.
     // Testing row with columnKeys: a-e, e maps to null
     colvalues.put(new Text(new String(new char[] { LAST_CHAR })), 
-      HGlobals.deleteBytes.get());
+      HLogEdit.deleteBytes.get());
     assertFalse("Failed with last columnKey " + LAST_CHAR + " mapping to null.", 
       filter.filterNotNull(colvalues));
   }

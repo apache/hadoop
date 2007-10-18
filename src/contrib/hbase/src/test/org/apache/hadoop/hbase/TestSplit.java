@@ -70,7 +70,7 @@ public class TestSplit extends MultiRegionTable {
     HLog hlog = new HLog(this.localFs, this.testDir, this.conf);
     try {
       HTableDescriptor htd = createTableDescriptor(getName());
-      HRegionInfo hri = new HRegionInfo(1, htd, null, null);
+      HRegionInfo hri = new HRegionInfo(htd, null, null);
       region = new HRegion(testDir, hlog, this.localFs, this.conf, hri, null);
       basicSplit(region);
     } finally {
@@ -89,11 +89,10 @@ public class TestSplit extends MultiRegionTable {
     HRegion [] regions = split(region);
     // Assert can get rows out of new regions.  Should be able to get first
     // row from first region and the midkey from second region.
-    byte [] b = new byte [] {FIRST_CHAR, FIRST_CHAR, FIRST_CHAR};
-    assertGet(regions[0], COLFAMILY_NAME3, new Text(b));
+    assertGet(regions[0], COLFAMILY_NAME3, new Text(START_KEY));
     assertGet(regions[1], COLFAMILY_NAME3, midkey);
     // Test I can get scanner and that it starts at right place.
-    assertScan(regions[0], COLFAMILY_NAME3, new Text(b));
+    assertScan(regions[0], COLFAMILY_NAME3, new Text(START_KEY));
     assertScan(regions[1], COLFAMILY_NAME3, midkey);
     // Now prove can't split regions that have references.
     Text [] midkeys = new Text[regions.length];
@@ -143,6 +142,7 @@ public class TestSplit extends MultiRegionTable {
     // The splits should have been even.  Test I can get some arbitrary row out
     // of each.
     int interval = (LAST_CHAR - FIRST_CHAR) / 3;
+    byte[] b = START_KEY.getBytes(HConstants.UTF8_ENCODING);
     for (HRegion r: sortedMap.values()) {
       assertGet(r, COLFAMILY_NAME3,
           new Text(new String(b, HConstants.UTF8_ENCODING)));

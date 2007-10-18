@@ -35,21 +35,28 @@ public class TestCompaction extends HBaseTestCase {
   private HLog hlog = null;
   private HRegion r = null;
   private static final String COLUMN_FAMILY = COLFAMILY_NAME1;
-  private static final Text STARTROW = new Text(START_KEY_BYTES);
+  private final Text STARTROW;
   private static final Text COLUMN_FAMILY_TEXT = new Text(COLUMN_FAMILY);
   private static final Text COLUMN_FAMILY_TEXT_MINUS_COLON =
     new Text(COLUMN_FAMILY.substring(0, COLUMN_FAMILY.length() - 1));
   private static final int COMPACTION_THRESHOLD = MAXVERSIONS;
   
+  /** constructor */
+  public TestCompaction() {
+    STARTROW = new Text(START_KEY);
+  }
+  
+  /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     super.setUp();
     this.hlog = new HLog(this.localFs, this.testDir, this.conf);
     HTableDescriptor htd = createTableDescriptor(getName());
-    HRegionInfo hri = new HRegionInfo(1, htd, null, null);
+    HRegionInfo hri = new HRegionInfo(htd, null, null);
     this.r = new HRegion(testDir, hlog, this.localFs, this.conf, hri, null);
   }
   
+  /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
     this.r.close();
@@ -111,9 +118,7 @@ public class TestCompaction extends HBaseTestCase {
     // we added when we flushed. But could be 3 only if the flush happened
     // before the compaction started though we tried to have the threads run
     // concurrently (On hudson this happens).
-    byte [] secondRowBytes = new byte[START_KEY_BYTES.length];
-    System.arraycopy(START_KEY_BYTES, 0, secondRowBytes, 0,
-      START_KEY_BYTES.length);
+    byte [] secondRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     Text secondRow = new Text(secondRowBytes);
