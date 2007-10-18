@@ -97,11 +97,21 @@ interface DownwardProtocol<K extends WritableComparable, V extends Writable> {
    * input.
    * @throws IOException
    */
-  void close() throws IOException;
+  void endOfInput() throws IOException;
   
   /**
    * The task should stop as soon as possible, because something has gone wrong.
    * @throws IOException
    */
   void abort() throws IOException;
+  
+  /**
+   * Flush the data through any buffers.
+   */
+  void flush() throws IOException;
+  
+  /**
+   * Close the connection.
+   */
+  void close() throws IOException, InterruptedException;
 }

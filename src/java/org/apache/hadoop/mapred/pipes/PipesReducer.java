@@ -94,8 +94,9 @@ class PipesReducer<K2 extends WritableComparable, V2 extends Writable,
     }
     try {
       if (isOk) {
-        application.getDownlink().close();
+        application.getDownlink().endOfInput();
       } else {
+        // send the abort to the application and let it clean up
         application.getDownlink().abort();
       }
       LOG.info("waiting for finish");
