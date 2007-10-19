@@ -471,5 +471,49 @@ class ReplicationTargetChooser {
     }
     return nodes;
   }
+
+  /**
+   * Verify that the block is replicated on at least 2 different racks
+   * if there is more than one rack in the the system.
+   * 
+   * @param lBlk block with locations
+   * @param cluster 
+   * @return 1 if the block must be relicated on additional rack,
+   * or 0 if the number of racks is sufficient.
+   */
+  public static int verifyBlockPlacement(LocatedBlock lBlk,
+                                         short replication,
+                                         NetworkTopology cluster) {
+    int numRacks = verifyBlockPlacement(lBlk, Math.min(2,replication), cluster);
+    return numRacks < 0 ? 0 : numRacks;
+  }
+
+  /**
+   * Verify that the block is replicated on at least minRacks different racks
+   * if there is more than minRacks rack in the the system.
+   * 
+   * @param lBlk block with locations
+   * @param minRacks number of racks the block should be replicated to
+   * @param cluster 
+   * @return the difference between the required and the actual number of racks
+   * the block is replicated to.
+   */
+  public static int verifyBlockPlacement(LocatedBlock lBlk,
+                                         int minRacks,
+                                         NetworkTopology cluster) {
+    DatanodeInfo[] locs = lBlk.getLocations();
+    if (locs == null)
+      locs = new DatanodeInfo[0];
+    int numRacks = cluster.getNumOfRacks();
+    if(numRacks <= 1) // only one rack
+      return 0;
+    minRacks = Math.min(minRacks, numRacks);
+    // 1. Check that all locations are different.
+    // 2. Count locations on different racks.
+    Set<String> racks = new TreeSet<String>();
+    for (DatanodeInfo dn : locs)
+      racks.add(dn.getNetworkLocation());
+    return minRacks - racks.size();
+  }
 } //end of Replicator
 

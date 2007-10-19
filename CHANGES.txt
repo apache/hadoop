@@ -14,6 +14,9 @@ Trunk (unreleased changes)
     HADOOP-1855.  fsck verifies block placement policies and reports
     violations.  (Konstantin Shvachko via dhruba)
 
+    HADOOP-1604.  An system administrator can finalize namenode upgrades 
+    without running the cluster. (Konstantin Shvachko via dhruba)
+
 Branch 0.15 (unreleased changes)
 
   INCOMPATIBLE CHANGES

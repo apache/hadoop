@@ -25,8 +25,6 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Tool;
@@ -56,7 +54,6 @@ import org.apache.hadoop.util.ToolRunner;
  *  
  */
 public class DFSck extends Configured implements Tool {
-  private static final Log LOG = LogFactory.getLog(DFSck.class.getName());
 
   DFSck() {}
   
@@ -82,13 +79,14 @@ public class DFSck extends Configured implements Tool {
   public int run(String[] args) throws Exception {
     String fsName = getInfoServer();
     if (args.length == 0) {
-      System.err.println("Usage: DFSck <path> [-move | -delete] [-files] [-blocks [-locations]]");
+      System.err.println("Usage: DFSck <path> [-move | -delete] [-files [-blocks [-locations | -racks]]]");
       System.err.println("\t<path>\tstart checking from this path");
       System.err.println("\t-move\tmove corrupted files to /lost+found");
       System.err.println("\t-delete\tdelete corrupted files");
       System.err.println("\t-files\tprint out files being checked");
       System.err.println("\t-blocks\tprint out block report");
       System.err.println("\t-locations\tprint out locations for every block");
+      System.err.println("\t-racks\tprint out network topology for data-node locations");
       ToolRunner.printGenericCommandUsage(System.err);
       return -1;
     }
@@ -105,6 +103,7 @@ public class DFSck extends Configured implements Tool {
       else if (args[idx].equals("-files")) { url.append("&files=1"); }
       else if (args[idx].equals("-blocks")) { url.append("&blocks=1"); }
       else if (args[idx].equals("-locations")) { url.append("&locations=1"); }
+      else if (args[idx].equals("-racks")) { url.append("&racks=1"); }
     }
     URL path = new URL(url.toString());
     URLConnection connection = path.openConnection();

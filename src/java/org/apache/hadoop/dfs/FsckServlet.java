@@ -19,7 +19,6 @@ package org.apache.hadoop.dfs;
 
 import java.util.*;
 import java.io.*;
-import org.apache.hadoop.mapred.StatusHttpServer;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.conf.*;
 import org.apache.commons.logging.*;

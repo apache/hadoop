@@ -21,10 +21,10 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Trash;
-import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.net.NetworkTopology;
 
 import java.io.*;
 import java.net.*;
@@ -707,6 +707,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    */
   public InetSocketAddress getNameNodeAddress() {
     return nameNodeAddress;
+  }
+
+  NetworkTopology getNetworkTopology() {
+    return this.namesystem.clusterMap;
   }
 
   /**

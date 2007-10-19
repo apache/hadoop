@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.dfs;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -35,8 +31,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.UTF8;
-
+import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 
 /**
  * This class provides rudimentary checking of DFS volumes for errors and
@@ -77,6 +73,7 @@ public class NamenodeFsck {
   private boolean showFiles = false;
   private boolean showBlocks = false;
   private boolean showLocations = false;
+  private boolean showRacks = false;
   private int fixing = FIXING_NONE;
   private String path = "/";
   
@@ -106,6 +103,7 @@ public class NamenodeFsck {
       else if (key.equals("files")) { this.showFiles = true; }
       else if (key.equals("blocks")) { this.showBlocks = true; }
       else if (key.equals("locations")) { this.showLocations = true; }
+      else if (key.equals("racks")) { this.showRacks = true; }
     }
   }
   
@@ -137,6 +135,9 @@ public class NamenodeFsck {
   }
   
   private void check(DFSFileInfo file, FsckResult res) throws IOException {
+    res.totalRacks = nn.getNetworkTopology().getNumOfRacks();
+    res.totalDatanodes = nn.getDatanodeReport(DatanodeReportType.LIVE).length;
+    int minReplication = FSNamesystem.getFSNamesystem().getMinReplication();
     if (file.isDir()) {
       if (showFiles) {
         out.println(file.getPath().toString() + " <dir>");
@@ -155,8 +156,8 @@ public class NamenodeFsck {
         0, fileLen);
     res.totalBlocks += blocks.locatedBlockCount();
     if (showFiles) {
-      out.print(file.getPath().toString() + " " + fileLen + ", " +
-          res.totalBlocks + " block(s): ");
+      out.print(file.getPath().toString() + " " + fileLen + " bytes, " +
+          blocks.locatedBlockCount() + " block(s): ");
     }  else {
       out.print('.');
       out.flush();
@@ -164,22 +165,26 @@ public class NamenodeFsck {
     }
     int missing = 0;
     long missize = 0;
-    int under = 0;
+    int underReplicatedPerFile = 0;
+    int misReplicatedPerFile = 0;
     StringBuffer report = new StringBuffer();
     int i = 0;
     for (LocatedBlock lBlk : blocks.getLocatedBlocks()) {
       Block block = lBlk.getBlock();
-      long id = block.getBlockId();
+      String blkName = block.getBlockName();
       DatanodeInfo[] locs = lBlk.getLocations();
+      res.totalReplicas += locs.length;
       short targetFileReplication = file.getReplication();
       if (locs.length > targetFileReplication) {
-        res.overReplicatedBlocks += (locs.length - targetFileReplication);
+        res.excessiveReplicas += (locs.length - targetFileReplication);
         res.numOverReplicatedBlocks += 1;
       }
+      if (locs.length >= minReplication)
+        res.numMinReplicatedBlocks++;
       if (locs.length < targetFileReplication && locs.length > 0) {
-        res.underReplicatedBlocks += (targetFileReplication - locs.length);
+        res.missingReplicas += (targetFileReplication - locs.length);
         res.numUnderReplicatedBlocks += 1;
-        under++;
+        underReplicatedPerFile++;
         if (!showFiles) {
           out.print("\n" + file.getPath().toString() + ": ");
         }
@@ -188,19 +193,38 @@ public class NamenodeFsck {
                     targetFileReplication + " but found " +
                     locs.length + " replica(s).");
       }
-      report.append(i + ". " + id + " len=" + block.getNumBytes());
-      if ( locs.length == 0) {
+      // verify block placement policy
+      int missingRacks = ReplicationTargetChooser.verifyBlockPlacement(
+                    lBlk, targetFileReplication, nn.getNetworkTopology());
+      if (missingRacks > 0) {
+        res.numMisReplicatedBlocks++;
+        misReplicatedPerFile++;
+        if (!showFiles) {
+          if(underReplicatedPerFile == 0)
+            out.println();
+          out.print(file.getPath().toString() + ": ");
+        }
+        out.println(" Replica placement policy is violated for " + 
+                    block.getBlockName() +
+                    ". Block should be additionally replicated on " + 
+                    missingRacks + " more rack(s).");
+      }
+      report.append(i + ". " + blkName + " len=" + block.getNumBytes());
+      if (locs.length == 0) {
         report.append(" MISSING!");
         res.addMissing(block.getBlockName(), block.getNumBytes());
         missing++;
         missize += block.getNumBytes();
       } else {
         report.append(" repl=" + locs.length);
-        if (showLocations) {
+        if (showLocations || showRacks) {
           StringBuffer sb = new StringBuffer("[");
           for (int j = 0; j < locs.length; j++) {
             if (j > 0) { sb.append(", "); }
-            sb.append(locs[j]);
+            if (showRacks)
+              sb.append(NodeBase.getPath(locs[j]));
+            else
+              sb.append(locs[j]);
           }
           sb.append(']');
           report.append(" " + sb.toString());
@@ -229,7 +253,7 @@ public class NamenodeFsck {
     if (showFiles) {
       if (missing > 0) {
         out.println(" MISSING " + missing + " blocks of total size " + missize + " B");
-      }  else if (under == 0) {
+      }  else if (underReplicatedPerFile == 0 && misReplicatedPerFile == 0) {
         out.println(" OK");
       }
       if (showBlocks) {
@@ -457,15 +481,20 @@ public class NamenodeFsck {
     private ArrayList<String> missingIds = new ArrayList<String>();
     private long missingSize = 0L;
     private long corruptFiles = 0L;
-    private long overReplicatedBlocks = 0L;
-    private long underReplicatedBlocks = 0L;
+    private long excessiveReplicas = 0L;
+    private long missingReplicas = 0L;
     private long numOverReplicatedBlocks = 0L;
     private long numUnderReplicatedBlocks = 0L;
+    private long numMisReplicatedBlocks = 0L;  // blocks that do not satisfy block placement policy
+    private long numMinReplicatedBlocks = 0L;  // minimally replicatedblocks
     private int replication = 0;
     private long totalBlocks = 0L;
     private long totalFiles = 0L;
     private long totalDirs = 0L;
     private long totalSize = 0L;
+    private long totalReplicas = 0L;
+    private int totalDatanodes = 0;
+    private int totalRacks = 0;
     
     /**
      * DFS is considered healthy if there are no missing blocks.
@@ -495,29 +524,28 @@ public class NamenodeFsck {
     }
     
     /** Return the number of over-replicated blocks. */
-    public long getOverReplicatedBlocks() {
-      return overReplicatedBlocks;
+    public long getExcessiveReplicas() {
+      return excessiveReplicas;
     }
     
-    public void setOverReplicatedBlocks(long overReplicatedBlocks) {
-      this.overReplicatedBlocks = overReplicatedBlocks;
+    public void setExcessiveReplicas(long overReplicatedBlocks) {
+      this.excessiveReplicas = overReplicatedBlocks;
     }
     
     /** Return the actual replication factor. */
     public float getReplicationFactor() {
-      if (totalBlocks != 0)
-        return (float) (totalBlocks * replication + overReplicatedBlocks - underReplicatedBlocks) / (float) totalBlocks;
-      else
+      if (totalBlocks == 0)
         return 0.0f;
+      return (float) (totalReplicas) / (float) totalBlocks;
     }
     
     /** Return the number of under-replicated blocks. Note: missing blocks are not counted here.*/
-    public long getUnderReplicatedBlocks() {
-      return underReplicatedBlocks;
+    public long getMissingReplicas() {
+      return missingReplicas;
     }
     
-    public void setUnderReplicatedBlocks(long underReplicatedBlocks) {
-      this.underReplicatedBlocks = underReplicatedBlocks;
+    public void setMissingReplicas(long underReplicatedBlocks) {
+      this.missingReplicas = underReplicatedBlocks;
     }
     
     /** Return total number of directories encountered during this scan. */
@@ -573,11 +601,11 @@ public class NamenodeFsck {
       StringBuffer res = new StringBuffer();
       res.append("Status: " + (isHealthy() ? "HEALTHY" : "CORRUPT"));
       res.append("\n Total size:\t" + totalSize + " B");
+      res.append("\n Total dirs:\t" + totalDirs);
+      res.append("\n Total files:\t" + totalFiles);
       res.append("\n Total blocks:\t" + totalBlocks);
       if (totalBlocks > 0) res.append(" (avg. block size "
                                       + (totalSize / totalBlocks) + " B)");
-      res.append("\n Total dirs:\t" + totalDirs);
-      res.append("\n Total files:\t" + totalFiles);
       if (missingSize > 0) {
         res.append("\n  ********************************");
         res.append("\n  CORRUPT FILES:\t" + corruptFiles);
@@ -585,12 +613,20 @@ public class NamenodeFsck {
         res.append("\n  MISSING SIZE:\t\t" + missingSize + " B");
         res.append("\n  ********************************");
       }
+      res.append("\n Minimally replicated blocks:\t" + numMinReplicatedBlocks);
+      if (totalBlocks > 0)        res.append(" (" + ((float) (numMinReplicatedBlocks * 100) / (float) totalBlocks) + " %)");
       res.append("\n Over-replicated blocks:\t" + numOverReplicatedBlocks);
-      if (totalBlocks > 0)        res.append(" (" + ((float) (overReplicatedBlocks * 100) / (float) totalBlocks) + " %)");
+      if (totalBlocks > 0)        res.append(" (" + ((float) (numOverReplicatedBlocks * 100) / (float) totalBlocks) + " %)");
       res.append("\n Under-replicated blocks:\t" + numUnderReplicatedBlocks);
       if (totalBlocks > 0)        res.append(" (" + ((float) (numUnderReplicatedBlocks * 100) / (float) totalBlocks) + " %)");
-      res.append("\n Target replication factor:\t" + replication);
-      res.append("\n Real replication factor:\t" + getReplicationFactor());
+      res.append("\n Mis-replicated blocks:\t\t" + numMisReplicatedBlocks);
+      if (totalBlocks > 0)        res.append(" (" + ((float) (numMisReplicatedBlocks * 100) / (float) totalBlocks) + " %)");
+      res.append("\n Default replication factor:\t" + replication);
+      res.append("\n Average block replication:\t" + getReplicationFactor());
+      res.append("\n Missing replicas:\t\t" + missingReplicas);
+      if (totalReplicas > 0)        res.append(" (" + ((float) (missingReplicas * 100) / (float) totalReplicas) + " %)");
+      res.append("\n Number of data-nodes:\t\t" + totalDatanodes);
+      res.append("\n Number of racks:\t\t" + totalRacks);
       return res.toString();
     }
     
