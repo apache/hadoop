@@ -292,7 +292,7 @@ public class DFSAdmin extends FsShell {
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
     UpgradeStatusReport status = dfs.distributedUpgradeProgress(action);
     String statusText = (status == null ? 
-        "There are no distributed upgrades in progress." :
+        "There are no upgrades in progress." :
           status.getStatusText(action == UpgradeAction.DETAILED_STATUS));
     System.out.println(statusText);
     return 0;

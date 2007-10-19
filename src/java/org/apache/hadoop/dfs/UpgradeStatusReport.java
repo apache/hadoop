@@ -34,15 +34,18 @@ import org.apache.hadoop.io.WritableFactory;
 public class UpgradeStatusReport implements Writable {
   protected int version;
   protected short upgradeStatus;
+  protected boolean finalized;
 
   public UpgradeStatusReport() {
     this.version = 0;
     this.upgradeStatus = 0;
+    this.finalized = false;
   }
 
-  public UpgradeStatusReport( int version, short status) {
+  public UpgradeStatusReport(int version, short status, boolean isFinalized) {
     this.version = version;
     this.upgradeStatus = status;
+    this.finalized = isFinalized;
   }
 
   /**
@@ -63,6 +66,14 @@ public class UpgradeStatusReport implements Writable {
   }
 
   /**
+   * Is current upgrade finalized.
+   * @return true if finalized or false otherwise.
+   */
+  public boolean isFinalized() {
+    return this.finalized;
+  }
+
+  /**
    * Get upgradeStatus data as a text for reporting.
    * Should be overloaded for a particular upgrade specific upgradeStatus data.
    * 
@@ -71,8 +82,12 @@ public class UpgradeStatusReport implements Writable {
    * @return text
    */
   public String getStatusText(boolean details) {
-    return "Distributed upgrade for version " + getVersion() 
-    + " is in progress. Status = " + getUpgradeStatus() + "%";
+    return "Upgrade for version " + getVersion() 
+            + (upgradeStatus<100 ? 
+              " is in progress. Status = " + upgradeStatus + "%" : 
+              " has been completed."
+              + "\nUpgrade is " + (finalized ? "" : "not ")
+              + "finalized.");
   }
 
   /**

@@ -1220,7 +1220,7 @@ class BlockCrcUpgradeUtils {
     
     public BlockCrcUpgradeStatusReport(int version, short status,
                                        String extraText) {
-      super(version, status);
+      super(version, status, false);
       this.extraText = extraText;
     }
     

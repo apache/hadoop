@@ -32,7 +32,6 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.lang.Math;
@@ -340,12 +339,16 @@ class FSImage extends Storage {
 
   private void doFinalize(StorageDirectory sd) throws IOException {
     File prevDir = sd.getPreviousDir();
-    if (!prevDir.exists())
-      return; // already discarded
+    if (!prevDir.exists()) { // already discarded
+      LOG.info("Directory " + prevDir + " does not exist.");
+      LOG.info("Finalize upgrade for " + sd.root + " is not required.");
+      return;
+    }
     LOG.info("Finalizing upgrade for storage directory " 
-             + sd.root 
-             + ".\n   cur LV = " + this.getLayoutVersion()
-             + "; cur CTime = " + this.getCTime());
+             + sd.root + "."
+             + (getLayoutVersion()==0 ? "" :
+                   "\n   cur LV = " + this.getLayoutVersion()
+                   + "; cur CTime = " + this.getCTime()));
     assert sd.getCurrentDir().exists() : "Current directory must exist.";
     final File tmpDir = sd.getFinalizedTmp();
     // rename previous to tmp and remove

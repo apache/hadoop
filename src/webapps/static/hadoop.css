@@ -7,6 +7,10 @@ div#dfsnodetable tr#row1, div#dfstable td#col1 {
 	font-weight : bolder;
 }
 
+div#dfstable td#col1 {
+	vertical-align : top;
+}
+
 div#dfstable td#col3 {
 	text-align : right;
 }
@@ -52,7 +56,7 @@ div#dfsnodetable .rowAlt, .headerASC, .headerDSC {
 }
 
 div#dfstable table {
-	width : 40%;
+	white-space : pre;
 }
 
 div#dfsnodetable td, div#dfsnodetable th, div#dfstable td {

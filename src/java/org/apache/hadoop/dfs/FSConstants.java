@@ -135,7 +135,7 @@ public interface FSConstants {
   public enum SafeModeAction{ SAFEMODE_LEAVE, SAFEMODE_ENTER, SAFEMODE_GET; }
 
   // Startup options
-  public enum StartupOption{ FORMAT, REGULAR, UPGRADE, ROLLBACK; }
+  public enum StartupOption{ FORMAT, REGULAR, UPGRADE, ROLLBACK, FINALIZE; }
 
   // type of the datanode report
   public static enum DatanodeReportType {ALL, LIVE, DEAD }

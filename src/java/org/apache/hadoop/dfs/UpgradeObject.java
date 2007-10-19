@@ -40,7 +40,7 @@ abstract class UpgradeObject implements Upgradeable {
 
   public UpgradeStatusReport getUpgradeStatusReport(boolean details) 
                                                     throws IOException {
-    return new UpgradeStatusReport(getVersion(), getUpgradeStatus());
+    return new UpgradeStatusReport(getVersion(), getUpgradeStatus(), false);
   }
 
   public int compareTo(Upgradeable o) {

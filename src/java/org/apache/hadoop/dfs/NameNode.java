@@ -742,9 +742,30 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     return false;
   }
 
+  private static boolean finalize(Configuration conf,
+                               boolean isConfirmationNeeded
+                               ) throws IOException {
+    Collection<File> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
+    FSNamesystem nsys = new FSNamesystem(new FSImage(dirsToFormat), conf);
+    System.err.print(
+        "\"finalize\" will remove the previous state of the files system.\n"
+        + "Recent upgrade will become permanent.\n"
+        + "Rollback option will not be available anymore.\n");
+    if (isConfirmationNeeded) {
+      System.err.print("Finalize filesystem state ? (Y or N) ");
+      if (!(System.in.read() == 'Y')) {
+        System.err.println("Finalize aborted.");
+        return true;
+      }
+      while(System.in.read() != '\n'); // discard the enter-key
+    }
+    nsys.dir.fsImage.finalizeUpgrade();
+    return false;
+  }
+
   private static void printUsage() {
     System.err.println(
-                       "Usage: java NameNode [-format] | [-upgrade] | [-rollback]");
+      "Usage: java NameNode [-format] | [-upgrade] | [-rollback] | [-finalize]");
   }
 
   private static StartupOption parseArguments(String args[], 
@@ -761,6 +782,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
         startOpt = StartupOption.UPGRADE;
       } else if ("-rollback".equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.ROLLBACK;
+      } else if ("-finalize".equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.FINALIZE;
       } else
         return null;
     }
@@ -786,12 +809,17 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       printUsage();
       return null;
     }
-      
-    if (startOpt == StartupOption.FORMAT) {
-      boolean aborted = format(conf, true);
-      System.exit(aborted ? 1 : 0);
+
+    switch (startOpt) {
+      case FORMAT:
+        boolean aborted = format(conf, true);
+        System.exit(aborted ? 1 : 0);
+      case FINALIZE:
+        aborted = finalize(conf, true);
+        System.exit(aborted ? 1 : 0);
+      default:
     }
-      
+
     NameNode namenode = new NameNode(conf);
     return namenode;
   }

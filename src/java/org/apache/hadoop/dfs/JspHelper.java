@@ -32,6 +32,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.jsp.JspWriter;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
 import org.apache.hadoop.fs.Path;
 
 public class JspHelper {
@@ -169,7 +170,21 @@ public class JspHelper {
       return "";
     return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "</em><br>";
   }
-    
+
+  public String getUpgradeStatusText() {
+    String statusText = "";
+    try {
+      UpgradeStatusReport status = 
+        fsn.distributedUpgradeProgress(UpgradeAction.GET_STATUS);
+      statusText = (status == null ? 
+          "There are no upgrades in progress." :
+            status.getStatusText(false));
+    } catch(IOException e) {
+      statusText = "Upgrade status unknown.";
+    }
+    return statusText;
+  }
+
   public void sortNodeList(ArrayList<DatanodeDescriptor> nodes,
                            String field, String order) {
         

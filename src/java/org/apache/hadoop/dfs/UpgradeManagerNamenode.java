@@ -104,10 +104,17 @@ class UpgradeManagerNamenode extends UpgradeManager {
     FSNamesystem.getFSNamesystem().leaveSafeMode(false);
   }
 
-  UpgradeStatusReport distributedUpgradeProgress(FSConstants.UpgradeAction action 
+  UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action 
                                                 ) throws IOException {
-    if(currentUpgrades == null)
-      return null;  // no upgrades are in progress
+    boolean isFinalized = false;
+    if(currentUpgrades == null) { // no upgrades are in progress
+      FSImage fsimage = FSNamesystem.getFSNamesystem().getFSImage();
+      isFinalized = fsimage.isUpgradeFinalized();
+      if(isFinalized) // upgrade is finalized
+        return null;  // nothing to report
+      return new UpgradeStatusReport(fsimage.getLayoutVersion(), 
+                                     (short)101, isFinalized);
+    }
     UpgradeObjectNamenode curUO = (UpgradeObjectNamenode)currentUpgrades.first();
     boolean details = false;
     switch(action) {

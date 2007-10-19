@@ -11,6 +11,9 @@ Trunk (unreleased changes)
     HADOOP-2058.  Facilitate creating new datanodes dynamically in
     MiniDFSCluster. (Hairong Kuang via dhruba)
 
+    HADOOP-1855.  fsck verifies block placement policies and reports
+    violations.  (Konstantin Shvachko via dhruba)
+
 Branch 0.15 (unreleased changes)
 
   INCOMPATIBLE CHANGES
