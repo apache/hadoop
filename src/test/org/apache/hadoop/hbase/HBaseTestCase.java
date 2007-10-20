@@ -113,7 +113,8 @@ public abstract class HBaseTestCase extends TestCase {
   
   protected HRegion createNewHRegion(Path dir, Configuration c,
         HRegionInfo info) throws IOException {
-    Path regionDir = HRegion.getRegionDir(dir, info.getEncodedName());
+    Path regionDir = HRegion.getRegionDir(dir
+        , HRegionInfo.encodeRegionName(info.getRegionName()));
     FileSystem fs = dir.getFileSystem(c);
     fs.mkdirs(regionDir);
     return new HRegion(dir,

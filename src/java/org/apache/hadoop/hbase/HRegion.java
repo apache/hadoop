@@ -121,8 +121,8 @@ public class HRegion implements HConstants {
     }
     
     HRegionInfo newRegionInfo = new HRegionInfo(tabledesc, startKey, endKey);
-    Path newRegionDir =
-      HRegion.getRegionDir(merges, newRegionInfo.getEncodedName());
+    Path newRegionDir = HRegion.getRegionDir(merges,
+        HRegionInfo.encodeRegionName(newRegionInfo.getRegionName()));
     if(fs.exists(newRegionDir)) {
       throw new IOException("Cannot merge; target file collision at " +
         newRegionDir);
@@ -138,9 +138,9 @@ public class HRegion implements HConstants {
     for (Map.Entry<Text, Vector<HStoreFile>> es : byFamily.entrySet()) {
       Text colFamily = es.getKey();
       Vector<HStoreFile> srcFiles = es.getValue();
-      HStoreFile dst =
-        new HStoreFile(conf, merges, newRegionInfo.getEncodedName(),
-        colFamily, Math.abs(rand.nextLong()));
+      HStoreFile dst = new HStoreFile(conf, merges,
+          HRegionInfo.encodeRegionName(newRegionInfo.getRegionName()),
+          colFamily, Math.abs(rand.nextLong()));
       dst.mergeStoreFiles(srcFiles, fs, conf);
     }
 
@@ -215,6 +215,7 @@ public class HRegion implements HConstants {
   private final HLocking lock = new HLocking();
   private long desiredMaxFileSize;
   private final long minSequenceId;
+  private final String encodedRegionName;
 
   //////////////////////////////////////////////////////////////////////////////
   // Constructor
@@ -247,6 +248,8 @@ public class HRegion implements HConstants {
     this.fs = fs;
     this.conf = conf;
     this.regionInfo = regionInfo;
+    this.encodedRegionName =
+      HRegionInfo.encodeRegionName(this.regionInfo.getRegionName());
     this.memcache = new HMemcache();
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.optionalFlushCount =
@@ -254,8 +257,7 @@ public class HRegion implements HConstants {
 
     // Declare the regionName.  This is a unique string for the region, used to 
     // build a unique filename.
-    this.regiondir =
-      HRegion.getRegionDir(rootDir, this.regionInfo.getEncodedName());
+    this.regiondir = HRegion.getRegionDir(rootDir, this.encodedRegionName);
     Path oldLogFile = new Path(regiondir, HREGION_OLDLOGFILE_NAME);
 
     // Move prefab HStore files into place (if any).  This picks up split files
@@ -270,8 +272,8 @@ public class HRegion implements HConstants {
         this.regionInfo.getTableDesc().families().entrySet()) {
       Text colFamily = HStoreKey.extractFamily(e.getKey());
       
-      HStore store = new HStore(rootDir, this.regionInfo.getEncodedName(), 
-          e.getValue(), fs, oldLogFile, conf); 
+      HStore store = new HStore(rootDir, this.regionInfo.getRegionName(),
+          this.encodedRegionName, e.getValue(), fs, oldLogFile, conf); 
       
       stores.put(colFamily, store);
       
@@ -420,13 +422,15 @@ public class HRegion implements HConstants {
     Path splits = getSplitsDir();
     HRegionInfo regionAInfo = new HRegionInfo(this.regionInfo.getTableDesc(),
         this.regionInfo.getStartKey(), midKey);
-    Path dirA = getSplitRegionDir(splits, regionAInfo.getEncodedName());
+    Path dirA = getSplitRegionDir(splits,
+        HRegionInfo.encodeRegionName(regionAInfo.getRegionName()));
     if(fs.exists(dirA)) {
       throw new IOException("Cannot split; target file collision at " + dirA);
     }
     HRegionInfo regionBInfo = new HRegionInfo(this.regionInfo.getTableDesc(),
         midKey, null);
-    Path dirB = getSplitRegionDir(splits, regionBInfo.getEncodedName());
+    Path dirB = getSplitRegionDir(splits,
+        HRegionInfo.encodeRegionName(regionBInfo.getRegionName()));
     if(this.fs.exists(dirB)) {
       throw new IOException("Cannot split; target file collision at " + dirB);
     }
@@ -457,18 +461,18 @@ public class HRegion implements HConstants {
     for(HStoreFile h: hstoreFilesToSplit) {
       // A reference to the bottom half of the hsf store file.
       HStoreFile.Reference aReference = new HStoreFile.Reference(
-        this.regionInfo.getEncodedName(), h.getFileId(), new HStoreKey(midKey),
+        this.encodedRegionName, h.getFileId(), new HStoreKey(midKey),
         HStoreFile.Range.bottom);
       HStoreFile a = new HStoreFile(this.conf, splits,
-          regionAInfo.getEncodedName(), h.getColFamily(),
-          Math.abs(rand.nextLong()), aReference);
+          HRegionInfo.encodeRegionName(regionAInfo.getRegionName()),
+          h.getColFamily(), Math.abs(rand.nextLong()), aReference);
       // Reference to top half of the hsf store file.
       HStoreFile.Reference bReference = new HStoreFile.Reference(
-        this.regionInfo.getEncodedName(), h.getFileId(), new HStoreKey(midKey),
+        this.encodedRegionName, h.getFileId(), new HStoreKey(midKey),
         HStoreFile.Range.top);
       HStoreFile b = new HStoreFile(this.conf, splits,
-        regionBInfo.getEncodedName(), h.getColFamily(),
-        Math.abs(rand.nextLong()), bReference);
+        HRegionInfo.encodeRegionName(regionBInfo.getRegionName()),
+        h.getColFamily(), Math.abs(rand.nextLong()), bReference);
       h.splitStoreFile(a, b, this.fs);
     }
 
@@ -1824,7 +1828,8 @@ public class HRegion implements HConstants {
    */
   static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
       final Configuration conf, final Path initialFiles) throws IOException {
-    Path regionDir = HRegion.getRegionDir(rootDir, info.getEncodedName());
+    Path regionDir = HRegion.getRegionDir(rootDir,
+        HRegionInfo.encodeRegionName(info.getRegionName()));
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
     return new HRegion(rootDir,

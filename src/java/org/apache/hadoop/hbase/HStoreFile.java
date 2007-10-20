@@ -26,8 +26,9 @@ import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
-import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -133,7 +134,7 @@ public class HStoreFile implements HConstants, WritableComparable {
    * Constructor that fully initializes the object
    * @param conf Configuration object
    * @param dir directory path
-   * @param regionName name of the region
+   * @param encodedRegionName name of the region
    * @param colFamily name of the column family
    * @param fileId file identifier
    */
@@ -377,15 +378,15 @@ public class HStoreFile implements HConstants, WritableComparable {
    * @return List of store file instances loaded from passed dir.
    * @throws IOException
    */
-  static Vector<HStoreFile> loadHStoreFiles(Configuration conf, Path dir, 
+  static List<HStoreFile> loadHStoreFiles(Configuration conf, Path dir, 
       String encodedRegionName, Text colFamily, FileSystem fs)
   throws IOException {
     // Look first at info files.  If a reference, these contain info we need
     // to create the HStoreFile.
     Path infodir = HStoreFile.getInfoDir(dir, encodedRegionName, colFamily);
     Path infofiles[] = fs.listPaths(new Path[] {infodir});
-    Vector<HStoreFile> results = new Vector<HStoreFile>(infofiles.length);
-    Vector<Path> mapfiles = new Vector<Path>(infofiles.length);
+    ArrayList<HStoreFile> results = new ArrayList<HStoreFile>(infofiles.length);
+    ArrayList<Path> mapfiles = new ArrayList<Path>(infofiles.length);
     for (int i = 0; i < infofiles.length; i++) {
       Path p = infofiles[i];
       Matcher m = REF_NAME_PARSER.matcher(p.getName());
@@ -534,7 +535,7 @@ public class HStoreFile implements HConstants, WritableComparable {
    * @param conf configuration object
    * @throws IOException
    */
-  void mergeStoreFiles(Vector<HStoreFile> srcFiles, FileSystem fs, 
+  void mergeStoreFiles(List<HStoreFile> srcFiles, FileSystem fs, 
       @SuppressWarnings("hiding") Configuration conf)
   throws IOException {
     // Copy all the source MapFile tuples into this HSF's MapFile

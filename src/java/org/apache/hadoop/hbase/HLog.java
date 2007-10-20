@@ -159,7 +159,7 @@ public class HLog implements HConstants {
             SequenceFile.Writer w = logWriters.get(regionName);
             if (w == null) {
               Path logfile = new Path(HRegion.getRegionDir(rootDir,
-                HRegionInfo.rootRegionInfo.getEncodedName()),
+                HRegionInfo.encodeRegionName(regionName)),
                 HREGION_OLDLOGFILE_NAME);
               
               if (LOG.isDebugEnabled()) {

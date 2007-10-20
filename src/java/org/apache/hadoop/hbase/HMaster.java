@@ -326,7 +326,8 @@ HMasterRegionInterface {
       if (!hasReferencesA && !hasReferencesB) {
         LOG.info("Deleting region " + parent.getRegionName() +
         " because daughter splits no longer hold references");
-        if (!HRegion.deleteRegion(fs, dir, parent.getEncodedName())) {
+        if (!HRegion.deleteRegion(fs, dir,
+            HRegionInfo.encodeRegionName(parent.getRegionName()))) {
           LOG.warn("Deletion of " + parent.getRegionName() + " failed");
         }
         
@@ -370,7 +371,8 @@ HMasterRegionInterface {
       }
       for (Text family: split.getTableDesc().families().keySet()) {
         Path p = HStoreFile.getMapDir(fs.makeQualified(dir),
-            split.getEncodedName(), HStoreKey.extractFamily(family));
+            HRegionInfo.encodeRegionName(split.getRegionName()),
+            HStoreKey.extractFamily(family));
 
         // Look for reference files.  Call listPaths with an anonymous
         // instance of PathFilter.
@@ -418,6 +420,7 @@ HMasterRegionInterface {
         return;
       }
       HServerInfo storedInfo = null;
+      boolean deadServer = false;
       if (serverName.length() != 0) {
         Map<Text, HRegionInfo> regionsToKill = killList.get(serverName);
         if (regionsToKill != null &&
@@ -432,6 +435,9 @@ HMasterRegionInterface {
         }
         synchronized (serversToServerInfo) {
           storedInfo = serversToServerInfo.get(serverName);
+          if (storedInfo != null && deadServers.contains(serverName)) {
+            deadServer = true;
+          }
         }
       }
       if (LOG.isDebugEnabled()) {
@@ -439,13 +445,17 @@ HMasterRegionInterface {
       }
       if (!(unassignedRegions.containsKey(info.getRegionName()) ||
             pendingRegions.contains(info.getRegionName()))
-          && (storedInfo == null || storedInfo.getStartCode() != startCode)) {
+          && (storedInfo == null || 
+              (storedInfo.getStartCode() != startCode && !deadServer))) {
         // The current assignment is no good
         if (LOG.isDebugEnabled()) {
           LOG.debug("Current assignment of " + info.getRegionName() +
               " is no good");
         }
         // Recover the region server's log if there is one.
+        // This is only done from here if we are restarting and there is stale
+        // data in the meta region. Once we are on-line, dead server log
+        // recovery is handled by lease expiration and PendingServerShutdown
         if (serverName.length() != 0) {
           StringBuilder dirName = new StringBuilder("log_");
           dirName.append(serverName.replace(":", "_"));
@@ -830,6 +840,10 @@ HMasterRegionInterface {
    */
   final Map<String, HServerInfo> serversToServerInfo =
     new HashMap<String, HServerInfo>();
+  
+  /** Set of known dead servers */
+  final Set<String> deadServers =
+    Collections.synchronizedSet(new HashSet<String>());
 
   /** SortedMap server load -> Set of server names */
   SortedMap<HServerLoad, Set<String>> loadToServers;
@@ -864,8 +878,8 @@ HMasterRegionInterface {
     this.fs = FileSystem.get(conf);
     this.rand = new Random();
     
-    Path rootRegionDir =
-      HRegion.getRegionDir(dir, HRegionInfo.rootRegionInfo.getEncodedName());
+    Path rootRegionDir = HRegion.getRegionDir(dir,
+        HRegionInfo.encodeRegionName(HRegionInfo.rootRegionInfo.getRegionName()));
     LOG.info("Root region dir: " + rootRegionDir.toString());
 
     try {
@@ -2107,6 +2121,7 @@ HMasterRegionInterface {
                   Thread.currentThread().getName());
             }
           }
+          deadServers.remove(deadServerName);
           break;
 
         } catch (IOException e) {
@@ -2240,7 +2255,8 @@ HMasterRegionInterface {
 
       } else if (deleteRegion) {
         try {
-          HRegion.deleteRegion(fs, dir, regionInfo.getEncodedName());
+          HRegion.deleteRegion(fs, dir,
+              HRegionInfo.encodeRegionName(regionInfo.getRegionName()));
         } catch (IOException e) {
           e = RemoteExceptionHandler.checkIOException(e);
           LOG.error("failed delete region " + regionInfo.getRegionName(), e);
@@ -2857,7 +2873,8 @@ HMasterRegionInterface {
         // Delete the region
       
         try {
-          HRegion.deleteRegion(fs, dir, i.getEncodedName());
+          HRegion.deleteRegion(fs, dir,
+              HRegionInfo.encodeRegionName(i.getRegionName()));
         
         } catch (IOException e) {
           LOG.error("failed to delete region " + i.getRegionName(),
@@ -2924,8 +2941,9 @@ HMasterRegionInterface {
 
         // Delete the directories used by the column
 
-        fs.delete(HStoreFile.getMapDir(dir, i.getEncodedName(), columnName));
-        fs.delete(HStoreFile.getInfoDir(dir, i.getEncodedName(), columnName));
+        String encodedName = HRegionInfo.encodeRegionName(i.getRegionName());
+        fs.delete(HStoreFile.getMapDir(dir, encodedName, columnName));
+        fs.delete(HStoreFile.getInfoDir(dir, encodedName, columnName));
       }
     }
   }
@@ -2985,6 +3003,7 @@ HMasterRegionInterface {
               loadToServers.put(load, servers);
             }
           }
+          deadServers.add(server);
         }
         serversToServerInfo.notifyAll();
       }

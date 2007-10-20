@@ -23,10 +23,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
-
-import org.apache.hadoop.hbase.util.Base64;
 
 /**
  * HRegion information.
@@ -34,8 +35,38 @@ import org.apache.hadoop.hbase.util.Base64;
  * HRegions' table descriptor, etc.
  */
 public class HRegionInfo implements WritableComparable {
+  private static MessageDigest encoder = null;
+  
+  static {
+    try {
+      if (encoder == null) {
+        encoder = MessageDigest.getInstance("SHA");
+      }
+    } catch (NoSuchAlgorithmException e) {
+      e.printStackTrace();
+    }
+  }
+
+  /**
+   * @param regionName
+   * @return the encodedName
+   */
+  public static String encodeRegionName(final Text regionName) {
+    byte[] bytes = null;
+    synchronized (encoder) {
+      encoder.update(regionName.getBytes(), 0, regionName.getLength());
+      bytes = encoder.digest();
+      encoder.reset();
+    }
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < bytes.length; i++) {
+      sb.append(bytes[i]);
+    }
+    return sb.toString();
+  }
+
   /** delimiter used between portions of a region name */
-  public static final String DELIMITER = ",";
+  private static final String DELIMITER = ",";
 
   /** HRegionInfo for root region */
   public static final HRegionInfo rootRegionInfo =
@@ -60,35 +91,6 @@ public class HRegionInfo implements WritableComparable {
     byte [] tableName = new byte[offset];
     System.arraycopy(regionName.getBytes(), 0, tableName, 0, offset);
     return new Text(tableName);
-  }
-  
-  /**
-   * Converts an encoded region name to its unencoded form
-   * 
-   * @param encodedName 
-   * @return unencoded region name
-   */
-  public static Text decodeRegionName(String encodedName) {
-    int offset = encodedName.indexOf(DELIMITER);
-    if (offset == -1) {
-      throw new IllegalArgumentException(
-          "encoded region name does not contain '" + DELIMITER + "': " +
-          encodedName);
-    }
-    String regionName = encodedName.substring(0, offset++);
-    String remainder = encodedName.substring(offset);
-    offset = remainder.indexOf(DELIMITER);
-    if (offset == -1) {
-      throw new IllegalArgumentException(
-          "improperly formatted encoded region name " + encodedName);
-    }
-    Text startKey = new Text();
-    if (offset != 0) {
-      startKey.set(Base64.decode(remainder.substring(0, offset), Base64.ORDERED));
-    }
-    offset += 1;
-    return new Text(regionName + DELIMITER + startKey.toString() + DELIMITER +
-      remainder.substring(offset));
   }
 
   private Text endKey;
@@ -187,16 +189,6 @@ public class HRegionInfo implements WritableComparable {
   /** @return the regionName */
   public Text getRegionName(){
     return regionName;
-  }
-
-  /**
-   * @return the encodedName
-   */
-  public String getEncodedName() {
-    return tableDesc.getName().toString() + DELIMITER +
-    (startKey == null || startKey.getLength() == 0 ? "" : 
-      Base64.encodeBytes(startKey.getBytes(), Base64.ORDERED)) + DELIMITER +
-    regionId;
   }
 
   /** @return the startKey */
