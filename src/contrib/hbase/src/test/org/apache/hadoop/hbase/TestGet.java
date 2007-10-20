@@ -89,7 +89,8 @@ public class TestGet extends HBaseTestCase {
       desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
       
       HRegionInfo info = new HRegionInfo(desc, null, null);
-      Path regionDir = HRegion.getRegionDir(dir, info.getEncodedName());
+      Path regionDir = HRegion.getRegionDir(dir,
+          HRegionInfo.encodeRegionName(info.getRegionName()));
       fs.mkdirs(regionDir);
       
       HLog log = new HLog(fs, new Path(regionDir, "log"), conf);

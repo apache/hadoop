@@ -24,7 +24,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -72,6 +71,7 @@ class HStore implements HConstants {
   private static final String BLOOMFILTER_FILE_NAME = "filter";
 
   Path dir;
+  Text regionName;
   String encodedRegionName;
   HColumnDescriptor family;
   Text familyName;
@@ -131,19 +131,22 @@ class HStore implements HConstants {
    * file will be deleted (by whoever has instantiated the HStore).
    *
    * @param dir log file directory
-   * @param encodedRegionName filename friendly name of region
+   * @param regionName
+   * @param encodedName
    * @param family name of column family
    * @param fs file system object
    * @param reconstructionLog existing log file to apply if any
    * @param conf configuration object
    * @throws IOException
    */
-  HStore(Path dir, String encodedRegionName, HColumnDescriptor family, 
-      FileSystem fs, Path reconstructionLog, Configuration conf)
+  HStore(Path dir, Text regionName, String encodedName,
+      HColumnDescriptor family, FileSystem fs, Path reconstructionLog,
+      Configuration conf)
   throws IOException {  
     this.dir = dir;
     this.compactionDir = new Path(dir, "compaction.dir");
-    this.encodedRegionName = encodedRegionName;
+    this.regionName = regionName;
+    this.encodedRegionName = encodedName;
     this.family = family;
     this.familyName = HStoreKey.extractFamily(this.family.getName());
     this.compression = SequenceFile.CompressionType.NONE;
@@ -187,7 +190,7 @@ class HStore implements HConstants {
     // MapFiles are in a reliable state.  Every entry in 'mapdir' must have a 
     // corresponding one in 'loginfodir'. Without a corresponding log info
     // file, the entry in 'mapdir' must be deleted.
-    Collection<HStoreFile> hstoreFiles = HStoreFile.loadHStoreFiles(conf, dir,
+    List<HStoreFile> hstoreFiles = HStoreFile.loadHStoreFiles(conf, dir,
         encodedRegionName, familyName, fs);
     for(HStoreFile hsf: hstoreFiles) {
       this.storefiles.put(Long.valueOf(hsf.loadInfo(fs)), hsf);
@@ -265,7 +268,6 @@ class HStore implements HConstants {
     SequenceFile.Reader login =
       new SequenceFile.Reader(this.fs, reconstructionLog, this.conf);
     try {
-      Text thisRegionName = HRegionInfo.decodeRegionName(encodedRegionName);
       HLogKey key = new HLogKey();
       HLogEdit val = new HLogEdit();
       while (login.next(key, val)) {
@@ -282,13 +284,13 @@ class HStore implements HConstants {
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
         Text column = val.getColumn();
         if (column.equals(HLog.METACOLUMN)
-            || !key.getRegionName().equals(thisRegionName)
+            || !key.getRegionName().equals(regionName)
             || !HStoreKey.extractFamily(column).equals(this.familyName)) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Passing on edit " + key.getRegionName() + ", " +
                 column.toString() + ": " + 
                 new String(val.getVal(), UTF8_ENCODING) +
-                ", my region: " + thisRegionName + ", my column: " +
+                ", my region: " + regionName + ", my column: " +
                 this.familyName);
           }
           continue;

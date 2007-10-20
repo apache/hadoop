@@ -14,6 +14,7 @@ Trunk (unreleased changes)
                (e.g. nightly #272)
    HADOOP-2064 TestSplit assertion and NPE failures (Patch build #952 and #953)
    HADOOP-2056 A table with row keys containing colon fails to split regions
+   HADOOP-2079 HADOOP-2056 Fix generated HLog, HRegion names
 
   IMPROVEMENTS
     HADOOP-2401 Add convenience put method that takes writable
