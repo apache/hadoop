@@ -335,6 +335,9 @@ Branch 0.15 (unreleased changes)
     that before waiting for the application to finish to ensure all buffered
     data is flushed. (Owen O'Malley via acmurthy)
 
+    HADOOP-2080.  Fixed calculation of the checksum file size when the values
+    are large. (omalley)
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
