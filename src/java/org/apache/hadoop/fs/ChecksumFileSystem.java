@@ -37,6 +37,7 @@ import org.apache.hadoop.util.StringUtils;
  *****************************************************************/
 public abstract class ChecksumFileSystem extends FilterFileSystem {
   private static final byte[] CHECKSUM_VERSION = new byte[] {'c', 'r', 'c', 0};
+  private final int bytesPerChecksum;
 
   public static double getApproxChkSumLength(long size) {
     return ChecksumFSOutputSummer.CHKSUM_AS_FRACTION * size;
@@ -44,6 +45,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   
   public ChecksumFileSystem(FileSystem fs) {
     super(fs);
+    bytesPerChecksum = getConf().getInt("io.bytes.per.checksum", 512);
   }
 
   /** get the raw file system */
@@ -66,12 +68,12 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * actual file.
    **/
   public long getChecksumFileLength(Path file, long fileSize) {
-    return ChecksumFSOutputSummer.getChecksumLength(fileSize, getBytesPerSum());
+    return getChecksumLength(fileSize, getBytesPerSum());
   }
 
   /** Return the bytes Per Checksum */
   public int getBytesPerSum() {
-    return getConf().getInt("io.bytes.per.checksum", 512);
+    return bytesPerChecksum;
   }
 
   private int getSumBufferSize(int bytesPerSum, int bufferSize) {
@@ -267,6 +269,19 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
         new ChecksumFSInputChecker(this, f, bufferSize) );
   }
 
+  /**
+   * Calculated the length of the checksum file in bytes.
+   * @param size the length of the data file in bytes
+   * @param bytesPerSum the number of bytes in a checksum block
+   * @return the number of bytes in the checksum file
+   */
+  public static long getChecksumLength(long size, int bytesPerSum) {
+    //the checksum length is equal to size passed divided by bytesPerSum +
+    //bytes written in the beginning of the checksum file.  
+    return ((size + bytesPerSum - 1) / bytesPerSum) * 4 +
+             CHECKSUM_VERSION.length + 4;  
+  }
+
   /** This class provides an output stream for a checksummed file.
    * It generates checksums for data. */
   private static class ChecksumFSOutputSummer extends FSOutputSummer {
@@ -312,13 +327,6 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       datas.close();
     }
     
-    public static long getChecksumLength(long size, int bytesPerSum) {
-      //the checksum length is equal to size passed divided by bytesPerSum +
-      //bytes written in the beginning of the checksum file.  
-      return ((long)(Math.ceil((float)size/bytesPerSum)) + 1) * 4 + 
-        CHECKSUM_VERSION.length;  
-    }
-
     @Override
     protected void writeChunk(byte[] b, int offset, int len, byte[] checksum)
     throws IOException {
