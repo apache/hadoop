@@ -44,8 +44,15 @@
       <title>News</title>
 
       <section>
-        <title> 9 October, 2007: release 0.14.2 available </title>
-	<p>This release fixes critical bugs in release 0.14.1.</p>
+        <title>29 October 2007: release 0.15.0 available </title>
+	<p>This release contains my improvements, new features, bug
+      fixes and optimizations.  See the release notes (above) for
+      details.</p>
+      </section>
+
+      <section>
+        <title>19 October, 2007: release 0.14.3 available </title>
+	<p>This release fixes critical bugs in release 0.14.2.</p>
       </section>
 
       <section>
@@ -70,38 +77,12 @@
 	and new features.  Performance and reliability are better than
 	ever.</p>
 
-	<note>When upgrading an existing HDFS filesystem to this
-	release, you should first start HDFS with 'bin/start-dfs.sh
-	-upgrade'.  See the <a
+	<note>When upgrading an existing HDFS filesystem to a 0.14.x
+	release from a 0.13.x or earlier release, you should first
+	start HDFS with 'bin/start-dfs.sh -upgrade'.  See the <a
 	href="http://wiki.apache.org/lucene-hadoop/Hadoop_0.14_Upgrade">Hadoop
 	0.14 Upgrade</a> page for details.</note>
 
-      </section>
-
-      <section>
-      <title>25 July, 2007: release 0.13.1 available</title>
-        <p>
-        In addition to new features, release 0.13 contains significant
-        performance and reliability improvements.  For example,
-        MapReduce sort performance on large clusters has <a
-        href="http://wiki.apache.org/lucene-hadoop-data/attachments/FAQ/attachments/sort900-20070607.png">doubled</a>.
-        </p>
-
-        <note>
-        When upgrading an existing <acronym title="Hadoop Distributed
-	File System">HDFS</acronym> filesystem to this release, you
-	should first start HDFS with <code>bin/start-dfs.sh
-	-upgrade</code>. See the <a
-	href="http://wiki.apache.org/lucene-hadoop/Hadoop_Upgrade">Hadoop
-	Upgrade</a> page for details.  </note>
-
-      </section>
-
-      <section>
-        <title> 8 June, 2006: <acronym title="Frequently Asked Questions">FAQ</acronym> added to Wiki </title>
-        <p>
-        Hadoop now has a <a href="http://wiki.apache.org/lucene-hadoop/FAQ">FAQ</a>. Please help make this more complete!
-        </p>
       </section>
      
     </section>
