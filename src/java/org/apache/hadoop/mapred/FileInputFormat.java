@@ -32,8 +32,14 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /** 
- * A base class for {@link InputFormat}. 
+ * A base class for file-based {@link InputFormat}.
  * 
+ * <p><code>FileInputFormat</code> is the base class for all file-based 
+ * <code>InputFormat</code>s. This provides generic implementations of
+ * {@link #validateInput(JobConf)} and {@link #getSplits(JobConf, int)}.
+ * Implementations fo <code>FileInputFormat</code> can also override the 
+ * {@link #isSplitable(FileSystem, Path)} method to ensure input-files are
+ * not split-up and are processed as a whole by {@link Mapper}s.
  */
 public abstract class FileInputFormat<K extends WritableComparable,
                                       V extends Writable>
@@ -58,6 +64,11 @@ public abstract class FileInputFormat<K extends WritableComparable,
   /**
    * Is the given filename splitable? Usually, true, but if the file is
    * stream compressed, it will not be.
+   * 
+   * <code>FileInputFormat</code> implementations can override this and return
+   * <code>false</code> to ensure that individual input files are never split-up
+   * so that {@link Mapper}s process entire files.
+   * 
    * @param fs the file system that the file is on
    * @param filename the file name to check
    * @return is this file splitable?

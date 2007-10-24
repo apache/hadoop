@@ -31,6 +31,8 @@ import java.net.URLDecoder;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.filecache.DistributedCache;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
@@ -43,11 +45,63 @@ import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapred.lib.HashPartitioner;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Tool;
 
-/** A map/reduce job configuration.  This names the {@link Mapper}, combiner
- * (if any), {@link Partitioner}, {@link Reducer}, {@link InputFormat}, and
- * {@link OutputFormat} implementations to be used.  It also indicates the set
- * of input files, and where the output files should be written. */
+/** 
+ * A map/reduce job configuration.
+ * 
+ * <p><code>JobConf</code> is the primary interface for a user to describe a 
+ * map-reduce job to the Hadoop framework for execution. The framework tries to
+ * faithfully execute the job as-is described by <code>JobConf</code>, however:
+ * <ol>
+ *   <li>
+ *   Some configuration parameters might have been marked as 
+ *   <a href="{@docRoot}/org/apache/hadoop/conf/Configuration.html#FinalParams">
+ *   final</a> by administrators and hence cannot be altered.
+ *   </li>
+ *   <li>
+ *   While some job parameters are straight-forward to set 
+ *   (e.g. {@link #setNumReduceTasks(int)}), some parameters interact subtly 
+ *   rest of the framework and/or job-configuration and is relatively more 
+ *   complex for the user to control finely (e.g. {@link #setNumMapTasks(int)}).
+ *   </li>
+ * </ol></p>
+ * 
+ * <p><code>JobConf</code> typically specifies the {@link Mapper}, combiner 
+ * (if any), {@link Partitioner}, {@link Reducer}, {@link InputFormat} and 
+ * {@link OutputFormat} implementations to be used etc. It also indicates the 
+ * set of input files ({@link #setInputPath(Path)}/{@link #addInputPath(Path)}), 
+ * and where the output files should be written ({@link #setOutputPath(Path)}).
+ *
+ * <p>Optionally <code>JobConf</code> is used to specify other advanced facets 
+ * of the job such as <code>Comparator</code>s to be used, files to be put in  
+ * the {@link DistributedCache}, whether or not intermediate and/or job outputs 
+ * are to be compressed (and how) etc.</p>
+ * 
+ * <p>Here is an example on how to configure a job via <code>JobConf</code>:</p>
+ * <p><blockquote><pre>
+ *     // Create a new JobConf
+ *     JobConf job = new JobConf(new Configuration(), MyJob.class);
+ *     
+ *     // Specify various job-specific parameters     
+ *     job.setJobName("myjob");
+ *     
+ *     job.setInputPath(new Path("in"));
+ *     job.setOutputPath(new Path("out"));
+ *     
+ *     job.setMapperClass(MyJob.MyMapper.class);
+ *     job.setCombinerClass(MyJob.MyReducer.class);
+ *     job.setReducerClass(MyJob.MyReducer.class);
+ *     
+ *     job.setInputFormat(SequenceFileInputFormat.class);
+ *     job.setOutputFormat(SequenceFileOutputFormat.class);
+ * </pre></blockquote></p>
+ * 
+ * @see JobClient
+ * @see ClusterStatus
+ * @see Tool
+ * @see DistributedCache
+ */
 public class JobConf extends Configuration {
   
   private static final Log LOG = LogFactory.getLog(JobConf.class);
@@ -61,6 +115,7 @@ public class JobConf extends Configuration {
 
   /** 
    * Construct a map/reduce job configuration.
+   * 
    * @param exampleClass a class whose containing jar is used as the job's jar.
    */
   public JobConf(Class exampleClass) {
@@ -92,7 +147,7 @@ public class JobConf extends Configuration {
 
   /** Construct a map/reduce configuration.
    *
-   * @param config a Configuration-format XML job description file
+   * @param config a Configuration-format XML job description file.
    */
   public JobConf(String config) {
     this(new Path(config));
@@ -100,7 +155,7 @@ public class JobConf extends Configuration {
 
   /** Construct a map/reduce configuration.
    *
-   * @param config a Configuration-format XML job description file
+   * @param config a Configuration-format XML job description file.
    */
   public JobConf(Path config) {
     super();
@@ -111,6 +166,7 @@ public class JobConf extends Configuration {
   /**
    * Checks if <b>mapred-default.xml</b> is on the CLASSPATH, if so
    * it warns the user and loads it as a {@link Configuration} resource.
+   * 
    * @deprecated Remove in hadoop-0.16.0 via HADOOP-1843
    */
   private void checkWarnAndLoadMapredDefault() {
@@ -122,12 +178,24 @@ public class JobConf extends Configuration {
     }
   }
   
+  /**
+   * Get the user jar for the map-reduce job.
+   * 
+   * @return the user jar for the map-reduce job.
+   */
   public String getJar() { return get("mapred.jar"); }
+  
+  /**
+   * Set the user jar for the map-reduce job.
+   * 
+   * @param jar the user jar for the map-reduce job.
+   */
   public void setJar(String jar) { set("mapred.jar", jar); }
   
   /**
    * Set the job's jar file by finding an example class location.
-   * @param cls the example class
+   * 
+   * @param cls the example class.
    */
   public void setJarByClass(Class cls) {
     String jar = findContainingJar(cls);
@@ -136,6 +204,11 @@ public class JobConf extends Configuration {
     }   
   }
 
+  /**
+   * Get the system directory where job-specific files are to be placed.
+   * 
+   * @return the system directory where job-specific files are to be placed.
+   */
   public Path getSystemDir() {
     return new Path(get("mapred.system.dir", "/tmp/hadoop/mapred/system"));
   }
@@ -158,23 +231,41 @@ public class JobConf extends Configuration {
     }
   }
 
-  /** Constructs a local file name.  Files are distributed among configured
-   * local directories.*/
+  /** 
+   * Constructs a local file name. Files are distributed among configured
+   * local directories.
+   */
   public Path getLocalPath(String pathString) throws IOException {
     return getLocalPath("mapred.local.dir", pathString);
   }
 
+  /**
+   * Set the {@link Path} of the input directory for the map-reduce job.
+   * 
+   * @param dir the {@link Path} of the input directory for the map-reduce job.
+   */
   public void setInputPath(Path dir) {
     dir = new Path(getWorkingDirectory(), dir);
     set("mapred.input.dir", dir.toString());
   }
 
+  /**
+   * Add a {@link Path} to the list of inputs for the map-reduce job.
+   * 
+   * @param dir {@link Path} to be added to the list of inputs for 
+   *            the map-reduce job.
+   */
   public void addInputPath(Path dir) {
     dir = new Path(getWorkingDirectory(), dir);
     String dirs = get("mapred.input.dir");
     set("mapred.input.dir", dirs == null ? dir.toString() : dirs + "," + dir);
   }
 
+  /**
+   * Get the list of input {@link Path}s for the map-reduce job.
+   * 
+   * @return the list of input {@link Path}s for the map-reduce job.
+   */
   public Path[] getInputPaths() {
     String dirs = get("mapred.input.dir", "");
     ArrayList list = Collections.list(new StringTokenizer(dirs, ","));
@@ -187,6 +278,7 @@ public class JobConf extends Configuration {
 
   /**
    * Get the reported username for this job.
+   * 
    * @return the username
    */
   public String getUser() {
@@ -195,7 +287,8 @@ public class JobConf extends Configuration {
   
   /**
    * Set the reported username for this job.
-   * @param user the username
+   * 
+   * @param user the username for this job.
    */
   public void setUser(String user) {
     set("user.name", user);
@@ -206,6 +299,10 @@ public class JobConf extends Configuration {
   /**
    * Set whether the framework should keep the intermediate files for 
    * failed tasks.
+   * 
+   * @param keep <code>true</code> if framework should keep the intermediate files 
+   *             for failed tasks, <code>false</code> otherwise.
+   * 
    */
   public void setKeepFailedTaskFiles(boolean keep) {
     setBoolean("keep.failed.task.files", keep);
@@ -213,6 +310,7 @@ public class JobConf extends Configuration {
   
   /**
    * Should the temporary files for failed tasks be kept?
+   * 
    * @return should the files be kept?
    */
   public boolean getKeepFailedTaskFiles() {
@@ -223,6 +321,7 @@ public class JobConf extends Configuration {
    * Set a regular expression for task names that should be kept. 
    * The regular expression ".*_m_000123_0" would keep the files
    * for the first instance of map 123 that ran.
+   * 
    * @param pattern the java.util.regex.Pattern to match against the 
    *        task names.
    */
@@ -233,15 +332,17 @@ public class JobConf extends Configuration {
   /**
    * Get the regular expression that is matched against the task names
    * to see if we need to keep the files.
-   * @return the pattern as a string, if it was set, othewise null
+   * 
+   * @return the pattern as a string, if it was set, othewise null.
    */
   public String getKeepTaskFilesPattern() {
     return get("keep.task.files.pattern");
   }
   
   /**
-   * Set the current working directory for the default file system
-   * @param dir the new current working directory
+   * Set the current working directory for the default file system.
+   * 
+   * @param dir the new current working directory.
    */
   public void setWorkingDirectory(Path dir) {
     dir = new Path(getWorkingDirectory(), dir);
@@ -250,7 +351,8 @@ public class JobConf extends Configuration {
   
   /**
    * Get the current working directory for the default file system.
-   * @return the directory name
+   * 
+   * @return the directory name.
    */
   public Path getWorkingDirectory() {
     String name = get("mapred.working.dir");
@@ -267,31 +369,107 @@ public class JobConf extends Configuration {
     }
   }
   
+  /**
+   * Get the {@link Path} to the output directory for the map-reduce job.
+   * 
+   * <h4 id="SideEffectFiles">Tasks' Side-Effect Files</h4>
+   * 
+   * <p>Some applications need to create/write-to side-files, which differ from
+   * the actual job-outputs.
+   * 
+   * <p>In such cases there could be issues with 2 instances of the same TIP 
+   * (running simultaneously e.g. speculative tasks) trying to open/write-to the
+   * same file (path) on HDFS. Hence the application-writer will have to pick 
+   * unique names per task-attempt (e.g. using the taskid, say 
+   * <tt>task_200709221812_0001_m_000000_0</tt>), not just per TIP.</p> 
+   * 
+   * <p>To get around this the Map-Reduce framework helps the application-writer 
+   * out by maintaining a special <tt>${mapred.output.dir}/_${taskid}</tt> 
+   * sub-directory for each task-attempt on HDFS where the output of the 
+   * task-attempt goes. On successful completion of the task-attempt the files 
+   * in the <tt>${mapred.output.dir}/_${taskid}</tt> (only) 
+   * are <i>promoted</i> to <tt>${mapred.output.dir}</tt>. Of course, the 
+   * framework discards the sub-directory of unsuccessful task-attempts. This 
+   * is completely transparent to the application.</p>
+   * 
+   * <p>The application-writer can take advantage of this by creating any 
+   * side-files required in <tt>${mapred.output.dir}</tt> during execution of his 
+   * reduce-task i.e. via {@link #getOutputPath()}, and the framework will move 
+   * them out similarly - thus she doesn't have to pick unique paths per 
+   * task-attempt.</p>
+   * 
+   * <p><i>Note</i>: the value of <tt>${mapred.output.dir}</tt> during execution 
+   * of a particular task-attempt is actually 
+   * <tt>${mapred.output.dir}/_{$taskid}</tt>, not the value set by 
+   * {@link #setOutputPath(Path)}. So, just create any side-files in the path 
+   * returned by {@link #getOutputPath()} from map/reduce task to take 
+   * advantage of this feature.</p>
+   * 
+   * <p>The entire discussion holds true for maps of jobs with 
+   * reducer=NONE (i.e. 0 reduces) since output of the map, in that case, 
+   * goes directly to HDFS.</p> 
+   * 
+   * @return the {@link Path} to the output directory for the map-reduce job.
+   */
   public Path getOutputPath() { 
     String name = get("mapred.output.dir");
     return name == null ? null: new Path(name);
   }
 
+  /**
+   * Set the {@link Path} of the output directory for the map-reduce job.
+   * 
+   * <p><i>Note</i>:
+   * </p>
+   * @param dir the {@link Path} of the output directory for the map-reduce job.
+   */
   public void setOutputPath(Path dir) {
     dir = new Path(getWorkingDirectory(), dir);
     set("mapred.output.dir", dir.toString());
   }
 
+  /**
+   * Get the {@link InputFormat} implementation for the map-reduce job,
+   * defaults to {@link TextInputFormat} if not specified explicity.
+   * 
+   * @return the {@link InputFormat} implementation for the map-reduce job.
+   */
   public InputFormat getInputFormat() {
     return (InputFormat)ReflectionUtils.newInstance(getClass("mapred.input.format.class",
                                                              TextInputFormat.class,
                                                              InputFormat.class),
                                                     this);
   }
+  
+  /**
+   * Set the {@link InputFormat} implementation for the map-reduce job.
+   * 
+   * @param theClass the {@link InputFormat} implementation for the map-reduce 
+   *                 job.
+   */
   public void setInputFormat(Class<? extends InputFormat> theClass) {
     setClass("mapred.input.format.class", theClass, InputFormat.class);
   }
+  
+  /**
+   * Get the {@link OutputFormat} implementation for the map-reduce job,
+   * defaults to {@link TextOutputFormat} if not specified explicity.
+   * 
+   * @return the {@link OutputFormat} implementation for the map-reduce job.
+   */
   public OutputFormat getOutputFormat() {
     return (OutputFormat)ReflectionUtils.newInstance(getClass("mapred.output.format.class",
                                                               TextOutputFormat.class,
                                                               OutputFormat.class),
                                                      this);
   }
+  
+  /**
+   * Set the {@link OutputFormat} implementation for the map-reduce job.
+   * 
+   * @param theClass the {@link OutputFormat} implementation for the map-reduce 
+   *                 job.
+   */
   public void setOutputFormat(Class<? extends OutputFormat> theClass) {
     setClass("mapred.output.format.class", theClass, OutputFormat.class);
   }
@@ -320,6 +498,7 @@ public class JobConf extends Configuration {
   /**
    * Should the map outputs be compressed before transfer?
    * Uses the SequenceFile compression.
+   * 
    * @param compress should the map outputs be compressed?
    */
   public void setCompressMapOutput(boolean compress) {
@@ -328,8 +507,9 @@ public class JobConf extends Configuration {
   
   /**
    * Are the outputs of the maps be compressed?
+   * 
    * @return <code>true</code> if the outputs of the maps are to be compressed,
-   *         <code>false</code> otherwise
+   *         <code>false</code> otherwise.
    */
   public boolean getCompressMapOutput() {
     return getBoolean("mapred.compress.map.output", false);
@@ -337,8 +517,9 @@ public class JobConf extends Configuration {
 
   /**
    * Set the {@link CompressionType} for the map outputs.
+   * 
    * @param style the {@link CompressionType} to control how the map outputs  
-   *              are compressed
+   *              are compressed.
    */
   public void setMapOutputCompressionType(CompressionType style) {
     set("mapred.map.output.compression.type", style.toString());
@@ -346,8 +527,9 @@ public class JobConf extends Configuration {
   
   /**
    * Get the {@link CompressionType} for the map outputs.
+   * 
    * @return the {@link CompressionType} for map outputs, defaulting to 
-   *         {@link CompressionType#RECORD} 
+   *         {@link CompressionType#RECORD}. 
    */
   public CompressionType getMapOutputCompressionType() {
     String val = get("mapred.map.output.compression.type", 
@@ -357,8 +539,9 @@ public class JobConf extends Configuration {
 
   /**
    * Set the given class as the  {@link CompressionCodec} for the map outputs.
+   * 
    * @param codecClass the {@link CompressionCodec} class that will compress  
-   *                   the map outputs
+   *                   the map outputs.
    */
   public void 
   setMapOutputCompressorClass(Class<? extends CompressionCodec> codecClass) {
@@ -368,9 +551,10 @@ public class JobConf extends Configuration {
   
   /**
    * Get the {@link CompressionCodec} for compressing the map outputs.
+   * 
    * @param defaultValue the {@link CompressionCodec} to return if not set
    * @return the {@link CompressionCodec} class that should be used to compress the 
-   *         map outputs
+   *         map outputs.
    * @throws IllegalArgumentException if the class was specified, but not found
    */
   public Class<? extends CompressionCodec> 
@@ -390,10 +574,10 @@ public class JobConf extends Configuration {
   
   /**
    * Get the key class for the map output data. If it is not set, use the
-   * (final) output ket class This allows the map output key class to be
-   * different than the final output key class
-   * 
-   * @return map output key class
+   * (final) output key class. This allows the map output key class to be
+   * different than the final output key class.
+   *  
+   * @return the map output key class.
    */
   public Class<? extends WritableComparable> getMapOutputKeyClass() {
     Class<? extends WritableComparable> retv = getClass("mapred.mapoutput.key.class", null,
@@ -407,7 +591,9 @@ public class JobConf extends Configuration {
   /**
    * Set the key class for the map output data. This allows the user to
    * specify the map output key class to be different than the final output
-   * value class
+   * value class.
+   * 
+   * @param theClass the map output key class.
    */
   public void setMapOutputKeyClass(Class<? extends WritableComparable> theClass) {
     setClass("mapred.mapoutput.key.class", theClass,
@@ -417,9 +603,9 @@ public class JobConf extends Configuration {
   /**
    * Get the value class for the map output data. If it is not set, use the
    * (final) output value class This allows the map output value class to be
-   * different than the final output value class
-   * 
-   * @return map output value class
+   * different than the final output value class.
+   *  
+   * @return the map output value class.
    */
   public Class<? extends Writable> getMapOutputValueClass() {
     Class<? extends Writable> retv = getClass("mapred.mapoutput.value.class", null,
@@ -433,21 +619,38 @@ public class JobConf extends Configuration {
   /**
    * Set the value class for the map output data. This allows the user to
    * specify the map output value class to be different than the final output
-   * value class
+   * value class.
+   * 
+   * @param theClass the map output value class.
    */
   public void setMapOutputValueClass(Class<? extends Writable> theClass) {
     setClass("mapred.mapoutput.value.class", theClass, Writable.class);
   }
   
+  /**
+   * Get the key class for the job output data.
+   * 
+   * @return the key class for the job output data.
+   */
   public Class<? extends WritableComparable> getOutputKeyClass() {
     return getClass("mapred.output.key.class",
                     LongWritable.class, WritableComparable.class);
   }
   
+  /**
+   * Set the key class for the job output data.
+   * 
+   * @param theClass the key class for the job output data.
+   */
   public void setOutputKeyClass(Class<? extends WritableComparable> theClass) {
     setClass("mapred.output.key.class", theClass, WritableComparable.class);
   }
 
+  /**
+   * Get the {@link WritableComparable} comparator used to compare keys.
+   * 
+   * @return the {@link WritableComparable} comparator used to compare keys.
+   */
   public WritableComparator getOutputKeyComparator() {
     Class theClass = getClass("mapred.output.key.comparator.class", null,
                               WritableComparator.class);
@@ -456,17 +659,24 @@ public class JobConf extends Configuration {
     return WritableComparator.get(getMapOutputKeyClass());
   }
 
+  /**
+   * Set the {@link WritableComparable} comparator used to compare keys.
+   * 
+   * @param theClass the {@link WritableComparable} comparator used to 
+   *                 compare keys.
+   * @see #setOutputValueGroupingComparator(Class)                 
+   */
   public void setOutputKeyComparatorClass(Class<? extends WritableComparator> theClass) {
     setClass("mapred.output.key.comparator.class",
              theClass, WritableComparator.class);
   }
 
-  /** Get the user defined comparator for grouping values.
+  /** 
+   * Get the user defined {@link WritableComparable} comparator for 
+   * grouping keys of inputs to the reduce.
    * 
-   * This call is used to get the comparator for grouping values by key.
-   * @see #setOutputValueGroupingComparator(Class) for details.
-   *  
-   * @return Comparator set by the user for grouping values.
+   * @return comparator set by the user for grouping values.
+   * @see #setOutputValueGroupingComparator(Class) for details.  
    */
   public WritableComparator getOutputValueGroupingComparator() {
     Class theClass = getClass("mapred.output.value.groupfn.class", null,
@@ -478,120 +688,310 @@ public class JobConf extends Configuration {
     return (WritableComparator)ReflectionUtils.newInstance(theClass, this);
   }
 
-  /** Set the user defined comparator for grouping values.
+  /** 
+   * Set the user defined {@link WritableComparable} comparator for 
+   * grouping keys in the input to the reduce.
    * 
-   * For key-value pairs (K1,V1) and (K2,V2), the values are passed
-   * in a single call to the map function if K1 and K2 compare as equal.
+   * <p>This comparator should be provided if the equivalence rules for keys
+   * for sorting the intermediates are different from those for grouping keys
+   * before each call to 
+   * {@link Reducer#reduce(WritableComparable, java.util.Iterator, OutputCollector, Reporter)}.</p>
+   *  
+   * <p>For key-value pairs (K1,V1) and (K2,V2), the values (V1, V2) are passed
+   * in a single call to the reduce function if K1 and K2 compare as equal.</p>
    * 
-   * This comparator should be provided if the equivalence rules for keys
-   * for sorting the intermediates are different from those for grouping 
-   * values.
+   * <p>Since {@link #setOutputKeyComparatorClass(Class)} can be used to control 
+   * how keys are sorted, this can be used in conjunction to simulate 
+   * <i>secondary sort on values</i>.</p>
+   *  
+   * <p><i>Note</i>: This is not a guarantee of the reduce sort being 
+   * <i>stable</i> in any sense. (In any case, with the order of available 
+   * map-outputs to the reduce being non-deterministic, it wouldn't make 
+   * that much sense.)</p>
    * 
-   * @param theClass The Comparator class to be used for grouping. It should
-   * extend WritableComparator.
+   * @param theClass the comparator class to be used for grouping keys. 
+   *                 It should extend <code>WritableComparator</code>.
+   * @see #setOutputKeyComparatorClass(Class)                 
    */
   public void setOutputValueGroupingComparator(Class theClass) {
     setClass("mapred.output.value.groupfn.class",
              theClass, WritableComparator.class);
   }
 
+  /**
+   * Get the value class for job outputs.
+   * 
+   * @return the value class for job outputs.
+   */
   public Class<? extends Writable> getOutputValueClass() {
     return getClass("mapred.output.value.class", Text.class, Writable.class);
   }
+  
+  /**
+   * Set the value class for job outputs.
+   * 
+   * @param theClass the value class for job outputs.
+   */
   public void setOutputValueClass(Class<? extends Writable> theClass) {
     setClass("mapred.output.value.class", theClass, Writable.class);
   }
 
-
+  /**
+   * Get the {@link Mapper} class for the job.
+   * 
+   * @return the {@link Mapper} class for the job.
+   */
   public Class<? extends Mapper> getMapperClass() {
     return getClass("mapred.mapper.class", IdentityMapper.class, Mapper.class);
   }
+  
+  /**
+   * Set the {@link Mapper} class for the job.
+   * 
+   * @param theClass the {@link Mapper} class for the job.
+   */
   public void setMapperClass(Class<? extends Mapper> theClass) {
     setClass("mapred.mapper.class", theClass, Mapper.class);
   }
 
+  /**
+   * Get the {@link MapRunnable} class for the job.
+   * 
+   * @return the {@link MapRunnable} class for the job.
+   */
   public Class<? extends MapRunnable> getMapRunnerClass() {
     return getClass("mapred.map.runner.class",
                     MapRunner.class, MapRunnable.class);
   }
+  
+  /**
+   * Expert: Set the {@link MapRunnable} class for the job.
+   * 
+   * Typically used to exert greater control on {@link Mapper}s.
+   * 
+   * @param theClass the {@link MapRunnable} class for the job.
+   */
   public void setMapRunnerClass(Class<? extends MapRunnable> theClass) {
     setClass("mapred.map.runner.class", theClass, MapRunnable.class);
   }
 
+  /**
+   * Get the {@link Partitioner} used to partition {@link Mapper}-outputs 
+   * to be sent to the {@link Reducer}s.
+   * 
+   * @return the {@link Partitioner} used to partition map-outputs.
+   */
   public Class<? extends Partitioner> getPartitionerClass() {
     return getClass("mapred.partitioner.class",
                     HashPartitioner.class, Partitioner.class);
   }
+  
+  /**
+   * Set the {@link Partitioner} class used to partition 
+   * {@link Mapper}-outputs to be sent to the {@link Reducer}s.
+   * 
+   * @param theClass the {@link Partitioner} used to partition map-outputs.
+   */
   public void setPartitionerClass(Class<? extends Partitioner> theClass) {
     setClass("mapred.partitioner.class", theClass, Partitioner.class);
   }
 
+  /**
+   * Get the {@link Reducer} class for the job.
+   * 
+   * @return the {@link Reducer} class for the job.
+   */
   public Class<? extends Reducer> getReducerClass() {
     return getClass("mapred.reducer.class",
                     IdentityReducer.class, Reducer.class);
   }
+  
+  /**
+   * Set the {@link Reducer} class for the job.
+   * 
+   * @param theClass the {@link Reducer} class for the job.
+   */
   public void setReducerClass(Class<? extends Reducer> theClass) {
     setClass("mapred.reducer.class", theClass, Reducer.class);
   }
 
+  /**
+   * Get the user-defined <i>combiner</i> class used to combine map-outputs 
+   * before being sent to the reducers. Typically the combiner is same as the
+   * the {@link Reducer} for the job i.e. {@link #getReducerClass()}.
+   * 
+   * @return the user-defined combiner class used to combine map-outputs.
+   */
   public Class<? extends Reducer> getCombinerClass() {
     return getClass("mapred.combiner.class", null, Reducer.class);
   }
+
+  /**
+   * Set the user-defined <i>combiner</i> class used to combine map-outputs 
+   * before being sent to the reducers. 
+   * 
+   * <p>The combiner is a task-level aggregation operation which, in some cases,
+   * helps to cut down the amount of data transferred from the {@link Mapper} to
+   * the {@link Reducer}, leading to better performance.</p>
+   *  
+   * <p>Typically the combiner is same as the the <code>Reducer</code> for the  
+   * job i.e. {@link #setReducerClass(Class)}.</p>
+   * 
+   * @param theClass the user-defined combiner class used to combine 
+   *                 map-outputs.
+   */
   public void setCombinerClass(Class<? extends Reducer> theClass) {
     setClass("mapred.combiner.class", theClass, Reducer.class);
   }
   
   /**
-   * Should speculative execution be used for this job?
-   * @return Defaults to true
+   * Should speculative execution be used for this job? 
+   * Defaults to <code>true</code>.
+   * 
+   * @return <code>true</code> if speculative execution be used for this job,
+   *         <code>false</code> otherwise.
    */
   public boolean getSpeculativeExecution() { 
     return getBoolean("mapred.speculative.execution", true);
   }
   
   /**
-   * Turn on or off speculative execution for this job.
-   * In general, it should be turned off for map jobs that have side effects.
+   * Turn speculative execution on or off for this job. 
+   * 
+   * @param speculativeExecution <code>true</code> if speculative execution 
+   *                             should be turned on, else <code>false</code>.
    */
-  public void setSpeculativeExecution(boolean new_val) {
-    setBoolean("mapred.speculative.execution", new_val);
+  public void setSpeculativeExecution(boolean speculativeExecution) {
+    setBoolean("mapred.speculative.execution", speculativeExecution);
   }
   
+  /**
+   * Get configured the number of reduce tasks for this job.
+   * Defaults to <code>1</code>.
+   * 
+   * @return the number of reduce tasks for this job.
+   */
   public int getNumMapTasks() { return getInt("mapred.map.tasks", 1); }
+  
+  /**
+   * Set the number of map tasks for this job.
+   * 
+   * <p><i>Note</i>: This is only a <i>hint</i> to the framework. The actual 
+   * number of spawned map tasks depends on the number of {@link InputSplit}s 
+   * generated by the job's {@link InputFormat#getSplits(JobConf, int)}.
+   *  
+   * A custom {@link InputFormat} is typically used to accurately control 
+   * the number of map tasks for the job.</p>
+   * 
+   * <h4 id="NoOfMaps">How many maps?</h4>
+   * 
+   * <p>The number of maps is usually driven by the total size of the inputs 
+   * i.e. total number of blocks of the input files.</p>
+   *  
+   * <p>The right level of parallelism for maps seems to be around 10-100 maps 
+   * per-node, although it has been set up to 300 or so for very cpu-light map 
+   * tasks. Task setup takes awhile, so it is best if the maps take at least a 
+   * minute to execute.</p>
+   * 
+   * <p>The default behavior of file-based {@link InputFormat}s is to split the 
+   * input into <i>logical</i> {@link InputSplit}s based on the total size, in 
+   * bytes, of input files. However, the {@link FileSystem} blocksize of the 
+   * input files is treated as an upper bound for input splits. A lower bound 
+   * on the split size can be set via 
+   * <a href="{@docRoot}/../hadoop-default.html#mapred.min.split.size">
+   * mapred.min.split.size</a>.</p>
+   *  
+   * <p>Thus, if you expect 10TB of input data and have a blocksize of 128MB, 
+   * you'll end up with 82,000 maps, unless {@link #setNumMapTasks(int)} is 
+   * used to set it even higher.</p>
+   * 
+   * @param n the number of map tasks for this job.
+   * @see InputFormat#getSplits(JobConf, int)
+   * @see FileInputFormat
+   * @see FileSystem#getDefaultBlockSize()
+   * @see FileStatus#getBlockSize()
+   */
   public void setNumMapTasks(int n) { setInt("mapred.map.tasks", n); }
 
+  /**
+   * Get configured the number of reduce tasks for this job. Defaults to 
+   * <code>1</code>.
+   * 
+   * @return the number of reduce tasks for this job.
+   */
   public int getNumReduceTasks() { return getInt("mapred.reduce.tasks", 1); }
+  
+  /**
+   * Set the requisite number of reduce tasks for this job.
+   * 
+   * <h4 id="NoOfReduces">How many reduces?</h4>
+   * 
+   * <p>The right number of reduces seems to be <code>0.95</code> or 
+   * <code>1.75</code> multiplied by (&lt;<i>no. of nodes</i>&gt; * 
+   * <a href="{@docRoot}/../hadoop-default.html#mapred.tasktracker.tasks.maximum">
+   * mapred.tasktracker.tasks.maximum</a>).
+   * </p>
+   * 
+   * <p>With <code>0.95</code> all of the reduces can launch immediately and 
+   * start transfering map outputs as the maps finish. With <code>1.75</code> 
+   * the faster nodes will finish their first round of reduces and launch a 
+   * second wave of reduces doing a much better job of load balancing.</p>
+   * 
+   * <p>Increasing the number of reduces increases the framework overhead, but 
+   * increases load balancing and lowers the cost of failures.</p>
+   * 
+   * <p>The scaling factors above are slightly less than whole numbers to 
+   * reserve a few reduce slots in the framework for speculative-tasks, failures
+   * etc.</p> 
+   *
+   * <h4 id="ReducerNone">Reducer NONE</h4>
+   * 
+   * <p>It is legal to set the number of reduce-tasks to <code>zero</code>.</p>
+   * 
+   * <p>In this case the output of the map-tasks directly go to distributed 
+   * file-system, to the path set by {@link #setOutputPath(Path)}. Also, the 
+   * framework doesn't sort the map-outputs before writing it out to HDFS.</p>
+   * 
+   * @param n the number of reduce tasks for this job.
+   */
   public void setNumReduceTasks(int n) { setInt("mapred.reduce.tasks", n); }
   
-  /** Get the configured number of maximum attempts that will be made to run a
-   *  map task, as specified by the <code>mapred.map.max.attempts</code>
-   *  property. If this property is not already set, the default is 4 attempts
-   * @return the max number of attempts
+  /** 
+   * Get the configured number of maximum attempts that will be made to run a
+   * map task, as specified by the <code>mapred.map.max.attempts</code>
+   * property. If this property is not already set, the default is 4 attempts.
+   *  
+   * @return the max number of attempts per map task.
    */
   public int getMaxMapAttempts() {
     return getInt("mapred.map.max.attempts", 4);
   }
-  /** Expert: Set the number of maximum attempts that will be made to run a
-   *  map task
-   * @param n the number of attempts
-   *
+  
+  /** 
+   * Expert: Set the number of maximum attempts that will be made to run a
+   * map task.
+   * 
+   * @param n the number of attempts per map task.
    */
   public void setMaxMapAttempts(int n) {
     setInt("mapred.map.max.attempts", n);
   }
 
-  /** Get the configured number of maximum attempts  that will be made to run a
-   *  reduce task, as specified by the <code>mapred.reduce.max.attempts</code>
-   *  property. If this property is not already set, the default is 4 attempts
-   * @return the max number of attempts
+  /** 
+   * Get the configured number of maximum attempts  that will be made to run a
+   * reduce task, as specified by the <code>mapred.reduce.max.attempts</code>
+   * property. If this property is not already set, the default is 4 attempts.
+   * 
+   * @return the max number of attempts per reduce task.
    */
   public int getMaxReduceAttempts() {
     return getInt("mapred.reduce.max.attempts", 4);
   }
-  /** Expert: Set the number of maximum attempts that will be made to run a
-   *  reduce task
-   * @param n the number of attempts
-   *
+  /** 
+   * Expert: Set the number of maximum attempts that will be made to run a
+   * reduce task.
+   * 
+   * @param n the number of attempts per reduce task.
    */
   public void setMaxReduceAttempts(int n) {
     setInt("mapred.reduce.max.attempts", n);
@@ -600,7 +1000,8 @@ public class JobConf extends Configuration {
   /**
    * Get the user-specified job name. This is only used to identify the 
    * job to the user.
-   * @return the job's name, defaulting to ""
+   * 
+   * @return the job's name, defaulting to "".
    */
   public String getJobName() {
     return get("mapred.job.name", "");
@@ -608,7 +1009,8 @@ public class JobConf extends Configuration {
   
   /**
    * Set the user-specified job name.
-   * @param name the job's new name
+   * 
+   * @param name the job's new name.
    */
   public void setJobName(String name) {
     set("mapred.job.name", name);
@@ -627,16 +1029,16 @@ public class JobConf extends Configuration {
    * When not running under HOD, this identifer is expected to remain set to 
    * the empty string.
    *
-   * @return the session identifier, defaulting to ""
+   * @return the session identifier, defaulting to "".
    */
   public String getSessionId() {
       return get("session.id", "");
   }
   
   /**
-   * Set the user-specified session idengifier.  
+   * Set the user-specified session identifier.  
    *
-   * @param sessionId the new session id
+   * @param sessionId the new session id.
    */
   public void setSessionId(String sessionId) {
       set("session.id", sessionId);
@@ -644,6 +1046,8 @@ public class JobConf extends Configuration {
     
   /**
    * Set the maximum no. of failures of a given job per tasktracker.
+   * If the no. of task failures exceeds <code>noFailures</code>, the 
+   * tasktracker is <i>blacklisted</i> for this job. 
    * 
    * @param noFailures maximum no. of failures of a given job per tasktracker.
    */
@@ -652,7 +1056,9 @@ public class JobConf extends Configuration {
   }
   
   /**
-   * Get the maximum no. of failures of a given job per tasktracker.
+   * Expert: Get the maximum no. of failures of a given job per tasktracker.
+   * If the no. of task failures exceeds this, the tasktracker is
+   * <i>blacklisted</i> for this job. 
    * 
    * @return the maximum no. of failures of a given job per tasktracker.
    */
@@ -662,21 +1068,30 @@ public class JobConf extends Configuration {
 
   /**
    * Get the maximum percentage of map tasks that can fail without 
-   * the job being aborted.
+   * the job being aborted. 
+   * 
+   * Each map task is executed a minimum of {@link #getMaxMapAttempts()} 
+   * attempts before being declared as <i>failed</i>.
+   *  
+   * Defaults to <code>zero</code>, i.e. <i>any</i> failed map-task results in
+   * the job being declared as {@link JobStatus#FAILED}.
    * 
    * @return the maximum percentage of map tasks that can fail without
-   *         the job being aborted
+   *         the job being aborted.
    */
   public int getMaxMapTaskFailuresPercent() {
     return getInt("mapred.max.map.failures.percent", 0);
   }
 
   /**
-   * Set the maximum percentage of map tasks that can fail without the job
-   * being aborted.
+   * Expert: Set the maximum percentage of map tasks that can fail without the
+   * job being aborted. 
+   * 
+   * Each map task is executed a minimum of {@link #getMaxMapAttempts} attempts 
+   * before being declared as <i>failed</i>.
    * 
    * @param percent the maximum percentage of map tasks that can fail without 
-   *                the job being aborted
+   *                the job being aborted.
    */
   public void setMaxMapTaskFailuresPercent(int percent) {
     setInt("mapred.max.map.failures.percent", percent);
@@ -684,10 +1099,16 @@ public class JobConf extends Configuration {
   
   /**
    * Get the maximum percentage of reduce tasks that can fail without 
-   * the job being aborted.
+   * the job being aborted. 
+   * 
+   * Each reduce task is executed a minimum of {@link #getMaxReduceAttempts()} 
+   * attempts before being declared as <i>failed</i>.
+   * 
+   * Defaults to <code>zero</code>, i.e. <i>any</i> failed reduce-task results 
+   * in the job being declared as {@link JobStatus#FAILED}.
    * 
    * @return the maximum percentage of reduce tasks that can fail without
-   *         the job being aborted
+   *         the job being aborted.
    */
   public int getMaxReduceTaskFailuresPercent() {
     return getInt("mapred.max.reduce.failures.percent", 0);
@@ -697,24 +1118,29 @@ public class JobConf extends Configuration {
    * Set the maximum percentage of reduce tasks that can fail without the job
    * being aborted.
    * 
+   * Each reduce task is executed a minimum of {@link #getMaxReduceAttempts()} 
+   * attempts before being declared as <i>failed</i>.
+   * 
    * @param percent the maximum percentage of reduce tasks that can fail without 
-   *                the job being aborted
+   *                the job being aborted.
    */
   public void setMaxReduceTaskFailuresPercent(int percent) {
     setInt("mapred.max.reduce.failures.percent", percent);
   }
   
   /**
-   * Set job priority for this job.
+   * Set {@link JobPriority} for this job.
    * 
-   * @param prio
+   * @param prio the {@link JobPriority} for this job.
    */
   public void setJobPriority(JobPriority prio) {
     set("mapred.job.priority", prio.toString());
   }
   
   /**
-   * Get the job priority for this job.
+   * Get the {@link JobPriority} for this job.
+   * 
+   * @return the {@link JobPriority} for this job.
    */
   public JobPriority getJobPriority() {
     String prio = get("mapred.job.priority");
@@ -725,12 +1151,44 @@ public class JobConf extends Configuration {
     return JobPriority.valueOf(prio);
   }
   
+  /**
+   * Get the uri to be invoked in-order to send a notification after the job 
+   * has completed (success/failure). 
+   * 
+   * @return the job end notification uri, <code>null</code> if it hasn't
+   *         been set.
+   * @see #setJobEndNotificationURI(String)
+   */
+  public String getJobEndNotificationURI() {
+    return get("job.end.notification.url");
+  }
+
+  /**
+   * Set the uri to be invoked in-order to send a notification after the job
+   * has completed (success/failure).
+   * 
+   * <p>The uri can contain 2 special parameters: <tt>$jobId</tt> and 
+   * <tt>$jobStatus</tt>. Those, if present, are replaced by the job's 
+   * identifier and completion-status respectively.</p>
+   * 
+   * <p>This is typically used by application-writers to implement chaining of 
+   * Map-Reduce jobs in an <i>asynchronous manner</i>.</p>
+   * 
+   * @param uri the job end notification uri
+   * @see JobStatus
+   * @see <a href="{@docRoot}/org/apache/hadoop/mapred/JobClient.html#JobCompletionAndChaining">Job Completion and Chaining</a>
+   */
+  public void setJobEndNotificationURI(String uri) {
+    set("job.end.notification.url", uri);
+  }
   
-  /** Find a jar that contains a class of the same name, if any.
+  /** 
+   * Find a jar that contains a class of the same name, if any.
    * It will return a jar file, even if that is not the first thing
    * on the class path that has a class with the same name.
-   * @param my_class the class to find
-   * @return a jar file that contains the class, or null
+   * 
+   * @param my_class the class to find.
+   * @return a jar file that contains the class, or null.
    * @throws IOException
    */
   private static String findContainingJar(Class my_class) {

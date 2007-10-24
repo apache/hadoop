@@ -26,7 +26,28 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
- * Summarizes the size and current state of the cluster.
+ * Status information on the current state of the Map-Reduce cluster.
+ * 
+ * <p><code>ClusterStatus</code> provides clients with information such as:
+ * <ol>
+ *   <li>
+ *   Size of the cluster. 
+ *   </li>
+ *   <li>
+ *   Task capacity of the cluster. 
+ *   </li>
+ *   <li>
+ *   The number of currently running map & reduce tasks.
+ *   </li>
+ *   <li>
+ *   State of the <code>JobTracker</code>.
+ *   </li>
+ * </ol></p>
+ * 
+ * <p>Clients can query for the latest <code>ClusterStatus</code>, via 
+ * {@link JobClient#getClusterStatus()}.</p>
+ * 
+ * @see JobClient
  */
 public class ClusterStatus implements Writable {
 
@@ -38,6 +59,15 @@ public class ClusterStatus implements Writable {
 
   ClusterStatus() {}
   
+  /**
+   * Construct a new cluster status.
+   * 
+   * @param trackers no. of tasktrackers in the cluster
+   * @param maps no. of currently running map-tasks in the cluster
+   * @param reduces no. of currently running reduce-tasks in the cluster
+   * @param max the maximum no. of tasks in the cluster
+   * @param state the {@link JobTracker.State} of the <code>JobTracker</code>
+   */
   ClusterStatus(int trackers, int maps, int reduces, int max,
                 JobTracker.State state) {
     task_trackers = trackers;
@@ -49,33 +79,47 @@ public class ClusterStatus implements Writable {
   
 
   /**
-   * The number of task trackers in the cluster.
+   * Get the number of task trackers in the cluster.
+   * 
+   * @return the number of task trackers in the cluster.
    */
   public int getTaskTrackers() {
     return task_trackers;
   }
   
   /**
-   * The number of currently running map tasks.
+   * Get the number of currently running map tasks in the cluster.
+   * 
+   * @return the number of currently running map tasks in the cluster.
    */
   public int getMapTasks() {
     return map_tasks;
   }
   
   /**
-   * The number of current running reduce tasks.
+   * Get the number of currently running reduce tasks in the cluster.
+   * 
+   * @return the number of currently running reduce tasks in the cluster.
    */
   public int getReduceTasks() {
     return reduce_tasks;
   }
   
   /**
-   * The maximum capacity for running tasks in the cluster.
+   * Get the maximum capacity for running tasks in the cluster.
+   * 
+   * @return the maximum capacity for running tasks in the cluster.
    */
   public int getMaxTasks() {
     return max_tasks;
   }
 
+  /**
+   * Get the current state of the <code>JobTracker</code>, 
+   * as {@link JobTracker.State}
+   * 
+   * @return the current state of the <code>JobTracker</code>.
+   */
   public JobTracker.State getJobTrackerState() {
     return state;
   }

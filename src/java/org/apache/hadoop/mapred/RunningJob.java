@@ -21,78 +21,120 @@ package org.apache.hadoop.mapred;
 import java.io.*;
 
 /** 
- * Includes details on a running MapReduce job.  A client can
- * track a living job using this object.
+ * <code>RunningJob</code> is the user-interface to query for details on a 
+ * running Map-Reduce job.
+ * 
+ * <p>Clients can get hold of <code>RunningJob</code> via the {@link JobClient}
+ * and then query the running-job for details such as name, configuration, 
+ * progress etc.</p> 
+ * 
+ * @see JobClient
  */
 public interface RunningJob {
   /**
-   * Returns an identifier for the job
+   * Get the job identifier.
+   * 
+   * @return the job identifier.
    */
   public String getJobID();
   
   /**
-   * Returns the name of the job
+   * Get the name of the job.
+   * 
+   * @return the name of the job.
    */
   public String getJobName();
 
   /**
-   * Returns the path of the submitted job.
+   * Get the path of the submitted job configuration.
+   * 
+   * @return the path of the submitted job configuration.
    */
   public String getJobFile();
 
   /**
-   * Returns a URL where some job progress information will be displayed.
+   * Get the URL where some job progress information will be displayed.
+   * 
+   * @return the URL where some job progress information will be displayed.
    */
   public String getTrackingURL();
 
   /**
-   * Returns a float between 0.0 and 1.0, indicating progress on
-   * the map portion of the job.  When all map tasks have completed,
-   * the function returns 1.0.
+   * Get the <i>progress</i> of the job's map-tasks, as a float between 0.0 
+   * and 1.0.  When all map tasks have completed, the function returns 1.0.
+   * 
+   * @return the progress of the job's map-tasks.
+   * @throws IOException
    */
   public float mapProgress() throws IOException;
 
   /**
-   * Returns a float between 0.0 and 1.0, indicating progress on
-   * the reduce portion of the job.  When all reduce tasks have completed,
-   * the function returns 1.0.
+   * Get the <i>progress</i> of the job's reduce-tasks, as a float between 0.0 
+   * and 1.0.  When all reduce tasks have completed, the function returns 1.0.
+   * 
+   * @return the progress of the job's reduce-tasks.
+   * @throws IOException
    */
   public float reduceProgress() throws IOException;
 
   /**
-   * Non-blocking function to check whether the job is finished or not.
+   * Check if the job is finished or not. 
+   * This is a non-blocking call.
+   * 
+   * @return <code>true</code> if the job is complete, else <code>false</code>.
+   * @throws IOException
    */
   public boolean isComplete() throws IOException;
 
   /**
-   * True iff job completed successfully.
+   * Check if the job completed successfully. 
+   * 
+   * @return <code>true</code> if the job succeeded, else <code>false</code>.
+   * @throws IOException
    */
   public boolean isSuccessful() throws IOException;
 
   /**
    * Blocks until the job is complete.
+   * 
+   * @throws IOException
    */
   public void waitForCompletion() throws IOException;
 
   /**
    * Kill the running job.  Blocks until all job tasks have been
    * killed as well.  If the job is no longer running, it simply returns.
+   * 
+   * @throws IOException
    */
   public void killJob() throws IOException;
     
-  public TaskCompletionEvent[] getTaskCompletionEvents(
-                                                       int startFrom) throws IOException;
+  /**
+   * Get events indicating completion (success/failure) of component tasks.
+   *  
+   * @param startFrom index to start fetching events from
+   * @return an array of {@link TaskCompletionEvent}s
+   * @throws IOException
+   */
+  public TaskCompletionEvent[] getTaskCompletionEvents(int startFrom) 
+  throws IOException;
   
   /**
    * Kill indicated task attempt.
-   * @param taskId the id of the task to kill.
-   * @param shouldFail if true the task is failed and added to failed tasks list, otherwise
-   * it is just killed, w/o affecting job failure status.  
+   * 
+   * @param taskId the id of the task to be terminated.
+   * @param shouldFail if true the task is failed and added to failed tasks 
+   *                   list, otherwise it is just killed, w/o affecting 
+   *                   job failure status.  
+   * @throws IOException
    */
   public void killTask(String taskId, boolean shouldFail) throws IOException;
     
   /**
    * Gets the counters for this job.
+   * 
+   * @return the counters for this job.
+   * @throws IOException
    */
   public Counters getCounters() throws IOException;
 }

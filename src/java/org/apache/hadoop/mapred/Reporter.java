@@ -18,11 +18,24 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.IOException;
-
 import org.apache.hadoop.util.Progressable;
 
-/** Passed to application code to permit alteration of status. */
+/** 
+ * A facility for Map-Reduce applications to report progress and update 
+ * counters, status information etc.
+ * 
+ * <p>{@link Mapper} and {@link Reducer} can use the <code>Reporter</code>
+ * provided to report progress or just indicate that they are alive. In 
+ * scenarios where the application takes an insignificant amount of time to 
+ * process individual key/value pairs, this is crucial since the framework 
+ * might assume that the task has timed-out and kill that task.
+ *
+ * <p>Applications can also update {@link Counters} via the provided 
+ * <code>Reporter</code> .</p>
+ * 
+ * @see Progressable
+ * @see Counters
+ */
 public interface Reporter extends Progressable {
   
   /**
@@ -41,25 +54,27 @@ public interface Reporter extends Progressable {
     };
 
   /**
-   * Alter the application's status description.
+   * Set the status description for the task.
    * 
-   * @param status
-   *          a brief description of the current status
+   * @param status brief description of the current status.
    */
   public abstract void setStatus(String status);
   
   /**
    * Increments the counter identified by the key, which can be of
-   * any enum type, by the specified amount.
-   * @param key A value of any enum type
+   * any {@link Enum} type, by the specified amount.
+   * 
+   * @param key key to identify the counter to be incremented. The key can be
+   *            be any <code>Enum</code>. 
    * @param amount A non-negative amount by which the counter is to 
-   * be incremented
+   *               be incremented.
    */
   public abstract void incrCounter(Enum key, long amount);
   
   /**
-   * Get the InputSplit object for a map.
-   * @return the input split that the map is reading from
+   * Get the {@link InputSplit} object for a map.
+   * 
+   * @return the <code>InputSplit</code> that the map is reading from.
    * @throws UnsupportedOperationException if called outside a mapper
    */
   public abstract InputSplit getInputSplit() 

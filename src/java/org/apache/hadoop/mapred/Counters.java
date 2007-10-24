@@ -36,6 +36,13 @@ import org.apache.hadoop.io.Writable;
 
 /**
  * A set of named counters.
+ * 
+ * <p><code>Counters</code> represent global counters, defined either by the 
+ * Map-Reduce framework or applications. Each <code>Counter</code> can be of
+ * any {@link Enum} type.</p>
+ * 
+ * <p><code>Counters</code> are bunched into {@link Group}s, each comprising of
+ * counters from a particular <code>Enum</code> class. 
  */
 public class Counters implements Writable {
   
@@ -57,10 +64,11 @@ public class Counters implements Writable {
   } // end class CounterRec
   
   /**
-   *  Represents a group of counters, comprising the counters from a particular 
-   *  counter enum class.  
+   *  <code>Group</code> of counters, comprising of counters from a particular 
+   *  counter {@link Enum} class.  
    *
-   *  This class handles localization of the class name and the counter names.
+   *  <p><code>Group</code>handles localization of the class name and the 
+   *  counter names.</p>
    */
   public static class Group {
     

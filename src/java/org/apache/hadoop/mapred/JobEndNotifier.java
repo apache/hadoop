@@ -95,7 +95,7 @@ public class JobEndNotifier {
   private static JobEndStatusInfo createNotification(JobConf conf,
                                                      JobStatus status) {
     JobEndStatusInfo notification = null;
-    String uri = conf.get("job.end.notification.url");
+    String uri = conf.getJobEndNotificationURI();
     if (uri != null) {
       // +1 to make logic for first notification identical to a retry
       int retryAttempts = conf.getInt("job.end.retry.attempts", 0) + 1;

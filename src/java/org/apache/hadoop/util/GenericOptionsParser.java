@@ -32,50 +32,54 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
-/*************************************************************
- * This class can be used as a utility to parse command line
- * arguments generic to the Hadoop framework. This class 
- * recognizes several command line arguments, which allow a user 
- * to specify a namenode, a job tracker etc. Generic options 
- * supported are 
- * <p>-conf <configuration file>     specify an application configuration file
- * <p>-D <property=value>            use value for given property
- * <p>-fs <local|namenode:port>      specify a namenode
- * <p>-jt <local|jobtracker:port>    specify a job tracker
- * <br>
- * <p>The general command line syntax is
- * <p>bin/hadoop command [genericOptions] [commandOptions]
- * <br>
- * Generic command line arguments <strong>might</strong> modify 
- * <code>Configuration </code> objects, given to constructors  
- * <br><br>
- * The functionality is implemented using Commons CLI.
- * <br>
- * <p>Examples using generic options are
- * <p>bin/hadoop dfs -fs darwin:8020 -ls /data
+/**
+ * <code>GenericOptionsParser</code> is a utility to parse command line
+ * arguments generic to the Hadoop framework. 
+ * 
+ * <code>GenericOptionsParser</code> recognizes several standarad command 
+ * line arguments, enabling applications to easily specify a namenode, a 
+ * jobtracker, additional configuration resources etc.
+ * 
+ * <h4 id="GenericOptions">Generic Options</h4>
+ * 
+ * <p>The supported generic options are:</p>
  * <p><blockquote><pre>
- *     list /data directory in dfs with namenode darwin:8020
- * </pre></blockquote>
- * <p>bin/hadoop dfs -D fs.default.name=darwin:8020 -ls /data
+ *     -conf &lt;configuration file&gt;     specify a configuration file
+ *     -D &lt;property=value&gt;            use value for given property
+ *     -fs &lt;local|namenode:port&gt;      specify a namenode
+ *     -jt &lt;local|jobtracker:port&gt;    specify a job tracker
+ * </pre></blockquote></p>
+ * 
+ * <p>The general command line syntax is:</p>
+ * <p><tt><pre>
+ * bin/hadoop command [genericOptions] [commandOptions]
+ * </pre></tt></p>
+ * 
+ * <p>Generic command line arguments <strong>might</strong> modify 
+ * <code>Configuration </code> objects, given to constructors.</p>
+ * 
+ * <p>The functionality is implemented using Commons CLI.</p>
+ *
+ * <p>Examples:</p>
  * <p><blockquote><pre>
- *     list /data directory in dfs with namenode darwin:8020
- * </pre></blockquote>
- * <p>bin/hadoop dfs -conf hadoop-site.xml -ls /data
- * <p><blockquote><pre>
- *     list /data directory in dfs with conf specified in hadoop-site.xml
- * </pre></blockquote>
- * <p>bin/hadoop job -D mapred.job.tracker=darwin:50020 -submit job.xml
- * <p><blockquote><pre>
- *     submit a job to job tracker darwin:50020
- * </pre></blockquote>
- * <p>bin/hadoop job -jt darwin:50020 -submit job.xml
- * <p><blockquote><pre>
- *     submit a job to job tracker darwin:50020
- * </pre></blockquote>
- * <p>bin/hadoop job -jt local -submit job.xml
- * <p><blockquote><pre>
- *     submit a job to local runner
- * </pre></blockquote>
+ * $ bin/hadoop dfs -fs darwin:8020 -ls /data
+ * list /data directory in dfs with namenode darwin:8020
+ * 
+ * $ bin/hadoop dfs -D fs.default.name=darwin:8020 -ls /data
+ * list /data directory in dfs with namenode darwin:8020
+ *     
+ * $ bin/hadoop dfs -conf hadoop-site.xml -ls /data
+ * list /data directory in dfs with conf specified in hadoop-site.xml
+ *     
+ * $ bin/hadoop job -D mapred.job.tracker=darwin:50020 -submit job.xml
+ * submit a job to job tracker darwin:50020
+ *     
+ * $ bin/hadoop job -jt darwin:50020 -submit job.xml
+ * submit a job to job tracker darwin:50020
+ *     
+ * $ bin/hadoop job -jt local -submit job.xml
+ * submit a job to local runner
+ * </pre></blockquote></p>
  *
  * @see Tool
  * @see ToolRunner
@@ -86,21 +90,27 @@ public class GenericOptionsParser {
 
   private CommandLine commandLine;
 
-  /** Instantinates a GenericOptionsParser to parse only
-   * the generic Hadoop  arguments. The array of string arguments 
-   * other than the generic arguments can be obtained by 
-   * {@link #getRemainingArgs()}
-   * @param conf the configuration to modify
-   * @param args User-specified arguments
+  /** 
+   * Create a <code>GenericOptionsParser<code> to parse only the generic Hadoop  
+   * arguments. 
+   * 
+   * The array of string arguments other than the generic arguments can be 
+   * obtained by {@link #getRemainingArgs()}.
+   * 
+   * @param conf the <code>Configuration</code> to modify.
+   * @param args command-line arguments.
    */
   public GenericOptionsParser(Configuration conf, String[] args) {
     this(conf, new Options(), args); 
   }
 
   /** 
-   * Instantinates a GenericOptionsParser to parse given options 
-   * as well as generic Hadoop options. The resulting <code>
-   * CommandLine</code> object can be obtained by {@link #getCommandLine()}
+   * Create a <code>GenericOptionsParser</code> to parse given options as well 
+   * as generic Hadoop options. 
+   * 
+   * The resulting <code>CommandLine</code> object can be obtained by 
+   * {@link #getCommandLine()}.
+   * 
    * @param conf the configuration to modify  
    * @param options options built by the caller 
    * @param args User-specified arguments
@@ -110,9 +120,9 @@ public class GenericOptionsParser {
   }
 
   /**
-   * Returns an array of Strings containing only command-specific 
-   * arguments.
-   * @return String array of remaining arguments not parsed
+   * Returns an array of Strings containing only application-specific arguments.
+   * 
+   * @return array of <code>String</code>s containing the un-parsed arguments.
    */
   public String[] getRemainingArgs() {
     return commandLine.getArgs();
@@ -120,12 +130,14 @@ public class GenericOptionsParser {
 
   /**
    * Returns the commons-cli <code>CommandLine</code> object 
-   * to process the parsed arguments. Note : if the object is 
-   * created with <code>GenericCommandLineParser(Configuration, String[])</code>, 
-   * then returned object will only contain parsed generic 
-   * options.
-   * @return CommandLine object representing list of arguments 
-   * parsed against Options descriptor.
+   * to process the parsed arguments. 
+   * 
+   * Note: If the object is created with 
+   * {@link #GenericOptionsParser(Configuration, String[])}, then returned 
+   * object will only contain parsed generic options.
+   * 
+   * @return <code>CommandLine</code> representing list of arguments 
+   *         parsed against Options descriptor.
    */
   public CommandLine getCommandLine() {
     return commandLine;
@@ -212,6 +224,11 @@ public class GenericOptionsParser {
     return args;
   }
 
+  /**
+   * Print the usage message for generic command-line options supported.
+   * 
+   * @param out stream to print the usage message to.
+   */
   public static void printGenericCommandUsage(PrintStream out) {
     out.println("Generic options supported are");
     out.println("-conf <configuration file>     specify an application configuration file");

@@ -24,11 +24,23 @@ import java.io.DataInput;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-/** Reads key/value pairs from an input file {@link FileSplit}.
- * Implemented by {@link InputFormat} implementations. */
+/**
+ * <code>RecordReader</code> reads &lt;key, value&gt; pairs from an 
+ * {@link InputSplit}.
+ *   
+ * <p><code>RecordReader</code>, typically, converts the byte-oriented view of 
+ * the input, provided by the <code>InputSplit</code>, and presents a 
+ * record-oriented view for the {@link Mapper} & {@link Reducer} tasks for 
+ * processing. It thus assumes the responsibility of processing record 
+ * boundaries and presenting the tasks with keys and values.</p>
+ * 
+ * @see InputSplit
+ * @see InputFormat
+ */
 public interface RecordReader<K extends WritableComparable,
                               V extends Writable> {
-  /** Reads the next key/value pair.
+  /** 
+   * Reads the next key/value pair from the input for processing.
    *
    * @param key the key to read data into
    * @param value the value to read data into
@@ -40,25 +52,38 @@ public interface RecordReader<K extends WritableComparable,
   
   /**
    * Create an object of the appropriate type to be used as a key.
-   * @return a new key object
+   * 
+   * @return a new key object.
    */
   K createKey();
   
   /**
-   * Create an object of the appropriate type to be used as the value.
-   * @return a new value object
+   * Create an object of the appropriate type to be used as a value.
+   * 
+   * @return a new value object.
    */
   V createValue();
 
-  /** Returns the current position in the input. */
+  /** 
+   * Returns the current position in the input.
+   * 
+   * @return the current position in the input.
+   * @throws IOException
+   */
   long getPos() throws IOException;
 
-  /** Close this to future operations.*/ 
+  /** 
+   * Close this {@link InputSplit} to future operations.
+   * 
+   * @throws IOException
+   */ 
   public void close() throws IOException;
 
   /**
-   * How far has the reader gone through the input.
-   * @return progress from 0.0 to 1.0
+   * How much of the input has the {@link RecordReader} consumed i.e.
+   * has been processed by?
+   * 
+   * @return progress from <code>0.0</code> to <code>1.0</code>.
    * @throws IOException
    */
   float getProgress() throws IOException;
