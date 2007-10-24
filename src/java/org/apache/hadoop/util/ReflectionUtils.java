@@ -151,13 +151,19 @@ public class ReflectionUtils {
    * @param title a descriptive title for the call stacks
    * @param minInterval the minimum time from the last 
    */
-  public static synchronized void logThreadInfo(Log log,
-                                                String title,
-                                                long minInterval) {
+  public static void logThreadInfo(Log log,
+                                   String title,
+                                   long minInterval) {
+    boolean dumpStack = false;
     if (log.isInfoEnabled()) {
-      long now = System.currentTimeMillis();
-      if (now - previousLogTime >= minInterval * 1000) {
-        previousLogTime = now;
+      synchronized (ReflectionUtils.class) {
+        long now = System.currentTimeMillis();
+        if (now - previousLogTime >= minInterval * 1000) {
+          previousLogTime = now;
+          dumpStack = true;
+        }
+      }
+      if (dumpStack) {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         printThreadInfo(new PrintWriter(buffer), title);
         log.info(buffer.toString());

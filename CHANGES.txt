@@ -24,6 +24,11 @@ Trunk (unreleased changes)
     HADOOP-1604.  An system administrator can finalize namenode upgrades 
     without running the cluster. (Konstantin Shvachko via dhruba)
 
+  OPTIMIZATIONS
+
+    HADOOP-1898.  Release the lock protecting the last time of the last stack
+    dump while the dump is happening. (Amareshwari Sri Ramadasu via omalley)
+
 Branch 0.15 (unreleased changes)
 
   INCOMPATIBLE CHANGES
