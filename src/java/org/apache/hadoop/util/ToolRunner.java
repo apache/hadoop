@@ -22,23 +22,34 @@ import java.io.PrintStream;
 import org.apache.hadoop.conf.Configuration;
 
 /**
- * ToolRunner can be used to run classes implementing {@link Tool}
- * interface. Static method {@link #run(Tool, String[])} is used.
- * {@link GenericOptionsParser} is used to parse the hadoop generic 
- * arguments to modify the <code>Configuration</code>.
+ * A utility to help run {@link Tool}s.
+ * 
+ * <p><code>ToolRunner</code> can be used to run classes implementing 
+ * <code>Tool</code> interface. It works in conjunction with 
+ * {@link GenericOptionsParser} to parse the 
+ * <a href="{@docRoot}/org/apache/hadoop/util/GenericOptionsParser.html#GenericOptions">
+ * generic hadoop command line arguments</a> and modifies the 
+ * <code>Configuration</code> of the <code>Tool</code>. The 
+ * application-specific options are passed along without being modified.
+ * </p>
+ * 
+ * @see Tool
+ * @see GenericOptionsParser
  */
 public class ToolRunner {
  
   /**
-   * Runs the given Tool by {@link Tool#run(String[])}, with the 
-   * given arguments. Uses the given configuration, or builds one if null.
-   * Sets the possibly modified version of the conf by Tool#setConf()  
+   * Runs the given <code>Tool</code> by {@link Tool#run(String[])}, after 
+   * parsing with the given generic arguments. Uses the given 
+   * <code>Configuration</code>, or builds one if null.
    * 
-   * @param conf Configuration object to use
-   * @param tool The Tool to run
-   * @param args the arguments to the tool(including generic arguments
-   * , see {@link GenericOptionsParser})
-   * @return exit code of the {@link Tool#run(String[])} method
+   * Sets the <code>Tool</code>'s configuration with the possibly modified 
+   * version of the <code>conf</code>.  
+   * 
+   * @param conf <code>Configuration</code> for the <code>Tool</code>.
+   * @param tool <code>Tool</code> to run.
+   * @param args command-line arguments to the tool.
+   * @return exit code of the {@link Tool#run(String[])} method.
    */
   public static int run(Configuration conf, Tool tool, String[] args) 
     throws Exception{
@@ -55,19 +66,24 @@ public class ToolRunner {
   }
   
   /**
-   * Runs the tool with the tool's Configuration
+   * Runs the <code>Tool</code> with its <code>Configuration</code>.
+   * 
    * Equivalent to <code>run(tool.getConf(), tool, args)</code>.
-   * @param tool The Tool to run
-   * @param args the arguments to the tool(including generic arguments
-   * , see {@link GenericOptionsParser})
-   * @return exit code of the {@link Tool#run(String[])} method
+   * 
+   * @param tool <code>Tool</code> to run.
+   * @param args command-line arguments to the tool.
+   * @return exit code of the {@link Tool#run(String[])} method.
    */
   public static int run(Tool tool, String[] args) 
     throws Exception{
     return run(tool.getConf(), tool, args);
   }
   
-  /** Delegates to GenericOptionsParser#printGenericCommandUsage() */
+  /**
+   * Prints generic command-line argurments and usage information.
+   * 
+   *  @param out stream to write usage information to.
+   */
   public static void printGenericCommandUsage(PrintStream out) {
     GenericOptionsParser.printGenericCommandUsage(out);
   }

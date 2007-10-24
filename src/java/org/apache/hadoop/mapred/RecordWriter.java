@@ -21,22 +21,36 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.io.DataOutput;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 
-/** Writes key/value pairs to an output file.  Implemented by {@link
- * OutputFormat} implementations. */
+/**
+ * <code>RecordWriter</code> writes the output &lt;key, value&gt; pairs 
+ * to an output file.
+ 
+ * <p><code>RecordWriter</code> implementations write the job outputs to the
+ * {@link FileSystem}.
+ * 
+ * @see OutputFormat
+ */
 public interface RecordWriter<K extends WritableComparable,
                               V extends Writable> {
-  /** Writes a key/value pair.
+  /** 
+   * Writes a key/value pair.
    *
-   * @param key the key to write
-   * @param value the value to write
-   *
+   * @param key the key to write.
+   * @param value the value to write.
+   * @throws IOException
    * @see Writable#write(DataOutput)
    */      
   void write(K key, V value) throws IOException;
 
-  /** Close this to future operations.*/ 
+  /** 
+   * Close this <code>RecordWriter</code> to future operations.
+   * 
+   * @param reporter facility to report progress.
+   * @throws IOException
+   */ 
   void close(Reporter reporter) throws IOException;
 }

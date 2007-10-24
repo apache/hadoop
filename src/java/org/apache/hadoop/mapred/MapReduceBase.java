@@ -23,8 +23,11 @@ import java.io.IOException;
 import org.apache.hadoop.io.Closeable;
 import org.apache.hadoop.mapred.JobConfigurable;
 
-/** Base class for {@link Mapper} and {@link Reducer} implementations.
- * Provides default implementations for a few methods.
+/** 
+ * Base class for {@link Mapper} and {@link Reducer} implementations.
+ * 
+ * <p>Provides default no-op implementations for a few methods, most non-trivial
+ * applications need to override some of them.</p>
  */
 public class MapReduceBase implements Closeable, JobConfigurable {
 

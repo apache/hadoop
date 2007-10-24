@@ -38,43 +38,70 @@ import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-/** Provides access to configuration parameters.  Configurations are specified
- * by resources.  A resource contains a set of name/value pairs.
+/** 
+ * Provides access to configuration parameters.
  *
- * <p>Each resource is named by either a String or by a Path.  If named by a
- * String, then the classpath is examined for a file with that name.  If a
- * File, then the local filesystem is examined directly, without referring to
- * the CLASSPATH.
+ * <h4 id="Resources">Resources</h4>
  *
- * <p>Configuration parameters may be declared 'final'.  Once a resource
- * declares a value final, no subsequently-loaded resource may alter that
- * value.  For example, one might define a final parameter with:
- * <pre>
+ * <p>Configurations are specified by resources. A resource contains a set of
+ * name/value pairs as XML data. Each resource is named by either a 
+ * <code>String</code> or by a {@link Path}. If named by a <code>String</code>, 
+ * then the classpath is examined for a file with that name.  If named by a 
+ * <code>Path</code>, then the local filesystem is examined directly, without 
+ * referring to the classpath.
+ *
+ * <p>Hadoop by default specifies two resources, loaded in-order from the
+ * classpath: <ol>
+ * <li><tt><a href="{@docRoot}/../hadoop-default.html">hadoop-default.xml</a>
+ * </tt>: Read-only defaults for hadoop.</li>
+ * <li><tt>hadoop-site.xml</tt>: Site-specific configuration for a given hadoop
+ * installation.</li>
+ * </ol>
+ * Applications may add additional resources, which are loaded
+ * subsequent to these resources in the order they are added.
+ * 
+ * <h4 id="FinalParams">Final Parameters</h4>
+ *
+ * <p>Configuration parameters may be declared <i>final</i>. 
+ * Once a resource declares a value final, no subsequently-loaded 
+ * resource can alter that value.  
+ * For example, one might define a final parameter with:
+ * <tt><pre>
  *  &lt;property&gt;
  *    &lt;name&gt;dfs.client.buffer.dir&lt;/name&gt;
  *    &lt;value&gt;/tmp/hadoop/dfs/client&lt;/value&gt;
- *    &lt;final&gt;true&lt;/final&gt;
- *  &lt;/property&gt;
- * </pre>
+ *    <b>&lt;final&gt;true&lt;/final&gt;</b>
+ *  &lt;/property&gt;</pre></tt>
  *
- * <p>Hadoop by default specifies two resource strings: "hadoop-default.xml"
- * and "hadoop-site.xml".  Other tools built on Hadoop may specify additional
- * resources.
- * 
- * <p>The values returned by most <tt>get*</tt> methods are based on String representations. 
- * This String is processed for <b>variable expansion</b>. The available variables are the 
- * <em>System properties</em> and the <em>other properties</em> defined in this Configuration.
- * <p>The only <tt>get*</tt> method that is not processed for variable expansion is
- * {@link #getObject(String)} (as it cannot assume that the returned values are String). 
- * You can use <tt>getObject</tt> to obtain the raw value of a String property without 
- * variable expansion: if <tt>(String)conf.getObject("my.jdk")</tt> is <tt>"JDK ${java.version}"</tt>
- * then conf.get("my.jdk")</tt> is <tt>"JDK 1.5.0"</tt> 
- * <p> Example XML config using variables:<br><tt>
- * &lt;name>basedir&lt;/name>&lt;value>/user/${user.name}&lt;/value><br> 
- * &lt;name>tempdir&lt;/name>&lt;value>${basedir}/tmp&lt;/value><br>
- * </tt>When conf.get("tempdir") is called:<br>
- * <tt>${basedir}</tt> is resolved to another property in this Configuration.
- * Then <tt>${user.name}</tt> is resolved to a System property.
+ * Administrators typically define parameters as final in 
+ * <tt>hadoop-site.xml</tt> for values that user applications may not alter.
+ *
+ * <h4 id="VariableExpansion">Variable Expansion</h4>
+ *
+ * <p>Value strings are first processed for <i>variable expansion</i>. The
+ * available properties are:<ol>
+ * <li>Other properties defined in this Configuration; and, if a name is
+ * undefined here,</li>
+ * <li>Properties in {@link System#getProperties()}.</li>
+ * </ol>
+ *
+ * <p>For example, if a configuration resource contains the following property
+ * definitions: 
+ * <tt><pre>
+ *  &lt;property&gt;
+ *    &lt;name&gt;basedir&lt;/name&gt;
+ *    &lt;value&gt;/user/${<i>user.name</i>}&lt;/value&gt;
+ *  &lt;/property&gt;
+ *  
+ *  &lt;property&gt;
+ *    &lt;name&gt;tempdir&lt;/name&gt;
+ *    &lt;value&gt;${<i>basedir</i>}/tmp&lt;/value&gt;
+ *  &lt;/property&gt;</pre></tt>
+ *
+ * When <tt>conf.get("tempdir")</tt> is called, then <tt>${<i>basedir</i>}</tt>
+ * will be resolved to another property in this Configuration, while
+ * <tt>${<i>user.name</i>}</tt> would then ordinarily be resolved to the value
+ * of the System property with that name.
  */
 public class Configuration implements Iterable<Map.Entry<String,String>> {
   private static final Log LOG =
@@ -120,7 +147,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     finalResources.add("hadoop-site.xml");
   }
 
-  /** A new configuration with the same settings cloned from another. */
+  /** 
+   * A new configuration with the same settings cloned from another.
+   * 
+   * @param other the configuration from which to clone settings.
+   */
   @SuppressWarnings("unchecked")
   public Configuration(Configuration other) {
     if (LOG.isDebugEnabled()) {
@@ -186,8 +217,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
   }
 
   /**
-   * Add a configuration resource.
-   * @param name resource to be added
+   * Add a configuration resource. 
+   * 
+   * The properties of this resource will override properties of previously 
+   * added resources, unless they were marked <a href="#Final>final</a>. 
+   * 
+   * @param name resource to be added, the classpath is examined for a file 
+   *             with that name.
    */
   public void addResource(String name) {
     addResource(resources, name);
@@ -195,7 +231,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
 
   /**
    * Add a configuration resource. 
-   * @param url url of the resource to be added
+   * 
+   * The properties of this resource will override properties of previously 
+   * added resources, unless they were marked <a href="#Final>final</a>. 
+   * 
+   * @param url url of the resource to be added, the local filesystem is 
+   *            examined directly to find the resource, without referring to 
+   *            the classpath.
    */
   public void addResource(URL url) {
     addResource(resources, url);
@@ -203,7 +245,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
 
   /**
    * Add a configuration resource. 
-   * @param file file-path of resource to be added
+   * 
+   * The properties of this resource will override properties of previously 
+   * added resources, unless they were marked <a href="#Final>final</a>. 
+   * 
+   * @param file file-path of resource to be added, the local filesystem is
+   *             examined directly to find the resource, without referring to 
+   *             the classpath.
    */
   public void addResource(Path file) {
     addResource(resources, file);
@@ -271,17 +319,28 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
                                     + MAX_SUBST + " " + expr);
   }
   
-  /** Returns the value of the <code>name</code> property, or null if no
-   * such property exists. */
+  /**
+   * Get the value of the <code>name</code> property, <code>null</code> if
+   * no such property exists.
+   * 
+   * Values are processed for <a href="#VariableExpansion">variable expansion</a> 
+   * before being returned. 
+   * 
+   * @param name the property name.
+   * @return the value of the <code>name</code> property, 
+   *         or null if no such property exists.
+   */
   public String get(String name) {
     return substituteVars(getProps().getProperty(name));
   }
 
   /**
-   * Get the value of the <code>name</code> property, without doing variable
-   * expansion.
-   * @param name the property name
-   * @return the result or null if no such property exists
+   * Get the value of the <code>name</code> property, without doing
+   * <a href="#VariableExpansion">variable expansion</a>.
+   * 
+   * @param name the property name.
+   * @return the value of the <code>name</code> property, 
+   *         or null if no such property exists.
    */
   public String getRaw(String name) {
     return getProps().getProperty(name);
@@ -295,7 +354,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     getProps().setProperty(name, value.toString());
   }
   
-  /** Sets the value of the <code>name</code> property. 
+  /** 
+   * Set the <code>value</code> of the <code>name</code> property.
+   * 
+   * @param name property name.
+   * @param value property value.
    */
   public void set(String name, String value) {
     getOverlay().setProperty(name, value);
@@ -309,16 +372,29 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     return overlay;
   }
 
-  /** Returns the value of the <code>name</code> property.  If no such property
+  /** 
+   * Get the value of the <code>name</code> property. If no such property 
    * exists, then <code>defaultValue</code> is returned.
+   * 
+   * @param name property name.
+   * @param defaultValue default value.
+   * @return property value, or <code>defaultValue</code> if the property 
+   *         doesn't exist.                    
    */
   public String get(String name, String defaultValue) {
     return substituteVars(getProps().getProperty(name, defaultValue));
   }
     
-  /** Returns the value of the <code>name</code> property as an integer.  If no
-   * such property is specified, or if the specified value is not a valid
-   * integer, then <code>defaultValue</code> is returned.
+  /** 
+   * Get the value of the <code>name</code> property as an <code>int</code>.
+   *   
+   * If no such property exists, or if the specified value is not a valid
+   * <code>int</code>, then <code>defaultValue</code> is returned.
+   * 
+   * @param name property name.
+   * @param defaultValue default value.
+   * @return property value as an <code>int</code>, 
+   *         or <code>defaultValue</code>. 
    */
   public int getInt(String name, int defaultValue) {
     String valueString = get(name);
@@ -331,15 +407,26 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     }
   }
 
-  /** Sets the value of the <code>name</code> property to an integer. */
+  /** 
+   * Set the value of the <code>name</code> property to an <code>int</code>.
+   * 
+   * @param name property name.
+   * @param value <code>int</code> value of the property.
+   */
   public void setInt(String name, int value) {
     set(name, Integer.toString(value));
   }
 
 
-  /** Returns the value of the <code>name</code> property as a long.  If no
-   * such property is specified, or if the specified value is not a valid
-   * long, then <code>defaultValue</code> is returned.
+  /** 
+   * Get the value of the <code>name</code> property as a <code>long</code>.  
+   * If no such property is specified, or if the specified value is not a valid
+   * <code>long</code>, then <code>defaultValue</code> is returned.
+   * 
+   * @param name property name.
+   * @param defaultValue default value.
+   * @return property value as a <code>long</code>, 
+   *         or <code>defaultValue</code>. 
    */
   public long getLong(String name, long defaultValue) {
     String valueString = get(name);
@@ -352,14 +439,25 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     }
   }
 
-  /** Sets the value of the <code>name</code> property to a long. */
+  /** 
+   * Set the value of the <code>name</code> property to a <code>long</code>.
+   * 
+   * @param name property name.
+   * @param value <code>long</code> value of the property.
+   */
   public void setLong(String name, long value) {
     set(name, Long.toString(value));
   }
 
-  /** Returns the value of the <code>name</code> property as a float.  If no
-   * such property is specified, or if the specified value is not a valid
-   * float, then <code>defaultValue</code> is returned.
+  /** 
+   * Get the value of the <code>name</code> property as a <code>float</code>.  
+   * If no such property is specified, or if the specified value is not a valid
+   * <code>float</code>, then <code>defaultValue</code> is returned.
+   * 
+   * @param name property name.
+   * @param defaultValue default value.
+   * @return property value as a <code>float</code>, 
+   *         or <code>defaultValue</code>. 
    */
   public float getFloat(String name, float defaultValue) {
     String valueString = get(name);
@@ -372,10 +470,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     }
   }
 
-  /** Returns the value of the <code>name</code> property as an boolean.  If no
-   * such property is specified, or if the specified value is not a valid
-   * boolean, then <code>defaultValue</code> is returned.  Valid boolean values
-   * are "true" and "false".
+  /** 
+   * Get the value of the <code>name</code> property as a <code>boolean</code>.  
+   * If no such property is specified, or if the specified value is not a valid
+   * <code>boolean</code>, then <code>defaultValue</code> is returned.
+   * 
+   * @param name property name.
+   * @param defaultValue default value.
+   * @return property value as a <code>boolean</code>, 
+   *         or <code>defaultValue</code>. 
    */
   public boolean getBoolean(String name, boolean defaultValue) {
     String valueString = get(name);
@@ -386,14 +489,24 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     else return defaultValue;
   }
 
-  /** Sets the value of the <code>name</code> property to an integer. */
+  /** 
+   * Set the value of the <code>name</code> property to a <code>boolean</code>.
+   * 
+   * @param name property name.
+   * @param value <code>boolean</code> value of the property.
+   */
   public void setBoolean(String name, boolean value) {
     set(name, Boolean.toString(value));
   }
 
-  /** Returns the value of the <code>name</code> property as an array of
-   * strings.  If no such property is specified, then <code>null</code>
-   * is returned.  Values are comma delimited.
+  /** 
+   * Get the comma delimited values of the <code>name</code> property as 
+   * an array of <code>String</code>s.  
+   * If no such property is specified then <code>null</code> is returned.
+   * 
+   * @param name property name.
+   * @return property value as an array of <code>String</code>s, 
+   *         or <code>null</code>. 
    */
   public String[] getStrings(String name) {
     String valueString = get(name);
@@ -402,16 +515,24 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
 
   /**
    * Load a class by name.
-   * @param name the class name
-   * @return the class object
-   * @throws ClassNotFoundException if the class is not found
+   * 
+   * @param name the class name.
+   * @return the class object.
+   * @throws ClassNotFoundException if the class is not found.
    */
   public Class<?> getClassByName(String name) throws ClassNotFoundException {
     return Class.forName(name, true, classLoader);
   }
-  
-  /** Returns the value of the <code>name</code> property as a Class.  If no
-   * such property is specified, then <code>defaultValue</code> is returned.
+
+  /** 
+   * Get the value of the <code>name</code> property as a <code>Class</code>.  
+   * If no such property is specified, then <code>defaultValue</code> is 
+   * returned.
+   * 
+   * @param name the class name.
+   * @param defaultValue default value.
+   * @return property value as a <code>Class</code>, 
+   *         or <code>defaultValue</code>. 
    */
   public Class<?> getClass(String name, Class<?> defaultValue) {
     String valueString = get(name);
@@ -424,15 +545,27 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     }
   }
 
-  /** Returns the value of the <code>name</code> property as a Class.  If no
-   * such property is specified, then <code>defaultValue</code> is returned.
-   * An error is thrown if the returned class does not implement the named
+  /** 
+   * Get the value of the <code>name</code> property as a <code>Class</code>
+   * implementing the interface specified by <code>xface</code>.
+   *   
+   * If no such property is specified, then <code>defaultValue</code> is 
+   * returned.
+   * 
+   * An exception is thrown if the returned class does not implement the named
    * interface. 
+   * 
+   * @param name the class name.
+   * @param defaultValue default value.
+   * @param xface the interface implemented by the named class.
+   * @return property value as a <code>Class</code>, 
+   *         or <code>defaultValue</code>.
    */
-  public <U> Class<? extends U> getClass(String propertyName, Class<? extends U> defaultValue,
-      Class<U> xface) {
+  public <U> Class<? extends U> getClass(String name, 
+                                         Class<? extends U> defaultValue, 
+                                         Class<U> xface) {
     try {
-      Class<?> theClass = getClass(propertyName, defaultValue);
+      Class<?> theClass = getClass(name, defaultValue);
       if (theClass != null && !xface.isAssignableFrom(theClass))
         throw new RuntimeException(theClass+" not "+xface.getName());
       else if (theClass != null)
@@ -444,21 +577,32 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     }
   }
 
-  /** Sets the value of the <code>name</code> property to the name of a class.
-   * First checks that the class implements the named interface. 
+  /** 
+   * Set the value of the <code>name</code> property to the name of a 
+   * <code>theClass</code> implementing the given interface <code>xface</code>.
+   * 
+   * An exception is thrown if <code>theClass</code> does not implement the 
+   * interface <code>xface</code>. 
+   * 
+   * @param name property name.
+   * @param theClass property value.
+   * @param xface the interface implemented by the named class.
    */
-  public void setClass(String propertyName, Class<?> theClass,
-                       Class<?> xface) {
-    
+  public void setClass(String name, Class<?> theClass, Class<?> xface) {
     if (!xface.isAssignableFrom(theClass))
       throw new RuntimeException(theClass+" not "+xface.getName());
-    set(propertyName, theClass.getName());
+    set(name, theClass.getName());
   }
 
-  /** Returns a local file under a directory named in <i>dirsProp</i> with
+  /** 
+   * Get a local file under a directory named by <i>dirsProp</i> with
    * the given <i>path</i>.  If <i>dirsProp</i> contains multiple directories,
    * then one is chosen based on <i>path</i>'s hash code.  If the selected
    * directory does not exist, an attempt is made to create it.
+   * 
+   * @param dirsProp directory in which to locate the file.
+   * @param path file-path.
+   * @return local file under the directory with the given path.
    */
   public Path getLocalPath(String dirsProp, String path)
     throws IOException {
@@ -482,10 +626,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     throw new IOException("No valid local directories in property: "+dirsProp);
   }
 
-  /** Returns a local file name under a directory named in <i>dirsProp</i> with
+  /** 
+   * Get a local file name under a directory named in <i>dirsProp</i> with
    * the given <i>path</i>.  If <i>dirsProp</i> contains multiple directories,
    * then one is chosen based on <i>path</i>'s hash code.  If the selected
    * directory does not exist, an attempt is made to create it.
+   * 
+   * @param dirsProp directory in which to locate the file.
+   * @param path file-path.
+   * @return local file under the directory with the given path.
    */
   public File getFile(String dirsProp, String path)
     throws IOException {
@@ -502,14 +651,22 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     throw new IOException("No valid local directories in property: "+dirsProp);
   }
 
-
-
-  /** Returns the URL for the named resource. */
+  /** 
+   * Get the {@link URL} for the named resource.
+   * 
+   * @param name resource name.
+   * @return the url for the named resource.
+   */
   public URL getResource(String name) {
     return classLoader.getResource(name);
   }
-  /** Returns an input stream attached to the configuration resource with the
+  
+  /** 
+   * Get an input stream attached to the configuration resource with the
    * given <code>name</code>.
+   * 
+   * @param name configuration resource name.
+   * @return an input stream attached to the resource.
    */
   public InputStream getConfResourceAsInputStream(String name) {
     try {
@@ -528,8 +685,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     }
   }
 
-  /** Returns a reader attached to the configuration resource with the
+  /** 
+   * Get a {@link Reader} attached to the configuration resource with the
    * given <code>name</code>.
+   * 
+   * @param name configuration resource name.
+   * @return a reader attached to the resource.
    */
   public Reader getConfResourceAsReader(String name) {
     try {
@@ -561,15 +722,17 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
   }
 
   /** @return Iterator&lt; Map.Entry&lt;String,String> >  
-   * @deprecated use <code>iterator()</code> instead 
+   * @deprecated Use {@link #iterator()} instead. 
    */
   public Iterator entries() {
     return iterator();
   }
 
   /**
-   * Go through the list of String key-value pairs in the configuration.
-   * @return an iterator over the entries
+   * Get an {@link Iterator} to go through the list of <code>String</code> 
+   * key-value pairs in the configuration.
+   * 
+   * @return an iterator over the entries.
    */
   public Iterator<Map.Entry<String, String>> iterator() {
     // Get a copy of just the string to string pairs. After the old object
@@ -689,7 +852,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     
   }
 
-  /** Writes non-default properties in this configuration.*/
+  /** 
+   * Write out the non-default properties in this configuration to the give
+   * {@link OutputStream}.
+   * 
+   * @param out the output stream to write to.
+   */
   public void write(OutputStream out) throws IOException {
     Properties properties = getProps();
     try {
@@ -732,8 +900,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
   }
 
   /**
-   * Get the class loader for this job.
-   * @return the correct class loader
+   * Get the {@link ClassLoader} for this job.
+   * 
+   * @return the correct class loader.
    */
   public ClassLoader getClassLoader() {
     return classLoader;
@@ -741,7 +910,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
   
   /**
    * Set the class loader that will be used to load the various objects.
-   * @param classLoader the new class loader
+   * 
+   * @param classLoader the new class loader.
    */
   public void setClassLoader(ClassLoader classLoader) {
     this.classLoader = classLoader;
@@ -767,11 +937,16 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     }
   }
 
-  /** Make this class quiet. Error and informational
-   *  messages might not be logged.
+  /** 
+   * Set the quiteness-mode. 
+   * 
+   * In the the quite-mode error and informational messages might not be logged.
+   * 
+   * @param quietmode <code>true</code> to set quiet-mode on, <code>false</code>
+   *              to turn it off.
    */
-  public synchronized void setQuietMode(boolean value) {
-    quietmode = value;
+  public synchronized void setQuietMode(boolean quietmode) {
+    this.quietmode = quietmode;
   }
 
   /** For debugging.  List non-default properties to the terminal and exit. */

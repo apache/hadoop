@@ -60,13 +60,89 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-/*******************************************************
- * JobClient interacts with the JobTracker network interface.
- * This object implements the job-control interface, and
- * should be the primary method by which user programs interact
- * with the networked job system.
+/**
+ * <code>JobClient</code> is the primary interface for the user-job to interact
+ * with the {@link JobTracker}.
+ * 
+ * <code>JobClient</code> provides facilities to submit jobs, track their 
+ * progress, access component-tasks' reports/logs, get the Map-Reduce cluster
+ * status information etc.
+ * 
+ * <p>The job submission process involves:
+ * <ol>
+ *   <li>
+ *   Checking the input and output specifications of the job.
+ *   </li>
+ *   <li>
+ *   Computing the {@link InputSplit}s for the job.
+ *   </li>
+ *   <li>
+ *   Setup the requisite accounting information for the {@link DistributedCache} 
+ *   of the job, if necessary.
+ *   </li>
+ *   <li>
+ *   Copying the job's jar and configuration to the map-reduce system directory 
+ *   on the distributed file-system. 
+ *   </li>
+ *   <li>
+ *   Submitting the job to the <code>JobTracker</code> and optionally monitoring
+ *   it's status.
+ *   </li>
+ * </ol></p>
+ *  
+ * Normally the user creates the application, describes various facets of the
+ * job via {@link JobConf} and then uses the <code>JobClient</code> to submit 
+ * the job and monitor its progress.
+ * 
+ * <p>Here is an example on how to use <code>JobClient</code>:</p>
+ * <p><blockquote><pre>
+ *     // Create a new JobConf
+ *     JobConf job = new JobConf(new Configuration(), MyJob.class);
+ *     
+ *     // Specify various job-specific parameters     
+ *     job.setJobName("myjob");
+ *     
+ *     job.setInputPath(new Path("in"));
+ *     job.setOutputPath(new Path("out"));
+ *     
+ *     job.setMapperClass(MyJob.MyMapper.class);
+ *     job.setReducerClass(MyJob.MyReducer.class);
  *
- *******************************************************/
+ *     // Submit the job, then poll for progress until the job is complete
+ *     JobClient.runJob(job);
+ * </pre></blockquote></p>
+ * 
+ * <h4 id="JobControl">Job Control</h4>
+ * 
+ * <p>At times clients would chain map-reduce jobs to accomplish complex tasks 
+ * which cannot be done via a single map-reduce job. This is fairly easy since 
+ * the output of the job, typically, goes to distributed file-system and that 
+ * can be used as the input for the next job.</p>
+ * 
+ * <p>However, this also means that the onus on ensuring jobs are complete 
+ * (success/failure) lies squarely on the clients. In such situations the 
+ * various job-control options are:
+ * <ol>
+ *   <li>
+ *   {@link #runJob(JobConf)} : submits the job and returns only after 
+ *   the job has completed.
+ *   </li>
+ *   <li>
+ *   {@link #submitJob(JobConf)} : only submits the job, then poll the 
+ *   returned handle to the {@link RunningJob} to query status and make 
+ *   scheduling decisions.
+ *   </li>
+ *   <li>
+ *   {@link JobConf#setJobEndNotificationURI(String)} : setup a notification
+ *   on job-completion, thus avoiding polling.
+ *   </li>
+ * </ol></p>
+ * 
+ * @see JobConf
+ * @see ClusterStatus
+ * @see Tool
+ * @see DistributedCache
+ */
 public class JobClient extends Configured implements MRConstants, Tool  {
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobClient");
   public static enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }
@@ -239,16 +315,28 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   static Random r = new Random();
 
   /**
-   * Build a job client, connect to the default job tracker
+   * Create a job client.
    */
   public JobClient() {
   }
     
+  /**
+   * Build a job client with the given {@link JobConf}, and connect to the 
+   * default {@link JobTracker}.
+   * 
+   * @param conf the job configuration.
+   * @throws IOException
+   */
   public JobClient(JobConf conf) throws IOException {
     setConf(conf);
     init(conf);
   }
     
+  /**
+   * Connect to the default {@link JobTracker}.
+   * @param conf the job configuration.
+   * @throws IOException
+   */
   public void init(JobConf conf) throws IOException {
     String tracker = conf.get("mapred.job.tracker", "local");
     if ("local".equals(tracker)) {
@@ -260,9 +348,10 @@ public class JobClient extends Configured implements MRConstants, Tool  {
 
   /**
    * Create a proxy JobSubmissionProtocol that retries timeouts.
-   * @param addr the address to connect to
-   * @param conf the server's configuration
-   * @return a proxy object that will retry timeouts
+   * 
+   * @param addr the address to connect to.
+   * @param conf the server's configuration.
+   * @return a proxy object that will retry timeouts.
    * @throws IOException
    */
   private JobSubmissionProtocol createProxy(InetSocketAddress addr,
@@ -286,6 +375,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
 
   /**
    * Build a job client, connect to the indicated job tracker.
+   * 
+   * @param jobTrackAddr the job tracker to connect to.
+   * @param conf configuration.
    */
   public JobClient(InetSocketAddress jobTrackAddr, 
                    Configuration conf) throws IOException {
@@ -293,6 +385,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   }
 
   /**
+   * Close the <code>JobClient</code>.
    */
   public synchronized void close() throws IOException {
   }
@@ -300,6 +393,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   /**
    * Get a filesystem handle.  We need this to prepare jobs
    * for submission to the MapReduce system.
+   * 
+   * @return the filesystem handle.
    */
   public synchronized FileSystem getFs() throws IOException {
     if (this.fs == null) {
@@ -310,10 +405,21 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   }
 
   /**
-   * Submit a job to the MR system
+   * Submit a job to the MR system.
+   * 
+   * This returns a handle to the {@link RunningJob} which can be used to track
+   * the running-job.
+   * 
+   * @param jobFile the job configuration.
+   * @return a handle to the {@link RunningJob} which can be used to track the
+   *         running-job.
+   * @throws FileNotFoundException
+   * @throws InvalidJobConfException
+   * @throws IOException
    */
   public RunningJob submitJob(String jobFile) throws FileNotFoundException, 
-                                                     InvalidJobConfException, IOException {
+                                                     InvalidJobConfException, 
+                                                     IOException {
     // Load in the submitted job details
     JobConf job = new JobConf(jobFile);
     return submitJob(job);
@@ -321,7 +427,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     
    
   /**
-   * Submit a job to the MR system
+   * Submit a job to the MR system.
+   * This returns a handle to the {@link RunningJob} which can be used to track
+   * the running-job.
+   * 
+   * @param job the job configuration.
+   * @return a handle to the {@link RunningJob} which can be used to track the
+   *         running-job.
+   * @throws FileNotFoundException
+   * @throws InvalidJobConfException
+   * @throws IOException
    */
   public RunningJob submitJob(JobConf job) throws FileNotFoundException, 
                                                   InvalidJobConfException, IOException {
@@ -551,8 +666,13 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   }
     
   /**
-   * Get an RunningJob object to track an ongoing job.  Returns
+   * Get an {@link RunningJob} object to track an ongoing job.  Returns
    * null if the id does not correspond to any known job.
+   * 
+   * @param jobid the jobid of the job.
+   * @return the {@link RunningJob} handle to track the job, null if the 
+   *         <code>jobid</code> doesn't correspond to any known job.
+   * @throws IOException
    */
   public RunningJob getJob(String jobid) throws IOException {
     JobStatus status = jobSubmitClient.getJobStatus(jobid);
@@ -565,8 +685,10 @@ public class JobClient extends Configured implements MRConstants, Tool  {
 
   /**
    * Get the information of the current state of the map tasks of a job.
-   * @param jobId the job to query
-   * @return the list of all of the map tips
+   * 
+   * @param jobId the job to query.
+   * @return the list of all of the map tips.
+   * @throws IOException
    */
   public TaskReport[] getMapTaskReports(String jobId) throws IOException {
     return jobSubmitClient.getMapTaskReports(jobId);
@@ -574,23 +696,44 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     
   /**
    * Get the information of the current state of the reduce tasks of a job.
-   * @param jobId the job to query
-   * @return the list of all of the map tips
+   * 
+   * @param jobId the job to query.
+   * @return the list of all of the reduce tips.
+   * @throws IOException
    */    
   public TaskReport[] getReduceTaskReports(String jobId) throws IOException {
     return jobSubmitClient.getReduceTaskReports(jobId);
   }
-    
+   
+  /**
+   * Get status information about the Map-Reduce cluster.
+   *  
+   * @return the status information about the Map-Reduce cluster as an object
+   *         of {@link ClusterStatus}.
+   * @throws IOException
+   */
   public ClusterStatus getClusterStatus() throws IOException {
     return jobSubmitClient.getClusterStatus();
   }
     
+
+  /** 
+   * Get the jobs that are not completed and not failed.
+   * 
+   * @return array of {@link JobStatus} for the running/to-be-run jobs.
+   * @throws IOException
+   */
   public JobStatus[] jobsToComplete() throws IOException {
     return jobSubmitClient.jobsToComplete();
   }
     
-  /** Utility that submits a job, then polls for progress until the job is
-   * complete. */
+  /** 
+   * Utility that submits a job, then polls for progress until the job is
+   * complete.
+   * 
+   * @param job the job configuration.
+   * @throws IOException
+   */
   public static RunningJob runJob(JobConf job) throws IOException {
     JobClient jc = new JobClient(job);
     boolean error = true;
@@ -764,9 +907,10 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   }
     
   /**
-   * Get the task output filter out of the JobConf
-   * @param job the JobConf to examine
-   * @return the filter level
+   * Get the task output filter out of the JobConf.
+   * 
+   * @param job the JobConf to examine.
+   * @return the filter level.
    */
   public static TaskStatusFilter getTaskOutputFilter(JobConf job) {
     return TaskStatusFilter.valueOf(job.get("jobclient.output.filter", 
@@ -774,9 +918,10 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   }
     
   /**
-   * Modify the JobConf to set the task output filter
-   * @param job the JobConf to modify
-   * @param newValue the value to set
+   * Modify the JobConf to set the task output filter.
+   * 
+   * @param job the JobConf to modify.
+   * @param newValue the value to set.
    */
   public static void setTaskOutputFilter(JobConf job, 
                                          TaskStatusFilter newValue) {

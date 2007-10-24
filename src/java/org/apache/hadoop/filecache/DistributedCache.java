@@ -24,14 +24,89 @@ import java.util.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.Reducer;
 
 import java.net.URI;
 
-/*******************************************************************************
- * The DistributedCache maintains all the caching information of cached archives
- * and unarchives all the files as well and returns the path
+/**
+ * Distribute application-specific large, read-only files efficiently.
  * 
- ******************************************************************************/
+ * <p><code>DistributedCache</code> is a facility provided by the Map-Reduce
+ * framework to cache files (text, archives, jars etc.) needed by applications.
+ * </p>
+ * 
+ * <p>Applications specify the files, via urls (hdfs:// or http://) to be cached 
+ * via the {@link JobConf}. The <code>DistributedCache</code> assumes that the
+ * files specified via hdfs:// urls are already present on the 
+ * {@link FileSystem} at the path specified by the url.</p>
+ * 
+ * <p>The framework will copy the necessary files on to the slave node before 
+ * any tasks for the job are executed on that node. Its efficiency stems from 
+ * the fact that the files are only copied once per job and the ability to 
+ * cache archives which are un-archived on the slaves.</p> 
+ *
+ * <p><code>DistributedCache</code> can be used to distribute simple, read-only
+ * data/text files and/or more complex types such as archives, jars etc. 
+ * Archives (zip files) are un-archived at the slave nodes. Jars maybe be 
+ * optionally added to the classpath of the tasks, a rudimentary software
+ * distribution mechanism. Optionally users can also direct it to symlink the 
+ * distributed cache file(s) into the working directory of the task.</p>
+ * 
+ * <p><code>DistributedCache</code> tracks modification timestamps of the cache 
+ * files. Clearly the cache files should not be modified by the application 
+ * or externally while the job is executing.</p>
+ * 
+ * <p>Here is an illustrative example on how to use the 
+ * <code>DistributedCache</code>:</p>
+ * <p><blockquote><pre>
+ *     // Setting up the cache for the application
+ *     
+ *     1. Copy the requisite files to the <code>FileSystem</code>:
+ *     
+ *     $ bin/hadoop fs -copyFromLocal lookup.dat /myapp/lookup.dat  
+ *     $ bin/hadoop fs -copyFromLocal map.zip /myapp/map.zip  
+ *     $ bin/hadoop fs -copyFromLocal mylib.jar /myapp/mylib.jar
+ *     
+ *     2. Setup the application's <code>JobConf</code>:
+ *     
+ *     JobConf job = new JobConf();
+ *     DistributedCache.addCacheFile(new URI("/myapp/lookup.dat#lookup.dat"), 
+ *                                   job);
+ *     DistributedCache.addCacheArchive(new URI("/myapp/map.zip", job);
+ *     DistributedCache.addFileToClassPath(new Path("/myapp/mylib.jar"), job);
+ *
+ *     3. Use the cached files in the {@link Mapper} or {@link Reducer}:
+ *     
+ *     public static class MapClass extends MapReduceBase  
+ *     implements Mapper&lt;K, V, K, V&gt; {
+ *     
+ *       private Path[] localArchives;
+ *       private Path[] localFiles;
+ *       
+ *       public void configure(JobConf job) {
+ *         // Get the cached archives/files
+ *         localArchives = DistributedCache.getLocalCacheArchives(job);
+ *         localFiles = DistributedCache.getLocalCacheFiles(job);
+ *       }
+ *       
+ *       public void map(K key, V value, 
+ *                       OutputCollector&lt;K, V&gt; output, Reporter reporter) 
+ *       throws IOException {
+ *         // Use data from the cached archives/files here
+ *         // ...
+ *         // ...
+ *         output.collect(k, v);
+ *       }
+ *     }
+ *     
+ * </pre></blockquote></p>
+ * 
+ * @see JobConf
+ * @see JobClient
+ */
 public class DistributedCache {
   // cacheID to cacheStatus mapping
   private static TreeMap<String, CacheStatus> cachedArchives = new TreeMap<String, CacheStatus>();
@@ -47,7 +122,7 @@ public class DistributedCache {
    * previously cached (and valid) or copy it from the {@link FileSystem} now.
    * 
    * @param cache the cache to be localized, this should be specified as 
-   * new URI(hdfs://hostname:port/absoulte_path_to_file#LINKNAME). If no schema 
+   * new URI(hdfs://hostname:port/absolute_path_to_file#LINKNAME). If no schema 
    * or hostname:port is provided the file is assumed to be in the filesystem
    * being used in the Configuration
    * @param conf The Confguration file which contains the filesystem

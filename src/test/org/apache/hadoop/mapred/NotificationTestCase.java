@@ -142,7 +142,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
 
   protected JobConf createJobConf() {
     JobConf conf = super.createJobConf();
-    conf.set("job.end.notification.url", getNotificationUrlTemplate());
+    conf.setJobEndNotificationURI(getNotificationUrlTemplate());
     conf.setInt("job.end.retry.attempts", 3);
     conf.setInt("job.end.retry.interval", 200);
     return conf;
