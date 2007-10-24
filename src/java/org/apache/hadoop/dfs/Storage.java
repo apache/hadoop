@@ -170,10 +170,22 @@ abstract class Storage extends StorageInfo {
       RandomAccessFile file = new RandomAccessFile(to, "rws");
       FileOutputStream out = null;
       try {
-        file.setLength(0);
         file.seek(0);
         out = new FileOutputStream(file.getFD());
+        /*
+         * If server is interrupted before this line, 
+         * the version file will remain unchanged.
+         */
         props.store(out, null);
+        /*
+         * Now the new fields are flushed to the head of the file, but file 
+         * length can still be larger then required and therefore the file can 
+         * contain whole or corrupted fields from its old contents in the end.
+         * If server is interrupted here and restarted later these extra fields
+         * either should not effect server behavior or should be handled
+         * by the server correctly.
+         */
+        file.setLength(out.getChannel().position());
       } finally {
         if (out != null) {
           out.close();
