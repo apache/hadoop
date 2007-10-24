@@ -3,6 +3,13 @@ Hadoop Change Log
 
 Trunk (unreleased changes)
 
+  INCOMPATIBLE CHANGES
+
+    HADOOP-1245.  Use the mapred.tasktracker.tasks.maximum value
+    configured on each tasktracker when allocating tasks, instead of
+    the value configured on the jobtracker. InterTrackerProtocol
+    version changed from 5 to 6. (Michael Bieniosek via omalley)
+    
   IMPROVEMENTS
 
     HADOOP-2045.  Change committer list on website to a table, so that
