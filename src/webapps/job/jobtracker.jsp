@@ -67,21 +67,15 @@
   public void generateSummaryTable(JspWriter out,
                                    JobTracker tracker) throws IOException {
     ClusterStatus status = tracker.getClusterStatus();
-    String tasksPerNode = status.getTaskTrackers() > 0 ?
-      percentFormat.format(((double)status.getMaxTasks()) / status.getTaskTrackers()) :
-      "-";
     out.print("<table border=\"2\" cellpadding=\"5\" cellspacing=\"2\">\n"+
               "<tr><th>Maps</th><th>Reduces</th>" + 
-              "<th>Total Submissions</th>" +
-              "<th>Nodes</th><th>Task Capacity</th><th>Avg. Tasks/Node</th></tr>\n");
+              "<th>Tasks/Node</th><th>Total Submissions</th>" +
+              "<th>Nodes</th></tr>\n");
     out.print("<tr><td>" + status.getMapTasks() + "</td><td>" +
               status.getReduceTasks() + "</td><td>" + 
-              tracker.getTotalSubmissions() +
-              "</td><td><a href=\"machines.jsp\">" +
-              status.getTaskTrackers() +
-              "</a></td><td>" + status.getMaxTasks() +
-	      "</td><td>" + tasksPerNode +
-              "</td></tr></table>\n");
+              status.getMaxTasks() + "</td><td>" +
+              tracker.getTotalSubmissions() + "</td><td><a href=\"machines.jsp\">" +
+              status.getTaskTrackers() + "</a></td></tr></table>\n");
   }%>
 
 <%@page import="org.apache.hadoop.dfs.JspHelper"%>

@@ -14,7 +14,7 @@
 
 @SET_MAKE@
 
-SOURCES = $(pipes_sort_SOURCES) $(wordcount_nopipe_SOURCES) $(wordcount_part_SOURCES) $(wordcount_simple_SOURCES)
+SOURCES = $(wordcount_nopipe_SOURCES) $(wordcount_part_SOURCES) $(wordcount_simple_SOURCES)
 
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
@@ -38,7 +38,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 host_triplet = @host@
 bin_PROGRAMS = wordcount-simple$(EXEEXT) wordcount-part$(EXEEXT) \
-	wordcount-nopipe$(EXEEXT) pipes-sort$(EXEEXT)
+	wordcount-nopipe$(EXEEXT)
 DIST_COMMON = config.guess config.sub $(srcdir)/Makefile.in \
 	$(srcdir)/Makefile.am $(top_srcdir)/configure \
 	$(am__configure_deps) $(top_srcdir)/impl/config.h.in depcomp \
@@ -59,10 +59,6 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
 am__dirstamp = $(am__leading_dot)dirstamp
-am_pipes_sort_OBJECTS = impl/sort.$(OBJEXT)
-pipes_sort_OBJECTS = $(am_pipes_sort_OBJECTS)
-pipes_sort_LDADD = $(LDADD)
-pipes_sort_DEPENDENCIES =
 am_wordcount_nopipe_OBJECTS = impl/wordcount-nopipe.$(OBJEXT)
 wordcount_nopipe_OBJECTS = $(am_wordcount_nopipe_OBJECTS)
 wordcount_nopipe_LDADD = $(LDADD)
@@ -86,8 +82,8 @@ LTCXXCOMPILE = $(LIBTOOL) --mode=compile --tag=CXX $(CXX) $(DEFS) \
 CXXLD = $(CXX)
 CXXLINK = $(LIBTOOL) --mode=link --tag=CXX $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(pipes_sort_SOURCES) $(wordcount_nopipe_SOURCES) \
-	$(wordcount_part_SOURCES) $(wordcount_simple_SOURCES)
+SOURCES = $(wordcount_nopipe_SOURCES) $(wordcount_part_SOURCES) \
+	$(wordcount_simple_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 ACLOCAL = @ACLOCAL@
@@ -222,9 +218,6 @@ wordcount_part_SOURCES = \
 wordcount_nopipe_SOURCES = \
 	impl/wordcount-nopipe.cc
 
-pipes_sort_SOURCES = \
-        impl/sort.cc
-
 all: all-am
 
 .SUFFIXES:
@@ -313,11 +306,6 @@ impl/$(am__dirstamp):
 impl/$(DEPDIR)/$(am__dirstamp):
 	@$(mkdir_p) impl/$(DEPDIR)
 	@: > impl/$(DEPDIR)/$(am__dirstamp)
-impl/sort.$(OBJEXT): impl/$(am__dirstamp) \
-	impl/$(DEPDIR)/$(am__dirstamp)
-pipes-sort$(EXEEXT): $(pipes_sort_OBJECTS) $(pipes_sort_DEPENDENCIES) 
-	@rm -f pipes-sort$(EXEEXT)
-	$(CXXLINK) $(pipes_sort_LDFLAGS) $(pipes_sort_OBJECTS) $(pipes_sort_LDADD) $(LIBS)
 impl/wordcount-nopipe.$(OBJEXT): impl/$(am__dirstamp) \
 	impl/$(DEPDIR)/$(am__dirstamp)
 wordcount-nopipe$(EXEEXT): $(wordcount_nopipe_OBJECTS) $(wordcount_nopipe_DEPENDENCIES) 
@@ -336,7 +324,6 @@ wordcount-simple$(EXEEXT): $(wordcount_simple_OBJECTS) $(wordcount_simple_DEPEND
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
-	-rm -f impl/sort.$(OBJEXT)
 	-rm -f impl/wordcount-nopipe.$(OBJEXT)
 	-rm -f impl/wordcount-part.$(OBJEXT)
 	-rm -f impl/wordcount-simple.$(OBJEXT)
@@ -344,7 +331,6 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@impl/$(DEPDIR)/sort.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@impl/$(DEPDIR)/wordcount-nopipe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@impl/$(DEPDIR)/wordcount-part.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@impl/$(DEPDIR)/wordcount-simple.Po@am__quote@

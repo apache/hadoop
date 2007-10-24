@@ -797,8 +797,7 @@ class JobInProgress {
                                         tip.getTIPId(), status.getTaskId(), status.getFinishTime(), 
                                         taskTrackerName); 
       JobHistory.Task.logFinished(profile.getJobId(), tip.getTIPId(), 
-                                  Values.MAP.name(), status.getFinishTime(),
-                                  status.getCounters()); 
+                                  Values.MAP.name(), status.getFinishTime()); 
     }else{
       JobHistory.ReduceAttempt.logStarted(profile.getJobId(), 
                                           tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
@@ -808,8 +807,7 @@ class JobInProgress {
                                            status.getSortFinishTime(), status.getFinishTime(), 
                                            taskTrackerName); 
       JobHistory.Task.logFinished(profile.getJobId(), tip.getTIPId(), 
-                                  Values.REDUCE.name(), status.getFinishTime(),
-                                  status.getCounters()); 
+                                  Values.REDUCE.name(), status.getFinishTime()); 
     }
         
     // Update the running/finished map/reduce counts
@@ -877,9 +875,7 @@ class JobInProgress {
       LOG.info("Job " + this.status.getJobId() + 
                " has completed successfully.");
       JobHistory.JobInfo.logFinished(this.status.getJobId(), finishTime, 
-                                     this.finishedMapTasks, 
-                                     this.finishedReduceTasks, failedMapTasks, 
-                                     failedReduceTasks, getCounters());
+                                     this.finishedMapTasks, this.finishedReduceTasks, failedMapTasks, failedReduceTasks);
       metrics.completeJob();
       return true;
     }

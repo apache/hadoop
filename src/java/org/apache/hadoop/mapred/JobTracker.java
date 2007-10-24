@@ -507,7 +507,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   long startTime;
   int totalSubmissions = 0;
 
-  private int totalTaskCapacity;
+  private int maxCurrentTasks;
   private HostsFileReader hostsReader;
 
   //
@@ -621,6 +621,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     //
     TASKTRACKER_EXPIRY_INTERVAL = 
       conf.getLong("mapred.tasktracker.expiry.interval", 10 * 60 * 1000);
+    maxCurrentTasks = conf.getInt("mapred.tasktracker.tasks.maximum", 2);
     RETIRE_JOB_INTERVAL = conf.getLong("mapred.jobtracker.retirejob.interval", 24 * 60 * 60 * 1000);
     RETIRE_JOB_CHECK_INTERVAL = conf.getLong("mapred.jobtracker.retirejob.check", 60 * 1000);
     TASK_ALLOC_EPSILON = conf.getFloat("mapred.jobtracker.taskalloc.loadbalance.epsilon", 0.2f);
@@ -1230,7 +1231,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     if (oldStatus != null) {
       totalMaps -= oldStatus.countMapTasks();
       totalReduces -= oldStatus.countReduceTasks();
-      totalTaskCapacity -= oldStatus.getMaxTasks();
       if (status == null) {
         taskTrackers.remove(trackerName);
       }
@@ -1238,7 +1238,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     if (status != null) {
       totalMaps += status.countMapTasks();
       totalReduces += status.countReduceTasks();
-      totalTaskCapacity += status.getMaxTasks();
       taskTrackers.put(trackerName, status);
     }
     return oldStatus != null;
@@ -1298,7 +1297,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     int remainingMapLoad = 0;
     int numTaskTrackers;
     TaskTrackerStatus tts;
-
+	
     synchronized (taskTrackers) {
       numTaskTrackers = taskTrackers.size();
       tts = taskTrackers.get(taskTracker);
@@ -1307,6 +1306,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       LOG.warn("Unknown task tracker polling; ignoring: " + taskTracker);
       return null;
     }
+    int totalCapacity = numTaskTrackers * maxCurrentTasks;
 
     synchronized(jobsByPriority){
       for (Iterator it = jobsByPriority.iterator(); it.hasNext();) {
@@ -1320,8 +1320,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       }   
     }
 
-    int maxCurrentTasks = tts.getMaxTasks();
-    
     // find out the maximum number of maps or reduces that we are willing
     // to run on any node.
     int maxMapLoad = 0;
@@ -1383,7 +1381,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
             padding = Math.min(maxCurrentTasks,
                                (int)(totalNeededMaps * PAD_FRACTION));
           }
-          if (totalMaps + padding >= totalTaskCapacity) {
+          if (totalMaps + padding >= totalCapacity) {
             break;
           }
         }
@@ -1421,7 +1419,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
               Math.min(maxCurrentTasks,
                        (int) (totalNeededReduces * PAD_FRACTION));
           }
-          if (totalReduces + padding >= totalTaskCapacity) {
+          if (totalReduces + padding >= totalCapacity) {
             break;
           }
         }
@@ -1577,7 +1575,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       return new ClusterStatus(taskTrackers.size(),
                                totalMaps,
                                totalReduces,
-                               totalTaskCapacity,
+                               maxCurrentTasks,
                                state);          
     }
   }

@@ -19,7 +19,7 @@ AM_CXXFLAGS=-Wall -I$(HADOOP_UTILS_PREFIX)/include \
 LDADD=-L$(HADOOP_UTILS_PREFIX)/lib -L$(HADOOP_PIPES_PREFIX)/lib \
       -lhadooppipes -lhadooputils
 
-bin_PROGRAMS= wordcount-simple wordcount-part wordcount-nopipe pipes-sort
+bin_PROGRAMS= wordcount-simple wordcount-part wordcount-nopipe
 
 # Define the sources for each program
 wordcount_simple_SOURCES = \
@@ -30,7 +30,4 @@ wordcount_part_SOURCES = \
 
 wordcount_nopipe_SOURCES = \
 	impl/wordcount-nopipe.cc
-
-pipes_sort_SOURCES = \
-        impl/sort.cc
 

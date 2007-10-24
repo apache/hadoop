@@ -391,7 +391,7 @@ public class TaskTracker
     this.reduceTotal = 0;
     this.acceptNewTasks = true;
     this.status = null;
-
+        
     this.minSpaceStart = this.fConf.getLong("mapred.local.dir.minspacestart", 0L);
     this.minSpaceKill = this.fConf.getLong("mapred.local.dir.minspacekill", 0L);
     int numCopiers = this.fConf.getInt("mapred.reduce.parallel.copies", 5);
@@ -860,7 +860,7 @@ public class TaskTracker
       synchronized (this) {
         status = new TaskTrackerStatus(taskTrackerName, localHostname, 
                                        httpPort, cloneAndResetRunningTaskStatuses(), 
-                                       failures, maxCurrentTasks); 
+                                       failures); 
       }
     } else {
       LOG.info("Resending 'status' to '" + jobTrackAddr.getHostName() +
