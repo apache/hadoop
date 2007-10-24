@@ -46,6 +46,7 @@ class TaskTrackerStatus implements Writable {
   List<TaskStatus> taskReports;
     
   volatile long lastSeen;
+  int maxTasks;
     
   /**
    */
@@ -57,13 +58,15 @@ class TaskTrackerStatus implements Writable {
    */
   public TaskTrackerStatus(String trackerName, String host, 
                            int httpPort, List<TaskStatus> taskReports, 
-                           int failures) {
+                           int failures, int maxTasks) {
     this.trackerName = trackerName;
     this.host = host;
     this.httpPort = httpPort;
 
     this.taskReports = new ArrayList<TaskStatus>(taskReports);
     this.failures = failures;
+
+    this.maxTasks = maxTasks;
   }
 
   /**
@@ -149,6 +152,16 @@ class TaskTrackerStatus implements Writable {
     this.lastSeen = lastSeen;
   }
 
+  /**
+   * Get the maximum concurrent tasks for this node.  (This applies
+   * per type of task - a node with maxTasks==1 will run up to 1 map
+   * and 1 reduce concurrently).
+   * @return maximum tasks this node supports
+   */
+  public int getMaxTasks() {
+    return maxTasks;
+  }
+  
   ///////////////////////////////////////////
   // Writable
   ///////////////////////////////////////////
@@ -157,6 +170,7 @@ class TaskTrackerStatus implements Writable {
     UTF8.writeString(out, host);
     out.writeInt(httpPort);
     out.writeInt(failures);
+    out.writeInt(maxTasks);
 
     out.writeInt(taskReports.size());
     for (TaskStatus taskStatus : taskReports) {
@@ -169,6 +183,7 @@ class TaskTrackerStatus implements Writable {
     this.host = UTF8.readString(in);
     this.httpPort = in.readInt();
     this.failures = in.readInt();
+    this.maxTasks = in.readInt();
 
     taskReports.clear();
     int numTasks = in.readInt();
