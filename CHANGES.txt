@@ -341,6 +341,9 @@ Branch 0.15 (unreleased changes)
     HADOOP-2048.  Change error handling in distcp so that each map copies
     as much as possible before reporting the error. Also report progress on
     every copy. (Chris Douglas via omalley)
+
+    HADOOP-2073.  Change size of VERSION file after writing contents to it.
+    (Konstantin Shvachko via dhruba)
  
   IMPROVEMENTS
 
