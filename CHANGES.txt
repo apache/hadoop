@@ -338,6 +338,10 @@ Branch 0.15 (unreleased changes)
     HADOOP-2080.  Fixed calculation of the checksum file size when the values
     are large. (omalley)
 
+    HADOOP-2048.  Change error handling in distcp so that each map copies
+    as much as possible before reporting the error. Also report progress on
+    every copy. (Chris Douglas via omalley)
+ 
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
