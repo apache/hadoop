@@ -44,8 +44,11 @@ public interface HConstants {
   /** default host address */
   static final String DEFAULT_HOST = "0.0.0.0";
   
+  static final int DEFAULT_MASTER_PORT = 60000;
+  
   /** Default master address */
-  static final String DEFAULT_MASTER_ADDRESS = DEFAULT_HOST + ":60000";
+  static final String DEFAULT_MASTER_ADDRESS = DEFAULT_HOST + ":" +
+    DEFAULT_MASTER_PORT;
 
   /** default port for master web api */
   static final int DEFAULT_MASTER_INFOPORT = 60010;

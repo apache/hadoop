@@ -63,7 +63,6 @@ class HMerge implements HConstants {
    */
   public static void merge(Configuration conf, FileSystem fs, Text tableName)
       throws IOException {
-
     HConnection connection = HConnectionManager.getConnection(conf);
     boolean masterIsRunning = connection.isMasterRunning();
     if(tableName.equals(META_TABLE_NAME)) {

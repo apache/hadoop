@@ -31,4 +31,12 @@ public class HBaseConfiguration extends Configuration {
     addResource("hbase-default.xml");
     addResource("hbase-site.xml");
   }
+  
+  /**
+   * Create a clone of passed configuration.
+   * @param c Configuration to clone.
+   */
+  public HBaseConfiguration(final Configuration c) {
+    super(c);
+  }
 }

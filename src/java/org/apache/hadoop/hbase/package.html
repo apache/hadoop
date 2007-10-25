@@ -40,8 +40,8 @@ files: <code>${HBASE_HOME}/conf/hbase-site.xml</code> and
 </p>
 <p>
 <code>hbase-site.xml</code> allows the user to override the properties defined in 
-<code>${HBASE_HOME}/conf/hbase-default.xml</code>.  <code>hbase-default.xml</code> itself 
-should never be modified.  At a minimum the <code>hbase.master</code> property should be redefined 
+<code>${HBASE_HOME}/conf/hbase-default.xml</code> (<code>hbase-default.xml</code> itself 
+should never be modified).  At a minimum the <code>hbase.master</code> property should be redefined 
 in <code>hbase-site.xml</code> to define the <code>host:port</code> pair on which to run the 
 HMaster (<a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseArchitecture">read about the 
 HBase master, regionservers, etc</a>):
@@ -71,12 +71,15 @@ can be set in <code>${HBASE_HOME}/conf/hbase-env.sh</code>.</li>
 </ul>
 
 <h2><a name="runandconfirm">Running and Confirming Your Installation</a></h2>
-<p>
-If you are running a distributed operation you will need to start the Hadoop daemons 
+<p>If you are running in standalone, non-distributed mode, hbase by default uses
+the local filesystem.</p>
+<p>If you are running a distributed cluster you will need to start the Hadoop DFS daemons 
 before starting HBase and stop the daemons after HBase has shut down.  Start and 
-stop the Hadoop daemons as per the Hadoop 
-<a href="http://lucene.apache.org/hadoop/api/overview-summary.html">instructions</a>.  Afterwards, 
-or if running a standalone operation, start HBase with the following command:
+stop the Hadoop DFS daemons as per the Hadoop 
+<a href="http://lucene.apache.org/hadoop/api/overview-summary.html">instructions</a>. HBase
+does not normally use the mapreduce daemons.  These do not need to be started.</p>
+
+<p>Start HBase with the following command:
 </p>
 <pre>
 ${HBASE_HOME}/bin/start-hbase.sh

@@ -35,8 +35,8 @@ import java.util.TimerTask;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Delayed;
 import java.util.concurrent.DelayQueue;
+import java.util.concurrent.Delayed;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -1294,16 +1294,12 @@ HMasterRegionInterface {
   /** {@inheritDoc} */
   public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg msgs[])
   throws IOException {
-    
     String serverName = serverInfo.getServerAddress().toString().trim();
     long serverLabel = getServerLabel(serverName);
-
     if (msgs.length > 0 && msgs[0].getMsg() == HMsg.MSG_REPORT_EXITING) {
-
       // HRegionServer is shutting down. Cancel the server's lease.
-      // Note that cancelling the server's lease takes care of updating
+      // Note that canceling the server's lease takes care of updating
       // serversToServerInfo, etc.
-
       if (LOG.isDebugEnabled()) {
         LOG.debug("Region server " + serverName +
             ": MSG_REPORT_EXITING -- cancelling lease");
@@ -1312,7 +1308,6 @@ HMasterRegionInterface {
       if (cancelLease(serverName, serverLabel)) {
         // Only process the exit message if the server still has a lease.
         // Otherwise we could end up processing the server exit twice.
-
         LOG.info("Region server " + serverName +
             ": MSG_REPORT_EXITING -- lease cancelled");
         // Get all the regions the server was serving reassigned
@@ -1341,7 +1336,6 @@ HMasterRegionInterface {
       // Tell server to shut down if we are shutting down.  This should
       // happen after check of MSG_REPORT_EXITING above, since region server
       // will send us one of these messages after it gets MSG_REGIONSERVER_STOP
-    
       return new HMsg[]{new HMsg(HMsg.MSG_REGIONSERVER_STOP)};
     }
 
@@ -2396,7 +2390,6 @@ HMasterRegionInterface {
     return !closed.get();
   }
 
-  /** {@inheritDoc} */
   public void shutdown() {
     TimerTask tt = new TimerTask() {
       @Override
@@ -2408,7 +2401,7 @@ HMasterRegionInterface {
         }
       }
     };
-    Timer t = new Timer("Shutdown");
+    Timer t = new Timer(getName() + "-Shutdown");
     t.schedule(tt, 10);
   }
 
@@ -3028,7 +3021,8 @@ HMasterRegionInterface {
   }
 
   protected static void doMain(String [] args,
-      Class<? extends HMaster> masterClass) {
+      Class<? extends HMaster> masterClass)
+  throws IOException {
     if (args.length < 1) {
       printUsageAndExit();
     }
@@ -3047,10 +3041,15 @@ HMasterRegionInterface {
 
       if (cmd.equals("start")) {
         try {
-          Constructor<? extends HMaster> c =
-            masterClass.getConstructor(Configuration.class);
-          HMaster master = c.newInstance(conf);
-          master.start();
+          // If 'local', defer to LocalHBaseCluster instance.
+          if (LocalHBaseCluster.isLocal(conf)) {
+            (new LocalHBaseCluster(conf)).startup();
+          } else {
+            Constructor<? extends HMaster> c =
+              masterClass.getConstructor(Configuration.class);
+            HMaster master = c.newInstance(conf);
+            master.start();
+          }
         } catch (Throwable t) {
           LOG.error( "Can not start master", t);
           System.exit(-1);
@@ -3060,6 +3059,9 @@ HMasterRegionInterface {
 
       if (cmd.equals("stop")) {
         try {
+          if (LocalHBaseCluster.isLocal(conf)) {
+            LocalHBaseCluster.doLocal(conf);
+          }
           HBaseAdmin adm = new HBaseAdmin(conf);
           adm.shutdown();
         } catch (Throwable t) {
@@ -3077,8 +3079,9 @@ HMasterRegionInterface {
   /**
    * Main program
    * @param args
+   * @throws IOException 
    */
-  public static void main(String [] args) {
+  public static void main(String [] args) throws IOException {
     doMain(args, HMaster.class);
   }
 }
