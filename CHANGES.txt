@@ -132,6 +132,9 @@ Branch 0.15 (unreleased changes)
     HADOOP-1968. FileSystem supports wildcard input syntax "{ }".
     (Hairong Kuang via dhruba)
 
+    HADOOP-1622.  Permit multiple jar files to be added to a job.
+    (Dennis Kubes via cutting)
+
   OPTIMIZATIONS
 
     HADOOP-1910.  Reduce the number of RPCs that DistributedFileSystem.create()

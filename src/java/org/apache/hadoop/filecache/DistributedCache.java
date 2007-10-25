@@ -288,7 +288,7 @@ public class DistributedCache {
       if (isArchive) {
         String tmpArchive = parchive.toString().toLowerCase();
         if (tmpArchive.endsWith(".jar")) {
-          RunJar.unJar(new File(parchive.toString()), new File(parchive
+          JarUtils.unJar(new File(parchive.toString()), new File(parchive
                                                                .getParent().toString()));
         } else if (tmpArchive.endsWith(".zip")) {
           FileUtil.unZip(new File(parchive.toString()), new File(parchive
