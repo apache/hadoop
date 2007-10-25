@@ -272,8 +272,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
   // JobSubmissionProtocol methods
 
-  private int jobid = 0;
-  public String getNewJobId() {
+  private static int jobid = 0;
+  public synchronized String getNewJobId() {
     return "job_local_" + Integer.toString(++jobid);
   }
 
