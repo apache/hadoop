@@ -45,6 +45,10 @@ Trunk (unreleased changes)
     job.xml in the JobTracker and while displaying it on the webui in 
     jobconf.jsp. (Amar Kamat via acmurthy)
 
+    HADOOP-2098.  Log start & completion of empty jobs to JobHistory, which
+    also ensures that we close the file-descriptor of the job's history log 
+    opened during job-submission. (Amar Kamat via acmurthy)
+
 Branch 0.15 (unreleased changes)
 
   INCOMPATIBLE CHANGES

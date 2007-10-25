@@ -251,7 +251,10 @@ class JobInProgress {
       status.setReduceProgress(1.0f);
       status.setRunState(JobStatus.SUCCEEDED);
       tasksInited = true;
-
+      JobHistory.JobInfo.logStarted(profile.getJobId(), 
+                                    System.currentTimeMillis(), 0, 0);
+      JobHistory.JobInfo.logFinished(profile.getJobId(), 
+                                     System.currentTimeMillis(), 0, 0, 0, 0);
       // Special case because the Job is not queued
       JobEndNotifier.registerNotification(this.getJobConf(), this.getStatus());
 
