@@ -44,6 +44,7 @@
       failedTaskAttempts += task.numTaskFailures();
       killedTaskAttempts += task.numKilledTasks();
     }
+    int pendingTasks = totalTasks - runningTasks - killedTasks - finishedTasks; 
     out.print("<tr><th><a href=\"jobtasks.jsp?jobid=" + jobId + 
               "&type="+ kind + "&pagenum=1\">" + kind + 
               "</a></th><td align=\"right\">" + 
@@ -52,13 +53,25 @@
               "</td><td align=\"right\">" + 
               totalTasks + 
               "</td><td align=\"right\">" + 
-              (totalTasks - runningTasks - finishedTasks - killedTasks) + 
-              "</td><td align=\"right\">" +
-              runningTasks + 
-              "</td><td align=\"right\">" +
-              finishedTasks + 
-              "</td><td align=\"right\">" +
-              killedTasks +
+              ((pendingTasks > 0) 
+               ? "<a href=\"jobtasks.jsp?jobid=" + jobId + "&type="+ kind + 
+                 "&pagenum=1" + "&state=pending\">" + pendingTasks + "</a>"
+               : "0") + 
+              "</td><td align=\"right\">" + 
+              ((runningTasks > 0) 
+               ? "<a href=\"jobtasks.jsp?jobid=" + jobId + "&type="+ kind + 
+                 "&pagenum=1" + "&state=running\">" + runningTasks + "</a>" 
+               : "0") + 
+              "</td><td align=\"right\">" + 
+              ((finishedTasks > 0) 
+               ?"<a href=\"jobtasks.jsp?jobid=" + jobId + "&type="+ kind + 
+                "&pagenum=1" + "&state=completed\">" + finishedTasks + "</a>" 
+               : "0") + 
+              "</td><td align=\"right\">" + 
+              ((killedTasks > 0) 
+               ?"<a href=\"jobtasks.jsp?jobid=" + jobId + "&type="+ kind +
+                "&pagenum=1" + "&state=killed\">" + killedTasks + "</a>"
+               : "0") + 
               "</td><td align=\"right\">" + 
               ((failedTaskAttempts > 0) ? 
                   ("<a href=\"jobfailures.jsp?jobid=" + jobId + 

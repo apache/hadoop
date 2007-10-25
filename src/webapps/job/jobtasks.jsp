@@ -17,6 +17,9 @@
   String jobid = request.getParameter("jobid");
   String type = request.getParameter("type");
   String pagenum = request.getParameter("pagenum");
+  TaskInProgress[] tasks;
+  String state = request.getParameter("state");
+  state = (state!=null) ? state : "all";
   int pnum = Integer.parseInt(pagenum);
   int next_page = pnum+1;
   int numperpage = 2000;
@@ -29,9 +32,11 @@
   int report_len = 0;
   if ("map".equals(type)){
      reports = (job != null) ? tracker.getMapTaskReports(jobid) : null;
+     tasks = (job != null) ? job.getMapTasks() : null;
     }
   else{
     reports = (job != null) ? tracker.getReduceTaskReports(jobid) : null;
+    tasks = (job != null) ? job.getReduceTasks() : null;
   }
 %>
 
@@ -50,13 +55,34 @@
     out.print("<b>Job " + jobid + " not found.</b><br>\n");
     return;
   }
+  // Filtering the reports if some filter is specified
+  if (!"all".equals(state)) {
+    List<TaskReport> filteredReports = new ArrayList<TaskReport>();
+    for (int i = 0; i < reports.length; ++i) {
+      if ("completed".equals(state) && tasks[i].isComplete()) {
+        filteredReports.add(reports[i]);
+      } else if ("running".equals(state) && tasks[i].isRunning()) {
+        filteredReports.add(reports[i]);
+      } else if ("killed".equals(state) && tasks[i].wasKilled()) {
+        filteredReports.add(reports[i]);
+      } else if ("pending".equals(state) 
+                 && !(tasks[i].isComplete() || tasks[i].isRunning() 
+                      || tasks[i].wasKilled())) {
+        filteredReports.add(reports[i]);
+      }
+    }
+    tasks = null; // free the task memory
+    // using filtered reports instead of all the reports
+    reports = filteredReports.toArray(new TaskReport[0]);
+  }
   report_len = reports.length;
   
   if (report_len <= start_index) {
     out.print("<b>No such tasks</b>");
   } else {
     out.print("<hr>");
-    out.print("<h2>Tasks</h2>");
+    out.print("<h2>" + Character.toUpperCase(state.charAt(0)) 
+              + state.substring(1).toLowerCase() + " Tasks</h2>");
     out.print("<center>");
     out.print("<table border=2 cellpadding=\"5\" cellspacing=\"2\">");
     out.print("<tr><td align=\"center\">Task</td><td>Complete</td><td>Status</td>" +
@@ -93,13 +119,13 @@
   if (end_index < report_len) {
     out.print("<div style=\"text-align:right\">" + 
               "<a href=\"jobtasks.jsp?jobid="+ jobid + "&type=" + type +
-              "&pagenum=" + next_page +
+              "&pagenum=" + next_page + "&state=" + state +
               "\">" + "Next" + "</a></div>");
   }
   if (start_index != 0) {
       out.print("<div style=\"text-align:right\">" + 
                 "<a href=\"jobtasks.jsp?jobid="+ jobid + "&type=" + type +
-                "&pagenum=" + (pnum -1) + "\">" + "Prev" + "</a></div>");
+                "&pagenum=" + (pnum -1) + "&state=" + state + "\">" + "Prev" + "</a></div>");
   }
 %>
 

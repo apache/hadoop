@@ -24,6 +24,10 @@ Trunk (unreleased changes)
     HADOOP-1604.  An system administrator can finalize namenode upgrades 
     without running the cluster. (Konstantin Shvachko via dhruba)
 
+    HADOOP-1839.  Link-ify the Pending/Running/Complete/Killed grid in
+    jobdetails.jsp to help quickly narrow down and see categorized TIPs' 
+    details via jobtasks.jsp. (Amar Kamat via acmurthy)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
