@@ -81,9 +81,8 @@ case $startStop in
 
   (start)
 
-    if [ ! -d "HADOOP_PID_DIR" ]; then
-      mkdir -p "$HADOOP_PID_DIR"
-    fi
+    mkdir -p "$HADOOP_PID_DIR"
+
     if [ -f $pid ]; then
       if kill -0 `cat $pid` > /dev/null 2>&1; then
         echo $command running as process `cat $pid`.  Stop it first.
