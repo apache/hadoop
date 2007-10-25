@@ -24,9 +24,10 @@
 <configuration>
   <property>
     <name>hbase.master</name>
-    <value>0.0.0.0:60000</value>
+    <value>local</value>
     <description>The host and port that the HBase master runs at.
-        TODO: Support 'local' (All running in single context).
+    A value of 'local' runs the master and a regionserver in
+    a single process.
     </description>
   </property>
   <property>

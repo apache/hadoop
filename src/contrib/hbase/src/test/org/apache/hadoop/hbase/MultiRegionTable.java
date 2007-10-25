@@ -302,12 +302,12 @@ public class MultiRegionTable extends HBaseTestCase {
       final HRegionInfo r) throws IOException {
     
     LOG.info("Starting compaction");
-    for (MiniHBaseCluster.RegionServerThread thread: cluster.regionThreads) {
+    for (LocalHBaseCluster.RegionServerThread thread:
+        cluster.getRegionThreads()) {
       SortedMap<Text, HRegion> regions = thread.getRegionServer().onlineRegions;
       
       // Retry if ConcurrentModification... alternative of sync'ing is not
       // worth it for sake of unit test.
-      
       for (int i = 0; i < 10; i++) {
         try {
           for (HRegion online: regions.values()) {

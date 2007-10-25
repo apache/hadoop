@@ -129,7 +129,8 @@ public class TestLogRolling extends HBaseTestCase {
       // continue
     }
 
-    this.logdir = cluster.regionThreads.get(0).getRegionServer().getLog().dir;
+    this.logdir =
+      cluster.getRegionThreads().get(0).getRegionServer().getLog().dir;
     
     // When the META table can be opened, the region servers are running
     @SuppressWarnings("unused")

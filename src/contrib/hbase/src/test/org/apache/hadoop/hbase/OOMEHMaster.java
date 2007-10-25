@@ -54,8 +54,9 @@ public class OOMEHMaster extends HMaster {
 
   /**
    * @param args
+   * @throws IOException 
    */
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
     doMain(args, OOMEHMaster.class);
   }
 }

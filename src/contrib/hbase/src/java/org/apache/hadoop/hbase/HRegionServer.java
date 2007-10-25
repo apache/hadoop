@@ -103,7 +103,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private final int serverLeaseTimeout;
 
   // Remote HMaster
-  private final HMasterRegionInterface hbaseMaster;
+  private HMasterRegionInterface hbaseMaster;
 
   // Server to handle client requests.  Default access so can be accessed by
   // unit tests.
@@ -422,11 +422,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
      this.leases = new Leases(
        conf.getInt("hbase.regionserver.lease.period", 3 * 60 * 1000),
        this.threadWakeFrequency);
-    // Remote HMaster
-    this.hbaseMaster = (HMasterRegionInterface)RPC.waitForProxy(
-        HMasterRegionInterface.class, HMasterRegionInterface.versionID,
-        new HServerAddress(conf.get(MASTER_ADDRESS)).getInetSocketAddress(),
-        conf);
   }
 
   /**
@@ -435,9 +430,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * load/unload instructions.
    */
   public void run() {
-    // Set below if HMaster asked us stop.
-    boolean masterRequestedStop = false;
-    
     try {
       init(reportForDuty());
       long lastMsg = 0;
@@ -509,7 +501,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                   if (LOG.isDebugEnabled()) {
                     LOG.debug("Got regionserver stop message");
                   }
-                  masterRequestedStop = true;
                   stopRequested.set(true);
                   break;
 
@@ -600,20 +591,18 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             RemoteExceptionHandler.checkIOException(e));
       }
       try {
-        if (!masterRequestedStop && closedRegions != null) {
-          HMsg[] exitMsg = new HMsg[closedRegions.size() + 1];
-          exitMsg[0] = new HMsg(HMsg.MSG_REPORT_EXITING);
-          // Tell the master what regions we are/were serving
-          int i = 1;
-          for(HRegion region: closedRegions) {
-            exitMsg[i++] = new HMsg(HMsg.MSG_REPORT_CLOSE,
-                region.getRegionInfo());
-          }
-
-          LOG.info("telling master that region server is shutting down at: " +
-              serverInfo.getServerAddress().toString());
-          hbaseMaster.regionServerReport(serverInfo, exitMsg);
+        HMsg[] exitMsg = new HMsg[closedRegions.size() + 1];
+        exitMsg[0] = new HMsg(HMsg.MSG_REPORT_EXITING);
+        // Tell the master what regions we are/were serving
+        int i = 1;
+        for(HRegion region: closedRegions) {
+          exitMsg[i++] = new HMsg(HMsg.MSG_REPORT_CLOSE,
+              region.getRegionInfo());
         }
+
+        LOG.info("telling master that region server is shutting down at: " +
+            serverInfo.getServerAddress().toString());
+        hbaseMaster.regionServerReport(serverInfo, exitMsg);
       } catch (IOException e) {
         LOG.warn("Failed to send exiting message to master: ",
             RemoteExceptionHandler.checkIOException(e));
@@ -783,10 +772,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Let the master know we're here
    * Run initialization using parameters passed us by the master.
    */
-  private MapWritable reportForDuty() {
+  private MapWritable reportForDuty() throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Telling master we are up");
     }
+    // Do initial RPC setup.
+    this.hbaseMaster = (HMasterRegionInterface)RPC.waitForProxy(
+      HMasterRegionInterface.class, HMasterRegionInterface.versionID,
+      new HServerAddress(conf.get(MASTER_ADDRESS)).getInetSocketAddress(),
+      this.conf);
     MapWritable result = null;
     long lastMsg = 0;
     while(!stopRequested.get()) {
@@ -1452,13 +1446,19 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       
       if (cmd.equals("start")) {
         try {
-          
-          Constructor<? extends HRegionServer> c =
-            regionServerClass.getConstructor(Configuration.class);
-          HRegionServer hrs = c.newInstance(conf);
-          Thread t = new Thread(hrs);
-          t.setName("regionserver" + hrs.server.getListenerAddress());
-          t.start();
+          // If 'local', don't start a region server here.  Defer to
+          // LocalHBaseCluster.  It manages 'local' clusters.
+          if (LocalHBaseCluster.isLocal(conf)) {
+            LOG.warn("Not starting a distinct region server because " +
+              "hbase.master is set to 'local' mode");
+          } else {
+            Constructor<? extends HRegionServer> c =
+              regionServerClass.getConstructor(Configuration.class);
+            HRegionServer hrs = c.newInstance(conf);
+            Thread t = new Thread(hrs);
+            t.setName("regionserver" + hrs.server.getListenerAddress());
+            t.start();
+          }
         } catch (Throwable t) {
           LOG.error( "Can not start region server because "+
               StringUtils.stringifyException(t) );

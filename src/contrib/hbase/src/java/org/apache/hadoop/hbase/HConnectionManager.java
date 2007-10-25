@@ -126,7 +126,7 @@ public class HConnectionManager implements HConstants {
      */
     @SuppressWarnings("unchecked")
     public TableServers(Configuration conf) {
-      this.conf = conf;
+      this.conf = LocalHBaseCluster.doLocal(new HBaseConfiguration(conf));
       
       String serverClassName =
         conf.get(REGION_SERVER_CLASS, DEFAULT_REGION_SERVER_CLASS);

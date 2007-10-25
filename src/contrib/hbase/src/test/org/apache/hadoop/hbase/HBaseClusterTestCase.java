@@ -26,12 +26,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
- * Abstract base class for HBase cluster junit tests.  Spins up cluster on
- * {@link #setUp()} and takes it down again in {@link #tearDown()}.
+ * Abstract base class for HBase cluster junit tests.  Spins up an hbase
+ * cluster in setup and tears it down again in tearDown.
  */
 public abstract class HBaseClusterTestCase extends HBaseTestCase {
   private static final Log LOG =
     LogFactory.getLog(HBaseClusterTestCase.class.getName());
+  
   protected MiniHBaseCluster cluster;
   final boolean miniHdfs;
   int regionServers;
@@ -106,14 +107,12 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
    * regionservers and master threads are no long alive.
    */
   public void threadDumpingJoin() {
-    if (this.cluster.regionThreads != null) {
-      synchronized(this.cluster.regionThreads) {
-        for(Thread t: this.cluster.regionThreads) {
-          threadDumpingJoin(t);
-        }
+    if (this.cluster.getRegionThreads() != null) {
+      for(Thread t: this.cluster.getRegionThreads()) {
+        threadDumpingJoin(t);
       }
     }
-    threadDumpingJoin(this.cluster.getMasterThread());
+    threadDumpingJoin(this.cluster.getMaster());
   }
 
   public void threadDumpingJoin(final Thread t) {

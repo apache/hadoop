@@ -53,7 +53,7 @@ public class TestInfoServers extends HBaseTestCase {
     a.createTable(new HTableDescriptor(getName()));
     assertTrue(a.tableExists(new Text(getName())));
     try {
-      int port = miniHbase.getMasterThread().getMaster().infoServer.getPort();
+      int port = miniHbase.getMaster().infoServer.getPort();
       assertHasExpectedContent(new URL("http://localhost:" + port +
         "/index.html"), "Master");
       port = miniHbase.getRegionThreads().get(0).getRegionServer().

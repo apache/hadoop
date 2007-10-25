@@ -6,6 +6,7 @@ Trunk (unreleased changes)
 
   NEW FEATURES
     HADOOP-2061 Add new Base64 dialects
+    HADOOP-2084 Add a LocalHBaseCluster
 
   OPTIMIZATIONS
 
