@@ -34,6 +34,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.util.StringUtils;
 /**
  * Provides methods for writing to and reading from job history. 
  * Job History works in an append mode, JobHistory and its inner classes provide methods 
@@ -367,8 +368,9 @@ public class JobHistory {
       /* Storing the job conf on the local file system */
       String localJobFilePath =  JobInfo.getLocalJobFilePath(jobId); 
       File localJobFile = new File(localJobFilePath);
+      FileOutputStream jobOut = null;
       try {
-        FileOutputStream jobOut = new FileOutputStream(localJobFile);
+        jobOut = new FileOutputStream(localJobFile);
         jobConf.write(jobOut);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Job conf for " + jobId + " stored at " 
@@ -376,6 +378,15 @@ public class JobHistory {
         }
       } catch (IOException ioe) {
         LOG.error("Failed to store job conf on the local filesystem ", ioe);
+      } finally {
+        if (jobOut != null) {
+          try {
+            jobOut.close();
+          } catch (IOException ie) {
+            LOG.info("Failed to close the job configuration file " 
+                     + StringUtils.stringifyException(ie));
+          }
+        }
       }
     }
     /**

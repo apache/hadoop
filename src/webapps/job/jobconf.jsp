@@ -27,14 +27,22 @@
 
 <%
   String jobFilePath = tracker.getLocalJobFilePath(jobId);
+  FileInputStream jobFile = null;
   try {
+    jobFile = new FileInputStream(jobFilePath);
     JobConf jobConf = new JobConf(jobFilePath);
     XMLUtils.transform(
         jobConf.getConfResourceAsInputStream("webapps/static/jobconf.xsl"),
-        new FileInputStream(jobFilePath), out);
+        jobFile, out);
   } catch (Exception e) {
     out.println("Failed to retreive job configuration for job '" + jobId + "!");
     out.println(e);
+  } finally {
+    if (jobFile != null) {
+      try { 
+        jobFile.close(); 
+      } catch (IOException e) {}
+    }
   }
 %>
 
