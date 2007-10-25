@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: MapReduce Tools for Eclipse
 Bundle-SymbolicName: org.apache.hadoop.eclipse;singleton:=true
-Bundle-Version: 1.0.4
+Bundle-Version: 1.1
 Bundle-Activator: org.apache.hadoop.eclipse.Activator
 Bundle-Localization: plugin
 Require-Bundle: org.eclipse.ui,
@@ -21,8 +21,9 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.ui.console,
  org.eclipse.ui.navigator,
  org.eclipse.core.filesystem,
- org.eclipse.team.cvs.ssh2,
- com.jcraft.jsch
+ org.apache.commons.logging
 Eclipse-LazyStart: true
-Bundle-ClassPath: classes/
+Bundle-ClassPath: classes/,
+ lib/commons-cli-2.0-SNAPSHOT.jar,
+ lib/hadoop-core.jar
 Bundle-Vendor: Apache Hadoop

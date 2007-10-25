@@ -23,6 +23,7 @@
   <!-- Override classpath to include Eclipse SDK jars -->
   <path id="classpath">
     <pathelement location="${build.classes}"/>
+    <pathelement location="${hadoop.root}/build/classes"/>
     <path refid="eclipse-sdk-jars"/>
   </path>
 
@@ -34,10 +35,13 @@
 
   <!-- Override jar target to specify manifest -->
   <target name="jar" depends="compile" unless="skip.contrib">
+    <mkdir dir="${build.dir}/lib"/>
+    <copy file="${deploy.dir}/hadoop-${version}-core.jar" tofile="${build.dir}/lib/hadoop-core.jar" verbose="true"/>
+    <copy file="${hadoop.root}/lib/commons-cli-2.0-SNAPSHOT.jar" todir="${build.dir}/lib" verbose="true"/>
     <jar
       jarfile="${build.dir}/hadoop-${version}-${name}.jar"
       manifest="${root}/META-INF/MANIFEST.MF">
-      <fileset dir="${build.dir}" includes="classes/"/>
+      <fileset dir="${build.dir}" includes="classes/ lib/"/>
       <fileset dir="${root}" includes="resources/ plugin.xml"/>
     </jar>
   </target>

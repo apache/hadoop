@@ -18,14 +18,9 @@
 
 package org.apache.hadoop.eclipse.actions;
 
-import java.io.IOException;
-
-import org.apache.hadoop.eclipse.Activator;
-import org.apache.hadoop.eclipse.servers.DefineHadoopServerLocWizardPage;
-import org.eclipse.core.runtime.FileLocator;
-import org.eclipse.core.runtime.Path;
+import org.apache.hadoop.eclipse.ImageLibrary;
+import org.apache.hadoop.eclipse.servers.HadoopLocationWizard;
 import org.eclipse.jface.action.Action;
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.wizard.Wizard;
 import org.eclipse.jface.wizard.WizardDialog;
 
@@ -34,35 +29,28 @@ import org.eclipse.jface.wizard.WizardDialog;
  * Action corresponding to creating a new MapReduce Server.
  */
 
-public class NewServerAction extends Action {
-  public NewServerAction() {
-    setText("New Hadoop Server");
-    try {
-      // TODO decorate with + sign to indicate create
-      setImageDescriptor(ImageDescriptor.createFromURL((FileLocator
-          .toFileURL(FileLocator.find(Activator.getDefault().getBundle(),
-              new Path("resources/hadoop_small.gif"), null)))));
-    } catch (IOException e) {
-      /* Ignore if no image */
-      e.printStackTrace();
-    }
+public class NewLocationAction extends Action {
+  public NewLocationAction() {
+    setText("New Hadoop location...");
+    setImageDescriptor(ImageLibrary.get("server.view.action.location.new"));
   }
 
   @Override
   public void run() {
     WizardDialog dialog = new WizardDialog(null, new Wizard() {
-      private DefineHadoopServerLocWizardPage page = new DefineHadoopServerLocWizardPage();
+      private HadoopLocationWizard page = new HadoopLocationWizard();
 
       @Override
       public void addPages() {
         super.addPages();
-        setWindowTitle("New Hadoop Server Location");
+        setWindowTitle("New Hadoop location...");
         addPage(page);
       }
 
       @Override
       public boolean performFinish() {
-        return page.performFinish() != null;
+        page.performFinish();
+        return true;
       }
 
     });

@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?eclipse version="3.2"?>
+
 <plugin>
-   <extension
+
+   <!-- extension
          point="org.eclipse.debug.core.launchConfigurationTypes">
       <launchConfigurationType
-            delegate="org.apache.hadoop.eclipse.launch.StartMapReduceServer"
+            delegate="org.apache.hadoop.eclipse.launch.HadoopLaunchDelegate"
             id="org.apache.hadoop.eclipse.launch.StartServer"
             modes="run,debug"
             name="Start Hadoop Server"
             public="true"/> 
-   </extension>
+   </extension -->
+
    <extension 
          name="MapReduce Nature" 
          id="org.apache.hadoop.eclipse.Nature"
@@ -18,9 +21,12 @@
          <run class="org.apache.hadoop.eclipse.MapReduceNature"/>
       </runtime>
    </extension>
+
    <extension 
          point="org.eclipse.ui.ide.projectNatureImages">
    </extension>
+
+   <!-- Wizards: new Mapper, Reducer, Driver -->
    <extension
          point="org.eclipse.ui.newWizards">
       <primaryWizard id="org.apache.hadoop.eclipse.NewProjectWizard"/> 
@@ -31,7 +37,7 @@
             hasPages="true"
             icon="resources/Elephant16x16.gif"
             id="org.apache.hadoop.eclipse.NewProjectWizard"
-            name="MapReduce Project"
+            name="Map/Reduce Project"
             preferredPerspectives="org.apache.hadoop.eclipse.Perspective"
             project="true"/>
       <wizard
@@ -46,7 +52,8 @@
             class="org.apache.hadoop.eclipse.NewReducerWizard"
             icon="resources/reducer16.png"
             id="org.apache.hadoop.eclipse.NewReducerWizard"
-            name="Reducer"/>
+            name="Reducer"
+            project="false"/>
       <wizard
             category="org.apache.hadoop.eclipse.category"
             class="org.apache.hadoop.eclipse.NewDriverWizard"
@@ -56,8 +63,9 @@
             project="false"/>
       <category
             id="org.apache.hadoop.eclipse.category"
-            name="MapReduce"/>
+            name="Map/Reduce"/>
    </extension>
+
    <extension
          point="org.eclipse.debug.ui.launchConfigurationTypeImages">
       <launchConfigurationTypeImage
@@ -65,6 +73,7 @@
             icon="resources/elephantblue16x16.gif"
             id="Hadouken.launchConfigurationTypeImage1"/>
    </extension>
+
    <extension
          point="org.eclipse.debug.ui.launchConfigurationTabGroups">
       <launchConfigurationTabGroup
@@ -74,14 +83,17 @@
      
    </extension>
 
+   <!-- Perspective: Map/Reduce -->
    <extension
          point="org.eclipse.ui.perspectives">
       <perspective
             class="org.apache.hadoop.eclipse.HadoopPerspectiveFactory"
             icon="resources/elephantblue16x16.gif"
             id="org.apache.hadoop.eclipse.Perspective"
-            name="MapReduce"/>
+            name="Map/Reduce"/>
    </extension>
+
+   <!-- Needed: allows DFS Browsing in Navigator! [TODO] -->
    <extension
          point="org.eclipse.core.expressions.propertyTesters">
       <propertyTester
@@ -97,10 +109,12 @@
             properties="server"
             type="org.eclipse.wst.server.core.IServer"/>
    </extension>
+
+   <!-- Run on Hadoop action -->
    <extension
          point="org.eclipse.debug.ui.launchShortcuts">
       <shortcut
-            class="org.apache.hadoop.eclipse.launch.LaunchShortcut"
+            class="org.apache.hadoop.eclipse.launch.HadoopApplicationLaunchShortcut"
             icon="resources/elephantblue16x16.gif"
             id="org.apache.hadoop.eclipse.launch.shortcut"
             label="Run on Hadoop"
@@ -126,19 +140,25 @@
          <perspective id="org.apache.hadoop.eclipse.Perspective"/>
       </shortcut>
    </extension>
+   
+   <!-- Hadoop locations view -->
    <extension
          point="org.eclipse.ui.views">
       <category
-            id="com.ibm.hipods.mapreduce.views.category"
+            id="org.apache.hadoop.eclipse.view.servers"
             name="MapReduce Tools"/>
       <view
             allowMultiple="false"
-            category="com.ibm.hipods.mapreduce.views.category"
+            category="org.apache.hadoop.eclipse.view.servers"
             class="org.apache.hadoop.eclipse.view.servers.ServerView"
+            icon="resources/hadoop-logo-16x16.png"
             id="org.apache.hadoop.eclipse.view.servers"
-            name="MapReduce Servers"/>
+            name="Map/Reduce Locations">
+      </view>
    </extension>
-   <extension
+   
+   <!-- ??? -->
+   <!-- extension
          point="org.eclipse.ui.cheatsheets.cheatSheetContent">
       <category
             id="org.apache.hadoop.eclipse.cheatsheet.Examples"
@@ -149,7 +169,9 @@
             contentFile="resources/HelloWorld.xml"
             id="org.apache.hadoop.eclipse.cheatsheet"
             name="Write a MapReduce application"/>
-   </extension>
+   </extension -->
+
+   <!-- DFS Browser -->
    <extension
          point="org.eclipse.ui.navigator.navigatorContent">
       <navigatorContent
@@ -158,12 +180,12 @@
             icon="resources/elephantblue16x16.gif"
             id="org.apache.hadoop.eclipse.views.dfscontent"
             labelProvider="org.apache.hadoop.eclipse.dfs.DFSContentProvider"
-            name="Distributed File Systems"
-            priority="highest"
+            name="Hadoop Distributed File Systems"
+            priority="normal"
             providesSaveables="false">
          <triggerPoints>
          	<or>
-             <instanceof value="org.apache.hadoop.eclipse.dfs.DfsPath"/>
+             <instanceof value="org.apache.hadoop.eclipse.dfs.DFSPath"/>
              <adapt type="org.eclipse.core.resources.IResource">
                 <test
                       forcePluginActivation="true"
@@ -175,13 +197,16 @@
          </actionProvider>
          <possibleChildren>
          	<or>
-	            <instanceof value="org.apache.hadoop.eclipse.dfs.DfsPath"/>
     	        <instanceof value="org.eclipse.wst.server.core.IServer"/>
-        	    <instanceof value="org.apache.hadoop.eclipse.dfs.DFSContentProvider$DFS"/>
+        	    <instanceof value="org.apache.hadoop.eclipse.dfs.DFSLocationsRoot"/>
+        	    <instanceof value="org.apache.hadoop.eclipse.dfs.DFSLocation"/>
+	            <instanceof value="org.apache.hadoop.eclipse.dfs.DFSPath"/>
         	</or>
          </possibleChildren>
       </navigatorContent>
    </extension>
+   
+   <!-- DFS Actions -->
    <extension
          point="org.eclipse.ui.navigator.viewer">
       <viewer
@@ -225,35 +250,35 @@
                   isRoot="false"
                   pattern="org.apache.hadoop.eclipse.views.dfscontent"/>
             <actionExtension pattern="org.apache.hadoop.eclipse.views.dfscontent.*"/>
-
-				
-		   
-
-
-				
-							
          </includes>
       </viewerContentBinding>
    </extension>
-   <extension
+   
+   <!-- HDFS FileSystem registration [TODO] -->
+   <!-- extension
          point="org.eclipse.core.filesystem.filesystems">
-      <filesystem scheme="dfs">
+      <filesystem scheme="hdfs">
          <run class="org.apache.hadoop.eclipse.dfs.FileSystem"/>
       </filesystem>
-   </extension>
+   </extension -->
+   
+   <!--
    <extension
          point="org.eclipse.ui.popupMenus">
       <viewerContribution
             id="Hadouken.viewerContribution1"
             targetID="org.eclipse.ui.navigator.ProjectExplorer#PopupMenu"/>
-   </extension>
+   </extension> -->
+   
+   <!-- Preferences -->
    <extension
          point="org.eclipse.ui.preferencePages">
       <page
-            class="org.apache.hadoop.eclipse.preferences.HadoopHomeDirPreferencePage"
-            id="org.apache.hadoop.eclipse.preferences.HadoopHomeDirPreferencePage"
-            name="Hadoop Home Directory"/>
+            class="org.apache.hadoop.eclipse.preferences.MapReducePreferencePage"
+            id="org.apache.hadoop.eclipse.preferences.MapReducePreferencePage"
+            name="Hadoop Map/Reduce"/>
    </extension>
+
    <extension
          point="org.eclipse.core.runtime.preferences">
       <initializer class="org.apache.hadoop.eclipse.preferences.PreferenceInitializer"/>

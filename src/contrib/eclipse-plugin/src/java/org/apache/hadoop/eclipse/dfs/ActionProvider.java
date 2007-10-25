@@ -18,23 +18,20 @@
 
 package org.apache.hadoop.eclipse.dfs;
 
-import java.util.HashMap;
-import java.util.Map;
-
+import org.apache.hadoop.eclipse.ImageLibrary;
+import org.apache.hadoop.eclipse.actions.DFSActionImpl;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.ui.IActionBars;
-import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.actions.ActionFactory;
 import org.eclipse.ui.navigator.CommonActionProvider;
 import org.eclipse.ui.navigator.ICommonActionConstants;
 import org.eclipse.ui.navigator.ICommonActionExtensionSite;
 import org.eclipse.ui.navigator.ICommonMenuConstants;
-import org.eclipse.ui.plugin.AbstractUIPlugin;
 
 /**
  * Allows the user to delete and refresh items in the DFS tree
@@ -42,10 +39,7 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 
 public class ActionProvider extends CommonActionProvider {
 
-  private ICommonActionExtensionSite site;
-
-  private Map<String, ImageDescriptor> descriptors =
-      new HashMap<String, ImageDescriptor>();
+  private static ICommonActionExtensionSite site;
 
   public ActionProvider() {
   }
@@ -53,38 +47,34 @@ public class ActionProvider extends CommonActionProvider {
   /* @inheritDoc */
   @Override
   public void init(ICommonActionExtensionSite site) {
+    if (ActionProvider.site != null) {
+      System.err.printf("%s: Multiple init()\n", this.getClass()
+          .getCanonicalName());
+      return;
+    }
     super.init(site);
-    this.site = site;
-
-    descriptors
-        .put("dfs.delete", PlatformUI.getWorkbench().getSharedImages()
-            .getImageDescriptor(ISharedImages.IMG_TOOL_DELETE));
-    descriptors.put("dfs.refresh", AbstractUIPlugin
-        .imageDescriptorFromPlugin("org.eclipse.core.tools.resources",
-            "icons/refresh.gif"));
-    // NOTE(jz)
-    // pretty brittle, but worst case no image
-    // descriptors.put("dfs.put",
-    // NavigatorPlugin.imageDescriptorFromPlugin("org.eclipse.core.tools.resources",
-    // "icons/refresh.gif"));
+    ActionProvider.site = site;
   }
 
   /* @inheritDoc */
   @Override
   public void fillActionBars(IActionBars actionBars) {
     actionBars.setGlobalActionHandler(ActionFactory.DELETE.getId(),
-        new DfsAction("dfs.delete", "Delete"));
+        new DFSAction(DFSActions.DELETE));
     actionBars.setGlobalActionHandler(ActionFactory.REFRESH.getId(),
-        new DfsAction("dfs.refresh", "Refresh"));
+        new DFSAction(DFSActions.REFRESH));
 
-    if ((this.site != null)
-        && (this.site.getStructuredViewer().getSelection() instanceof IStructuredSelection)
-        && (((IStructuredSelection) this.site.getStructuredViewer()
+    if (site == null)
+      return;
+
+    if ((site.getStructuredViewer().getSelection() instanceof IStructuredSelection)
+        && (((IStructuredSelection) site.getStructuredViewer()
             .getSelection()).size() == 1)
-        && (((IStructuredSelection) this.site.getStructuredViewer()
-            .getSelection()).getFirstElement() instanceof DfsFile)) {
+        && (((IStructuredSelection) site.getStructuredViewer()
+            .getSelection()).getFirstElement() instanceof DFSFile)) {
+
       actionBars.setGlobalActionHandler(ICommonActionConstants.OPEN,
-          new DfsAction("dfs.open", "View"));
+          new DFSAction(DFSActions.OPEN));
     }
 
     actionBars.updateActionBars();
@@ -93,75 +83,100 @@ public class ActionProvider extends CommonActionProvider {
   /* @inheritDoc */
   @Override
   public void fillContextMenu(IMenuManager menu) {
-    menu.appendToGroup(ICommonMenuConstants.GROUP_EDIT, new DfsAction(
-        "dfs.delete", "Delete"));
-    menu.appendToGroup(ICommonMenuConstants.GROUP_EDIT, new DfsAction(
-        "dfs.refresh", "Refresh"));
+    /*
+     * Actions on multiple selections
+     */
+    menu.appendToGroup(ICommonMenuConstants.GROUP_EDIT, new DFSAction(
+        DFSActions.DELETE));
 
-    menu.appendToGroup(ICommonMenuConstants.GROUP_NEW, new DfsAction(
-        "dfs.get", "Download to local directory..."));
+    menu.appendToGroup(ICommonMenuConstants.GROUP_OPEN, new DFSAction(
+        DFSActions.REFRESH));
 
-    if (this.site == null)
+    menu.appendToGroup(ICommonMenuConstants.GROUP_NEW, new DFSAction(
+        DFSActions.DOWNLOAD));
+
+    if (site == null)
       return;
 
-    ISelection isel = this.site.getStructuredViewer().getSelection();
+    ISelection isel = site.getStructuredViewer().getSelection();
     if (!(isel instanceof IStructuredSelection))
       return;
+
+    /*
+     * Actions on single selections only
+     */
 
     IStructuredSelection issel = (IStructuredSelection) isel;
     if (issel.size() != 1)
       return;
-
     Object element = issel.getFirstElement();
 
-    if (element instanceof DfsFile) {
-      menu.appendToGroup(ICommonMenuConstants.GROUP_OPEN, new DfsAction(
-          "dfs.open", "View"));
+    if (element instanceof DFSFile) {
+      menu.appendToGroup(ICommonMenuConstants.GROUP_OPEN, new DFSAction(
+          DFSActions.OPEN));
 
-    } else if (element instanceof DfsFolder) {
-      menu.appendToGroup(ICommonMenuConstants.GROUP_NEW, new DfsAction(
-          "dfs.put", "Import from local directory..."));
+    } else if (element instanceof DFSFolder) {
+      menu.appendToGroup(ICommonMenuConstants.GROUP_NEW, new DFSAction(
+          DFSActions.MKDIR));
+      menu.appendToGroup(ICommonMenuConstants.GROUP_NEW, new DFSAction(
+          DFSActions.UPLOAD_FILES));
+      menu.appendToGroup(ICommonMenuConstants.GROUP_NEW, new DFSAction(
+          DFSActions.UPLOAD_DIR));
+
+    } else if (element instanceof DFSLocation) {
+      menu.appendToGroup(ICommonMenuConstants.GROUP_OPEN, new DFSAction(
+          DFSActions.RECONNECT));
+
+    } else if (element instanceof DFSLocationsRoot) {
+      menu.appendToGroup(ICommonMenuConstants.GROUP_OPEN, new DFSAction(
+          DFSActions.DISCONNECT));
     }
+
   }
 
   /**
-   * 
+   * Representation of an action on a DFS entry in the browser
    */
-  public class DfsAction extends Action {
+  public static class DFSAction extends Action {
 
-    private final String actionDefinition;
+    private final String id;
 
     private final String title;
 
-    public DfsAction(String actionDefinition, String title) {
-      this.actionDefinition = actionDefinition;
-      this.title = title;
+    private DFSActions action;
 
+    public DFSAction(String id, String title) {
+      this.id = id;
+      this.title = title;
     }
 
+    public DFSAction(DFSActions action) {
+      this.id = action.id;
+      this.title = action.title;
+    }
+
+    /* @inheritDoc */
     @Override
     public String getText() {
       return this.title;
     }
 
+    /* @inheritDoc */
     @Override
     public ImageDescriptor getImageDescriptor() {
-      if (descriptors.containsKey(getActionDefinitionId())) {
-        return (ImageDescriptor) descriptors.get(getActionDefinitionId());
-      } else {
-        return null;
-      }
+      return ImageLibrary.get(getActionDefinitionId());
     }
 
+    /* @inheritDoc */
     @Override
     public String getActionDefinitionId() {
-      return actionDefinition;
+      return id;
     }
 
+    /* @inheritDoc */
     @Override
     public void run() {
-      org.apache.hadoop.eclipse.actions.DfsAction action =
-          new org.apache.hadoop.eclipse.actions.DfsAction();
+      DFSActionImpl action = new DFSActionImpl();
       action.setActivePart(this, PlatformUI.getWorkbench()
           .getActiveWorkbenchWindow().getActivePage().getActivePart());
       action.selectionChanged(this, site.getStructuredViewer()
@@ -169,6 +184,7 @@ public class ActionProvider extends CommonActionProvider {
       action.run(this);
     }
 
+    /* @inheritDoc */
     @Override
     public boolean isEnabled() {
       return true;

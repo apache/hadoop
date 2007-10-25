@@ -42,8 +42,8 @@ import org.eclipse.ui.INewWizard;
 import org.eclipse.ui.IWorkbench;
 
 /**
- * Wizard for creating a new Mapper class (a class that runs the Map portion of
- * a MapReduce job). The class is pre-filled with a template.
+ * Wizard for creating a new Mapper class (a class that runs the Map portion
+ * of a MapReduce job). The class is pre-filled with a template.
  * 
  */
 
@@ -84,15 +84,7 @@ public class NewMapperWizard extends NewElementWizard implements INewWizard,
 
       setTitle("Mapper");
       setDescription("Create a new Mapper implementation.");
-      try {
-        setImageDescriptor(ImageDescriptor.createFromURL((FileLocator
-            .toFileURL(FileLocator.find(Activator.getDefault().getBundle(),
-                new Path("resources/mapwiz.png"), null)))));
-      } catch (IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
-
+      setImageDescriptor(ImageLibrary.get("wizard.mapper.new"));
     }
 
     public void setSelection(IStructuredSelection selection) {

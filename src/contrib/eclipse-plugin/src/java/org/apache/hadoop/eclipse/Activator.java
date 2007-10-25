@@ -27,18 +27,28 @@ import org.osgi.framework.BundleContext;
  */
 public class Activator extends AbstractUIPlugin {
 
-  // The plug-in ID
-  public static final String PLUGIN_ID =
-      "org.apache.hadoop.eclipse.Hadouken";
+  /**
+   * The plug-in ID
+   */
+  public static final String PLUGIN_ID = "org.apache.hadoop.eclipse";
 
-  // The shared instance
+  /**
+   * The shared unique instance (singleton)
+   */
   private static Activator plugin;
 
   /**
-   * The constructor
+   * Constructor
    */
   public Activator() {
-    plugin = this;
+    synchronized (Activator.class) {
+      if (plugin != null) {
+        // Not a singleton!?
+        throw new RuntimeException("Activator for " + PLUGIN_ID
+            + " is not a singleton");
+      }
+      plugin = this;
+    }
   }
 
   /* @inheritDoc */
@@ -56,9 +66,9 @@ public class Activator extends AbstractUIPlugin {
   }
 
   /**
-   * Returns the shared instance
+   * Returns the shared unique instance (singleton)
    * 
-   * @return the shared instance
+   * @return the shared unique instance (singleton)
    */
   public static Activator getDefault() {
     return plugin;

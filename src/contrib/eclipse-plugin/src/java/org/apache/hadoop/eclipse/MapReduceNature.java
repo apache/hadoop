@@ -50,7 +50,7 @@ public class MapReduceNature implements IProjectNature {
   static Logger log = Logger.getLogger(MapReduceNature.class.getName());
 
   /**
-   * Configures an Eclipse project as a MapReduce project by adding the
+   * Configures an Eclipse project as a Map/Reduce project by adding the
    * Hadoop libraries to a project's classpath.
    */
   public void configure() throws CoreException {
@@ -98,7 +98,7 @@ public class MapReduceNature implements IProjectNature {
           new IClasspathEntry[currentCp.length + coreJars.size()];
       System.arraycopy(currentCp, 0, newCp, 0, currentCp.length);
 
-      final Iterator i = coreJars.iterator();
+      final Iterator<File> i = coreJars.iterator();
       int count = 0;
       while (i.hasNext()) {
         // for (int i = 0; i < s_coreJarNames.length; i++) {
@@ -106,7 +106,7 @@ public class MapReduceNature implements IProjectNature {
         final File f = (File) i.next();
         // URL url = FileLocator.toFileURL(FileLocator.find(bundle, new
         // Path("lib/" + s_coreJarNames[i]), null));
-        URL url = f.toURL();
+        URL url = f.toURI().toURL();
         log.finer("hadoop library url.getPath() = " + url.getPath());
 
         newCp[newCp.length - 1 - count] =
@@ -116,8 +116,8 @@ public class MapReduceNature implements IProjectNature {
 
       javaProject.setRawClasspath(newCp, new NullProgressMonitor());
     } catch (Exception e) {
-      log.log(Level.SEVERE, "IOException generated in HadoukenNature.class",
-          e);
+      log.log(Level.SEVERE, "IOException generated in "
+          + this.getClass().getCanonicalName(), e);
     }
   }
 
@@ -126,7 +126,6 @@ public class MapReduceNature implements IProjectNature {
    */
   public void deconfigure() throws CoreException {
     // TODO Auto-generated method stub
-
   }
 
   /**
@@ -143,4 +142,5 @@ public class MapReduceNature implements IProjectNature {
   public void setProject(IProject project) {
     this.project = project;
   }
+
 }

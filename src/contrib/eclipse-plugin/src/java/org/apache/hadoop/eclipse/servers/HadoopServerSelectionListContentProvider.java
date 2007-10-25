@@ -26,7 +26,6 @@ import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.graphics.Image;
 
-
 /**
  * Provider that enables selection of a predefined Hadoop server.
  */
@@ -47,10 +46,12 @@ public class HadoopServerSelectionListContentProvider implements
 
   public String getColumnText(Object element, int columnIndex) {
     if (element instanceof HadoopServer) {
+      HadoopServer location = (HadoopServer) element;
       if (columnIndex == 0) {
-        return ((HadoopServer) element).getName();
+        return location.getLocationName();
+
       } else if (columnIndex == 1) {
-        return ((HadoopServer) element).toString();
+        return location.getMasterHostName();
       }
     }
 

@@ -18,17 +18,12 @@
 
 package org.apache.hadoop.eclipse.dfs;
 
-import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.apache.hadoop.eclipse.Activator;
+import org.apache.hadoop.eclipse.ImageLibrary;
 import org.apache.hadoop.eclipse.server.HadoopServer;
-import org.apache.hadoop.eclipse.servers.IHadoopServerListener;
 import org.apache.hadoop.eclipse.servers.ServerRegistry;
-import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.runtime.FileLocator;
-import org.eclipse.core.runtime.IAdaptable;
-import org.eclipse.core.runtime.Path;
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ILabelProviderListener;
 import org.eclipse.jface.viewers.ITreeContentProvider;
@@ -36,12 +31,25 @@ import org.eclipse.jface.viewers.StructuredViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.ui.ISharedImages;
-import org.eclipse.ui.PlatformUI;
-import org.eclipse.ui.model.IWorkbenchAdapter;
 
 /**
- * Handles viewing the DFS
+ * Handles viewing of DFS locations
+ * <p>
+ * 
+ * The content handled by this provider is a tree:
+ * 
+ * <tt>
+ * <br>DFSLocationsRoot
+ * <br>\_HadoopServer
+ * <br>|  \_DfsFolder
+ * <br>|  |  \_DfsFile
+ * <br>|  \_DfsFolder
+ * <br>| ...
+ * <br>\_HadoopServer...
+ * </tt>
+ * 
+ * The code should not block here: blocking operations need to be done
+ * asynchronously so as not to freeze the UI!
  */
 public class DFSContentProvider implements ITreeContentProvider,
     ILabelProvider {
@@ -51,153 +59,186 @@ public class DFSContentProvider implements ITreeContentProvider,
    */
   private Viewer viewer;
 
-  private ImageDescriptor hadoopImage;
+  private StructuredViewer sviewer;
 
-  private ImageDescriptor folderImage;
+  private Map<HadoopServer, DFSContent> rootFolders =
+      new HashMap<HadoopServer, DFSContent>();
 
-  private ImageDescriptor fileImage;
-
-  private ImageDescriptor dfsImage;
-
+  /**
+   * Constructor: load resources (icons).
+   */
   public DFSContentProvider() {
-    try {
-      hadoopImage =
-          ImageDescriptor.createFromURL((FileLocator.toFileURL(FileLocator
-              .find(Activator.getDefault().getBundle(), new Path(
-                  "resources/hadoop_small.gif"), null))));
-      dfsImage =
-          ImageDescriptor.createFromURL((FileLocator.toFileURL(FileLocator
-              .find(Activator.getDefault().getBundle(), new Path(
-                  "resources/files.gif"), null))));
-    } catch (IOException e) {
-      e.printStackTrace();
-      // no images, okay, will deal with that
-    }
   }
 
-  public Object[] getChildren(Object parentElement) {
-    if (parentElement instanceof DummyWorkspace) {
-      return ResourcesPlugin.getWorkspace().getRoot().getProjects();
-    }
-    if (parentElement instanceof DFS) {
-      return ServerRegistry.getInstance().getServers().toArray();
-    } else if (parentElement instanceof HadoopServer) {
-      return new Object[] { new DfsFolder((HadoopServer) parentElement, "/",
-          viewer) };
-    } else if (parentElement instanceof DfsFolder) {
-      return ((DfsFolder) parentElement).getChildren();
-    }
+  private final DFSLocationsRoot locationsRoot = new DFSLocationsRoot(this);
 
-    return new Object[0];
-  }
+  /*
+   * ITreeContentProvider implementation
+   */
 
-  public Object getParent(Object element) {
-    if (element instanceof DfsPath) {
-      return ((DfsPath) element).getParent();
-    } else if (element instanceof HadoopServer) {
-      return dfs;
-    } else {
+  /* @inheritDoc */
+  public Object[] getChildren(Object parent) {
+
+    if (!(parent instanceof DFSContent))
       return null;
-    }
+    DFSContent content = (DFSContent) parent;
+    return content.getChildren();
   }
 
-  public boolean hasChildren(Object element) {
-    return (element instanceof HadoopServer)
-        || (element instanceof DfsFolder) || (element instanceof DFS)
-        || (element instanceof DummyWorkspace);
-  }
+  public Object[] test(Object parentElement) {
+    if (parentElement instanceof DFSLocationsRoot) {
+      return ServerRegistry.getInstance().getServers().toArray();
 
-  public class DFS {
-    public DFS() {
-      ServerRegistry.getInstance().addListener(new IHadoopServerListener() {
-        public void serverChanged(final HadoopServer location, final int type) {
-          if (viewer != null) {
-            Display.getDefault().syncExec(new Runnable() {
-              public void run() {
-                if (type == ServerRegistry.SERVER_STATE_CHANGED) {
-                  ((StructuredViewer) viewer).refresh(location);
-                } else {
-                  ((StructuredViewer) viewer).refresh(ResourcesPlugin
-                      .getWorkspace().getRoot());
-                }
-              }
-            });
-          }
-        }
-      });
+    } else if (parentElement instanceof HadoopServer) {
+      final HadoopServer location = (HadoopServer) parentElement;
+      Object root = rootFolders.get(location);
+      if (root != null)
+        return new Object[] { root };
+
+      return new Object[] { "Connecting to DFS..." };
+
+    } else if (parentElement instanceof DFSFolder) {
+      DFSFolder folder = (DFSFolder) parentElement;
+      return folder.getChildren();
     }
 
-    @Override
-    public String toString() {
-      return "MapReduce DFS";
-    }
+    return new Object[] { "<Unknown DFSContent>" };
   }
 
-  private final DFS dfs = new DFS();
+  /* @inheritDoc */
+  public Object getParent(Object element) {
 
-  private final Object workspace = new DummyWorkspace();
+    if (element instanceof DFSPath) {
+      return ((DFSPath) element).getParent();
 
-  private static class DummyWorkspace {
-    @Override
-    public String toString() {
-      return "Workspace";
-    }
-  };
-
-  public Object[] getElements(final Object inputElement) {
-    return ServerRegistry.getInstance().getServers().toArray();
-  }
-
-  public void dispose() {
-
-  }
-
-  public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
-    this.viewer = viewer;
-  }
-
-  public Image getImage(Object element) {
-    if (element instanceof DummyWorkspace) {
-      IWorkbenchAdapter a =
-          (IWorkbenchAdapter) ((IAdaptable) ResourcesPlugin.getWorkspace()
-              .getRoot()).getAdapter(IWorkbenchAdapter.class);
-      return a.getImageDescriptor(ResourcesPlugin.getWorkspace().getRoot())
-          .createImage();
-    } else if (element instanceof DFS) {
-      return dfsImage.createImage(true);
     } else if (element instanceof HadoopServer) {
-      return hadoopImage.createImage(true);
-    } else if (element instanceof DfsFolder) {
-      return PlatformUI.getWorkbench().getSharedImages().getImageDescriptor(
-          ISharedImages.IMG_OBJ_FOLDER).createImage();
-    } else if (element instanceof DfsFile) {
-      return PlatformUI.getWorkbench().getSharedImages().getImageDescriptor(
-          ISharedImages.IMG_OBJ_FILE).createImage();
+      return locationsRoot;
     }
 
     return null;
   }
 
-  public String getText(Object element) {
-    if (element instanceof DummyWorkspace) {
-      IWorkbenchAdapter a =
-          (IWorkbenchAdapter) ((IAdaptable) ResourcesPlugin.getWorkspace()
-              .getRoot()).getAdapter(IWorkbenchAdapter.class);
-      return a.getLabel(ResourcesPlugin.getWorkspace().getRoot());
-    } else {
-      return element.toString();
+  /* @inheritDoc */
+  public boolean hasChildren(Object element) {
+    if (element instanceof DFSContent) {
+      DFSContent content = (DFSContent) element;
+      return content.hasChildren();
     }
+    return false;
   }
 
+  /*
+   * IStructureContentProvider implementation
+   */
+
+  /* @inheritDoc */
+  public Object[] getElements(final Object inputElement) {
+    return new Object[] { locationsRoot };
+    // return ServerRegistry.getInstance().getServers().toArray();
+  }
+
+  /*
+   * ILabelProvider implementation
+   */
+
+  /* @inheritDoc */
+  public Image getImage(Object element) {
+    if (element instanceof DFSLocationsRoot)
+      return ImageLibrary.getImage("dfs.browser.root.entry");
+
+    else if (element instanceof DFSLocation)
+      return ImageLibrary.getImage("dfs.browser.location.entry");
+
+    else if (element instanceof DFSFolder)
+      return ImageLibrary.getImage("dfs.browser.folder.entry");
+
+    else if (element instanceof DFSFile)
+      return ImageLibrary.getImage("dfs.browser.file.entry");
+
+    return null;
+  }
+
+  /* @inheritDoc */
+  public String getText(Object element) {
+    if (element instanceof DFSFile)
+      return ((DFSFile) element).toDetailedString();
+
+    return element.toString();
+  }
+
+  /*
+   * IBaseLabelProvider implementation
+   */
+
+  /* @inheritDoc */
   public void addListener(ILabelProviderListener listener) {
-
   }
 
+  /* @inheritDoc */
+  public void removeListener(ILabelProviderListener listener) {
+  }
+
+  /* @inheritDoc */
   public boolean isLabelProperty(Object element, String property) {
     return false;
   }
 
-  public void removeListener(ILabelProviderListener listener) {
+  /*
+   * IContentProvider implementation
+   */
 
+  /* @inheritDoc */
+  public void dispose() {
   }
+
+  /* @inheritDoc */
+  public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
+    this.viewer = viewer;
+    if ((viewer != null) && (viewer instanceof StructuredViewer))
+      this.sviewer = (StructuredViewer) viewer;
+    else
+      this.sviewer = null;
+  }
+
+  /*
+   * Miscellaneous
+   */
+
+  /**
+   * Ask the viewer for this content to refresh
+   */
+  void refresh() {
+    // no display, nothing to update
+    if (this.viewer == null)
+      return;
+
+    Display.getDefault().asyncExec(new Runnable() {
+      public void run() {
+        DFSContentProvider.this.viewer.refresh();
+      }
+    });
+  }
+
+  /**
+   * Ask the viewer to refresh a single element
+   * 
+   * @param content what to refresh
+   */
+  void refresh(final DFSContent content) {
+    if (this.sviewer != null) {
+      Display.getDefault().asyncExec(new Runnable() {
+        public void run() {
+          DFSContentProvider.this.sviewer.refresh(content);
+        }
+      });
+
+    } else {
+      refresh();
+    }
+  }
+
+  Viewer getViewer() {
+    return this.viewer;
+  }
+
 }

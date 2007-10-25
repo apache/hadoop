@@ -27,9 +27,8 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.PlatformUI;
 
-
 /**
- * Action to open a new MapReduce project.
+ * Action to open a new Map/Reduce project.
  */
 
 public class OpenNewMRProjectAction extends Action {

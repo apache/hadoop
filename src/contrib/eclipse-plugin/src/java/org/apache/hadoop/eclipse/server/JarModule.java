@@ -22,37 +22,49 @@ import java.io.File;
 import java.util.logging.Logger;
 
 import org.apache.hadoop.eclipse.Activator;
+import org.apache.hadoop.eclipse.ErrorMessageDialog;
 import org.eclipse.core.resources.IResource;
-import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaElement;
-import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IType;
-import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.ui.jarpackager.IJarExportRunnable;
 import org.eclipse.jdt.ui.jarpackager.JarPackageData;
-
+import org.eclipse.jface.operation.IRunnableWithProgress;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.PlatformUI;
 
 /**
- * Methods for interacting with the jar file containing the 
+ * Methods for interacting with the jar file containing the
  * Mapper/Reducer/Driver classes for a MapReduce job.
  */
 
-public class JarModule {
+public class JarModule implements IRunnableWithProgress {
+
   static Logger log = Logger.getLogger(JarModule.class.getName());
 
-  private final IResource resource;
+  private IResource resource;
+
+  private File jarFile;
 
   public JarModule(IResource resource) {
     this.resource = resource;
   }
 
+  public String getName() {
+    return resource.getProject().getName() + "/" + resource.getName();
+  }
+
   /**
-   * Create the jar file containing all the MapReduce job classes.
+   * Creates a JAR file containing the given resource (Java class with
+   * main()) and all associated resources
+   * 
+   * @param resource the resource
+   * @return a file designing the created package
    */
-  public File buildJar(IProgressMonitor monitor) {
+  public void run(IProgressMonitor monitor) {
+
     log.fine("Build jar");
     JarPackageData jarrer = new JarPackageData();
 
@@ -61,42 +73,74 @@ public class JarModule {
     jarrer.setExportOutputFolders(true);
     jarrer.setOverwrite(true);
 
-    Path path;
-
     try {
-      IJavaProject project = (IJavaProject) resource.getProject().getNature(
-          JavaCore.NATURE_ID); // todo(jz)
+      // IJavaProject project =
+      // (IJavaProject) resource.getProject().getNature(JavaCore.NATURE_ID);
+
       // check this is the case before letting this method get called
       Object element = resource.getAdapter(IJavaElement.class);
       IType type = ((ICompilationUnit) element).findPrimaryType();
       jarrer.setManifestMainClass(type);
-      path = new Path(new File(Activator.getDefault().getStateLocation()
-          .toFile(), resource.getProject().getName() + "_project_hadoop_"
-          + resource.getName() + "_" + System.currentTimeMillis() + ".jar")
-          .getAbsolutePath());
-      jarrer.setJarLocation(path);
+
+      // Create a temporary JAR file name
+      File baseDir = Activator.getDefault().getStateLocation().toFile();
+
+      String prefix =
+          String.format("%s_%s-", resource.getProject().getName(), resource
+              .getName());
+      File jarFile = File.createTempFile(prefix, ".jar", baseDir);
+      jarrer.setJarLocation(new Path(jarFile.getAbsolutePath()));
 
       jarrer.setElements(resource.getProject().members(IResource.FILE));
-      IJarExportRunnable runnable = jarrer.createJarExportRunnable(null);
+      IJarExportRunnable runnable =
+          jarrer.createJarExportRunnable(Display.getDefault()
+              .getActiveShell());
       runnable.run(monitor);
+
+      this.jarFile = jarFile;
+
     } catch (Exception e) {
       e.printStackTrace();
       throw new RuntimeException(e);
     }
-
-    return path.toFile();
   }
 
-  public String getName() {
-    return resource.getProject().getName() + "/" + resource.getName();
+  /**
+   * Allow the retrieval of the resulting JAR file
+   * 
+   * @return the generated JAR file
+   */
+  public File getJarFile() {
+    return this.jarFile;
   }
 
-  public static JarModule fromMemento(String memento) {
-    return new JarModule(ResourcesPlugin.getWorkspace().getRoot().findMember(
-        Path.fromPortableString(memento)));
+  /**
+   * Static way to create a JAR package for the given resource and showing a
+   * progress bar
+   * 
+   * @param resource
+   * @return
+   */
+  public static File createJarPackage(IResource resource) {
+
+    JarModule jarModule = new JarModule(resource);
+    try {
+      PlatformUI.getWorkbench().getProgressService().run(false, true,
+          jarModule);
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      return null;
+    }
+
+    File jarFile = jarModule.getJarFile();
+    if (jarFile == null) {
+      ErrorMessageDialog.display("Run on Hadoop",
+          "Unable to create or locate the JAR file for the Job");
+      return null;
+    }
+
+    return jarFile;
   }
 
-  public String toMemento() {
-    return resource.getFullPath().toPortableString();
-  }
 }

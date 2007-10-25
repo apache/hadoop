@@ -41,13 +41,13 @@ import org.eclipse.ui.INewWizard;
 import org.eclipse.ui.IWorkbench;
 
 /**
- * Wizard for creating a new Reducer class (a class that runs the Reduce portion
- * of a MapReduce job). The class is pre-filled with a template.
+ * Wizard for creating a new Reducer class (a class that runs the Reduce
+ * portion of a MapReduce job). The class is pre-filled with a template.
  * 
  */
 
-public class NewReducerWizard extends NewElementWizard implements INewWizard,
-    IRunnableWithProgress {
+public class NewReducerWizard extends NewElementWizard implements
+    INewWizard, IRunnableWithProgress {
   private Page page;
 
   public NewReducerWizard() {
@@ -81,15 +81,7 @@ public class NewReducerWizard extends NewElementWizard implements INewWizard,
 
       setTitle("Reducer");
       setDescription("Create a new Reducer implementation.");
-      try {
-        setImageDescriptor(ImageDescriptor.createFromURL((FileLocator
-            .toFileURL(FileLocator.find(Activator.getDefault().getBundle(),
-                new Path("resources/reducewiz.png"), null)))));
-      } catch (IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
-
+      setImageDescriptor(ImageLibrary.get("wizard.reducer.new"));
     }
 
     public void setSelection(IStructuredSelection selection) {

@@ -70,14 +70,7 @@ public class NewDriverWizardPage extends NewTypeWizardPage {
     this.showContainerSelector = showContainerSelector;
     setTitle("MapReduce Driver");
     setDescription("Create a new MapReduce driver.");
-    try {
-      setImageDescriptor(ImageDescriptor.createFromURL((FileLocator
-          .toFileURL(FileLocator.find(Activator.getDefault().getBundle(),
-              new Path("resources/driverwiz.png"), null)))));
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
+    setImageDescriptor(ImageLibrary.get("wizard.driver.new"));
   }
 
   public void setSelection(IStructuredSelection selection) {

@@ -24,13 +24,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.hadoop.eclipse.preferences.HadoopHomeDirPreferencePage;
+import org.apache.hadoop.eclipse.preferences.MapReducePreferencePage;
 import org.apache.hadoop.eclipse.preferences.PreferenceConstants;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IProjectDescription;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.IConfigurationElement;
 import org.eclipse.core.runtime.IExecutableExtension;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -44,7 +43,6 @@ import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.preference.PreferenceDialog;
 import org.eclipse.jface.preference.PreferenceManager;
 import org.eclipse.jface.preference.PreferenceNode;
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.wizard.IWizardPage;
 import org.eclipse.jface.wizard.Wizard;
@@ -72,8 +70,8 @@ import org.eclipse.ui.wizards.newresource.BasicNewProjectResourceWizard;
 
 public class NewMapReduceProjectWizard extends Wizard implements
     IWorkbenchWizard, IExecutableExtension {
-  static Logger log = Logger.getLogger(NewMapReduceProjectWizard.class
-      .getName());
+  static Logger log =
+      Logger.getLogger(NewMapReduceProjectWizard.class.getName());
 
   private HadoopFirstPage firstPage;
 
@@ -132,19 +130,11 @@ public class NewMapReduceProjectWizard extends Wizard implements
     }
   }
 
-  static class HadoopFirstPage extends WizardNewProjectCreationPage implements
-      SelectionListener {
+  static class HadoopFirstPage extends WizardNewProjectCreationPage
+      implements SelectionListener {
     public HadoopFirstPage() {
       super("New Hadoop Project");
-
-      try {
-        setImageDescriptor(ImageDescriptor.createFromURL((FileLocator
-            .toFileURL(FileLocator.find(Activator.getDefault().getBundle(),
-                new Path("resources/projwiz.png"), null)))));
-      } catch (Exception e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
+      setImageDescriptor(ImageLibrary.get("wizard.mapreduce.project.new"));
     }
 
     private Link openPreferences;
@@ -161,7 +151,7 @@ public class NewMapReduceProjectWizard extends Wizard implements
 
     public String currentPath;
 
-    private Button generateDriver;
+    // private Button generateDriver;
 
     @Override
     public void createControl(Composite parent) {
@@ -174,15 +164,19 @@ public class NewMapReduceProjectWizard extends Wizard implements
       group.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
       group.setText("Hadoop MapReduce Library Installation Path");
       GridLayout layout = new GridLayout(3, true);
-      layout.marginLeft = convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_MARGIN);
-      layout.marginRight = convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_MARGIN);
-      layout.marginTop = convertHorizontalDLUsToPixels(IDialogConstants.VERTICAL_MARGIN);
-      layout.marginBottom = convertHorizontalDLUsToPixels(IDialogConstants.VERTICAL_MARGIN);
+      layout.marginLeft =
+          convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_MARGIN);
+      layout.marginRight =
+          convertHorizontalDLUsToPixels(IDialogConstants.HORIZONTAL_MARGIN);
+      layout.marginTop =
+          convertHorizontalDLUsToPixels(IDialogConstants.VERTICAL_MARGIN);
+      layout.marginBottom =
+          convertHorizontalDLUsToPixels(IDialogConstants.VERTICAL_MARGIN);
       group.setLayout(layout);
 
       workspaceHadoop = new Button(group, SWT.RADIO);
-      GridData d = new GridData(GridData.BEGINNING, GridData.BEGINNING, false,
-          false);
+      GridData d =
+          new GridData(GridData.BEGINNING, GridData.BEGINNING, false, false);
       d.horizontalSpan = 2;
       workspaceHadoop.setLayoutData(d);
       // workspaceHadoop.setText("Use default workbench Hadoop library
@@ -192,9 +186,10 @@ public class NewMapReduceProjectWizard extends Wizard implements
       updateHadoopDirLabelFromPreferences();
 
       openPreferences = new Link(group, SWT.NONE);
-      openPreferences.setText("<a>Configure Hadoop install directory...</a>");
-      openPreferences.setLayoutData(new GridData(GridData.END, GridData.CENTER,
-          false, false));
+      openPreferences
+          .setText("<a>Configure Hadoop install directory...</a>");
+      openPreferences.setLayoutData(new GridData(GridData.END,
+          GridData.CENTER, false, false));
       openPreferences.addSelectionListener(this);
 
       projectHadoop = new Button(group, SWT.RADIO);
@@ -264,8 +259,9 @@ public class NewMapReduceProjectWizard extends Wizard implements
     }
 
     private void updateHadoopDirLabelFromPreferences() {
-      path = Activator.getDefault().getPreferenceStore().getString(
-          PreferenceConstants.P_PATH);
+      path =
+          Activator.getDefault().getPreferenceStore().getString(
+              PreferenceConstants.P_PATH);
 
       if ((path != null) && (path.length() > 0)) {
         workspaceHadoop.setText("Use default Hadoop");
@@ -280,9 +276,10 @@ public class NewMapReduceProjectWizard extends Wizard implements
     public void widgetSelected(SelectionEvent e) {
       if (e.getSource() == openPreferences) {
         PreferenceManager manager = new PreferenceManager();
-        manager.addToRoot(new PreferenceNode("Hadoop Installation Directory",
-            new HadoopHomeDirPreferencePage()));
-        PreferenceDialog dialog = new PreferenceDialog(this.getShell(), manager);
+        manager.addToRoot(new PreferenceNode(
+            "Hadoop Installation Directory", new MapReducePreferencePage()));
+        PreferenceDialog dialog =
+            new PreferenceDialog(this.getShell(), manager);
         dialog.create();
         dialog.setMessage("Select Hadoop Installation Directory");
         dialog.setBlockOnOpen(true);
@@ -325,8 +322,9 @@ public class NewMapReduceProjectWizard extends Wizard implements
      */
 
     firstPage = new HadoopFirstPage();
-    javaPage = new NewJavaProjectWizardPage(ResourcesPlugin.getWorkspace()
-        .getRoot(), firstPage);
+    javaPage =
+        new NewJavaProjectWizardPage(ResourcesPlugin.getWorkspace()
+            .getRoot(), firstPage);
     // newDriverPage = new NewDriverWizardPage(false);
     // newDriverPage.setPageComplete(false); // ensure finish button
     // initially disabled
@@ -345,8 +343,8 @@ public class NewMapReduceProjectWizard extends Wizard implements
               try {
                 monitor.beginTask("Create Hadoop Project", 300);
 
-                javaPage.getRunnable()
-                    .run(new SubProgressMonitor(monitor, 100));
+                javaPage.getRunnable().run(
+                    new SubProgressMonitor(monitor, 100));
 
                 // if( firstPage.generateDriver.getSelection())
                 // {
@@ -356,8 +354,8 @@ public class NewMapReduceProjectWizard extends Wizard implements
                 // SubProgressMonitor(monitor,100));
                 // }
 
-                IProject project = javaPage.getNewJavaProject().getResource()
-                    .getProject();
+                IProject project =
+                    javaPage.getNewJavaProject().getResource().getProject();
                 IProjectDescription description = project.getDescription();
                 String[] existingNatures = description.getNatureIds();
                 String[] natures = new String[existingNatures.length + 1];
@@ -371,7 +369,8 @@ public class NewMapReduceProjectWizard extends Wizard implements
                 project.setPersistentProperty(new QualifiedName(
                     Activator.PLUGIN_ID, "hadoop.runtime.path"),
                     firstPage.currentPath);
-                project.setDescription(description, new NullProgressMonitor());
+                project.setDescription(description,
+                    new NullProgressMonitor());
 
                 String[] natureIds = project.getDescription().getNatureIds();
                 for (int i = 0; i < natureIds.length; i++) {

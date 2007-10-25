@@ -25,23 +25,24 @@ import org.eclipse.ui.IWorkbenchPreferencePage;
 
 /**
  * This class represents a preference page that is contributed to the
- * Preferences dialog. By subclassing <samp>FieldEditorPreferencePage</samp>,
+ * Preferences dialog. By sub-classing <tt>FieldEditorPreferencePage</tt>,
  * we can use the field support built into JFace that allows us to create a
  * page that is small and knows how to save, restore and apply itself.
+ * 
  * <p>
  * This page is used to modify preferences only. They are stored in the
  * preference store that belongs to the main plug-in class. That way,
  * preferences can be accessed directly via the preference store.
  */
 
-public class HadoopHomeDirPreferencePage extends FieldEditorPreferencePage
+public class MapReducePreferencePage extends FieldEditorPreferencePage
     implements IWorkbenchPreferencePage {
 
-  public HadoopHomeDirPreferencePage() {
+  public MapReducePreferencePage() {
     super(GRID);
     setPreferenceStore(Activator.getDefault().getPreferenceStore());
-    setTitle("MapReduce Tools");
-    setDescription("MapReduce Preferences");
+    setTitle("Hadoop Map/Reduce Tools");
+    // setDescription("Hadoop Map/Reduce Preferences");
   }
 
   /**
@@ -52,7 +53,7 @@ public class HadoopHomeDirPreferencePage extends FieldEditorPreferencePage
   @Override
   public void createFieldEditors() {
     addField(new DirectoryFieldEditor(PreferenceConstants.P_PATH,
-        "&Hadoop main directory:", getFieldEditorParent()));
+        "&Hadoop installation directory:", getFieldEditorParent()));
 
   }
 
