@@ -27,6 +27,9 @@ to call at top-level: ant deploy-contrib compile-core-test
   <import file="../build-contrib.xml"/>
 
   <property name="build.webapps" value="${build.dir}/webapps"/>
+  <property name="build.lib" value="${build.dir}/lib"/>
+  <property name="build.conf" value="${build.dir}/conf"/>
+  <property name="build.bin" value="${build.dir}/bin"/>
   <property name="src.webapps" value="${basedir}/src/webapps" />
 
   <target name="init">
@@ -47,6 +50,22 @@ to call at top-level: ant deploy-contrib compile-core-test
         <exclude name="**/*~" />
       </fileset>
     </copy>
+    <!--Copy bin, lib, and conf. too-->
+    <mkdir dir="${build.lib}"/>
+    <copy todir="${build.lib}">
+      <fileset dir="${basedir}/lib" />
+    </copy>
+    <mkdir dir="${build.conf}"/>
+    <copy todir="${build.conf}">
+      <fileset dir="${basedir}/conf" />
+    </copy>
+    <mkdir dir="${build.bin}"/>
+    <copy todir="${build.bin}">
+      <fileset dir="${basedir}/bin" />
+    </copy>
+    <chmod perm="ugo+x" type="file">
+      <fileset dir="${build.bin}" />
+    </chmod>
   </target>
 
   <target name="javacc" if="javacc.home">

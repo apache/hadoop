@@ -20,6 +20,7 @@ Trunk (unreleased changes)
   IMPROVEMENTS
     HADOOP-2401 Add convenience put method that takes writable
                 (Johan Oskarsson via Stack)
+    HADOOP-2088 Make hbase runnable in $HADOOP_HOME/build(/contrib/hbase)
 
 Branch 0.15 (unreleased changes)
 
