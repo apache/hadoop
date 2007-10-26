@@ -57,11 +57,8 @@
             value="${build.dir}/c++-examples/${build.platform}"/>
 
   <property name="test.src.dir" value="${basedir}/src/test"/>
-  <property name="test.resources.dir" value="${test.src.dir}/resources" />
-  <property name="test.src.dir" value="${basedir}/src/test"/>
   <property name="test.build.dir" value="${build.dir}/test"/>
   <property name="test.generated.dir" value="${test.build.dir}/src"/>
-  <property name="test.build.resources" value="${test.build.dir}/resources"/>
   <property name="test.build.data" value="${test.build.dir}/data"/>
   <property name="test.cache.data" value="${test.build.dir}/cache"/>
   <property name="test.debug.data" value="${test.build.dir}/debug"/>
@@ -139,7 +136,6 @@
   <target name="init">
     <mkdir dir="${build.dir}"/>
     <mkdir dir="${build.classes}"/>
-    <mkdir dir="${test.build.resources}" />
     <mkdir dir="${build.src}"/>
     <mkdir dir="${build.webapps}/task/WEB-INF"/>
     <mkdir dir="${build.webapps}/job/WEB-INF"/>
@@ -472,12 +468,6 @@
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.zip" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/dfs/hadoop-12-dfs-dir.tgz" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/dfs/hadoop-12-dfs-dir.txt" todir="${test.cache.data}"/>
-    <delete dir="${test.debug.data}"/>
-    <mkdir dir="${test.debug.data}"/>
-    <copy file="${test.src.dir}/org/apache/hadoop/mapred/testscript.txt" todir="${test.debug.data}"/>
-    <copy todir="${test.build.resources}">
-      <fileset dir="${test.resources.dir}"/>
-    </copy>
   </target>
 
   <!-- ================================================================== -->
@@ -493,7 +483,6 @@
            fork="yes" maxmemory="256m" dir="${basedir}" timeout="${test.timeout}"
       errorProperty="tests.failed" failureProperty="tests.failed">
       <sysproperty key="test.build.data" value="${test.build.data}"/>
-      <sysproperty key="test.build.resources" value="${test.build.resources}"/>
       <sysproperty key="test.cache.data" value="${test.cache.data}"/>    	
       <sysproperty key="test.debug.data" value="${test.debug.data}"/>
       <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>

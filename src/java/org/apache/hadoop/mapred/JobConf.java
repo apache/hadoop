@@ -21,14 +21,12 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import java.net.URL;
 import java.util.StringTokenizer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.LinkedHashSet;
-import java.util.Set;
 
+import java.net.URL;
 import java.net.URLDecoder;
 
 import org.apache.commons.logging.Log;
@@ -39,18 +37,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
 
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapred.lib.HashPartitioner;
-import org.apache.hadoop.util.JarUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 
@@ -174,36 +167,6 @@ public class JobConf extends Configuration {
   }
 
   /**
-   * <p>Returns an array of the unique resources for this map reduce job.  These
-   * are resources added with the {@link #addJobResource(String)} method and are
-   * not default or final configuration resources.
-   * 
-   * @return String[] A array of unique job resources in priority order.
-   */
-  public String[] getJobResources() {
-    
-    // get the various jar config settings
-    String jar = get("mapred.jar");
-    String resources = get("mapred.job.resources");
-    
-    // add additional resources first, followed by setJar
-    Set<String> allResources = new LinkedHashSet<String>();
-    if (resources != null && resources.length() > 0) {
-      String[] resAr = resources.split(",");
-      for (int i = 0; i < resAr.length; i++) {
-        allResources.add(resAr[i].trim());
-      }
-    }
-    if (jar != null && jar.length() > 0) {
-      allResources.add(jar);
-    }
-    
-    // return as a string array
-    return (String[])allResources.toArray(new String[allResources.size()]);
-  }
-
-
-  /**
    * Checks if <b>mapred-default.xml</b> is on the CLASSPATH, if so
    * it warns the user and loads it as a {@link Configuration} resource.
    * 
@@ -219,42 +182,9 @@ public class JobConf extends Configuration {
   }
   
   /**
-   * <p>Adds an additional resource to the mapreduce job.  A resource can be
-   * a file on the local filesystem, the name of a class contained in a jar in 
-   * the classpath, a jar that is on the classpath, or a directory on the local 
-   * file system.</p> 
-   * 
-   * <p>When a job is submitted to the MR system, all resources are merged into
-   * a single job.jar file.  Each resource takes priority over any previously
-   * added resources.  If there are any conflicts, resources added later will
-   * overwrite resources added earlier.</p>
-   * 
-   * <p>One thing to note is that empty directories inside of resource jars will 
-   * not be copied over to the merged job jar.</p>
-   * 
-   * @param resource The resource to be added to the mapreduce job.
-   */
-  public void addJobResource(String resource) {
-    
-    if (resource != null && resource.length() > 0) {
-      
-      String resources = get("mapred.job.resources");
-      if (resources != null && resources.length() > 0) {
-        resources = (resource + "," + resources);
-      }
-      else {
-        resources = resource;
-      }
-      
-      set("mapred.job.resources", resources);
-    }
-  }
-
-  /**
    * Get the user jar for the map-reduce job.
    * 
    * @return the user jar for the map-reduce job.
-   * @deprecated Use {@link #getJobResources()} instead.
    */
   public String getJar() { return get("mapred.jar"); }
   
@@ -262,7 +192,6 @@ public class JobConf extends Configuration {
    * Set the user jar for the map-reduce job.
    * 
    * @param jar the user jar for the map-reduce job.
-   * @deprecated Use {@link #addJobResource(String)} instead.
    */
   public void setJar(String jar) { set("mapred.jar", jar); }
   
@@ -272,9 +201,9 @@ public class JobConf extends Configuration {
    * @param cls the example class.
    */
   public void setJarByClass(Class cls) {
-    String jar = JarUtils.findContainingJar(cls);
+    String jar = findContainingJar(cls);
     if (jar != null) {
-      addJobResource(cls.toString());
+      setJar(jar);
     }   
   }
 
@@ -1360,5 +1289,6 @@ public class JobConf extends Configuration {
     }
     return null;
   }
+
 }
 

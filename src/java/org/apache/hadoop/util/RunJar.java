@@ -30,12 +30,42 @@ import org.apache.hadoop.fs.FileUtil;
 
 /** Run a Hadoop job jar. */
 public class RunJar {
-  
-  /** @deprecated Use {@link JarUtils#unJar(File, File)} instead. */
-  @Deprecated
-  public static void unJar(File jarFile, File toDir)
-    throws IOException {
-    JarUtils.unJar(jarFile, toDir);
+
+  /** Unpack a jar file into a directory. */
+  public static void unJar(File jarFile, File toDir) throws IOException {
+    JarFile jar = new JarFile(jarFile);
+    try {
+      Enumeration entries = jar.entries();
+      while (entries.hasMoreElements()) {
+        JarEntry entry = (JarEntry)entries.nextElement();
+        if (!entry.isDirectory()) {
+          InputStream in = jar.getInputStream(entry);
+          try {
+            File file = new File(toDir, entry.getName());
+            if (!file.getParentFile().mkdirs()) {
+              if (!file.getParentFile().isDirectory()) {
+                throw new IOException("Mkdirs failed to create " + 
+                                      file.getParentFile().toString());
+              }
+            }
+            OutputStream out = new FileOutputStream(file);
+            try {
+              byte[] buffer = new byte[8192];
+              int i;
+              while ((i = in.read(buffer)) != -1) {
+                out.write(buffer, 0, i);
+              }
+            } finally {
+              out.close();
+            }
+          } finally {
+            in.close();
+          }
+        }
+      }
+    } finally {
+      jar.close();
+    }
   }
 
   /** Run a Hadoop job jar.  If the main class is not in the jar's manifest,
@@ -99,7 +129,7 @@ public class RunJar {
         }
       });
 
-    JarUtils.unJar(file, workDir);
+    unJar(file, workDir);
     
     ArrayList<URL> classPath = new ArrayList<URL>();
     classPath.add(new File(workDir+"/").toURL());

@@ -21,7 +21,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -32,11 +31,9 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -47,7 +44,6 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -60,7 +56,6 @@ import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.TaskInProgress;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.util.JarUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -429,115 +424,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     JobConf job = new JobConf(jobFile);
     return submitJob(job);
   }
-
-
-  /**
-   * Creates a mapreduce job jar file from all of the mapreduce job resources.
-   * 
-   * @param job The current job configuration.
-   * @param jobId The current job id.
-   * 
-   * @return The file path to the finished job jar.
-   * @throws IOException If an error occurs while creating the job jar file.
-   */
-  private File createJobJar(JobConf job, String jobId) 
-    throws IOException {
     
-    // get both jar and jars as they can be set through either config
-    String[] resources = job.getJobResources();
-    boolean hasResources = (resources != null && resources.length > 0);   
-    File jobJarFile = null;
-    
-    // check for either a single or multiple jars
-    if (hasResources) {
-
-      // allow resources to be found through the classpath, absolute path, 
-      // a directory or through a containing jar file
-      List<File> jarList = new ArrayList<File>();
-      for (int i = 0; i < resources.length; i++) {
-        
-        // get the current resource
-        String current = resources[i];
-        if (current != null && current.length() > 0) {
-          
-          // create a file from the current resource and see if it exists
-          File currentFile = new File(current);
-          boolean exists = currentFile.exists();
-          
-          // if the resource is not an absolute path to a file
-          if (!exists) {
-
-            // try converting it to a classname
-            try {
-              
-              // try to find the containing jar on the classpath
-              Class cls = Class.forName(current);
-              String jar = JarUtils.findContainingJar(cls);
-              if (jar != null) {
-                currentFile = new File(jar);
-                if (currentFile.exists()) {
-                  jarList.add(new File(jar));
-                  continue;
-                }
-              }
-            }
-            catch (ClassNotFoundException e) {
-              // do nothing, not a classname
-            }
- 
-            // try to find a resource on the classpath that matches, should be
-            // a jar but will technically find any matching resource
-            String jar = JarUtils.findJar(getClass(), current);
-            if (jar != null) {
-              currentFile = new File(jar);
-              if (currentFile.exists()) {
-                jarList.add(new File(jar));
-              }
-            }
-
-          }
-          else if (exists) {            
-            // the resource is an existing file or directory
-            jarList.add(new File(current));
-          }
-        }
-      }
-      
-      // get the list of final resources
-      int numResources = jarList.size();
-      File[] jarResources = ((numResources == 0) ? new File[0] : 
-        (File[])jarList.toArray(new File[jarList.size()]));
-      
-      // see if we are dealing with a single jar file
-      boolean hasSingleJar = false;
-      if (numResources == 1) {
-        File testJar =jarResources[0];
-        if (testJar.exists() && testJar.isFile()) {
-          hasSingleJar = true;
-          jobJarFile = testJar;
-        }
-      }
-      
-      // we only jar up if there is more than one resource or if there is a 
-      // single resource but it is not a jar file (i.e. it is a directory)
-      if (numResources > 1 || (numResources == 1 && !hasSingleJar) ){
- 
-        // create an jartmp directory in the hadoop.tmp.dir
-        File tmpDir = new File(job.get("hadoop.tmp.dir"));
-
-        // create a complete job jar file from the unjar directory contents
-        // in the system temp directory and delete on exit
-        jobJarFile = FileUtil.createLocalTempFile(tmpDir, jobId + ".job.", true);
-        boolean uncompress = getConf().getBoolean("mapred.job.resources.uncompress", 
-          true);
-        JarUtils.jarAll(jarResources, jobJarFile, uncompress);
-      }
-    }
-    
-    // return the finished job jar file path
-    return jobJarFile;
-  }
-  
+   
   /**
    * Submit a job to the MR system.
    * This returns a handle to the {@link RunningJob} which can be used to track
@@ -592,29 +480,23 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       }
       DistributedCache.setFileTimestamps(job, fileTimestamps.toString());
     }
-
-    // create the job jar file from all job jars
-    File jobJarFile = createJobJar(job, jobId);
+       
+    String originalJarPath = job.getJar();
     short replication = (short)job.getInt("mapred.submit.replication", 10);
-    
-    // if we have a job jar file
-    if (jobJarFile != null) {
-    
-      // set the job name to the job jar file name if no name is set
-      if ("".equals(job.getJobName())){        
-        String jobName = jobJarFile.getName();
-        job.setJobName(new Path(jobName).getName());
+
+    if (originalJarPath != null) {           // copy jar to JobTracker's fs
+      // use jar name if job is not named. 
+      if ("".equals(job.getJobName())){
+        job.setJobName(new Path(originalJarPath).getName());
       }
-      
-      // copy the merged job jar to the job filesystem and set replication
-      job.setJar(submitJarFile.toString());      
-      fs.copyFromLocalFile(new Path(jobJarFile.toString()), submitJarFile);
+      job.setJar(submitJarFile.toString());
+      fs.copyFromLocalFile(new Path(originalJarPath), submitJarFile);
       fs.setReplication(submitJarFile, replication);
     } else {
       LOG.warn("No job jar file set.  User classes may not be found. "+
                "See JobConf(Class) or JobConf#setJar(String).");
     }
-    
+
     // Set the user's name and working directory
     String user = System.getProperty("user.name");
     job.setUser(user != null ? user : "Dr Who");
@@ -1072,7 +954,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   }
     
   public int run(String[] argv) throws Exception {
-
+    // process arguments
     String submitJobFile = null;
     String jobid = null;
     String taskid = null;

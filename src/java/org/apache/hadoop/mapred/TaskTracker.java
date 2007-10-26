@@ -71,7 +71,6 @@ import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.DiskChecker;
-import org.apache.hadoop.util.JarUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.util.StringUtils;
@@ -613,7 +612,7 @@ public class TaskTracker
               throw new IOException("Mkdirs failed to create " + workDir.toString());
             }
           }
-          JarUtils.unJar(new File(localJarFile.toString()), workDir);
+          RunJar.unJar(new File(localJarFile.toString()), workDir);
         }
         rjob.keepJobFiles = ((localJobConf.getKeepTaskFilesPattern() != null) ||
                              localJobConf.getKeepFailedTaskFiles());
