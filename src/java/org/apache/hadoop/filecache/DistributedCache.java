@@ -52,8 +52,9 @@ import java.net.URI;
  * data/text files and/or more complex types such as archives, jars etc. 
  * Archives (zip files) are un-archived at the slave nodes. Jars maybe be 
  * optionally added to the classpath of the tasks, a rudimentary software
- * distribution mechanism. Optionally users can also direct it to symlink the 
- * distributed cache file(s) into the working directory of the task.</p>
+ * distribution mechanism.  Files have execution permissions. Optionally users 
+ * can also direct it to symlink the distributed cache file(s) into 
+ * the working directory of the task.</p>
  * 
  * <p><code>DistributedCache</code> tracks modification timestamps of the cache 
  * files. Clearly the cache files should not be modified by the application 
@@ -238,6 +239,7 @@ public class DistributedCache {
   }
 
   // the method which actually copies the caches locally and unjars/unzips them
+  // and does chmod for the files
   private static Path localizeCache(Configuration conf, 
                                     URI cache, long confFileStamp,
                                     CacheStatus cacheStatus,
@@ -297,6 +299,13 @@ public class DistributedCache {
         }
         // else will not do anyhting
         // and copy the file into the dir as it is
+      }
+      
+      // do chmod here 
+      try {
+    	FileUtil.chmod(parchive.toString(), "+x");
+      } catch(InterruptedException e) {
+    	LOG.warn("Exception in chmod" + e.toString());
       }
 
       // update cacheStatus to reflect the newly cached file

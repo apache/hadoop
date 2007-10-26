@@ -418,12 +418,12 @@ abstract class TaskRunner extends Thread {
    */
   private void runChild(List<String> args, File dir,
                         String taskid) throws IOException {
-    ProcessBuilder builder = new ProcessBuilder(args);
-    builder.directory(dir);
-    process = builder.start();
-    
+
     try {
-      int exit_code = process.waitFor();
+      ShellUtil shexec = new ShellUtil(args, dir, System.getenv());
+      shexec.execute();
+      process = shexec.getProcess();
+      int exit_code = shexec.getExitCode();
      
       if (!killed && exit_code != 0) {
         if (exit_code == 65) {

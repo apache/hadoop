@@ -161,6 +161,9 @@ public class StringUtils {
    * @param uris
    */
   public static String uriToString(URI[] uris){
+    if (uris == null) {
+      return null;
+    }
     StringBuffer ret = new StringBuffer(uris[0].toString());
     for(int i = 1; i < uris.length;i++){
       ret.append(",");
@@ -194,6 +197,9 @@ public class StringUtils {
    * @param str
    */
   public static Path[] stringToPath(String[] str){
+    if (str == null) {
+      return null;
+    }
     Path[] p = new Path[str.length];
     for (int i = 0; i < str.length;i++){
       p[i] = new Path(str[i]);

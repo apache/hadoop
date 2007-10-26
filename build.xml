@@ -64,6 +64,7 @@
   <property name="test.build.resources" value="${test.build.dir}/resources"/>
   <property name="test.build.data" value="${test.build.dir}/data"/>
   <property name="test.cache.data" value="${test.build.dir}/cache"/>
+  <property name="test.debug.data" value="${test.build.dir}/debug"/>
   <property name="test.log.dir" value="${test.build.dir}/logs"/>
   <property name="test.build.classes" value="${test.build.dir}/classes"/>
   <property name="test.build.testjar" value="${test.build.dir}/testjar"/>
@@ -471,10 +472,12 @@
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.zip" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/dfs/hadoop-12-dfs-dir.tgz" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/dfs/hadoop-12-dfs-dir.txt" todir="${test.cache.data}"/>
+    <delete dir="${test.debug.data}"/>
+    <mkdir dir="${test.debug.data}"/>
+    <copy file="${test.src.dir}/org/apache/hadoop/mapred/testscript.txt" todir="${test.debug.data}"/>
     <copy todir="${test.build.resources}">
       <fileset dir="${test.resources.dir}"/>
     </copy>
-    
   </target>
 
   <!-- ================================================================== -->
@@ -492,6 +495,7 @@
       <sysproperty key="test.build.data" value="${test.build.data}"/>
       <sysproperty key="test.build.resources" value="${test.build.resources}"/>
       <sysproperty key="test.cache.data" value="${test.cache.data}"/>    	
+      <sysproperty key="test.debug.data" value="${test.debug.data}"/>
       <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
       <sysproperty key="test.src.dir" value="${test.src.dir}"/>
       <sysproperty key="java.library.path"
@@ -735,6 +739,9 @@
           <include name="*/bin/*" />
         </fileset>
         <fileset dir="${dist.dir}/src/contrib/ec2/bin/image"/>
+    </chmod>
+    <chmod perm="ugo+x" type="file">
+        <fileset dir="${dist.dir}/src/c++/pipes/debug"/>
     </chmod>
 
   </target>

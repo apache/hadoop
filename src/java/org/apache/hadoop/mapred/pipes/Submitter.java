@@ -231,6 +231,15 @@ public class Submitter {
     if (exec == null) {
       throw new IllegalArgumentException("No application program defined.");
     }
+    // add default debug script only when executable is expressed as
+    // <path>#<executable>
+    if (exec.contains("#")) {
+      DistributedCache.createSymlink(conf);
+      // set default gdb commands for map and reduce task 
+      String defScript = "$HADOOP_HOME/src/c++/pipes/debug/pipes-default-script";
+      setIfUnset(conf,"mapred.map.task.debug.script",defScript);
+      setIfUnset(conf,"mapred.reduce.task.debug.script",defScript);
+    }
     URI[] fileCache = DistributedCache.getCacheFiles(conf);
     if (fileCache == null) {
       fileCache = new URI[1];

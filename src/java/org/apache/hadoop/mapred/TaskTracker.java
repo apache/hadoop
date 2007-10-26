@@ -19,11 +19,15 @@
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.RandomAccessFile;
 import java.net.BindException;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException; 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -36,6 +40,7 @@ import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Pattern;
+import java.util.Vector;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -52,10 +57,12 @@ import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.mapred.pipes.Submitter;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsException;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -68,6 +75,7 @@ import org.apache.hadoop.util.JarUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.ShellUtil;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.log4j.LogManager;
 
@@ -872,14 +880,16 @@ public class TaskTracker
     // Check if we should ask for a new Task
     //
     boolean askForNewTask;
+    long localMinSpaceStart;
     synchronized (this) {
       askForNewTask = (mapTotal < maxCurrentTasks || 
                        reduceTotal < maxCurrentTasks) &&
                       acceptNewTasks; 
+      localMinSpaceStart = minSpaceStart;
     }
     if (askForNewTask) {
       checkLocalDirs(fConf.getLocalDirs());
-      askForNewTask = enoughFreeSpace(minSpaceStart);
+      askForNewTask = enoughFreeSpace(localMinSpaceStart);
     }
       
     //
@@ -1039,7 +1049,11 @@ public class TaskTracker
    * Then pick the one with least progress
    */
   private void killOverflowingTasks() throws IOException {
-    if (!enoughFreeSpace(minSpaceKill)) {
+    long localMinSpaceKill;
+    synchronized(this){
+      localMinSpaceKill = minSpaceKill;  
+    }
+    if (!enoughFreeSpace(localMinSpaceKill)) {
       acceptNewTasks=false; 
       //we give up! do not accept new tasks until
       //all the ones running have finished and they're all cleared up
@@ -1229,6 +1243,7 @@ public class TaskTracker
     private boolean alwaysKeepTaskFiles;
     private TaskStatus taskStatus; 
     private long taskTimeout;
+    private String debugCommand;
         
     /**
      */
@@ -1279,6 +1294,11 @@ public class TaskTracker
       } else {
         alwaysKeepTaskFiles = false;
       }
+      if (task.isMapTask()) {
+        debugCommand = localJobConf.getMapDebugScript();
+      } else {
+        debugCommand = localJobConf.getReduceDebugScript();
+      }
     }
         
     /**
@@ -1287,14 +1307,14 @@ public class TaskTracker
       return task;
     }
 
-    public void setJobConf(JobConf lconf){
+    public synchronized void setJobConf(JobConf lconf){
       this.localJobConf = lconf;
       keepFailedTaskFiles = localJobConf.getKeepFailedTaskFiles();
       taskTimeout = localJobConf.getLong("mapred.task.timeout", 
                                          10 * 60 * 1000);
     }
         
-    public JobConf getJobConf() {
+    public synchronized JobConf getJobConf() {
       return localJobConf;
     }
         
@@ -1413,6 +1433,71 @@ public class TaskTracker
           if (!wasKilled) {
             failures += 1;
             taskStatus.setRunState(TaskStatus.State.FAILED);
+            // call the script here for the failed tasks.
+            if (debugCommand != null) {
+              String taskStdout ="";
+              String taskStderr ="";
+              String taskSyslog ="";
+              String jobConf = task.getJobFile();
+              try {
+                // get task's stdout file 
+                taskStdout = FileUtil.makeShellPath(TaskLog.getTaskLogFile
+                                  (task.getTaskId(), TaskLog.LogName.STDOUT));
+                // get task's stderr file 
+                taskStderr = FileUtil.makeShellPath(TaskLog.getTaskLogFile
+                                  (task.getTaskId(), TaskLog.LogName.STDERR));
+                // get task's syslog file 
+                taskSyslog = FileUtil.makeShellPath(TaskLog.getTaskLogFile
+                                  (task.getTaskId(), TaskLog.LogName.SYSLOG));
+              } catch(IOException e){
+                LOG.warn("Exception finding task's stdout/err/syslog files");
+              }
+              File workDir = new File(task.getJobFile()).getParentFile();
+              // Build the command  
+              File stdout = TaskLog.getTaskLogFile(task.getTaskId(),
+                                                   TaskLog.LogName.DEBUGOUT);
+              // add pipes program as argument if it exists.
+              String program ="";
+              String executable = Submitter.getExecutable(localJobConf);
+              if ( executable != null) {
+            	try {
+            	  program = new URI(executable).getFragment();
+            	} catch (URISyntaxException ur) {
+            	  LOG.warn("Problem in the URI fragment for pipes executable");
+            	}	  
+              }
+              String [] debug = debugCommand.split(" ");
+              Vector<String> vargs = new Vector<String>();
+              for (String component : debug) {
+                vargs.add(component);
+              }
+              vargs.add(taskStdout);
+              vargs.add(taskStderr);
+              vargs.add(taskSyslog);
+              vargs.add(jobConf);
+              vargs.add(program);
+              try {
+                List<String>  wrappedCommand = TaskLog.captureDebugOut
+                                                          (vargs, stdout);
+                // run the script.
+                try {
+                  runScript(wrappedCommand, workDir);
+                } catch (IOException ioe) {
+                  LOG.warn("runScript failed with: " + StringUtils.
+                                                      stringifyException(ioe));
+                }
+              } catch(IOException e) {
+                LOG.warn("Error in preparing wrapped debug command");
+              }
+
+              // add all lines of debug out to diagnostics
+              try {
+                int num = localJobConf.getInt("mapred.debug.out.lines", -1);
+                addDiagnostics(FileUtil.makeShellPath(stdout),num,"DEBUG OUT");
+              } catch(IOException ioe) {
+                LOG.warn("Exception in add diagnostics!");
+              }
+            }
           } else {
             taskStatus.setRunState(TaskStatus.State.KILLED);
           }
@@ -1436,7 +1521,95 @@ public class TaskTracker
         }
       }
     }
+  
 
+    /**
+     * Runs the script given in args
+     * @param args script name followed by its argumnets
+     * @param dir current working directory.
+     * @throws IOException
+     */
+    public void runScript(List<String> args, File dir) throws IOException {
+      Process process = null;
+      try {
+        ShellUtil shexec = new ShellUtil(args, dir, System.getenv());
+        shexec.execute();
+        process = shexec.getProcess();
+        int exit_code = shexec.getExitCode();
+        if (exit_code != 0) {
+          throw new IOException("Task debug script exit with nonzero "
+                                +"status of " + exit_code + ".");
+        }
+      } catch (InterruptedException e) {
+          throw new IOException(e.toString());
+      } finally {
+        if (process != null) {
+          process.destroy();
+        }
+      }
+    }
+
+    /**
+     * Add last 'num' lines of the given file to the diagnostics.
+     * if num =-1, all the lines of file are added to the diagnostics.
+     * @param file The file from which to collect diagnostics.
+     * @param num The number of lines to be sent to diagnostics.
+     * @param tag The tag is printed before the diagnostics are printed. 
+     */
+    public void addDiagnostics(String file, int num, String tag) {
+      RandomAccessFile rafile = null;
+      try {
+        rafile = new RandomAccessFile(file,"r");
+        int no_lines =0;
+        String line = null;
+        StringBuffer tail = new StringBuffer();
+        tail.append("\n-------------------- "+tag+"---------------------\n");
+        String[] lines = null;
+        if (num >0) {
+          lines = new String[num];
+        }
+        while ((line = rafile.readLine()) != null) {
+          no_lines++;
+          if (num >0) {
+            if (no_lines <= num) {
+              lines[no_lines-1] = line;
+            }
+            else { // shift them up
+              for (int i=0; i<num-1; ++i) {
+                lines[i] = lines[i+1];
+              }
+              lines[num-1] = line;
+            }
+          }
+          else if (num == -1) {
+            tail.append(line); 
+            tail.append("\n");
+          }
+        }
+        int n = no_lines > num ?num:no_lines;
+        if (num >0) {
+          for (int i=0;i<n;i++) {
+            tail.append(lines[i]);
+            tail.append("\n");
+          }
+        }
+        if(n!=0)
+          reportDiagnosticInfo(tail.toString());
+      } catch (FileNotFoundException fnfe){
+        LOG.warn("File "+file+ " not found");
+      } catch (IOException ioe){
+        LOG.warn("Error reading file "+file);
+      } finally {
+         try {
+           if (rafile != null) {
+             rafile.close();
+           }
+         } catch (IOException ioe) {
+           LOG.warn("Error closing file "+file);
+         }
+      }
+    }
+    
     /**
      * We no longer need anything from this task, as the job has
      * finished.  If the task is still running, kill it and clean up.
@@ -1515,10 +1688,12 @@ public class TaskTracker
       LOG.debug("Cleaning up " + taskId);
       synchronized (TaskTracker.this) {
         tasks.remove(taskId);
-        if (alwaysKeepTaskFiles ||
-            (taskStatus.getRunState() == TaskStatus.State.FAILED && 
-             keepFailedTaskFiles)) {
-          return;
+        synchronized (this){
+          if (alwaysKeepTaskFiles ||
+              (taskStatus.getRunState() == TaskStatus.State.FAILED && 
+               keepFailedTaskFiles)) {
+            return;
+          }
         }
       }
       synchronized (this) {

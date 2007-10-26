@@ -83,7 +83,10 @@ import org.apache.hadoop.util.Tool;
  * <p>Optionally <code>JobConf</code> is used to specify other advanced facets 
  * of the job such as <code>Comparator</code>s to be used, files to be put in  
  * the {@link DistributedCache}, whether or not intermediate and/or job outputs 
- * are to be compressed (and how) etc.</p>
+ * are to be compressed (and how), debugability via user-provided scripts 
+ * ( {@link #setMapDebugScript(String)}/{@link #setReduceDebugScript(String)}),
+ * for doing post-processing on task logs, task's stdout, stderr, syslog. 
+ * and etc.</p>
  * 
  * <p>Here is an example on how to configure a job via <code>JobConf</code>:</p>
  * <p><blockquote><pre>
@@ -1222,6 +1225,80 @@ public class JobConf extends Configuration {
     return JobPriority.valueOf(prio);
   }
   
+  /**
+   * Set the debug script to run when the map tasks fail.
+   * 
+   * <p>The debug script can aid debugging of failed map tasks. The script is 
+   * given task's stdout, stderr, syslog, jobconf files as arguments.</p>
+   * 
+   * <p>The debug command, run on the node where the map failed, is:</p>
+   * <p><pre><blockquote> 
+   * $script $stdout $stderr $syslog $jobconf.
+   * </blockquote></pre></p>
+   * 
+   * <p> The script file is distributed through {@link DistributedCache} 
+   * APIs. The script needs to be symlinked. </p>
+   * 
+   * <p>Here is an example on how to submit a script 
+   * <p><blockquote><pre>
+   * job.setMapDebugScript("./myscript");
+   * DistributedCache.createSymlink(job);
+   * DistributedCache.addCacheFile("/debug/scripts/myscript#myscript");
+   * </pre></blockquote></p>
+   * 
+   * @param mDbgScript the script name
+   */
+  public void  setMapDebugScript(String mDbgScript) {
+    set("mapred.map.task.debug.script", mDbgScript);
+  }
+  
+  /**
+   * Get the map task's debug script.
+   * 
+   * @return the debug Script for the mapred job for failed map tasks.
+   * @see #setMapDebugScript(String)
+   */
+  public String getMapDebugScript() {
+    return get("mapred.map.task.debug.script");
+  }
+  
+  /**
+   * Set the debug script to run when the reduce tasks fail.
+   * 
+   * <p>The debug script can aid debugging of failed reduce tasks. The script
+   * is given task's stdout, stderr, syslog, jobconf files as arguments.</p>
+   * 
+   * <p>The debug command, run on the node where the map failed, is:</p>
+   * <p><pre><blockquote> 
+   * $script $stdout $stderr $syslog $jobconf.
+   * </blockquote></pre></p>
+   * 
+   * <p> The script file is distributed through {@link DistributedCache} 
+   * APIs. The script file needs to be symlinked </p>
+   * 
+   * <p>Here is an example on how to submit a script 
+   * <p><blockquote><pre>
+   * job.setReduceDebugScript("./myscript");
+   * DistributedCache.createSymlink(job);
+   * DistributedCache.addCacheFile("/debug/scripts/myscript#myscript");
+   * </pre></blockquote></p>
+   * 
+   * @param rDbgScript the script name
+   */
+  public void  setReduceDebugScript(String rDbgScript) {
+    set("mapred.reduce.task.debug.script", rDbgScript);
+  }
+  
+  /**
+   * Get the reduce task's debug Script
+   * 
+   * @return the debug script for the mapred job for failed reduce tasks.
+   * @see #setReduceDebugScript(String)
+   */
+  public String getReduceDebugScript() {
+    return get("mapred.reduce.task.debug.script");
+  }
+
   /**
    * Get the uri to be invoked in-order to send a notification after the job 
    * has completed (success/failure). 

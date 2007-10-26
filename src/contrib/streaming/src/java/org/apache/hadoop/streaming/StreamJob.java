@@ -238,6 +238,8 @@ public class StreamJob {
       numReduceTasksSpec_ = (String)cmdLine.getValue("-numReduceTasks"); 
       partitionerSpec_ = (String)cmdLine.getValue("-partitioner");
       inReaderSpec_ = (String)cmdLine.getValue("-inputreader"); 
+      mapDebugSpec_ = (String)cmdLine.getValue("-mapdebug");    
+      reduceDebugSpec_ = (String)cmdLine.getValue("-reducedebug");
       
       List<String> car = cmdLine.getValues("-cacheArchive"); 
       if (null != car){
@@ -395,6 +397,10 @@ public class StreamJob {
         "Optional.", "spec",1, false );
     Option inputreader = createOption("inputreader", 
                                       "Optional.", "spec", 1, false);
+    Option mapDebug = createOption("mapdebug",
+                                   "Optional.", "spec", 1, false);
+    Option reduceDebug = createOption("reducedebug",
+                                      "Optional", "spec",1, false);
     Option cacheFile = createOption("cacheFile", 
                                     "File name URI", "fileNameURI", Integer.MAX_VALUE, false);
     Option cacheArchive = createOption("cacheArchive", 
@@ -423,6 +429,8 @@ public class StreamJob {
       withOption(partitioner).
       withOption(numReduceTasks).
       withOption(inputreader).
+      withOption(mapDebug).
+      withOption(reduceDebug).
       withOption(jobconf).
       withOption(cmdenv).
       withOption(cacheFile).
@@ -460,6 +468,10 @@ public class StreamJob {
       System.out.println("  -inputreader <spec>  Optional.");
       System.out.println("  -jobconf  <n>=<v>    Optional. Add or override a JobConf property");
       System.out.println("  -cmdenv   <n>=<v>    Optional. Pass env.var to streaming commands");
+      System.out.println("  -mapdebug <path>  Optional. " +
+                                "To run this script when a map task fails ");
+      System.out.println("  -reducedebug <path>  Optional." +
+                             " To run this script when a reduce task fails ");
       System.out.println("  -cacheFile fileNameURI");
       System.out.println("  -cacheArchive fileNameURI");
       System.out.println("  -verbose");
@@ -801,6 +813,12 @@ public class StreamJob {
       jobConf_.setNumReduceTasks(0);
     }
     
+    if(mapDebugSpec_ != null){
+    	jobConf_.setMapDebugScript(mapDebugSpec_);
+    }
+    if(reduceDebugSpec_ != null){
+    	jobConf_.setReduceDebugScript(reduceDebugSpec_);
+    }
     // last, allow user to override anything
     // (although typically used with properties we didn't touch)
 
@@ -1023,6 +1041,8 @@ public class StreamJob {
   protected String partitionerSpec_;
   protected String numReduceTasksSpec_;
   protected String additionalConfSpec_;
+  protected String mapDebugSpec_;
+  protected String reduceDebugSpec_;
 
   // Use to communicate config to the external processes (ex env.var.HADOOP_USER)
   // encoding "a=b c=d"

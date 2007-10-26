@@ -59,8 +59,11 @@ public class TaskLog {
     STDERR ("stderr"),
     
     /** Log on the map-reduce system logs of the task. */
-    SYSLOG ("syslog");
+    SYSLOG ("syslog"),
     
+    /** Log the debug script's stdout  */
+    DEBUGOUT ("debugout");
+        
     private String prefix;
     
     private LogName(String prefix) {
@@ -248,4 +251,43 @@ public class TaskLog {
     result.add(mergedCmd.toString());
     return result;
   }
+  
+  /**
+   * Wrap a command in a shell to capture debug script's 
+   * stdout and stderr to debugout.
+   * @param cmd The command and the arguments that should be run
+   * @param debugoutFilename The filename that stdout and stderr
+   *  should be saved to.
+   * @return the modified command that should be run
+   * @throws IOException
+   */
+  public static List<String> captureDebugOut(List<String> cmd, 
+                                             File debugoutFilename
+                                            ) throws IOException {
+    String debugout = FileUtil.makeShellPath(debugoutFilename);
+    List<String> result = new ArrayList<String>(3);
+    result.add(bashCommand);
+    result.add("-c");
+    StringBuffer mergedCmd = new StringBuffer();
+    mergedCmd.append("exec ");
+    boolean isExecutable = true;
+    for(String s: cmd) {
+      if (isExecutable) {
+        // the executable name needs to be expressed as a shell path for the  
+        // shell to find it.
+        mergedCmd.append(FileUtil.makeShellPath(new File(s)));
+        isExecutable = false; 
+      } else {
+        mergedCmd.append(s);
+      }
+      mergedCmd.append(" ");
+    }
+    mergedCmd.append(" < /dev/null ");
+    mergedCmd.append(" >");
+    mergedCmd.append(debugout);
+    mergedCmd.append(" 2>&1 ");
+    result.add(mergedCmd.toString());
+    return result;
+  }
+  
 } // TaskLog

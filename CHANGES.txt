@@ -28,6 +28,9 @@ Trunk (unreleased changes)
     jobdetails.jsp to help quickly narrow down and see categorized TIPs' 
     details via jobtasks.jsp. (Amar Kamat via acmurthy)
 
+    HADOOP-1857.  Ability to run a script when a task fails to capture stack
+    traces. (Amareshwari Sri Ramadasu via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

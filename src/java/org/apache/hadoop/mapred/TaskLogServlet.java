@@ -58,11 +58,19 @@ public class TaskLogServlet extends HttpServlet {
         out.write("</pre></td></tr></table><hr><br>\n".getBytes());
       }
     } catch (IOException ioe) {
-      response.sendError(HttpServletResponse.SC_GONE,
+      if (filter == TaskLog.LogName.DEBUGOUT) {
+        if (!plainText) {
+           out.write("</pre></td></tr></table><hr><br>\n".getBytes());
+         }
+        // do nothing
+      }
+      else {
+        response.sendError(HttpServletResponse.SC_GONE,
                          "Failed to retrieve " + filter + " log for task: " + 
                          taskId);
-      out.write(("TaskLogServlet exception:\n" + 
+        out.write(("TaskLogServlet exception:\n" + 
                  StringUtils.stringifyException(ioe) + "\n").getBytes());
+      }
     }
   }
 
@@ -124,6 +132,8 @@ public class TaskLogServlet extends HttpServlet {
                      TaskLog.LogName.STDERR);
         printTaskLog(response, out, taskId, start, end, plainText, 
                      TaskLog.LogName.SYSLOG);
+        printTaskLog(response, out, taskId, start, end, plainText, 
+                TaskLog.LogName.DEBUGOUT);
       } else {
         printTaskLog(response, out, taskId, start, end, plainText, filter);
       }
