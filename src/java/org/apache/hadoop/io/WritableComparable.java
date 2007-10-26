@@ -46,7 +46,7 @@ package org.apache.hadoop.io;
  *       public int compareTo(MyWritableComparable w) {
  *         int thisValue = this.value;
  *         int thatValue = ((IntWritable)o).value;
- *         return (thisValue<thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
+ *         return (thisValue &lt; thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
  *       }
  *     }
  * </pre></blockquote></p>

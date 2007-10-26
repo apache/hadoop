@@ -54,6 +54,9 @@ Trunk (unreleased changes)
     also ensures that we close the file-descriptor of the job's history log 
     opened during job-submission. (Amar Kamat via acmurthy)
 
+    HADOOP-2103.  Fix minor javadoc bugs introduce by HADOOP-2046. (Nigel
+    Daley via acmurthy) 
+
 Branch 0.15 (unreleased changes)
 
   INCOMPATIBLE CHANGES
