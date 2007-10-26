@@ -9,6 +9,11 @@ Trunk (unreleased changes)
     configured on each tasktracker when allocating tasks, instead of
     the value configured on the jobtracker. InterTrackerProtocol
     version changed from 5 to 6. (Michael Bieniosek via omalley)
+
+  NEW FEATURES
+
+    HADOOP-1857.  Ability to run a script when a task fails to capture stack
+    traces. (Amareshwari Sri Ramadasu via ddas)
     
   IMPROVEMENTS
 
@@ -27,9 +32,6 @@ Trunk (unreleased changes)
     HADOOP-1839.  Link-ify the Pending/Running/Complete/Killed grid in
     jobdetails.jsp to help quickly narrow down and see categorized TIPs' 
     details via jobtasks.jsp. (Amar Kamat via acmurthy)
-
-    HADOOP-1857.  Ability to run a script when a task fails to capture stack
-    traces. (Amareshwari Sri Ramadasu via ddas)
 
     HADOOP-1210.  Log counters in job history. (Owen O'Malley via ddas)
 
