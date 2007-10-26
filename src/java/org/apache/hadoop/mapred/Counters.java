@@ -392,5 +392,29 @@ public class Counters implements Writable {
     }
     return sb.toString();
   }
-  
+
+  /**
+   * Convert a counters object into a single line that is easy to parse.
+   * @return the string with "name=value" for each counter and separated by ","
+   */
+  public String makeCompactString() {
+    StringBuffer buffer = new StringBuffer();
+    for(String groupName: getGroupNames()){
+      Counters.Group group = getGroup(groupName);
+      boolean first = true;
+      for(String counterName: group.getCounterNames()) {
+        if (first) {
+          first = false;
+        } else {
+          buffer.append(',');
+        }
+        buffer.append(groupName);
+        buffer.append('.');
+        buffer.append(counterName);
+        buffer.append('=');
+        buffer.append(group.getCounter(counterName));
+      }
+    }
+    return buffer.toString();
+  }
 }

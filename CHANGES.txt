@@ -31,6 +31,8 @@ Trunk (unreleased changes)
     HADOOP-1857.  Ability to run a script when a task fails to capture stack
     traces. (Amareshwari Sri Ramadasu via ddas)
 
+    HADOOP-1210.  Log counters in job history. (Owen O'Malley via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
