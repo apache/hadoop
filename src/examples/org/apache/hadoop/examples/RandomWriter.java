@@ -42,8 +42,8 @@ import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolBase;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
@@ -79,7 +79,7 @@ import org.apache.hadoop.util.ToolRunner;
  * </configuration></xmp>
  * 
  * Equivalently, {@link RandomWriter} also supports all the above options
- * and ones supported by {@link ToolBase} via the command-line.
+ * and ones supported by {@link GenericOptionsParser} via the command-line.
  */
 public class RandomWriter extends Configured implements Tool {
   

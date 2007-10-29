@@ -24,7 +24,7 @@ import org.apache.hadoop.conf.Configuration;
  * @deprecated This class is depracated. Classes 
  * extending ToolBase should rather implement {@link Tool} 
  * interface, and use {@link ToolRunner} for execution 
- * functionality. Alternativelly, {@link GenericOptionsParser} 
+ * functionality. Alternatively, {@link GenericOptionsParser} 
  * can be used to parse generic arguments related to hadoop 
  * framework. 
  */
@@ -51,7 +51,7 @@ public abstract class ToolBase implements Tool {
    * positive non-zero values can be used to return application-specific codes.
    */
   public final int doMain(Configuration conf, String[] args) throws Exception {
-    return ToolRunner.run(this, args);
+    return ToolRunner.run(conf, this, args);
   }
 
 }
