@@ -35,6 +35,11 @@ Trunk (unreleased changes)
 
     HADOOP-1210.  Log counters in job history. (Owen O'Malley via ddas)
 
+    HADOOP-2105.  Improve overview.html to clarify supported platforms, 
+    software pre-requisites for hadoop, how to install them on various 
+    platforms and a better general description of hadoop and it's utility. 
+    (Jim Kellerman via acmurthy) 
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
@@ -55,6 +60,9 @@ Trunk (unreleased changes)
     HADOOP-2098.  Log start & completion of empty jobs to JobHistory, which
     also ensures that we close the file-descriptor of the job's history log 
     opened during job-submission. (Amar Kamat via acmurthy)
+
+    HADOOP-2103.  Fix minor javadoc bugs introduce by HADOOP-2046. (Nigel
+    Daley via acmurthy) 
 
 Branch 0.15 (unreleased changes)
 
@@ -388,9 +396,6 @@ Branch 0.15 (unreleased changes)
     to the superceding ToolRunner to ensure it picks up the appropriate
     configuration resources. (Dennis Kubes and Enis Soztutar via acmurthy) 
  
-    HADOOP-2103.  Fix minor javadoc bugs introduce by HADOOP-2046. (Nigel
-    Daley via acmurthy) 
-
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
@@ -511,11 +516,6 @@ Branch 0.15 (unreleased changes)
     to the transaction log. (Dhruba Borthakur)
 
     HADOOP-2046.  Improve mapred javadoc.  (Arun C. Murthy via cutting)
-
-    HADOOP-2105.  Improve overview.html to clarify supported platforms, 
-    software pre-requisites for hadoop, how to install them on various 
-    platforms and a better general description of hadoop and it's utility. 
-    (Jim Kellerman via acmurthy) 
 
 
 Release 0.14.3 - 2007-10-19
