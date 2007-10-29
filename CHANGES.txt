@@ -60,7 +60,9 @@ Trunk (unreleased changes)
     HADOOP-1622 i.e. http://svn.apache.org/viewvc?view=rev&revision=588771.
     (acmurthy)
 
-Branch 0.15 (unreleased changes)
+
+Release 0.15.0 - 2007-11-2
+
 
   INCOMPATIBLE CHANGES
 
