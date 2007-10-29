@@ -220,7 +220,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    * Add a configuration resource. 
    * 
    * The properties of this resource will override properties of previously 
-   * added resources, unless they were marked <a href="#Final>final</a>. 
+   * added resources, unless they were marked <a href="#Final">final</a>. 
    * 
    * @param name resource to be added, the classpath is examined for a file 
    *             with that name.
@@ -233,7 +233,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    * Add a configuration resource. 
    * 
    * The properties of this resource will override properties of previously 
-   * added resources, unless they were marked <a href="#Final>final</a>. 
+   * added resources, unless they were marked <a href="#Final">final</a>. 
    * 
    * @param url url of the resource to be added, the local filesystem is 
    *            examined directly to find the resource, without referring to 
@@ -247,7 +247,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    * Add a configuration resource. 
    * 
    * The properties of this resource will override properties of previously 
-   * added resources, unless they were marked <a href="#Final>final</a>. 
+   * added resources, unless they were marked <a href="#Final">final</a>. 
    * 
    * @param file file-path of resource to be added, the local filesystem is
    *             examined directly to find the resource, without referring to 
