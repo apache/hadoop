@@ -56,6 +56,10 @@ Trunk (unreleased changes)
     also ensures that we close the file-descriptor of the job's history log 
     opened during job-submission. (Amar Kamat via acmurthy)
 
+    HADOOP-2112.  Adding back changes to build.xml lost while reverting
+    HADOOP-1622 i.e. http://svn.apache.org/viewvc?view=rev&revision=588771.
+    (acmurthy)
+
 Branch 0.15 (unreleased changes)
 
   INCOMPATIBLE CHANGES
