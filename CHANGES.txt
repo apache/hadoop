@@ -61,9 +61,6 @@ Trunk (unreleased changes)
     also ensures that we close the file-descriptor of the job's history log 
     opened during job-submission. (Amar Kamat via acmurthy)
 
-    HADOOP-2103.  Fix minor javadoc bugs introduce by HADOOP-2046. (Nigel
-    Daley via acmurthy) 
-
 Branch 0.15 (unreleased changes)
 
   INCOMPATIBLE CHANGES
@@ -396,6 +393,9 @@ Branch 0.15 (unreleased changes)
     to the superceding ToolRunner to ensure it picks up the appropriate
     configuration resources. (Dennis Kubes and Enis Soztutar via acmurthy) 
  
+    HADOOP-2103.  Fix minor javadoc bugs introduce by HADOOP-2046. (Nigel
+    Daley via acmurthy) 
+
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
