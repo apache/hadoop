@@ -63,7 +63,6 @@ Trunk (unreleased changes)
 
 Release 0.15.0 - 2007-11-2
 
-
   INCOMPATIBLE CHANGES
 
     HADOOP-1708.  Make files appear in namespace as soon as they are
