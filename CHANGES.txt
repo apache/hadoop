@@ -392,6 +392,10 @@ Branch 0.15 (unreleased changes)
     HADOOP-2073.  Change size of VERSION file after writing contents to it.
     (Konstantin Shvachko via dhruba)
  
+    HADOOP-2102.  Fix the deprecated ToolBase to pass its Configuration object
+    to the superceding ToolRunner to ensure it picks up the appropriate
+    configuration resources. (Dennis Kubes and Enis Soztutar via acmurthy) 
+ 
   IMPROVEMENTS
 
     HADOOP-1908. Restructure data node code so that block sending and 
