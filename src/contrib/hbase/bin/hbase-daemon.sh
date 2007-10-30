@@ -94,9 +94,9 @@ if [ "$HADOOP_IDENT_STRING" = "" ]; then
 fi
 
 # some variables
-export HADOOP_LOGFILE=hbase-$HADOOP_IDENT_STRING-$command-`hostname`.log
+export HADOOP_LOGFILE=hbase-$HADOOP_IDENT_STRING-$command-$HOSTNAME.log
 export HADOOP_ROOT_LOGGER="INFO,DRFA"
-log=$HADOOP_LOG_DIR/hbase-$HADOOP_IDENT_STRING-$command-`hostname`.out  
+log=$HADOOP_LOG_DIR/hbase-$HADOOP_IDENT_STRING-$command-$HOSTNAME.out  
 pid=$HADOOP_PID_DIR/hbase-$HADOOP_IDENT_STRING-$command.pid
 
 # Set default scheduling priority
