@@ -75,8 +75,8 @@ public class TestFilter extends TestCase {
     bf.add(k3);
     assertTrue(bf.membershipTest(key));
     assertFalse(bf.membershipTest(new StringKey("graknyl")));
-    assertTrue(bf.membershipTest(new StringKey("xyzzy")));      // False positive
-    assertTrue(bf.membershipTest(new StringKey("abcd")));       // False positive
+    assertFalse(bf.membershipTest(new StringKey("xyzzy")));
+    assertFalse(bf.membershipTest(new StringKey("abcd")));
   }
   
   /** Test a CountingBloomFilter
@@ -92,8 +92,8 @@ public class TestFilter extends TestCase {
     bf.add(k3);
     assertTrue(bf.membershipTest(key));
     assertFalse(bf.membershipTest(new StringKey("graknyl")));
-    assertTrue(bf.membershipTest(new StringKey("xyzzy")));      // False positive
-    assertTrue(bf.membershipTest(new StringKey("abcd")));       // False positive
+    assertFalse(bf.membershipTest(new StringKey("xyzzy")));
+    assertFalse(bf.membershipTest(new StringKey("abcd")));
   }
   
   /** Test a DynamicBloomFilter
@@ -110,6 +110,6 @@ public class TestFilter extends TestCase {
     assertTrue(bf.membershipTest(key));
     assertFalse(bf.membershipTest(new StringKey("graknyl")));
     assertFalse(bf.membershipTest(new StringKey("xyzzy")));
-    assertTrue(bf.membershipTest(new StringKey("abcd")));       // False positive
+    assertFalse(bf.membershipTest(new StringKey("abcd")));
   }
 }//end class

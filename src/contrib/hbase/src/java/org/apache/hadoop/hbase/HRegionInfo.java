@@ -23,11 +23,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
+
+import org.apache.hadoop.hbase.util.JenkinsHash;
 
 /**
  * HRegion information.
@@ -35,34 +34,13 @@ import org.apache.hadoop.io.WritableComparable;
  * HRegions' table descriptor, etc.
  */
 public class HRegionInfo implements WritableComparable {
-  private static MessageDigest encoder = null;
-  
-  static {
-    try {
-      if (encoder == null) {
-        encoder = MessageDigest.getInstance("SHA");
-      }
-    } catch (NoSuchAlgorithmException e) {
-      e.printStackTrace();
-    }
-  }
-
   /**
    * @param regionName
    * @return the encodedName
    */
   public static String encodeRegionName(final Text regionName) {
-    byte[] bytes = null;
-    synchronized (encoder) {
-      encoder.update(regionName.getBytes(), 0, regionName.getLength());
-      bytes = encoder.digest();
-      encoder.reset();
-    }
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < bytes.length; i++) {
-      sb.append(bytes[i]);
-    }
-    return sb.toString();
+    return String.valueOf(
+        JenkinsHash.hash(regionName.getBytes(), regionName.getLength(), 0));
   }
 
   /** delimiter used between portions of a region name */
