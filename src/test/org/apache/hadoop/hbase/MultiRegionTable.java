@@ -75,19 +75,27 @@ public class MultiRegionTable extends HBaseTestCase {
     HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
     int count = count(meta, tableName);
     HTable t = new HTable(conf, new Text(tableName));
+    // We created the table.  Get the parent region here now.  One will
+    // have been created though nought in it.
+    HRegionInfo parent =
+      t.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
+    LOG.info("Parent region " + parent.toString());
+    // Now add content.
     addContent(new HTableIncommon(t), columnName);
     LOG.info("Finished content loading");
     
     // All is running in the one JVM so I should be able to get the single
-    // region instance and bring on a split.
-    // Presumption is that there is only one regionserver.
+    // region instance and bring on a split. Presumption is that there is only
+    // one regionserver.   Of not, the split may already have happened by the
+    // time we got here.  If so, then the region found when we go searching
+    // with EMPTY_START_ROW will be one of the unsplittable daughters.
     HRegionInfo hri = null;
     HRegion r = null;
     for (int i = 0; i < 30; i++) {
       hri = t.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
       LOG.info("Region location: " + hri);
       r = cluster.getRegionThreads().get(0).getRegionServer().
-          onlineRegions.get(hri.getRegionName());
+        onlineRegions.get(hri.getRegionName());
       if (r != null) {
         break;
       }
@@ -121,9 +129,8 @@ public class MultiRegionTable extends HBaseTestCase {
     // Get info on the parent from the meta table.  Pass in 'hri'. Its the
     // region we have been dealing with up to this. Its the parent of the
     // region split.
-    Map<Text, byte []> data = getSplitParentInfo(meta, hri);
-    HRegionInfo parent =
-      Writables.getHRegionInfoOrNull(data.get(HConstants.COL_REGIONINFO));
+    Map<Text, byte []> data = getSplitParentInfo(meta, parent);
+    parent  = Writables.getHRegionInfoOrNull(data.get(HConstants.COL_REGIONINFO));
     LOG.info("Found parent region: " + parent);
     assertTrue(parent.isOffline());
     assertTrue(parent.isSplit());
