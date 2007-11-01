@@ -409,8 +409,7 @@ HMasterRegionInterface {
     }
 
     protected void checkAssigned(final HRegionInfo info,
-      final String serverName, final long startCode)
-    throws IOException {
+      final String serverName, final long startCode) throws IOException {
       // Skip region - if ...
       if(info.isOffline()                                 // offline
           || killedRegions.contains(info.getRegionName()) // queued for offline
@@ -435,7 +434,7 @@ HMasterRegionInterface {
         }
         synchronized (serversToServerInfo) {
           storedInfo = serversToServerInfo.get(serverName);
-          if (storedInfo != null && deadServers.contains(serverName)) {
+          if (deadServers.contains(serverName)) {
             deadServer = true;
           }
         }
@@ -443,10 +442,23 @@ HMasterRegionInterface {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Checking " + info.getRegionName() + " is assigned");
       }
-      if (!(unassignedRegions.containsKey(info.getRegionName()) ||
-            pendingRegions.contains(info.getRegionName()))
-          && (storedInfo == null || 
-              (storedInfo.getStartCode() != startCode && !deadServer))) {
+
+      /*
+       * If the server is not dead and either:
+       *   the stored info is not null and the start code does not match
+       * or:
+       *   the stored info is null and the region is neither unassigned nor pending
+       * then:
+       */ 
+      if (!deadServer &&
+          ((storedInfo != null && storedInfo.getStartCode() != startCode) ||
+              (storedInfo == null &&
+                  !unassignedRegions.containsKey(info.getRegionName()) &&
+                  !pendingRegions.contains(info.getRegionName())
+              )
+          )
+      ) {
+
         // The current assignment is no good
         if (LOG.isDebugEnabled()) {
           LOG.debug("Current assignment of " + info.getRegionName() +
@@ -2390,6 +2402,7 @@ HMasterRegionInterface {
     return !closed.get();
   }
 
+  /** {@inheritDoc} */
   public void shutdown() {
     TimerTask tt = new TimerTask() {
       @Override
@@ -3021,8 +3034,8 @@ HMasterRegionInterface {
   }
 
   protected static void doMain(String [] args,
-      Class<? extends HMaster> masterClass)
-  throws IOException {
+      Class<? extends HMaster> masterClass) {
+
     if (args.length < 1) {
       printUsageAndExit();
     }
@@ -3079,9 +3092,8 @@ HMasterRegionInterface {
   /**
    * Main program
    * @param args
-   * @throws IOException 
    */
-  public static void main(String [] args) throws IOException {
+  public static void main(String [] args) {
     doMain(args, HMaster.class);
   }
 }
