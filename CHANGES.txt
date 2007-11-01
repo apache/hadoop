@@ -63,6 +63,12 @@ Trunk (unreleased changes)
     HADOOP-1622 i.e. http://svn.apache.org/viewvc?view=rev&revision=588771.
     (acmurthy)
 
+Release 0.15.1 -
+
+  BUG FIXES
+
+    HADOOP-2140.  Add missing Apache Licensing text at the front of several
+    C and C++ files.
 
 Release 0.15.0 - 2007-11-2
 
