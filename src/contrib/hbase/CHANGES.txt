@@ -17,6 +17,7 @@ Trunk (unreleased changes)
    HADOOP-2056 A table with row keys containing colon fails to split regions
    HADOOP-2079 HADOOP-2056 Fix generated HLog, HRegion names
    HADOOP-2124 Use of `hostname` does not work on Cygwin in some cases
+   HADOOP-2083 TestTableIndex failed in #970 and #956
 
   IMPROVEMENTS
     HADOOP-2401 Add convenience put method that takes writable
