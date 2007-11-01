@@ -49,7 +49,7 @@
  */
 package org.onelab.filter;
 
-import java.security.*;
+import org.apache.hadoop.hbase.util.JenkinsHash;
 
 /**
  * Implements a hash object that returns a certain number of hashed values.
@@ -66,9 +66,6 @@ import java.security.*;
  * @see <a href="http://www.itl.nist.gov/fipspubs/fip180-1.htm">SHA-1 algorithm</a>
  */
 public final class HashFunction{
-  /** The SHA-1 algorithm. */
-  private MessageDigest sha;
-
   /** The number of hashed values. */
   private int nbHash;
 
@@ -83,13 +80,6 @@ public final class HashFunction{
    * @param nbHash The number of resulting hashed values.
    */
   public HashFunction(int maxValue, int nbHash) {
-    try {
-      sha = MessageDigest.getInstance("SHA-1");
-      
-    } catch(NoSuchAlgorithmException e) {
-      throw new AssertionError(e);
-    }
-
     if(maxValue <= 0) {
       throw new IllegalArgumentException("maxValue must be > 0");
     }
@@ -102,9 +92,8 @@ public final class HashFunction{
     this.nbHash = nbHash;
   }//end constructor
 
-  /** Clears <i>this</i> hash function. */
+  /** Clears <i>this</i> hash function. A NOOP */
   public void clear(){
-    sha.reset();
   }//end clear()
 
   /**
@@ -121,19 +110,9 @@ public final class HashFunction{
       if(b.length == 0) {
         throw new IllegalArgumentException("key length must be > 0");
       }
-      sha.update(b);
-      byte[] digestBytes = sha.digest();
       int[] result = new int[nbHash];
-      int nbBytePerInt = digestBytes.length/nbHash;
-      int offset = 0;
-      for(int i = 0; i < nbHash; i++){
-        int val = 0;
-        for(int j = offset; j < offset + nbBytePerInt; j++) {
-          val |=
-            (digestBytes[offset] & 0xff) << ((nbBytePerInt - 1 - (j - offset)) * 8);
-        }
-        result[i] = Math.abs(val) % maxValue;
-        offset += nbBytePerInt;
+      for (int i = 0, initval = 0; i < nbHash; i++) {
+        result[i] = Math.abs(JenkinsHash.hash(b, initval)) % maxValue;
       }
       return result;
   }//end hash() 
