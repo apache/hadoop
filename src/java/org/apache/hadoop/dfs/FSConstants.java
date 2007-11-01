@@ -85,6 +85,8 @@ public interface FSConstants {
   public static final byte OP_WRITE_BLOCK = (byte) 80;
   public static final byte OP_READ_BLOCK = (byte) 81;
   public static final byte OP_READ_METADATA = (byte) 82;
+  public static final byte OP_REPLACE_BLOCK = (byte) 83;
+  public static final byte OP_COPY_BLOCK = (byte) 84;
   
   public static final int OP_STATUS_SUCCESS = 0;  
   public static final int OP_STATUS_ERROR = 1;  
@@ -97,13 +99,21 @@ public interface FSConstants {
    * This should change when serialization of DatanodeInfo, not just
    * when protocol changes. It is not very obvious. 
    */
-  /* Version 6: 
-   * 0 marks the end of a block not an EMPTY_CHUNK
-   * OP_READ_BLOCK: return OP_STATUS_ERROR if received an invalid block id
-   *                return OP_STATUS_ERROR if received an invalid length
-   * OP_WRITE_BLOCK: return OP_STATUS_ERROR if illegal bytesPerChecksum
+  /* Version 7: 
+   * Add two operations to data node
+   * OP_COPY_BLOCK: 
+   *   The command is for sending to a proxy source for the balancing purpose
+   *   The datanode then sends OP_REPLACE_BLOCK request to the destination
+   *   OP_COPY_BLOCK BlockID(long) SourceID (UTF8) Destination (DatanodeInfo)
+   *   return OP_STATUS_ERROR if any error occurs; OP_STATUS_SUCCESS otherwise
+   * OP_REPLACE_BLOCK: 
+   *   the command is for sending to a destination for the balancing purpose
+   *   The datanode then writes the block to disk and notifies namenode of this
+   *   received block together with a deletion hint: sourceID
+   *   OP_REPLACE_BLOCK BlockID(long) SourceID(UTF8) Block_Data_With_Crc
+   *   return OP_STATUS_ERROR if any error occurs; OP_STATUS_SUCCESS otherwise
    */
-  public static final int DATA_TRANFER_VERSION = 6; //Should it be 1?
+  public static final int DATA_TRANFER_VERSION = 7;
 
   // Return codes for file create
   public static final int OPERATION_FAILED = 0;

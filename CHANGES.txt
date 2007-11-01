@@ -35,6 +35,9 @@ Trunk (unreleased changes)
 
     HADOOP-1210.  Log counters in job history. (Owen O'Malley via ddas)
 
+    HADOOP-1912. Datanode has two new commands COPY and REPLACE. These are
+    needed for supporting data rebalance.  (Hairong Kuang via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

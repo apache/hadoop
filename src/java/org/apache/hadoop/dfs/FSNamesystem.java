@@ -606,24 +606,22 @@ class FSNamesystem implements FSConstants {
    * return the length of the added block; 0 if the block is not added
    */
   private long addBlock(Block block, List<BlockWithLocations> results) {
-    int numNodes = blocksMap.numNodes(block);
-    String[] machineSet = new String[numNodes];
-    if (numNodes > 0) {
-      numNodes = 0;
-      for(Iterator<DatanodeDescriptor> it = 
-          blocksMap.nodeIterator(block); it.hasNext();) {
-        String storageID = it.next().getStorageID();
-        // filter invalidate replicas
-        Collection<Block> blocks = recentInvalidateSets.get(storageID); 
-        if(blocks==null || !blocks.contains(block)) {
-          machineSet[numNodes++] = storageID;
-        }
+    ArrayList<String> machineSet =
+      new ArrayList<String>(blocksMap.numNodes(block));
+    for(Iterator<DatanodeDescriptor> it = 
+      blocksMap.nodeIterator(block); it.hasNext();) {
+      String storageID = it.next().getStorageID();
+      // filter invalidate replicas
+      Collection<Block> blocks = recentInvalidateSets.get(storageID); 
+      if(blocks==null || !blocks.contains(block)) {
+        machineSet.add(storageID);
       }
     }
-    if(numNodes == 0) {
+    if(machineSet.size() == 0) {
       return 0;
     } else {
-      results.add(new BlockWithLocations(block, machineSet));
+      results.add(new BlockWithLocations(block, 
+          machineSet.toArray(new String[machineSet.size()])));
       return block.getNumBytes();
     }
   }
@@ -770,7 +768,7 @@ class FSNamesystem implements FSConstants {
       LOG.info("Reducing replication for file " + src 
                + ". New replication is " + replication);
       for(int idx = 0; idx < fileBlocks.length; idx++)
-        proccessOverReplicatedBlock(fileBlocks[idx], replication);
+        proccessOverReplicatedBlock(fileBlocks[idx], replication, null, null);
     }
     return true;
   }
@@ -2219,7 +2217,7 @@ class FSNamesystem implements FSConstants {
       removeStoredBlock(b, node);
     }
     for (Block b : toAdd) {
-      addStoredBlock(b, node);
+      addStoredBlock(b, node, null);
     }
         
     //
@@ -2262,7 +2260,9 @@ class FSNamesystem implements FSConstants {
    * needed replications if this takes care of the problem.
    * @return the block that is stored in blockMap.
    */
-  synchronized Block addStoredBlock(Block block, DatanodeDescriptor node) {
+  synchronized Block addStoredBlock(Block block, 
+                                    DatanodeDescriptor node,
+                                    DatanodeDescriptor delNodeHint) {
         
     INodeFile fileINode = blocksMap.getINode(block);
     int replication = (fileINode != null) ?  fileINode.getReplication() : 
@@ -2333,7 +2333,7 @@ class FSNamesystem implements FSConstants {
       updateNeededReplications(block, curReplicaDelta, 0);
     }
     if (numCurrentReplica > fileReplication) {
-      proccessOverReplicatedBlock(block, fileReplication);
+      proccessOverReplicatedBlock(block, fileReplication, node, delNodeHint);
     }
     return block;
   }
@@ -2343,7 +2343,11 @@ class FSNamesystem implements FSConstants {
    * If there are any extras, call chooseExcessReplicates() to
    * mark them in the excessReplicateMap.
    */
-  private void proccessOverReplicatedBlock(Block block, short replication) {
+  private void proccessOverReplicatedBlock(Block block, short replication, 
+      DatanodeDescriptor addedNode, DatanodeDescriptor delNodeHint) {
+    if(addedNode == delNodeHint) {
+      delNodeHint = null;
+    }
     Collection<DatanodeDescriptor> nonExcess = new ArrayList<DatanodeDescriptor>();
     for (Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(block); 
          it.hasNext();) {
@@ -2355,7 +2359,8 @@ class FSNamesystem implements FSConstants {
         }
       }
     }
-    chooseExcessReplicates(nonExcess, block, replication);    
+    chooseExcessReplicates(nonExcess, block, replication, 
+        addedNode, delNodeHint);    
   }
 
   /**
@@ -2373,7 +2378,9 @@ class FSNamesystem implements FSConstants {
    * then pick a node with least free space
    */
   void chooseExcessReplicates(Collection<DatanodeDescriptor> nonExcess, 
-                              Block b, short replication) {
+                              Block b, short replication,
+                              DatanodeDescriptor addedNode,
+                              DatanodeDescriptor delNodeHint) {
     // first form a rack to datanodes map and
     HashMap<String, ArrayList<DatanodeDescriptor>> rackMap =
       new HashMap<String, ArrayList<DatanodeDescriptor>>();
@@ -2405,22 +2412,29 @@ class FSNamesystem implements FSConstants {
       }
     }
     
-    // pick one node with least space from priSet if it is not empty
+    // pick one node to delete that favors the delete hint
+    // otherwise pick one with least space from priSet if it is not empty
     // otherwise one node with least space from remains
     while (nonExcess.size() - replication > 0) {
       DatanodeInfo cur = null;
       long minSpace = Long.MAX_VALUE;
 
-      Iterator<DatanodeDescriptor> iter = 
-        priSet.isEmpty() ? remains.iterator() : priSet.iterator();
-      while( iter.hasNext() ) {
-        DatanodeDescriptor node = iter.next();
-        long free = node.getRemaining();
-                
-        if (minSpace > free) {
-          minSpace = free;
-          cur = node;
-        }
+      // check if we can del delNodeHint
+      if( delNodeHint !=null && (priSet.contains(delNodeHint) ||
+          (addedNode != null && !priSet.contains(addedNode))) ) {
+          cur = delNodeHint;
+      } else { // regular excessive replica removal
+        Iterator<DatanodeDescriptor> iter = 
+          priSet.isEmpty() ? remains.iterator() : priSet.iterator();
+          while( iter.hasNext() ) {
+            DatanodeDescriptor node = iter.next();
+            long free = node.getRemaining();
+
+            if (minSpace > free) {
+              minSpace = free;
+              cur = node;
+            }
+          }
       }
 
       // adjust rackmap, priSet, and remains
@@ -2430,14 +2444,13 @@ class FSNamesystem implements FSConstants {
       if(datanodes.isEmpty()) {
         rackMap.remove(rack);
       }
-      if (priSet.isEmpty()) {
-        remains.remove(cur);
-      } else {
-        priSet.remove(cur);
+      if( priSet.remove(cur) ) {
         if (datanodes.size() == 1) {
           priSet.remove(datanodes.get(0));
           remains.add(datanodes.get(0));
         }
+      } else {
+        remains.remove(cur);
       }
 
       nonExcess.remove(cur);
@@ -2515,7 +2528,8 @@ class FSNamesystem implements FSConstants {
    * The given node is reporting that it received a certain block.
    */
   public synchronized void blockReceived(DatanodeID nodeID,  
-                                         Block block
+                                         Block block,
+                                         String delHint
                                          ) throws IOException {
     DatanodeDescriptor node = getDatanode(nodeID);
     if (node == null) {
@@ -2538,10 +2552,22 @@ class FSNamesystem implements FSConstants {
       throw new DisallowedDatanodeException(node);
     }
 
+    // get the deletion hint node
+    DatanodeDescriptor delHintNode = null;
+    if(delHint!=null && delHint.length()!=0) {
+      delHintNode = datanodeMap.get(delHint);
+      if(delHintNode == null) {
+        NameNode.stateChangeLog.warn("BLOCK* NameSystem.blockReceived: "
+            + block.getBlockName()
+            + " is expected to be removed from an unrecorded node " 
+            + delHint);
+      }
+    }
+
     //
     // Modify the blocks->datanode map and node's map.
     // 
-    addStoredBlock(block, node);
+    addStoredBlock(block, node, delHintNode );
     pendingReplications.remove(block);
   }
 

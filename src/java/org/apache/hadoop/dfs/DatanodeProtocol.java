@@ -31,9 +31,9 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface DatanodeProtocol extends VersionedProtocol {
   /*
-   * 9: heartbeat sends also the data node used space;
+   * 10: blockReceived also sends hints for deletion
    */
-  public static final long versionID = 9L;
+  public static final long versionID = 10L;
   
   // error code
   final static int NOTIFY = 0;
@@ -89,12 +89,15 @@ interface DatanodeProtocol extends VersionedProtocol {
     
   /**
    * blockReceived() allows the DataNode to tell the NameNode about
-   * recently-received block data.  For example, whenever client code
+   * recently-received block data, with a hint for pereferred replica
+   * to be deleted when there is any excessive blocks.
+   * For example, whenever client code
    * writes a new Block here, or another DataNode copies a Block to
    * this DataNode, it will call blockReceived().
    */
   public void blockReceived(DatanodeRegistration registration,
-                            Block blocks[]) throws IOException;
+                            Block blocks[],
+                            String[] delHints) throws IOException;
 
   /**
    * errorReport() tells the NameNode about something that has gone

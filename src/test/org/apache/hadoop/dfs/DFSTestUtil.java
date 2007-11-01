@@ -109,19 +109,29 @@ public class DFSTestUtil extends TestCase {
     Path root = new Path(topdir);
     
     for (int idx = 0; idx < nFiles; idx++) {
-      Path fPath = new Path(root, files[idx].getName());
-      if (!fs.mkdirs(fPath.getParent())) {
-        throw new IOException("Mkdirs failed to create " + 
-                              fPath.getParent().toString());
-      }
-      FSDataOutputStream out = fs.create(fPath, replicationFactor);
-      byte[] toWrite = new byte[files[idx].getSize()];
-      Random rb = new Random(files[idx].getSeed());
-      rb.nextBytes(toWrite);
-      out.write(toWrite);
-      out.close();
-      toWrite = null;
+      createFile(fs, new Path(root, files[idx].getName()), files[idx].getSize(),
+          replicationFactor, files[idx].getSeed());
     }
+  }
+  
+  static void createFile(FileSystem fs, Path fileName, long fileLen, 
+      short replFactor, long seed) throws IOException {
+    if (!fs.mkdirs(fileName.getParent())) {
+      throw new IOException("Mkdirs failed to create " + 
+                            fileName.getParent().toString());
+    }
+    FSDataOutputStream out = fs.create(fileName, replFactor);
+    byte[] toWrite = new byte[1024];
+    Random rb = new Random(seed);
+    long bytesToWrite = fileLen;
+    while (bytesToWrite>0) {
+     rb.nextBytes(toWrite);
+     int bytesToWriteNext = (1024<bytesToWrite)?1024:(int)bytesToWrite;
+
+     out.write(toWrite, 0, bytesToWriteNext);
+     bytesToWrite -= bytesToWriteNext;
+    }
+    out.close();
   }
   
   /** check if the files have been copied correctly. */
@@ -168,33 +178,31 @@ public class DFSTestUtil extends TestCase {
     Path root = new Path(topdir);
 
     /** wait for the replication factor to settle down */
-    while (true) {
-      boolean good = true;
-      for (int idx = 0; idx < nFiles; idx++) {
-        Path fPath = new Path(root, files[idx].getName());
-        String locs[][] = fs.getFileCacheHints(fPath, 0, Long.MAX_VALUE);
-        for (int j = 0; j < locs.length; j++) {
-          String[] loc = locs[j];
-          if (loc.length != value) {
-            System.out.println("File " + fPath + " has replication factor " +
-                               loc.length);
-            good = false;
-            break;
-          }
-        }
-        if (!good) {
+    for (int idx = 0; idx < nFiles; idx++) {
+      waitReplication(fs, new Path(root, files[idx].getName()), value);
+    }
+  }
+  
+  /** wait for the file's replication to be done */
+  static void waitReplication(FileSystem fs, Path fileName, 
+      short replFactor)  throws IOException {
+    boolean good;
+    do {
+      good = true;
+      String locs[][] = fs.getFileCacheHints(fileName, 0, Long.MAX_VALUE);
+      for (int j = 0; j < locs.length; j++) {
+        String[] loc = locs[j];
+        if (loc.length != replFactor) {
+          System.out.println("File " + fileName + " has replication factor " +
+              loc.length);
+          try {
+            System.out.println("Waiting for replication factor to drain");
+            Thread.sleep(100);
+          } catch (InterruptedException e) {} 
           break;
         }
       }
-      if (!good) {
-        try {
-          System.out.println("Waiting for replication factor to drain");
-          Thread.sleep(1000);
-        } catch (InterruptedException e) {} 
-        continue;
-      }
-      break;
-    }
+    } while(!good);
   }
   
   /** delete directory and everything underneath it.*/

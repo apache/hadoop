@@ -596,12 +596,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   public void blockReceived(DatanodeRegistration nodeReg, 
-                            Block blocks[]) throws IOException {
+                            Block blocks[],
+                            String delHints[]) throws IOException {
     verifyRequest(nodeReg);
     stateChangeLog.debug("*BLOCK* NameNode.blockReceived: "
                          +"from "+nodeReg.getName()+" "+blocks.length+" blocks.");
     for (int i = 0; i < blocks.length; i++) {
-      namesystem.blockReceived(nodeReg, blocks[i]);
+      namesystem.blockReceived(nodeReg, blocks[i], delHints[i]);
     }
   }
 
