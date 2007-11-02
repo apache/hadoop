@@ -52,10 +52,10 @@
         <p>See the release notes (above) for details.</p>
 
 	<note>When upgrading an existing HDFS filesystem to a 0.15.x
-	release from an earlier release, you should first
-	start HDFS with 'bin/start-dfs.sh -upgrade'.  See the <a
+	release from an earlier release, you should first start HDFS
+	with 'bin/start-dfs.sh -upgrade'.  See the <a
 	href="http://wiki.apache.org/lucene-hadoop/Hadoop_Upgrade">Hadoop
-	0.14 Upgrade</a> page for details.</note>
+	Upgrade</a> page for details.</note>
 
       </section>
 
