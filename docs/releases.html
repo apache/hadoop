@@ -238,10 +238,17 @@ document.write("Last Published: " + document.lastModified);
         fixes and optimizations.</p>
 <p>Notably, this contains the first working version of <a href="http://wiki.apache.org/lucene-hadoop/Hbase">HBase</a>.</p>
 <p>See the release notes (above) for details.</p>
-<a name="N10051"></a><a name="19+October%2C+2007%3A+release+0.14.3+available"></a>
+<div class="note">
+<div class="label">Note</div>
+<div class="content">When upgrading an existing HDFS filesystem to a 0.15.x
+	release from an earlier release, you should first
+	start HDFS with 'bin/start-dfs.sh -upgrade'.  See the <a href="http://wiki.apache.org/lucene-hadoop/Hadoop_Upgrade">Hadoop
+	0.14 Upgrade</a> page for details.</div>
+</div>
+<a name="N10058"></a><a name="19+October%2C+2007%3A+release+0.14.3+available"></a>
 <h3 class="h4">19 October, 2007: release 0.14.3 available </h3>
 <p>This release fixes critical bugs in release 0.14.2.</p>
-<a name="N1005B"></a><a name="4+September%2C+2007%3A+release+0.14.1+available"></a>
+<a name="N10062"></a><a name="4+September%2C+2007%3A+release+0.14.1+available"></a>
 <h3 class="h4"> 4 September, 2007: release 0.14.1 available </h3>
 <p>New features in release 0.14 include:</p>
 <ul>
