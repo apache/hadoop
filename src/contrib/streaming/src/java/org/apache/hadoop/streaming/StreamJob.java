@@ -404,7 +404,7 @@ public class StreamJob {
     Option cacheFile = createOption("cacheFile", 
                                     "File name URI", "fileNameURI", Integer.MAX_VALUE, false);
     Option cacheArchive = createOption("cacheArchive", 
-                                       "File name URI", "fileNameURI", 1, false);
+                                       "File name URI", "fileNameURI", Integer.MAX_VALUE, false);
     
     // boolean properties
     

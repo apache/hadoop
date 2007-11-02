@@ -63,6 +63,10 @@ Trunk (unreleased changes)
     HADOOP-1622 i.e. http://svn.apache.org/viewvc?view=rev&revision=588771.
     (acmurthy)
 
+    HADOOP-2089.  Fixes the command line argument handling to handle multiple
+    -cacheArchive in Hadoop streaming.  (Lohit Vijayarenu via ddas)
+
+
 Release 0.15.1 -
 
   BUG FIXES
