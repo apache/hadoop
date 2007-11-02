@@ -46,8 +46,10 @@
       <section>
         <title>29 October 2007: release 0.15.0 available </title>
 	<p>This release contains my improvements, new features, bug
-      fixes and optimizations.  See the release notes (above) for
-      details.</p>
+        fixes and optimizations.</p>
+	<p>Notably, this contains the first working version of <a
+	href="http://wiki.apache.org/lucene-hadoop/Hbase">HBase</a>.</p>
+        <p>See the release notes (above) for details.</p>
       </section>
 
       <section>
