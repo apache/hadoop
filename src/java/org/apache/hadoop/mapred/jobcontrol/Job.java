@@ -77,6 +77,16 @@ public class Job {
     this.message = "just initialized";
     this.jc = new JobClient(jobConf);
   }
+  
+  /**
+   * Construct a job.
+   * 
+   * @param jobConf mapred job configuration representing a job to be executed.
+   * @throws IOException
+   */
+  public Job(JobConf jobConf) throws IOException {
+    this(jobConf, null);
+  }
 	
   public String toString() {
     StringBuffer sb = new StringBuffer();
@@ -86,7 +96,7 @@ public class Job {
     sb.append("job mapred id:\t").append(this.mapredJobID).append("\n");
     sb.append("job message:\t").append(this.message).append("\n");
 		
-    if (this.dependingJobs == null) {
+    if (this.dependingJobs == null || this.dependingJobs.size() == 0) {
       sb.append("job has no depending job:\t").append("\n");
     } else {
       sb.append("job has ").append(this.dependingJobs.size()).append(" dependeng jobs:\n");
@@ -162,7 +172,7 @@ public class Job {
   /**
    * @return the state of this job
    */
-  public int getState() {
+  public synchronized int getState() {
     return this.state;
   }
 	
@@ -170,7 +180,7 @@ public class Job {
    * Set the state for this job.
    * @param state the new state for this job.
    */
-  public void setState(int state) {
+  protected synchronized void setState(int state) {
     this.state = state;
   }
 	
@@ -194,6 +204,24 @@ public class Job {
    */
   public ArrayList getDependingJobs() {
     return this.dependingJobs;
+  }
+  
+  /**
+   * Add a job to this jobs' dependency list. Dependent jobs can only be added while a Job 
+   * is waiting to run, not during or afterwards.
+   * 
+   * @param dependingJob Job that this Job depends on.
+   * @return <tt>true</tt> if the Job was added.
+   */
+  public synchronized boolean addDependingJob(Job dependingJob) {
+    if (this.state == Job.WAITING) { //only allowed to add jobs when waiting
+      if (this.dependingJobs == null) {
+        this.dependingJobs = new ArrayList();
+      }
+      return this.dependingJobs.add(dependingJob);
+    } else {
+      return false;
+    }
   }
 	
   /**
@@ -260,7 +288,7 @@ public class Job {
    * Check and update the state of this job. The state changes  
    * depending on its current state and the states of the depending jobs.
    */
-  public int checkState() {
+   synchronized int checkState() {
     if (this.state == Job.RUNNING) {
       checkRunningState();
     }
@@ -299,7 +327,7 @@ public class Job {
    * Submit this job to mapred. The state becomes RUNNING if submission 
    * is successful, FAILED otherwise.  
    */
-  public void submit() {
+  protected synchronized void submit() {
     try {
       if (theJobConf.getBoolean("create.empty.dir.if.nonexist", false)) {
         FileSystem fs = FileSystem.get(theJobConf);

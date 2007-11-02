@@ -38,6 +38,9 @@ Trunk (unreleased changes)
     HADOOP-1912. Datanode has two new commands COPY and REPLACE. These are
     needed for supporting data rebalance.  (Hairong Kuang via dhruba)
 
+    HADOOP-2086. This patch adds the ability to add dependencies to a job
+    (run via JobControl) after construction.  (Adrian Woodhead via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
