@@ -2,11 +2,14 @@ package org.apache.hadoop.hbase.shell.formatter;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 
 import org.apache.hadoop.hbase.shell.TableFormatter;
 import org.znerd.xmlenc.LineBreak;
 import org.znerd.xmlenc.XMLOutputter;
+import org.znerd.xmlenc.XMLEncoder;
+import org.znerd.xmlenc.InvalidXMLException;
 
 /**
  * Formatter that outputs data inside an HTML table. If only a single cell
@@ -28,13 +31,56 @@ public class HtmlTableFormatter implements TableFormatter {
   private HtmlTableFormatter() {
     this(null);
   }
+
+  /*
+   * An encoder that replaces illegal XML characters with the '@' sign.
+   */
+  private static class HbaseXMLEncoder extends XMLEncoder {
+    @SuppressWarnings("deprecation")
+    public HbaseXMLEncoder()
+    throws IllegalArgumentException, UnsupportedEncodingException {
+      super("UTF-8");
+    }
+    
+    @Override
+    public void text(Writer w, char c, boolean escape)
+    throws InvalidXMLException, IOException {
+      super.text(w, legalize(c), escape);
+    }
+    
+    @Override
+    public void text(Writer w, char[] cs, int start, int length, boolean b)
+        throws NullPointerException, IndexOutOfBoundsException,
+        InvalidXMLException, IOException {
+      for (int i = start; i < start + length; i++) {
+        cs[i] = legalize(cs[i]);
+      }
+      super.text(w, cs, start, length, b);
+    }
+    
+    /**
+     * If character is in range A, C, or E, then replace with '@'
+     * <pre>
+     * A   0-8     Control characters   -- Not allowed in XML 1.0 --
+     * B   9-10    Normal characters    Never needed
+     * C   11-12   Control characters   -- Not allowed in XML 1.0 --
+     * D   13      Normal character     Never needed
+     * E   14-31   Control characters   -- Not allowed in XML 1.0 --
+     * </pre>
+     * @param c Character to look at.
+     * @return
+     */
+    private char legalize(final char c) {
+      return (c <= 8 || c == 11 || c == 12 || (c >= 14 && c <= 31))? '@': c;
+    }
+  }
   
   public HtmlTableFormatter(final Writer o) {
     this.out = o;
     try {
       // Looking at the xmlenc source, there should be no issue w/ wrapping
       // the stream -- i.e. no hanging resources.
-      this.outputter = new XMLOutputter(this.out, "UTF-8");
+      this.outputter = new XMLOutputter(this.out, new HbaseXMLEncoder());
       String os = System.getProperty("os.name").toLowerCase();
       // Shell likes the DOS output.
       this.outputter.setLineBreak(os.contains("windows")?
