@@ -28,11 +28,11 @@
 <form action="/hql.jsp" method="get">
     <p>
     <label for="query">Query: </label>
-    <input type="text" name="q" id="q" size="40" value="<%= query %>" />
+    <input type="text" name="q" id="q" size="60" value="<%= query %>" />
     <input type="submit" value="submit" />
     </p>
  </form>
- <p>Enter 'help;' -- thats 'help' plus a semi-colon -- for a list of <em>HQL</em> commands.
+ <p>Enter 'help;' -- thats 'help' plus a semi-colon -- for the list of <em>HQL</em> commands.
  Data Definition, SHELL, INSERTS, DELETES, and UPDATE commands are disabled in this interface
  </p>
  
