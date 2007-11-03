@@ -20,6 +20,7 @@ Trunk (unreleased changes)
    HADOOP-2083 TestTableIndex failed in #970 and #956
    HADOOP-2109 Fixed race condition in processing server lease timeout.
    HADOOP-2137 hql.jsp : The character 0x19 is not valid
+   HADOOP-2109 Fix another race condition in processing dead servers
 
   IMPROVEMENTS
     HADOOP-2401 Add convenience put method that takes writable
