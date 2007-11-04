@@ -1927,6 +1927,10 @@ HMasterRegionInterface {
           "meta and clearing pendingRegions");
 
           if (info.getTableDesc().getName().equals(META_TABLE_NAME)) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("removing meta region " + info.getRegionName() +
+                  " from online meta regions");
+            }
             onlineMetaRegions.remove(info.getStartKey());
           }
 
@@ -2082,27 +2086,27 @@ HMasterRegionInterface {
         rootRescanned = true;
       }
 
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("numberOfMetaRegions: " + numberOfMetaRegions.get() +
+            ", onlineMetaRegions.size(): " + onlineMetaRegions.size());
+      }
+      if (numberOfMetaRegions.get() != onlineMetaRegions.size()) {
+        // We can't proceed because not all of the meta regions are online.
+        // We can't block either because that would prevent the meta region
+        // online message from being processed. So return false to have this
+        // operation requeued.
+        
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+              "Requeuing shutdown because not all meta regions are online");
+        }
+        return false;
+      }
       for (int tries = 0; tries < numRetries; tries++) {
         try {
           if (closed.get()) {
             return true;
           }
-          if (!rootRescanned ||
-              numberOfMetaRegions.get() != onlineMetaRegions.size()) {
-            // We can't proceed because not all of the meta regions are online.
-            // We can't block either because that would prevent the meta region
-            // online message from being processed. So return false to have this
-            // operation requeued.
-            
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Requeuing shutdown because rootScanned: " +
-                  rootRescanned + ", numberOfMetaRegions: " +
-                  numberOfMetaRegions.get() + ", onlineMetaRegions.size(): " +
-                  onlineMetaRegions.size());
-            }
-            return false;
-          }
-
           for (MetaRegion r: onlineMetaRegions.values()) {
 
             HRegionInterface server = null;
@@ -2364,7 +2368,7 @@ HMasterRegionInterface {
           if (region.getTableDesc().getName().equals(META_TABLE_NAME)) {
             // It's a meta region.
             MetaRegion m = new MetaRegion(this.serverAddress,
-              this.region.getRegionName(), this.region.getRegionName());
+              this.region.getRegionName(), this.region.getStartKey());
             if (!initialMetaScanComplete) {
               // Put it on the queue to be scanned for the first time.
               try {
@@ -2377,7 +2381,7 @@ HMasterRegionInterface {
             } else {
               // Add it to the online meta regions
               LOG.debug("Adding to onlineMetaRegions: " + m.toString());
-              onlineMetaRegions.put(this.region.getRegionName(), m);
+              onlineMetaRegions.put(this.region.getStartKey(), m);
             }
           }
           // If updated successfully, remove from pending list.
