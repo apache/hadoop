@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
@@ -55,9 +57,9 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
     // Start up a new region server to take over serving of root and meta
     // after we shut down the current meta/root host.
     this.cluster.startRegionServer();
-    // Now abort the region server and wait for it to go down.
-    this.cluster.abortRegionServer(0);
-    LOG.info(this.cluster.waitOnRegionServer(0) + " has been aborted");
+    // Now abort the meta region server and wait for it to go down and come back
+    stopOrAbortMetaRegionServer(true);
+    // Verify that everything is back up.
     Thread t = startVerificationThread(tableName, row);
     t.start();
     threadDumpingJoin(t);
@@ -76,9 +78,9 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
     // Start up a new region server to take over serving of root and meta
     // after we shut down the current meta/root host.
     this.cluster.startRegionServer();
-    // Now shutdown the region server and wait for it to go down.
-    this.cluster.stopRegionServer(0);
-    LOG.info(this.cluster.waitOnRegionServer(0) + " has been shutdown");
+    // Now abort the meta region server and wait for it to go down and come back
+    stopOrAbortMetaRegionServer(false);
+    // Verify that everything is back up.
     Thread t = startVerificationThread(tableName, row);
     t.start();
     threadDumpingJoin(t);
@@ -98,6 +100,41 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
     table.commit(lockid);
     return row;
   }
+
+  /*
+   * Stop the region server serving the meta region and wait for the meta region
+   * to get reassigned. This is always the most problematic case.
+   * 
+   * @param abort set to true if region server should be aborted, if false it
+   * is just shut down.
+   */
+  private void stopOrAbortMetaRegionServer(boolean abort) {
+    List<LocalHBaseCluster.RegionServerThread> regionThreads =
+      cluster.getRegionThreads();
+    
+    int server = -1;
+    for (int i = 0; i < regionThreads.size() && server == -1; i++) {
+      HRegionServer s = regionThreads.get(i).getRegionServer();
+      Collection<HRegion> regions = s.getOnlineRegions().values();
+      for (HRegion r : regions) {
+        if (r.getTableDesc().getName().equals(HConstants.META_TABLE_NAME)) {
+          server = i;
+        }
+      }
+    }
+    if (server == -1) {
+      LOG.fatal("could not find region server serving meta region");
+      fail();
+    }
+    if (abort) {
+      this.cluster.abortRegionServer(server);
+      
+    } else {
+      this.cluster.stopRegionServer(server);
+    }
+    LOG.info(this.cluster.waitOnRegionServer(server) + " has been " +
+        (abort ? "aborted" : "shut down"));
+  }
   
   /*
    * Run verification in a thread so I can concurrently run a thread-dumper
@@ -111,6 +148,18 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
       final Text row) {
     Runnable runnable = new Runnable() {
       public void run() {
+        try {
+          // Now try to open a scanner on the meta table. Should stall until
+          // meta server comes back up.
+          HTable t = new HTable(conf, HConstants.META_TABLE_NAME);
+          HScannerInterface s =
+            t.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY, new Text());
+          s.close();
+          
+        } catch (IOException e) {
+          LOG.fatal("could not re-open meta table because", e);
+          fail();
+        }
         HScannerInterface scanner = null;
         try {
           // Verify that the client can find the data after the region has moved

@@ -22,7 +22,10 @@ Trunk (unreleased changes)
    HADOOP-2137 hql.jsp : The character 0x19 is not valid
    HADOOP-2109 Fix another race condition in processing dead servers,
                Fix error online meta regions: was using region name and not
-               startKey as key for map.put
+               startKey as key for map.put. Change TestRegionServerExit to
+               always kill the region server for the META region. This makes
+               the test more deterministic and getting META reassigned was
+               problematic.
 
   IMPROVEMENTS
     HADOOP-2401 Add convenience put method that takes writable
