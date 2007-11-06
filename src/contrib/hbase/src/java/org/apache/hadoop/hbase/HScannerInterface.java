@@ -19,16 +19,19 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.io.Text;
-
+import java.io.Closeable;
 import java.io.IOException;
+import java.util.Map;
 import java.util.SortedMap;
+
+import org.apache.hadoop.io.Text;
 
 /**
  * HScannerInterface iterates through a set of rows.  It's implemented by
  * several classes.
  */
-public interface HScannerInterface {
+public interface HScannerInterface extends Closeable,
+Iterable<Map.Entry<HStoreKey, SortedMap<Text, byte []>>> {
   /**
    * Grab the next row's worth of values. The scanner will return the most
    * recent data value for each row that is not newer than the target time

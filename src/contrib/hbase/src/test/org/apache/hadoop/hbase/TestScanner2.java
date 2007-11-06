@@ -26,15 +26,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.MapWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hbase.filter.RegExpRowFilter;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
@@ -42,6 +40,9 @@ import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Additional scanner tests.
@@ -69,13 +70,38 @@ public class TestScanner2 extends HBaseClusterTestCase {
       fail();
     }
   }
+
+  public void testStopRow() throws Exception {
+    Text tableName = new Text(getName());
+    createTable(new HBaseAdmin(this.conf), tableName);
+    HTable table = new HTable(this.conf, tableName);
+    final String lastKey = "aac";
+    addContent(new HTableIncommon(table), FIRST_COLKEY + ":");
+    HScannerInterface scanner =
+      table.obtainScanner(new Text [] {new Text(FIRST_COLKEY + ":")},
+        HConstants.EMPTY_START_ROW, new Text(lastKey));
+    for (Map.Entry<HStoreKey, SortedMap<Text, byte []>> e: scanner) {
+      LOG.info(e.getKey());
+      assertTrue(e.getKey().getRow().toString().compareTo(lastKey) < 0);
+    }
+  }
   
+  public void testIterator() throws Exception {
+    HTable table = new HTable(this.conf, HConstants.ROOT_TABLE_NAME);
+    HScannerInterface scanner =
+      table.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY,
+      HConstants.EMPTY_START_ROW);
+    for (Map.Entry<HStoreKey, SortedMap<Text, byte []>> e: scanner) {
+      assertNotNull(e.getKey());
+      assertNotNull(e.getValue());
+    }
+  }
+
   /**
    * Test getting scanners with regexes for column names.
    * @throws IOException 
    */
   public void testRegexForColumnName() throws IOException {
-    // Setup HClient, ensure that it is running correctly
     HBaseAdmin admin = new HBaseAdmin(conf);
     
     // Setup colkeys to be inserted

@@ -20,9 +20,11 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Vector;
+import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -273,5 +275,10 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
       }
     }
     return insertedItem;
+  }
+  
+  public Iterator<Entry<HStoreKey, SortedMap<Text, byte[]>>> iterator() {
+    throw new UnsupportedOperationException("Unimplemented serverside. " +
+      "next(HStoreKey, StortedMap(...) is more efficient");
   }
 }
