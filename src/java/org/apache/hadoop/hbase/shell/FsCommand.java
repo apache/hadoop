@@ -22,8 +22,8 @@ package org.apache.hadoop.hbase.shell;
 import java.io.Writer;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
@@ -36,7 +36,7 @@ public class FsCommand extends BasicCommand {
     super(o);
   }
 
-  public ReturnMsg execute(@SuppressWarnings("unused") Configuration conf) {
+  public ReturnMsg execute(@SuppressWarnings("unused") HBaseConfiguration conf) {
     // This commmand will write the 
     FsShell shell = new FsShell();
     try {

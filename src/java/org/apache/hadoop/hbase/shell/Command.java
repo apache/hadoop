@@ -19,7 +19,7 @@
  */
 package org.apache.hadoop.hbase.shell;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 
 public interface Command {
   /** family indicator */
@@ -31,7 +31,7 @@ public interface Command {
    * @param conf Configuration
    * @return Result of command execution
    */
-  public ReturnMsg execute(final Configuration conf);
+  public ReturnMsg execute(final HBaseConfiguration conf);
 
   /**
    * @return Type of this command whether DDL, SELECT, INSERT, UPDATE, DELETE,

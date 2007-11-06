@@ -55,14 +55,14 @@ public class LocalHBaseCluster implements HConstants {
   private final static int DEFAULT_NO = 1;
   public static final String LOCAL = "local";
   public static final String LOCAL_COLON = LOCAL + ":";
-  private final Configuration conf;
+  private final HBaseConfiguration conf;
 
   /**
    * Constructor.
    * @param conf
    * @throws IOException
    */
-  public LocalHBaseCluster(final Configuration conf)
+  public LocalHBaseCluster(final HBaseConfiguration conf)
   throws IOException {
     this(conf, DEFAULT_NO);
   }
@@ -74,7 +74,8 @@ public class LocalHBaseCluster implements HConstants {
    * @param noRegionServers Count of regionservers to start.
    * @throws IOException
    */
-  public LocalHBaseCluster(final Configuration conf, final int noRegionServers)
+  public LocalHBaseCluster(final HBaseConfiguration conf,
+    final int noRegionServers)
   throws IOException {
     super();
     this.conf = conf;
@@ -234,7 +235,7 @@ public class LocalHBaseCluster implements HConstants {
    * @return The passed <code>c</code> configuration modified if hbase.master
    * value was 'local' otherwise, unaltered.
    */
-  static Configuration doLocal(final Configuration c) {
+  static HBaseConfiguration doLocal(final HBaseConfiguration c) {
     if (!isLocal(c)) {
       return c;
     }
@@ -263,7 +264,7 @@ public class LocalHBaseCluster implements HConstants {
    * @throws IOException
    */
   public static void main(String[] args) throws IOException {
-    Configuration conf = new HBaseConfiguration();
+    HBaseConfiguration conf = new HBaseConfiguration();
     LocalHBaseCluster cluster = new LocalHBaseCluster(conf);
     cluster.startup();
     HBaseAdmin admin = new HBaseAdmin(conf);

@@ -36,6 +36,7 @@ import org.apache.hadoop.mapred.JobConfigurable;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
@@ -195,7 +196,7 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
       m_cols[i] = new Text(colNames[i]);
     }
     try {
-      m_table = new HTable(job, m_tableName);
+      m_table = new HTable(new HBaseConfiguration(job), m_tableName);
     } catch (Exception e) {
       LOG.error(e);
     }

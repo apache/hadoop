@@ -20,21 +20,18 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.util.NoSuchElementException;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.SortedMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
-
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * Provides administrative functions for HBase
@@ -53,7 +50,7 @@ public class HBaseAdmin implements HConstants {
    * @param conf Configuration object
    * @throws MasterNotRunningException
    */
-  public HBaseAdmin(Configuration conf) throws MasterNotRunningException {
+  public HBaseAdmin(HBaseConfiguration conf) throws MasterNotRunningException {
     this.connection = HConnectionManager.getConnection(conf);
     this.pause = conf.getLong("hbase.client.pause", 30 * 1000);
     this.numRetries = conf.getInt("hbase.client.retries.number", 5);

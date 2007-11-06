@@ -19,9 +19,11 @@
  */
 package org.apache.hadoop.hbase.shell;
 
+import org.apache.hadoop.hbase.HBaseConfiguration;
+
 /**
  * Message returned when a {@link Command} is
- * {@link Command#execute(org.apache.hadoop.conf.Configuration)}'ed.
+ * {@link Command#execute(HBaseConfiguration)}'ed.
  */
 public class ReturnMsg {
   private final String msg;

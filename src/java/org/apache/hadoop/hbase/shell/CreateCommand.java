@@ -24,8 +24,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 
@@ -41,7 +41,7 @@ public class CreateCommand extends SchemaModificationCommand {
     super(o);
   }
   
-  public ReturnMsg execute(Configuration conf) {
+  public ReturnMsg execute(HBaseConfiguration conf) {
     try {
       HBaseAdmin admin = new HBaseAdmin(conf);
       HTableDescriptor tableDesc = new HTableDescriptor(tableName);

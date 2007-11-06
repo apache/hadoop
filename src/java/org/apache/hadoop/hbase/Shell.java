@@ -74,7 +74,7 @@ public class Shell {
    */
   public static void main(@SuppressWarnings("unused") String args[])
   throws IOException {
-    Configuration conf = new HBaseConfiguration();
+    HBaseConfiguration conf = new HBaseConfiguration();
     ConsoleReader reader = new ConsoleReader();
     reader.setBellEnabled(conf.getBoolean("hbaseshell.jline.bell.enabled",
       DEFAULT_BELL_ENABLED));

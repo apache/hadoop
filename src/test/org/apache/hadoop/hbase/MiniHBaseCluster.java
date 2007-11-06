@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,7 +36,7 @@ public class MiniHBaseCluster implements HConstants {
   static final Logger LOG =
     Logger.getLogger(MiniHBaseCluster.class.getName());
   
-  private Configuration conf;
+  private HBaseConfiguration conf;
   private MiniDFSCluster cluster;
   private FileSystem fs;
   private boolean shutdownDFS;
@@ -52,7 +51,7 @@ public class MiniHBaseCluster implements HConstants {
    * @param nRegionNodes
    * @throws IOException
    */
-  public MiniHBaseCluster(Configuration conf, int nRegionNodes)
+  public MiniHBaseCluster(HBaseConfiguration conf, int nRegionNodes)
   throws IOException {
     this(conf, nRegionNodes, true, true, true);
   }
@@ -66,7 +65,7 @@ public class MiniHBaseCluster implements HConstants {
    * @param miniHdfsFilesystem
    * @throws IOException
    */
-  public MiniHBaseCluster(Configuration conf, int nRegionNodes,
+  public MiniHBaseCluster(HBaseConfiguration conf, int nRegionNodes,
       final boolean miniHdfsFilesystem) throws IOException {
     this(conf, nRegionNodes, miniHdfsFilesystem, true, true);
   }
@@ -89,7 +88,7 @@ public class MiniHBaseCluster implements HConstants {
    * @param dfsCluster
    * @throws IOException
    */
-  public MiniHBaseCluster(Configuration conf, int nRegionNodes,
+  public MiniHBaseCluster(HBaseConfiguration conf, int nRegionNodes,
       MiniDFSCluster dfsCluster) throws IOException {
 
     this.conf = conf;
@@ -110,7 +109,7 @@ public class MiniHBaseCluster implements HConstants {
    * @param deleteOnExit clean up mini hdfs files
    * @throws IOException
    */
-  public MiniHBaseCluster(Configuration conf, int nRegionNodes,
+  public MiniHBaseCluster(HBaseConfiguration conf, int nRegionNodes,
       final boolean miniHdfsFilesystem, boolean format, boolean deleteOnExit)
     throws IOException {
 

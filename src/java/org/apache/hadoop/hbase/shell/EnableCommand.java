@@ -22,8 +22,8 @@ package org.apache.hadoop.hbase.shell;
 import java.io.IOException;
 import java.io.Writer;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -36,7 +36,7 @@ public class EnableCommand extends BasicCommand {
     super(o);
   }
  
-  public ReturnMsg execute(Configuration conf) {
+  public ReturnMsg execute(HBaseConfiguration conf) {
     assert tableName != null;
     try {
       HBaseAdmin admin = new HBaseAdmin(conf);

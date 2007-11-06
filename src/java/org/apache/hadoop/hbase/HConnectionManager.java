@@ -30,15 +30,13 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * A non-instantiable class that manages connections to multiple tables in
@@ -65,7 +63,7 @@ public class HConnectionManager implements HConstants {
    * @param conf
    * @return HConnection object for the instance specified by the configuration
    */
-  public static HConnection getConnection(Configuration conf) {
+  public static HConnection getConnection(HBaseConfiguration conf) {
     HConnection connection;
     synchronized (HBASE_INSTANCES) {
       String instanceName = conf.get(HBASE_DIR, DEFAULT_HBASE_DIR);
@@ -84,7 +82,7 @@ public class HConnectionManager implements HConstants {
    * Delete connection information for the instance specified by the configuration
    * @param conf
    */
-  public static void deleteConnection(Configuration conf) {
+  public static void deleteConnection(HBaseConfiguration conf) {
     synchronized (HBASE_INSTANCES) {
       HBASE_INSTANCES.remove(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
     }    
@@ -106,7 +104,7 @@ public class HConnectionManager implements HConstants {
     private final Integer rootRegionLock = new Integer(0);
     private final Integer metaRegionLock = new Integer(0);
     
-    private volatile Configuration conf;
+    private volatile HBaseConfiguration conf;
 
     // Map tableName -> (Map startRow -> (HRegionInfo, HServerAddress)
     private Map<Text, SortedMap<Text, HRegionLocation>> tablesToServers;
@@ -125,7 +123,7 @@ public class HConnectionManager implements HConstants {
      * @param conf Configuration object
      */
     @SuppressWarnings("unchecked")
-    public TableServers(Configuration conf) {
+    public TableServers(HBaseConfiguration conf) {
       this.conf = LocalHBaseCluster.doLocal(new HBaseConfiguration(conf));
       
       String serverClassName =

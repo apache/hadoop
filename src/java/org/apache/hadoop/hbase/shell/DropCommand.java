@@ -23,8 +23,8 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -37,7 +37,7 @@ public class DropCommand extends BasicCommand {
     super(o);
   }
 
-  public ReturnMsg execute(Configuration conf) {
+  public ReturnMsg execute(HBaseConfiguration conf) {
     if (tableList == null) {
       throw new IllegalArgumentException("List of tables is null");
     }

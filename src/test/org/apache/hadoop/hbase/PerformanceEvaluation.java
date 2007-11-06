@@ -103,7 +103,7 @@ public class PerformanceEvaluation implements HConstants {
       SEQUENTIAL_WRITE,
       SCAN});
   
-  volatile Configuration conf;
+  volatile HBaseConfiguration conf;
   private boolean miniCluster = false;
   private int N = 1;
   private int R = ROWS_PER_GB;
@@ -131,7 +131,7 @@ public class PerformanceEvaluation implements HConstants {
    * Constructor
    * @param c Configuration object
    */
-  public PerformanceEvaluation(final Configuration c) {
+  public PerformanceEvaluation(final HBaseConfiguration c) {
     this.conf = c;
   }
   
@@ -163,7 +163,7 @@ public class PerformanceEvaluation implements HConstants {
     public void configure(JobConf j) {
       this.cmd = j.get(CMD_KEY);
 
-      this.pe = new PerformanceEvaluation(j);
+      this.pe = new PerformanceEvaluation(new HBaseConfiguration(j));
     }
     
     /** {@inheritDoc} */
@@ -292,9 +292,9 @@ public class PerformanceEvaluation implements HConstants {
     private final Status status;
     protected HBaseAdmin admin;
     protected HTable table;
-    protected volatile Configuration conf;
+    protected volatile HBaseConfiguration conf;
     
-    Test(final Configuration conf, final int startRow,
+    Test(final HBaseConfiguration conf, final int startRow,
         final int perClientRunRows, final int totalRows, final Status status) {
       super();
       this.startRow = startRow;
@@ -383,7 +383,7 @@ public class PerformanceEvaluation implements HConstants {
   }
   
   class RandomReadTest extends Test {
-    RandomReadTest(final Configuration conf, final int startRow,
+    RandomReadTest(final HBaseConfiguration conf, final int startRow,
         final int perClientRunRows, final int totalRows, final Status status) {
       super(conf, startRow, perClientRunRows, totalRows, status);
     }
@@ -406,7 +406,7 @@ public class PerformanceEvaluation implements HConstants {
   }
   
   class RandomWriteTest extends Test {
-    RandomWriteTest(final Configuration conf, final int startRow,
+    RandomWriteTest(final HBaseConfiguration conf, final int startRow,
         final int perClientRunRows, final int totalRows, final Status status) {
       super(conf, startRow, perClientRunRows, totalRows, status);
     }
@@ -430,7 +430,7 @@ public class PerformanceEvaluation implements HConstants {
     private HStoreKey key = new HStoreKey();
     private TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
     
-    ScanTest(final Configuration conf, final int startRow,
+    ScanTest(final HBaseConfiguration conf, final int startRow,
         final int perClientRunRows, final int totalRows, final Status status) {
       super(conf, startRow, perClientRunRows, totalRows, status);
     }
@@ -464,7 +464,7 @@ public class PerformanceEvaluation implements HConstants {
   }
   
   class SequentialReadTest extends Test {
-    SequentialReadTest(final Configuration conf, final int startRow,
+    SequentialReadTest(final HBaseConfiguration conf, final int startRow,
         final int perClientRunRows, final int totalRows, final Status status) {
       super(conf, startRow, perClientRunRows, totalRows, status);
     }
@@ -481,7 +481,7 @@ public class PerformanceEvaluation implements HConstants {
   }
   
   class SequentialWriteTest extends Test {
-    SequentialWriteTest(final Configuration conf, final int startRow,
+    SequentialWriteTest(final HBaseConfiguration conf, final int startRow,
         final int perClientRunRows, final int totalRows, final Status status) {
       super(conf, startRow, perClientRunRows, totalRows, status);
     }

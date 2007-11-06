@@ -94,7 +94,7 @@ HMasterRegionInterface {
   volatile AtomicBoolean closed = new AtomicBoolean(true);
   volatile boolean fsOk;
   Path dir;
-  Configuration conf;
+  HBaseConfiguration conf;
   FileSystem fs;
   Random rand;
   int threadWakeFrequency; 
@@ -868,7 +868,7 @@ HMasterRegionInterface {
    * @param conf - Configuration object
    * @throws IOException
    */
-  public HMaster(Configuration conf) throws IOException {
+  public HMaster(HBaseConfiguration conf) throws IOException {
     this(new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR)),
         new HServerAddress(conf.get(MASTER_ADDRESS, DEFAULT_MASTER_ADDRESS)),
         conf);
@@ -882,7 +882,7 @@ HMasterRegionInterface {
    * 
    * @throws IOException
    */
-  public HMaster(Path dir, HServerAddress address, Configuration conf)
+  public HMaster(Path dir, HServerAddress address, HBaseConfiguration conf)
   throws IOException {
     this.fsOk = true;
     this.dir = dir;
@@ -3044,7 +3044,7 @@ HMasterRegionInterface {
       printUsageAndExit();
     }
 
-    Configuration conf = new HBaseConfiguration();
+    HBaseConfiguration conf = new HBaseConfiguration();
 
     // Process command-line args. TODO: Better cmd-line processing
     // (but hopefully something not as painful as cli options).

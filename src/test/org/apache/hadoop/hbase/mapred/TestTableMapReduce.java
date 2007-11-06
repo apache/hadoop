@@ -26,17 +26,11 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.MapWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HScannerInterface;
@@ -46,10 +40,12 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MultiRegionTable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.mapred.TableMap;
-import org.apache.hadoop.hbase.mapred.TableOutputCollector;
-import org.apache.hadoop.hbase.mapred.TableReduce;
-import org.apache.hadoop.hbase.mapred.IdentityTableReduce;
+import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.mapred.Reporter;
 
 /**
  * Test Map/Reduce job over HBase tables
@@ -314,7 +310,7 @@ public class TestTableMapReduce extends MultiRegionTable {
     verify(conf, MULTI_REGION_TABLE_NAME);
   }
 
-  private void scanTable(Configuration conf, String tableName)
+  private void scanTable(HBaseConfiguration conf, String tableName)
   throws IOException {
     HTable table = new HTable(conf, new Text(tableName));
     
@@ -344,7 +340,8 @@ public class TestTableMapReduce extends MultiRegionTable {
   }
 
   @SuppressWarnings("null")
-  private void verify(Configuration conf, String tableName) throws IOException {
+  private void verify(HBaseConfiguration conf, String tableName)
+  throws IOException {
     HTable table = new HTable(conf, new Text(tableName));
     
     Text[] columns = {

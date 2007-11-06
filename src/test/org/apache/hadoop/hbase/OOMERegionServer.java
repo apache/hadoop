@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.io.Text;
 
@@ -37,11 +36,11 @@ import org.apache.hadoop.io.Text;
 public class OOMERegionServer extends HRegionServer {
   private List<BatchUpdate> retainer = new ArrayList<BatchUpdate>();
 
-  public OOMERegionServer(Configuration conf) throws IOException {
+  public OOMERegionServer(HBaseConfiguration conf) throws IOException {
     super(conf);
   }
 
-  public OOMERegionServer(HServerAddress address, Configuration conf)
+  public OOMERegionServer(HServerAddress address, HBaseConfiguration conf)
   throws IOException {
     super(address, conf);
   }

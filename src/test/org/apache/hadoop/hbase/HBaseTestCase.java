@@ -51,7 +51,7 @@ public abstract class HBaseTestCase extends TestCase {
     StaticTestEnvironment.initialize();
   }
   
-  protected volatile Configuration conf;
+  protected volatile HBaseConfiguration conf;
 
   /**
    * constructor

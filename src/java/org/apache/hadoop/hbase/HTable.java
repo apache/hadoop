@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
@@ -76,7 +75,7 @@ public class HTable implements HConstants {
    * @param tableName name of the table
    * @throws IOException
    */
-  public HTable(Configuration conf, Text tableName) throws IOException {
+  public HTable(HBaseConfiguration conf, Text tableName) throws IOException {
     closed = true;
     this.connection = HConnectionManager.getConnection(conf);
     this.tableName = tableName;

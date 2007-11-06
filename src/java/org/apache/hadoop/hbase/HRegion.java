@@ -111,7 +111,7 @@ public class HRegion implements HConstants {
       throw new IOException("Cannot merge non-adjacent regions");
     }
 
-    Configuration conf = a.getConf();
+    HBaseConfiguration conf = a.getConf();
     HTableDescriptor tabledesc = a.getTableDesc();
     HLog log = a.getLog();
     Path rootDir = a.getRootDir();
@@ -194,7 +194,7 @@ public class HRegion implements HConstants {
   Path rootDir;
   HLog log;
   FileSystem fs;
-  Configuration conf;
+  HBaseConfiguration conf;
   HRegionInfo regionInfo;
   Path regiondir;
 
@@ -242,7 +242,7 @@ public class HRegion implements HConstants {
    * 
    * @throws IOException
    */
-  public HRegion(Path rootDir, HLog log, FileSystem fs, Configuration conf, 
+  public HRegion(Path rootDir, HLog log, FileSystem fs, HBaseConfiguration conf, 
       HRegionInfo regionInfo, Path initialFiles)
   throws IOException {
     this.rootDir = rootDir;
@@ -559,7 +559,7 @@ public class HRegion implements HConstants {
   }
 
   /** @return Configuration object */
-  public Configuration getConf() {
+  public HBaseConfiguration getConf() {
     return this.conf;
   }
 
@@ -1834,7 +1834,8 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
-      final Configuration conf, final Path initialFiles) throws IOException {
+      final HBaseConfiguration conf, final Path initialFiles)
+  throws IOException {
     Path regionDir = HRegion.getRegionDir(rootDir,
         HRegionInfo.encodeRegionName(info.getRegionName()));
     FileSystem fs = FileSystem.get(conf);

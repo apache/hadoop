@@ -24,8 +24,8 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.io.Text;
 
@@ -41,7 +41,7 @@ public class DeleteCommand extends BasicCommand {
   private String rowKey;
   private List<String> columnList;
 
-  public ReturnMsg execute(Configuration conf) {
+  public ReturnMsg execute(HBaseConfiguration conf) {
     if (columnList == null) {
       throw new IllegalArgumentException("Column list is null");
     }

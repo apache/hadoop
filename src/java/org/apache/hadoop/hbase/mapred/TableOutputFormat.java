@@ -34,6 +34,7 @@ import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
 
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 
@@ -51,7 +52,9 @@ public class TableOutputFormat
   static final Logger LOG = Logger.getLogger(TableOutputFormat.class.getName());
 
   /** constructor */
-  public TableOutputFormat() {}
+  public TableOutputFormat() {
+    super();
+  }
 
   /**
    * Convert Reduce output (key, value) to (HStoreKey, KeyedDataArrayWritable) 
@@ -71,7 +74,9 @@ public class TableOutputFormat
     }
 
     /** {@inheritDoc} */
-    public void close(@SuppressWarnings("unused") Reporter reporter) {}
+    public void close(@SuppressWarnings("unused") Reporter reporter) {
+      // Nothing to do.
+    }
 
     /** {@inheritDoc} */
     public void write(Text key, MapWritable value) throws IOException {
@@ -99,7 +104,7 @@ public class TableOutputFormat
     Text tableName = new Text(job.get(OUTPUT_TABLE));
     HTable table = null;
     try {
-      table = new HTable(job, tableName);
+      table = new HTable(new HBaseConfiguration(job), tableName);
     } catch(IOException e) {
       LOG.error(e);
       throw e;
