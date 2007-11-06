@@ -112,7 +112,6 @@ public class HBaseAdmin implements HConstants {
    */
   public void createTable(HTableDescriptor desc)
   throws IOException {
-    
     createTableAsync(desc);
 
     // Wait for new table to come on-line
@@ -134,15 +133,12 @@ public class HBaseAdmin implements HConstants {
    */
   public void createTableAsync(HTableDescriptor desc)
   throws IOException {
-    
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    
     checkReservedTableName(desc.getName());
     try {
       this.master.createTable(desc);
-
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
@@ -492,10 +488,12 @@ public class HBaseAdmin implements HConstants {
    * @throws IllegalArgumentException - if the table name is reserved
    */
   protected void checkReservedTableName(Text tableName) {
+    if (tableName == null || tableName.getLength() <= 0) {
+      throw new IllegalArgumentException("Null or empty table name");
+    }
     if(tableName.charAt(0) == '-' ||
         tableName.charAt(0) == '.' ||
         tableName.find(",") != -1) {
-      
       throw new IllegalArgumentException(tableName + " is a reserved table name");
     }
   }

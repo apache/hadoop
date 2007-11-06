@@ -74,7 +74,11 @@ public class HTableDescriptor implements WritableComparable {
     families.put(family.getName(), family);
   }
 
-  /** Constructs an empty object */
+  /**
+   * Constructs an empty object.
+   * For deserializing an HTableDescriptor instance only.
+   * @see #HTableDescriptor(String)
+   */
   public HTableDescriptor() {
     this.name = new Text();
     this.families = new TreeMap<Text, HColumnDescriptor>();
