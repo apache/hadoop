@@ -93,6 +93,8 @@ public class StatusHttpServer {
       webServer.addWebApplication("/", appDir + "/" + name);
     addServlet("stacks", "/stacks", StackServlet.class);
     addServlet("reducegraph", "/taskgraph", TaskGraphServlet.class);
+    addServlet("logLevel", "/logLevel",
+        org.apache.hadoop.log.LogLevel.Servlet.class);
   }
 
   /**

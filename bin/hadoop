@@ -46,6 +46,7 @@ if [ $# = 0 ]; then
   echo "  version              print the version"
   echo "  jar <jar>            run a jar file"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
+  echo "  daemonlog            get/set the log level for each daemon"
   echo " or"
   echo "  CLASSNAME            run the class named CLASSNAME"
   echo "Most commands print help when invoked w/o parameters."
@@ -190,6 +191,8 @@ elif [ "$COMMAND" = "jar" ] ; then
   CLASS=org.apache.hadoop.util.RunJar
 elif [ "$COMMAND" = "distcp" ] ; then
   CLASS=org.apache.hadoop.util.CopyFiles
+elif [ "$COMMAND" = "daemonlog" ] ; then
+  CLASS=org.apache.hadoop.log.LogLevel
 else
   CLASS=$COMMAND
 fi

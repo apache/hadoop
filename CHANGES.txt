@@ -41,6 +41,9 @@ Trunk (unreleased changes)
     HADOOP-2086. This patch adds the ability to add dependencies to a job
     (run via JobControl) after construction.  (Adrian Woodhead via ddas)
 
+    HADOOP-1185. Support changing the logging level of a server without 
+    restarting the server.  (Tsz Wo (Nicholas), SZE via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
