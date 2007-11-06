@@ -24,13 +24,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.TreeMap;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
-
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.io.Text;
 
 /**
  * Test of a long-lived scanner validating as we go.
@@ -135,7 +133,7 @@ public class TestScanner extends HBaseTestCase {
       
       // Initialization
       
-      Configuration conf = new HBaseConfiguration();
+      HBaseConfiguration conf = new HBaseConfiguration();
       cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
       fs = cluster.getFileSystem();
       Path dir = new Path("/hbase");

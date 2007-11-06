@@ -30,11 +30,11 @@ import junit.textui.TestRunner;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -211,7 +211,8 @@ public class TestTableIndex extends HBaseTestCase {
     return c.toString();
   }
 
-  private void scanTable(Configuration c, long firstK) throws IOException {
+  private void scanTable(HBaseConfiguration c, long firstK)
+  throws IOException {
     HTable table = new HTable(c, new Text(TABLE_NAME));
     Text[] columns = { TEXT_INPUT_COLUMN, TEXT_OUTPUT_COLUMN };
     HScannerInterface scanner = table.obtainScanner(columns,
@@ -235,7 +236,7 @@ public class TestTableIndex extends HBaseTestCase {
     }
   }
 
-  private void verify(Configuration c) throws IOException {
+  private void verify(HBaseConfiguration c) throws IOException {
     Path localDir = new Path(this.testDir, "index_" +
       Integer.toString(new Random().nextInt()));
     this.fs.copyToLocalFile(new Path(INDEX_DIR), localDir);

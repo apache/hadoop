@@ -85,7 +85,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   protected volatile boolean fsOk;
   
   protected final HServerInfo serverInfo;
-  protected final Configuration conf;
+  protected final HBaseConfiguration conf;
   private final Random rand = new Random();
   
   // region name -> HRegion
@@ -373,7 +373,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @param conf
    * @throws IOException
    */
-  public HRegionServer(Configuration conf) throws IOException {
+  public HRegionServer(HBaseConfiguration conf) throws IOException {
     this(new HServerAddress(conf.get(REGIONSERVER_ADDRESS,
         DEFAULT_REGIONSERVER_ADDRESS)), conf);
   }
@@ -384,7 +384,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @param conf
    * @throws IOException
    */
-  public HRegionServer(HServerAddress address, Configuration conf)
+  public HRegionServer(HServerAddress address, HBaseConfiguration conf)
   throws IOException {  
     this.abortRequested = false;
     this.fsOk = true;

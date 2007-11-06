@@ -21,14 +21,14 @@ package org.apache.hadoop.hbase.shell;
 
 import java.io.Writer;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 
 public class ExitCommand extends BasicCommand {
   public ExitCommand(Writer o) {
     super(o);
   }
 
-  public ReturnMsg execute(@SuppressWarnings("unused") Configuration conf) {
+  public ReturnMsg execute(@SuppressWarnings("unused") HBaseConfiguration conf) {
     // TOD: Is this the best way to exit?  Would be a problem if shell is run
     // inside another program -- St.Ack 09/11/2007
     System.exit(1);

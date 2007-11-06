@@ -122,11 +122,11 @@ public class HStoreFile implements HConstants, WritableComparable {
   private String encodedRegionName;
   private Text colFamily;
   private long fileId;
-  private final Configuration conf;
+  private final HBaseConfiguration conf;
   private Reference reference;
 
   /** Shutdown constructor used by Writable */
-  HStoreFile(Configuration conf) {
+  HStoreFile(HBaseConfiguration conf) {
     this(conf, new Path(Path.CUR_DIR), "", new Text(), 0);
   }
   
@@ -138,7 +138,7 @@ public class HStoreFile implements HConstants, WritableComparable {
    * @param colFamily name of the column family
    * @param fileId file identifier
    */
-  HStoreFile(final Configuration conf, final Path dir, 
+  HStoreFile(final HBaseConfiguration conf, final Path dir, 
       final String encodedRegionName, final Text colFamily, final long fileId) {
     this(conf, dir, encodedRegionName, colFamily, fileId, null);
   }
@@ -152,7 +152,7 @@ public class HStoreFile implements HConstants, WritableComparable {
    * @param fileId file identifier
    * @param ref Reference to another HStoreFile.
    */
-  HStoreFile(Configuration conf, Path dir, String encodedRegionName, 
+  HStoreFile(HBaseConfiguration conf, Path dir, String encodedRegionName, 
       Text colFamily, long fileId, final Reference ref) {
     this.conf = conf;
     this.dir = dir;
@@ -348,7 +348,7 @@ public class HStoreFile implements HConstants, WritableComparable {
    * Checks the filesystem to determine if the file already exists. If so, it
    * will keep generating names until it generates a name that does not exist.
    */
-  static HStoreFile obtainNewHStoreFile(Configuration conf, Path dir, 
+  static HStoreFile obtainNewHStoreFile(HBaseConfiguration conf, Path dir, 
       String encodedRegionName, Text colFamily, FileSystem fs)
       throws IOException {
     
@@ -378,7 +378,7 @@ public class HStoreFile implements HConstants, WritableComparable {
    * @return List of store file instances loaded from passed dir.
    * @throws IOException
    */
-  static List<HStoreFile> loadHStoreFiles(Configuration conf, Path dir, 
+  static List<HStoreFile> loadHStoreFiles(HBaseConfiguration conf, Path dir, 
       String encodedRegionName, Text colFamily, FileSystem fs)
   throws IOException {
     // Look first at info files.  If a reference, these contain info we need

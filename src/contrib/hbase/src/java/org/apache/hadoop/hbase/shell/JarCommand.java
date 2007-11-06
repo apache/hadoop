@@ -35,6 +35,7 @@ import java.util.jar.Manifest;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.util.RunJar;
 
 /**
@@ -48,7 +49,7 @@ public class JarCommand extends BasicCommand {
   }
 
   @SuppressWarnings("deprecation")
-  public ReturnMsg execute(@SuppressWarnings("unused") Configuration conf) {
+  public ReturnMsg execute(@SuppressWarnings("unused") HBaseConfiguration conf) {
     
     try {
       String[] args = getQuery();

@@ -28,8 +28,7 @@ public class HBaseConfiguration extends Configuration {
   /** constructor */
   public HBaseConfiguration() {
     super();
-    addResource("hbase-default.xml");
-    addResource("hbase-site.xml");
+    addHbaseResources();
   }
   
   /**
@@ -38,5 +37,13 @@ public class HBaseConfiguration extends Configuration {
    */
   public HBaseConfiguration(final Configuration c) {
     super(c);
+    if (!(c instanceof HBaseConfiguration)) {
+      addHbaseResources();
+    }
+  }
+  
+  private void addHbaseResources() {
+    addResource("hbase-default.xml");
+    addResource("hbase-site.xml");
   }
 }

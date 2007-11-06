@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -75,7 +74,7 @@ public class SelectCommand extends BasicCommand {
     this.formatter = f;
   }
 
-  public ReturnMsg execute(final Configuration conf) {
+  public ReturnMsg execute(final HBaseConfiguration conf) {
     if (this.tableName.equals("") || this.rowKey == null ||
         this.columns.size() == 0) {
       return new ReturnMsg(0, "Syntax error : Please check 'Select' syntax.");

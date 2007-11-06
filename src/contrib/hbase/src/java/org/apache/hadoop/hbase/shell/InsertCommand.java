@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.io.Text;
 
@@ -40,7 +40,7 @@ public class InsertCommand extends BasicCommand {
     super(o);
   }
 
-  public ReturnMsg execute(Configuration conf) {
+  public ReturnMsg execute(HBaseConfiguration conf) {
     if (this.tableName == null || this.values == null || this.rowKey == null)
       return new ReturnMsg(0, "Syntax error : Please check 'Insert' syntax.");
 

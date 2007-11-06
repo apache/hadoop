@@ -52,7 +52,7 @@ public class HelpCommand extends BasicCommand {
     this.formatter = f;
   }
 
-  public ReturnMsg execute(@SuppressWarnings("unused") Configuration conf) {
+  public ReturnMsg execute(@SuppressWarnings("unused") HBaseConfiguration conf) {
     try {
       printHelp(this.argument);
     } catch (IOException e) {

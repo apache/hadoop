@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.shell;
 import java.io.IOException;
 import java.io.Writer;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConnection;
 import org.apache.hadoop.hbase.HConnectionManager;
@@ -49,7 +49,7 @@ public class DescCommand extends BasicCommand {
     this.formatter = f;
   }
   
-  public ReturnMsg execute(final Configuration conf) {
+  public ReturnMsg execute(final HBaseConfiguration conf) {
     if (this.tableName == null) 
       return new ReturnMsg(0, "Syntax error : Please check 'Describe' syntax");
     try {

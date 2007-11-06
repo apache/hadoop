@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.shell;
 import java.io.IOException;
 import java.io.Writer;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 
 /**
  * Clears the console screen. 
@@ -32,7 +32,7 @@ public class ClearCommand extends BasicCommand {
     super(o);
   }
 
-  public ReturnMsg execute(@SuppressWarnings("unused") Configuration conf) {
+  public ReturnMsg execute(@SuppressWarnings("unused") HBaseConfiguration conf) {
     clear();
     return null;
   }

@@ -22,8 +22,8 @@ package org.apache.hadoop.hbase.shell;
 import java.io.IOException;
 import java.io.Writer;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 
 /**
@@ -51,7 +51,7 @@ public class ShowCommand extends BasicCommand {
     this.command = argument;
   }
 
-  public ReturnMsg execute(final Configuration conf) {
+  public ReturnMsg execute(final HBaseConfiguration conf) {
     if (this.command == null) {
       return new ReturnMsg(0, "Syntax error : Please check 'Show' syntax");
     }

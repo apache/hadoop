@@ -26,6 +26,7 @@ Trunk (unreleased changes)
                always kill the region server for the META region. This makes
                the test more deterministic and getting META reassigned was
                problematic.
+   HADOOP-2155 Method expecting HBaseConfiguration throws NPE when given Configuration
 
   IMPROVEMENTS
     HADOOP-2401 Add convenience put method that takes writable

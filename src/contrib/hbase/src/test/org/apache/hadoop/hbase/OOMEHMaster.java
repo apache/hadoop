@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
 /**
@@ -35,11 +34,11 @@ import org.apache.hadoop.fs.Path;
 public class OOMEHMaster extends HMaster {
   private List<byte []> retainer = new ArrayList<byte[]>();
   
-  public OOMEHMaster(Configuration conf) throws IOException {
+  public OOMEHMaster(HBaseConfiguration conf) throws IOException {
     super(conf);
   }
 
-  public OOMEHMaster(Path dir, HServerAddress address, Configuration conf)
+  public OOMEHMaster(Path dir, HServerAddress address, HBaseConfiguration conf)
       throws IOException {
     super(dir, address, conf);
   }

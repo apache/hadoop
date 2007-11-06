@@ -37,7 +37,6 @@ import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -77,7 +76,7 @@ class HStore implements HConstants {
   Text familyName;
   SequenceFile.CompressionType compression;
   FileSystem fs;
-  Configuration conf;
+  HBaseConfiguration conf;
   Path mapdir;
   Path loginfodir;
   Path filterDir;
@@ -141,7 +140,7 @@ class HStore implements HConstants {
    */
   HStore(Path dir, Text regionName, String encodedName,
       HColumnDescriptor family, FileSystem fs, Path reconstructionLog,
-      Configuration conf)
+      HBaseConfiguration conf)
   throws IOException {  
     this.dir = dir;
     this.compactionDir = new Path(dir, "compaction.dir");

@@ -28,13 +28,11 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
-
-import org.apache.hadoop.hbase.util.Writables;
 
 /** 
  * A non-instantiable class that has a static method capable of compacting
@@ -61,7 +59,7 @@ class HMerge implements HConstants {
    * @param tableName   - Table to be compacted
    * @throws IOException
    */
-  public static void merge(Configuration conf, FileSystem fs, Text tableName)
+  public static void merge(HBaseConfiguration conf, FileSystem fs, Text tableName)
       throws IOException {
     HConnection connection = HConnectionManager.getConnection(conf);
     boolean masterIsRunning = connection.isMasterRunning();
@@ -82,7 +80,7 @@ class HMerge implements HConstants {
   }
 
   private static abstract class Merger {
-    protected Configuration conf;
+    protected HBaseConfiguration conf;
     protected FileSystem fs;
     protected Text tableName;
     protected Path dir;
@@ -93,7 +91,7 @@ class HMerge implements HConstants {
     protected HStoreKey key;
     protected HRegionInfo info;
     
-    protected Merger(Configuration conf, FileSystem fs, Text tableName)
+    protected Merger(HBaseConfiguration conf, FileSystem fs, Text tableName)
         throws IOException {
       
       this.conf = conf;
@@ -200,7 +198,7 @@ class HMerge implements HConstants {
     private HScannerInterface metaScanner;
     private HRegionInfo latestRegion;
     
-    OnlineMerger(Configuration conf, FileSystem fs, Text tableName)
+    OnlineMerger(HBaseConfiguration conf, FileSystem fs, Text tableName)
     throws IOException {
       
       super(conf, fs, tableName);
@@ -315,7 +313,7 @@ class HMerge implements HConstants {
     private TreeSet<HRegionInfo> metaRegions;
     private TreeMap<Text, byte []> results;
     
-    OfflineMerger(Configuration conf, FileSystem fs, Text tableName)
+    OfflineMerger(HBaseConfiguration conf, FileSystem fs, Text tableName)
         throws IOException {
       
       super(conf, fs, tableName);
