@@ -41,6 +41,15 @@ public class TestMasterAdmin extends HBaseClusterTestCase {
   /** @throws Exception */
   public void testMasterAdmin() throws Exception {
     admin = new HBaseAdmin(conf);
+    // Add test that exception is thrown if descriptor is without a table name.
+    // HADOOP-2156.
+    boolean exception = false;
+    try {
+      admin.createTable(new HTableDescriptor());
+    } catch (IllegalArgumentException e) {
+      exception = true;
+    }
+    assertTrue(exception);
     admin.createTable(testDesc);
     admin.disableTable(testDesc.getName());
 
