@@ -32,8 +32,10 @@ Trunk (unreleased changes)
                 (Johan Oskarsson via Stack)
     HADOOP-2088 Make hbase runnable in $HADOOP_HOME/build(/contrib/hbase)
     HADOOP-2126 Use Bob Jenkins' hash for bloom filters
+    HADOOP-2157 Make Scanners implement Iterable
 
-Branch 0.15 (unreleased changes)
+Release 0.15.1
+Branch 0.15
 
   INCOMPATIBLE CHANGES
     HADOOP-1931 Hbase scripts take --ARG=ARG_VALUE when should be like hadoop

@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -29,6 +30,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.Vector;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -1807,6 +1809,11 @@ public class HRegion implements HConstants {
           closeScanner(i);
         }
       }
+    }
+
+    public Iterator<Entry<HStoreKey, SortedMap<Text, byte[]>>> iterator() {
+      throw new UnsupportedOperationException("Unimplemented serverside. " +
+        "next(HStoreKey, StortedMap(...) is more efficient");
     }
   }
   

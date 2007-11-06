@@ -22,10 +22,12 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
@@ -33,6 +35,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
+import org.apache.hadoop.hbase.filter.StopRowFilter;
+import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Writables;
@@ -383,9 +387,8 @@ public class HTable implements HConstants {
    * @return scanner
    * @throws IOException
    */
-  public HScannerInterface obtainScanner(Text[] columns,
-      Text startRow) throws IOException {
-    
+  public HScannerInterface obtainScanner(Text[] columns, Text startRow)
+  throws IOException {
     return obtainScanner(columns, startRow, System.currentTimeMillis(), null);
   }
   
@@ -403,9 +406,9 @@ public class HTable implements HConstants {
    * @return scanner
    * @throws IOException
    */
-  public HScannerInterface obtainScanner(Text[] columns,
-      Text startRow, long timestamp) throws IOException {
-    
+  public HScannerInterface obtainScanner(Text[] columns, Text startRow,
+      long timestamp)
+  throws IOException {
     return obtainScanner(columns, startRow, timestamp, null);
   }
   
@@ -423,10 +426,59 @@ public class HTable implements HConstants {
    * @return scanner
    * @throws IOException
    */
-  public HScannerInterface obtainScanner(Text[] columns,
-      Text startRow, RowFilterInterface filter) throws IOException { 
-    
+  public HScannerInterface obtainScanner(Text[] columns, Text startRow,
+      RowFilterInterface filter)
+  throws IOException { 
     return obtainScanner(columns, startRow, System.currentTimeMillis(), filter);
+  }
+
+  /** 
+   * Get a scanner on the current table starting at the specified row and
+   * ending just before <code>stopRow<code>.
+   * Return the specified columns.
+   *
+   * @param columns columns to scan. If column name is a column family, all
+   * columns of the specified column family are returned.  Its also possible
+   * to pass a regex in the column qualifier. A column qualifier is judged to
+   * be a regex if it contains at least one of the following characters:
+   * <code>\+|^&*$[]]}{)(</code>.
+   * @param startRow starting row in table to scan
+   * @param stopRow Row to stop scanning on. Once we hit this row we stop
+   * returning values; i.e. we return the row before this one but not the
+   * <code>stopRow</code> itself.
+   * @return scanner
+   * @throws IOException
+   */
+  public HScannerInterface obtainScanner(final Text[] columns,
+      final Text startRow, final Text stopRow)
+  throws IOException {
+    return obtainScanner(columns, startRow, stopRow,
+      System.currentTimeMillis());
+  }
+
+  /** 
+   * Get a scanner on the current table starting at the specified row and
+   * ending just before <code>stopRow<code>.
+   * Return the specified columns.
+   *
+   * @param columns columns to scan. If column name is a column family, all
+   * columns of the specified column family are returned.  Its also possible
+   * to pass a regex in the column qualifier. A column qualifier is judged to
+   * be a regex if it contains at least one of the following characters:
+   * <code>\+|^&*$[]]}{)(</code>.
+   * @param startRow starting row in table to scan
+   * @param stopRow Row to stop scanning on. Once we hit this row we stop
+   * returning values; i.e. we return the row before this one but not the
+   * <code>stopRow</code> itself.
+   * @param timestamp only return results whose timestamp <= this value
+   * @return scanner
+   * @throws IOException
+   */
+  public HScannerInterface obtainScanner(final Text[] columns,
+      final Text startRow, final Text stopRow, final long timestamp)
+  throws IOException {
+    return obtainScanner(columns, startRow, timestamp,
+      new WhileMatchRowFilter(new StopRowFilter(stopRow)));
   }
   
   /** 
@@ -447,7 +499,6 @@ public class HTable implements HConstants {
   public HScannerInterface obtainScanner(Text[] columns,
       Text startRow, long timestamp, RowFilterInterface filter)
   throws IOException {
-    
     checkClosed();
     return new ClientScanner(columns, startRow, timestamp, filter);
   }
@@ -880,6 +931,46 @@ public class HTable implements HConstants {
       }
       this.server = null;
       this.closed = true;
+    }
+
+    public Iterator<Entry<HStoreKey, SortedMap<Text, byte[]>>> iterator() {
+      return new Iterator<Entry<HStoreKey, SortedMap<Text, byte[]>>>() {
+        HStoreKey key = null;
+        SortedMap<Text, byte []> value = null;
+        
+        public boolean hasNext() {
+          boolean hasNext = false;
+          try {
+            this.key = new HStoreKey();
+            this.value = new TreeMap<Text, byte[]>();
+            hasNext = ClientScanner.this.next(key, value);
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+          return hasNext;
+        }
+
+        public Entry<HStoreKey, SortedMap<Text, byte[]>> next() {
+          return new Map.Entry<HStoreKey, SortedMap<Text, byte[]>>() {
+            public HStoreKey getKey() {
+              return key;
+            }
+
+            public SortedMap<Text, byte[]> getValue() {
+              return value;
+            }
+
+            public SortedMap<Text, byte[]> setValue(@SuppressWarnings("unused")
+            SortedMap<Text, byte[]> value) {
+              throw new UnsupportedOperationException();
+            }
+          };
+        }
+
+        public void remove() {
+          throw new UnsupportedOperationException();
+        }
+      };
     }
   }
 }

@@ -46,7 +46,6 @@ import org.apache.hadoop.io.Text;
  * TODO: INTO FILE is not yet implemented.
  */
 public class SelectCommand extends BasicCommand {
-  
   private Text tableName;
   private Text rowKey = new Text("");
   private List<String> columns;
@@ -220,6 +219,8 @@ public class SelectCommand extends BasicCommand {
             break;
           }
         }
+        // Clear results else subsequent results polluted w/ previous finds.
+        results.clear();
       }
       formatter.footer();
       scan.close();
