@@ -21,13 +21,13 @@
 <body>
 <a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="Hbase Logo" title="Hbase Logo" /></a>
 <h1 id="page_title">Region Server: <%= serverInfo.getServerAddress().toString() %></h1>
-<p id="links_menu"><a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a></p>
+<p id="links_menu"><a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
 <hr id="head_rule" />
 
 <h2>Region Server Attributes</h2>
 <table>
-<tr><th>Attribute Name</th><th>Value</th></tr>
-<tr><td>Load</td><td><%= serverInfo.getLoad().toString() %></td></tr>
+<tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
+<tr><td>Load</td><td><%= serverInfo.getLoad().toString() %></td><td>Requests/<em>hbase.regionserver.msginterval</em> + count of loaded regions</td></tr>
 </table>
 
 <h2>Online Regions</h2>

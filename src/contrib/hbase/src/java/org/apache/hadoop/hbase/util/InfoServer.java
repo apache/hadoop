@@ -99,6 +99,7 @@ public class InfoServer {
     this.webAppContext = 
       this.webServer.addWebApplication("/", webappDir);
     addServlet("stacks", "/stacks", StatusHttpServer.StackServlet.class);
+    addServlet("logLevel", "/logLevel", org.apache.hadoop.log.LogLevel.Servlet.class);
   }
 
   /**

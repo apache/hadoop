@@ -32,6 +32,7 @@ Trunk (unreleased changes)
   IMPROVEMENTS
     HADOOP-2401 Add convenience put method that takes writable
                 (Johan Oskarsson via Stack)
+    HADOOP-2074 Simple switch to enable DEBUG level-logging in hbase
     HADOOP-2088 Make hbase runnable in $HADOOP_HOME/build(/contrib/hbase)
     HADOOP-2126 Use Bob Jenkins' hash for bloom filters
     HADOOP-2157 Make Scanners implement Iterable

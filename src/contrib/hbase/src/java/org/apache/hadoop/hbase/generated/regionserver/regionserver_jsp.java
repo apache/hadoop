@@ -55,9 +55,9 @@ public final class regionserver_jsp extends org.apache.jasper.runtime.HttpJspBas
       out.print( serverInfo.getServerAddress().toString() );
       out.write("</title>\n<link rel=\"stylesheet\" type=\"text/css\" href=\"/static/hbase.css\" />\n</head>\n\n<body>\n<a id=\"logo\" href=\"http://wiki.apache.org/lucene-hadoop/Hbase\"><img src=\"/static/hbase_logo_med.gif\" alt=\"Hbase Logo\" title=\"Hbase Logo\" /></a>\n<h1 id=\"page_title\">Region Server: ");
       out.print( serverInfo.getServerAddress().toString() );
-      out.write("</h1>\n<p id=\"links_menu\"><a href=\"/logs/\">Local logs</a>, <a href=\"/stacks\">Thread Dump</a></p>\n<hr id=\"head_rule\" />\n\n<h2>Region Server Attributes</h2>\n<table>\n<tr><th>Attribute Name</th><th>Value</th></tr>\n<tr><td>Load</td><td>");
+      out.write("</h1>\n<p id=\"links_menu\"><a href=\"/logs/\">Local logs</a>, <a href=\"/stacks\">Thread Dump</a>, <a href=\"/logLevel\">Log Level</a></p>\n<hr id=\"head_rule\" />\n\n<h2>Region Server Attributes</h2>\n<table>\n<tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>\n<tr><td>Load</td><td>");
       out.print( serverInfo.getLoad().toString() );
-      out.write("</td></tr>\n</table>\n\n<h2>Online Regions</h2>\n");
+      out.write("</td><td>Requests/<em>hbase.regionserver.msginterval</em> + count of loaded regions</td></tr>\n</table>\n\n<h2>Online Regions</h2>\n");
  if (onlineRegions != null && onlineRegions.size() > 0) { 
       out.write("\n<table>\n<tr><th>Region Name</th><th>Start Key</th><th>End Key</th></tr>\n");
    for (HRegion r: onlineRegions.values()) { 

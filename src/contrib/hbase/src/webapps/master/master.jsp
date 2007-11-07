@@ -22,6 +22,7 @@
   Map<Text, MetaRegion> onlineRegions = master.getOnlineMetaRegions();
   Map<String, HServerInfo> serverToServerInfos =
     master.getServersToServerInfo();
+  int interval = conf.getInt("hbase.regionserver.msginterval", 6000)/1000;
 %><?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
@@ -35,14 +36,14 @@
 
 <a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="Hbase Logo" title="Hbase Logo" /></a>
 <h1 id="page_title">Master: <%=master.getMasterAddress()%></h1>
-<p id="links_menu"><a href="/hql.jsp">HQL</a>, <a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a></p>
+<p id="links_menu"><a href="/hql.jsp">HQL</a>, <a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
 <hr id="head_rule" />
 
 <h2>Master Attributes</h2>
 <table>
-<tr><th>Attribute Name</th><th>Value</th></tr>
-<tr><td>Filesystem</td><td><%= conf.get("fs.default.name") %></td></tr>
-<tr><td>Hbase Root Directory</td><td><%= master.getRootDir().toString() %></td></tr>
+<tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
+<tr><td>Filesystem</td><td><%= conf.get("fs.default.name") %></td><td>Filesystem hbase is running on</td></tr>
+<tr><td>Hbase Root Directory</td><td><%= master.getRootDir().toString() %></td><td>Location of hbase home directory</td></tr>
 </table>
 
 <h2>Online META Regions</h2>
@@ -69,6 +70,7 @@
 <% if (serverToServerInfos != null && serverToServerInfos.size() > 0) { %>
 <table>
 <tr><th>Address</th><th>Start Code</th><th>Load</th></tr>
+
 <%   for (Map.Entry<String, HServerInfo> e: serverToServerInfos.entrySet()) {
        HServerInfo hsi = e.getValue();
        String url = "http://" +
@@ -81,6 +83,7 @@
 <tr><td><a href="<%= url %>"><%= address %></a></td><td><%= startCode %></td><td><%= load %></tr>
 <%   } %>
 </table>
+<p>Load is requests per <em>hbase.regionsserver.msginterval</em> (<%=interval%> second(s)) and count of regions loaded</p>
 <% } %>
 </body>
 </html>
