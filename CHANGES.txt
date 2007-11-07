@@ -44,6 +44,10 @@ Trunk (unreleased changes)
     HADOOP-1185. Support changing the logging level of a server without 
     restarting the server.  (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-2134.  Remove developer-centric requirements from overview.html and
+    keep it end-user focussed, specifically sections related to subversion and
+    building Hadoop. (Jim Kellerman via acmurthy)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
