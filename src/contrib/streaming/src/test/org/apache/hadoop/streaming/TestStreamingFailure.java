@@ -47,7 +47,6 @@ public class TestStreamingFailure extends TestStreaming
       "-input", INVALID_INPUT_FILE.getAbsolutePath(),
       "-output", OUTPUT_DIR.getAbsolutePath(),
       "-mapper", map,
-      "-combiner", combine,
       "-reducer", reduce,
       //"-verbose",
       //"-jobconf", "stream.debug=set"

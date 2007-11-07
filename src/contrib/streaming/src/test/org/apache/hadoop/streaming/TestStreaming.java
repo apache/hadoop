@@ -40,7 +40,6 @@ public class TestStreaming extends TestCase
   protected String map = StreamUtil.makeJavaCommand(TrApp.class, new String[]{".", "\\n"});
   // reduce behave like /usr/bin/uniq. But also prepend lines with R.
   // command-line combiner does not have any effect any more.
-  protected String combine  = StreamUtil.makeJavaCommand(UniqApp.class, new String[]{"C"});
   protected String reduce = StreamUtil.makeJavaCommand(UniqApp.class, new String[]{"R"});
   protected String outputExpect = "Rare\t\nRblue\t\nRbunnies\t\nRpink\t\nRred\t\nRroses\t\nRviolets\t\n";
 
@@ -66,7 +65,6 @@ public class TestStreaming extends TestCase
       "-input", INPUT_FILE.getAbsolutePath(),
       "-output", OUTPUT_DIR.getAbsolutePath(),
       "-mapper", map,
-      "-combiner", combine,
       "-reducer", reduce,
       //"-verbose",
       //"-jobconf", "stream.debug=set"

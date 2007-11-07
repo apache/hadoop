@@ -47,7 +47,6 @@ public class TestGzipInput extends TestStreaming
       "-input", INPUT_FILE.getAbsolutePath(),
       "-output", OUTPUT_DIR.getAbsolutePath(),
       "-mapper", map,
-      "-combiner", combine,
       "-reducer", reduce,
       "-jobconf", "stream.recordreader.compression=gzip"
     };

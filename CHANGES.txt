@@ -79,6 +79,11 @@ Trunk (unreleased changes)
     HADOOP-1348.  Allow XML comments inside configuration files. 
     (Rajagopal Natarajan and Enis Soztutar via enis)
 
+    HADOOP-1952.  Improve handling of invalid, user-specified classes while
+    configuring streaming jobs such as combiner, input/output formats etc.
+    Now invalid options are caught, logged and jobs are failed early. (Lohit
+    Vijayarenu via acmurthy)
+
 Release 0.15.1 -
 
   BUG FIXES
