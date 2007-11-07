@@ -52,9 +52,9 @@ public final class hql_jsp extends org.apache.jasper.runtime.HttpJspBase
      query = "";
    }
 
-      out.write("\n<form action=\"/hql.jsp\" method=\"get\">\n    <p>\n    <label for=\"query\">Query: </label>\n    <input type=\"text\" name=\"q\" id=\"q\" size=\"40\" value=\"");
+      out.write("\n<form action=\"/hql.jsp\" method=\"get\">\n    <p>\n    <label for=\"query\">Query: </label>\n    <input type=\"text\" name=\"q\" id=\"q\" size=\"60\" value=\"");
       out.print( query );
-      out.write("\" />\n    <input type=\"submit\" value=\"submit\" />\n    </p>\n </form>\n <p>Enter 'help;' -- thats 'help' plus a semi-colon -- for a list of <em>HQL</em> commands.\n Data Definition, SHELL, INSERTS, DELETES, and UPDATE commands are disabled in this interface\n </p>\n \n ");
+      out.write("\" />\n    <input type=\"submit\" value=\"submit\" />\n    </p>\n </form>\n <p>Enter 'help;' -- thats 'help' plus a semi-colon -- for the list of <em>HQL</em> commands.\n Data Definition, SHELL, INSERTS, DELETES, and UPDATE commands are disabled in this interface\n </p>\n \n ");
 
   if (query.length() > 0) {
  
