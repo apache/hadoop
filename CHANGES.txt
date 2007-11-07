@@ -76,6 +76,8 @@ Trunk (unreleased changes)
     wrapped over the DFSInputStream since mark/reset aren't supported by
     DFSInputStream anymore. (Lohit Vijayarenu via acmurthy)
 
+    HADOOP-1348.  Allow XML comments inside configuration files. 
+    (Rajagopal Natarajan and Enis Soztutar via enis)
 
 Release 0.15.1 -
 

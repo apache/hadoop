@@ -18,25 +18,44 @@
 
 package org.apache.hadoop.conf;
 
-import java.util.*;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.Reader;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.net.URL;
-import java.io.*;
 
-import javax.xml.parsers.*;
-
-import org.w3c.dom.*;
-import javax.xml.transform.TransformerFactory;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.util.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.StringUtils;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Text;
 
 /** 
  * Provides access to configuration parameters.
@@ -112,10 +131,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
   /**
    * @deprecated Remove in hadoop-0.16.0 via HADOOP-1843
    */
+  @Deprecated
   private ArrayList<Object> defaultResources = new ArrayList<Object>();
   /**
    * @deprecated Remove in hadoop-0.16.0 via HADOOP-1843
    */
+  @Deprecated
   private ArrayList<Object> finalResources = new ArrayList<Object>();
   
   /**
@@ -172,6 +193,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    * Add a default resource.
    * @deprecated Use {@link #addResource(String)} instead  
    */
+  @Deprecated
   public void addDefaultResource(String name) {
     addResource(defaultResources, name);
   }
@@ -180,6 +202,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    * Add a default resource.
    * @deprecated Use {@link #addResource(URL)} instead
    */
+  @Deprecated
   public void addDefaultResource(URL url) {
     addResource(defaultResources, url);
   }
@@ -188,6 +211,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    * Add a default resource.
    * @deprecated Use {@link #addResource(Path)} instead  
    */
+  @Deprecated
   public void addDefaultResource(Path file) {
     addResource(defaultResources, file);
   }
@@ -196,6 +220,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    * Add a final resource.
    * @deprecated Use {@link #addResource(String)} instead
    */
+  @Deprecated
   public void addFinalResource(String name) {
     addResource(finalResources, name);
   }
@@ -204,6 +229,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    * Add a final resource.
    * @deprecated Use {@link #addResource(URL)} instead  
    */
+  @Deprecated
   public void addFinalResource(URL url) {
     addResource(finalResources, url);
   }
@@ -212,6 +238,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    * Add a final resource.
    * @deprecated Use {@link #addResource(Path)} instead
    */
+  @Deprecated
   public void addFinalResource(Path file) {
     addResource(finalResources, file);
   }
@@ -270,11 +297,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    * property exists.
    * @deprecated A side map of Configuration to Object should be used instead.
    */
+  @Deprecated
   public Object getObject(String name) { return getProps().get(name);}
 
   /** Sets the value of the <code>name</code> property. 
    * @deprecated
    */
+  @Deprecated
   public void setObject(String name, Object value) {
     getProps().put(name, value);
   }
@@ -283,6 +312,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    * exists, then <code>defaultValue</code> is returned.
    * @deprecated A side map of Configuration to Object should be used instead.
    */
+  @Deprecated
   public Object get(String name, Object defaultValue) {
     Object res = getObject(name);
     if (res != null) return res;
@@ -349,6 +379,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
   /** Sets the value of the <code>name</code> property. 
    * @deprecated
    */
+  @Deprecated
   public void set(String name, Object value) {
     getOverlay().setProperty(name, value.toString());
     getProps().setProperty(name, value.toString());
@@ -724,6 +755,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
   /** @return Iterator&lt; Map.Entry&lt;String,String> >  
    * @deprecated Use {@link #iterator()} instead. 
    */
+  @Deprecated
   public Iterator entries() {
     return iterator();
   }
@@ -759,8 +791,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
 
   private void loadResource(Properties properties, Object name, boolean quiet) {
     try {
-      DocumentBuilder builder =
-        DocumentBuilderFactory.newInstance().newDocumentBuilder();
+      DocumentBuilderFactory docBuilderFactory 
+        = DocumentBuilderFactory.newInstance();
+      //ignore all comments inside the xml file
+      docBuilderFactory.setIgnoringComments(true);
+      DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
       Document doc = null;
 
 
@@ -917,6 +952,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     this.classLoader = classLoader;
   }
   
+  @Override
   public String toString() {
     StringBuffer sb = new StringBuffer();
     sb.append("Configuration: ");

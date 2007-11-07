@@ -34,11 +34,13 @@ public class TestConfiguration extends TestCase {
   final static String CONFIG = new File("./test-config.xml").getAbsolutePath();
   final static String CONFIG2 = new File("./test-config2.xml").getAbsolutePath();
 
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
     conf = new Configuration();
   }
   
+  @Override
   protected void tearDown() throws Exception {
     super.tearDown();
     new File(CONFIG).delete();
@@ -171,6 +173,17 @@ public class TestConfiguration extends TestCase {
     assertEquals(clone.get("d"), "e"); 
     assertEquals(clone.get("e"), "f"); 
     
+  }
+  
+  public void testCommentsInValue() throws IOException {
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("my.comment", "this <!--comment here--> contains a comment");
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    //two spaces one after "this", one before "contains"
+    assertEquals("this  contains a comment", conf.get("my.comment"));
   }
 
   BufferedWriter out;
