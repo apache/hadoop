@@ -71,15 +71,16 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
     if (start_ > in_.getPos()) {
       in_.seek(start_);
     }
+    pos_ = start_;
+    bin_ = new BufferedInputStream(in_);
     seekNextRecordBoundary();
   }
   
   int numNext = 0;
 
   public synchronized boolean next(Text key, Text value) throws IOException {
-    long pos = in_.getPos();
     numNext++;
-    if (pos >= end_) {
+    if (pos_ >= end_) {
       return false;
     }
 
@@ -99,11 +100,6 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
 
     key.set(record);
     value.set("");
-
-    /*if (numNext < 5) {
-      System.out.println("@@@ " + numNext + ". true next k=|" + key.toString().replaceAll("[\\r\\n]", " ")
-      + "|, len=" + buf.length() + " v=|" + value.toString().replaceAll("[\\r\\n]", " ") + "|");
-      }*/
 
     return true;
   }
@@ -130,77 +126,64 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
 
   private boolean slowReadUntilMatch(Pattern markPattern, boolean includePat,
                                      DataOutputBuffer outBufOrNull) throws IOException {
-    try {
-      long inStart = in_.getPos();
-      byte[] buf = new byte[Math.max(lookAhead_, maxRecSize_)];
-      int read = 0;
-      boolean success = true;
-      in_.mark(lookAhead_ + 2);
-      read = in_.read(buf);
-      if (read == -1) return false;
+    byte[] buf = new byte[Math.max(lookAhead_, maxRecSize_)];
+    int read = 0;
+    boolean success = true;
+    long skippedBytes = 0;
+    bin_.mark(Math.max(lookAhead_, maxRecSize_) + 2); //mark to invalidate if we read more
+    read = bin_.read(buf);
+    if (read == -1) return false;
 
-      String sbuf = new String(buf, 0, read, "UTF-8");
-      Matcher match = markPattern.matcher(sbuf);
+    String sbuf = new String(buf, 0, read, "UTF-8");
+    Matcher match = markPattern.matcher(sbuf);
 
-      firstMatchStart_ = NA;
-      firstMatchEnd_ = NA;
-      int bufPos = 0;
-      int state = synched_ ? CDATA_OUT : CDATA_UNK;
-      int s = 0;
-      int matchLen = 0;
-      while (match.find(bufPos)) {
-        int input;
-        matchLen = match.group(0).length();
-        if (match.group(1) != null) {
-          input = CDATA_BEGIN;
-        } else if (match.group(2) != null) {
-          input = CDATA_END;
-          firstMatchStart_ = NA; // |<DOC CDATA[ </DOC> ]]> should keep it
-        } else {
-          input = RECORD_MAYBE;
+    firstMatchStart_ = NA;
+    firstMatchEnd_ = NA;
+    int bufPos = 0;
+    int state = synched_ ? CDATA_OUT : CDATA_UNK;
+    int s = 0;
+    int matchLen = 0;
+    int LL = 120000 * 10;
+
+    while (match.find(bufPos)) {
+      int input;
+      matchLen = match.group(0).length();
+      if (match.group(1) != null) {
+        input = CDATA_BEGIN;
+      } else if (match.group(2) != null) {
+        input = CDATA_END;
+        firstMatchStart_ = NA; // |<DOC CDATA[ </DOC> ]]> should keep it
+      } else {
+        input = RECORD_MAYBE;
+      }
+      if (input == RECORD_MAYBE) {
+        if (firstMatchStart_ == NA) {
+          firstMatchStart_ = match.start();
+          firstMatchEnd_ = match.end();
         }
-        if (input == RECORD_MAYBE) {
-          if (firstMatchStart_ == NA) {
-            firstMatchStart_ = match.start();
-            firstMatchEnd_ = match.end();
-          }
-        }
-        state = nextState(state, input, match.start());
-        /*System.out.println("@@@" +
-          s + ". Match " + match.start() + " " + match.groupCount() +
-          " state=" + state + " input=" + input + 
-          " firstMatchStart_=" + firstMatchStart_ + " startinstream=" + (inStart+firstMatchStart_) + 
-          " match=" + match.group(0) + " in=" + in_.getPos());*/
-        if (state == RECORD_ACCEPT) {
-          break;
-        }
+      }
+      state = nextState(state, input, match.start());
+      if (state == RECORD_ACCEPT) {
         bufPos = match.end();
-        s++;
+        break;
       }
-      if (state != CDATA_UNK) {
-        synched_ = true;
-      }
-      boolean matched = (firstMatchStart_ != NA) && (state == RECORD_ACCEPT || state == CDATA_UNK);
-      if (matched) {
-        int endPos = includePat ? firstMatchEnd_ : firstMatchStart_;
-        //System.out.println("firstMatchStart_=" + firstMatchStart_ + " firstMatchEnd_=" + firstMatchEnd_);
-        //String snip = sbuf.substring(firstMatchStart_, firstMatchEnd_);
-        //System.out.println(" match snip=|" + snip + "| markPattern=" + markPattern);
-        if (outBufOrNull != null) {
-          in_.reset();
-          outBufOrNull.write(in_, endPos);
-        } else {
-          //System.out.println("Skip to " + (inStart + endPos));
-          in_.seek(inStart + endPos);
-        }
-      }
-      return matched;
-    } catch (Exception e) {
-      e.printStackTrace();
-    } finally {
-      // in_ ?
+      bufPos = match.end();
+      s++;
     }
-    return false;
+    if (state != CDATA_UNK) {
+      synched_ = true;
+    }
+    boolean matched = (firstMatchStart_ != NA) && (state == RECORD_ACCEPT || state == CDATA_UNK);
+    if (matched) {
+      int endPos = includePat ? firstMatchEnd_ : firstMatchStart_;
+      bin_.reset();
+      skippedBytes = bin_.skip(endPos); //Skip succeeds as we have already read this is buffer
+      pos_ += endPos;
+      if (outBufOrNull != null) {
+        outBufOrNull.writeBytes(sbuf.substring(0,endPos));
+      }
+    }
+    return matched;
   }
 
   // states
@@ -254,19 +237,15 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
   }
 
   boolean fastReadUntilMatch(String textPat, boolean includePat, DataOutputBuffer outBufOrNull) throws IOException {
-    //System.out.println("@@@BEGIN readUntilMatch inPos=" + in_.getPos());  
     byte[] cpat = textPat.getBytes("UTF-8");
     int m = 0;
     boolean match = false;
-    long markPos = -1;
     int msup = cpat.length;
-    if (!includePat) {
-      int LL = 120000 * 10;
-      markPos = in_.getPos();
-      in_.mark(LL); // lookAhead_
-    }
+    int LL = 120000 * 10;
+
+    bin_.mark(LL); // large number to invalidate mark
     while (true) {
-      int b = in_.read();
+      int b = bin_.read();
       if (b == -1) break;
 
       byte c = (byte) b; // this assumes eight-bit matching. OK with UTF-8
@@ -277,22 +256,21 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
           break;
         }
       } else {
+        bin_.mark(LL); // rest mark so we could jump back if we found a match
         if (outBufOrNull != null) {
           outBufOrNull.write(cpat, 0, m);
           outBufOrNull.write(c);
+          pos_ += m;
         }
-
         m = 0;
       }
     }
     if (!includePat && match) {
-      long pos = in_.getPos() - textPat.length();
-      in_.reset();
-      in_.seek(pos);
+      bin_.reset();
     } else if (outBufOrNull != null) {
       outBufOrNull.write(cpat);
+      pos_ += msup;
     }
-    //System.out.println("@@@DONE  readUntilMatch inPos=" + in_.getPos() + " includePat=" + includePat + " pat=" + textPat + ", buf=|" + outBufOrNull + "|");
     return match;
   }
 
@@ -313,6 +291,9 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
   boolean slowMatch_;
   int lookAhead_; // bytes to read to try to synch CDATA/non-CDATA. Should be more than max record size
   int maxRecSize_;
+
+  BufferedInputStream bin_; // Wrap FSDataInputStream for efficient backward seeks 
+  long pos_; // Keep track on position with respect encapsulated FSDataInputStream  
 
   final static int NA = -1;
   int firstMatchStart_ = 0; // candidate record boundary. Might just be CDATA.

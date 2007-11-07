@@ -72,6 +72,10 @@ Trunk (unreleased changes)
     HADOOP-2089.  Fixes the command line argument handling to handle multiple
     -cacheArchive in Hadoop streaming.  (Lohit Vijayarenu via ddas)
 
+    HADOOP-2071.  Fix StreamXmlRecordReader to use a BufferedInputStream
+    wrapped over the DFSInputStream since mark/reset aren't supported by
+    DFSInputStream anymore. (Lohit Vijayarenu via acmurthy)
+
 
 Release 0.15.1 -
 
