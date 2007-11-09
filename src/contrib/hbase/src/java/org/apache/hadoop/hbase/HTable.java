@@ -564,13 +564,19 @@ public class HTable implements HConstants {
   
   /** 
    * Start an atomic row insertion/update.  No changes are committed until the 
-   * call to commit() returns.
-   * 
-   * A call to abort() will abandon any updates in progress.
+   * call to commit() returns. A call to abort() will abandon any updates in
+   * progress.
    *
    * 
-   * @param row Name of row to start update against.
-   * @return Row lockid.
+   * @param row Name of row to start update against.  Note, choose row names
+   * with care.  Rows are sorted lexicographically (comparison is done
+   * using {@link Text#compareTo(Object)}.  If your keys are numeric,
+   * lexicographic sorting means that 46 sorts AFTER 450 (If you want to use
+   * numerics for keys, zero-pad).
+   * @return Row lock id..
+   * @see #commit(long)
+   * @see #commit(long, long)
+   * @see #abort(long)
    */
   public synchronized long startUpdate(final Text row) {
     checkClosed();

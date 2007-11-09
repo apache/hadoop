@@ -25,6 +25,7 @@ import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Formatter;
 import java.util.List;
 import java.util.Random;
 import java.util.TreeMap;
@@ -293,6 +294,7 @@ public class PerformanceEvaluation implements HConstants {
     protected HBaseAdmin admin;
     protected HTable table;
     protected volatile HBaseConfiguration conf;
+    private Formatter formatter = new Formatter();
     
     Test(final HBaseConfiguration conf, final int startRow,
         final int perClientRunRows, final int totalRows, final Status status) {
@@ -366,8 +368,12 @@ public class PerformanceEvaluation implements HConstants {
     }
     
     Text getRandomRow() {
-      return new Text(Integer.toString(this.rand.nextInt(Integer.MAX_VALUE) %
+      return new Text(format(this.rand.nextInt(Integer.MAX_VALUE) %
         this.totalRows));
+    }
+    
+    public Text format(final int i) {
+      return new Text(String.format("%010d", Integer.valueOf(i)));
     }
     
     /*
@@ -439,7 +445,7 @@ public class PerformanceEvaluation implements HConstants {
     void testSetup() throws IOException {
       super.testSetup();
       this.testScanner = table.obtainScanner(new Text[] {COLUMN_NAME},
-          new Text(Integer.toString(this.startRow)));
+        format(this.startRow));
     }
     
     @Override
@@ -471,7 +477,7 @@ public class PerformanceEvaluation implements HConstants {
     
     @Override
     void testRow(final int i) throws IOException {
-      table.get(new Text(Integer.toString(i)), COLUMN_NAME);
+      table.get(format(i), COLUMN_NAME);
     }
 
     @Override
@@ -488,7 +494,7 @@ public class PerformanceEvaluation implements HConstants {
     
     @Override
     void testRow(final int i) throws IOException {
-      long lockid = table.startUpdate(new Text(Integer.toString(i)));
+      long lockid = table.startUpdate(format(i));
       table.put(lockid, COLUMN_NAME, generateValue());
       table.commit(lockid);
     }

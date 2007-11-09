@@ -37,6 +37,8 @@ public abstract class HBaseTestCase extends TestCase {
   protected final static String COLFAMILY_NAME1 = "colfamily1:";
   protected final static String COLFAMILY_NAME2 = "colfamily2:";
   protected final static String COLFAMILY_NAME3 = "colfamily3:";
+  protected static Text [] COLUMNS = new Text [] {new Text(COLFAMILY_NAME1),
+    new Text(COLFAMILY_NAME2), new Text(COLFAMILY_NAME3)};
   protected Path testDir = null;
   protected FileSystem localFs = null;
   protected static final char FIRST_CHAR = 'a';

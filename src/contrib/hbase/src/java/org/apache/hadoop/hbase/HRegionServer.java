@@ -1453,7 +1453,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               "hbase.master is set to 'local' mode");
           } else {
             Constructor<? extends HRegionServer> c =
-              regionServerClass.getConstructor(Configuration.class);
+              regionServerClass.getConstructor(HBaseConfiguration.class);
             HRegionServer hrs = c.newInstance(conf);
             Thread t = new Thread(hrs);
             t.setName("regionserver" + hrs.server.getListenerAddress());
