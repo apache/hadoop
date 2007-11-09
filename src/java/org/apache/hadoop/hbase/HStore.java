@@ -1100,7 +1100,7 @@ class HStore implements HConstants {
               }
               results.put(new Text(readcol), readval.get());
               readval = new ImmutableBytesWritable();
-            } else if(key.getRow().compareTo(readkey.getRow()) > 0) {
+            } else if(key.getRow().compareTo(readkey.getRow()) < 0) {
               break;
             }
             

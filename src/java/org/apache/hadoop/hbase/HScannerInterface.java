@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.SortedMap;
 
@@ -28,7 +29,8 @@ import org.apache.hadoop.io.Text;
 
 /**
  * HScannerInterface iterates through a set of rows.  It's implemented by
- * several classes.
+ * several classes.  Implements {@link Iterable} but be sure to still call
+ * {@link #close()} when done with your {@link Iterator}
  */
 public interface HScannerInterface extends Closeable,
 Iterable<Map.Entry<HStoreKey, SortedMap<Text, byte []>>> {

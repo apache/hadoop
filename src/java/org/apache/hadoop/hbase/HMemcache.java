@@ -235,7 +235,7 @@ public class HMemcache {
           && key.matchesWithoutColumn(itKey)) {
         byte [] val = tailMap.get(itKey);
         results.put(itCol, val);
-      } else if (key.getRow().compareTo(itKey.getRow()) > 0) {
+      } else if (key.getRow().compareTo(itKey.getRow()) < 0) {
         break;
       }
     }

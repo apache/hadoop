@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
@@ -1018,13 +1017,11 @@ public class HRegion implements HConstants {
    */
   TreeMap<Text, byte []> getFull(Text row) throws IOException {
     HStoreKey key = new HStoreKey(row, System.currentTimeMillis());
-
     lock.obtainReadLock();
     try {
       TreeMap<Text, byte []> memResult = memcache.getFull(key);
       for (Text colFamily: stores.keySet()) {
-        HStore targetStore = stores.get(colFamily);
-        targetStore.getFull(key, memResult);
+        this.stores.get(colFamily).getFull(key, memResult);
       }
       return memResult;
     } finally {

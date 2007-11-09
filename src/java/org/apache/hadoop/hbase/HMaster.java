@@ -3063,7 +3063,7 @@ HMasterRegionInterface {
             (new LocalHBaseCluster(conf)).startup();
           } else {
             Constructor<? extends HMaster> c =
-              masterClass.getConstructor(Configuration.class);
+              masterClass.getConstructor(HBaseConfiguration.class);
             HMaster master = c.newInstance(conf);
             master.start();
           }
