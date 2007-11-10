@@ -1,6 +1,13 @@
 Hadoop Change Log
 
 
+Release 0.15.1 -
+
+  BUG FIXES
+
+    HADOOP-2140.  Add missing Apache Licensing text at the front of several
+    C and C++ files.
+
 Release 0.15.0 - 2007-11-2
 
   INCOMPATIBLE CHANGES
