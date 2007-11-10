@@ -95,6 +95,10 @@ Release 0.15.1 -
     HADOOP-2140.  Add missing Apache Licensing text at the front of several
     C and C++ files.
 
+    HADOOP-2169.  Fix the DT_SONAME field of libhdfs.so to set it to the
+    correct value of 'libhdfs.so', currently it is set to the absolute path of
+    libhdfs.so. (acmurthy) 
+
 Release 0.15.0 - 2007-11-2
 
   INCOMPATIBLE CHANGES
