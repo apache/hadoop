@@ -630,8 +630,7 @@ public class HTable implements HConstants {
   }
   
   /** 
-   * Delete all values for a column
-   * 
+   * Delete all cells that match the passed row and column.
    * @param row Row to update
    * @param column name of column whose value is to be deleted
    * @throws IOException 
@@ -641,8 +640,8 @@ public class HTable implements HConstants {
   }
   
   /** 
-   * Delete all values for a column
-   * 
+   * Delete all cells that match the passed row and column and whose
+   * timestamp is equal-to or older than the passed timestamp.
    * @param row Row to update
    * @param column name of column whose value is to be deleted
    * @param ts Delete all cells of the same timestamp or older.
