@@ -235,11 +235,8 @@ public class CopyFiles implements Tool {
     private int skipcount = 0;
     private int copycount = 0;
 
-    // hack
-    private Reporter rep;
-
-    private void updateStatus() {
-      rep.setStatus("Copied: " + copycount + " Skipped: " + skipcount +
+    private void updateStatus(Reporter reporter) {
+      reporter.setStatus("Copied: " + copycount + " Skipped: " + skipcount +
                     " Failed: " + failcount);
     }
 
@@ -290,7 +287,7 @@ public class CopyFiles implements Tool {
           outc.collect(null, new Text("SKIP: " + srcstat.getPath()));
           ++skipcount;
           reporter.incrCounter(Counter.SKIP, 1);
-          updateStatus();
+          updateStatus(reporter);
           return;
         }
         // open src file
@@ -330,7 +327,7 @@ public class CopyFiles implements Tool {
       ++copycount;
       reporter.incrCounter(Counter.BYTESCOPIED, cbcopied);
       reporter.incrCounter(Counter.COPY, 1);
-      updateStatus();
+      updateStatus(reporter);
     }
 
     /** Mapper configuration.
@@ -368,12 +365,11 @@ public class CopyFiles implements Tool {
       FileStatus srcstat = value.input;
       Path dstpath = value.output;
       try {
-        rep = reporter;
         copy(srcstat, dstpath, out, reporter);
       } catch (IOException e) {
         ++failcount;
         reporter.incrCounter(Counter.FAIL, 1);
-        updateStatus();
+        updateStatus(reporter);
         final String sfailure = "FAIL " + dstpath + " : " +
                           StringUtils.stringifyException(e);
         out.collect(null, new Text(sfailure));
@@ -388,18 +384,18 @@ public class CopyFiles implements Tool {
               LOG.debug("Ignoring cleanup exception", ex);
             }
             // update status, so we don't get timed out
-            updateStatus();
+            updateStatus(reporter);
             Thread.sleep(3 * 1000);
           }
         } catch (InterruptedException inte) {
           throw (IOException)new IOException().initCause(inte);
         }
-        updateStatus();
+      } finally {
+        updateStatus(reporter);
       }
     }
 
     public void close() throws IOException {
-      updateStatus();
       if (0 == failcount || ignoreReadFailures) {
         return;
       }

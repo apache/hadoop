@@ -99,6 +99,10 @@ Release 0.15.1 -
     correct value of 'libhdfs.so', currently it is set to the absolute path of
     libhdfs.so. (acmurthy) 
 
+    HADOOP-2174.  Removed the unnecessary Reporter.setStatus call from
+    FSCopyFilesMapper.close which led to a NPE since the reporter isn't valid
+    in the close method. (Chris Douglas via acmurthy) 
+
 Release 0.15.0 - 2007-11-2
 
   INCOMPATIBLE CHANGES
