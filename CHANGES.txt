@@ -92,13 +92,6 @@ Release 0.15.1 -
 
   BUG FIXES
 
-    HADOOP-2140.  Add missing Apache Licensing text at the front of several
-    C and C++ files.
-
-    HADOOP-2169.  Fix the DT_SONAME field of libhdfs.so to set it to the
-    correct value of 'libhdfs.so', currently it is set to the absolute path of
-    libhdfs.so. (acmurthy) 
-
     HADOOP-2174.  Removed the unnecessary Reporter.setStatus call from
     FSCopyFilesMapper.close which led to a NPE since the reporter isn't valid
     in the close method. (Chris Douglas via acmurthy) 
@@ -364,10 +357,6 @@ Release 0.15.0 - 2007-11-2
     otherwise may lead to lost tasktrackers if the NameNode is unresponsive.
     (Devaraj Das via acmurthy)
 
-    HADOOP-2001.  Make the job priority updates and job kills synchronized on
-    the JobTracker. Deadlock was seen in the JobTracker because of the lack of
-    this synchronization.  (Arun C Murthy via ddas)
-
     HADOOP-2026. Namenode prints out one log line for "Number of transactions"
     at most once every minute. (Dhruba Borthakur)
 
@@ -563,6 +552,22 @@ Release 0.15.0 - 2007-11-2
     software pre-requisites for hadoop, how to install them on various 
     platforms and a better general description of hadoop and it's utility. 
     (Jim Kellerman via acmurthy) 
+
+
+Release 0.14.4 -
+
+  BUG FIXES
+
+    HADOOP-2140.  Add missing Apache Licensing text at the front of several
+    C and C++ files.
+
+    HADOOP-2169.  Fix the DT_SONAME field of libhdfs.so to set it to the
+    correct value of 'libhdfs.so', currently it is set to the absolute path of
+    libhdfs.so. (acmurthy) 
+
+    HADOOP-2001.  Make the job priority updates and job kills synchronized on
+    the JobTracker. Deadlock was seen in the JobTracker because of the lack of
+    this synchronization.  (Arun C Murthy via ddas)
 
 
 Release 0.14.3 - 2007-10-19
