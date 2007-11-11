@@ -1,6 +1,22 @@
 Hadoop Change Log
 
 
+Release 0.14.4 -
+
+  BUG FIXES
+
+    HADOOP-2140.  Add missing Apache Licensing text at the front of several
+    C and C++ files.
+
+    HADOOP-2169.  Fix the DT_SONAME field of libhdfs.so to set it to the
+    correct value of 'libhdfs.so', currently it is set to the absolute path of
+    libhdfs.so. (acmurthy)
+
+    HADOOP-2001.  Make the job priority updates and job kills synchronized on
+    the JobTracker. Deadlock was seen in the JobTracker because of the lack of
+    this synchronization.  (Arun C Murthy via ddas)
+
+
 Release 0.14.3 - 2007-10-19
 
   BUG FIXES

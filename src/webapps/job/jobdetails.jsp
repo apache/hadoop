@@ -104,8 +104,8 @@
     
     String action = request.getParameter("action");
     if("changeprio".equalsIgnoreCase(action)) {
-	  job.setPriority(JobPriority.valueOf(request.getParameter("prio")));
-	  tracker.resortPriority();
+      tracker.setJobPriority(jobId, 
+                             JobPriority.valueOf(request.getParameter("prio")));
     }
     
     if(JspHelper.conf.getBoolean(PRIVATE_ACTIONS_KEY, false)) {
@@ -114,8 +114,8 @@
   	      printConfirm(out, jobId);
     	    return;
 	    }
-  	  else if(action != null && action.equalsIgnoreCase("kill")) {
-				job.kill();
+  	    else if(action != null && action.equalsIgnoreCase("kill")) {
+	      tracker.killJob(jobId);
 	    }
     }
 %>

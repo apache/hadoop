@@ -31,8 +31,9 @@ PLATFORM = $(shell echo $$OS_NAME | tr [A-Z] [a-z])
 CPPFLAGS = -m32 -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/$(PLATFORM)
 
 LIB_NAME = hdfs
-SO_TARGET = $(LIBHDFS_BUILD_DIR)/lib$(LIB_NAME).so.$(SHLIB_VERSION)
-SO = $(LIBHDFS_BUILD_DIR)/lib$(LIB_NAME).so
+SO_NAME = lib$(LIB_NAME).so
+SO_TARGET = $(LIBHDFS_BUILD_DIR)/$(SO_NAME).$(SHLIB_VERSION)
+SO = $(LIBHDFS_BUILD_DIR)/$(SO_NAME)
 
 RM = rm -rf
 LINK = ln -sf
@@ -52,7 +53,7 @@ HDFS_WRITE_TEST = $(LIBHDFS_BUILD_DIR)/hdfs_write
 all: $(SO_TARGET) $(HDFS_TEST) $(HDFS_READ_TEST) $(HDFS_WRITE_TEST)
 
 $(SO_TARGET): $(COBJS)
-	$(LD) $(LDFLAGS) -o $(SO_TARGET) -Wl,-soname,$(SO_TARGET) $(COBJS) \
+	$(LD) $(LDFLAGS) -o $(SO_TARGET) -Wl,-soname,$(SO_NAME) $(COBJS) \
 	&& $(LINK) $(SO_TARGET) $(SO)
 	
 $(LIBHDFS_BUILD_DIR)/%.o: %.c
