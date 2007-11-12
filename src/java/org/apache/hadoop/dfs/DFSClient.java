@@ -1701,6 +1701,22 @@ class DFSClient implements FSConstants {
       namenode.abandonBlock(block, src.toString());
     }
 
+    private void internalClose() throws IOException {
+      // Clean up any resources that might be held.
+      closed = true;
+      
+      synchronized (pendingCreates) {
+        pendingCreates.remove(src);
+      }
+      
+      if (s != null) {
+        s.close();
+        s = null;
+      }
+      
+      closeBackupStream();
+    }
+    
     /**
      * Closes this output stream and releases any system 
      * resources associated with this stream.
@@ -1712,9 +1728,9 @@ class DFSClient implements FSConstants {
         throw new IOException("Stream closed");
       }
       
-      flushBuffer();
-      
       try {
+        flushBuffer();
+        
         if (filePos == 0 || bytesWrittenToBlock != 0) {
           try {
             endBlock();
@@ -1743,11 +1759,8 @@ class DFSClient implements FSConstants {
             }
           }
         }
-        closed = true;
       } finally {
-        synchronized (pendingCreates) {
-          pendingCreates.remove(src.toString());
-        }
+        internalClose();
       }
     }
   }

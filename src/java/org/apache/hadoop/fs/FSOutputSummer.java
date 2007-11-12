@@ -119,8 +119,9 @@ abstract public class FSOutputSummer extends OutputStream {
    */
   protected synchronized void flushBuffer() throws IOException {
     if(count != 0) {
-      writeChecksumChunk(buf, 0, count);
+      int chunkLen = count;
       count = 0;
+      writeChecksumChunk(buf, 0, chunkLen);
     }
   }
   

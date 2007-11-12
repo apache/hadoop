@@ -88,8 +88,11 @@ Trunk (unreleased changes)
     Now invalid options are caught, logged and jobs are failed early. (Lohit
     Vijayarenu via acmurthy)
 
-    HADOOP-2151. FileSyste.globPaths validates the list of Paths that
+    HADOOP-2151. FileSystem.globPaths validates the list of Paths that
     it returns.  (Lohit Vijayarenu via dhruba)
+
+    HADOOP-2121. Cleanup DFSOutputStream when the stream encountered errors
+    when Datanodes became full.  (Raghu Angadi via dhruba)
 
 Release 0.15.1 -
 
