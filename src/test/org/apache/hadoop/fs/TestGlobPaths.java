@@ -102,6 +102,8 @@ public class TestGlobPaths extends TestCase {
     pTestClosure1();
     pTestClosure2();
     pTestClosure3();
+    pTestClosure4();
+    pTestClosure5();
   }
   
   private void pTestClosure1() throws IOException {
@@ -145,7 +147,33 @@ public class TestGlobPaths extends TestCase {
       cleanupDFS();
     } 
   }
+
+  private void pTestClosure4() throws IOException {
+    try {
+      String [] files = new String[] {USER_DIR+"/dir1/file1", 
+                                      USER_DIR+"/dir2/file2", 
+                                       USER_DIR+"/dir3/file1"};
+      Path[] matchedPath = prepareTesting(USER_DIR+"/*/file1", files);
+      assertEquals(matchedPath.length, 2);
+      assertEquals(matchedPath[0], path[0]);
+      assertEquals(matchedPath[1], path[2]);
+    } finally {
+      cleanupDFS();
+    }
+  }
   
+  private void pTestClosure5() throws IOException {
+    try {
+      String [] files = new String[] {USER_DIR+"/dir1/file1", 
+                                      USER_DIR+"/file1"};
+      Path[] matchedPath = prepareTesting(USER_DIR+"/*/file1", files);
+      assertEquals(matchedPath.length, 1);
+      assertEquals(matchedPath[0], path[0]);
+    } finally {
+      cleanupDFS();
+    }
+  }
+
   private void pTestSet() throws IOException {
     try {    
       String [] files = new String[] {USER_DIR+"/a.c", USER_DIR+"/a.cpp",

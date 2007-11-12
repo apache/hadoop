@@ -616,24 +616,34 @@ public abstract class FileSystem extends Configured {
       parents[0] = new Path(Path.CUR_DIR);
     }
       
-    Path[] results = globPathsLevel(parents, components, level, filter);
+    Path[] results = globPathsLevel(parents, components, level, filter, false);
     Arrays.sort(results);
     return results;
   }
     
-  private Path[] globPathsLevel(Path[] parents,
-                                String [] filePattern, int level, PathFilter filter) throws IOException {
+  private Path[] globPathsLevel(Path[] parents, String [] filePattern, 
+            int level, PathFilter filter, boolean hasGlob) throws IOException {
     if (level == filePattern.length)
       return parents;
     GlobFilter fp = new GlobFilter(filePattern[level], filter);
     if (fp.hasPattern()) {
       parents = listPaths(parents, fp);
+       hasGlob = true;
     } else {
+      int goodPathCount = 0;
       for(int i=0; i<parents.length; i++) {
-        parents[i] = new Path(parents[i], filePattern[level]);
+        Path tmpPath = new Path(parents[i], filePattern[level]);
+        if (!hasGlob || exists(tmpPath)) {
+          parents[goodPathCount++] = tmpPath;
+        }
+      }
+      if (goodPathCount != parents.length) {
+        Path [] goodParents = new Path[goodPathCount];
+        System.arraycopy(parents, 0, goodParents, 0, goodPathCount);
+        parents = goodParents;
       }
     }
-    return globPathsLevel(parents, filePattern, level+1, filter);      
+    return globPathsLevel(parents, filePattern, level+1, filter, hasGlob);
   }
  
   private static class GlobFilter implements PathFilter {

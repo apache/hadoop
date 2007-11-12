@@ -88,6 +88,9 @@ Trunk (unreleased changes)
     Now invalid options are caught, logged and jobs are failed early. (Lohit
     Vijayarenu via acmurthy)
 
+    HADOOP-2151. FileSyste.globPaths validates the list of Paths that
+    it returns.  (Lohit Vijayarenu via dhruba)
+
 Release 0.15.1 -
 
   BUG FIXES
