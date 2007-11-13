@@ -224,23 +224,20 @@ public class MiniHBaseCluster implements HConstants {
    */
   public void shutdown() {
     this.hbaseCluster.shutdown();
-
     try {
       if (shutdownDFS && cluster != null) {
         FileSystem fs = cluster.getFileSystem();
-
-        LOG.info("Shutting down Mini DFS ");
-        cluster.shutdown();
-
         if (fs != null) {
           LOG.info("Shutting down FileSystem");
           fs.close();
         }
+        if (this.cluster != null) {
+          LOG.info("Shutting down Mini DFS ");
+          cluster.shutdown();
+        }
       }
-
     } catch (IOException e) {
       LOG.error("shutdown", e);
-
     } finally {
       // Delete all DFS files
       if(deleteOnExit) {
@@ -248,7 +245,6 @@ public class MiniHBaseCluster implements HConstants {
             StaticTestEnvironment.TEST_DIRECTORY_KEY), "dfs"));
       }
     }
-
   }
 
   private void deleteFile(File f) {
