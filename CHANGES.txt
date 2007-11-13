@@ -5,13 +5,6 @@ Release 0.15.1 -
 
   BUG FIXES
 
-    HADOOP-2140.  Add missing Apache Licensing text at the front of several
-    C and C++ files.
-
-    HADOOP-2169.  Fix the DT_SONAME field of libhdfs.so to set it to the
-    correct value of 'libhdfs.so', currently it is set to the absolute path of
-    libhdfs.so. (acmurthy) 
-
     HADOOP-2174.  Removed the unnecessary Reporter.setStatus call from
     FSCopyFilesMapper.close which led to a NPE since the reporter isn't valid
     in the close method. (Chris Douglas via acmurthy) 
