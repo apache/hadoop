@@ -24,9 +24,12 @@ See http://forrest.apache.org/docs/linking.html for more info.
   </project>
 
   <docs label="Documentation"> 
-    <hdfs      label="Hadoop File System" href="hdfs_design.html" />
-    <install   label="Install and Configure" href="ext:overview" />
-    <api       label="API Docs"           href="ext:api" />
+    <overview  label="Overview"           href="documentation.html" />
+    <quickstart label="Quickstart"        href="quickstart.html" />
+    <setup     label="Cluster Setup"      href="cluster_setup.html" />
+    <hdfs      label="HDFS Architecture"  href="hdfs_design.html" />
+    <mapred    label="Map-Reduce Tutorial" href="mapred_tutorial.html" />
+    <api       label="API Docs"           href="ext:api/index" />
     <wiki      label="Wiki"               href="ext:wiki" />
     <faq       label="FAQ"                href="ext:faq" />
     <usermail  label="Mailing Lists"      href="mailing_lists.html#Users" />
@@ -46,10 +49,117 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <nightly   href="http://lucene.zones.apache.org:8080/hudson/job/Hadoop-Nightly/" />
     <releases  href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/" />
     <store     href="http://www.cafepress.com/hadoop/" />
-    <api       href="api/index.html" />
-    <overview  href="api/overview-summary.html#overview_description" />
     <lucene    href="http://lucene.apache.org/" />
     <nutch     href="http://lucene.apache.org/nutch/" />
+    <hadoop-default href="http://lucene.apache.org/hadoop/hadoop-default.html" />
+    <api href="api/">
+      <index href="index.html" />
+      <org href="org/">
+        <apache href="apache/">
+          <hadoop href="hadoop/">
+            <conf href="conf/">
+              <configuration href="Configuration.html">
+                <final href="#FinalParams" />
+                <get href="#get(java.lang.String, java.lang.String)" />
+                <set href="#set(java.lang.String, java.lang.String)" />
+              </configuration>
+            </conf>
+            <filecache href="filecache/">
+              <distributedcache href="DistributedCache.html" />
+            </filecache>
+            <fs href="fs/">
+              <filesystem href="FileSystem.html" />
+            </fs>
+            <io href="io/">
+              <closeable href="Closeable.html">
+                <close href="#close()" />
+              </closeable>
+              <sequencefile href="SequenceFile.html" />
+              <writable href="Writable.html" />
+              <writablecomparable href="WritableComparable.html" />
+              <compress href="compress/">
+                <compressioncodec href="CompressionCodec.html" />
+              </compress>
+            </io>
+            <mapred href="mapred/">
+              <clusterstatus href="ClusterStatus.html" />
+              <counters href="Counters.html" />
+              <fileinputformat href="FileInputFormat.html" />
+              <filesplit href="FileSplit.html" />
+              <inputformat href="InputFormat.html" />
+              <inputsplit href="InputSplit.html" />
+              <isolationrunner href="IsolationRunner.html" />
+              <jobclient href="JobClient.html">
+                <runjob href="#runJob(org.apache.hadoop.mapred.JobConf)" />
+                <submitjob href="#submitJob(org.apache.hadoop.mapred.JobConf)" />
+              </jobclient>
+              <jobconf href="JobConf.html">
+                <setnummaptasks href="#setNumMapTasks(int)" />
+                <setnumreducetasks href="#setNumReduceTasks(int)" />
+                <setoutputkeycomparatorclass href="#setOutputKeyComparatorClass(java.lang.Class)" />
+                <setoutputvaluegroupingcomparator href="#setOutputValueGroupingComparator(java.lang.Class)" />
+                <setinputpath href="#setInputPath(org.apache.hadoop.fs.Path)" />
+                <addinputpath href="#addInputPath(org.apache.hadoop.fs.Path)" />
+                <getoutputpath href="#getOutputPath()" />
+                <setoutputpath href="#setOutputPath(org.apache.hadoop.fs.Path)" />
+                <setcombinerclass href="#setCombinerClass(java.lang.Class)" />
+                <setmapdebugscript href="#setMapDebugScript(java.lang.String)" />
+                <setreducedebugscript href="#setReduceDebugScript(java.lang.String)" />
+                <setspeculativeexecution href="#setSpeculativeExecution(boolean)" />
+                <setmaxmapattempts href="#setMaxMapAttempts(int)" />
+                <setmaxreduceattempts href="#setMaxReduceAttempts(int)" />
+                <setmaxmaptaskfailurespercent href="#setMaxMapTaskFailuresPercent(int)" />
+                <setmaxreducetaskfailurespercent href="#setMaxReduceTaskFailuresPercent(int)" />
+                <setjobendnotificationuri href="#setJobEndNotificationURI(java.lang.String)" />
+              </jobconf>
+              <jobconfigurable href="JobConfigurable.html">
+                <configure href="#configure(org.apache.hadoop.mapred.JobConf)" />
+              </jobconfigurable>
+              <jobcontrol href="jobcontrol/">
+                <package-summary href="package-summary.html" />
+              </jobcontrol>
+              <mapper href="Mapper.html">
+                <map href="#map(K1, V1, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)" />
+              </mapper>
+              <outputcollector href="OutputCollector.html">
+                <collect href="#collect(K, V)" />
+              </outputcollector>
+              <outputformat href="OutputFormat.html" />
+              <partitioner href="Partitioner.html" />
+              <recordreader href="RecordReader.html" />
+              <recordwriter href="RecordWriter.html" />
+              <reducer href="Reducer.html">
+                <reduce href="#reduce(K2, java.util.Iterator, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)" />
+              </reducer>
+              <reporter href="Reporter.html">
+                <incrcounter href="#incrCounter(java.lang.Enum, long)" />
+              </reporter>
+              <runningjob href="RunningJob.html" />
+              <textinputformat href="TextInputFormat.html" />
+              <textoutputformat href="TextOutputFormat.html" />
+              <lib href="lib/">
+                <package-summary href="package-summary.html" />
+                <hashpartitioner href="HashPartitioner.html" />
+              </lib>
+              <pipes href="pipes/">
+                <package-summary href="package-summary.html" />
+              </pipes>
+            </mapred>
+            <streaming href="streaming/">
+              <package-summary href="package-summary.html" />
+            </streaming>
+            <util href="util/">
+              <genericoptionsparser href="GenericOptionsParser.html" />
+              <progress href="Progress.html" />
+              <tool href="Tool.html" />
+              <toolrunner href="ToolRunner.html">
+                <run href="#run(org.apache.hadoop.util.Tool, java.lang.String[])" />
+              </toolrunner>
+            </util>
+          </hadoop>
+        </apache>
+      </org>
+    </api>
   </external-refs>
  
 </site>

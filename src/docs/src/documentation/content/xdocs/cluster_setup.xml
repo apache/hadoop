@@ -1,0 +1,414 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document>
+  
+  <header>
+    <title>Hadoop Cluster Setup</title>
+  </header>
+  
+  <body>
+  
+    <section>
+      <title>Purpose</title>
+      
+      <p>This document describes how to install, configure and manage non-trivial
+      Hadoop clusters ranging from a few nodes to extremely large clusters with 
+      thousands of nodes.</p>
+      
+      <p>If you are looking to install Hadoop on a single machine to play
+      with it, you can find relevant details <a href="quickstart.html">here</a>.
+      </p>
+    </section>
+    
+    <section>
+      <title>Pre-requisites</title>
+      
+      <ol>
+        <li>
+          Make sure all <a href="quickstart.html#PreReqs">requisite</a> software 
+          is installed on all nodes in your cluster.
+        </li>
+        <li>
+          <a href="quickstart.html#GetHadoop">Get</a> the Hadoop software.
+        </li>
+      </ol>
+    </section>
+    
+    <section>
+      <title>Installation</title>
+      
+      <p>Installing a Hadoop cluster typically involves unpacking the software 
+      on all the machines in the cluster.</p>
+      
+      <p>Typically one machine in the cluster is designated as the 
+      <code>NameNode</code> and another machine the as <code>JobTracker</code>,
+      exclusively. These are the <em>masters</em>. The rest of the machines in 
+      the cluster act as both <code>DataNode</code> <em>and</em> 
+      <code>TaskTracker</code>. These are the <em>slaves</em>.</p>
+      
+      <p>The root of the distribution is referred to as 
+      <code>HADOOP_HOME</code>. All machines in the cluster usually have the same 
+      <code>HADOOP_HOME</code> path.</p>
+    </section>
+    
+    <section>
+      <title>Configuration</title>
+      
+      <p>The following sections describe how to configure a Hadoop cluster.</p>
+      
+      <section>
+        <title>Configuration Files</title>
+        
+        <p>Hadoop configuration is driven by two important configuration files
+        found in the <code>conf/</code> directory of the distribution:</p>
+        <ol>
+          <li>
+            <a href="ext:hadoop-default">hadoop-default.xml</a> - Read-only 
+            default configuration.
+          </li>
+          <li>
+            <em>hadoop-site.xml</em> - Site-specific configuration.
+          </li>
+        </ol>
+      
+        <p>To learn more about how the Hadoop framework is controlled by these 
+        configuration files, look <a href="ext:configuration">here</a>.</p>
+      
+        <p>Additionally, you can control the Hadoop scripts found in the 
+        <code>bin/</code> directory of the distribution, by setting site-specific 
+        values via the <code>conf/hadoop-env.sh</code>.</p>
+      </section>
+      
+      <section>
+        <title>Site Configuration</title>
+        
+        <p>To configure the the Hadoop cluster you will need to configure the
+        <em>environment</em> in which the Hadoop daemons execute as well as
+        the <em>configuration parameters</em> for the Hadoop daemons.</p>
+        
+        <p>The Hadoop daemons are <code>NameNode</code>/<code>DataNode</code> 
+        and <code>JobTracker</code>/<code>TaskTracker</code>.</p>
+        
+        <section>
+          <title>Configuring the Environment of the Hadoop Daemons</title>
+
+          <p>Administrators should use the <code>conf/hadoop-env.sh</code> script
+          to do site-specific customization of the Hadoop daemons' process 
+          environment.</p> 
+          
+          <p>At the very least you should specify the
+          <code>JAVA_HOME</code> so that it is correctly defined on each
+          remote node.</p>
+          
+          <p>Other useful configuration parameters that you can customize 
+          include:</p>
+          <ul>
+            <li>
+              <code>HADOOP_LOG_DIR</code> - The directory where the daemons'
+              log files are stored. They are automatically created if they don't
+              exist.
+            </li>
+            <li>
+              <code>HADOOP_HEAPSIZE</code> - The maximum amount of heapsize 
+              to use, in MB e.g. <code>2000MB</code>.
+            </li>
+          </ul>
+        </section>
+        
+        <section>
+          <title>Configuring the Hadoop Daemons</title>
+          
+          <p>This section deals with important parameters to be specified in the
+          <code>conf/hadoop-site.xml</code> for the Hadoop cluster.</p>
+
+		  <table>
+  		    <tr>
+		      <th>Parameter</th>
+		      <th>Value</th> 
+		      <th>Notes</th>
+		    </tr>
+  		    <tr>
+		      <td>fs.default.name</td>
+  		      <td>Hostname or IP address of <code>NameNode</code>.</td>
+		      <td><em>host:port</em> pair.</td>
+		    </tr>
+		    <tr>
+		      <td>mapred.job.tracker</td>
+		      <td>Hostname or IP address of <code>JobTracker</code>.</td>
+		      <td><em>host:port</em> pair.</td>
+		    </tr>
+		    <tr>
+		      <td>dfs.name.dir</td>
+		      <td>
+		        Path on the local filesystem where the <code>NameNode</code> 
+		        stores the namespace and transactions logs persistently.</td>
+		      <td>
+		        If this is a comma-delimited list of directories then the name 
+		        table is replicated in all of the directories, for redundancy.
+		      </td>
+		    </tr>
+		    <tr>
+		      <td>dfs.data.dir</td>
+		      <td>
+		        Comma separated list of paths on the local filesystem of a 
+		        <code>DataNode</code> where it should store its blocks.
+		      </td>
+		      <td>
+		        If this is a comma-delimited list of directories, then data will 
+		        be stored in all named directories, typically on different 
+		        devices.
+		      </td>
+		    </tr>
+		    <tr>
+		      <td>mapred.system.dir</td>
+		      <td>
+		        Path on the HDFS where where the Map-Reduce framework stores 
+		        system files e.g. <code>/hadoop/mapred/system/</code>.
+		      </td>
+		      <td>
+		        This is in the default filesystem (HDFS) and must be accessible 
+		        from both the server and client machines.
+		      </td>
+		    </tr>
+		    <tr>
+		      <td>mapred.local.dir</td>
+		      <td>
+		        Comma-separated list of paths on the local filesystem where 
+		        temporary Map-Reduce data is written.
+		      </td>
+		      <td>Multiple paths help spread disk i/o.</td>
+		    </tr>
+		    <tr>
+		      <td>mapred.tasktracker.tasks.maximum</td>
+		      <td>
+		        The maximum number of map and reduce tasks, which are run 
+		        simultaneously on a given <code>TaskTracker</code>, individually.
+		      </td>
+		      <td>
+		        Defaults to 2 (2 maps and 2 reduces), but vary it depending on 
+		        your hardware.
+		      </td>
+		    </tr>
+		    <tr>
+		      <td>dfs.hosts/dfs.hosts.exclude</td>
+		      <td>List of permitted/excluded DataNodes.</td>
+		      <td>
+		        If necessary, use these files to control the list of allowable 
+		        datanodes.
+		      </td>
+		    </tr>
+		    <tr>
+		      <td>mapred.hosts/mapred.hosts.exclude</td>
+		      <td>List of permitted/excluded TaskTrackers.</td>
+		      <td>
+		        If necessary, use these files to control the list of allowable 
+		        tasktrackers.
+		      </td>
+  		    </tr>
+		  </table>
+
+          <p>Typically all the above parameters are marked as 
+          <a href="api/index.html?org/apache/hadoop/conf/Configuration.html#FinalParameters">
+          final</a> to ensure that they cannot be overriden by user-applications.
+          </p>
+
+          <section>
+            <title>Real-World Cluster Configurations</title>
+            
+            <p>This section lists some non-default configuration parameters which 
+            have been used to run the <em>sort</em> benchmark on very large 
+            clusters.</p>
+            
+            <ul>
+              <li>
+                <p>Some non-default configuration values used to run sort900,
+                that is 9TB of data sorted on a cluster with 900 nodes:</p>
+                <table>
+  		          <tr>
+		            <th>Parameter</th>
+		            <th>Value</th> 
+		            <th>Notes</th>
+		          </tr>
+                  <tr>
+                    <td>dfs.block.size</td>
+                    <td>134217728</td>
+                    <td>HDFS blocksize of 128MB for large file-systems.</td>
+                  </tr>
+                  <tr>
+                    <td>dfs.namenode.handler.count</td>
+                    <td>40</td>
+                    <td>
+                      More NameNode server threads to handle RPCs from large 
+                      number of DataNodes.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>mapred.reduce.parallel.copies</td>
+                    <td>20</td>
+                    <td>
+                      Higher number of parallel copies run by reduces to fetch
+                      outputs from very large number of maps.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>mapred.child.java.opts</td>
+                    <td>-Xmx512M</td>
+                    <td>
+                      Larger heap-size for child jvms of maps/reduces.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>fs.inmemory.size.mb</td>
+                    <td>200</td>
+                    <td>
+                      Larger amount of memory allocated for the in-memory 
+                      file-system used to merge map-outputs at the reduces.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>io.sort.factor</td>
+                    <td>100</td>
+                    <td>More streams merged at once while sorting files.</td>
+                  </tr>
+                  <tr>
+                    <td>io.sort.mb</td>
+                    <td>200</td>
+                    <td>Higher memory-limit while sorting data.</td>
+                  </tr>
+                  <tr>
+                    <td>io.file.buffer.size</td>
+                    <td>131072</td>
+                    <td>Size of read/write buffer used in SequenceFiles.</td>
+                  </tr>
+                </table>
+              </li>
+              <li>
+                <p>Updates to some configuration values to run sort1400 and 
+                sort2000, that is 14TB of data sorted on 1400 nodes and 20TB of
+                data sorted on 2000 nodes:</p>
+                <table>
+  		          <tr>
+		            <th>Parameter</th>
+		            <th>Value</th> 
+		            <th>Notes</th>
+		          </tr>
+                  <tr>
+                    <td>mapred.job.tracker.handler.count</td>
+                    <td>60</td>
+                    <td>
+                      More JobTracker server threads to handle RPCs from large 
+                      number of TaskTrackers.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>mapred.reduce.parallel.copies</td>
+                    <td>50</td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td>tasktracker.http.threads</td>
+                    <td>50</td>
+                    <td>
+                      More worker threads for the TaskTracker's http server. The
+                      http server is used by reduces to fetch intermediate 
+                      map-outputs.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>mapred.child.java.opts</td>
+                    <td>-Xmx1024M</td>
+                    <td></td>
+                  </tr>
+                </table>
+              </li>
+            </ul>
+          </section>
+          
+        </section>
+        
+        <section>
+          <title>Slaves</title>
+          
+          <p>Typically you choose one machine in the cluster to act as the 
+          <code>NameNode</code> and one machine as to act as the 
+          <code>JobTracker</code>, exclusively. The rest of the machines act as 
+          both a <code>DataNode</code> and <code>TaskTracker</code> and are 
+          referred to as <em>slaves</em>.</p>
+          
+          <p>List all slave hostnames or IP addresses in your 
+          <code>conf/slaves</code> file, one per line.</p>
+        </section>
+        
+        <section>
+          <title>Logging</title>
+          
+          <p>Hadoop uses the <a href="http://logging.apache.org/log4j/">Apache 
+          log4j</a> via the <a href="http://commons.apache.org/logging/">Apache 
+          Commons Logging</a> framework for logging. Edit the 
+          <code>conf/log4j.properties</code> file to customize the Hadoop 
+          daemons' logging configuration (log-formats and so on).</p>
+        </section>
+      </section>
+      
+      <p>Once all the necessary configuration is complete, distribute the files
+      to the <code>HADOOP_CONF_DIR</code> directory on all the machines, 
+      typically <code>${HADOOP_HOME}/conf</code>.</p>
+    </section>
+    
+    <section>
+      <title>Hadoop Startup</title>
+      
+      <p>To start a Hadoop cluster you will need to start both the HDFS and 
+      Map-Reduce cluster.</p>
+
+      <p>
+        Format a new distributed filesystem:<br/>
+        <code>$ bin/hadoop namenode -format</code>
+      </p>
+      
+      <p>
+        Start the HDFS with the following command, run on the designated
+        <code>NameNode</code>:<br/>
+        <code>$ bin/start-dfs.sh</code>
+      </p>
+      <p>The <code>bin/start-dfs.sh</code> script also consults the 
+      <code>${HADOOP_CONF_DIR}/slaves</code> file on the <code>NameNode</code> 
+      and starts the <code>DataNode</code> daemon on all the listed slaves.</p>
+      
+      <p>
+        Start Map-Reduce with the following command, run on the designated
+        <code>JobTracker</code>:<br/>
+        <code>$ bin/start-mapred.sh</code>
+      </p>
+      <p>The <code>bin/start-mapred.sh</code> script also consults the 
+      <code>${HADOOP_CONF_DIR}/slaves</code> file on the <code>JobTracker</code> 
+      and starts the <code>TaskTracker</code> daemon on all the listed slaves.
+      </p>
+    </section>
+    
+    <section>
+      <title>Hadoop Shutdown</title>
+      
+      <p>
+        Stop HDFS with the following command, run on the designated 
+        <code>NameNode</code>:<br/>
+        <code>$ bin/stop-dfs.sh</code>
+      </p>
+      <p>The <code>bin/stop-dfs.sh</code> script also consults the 
+      <code>${HADOOP_CONF_DIR}/slaves</code> file on the <code>NameNode</code> 
+      and stops the <code>DataNode</code> daemon on all the listed slaves.</p>
+      
+      <p>
+        Stop Map-Reduce with the following command, run on the designated
+        the designated <code>JobTracker</code>:<br/>
+        <code>$ bin/stop-mapred.sh</code><br/>
+      </p>
+      <p>The <code>bin/stop-mapred.sh</code> script also consults the 
+      <code>${HADOOP_CONF_DIR}/slaves</code> file on the <code>JobTracker</code> 
+      and stops the <code>TaskTracker</code> daemon on all the listed slaves.</p>
+    </section>
+  </body>
+  
+</document>

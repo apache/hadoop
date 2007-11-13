@@ -99,6 +99,17 @@ Trunk (unreleased changes)
 
 Release 0.15.1 -
 
+  IMPROVEMENTS
+
+    HADOOP-1917.  Addition of guides/tutorial for better overall
+    documentation for Hadoop. Specifically: 
+    * quickstart.html is targetted towards first-time users and helps them 
+      setup a single-node cluster and play with Hadoop. 
+    * cluster_setup.html helps admins to configure and setup non-trivial
+      hadoop clusters.
+    * mapred_tutorial.html is a comprehensive Map-Reduce tutorial. 
+    (acmurthy) 
+
   BUG FIXES
 
     HADOOP-2174.  Removed the unnecessary Reporter.setStatus call from

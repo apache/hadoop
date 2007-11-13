@@ -64,7 +64,8 @@
       <ol>
         <li><a href="documentation.html">Learn about</a> Hadoop by reading the documentation.</li>
         <li><a href="releases.html">Download</a> Hadoop from the release page.</li>
-        <li><a href="ext:overview">Install and configure</a> Hadoop. Scroll down the page.</li>
+        <li>Hadoop <a href="quickstart.html">Quickstart</a>.</li>
+        <li><a href="cluster_setup.html">Hadoop Cluster Setup</a>.</li>
         <li><a href="mailing_lists.html">Discuss it</a> on the mailing list.</li>
       </ol>
     </section>
