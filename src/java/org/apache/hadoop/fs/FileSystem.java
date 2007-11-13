@@ -145,6 +145,9 @@ public abstract class FileSystem extends Configured {
 
     Map<String,FileSystem> authorityToFs = CACHE.get(scheme);
     if (authorityToFs == null) {
+      if (CACHE.isEmpty()) {
+        Runtime.getRuntime().addShutdownHook(clientFinalizer);
+      }
       authorityToFs = new HashMap<String,FileSystem>();
       CACHE.put(scheme, authorityToFs);
     }
@@ -163,16 +166,29 @@ public abstract class FileSystem extends Configured {
     return fs;
   }
 
+  private static class ClientFinalizer extends Thread {
+    public synchronized void run() {
+      try {
+        FileSystem.closeAll();
+      } catch (IOException e) {
+        LOG.info("FileSystem.closeAll() threw an exception:\n" + e);
+      }
+    }
+  }
+  private static final ClientFinalizer clientFinalizer = new ClientFinalizer();
+
   /**
    * Close all cached filesystems. Be sure those filesystems are not
    * used anymore.
    * 
    * @throws IOException
    */
-  public static synchronized void closeAll() throws IOException{
-    for(Map<String, FileSystem>  fss : CACHE.values()){
-      for(FileSystem fs : fss.values()){
-        fs.close();
+  public static synchronized void closeAll() throws IOException {
+    Set<String> scheme = new HashSet<String>(CACHE.keySet());
+    for (String s : scheme) {
+      Set<String> authority = new HashSet<String>(CACHE.get(s).keySet());
+      for (String a : authority) {
+        CACHE.get(s).get(a).close();
       }
     }
   }
@@ -895,6 +911,15 @@ public abstract class FileSystem extends Configured {
       Map<String,FileSystem> authorityToFs = CACHE.get(uri.getScheme());
       if (authorityToFs != null) {
         authorityToFs.remove(uri.getAuthority());
+        if (authorityToFs.isEmpty()) {
+          CACHE.remove(uri.getScheme());
+          if (CACHE.isEmpty() && !clientFinalizer.isAlive()) {
+            if (!Runtime.getRuntime().removeShutdownHook(clientFinalizer)) {
+              LOG.info("Could not cancel cleanup thread, though no " +
+                       "FileSystems are open");
+            }
+          }
+        }
       }
     }
   }

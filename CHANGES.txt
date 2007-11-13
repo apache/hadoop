@@ -94,6 +94,9 @@ Trunk (unreleased changes)
     HADOOP-2121. Cleanup DFSOutputStream when the stream encountered errors
     when Datanodes became full.  (Raghu Angadi via dhruba)
 
+    HADOOP-1130. The FileSystem.closeAll() method closes all existing
+    DFSClients.  (Chris Douglas via dhruba)
+
 Release 0.15.1 -
 
   BUG FIXES

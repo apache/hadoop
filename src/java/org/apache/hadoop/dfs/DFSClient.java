@@ -72,38 +72,6 @@ class DFSClient implements FSConstants {
   private TreeMap<String, OutputStream> pendingCreates =
     new TreeMap<String, OutputStream>();
     
-  /**
-   * A class to track the list of DFS clients, so that they can be closed
-   * on exit.
-   */
-  private static class ClientFinalizer extends Thread {
-    private List<DFSClient> clients = new ArrayList<DFSClient>();
-
-    public synchronized void addClient(DFSClient client) {
-      clients.add(client);
-    }
-
-    @Override
-    public synchronized void run() {
-      for (DFSClient client : clients) {
-        if (client.running) {
-          try {
-            client.close();
-          } catch (IOException ie) {
-            System.err.println("Error closing client");
-            ie.printStackTrace();
-          }
-        }
-      }
-    }
-  }
-
-  // add a cleanup thread
-  private static ClientFinalizer clientFinalizer = new ClientFinalizer();
-  static {
-    Runtime.getRuntime().addShutdownHook(clientFinalizer);
-  }
-
   private static ClientProtocol createNamenode(
       InetSocketAddress nameNodeAddr, Configuration conf)
     throws IOException {
