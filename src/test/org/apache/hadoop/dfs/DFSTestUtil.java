@@ -195,6 +195,7 @@ public class DFSTestUtil extends TestCase {
         if (loc.length != replFactor) {
           System.out.println("File " + fileName + " has replication factor " +
               loc.length);
+          good = false;
           try {
             System.out.println("Waiting for replication factor to drain");
             Thread.sleep(100);

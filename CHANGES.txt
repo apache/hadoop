@@ -97,6 +97,10 @@ Trunk (unreleased changes)
     HADOOP-1130. The FileSystem.closeAll() method closes all existing
     DFSClients.  (Chris Douglas via dhruba)
 
+    HADOOP-2204. DFSTestUtil.waitReplication was not waiting for all replicas
+    to get created, thus causing unit test failure.
+    (Raghu Angadi via dhruba)
+
 Release 0.15.1 -
 
   IMPROVEMENTS
