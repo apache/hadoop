@@ -120,6 +120,11 @@ Release 0.15.1 -
     FSCopyFilesMapper.close which led to a NPE since the reporter isn't valid
     in the close method. (Chris Douglas via acmurthy) 
 
+    HADOOP-2172.  Restore performance of random access to local files
+    by caching positions of local input streams, avoiding a system
+    call. (cutting)
+
+
 Release 0.15.0 - 2007-11-2
 
   INCOMPATIBLE CHANGES
