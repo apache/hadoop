@@ -68,6 +68,7 @@ public class RawLocalFileSystem extends FileSystem {
    *******************************************************/
   class LocalFSFileInputStream extends FSInputStream {
     FileInputStream fis;
+    private long position;
 
     public LocalFSFileInputStream(Path f) throws IOException {
       this.fis = new FileInputStream(pathToFile(f));
@@ -75,10 +76,11 @@ public class RawLocalFileSystem extends FileSystem {
     
     public void seek(long pos) throws IOException {
       fis.getChannel().position(pos);
+      this.position = pos;
     }
     
     public long getPos() throws IOException {
-      return fis.getChannel().position();
+      return this.position;
     }
     
     public boolean seekToNewSource(long targetPos) throws IOException {
@@ -94,7 +96,11 @@ public class RawLocalFileSystem extends FileSystem {
     
     public int read() throws IOException {
       try {
-        return fis.read();
+        int value = fis.read();
+        if (value >= 0) {
+          this.position++;
+        }
+        return value;
       } catch (IOException e) {                 // unexpected exception
         throw new FSError(e);                   // assume native fs error
       }
@@ -102,7 +108,11 @@ public class RawLocalFileSystem extends FileSystem {
     
     public int read(byte[] b, int off, int len) throws IOException {
       try {
-        return fis.read(b, off, len);
+        int value = fis.read(b, off, len);
+        if (value > 0) {
+          this.position += value;
+        }
+        return value;
       } catch (IOException e) {                 // unexpected exception
         throw new FSError(e);                   // assume native fs error
       }
@@ -118,7 +128,13 @@ public class RawLocalFileSystem extends FileSystem {
       }
     }
     
-    public long skip(long n) throws IOException { return fis.skip(n); }
+    public long skip(long n) throws IOException {
+      long value = fis.skip(n);
+      if (value > 0) {
+        this.position += value;
+      }
+      return value;
+    }
   }
   
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
