@@ -14,7 +14,7 @@
       <title>Purpose</title>
       
       <p>This document comprehensively describes all user-facing facets of the 
-      Hadoop Map-Reduce framework and serve as a tutorial.
+      Hadoop Map-Reduce framework and serves as a tutorial.
       </p>
     </section>
     
@@ -959,7 +959,7 @@
         <ul>
           <li>f
             Some configuration parameters may have been marked as 
-            <a href="ext:api/org/apache/hadoop/conf/configuration/final">
+            <a href="ext:api/org/apache/hadoop/conf/configuration/final_parameters">
             final</a> by administrators and hence cannot be altered.
           </li>
           <li>
