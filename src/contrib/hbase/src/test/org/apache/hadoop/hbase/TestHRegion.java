@@ -78,14 +78,14 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
   private static final Text CONTENTS_BODY = new Text("contents:body");
   private static final Text CONTENTS_FIRSTCOL = new Text("contents:firstcol");
   private static final Text ANCHOR_SECONDCOL = new Text("anchor:secondcol");
-  
-  private static MiniDFSCluster cluster = null;
-  private static FileSystem fs = null;
-  private static Path parentdir = null;
-  private static Path newlogdir = null;
-  private static HLog log = null;
-  private static HTableDescriptor desc = null;
-  static HRegion region = null;
+
+  private MiniDFSCluster cluster = null;
+  private FileSystem fs = null;
+  private Path parentdir = null;
+  private Path newlogdir = null;
+  private HLog log = null;
+  private HTableDescriptor desc = null;
+  HRegion region = null;
   
   private static int numInserted = 0;
 
@@ -825,6 +825,11 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
       e.printStackTrace();
     }
     if (cluster != null) {
+      try {
+        fs.close();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
       cluster.shutdown();
       cluster = null;
     }
