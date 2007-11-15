@@ -124,6 +124,10 @@ Release 0.15.1 -
     by caching positions of local input streams, avoiding a system
     call. (cutting)
 
+    HADOOP-2205.  Regenerate the Hadoop website since some of the changes made
+    by HADOOP-1917 weren't correctly copied over to the trunk/docs directory. 
+    Also fixed a couple of minor typos and broken links. (acmurthy)
+
 
 Release 0.15.0 - 2007-11-2
 

@@ -59,7 +59,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
           <hadoop href="hadoop/">
             <conf href="conf/">
               <configuration href="Configuration.html">
-                <final href="#FinalParams" />
+                <final_parameters href="#FinalParams" />
                 <get href="#get(java.lang.String, java.lang.String)" />
                 <set href="#set(java.lang.String, java.lang.String)" />
               </configuration>

@@ -31,7 +31,7 @@
           is installed on all nodes in your cluster.
         </li>
         <li>
-          <a href="quickstart.html#GetHadoop">Get</a> the Hadoop software.
+          <a href="quickstart.html#Download">Get</a> the Hadoop software.
         </li>
       </ol>
     </section>
@@ -74,7 +74,8 @@
         </ol>
       
         <p>To learn more about how the Hadoop framework is controlled by these 
-        configuration files, look <a href="ext:configuration">here</a>.</p>
+        configuration files, look 
+        <a href="ext:api/org/apache/hadoop/conf/configuration">here</a>.</p>
       
         <p>Additionally, you can control the Hadoop scripts found in the 
         <code>bin/</code> directory of the distribution, by setting site-specific 
@@ -210,7 +211,7 @@
 		  </table>
 
           <p>Typically all the above parameters are marked as 
-          <a href="api/index.html?org/apache/hadoop/conf/Configuration.html#FinalParameters">
+          <a href="ext:api/org/apache/hadoop/conf/configuration/final_parameters">
           final</a> to ensure that they cannot be overriden by user-applications.
           </p>
 
