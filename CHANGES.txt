@@ -48,6 +48,9 @@ Trunk (unreleased changes)
     keep it end-user focussed, specifically sections related to subversion and
     building Hadoop. (Jim Kellerman via acmurthy)
 
+    HADOOP-1989. Support simulated DataNodes. This helps creating large virtual
+    clusters for testing purposes.  (Sanjay Radia via dhruba)
+    
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

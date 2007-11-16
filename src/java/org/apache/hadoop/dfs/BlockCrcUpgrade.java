@@ -327,7 +327,8 @@ class BlockCrcUpgradeUtils {
                            byte[] crcBuf) throws IOException {
     Block block = blockInfo.block;
     
-    File blockFile = blockInfo.dataNode.data.getBlockFile( block );
+    FSDataset data = (FSDataset) blockInfo.dataNode.data;
+    File blockFile = data.getBlockFile( block );
     File metaFile = FSDataset.getMetaFile( blockFile );
     
     if ( bytesPerChecksum <= 0 ) {
@@ -367,7 +368,7 @@ class BlockCrcUpgradeUtils {
     File tmpMetaFile = null;
     DataOutputStream out = null;
     try {
-      tmpBlockFile = blockInfo.dataNode.data.createTmpFile(null, block);
+      tmpBlockFile = data.createTmpFile(null, block);
       tmpMetaFile = FSDataset.getMetaFile( tmpBlockFile );
       out = new DataOutputStream( new FileOutputStream(tmpMetaFile) );
       
@@ -436,7 +437,8 @@ class BlockCrcUpgradeUtils {
     int oldCrcOffset = 0;
     
     Block block = blockInfo.block;
-    File blockFile = blockInfo.dataNode.data.getBlockFile( block );
+    FSDataset data = (FSDataset) blockInfo.dataNode.data;
+    File blockFile = data.getBlockFile( block );
     if ( blockFile == null || !blockFile.exists() ) {
       throw new IOException("Block file "  + 
                             ((blockFile != null) ? blockFile.getAbsolutePath()
@@ -779,7 +781,8 @@ class BlockCrcUpgradeUtils {
                                    throws IOException {
     
     Block block = blockInfo.block;
-    File blockFile = blockInfo.dataNode.data.getBlockFile( block );
+    FSDataset data = (FSDataset) blockInfo.dataNode.data;
+    File blockFile = data.getBlockFile( block );
     if (blockFile == null || !blockFile.exists()) {
       throw new IOException("Could not local file for block");
     }
@@ -1396,7 +1399,7 @@ class BlockCrcUpgradeObjectDatanode extends UpgradeObjectDatanode {
       return;
     }
     
-    FSDataset dataset = getDatanode().data;
+    FSDataset dataset = (FSDataset) getDatanode().data;
 
     // Set up the retry policy so that each attempt waits for one minute.
     Configuration conf = new Configuration();

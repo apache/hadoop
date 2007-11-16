@@ -34,6 +34,7 @@ public class TestSmallBlock extends TestCase {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 1;
   static final int fileSize = 20;
+  boolean simulatedStorage = false;
 
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
     // create and write a file that contains three blocks of data
@@ -61,8 +62,14 @@ public class TestSmallBlock extends TestCase {
     assertEquals("Number of blocks", fileSize, locations.length);
     FSDataInputStream stm = fileSys.open(name);
     byte[] expected = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(expected);
+    if (simulatedStorage) {
+      for (int i = 0; i < expected.length; ++i) {  
+        expected[i] = SimulatedFSDataset.DEFAULT_DATABYTE;
+      }
+    } else {
+      Random rand = new Random(seed);
+      rand.nextBytes(expected);
+    }
     // do a sanity check. Read the file
     byte[] actual = new byte[fileSize];
     stm.readFully(0, actual);
@@ -81,6 +88,9 @@ public class TestSmallBlock extends TestCase {
    */
   public void testSmallBlock() throws IOException {
     Configuration conf = new Configuration();
+    if (simulatedStorage) {
+      conf.setBoolean("dfs.datanode.simulateddatastorage", true);
+    }
     conf.set("io.bytes.per.checksum", "1");
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fileSys = cluster.getFileSystem();
@@ -93,5 +103,10 @@ public class TestSmallBlock extends TestCase {
       fileSys.close();
       cluster.shutdown();
     }
+  }
+  public void testSmallBlockSimulatedStorage() throws IOException {
+    simulatedStorage = true;
+    testSmallBlock();
+    simulatedStorage = false;
   }
 }

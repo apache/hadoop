@@ -38,6 +38,7 @@ public class TestFileCreation extends TestCase {
   static final int blockSize = 8192;
   static final int numBlocks = 2;
   static final int fileSize = numBlocks * blockSize + 1;
+  boolean simulatedStorage = false;
 
   // The test file is 2 times the blocksize plus one. This means that when the
   // entire file is written, the first two blocks definitely get flushed to
@@ -96,8 +97,14 @@ public class TestFileCreation extends TestCase {
     }
     FSDataInputStream stm = fileSys.open(name);
     byte[] expected = new byte[numBlocks * blockSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(expected);
+    if (simulatedStorage) {
+      for (int i= 0; i < expected.length; i++) {  
+        expected[i] = SimulatedFSDataset.DEFAULT_DATABYTE;
+      }
+    } else {
+      Random rand = new Random(seed);
+      rand.nextBytes(expected);
+    }
     // do a sanity check. Read the file
     byte[] actual = new byte[numBlocks * blockSize];
     stm.readFully(0, actual);
@@ -108,7 +115,7 @@ public class TestFileCreation extends TestCase {
     for (int idx = 0; idx < actual.length; idx++) {
       this.assertEquals(message+" byte "+(from+idx)+" differs. expected "+
                         expected[from+idx]+" actual "+actual[idx],
-                        actual[idx], expected[from+idx]);
+                        expected[from+idx], actual[idx]);
       actual[idx] = 0;
     }
   }
@@ -118,6 +125,9 @@ public class TestFileCreation extends TestCase {
    */
   public void testFileCreation() throws IOException {
     Configuration conf = new Configuration();
+    if (simulatedStorage) {
+      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+    }
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fs = cluster.getFileSystem();
     try {
@@ -163,10 +173,28 @@ public class TestFileCreation extends TestCase {
       assertTrue(file1 + " should be of size " + fileSize +
                  " but found to be of size " + len, 
                   len == fileSize);
-
+      
+      
+      // Check storage usage 
+      // can't check capacities for real storage since the OS file system may be changing under us.
+      if (simulatedStorage) {
+        DataNode dn = cluster.getDataNodes().get(0);
+        assertEquals(fileSize, dn.getFSDataset().getDfsUsed());
+        assertEquals(SimulatedFSDataset.DEFAULT_CAPACITY-fileSize, dn.getFSDataset().getRemaining());
+      }
     } finally {
       fs.close();
       cluster.shutdown();
     }
+  }
+
+
+/**
+ * Test that file data becomes available before file is closed.
+ */
+  public void testFileCreationSimulated() throws IOException {
+    simulatedStorage = true;
+    testFileCreation();
+    simulatedStorage = false;
   }
 }

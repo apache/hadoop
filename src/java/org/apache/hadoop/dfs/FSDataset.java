@@ -31,7 +31,7 @@ import org.apache.hadoop.conf.*;
  * has a unique name and an extent on disk.
  *
  ***************************************************/
-class FSDataset implements FSConstants {
+class FSDataset implements FSConstants, FSDatasetInterface {
 
 
   /**
@@ -447,6 +447,7 @@ class FSDataset implements FSConstants {
       return sb.toString();
     }
   }
+  
   //////////////////////////////////////////////////////
   //
   // FSDataSet
@@ -457,8 +458,28 @@ class FSDataset implements FSConstants {
   public static final String METADATA_EXTENSION = ".meta";
   public static final short METADATA_VERSION = 1;
     
-  public static File getMetaFile( File f ) {
+  protected static File getMetaFile( File f ) {
     return new File( f.getAbsolutePath() + METADATA_EXTENSION );
+  }
+  
+  protected File getMetaFile(Block b) throws IOException {
+    File blockFile = getBlockFile( b );
+    return new File( blockFile.getAbsolutePath() + METADATA_EXTENSION ); 
+  }
+  public boolean metaFileExists(Block b) throws IOException {
+    return getMetaFile(b).exists();
+  }
+  
+  public long getMetaDataLength(Block b) throws IOException {
+    File checksumFile = getMetaFile( b );
+  return checksumFile.length();
+  }
+
+  public MetaDataInputStream getMetaDataInputStream(Block b)
+      throws IOException {
+    File checksumFile = getMetaFile( b );
+    return new MetaDataInputStream(new FileInputStream(checksumFile),
+                                                    checksumFile.length());
   }
     
   FSVolumeSet volumes;
@@ -523,21 +544,31 @@ class FSDataset implements FSConstants {
   /**
    * Get File name for a given block.
    */
-  public synchronized File getBlockFile(Block b) throws IOException {
+  protected synchronized File getBlockFile(Block b) throws IOException {
     if (!isValidBlock(b)) {
       throw new IOException("Block " + b + " is not valid.");
     }
     return getFile(b);
   }
+  
+  public synchronized InputStream getBlockInputStream(Block b) throws IOException {
+    return new FileInputStream(getBlockFile(b));
+  }
 
-  static class BlockWriteStreams {
-    OutputStream dataOut;
-    OutputStream checksumOut;
-    
-    BlockWriteStreams( File f ) throws IOException {
-      dataOut = new FileOutputStream( f );
-      checksumOut = new FileOutputStream( getMetaFile( f ) );
+  public synchronized InputStream getBlockInputStream(Block b, long seekOffset) throws IOException {
+
+    File blockFile = getBlockFile(b);
+    RandomAccessFile blockInFile = new RandomAccessFile(blockFile, "r");
+    if (seekOffset > 0) {
+      blockInFile.seek(seekOffset);
     }
+    return new FileInputStream(blockInFile.getFD());
+  }
+    
+  BlockWriteStreams createBlockWriteStreams( File f ) throws IOException {
+      return new BlockWriteStreams(new FileOutputStream(f),
+          new FileOutputStream( getMetaFile( f ) ));
+
   }
   
   /**
@@ -590,7 +621,7 @@ class FSDataset implements FSConstants {
     // REMIND - mjc - make this a filter stream that enforces a max
     // block size, so clients can't go crazy
     //
-    return new BlockWriteStreams( f );
+    return createBlockWriteStreams( f );
   }
 
   File createTmpFile( FSVolume vol, Block blk ) throws IOException {
@@ -731,7 +762,7 @@ class FSDataset implements FSConstants {
    * check if a data diretory is healthy
    * @throws DiskErrorException
    */
-  void checkDataDir() throws DiskErrorException {
+  public void checkDataDir() throws DiskErrorException {
     volumes.checkDirs();
   }
     

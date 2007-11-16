@@ -24,8 +24,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 
 public class TestSetrepIncreasing extends TestCase {
-  static void setrep(int fromREP, int toREP) throws IOException {
+  static void setrep(int fromREP, int toREP, boolean simulatedStorage) throws IOException {
     Configuration conf = new Configuration();
+    if (simulatedStorage) {
+      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+    }
     conf.set("dfs.replication", "" + fromREP);
     conf.setLong("dfs.blockreport.intervalMsec", 1000L);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 10, true, null);
@@ -63,6 +66,9 @@ public class TestSetrepIncreasing extends TestCase {
   }
 
   public void testSetrepIncreasing() throws IOException {
-    setrep(3, 7);
+    setrep(3, 7, false);
+  }
+  public void testSetrepIncreasingSimulatedStorage() throws IOException {
+    setrep(3, 7, true);
   }
 }

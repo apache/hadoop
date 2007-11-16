@@ -415,7 +415,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
     // if this fails, the delete did not propagate because either
     //   awaitQuiescence() returned before the disk images were removed
     //   or a real failure was detected.
-    assertTrue(" data dir not empty: " + dn.data.volumes,
+    assertTrue(" data dir not empty: " + dn.data,
                blocks.length==0);
   }
 

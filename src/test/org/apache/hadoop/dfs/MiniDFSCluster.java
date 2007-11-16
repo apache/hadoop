@@ -32,7 +32,8 @@ import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
- * The data directories for DFS are undering the testing directory.
+ * The data directories for non-simulated DFS are under the testing directory.
+ * For simulated data nodes, no underlying fs storage is used.
  */
 public class MiniDFSCluster {
 
@@ -41,6 +42,14 @@ public class MiniDFSCluster {
   private ArrayList<DataNode> dataNodes = new ArrayList<DataNode>();
   private File base_dir;
   private File data_dir;
+  
+  
+  /**
+   * This null constructor is used only when wishing to start a data node cluster
+   * without a name node (ie when the name node is started elsewhere).
+   */
+  public MiniDFSCluster() {
+  }
   
   /**
    * Modify the config and start up the servers with the given operation.
@@ -80,10 +89,10 @@ public class MiniDFSCluster {
                         String[] racks) throws IOException {
     this(0, conf, numDataNodes, format, true, null, racks);
   }
-
+  
   /**
-   * NOTE: if possible, the other constructors should be used as they will
-   * ensure that the servers use free ports.
+   * NOTE: if possible, the other constructors that don't have nameNode port 
+   * parameter should be used as they will ensure that the servers use free ports.
    * <p>
    * Modify the config and start up the servers.  
    * 
@@ -106,6 +115,37 @@ public class MiniDFSCluster {
                         boolean manageDfsDirs,
                         StartupOption operation,
                         String[] racks) throws IOException {
+    this(0, conf, numDataNodes, format, manageDfsDirs, operation, racks, null);
+ 
+  }
+
+  /**
+   * NOTE: if possible, the other constructors that don't have nameNode port 
+   * parameter should be used as they will ensure that the servers use free ports.
+   * <p>
+   * Modify the config and start up the servers.  
+   * 
+   * @param nameNodePort suggestion for which rpc port to use.  caller should
+   *          use getNameNodePort() to get the actual port used.
+   * @param conf the base configuration to use in starting the servers.  This
+   *          will be modified as necessary.
+   * @param numDataNodes Number of DataNodes to start; may be zero
+   * @param format if true, format the NameNode and DataNodes before starting up
+   * @param manageDfsDirs if true, the data directories for servers will be
+   *          created and dfs.name.dir and dfs.data.dir will be set in the conf
+   * @param operation the operation with which to start the servers.  If null
+   *          or StartupOption.FORMAT, then StartupOption.REGULAR will be used.
+   * @param racks array of strings indicating the rack that each DataNode is on
+   * @param simulatedCapacities array of capacities of the simulated data nodes
+   */
+  public MiniDFSCluster(int nameNodePort, 
+                        Configuration conf,
+                        int numDataNodes,
+                        boolean format,
+                        boolean manageDfsDirs,
+                        StartupOption operation,
+                        String[] racks,
+                        long[] simulatedCapacities) throws IOException {
     this.conf = conf;
     base_dir = new File(System.getProperty("test.build.data"), "dfs/");
     data_dir = new File(base_dir, "data");
@@ -139,7 +179,7 @@ public class MiniDFSCluster {
     nameNode = NameNode.createNameNode(args, conf);
     
     // Start the DataNodes
-    startDataNodes(conf, numDataNodes, manageDfsDirs, operation, racks);
+    startDataNodes(conf, numDataNodes, manageDfsDirs, operation, racks, simulatedCapacities);
     
     if (numDataNodes > 0) {
       while (!isClusterUp()) {
@@ -155,6 +195,12 @@ public class MiniDFSCluster {
   /**
    * Modify the config and start up additional DataNodes.  The info port for
    * DataNodes is guaranteed to use a free port.
+   *  
+   *  Data nodes can run with the name node in the mini cluster or
+   *  a real name node. For example, running with a real name node is useful
+   *  when running simulated data nodes with a real name node.
+   *  If minicluster's name node is null assume that the conf has been
+   *  set with the right address:port of the name node.
    *
    * @param conf the base configuration to use in starting the DataNodes.  This
    *          will be modified as necessary.
@@ -164,14 +210,23 @@ public class MiniDFSCluster {
    * @param operation the operation with which to start the DataNodes.  If null
    *          or StartupOption.FORMAT, then StartupOption.REGULAR will be used.
    * @param racks array of strings indicating the rack that each DataNode is on
+   * @param simulatedCapacities array of capacities of the simulated data nodes
    *
    * @throws IllegalStateException if NameNode has been shutdown
    */
   public void startDataNodes(Configuration conf, int numDataNodes, 
                              boolean manageDfsDirs, StartupOption operation, 
-                             String[] racks) throws IOException {
-    if (nameNode == null) {
-      throw new IllegalStateException("NameNode is not running");
+                             String[] racks,
+                             long[] simulatedCapacities) throws IOException {
+
+    // If minicluster's name node is null assume that the conf has been
+    // set with the right address:port of the name node.
+    //
+    if (nameNode != null) { // set conf from the name node
+      InetSocketAddress nnAddr = nameNode.getNameNodeAddress(); 
+      int nameNodePort = nnAddr.getPort(); 
+      conf.set("fs.default.name", 
+               nnAddr.getHostName()+ ":" + Integer.toString(nameNodePort));
     }
     
     if (racks != null && numDataNodes > racks.length ) {
@@ -181,10 +236,6 @@ public class MiniDFSCluster {
 
     // Set up the right ports for the datanodes
     conf.setInt("dfs.datanode.info.port", 0);
-    InetSocketAddress nnAddr = nameNode.getNameNodeAddress(); 
-    int nameNodePort = nnAddr.getPort(); 
-    conf.set("fs.default.name", 
-             nnAddr.getHostName()+ ":" + Integer.toString(nameNodePort));
     
     String[] args = (operation == null ||
                      operation == StartupOption.FORMAT ||
@@ -209,10 +260,42 @@ public class MiniDFSCluster {
       if (racks != null) {
         dnConf.set("dfs.datanode.rack", racks[i-curDatanodesNum]);
       }
+      if (simulatedCapacities != null) {
+        dnConf.setBoolean("dfs.datanode.simulateddatastorage", true);
+      }
+      if (simulatedCapacities != null && i < simulatedCapacities.length) {
+        dnConf.setLong(SimulatedFSDataset.CONFIG_PROPERTY_CAPACITY, simulatedCapacities[i]);
+      }
       System.out.println("Starting DataNode " + i + " with dfs.data.dir: " 
                          + dnConf.get("dfs.data.dir"));
       dataNodes.add(DataNode.createDataNode(dnArgs, dnConf));
     }
+  }
+  
+  
+  
+  /**
+   * Modify the config and start up the DataNodes.  The info port for
+   * DataNodes is guaranteed to use a free port.
+   *
+   * @param conf the base configuration to use in starting the DataNodes.  This
+   *          will be modified as necessary.
+   * @param numDataNodes Number of DataNodes to start; may be zero
+   * @param manageDfsDirs if true, the data directories for DataNodes will be
+   *          created and dfs.data.dir will be set in the conf
+   * @param operation the operation with which to start the DataNodes.  If null
+   *          or StartupOption.FORMAT, then StartupOption.REGULAR will be used.
+   * @param racks array of strings indicating the rack that each DataNode is on
+   * @param simulatedCapacities array of capacities of the simulated data nodes
+   *
+   * @throws IllegalStateException if NameNode has been shutdown
+   */
+  
+  public void startDataNodes(Configuration conf, int numDataNodes, 
+      boolean manageDfsDirs, StartupOption operation, 
+      String[] racks
+      ) throws IOException {
+    startDataNodes( conf,  numDataNodes, manageDfsDirs,  operation, racks, null);
   }
   
   /**
@@ -338,5 +421,81 @@ public class MiniDFSCluster {
     }
 
     client.close();
+  }
+  
+  public void formatDataNodeDirs() throws IOException {
+    base_dir = new File(System.getProperty("test.build.data"), "dfs/");
+    data_dir = new File(base_dir, "data");
+    if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
+      throw new IOException("Cannot remove data directory: " + data_dir);
+    }
+  }
+  
+  /**
+   * 
+   * @param dataNodeIndex - data node whose block report is desired - the index is same as for getDataNodes()
+   * @return the block report for the specified data node
+   */
+  public Block[] getBlockReport(int dataNodeIndex) {
+    if (dataNodeIndex < 0 || dataNodeIndex > dataNodes.size()) {
+      throw new IndexOutOfBoundsException();
+    }
+    return dataNodes.get(dataNodeIndex).getFSDataset().getBlockReport();
+  }
+  
+  
+  /**
+   * 
+   * @return block reports from all data nodes
+   *    Block[] is indexed in the same order as the list of datanodes returned by getDataNodes()
+   */
+  public Block[][] getAllBlockReports() {
+    int numDataNodes = dataNodes.size();
+    Block[][] result = new Block[numDataNodes][];
+    for (int i = 0; i < numDataNodes; ++i) {
+     result[i] = getBlockReport(i);
+    }
+    return result;
+  }
+  
+  
+  /**
+   * This method is valid only if the the data nodes have simulated data
+   * @param dataNodeIndex - data node i which to inject - the index is same as for getDataNodes()
+   * @param blocksToInject - the blocks
+   * @throws IOException
+   *              if not simulatedFSDataset
+   *             if any of blocks already exist in the data node
+   *   
+   */
+  public void injectBlocks(int dataNodeIndex, Block[] blocksToInject) throws IOException {
+    if (dataNodeIndex < 0 || dataNodeIndex > dataNodes.size()) {
+      throw new IndexOutOfBoundsException();
+    }
+    FSDatasetInterface dataSet = dataNodes.get(dataNodeIndex).getFSDataset();
+    if (!(dataSet instanceof SimulatedFSDataset)) {
+      throw new IOException("injectBlocks is valid only for SimilatedFSDataset");
+    }
+    SimulatedFSDataset sdataset = (SimulatedFSDataset) dataSet;
+    sdataset.injectBlocks(blocksToInject);
+    dataNodes.get(dataNodeIndex).scheduleBlockReport();
+  }
+  
+  /**
+   * This method is valid only if the the data nodes have simulated data
+   * @param blocksToInject - blocksToInject[] is indexed in the same order as the list 
+   *             of datanodes returned by getDataNodes()
+   * @throws IOException
+   *             if not simulatedFSDataset
+   *             if any of blocks already exist in the data nodes
+   *             Note the rest of the blocks are not injected.
+   */
+  public void injectBlocks(Block[][] blocksToInject) throws IOException {
+    if (blocksToInject.length >  dataNodes.size()) {
+      throw new IndexOutOfBoundsException();
+    }
+    for (int i = 0; i < blocksToInject.length; ++i) {
+     injectBlocks(i, blocksToInject[i]);
+    }
   }
 }

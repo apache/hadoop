@@ -99,6 +99,17 @@ public class DataChecksum implements Checksum {
     out.writeByte( type );
     out.writeInt( bytesPerChecksum );
   }
+
+  public byte[] getHeader() {
+    byte[] header = new byte[DataChecksum.HEADER_LEN];
+    header[0] = (byte) (type & 0xff);
+    // Writing in buffer just like DataOutput.WriteInt()
+    header[1+0] = (byte) ((bytesPerChecksum >>> 24) & 0xff);
+    header[1+1] = (byte) ((bytesPerChecksum >>> 16) & 0xff);
+    header[1+2] = (byte) ((bytesPerChecksum >>> 8) & 0xff);
+    header[1+3] = (byte) (bytesPerChecksum & 0xff);
+    return header;
+  }
   
   /**
    * Writes the current checksum to the stream.

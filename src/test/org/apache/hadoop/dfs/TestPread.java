@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 public class TestPread extends TestCase {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 4096;
+  boolean simulatedStorage = false;
 
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
     // create and write a file that contains three blocks of data
@@ -80,11 +81,18 @@ public class TestPread extends TestCase {
       nread += nbytes;
     }
   }
+  
   private void pReadFile(FileSystem fileSys, Path name) throws IOException {
     FSDataInputStream stm = fileSys.open(name);
     byte[] expected = new byte[(int)(12*blockSize)];
-    Random rand = new Random(seed);
-    rand.nextBytes(expected);
+    if (simulatedStorage) {
+      for (int i= 0; i < expected.length; i++) {  
+        expected[i] = SimulatedFSDataset.DEFAULT_DATABYTE;
+      }
+    } else {
+      Random rand = new Random(seed);
+      rand.nextBytes(expected);
+    }
     // do a sanity check. Read first 4K bytes
     byte[] actual = new byte[4096];
     stm.readFully(actual);
@@ -156,6 +164,9 @@ public class TestPread extends TestCase {
     Configuration conf = new Configuration();
     conf.setLong("dfs.block.size", 4096);
     conf.setLong("dfs.read.prefetch.size", 4096);
+    if (simulatedStorage) {
+      conf.setBoolean("dfs.datanode.simulateddatastorage", true);
+    }
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
     FileSystem fileSys = cluster.getFileSystem();
     try {
@@ -167,6 +178,12 @@ public class TestPread extends TestCase {
       fileSys.close();
       cluster.shutdown();
     }
+  }
+  
+  public void testPreadDFSSimulated() throws IOException {
+    simulatedStorage = true;
+    testPreadDFS();
+    simulatedStorage = true;
   }
   
   /**

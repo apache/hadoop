@@ -88,6 +88,7 @@ class PendingReplicationBlocks {
     synchronized (pendingReplications) {
       PendingBlockInfo found = pendingReplications.get(block);
       if (found != null) {
+      	FSNamesystem.LOG.debug("Removing pending replication for block" + block);
         found.decrementReplicas();
         if (found.getNumReplicas() <= 0) {
           pendingReplications.remove(block);
@@ -196,6 +197,7 @@ class PendingReplicationBlocks {
       synchronized (pendingReplications) {
         Iterator iter = pendingReplications.entrySet().iterator();
         long now = FSNamesystem.now();
+        FSNamesystem.LOG.debug("PendingReplicationMonitor checking Q");
         while (iter.hasNext()) {
           Map.Entry entry = (Map.Entry) iter.next();
           PendingBlockInfo pendingBlock = (PendingBlockInfo) entry.getValue();

@@ -44,7 +44,7 @@ public class TestReplication extends TestCase {
   };
   private static final int numDatanodes = racks.length;
   private static final Log LOG = LogFactory.getLog(
-                                                   "org.apache.hadoop.dfs.TestReplication");
+                                       "org.apache.hadoop.dfs.TestReplication");
 
   private void writeFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
@@ -133,9 +133,12 @@ public class TestReplication extends TestCase {
   /**
    * Tests replication in DFS.
    */
-  public void testReplication() throws IOException {
+  public void runReplication(boolean simulated) throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean("dfs.replication.considerLoad", false);
+    if (simulated) {
+      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+    }
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, racks);
     cluster.waitActive();
     
@@ -168,6 +171,16 @@ public class TestReplication extends TestCase {
       cluster.shutdown();
     }
   }
+
+
+  public void testReplicationSimulatedStorag() throws IOException {
+    runReplication(true);
+  }
+  
+  
+  public void testReplication() throws IOException {
+    runReplication(false);
+  }
   
   // Waits for all of the blocks to have expected replication
   private void waitForBlockReplication(String filename, 
@@ -177,7 +190,7 @@ public class TestReplication extends TestCase {
     long start = System.currentTimeMillis();
     
     //wait for all the blocks to be replicated;
-    System.out.println("Checking for block replication for " + filename);
+    LOG.info("Checking for block replication for " + filename);
     int iters = 0;
     while (true) {
       boolean replOk = true;
@@ -190,7 +203,7 @@ public class TestReplication extends TestCase {
         int actual = block.getLocations().length;
         if ( actual < expected ) {
           if (true || iters > 0) {
-            System.out.println("Not enough replicas for " + block.getBlock() +
+            LOG.info("Not enough replicas for " + block.getBlock() +
                                " yet. Expecting " + expected + ", got " + 
                                actual + ".");
           }
@@ -272,13 +285,15 @@ public class TestReplication extends TestCase {
       int fileCount = 0;
       for (int i=0; i<6; i++) {
         File blockFile = new File(baseDir, "data" + (i+1) + "/current/" + block);
-        System.out.println("Checking for file " + blockFile);
+        LOG.info("Checking for file " + blockFile);
         
         if (blockFile.exists()) {
           if (fileCount == 0) {
+            LOG.info("Deleting file " + blockFile);
             assertTrue(blockFile.delete());
           } else {
             // corrupt it.
+            LOG.info("Corrupting file " + blockFile);
             long len = blockFile.length();
             assertTrue(len > 50);
             RandomAccessFile blockOut = new RandomAccessFile(blockFile, "rw");
@@ -294,6 +309,8 @@ public class TestReplication extends TestCase {
        * to a datanode node fails, same block can not be written to it
        * immediately. In our case some replication attempts will fail.
        */
+      
+      LOG.info("Restarting minicluster after deleting a replica and corrupting 2 crcs");
       conf = new Configuration();
       conf.set("dfs.replication", Integer.toString(numDataNodes));
       conf.set("dfs.replication.pending.timeout.sec", Integer.toString(2));

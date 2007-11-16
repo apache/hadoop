@@ -23,6 +23,6 @@ import junit.framework.TestCase;
 
 public class TestSetrepDecreasing extends TestCase {
   public void testSetrepDecreasing() throws IOException {
-    TestSetrepIncreasing.setrep(5, 3);
+    TestSetrepIncreasing.setrep(5, 3, false);
   }
 }

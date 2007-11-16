@@ -36,6 +36,7 @@ if [ $# = 0 ]; then
   echo "  secondarynamenode    run the DFS secondary namenode"
   echo "  namenode             run the DFS namenode"
   echo "  datanode             run a DFS datanode"
+  echo "  datanodecluster      run a DFS datanode cluster"
   echo "  dfsadmin             run a DFS admin client"
   echo "  fsck                 run a DFS filesystem checking utility"
   echo "  fs                   run a generic filesystem user client"
@@ -169,6 +170,8 @@ elif [ "$COMMAND" = "secondarynamenode" ] ; then
   CLASS='org.apache.hadoop.dfs.SecondaryNameNode'
 elif [ "$COMMAND" = "datanode" ] ; then
   CLASS='org.apache.hadoop.dfs.DataNode'
+elif [ "$COMMAND" = "datanodecluster" ] ; then
+  CLASS='org.apache.hadoop.dfs.DataNodeCluster'
 elif [ "$COMMAND" = "fs" ] ; then
   CLASS=org.apache.hadoop.fs.FsShell
 elif [ "$COMMAND" = "dfs" ] ; then

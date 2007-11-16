@@ -34,6 +34,8 @@ import org.apache.hadoop.mapred.StatusHttpServer;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.dfs.BlockCommand;
 import org.apache.hadoop.dfs.DatanodeProtocol;
+import org.apache.hadoop.dfs.FSDatasetInterface.MetaDataInputStream;
+
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -108,7 +110,7 @@ public class DataNode implements FSConstants, Runnable {
   }
 
   DatanodeProtocol namenode = null;
-  FSDataset data = null;
+  FSDatasetInterface data = null;
   DatanodeRegistration dnRegistration = null;
   private String networkLoc;
   volatile boolean shouldRun = true;
@@ -222,6 +224,17 @@ public class DataNode implements FSConstants, Runnable {
     }
   }
     
+  
+  /**
+   * This method starts the data node with the specified conf.
+   * 
+   * @param conf - the configuration
+   * 		if conf's CONFIG_PROPERTY_SIMULATED property is set
+   *  then a simulated storage based data node is created.
+   * 
+   * @param dataDirs - only for a non-simulated storage data node
+   * @throws IOException
+   */
   void startDataNode(Configuration conf, 
                      AbstractList<File> dataDirs
                      ) throws IOException {
@@ -248,16 +261,32 @@ public class DataNode implements FSConstants, Runnable {
                        conf);
     // get version and id info from the name-node
     NamespaceInfo nsInfo = handshake();
-
-    // read storage info, lock data dirs and transition fs state if necessary
     StartupOption startOpt = getStartupOption(conf);
     assert startOpt != null : "Startup option must be set.";
-    storage.recoverTransitionRead(nsInfo, dataDirs, startOpt);
-    // adjust
-    this.dnRegistration.setStorageInfo(storage);
-      
-    // initialize data node internal structure
-    this.data = new FSDataset(storage, conf);
+    
+    boolean simulatedFSDataset = 
+        conf.getBoolean("dfs.datanode.simulateddatastorage", false);
+    if (simulatedFSDataset) {
+        setNewStorageID(dnRegistration);
+        dnRegistration.storageInfo.layoutVersion = FSConstants.LAYOUT_VERSION;
+        dnRegistration.storageInfo.namespaceID = nsInfo.namespaceID;
+ 
+        try {
+          //Equivalent of following (can't do because Simulated is in test dir)
+          //  this.data = new SimulatedFSDataset(conf);
+          this.data = (FSDatasetInterface) ReflectionUtils.newInstance(
+              Class.forName("org.apache.hadoop.dfs.SimulatedFSDataset"), conf);
+        } catch (ClassNotFoundException e) {
+          throw new IOException(StringUtils.stringifyException(e));
+        }
+    } else { // real storage
+      // read storage info, lock data dirs and transition fs state if necessary
+      storage.recoverTransitionRead(nsInfo, dataDirs, startOpt);
+      // adjust
+      this.dnRegistration.setStorageInfo(storage);
+      // initialize data node internal structure
+      this.data = new FSDataset(storage, conf);
+    }
       
     // find free port
     ServerSocket ss = null;
@@ -657,8 +686,7 @@ public class DataNode implements FSConstants, Runnable {
     case DatanodeProtocol.DNA_REGISTER:
       // namenode requested a registration
       register();
-      lastHeartbeat=0;
-      lastBlockReport=0;
+      scheduleBlockReport();
       break;
     case DatanodeProtocol.DNA_FINALIZE:
       storage.finalizeUpgrade();
@@ -708,7 +736,7 @@ public class DataNode implements FSConstants, Runnable {
         break;
       }
       if (xferTargets[i].length > 0) {
-        LOG.info("Starting thread to transfer block " + blocks[i] + " to " + xferTargets[i]);
+        LOG.info(dnRegistration + ":Starting thread to transfer block " + blocks[i] + " to " + xferTargets[i]);
         new Daemon(new DataTransfer(xferTargets[i], blocks[i])).start();
       }
     }
@@ -778,7 +806,7 @@ public class DataNode implements FSConstants, Runnable {
         }
         ss.close();
       } catch (IOException ie) {
-        LOG.info("Exiting DataXceiveServer due to " + ie.toString());
+        LOG.info(dnRegistration + ":Exiting DataXceiveServer due to " + ie.toString());
       }
     }
     public void kill() {
@@ -836,9 +864,9 @@ public class DataNode implements FSConstants, Runnable {
           throw new IOException("Unknown opcode " + op + "in data stream");
         }
        } catch (Throwable t) {
-        LOG.error("DataXceiver: " + StringUtils.stringifyException(t));
+        LOG.error(dnRegistration + ":DataXceiver: " + StringUtils.stringifyException(t));
       } finally {
-        LOG.debug("Number of active connections is: "+xceiverCount);
+        LOG.debug(dnRegistration + ":Number of active connections is: "+xceiverCount);
         IOUtils.closeStream(in);
         IOUtils.closeSocket(s);
       }
@@ -877,7 +905,7 @@ public class DataNode implements FSConstants, Runnable {
 
         myMetrics.readBytes((int) read);
         myMetrics.readBlocks(1);
-        LOG.info("Served block " + block + " to " + s.getInetAddress());
+        LOG.info(dnRegistration + "Served block " + block + " to " + s.getInetAddress());
       } catch ( SocketException ignored ) {
         // Its ok for remote side to close the connection anytime.
         myMetrics.readBlocks(1);
@@ -885,7 +913,7 @@ public class DataNode implements FSConstants, Runnable {
         /* What exactly should we do here?
          * Earlier version shutdown() datanode if there is disk error.
          */
-        LOG.warn( "Got exception while serving " + block + " to " +
+        LOG.warn(dnRegistration +  ":Got exception while serving " + block + " to " +
                   s.getInetAddress() + ":\n" + 
                   StringUtils.stringifyException(ioe) );
         throw ioe;
@@ -992,7 +1020,7 @@ public class DataNode implements FSConstants, Runnable {
         try {
           sendResponse(s, opStatus);
         } catch (IOException ioe) {
-          LOG.warn("Error writing reply back to " + s.getInetAddress() +
+          LOG.warn(dnRegistration +":Error writing reply of status " + opStatus +  " back to " + s.getInetAddress() +
               " for writing block " + block +"\n" +
               StringUtils.stringifyException(ioe));
         }
@@ -1013,18 +1041,18 @@ public class DataNode implements FSConstants, Runnable {
       xceiverCount.incr();
 
       Block block = new Block( in.readLong(), 0 );
-      InputStream checksumIn = null;
+      MetaDataInputStream checksumIn = null;
       DataOutputStream out = null;
       
       try {
-        File blockFile = data.getBlockFile( block );
-        File checksumFile = FSDataset.getMetaFile( blockFile );
-        checksumIn = new FileInputStream(checksumFile);
 
-        long fileSize = checksumFile.length();
+        checksumIn = data.getMetaDataInputStream(block);
+        
+        long fileSize = checksumIn.getLength();
+
         if (fileSize >= 1L<<31 || fileSize <= 0) {
-          throw new IOException("Unexpected size for checksumFile " +
-                                checksumFile);
+            throw new IOException("Unexpected size for checksumFile of block" +
+                    block);
         }
 
         byte [] buf = new byte[(int)fileSize];
@@ -1243,20 +1271,17 @@ public class DataNode implements FSConstants, Runnable {
 
     BlockSender(Block block, long startOffset, long length,
         boolean corruptChecksumOk, boolean chunkOffsetOK) throws IOException {
-      RandomAccessFile blockInFile = null;
 
       try {
         this.block = block;
         this.chunkOffsetOK = chunkOffsetOK;
         this.corruptChecksumOk = corruptChecksumOk;
-        File blockFile = data.getBlockFile(block);
-        blockInFile = new RandomAccessFile(blockFile, "r");
 
-        File checksumFile = FSDataset.getMetaFile(blockFile);
 
-        if (!corruptChecksumOk || checksumFile.exists()) {
-          checksumIn = new DataInputStream(new BufferedInputStream(
-              new FileInputStream(checksumFile), BUFFER_SIZE));
+        if ( !corruptChecksumOk || data.metaFileExists(block) ) {
+          checksumIn = new DataInputStream(
+                  new BufferedInputStream(data.getMetaDataInputStream(block),
+                                          BUFFER_SIZE));
 
           // read and handle the common header here. For now just a version
           short version = checksumIn.readShort();
@@ -1284,7 +1309,7 @@ public class DataNode implements FSConstants, Runnable {
             || (length + startOffset) > endOffset) {
           String msg = " Offset " + startOffset + " and length " + length
           + " don't match block " + block + " ( blockLen " + endOffset + " )";
-          LOG.warn("sendBlock() : " + msg);
+          LOG.warn(dnRegistration + ":sendBlock() : " + msg);
           throw new IOException(msg);
         }
 
@@ -1304,18 +1329,17 @@ public class DataNode implements FSConstants, Runnable {
         // seek to the right offsets
         if (offset > 0) {
           long checksumSkip = (offset / bytesPerChecksum) * checksumSize;
-          blockInFile.seek(offset);
+          // note blockInStream is  seeked when created below
           if (checksumSkip > 0) {
             // Should we use seek() for checksum file as well?
             IOUtils.skipFully(checksumIn, checksumSkip);
           }
         }
-
-        blockIn = new DataInputStream(new BufferedInputStream(
-            new FileInputStream(blockInFile.getFD()), BUFFER_SIZE));
+        InputStream blockInStream = data.getBlockInputStream(block, offset); // seek to offset
+        blockIn = new DataInputStream(new BufferedInputStream(blockInStream, BUFFER_SIZE));
       } catch (IOException ioe) {
         IOUtils.closeStream(this);
-        IOUtils.closeStream(blockInFile);
+        IOUtils.closeStream(blockIn);
         throw ioe;
       }
     }
@@ -1533,7 +1557,7 @@ public class DataNode implements FSConstants, Runnable {
           mirrorOut.writeInt(len);
           mirrorOut.write(buf, 0, len + checksumSize);
         } catch (IOException ioe) {
-          LOG.info("Exception writing to mirror " + mirrorAddr + "\n"
+          LOG.info(dnRegistration + ":Exception writing to mirror " + mirrorAddr + "\n"
               + StringUtils.stringifyException(ioe));
           //
           // If stream-copy fails, continue
@@ -1659,13 +1683,14 @@ public class DataNode implements FSConstants, Runnable {
         }
         // send data & checksum
         blockSender.sendBlock(out, null);
+
         
         // check the response
         receiveResponse(sock);
+        LOG.info(dnRegistration + ":Transmitted block " + b + " to " + curTarget);
 
-        LOG.info("Transmitted block " + b + " to " + curTarget);
       } catch (IOException ie) {
-        LOG.warn("Failed to transfer " + b + " to " + targets[0].getName()
+        LOG.warn(dnRegistration + ":Failed to transfer " + b + " to " + targets[0].getName()
             + " got " + StringUtils.stringifyException(ie));
       } finally {
         IOUtils.closeStream(blockSender);
@@ -1684,7 +1709,7 @@ public class DataNode implements FSConstants, Runnable {
    * Only stop when "shouldRun" is turned off (which can only happen at shutdown).
    */
   public void run() {
-    LOG.info("In DataNode.run, data = " + data);
+    LOG.info(dnRegistration + "In DataNode.run, data = " + data);
 
     // start dataXceiveServer
     dataXceiveServer.start();
@@ -1710,7 +1735,7 @@ public class DataNode implements FSConstants, Runnable {
     } catch (InterruptedException ie) {
     }
         
-    LOG.info("Finishing DataNode in: "+data);
+    LOG.info(dnRegistration + ":Finishing DataNode in: "+data);
   }
     
   /** Start datanode daemon.
@@ -1902,6 +1927,26 @@ public class DataNode implements FSConstants, Runnable {
     }
 
     return networkLoc.toString();
+  }
+  
+  /**
+   * This methods  arranges for the data node to send the block report at the next heartbeat.
+   */
+  public void scheduleBlockReport() {
+    lastHeartbeat=0;
+    lastBlockReport=0;
+  }
+  
+  
+  /**
+   * This method is used for testing. 
+   * Examples are adding and deleting blocks directly.
+   * The most common usage will be when the data node's storage is similated.
+   * 
+   * @return the fsdataset that stores the blocks
+   */
+  public FSDatasetInterface getFSDataset() {
+    return data;
   }
 
   /**
