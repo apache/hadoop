@@ -1076,13 +1076,10 @@ class FSNamesystem implements FSConstants {
       pendingFile = (INodeFileUnderConstruction) iFile;
       fileBlocks =  dir.getFileBlocks(src);
     }
-    if (fileBlocks == null || fileBlocks.length == 0 ||
-        pendingFile == null) {    
+    if (fileBlocks == null ) {    
       NameNode.stateChangeLog.warn("DIR* NameSystem.completeFile: "
                                    + "failed to complete " + src
-                                   + " because dir.getFileBlocks() is " + 
-                                   ((fileBlocks == null) ? 
-                                    "null":fileBlocks.length) + 
+                                   + " because dir.getFileBlocks() is null " + 
                                    " and pendingFile is " + 
                                    ((pendingFile == null) ? "null" : 
                                      ("from " + pendingFile.getClientMachine()))

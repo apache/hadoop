@@ -104,6 +104,9 @@ Trunk (unreleased changes)
     to get created, thus causing unit test failure.
     (Raghu Angadi via dhruba)
 
+    HADOOP-2078. An zero size file may have no blocks associated with it.
+    (Konstantin Shvachko via dhruba)
+
 Release 0.15.1 -
 
   IMPROVEMENTS
