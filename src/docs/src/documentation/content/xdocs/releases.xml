@@ -47,10 +47,14 @@
       <title>Project News</title>
 
       <section>
+        <title>26 November, 2007: release 0.14.4 available </title>
+	<p>This release fixes critical bugs in release 0.14.3.</p>
+      </section>
+
+      <section>
         <title>19 October, 2007: release 0.14.3 available </title>
 	<p>This release fixes critical bugs in release 0.14.2.</p>
       </section>
-
 
       <section>
         <title> 9 October, 2007: release 0.14.2 available </title>
