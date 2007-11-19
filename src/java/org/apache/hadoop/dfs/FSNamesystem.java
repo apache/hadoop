@@ -1406,6 +1406,15 @@ class FSNamesystem implements FSConstants {
     return success;
   }
 
+  /* Get the size of the specified directory subtree.
+   * @param src The string representation of the path
+   * @throws IOException if path does not exist
+   * @return size in bytes
+   */
+  long getContentLength(String src) throws IOException {
+    return dir.getContentLength(src);
+  }
+
   /************************************************************
    * A Lease governs all the locks held by a single client.
    * For each client there's a corresponding lease, whose

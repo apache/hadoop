@@ -485,6 +485,19 @@ class DFSClient implements FSConstants {
   }
 
   /**
+   * Retrieves the total size of all files and directories under
+   * the specified path.
+   * 
+   * @param src
+   * @throws IOException
+   * @return the number of bytes in the subtree rooted at src
+   */
+  public long getContentLength(String src
+                               ) throws IOException {
+    return namenode.getContentLength(src);
+  }
+
+  /**
    * Pick the best node from which to stream the data.
    * Entries in <i>nodes</i> are already in the priority order
    */

@@ -109,6 +109,13 @@ Trunk (unreleased changes)
 
 Release 0.15.1 -
 
+  INCOMPATIBLE CHANGES
+
+    HADOOP-713.  Reduce CPU usage on namenode while listing directories.
+    FileSystem.listPaths does not return the size of the entire subtree.
+    Introduced a new API ClientProtocol.getContentLength that returns the
+    size of the subtree. (Dhruba Borthakur via dhruba)
+
   IMPROVEMENTS
 
     HADOOP-1917.  Addition of guides/tutorial for better overall

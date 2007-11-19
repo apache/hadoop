@@ -103,20 +103,27 @@ public class TestFileStatus extends TestCase {
                   fs.getFileStatus(file1).isDir() == false);
       assertTrue(fs.getFileStatus(file1).getBlockSize() == blockSize);
       assertTrue(fs.getFileStatus(file1).getReplication() == 1);
+      assertTrue(fs.getFileStatus(file1).getLen() == fileSize);
+      assertTrue(fs.getContentLength(file1) == fileSize);
       System.out.println("Path : \"" + file1 + "\"");
 
-      // create a directory
+      // create an empty directory
       //
+      Path parentDir = new Path("/test");
       Path dir = new Path("/test/mkdirs");
       assertTrue(fs.mkdirs(dir));
       assertTrue(fs.exists(dir));
       assertTrue(dir + " should be a directory", 
                  fs.getFileStatus(path).isDir() == true);
+      assertTrue(dir + " should be zero size ",
+                 fs.getContentLength(dir) == 0);
+      assertTrue(dir + " should be zero size ",
+                 fs.getFileStatus(dir).getLen() == 0);
       System.out.println("Dir : \"" + dir + "\"");
 
       // create another file that is smaller than a block.
       //
-      Path file2 = new Path("filestatus2.dat");
+      Path file2 = new Path("/test/mkdirs/filestatus2.dat");
       writeFile(fs, file2, 1, blockSize/4, blockSize);
       System.out.println("Created file filestatus2.dat with one "
                          + " replicas.");
@@ -127,6 +134,42 @@ public class TestFileStatus extends TestCase {
       assertTrue(fs.getFileStatus(file2).getBlockSize() == blockSize);
       assertTrue(fs.getFileStatus(file2).getReplication() == 1);
 
+      // create another file in the same directory
+      Path file3 = new Path("/test/mkdirs/filestatus3.dat");
+      writeFile(fs, file3, 1, blockSize/4, blockSize);
+      System.out.println("Created file filestatus3.dat with one "
+                         + " replicas.");
+      checkFile(fs, file3, 1);
+
+      // verify that the size of the directory increased by the size 
+      // of the two files
+      assertTrue(dir + " size should be " + (blockSize/2), 
+                 blockSize/2 == fs.getContentLength(dir));
+
+      // The following are test cases for listPaths which is a deprecated
+      // API. These tests shoudl go away when the API is removed.
+
+      // issue a listPaths on directory /test/mkdirs and verify that the
+      // size of the files inside it are valid
+      Path[] files = fs.listPaths(dir);
+      assertTrue(dir + " should have two files", files.length == 2);
+      for (int i = 0; i < files.length; i++) {
+        DfsPath dfspath = (DfsPath) files[i];
+        assertTrue(files[i] + " should be of size " + (blockSize/4), 
+                   blockSize/4 == dfspath.getContentsLength());
+        assertTrue(files[i] + " should be of size " + (blockSize/4), 
+                   blockSize/4 == fs.getContentLength(dfspath));
+      }
+
+      // issue a listPath on directory /test and verify that the
+      // size returned for /test/mkdirs directory is correct.
+      Path[] dirs = fs.listPaths(parentDir);
+      assertTrue(parentDir + " should have one sub directory", 
+                 dirs.length == 1);
+      DfsPath dfsdir = (DfsPath) dirs[0];
+      assertTrue(dirs[0] + " should be of size " + blockSize/2,
+                 fs.getContentLength(dfsdir) == blockSize/2);
+      
     } finally {
       fs.close();
       cluster.shutdown();

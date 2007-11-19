@@ -35,8 +35,9 @@ interface ClientProtocol extends VersionedProtocol {
    * 17 : getBlockSize replaced by getPreferredBlockSize
    * 18 : datanodereport returns dead, live or all nodes.
    * 19 : rollEditLog() returns a token to uniquely identify the editfile.
+   * 20 : getContentLength reutrns the total size in bytes of a directory subtree
    */
-  public static final long versionID = 19L;
+  public static final long versionID = 20L;
   
   ///////////////////////////////////////
   // File contents
@@ -373,4 +374,11 @@ interface ClientProtocol extends VersionedProtocol {
    * @return object containing information regarding the file
    */
   public DFSFileInfo getFileInfo(String src) throws IOException;
+
+  /* Get the total size of all files and directories rooted at
+   * the specified directory.
+   * @param src The string representation of the path
+   * @return size of directory subtree in bytes
+   */
+  public long getContentLength(String src) throws IOException;
 }

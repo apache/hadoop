@@ -46,7 +46,7 @@ class DfsPath extends Path {
     return info.getLen();
   }
   public long getContentsLength() {
-    assert isDirectory() : "Must be a directory";
+    assert !isDirectory();
     return info.getLen();
   }
   public short getReplication() {

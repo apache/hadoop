@@ -517,6 +517,15 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     namesystem.metaSave(filename);
   }
 
+  /* Get the size of the directory subtree.
+   * @param src The string representation of the path to the file
+   * @throws IOException if path does not exist
+   * @return size in bytes of the directory subtree
+   */
+  public long getContentLength(String src)  throws IOException {
+    return namesystem.getContentLength(src);
+  }
+
   ////////////////////////////////////////////////////////////////
   // DatanodeProtocol
   ////////////////////////////////////////////////////////////////
