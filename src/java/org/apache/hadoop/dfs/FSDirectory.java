@@ -610,4 +610,19 @@ class FSDirectory implements FSConstants {
     }
     return src;
   }
+
+  /* Get the size of the directory subtree.
+   */
+  long getContentLength(String src) throws IOException {
+    String srcs = normalizePath(src);
+    synchronized (rootDir) {
+      INode targetNode = rootDir.getNode(srcs);
+      if (targetNode == null) {
+        throw new IOException(src + " does not exist");
+      }
+      else {
+        return targetNode.computeContentsLength();
+      }
+    }
+  }
 }
