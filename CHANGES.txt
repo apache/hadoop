@@ -600,7 +600,7 @@ Release 0.15.0 - 2007-11-2
     (Jim Kellerman via acmurthy) 
 
 
-Release 0.14.4 -
+Release 0.14.4 - 2007-11-26
 
   BUG FIXES
 
