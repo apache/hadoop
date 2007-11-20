@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MultiRegionTable;
+import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
@@ -86,6 +87,21 @@ public class TestTableMapReduce extends MultiRegionTable {
   public TestTableMapReduce() {
     super();
 
+    // Make the thread wake frequency a little slower so other threads
+    // can run
+    conf.setInt("hbase.server.thread.wakefrequency", 2000);
+    
+    // Make sure the cache gets flushed so we trigger a compaction(s) and
+    // hence splits.
+    conf.setInt("hbase.hregion.memcache.flush.size", 1024 * 1024);
+
+    // Always compact if there is more than one store file.
+    conf.setInt("hbase.hstore.compactionThreshold", 2);
+
+    // This size should make it so we always split using the addContent
+    // below. After adding all data, the first region is 1.3M
+    conf.setLong("hbase.hregion.max.filesize", 256 * 1024);
+
     // Make lease timeout longer, lease checks less frequent
     conf.setInt("hbase.master.lease.period", 10 * 1000);
     conf.setInt("hbase.master.lease.thread.wakefrequency", 5 * 1000);
@@ -97,9 +113,6 @@ public class TestTableMapReduce extends MultiRegionTable {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    // This size is picked so the table is split into two
-    // after addContent in testMultiRegionTableMapReduce.
-    conf.setLong("hbase.hregion.max.filesize", 256 * 1024);
     dfsCluster = new MiniDFSCluster(conf, 1, true, (String[])null);
     try {
       fs = dfsCluster.getFileSystem();
@@ -109,10 +122,7 @@ public class TestTableMapReduce extends MultiRegionTable {
       hCluster = new MiniHBaseCluster(conf, 1, dfsCluster);
       LOG.info("Master is at " + this.conf.get(HConstants.MASTER_ADDRESS));
     } catch (Exception e) {
-      if (dfsCluster != null) {
-        dfsCluster.shutdown();
-        dfsCluster = null;
-      }
+      StaticTestEnvironment.shutdownDfs(dfsCluster);
       throw e;
     }
   }
@@ -126,18 +136,7 @@ public class TestTableMapReduce extends MultiRegionTable {
     if(hCluster != null) {
       hCluster.shutdown();
     }
-    
-    if (dfsCluster != null) {
-      dfsCluster.shutdown();
-    }
-    
-    if (fs != null) {
-      try {
-        fs.close();
-      } catch (IOException e) {
-        LOG.info("During tear down got a " + e.getMessage());
-      }
-    }
+    StaticTestEnvironment.shutdownDfs(dfsCluster);
   }
 
   /**
@@ -218,49 +217,54 @@ public class TestTableMapReduce extends MultiRegionTable {
     // insert some data into the test table
     HTable table = new HTable(conf, new Text(SINGLE_REGION_TABLE_NAME));
 
-    for(int i = 0; i < values.length; i++) {
-      long lockid = table.startUpdate(new Text("row_"
-          + String.format("%1$05d", i)));
+    try {
+      for(int i = 0; i < values.length; i++) {
+        long lockid = table.startUpdate(new Text("row_"
+            + String.format("%1$05d", i)));
+
+        try {
+          table.put(lockid, TEXT_INPUT_COLUMN, values[i]);
+          table.commit(lockid, System.currentTimeMillis());
+          lockid = -1;
+        } finally {
+          if (lockid != -1)
+            table.abort(lockid);
+        }
+      }
+
+      LOG.info("Print table contents before map/reduce");
+      scanTable(conf, SINGLE_REGION_TABLE_NAME);
+
+      @SuppressWarnings("deprecation")
+      MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
 
       try {
-        table.put(lockid, TEXT_INPUT_COLUMN, values[i]);
-        table.commit(lockid, System.currentTimeMillis());
-        lockid = -1;
+        JobConf jobConf = new JobConf(conf, TestTableMapReduce.class);
+        jobConf.setJobName("process column contents");
+        jobConf.setNumMapTasks(1);
+        jobConf.setNumReduceTasks(1);
+
+        TableMap.initJob(SINGLE_REGION_TABLE_NAME, INPUT_COLUMN, 
+            ProcessContentsMapper.class, jobConf);
+
+        TableReduce.initJob(SINGLE_REGION_TABLE_NAME,
+            IdentityTableReduce.class, jobConf);
+
+        JobClient.runJob(jobConf);
+
       } finally {
-        if (lockid != -1)
-          table.abort(lockid);
+        mrCluster.shutdown();
       }
-    }
-
-    LOG.info("Print table contents before map/reduce");
-    scanTable(conf, SINGLE_REGION_TABLE_NAME);
     
-    @SuppressWarnings("deprecation")
-    MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
+      LOG.info("Print table contents after map/reduce");
+      scanTable(conf, SINGLE_REGION_TABLE_NAME);
 
-    try {
-      JobConf jobConf = new JobConf(conf, TestTableMapReduce.class);
-      jobConf.setJobName("process column contents");
-      jobConf.setNumMapTasks(1);
-      jobConf.setNumReduceTasks(1);
+      // verify map-reduce results
+      verify(conf, SINGLE_REGION_TABLE_NAME);
 
-      TableMap.initJob(SINGLE_REGION_TABLE_NAME, INPUT_COLUMN, 
-          ProcessContentsMapper.class, jobConf);
-
-      TableReduce.initJob(SINGLE_REGION_TABLE_NAME,
-          IdentityTableReduce.class, jobConf);
-
-      JobClient.runJob(jobConf);
-      
     } finally {
-      mrCluster.shutdown();
+      table.close();
     }
-    
-    LOG.info("Print table contents after map/reduce");
-    scanTable(conf, SINGLE_REGION_TABLE_NAME);
-
-    // verify map-reduce results
-    verify(conf, SINGLE_REGION_TABLE_NAME);
   }
   
   /*
@@ -277,37 +281,42 @@ public class TestTableMapReduce extends MultiRegionTable {
     admin.createTable(desc);
 
     // Populate a table into multiple regions
-    MultiRegionTable.makeMultiRegionTable(conf, hCluster, fs,
-        MULTI_REGION_TABLE_NAME, INPUT_COLUMN);
+    makeMultiRegionTable(conf, hCluster, fs, MULTI_REGION_TABLE_NAME,
+        INPUT_COLUMN);
     
     // Verify table indeed has multiple regions
     HTable table = new HTable(conf, new Text(MULTI_REGION_TABLE_NAME));
-    Text[] startKeys = table.getStartKeys();
-    assertTrue(startKeys.length > 1);
-
-    @SuppressWarnings("deprecation")
-    MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
-
     try {
-      JobConf jobConf = new JobConf(conf, TestTableMapReduce.class);
-      jobConf.setJobName("process column contents");
-      jobConf.setNumMapTasks(2);
-      jobConf.setNumReduceTasks(1);
+      Text[] startKeys = table.getStartKeys();
+      assertTrue(startKeys.length > 1);
 
-      TableMap.initJob(MULTI_REGION_TABLE_NAME, INPUT_COLUMN, 
-          ProcessContentsMapper.class, jobConf);
+      @SuppressWarnings("deprecation")
+      MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
 
-      TableReduce.initJob(MULTI_REGION_TABLE_NAME,
-          IdentityTableReduce.class, jobConf);
+      try {
+        JobConf jobConf = new JobConf(conf, TestTableMapReduce.class);
+        jobConf.setJobName("process column contents");
+        jobConf.setNumMapTasks(2);
+        jobConf.setNumReduceTasks(1);
 
-      JobClient.runJob(jobConf);
+        TableMap.initJob(MULTI_REGION_TABLE_NAME, INPUT_COLUMN, 
+            ProcessContentsMapper.class, jobConf);
+
+        TableReduce.initJob(MULTI_REGION_TABLE_NAME,
+            IdentityTableReduce.class, jobConf);
+
+        JobClient.runJob(jobConf);
+
+      } finally {
+        mrCluster.shutdown();
+      }
+
+      // verify map-reduce results
+      verify(conf, MULTI_REGION_TABLE_NAME);
       
     } finally {
-      mrCluster.shutdown();
+      table.close();
     }
-    
-    // verify map-reduce results
-    verify(conf, MULTI_REGION_TABLE_NAME);
   }
 
   private void scanTable(HBaseConfiguration conf, String tableName)

@@ -38,11 +38,11 @@ public class TestTimestamp extends HBaseTestCase {
   private static final String COLUMN_NAME = "contents:";
   
   private static final Text COLUMN = new Text(COLUMN_NAME);
-  private static final Text[] COLUMNS = {COLUMN};
   private static final Text ROW = new Text("row");
   
   // When creating column descriptor, how many versions of a cell to allow.
   private static final int VERSIONS = 3;
+  
 
   /**
    * Test that delete works according to description in <a
@@ -52,11 +52,8 @@ public class TestTimestamp extends HBaseTestCase {
   public void testDelete() throws IOException {
     final HRegion r = createRegion();
     try {
-     doTestDelete(new HRegionIncommon(r), new FlushCache() {
-      public void flushcache() throws IOException {
-        r.flushcache(false);
-      }
-     });
+      final HRegionIncommon region = new HRegionIncommon(r);
+      doTestDelete(region, region);
     } finally {
       r.close();
       r.getLog().closeAndDelete();
@@ -70,11 +67,8 @@ public class TestTimestamp extends HBaseTestCase {
   public void testTimestampScanning() throws IOException {
     final HRegion r = createRegion();
     try {
-      doTestTimestampScanning(new HRegionIncommon(r), new FlushCache() {
-        public void flushcache() throws IOException {
-          r.flushcache(false);
-        }
-       });
+      final HRegionIncommon region = new HRegionIncommon(r);
+      doTestTimestampScanning(region, region);
     } finally {
       r.close();
       r.getLog().closeAndDelete();
@@ -187,7 +181,7 @@ public class TestTimestamp extends HBaseTestCase {
     // Now assert that if we ask for multiple versions, that they come out in
     // order.
     byte [][] bytesBytes = incommon.get(ROW, COLUMN, tss.length);
-    assertEquals(bytesBytes.length, tss.length);
+    assertEquals(tss.length, bytesBytes.length);
     for (int i = 0; i < bytesBytes.length; i++) {
       long ts = Writables.bytesToLong(bytesBytes[i]);
       assertEquals(ts, tss[i]);

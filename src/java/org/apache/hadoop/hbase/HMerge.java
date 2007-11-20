@@ -23,6 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.NoSuchElementException;
+import java.util.Random;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
@@ -34,6 +35,8 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 
+import org.apache.hadoop.hbase.io.BatchUpdate;
+
 /** 
  * A non-instantiable class that has a static method capable of compacting
  * a table by merging adjacent regions that have grown too small.
@@ -41,6 +44,7 @@ import org.apache.hadoop.io.Text;
 class HMerge implements HConstants {
   static final Log LOG = LogFactory.getLog(HMerge.class);
   static final Text[] META_COLS = {COL_REGIONINFO};
+  static final Random rand = new Random();
   
   private HMerge() {
     // Not instantiable
@@ -366,53 +370,30 @@ class HMerge implements HConstants {
           oldRegion2
       };
       for(int r = 0; r < regionsToDelete.length; r++) {
-        long lockid = -1L;
-        try {
-          lockid = root.startUpdate(regionsToDelete[r]);
-          root.delete(lockid, COL_REGIONINFO);
-          root.delete(lockid, COL_SERVER);
-          root.delete(lockid, COL_STARTCODE);
-          root.commit(lockid, System.currentTimeMillis());
-          lockid = -1L;
+        long lockid = Math.abs(rand.nextLong());
+        BatchUpdate b = new BatchUpdate(lockid);
+        lockid = b.startUpdate(regionsToDelete[r]);
+        b.delete(lockid, COL_REGIONINFO);
+        b.delete(lockid, COL_SERVER);
+        b.delete(lockid, COL_STARTCODE);
+        root.batchUpdate(System.currentTimeMillis(), b);
+        lockid = -1L;
 
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("updated columns in row: " + regionsToDelete[r]);
-          }
-        } finally {
-          try {
-            if(lockid != -1L) {
-              root.abort(lockid);
-            }
-
-          } catch(IOException iex) {
-            LOG.error(iex);
-          }
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("updated columns in row: " + regionsToDelete[r]);
         }
       }
       ByteArrayOutputStream byteValue = new ByteArrayOutputStream();
       DataOutputStream s = new DataOutputStream(byteValue);
       newRegion.getRegionInfo().setOffline(true);
       newRegion.getRegionInfo().write(s);
-      long lockid = -1L;
-      try {
-        lockid = root.startUpdate(newRegion.getRegionName());
-        root.put(lockid, COL_REGIONINFO, byteValue.toByteArray());
-        root.commit(lockid, System.currentTimeMillis());
-        lockid = -1L;
-
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("updated columns in row: "
-              + newRegion.getRegionName());
-        }
-      } finally {
-        try {
-          if(lockid != -1L) {
-            root.abort(lockid);
-          }
-
-        } catch(IOException iex) {
-          LOG.error(iex);
-        }
+      long lockid = Math.abs(rand.nextLong());
+      BatchUpdate b = new BatchUpdate(lockid);
+      lockid = b.startUpdate(newRegion.getRegionName());
+      b.put(lockid, COL_REGIONINFO, byteValue.toByteArray());
+      root.batchUpdate(System.currentTimeMillis(), b);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("updated columns in row: " + newRegion.getRegionName());
       }
     }
   }

@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 
@@ -90,6 +89,7 @@ public class TestLogRolling extends HBaseTestCase {
       super.setUp();
       dfs = new MiniDFSCluster(conf, 2, true, (String[]) null);
     } catch (Exception e) {
+      StaticTestEnvironment.shutdownDfs(dfs);
       LOG.fatal("error during setUp: ", e);
       throw e;
     }
@@ -100,21 +100,10 @@ public class TestLogRolling extends HBaseTestCase {
   public void tearDown() throws Exception {
     try {
       super.tearDown();
-
       if (cluster != null) {                      // shutdown mini HBase cluster
         cluster.shutdown();
       }
-
-      if (dfs != null) {
-        FileSystem fs = dfs.getFileSystem();
-        try {
-          dfs.shutdown();
-        } finally {
-          if (fs != null) {
-            fs.close();
-          }
-        }
-      }
+      StaticTestEnvironment.shutdownDfs(dfs);
     } catch (Exception e) {
       LOG.fatal("error in tearDown", e);
       throw e;

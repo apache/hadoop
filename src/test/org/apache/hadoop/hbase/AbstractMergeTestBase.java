@@ -102,9 +102,7 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
       meta.getLog().closeAndDelete();
       
     } catch (Exception e) {
-      if(dfsCluster != null) {
-        dfsCluster.shutdown();
-      }
+      StaticTestEnvironment.shutdownDfs(dfsCluster);
       throw e;
     }
   }
@@ -115,16 +113,7 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
-    if (dfsCluster != null) {
-      dfsCluster.shutdown();
-    }
-    if (this.fs != null) {
-      try {
-        this.fs.close();
-      } catch (IOException e) {
-        LOG.info("During tear down got a " + e.getMessage());
-      }
-    }
+    StaticTestEnvironment.shutdownDfs(dfsCluster);
   }
 
   private HRegion createAregion(Text startKey, Text endKey, int firstRow,
@@ -134,20 +123,21 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
     
     System.out.println("created region " + region.getRegionName());
 
+    HRegionIncommon r = new HRegionIncommon(region);
     for(int i = firstRow; i < firstRow + nrows; i++) {
-      long lockid = region.startUpdate(new Text("row_"
+      long lockid = r.startUpdate(new Text("row_"
           + String.format("%1$05d", i)));
 
-      region.put(lockid, COLUMN_NAME, value.get());
-      region.commit(lockid, System.currentTimeMillis());
+      r.put(lockid, COLUMN_NAME, value.get());
+      r.commit(lockid, System.currentTimeMillis());
       if(i % 10000 == 0) {
         System.out.println("Flushing write #" + i);
-        region.flushcache(false);
+        r.flushcache();
       }
     }
     System.out.println("Rolling log...");
     region.log.rollWriter();
-    region.compactStores();
+    region.compactIfNeeded();
     region.close();
     region.getLog().closeAndDelete();
     region.getRegionInfo().setOffline(true);

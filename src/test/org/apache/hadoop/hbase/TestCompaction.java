@@ -43,7 +43,11 @@ public class TestCompaction extends HBaseTestCase {
   
   /** constructor */
   public TestCompaction() {
+    super();
     STARTROW = new Text(START_KEY);
+    
+    // Set cache flush size to 1MB
+    conf.setInt("hbase.hregion.memcache.flush.size", 1024*1024);
   }
   
   /** {@inheritDoc} */
@@ -71,11 +75,10 @@ public class TestCompaction extends HBaseTestCase {
    */
   public void testCompaction() throws Exception {
     createStoreFile(r);
-    assertFalse(r.needsCompaction());
+    assertFalse(r.compactIfNeeded());
     for (int i = 0; i < COMPACTION_THRESHOLD; i++) {
       createStoreFile(r);
     }
-    assertTrue(r.needsCompaction());
     // Add more content.  Now there are about 5 versions of each column.
     // Default is that there only 3 (MAXVERSIONS) versions allowed per column.
     // Assert > 3 and then after compaction, assert that only 3 versions
@@ -91,7 +94,7 @@ public class TestCompaction extends HBaseTestCase {
       @Override
       public void run() {
         try {
-          region.flushcache(false);
+          region.flushcache();
         } catch (IOException e) {
           e.printStackTrace();
         }
@@ -101,7 +104,7 @@ public class TestCompaction extends HBaseTestCase {
       @Override
       public void run() {
         try {
-          assertTrue(region.compactStores());
+          assertTrue(region.compactIfNeeded());
         } catch (IOException e) {
           e.printStackTrace();
         }
@@ -140,16 +143,15 @@ public class TestCompaction extends HBaseTestCase {
     // verify that it is removed as we compact.
     // Assert all delted.
     assertNull(this.r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/));
-    this.r.flushcache(false);
+    this.r.flushcache();
     assertNull(this.r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/));
     // Add a bit of data and flush it so we for sure have the compaction limit
     // for store files.  Usually by this time we will have but if compaction
     // included the flush that ran 'concurrently', there may be just the
     // compacted store and the flush above when we added deletes.  Add more
     // content to be certain.
-    createBunchOfSmallStoreFiles(this.r);
-    assertTrue(this.r.needsCompaction());
-    this.r.compactStores();
+    createSmallerStoreFile(this.r);
+    assertTrue(this.r.compactIfNeeded());
     // Assert that the first row is still deleted.
     bytes = this.r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);
     assertNull(bytes);
@@ -167,21 +169,14 @@ public class TestCompaction extends HBaseTestCase {
 
   private void createStoreFile(final HRegion region) throws IOException {
     HRegionIncommon loader = new HRegionIncommon(region);
-    for (int i = 0; i < 1; i++) {
-      addContent(loader, COLUMN_FAMILY);
-    }
-    region.flushcache(false);
+    addContent(loader, COLUMN_FAMILY);
+    loader.flushcache();
   }
 
-  private void createBunchOfSmallStoreFiles(final HRegion region)
-  throws IOException {
-    final String xyz = new String("xyz");
-    byte [] bytes = xyz.getBytes();
-    for (int i = 0; i < 1; i++) {
-      long lid = region.startUpdate(new Text(xyz));
-      region.put(lid, COLUMN_FAMILY_TEXT, bytes);
-      region.commit(lid);
-      region.flushcache(false);
-    }
+  private void createSmallerStoreFile(final HRegion region) throws IOException {
+    HRegionIncommon loader = new HRegionIncommon(region); 
+    addContent(loader, COLUMN_FAMILY,
+        ("bbb" + PUNCTUATION).getBytes(), null);
+    loader.flushcache();
   }
 }

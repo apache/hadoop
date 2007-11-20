@@ -39,6 +39,9 @@ public class TestSplit extends MultiRegionTable {
   /** constructor */
   public TestSplit() {
     super();
+
+    // Always compact if there is more than one store file.
+    conf.setInt("hbase.hstore.compactionThreshold", 2);
     
     // Make lease timeout longer, lease checks less frequent
     conf.setInt("hbase.master.lease.period", 10 * 1000);
@@ -47,20 +50,15 @@ public class TestSplit extends MultiRegionTable {
     // Increase the amount of time between client retries
     conf.setLong("hbase.client.pause", 15 * 1000);
 
+    // This size should make it so we always split using the addContent
+    // below.  After adding all data, the first region is 1.3M
+    conf.setLong("hbase.hregion.max.filesize", 1024 * 128);
+    
     Logger.getRootLogger().setLevel(Level.WARN);
     Logger.getLogger(this.getClass().getPackage().getName()).
       setLevel(Level.DEBUG);
   }
 
-  /** {@inheritDoc} */
-  @Override
-  public void setUp() throws Exception {
-    super.setUp();
-    // This size should make it so we always split using the addContent
-    // below.  After adding all data, the first region is 1.3M
-    conf.setLong("hbase.hregion.max.filesize", 1024 * 128);
-  }
-  
   /**
    * Splits twice and verifies getting from each of the split regions.
    * @throws Exception
@@ -83,7 +81,7 @@ public class TestSplit extends MultiRegionTable {
   
   private void basicSplit(final HRegion region) throws Exception {
     addContent(region, COLFAMILY_NAME3);
-    region.internalFlushcache();
+    region.internalFlushcache(region.snapshotMemcaches());
     Text midkey = new Text();
     assertTrue(region.needsSplit(midkey));
     HRegion [] regions = split(region);
@@ -110,7 +108,12 @@ public class TestSplit extends MultiRegionTable {
       }
       addContent(regions[i], COLFAMILY_NAME2);
       addContent(regions[i], COLFAMILY_NAME1);
-      regions[i].internalFlushcache();
+      long startTime = region.snapshotMemcaches();
+      if (startTime == -1) {
+        LOG.info("cache flush not needed");
+      } else {
+        regions[i].internalFlushcache(startTime);
+      }
     }
     
     // Assert that even if one store file is larger than a reference, the
@@ -126,7 +129,7 @@ public class TestSplit extends MultiRegionTable {
     
     // To make regions splitable force compaction.
     for (int i = 0; i < regions.length; i++) {
-      assertTrue(regions[i].compactStores());
+      regions[i].compactStores();
     }
 
     TreeMap<String, HRegion> sortedMap = new TreeMap<String, HRegion>();
@@ -156,6 +159,12 @@ public class TestSplit extends MultiRegionTable {
    * @throws Exception
    */
   public void testSplitRegionIsDeleted() throws Exception {
+    // Make sure the cache gets flushed so we trigger a compaction(s) and
+    // hence splits. This is done here rather than in the constructor because
+    // the first test runs without a cluster, and will block when the cache
+    // fills up.
+    conf.setInt("hbase.hregion.memcache.flush.size", 1024 * 1024);
+
     try {
       // Start up a hbase cluster
       MiniHBaseCluster cluster = new MiniHBaseCluster(conf, 1, true);
@@ -228,7 +237,7 @@ public class TestSplit extends MultiRegionTable {
     assertTrue(r.needsSplit(midKey));
     // Assert can get mid key from passed region.
     assertGet(r, COLFAMILY_NAME3, midKey);
-    HRegion [] regions = r.closeAndSplit(midKey, null);
+    HRegion [] regions = r.splitRegion(null);
     assertEquals(regions.length, 2);
     return regions;
   }

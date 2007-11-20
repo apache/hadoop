@@ -409,13 +409,13 @@ public class HLog implements HConstants {
    * @param timestamp
    * @throws IOException
    */
-  synchronized void append(Text regionName, Text tableName, Text row,
-      TreeMap<Text, byte[]> columns, long timestamp)
-  throws IOException {
+  synchronized void append(Text regionName, Text tableName,
+      TreeMap<HStoreKey, byte[]> edits) throws IOException {
+    
     if (closed) {
       throw new IOException("Cannot append; log is closed");
     }
-    long seqNum[] = obtainSeqNum(columns.size());
+    long seqNum[] = obtainSeqNum(edits.size());
     // The 'lastSeqWritten' map holds the sequence number of the oldest
     // write for each region. When the cache is flushed, the entry for the
     // region being flushed is removed if the sequence number of the flush
@@ -424,10 +424,12 @@ public class HLog implements HConstants {
       this.lastSeqWritten.put(regionName, Long.valueOf(seqNum[0]));
     }
     int counter = 0;
-    for (Map.Entry<Text, byte[]> es : columns.entrySet()) {
+    for (Map.Entry<HStoreKey, byte[]> es : edits.entrySet()) {
+      HStoreKey key = es.getKey();
       HLogKey logKey =
-        new HLogKey(regionName, tableName, row, seqNum[counter++]);
-      HLogEdit logEdit = new HLogEdit(es.getKey(), es.getValue(), timestamp);
+        new HLogKey(regionName, tableName, key.getRow(), seqNum[counter++]);
+      HLogEdit logEdit =
+        new HLogEdit(key.getColumn(), es.getValue(), key.getTimestamp());
       this.writer.append(logKey, logEdit);
       this.numEntries++;
     }

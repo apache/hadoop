@@ -43,7 +43,8 @@ public interface HConstants {
 
   /** default host address */
   static final String DEFAULT_HOST = "0.0.0.0";
-  
+
+  /** default port that the master listens on */
   static final int DEFAULT_MASTER_PORT = 60000;
   
   /** Default master address */
@@ -164,7 +165,7 @@ public interface HConstants {
    * commit.
    */
   static final long LATEST_TIMESTAMP = Long.MAX_VALUE;
-  
+
   /**
    * Define for 'return-all-versions'.
    */

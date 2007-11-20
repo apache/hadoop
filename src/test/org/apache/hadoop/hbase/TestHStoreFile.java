@@ -45,9 +45,13 @@ public class TestHStoreFile extends HBaseTestCase {
   /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
-    this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
-    this.fs = cluster.getFileSystem();
-    this.dir = new Path(DIR, getName());
+    try {
+      this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
+      this.fs = cluster.getFileSystem();
+      this.dir = new Path(DIR, getName());
+    } catch (IOException e) {
+      StaticTestEnvironment.shutdownDfs(cluster);
+    }
     super.setUp();
   }
   
@@ -55,13 +59,7 @@ public class TestHStoreFile extends HBaseTestCase {
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
-    if (this.cluster != null) {
-      try {
-        this.cluster.shutdown();
-      } catch (Exception e) {
-        LOG.warn("Closing down mini DFS", e);
-      }
-    }
+    StaticTestEnvironment.shutdownDfs(cluster);
     // ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
     //  "Temporary end-of-test thread dump debugging HADOOP-2040: " + getName());
   }

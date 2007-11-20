@@ -22,23 +22,16 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
-import java.util.SortedMap;
 import java.util.TreeMap;
 
 import junit.framework.TestCase;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HMemcache.Snapshot;
 import org.apache.hadoop.io.Text;
 
 /** memcache test case */
 public class TestHMemcache extends TestCase {
   
-  private HMemcache hmemcache;
-
-  private Configuration conf;
+  private HStore.Memcache hmemcache;
 
   private static final int ROW_COUNT = 3;
 
@@ -50,10 +43,7 @@ public class TestHMemcache extends TestCase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    this.hmemcache = new HMemcache();
-    // Set up a configuration that has configuration for a file
-    // filesystem implementation.
-    this.conf = new HBaseConfiguration();
+    this.hmemcache = new HStore.Memcache();
   }
 
   private Text getRowName(final int index) {
@@ -69,48 +59,26 @@ public class TestHMemcache extends TestCase {
    * Adds {@link #ROW_COUNT} rows and {@link #COLUMNS_COUNT}
    * @param hmc Instance to add rows to.
    */
-  private void addRows(final HMemcache hmc) throws UnsupportedEncodingException {
+  private void addRows(final HStore.Memcache hmc)
+    throws UnsupportedEncodingException {
+    
     for (int i = 0; i < ROW_COUNT; i++) {
-      TreeMap<Text, byte []> columns = new TreeMap<Text, byte []>();
+      long timestamp = System.currentTimeMillis();
       for (int ii = 0; ii < COLUMNS_COUNT; ii++) {
         Text k = getColumnName(i, ii);
-        columns.put(k, k.toString().getBytes(HConstants.UTF8_ENCODING));
+        hmc.add(new HStoreKey(getRowName(i), k, timestamp),
+            k.toString().getBytes(HConstants.UTF8_ENCODING));
       }
-      hmc.add(getRowName(i), columns, System.currentTimeMillis());
     }
   }
 
-  private HLog getLogfile() throws IOException {
-    // Create a log file.
-    Path testDir = new Path(conf.get("hadoop.tmp.dir", 
-        System.getProperty("java.tmp.dir")), "hbase");
-    Path logFile = new Path(testDir, this.getName());
-    FileSystem fs = testDir.getFileSystem(conf);
-    // Cleanup any old log file.
-    if (fs.exists(logFile)) {
-      fs.delete(logFile);
-    }
-    return new HLog(fs, logFile, this.conf);
-  }
-
-  private Snapshot runSnapshot(final HMemcache hmc, final HLog log)
-    throws IOException {
-    
+  private void runSnapshot(final HStore.Memcache hmc) {
     // Save off old state.
-    int oldHistorySize = hmc.history.size();
-    SortedMap<HStoreKey, byte []> oldMemcache = hmc.memcache;
-    // Run snapshot.
-    Snapshot s = hmc.snapshotMemcacheForLog(log);
+    int oldHistorySize = hmc.snapshot.size();
+    hmc.snapshot();
     // Make some assertions about what just happened.
-    assertEquals("Snapshot equals old memcache", hmc.snapshot,
-        oldMemcache);
-    assertEquals("Returned snapshot holds old memcache",
-        s.memcacheSnapshot, oldMemcache);
-    assertEquals("History has been incremented",
-        oldHistorySize + 1, hmc.history.size());
-    assertEquals("History holds old snapshot",
-        hmc.history.get(oldHistorySize), oldMemcache);
-    return s;
+    assertTrue("History size has not increased",
+        oldHistorySize < hmc.snapshot.size());
   }
 
   /** 
@@ -119,21 +87,14 @@ public class TestHMemcache extends TestCase {
    */
   public void testSnapshotting() throws IOException {
     final int snapshotCount = 5;
-    final Text tableName = new Text(getName());
-    HLog log = getLogfile();
     // Add some rows, run a snapshot. Do it a few times.
     for (int i = 0; i < snapshotCount; i++) {
       addRows(this.hmemcache);
-      int historyInitialSize = this.hmemcache.history.size();
-      Snapshot s = runSnapshot(this.hmemcache, log);
-      log.completeCacheFlush(new Text(Integer.toString(i)),
-          tableName, s.sequenceId);
-      // Clean up snapshot now we are done with it.
-      this.hmemcache.deleteSnapshot();
-      assertTrue("History not being cleared",
-        historyInitialSize == this.hmemcache.history.size());
+      runSnapshot(this.hmemcache);
+      this.hmemcache.getSnapshot();
+      assertEquals("History not being cleared", 0,
+          this.hmemcache.snapshot.size());
     }
-    log.closeAndDelete();
   }
   
   private void isExpectedRow(final int rowIndex, TreeMap<Text, byte []> row)
@@ -161,7 +122,8 @@ public class TestHMemcache extends TestCase {
     addRows(this.hmemcache);
     for (int i = 0; i < ROW_COUNT; i++) {
       HStoreKey hsk = new HStoreKey(getRowName(i));
-      TreeMap<Text, byte []> all = this.hmemcache.getFull(hsk);
+      TreeMap<Text, byte []> all = new TreeMap<Text, byte[]>();
+      this.hmemcache.getFull(hsk, all);
       isExpectedRow(i, all);
     }
   }

@@ -47,7 +47,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
@@ -2468,10 +2467,12 @@ HMasterRegionInterface {
       // for the table we want to create already exists, then table already
       // created. Throw already-exists exception.
       
-      MetaRegion m = (onlineMetaRegions.containsKey(newRegion.getRegionName()) ?
-          onlineMetaRegions.get(newRegion.getRegionName()) :
-            onlineMetaRegions.get(onlineMetaRegions.headMap(
-                newRegion.getTableDesc().getName()).lastKey()));
+      MetaRegion m = (onlineMetaRegions.size() == 1 ?
+          onlineMetaRegions.get(onlineMetaRegions.firstKey()) : 
+            (onlineMetaRegions.containsKey(newRegion.getRegionName()) ?
+                onlineMetaRegions.get(newRegion.getRegionName()) :
+                  onlineMetaRegions.get(onlineMetaRegions.headMap(
+                      newRegion.getTableDesc().getName()).lastKey())));
           
       Text metaRegionName = m.getRegionName();
       HRegionInterface server = connection.getHRegionConnection(m.getServer());
