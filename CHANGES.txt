@@ -1,7 +1,7 @@
 Hadoop Change Log
 
 
-Release 0.15.1 -
+Release 0.15.1 - 2007-11-27
 
   INCOMPATIBLE CHANGES
 
@@ -297,10 +297,6 @@ Release 0.15.0 - 2007-11-2
     otherwise may lead to lost tasktrackers if the NameNode is unresponsive.
     (Devaraj Das via acmurthy)
 
-    HADOOP-2001.  Make the job priority updates and job kills synchronized on
-    the JobTracker. Deadlock was seen in the JobTracker because of the lack of
-    this synchronization.  (Arun C Murthy via ddas)
-
     HADOOP-2026. Namenode prints out one log line for "Number of transactions"
     at most once every minute. (Dhruba Borthakur)
 
@@ -498,7 +494,7 @@ Release 0.15.0 - 2007-11-2
     (Jim Kellerman via acmurthy) 
 
 
-Release 0.14.4 -
+Release 0.14.4 - 2007-11-26
 
   BUG FIXES
 
