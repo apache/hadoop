@@ -937,6 +937,7 @@ public class HTable implements HConstants {
       this.closed = true;
     }
 
+    /** {@inheritDoc} */
     public Iterator<Entry<HStoreKey, SortedMap<Text, byte[]>>> iterator() {
       return new Iterator<Entry<HStoreKey, SortedMap<Text, byte[]>>>() {
         HStoreKey key = null;

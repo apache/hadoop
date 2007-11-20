@@ -34,7 +34,11 @@ public class BatchOperation implements Writable {
    * Operation types.
    * @see org.apache.hadoop.io.SequenceFile.Writer
    */
-  public static enum Operation {PUT, DELETE}
+  public static enum Operation {
+    /** update a field */
+    PUT,
+    /** delete a field */
+    DELETE}
 
   private Operation op;
   private Text column;
@@ -65,7 +69,8 @@ public class BatchOperation implements Writable {
   
   /**
    * Creates a put operation
-   * 
+   *
+   * @param operation the operation (put or get)
    * @param column column name
    * @param value column value
    */

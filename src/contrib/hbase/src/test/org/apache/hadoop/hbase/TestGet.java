@@ -23,7 +23,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.TreeMap;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,7 +44,7 @@ public class TestGet extends HBaseTestCase {
   private static final String SERVER_ADDRESS = "foo.bar.com:1234";
 
   
-  private void verifyGet(final HRegion r, final String expectedServer)
+  private void verifyGet(final HRegionIncommon r, final String expectedServer)
   throws IOException {
     // This should return a value because there is only one family member
     byte [] value = r.get(ROW_KEY, CONTENTS);
@@ -55,7 +55,7 @@ public class TestGet extends HBaseTestCase {
     assertNull(value);
     
     // Find out what getFull returns
-    TreeMap<Text, byte []> values = r.getFull(ROW_KEY);
+    Map<Text, byte []> values = r.getFull(ROW_KEY);
     
     // assertEquals(4, values.keySet().size());
     for(Iterator<Text> i = values.keySet().iterator(); i.hasNext(); ) {
@@ -95,7 +95,8 @@ public class TestGet extends HBaseTestCase {
       
       HLog log = new HLog(fs, new Path(regionDir, "log"), conf);
 
-      HRegion r = new HRegion(dir, log, fs, conf, info, null);
+      HRegion region = new HRegion(dir, log, fs, conf, info, null);
+      HRegionIncommon r = new HRegionIncommon(region);
       
       // Write information to the table
       
@@ -132,9 +133,10 @@ public class TestGet extends HBaseTestCase {
       
       // Close and re-open region, forcing updates to disk
       
-      r.close();
+      region.close();
       log.rollWriter();
-      r = new HRegion(dir, log, fs, conf, info, null);
+      region = new HRegion(dir, log, fs, conf, info, null);
+      r = new HRegionIncommon(region);
       
       // Read it back
       
@@ -160,9 +162,10 @@ public class TestGet extends HBaseTestCase {
       
       // Close region and re-open it
       
-      r.close();
+      region.close();
       log.rollWriter();
-      r = new HRegion(dir, log, fs, conf, info, null);
+      region = new HRegion(dir, log, fs, conf, info, null);
+      r = new HRegionIncommon(region);
 
       // Read it back
       
@@ -170,13 +173,11 @@ public class TestGet extends HBaseTestCase {
 
       // Close region once and for all
       
-      r.close();
+      region.close();
       log.closeAndDelete();
       
     } finally {
-      if(cluster != null) {
-        cluster.shutdown();
-      }
+      StaticTestEnvironment.shutdownDfs(cluster);
     }
   }
 }

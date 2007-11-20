@@ -71,6 +71,9 @@ public class TestScanner2 extends HBaseClusterTestCase {
     }
   }
 
+  /**
+   * @throws Exception
+   */
   public void testStopRow() throws Exception {
     Text tableName = new Text(getName());
     createTable(new HBaseAdmin(this.conf), tableName);
@@ -86,6 +89,9 @@ public class TestScanner2 extends HBaseClusterTestCase {
     }
   }
   
+  /**
+   * @throws Exception
+   */
   public void testIterator() throws Exception {
     HTable table = new HTable(this.conf, HConstants.ROOT_TABLE_NAME);
     HScannerInterface scanner =
@@ -139,11 +145,12 @@ public class TestScanner2 extends HBaseClusterTestCase {
     int count = 0;
     while (scanner.next(key, results)) {
       for (Text c: results.keySet()) {
+        System.out.println(c);
         assertTrue(c.toString().matches(regexColumnname));
         count++;
       }
     }
-    assertTrue(count == 1);
+    assertEquals(1, count);
     scanner.close();
   }
 
@@ -267,7 +274,7 @@ public class TestScanner2 extends HBaseClusterTestCase {
     Text tableName = new Text(getName());
     admin.createTable(new HTableDescriptor(tableName.toString()));
     List<HRegionInfo> regions = scan(metaTable);
-    assertEquals("Expected one region", regions.size(), 1);
+    assertEquals("Expected one region", 1, regions.size());
     HRegionInfo region = regions.get(0);
     assertTrue("Expected region named for test",
       region.getRegionName().toString().startsWith(getName()));
@@ -365,7 +372,7 @@ public class TestScanner2 extends HBaseClusterTestCase {
     // Assert added.
     byte [] bytes = t.get(region.getRegionName(), HConstants.COL_REGIONINFO);
     HRegionInfo hri = Writables.getHRegionInfo(bytes);
-    assertEquals(hri.getRegionId(), region.getRegionId());
+    assertEquals(region.getRegionId(), hri.getRegionId());
     if (LOG.isDebugEnabled()) {
       LOG.info("Added region " + region.getRegionName() + " to table " +
         t.getTableName());

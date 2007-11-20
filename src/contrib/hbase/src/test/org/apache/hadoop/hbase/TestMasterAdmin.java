@@ -36,6 +36,10 @@ public class TestMasterAdmin extends HBaseClusterTestCase {
   public TestMasterAdmin() {
     super(true);
     admin = null;
+
+    // Make the thread wake frequency a little slower so other threads
+    // can run
+    conf.setInt("hbase.server.thread.wakefrequency", 2000);
   }
   
   /** @throws Exception */

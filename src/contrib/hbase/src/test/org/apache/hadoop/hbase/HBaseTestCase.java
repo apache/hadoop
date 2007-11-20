@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.Map;
+import java.util.Random;
 
 import junit.framework.TestCase;
 
@@ -28,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -219,19 +222,36 @@ public abstract class HBaseTestCase extends TestCase {
               && endKey.compareTo(t) <= 0) {
             break EXIT;
           }
-          long lockid = updater.startBatchUpdate(t);
           try {
-            updater.put(lockid, new Text(column), bytes);
-            if (ts == -1) {
-              updater.commit(lockid);
-            } else {
-              updater.commit(lockid, ts);
+            long lockid = updater.startBatchUpdate(t);
+            try {
+              updater.put(lockid, new Text(column), bytes);
+              if (ts == -1) {
+                updater.commit(lockid);
+              } else {
+                updater.commit(lockid, ts);
+              }
+              lockid = -1;
+            } catch (RuntimeException ex) {
+              ex.printStackTrace();
+              throw ex;
+              
+            } catch (IOException ex) {
+              ex.printStackTrace();
+              throw ex;
+              
+            } finally {
+              if (lockid != -1) {
+                updater.abort(lockid);
+              }
             }
-            lockid = -1;
-          } finally {
-            if (lockid != -1) {
-              updater.abort(lockid);
-            }
+          } catch (RuntimeException ex) {
+            ex.printStackTrace();
+            throw ex;
+            
+          } catch (IOException ex) {
+            ex.printStackTrace();
+            throw ex;
           }
         }
         // Set start character back to FIRST_CHAR after we've done first loop.
@@ -275,32 +295,56 @@ public abstract class HBaseTestCase extends TestCase {
   /**
    * A class that makes a {@link Incommon} out of a {@link HRegion}
    */
-  public static class HRegionIncommon implements Incommon {
+  public static class HRegionIncommon implements Incommon, FlushCache {
     final HRegion region;
+    private final Random rand = new Random();
+    private BatchUpdate batch;
+    
+    private void checkBatch() {
+      if (batch == null) {
+        throw new IllegalStateException("No update in progress");
+      }
+    }
+    
     public HRegionIncommon(final HRegion HRegion) {
-      super();
       this.region = HRegion;
+      this.batch = null;
     }
     public void abort(long lockid) throws IOException {
-      this.region.abort(lockid);
+      this.batch = null;
     }
     public void commit(long lockid) throws IOException {
-      this.region.commit(lockid);
+      commit(lockid, HConstants.LATEST_TIMESTAMP);
     }
     public void commit(long lockid, final long ts) throws IOException {
-      this.region.commit(lockid, ts);
+      checkBatch();
+      try {
+        this.region.batchUpdate(ts, batch);
+      } finally {
+        this.batch = null;
+      }
     }
     public void put(long lockid, Text column, byte[] val) throws IOException {
-      this.region.put(lockid, column, val);
+      checkBatch();
+      this.batch.put(lockid, column, val);
     }
     public void delete(long lockid, Text column) throws IOException {
-      this.region.delete(lockid, column);
+      checkBatch();
+      this.batch.delete(lockid, column);
     }
     public void deleteAll(Text row, Text column, long ts) throws IOException {
       this.region.deleteAll(row, column, ts);
     }
     public long startBatchUpdate(Text row) throws IOException {
-      return this.region.startUpdate(row);
+      return startUpdate(row);
+    }
+    public long startUpdate(Text row) throws IOException {
+      if (this.batch != null) {
+        throw new IllegalStateException("Update already in progress");
+      }
+      long lockid = Math.abs(rand.nextLong());
+      this.batch = new BatchUpdate(lockid);
+      return batch.startUpdate(row);
     }
     public HScannerInterface getScanner(Text [] columns, Text firstRow,
         long ts)
@@ -316,6 +360,12 @@ public abstract class HBaseTestCase extends TestCase {
     public byte[][] get(Text row, Text column, long ts, int versions)
         throws IOException {
       return this.region.get(row, column, ts, versions);
+    }
+    public Map<Text, byte []> getFull(Text row) throws IOException {
+      return region.getFull(row);
+    }
+    public void flushcache() throws IOException {
+      this.region.internalFlushcache(this.region.snapshotMemcaches());
     }
   }
 

@@ -49,13 +49,13 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     try {
       // Write columns named 1, 2, 3, etc. and then values of single byte
       // 1, 2, 3...
-      TreeMap<Text, byte []> cols = new TreeMap<Text, byte []>();
+      long timestamp = System.currentTimeMillis();
+      TreeMap<HStoreKey, byte []> cols = new TreeMap<HStoreKey, byte []>();
       for (int i = 0; i < COL_COUNT; i++) {
-        cols.put(new Text(Integer.toString(i)),
+        cols.put(new HStoreKey(row, new Text(Integer.toString(i)), timestamp),
             new byte[] { (byte)(i + '0') });
       }
-      long timestamp = System.currentTimeMillis();
-      log.append(regionName, tableName, row, cols, timestamp);
+      log.append(regionName, tableName, cols);
       long logSeqId = log.startCacheFlush();
       log.completeCacheFlush(regionName, tableName, logSeqId);
       log.close();

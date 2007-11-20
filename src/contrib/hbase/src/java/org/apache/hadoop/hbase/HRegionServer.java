@@ -47,7 +47,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
-import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -194,15 +193,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       List<HRegion> nonClosedRegionsToCheck = getRegionsToCheck();
       for(HRegion cur: nonClosedRegionsToCheck) {
         try {
-          if (cur.needsCompaction()) {
-            cur.compactStores();
+          if (cur.compactIfNeeded()) {
+            // After compaction, it probably needs splitting.  May also need
+            // splitting just because one of the memcache flushes was big.
+            split(cur);
           }
-          // After compaction, it probably needs splitting.  May also need
-          // splitting just because one of the memcache flushes was big.
-          Text midKey = new Text();
-          if (cur.needsSplit(midKey)) {
-            split(cur, midKey);
-          }
+
         } catch(IOException e) {
           //TODO: What happens if this fails? Are we toast?
           LOG.error("Split or compaction failed", e);
@@ -213,10 +209,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
     }
     
-    private void split(final HRegion region, final Text midKey)
-    throws IOException {
+    private void split(final HRegion region) throws IOException {
       final HRegionInfo oldRegionInfo = region.getRegionInfo();
-      final HRegion[] newRegions = region.closeAndSplit(midKey, this);
+      final HRegion[] newRegions = region.splitRegion(this);
+      
+      if (newRegions == null) {
+        return;                                 // Didn't need to be split
+      }
       
       // When a region is split, the META table needs to updated if we're
       // splitting a 'normal' region, and the ROOT table needs to be
@@ -302,7 +301,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // Flush them, if necessary
       for(HRegion cur: nonClosedRegionsToFlush) {
         try {
-          cur.optionallyFlush();
+          cur.flushcache();
         } catch (DroppedSnapshotException e) {
           // Cache flush can fail in a few places.  If it fails in a critical
           // section, we get a DroppedSnapshotException and a replay of hlog
@@ -1046,7 +1045,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     try {
       HRegion region = getRegion(regionName);
       MapWritable result = new MapWritable();
-      TreeMap<Text, byte[]> map = region.getFull(row);
+      Map<Text, byte[]> map = region.getFull(row);
       for (Map.Entry<Text, byte []> es: map.entrySet()) {
         result.put(new HStoreKey(row, es.getKey()),
             new ImmutableBytesWritable(es.getValue()));
@@ -1100,46 +1099,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /** {@inheritDoc} */
   public void batchUpdate(Text regionName, long timestamp, BatchUpdate b)
-  throws IOException {
+    throws IOException {
+    
     checkOpen();
     this.requestCount.incrementAndGet();
-    // If timestamp == LATEST_TIMESTAMP and we have deletes, then they need
-    // special treatment.  For these we need to first find the latest cell so
-    // when we write the delete, we write it with the latest cells' timestamp
-    // so the delete record overshadows.  This means deletes and puts do not
-    // happen within the same row lock.
-    List<Text> deletes = null;
+    HRegion region = getRegion(regionName);
     try {
-      long lockid = startUpdate(regionName, b.getRow());
-      for (BatchOperation op: b) {
-        switch(op.getOp()) {
-        case PUT:
-          put(regionName, lockid, op.getColumn(), op.getValue());
-          break;
-
-        case DELETE:
-          if (timestamp == LATEST_TIMESTAMP) {
-            // Save off these deletes.
-            if (deletes == null) {
-              deletes = new ArrayList<Text>();
-            }
-            deletes.add(op.getColumn());
-          } else {
-            delete(regionName, lockid, op.getColumn());
-          }
-          break;
-        }
-      }
-      commit(regionName, lockid,
-        (timestamp == LATEST_TIMESTAMP)? System.currentTimeMillis(): timestamp);
-      
-      if (deletes != null && deletes.size() > 0) {
-        // We have some LATEST_TIMESTAMP deletes to run.
-        HRegion r = getRegion(regionName);
-        for (Text column: deletes) {
-          r.deleteMultiple(b.getRow(), column, LATEST_TIMESTAMP, 1);
-        }
-      }
+      region.batchUpdate(timestamp, b);
     } catch (IOException e) {
       checkFileSystem();
       throw e;
@@ -1234,37 +1200,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // Methods that do the actual work for the remote API
   //
   
-  protected long startUpdate(Text regionName, Text row) throws IOException {
-    HRegion region = getRegion(regionName);
-    return region.startUpdate(row);
-  }
-
-  protected void put(final Text regionName, final long lockid,
-      final Text column, final byte [] val)
-  throws IOException {
-    HRegion region = getRegion(regionName, true);
-    region.put(lockid, column, val);
-  }
-
-  protected void delete(Text regionName, long lockid, Text column) 
-  throws IOException {
-    HRegion region = getRegion(regionName);
-    region.delete(lockid, column);
-  }
-  
   /** {@inheritDoc} */
   public void deleteAll(final Text regionName, final Text row,
       final Text column, final long timestamp) 
   throws IOException {
     HRegion region = getRegion(regionName);
     region.deleteAll(row, column, timestamp);
-  }
-
-  protected void commit(Text regionName, final long lockid,
-      final long timestamp) throws IOException {
-
-    HRegion region = getRegion(regionName, true);
-    region.commit(lockid, timestamp);
   }
 
   /**
@@ -1379,6 +1320,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   protected List<HRegion> getRegionsToCheck() {
     ArrayList<HRegion> regionsToCheck = new ArrayList<HRegion>();
+    //TODO: is this locking necessary? 
     lock.readLock().lock();
     try {
       regionsToCheck.addAll(this.onlineRegions.values());

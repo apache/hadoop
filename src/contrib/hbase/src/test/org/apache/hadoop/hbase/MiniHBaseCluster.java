@@ -117,9 +117,14 @@ public class MiniHBaseCluster implements HConstants {
     this.deleteOnExit = deleteOnExit;
     this.shutdownDFS = false;
     if (miniHdfsFilesystem) {
-      this.cluster = new MiniDFSCluster(this.conf, 2, format, (String[])null);
-      this.fs = cluster.getFileSystem();
-      this.shutdownDFS = true;
+      try {
+        this.cluster = new MiniDFSCluster(this.conf, 2, format, (String[])null);
+        this.fs = cluster.getFileSystem();
+        this.shutdownDFS = true;
+      } catch (IOException e) {
+        StaticTestEnvironment.shutdownDfs(cluster);
+        throw e;
+      }
     } else {
       this.cluster = null;
       this.fs = FileSystem.get(conf);
@@ -224,26 +229,13 @@ public class MiniHBaseCluster implements HConstants {
    */
   public void shutdown() {
     this.hbaseCluster.shutdown();
-    try {
-      if (shutdownDFS && cluster != null) {
-        FileSystem fs = cluster.getFileSystem();
-        if (fs != null) {
-          LOG.info("Shutting down FileSystem");
-          fs.close();
-        }
-        if (this.cluster != null) {
-          LOG.info("Shutting down Mini DFS ");
-          cluster.shutdown();
-        }
-      }
-    } catch (IOException e) {
-      LOG.error("shutdown", e);
-    } finally {
-      // Delete all DFS files
-      if(deleteOnExit) {
-        deleteFile(new File(System.getProperty(
-            StaticTestEnvironment.TEST_DIRECTORY_KEY), "dfs"));
-      }
+    if (shutdownDFS) {
+      StaticTestEnvironment.shutdownDfs(cluster);
+    }
+    // Delete all DFS files
+    if(deleteOnExit) {
+      deleteFile(new File(System.getProperty(
+          StaticTestEnvironment.TEST_DIRECTORY_KEY), "dfs"));
     }
   }
 
@@ -265,7 +257,7 @@ public class MiniHBaseCluster implements HConstants {
     for (LocalHBaseCluster.RegionServerThread t:
         this.hbaseCluster.getRegionServers()) {
       for(HRegion r: t.getRegionServer().onlineRegions.values() ) {
-        r.flushcache(false);
+        r.internalFlushcache(r.snapshotMemcaches());
       }
     }
   }

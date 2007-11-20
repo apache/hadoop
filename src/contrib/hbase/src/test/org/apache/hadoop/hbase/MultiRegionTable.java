@@ -53,11 +53,9 @@ public class MultiRegionTable extends HBaseTestCase {
   @SuppressWarnings("null")
   public static void makeMultiRegionTable(HBaseConfiguration conf,
       MiniHBaseCluster cluster, FileSystem localFs, String tableName,
-      String columnName)
-  throws IOException {  
+      String columnName) throws IOException {  
     final int retries = 10; 
-    final long waitTime =
-      conf.getLong("hbase.master.meta.thread.rescanfrequency", 10L * 1000L);
+    final long waitTime = 20L * 1000L;
     
     // This size should make it so we always split using the addContent
     // below.  After adding all data, the first region is 1.3M. Should
@@ -106,7 +104,7 @@ public class MultiRegionTable extends HBaseTestCase {
     }
 
     // Flush will provoke a split next time the split-checker thread runs.
-    r.flushcache(false);
+    r.internalFlushcache(r.snapshotMemcaches());
     
     // Now, wait until split makes it into the meta table.
     int oldCount = count;
@@ -156,15 +154,19 @@ public class MultiRegionTable extends HBaseTestCase {
     // Wait till the parent only has reference to remaining split, one that
     // still has references.
     
-    while (getSplitParentInfo(meta, parent).size() == 3) {
-      try {
-        Thread.sleep(waitTime);
-      } catch (InterruptedException e) {
-        // continue
+    while (true) {
+      data = getSplitParentInfo(meta, parent);
+      if (data == null || data.size() == 3) {
+        try {
+          Thread.sleep(waitTime);
+        } catch (InterruptedException e) {
+          // continue
+        }
+        continue;
       }
+      break;
     }
-    LOG.info("Parent split returned " +
-        getSplitParentInfo(meta, parent).keySet().toString());
+    LOG.info("Parent split returned " + data.keySet().toString());
     
     // Call second split.
     

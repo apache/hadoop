@@ -50,7 +50,8 @@ public class TestScanner extends HBaseTestCase {
   
   private static final long START_CODE = Long.MAX_VALUE;
 
-  private HRegion region;
+  private HRegion r;
+  private HRegionIncommon region;
 
   /** Compare the HRegionInfo we read from HBase to what we stored */
   private void validateRegionInfo(byte [] regionBytes) throws IOException {
@@ -79,7 +80,7 @@ public class TestScanner extends HBaseTestCase {
     
     for(int i = 0; i < scanColumns.length; i++) {
       try {
-        scanner = region.getScanner(scanColumns[i], FIRST_ROW,
+        scanner = r.getScanner(scanColumns[i], FIRST_ROW,
             System.currentTimeMillis(), null);
         
         while(scanner.next(key, results)) {
@@ -145,7 +146,8 @@ public class TestScanner extends HBaseTestCase {
       
       HLog log = new HLog(fs, new Path(regionDir, "log"), conf);
 
-      region = new HRegion(dir, log, fs, conf, REGION_INFO, null);
+      r = new HRegion(dir, log, fs, conf, REGION_INFO, null);
+      region = new HRegionIncommon(r);
       
       // Write information to the meta table
       
@@ -165,9 +167,10 @@ public class TestScanner extends HBaseTestCase {
       
       // Close and re-open
       
-      region.close();
+      r.close();
       log.rollWriter();
-      region = new HRegion(dir, log, fs, conf, REGION_INFO, null);
+      r = new HRegion(dir, log, fs, conf, REGION_INFO, null);
+      region = new HRegionIncommon(r);
 
       // Verify we can get the data back now that it is on disk.
       
@@ -196,7 +199,7 @@ public class TestScanner extends HBaseTestCase {
       
       // flush cache
 
-      region.flushcache(false);
+      region.flushcache();
 
       // Validate again
       
@@ -205,9 +208,10 @@ public class TestScanner extends HBaseTestCase {
 
       // Close and reopen
       
-      region.close();
+      r.close();
       log.rollWriter();
-      region = new HRegion(dir, log, fs, conf, REGION_INFO, null);
+      r = new HRegion(dir, log, fs, conf, REGION_INFO, null);
+      region = new HRegionIncommon(r);
 
       // Validate again
       
@@ -232,7 +236,7 @@ public class TestScanner extends HBaseTestCase {
 
       // flush cache
 
-      region.flushcache(false);
+      region.flushcache();
 
       // Validate again
       
@@ -241,9 +245,10 @@ public class TestScanner extends HBaseTestCase {
 
       // Close and reopen
       
-      region.close();
+      r.close();
       log.rollWriter();
-      region = new HRegion(dir, log, fs, conf, REGION_INFO, null);
+      r = new HRegion(dir, log, fs, conf, REGION_INFO, null);
+      region = new HRegionIncommon(r);
 
       // Validate again
       
@@ -252,13 +257,11 @@ public class TestScanner extends HBaseTestCase {
       
       // clean up
       
-      region.close();
+      r.close();
       log.closeAndDelete();
       
     } finally {
-      if(cluster != null) {
-        cluster.shutdown();
-      }
+      StaticTestEnvironment.shutdownDfs(cluster);
     }
   }
 }

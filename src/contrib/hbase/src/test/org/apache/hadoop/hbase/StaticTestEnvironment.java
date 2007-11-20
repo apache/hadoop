@@ -20,8 +20,11 @@
 package org.apache.hadoop.hbase;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Enumeration;
 
+import org.apache.hadoop.dfs.MiniDFSCluster;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.log4j.Appender;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Layout;
@@ -33,6 +36,9 @@ import org.apache.log4j.PatternLayout;
  * Initializes test environment
  */
 public class StaticTestEnvironment {
+  private static final Logger LOG =
+    Logger.getLogger(StaticTestEnvironment.class.getPackage().getName());
+
   private StaticTestEnvironment() {}                    // Not instantiable
 
   /** configuration parameter name for test directory */
@@ -105,7 +111,28 @@ public class StaticTestEnvironment {
         consoleLayout.setConversionPattern("%d %-5p [%t] %l: %m%n");
       }
     }
-    Logger.getLogger(
-        HBaseTestCase.class.getPackage().getName()).setLevel(logLevel);
+    LOG.setLevel(logLevel);
+  }
+  
+  /**
+   * Common method to close down a MiniDFSCluster and the associated file system
+   * 
+   * @param cluster
+   */
+  public static void shutdownDfs(MiniDFSCluster cluster) {
+    if (cluster != null) {
+      try {
+        FileSystem fs = cluster.getFileSystem();
+        if (fs != null) {
+          LOG.info("Shutting down FileSystem");
+          fs.close();
+        }
+      } catch (IOException e) {
+        LOG.error("error closing file system", e);
+      }
+
+      LOG.info("Shutting down Mini DFS ");
+      cluster.shutdown();
+    }
   }
 }

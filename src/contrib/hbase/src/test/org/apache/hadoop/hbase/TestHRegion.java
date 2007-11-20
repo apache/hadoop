@@ -61,9 +61,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
       read();
       cleanup();
     } finally {
-      if(cluster != null) {
-        cluster.shutdown();
-      }
+      StaticTestEnvironment.shutdownDfs(cluster);
     }
   }
   
@@ -78,14 +76,15 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
   private static final Text CONTENTS_BODY = new Text("contents:body");
   private static final Text CONTENTS_FIRSTCOL = new Text("contents:firstcol");
   private static final Text ANCHOR_SECONDCOL = new Text("anchor:secondcol");
-
+  
   private MiniDFSCluster cluster = null;
   private FileSystem fs = null;
   private Path parentdir = null;
   private Path newlogdir = null;
   private HLog log = null;
   private HTableDescriptor desc = null;
-  HRegion region = null;
+  HRegion r = null;
+  HRegionIncommon region = null;
   
   private static int numInserted = 0;
 
@@ -103,8 +102,9 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     desc = new HTableDescriptor("test");
     desc.addFamily(new HColumnDescriptor("contents:"));
     desc.addFamily(new HColumnDescriptor("anchor:"));
-    region = new HRegion(parentdir, log, fs, conf, 
+    r = new HRegion(parentdir, log, fs, conf, 
         new HRegionInfo(desc, null, null), null);
+    region = new HRegionIncommon(r);
   }
 
   // Test basic functionality. Writes to contents:basic and anchor:anchornum-*
@@ -129,7 +129,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
 
     startTime = System.currentTimeMillis();
 
-    region.flushcache(false);
+    region.flushcache();
 
     System.out.println("Cache flush elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
@@ -169,7 +169,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     try {
       region.put(-1, CONTENTS_BASIC,
           "bad input".getBytes(HConstants.UTF8_ENCODING));
-    } catch (LockException e) {
+    } catch (Exception e) {
       exceptionThrown = true;
     }
     assertTrue("Bad lock id", exceptionThrown);
@@ -182,6 +182,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
       String unregisteredColName = "FamilyGroup:FamilyLabel";
       region.put(lockid, new Text(unregisteredColName),
         unregisteredColName.getBytes(HConstants.UTF8_ENCODING));
+      region.commit(lockid);
     } catch (IOException e) {
       exceptionThrown = true;
     } finally {
@@ -209,8 +210,8 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
           for (int i = 0; i < lockCount; i++) {
             try {
               Text rowid = new Text(Integer.toString(i));
-              lockids[i] = region.obtainRowLock(rowid);
-              rowid.equals(region.getRowFromLock(lockids[i]));
+              lockids[i] = r.obtainRowLock(rowid);
+              rowid.equals(r.getRowFromLock(lockids[i]));
               LOG.debug(getName() + " locked " + rowid.toString());
             } catch (IOException e) {
               e.printStackTrace();
@@ -221,13 +222,8 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
           
           // Abort outstanding locks.
           for (int i = lockCount - 1; i >= 0; i--) {
-            try {
-              region.abort(lockids[i]);
-              LOG.debug(getName() + " unlocked " +
-                  Integer.toString(i));
-            } catch (IOException e) {
-              e.printStackTrace();
-            }
+            r.releaseRowLock(r.getRowFromLock(lockids[i]));
+            LOG.debug(getName() + " unlocked " + i);
           }
           LOG.debug(getName() + " released " +
               Integer.toString(lockCount) + " locks");
@@ -288,7 +284,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     startTime = System.currentTimeMillis();
 
     HInternalScannerInterface s =
-      region.getScanner(cols, new Text(), System.currentTimeMillis(), null);
+      r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
     int numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
@@ -326,7 +322,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     startTime = System.currentTimeMillis();
     
-    region.flushcache(false);
+    region.flushcache();
 
     System.out.println("Cache flush elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
@@ -335,7 +331,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     startTime = System.currentTimeMillis();
     
-    s = region.getScanner(cols, new Text(), System.currentTimeMillis(), null);
+    s = r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
@@ -390,7 +386,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     startTime = System.currentTimeMillis();
 
-    s = region.getScanner(cols, new Text(), System.currentTimeMillis(), null);
+    s = r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
@@ -428,7 +424,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     startTime = System.currentTimeMillis();
     
-    region.flushcache(false);
+    region.flushcache();
 
     System.out.println("Cache flush elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
@@ -437,7 +433,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     startTime = System.currentTimeMillis();
     
-    s = region.getScanner(cols, new Text(), System.currentTimeMillis(), null);
+    s = r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
@@ -473,7 +469,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
 
     startTime = System.currentTimeMillis();
     
-    s = region.getScanner(cols, new Text("row_vals1_500"),
+    s = r.getScanner(cols, new Text("row_vals1_500"),
         System.currentTimeMillis(), null);
     
     numFetched = 0;
@@ -542,7 +538,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
         System.out.println("Flushing write #" + k);
 
         long flushStart = System.currentTimeMillis();
-        region.flushcache(false);
+        region.flushcache();
         long flushEnd = System.currentTimeMillis();
         totalFlush += (flushEnd - flushStart);
 
@@ -557,7 +553,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
       }
     }
     long startCompact = System.currentTimeMillis();
-    if(region.compactStores()) {
+    if(r.compactIfNeeded()) {
       totalCompact = System.currentTimeMillis() - startCompact;
       System.out.println("Region compacted - elapsedTime: " + (totalCompact / 1000.0));
 
@@ -583,43 +579,28 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
 
   // NOTE: This test depends on testBatchWrite succeeding
   private void splitAndMerge() throws IOException {
-    Text midKey = new Text();
-
-    if(region.needsSplit(midKey)) {
-      System.out.println("Needs split");
-    }
-
-    // Split it anyway
-
-    Text midkey = new Text("row_"
-        + (StaticTestEnvironment.debugging ? (N_ROWS / 2) : (NUM_VALS/2)));
-    
-    Path oldRegionPath = region.getRegionDir();
-
+    Path oldRegionPath = r.getRegionDir();
     long startTime = System.currentTimeMillis();
+    HRegion subregions[] = r.splitRegion(this);
+    if (subregions != null) {
+      System.out.println("Split region elapsed time: "
+          + ((System.currentTimeMillis() - startTime) / 1000.0));
 
-    HRegion subregions[] = region.closeAndSplit(midkey, this);
+      assertEquals("Number of subregions", subregions.length, 2);
 
-    System.out.println("Split region elapsed time: "
-        + ((System.currentTimeMillis() - startTime) / 1000.0));
+      // Now merge it back together
 
-    assertEquals("Number of subregions", subregions.length, 2);
-
-    // Now merge it back together
-
-    Path oldRegion1 = subregions[0].getRegionDir();
-    Path oldRegion2 = subregions[1].getRegionDir();
-
-    startTime = System.currentTimeMillis();
-
-    region = HRegion.closeAndMerge(subregions[0], subregions[1]);
-
-    System.out.println("Merge regions elapsed time: "
-        + ((System.currentTimeMillis() - startTime) / 1000.0));
-    
-    fs.delete(oldRegionPath);
-    fs.delete(oldRegion1);
-    fs.delete(oldRegion2);
+      Path oldRegion1 = subregions[0].getRegionDir();
+      Path oldRegion2 = subregions[1].getRegionDir();
+      startTime = System.currentTimeMillis();
+      r = HRegion.closeAndMerge(subregions[0], subregions[1]);
+      region = new HRegionIncommon(r);
+      System.out.println("Merge regions elapsed time: "
+          + ((System.currentTimeMillis() - startTime) / 1000.0));
+      fs.delete(oldRegion1);
+      fs.delete(oldRegion2);
+      fs.delete(oldRegionPath);
+    }
   }
 
   /**
@@ -650,7 +631,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     long startTime = System.currentTimeMillis();
     
     HInternalScannerInterface s =
-      region.getScanner(cols, new Text(), System.currentTimeMillis(), null);
+      r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
 
     try {
 
@@ -706,7 +687,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     startTime = System.currentTimeMillis();
 
-    s = region.getScanner(cols, new Text(), System.currentTimeMillis(), null);
+    s = r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
     try {
       int numFetched = 0;
       HStoreKey curKey = new HStoreKey();
@@ -744,7 +725,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
 
     if(StaticTestEnvironment.debugging) {
       startTime = System.currentTimeMillis();
-      s = region.getScanner(new Text[] { CONTENTS_BODY }, new Text(),
+      s = r.getScanner(new Text[] { CONTENTS_BODY }, new Text(),
           System.currentTimeMillis(), null);
       
       try {
@@ -782,7 +763,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     startTime = System.currentTimeMillis();
     
-    s = region.getScanner(cols, new Text(), System.currentTimeMillis(), null);
+    s = r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
 
     try {
       int fetched = 0;
@@ -817,21 +798,10 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
   }
   
   private void cleanup() {
-
-    // Shut down the mini cluster
     try {
       log.closeAndDelete();
     } catch (IOException e) {
       e.printStackTrace();
-    }
-    if (cluster != null) {
-      try {
-        fs.close();
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-      cluster.shutdown();
-      cluster = null;
     }
 
     // Delete all the DFS files

@@ -212,6 +212,9 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
    */
   public boolean next(HStoreKey key, SortedMap<Text, byte []> results)
   throws IOException {
+    if (scannerClosed) {
+      return false;
+    }
     // Find the next row label (and timestamp)
     Text chosenRow = null;
     long chosenTimestamp = -1;
@@ -277,6 +280,7 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
     return insertedItem;
   }
   
+  /** {@inheritDoc} */
   public Iterator<Entry<HStoreKey, SortedMap<Text, byte[]>>> iterator() {
     throw new UnsupportedOperationException("Unimplemented serverside. " +
       "next(HStoreKey, StortedMap(...) is more efficient");

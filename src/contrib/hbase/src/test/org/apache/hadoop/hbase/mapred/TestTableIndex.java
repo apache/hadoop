@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HScannerInterface;
@@ -44,6 +43,7 @@ import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MultiRegionTable;
+import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -58,7 +58,7 @@ import org.apache.lucene.search.TermQuery;
 /**
  * Test Map/Reduce job to build index over HBase table
  */
-public class TestTableIndex extends HBaseTestCase {
+public class TestTableIndex extends MultiRegionTable {
   private static final Log LOG = LogFactory.getLog(TestTableIndex.class);
 
   static final String TABLE_NAME = "moretest";
@@ -76,13 +76,21 @@ public class TestTableIndex extends HBaseTestCase {
   private Path dir;
   private MiniHBaseCluster hCluster = null;
 
+  /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     super.setUp();
 
+    // Make sure the cache gets flushed so we trigger a compaction(s) and
+    // hence splits.
+    conf.setInt("hbase.hregion.memcache.flush.size", 1024 * 1024);
+
+    // Always compact if there is more than one store file.
+    conf.setInt("hbase.hstore.compactionThreshold", 2);
+    
     // This size should make it so we always split using the addContent
     // below. After adding all data, the first region is 1.3M
-    conf.setLong("hbase.hregion.max.filesize", 256 * 1024);
+    conf.setLong("hbase.hregion.max.filesize", 128 * 1024);
 
     desc = new HTableDescriptor(TABLE_NAME);
     desc.addFamily(new HColumnDescriptor(INPUT_COLUMN));
@@ -103,22 +111,19 @@ public class TestTableIndex extends HBaseTestCase {
       admin.createTable(desc);
 
       // Populate a table into multiple regions
-      MultiRegionTable.makeMultiRegionTable(conf, hCluster, null, TABLE_NAME,
-        INPUT_COLUMN);
+      makeMultiRegionTable(conf, hCluster, null, TABLE_NAME, INPUT_COLUMN);
 
       // Verify table indeed has multiple regions
       HTable table = new HTable(conf, new Text(TABLE_NAME));
       Text[] startKeys = table.getStartKeys();
       assertTrue(startKeys.length > 1);
     } catch (Exception e) {
-      if (dfsCluster != null) {
-        dfsCluster.shutdown();
-        dfsCluster = null;
-      }
+      StaticTestEnvironment.shutdownDfs(dfsCluster);
       throw e;
     }
   }
 
+  /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
@@ -127,9 +132,7 @@ public class TestTableIndex extends HBaseTestCase {
       hCluster.shutdown();
     }
 
-    if (dfsCluster != null) {
-      dfsCluster.shutdown();
-    }
+    StaticTestEnvironment.shutdownDfs(dfsCluster);
   }
 
   /**
