@@ -44,6 +44,11 @@
       <title>News</title>
 
       <section>
+        <title>27 November, 2007: release 0.15.1 available </title>
+        <p>This release fixes critical bugs in release 0.15.0.</p>
+      </section>
+
+      <section>
         <title>26 November, 2007: release 0.14.4 available </title>
         <p>This release fixes critical bugs in release 0.14.3.</p>
       </section>

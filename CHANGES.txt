@@ -107,7 +107,8 @@ Trunk (unreleased changes)
     HADOOP-2078. An zero size file may have no blocks associated with it.
     (Konstantin Shvachko via dhruba)
 
-Release 0.15.1 -
+
+Release 0.15.1 - 2007-11-27
 
   INCOMPATIBLE CHANGES
 
