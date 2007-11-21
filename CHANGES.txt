@@ -115,6 +115,10 @@ Trunk (unreleased changes)
     HADOOP-2078. An zero size file may have no blocks associated with it.
     (Konstantin Shvachko via dhruba)
 
+    HADOOP-1281. Kill map-tasks when the parent TaskInProgress has been 
+    completed by another (possibly speculative) map-task. This ensures that 
+    map-slots are not needlessly held-up. (acmurthy)
+
 
 Release 0.15.1 - 2007-11-27
 
