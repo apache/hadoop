@@ -112,9 +112,7 @@ public class JobConf extends Configuration {
   /**
    * Construct a map/reduce job configuration.
    */
-  public JobConf() {
-	  checkWarnAndLoadMapredDefault();
-  }
+  public JobConf() {}
 
   /** 
    * Construct a map/reduce job configuration.
@@ -122,7 +120,6 @@ public class JobConf extends Configuration {
    * @param exampleClass a class whose containing jar is used as the job's jar.
    */
   public JobConf(Class exampleClass) {
-    checkWarnAndLoadMapredDefault();
     setJarByClass(exampleClass);
   }
   
@@ -133,7 +130,6 @@ public class JobConf extends Configuration {
    */
   public JobConf(Configuration conf) {
     super(conf);
-    checkWarnAndLoadMapredDefault();
   }
 
 
@@ -162,25 +158,9 @@ public class JobConf extends Configuration {
    */
   public JobConf(Path config) {
     super();
-    checkWarnAndLoadMapredDefault();
     addResource(config);
   }
 
-  /**
-   * Checks if <b>mapred-default.xml</b> is on the CLASSPATH, if so
-   * it warns the user and loads it as a {@link Configuration} resource.
-   * 
-   * @deprecated Remove in hadoop-0.16.0 via HADOOP-1843
-   */
-  private void checkWarnAndLoadMapredDefault() {
-    URL mapredDefaultConf = getClassLoader().getResource("mapred-default.xml");
-    if (mapredDefaultConf != null) {
-      LOG.warn("Deprecated resource 'mapred-default.xml' is being loaded, " +
-          "please discontinue its usage!");
-      addResource("mapred-default.xml");
-    }
-  }
-  
   /**
    * Get the user jar for the map-reduce job.
    * 

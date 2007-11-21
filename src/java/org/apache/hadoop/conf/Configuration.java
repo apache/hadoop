@@ -129,17 +129,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
   private boolean quietmode = true;
   
   /**
-   * @deprecated Remove in hadoop-0.16.0 via HADOOP-1843
-   */
-  @Deprecated
-  private ArrayList<Object> defaultResources = new ArrayList<Object>();
-  /**
-   * @deprecated Remove in hadoop-0.16.0 via HADOOP-1843
-   */
-  @Deprecated
-  private ArrayList<Object> finalResources = new ArrayList<Object>();
-  
-  /**
    * List of configuration resources.
    */
   private ArrayList<Object> resources = new ArrayList<Object>();
@@ -164,8 +153,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     if (LOG.isDebugEnabled()) {
       LOG.debug(StringUtils.stringifyException(new IOException("config()")));
     }
-    defaultResources.add("hadoop-default.xml");
-    finalResources.add("hadoop-site.xml");
+    resources.add("hadoop-default.xml");
+    resources.add("hadoop-site.xml");
   }
 
   /** 
@@ -179,68 +168,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
       LOG.debug(StringUtils.stringifyException
                 (new IOException("config(config)")));
     }
-    this.defaultResources = (ArrayList)other.defaultResources.clone();
-    this.finalResources = (ArrayList)other.finalResources.clone();
     this.resources = (ArrayList)other.resources.clone();
     if (other.properties != null)
       this.properties = (Properties)other.properties.clone();
     if (other.overlay!=null)
       this.overlay = (Properties)other.overlay.clone();
     this.finalParameters = new HashSet<String>(other.finalParameters);
-  }
-
-  /** 
-   * Add a default resource.
-   * @deprecated Use {@link #addResource(String)} instead  
-   */
-  @Deprecated
-  public void addDefaultResource(String name) {
-    addResource(defaultResources, name);
-  }
-
-  /** 
-   * Add a default resource.
-   * @deprecated Use {@link #addResource(URL)} instead
-   */
-  @Deprecated
-  public void addDefaultResource(URL url) {
-    addResource(defaultResources, url);
-  }
-
-  /** 
-   * Add a default resource.
-   * @deprecated Use {@link #addResource(Path)} instead  
-   */
-  @Deprecated
-  public void addDefaultResource(Path file) {
-    addResource(defaultResources, file);
-  }
-
-  /** 
-   * Add a final resource.
-   * @deprecated Use {@link #addResource(String)} instead
-   */
-  @Deprecated
-  public void addFinalResource(String name) {
-    addResource(finalResources, name);
-  }
-
-  /** 
-   * Add a final resource.
-   * @deprecated Use {@link #addResource(URL)} instead  
-   */
-  @Deprecated
-  public void addFinalResource(URL url) {
-    addResource(finalResources, url);
-  }
-
-  /** 
-   * Add a final resource.
-   * @deprecated Use {@link #addResource(Path)} instead
-   */
-  @Deprecated
-  public void addFinalResource(Path file) {
-    addResource(finalResources, file);
   }
 
   /**
@@ -743,8 +676,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
   private synchronized Properties getProps() {
     if (properties == null) {
       properties = new Properties();
-      loadResources(properties, defaultResources, quietmode);
-      loadResources(properties, finalResources, quietmode);
       loadResources(properties, resources, quietmode);
       if (overlay!= null)
         properties.putAll(overlay);
@@ -956,10 +887,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
   public String toString() {
     StringBuffer sb = new StringBuffer();
     sb.append("Configuration: ");
-    sb.append("defaults: ");
-    toString(defaultResources, sb);
-    sb.append("final: ");
-    toString(finalResources, sb);
+    toString(resources, sb);
     return sb.toString();
   }
 
@@ -967,7 +895,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     ListIterator i = resources.listIterator();
     while (i.hasNext()) {
       if (i.nextIndex() != 0) {
-        sb.append(" , ");
+        sb.append(", ");
       }
       sb.append(i.next());
     }

@@ -656,18 +656,18 @@ public class StreamJob {
     msg("hadoopAliasConf_ = " + hadoopAliasConf_);
     config_ = new Configuration();
     if (!cluster_.equals("default")) {
-      config_.addFinalResource(new Path(getHadoopAliasConfFile()));
+      config_.addResource(new Path(getHadoopAliasConfFile()));
     } else {
       // use only defaults: hadoop-default.xml and hadoop-site.xml
     }
     System.out.println("additionalConfSpec_:" + additionalConfSpec_);
     if (additionalConfSpec_ != null) {
-      config_.addDefaultResource(new Path(additionalConfSpec_));
+      config_.addResource(new Path(additionalConfSpec_));
     }
     Iterator it = configPath_.iterator();
     while (it.hasNext()) {
       String pathName = (String) it.next();
-      config_.addFinalResource(new Path(pathName));
+      config_.addResource(new Path(pathName));
     }
 
     // general MapRed job properties

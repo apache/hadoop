@@ -185,6 +185,19 @@ public class TestConfiguration extends TestCase {
     //two spaces one after "this", one before "contains"
     assertEquals("this  contains a comment", conf.get("my.comment"));
   }
+  
+  public void testToString() throws IOException {
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    
+    String expectedOutput = 
+      "Configuration: hadoop-default.xml, hadoop-site.xml, " + 
+      fileResource.toString();
+    assertEquals(expectedOutput, conf.toString());
+  }
 
   BufferedWriter out;
 	

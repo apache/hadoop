@@ -10,6 +10,12 @@ Trunk (unreleased changes)
     the value configured on the jobtracker. InterTrackerProtocol
     version changed from 5 to 6. (Michael Bieniosek via omalley)
 
+    HADOOP-1843. Removed code from Configuration and JobConf deprecated by 
+    HADOOP-785 and a minor fix to Configuration.toString. Specifically the 
+    important change is that mapred-default.xml is no longer supported and 
+    Configuration no longer supports the notion of default/final resources.
+    (acmurthy) 
+
   NEW FEATURES
 
     HADOOP-1857.  Ability to run a script when a task fails to capture stack

@@ -133,7 +133,7 @@ public class ValueAggregatorJob {
     
     JobConf theJob = new JobConf(ValueAggregatorJob.class);
     if (specFile != null) {
-      theJob.addDefaultResource(specFile);
+      theJob.addResource(specFile);
     }
     FileSystem fs = FileSystem.get(theJob);
     theJob.setJobName("ValueAggregatorJob: " + jobName);
