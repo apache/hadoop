@@ -122,6 +122,10 @@ Trunk (unreleased changes)
     completed by another (possibly speculative) map-task. This ensures that 
     map-slots are not needlessly held-up. (acmurthy)
 
+    HADOOP-2212. ChecksumFileSystem.getSumBufferSize might throw 
+    java.lang.ArithmeticException. The fix is to initialize bytesPerChecksum
+    to 0.  (Michael Bieniosek via ddas)
+
 
 Release 0.15.1 - 2007-11-27
 

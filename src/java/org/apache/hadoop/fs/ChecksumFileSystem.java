@@ -37,7 +37,7 @@ import org.apache.hadoop.util.StringUtils;
  *****************************************************************/
 public abstract class ChecksumFileSystem extends FilterFileSystem {
   private static final byte[] CHECKSUM_VERSION = new byte[] {'c', 'r', 'c', 0};
-  private int bytesPerChecksum;
+  private int bytesPerChecksum = 512;
 
   public static double getApproxChkSumLength(long size) {
     return ChecksumFSOutputSummer.CHKSUM_AS_FRACTION * size;
