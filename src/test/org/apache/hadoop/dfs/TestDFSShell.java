@@ -21,10 +21,12 @@ import junit.framework.TestCase;
 import java.io.*;
 import java.security.*;
 import java.util.*;
+import java.util.zip.GZIPOutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This class tests commands from DFSShell.
@@ -169,6 +171,50 @@ public class TestDFSShell extends TestCase {
     } finally {
       try {dfs.close();} catch (Exception e) {}
       cluster.shutdown();
+    }
+  }
+
+  public void testText() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    PrintStream bak = null;
+    try {
+      cluster = new MiniDFSCluster(conf, 2, true, null);
+      FileSystem fs = cluster.getFileSystem();
+      Path root = new Path("/texttest");
+      fs.mkdirs(root);
+      OutputStream zout = new GZIPOutputStream(
+          fs.create(new Path(root, "file.gz")));
+      Random r = new Random();
+      ByteArrayOutputStream file = new ByteArrayOutputStream();
+      for (int i = 0; i < 1024; ++i) {
+        char c = Character.forDigit(r.nextInt(26) + 10, 36);
+        file.write(c);
+        zout.write(c);
+      }
+      zout.close();
+
+      bak = System.out;
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(out));
+
+      String[] argv = new String[2];
+      argv[0] = "-text";
+      argv[1] = new Path(root, "file.gz").toUri().getPath();
+      int ret = ToolRunner.run(new FsShell(), argv);
+      assertTrue("-text returned -1", 0 >= ret);
+      file.reset();
+      out.reset();
+      assertTrue("Output doesn't match input",
+          Arrays.equals(file.toByteArray(), out.toByteArray()));
+
+    } finally {
+      if (null != bak) {
+        System.setOut(bak);
+      }
+      if (null != cluster) {
+        cluster.shutdown();
+      }
     }
   }
 

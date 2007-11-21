@@ -72,6 +72,9 @@ Trunk (unreleased changes)
     HADOOP-2127. Added a pipes sort example to benchmark trivial pipes
     application versus trivial java application. (omalley via acmurthy)
 
+    HADOOP-2113. A new shell command "dfs -text" to view the contents of
+    a gziped or SequenceFile. (Chris Douglas via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
