@@ -68,19 +68,22 @@
                                    JobTracker tracker) throws IOException {
     ClusterStatus status = tracker.getClusterStatus();
     String tasksPerNode = status.getTaskTrackers() > 0 ?
-      percentFormat.format(((double)status.getMaxTasks()) / status.getTaskTrackers()) :
+      percentFormat.format(((double)(status.getMaxMapTasks() +
+                      status.getMaxReduceTasks())) / status.getTaskTrackers()):
       "-";
     out.print("<table border=\"2\" cellpadding=\"5\" cellspacing=\"2\">\n"+
               "<tr><th>Maps</th><th>Reduces</th>" + 
               "<th>Total Submissions</th>" +
-              "<th>Nodes</th><th>Task Capacity</th><th>Avg. Tasks/Node</th></tr>\n");
+              "<th>Nodes</th><th>Map Task Capacity</th>" +
+              "<th>Reduce Task Capacity</th><th>Avg. Tasks/Node</th></tr>\n");
     out.print("<tr><td>" + status.getMapTasks() + "</td><td>" +
               status.getReduceTasks() + "</td><td>" + 
               tracker.getTotalSubmissions() +
               "</td><td><a href=\"machines.jsp\">" +
               status.getTaskTrackers() +
-              "</a></td><td>" + status.getMaxTasks() +
-	      "</td><td>" + tasksPerNode +
+              "</a></td><td>" + status.getMaxMapTasks() +
+              "</td><td>" + status.getMaxReduceTasks() +
+              "</td><td>" + tasksPerNode +
               "</td></tr></table>\n");
   }%>
 

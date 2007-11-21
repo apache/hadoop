@@ -33,8 +33,10 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
    *changed.
    *Changed to 4 since killTask(String,boolean) is added
    *Version 4: added jobtracker state to ClusterStatus
+   *Version 5: max_tasks in ClusterStatus is replaced by
+   * max_map_tasks and max_reduce_tasks for HADOOP-1274
    */
-  public static final long versionID = 4L;
+  public static final long versionID = 5L;
 
   /**
    * Allocate a name for the job.

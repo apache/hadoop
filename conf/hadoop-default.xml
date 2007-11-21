@@ -603,9 +603,17 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>mapred.tasktracker.tasks.maximum</name>
+  <name>mapred.tasktracker.map.tasks.maximum</name>
   <value>2</value>
-  <description>The maximum number of tasks that will be run
+  <description>The maximum number of map tasks that will be run
+  simultaneously by a task tracker.
+  </description>
+</property>
+
+<property>
+  <name>mapred.tasktracker.reduce.tasks.maximum</name>
+  <value>2</value>
+  <description>The maximum number of reduce tasks that will be run
   simultaneously by a task tracker.
   </description>
 </property>

@@ -472,9 +472,12 @@ public class SortValidator {
           jobConf.getInt("test.sortvalidate.maps_per_host", 10);
       }
       if (noReduces == -1) {
-        noReduces = cluster.getTaskTrackers() * 
-          jobConf.getInt("test.sortvalidate.reduces_per_host", 
-                         cluster.getMaxTasks());
+        noReduces = (int) (cluster.getMaxReduceTasks() * 0.9);
+        String sortReduces = jobConf.get("test.sortvalidate.reduces_per_host");
+        if (sortReduces != null) {
+           noReduces = cluster.getTaskTrackers() * 
+                           Integer.parseInt(sortReduces);
+        }
       }
       jobConf.setNumMapTasks(noMaps);
       jobConf.setNumReduceTasks(noReduces);

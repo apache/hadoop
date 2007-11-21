@@ -324,7 +324,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
   }
   
   public ClusterStatus getClusterStatus() {
-    return new ClusterStatus(1, map_tasks, reduce_tasks, 1, 
+    return new ClusterStatus(1, map_tasks, reduce_tasks, 1, 1, 
                              JobTracker.State.RUNNING);
   }
 

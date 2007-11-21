@@ -51,6 +51,14 @@ Trunk (unreleased changes)
     HADOOP-1989. Support simulated DataNodes. This helps creating large virtual
     clusters for testing purposes.  (Sanjay Radia via dhruba)
     
+    HADOOP-1274. Support different number of mappers and reducers per
+    TaskTracker to  allow administrators to better configure and utilize
+    heterogenous clusters. 
+    Configuration changes to hadoop-default.xml:
+      add mapred.tasktracker.map.tasks.maximum (default value of 2)
+      add mapred.tasktracker.reduce.tasks.maximum (default value of 2)
+      remove mapred.tasktracker.tasks.maximum (deprecated for 0.16.0)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

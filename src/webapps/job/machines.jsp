@@ -25,7 +25,9 @@
       out.print("<table border=\"2\" cellpadding=\"5\" cellspacing=\"2\">\n");
       out.print("<tr><td align=\"center\" colspan=\"6\"><b>Task Trackers</b></td></tr>\n");
       out.print("<tr><td><b>Name</b></td><td><b>Host</b></td>" +
-                "<td><b># running tasks</b></td><td><b>Max Tasks</b></td>" +
+                "<td><b># running tasks</b></td>" +
+                "<td><b>Max Map Tasks</b></td>" +
+                "<td><b>Max Reduce Tasks</b></td>" +
                 "<td><b>Failures</b></td>" +
                 "<td><b>Seconds since heartbeat</b></td></tr>\n");
       int maxFailures = 0;
@@ -50,7 +52,8 @@
         out.print(tt.getHost() + ":" + tt.getHttpPort() + "/\">");
         out.print(tt.getTrackerName() + "</a></td><td>");
         out.print(tt.getHost() + "</td><td>" + numCurTasks +
-                  "</td><td>" + tt.getMaxTasks() + 
+                  "</td><td>" + tt.getMaxMapTasks() +
+                  "</td><td>" + tt.getMaxReduceTasks() + 
                   "</td><td>" + numFailures + 
                   "</td><td>" + sinceHeartbeat + "</td></tr>\n");
       }

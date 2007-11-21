@@ -46,7 +46,8 @@ class TaskTrackerStatus implements Writable {
   List<TaskStatus> taskReports;
     
   volatile long lastSeen;
-  int maxTasks;
+  private int maxMapTasks;
+  private int maxReduceTasks;
     
   /**
    */
@@ -58,15 +59,16 @@ class TaskTrackerStatus implements Writable {
    */
   public TaskTrackerStatus(String trackerName, String host, 
                            int httpPort, List<TaskStatus> taskReports, 
-                           int failures, int maxTasks) {
+                           int failures, int maxMapTasks,
+                           int maxReduceTasks) {
     this.trackerName = trackerName;
     this.host = host;
     this.httpPort = httpPort;
 
     this.taskReports = new ArrayList<TaskStatus>(taskReports);
     this.failures = failures;
-
-    this.maxTasks = maxTasks;
+    this.maxMapTasks = maxMapTasks;
+    this.maxReduceTasks = maxReduceTasks;
   }
 
   /**
@@ -158,10 +160,12 @@ class TaskTrackerStatus implements Writable {
    * and 1 reduce concurrently).
    * @return maximum tasks this node supports
    */
-  public int getMaxTasks() {
-    return maxTasks;
+  public int getMaxMapTasks() {
+    return maxMapTasks;
   }
-  
+  public int getMaxReduceTasks() {
+    return maxReduceTasks;
+  }  
   ///////////////////////////////////////////
   // Writable
   ///////////////////////////////////////////
@@ -170,8 +174,8 @@ class TaskTrackerStatus implements Writable {
     UTF8.writeString(out, host);
     out.writeInt(httpPort);
     out.writeInt(failures);
-    out.writeInt(maxTasks);
-
+    out.writeInt(maxMapTasks);
+    out.writeInt(maxReduceTasks);
     out.writeInt(taskReports.size());
     for (TaskStatus taskStatus : taskReports) {
       TaskStatus.writeTaskStatus(out, taskStatus);
@@ -183,8 +187,8 @@ class TaskTrackerStatus implements Writable {
     this.host = UTF8.readString(in);
     this.httpPort = in.readInt();
     this.failures = in.readInt();
-    this.maxTasks = in.readInt();
-
+    this.maxMapTasks = in.readInt();
+    this.maxReduceTasks = in.readInt();
     taskReports.clear();
     int numTasks = in.readInt();
     for (int i = 0; i < numTasks; i++) {

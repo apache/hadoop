@@ -54,7 +54,8 @@ public class ClusterStatus implements Writable {
   private int task_trackers;
   private int map_tasks;
   private int reduce_tasks;
-  private int max_tasks;
+  private int max_map_tasks;
+  private int max_reduce_tasks;
   private JobTracker.State state;
 
   ClusterStatus() {}
@@ -68,12 +69,13 @@ public class ClusterStatus implements Writable {
    * @param max the maximum no. of tasks in the cluster
    * @param state the {@link JobTracker.State} of the <code>JobTracker</code>
    */
-  ClusterStatus(int trackers, int maps, int reduces, int max,
-                JobTracker.State state) {
+  ClusterStatus(int trackers, int maps, int reduces, int maxMaps,
+                int maxReduces, JobTracker.State state) {
     task_trackers = trackers;
     map_tasks = maps;
     reduce_tasks = reduces;
-    max_tasks = max;
+    max_map_tasks = maxMaps;
+    max_reduce_tasks = maxReduces;
     this.state = state;
   }
   
@@ -109,11 +111,31 @@ public class ClusterStatus implements Writable {
    * Get the maximum capacity for running tasks in the cluster.
    * 
    * @return the maximum capacity for running tasks in the cluster.
+   * @deprecated Use {@link #getMaxMapTasks()} and/or
+   *  {@link #getMaxReduceTasks()}
    */
   public int getMaxTasks() {
-    return max_tasks;
+    return (max_map_tasks + max_reduce_tasks);
+  }
+  
+  /**
+   * Get the maximum capacity for running map tasks in the cluster.
+   * 
+   * @return the maximum capacity for running map tasks in the cluster.
+   */
+  public int getMaxMapTasks() {
+    return max_map_tasks;
   }
 
+  /**
+   * Get the maximum capacity for running reduce tasks in the cluster.
+   * 
+   * @return the maximum capacity for running reduce tasks in the cluster.
+   */
+  public int getMaxReduceTasks() {
+    return max_reduce_tasks;
+  }
+  
   /**
    * Get the current state of the <code>JobTracker</code>, 
    * as {@link JobTracker.State}
@@ -128,7 +150,8 @@ public class ClusterStatus implements Writable {
     out.writeInt(task_trackers);
     out.writeInt(map_tasks);
     out.writeInt(reduce_tasks);
-    out.writeInt(max_tasks);
+    out.writeInt(max_map_tasks);
+    out.writeInt(max_reduce_tasks);
     WritableUtils.writeEnum(out, state);
   }
 
@@ -136,7 +159,8 @@ public class ClusterStatus implements Writable {
     task_trackers = in.readInt();
     map_tasks = in.readInt();
     reduce_tasks = in.readInt();
-    max_tasks = in.readInt();
+    max_map_tasks = in.readInt();
+    max_reduce_tasks = in.readInt();
     state = WritableUtils.readEnum(in, JobTracker.State.class);
   }
 

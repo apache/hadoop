@@ -506,8 +506,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   private String trackerIdentifier;
   long startTime;
   int totalSubmissions = 0;
-
-  private int totalTaskCapacity;
+  private int totalMapTaskCapacity;
+  private int totalReduceTaskCapacity;
   private HostsFileReader hostsReader;
 
   //
@@ -1230,7 +1230,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     if (oldStatus != null) {
       totalMaps -= oldStatus.countMapTasks();
       totalReduces -= oldStatus.countReduceTasks();
-      totalTaskCapacity -= oldStatus.getMaxTasks();
+      totalMapTaskCapacity -= oldStatus.getMaxMapTasks();
+      totalReduceTaskCapacity -= oldStatus.getMaxReduceTasks();
       if (status == null) {
         taskTrackers.remove(trackerName);
       }
@@ -1238,7 +1239,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     if (status != null) {
       totalMaps += status.countMapTasks();
       totalReduces += status.countReduceTasks();
-      totalTaskCapacity += status.getMaxTasks();
+      totalMapTaskCapacity += status.getMaxMapTasks();
+      totalReduceTaskCapacity += status.getMaxReduceTasks();
       taskTrackers.put(trackerName, status);
     }
     return oldStatus != null;
@@ -1320,17 +1322,17 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       }   
     }
 
-    int maxCurrentTasks = tts.getMaxTasks();
-    
+    int maxCurrentMapTasks = tts.getMaxMapTasks();
+    int maxCurrentReduceTasks = tts.getMaxReduceTasks();
     // find out the maximum number of maps or reduces that we are willing
     // to run on any node.
     int maxMapLoad = 0;
     int maxReduceLoad = 0;
     if (numTaskTrackers > 0) {
-      maxMapLoad = Math.min(maxCurrentTasks,
+      maxMapLoad = Math.min(maxCurrentMapTasks,
                             (int) Math.ceil((double) remainingMapLoad / 
                                             numTaskTrackers));
-      maxReduceLoad = Math.min(maxCurrentTasks,
+      maxReduceLoad = Math.min(maxCurrentReduceTasks,
                                (int) Math.ceil((double) remainingReduceLoad
                                                / numTaskTrackers));
     }
@@ -1380,10 +1382,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           totalNeededMaps += job.desiredMaps();
           int padding = 0;
           if (numTaskTrackers > MIN_CLUSTER_SIZE_FOR_PADDING) {
-            padding = Math.min(maxCurrentTasks,
+            padding = Math.min(maxCurrentMapTasks,
                                (int)(totalNeededMaps * PAD_FRACTION));
           }
-          if (totalMaps + padding >= totalTaskCapacity) {
+          if (totalMaps + padding >= totalMapTaskCapacity) {
             break;
           }
         }
@@ -1418,10 +1420,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           int padding = 0;
           if (numTaskTrackers > MIN_CLUSTER_SIZE_FOR_PADDING) {
             padding = 
-              Math.min(maxCurrentTasks,
+              Math.min(maxCurrentReduceTasks,
                        (int) (totalNeededReduces * PAD_FRACTION));
           }
-          if (totalReduces + padding >= totalTaskCapacity) {
+          if (totalReduces + padding >= totalReduceTaskCapacity) {
             break;
           }
         }
@@ -1577,7 +1579,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       return new ClusterStatus(taskTrackers.size(),
                                totalMaps,
                                totalReduces,
-                               totalTaskCapacity,
+                               totalMapTaskCapacity,
+                               totalReduceTaskCapacity, 
                                state);          
     }
   }

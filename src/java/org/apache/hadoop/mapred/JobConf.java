@@ -931,8 +931,8 @@ public class JobConf extends Configuration {
    * 
    * <p>The right number of reduces seems to be <code>0.95</code> or 
    * <code>1.75</code> multiplied by (&lt;<i>no. of nodes</i>&gt; * 
-   * <a href="{@docRoot}/../hadoop-default.html#mapred.tasktracker.tasks.maximum">
-   * mapred.tasktracker.tasks.maximum</a>).
+   * <a href="{@docRoot}/../hadoop-default.html#mapred.tasktracker.reduce.tasks.maximum">
+   * mapred.tasktracker.reduce.tasks.maximum</a>).
    * </p>
    * 
    * <p>With <code>0.95</code> all of the reduces can launch immediately and 

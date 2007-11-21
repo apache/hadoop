@@ -35,8 +35,10 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * version 5 introduced that removes locateMapOutputs and instead uses
    * getTaskCompletionEvents to figure finished maps and fetch the outputs
    * version 6 adds maxTasks to TaskTrackerStatus for HADOOP-1245
+   * version 7 replaces maxTasks by maxMapTasks and maxReduceTasks in 
+   * TaskTrackerStatus for HADOOP-1274
    */
-  public static final long versionID = 6L;
+  public static final long versionID = 7L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;
