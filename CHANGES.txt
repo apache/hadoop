@@ -59,6 +59,9 @@ Trunk (unreleased changes)
       add mapred.tasktracker.reduce.tasks.maximum (default value of 2)
       remove mapred.tasktracker.tasks.maximum (deprecated for 0.16.0)
 
+    HADOOP-2104. Adds a description to the ant targets. This makes the 
+    output of "ant -projecthelp" sensible. (Chris Douglas via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

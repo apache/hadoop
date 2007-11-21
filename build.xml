@@ -314,8 +314,8 @@
 
   </target>
 
-  <target name="compile-core" 
-          depends="clover,compile-core-classes,compile-core-native,compile-c++">
+  <target name="compile-core"
+          depends="clover,compile-core-classes,compile-core-native,compile-c++" description="Compile core only">
   </target>
 
   <target name="compile-contrib" depends="compile-core">
@@ -325,7 +325,7 @@
      </subant>  	
   </target>
   
-  <target name="compile" depends="compile-core, compile-contrib, compile-ant-tasks">
+  <target name="compile" depends="compile-core, compile-contrib, compile-ant-tasks" description="Compile core, contrib">
   </target>
 
   <target name="compile-examples" 
@@ -350,7 +350,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="jar" depends="compile-core">
+  <target name="jar" depends="compile-core" description="Make hadoop.jar">
     <tar compression="gzip" destfile="${build.classes}/bin.tgz">
       <tarfileset dir="bin" mode="755"/>
     </tar>
@@ -376,7 +376,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="examples" depends="jar, compile-examples">
+  <target name="examples" depends="jar, compile-examples" description="Make the Hadoop examples jar.">
     <jar jarfile="${build.dir}/${final.name}-examples.jar"
          basedir="${build.examples}">
       <manifest>
@@ -391,7 +391,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="metrics.jar" depends="compile-core">
+  <target name="metrics.jar" depends="compile-core" description="Make the Hadoop metrics jar. (for use outside Hadoop)">
     <jar jarfile="${build.dir}/hadoop-metrics-${version}.jar"
          basedir="${build.classes}">
       <include name="**/metrics/**" />
@@ -476,7 +476,7 @@
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     --> 
   <!-- ================================================================== -->
-  <target name="test-core" depends="compile-core-test">
+  <target name="test-core" depends="compile-core-test" description="Run core unit tests">
 
     <delete dir="${test.build.data}"/>
     <mkdir dir="${test.build.data}"/>
@@ -511,18 +511,18 @@
     <fail if="tests.failed">Tests failed!</fail>
   </target>   
 
-  <target name="test-contrib" depends="compile-core, compile-core-test">
+  <target name="test-contrib" depends="compile-core, compile-core-test" description="Run contrib unit tests">
     <subant target="test">
        <property name="version" value="${version}"/>
        <fileset file="${contrib.dir}/build.xml"/>
     </subant> 
   </target>
 	  
-  <target name="test" depends="test-core, test-contrib">
+  <target name="test" depends="test-core, test-contrib" description="Run core, contrib unit tests">
   </target>
 
   <!-- Run all unit tests, not just Test*, and use non-test configuration. -->
-  <target name="test-cluster">
+  <target name="test-cluster" description="Run all unit tests, not just Test*, and use non-test configuration.">
     <antcall target="test">
       <param name="test.include" value="*"/>
       <param name="test.classpath.id" value="test.cluster.classpath"/>
@@ -535,7 +535,7 @@
   <!-- ================================================================== -->
   <!-- Run optional third-party tool targets                              --> 
   <!-- ================================================================== -->
-  <target name="checkstyle" depends="check-for-checkstyle" if="checkstyle.present">
+  <target name="checkstyle" depends="check-for-checkstyle" if="checkstyle.present" description="Run optional third-party tool targets">
  	<taskdef resource="checkstyletask.properties">
       <classpath>
         <fileset dir="${lib.dir}">
@@ -568,7 +568,7 @@
   </target>
 
   <property name="findbugs.home" value=""/>
-  <target name="findbugs" depends="check-for-findbugs, tar" if="findbugs.present">
+  <target name="findbugs" depends="check-for-findbugs, tar" if="findbugs.present" description="Run findbugs if present">
     <property name="findbugs.out.dir" value="${test.build.dir}/findbugs"/>
     <property name="findbugs.exclude.file" value="${test.src.dir}/findbugsExcludeFile.xml"/>
     <property name="findbugs.report.htmlfile" value="${findbugs.out.dir}/hadoop-findbugs-report.html"/>
@@ -607,7 +607,7 @@
   <!-- ================================================================== -->
   <!-- Documentation                                                      -->
   <!-- ================================================================== -->
-  <target name="javadoc" depends="default-doc">
+  <target name="javadoc" depends="default-doc" description="Generate documentation">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
       overview="${src.dir}/overview.html"
@@ -660,7 +660,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="jar, javadoc, examples, compile-core-test, deploy-contrib, ant-tasks">
+  <target name="package" depends="jar, javadoc, examples, compile-core-test, deploy-contrib, ant-tasks" description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
     <mkdir dir="${dist.dir}/contrib"/>
@@ -741,7 +741,7 @@
   <!-- ================================================================== -->
   <!-- Make release tarball                                               -->
   <!-- ================================================================== -->
-  <target name="tar" depends="package">
+  <target name="tar" depends="package" description="Make release tarball">
     <tar compression="gzip" longfile="gnu"
       destfile="${build.dir}/${final.name}.tar.gz">
       <tarfileset dir="${build.dir}" mode="664">
@@ -761,7 +761,7 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean" depends="clean-contrib">
+  <target name="clean" depends="clean-contrib" description="Clean.  Delete the build files, and their directories">
   	<delete dir="${build.dir}"/>
   </target>
 
