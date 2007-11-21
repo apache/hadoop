@@ -31,7 +31,6 @@
   <property name="build.examples" location="${build.dir}/examples"/>
   <property name="hadoop.log.dir" location="${build.dir}/test/logs"/>
   <!-- all jars together -->
-  <property name="deploy.dir" location="${hadoop.root}/build/"/>
   <property name="javac.deprecation" value="off"/>
   <property name="javac.debug" value="on"/>
 
@@ -156,20 +155,22 @@
     </jar>
   </target>
   
-  <target name="deploy" depends="jar, jar-examples" unless="skip.contrib">
-    <echo message="contrib: ${name}"/>
-    <mkdir dir="${deploy.dir}"/>
-    <copy file="${build.dir}/hadoop-${version}-${name}.jar"
-          todir="${deploy.dir}"/>
-    <!-- <copy todir="${deploy.dir}" flatten="true">
-      <fileset refid="lib.jars"/>
-    </copy> -->
+  <!-- ====================================================== -->
+  <!-- Package a Hadoop contrib                               -->
+  <!-- ====================================================== -->
+  <target name="package" depends="jar, jar-examples" unless="skip.contrib"> 
+    <mkdir dir="${dist.dir}/contrib/${name}"/>
+    <copy todir="${dist.dir}/contrib/${name}" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${build.dir}">
+        <include name="hadoop-${version}-${name}.jar" />
+      </fileset>
+    </copy>
   </target>
   
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     -->
   <!-- ================================================================== -->
-  <target name="test" depends="compile-test, deploy" if="test.available">
+  <target name="test" depends="compile-test, compile, compile-examples" if="test.available">
     <echo message="contrib: ${name}"/>
     <delete dir="${hadoop.log.dir}"/>
     <mkdir dir="${hadoop.log.dir}"/>
@@ -213,7 +214,6 @@
   <target name="clean">
     <echo message="contrib: ${name}"/>
     <delete dir="${build.dir}"/>
-    <!--<delete dir="${deploy.dir}"/> -->
   </target>
 
 </project>

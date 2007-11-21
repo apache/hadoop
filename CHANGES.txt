@@ -75,6 +75,10 @@ Trunk (unreleased changes)
     HADOOP-2113. A new shell command "dfs -text" to view the contents of
     a gziped or SequenceFile. (Chris Douglas via dhruba)
 
+    HADOOP-2207.  Add a "package" target for contrib modules that
+    permits each to determine what files are copied into release
+    builds.  (stack via cutting)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

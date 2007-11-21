@@ -1,17 +1,25 @@
 <?xml version="1.0"?>
 
-<project name="hadoopcontrib" default="deploy" basedir=".">
+<project name="hadoopcontrib" default="compile" basedir=".">
   
   <!-- In case one of the contrib subdirectories -->
   <!-- fails the build or test targets and you cannot fix it: -->
   <!-- Then add to fileset: excludes="badcontrib/build.xml" -->
+
+  <!-- ====================================================== -->
+  <!-- Compile contribs.                                      -->
+  <!-- ====================================================== -->
+  <target name="compile">
+    <subant target="compile">
+      <fileset dir="." includes="*/build.xml"/>
+    </subant>
+  </target>
   
   <!-- ====================================================== -->
-  <!-- Build & deploy all the contrib jars.                   -->
+  <!-- Package contrib jars.                                  -->
   <!-- ====================================================== -->
-  
-  <target name="deploy">
-    <subant target="deploy">
+  <target name="package">
+    <subant target="package">
       <fileset dir="." includes="*/build.xml"/>
     </subant>
   </target>

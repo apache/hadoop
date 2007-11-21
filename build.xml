@@ -319,7 +319,7 @@
   </target>
 
   <target name="compile-contrib" depends="compile-core">
-     <subant target="deploy">
+     <subant target="compile">
         <property name="version" value="${version}"/>
         <fileset file="${contrib.dir}/build.xml"/>
      </subant>  	
@@ -660,7 +660,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="jar, javadoc, examples, compile-core-test, deploy-contrib, ant-tasks" description="Build distribution">
+  <target name="package" depends="jar, javadoc, examples, compile-core-test, ant-tasks" description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
     <mkdir dir="${dist.dir}/contrib"/>
@@ -681,11 +681,13 @@
 	  <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
     </exec>
 
-    <copy todir="${dist.dir}/contrib" includeEmptyDirs="false" flatten="true">
-      <fileset dir="build/contrib">
-        <include name="*/*.jar"/>
-      </fileset>
-    </copy>
+    <subant target="package">
+      <!--Pass down the version in case its needed again and the target
+      distribution directory so contribs know where to install to.-->
+      <property name="version" value="${version}"/>
+      <property name="dist.dir" value="${dist.dir}"/>
+      <fileset file="${contrib.dir}/build.xml"/>
+    </subant>  	
 
     <copy todir="${dist.dir}/webapps">
       <fileset dir="${build.webapps}"/>
@@ -766,15 +768,9 @@
   </target>
 
   <!-- ================================================================== -->
-  <!-- Contrib targets. For now, they must be called explicitely          -->
+  <!-- Clean contrib target. For now, must be called explicitly           -->
   <!-- Using subant instead of ant as a workaround for 30569              -->
   <!-- ================================================================== -->
-  <target name="deploy-contrib" depends="compile-core">
-     <subant target="deploy">        
-        <property name="version" value="${version}"/>
-        <fileset file="src/contrib/build.xml"/>
-     </subant>  	
-  </target>
   <target name="clean-contrib">
      <subant target="clean">        
         <fileset file="src/contrib/build.xml"/>
