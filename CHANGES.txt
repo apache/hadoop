@@ -63,6 +63,9 @@ Trunk (unreleased changes)
     HADOOP-2104. Adds a description to the ant targets. This makes the 
     output of "ant -projecthelp" sensible. (Chris Douglas via ddas)
 
+    HADOOP-2127. Added a pipes sort example to benchmark trivial pipes
+    application versus trivial java application. (omalley via acmurthy)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
