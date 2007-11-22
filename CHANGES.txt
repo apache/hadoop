@@ -135,10 +135,6 @@ Trunk (unreleased changes)
     HADOOP-2078. An zero size file may have no blocks associated with it.
     (Konstantin Shvachko via dhruba)
 
-    HADOOP-1281. Kill map-tasks when the parent TaskInProgress has been 
-    completed by another (possibly speculative) map-task. This ensures that 
-    map-slots are not needlessly held-up. (acmurthy)
-
     HADOOP-2212. ChecksumFileSystem.getSumBufferSize might throw 
     java.lang.ArithmeticException. The fix is to initialize bytesPerChecksum
     to 0.  (Michael Bieniosek via ddas)

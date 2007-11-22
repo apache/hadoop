@@ -330,7 +330,8 @@ class TaskInProgress {
         (job.getStatus().getRunState() != JobStatus.RUNNING)) {
       tasksReportedClosed.add(taskid);
       return true;
-    } else if (isComplete() && !tasksReportedClosed.contains(taskid)) {
+    } else if (!isMapTask() && isComplete() && 
+               !tasksReportedClosed.contains(taskid)){
       tasksReportedClosed.add(taskid);
       return true; 
     } else {
