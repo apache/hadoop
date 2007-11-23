@@ -25,7 +25,6 @@ import java.io.Writer;
 
 import jline.ConsoleReader;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.shell.Command;
 import org.apache.hadoop.hbase.shell.HelpCommand;
 import org.apache.hadoop.hbase.shell.ReturnMsg;
@@ -43,7 +42,6 @@ public class Shell {
   /** audible keyboard bells */
   public static final boolean DEFAULT_BELL_ENABLED = true;
   
-
   /** Return the boolean value indicating whether end of command or not */
   static boolean isEndOfCommand(String line) {
     return (line.lastIndexOf(';') > -1) ? true : false;
@@ -51,7 +49,7 @@ public class Shell {
 
   /** Return the string of prompt start string */
   private static String getPrompt(final StringBuilder queryStr) {
-    return (queryStr.toString().equals("")) ? "Hbase> " : "   --> ";
+    return (queryStr.toString().equals("")) ? "hql > " : "  --> ";
   }
 
   /**
