@@ -263,6 +263,8 @@ public class StatusHttpServer {
     public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
 
+      response.setContentType("image/svg+xml");
+
       JobTracker tracker = 
         (JobTracker) getServletContext().getAttribute("job.tracker");
       

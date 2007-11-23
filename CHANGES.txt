@@ -183,6 +183,8 @@ Release 0.15.1 - 2007-11-27
     HADOOP-2246.  Moved the changelog for HADOOP-1851 from the NEW FEATURES 
     section to the INCOMPATIBLE CHANGES section. (acmurthy)
 
+    HADOOP-2238.  Fix TaskGraphServlet so that it sets the content type of 
+    the response appropriately.  (Paul Saab via enis)
 
 Release 0.15.0 - 2007-11-2
 
