@@ -139,10 +139,6 @@ Trunk (unreleased changes)
     java.lang.ArithmeticException. The fix is to initialize bytesPerChecksum
     to 0.  (Michael Bieniosek via ddas)
 
-    HADOOP-2245.  Fix LocalJobRunner to generate unique mapids across jobs by
-    incorporating the jobid. Also adds a test-case for JobControl vis-a-vis the 
-    LocalJobRunner. (Adrian Woodhead via acmurthy)
-
     HADOOP-2216.  Fix jobtasks.jsp to ensure that it first collects the
     taskids which satisfy the filtering criteria and then use that list to
     print out only the required task-reports, previously it was oblivious to

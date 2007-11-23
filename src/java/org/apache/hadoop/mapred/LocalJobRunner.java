@@ -114,7 +114,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
         }
         DataOutputBuffer buffer = new DataOutputBuffer();
         for (int i = 0; i < splits.length; i++) {
-          String mapId = jobId + "_map_" + idFormat.format(i);
+          String mapId = "map_" + idFormat.format(i); 
           mapIds.add(mapId);
           buffer.reset();
           splits[i].write(buffer);

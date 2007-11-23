@@ -139,9 +139,11 @@ public class TestJobControl extends junit.framework.TestCase {
    * Then it creates a JobControl object and add the 4 jobs to the JobControl object.
    * Finally, it creates a thread to run the JobControl object and monitors/reports
    * the job states.
+   * 
+   * @param args
    */
   public static void doJobControlTest() throws Exception {
-
+        
     Configuration defaults = new Configuration();
     FileSystem fs = FileSystem.get(defaults);
     Path rootDataDir = new Path(System.getProperty("test.build.data", "."), "TestJobControlData");
@@ -151,29 +153,29 @@ public class TestJobControl extends junit.framework.TestCase {
     Path outdir_3 = new Path(rootDataDir, "outdir_3");
     Path outdir_4 = new Path(rootDataDir, "outdir_4");
 
-    JobControlTestUtils.cleanData(fs, indir);
-    JobControlTestUtils.generateData(fs, indir);
+    cleanData(fs, indir);
+    generateData(fs, indir);
 
-    JobControlTestUtils.cleanData(fs, outdir_1);
-    JobControlTestUtils.cleanData(fs, outdir_2);
-    JobControlTestUtils.cleanData(fs, outdir_3);
-    JobControlTestUtils.cleanData(fs, outdir_4);
+    cleanData(fs, outdir_1);
+    cleanData(fs, outdir_2);
+    cleanData(fs, outdir_3);
+    cleanData(fs, outdir_4);
 
     ArrayList<Job> dependingJobs = null;
 
     ArrayList<Path> inPaths_1 = new ArrayList<Path>();
     inPaths_1.add(indir);
-    JobConf jobConf_1 = JobControlTestUtils.createCopyJob(inPaths_1, outdir_1);
+    JobConf jobConf_1 = createCopyJob(inPaths_1, outdir_1);
     Job job_1 = new Job(jobConf_1, dependingJobs);
     ArrayList<Path> inPaths_2 = new ArrayList<Path>();
     inPaths_2.add(indir);
-    JobConf jobConf_2 = JobControlTestUtils.createCopyJob(inPaths_2, outdir_2);
+    JobConf jobConf_2 = createCopyJob(inPaths_2, outdir_2);
     Job job_2 = new Job(jobConf_2, dependingJobs);
 
     ArrayList<Path> inPaths_3 = new ArrayList<Path>();
     inPaths_3.add(outdir_1);
     inPaths_3.add(outdir_2);
-    JobConf jobConf_3 = JobControlTestUtils.createCopyJob(inPaths_3, outdir_3);
+    JobConf jobConf_3 = createCopyJob(inPaths_3, outdir_3);
     dependingJobs = new ArrayList<Job>();
     dependingJobs.add(job_1);
     dependingJobs.add(job_2);
@@ -181,7 +183,7 @@ public class TestJobControl extends junit.framework.TestCase {
 
     ArrayList<Path> inPaths_4 = new ArrayList<Path>();
     inPaths_4.add(outdir_3);
-    JobConf jobConf_4 = JobControlTestUtils.createCopyJob(inPaths_4, outdir_4);
+    JobConf jobConf_4 = createCopyJob(inPaths_4, outdir_4);
     dependingJobs = new ArrayList<Job>();
     dependingJobs.add(job_3);
     Job job_4 = new Job(jobConf_4, dependingJobs);
