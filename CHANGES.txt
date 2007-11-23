@@ -178,6 +178,9 @@ Release 0.15.1 - 2007-11-27
     by HADOOP-1917 weren't correctly copied over to the trunk/docs directory. 
     Also fixed a couple of minor typos and broken links. (acmurthy)
 
+    HADOOP-2246.  Moved the changelog for HADOOP-1851 from the NEW FEATURES 
+    section to the INCOMPATIBLE CHANGES section. (acmurthy)
+
 
 Release 0.15.0 - 2007-11-2
 
@@ -214,6 +217,10 @@ Release 0.15.0 - 2007-11-2
     datanodes, dead datanodes or all datanodes. Client Protocol version
     changed from 17 to 18.  (Hairong Kuang via dhruba)
 
+    HADOOP-1851.  Permit specification of map output compression type
+    and codec, independent of the final output's compression
+    parameters.  (Arun C Murthy via cutting)
+
   NEW FEATURES
 
     HADOOP-89.  A client can access file data even before the creator
@@ -247,10 +254,6 @@ Release 0.15.0 - 2007-11-2
     HADOOP-1914. Introduce a new NamenodeProtocol to allow secondary 
     namenodes and rebalancing processes to communicate with a primary 
     namenode.  (Hairong Kuang via dhruba)
-
-    HADOOP-1851.  Permit specification of map output compression type
-    and codec, independent of the final output's compression
-    parameters.  (Arun C Murthy via cutting)
 
     HADOOP-1963.  Add a FileSystem implementation for the Kosmos
     Filesystem (KFS).  (Sriram Rao via cutting)
