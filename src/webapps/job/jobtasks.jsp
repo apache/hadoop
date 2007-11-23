@@ -57,17 +57,20 @@
   }
   // Filtering the reports if some filter is specified
   if (!"all".equals(state)) {
+    List<String> filteredReportsTaskIds = new ArrayList<String>();
     List<TaskReport> filteredReports = new ArrayList<TaskReport>();
-    for (int i = 0; i < reports.length; ++i) {
-      if ("completed".equals(state) && tasks[i].isComplete()) {
-        filteredReports.add(reports[i]);
-      } else if ("running".equals(state) && tasks[i].isRunning()) {
-        filteredReports.add(reports[i]);
-      } else if ("killed".equals(state) && tasks[i].wasKilled()) {
-        filteredReports.add(reports[i]);
-      } else if ("pending".equals(state) 
-                 && !(tasks[i].isComplete() || tasks[i].isRunning() 
-                      || tasks[i].wasKilled())) {
+    for (int i = 0; i < tasks.length; ++i) {
+      if (("completed".equals(state) && tasks[i].isComplete()) 
+          || ("running".equals(state) && tasks[i].isRunning()) 
+          || ("killed".equals(state) && tasks[i].wasKilled()) 
+          || ("pending".equals(state)  && !(tasks[i].isComplete() 
+                                            || tasks[i].isRunning() 
+                                            || tasks[i].wasKilled()))) {
+        filteredReportsTaskIds.add(tasks[i].getTIPId());
+      }
+    }
+    for (int i = 0 ; i < reports.length; ++i) {
+      if (filteredReportsTaskIds.contains(reports[i].getTaskId())) {
         filteredReports.add(reports[i]);
       }
     }

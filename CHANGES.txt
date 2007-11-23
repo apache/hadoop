@@ -143,6 +143,12 @@ Trunk (unreleased changes)
     incorporating the jobid. Also adds a test-case for JobControl vis-a-vis the 
     LocalJobRunner. (Adrian Woodhead via acmurthy)
 
+    HADOOP-2216.  Fix jobtasks.jsp to ensure that it first collects the
+    taskids which satisfy the filtering criteria and then use that list to
+    print out only the required task-reports, previously it was oblivious to
+    the filtering and hence used the wrong index into the array of task-reports. 
+    (Amar Kamat via acmurthy)
+
 
 Release 0.15.1 - 2007-11-27
 
