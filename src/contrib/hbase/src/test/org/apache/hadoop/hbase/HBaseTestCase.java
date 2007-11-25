@@ -123,8 +123,8 @@ public abstract class HBaseTestCase extends TestCase {
     FileSystem fs = dir.getFileSystem(c);
     fs.mkdirs(regionDir);
     return new HRegion(dir,
-      new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME), conf),
-      fs, conf, info, null);
+      new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME), conf,
+          null), fs, conf, info, null, null);
   }
   
   protected HTableDescriptor createTableDescriptor(final String name) {
@@ -365,7 +365,7 @@ public abstract class HBaseTestCase extends TestCase {
       return region.getFull(row);
     }
     public void flushcache() throws IOException {
-      this.region.internalFlushcache(this.region.snapshotMemcaches());
+      this.region.flushcache();
     }
   }
 

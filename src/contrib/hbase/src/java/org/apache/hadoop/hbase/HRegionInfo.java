@@ -78,7 +78,18 @@ public class HRegionInfo implements WritableComparable {
   private boolean split;
   private Text startKey;
   private HTableDescriptor tableDesc;
-
+  private int hashCode;
+  
+  private void setHashCode() {
+    int result = this.regionName.hashCode();
+    result ^= Long.valueOf(this.regionId).hashCode();
+    result ^= this.startKey.hashCode();
+    result ^= this.endKey.hashCode();
+    result ^= Boolean.valueOf(this.offLine).hashCode();
+    result ^= this.tableDesc.hashCode();
+    this.hashCode = result;
+  }
+  
   /** Used to construct the HRegionInfo for the root and first meta regions */
   private HRegionInfo(long regionId, HTableDescriptor tableDesc) {
     this.regionId = regionId;
@@ -89,6 +100,7 @@ public class HRegionInfo implements WritableComparable {
         DELIMITER + regionId);
     this.split = false;
     this.startKey = new Text();
+    setHashCode();
   }
 
   /** Default constructor - creates empty object */
@@ -100,6 +112,7 @@ public class HRegionInfo implements WritableComparable {
     this.split = false;
     this.startKey = new Text();
     this.tableDesc = new HTableDescriptor();
+    this.hashCode = 0;
   }
   
   /**
@@ -152,6 +165,7 @@ public class HRegionInfo implements WritableComparable {
     }
     
     this.tableDesc = tableDesc;
+    setHashCode();
   }
   
   /** @return the endKey */
@@ -232,13 +246,7 @@ public class HRegionInfo implements WritableComparable {
    */
   @Override
   public int hashCode() {
-    int result = this.regionName.hashCode();
-    result ^= Long.valueOf(this.regionId).hashCode();
-    result ^= this.startKey.hashCode();
-    result ^= this.endKey.hashCode();
-    result ^= Boolean.valueOf(this.offLine).hashCode();
-    result ^= this.tableDesc.hashCode();
-    return result;
+    return this.hashCode;
   }
 
   //
@@ -256,6 +264,7 @@ public class HRegionInfo implements WritableComparable {
     out.writeBoolean(split);
     startKey.write(out);
     tableDesc.write(out);
+    out.writeInt(hashCode);
   }
   
   /**
@@ -269,6 +278,7 @@ public class HRegionInfo implements WritableComparable {
     this.split = in.readBoolean();
     this.startKey.readFields(in);
     this.tableDesc.readFields(in);
+    this.hashCode = in.readInt();
   }
   
   //

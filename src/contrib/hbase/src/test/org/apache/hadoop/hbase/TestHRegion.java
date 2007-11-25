@@ -98,12 +98,12 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     fs.mkdirs(parentdir);
     newlogdir = new Path(parentdir, "log");
 
-    log = new HLog(fs, newlogdir, conf);
+    log = new HLog(fs, newlogdir, conf, null);
     desc = new HTableDescriptor("test");
     desc.addFamily(new HColumnDescriptor("contents:"));
     desc.addFamily(new HColumnDescriptor("anchor:"));
     r = new HRegion(parentdir, log, fs, conf, 
-        new HRegionInfo(desc, null, null), null);
+        new HRegionInfo(desc, null, null), null, null);
     region = new HRegionIncommon(r);
   }
 

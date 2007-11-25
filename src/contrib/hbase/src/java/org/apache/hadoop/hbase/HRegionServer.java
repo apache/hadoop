@@ -26,15 +26,19 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
-import java.util.List;
-import java.util.ListIterator;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Vector;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.DelayQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -125,27 +129,79 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** region server process name */
   public static final String REGIONSERVER = "regionserver";
 
+  /** Queue entry passed to flusher, compactor and splitter threads */
+  class QueueEntry implements Delayed {
+    private final HRegion region;
+    private long expirationTime;
+
+    QueueEntry(HRegion region, long expirationTime) {
+      this.region = region;
+      this.expirationTime = expirationTime;
+    }
+    
+    /** {@inheritDoc} */
+    @Override
+    public boolean equals(Object o) {
+      QueueEntry other = (QueueEntry) o;
+      return this.hashCode() == other.hashCode();
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public int hashCode() {
+      return this.region.getRegionInfo().hashCode();
+    }
+
+    /** {@inheritDoc} */
+    public long getDelay(TimeUnit unit) {
+      return unit.convert(this.expirationTime - System.currentTimeMillis(),
+          TimeUnit.MILLISECONDS);
+    }
+
+    /** {@inheritDoc} */
+    public int compareTo(Delayed o) {
+      long delta = this.getDelay(TimeUnit.MILLISECONDS) -
+        o.getDelay(TimeUnit.MILLISECONDS);
+
+      int value = 0;
+      if (delta > 0) {
+        value = 1;
+        
+      } else if (delta < 0) {
+        value = -1;
+      }
+      return value;
+    }
+
+    /** @return the region */
+    public HRegion getRegion() {
+      return region;
+    }
+
+    /** @param expirationTime the expirationTime to set */
+    public void setExpirationTime(long expirationTime) {
+      this.expirationTime = expirationTime;
+    }
+  }
+  
   // Check to see if regions should be split
-  private final Thread splitOrCompactCheckerThread;
+  final Splitter splitter;
   // Needed at shutdown. On way out, if can get this lock then we are not in
   // middle of a split or compaction: i.e. splits/compactions cannot be
   // interrupted.
-  protected final Integer splitOrCompactLock = new Integer(0);
+  final Integer splitterLock = new Integer(0);
   
-  /*
-   * Runs periodically to determine if regions need to be compacted or split
-   */
-  class SplitOrCompactChecker extends Chore
-  implements RegionUnavailableListener {
+  /** Split regions on request */
+  class Splitter extends Thread implements RegionUnavailableListener {
+    private final BlockingQueue<QueueEntry> splitQueue =
+      new LinkedBlockingQueue<QueueEntry>();
+
     private HTable root = null;
     private HTable meta = null;
 
-    /**
-     * @param stop
-     */
-    public SplitOrCompactChecker(final AtomicBoolean stop) {
-      super(conf.getInt("hbase.regionserver.thread.splitcompactcheckfrequency",
-        30 * 1000), stop);
+    /** constructor */
+    public Splitter() {
+      super();
     }
 
     /** {@inheritDoc} */
@@ -178,35 +234,50 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     
     /**
-     * Scan for splits or compactions to run.  Run any we find.
+     * Perform region splits if necessary
      */
     @Override
-    protected void chore() {
-      // Don't interrupt us while we're working
-      synchronized (splitOrCompactLock) {
-        checkForSplitsOrCompactions();
-      }
-    }
-    
-    private void checkForSplitsOrCompactions() {
-      // Grab a list of regions to check
-      List<HRegion> nonClosedRegionsToCheck = getRegionsToCheck();
-      for(HRegion cur: nonClosedRegionsToCheck) {
+    public void run() {
+      while (!stopRequested.get()) {
+        QueueEntry e = null;
         try {
-          if (cur.compactIfNeeded()) {
-            // After compaction, it probably needs splitting.  May also need
-            // splitting just because one of the memcache flushes was big.
-            split(cur);
-          }
+          e = splitQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
+          
+        } catch (InterruptedException ex) {
+          continue;
+        }
+        if (e == null) {
+          continue;
+        }
+        synchronized (splitterLock) { // Don't interrupt us while we're working
+          try {
+            split(e.getRegion());
+            
+          } catch (IOException ex) {
+            LOG.error("Split failed for region " +
+                e.getRegion().getRegionName(),
+                RemoteExceptionHandler.checkIOException(ex));
+            if (!checkFileSystem()) {
+              break;
+            }
 
-        } catch(IOException e) {
-          //TODO: What happens if this fails? Are we toast?
-          LOG.error("Split or compaction failed", e);
-          if (!checkFileSystem()) {
-            break;
+          } catch (Exception ex) {
+            LOG.error("Split failed on region " +
+                e.getRegion().getRegionName(), ex);
+            if (!checkFileSystem()) {
+              break;
+            }
           }
         }
       }
+      LOG.info(getName() + " exiting");
+    }
+    
+    /**
+     * @param e entry indicating which region needs to be split
+     */
+    public void splitRequested(QueueEntry e) {
+      splitQueue.add(e);
     }
     
     private void split(final HRegion region) throws IOException {
@@ -271,54 +342,181 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
 
-  // Cache flushing  
-  private final Thread cacheFlusherThread;
+  // Compactions
+  final Compactor compactor;
   // Needed during shutdown so we send an interrupt after completion of a
-  // flush, not in the midst.
-  protected final Integer cacheFlusherLock = new Integer(0);
-  
-  /* Runs periodically to flush memcache.
-   */
-  class Flusher extends Chore {
-    /**
-     * @param period
-     * @param stop
-     */
-    public Flusher(final int period, final AtomicBoolean stop) {
-      super(period, stop);
+  // compaction, not in the midst.
+  final Integer compactionLock = new Integer(0);
+
+  /** Compact region on request */
+  class Compactor extends Thread {
+    private final BlockingQueue<QueueEntry> compactionQueue =
+      new LinkedBlockingQueue<QueueEntry>();
+
+    /** constructor */
+    public Compactor() {
+      super();
     }
     
+    /** {@inheritDoc} */
     @Override
-    protected void chore() {
-      synchronized(cacheFlusherLock) {
-        checkForFlushesToRun();
-      }
-    }
-    
-    private void checkForFlushesToRun() {
-      // Grab a list of items to flush
-      List<HRegion> nonClosedRegionsToFlush = getRegionsToCheck();
-      // Flush them, if necessary
-      for(HRegion cur: nonClosedRegionsToFlush) {
+    public void run() {
+      while (!stopRequested.get()) {
+        QueueEntry e = null;
         try {
-          cur.flushcache();
-        } catch (DroppedSnapshotException e) {
-          // Cache flush can fail in a few places.  If it fails in a critical
-          // section, we get a DroppedSnapshotException and a replay of hlog
-          // is required. Currently the only way to do this is a restart of
-          // the server.
-          LOG.fatal("Replay of hlog required. Forcing server restart", e);
+          e = compactionQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
+          
+        } catch (InterruptedException ex) {
+          continue;
+        }
+        if (e == null) {
+          continue;
+        }
+        try {
+          if (e.getRegion().compactIfNeeded()) {
+            splitter.splitRequested(e);
+          }
+          
+        } catch (IOException ex) {
+          LOG.error("Compaction failed for region " +
+              e.getRegion().getRegionName(),
+              RemoteExceptionHandler.checkIOException(ex));
           if (!checkFileSystem()) {
             break;
           }
-          HRegionServer.this.stop();
-        } catch (IOException iex) {
-          LOG.error("Cache flush failed",
-            RemoteExceptionHandler.checkIOException(iex));
+
+        } catch (Exception ex) {
+          LOG.error("Compaction failed for region " +
+              e.getRegion().getRegionName(), ex);
           if (!checkFileSystem()) {
             break;
           }
         }
+      }
+      LOG.info(getName() + " exiting");
+    }
+    
+    /**
+     * @param e QueueEntry for region to be compacted
+     */
+    public void compactionRequested(QueueEntry e) {
+      compactionQueue.add(e);
+    }
+  }
+  
+  // Cache flushing  
+  final Flusher cacheFlusher;
+  // Needed during shutdown so we send an interrupt after completion of a
+  // flush, not in the midst.
+  final Integer cacheFlusherLock = new Integer(0);
+  
+  /** Flush cache upon request */
+  class Flusher extends Thread implements CacheFlushListener {
+    private final DelayQueue<QueueEntry> flushQueue =
+      new DelayQueue<QueueEntry>();
+
+    private final long optionalFlushPeriod;
+    
+    /** constructor */
+    public Flusher() {
+      super();
+      this.optionalFlushPeriod = conf.getLong(
+          "hbase.regionserver.optionalcacheflushinterval", 60L * 1000L);
+
+    }
+    
+    /** {@inheritDoc} */
+    @Override
+    public void run() {
+      while (!stopRequested.get()) {
+        QueueEntry e = null;
+        try {
+          e = flushQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
+          
+        } catch (InterruptedException ex) {
+          continue;
+
+        } catch (ConcurrentModificationException ex) {
+          continue;
+          
+        }
+        synchronized(cacheFlusherLock) { // Don't interrupt while we're working
+          if (e != null) {
+            try {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("flushing region " + e.getRegion().getRegionName());
+              }
+              if (e.getRegion().flushcache()) {
+                compactor.compactionRequested(e);
+              }
+              
+            } catch (DroppedSnapshotException ex) {
+              // Cache flush can fail in a few places.  If it fails in a critical
+              // section, we get a DroppedSnapshotException and a replay of hlog
+              // is required. Currently the only way to do this is a restart of
+              // the server.
+              LOG.fatal("Replay of hlog required. Forcing server restart", ex);
+              if (!checkFileSystem()) {
+                break;
+              }
+              HRegionServer.this.stop();
+              
+            } catch (IOException ex) {
+              LOG.error("Cache flush failed for region " +
+                  e.getRegion().getRegionName(),
+                  RemoteExceptionHandler.checkIOException(ex));
+              if (!checkFileSystem()) {
+                break;
+              }
+
+            } catch (Exception ex) {
+              LOG.error("Cache flush failed for region " +
+                  e.getRegion().getRegionName(), ex);
+              if (!checkFileSystem()) {
+                break;
+              }
+            }
+            e.setExpirationTime(System.currentTimeMillis() +
+                optionalFlushPeriod);
+            flushQueue.add(e);
+          }
+          
+          // Now insure that all the active regions are in the queue
+          
+          Set<HRegion> regions = getRegionsToCheck();
+          for (HRegion r: regions) {
+            e = new QueueEntry(r, r.getLastFlushTime() + optionalFlushPeriod);
+            synchronized (flushQueue) {
+              if (!flushQueue.contains(e)) {
+                flushQueue.add(e);
+              }
+            }
+          }
+
+          // Now make sure that the queue only contains active regions
+
+          synchronized (flushQueue) {
+            for (Iterator<QueueEntry> i = flushQueue.iterator(); i.hasNext();  ) {
+              e = i.next();
+              if (!regions.contains(e.getRegion())) {
+                i.remove();
+              }
+            }
+          }
+        }
+      }
+      flushQueue.clear();
+      LOG.info(getName() + " exiting");
+    }
+    
+    /** {@inheritDoc} */
+    public void flushRequested(HRegion region) {
+      QueueEntry e = new QueueEntry(region, System.currentTimeMillis());
+      synchronized (flushQueue) {
+        if (flushQueue.contains(e)) {
+          flushQueue.remove(e);
+        }
+        flushQueue.add(e);
       }
     }
   }
@@ -326,44 +524,57 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // HLog and HLog roller.  log is protected rather than private to avoid
   // eclipse warning when accessed by inner classes
   protected HLog log;
-  private final Thread logRollerThread;
-  protected final Integer logRollerLock = new Integer(0);
+  final LogRoller logRoller;
+  final Integer logRollerLock = new Integer(0);
   
   /** Runs periodically to determine if the HLog should be rolled */
-  class LogRoller extends Chore {
-    private int MAXLOGENTRIES =
-      conf.getInt("hbase.regionserver.maxlogentries", 30 * 1000);
+  class LogRoller extends Thread implements LogRollListener {
+    private volatile boolean rollLog;
     
-    /**
-     * @param period
-     * @param stop
-     */
-    public LogRoller(final int period, final AtomicBoolean stop) {
-      super(period, stop);
+    /** constructor */
+    public LogRoller() {
+      super();
+      this.rollLog = false;
     }
  
     /** {@inheritDoc} */
     @Override
-    protected void chore() {
-      synchronized(logRollerLock) {
-        checkForLogRoll();
+    public synchronized void run() {
+      while (!stopRequested.get()) {
+        try {
+          this.wait(threadWakeFrequency);
+          
+        } catch (InterruptedException e) {
+          continue;
+        }
+        if (!rollLog) {
+          continue;
+        }
+        synchronized (logRollerLock) {
+          try {
+            LOG.info("Rolling hlog. Number of entries: " + log.getNumEntries());
+            log.rollWriter();
+            
+          } catch (IOException ex) {
+            LOG.error("Log rolling failed",
+              RemoteExceptionHandler.checkIOException(ex));
+            checkFileSystem();
+            
+          } catch (Exception ex) {
+            LOG.error("Log rolling failed", ex);
+            checkFileSystem();
+            
+          } finally {
+            rollLog = false;
+          }
+        }
       }
     }
 
-    private void checkForLogRoll() {
-      // If the number of log entries is high enough, roll the log.  This
-      // is a very fast operation, but should not be done too frequently.
-      int nEntries = log.getNumEntries();
-      if(nEntries > this.MAXLOGENTRIES) {
-        try {
-          LOG.info("Rolling hlog. Number of entries: " + nEntries);
-          log.rollWriter();
-        } catch (IOException iex) {
-          LOG.error("Log rolling failed",
-            RemoteExceptionHandler.checkIOException(iex));
-          checkFileSystem();
-        }
-      }
+    /** {@inheritDoc} */
+    public synchronized void logRollRequested() {
+      rollLog = true;
+      this.notifyAll();
     }
   }
 
@@ -396,20 +607,22 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.serverLeaseTimeout =
       conf.getInt("hbase.master.lease.period", 30 * 1000);
 
-    // Cache flushing chore thread.
-    this.cacheFlusherThread =
-      new Flusher(this.threadWakeFrequency, stopRequested);
+    // Cache flushing thread.
+    this.cacheFlusher = new Flusher();
     
-    // Check regions to see if they need to be split or compacted chore thread
-    this.splitOrCompactCheckerThread =
-      new SplitOrCompactChecker(this.stopRequested);
+    // Compaction thread
+    this.compactor = new Compactor();
     
+    // Region split thread
+    this.splitter = new Splitter();
+    
+    // Log rolling thread
+    this.logRoller = new LogRoller();
+
     // Task thread to process requests from Master
     this.worker = new Worker();
     this.workerThread = new Thread(worker);
     this.sleeper = new Sleeper(this.msgInterval, this.stopRequested);
-    this.logRollerThread =
-      new LogRoller(this.threadWakeFrequency, stopRequested);
     // Server to handle client requests
     this.server = RPC.getServer(this, address.getBindAddress(), 
       address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
@@ -557,14 +770,17 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive?  If OOME could have exited already
-    synchronized(logRollerLock) {
-      this.logRollerThread.interrupt();
-    }
     synchronized(cacheFlusherLock) {
-      this.cacheFlusherThread.interrupt();
+      this.cacheFlusher.interrupt();
     }
-    synchronized(splitOrCompactLock) {
-      this.splitOrCompactCheckerThread.interrupt();
+    synchronized (compactionLock) {
+      this.compactor.interrupt();
+    }
+    synchronized (splitterLock) {
+      this.splitter.interrupt();
+    }
+    synchronized (logRollerLock) {
+      this.logRoller.interrupt();
     }
 
     if (abortRequested) {
@@ -657,7 +873,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         "running at " + this.serverInfo.getServerAddress().toString() +
         " because logdir " + logdir.toString() + " exists");
     }
-    return new HLog(fs, logdir, conf);
+    return new HLog(fs, logdir, conf, logRoller);
   }
   
   /*
@@ -680,16 +896,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         LOG.fatal("Set stop flag in " + t.getName(), e);
       }
     };
-    Threads.setDaemonThreadRunning(this.cacheFlusherThread, n + ".cacheFlusher",
+    Threads.setDaemonThreadRunning(this.logRoller, n + ".logRoller",
+        handler);
+    Threads.setDaemonThreadRunning(this.cacheFlusher, n + ".cacheFlusher",
       handler);
-    Threads.setDaemonThreadRunning(this.splitOrCompactCheckerThread,
-      n + ".splitOrCompactChecker", handler);
-    Threads.setDaemonThreadRunning(this.logRollerThread, n + ".logRoller",
-      handler);
-    // Worker is not the same as the above threads in that it does not
-    // inherit from Chore.  Set an UncaughtExceptionHandler on it in case its
-    // the one to see an OOME, etc., first.  The handler will set the stop
-    // flag.
+    Threads.setDaemonThreadRunning(this.compactor, n + ".compactor",
+        handler);
+    Threads.setDaemonThreadRunning(this.splitter, n + ".splitter", handler);
     Threads.setDaemonThreadRunning(this.workerThread, n + ".worker", handler);
     // Leases is not a Thread. Internally it runs a daemon thread.  If it gets
     // an unhandled exception, it will just exit.
@@ -752,9 +965,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   void join() {
     join(this.workerThread);
-    join(this.logRollerThread);
-    join(this.cacheFlusherThread);
-    join(this.splitOrCompactCheckerThread);
+    join(this.logRoller);
+    join(this.cacheFlusher);
+    join(this.compactor);
+    join(this.splitter);
   }
 
   private void join(final Thread t) {
@@ -925,7 +1139,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     HRegion region = onlineRegions.get(regionInfo.getRegionName());
     if(region == null) {
       region = new HRegion(new Path(this.conf.get(HConstants.HBASE_DIR)),
-        this.log, FileSystem.get(conf), conf, regionInfo, null);
+        this.log, FileSystem.get(conf), conf, regionInfo, null,
+        this.cacheFlusher);
       this.lock.writeLock().lock();
       try {
         this.log.setSequenceNumber(region.getMinSequenceId());
@@ -1226,6 +1441,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   public AtomicInteger getRequestCount() {
     return this.requestCount;
   }
+
+  /** @return reference to CacheFlushListener */
+  public CacheFlushListener getCacheFlushListener() {
+    return this.cacheFlusher;
+  }
   
   /** 
    * Protected utility method for safely obtaining an HRegion handle.
@@ -1318,8 +1538,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @return Returns list of non-closed regions hosted on this server.  If no
    * regions to check, returns an empty list.
    */
-  protected List<HRegion> getRegionsToCheck() {
-    ArrayList<HRegion> regionsToCheck = new ArrayList<HRegion>();
+  protected Set<HRegion> getRegionsToCheck() {
+    HashSet<HRegion> regionsToCheck = new HashSet<HRegion>();
     //TODO: is this locking necessary? 
     lock.readLock().lock();
     try {
@@ -1328,8 +1548,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       lock.readLock().unlock();
     }
     // Purge closed regions.
-    for (final ListIterator<HRegion> i = regionsToCheck.listIterator();
-        i.hasNext();) {
+    for (final Iterator<HRegion> i = regionsToCheck.iterator(); i.hasNext();) {
       HRegion r = i.next();
       if (r.isClosed()) {
         i.remove();

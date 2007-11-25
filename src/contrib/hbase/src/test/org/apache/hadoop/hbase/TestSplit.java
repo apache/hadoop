@@ -65,11 +65,11 @@ public class TestSplit extends MultiRegionTable {
    */
   public void testBasicSplit() throws Exception {
     HRegion region = null;
-    HLog hlog = new HLog(this.localFs, this.testDir, this.conf);
+    HLog hlog = new HLog(this.localFs, this.testDir, this.conf, null);
     try {
       HTableDescriptor htd = createTableDescriptor(getName());
       HRegionInfo hri = new HRegionInfo(htd, null, null);
-      region = new HRegion(testDir, hlog, this.localFs, this.conf, hri, null);
+      region = new HRegion(testDir, hlog, this.localFs, this.conf, hri, null, null);
       basicSplit(region);
     } finally {
       if (region != null) {
@@ -81,7 +81,7 @@ public class TestSplit extends MultiRegionTable {
   
   private void basicSplit(final HRegion region) throws Exception {
     addContent(region, COLFAMILY_NAME3);
-    region.internalFlushcache(region.snapshotMemcaches());
+    region.flushcache();
     Text midkey = new Text();
     assertTrue(region.needsSplit(midkey));
     HRegion [] regions = split(region);
@@ -108,12 +108,7 @@ public class TestSplit extends MultiRegionTable {
       }
       addContent(regions[i], COLFAMILY_NAME2);
       addContent(regions[i], COLFAMILY_NAME1);
-      long startTime = region.snapshotMemcaches();
-      if (startTime == -1) {
-        LOG.info("cache flush not needed");
-      } else {
-        regions[i].internalFlushcache(startTime);
-      }
+      regions[i].flushcache();
     }
     
     // Assert that even if one store file is larger than a reference, the

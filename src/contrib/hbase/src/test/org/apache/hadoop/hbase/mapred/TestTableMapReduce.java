@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -87,6 +88,9 @@ public class TestTableMapReduce extends MultiRegionTable {
   public TestTableMapReduce() {
     super();
 
+    // The region server doesn't have to talk to the master quite so often
+    conf.setInt("hbase.regionserver.msginterval", 2000);
+    
     // Make the thread wake frequency a little slower so other threads
     // can run
     conf.setInt("hbase.server.thread.wakefrequency", 2000);
@@ -105,6 +109,9 @@ public class TestTableMapReduce extends MultiRegionTable {
     // Make lease timeout longer, lease checks less frequent
     conf.setInt("hbase.master.lease.period", 10 * 1000);
     conf.setInt("hbase.master.lease.thread.wakefrequency", 5 * 1000);
+    
+    // Set client pause to the original default
+    conf.setInt("hbase.client.pause", 10 * 1000);
   }
 
   /**
@@ -381,9 +388,11 @@ public class TestTableMapReduce extends MultiRegionTable {
         assertNotNull(firstValue);
         assertNotNull(secondValue);
         assertEquals(firstValue.length, secondValue.length);
-        for (int i=0; i<firstValue.length; i++) {
-          assertEquals(firstValue[i], secondValue[firstValue.length-i-1]);
+        byte[] secondReversed = new byte[secondValue.length];
+        for (int i = 0, j = secondValue.length - 1; j >= 0; j--, i++) {
+          secondReversed[i] = secondValue[j];
         }
+        assertTrue(Arrays.equals(firstValue, secondReversed));
       }
       
     } finally {

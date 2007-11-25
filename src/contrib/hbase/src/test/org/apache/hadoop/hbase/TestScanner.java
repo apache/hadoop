@@ -144,9 +144,9 @@ public class TestScanner extends HBaseTestCase {
           HRegionInfo.encodeRegionName(REGION_INFO.getRegionName()));
       fs.mkdirs(regionDir);
       
-      HLog log = new HLog(fs, new Path(regionDir, "log"), conf);
+      HLog log = new HLog(fs, new Path(regionDir, "log"), conf, null);
 
-      r = new HRegion(dir, log, fs, conf, REGION_INFO, null);
+      r = new HRegion(dir, log, fs, conf, REGION_INFO, null, null);
       region = new HRegionIncommon(r);
       
       // Write information to the meta table
@@ -169,7 +169,7 @@ public class TestScanner extends HBaseTestCase {
       
       r.close();
       log.rollWriter();
-      r = new HRegion(dir, log, fs, conf, REGION_INFO, null);
+      r = new HRegion(dir, log, fs, conf, REGION_INFO, null, null);
       region = new HRegionIncommon(r);
 
       // Verify we can get the data back now that it is on disk.
@@ -210,7 +210,7 @@ public class TestScanner extends HBaseTestCase {
       
       r.close();
       log.rollWriter();
-      r = new HRegion(dir, log, fs, conf, REGION_INFO, null);
+      r = new HRegion(dir, log, fs, conf, REGION_INFO, null, null);
       region = new HRegionIncommon(r);
 
       // Validate again
@@ -247,7 +247,7 @@ public class TestScanner extends HBaseTestCase {
       
       r.close();
       log.rollWriter();
-      r = new HRegion(dir, log, fs, conf, REGION_INFO, null);
+      r = new HRegion(dir, log, fs, conf, REGION_INFO, null, null);
       region = new HRegionIncommon(r);
 
       // Validate again

@@ -93,9 +93,9 @@ public class TestGet extends HBaseTestCase {
           HRegionInfo.encodeRegionName(info.getRegionName()));
       fs.mkdirs(regionDir);
       
-      HLog log = new HLog(fs, new Path(regionDir, "log"), conf);
+      HLog log = new HLog(fs, new Path(regionDir, "log"), conf, null);
 
-      HRegion region = new HRegion(dir, log, fs, conf, info, null);
+      HRegion region = new HRegion(dir, log, fs, conf, info, null, null);
       HRegionIncommon r = new HRegionIncommon(region);
       
       // Write information to the table
@@ -135,7 +135,7 @@ public class TestGet extends HBaseTestCase {
       
       region.close();
       log.rollWriter();
-      region = new HRegion(dir, log, fs, conf, info, null);
+      region = new HRegion(dir, log, fs, conf, info, null, null);
       r = new HRegionIncommon(region);
       
       // Read it back
@@ -164,7 +164,7 @@ public class TestGet extends HBaseTestCase {
       
       region.close();
       log.rollWriter();
-      region = new HRegion(dir, log, fs, conf, info, null);
+      region = new HRegion(dir, log, fs, conf, info, null, null);
       r = new HRegionIncommon(region);
 
       // Read it back

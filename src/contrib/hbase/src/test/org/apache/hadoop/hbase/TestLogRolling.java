@@ -19,10 +19,12 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -32,7 +34,8 @@ public class TestLogRolling extends HBaseTestCase {
   private static final Log LOG = LogFactory.getLog(TestLogRolling.class);
   private MiniDFSCluster dfs;
   private MiniHBaseCluster cluster;
-  private Path logdir;
+  private HRegionServer server;
+  private HLog log;
   private String tableName;
   private byte[] value;
   
@@ -45,9 +48,13 @@ public class TestLogRolling extends HBaseTestCase {
     try {
       this.dfs = null;
       this.cluster = null;
-      this.logdir = null;
+      this.server = null;
+      this.log = null;
       this.tableName = null;
       this.value = null;
+
+      // Force a region split after every 768KB
+      conf.setLong("hbase.hregion.max.filesize", 768L * 1024L);
 
       // We roll the log after every 256 writes
       conf.setInt("hbase.regionserver.maxlogentries", 256);
@@ -118,8 +125,8 @@ public class TestLogRolling extends HBaseTestCase {
       // continue
     }
 
-    this.logdir =
-      cluster.getRegionThreads().get(0).getRegionServer().getLog().dir;
+    this.server = cluster.getRegionThreads().get(0).getRegionServer();
+    this.log = server.getLog();
     
     // When the META table can be opened, the region servers are running
     @SuppressWarnings("unused")
@@ -150,21 +157,6 @@ public class TestLogRolling extends HBaseTestCase {
     }
   }
   
-  private int countLogFiles(final boolean print) throws Exception {
-    Path[] logfiles = dfs.getFileSystem().listPaths(new Path[] {this.logdir});
-    if (print) {
-      for (int i = 0; i < logfiles.length; i++) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("logfile: " + logfiles[i].toString());
-        }
-      }
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("number of log files: " + logfiles.length);
-    }
-    return logfiles.length;
-  }
-  
   /**
    * Tests that logs are deleted
    * 
@@ -172,21 +164,24 @@ public class TestLogRolling extends HBaseTestCase {
    */
   public void testLogRolling() throws Exception {
     tableName = getName();
-    // Force a region split after every 768KB
-    conf.setLong("hbase.hregion.max.filesize", 768L * 1024L);
     try {
       startAndWriteData();
-      int count = countLogFiles(true);
-      LOG.info("Finished writing. There are " + count + " log files. " +
-        "Sleeping to let cache flusher and log roller run");
-      while (count > 2) {
-        try {
-          Thread.sleep(1000L);
-        } catch (InterruptedException e) {
-          LOG.info("Sleep interrupted", e);
-        }
-        count = countLogFiles(true);
+      LOG.info("after writing there are " + log.getNumLogFiles() + " log files");
+      
+      // flush all regions
+      
+      List<HRegion> regions =
+        new ArrayList<HRegion>(server.getOnlineRegions().values());
+      for (HRegion r: regions) {
+        r.flushcache();
       }
+      
+      // Now roll the log
+      log.rollWriter();
+      
+      int count = log.getNumLogFiles();
+      LOG.info("after flushing all regions and rolling logs there are " +
+          log.getNumLogFiles() + " log files");
       assertTrue(count <= 2);
     } catch (Exception e) {
       LOG.fatal("unexpected exception", e);

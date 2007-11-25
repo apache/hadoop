@@ -45,7 +45,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     final Text tableName = new Text("tablename");
     final Text row = new Text("row");
     Reader reader = null;
-    HLog log = new HLog(fs, dir, this.conf);
+    HLog log = new HLog(fs, dir, this.conf, null);
     try {
       // Write columns named 1, 2, 3, etc. and then values of single byte
       // 1, 2, 3...

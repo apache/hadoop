@@ -31,6 +31,10 @@ public class Sleeper {
   private final int period;
   private AtomicBoolean stop;
   
+  /**
+   * @param sleep
+   * @param stop
+   */
   public Sleeper(final int sleep, final AtomicBoolean stop) {
     this.period = sleep;
     this.stop = stop;
@@ -40,7 +44,7 @@ public class Sleeper {
    * Sleep for period.
    */
   public void sleep() {
-    sleep(System.currentTimeMillis());
+    sleep(period);
   }
   
   /**
