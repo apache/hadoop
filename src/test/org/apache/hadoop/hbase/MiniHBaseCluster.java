@@ -257,7 +257,7 @@ public class MiniHBaseCluster implements HConstants {
     for (LocalHBaseCluster.RegionServerThread t:
         this.hbaseCluster.getRegionServers()) {
       for(HRegion r: t.getRegionServer().onlineRegions.values() ) {
-        r.internalFlushcache(r.snapshotMemcaches());
+        r.flushcache();
       }
     }
   }

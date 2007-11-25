@@ -108,7 +108,8 @@ class HMerge implements HConstants {
       this.dir = new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
       this.basedir = new Path(dir, "merge_" + System.currentTimeMillis());
       fs.mkdirs(basedir);
-      this.hlog = new HLog(fs, new Path(basedir, HREGION_LOGDIR_NAME), conf);
+      this.hlog =
+        new HLog(fs, new Path(basedir, HREGION_LOGDIR_NAME), conf, null);
     }
     
     void process() throws IOException {
@@ -150,11 +151,11 @@ class HMerge implements HConstants {
       for(int i = 0; i < regions.length - 1; i++) {
         if(currentRegion == null) {
           currentRegion =
-            new HRegion(dir, hlog, fs, conf, regions[i], null);
+            new HRegion(dir, hlog, fs, conf, regions[i], null, null);
           currentSize = currentRegion.largestHStore(midKey).getAggregate();
         }
         nextRegion =
-          new HRegion(dir, hlog, fs, conf, regions[i + 1], null);
+          new HRegion(dir, hlog, fs, conf, regions[i + 1], null, null);
 
         nextSize = nextRegion.largestHStore(midKey).getAggregate();
 
@@ -327,7 +328,7 @@ class HMerge implements HConstants {
       // Scan root region to find all the meta regions
       
       HRegion root =
-        new HRegion(dir, hlog,fs, conf, HRegionInfo.rootRegionInfo, null);
+        new HRegion(dir, hlog,fs, conf, HRegionInfo.rootRegionInfo, null, null);
 
       HInternalScannerInterface rootScanner =
         root.getScanner(META_COLS, new Text(), System.currentTimeMillis(), null);
@@ -363,7 +364,7 @@ class HMerge implements HConstants {
         HRegion newRegion) throws IOException {
       
       HRegion root =
-        new HRegion(dir, hlog, fs, conf, HRegionInfo.rootRegionInfo, null);
+        new HRegion(dir, hlog, fs, conf, HRegionInfo.rootRegionInfo, null, null);
 
       Text[] regionsToDelete = {
           oldRegion1,

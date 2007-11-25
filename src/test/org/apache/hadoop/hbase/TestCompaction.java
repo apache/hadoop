@@ -54,10 +54,11 @@ public class TestCompaction extends HBaseTestCase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    this.hlog = new HLog(this.localFs, this.testDir, this.conf);
+    this.hlog = new HLog(this.localFs, this.testDir, this.conf, null);
     HTableDescriptor htd = createTableDescriptor(getName());
     HRegionInfo hri = new HRegionInfo(htd, null, null);
-    this.r = new HRegion(testDir, hlog, this.localFs, this.conf, hri, null);
+    this.r =
+      new HRegion(testDir, hlog, this.localFs, this.conf, hri, null, null);
   }
   
   /** {@inheritDoc} */

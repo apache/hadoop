@@ -103,9 +103,11 @@ public class MultiRegionTable extends HBaseTestCase {
       }
     }
 
-    // Flush will provoke a split next time the split-checker thread runs.
-    r.internalFlushcache(r.snapshotMemcaches());
+    // Flush the cache
     
+    cluster.getRegionThreads().get(0).getRegionServer().getCacheFlushListener().
+      flushRequested(r);
+
     // Now, wait until split makes it into the meta table.
     int oldCount = count;
     for (int i = 0; i < retries;  i++) {

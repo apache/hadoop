@@ -144,6 +144,14 @@
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.optionalcacheflushinterval</name>
+    <value>60000</value>
+    <description>
+    Amount of time to wait since the last time a region was flushed before
+    invoking an optional cache flush. Default 60,000.
+    </description>
+  </property>
+  <property>
     <name>hbase.hregion.memcache.flush.size</name>
     <value>16777216</value>
     <description>

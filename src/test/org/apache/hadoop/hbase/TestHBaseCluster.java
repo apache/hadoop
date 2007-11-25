@@ -45,6 +45,10 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     this.table = null;
     Logger.getRootLogger().setLevel(Level.INFO);
 
+    // Make the thread wake frequency a little slower so other threads
+    // can run
+    conf.setInt("hbase.server.thread.wakefrequency", 2000);
+    
     // Make lease timeout longer, lease checks less frequent
     conf.setInt("hbase.master.lease.period", 10 * 1000);
     conf.setInt("hbase.master.lease.thread.wakefrequency", 5 * 1000);
@@ -112,7 +116,7 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
       Text rowlabel = new Text("row_" + k);
 
       byte bodydata[] = table.get(rowlabel, CONTENTS_BASIC);
-      assertNotNull(bodydata);
+      assertNotNull("no data for row " + rowlabel, bodydata);
       String bodystr = new String(bodydata, HConstants.UTF8_ENCODING).trim();
       String teststr = CONTENTSTR + k;
       assertEquals("Incorrect value for key: (" + rowlabel + "," + CONTENTS_BASIC

@@ -310,11 +310,11 @@ public class TestTimestamp extends HBaseTestCase {
   }
   
   private HRegion createRegion() throws IOException {
-    HLog hlog = new HLog(this.localFs, this.testDir, this.conf);
+    HLog hlog = new HLog(this.localFs, this.testDir, this.conf, null);
     HTableDescriptor htd = createTableDescriptor(getName());
     htd.addFamily(new HColumnDescriptor(COLUMN, VERSIONS,
       CompressionType.NONE, false, Integer.MAX_VALUE, null));
     HRegionInfo hri = new HRegionInfo(htd, null, null);
-    return new HRegion(testDir, hlog, this.localFs, this.conf, hri, null);
+    return new HRegion(testDir, hlog, this.localFs, this.conf, hri, null, null);
   }
 }

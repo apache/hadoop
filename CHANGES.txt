@@ -42,6 +42,7 @@ Trunk (unreleased changes)
     HADOOP-2176 Htable.deleteAll documentation is ambiguous
     HADOOP-2139 (phase 1) Increase parallelism in region servers.
     HADOOP-2267 [Hbase Shell] Change the prompt's title from 'hbase' to 'hql'.
+    HADOOP-2139 (phase 2) Make region server more event driven
 
 Release 0.15.1
 Branch 0.15

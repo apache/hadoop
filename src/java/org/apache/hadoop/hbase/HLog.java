@@ -22,10 +22,13 @@ package org.apache.hadoop.hbase;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -89,7 +92,9 @@ public class HLog implements HConstants {
   final FileSystem fs;
   final Path dir;
   final Configuration conf;
+  final LogRollListener listener;
   final long threadWakeFrequency;
+  private final int maxlogentries;
 
   /*
    * Current log file.
@@ -99,12 +104,13 @@ public class HLog implements HConstants {
   /*
    * Map of all log files but the current one. 
    */
-  final TreeMap<Long, Path> outputfiles = new TreeMap<Long, Path>();
+  final SortedMap<Long, Path> outputfiles = 
+    Collections.synchronizedSortedMap(new TreeMap<Long, Path>());
 
   /*
    * Map of region to last sequence/edit id. 
    */
-  final Map<Text, Long> lastSeqWritten = new HashMap<Text, Long>();
+  final Map<Text, Long> lastSeqWritten = new ConcurrentHashMap<Text, Long>();
 
   volatile boolean closed = false;
 
@@ -118,6 +124,10 @@ public class HLog implements HConstants {
   // This lock prevents starting a log roll during a cache flush.
   // synchronized is insufficient because a cache flush spans two method calls.
   private final Lock cacheFlushLock = new ReentrantLock();
+
+  // We synchronize on updateLock to prevent updates and to prevent a log roll
+  // during an update
+  private final Integer updateLock = new Integer(0);
 
   /**
    * Split up a bunch of log files, that are no longer being written to, into
@@ -207,12 +217,15 @@ public class HLog implements HConstants {
    * @param conf
    * @throws IOException
    */
-  HLog(final FileSystem fs, final Path dir, final Configuration conf)
-  throws IOException {
+  HLog(final FileSystem fs, final Path dir, final Configuration conf,
+      final LogRollListener listener) throws IOException {
     this.fs = fs;
     this.dir = dir;
     this.conf = conf;
+    this.listener = listener;
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
+    this.maxlogentries =
+      conf.getInt("hbase.regionserver.maxlogentries", 30 * 1000);
     if (fs.exists(dir)) {
       throw new IOException("Target HLog directory already exists: " + dir);
     }
@@ -256,98 +269,82 @@ public class HLog implements HConstants {
    *
    * @throws IOException
    */
-  synchronized void rollWriter() throws IOException {
-    boolean locked = false;
-    while (!locked && !closed) {
-      if (this.cacheFlushLock.tryLock()) {
-        locked = true;
-        break;
-      }
-      try {
-        this.wait(threadWakeFrequency);
-      } catch (InterruptedException e) {
-        // continue
-      }
-    }
-    if (closed) {
-      if (locked) {
-        this.cacheFlushLock.unlock();
-      }
-      throw new IOException("Cannot roll log; log is closed");
-    }
-
-    // If we get here we have locked out both cache flushes and appends
+  void rollWriter() throws IOException {
+    this.cacheFlushLock.lock();
     try {
-      if (this.writer != null) {
-        // Close the current writer, get a new one.
-        this.writer.close();
-        Path p = computeFilename(filenum - 1);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Closing current log writer " + p.toString() +
-            " to get a new one");
-        }
-        if (filenum > 0) {
-          synchronized (this.sequenceLock) {
-            this.outputfiles.put(Long.valueOf(this.logSeqNum - 1), p);
-          }
-        }
+      if (closed) {
+        return;
       }
-      Path newPath = computeFilename(filenum++);
-      this.writer = SequenceFile.createWriter(this.fs, this.conf, newPath,
-          HLogKey.class, HLogEdit.class);
-      LOG.info("new log writer created at " + newPath);
-
-      // Can we delete any of the old log files?
-      if (this.outputfiles.size() > 0) {
-        if (this.lastSeqWritten.size() <= 0) {
-          LOG.debug("Last sequence written is empty. Deleting all old hlogs");
-          // If so, then no new writes have come in since all regions were
-          // flushed (and removed from the lastSeqWritten map). Means can
-          // remove all but currently open log file.
-          for (Map.Entry<Long, Path> e : this.outputfiles.entrySet()) {
-            deleteLogFile(e.getValue(), e.getKey());
-          }
-          this.outputfiles.clear();
-        } else {
-          // Get oldest edit/sequence id.  If logs are older than this id,
-          // then safe to remove.
-          TreeSet<Long> sequenceNumbers =
-            new TreeSet<Long>(this.lastSeqWritten.values());
-          long oldestOutstandingSeqNum = sequenceNumbers.first().longValue();
-          // Get the set of all log files whose final ID is older than the
-          // oldest pending region operation
-          sequenceNumbers.clear();
-          sequenceNumbers.addAll(this.outputfiles.headMap(
-              Long.valueOf(oldestOutstandingSeqNum)).keySet());
-          // Now remove old log files (if any)
+      synchronized (updateLock) {
+        if (this.writer != null) {
+          // Close the current writer, get a new one.
+          this.writer.close();
+          Path p = computeFilename(filenum - 1);
           if (LOG.isDebugEnabled()) {
-            // Find region associated with oldest key -- helps debugging.
-            Text oldestRegion = null;
-            for (Map.Entry<Text, Long> e: this.lastSeqWritten.entrySet()) {
-              if (e.getValue().longValue() == oldestOutstandingSeqNum) {
-                oldestRegion = e.getKey();
-                break;
+            LOG.debug("Closing current log writer " + p.toString() +
+            " to get a new one");
+          }
+          if (filenum > 0) {
+            synchronized (this.sequenceLock) {
+              this.outputfiles.put(Long.valueOf(this.logSeqNum - 1), p);
+            }
+          }
+        }
+        Path newPath = computeFilename(filenum++);
+        this.writer = SequenceFile.createWriter(this.fs, this.conf, newPath,
+            HLogKey.class, HLogEdit.class);
+        LOG.info("new log writer created at " + newPath);
+
+        // Can we delete any of the old log files?
+        if (this.outputfiles.size() > 0) {
+          if (this.lastSeqWritten.size() <= 0) {
+            LOG.debug("Last sequence written is empty. Deleting all old hlogs");
+            // If so, then no new writes have come in since all regions were
+            // flushed (and removed from the lastSeqWritten map). Means can
+            // remove all but currently open log file.
+            for (Map.Entry<Long, Path> e : this.outputfiles.entrySet()) {
+              deleteLogFile(e.getValue(), e.getKey());
+            }
+            this.outputfiles.clear();
+          } else {
+            // Get oldest edit/sequence id.  If logs are older than this id,
+            // then safe to remove.
+            Long oldestOutstandingSeqNum =
+              Collections.min(this.lastSeqWritten.values());
+            // Get the set of all log files whose final ID is older than or
+            // equal to the oldest pending region operation
+            TreeSet<Long> sequenceNumbers =
+              new TreeSet<Long>(this.outputfiles.headMap(
+                (oldestOutstandingSeqNum + Long.valueOf(1L))).keySet());
+            // Now remove old log files (if any)
+            if (LOG.isDebugEnabled()) {
+              // Find region associated with oldest key -- helps debugging.
+              Text oldestRegion = null;
+              for (Map.Entry<Text, Long> e: this.lastSeqWritten.entrySet()) {
+                if (e.getValue().longValue() == oldestOutstandingSeqNum) {
+                  oldestRegion = e.getKey();
+                  break;
+                }
+              }
+              LOG.debug("Found " + sequenceNumbers.size() + " logs to remove " +
+                  "using oldest outstanding seqnum of " +
+                  oldestOutstandingSeqNum + " from region " + oldestRegion);
+            }
+            if (sequenceNumbers.size() > 0) {
+              for (Long seq : sequenceNumbers) {
+                deleteLogFile(this.outputfiles.remove(seq), seq);
               }
             }
-            LOG.debug("Found " + sequenceNumbers.size() + " logs to remove " +
-              "using oldest outstanding seqnum of " + oldestOutstandingSeqNum +
-              " from region " + oldestRegion);
-          }
-          if (sequenceNumbers.size() > 0) {
-            for (Long seq : sequenceNumbers) {
-              deleteLogFile(this.outputfiles.remove(seq), seq);
-            }
           }
         }
+        this.numEntries = 0;
       }
-      this.numEntries = 0;
     } finally {
       this.cacheFlushLock.unlock();
     }
   }
   
-  private void deleteLogFile(final Path p, final Long seqno)
-  throws IOException {
+  private void deleteLogFile(final Path p, final Long seqno) throws IOException {
     LOG.info("removing old log file " + p.toString() +
       " whose highest sequence/edit id is " + seqno);
     this.fs.delete(p);
@@ -367,7 +364,7 @@ public class HLog implements HConstants {
    *
    * @throws IOException
    */
-  synchronized void closeAndDelete() throws IOException {
+  void closeAndDelete() throws IOException {
     close();
     fs.delete(dir);
   }
@@ -377,12 +374,19 @@ public class HLog implements HConstants {
    *
    * @throws IOException
    */
-  synchronized void close() throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("closing log writer in " + this.dir.toString());
+  void close() throws IOException {
+    cacheFlushLock.lock();
+    try {
+      synchronized (updateLock) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("closing log writer in " + this.dir.toString());
+        }
+        this.writer.close();
+        this.closed = true;
+      }
+    } finally {
+      cacheFlushLock.unlock();
     }
-    this.writer.close();
-    this.closed = true;
   }
 
   /**
@@ -409,29 +413,36 @@ public class HLog implements HConstants {
    * @param timestamp
    * @throws IOException
    */
-  synchronized void append(Text regionName, Text tableName,
+  void append(Text regionName, Text tableName,
       TreeMap<HStoreKey, byte[]> edits) throws IOException {
     
     if (closed) {
       throw new IOException("Cannot append; log is closed");
     }
-    long seqNum[] = obtainSeqNum(edits.size());
-    // The 'lastSeqWritten' map holds the sequence number of the oldest
-    // write for each region. When the cache is flushed, the entry for the
-    // region being flushed is removed if the sequence number of the flush
-    // is greater than or equal to the value in lastSeqWritten.
-    if (!this.lastSeqWritten.containsKey(regionName)) {
-      this.lastSeqWritten.put(regionName, Long.valueOf(seqNum[0]));
+    synchronized (updateLock) {
+      long seqNum[] = obtainSeqNum(edits.size());
+      // The 'lastSeqWritten' map holds the sequence number of the oldest
+      // write for each region. When the cache is flushed, the entry for the
+      // region being flushed is removed if the sequence number of the flush
+      // is greater than or equal to the value in lastSeqWritten.
+      if (!this.lastSeqWritten.containsKey(regionName)) {
+        this.lastSeqWritten.put(regionName, Long.valueOf(seqNum[0]));
+      }
+      int counter = 0;
+      for (Map.Entry<HStoreKey, byte[]> es : edits.entrySet()) {
+        HStoreKey key = es.getKey();
+        HLogKey logKey =
+          new HLogKey(regionName, tableName, key.getRow(), seqNum[counter++]);
+        HLogEdit logEdit =
+          new HLogEdit(key.getColumn(), es.getValue(), key.getTimestamp());
+        this.writer.append(logKey, logEdit);
+        this.numEntries++;
+      }
     }
-    int counter = 0;
-    for (Map.Entry<HStoreKey, byte[]> es : edits.entrySet()) {
-      HStoreKey key = es.getKey();
-      HLogKey logKey =
-        new HLogKey(regionName, tableName, key.getRow(), seqNum[counter++]);
-      HLogEdit logEdit =
-        new HLogEdit(key.getColumn(), es.getValue(), key.getTimestamp());
-      this.writer.append(logKey, logEdit);
-      this.numEntries++;
+    if (this.numEntries > this.maxlogentries) {
+      if (listener != null) {
+        listener.logRollRequested();
+      }
     }
   }
 
@@ -449,6 +460,11 @@ public class HLog implements HConstants {
       value = logSeqNum++;
     }
     return value;
+  }
+
+  /** @return the number of log files in use */
+  int getNumLogFiles() {
+    return outputfiles.size();
   }
 
   /**
@@ -487,43 +503,43 @@ public class HLog implements HConstants {
   /**
    * Complete the cache flush
    *
-   * Protected by this and cacheFlushLock
+   * Protected by cacheFlushLock
    *
    * @param regionName
    * @param tableName
    * @param logSeqId
    * @throws IOException
    */
-  synchronized void completeCacheFlush(final Text regionName,
-    final Text tableName, final long logSeqId)
-  throws IOException {
+  void completeCacheFlush(final Text regionName, final Text tableName,
+      final long logSeqId) throws IOException {
+
     try {
       if (this.closed) {
         return;
       }
-      this.writer.append(new HLogKey(regionName, tableName, HLog.METAROW, logSeqId),
-        new HLogEdit(HLog.METACOLUMN, HLogEdit.completeCacheFlush.get(),
-          System.currentTimeMillis()));
-      this.numEntries++;
-      Long seq = this.lastSeqWritten.get(regionName);
-      if (seq != null && logSeqId >= seq.longValue()) {
-        this.lastSeqWritten.remove(regionName);
+      synchronized (updateLock) {
+        this.writer.append(new HLogKey(regionName, tableName, HLog.METAROW, logSeqId),
+            new HLogEdit(HLog.METACOLUMN, HLogEdit.completeCacheFlush.get(),
+                System.currentTimeMillis()));
+        this.numEntries++;
+        Long seq = this.lastSeqWritten.get(regionName);
+        if (seq != null && logSeqId >= seq.longValue()) {
+          this.lastSeqWritten.remove(regionName);
+        }
       }
     } finally {
       this.cacheFlushLock.unlock();
-      notifyAll();              // wake up the log roller if it is waiting
     }
   }
 
   /**
-   * Abort a cache flush. This method will clear waits on
-   * {@link #insideCacheFlush}. Call if the flush fails. Note that the only
-   * recovery for an aborted flush currently is a restart of the regionserver so
-   * the snapshot content dropped by the failure gets restored to the memcache.
+   * Abort a cache flush.
+   * Call if the flush fails. Note that the only recovery for an aborted flush
+   * currently is a restart of the regionserver so the snapshot content dropped
+   * by the failure gets restored to the memcache.
    */
-  synchronized void abortCacheFlush() {
+  void abortCacheFlush() {
     this.cacheFlushLock.unlock();
-    notifyAll();
   }
 
   private static void usage() {

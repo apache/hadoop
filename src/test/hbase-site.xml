@@ -104,7 +104,16 @@
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.optionalcacheflushinterval</name>
+    <value>10000</value>
+    <description>
+    Amount of time to wait since the last time a region was flushed before
+    invoking an optional cache flush. Default 60,000.
+    </description>
+  </property>
+  <property>
   	<name>hbase.rootdir</name>
   	<value>/hbase</value>
-  	<description>location of HBase instance in dfs</description></property>
+  	<description>location of HBase instance in dfs</description>
+  </property>
 </configuration>
