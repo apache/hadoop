@@ -26,16 +26,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
-import java.util.SortedSet;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -414,18 +414,19 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     protected void checkAssigned(final HRegionInfo info,
       final String serverName, final long startCode) throws IOException {
       
-      synchronized (serversToServerInfo) {
-        // Skip region - if ...
-        if(info.isOffline()                                 // offline
-            || killedRegions.contains(info.getRegionName()) // queued for offline
-            || regionsToDelete.contains(info.getRegionName())) { // queued for delete
-          unassignedRegions.remove(info.getRegionName());
-          assignAttempts.remove(info.getRegionName());
-          return;
-        }
-        HServerInfo storedInfo = null;
-        boolean deadServer = false;
-        if (serverName.length() != 0) {
+      // Skip region - if ...
+      if(info.isOffline()                                 // offline
+          || killedRegions.contains(info.getRegionName()) // queued for offline
+          || regionsToDelete.contains(info.getRegionName())) { // queued for delete
+
+        unassignedRegions.remove(info.getRegionName());
+        assignAttempts.remove(info.getRegionName());
+        return;
+      }
+      HServerInfo storedInfo = null;
+      boolean deadServer = false;
+      if (serverName.length() != 0) {
+        synchronized (killList) {
           Map<Text, HRegionInfo> regionsToKill = killList.get(serverName);
           if (regionsToKill != null &&
               regionsToKill.containsKey(info.getRegionName())) {
@@ -437,65 +438,62 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             }
             return;
           }
-          storedInfo = serversToServerInfo.get(serverName);
-          if (deadServers.contains(serverName)) {
-            deadServer = true;
-          }
         }
+        storedInfo = serversToServerInfo.get(serverName);
+        deadServer = deadServers.contains(serverName);
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Checking " + info.getRegionName() + " is assigned");
+      }
+      /*
+       * If the server is not dead and either:
+       *   the stored info is not null and the start code does not match
+       * or:
+       *   the stored info is null and the region is neither unassigned nor pending
+       * then:
+       */ 
+      if (!deadServer &&
+          ((storedInfo != null && storedInfo.getStartCode() != startCode) ||
+              (storedInfo == null &&
+                  !unassignedRegions.containsKey(info.getRegionName()) &&
+                  !pendingRegions.contains(info.getRegionName())
+              )
+          )
+      ) {
+
+        // The current assignment is no good
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Checking " + info.getRegionName() + " is assigned");
+          LOG.debug("Current assignment of " + info.getRegionName() +
+          " is no good");
         }
-
-        /*
-         * If the server is not dead and either:
-         *   the stored info is not null and the start code does not match
-         * or:
-         *   the stored info is null and the region is neither unassigned nor pending
-         * then:
-         */ 
-        if (!deadServer &&
-            ((storedInfo != null && storedInfo.getStartCode() != startCode) ||
-                (storedInfo == null &&
-                    !unassignedRegions.containsKey(info.getRegionName()) &&
-                    !pendingRegions.contains(info.getRegionName())
-                )
-            )
-        ) {
-
-          // The current assignment is no good
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Current assignment of " + info.getRegionName() +
-            " is no good");
-          }
-          // Recover the region server's log if there is one.
-          // This is only done from here if we are restarting and there is stale
-          // data in the meta region. Once we are on-line, dead server log
-          // recovery is handled by lease expiration and ProcessServerShutdown
-          if (serverName.length() != 0) {
-            StringBuilder dirName = new StringBuilder("log_");
-            dirName.append(serverName.replace(":", "_"));
-            Path logDir = new Path(dir, dirName.toString());
-            try {
-              if (fs.exists(logDir)) {
-                splitLogLock.lock();
-                try {
-                  HLog.splitLog(dir, logDir, fs, conf);
-                } finally {
-                  splitLogLock.unlock();
-                }
+        // Recover the region server's log if there is one.
+        // This is only done from here if we are restarting and there is stale
+        // data in the meta region. Once we are on-line, dead server log
+        // recovery is handled by lease expiration and ProcessServerShutdown
+        if (serverName.length() != 0) {
+          StringBuilder dirName = new StringBuilder("log_");
+          dirName.append(serverName.replace(":", "_"));
+          Path logDir = new Path(dir, dirName.toString());
+          try {
+            if (fs.exists(logDir)) {
+              splitLogLock.lock();
+              try {
+                HLog.splitLog(dir, logDir, fs, conf);
+              } finally {
+                splitLogLock.unlock();
               }
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Split " + logDir.toString());
-              }
-            } catch (IOException e) {
-              LOG.warn("unable to split region server log because: ", e);
-              throw e;
             }
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Split " + logDir.toString());
+            }
+          } catch (IOException e) {
+            LOG.warn("unable to split region server log because: ", e);
+            throw e;
           }
-          // Now get the region assigned
-          unassignedRegions.put(info.getRegionName(), info);
-          assignAttempts.put(info.getRegionName(), Long.valueOf(0L));
         }
+        // Now get the region assigned
+        unassignedRegions.put(info.getRegionName(), info);
+        assignAttempts.put(info.getRegionName(), Long.valueOf(0L));
       }
     }
   }
@@ -800,25 +798,21 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   MetaScanner metaScannerThread;
   Integer metaScannerLock = new Integer(0);
 
-  /////////////////////////////////////////////////////////////////////////////
-  //
-  // Access to all of the following objects MUST be synchronized on
-  // serversToServerInfo
-  
   /** The map of known server names to server info */
   final Map<String, HServerInfo> serversToServerInfo =
-    new HashMap<String, HServerInfo>();
+    new ConcurrentHashMap<String, HServerInfo>();
   
   /** Set of known dead servers */
-  final Set<String> deadServers = new HashSet<String>();
+  final Set<String> deadServers =
+    Collections.synchronizedSet(new HashSet<String>());
 
   /** SortedMap server load -> Set of server names */
   final SortedMap<HServerLoad, Set<String>> loadToServers =
-    new TreeMap<HServerLoad, Set<String>>();
+    Collections.synchronizedSortedMap(new TreeMap<HServerLoad, Set<String>>());
 
   /** Map of server names -> server load */
   final Map<String, HServerLoad> serversToLoad =
-    new HashMap<String, HServerLoad>();
+    new ConcurrentHashMap<String, HServerLoad>();
 
   /**
    * The 'unassignedRegions' table maps from a region name to a HRegionInfo 
@@ -831,39 +825,43 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * the region has been deployed.
    */
   final SortedMap<Text, HRegionInfo> unassignedRegions =
-    new TreeMap<Text, HRegionInfo>();
+    Collections.synchronizedSortedMap(new TreeMap<Text, HRegionInfo>());
 
   /**
    * The 'assignAttempts' table maps from regions to a timestamp that indicates
    * the last time we *tried* to assign the region to a RegionServer. If the 
    * timestamp is out of date, then we can try to reassign it.
    */
-  final Map<Text, Long> assignAttempts = new HashMap<Text, Long>();
+  final Map<Text, Long> assignAttempts = new ConcurrentHashMap<Text, Long>();
 
   /**
    * Regions that have been assigned, and the server has reported that it has
    * started serving it, but that we have not yet recorded in the meta table.
    */
-  final Set<Text> pendingRegions = new HashSet<Text>();
+  final Set<Text> pendingRegions =
+    Collections.synchronizedSet(new HashSet<Text>());
 
   /**
    * The 'killList' is a list of regions that are going to be closed, but not
    * reopened.
    */
   final Map<String, HashMap<Text, HRegionInfo>> killList =
-    new HashMap<String, HashMap<Text, HRegionInfo>>();
+    new ConcurrentHashMap<String, HashMap<Text, HRegionInfo>>();
 
   /** 'killedRegions' contains regions that are in the process of being closed */
-  final Set<Text> killedRegions = new HashSet<Text>();
+  final Set<Text> killedRegions =
+    Collections.synchronizedSet(new HashSet<Text>());
 
   /**
    * 'regionsToDelete' contains regions that need to be deleted, but cannot be
    * until the region server closes it
    */
-  final Set<Text> regionsToDelete = new HashSet<Text>();
+  final Set<Text> regionsToDelete =
+    Collections.synchronizedSet(new HashSet<Text>());
 
-  //
-  /////////////////////////////////////////////////////////////////////////////
+  /** Set of tables currently in creation. */
+  private Set<Text> tableInCreation = 
+    Collections.synchronizedSet(new HashSet<Text>());
 
   /** Build the HMaster out of a raw configuration item.
    * 
@@ -974,8 +972,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * could 'notice' dead region server in root scanner -- if we failed access
    * multiple times -- but reassigning root is catastrophic.
    * 
-   * Note: This method must be called from inside a synchronized block on
-   * serversToServerInfo
    */
   void unassignRootRegion() {
     this.rootRegionLocation.set(null);
@@ -1233,43 +1229,40 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     String s = serverInfo.getServerAddress().toString().trim();
     LOG.info("received start message from: " + s);
 
-    synchronized (serversToServerInfo) {
-      HServerLoad load = serversToLoad.remove(s);
-      if (load != null) {
-        // The startup message was from a known server.
-        // Remove stale information about the server's load.
-        Set<String> servers = loadToServers.get(load);
-        if (servers != null) {
-          servers.remove(s);
-          loadToServers.put(load, servers);
-        }
-      }
-      
-      HServerInfo storedInfo = serversToServerInfo.remove(s);
-      if (storedInfo != null && !closed.get()) {
-        // The startup message was from a know server with the same name.
-        // Timeout the old one right away.
-        HServerAddress root = rootRegionLocation.get();
-        if (root != null && root.equals(storedInfo.getServerAddress())) {
-          unassignRootRegion();
-        }
-        shutdownQueue.put(new ProcessServerShutdown(storedInfo));
-      }
-
-      // record new server
-      
-      load = new HServerLoad();
-      serverInfo.setLoad(load);
-      serversToServerInfo.put(s, serverInfo);
-      serversToLoad.put(s, load);
+    HServerLoad load = serversToLoad.remove(s);
+    if (load != null) {
+      // The startup message was from a known server.
+      // Remove stale information about the server's load.
       Set<String> servers = loadToServers.get(load);
-      if (servers == null) {
-        servers = new HashSet<String>();
+      if (servers != null) {
+        servers.remove(s);
+        loadToServers.put(load, servers);
       }
-      servers.add(s);
-      loadToServers.put(load, servers);
-      serversToServerInfo.notifyAll();
     }
+
+    HServerInfo storedInfo = serversToServerInfo.remove(s);
+    if (storedInfo != null && !closed.get()) {
+      // The startup message was from a known server with the same name.
+      // Timeout the old one right away.
+      HServerAddress root = rootRegionLocation.get();
+      if (root != null && root.equals(storedInfo.getServerAddress())) {
+        unassignRootRegion();
+      }
+      shutdownQueue.put(new ProcessServerShutdown(storedInfo));
+    }
+
+    // record new server
+
+    load = new HServerLoad();
+    serverInfo.setLoad(load);
+    serversToServerInfo.put(s, serverInfo);
+    serversToLoad.put(s, load);
+    Set<String> servers = loadToServers.get(load);
+    if (servers == null) {
+      servers = new HashSet<String>();
+    }
+    servers.add(s);
+    loadToServers.put(load, servers);
 
     if (!closed.get()) {
       long serverLabel = getServerLabel(s);
@@ -1327,10 +1320,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
               onlineMetaRegions.remove(info.getStartKey());
             }
 
-            synchronized (serversToServerInfo) {
-              this.unassignedRegions.put(info.getRegionName(), info);
-              this.assignAttempts.put(info.getRegionName(), Long.valueOf(0L));
-            }
+            this.unassignedRegions.put(info.getRegionName(), info);
+            this.assignAttempts.put(info.getRegionName(), Long.valueOf(0L));
           }
         }
       }
@@ -1347,10 +1338,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       return new HMsg[]{new HMsg(HMsg.MSG_REGIONSERVER_STOP)};
     }
 
-    HServerInfo storedInfo;
-    synchronized (serversToServerInfo) {
-      storedInfo = serversToServerInfo.get(serverName);
-    }
+    HServerInfo storedInfo = serversToServerInfo.get(serverName);
     if (storedInfo == null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("received server report from unknown server: " + serverName);
@@ -1389,34 +1377,32 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
       // Refresh the info object and the load information
 
-      synchronized (serversToServerInfo) {
-        serversToServerInfo.put(serverName, serverInfo);
+      serversToServerInfo.put(serverName, serverInfo);
 
-        HServerLoad load = serversToLoad.get(serverName);
-        if (load != null && !load.equals(serverInfo.getLoad())) {
-          // We have previous information about the load on this server
-          // and the load on this server has changed
+      HServerLoad load = serversToLoad.get(serverName);
+      if (load != null && !load.equals(serverInfo.getLoad())) {
+        // We have previous information about the load on this server
+        // and the load on this server has changed
 
-          Set<String> servers = loadToServers.get(load);
-
-          // Note that servers should never be null because loadToServers
-          // and serversToLoad are manipulated in pairs
-
-          servers.remove(serverName);
-          loadToServers.put(load, servers);
-        }
-
-        // Set the current load information
-
-        load = serverInfo.getLoad();
-        serversToLoad.put(serverName, load);
         Set<String> servers = loadToServers.get(load);
-        if (servers == null) {
-          servers = new HashSet<String>();
-        }
-        servers.add(serverName);
+
+        // Note that servers should never be null because loadToServers
+        // and serversToLoad are manipulated in pairs
+
+        servers.remove(serverName);
         loadToServers.put(load, servers);
       }
+
+      // Set the current load information
+
+      load = serverInfo.getLoad();
+      serversToLoad.put(serverName, load);
+      Set<String> servers = loadToServers.get(load);
+      if (servers == null) {
+        servers = new HashSet<String>();
+      }
+      servers.add(serverName);
+      loadToServers.put(load, servers);
 
       // Next, process messages for this server
       return processMsgs(serverInfo, msgs);
@@ -1426,29 +1412,29 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /** Cancel a server's lease and update its load information */
   private boolean cancelLease(final String serverName, final long serverLabel) {
     boolean leaseCancelled = false;
-    synchronized (serversToServerInfo) {
-      HServerInfo info = serversToServerInfo.remove(serverName);
-      if (rootRegionLocation.get() != null &&
-          info.getServerAddress().equals(rootRegionLocation.get())) {
-        unassignRootRegion();
-      }
-      if (info != null) {
-        // Only cancel lease and update load information once.
-        // This method can be called a couple of times during shutdown.
-        LOG.info("Cancelling lease for " + serverName);
-        serverLeases.cancelLease(serverLabel, serverLabel);
-        leaseCancelled = true;
+    HServerInfo info = serversToServerInfo.remove(serverName);
+    if (rootRegionLocation.get() != null &&
+        info.getServerAddress().equals(rootRegionLocation.get())) {
+      unassignRootRegion();
+    }
+    if (info != null) {
+      // Only cancel lease and update load information once.
+      // This method can be called a couple of times during shutdown.
+      LOG.info("Cancelling lease for " + serverName);
+      serverLeases.cancelLease(serverLabel, serverLabel);
+      leaseCancelled = true;
 
-        // update load information
-        HServerLoad load = serversToLoad.remove(serverName);
-        if (load != null) {
-          Set<String> servers = loadToServers.get(load);
-          if (servers != null) {
-            servers.remove(serverName);
-            loadToServers.put(load, servers);
-          }
+      // update load information
+      HServerLoad load = serversToLoad.remove(serverName);
+      if (load != null) {
+        Set<String> servers = loadToServers.get(load);
+        if (servers != null) {
+          servers.remove(serverName);
+          loadToServers.put(load, servers);
         }
       }
+    }
+    synchronized (serversToServerInfo) {
       serversToServerInfo.notifyAll();
     }
     return leaseCancelled;
@@ -1466,147 +1452,141 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     ArrayList<HMsg> returnMsgs = new ArrayList<HMsg>();
     String serverName = info.getServerAddress().toString();
     HashMap<Text, HRegionInfo> regionsToKill = null;
-    synchronized (serversToServerInfo) {
-      regionsToKill = killList.remove(serverName);
-    }
+    regionsToKill = killList.remove(serverName);
 
     // Get reports on what the RegionServer did.
 
     for (int i = 0; i < incomingMsgs.length; i++) {
       HRegionInfo region = incomingMsgs[i].getRegionInfo();
 
-      synchronized (serversToServerInfo) {
-        switch (incomingMsgs[i].getMsg()) {
+      switch (incomingMsgs[i].getMsg()) {
 
-        case HMsg.MSG_REPORT_OPEN:
-          HRegionInfo regionInfo = unassignedRegions.get(region.getRegionName());
+      case HMsg.MSG_REPORT_OPEN:
+        HRegionInfo regionInfo = unassignedRegions.get(region.getRegionName());
 
-          if (regionInfo == null) {
+        if (regionInfo == null) {
 
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("region server " + info.getServerAddress().toString()
-                  + " should not have opened region " + region.getRegionName());
-            }
-
-            // This Region should not have been opened.
-            // Ask the server to shut it down, but don't report it as closed.  
-            // Otherwise the HMaster will think the Region was closed on purpose, 
-            // and then try to reopen it elsewhere; that's not what we want.
-
-            returnMsgs.add(new HMsg(HMsg.MSG_REGION_CLOSE_WITHOUT_REPORT, region)); 
-
-          } else {
-            LOG.info(info.getServerAddress().toString() + " serving " +
-                region.getRegionName());
-            // Remove from unassigned list so we don't assign it to someone else
-            this.unassignedRegions.remove(region.getRegionName());
-            this.assignAttempts.remove(region.getRegionName());
-            if (region.getRegionName().compareTo(
-                HRegionInfo.rootRegionInfo.getRegionName()) == 0) {
-              // Store the Root Region location (in memory)
-              synchronized (rootRegionLocation) {
-                this.rootRegionLocation.set(
-                    new HServerAddress(info.getServerAddress()));
-                this.rootRegionLocation.notifyAll();
-              }
-              break;
-            }
-
-            // Note that the table has been assigned and is waiting for the meta
-            // table to be updated.
-
-            pendingRegions.add(region.getRegionName());
-
-            // Queue up an update to note the region location.
-
-            try {
-              msgQueue.put(new ProcessRegionOpen(info, region));
-            } catch (InterruptedException e) {
-              throw new RuntimeException("Putting into msgQueue was interrupted.", e);
-            }
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("region server " + info.getServerAddress().toString()
+                + " should not have opened region " + region.getRegionName());
           }
-          break;
 
-        case HMsg.MSG_REPORT_CLOSE:
-          LOG.info(info.getServerAddress().toString() + " no longer serving " +
+          // This Region should not have been opened.
+          // Ask the server to shut it down, but don't report it as closed.  
+          // Otherwise the HMaster will think the Region was closed on purpose, 
+          // and then try to reopen it elsewhere; that's not what we want.
+
+          returnMsgs.add(new HMsg(HMsg.MSG_REGION_CLOSE_WITHOUT_REPORT, region)); 
+
+        } else {
+          LOG.info(info.getServerAddress().toString() + " serving " +
               region.getRegionName());
-
+          // Remove from unassigned list so we don't assign it to someone else
+          this.unassignedRegions.remove(region.getRegionName());
+          this.assignAttempts.remove(region.getRegionName());
           if (region.getRegionName().compareTo(
               HRegionInfo.rootRegionInfo.getRegionName()) == 0) {
-
-            // Root region
-
-            unassignRootRegion();
-
-          } else {
-            boolean reassignRegion = true;
-            boolean deleteRegion = false;
-
-            if (killedRegions.remove(region.getRegionName())) {
-              reassignRegion = false;
+            // Store the Root Region location (in memory)
+            synchronized (rootRegionLocation) {
+              this.rootRegionLocation.set(
+                  new HServerAddress(info.getServerAddress()));
+              this.rootRegionLocation.notifyAll();
             }
-
-            if (regionsToDelete.remove(region.getRegionName())) {
-              reassignRegion = false;
-              deleteRegion = true;
-            }
-
-            // NOTE: we cannot put the region into unassignedRegions as that
-            //       could create a race with the pending close if it gets 
-            //       reassigned before the close is processed.
-
-            unassignedRegions.remove(region.getRegionName());
-            assignAttempts.remove(region.getRegionName());
-
-            try {
-              msgQueue.put(new ProcessRegionClose(region, reassignRegion,
-                  deleteRegion));
-
-            } catch (InterruptedException e) {
-              throw new RuntimeException("Putting into msgQueue was interrupted.", e);
-            }
+            break;
           }
-          break;
 
-        case HMsg.MSG_REPORT_SPLIT:
-          // A region has split.
+          // Note that the table has been assigned and is waiting for the meta
+          // table to be updated.
 
-          HRegionInfo newRegionA = incomingMsgs[++i].getRegionInfo();
-          unassignedRegions.put(newRegionA.getRegionName(), newRegionA);
-          assignAttempts.put(newRegionA.getRegionName(), Long.valueOf(0L));
+          pendingRegions.add(region.getRegionName());
 
-          HRegionInfo newRegionB = incomingMsgs[++i].getRegionInfo();
-          unassignedRegions.put(newRegionB.getRegionName(), newRegionB);
-          assignAttempts.put(newRegionB.getRegionName(), Long.valueOf(0L));
+          // Queue up an update to note the region location.
 
-          LOG.info("region " + region.getRegionName() +
-              " split. New regions are: " + newRegionA.getRegionName() + ", " +
-              newRegionB.getRegionName());
-
-          if (region.getTableDesc().getName().equals(META_TABLE_NAME)) {
-            // A meta region has split.
-
-            onlineMetaRegions.remove(region.getStartKey());
-            numberOfMetaRegions.incrementAndGet();
+          try {
+            msgQueue.put(new ProcessRegionOpen(info, region));
+          } catch (InterruptedException e) {
+            throw new RuntimeException("Putting into msgQueue was interrupted.", e);
           }
-          break;
-
-        default:
-          throw new IOException(
-              "Impossible state during msg processing.  Instruction: " +
-              incomingMsgs[i].getMsg());
         }
+        break;
+
+      case HMsg.MSG_REPORT_CLOSE:
+        LOG.info(info.getServerAddress().toString() + " no longer serving " +
+            region.getRegionName());
+
+        if (region.getRegionName().compareTo(
+            HRegionInfo.rootRegionInfo.getRegionName()) == 0) {
+
+          // Root region
+
+          unassignRootRegion();
+
+        } else {
+          boolean reassignRegion = true;
+          boolean deleteRegion = false;
+
+          if (killedRegions.remove(region.getRegionName())) {
+            reassignRegion = false;
+          }
+
+          if (regionsToDelete.remove(region.getRegionName())) {
+            reassignRegion = false;
+            deleteRegion = true;
+          }
+
+          // NOTE: we cannot put the region into unassignedRegions as that
+          //       could create a race with the pending close if it gets 
+          //       reassigned before the close is processed.
+
+          unassignedRegions.remove(region.getRegionName());
+          assignAttempts.remove(region.getRegionName());
+
+          try {
+            msgQueue.put(new ProcessRegionClose(region, reassignRegion,
+                deleteRegion));
+
+          } catch (InterruptedException e) {
+            throw new RuntimeException("Putting into msgQueue was interrupted.", e);
+          }
+        }
+        break;
+
+      case HMsg.MSG_REPORT_SPLIT:
+        // A region has split.
+
+        HRegionInfo newRegionA = incomingMsgs[++i].getRegionInfo();
+        unassignedRegions.put(newRegionA.getRegionName(), newRegionA);
+        assignAttempts.put(newRegionA.getRegionName(), Long.valueOf(0L));
+
+        HRegionInfo newRegionB = incomingMsgs[++i].getRegionInfo();
+        unassignedRegions.put(newRegionB.getRegionName(), newRegionB);
+        assignAttempts.put(newRegionB.getRegionName(), Long.valueOf(0L));
+
+        LOG.info("region " + region.getRegionName() +
+            " split. New regions are: " + newRegionA.getRegionName() + ", " +
+            newRegionB.getRegionName());
+
+        if (region.getTableDesc().getName().equals(META_TABLE_NAME)) {
+          // A meta region has split.
+
+          onlineMetaRegions.remove(region.getStartKey());
+          numberOfMetaRegions.incrementAndGet();
+        }
+        break;
+
+      default:
+        throw new IOException(
+            "Impossible state during msg processing.  Instruction: " +
+            incomingMsgs[i].getMsg());
       }
     }
 
     // Process the kill list
 
-    synchronized (serversToServerInfo) {
-      if (regionsToKill != null) {
-        for (HRegionInfo i: regionsToKill.values()) {
-          returnMsgs.add(new HMsg(HMsg.MSG_REGION_CLOSE, i));
-          killedRegions.add(i.getRegionName());
-        }
+    if (regionsToKill != null) {
+      for (HRegionInfo i: regionsToKill.values()) {
+        returnMsgs.add(new HMsg(HMsg.MSG_REGION_CLOSE, i));
+        killedRegions.add(i.getRegionName());
       }
     }
 
@@ -1627,97 +1607,98 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       ArrayList<HMsg> returnMsgs) {
     
     long now = System.currentTimeMillis();
-    SortedSet<Text> regionsToAssign = new TreeSet<Text>();
-    synchronized (serversToServerInfo) {
+    Set<Text> regionsToAssign = new HashSet<Text>();
+    synchronized (this.assignAttempts) {
       for (Map.Entry<Text, Long> e: this.assignAttempts.entrySet()) {
         long diff = now - e.getValue().longValue();
         if (diff > this.maxRegionOpenTime) {
           regionsToAssign.add(e.getKey());
         }
       }
-      int nRegionsToAssign = regionsToAssign.size();
-      if (nRegionsToAssign <= 0) {
-        // No regions to assign.  Return.
-        return;
+    }
+    int nRegionsToAssign = regionsToAssign.size();
+    if (nRegionsToAssign <= 0) {
+      // No regions to assign.  Return.
+      return;
+    }
+
+    if (this.serversToServerInfo.size() == 1) {
+      assignRegionsToOneServer(regionsToAssign, serverName, returnMsgs);
+      // Finished.  Return.
+      return;
+    }
+
+    // Multiple servers in play.
+    // We need to allocate regions only to most lightly loaded servers.
+    HServerLoad thisServersLoad = info.getLoad();
+    int nregions = regionsPerServer(nRegionsToAssign, thisServersLoad);
+    nRegionsToAssign -= nregions;
+    if (nRegionsToAssign > 0) {
+      // We still have more regions to assign. See how many we can assign
+      // before this server becomes more heavily loaded than the next
+      // most heavily loaded server.
+      SortedMap<HServerLoad, Set<String>> heavyServers =
+        new TreeMap<HServerLoad, Set<String>>();
+      synchronized (this.loadToServers) {
+        heavyServers.putAll(this.loadToServers.tailMap(thisServersLoad));
       }
-
-      if (this.serversToServerInfo.size() == 1) {
-        assignRegionsToOneServer(regionsToAssign, serverName, returnMsgs);
-        // Finished.  Return.
-        return;
-      }
-
-      // Multiple servers in play.
-      // We need to allocate regions only to most lightly loaded servers.
-      HServerLoad thisServersLoad = info.getLoad();
-      int nregions = regionsPerServer(nRegionsToAssign, thisServersLoad);
-      nRegionsToAssign -= nregions;
-      if (nRegionsToAssign > 0) {
-        // We still have more regions to assign. See how many we can assign
-        // before this server becomes more heavily loaded than the next
-        // most heavily loaded server.
-        SortedMap<HServerLoad, Set<String>> heavyServers =
-          this.loadToServers.tailMap(thisServersLoad);
-        int nservers = 0;
-        HServerLoad heavierLoad = null;
-        for (Map.Entry<HServerLoad, Set<String>> e : heavyServers.entrySet()) {
-          Set<String> servers = e.getValue();
-          nservers += servers.size();
-          if (e.getKey().compareTo(thisServersLoad) == 0) {
-            // This is the load factor of the server we are considering
-            nservers -= 1;
-            continue;
-          }
-
-          // If we get here, we are at the first load entry that is a
-          // heavier load than the server we are considering
-          heavierLoad = e.getKey();
-          break;
+      int nservers = 0;
+      HServerLoad heavierLoad = null;
+      for (Map.Entry<HServerLoad, Set<String>> e : heavyServers.entrySet()) {
+        Set<String> servers = e.getValue();
+        nservers += servers.size();
+        if (e.getKey().compareTo(thisServersLoad) == 0) {
+          // This is the load factor of the server we are considering
+          nservers -= 1;
+          continue;
         }
 
-        nregions = 0;
-        if (heavierLoad != null) {
-          // There is a more heavily loaded server
-          for (HServerLoad load =
-            new HServerLoad(thisServersLoad.getNumberOfRequests(),
-                thisServersLoad.getNumberOfRegions());
-          load.compareTo(heavierLoad) <= 0 &&
-          nregions < nRegionsToAssign;
-          load.setNumberOfRegions(load.getNumberOfRegions() + 1),
-          nregions++) {
-            // continue;
-          }
-        }
+        // If we get here, we are at the first load entry that is a
+        // heavier load than the server we are considering
+        heavierLoad = e.getKey();
+        break;
+      }
 
-        if (nregions < nRegionsToAssign) {
-          // There are some more heavily loaded servers
-          // but we can't assign all the regions to this server.
-          if (nservers > 0) {
-            // There are other servers that can share the load.
-            // Split regions that need assignment across the servers.
-            nregions = (int) Math.ceil((1.0 * nRegionsToAssign)
-                / (1.0 * nservers));
-          } else {
-            // No other servers with same load.
-            // Split regions over all available servers
-            nregions = (int) Math.ceil((1.0 * nRegionsToAssign)
-                / (1.0 * serversToServerInfo.size()));
-          }
+      nregions = 0;
+      if (heavierLoad != null) {
+        // There is a more heavily loaded server
+        for (HServerLoad load =
+          new HServerLoad(thisServersLoad.getNumberOfRequests(),
+              thisServersLoad.getNumberOfRegions());
+        load.compareTo(heavierLoad) <= 0 && nregions < nRegionsToAssign;
+        load.setNumberOfRegions(load.getNumberOfRegions() + 1), nregions++) {
+          // continue;
+        }
+      }
+
+      if (nregions < nRegionsToAssign) {
+        // There are some more heavily loaded servers
+        // but we can't assign all the regions to this server.
+        if (nservers > 0) {
+          // There are other servers that can share the load.
+          // Split regions that need assignment across the servers.
+          nregions = (int) Math.ceil((1.0 * nRegionsToAssign)
+              / (1.0 * nservers));
         } else {
-          // Assign all regions to this server
-          nregions = nRegionsToAssign;
+          // No other servers with same load.
+          // Split regions over all available servers
+          nregions = (int) Math.ceil((1.0 * nRegionsToAssign)
+              / (1.0 * serversToServerInfo.size()));
         }
+      } else {
+        // Assign all regions to this server
+        nregions = nRegionsToAssign;
+      }
 
-        now = System.currentTimeMillis();
-        for (Text regionName: regionsToAssign) {
-          HRegionInfo regionInfo = this.unassignedRegions.get(regionName);
-          LOG.info("assigning region " + regionName + " to server " +
-              serverName);
-          this.assignAttempts.put(regionName, Long.valueOf(now));
-          returnMsgs.add(new HMsg(HMsg.MSG_REGION_OPEN, regionInfo));
-          if (--nregions <= 0) {
-            break;
-          }
+      now = System.currentTimeMillis();
+      for (Text regionName: regionsToAssign) {
+        HRegionInfo regionInfo = this.unassignedRegions.get(regionName);
+        LOG.info("assigning region " + regionName + " to server " +
+            serverName);
+        this.assignAttempts.put(regionName, Long.valueOf(now));
+        returnMsgs.add(new HMsg(HMsg.MSG_REGION_OPEN, regionInfo));
+        if (--nregions <= 0) {
+          break;
         }
       }
     }
@@ -1727,19 +1708,21 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * @param nRegionsToAssign
    * @param thisServersLoad
    * @return How many regions we can assign to more lightly loaded servers
-   * 
-   * Note: this method MUST be called from inside a synchronized block on
-   * serversToServerInfo
    */
   private int regionsPerServer(final int nRegionsToAssign,
       final HServerLoad thisServersLoad) {
+    
     SortedMap<HServerLoad, Set<String>> lightServers =
-      this.loadToServers.headMap(thisServersLoad);
+      new TreeMap<HServerLoad, Set<String>>();
+    
+    synchronized (this.loadToServers) {
+      lightServers.putAll(this.loadToServers.headMap(thisServersLoad));
+    }
 
     int nRegions = 0;
     for (Map.Entry<HServerLoad, Set<String>> e : lightServers.entrySet()) {
-      HServerLoad lightLoad = new HServerLoad(e.getKey()
-          .getNumberOfRequests(), e.getKey().getNumberOfRegions());
+      HServerLoad lightLoad = new HServerLoad(e.getKey().getNumberOfRequests(),
+          e.getKey().getNumberOfRegions());
       do {
         lightLoad.setNumberOfRegions(lightLoad.getNumberOfRegions() + 1);
         nRegions += 1;
@@ -1760,17 +1743,15 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * @param serverName
    * @param returnMsgs
    */
-  private void assignRegionsToOneServer(final SortedSet<Text> regionsToAssign,
+  private void assignRegionsToOneServer(final Set<Text> regionsToAssign,
       final String serverName, final ArrayList<HMsg> returnMsgs) {
     long now = System.currentTimeMillis();
     for (Text regionName: regionsToAssign) {
-      synchronized (serversToServerInfo) {
-        HRegionInfo regionInfo = this.unassignedRegions.get(regionName);
-        LOG.info("assigning region " + regionName + " to the only server " +
-            serverName);
-        this.assignAttempts.put(regionName, Long.valueOf(now));
-        returnMsgs.add(new HMsg(HMsg.MSG_REGION_OPEN, regionInfo));
-      }
+      HRegionInfo regionInfo = this.unassignedRegions.get(regionName);
+      LOG.info("assigning region " + regionName + " to the only server " +
+          serverName);
+      this.assignAttempts.put(regionName, Long.valueOf(now));
+      returnMsgs.add(new HMsg(HMsg.MSG_REGION_OPEN, regionInfo));
     }
   }
   
@@ -1779,9 +1760,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
 
   private abstract class RegionServerOperation {
-    RegionServerOperation() {
-      super();
-    }
+    RegionServerOperation() {}
 
     abstract boolean process() throws IOException;
   }
@@ -1939,16 +1918,19 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           ToDoEntry todo = new ToDoEntry(row, info);
           toDoList.add(todo);
 
-          synchronized (serversToServerInfo) {
-            if (killList.containsKey(deadServerName)) {
-              HashMap<Text, HRegionInfo> regionsToKill =
-                killList.get(deadServerName);
+          if (killList.containsKey(deadServerName)) {
+            HashMap<Text, HRegionInfo> regionsToKill =
+              new HashMap<Text, HRegionInfo>();
+            synchronized (killList) {
+              regionsToKill.putAll(killList.get(deadServerName));
+            }
 
-              if (regionsToKill.containsKey(info.getRegionName())) {
-                regionsToKill.remove(info.getRegionName());
-                killList.put(deadServerName, regionsToKill);
-                unassignedRegions.remove(info.getRegionName());
-                assignAttempts.remove(info.getRegionName());
+            if (regionsToKill.containsKey(info.getRegionName())) {
+              regionsToKill.remove(info.getRegionName());
+              killList.put(deadServerName, regionsToKill);
+              unassignedRegions.remove(info.getRegionName());
+              assignAttempts.remove(info.getRegionName());
+              synchronized (regionsToDelete) {
                 if (regionsToDelete.contains(info.getRegionName())) {
                   // Delete this region
                   regionsToDelete.remove(info.getRegionName());
@@ -1958,15 +1940,15 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
                   todo.regionOffline = true;
                 }
               }
-
-            } else {
-              // Get region reassigned
-              regions.put(info.getRegionName(), info);
-
-              // If it was pending, remove.
-              // Otherwise will obstruct its getting reassigned.
-              pendingRegions.remove(info.getRegionName());
             }
+
+          } else {
+            // Get region reassigned
+            regions.put(info.getRegionName(), info);
+
+            // If it was pending, remove.
+            // Otherwise will obstruct its getting reassigned.
+            pendingRegions.remove(info.getRegionName());
           }
         }
       } finally {
@@ -1999,10 +1981,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       for (Map.Entry<Text, HRegionInfo> e: regions.entrySet()) {
         Text region = e.getKey();
         HRegionInfo regionInfo = e.getValue();
-        synchronized (serversToServerInfo) {
-          unassignedRegions.put(region, regionInfo);
-          assignAttempts.put(region, Long.valueOf(0L));
-        }
+        unassignedRegions.put(region, regionInfo);
+        assignAttempts.put(region, Long.valueOf(0L));
       }
     }
 
@@ -2039,9 +2019,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           // is created, a check is made to see if it is the root server.
           // and unassignRootRegion() is called then. However, in the
           // unlikely event that we do end up here, let's do the right thing.
-          synchronized (serversToServerInfo) {
-            unassignRootRegion();
-          }
+          unassignRootRegion();
           rootRegionUnavailable = true;
         }
         if (rootRegionUnavailable) {
@@ -2128,35 +2106,34 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           if (closed.get()) {
             return true;
           }
+          List<MetaRegion> regions = new ArrayList<MetaRegion>();
           synchronized (onlineMetaRegions) {
-            for (MetaRegion r: onlineMetaRegions.values()) {
+            regions.addAll(onlineMetaRegions.values());
+          }
+          for (MetaRegion r: regions) {
+            HRegionInterface server = null;
+            long scannerId = -1L;
 
-              HRegionInterface server = null;
-              long scannerId = -1L;
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("process server shutdown scanning " +
+                  r.getRegionName() + " on " + r.getServer() + " " +
+                  Thread.currentThread().getName());
+            }
+            server = connection.getHRegionConnection(r.getServer());
 
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("process server shutdown scanning " +
-                    r.getRegionName() + " on " + r.getServer() + " " +
-                    Thread.currentThread().getName());
-              }
-              server = connection.getHRegionConnection(r.getServer());
+            scannerId =
+              server.openScanner(r.getRegionName(), COLUMN_FAMILY_ARRAY,
+                  EMPTY_START_ROW, System.currentTimeMillis(), null);
 
-              scannerId =
-                server.openScanner(r.getRegionName(), COLUMN_FAMILY_ARRAY,
-                    EMPTY_START_ROW, System.currentTimeMillis(), null);
+            scanMetaRegion(server, scannerId, r.getRegionName());
 
-              scanMetaRegion(server, scannerId, r.getRegionName());
-
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("process server shutdown finished scanning " +
-                    r.getRegionName() + " on " + r.getServer() + " " +
-                    Thread.currentThread().getName());
-              }
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("process server shutdown finished scanning " +
+                  r.getRegionName() + " on " + r.getServer() + " " +
+                  Thread.currentThread().getName());
             }
           }
-          synchronized (serversToServerInfo) {
-            deadServers.remove(deadServerName);
-          }
+          deadServers.remove(deadServerName);
           break;
 
         } catch (IOException e) {
@@ -2287,10 +2264,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       if (reassignRegion) {
         LOG.info("reassign region: " + regionInfo.getRegionName());
 
-        synchronized (serversToServerInfo) {
-          unassignedRegions.put(regionInfo.getRegionName(), regionInfo);
-          assignAttempts.put(regionInfo.getRegionName(), Long.valueOf(0L));
-        }
+        unassignedRegions.put(regionInfo.getRegionName(), regionInfo);
+        assignAttempts.put(regionInfo.getRegionName(), Long.valueOf(0L));
 
       } else if (deleteRegion) {
         try {
@@ -2375,10 +2350,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             return false;
           }
 
-          MetaRegion r = onlineMetaRegions.containsKey(region.getRegionName()) ?
-            onlineMetaRegions.get(region.getRegionName()) :
-            onlineMetaRegions.get(onlineMetaRegions.headMap(
-                region.getRegionName()).lastKey());
+          MetaRegion r = null;
+          synchronized (onlineMetaRegions) {
+            r = onlineMetaRegions.containsKey(region.getRegionName()) ?
+                onlineMetaRegions.get(region.getRegionName()) :
+                  onlineMetaRegions.get(onlineMetaRegions.headMap(
+                      region.getRegionName()).lastKey());
+          }
           metaRegionName = r.getRegionName();
           server = connection.getHRegionConnection(r.getServer());
         }
@@ -2414,9 +2392,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             }
           }
           // If updated successfully, remove from pending list.
-          synchronized (serversToServerInfo) {
-            pendingRegions.remove(region.getRegionName());
-          }
+          pendingRegions.remove(region.getRegionName());
           break;
         } catch (IOException e) {
           if (tries == numRetries - 1) {
@@ -2482,18 +2458,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
   }
 
-  /* Set of tables currently in creation. Access needs to be synchronized. */
-  private Set<Text> tableInCreation = new HashSet<Text>();
-
   private void createTable(final HRegionInfo newRegion) throws IOException {
     Text tableName = newRegion.getTableDesc().getName();
-    synchronized (tableInCreation) {
-      if (tableInCreation.contains(tableName)) {
-        throw new TableExistsException("Table " + tableName + " in process "
-            + "of being created");
-      }
-      tableInCreation.add(tableName);
+    if (tableInCreation.contains(tableName)) {
+      throw new TableExistsException("Table " + tableName + " in process "
+          + "of being created");
     }
+    tableInCreation.add(tableName);
     try {
       // 1. Check to see if table already exists. Get meta region where
       // table would sit should it exist. Open scanner on it. If a region
@@ -2558,15 +2529,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
       // 5. Get it assigned to a server
 
-      synchronized (serversToServerInfo) {
-        this.unassignedRegions.put(regionName, info);
-        this.assignAttempts.put(regionName, Long.valueOf(0L));
-      }
+      this.unassignedRegions.put(regionName, info);
+      this.assignAttempts.put(regionName, Long.valueOf(0L));
 
     } finally {
-      synchronized (tableInCreation) {
-        tableInCreation.remove(newRegion.getTableDesc().getName());
-      }
+      tableInCreation.remove(newRegion.getTableDesc().getName());
     }
   }
 
@@ -2629,17 +2596,16 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       }
 
       Text firstMetaRegion = null;
-      if (onlineMetaRegions.size() == 1) {
-        firstMetaRegion = onlineMetaRegions.firstKey();
-
-      } else if (onlineMetaRegions.containsKey(tableName)) {
-        firstMetaRegion = tableName;
-
-      } else {
-        firstMetaRegion = onlineMetaRegions.headMap(tableName).lastKey();
-      }
-
       synchronized (onlineMetaRegions) {
+        if (onlineMetaRegions.size() == 1) {
+          firstMetaRegion = onlineMetaRegions.firstKey();
+
+        } else if (onlineMetaRegions.containsKey(tableName)) {
+          firstMetaRegion = tableName;
+
+        } else {
+          firstMetaRegion = onlineMetaRegions.headMap(tableName).lastKey();
+        }
         this.metaRegions.addAll(onlineMetaRegions.tailMap(
             firstMetaRegion).values());
       }
@@ -2758,10 +2724,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     protected boolean isBeingServed(String serverName, long startCode) {
       boolean result = false;
       if (serverName != null && serverName.length() > 0 && startCode != -1L) {
-        HServerInfo s;
-        synchronized (serversToServerInfo) {
-          s = serversToServerInfo.get(serverName);
-        }
+        HServerInfo s = serversToServerInfo.get(serverName);
         result = s != null && s.getStartCode() == startCode;
       }
       return result;
@@ -2840,17 +2803,15 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           LOG.debug("updated columns in row: " + i.getRegionName());
         }
 
-        synchronized (serversToServerInfo) {
-          if (online) {                         // Bring offline regions on-line
-            if (!unassignedRegions.containsKey(i.getRegionName())) {
-              unassignedRegions.put(i.getRegionName(), i);
-              assignAttempts.put(i.getRegionName(), Long.valueOf(0L));
-            }
-
-          } else {                              // Prevent region from getting assigned.
-            unassignedRegions.remove(i.getRegionName());
-            assignAttempts.remove(i.getRegionName());
+        if (online) {                         // Bring offline regions on-line
+          if (!unassignedRegions.containsKey(i.getRegionName())) {
+            unassignedRegions.put(i.getRegionName(), i);
+            assignAttempts.put(i.getRegionName(), Long.valueOf(0L));
           }
+
+        } else {                              // Prevent region from getting assigned.
+          unassignedRegions.remove(i.getRegionName());
+          assignAttempts.remove(i.getRegionName());
         }
       }
 
@@ -2868,12 +2829,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
         // Cause regions being served to be taken off-line and disabled
 
-        HashMap<Text, HRegionInfo> localKillList = null;
-        synchronized (serversToServerInfo) {
-          localKillList = killList.get(serverName);
-        }
-        if (localKillList == null) {
-          localKillList = new HashMap<Text, HRegionInfo>();
+        HashMap<Text, HRegionInfo> localKillList =
+          new HashMap<Text, HRegionInfo>();
+        
+        synchronized (killList) {
+          HashMap<Text, HRegionInfo> killedRegions = killList.get(serverName);
+          if (killedRegions != null) {
+            localKillList.putAll(killedRegions);
+          }
         }
         for (HRegionInfo i: e.getValue()) {
           if (LOG.isDebugEnabled()) {
@@ -2887,9 +2850,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             LOG.debug("inserted local kill list into kill list for server " +
                 serverName);
           }
-          synchronized (serversToServerInfo) {
-            killList.put(serverName, localKillList);
-          }
+          killList.put(serverName, localKillList);
         }
       }
       servedRegions.clear();
@@ -2922,9 +2883,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       
       for (HashSet<HRegionInfo> s: servedRegions.values()) {
         for (HRegionInfo i: s) {
-          synchronized (serversToServerInfo) {
-            regionsToDelete.add(i.getRegionName());
-          }
+          regionsToDelete.add(i.getRegionName());
         }
       }
 
@@ -3051,25 +3010,24 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     public void leaseExpired() {
       LOG.info(server + " lease expired");
       // Remove the server from the known servers list and update load info
-      HServerInfo info;
-      synchronized (serversToServerInfo) {
-        info = serversToServerInfo.remove(server);
-        if (info != null) {
-          HServerAddress root = rootRegionLocation.get();
-          if (root != null && root.equals(info.getServerAddress())) {
-            unassignRootRegion();
-          }
-          String serverName = info.getServerAddress().toString();
-          HServerLoad load = serversToLoad.remove(serverName);
-          if (load != null) {
-            Set<String> servers = loadToServers.get(load);
-            if (servers != null) {
-              servers.remove(serverName);
-              loadToServers.put(load, servers);
-            }
-          }
-          deadServers.add(server);
+      HServerInfo info = serversToServerInfo.remove(server);
+      if (info != null) {
+        HServerAddress root = rootRegionLocation.get();
+        if (root != null && root.equals(info.getServerAddress())) {
+          unassignRootRegion();
         }
+        String serverName = info.getServerAddress().toString();
+        HServerLoad load = serversToLoad.remove(serverName);
+        if (load != null) {
+          Set<String> servers = loadToServers.get(load);
+          if (servers != null) {
+            servers.remove(serverName);
+            loadToServers.put(load, servers);
+          }
+        }
+        deadServers.add(server);
+      }
+      synchronized (serversToServerInfo) {
         serversToServerInfo.notifyAll();
       }
 
