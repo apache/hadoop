@@ -145,6 +145,9 @@ Trunk (unreleased changes)
     the filtering and hence used the wrong index into the array of task-reports. 
     (Amar Kamat via acmurthy)
 
+    HADOOP-2272.  Fix findbugs target to reflect changes made to the location
+    of the streaming jar file by HADOOP-2207.  (Adrian Woodhead via nigel)
+
 
 Release 0.15.1 - 2007-11-27
 

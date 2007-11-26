@@ -591,7 +591,7 @@
       <sourcePath path="${basedir}/src/contrib/streaming/src/java" />
       <class location="${basedir}/build/hadoop-${version}-core.jar" />
       <class location="${basedir}/build/hadoop-${version}-examples.jar" />
-      <class location="${basedir}/build/hadoop-${version}-streaming.jar" />
+      <class location="${basedir}/build/contrib/streaming/hadoop-${version}-streaming.jar" />
     </findbugs>
   	
   	<xslt style="${findbugs.home}/src/xsl/default.xsl"
