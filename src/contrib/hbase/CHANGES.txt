@@ -31,6 +31,8 @@ Trunk (unreleased changes)
    HADOOP-2161 getRow() is orders of magnitudes slower than get(), even on rows
                with one column (Clint Morgan and Stack)
    HADOOP-2040 Hudson hangs AFTER test has finished
+   HADOOP-2274 Excess synchronization introduced by HADOOP-2139 negatively
+               impacts performance
 
   IMPROVEMENTS
     HADOOP-2401 Add convenience put method that takes writable
