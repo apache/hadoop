@@ -33,6 +33,7 @@ Trunk (unreleased changes)
    HADOOP-2040 Hudson hangs AFTER test has finished
    HADOOP-2274 Excess synchronization introduced by HADOOP-2139 negatively
                impacts performance
+   HADOOP-2196 Fix how hbase sits in hadoop 'package' product
 
   IMPROVEMENTS
     HADOOP-2401 Add convenience put method that takes writable

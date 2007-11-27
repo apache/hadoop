@@ -19,10 +19,6 @@
  * limitations under the License.
  */
 -->
-<!-- 
-Before you can run these subtargets directly, you need 
-to call at top-level: ant deploy-contrib compile-core-test
--->
 <project name="hbase" default="jar">
   <import file="../build-contrib.xml"/>
 
@@ -103,6 +99,43 @@ to call at top-level: ant deploy-contrib compile-core-test
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
     </jar>
   </target>
+
+  <!--Manage our own packaging... install our dependencies,
+  bin, etc.-->
+  <target name="package" depends="jar" unless="skip.contrib"> 
+    <condition property="dist.dir" value="distribution">
+      <not>
+        <isset property="dist.dir" />
+      </not>
+    </condition>
+    <property name="hbase.dist.dir" value="${dist.dir}/contrib/${name}"/>
+    <mkdir dir="${hbase.dist.dir}"/>
+    <copy todir="${hbase.dist.dir}" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${build.dir}">
+        <include name="hadoop-${version}-${name}.jar" />
+      </fileset>
+    </copy>
+    <mkdir dir="${hbase.dist.dir}/webapps"/>
+    <copy todir="${hbase.dist.dir}/webapps">
+      <fileset dir="${build.webapps}" />
+    </copy>
+    <mkdir dir="${hbase.dist.dir}/lib"/>
+    <copy todir="${hbase.dist.dir}/lib">
+      <fileset dir="${build.lib}" />
+    </copy>
+    <mkdir dir="${hbase.dist.dir}/conf" />
+    <copy todir="${hbase.dist.dir}/conf">
+      <fileset dir="${build.conf}" />
+    </copy>
+    <mkdir dir="${hbase.dist.dir}/bin" />
+    <copy todir="${hbase.dist.dir}/bin">
+      <fileset dir="${build.bin}" />
+    </copy>
+    <chmod perm="ugo+x" type="file">
+      <fileset dir="${hbase.dist.dir}/bin" />
+    </chmod>
+  </target>
+
 
   <!-- Override compile-test  target so can generate a hbase 
        test jar that has test and hbase classes. 

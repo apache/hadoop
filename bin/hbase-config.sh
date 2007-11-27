@@ -80,7 +80,18 @@ do
 done
  
 # If no hadoop home specified, then we assume its above this directory.
-HADOOP_HOME="${HADOOP_HOME:-$HBASE_HOME/../../../}"
+# Can be in one of two places.  If we've been packaged, then it'll be
+# two levels above us.  If we are running from src at src/contrib/hbase
+# or from the build directory at build/contrib/hbase, then its three
+# levels up.  Look for the hadoop script.
+if [ "$HADOOP_HOME" = "" ]; then
+    if [ -f "$HBASE_HOME/../../bin/hadoop" ]; then
+      HADOOP_HOME="$HBASE_HOME/../../"
+    else
+      HADOOP_HOME="$HBASE_HOME/../../../"
+    fi
+fi
+
 # Allow alternate hadoop conf dir location.
 HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
 # Allow alternate hbase conf dir location.
