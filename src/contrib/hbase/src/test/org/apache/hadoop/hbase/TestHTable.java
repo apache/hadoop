@@ -31,7 +31,8 @@ import org.apache.hadoop.io.Text;
 public class TestHTable extends HBaseClusterTestCase implements HConstants {
   private static final HColumnDescriptor column =
     new HColumnDescriptor(COLUMN_FAMILY.toString());
-  
+
+  private static final Text nosuchTable = new Text("nosuchTable");
   private static final Text tableAname = new Text("tableA");
   private static final Text tableBname = new Text("tableB");
   
@@ -42,6 +43,19 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
    * @throws IOException
    */
   public void testHTable() throws IOException {
+    byte[] value = "value".getBytes(UTF8_ENCODING);
+    
+    try {
+      new HTable(conf, nosuchTable);
+      
+    } catch (TableNotFoundException e) {
+      // expected
+
+    } catch (IOException e) {
+      e.printStackTrace();
+      fail();
+    }
+    
     HTableDescriptor tableAdesc = new HTableDescriptor(tableAname.toString());
     tableAdesc.addFamily(column);
     
@@ -55,8 +69,6 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     admin.createTable(tableBdesc);
     
     // put some data into table A
-    
-    byte[] value = "value".getBytes(UTF8_ENCODING);
     
     HTable a = new HTable(conf, tableAname);
     long lockid = a.startUpdate(row);
@@ -82,6 +94,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
           b.put(lockid, e.getKey(), e.getValue());
         }
         b.commit(lockid);
+        b.abort(lockid);
       }
     } finally {
       s.close();

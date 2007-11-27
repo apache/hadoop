@@ -57,12 +57,17 @@ public class HTable implements HConstants {
   protected Random rand;
   protected volatile SortedMap<Text, HRegionLocation> tableServers;
   protected AtomicReference<BatchUpdate> batch;
+
+  protected volatile boolean tableDoesNotExist;
   
   // For row mutation operations
   
   protected volatile boolean closed;
 
   protected void checkClosed() {
+    if (tableDoesNotExist) {
+      throw new IllegalStateException("table does not exist: " + tableName);
+    }
     if (closed) {
       throw new IllegalStateException("table is closed");
     }
@@ -77,13 +82,15 @@ public class HTable implements HConstants {
    */
   public HTable(HBaseConfiguration conf, Text tableName) throws IOException {
     closed = true;
+    tableDoesNotExist = true;
     this.connection = HConnectionManager.getConnection(conf);
     this.tableName = tableName;
     this.pause = conf.getLong("hbase.client.pause", 10 * 1000);
     this.numRetries = conf.getInt("hbase.client.retries.number", 5);
     this.rand = new Random();
-    tableServers = connection.getTableServers(tableName);
     this.batch = new AtomicReference<BatchUpdate>();
+    tableServers = connection.getTableServers(tableName);
+    tableDoesNotExist = false;
     closed = false;
   }
 
@@ -685,8 +692,7 @@ public class HTable implements HConstants {
    */
   public synchronized void abort(long lockid) {
     checkClosed();
-    updateInProgress(true);
-    if (batch.get().getLockid() != lockid) {
+    if (batch.get() != null && batch.get().getLockid() != lockid) {
       throw new IllegalArgumentException("invalid lock id " + lockid);
     }
     batch.set(null);
