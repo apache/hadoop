@@ -103,21 +103,13 @@ public final class master_jsp extends org.apache.jasper.runtime.HttpJspBase
       out.print(msg );
       out.write("</p>\n\n<h2>Region Servers</h2>\n");
  if (serverToServerInfos != null && serverToServerInfos.size() > 0) { 
-      out.write('\n');
- int totalRegions = 0;
-   int totalRequests = 0; 
-
-      out.write("\n\n<table>\n<tr><th rowspan=");
-      out.print( serverToServerInfos.size() + 1);
-      out.write("></th><th>Address</th><th>Start Code</th><th>Load</th></tr>\n\n");
+      out.write("\n<table>\n<tr><th>Address</th><th>Start Code</th><th>Load</th></tr>\n\n");
    for (Map.Entry<String, HServerInfo> e: serverToServerInfos.entrySet()) {
        HServerInfo hsi = e.getValue();
        String url = "http://" +
          hsi.getServerAddress().getBindAddress().toString() + ":" +
          hsi.getInfoPort() + "/";
        String load = hsi.getLoad().toString();
-       totalRegions += hsi.getLoad().getNumberOfRegions();
-       totalRequests += hsi.getLoad().getNumberOfRequests();
        long startCode = hsi.getStartCode();
        String address = hsi.getServerAddress().toString();
 
@@ -130,15 +122,9 @@ public final class master_jsp extends org.apache.jasper.runtime.HttpJspBase
       out.print( startCode );
       out.write("</td><td>");
       out.print( load );
-      out.write("</td></tr>\n");
+      out.write("</tr>\n");
    } 
-      out.write("\n<tr><th>Total: </th><td>servers: ");
-      out.print( serverToServerInfos.size() );
-      out.write("</td><td>&nbsp;</td><td>requests: ");
-      out.print( totalRequests );
-      out.write(" regions: ");
-      out.print( totalRegions );
-      out.write("</td></tr>\n</table>\n\n<p>Load is requests per <em>hbase.regionsserver.msginterval</em> (");
+      out.write("\n</table>\n<p>Load is requests per <em>hbase.regionsserver.msginterval</em> (");
       out.print(interval);
       out.write(" second(s)) and count of regions loaded</p>\n");
  } 
