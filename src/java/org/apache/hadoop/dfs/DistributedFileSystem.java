@@ -160,21 +160,17 @@ public class DistributedFileSystem extends FileSystem {
     return dfs.getContentLength(getPathName(f));
   }
 
-  public FileStatus[] listStatus(Path f) throws IOException {
-    return dfs.listPaths(getPathName(f));
-  }
-
-  public Path[] listPaths(Path f) throws IOException {
-    DFSFileInfo info[] = dfs.listPaths(getPathName(f));
-    if (info == null) {
-      return new Path[0];
-    } else {
-      Path results[] = new DfsPath[info.length];
-      for (int i = 0; i < info.length; i++) {
-        results[i] = new DfsPath(info[i], this);
-      }
-      return results;
+  public FileStatus[] listStatus(Path p) throws IOException {
+    DFSFileInfo[] infos = dfs.listPaths(getPathName(p));
+    if (infos == null) return null;
+    FileStatus[] stats = new FileStatus[infos.length];
+    for (int i = 0; i < infos.length; i++) {
+      DFSFileInfo f = (DFSFileInfo)infos[i];
+      stats[i] = new FileStatus(f.getLen(), f.isDir(), f.getReplication(),
+                                f.getBlockSize(), f.getModificationTime(),
+                                new DfsPath(f, this)); // fully-qualify path
     }
+    return stats;
   }
 
   public boolean mkdirs(Path f) throws IOException {

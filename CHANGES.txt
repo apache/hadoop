@@ -148,6 +148,10 @@ Trunk (unreleased changes)
     HADOOP-2272.  Fix findbugs target to reflect changes made to the location
     of the streaming jar file by HADOOP-2207.  (Adrian Woodhead via nigel)
 
+    HADOOP-2129.  Fix so that distcp works correctly when source is
+    HDFS but not the default filesystem.  HDFS paths returned by the
+    listStatus() method are now fully-qualified.  (cutting)
+
 
 Release 0.15.1 - 2007-11-27
 
