@@ -68,8 +68,12 @@
 
 <h2>Region Servers</h2>
 <% if (serverToServerInfos != null && serverToServerInfos.size() > 0) { %>
+<% int totalRegions = 0;
+   int totalRequests = 0; 
+%>
+
 <table>
-<tr><th>Address</th><th>Start Code</th><th>Load</th></tr>
+<tr><th rowspan=<%= serverToServerInfos.size() + 1%>></th><th>Address</th><th>Start Code</th><th>Load</th></tr>
 
 <%   for (Map.Entry<String, HServerInfo> e: serverToServerInfos.entrySet()) {
        HServerInfo hsi = e.getValue();
@@ -77,12 +81,16 @@
          hsi.getServerAddress().getBindAddress().toString() + ":" +
          hsi.getInfoPort() + "/";
        String load = hsi.getLoad().toString();
+       totalRegions += hsi.getLoad().getNumberOfRegions();
+       totalRequests += hsi.getLoad().getNumberOfRequests();
        long startCode = hsi.getStartCode();
        String address = hsi.getServerAddress().toString();
 %>
-<tr><td><a href="<%= url %>"><%= address %></a></td><td><%= startCode %></td><td><%= load %></tr>
+<tr><td><a href="<%= url %>"><%= address %></a></td><td><%= startCode %></td><td><%= load %></td></tr>
 <%   } %>
+<tr><th>Total: </th><td>servers: <%= serverToServerInfos.size() %></td><td>&nbsp;</td><td>requests: <%= totalRequests %> regions: <%= totalRegions %></td></tr>
 </table>
+
 <p>Load is requests per <em>hbase.regionsserver.msginterval</em> (<%=interval%> second(s)) and count of regions loaded</p>
 <% } %>
 </body>
