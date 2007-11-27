@@ -30,6 +30,8 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConnection;
+import org.apache.hadoop.hbase.HConnectionManager;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
@@ -80,6 +82,11 @@ public class SelectCommand extends BasicCommand {
       return new ReturnMsg(0, "Syntax error : Please check 'Select' syntax.");
     } 
     try {
+      HConnection conn = HConnectionManager.getConnection(conf);
+      if (!conn.tableExists(this.tableName)) {
+        return new ReturnMsg(0, "'" + this.tableName + "' Table not found");
+      }
+      
       HTable table = new HTable(conf, this.tableName);
       HBaseAdmin admin = new HBaseAdmin(conf);
       int count = 0;

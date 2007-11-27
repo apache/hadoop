@@ -28,6 +28,8 @@ import java.util.Set;
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConnection;
+import org.apache.hadoop.hbase.HConnectionManager;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -38,7 +40,7 @@ public class AlterCommand extends SchemaModificationCommand {
   private OperationType operationType = OperationType.NOOP;
   private Map<String, Map<String, Object>> columnSpecMap =
     new HashMap<String, Map<String, Object>>();
-  private String table;
+  private String tableName;
   private String column; // column to be dropped
 
   public AlterCommand(Writer o) {
@@ -47,28 +49,33 @@ public class AlterCommand extends SchemaModificationCommand {
 
   public ReturnMsg execute(HBaseConfiguration conf) {
     try {
+      HConnection conn = HConnectionManager.getConnection(conf);
+      if (!conn.tableExists(new Text(this.tableName))) {
+        return new ReturnMsg(0, "'" + this.tableName + "' Table not found");
+      }
+      
       HBaseAdmin admin = new HBaseAdmin(conf);
       Set<String> columns = null;
       HColumnDescriptor columnDesc = null;
       switch (operationType) {
       case ADD:
-        disableTable(admin, table);
+        disableTable(admin, tableName);
         columns = columnSpecMap.keySet();
         for (String c : columns) {
           columnDesc = getColumnDescriptor(c, columnSpecMap.get(c));
-          println("Adding " + c + " to " + table +
+          println("Adding " + c + " to " + tableName +
             "... Please wait.");
-          admin.addColumn(new Text(table), columnDesc);
+          admin.addColumn(new Text(tableName), columnDesc);
         }
-        enableTable(admin, table);
+        enableTable(admin, tableName);
         break;
       case DROP:
-        disableTable(admin, table);
-        println("Dropping " + column + " from " + table +
+        disableTable(admin, tableName);
+        println("Dropping " + column + " from " + tableName +
           "... Please wait.");
         column = appendDelimiter(column);
-        admin.deleteColumn(new Text(table), new Text(column));
-        enableTable(admin, table);
+        admin.deleteColumn(new Text(tableName), new Text(column));
+        enableTable(admin, tableName);
         break;
       case CHANGE:
         // Not yet supported
@@ -98,7 +105,7 @@ public class AlterCommand extends SchemaModificationCommand {
    * @param t Table to be altered.
    */
   public void setTable(String t) {
-    this.table = t;
+    this.tableName = t;
   }
 
   /**
