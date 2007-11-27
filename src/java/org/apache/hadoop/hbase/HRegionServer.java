@@ -642,7 +642,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       false, conf);
     this.serverInfo = new HServerInfo(new HServerAddress(
       new InetSocketAddress(getThisIP(),
-      this.server.getListenerAddress().getPort())), this.rand.nextLong(),
+      this.server.getListenerAddress().getPort())), System.currentTimeMillis(),
       this.conf.getInt("hbase.regionserver.info.port", 60030));
      this.leases = new Leases(
        conf.getInt("hbase.regionserver.lease.period", 3 * 60 * 1000),
@@ -704,7 +704,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                     synchronized (logRollerLock) {
                       try {
                         log.closeAndDelete();
-                        serverInfo.setStartCode(rand.nextLong());
+
+                      } catch (Exception e) {
+                        LOG.error("error closing and deleting HLog", e);
+                      }
+                      try {
+                        serverInfo.setStartCode(System.currentTimeMillis());
                         log = setupHLog();
                       } catch (IOException e) {
                         this.abortRequested = true;
