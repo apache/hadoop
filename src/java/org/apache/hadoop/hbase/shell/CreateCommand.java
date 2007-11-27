@@ -72,7 +72,7 @@ public class CreateCommand extends SchemaModificationCommand {
 
   /**
    * Sets the table to be created.
-   * @param table Table to be created
+   * @param tableName Table to be created
    */
   public void setTable(String tableName) {
     this.tableName = new Text(tableName);
