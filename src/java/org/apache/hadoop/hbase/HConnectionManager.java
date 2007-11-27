@@ -738,7 +738,10 @@ public class HConnectionManager implements HConstants {
                 regionInfo, new HServerAddress(serverAddress)));
           }
         } catch (IOException e) {
-          if (tries == numRetries - 1) {                 // no retries left
+          if (e instanceof TableNotFoundException) {
+            throw e;                                    // don't retry
+          }
+          if (tries == numRetries - 1) {                // no retries left
             if (e instanceof RemoteException) {
               e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
             }

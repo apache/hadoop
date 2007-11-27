@@ -51,6 +51,8 @@ Trunk (unreleased changes)
     HADOOP-2139 (phase 2) Make region server more event driven
     HADOOP-2289 Useless efforts of looking for the non-existant table in select
                 command.
+    HADOOP-2262 HADOOP-2261 fail fast on non-existing table, change abort to
+                function after commit even if commit was successful
 
 Release 0.15.1
 Branch 0.15
