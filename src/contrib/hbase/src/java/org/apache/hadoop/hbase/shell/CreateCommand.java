@@ -27,13 +27,16 @@ import java.util.Set;
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConnection;
+import org.apache.hadoop.hbase.HConnectionManager;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.io.Text;
 
 /**
  * Creates tables.
  */
 public class CreateCommand extends SchemaModificationCommand {
-  private String tableName;
+  private Text tableName;
   private Map<String, Map<String, Object>> columnSpecMap =
     new HashMap<String, Map<String, Object>>();
   
@@ -43,8 +46,13 @@ public class CreateCommand extends SchemaModificationCommand {
   
   public ReturnMsg execute(HBaseConfiguration conf) {
     try {
+      HConnection conn = HConnectionManager.getConnection(conf);
+      if (conn.tableExists(this.tableName)) {
+        return new ReturnMsg(0, "'" + this.tableName + "' Table already exist");
+      }
+      
       HBaseAdmin admin = new HBaseAdmin(conf);
-      HTableDescriptor tableDesc = new HTableDescriptor(tableName);
+      HTableDescriptor tableDesc = new HTableDescriptor(tableName.toString());
       HColumnDescriptor columnDesc = null;
       Set<String> columns = columnSpecMap.keySet();
       for (String column : columns) {
@@ -66,8 +74,8 @@ public class CreateCommand extends SchemaModificationCommand {
    * Sets the table to be created.
    * @param table Table to be created
    */
-  public void setTable(String table) {
-    this.tableName = table;
+  public void setTable(String tableName) {
+    this.tableName = new Text(tableName);
   }
 
   /**

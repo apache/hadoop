@@ -24,6 +24,8 @@ import java.io.Writer;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConnection;
+import org.apache.hadoop.hbase.HConnectionManager;
 import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.io.Text;
 
@@ -44,6 +46,11 @@ public class InsertCommand extends BasicCommand {
     if (this.tableName == null || this.values == null || this.rowKey == null)
       return new ReturnMsg(0, "Syntax error : Please check 'Insert' syntax.");
 
+    HConnection conn = HConnectionManager.getConnection(conf);
+    if (!conn.tableExists(this.tableName)) {
+      return new ReturnMsg(0, "'" + this.tableName + "' Table not found");
+    }
+    
     if (this.columnfamilies.size() != this.values.size())
       return new ReturnMsg(0,
           "Mismatch between values list and columnfamilies list");
