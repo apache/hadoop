@@ -53,6 +53,7 @@ Trunk (unreleased changes)
                 command.
     HADOOP-2262 HADOOP-2261 fail fast on non-existing table, change abort to
                 function after commit even if commit was successful
+    HADOOP-2257 Show a total of all requests and regions on the web ui
 
 Release 0.15.1
 Branch 0.15
