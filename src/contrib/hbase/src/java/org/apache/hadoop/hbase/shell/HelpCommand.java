@@ -26,14 +26,13 @@ import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 
 public class HelpCommand extends BasicCommand {
   private String argument;
-  private static final String [] HEADER =
-    new String [] {"Command", "Description", "Example"};
-  
+  private static final String[] HEADER = new String[] { "Command",
+      "Description", "Example" };
+
   /** application name */
   public static final String APP_NAME = "Hbase Shell";
 
@@ -41,18 +40,18 @@ public class HelpCommand extends BasicCommand {
   public static final String APP_VERSION = "0.0.2";
 
   /** help contents map */
-  public final Map<String, String[]> help =
-    new HashMap<String, String[]>();
-    
+  public final Map<String, String[]> help = new HashMap<String, String[]>();
+
   private final TableFormatter formatter;
-  
+
   public HelpCommand(final Writer o, final TableFormatter f) {
     super(o);
     this.help.putAll(load());
     this.formatter = f;
   }
 
-  public ReturnMsg execute(@SuppressWarnings("unused") HBaseConfiguration conf) {
+  public ReturnMsg execute(@SuppressWarnings("unused")
+  HBaseConfiguration conf) {
     try {
       printHelp(this.argument);
     } catch (IOException e) {
@@ -66,73 +65,104 @@ public class HelpCommand extends BasicCommand {
   }
 
   /**
-   * add help contents 
+   * add help contents
    */
   private Map<? extends String, ? extends String[]> load() {
     Map<String, String[]> load = new HashMap<String, String[]>();
-    load.put("SHOW", new String[] {"List all user tables", "SHOW TABLES;"});
-    
-    load.put("FS", new String[] { "Hadoop FsShell; entering a lone 'FS;' " +
-      "will emit usage",
-      "FS -copyFromLocal /home/user/backup.dat fs/user/backup;"});
-    
-    load.put("JAR", new String[] { "Hadoop RunJar util", 
-      "JAR ./build/hadoop-examples.jar pi 10 10;"});
-    load.put("CLEAR", new String[] {"Clear the screen", "CLEAR;"} );
-    
+    load.put("SHOW", new String[] { "Show information about selected title",
+        "SHOW TABLES[or substitution variable name];" });
+
+    load.put("FS", new String[] {
+        "Hadoop FsShell; entering a lone 'FS;' " + "will emit usage",
+        "FS -copyFromLocal /home/user/backup.dat fs/user/backup;" });
+
+    load.put("JAR", new String[] { "Hadoop RunJar util",
+        "JAR ./build/hadoop-examples.jar pi 10 10;" });
+    load.put("CLEAR", new String[] { "Clear the screen", "CLEAR;" });
+
     load.put("DESCRIBE", new String[] { "Print table information",
-      "[DESCRIBE|DESC] table_name;"});
-    
-    load.put("CREATE", new String[] {
-        "Create tables",
-        "CREATE TABLE table_name (column_family_name [MAX_VERSIONS=n] " +
-        "[MAX_LENGTH=n] [COMPRESSION=NONE|RECORD|BLOCK] [IN_MEMORY] " +
-        "[BLOOMFILTER=NONE|BLOOM|COUNTING|RETOUCHED VECTOR_SIZE=n NUM_HASH=n], " +
-        "...)"
-    });
-    load.put("DROP", new String[] {
-        "Drop tables",
-        "DROP TABLE table_name [, table_name] ...;"});
-    
+        "[DESCRIBE|DESC] table_name;" });
+
+    load
+        .put(
+            "CREATE",
+            new String[] {
+                "Create tables",
+                "CREATE TABLE table_name (column_family_name [MAX_VERSIONS=n] "
+                    + "[MAX_LENGTH=n] [COMPRESSION=NONE|RECORD|BLOCK] [IN_MEMORY] "
+                    + "[BLOOMFILTER=NONE|BLOOM|COUNTING|RETOUCHED VECTOR_SIZE=n NUM_HASH=n], "
+                    + "...)" });
+    load.put("DROP", new String[] { "Drop tables",
+        "DROP TABLE table_name [, table_name] ...;" });
+
     load.put("INSERT", new String[] {
         "Insert values into table",
-        "INSERT INTO table_name (column_name, ...) " +
-        "VALUES ('value', ...) WHERE row='row_key';"
-    });
-    
+        "INSERT INTO table_name (column_name, ...) "
+            + "VALUES ('value', ...) WHERE row='row_key';" });
+
     load.put("DELETE", new String[] {
         "Delete table data",
-        "DELETE {column_name, [, column_name] ... | *} FROM table_name " +
-        "WHERE row='row-key';"
-    });
-    
-    load.put("SELECT",
-        new String[] {
-            "Select values from table",
-            "SELECT {column_name, [, column_name] ... | *} FROM table_name " +
-            "[WHERE row='row_key' | STARTING FROM 'row-key'] " +
-            "[NUM_VERSIONS = version_count] " +
-            "[TIMESTAMP 'timestamp'] " +
-            "[LIMIT = row_count] " +
-            "[INTO FILE 'file_name'];"
-    });
-                
-    load.put("ALTER",
-        new String[] {
-            "Alter structure of table",
-            "ALTER TABLE table_name ADD column_spec | " +
-            "ADD (column_spec, column_spec, ...) | " +
-            "DROP column_family_name | " +
-            "CHANGE column_spec;"
-    });
+        "DELETE {column_name, [, column_name] ... | *} FROM table_name "
+            + "WHERE row='row-key';" });
 
-    load.put("EXIT", new String[] { "Exit shell", "EXIT;"});
+    load.put("SELECT", new String[] {
+        "Select values from table",
+        "SELECT {column_name, [, column_name] ... | *} FROM table_name "
+            + "[WHERE row='row_key' | STARTING FROM 'row-key'] "
+            + "[NUM_VERSIONS = version_count] " + "[TIMESTAMP 'timestamp'] "
+            + "[LIMIT = row_count] " + "[INTO FILE 'file_name'];" });
+
+    load.put("ALTER", new String[] {
+        "Alter structure of table",
+        "ALTER TABLE table_name ADD column_spec | "
+            + "ADD (column_spec, column_spec, ...) | "
+            + "DROP column_family_name | " + "CHANGE column_spec;" });
+
+    load.put("EXIT", new String[] { "Exit shell", "EXIT;" });
+
+    // A Algebraic Query Commands
+    // this is a tentative query language based on a hbase which uses relational
+    // model of
+    // data.
+
+    load.put("TABLE",
+        new String[] { "Load a table", "A = table('table_name');" });
+    load.put("SUBSTITUTE", new String[] { "Substitute expression to [A~Z]",
+        "D = A.projection('cf_name1'[, 'cf_name2']);" });
+    load.put("SAVE", new String[] { "Save results into specified table (It runs a mapreduce job)",
+        "SAVE A INTO table('table_name');" });
+
+    // Relational Operations
+    load.put("PROJECTION", new String[] {
+        "Selects a subset of the columnfamilies of a relation",
+        "A = TABLE('table_name');"
+            + " B = A.Projection('cf_name1'[, 'cf_name2']);" });
+    load
+        .put(
+            "SELECTION",
+            new String[] {
+                "Selects a subset of the rows in a relation that satisfy a selection condition (>, <, AND, OR, etc.)",
+                "A = Table('table_name');"
+                    + " B = A.Selection(cf_name1 > 100 [AND cf_name2 = 'string_value']);" });
+
+    // Aggregation Functions
+    //TODO : and apply aggregate function independently to each group of rows 
+    load
+        .put(
+            "GROUP",
+            new String[] {
+                "Group rows by value of an attribute",
+                "A = Table('table_name');"
+                    + " B = Group A by ('cf_name1'[, 'cf_name2']);" });
 
     return load;
   }
 
-  /** Print out the program version. 
-   * @throws IOException */
+  /**
+   * Print out the program version.
+   * 
+   * @throws IOException
+   */
   public void printVersion() throws IOException {
     println(APP_NAME + ", " + APP_VERSION + " version.\n"
         + "Copyright (c) 2007 by udanax, "
@@ -146,7 +176,7 @@ public class HelpCommand extends BasicCommand {
       printHelp(this.help);
     } else {
       if (this.help.containsKey(cmd.toUpperCase())) {
-        final Map<String, String []> m = new HashMap<String, String []>();
+        final Map<String, String[]> m = new HashMap<String, String[]>();
         m.put(cmd.toUpperCase(), this.help.get(cmd.toUpperCase()));
         printHelp(m);
       } else {
@@ -154,14 +184,14 @@ public class HelpCommand extends BasicCommand {
       }
     }
   }
-  
-  private void printHelp(final Map<String, String []> m) throws IOException {
+
+  private void printHelp(final Map<String, String[]> m) throws IOException {
     this.formatter.header(HEADER);
-    for (Map.Entry<String, String []> e: m.entrySet()) {
-      String [] value = e.getValue();
+    for (Map.Entry<String, String[]> e : m.entrySet()) {
+      String[] value = e.getValue();
       if (value.length == 2) {
-        this.formatter.row(new String [] {e.getKey().toUpperCase(), value[0],
-          value[1]});
+        this.formatter.row(new String[] { e.getKey().toUpperCase(), value[0],
+            value[1] });
       } else {
         throw new IOException("Value has too many elements:" + value);
       }

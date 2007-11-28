@@ -69,7 +69,7 @@ public abstract class BasicCommand implements Command, CommandFactory {
    * at the end of the column name.
    */
   protected String appendDelimiter(String column) {
-    return (!column.endsWith(FAMILY_INDICATOR))?
+    return (!column.endsWith(FAMILY_INDICATOR) && column.indexOf(FAMILY_INDICATOR) == -1)?
       column + FAMILY_INDICATOR: column;
   }
 

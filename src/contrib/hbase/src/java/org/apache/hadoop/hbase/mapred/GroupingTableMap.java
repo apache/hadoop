@@ -47,7 +47,7 @@ public class GroupingTableMap extends TableMap {
   public static final String GROUP_COLUMNS =
     "hbase.mapred.groupingtablemap.columns";
   
-  private Text[] m_columns;
+  protected Text[] m_columns;
 
   /** default constructor */
   public GroupingTableMap() {
