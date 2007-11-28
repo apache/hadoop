@@ -1,6 +1,15 @@
 Hadoop Change Log
 
 
+Branch 0.15 (unreleased)
+
+  BUG FIXES
+
+    HADOOP-2129.  Fix so that distcp works correctly when source is
+    HDFS but not the default filesystem.  HDFS paths returned by the
+    listStatus() method are now fully-qualified.  (cutting)
+
+
 Release 0.15.1 - 2007-11-27
 
   INCOMPATIBLE CHANGES
