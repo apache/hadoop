@@ -5,6 +5,12 @@ Branch 0.15 (unreleased)
 
   BUG FIXES
 
+    HADOOP-2246.  Moved the changelog for HADOOP-1851 from the NEW FEATURES 
+    section to the INCOMPATIBLE CHANGES section. (acmurthy)
+
+    HADOOP-2238.  Fix TaskGraphServlet so that it sets the content type of 
+    the response appropriately.  (Paul Saab via enis)
+
     HADOOP-2129.  Fix so that distcp works correctly when source is
     HDFS but not the default filesystem.  HDFS paths returned by the
     listStatus() method are now fully-qualified.  (cutting)
@@ -44,11 +50,6 @@ Release 0.15.1 - 2007-11-27
     by HADOOP-1917 weren't correctly copied over to the trunk/docs directory. 
     Also fixed a couple of minor typos and broken links. (acmurthy)
 
-    HADOOP-2246.  Moved the changelog for HADOOP-1851 from the NEW FEATURES 
-    section to the INCOMPATIBLE CHANGES section. (acmurthy)
-
-    HADOOP-2238.  Fix TaskGraphServlet so that it sets the content type of 
-    the response appropriately.  (Paul Saab via enis)
 
 Release 0.15.0 - 2007-11-2
 
