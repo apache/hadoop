@@ -19,6 +19,10 @@
  */
 package org.apache.hadoop.io;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.util.Map;
 
 import junit.framework.TestCase;
@@ -96,5 +100,35 @@ public class TestMapWritable extends TestCase {
     MapWritable outMap = new MapWritable(inMap);
     MapWritable copyOfCopy = new MapWritable(outMap);
     assertEquals(1, copyOfCopy.getNewClasses());
+  }
+  
+  /**
+   * Assert MapWritable does not grow across calls to readFields.
+   * @throws Exception
+   * @see <a href="https://issues.apache.org/jira/browse/HADOOP-2244">HADOOP-2244</a>
+   */
+  public void testMultipleCallsToReadFieldsAreSafe() throws Exception {
+    // Create an instance and add a key/value.
+    MapWritable m = new MapWritable();
+    final Text t = new Text(getName());
+    m.put(t, t);
+    // Get current size of map.  Key values are 't'.
+    int count = m.size();
+    // Now serialize... save off the bytes.
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(baos);
+    m.write(dos);
+    dos.close();
+    // Now add new values to the MapWritable.
+    m.put(new Text("key1"), new Text("value1"));
+    m.put(new Text("key2"), new Text("value2"));
+    // Now deserialize the original MapWritable.  Ensure count and key values
+    // match original state.
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    DataInputStream dis = new DataInputStream(bais);
+    m.readFields(dis);
+    assertEquals(count, m.size());
+    assertTrue(m.get(t).equals(t));
+    dis.close();
   }
 }

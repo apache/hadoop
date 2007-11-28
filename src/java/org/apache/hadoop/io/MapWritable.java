@@ -144,6 +144,10 @@ public class MapWritable extends AbstractMapWritable
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
     
+    // First clear the map.  Otherwise we will just accumulate
+    // entries every time this method is called.
+    this.instance.clear();
+    
     // Read the number of entries in the map
     
     int entries = in.readInt();

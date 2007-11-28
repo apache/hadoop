@@ -152,6 +152,8 @@ Trunk (unreleased changes)
     HDFS but not the default filesystem.  HDFS paths returned by the
     listStatus() method are now fully-qualified.  (cutting)
 
+    HADOOP-2244.  Fixes the MapWritable.readFields to clear the instance 
+    field variable every time readFields is called. (Michael Stack via ddas).
 
 Release 0.15.1 - 2007-11-27
 
