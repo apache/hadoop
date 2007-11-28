@@ -33,6 +33,8 @@ import java.util.HashMap;
 import java.io.StringReader;
 import java.io.Reader;
 import java.io.Writer;
+import java.net.URLEncoder;
+import java.io.UnsupportedEncodingException;
 
 import org.apache.hadoop.hbase.shell.*;
 
@@ -43,6 +45,7 @@ public class Parser {
   private String QueryString;
   private TableFormatter formatter;
   private Writer out;
+  private String secondR;
   
   public Parser(final String query, final Writer o, final TableFormatter f) {
     this((Reader)(new StringReader(query)));
@@ -102,7 +105,11 @@ TOKEN: /** for HQL statements */
    | <LPAREN: "(">
    | <RPAREN: ")">
    | <EQUALS: "=">
-   | <NOTEQUAL: "<>">
+   | <LCOMP: ">">
+   | <RCOMP: "<">
+   | <NOT: "not">
+   | <IN: "in">
+   | <NOTEQUAL: "!=">
    | <ASTERISK: "*">
    | <MAX_VERSIONS: "max_versions">
    | <MAX_LENGTH: "max_length">
@@ -121,9 +128,16 @@ TOKEN: /** for HQL statements */
    | <CHANGE: "change">
 }
 
+TOKEN : 
+{
+     <SAVE: "save">
+   | <GROUP: "group">
+   | <BY: "by">
+}
+
 TOKEN : /** Literals */
 {
-   <ID: ["A"-"Z","a"-"z","_","-",".",":","/"] (["A"-"Z","a"-"z","0"-"9","_","-",".",":","/"])* >
+   <ID: ["A"-"Z","a"-"z","_","-",":","/"] (["A"-"Z","a"-"z","0"-"9","_","-",":","/"])* >
  | <INTEGER_LITERAL: (["0"-"9"])+ >
  | <FLOATING_POINT_LITERAL:
    (["0"-"9"])+ "." (["0"-"9"])+ (<EXPONENT>)?
@@ -144,7 +158,10 @@ Command terminatedCommand() :
     Command statement = null;
 }
 {
-    ([statement = cmdStatement()] ";" | <EOF>)
+    (
+      [statement = cmdStatement()] ";" | <EOF>
+    )
+  
     {
         return statement;
     }
@@ -171,6 +188,8 @@ Command cmdStatement() :
       | cmd = clearCommand()
       | cmd = fsCommand()
       | cmd = jarCommand()
+      | cmd = substituteCommand()
+      | cmd = saveCommand()
   )
    {
        return cmd;
@@ -245,6 +264,8 @@ HelpCommand helpCommand() :
        | t=<CLEAR>
        | t=<FS>
        | t=<JAR>
+       | t=<GROUP>
+       | t=<SAVE>
        | t=<ID>
      ) { argument = t.image.toString(); }
    ]
@@ -263,7 +284,7 @@ ShowCommand showCommand() :
 {
    <SHOW>
    [
-       argument = Identifier()
+       argument = identifier()
    ]
   { 
       show.setArgument(argument);
@@ -278,7 +299,7 @@ DescCommand descCommand() :
 }
 {
   ( <DESCRIBE> | <DESC> )
-  argument = Identifier()
+  argument = identifier()
   { 
     desc.setArgument(argument);
     return desc;
@@ -360,14 +381,14 @@ CreateCommand createCommand() :
 {
   <CREATE> 
   <TABLE> 
-  table = Identifier() 
+  table = identifier() 
   { 
     createCommand.setTable(table); 
   }
   
   <LPAREN>
   
-  column = Identifier() 
+  column = identifier() 
   columnSpec = ColumnSpec()
   { 
     createCommand.addColumnSpec(column, columnSpec); 
@@ -375,7 +396,7 @@ CreateCommand createCommand() :
   
   (
      <COMMA> 
-      column = Identifier() 
+      column = identifier() 
       columnSpec = ColumnSpec() 
       { 
         createCommand.addColumnSpec(column, columnSpec); 
@@ -395,12 +416,12 @@ AlterCommand alterCommand() :
 }
 {
   <ALTER> 
-  <TABLE> table = Identifier() 
+  <TABLE> table = identifier() 
   { alterCommand.setTable(table); }
 
   (
     LOOKAHEAD(2)
-      <ADD> column = Identifier() columnSpec = ColumnSpec() 
+      <ADD> column = identifier() columnSpec = ColumnSpec() 
       { 
          alterCommand.setOperationType(AlterCommand.OperationType.ADD);
          alterCommand.addColumnSpec(column, columnSpec); 
@@ -412,14 +433,14 @@ AlterCommand alterCommand() :
       alterCommand.setOperationType(AlterCommand.OperationType.ADD); 
     }
       
-    column = Identifier() columnSpec = ColumnSpec() 
+    column = identifier() columnSpec = ColumnSpec() 
     { 
       alterCommand.addColumnSpec(column, columnSpec); 
     }
       
     ( 
         <COMMA> 
-        column = Identifier()
+        column = identifier()
         columnSpec = ColumnSpec() 
         { 
           alterCommand.addColumnSpec(column, columnSpec); 
@@ -427,13 +448,13 @@ AlterCommand alterCommand() :
     )*
     <RPAREN>
   |
-    <DROP> column = Identifier()
+    <DROP> column = identifier()
     { 
       alterCommand.setOperationType(AlterCommand.OperationType.DROP);
       alterCommand.setColumn(column); 
     }
   |
-    <CHANGE> column = Identifier() columnSpec = ColumnSpec()  
+    <CHANGE> column = identifier() columnSpec = ColumnSpec()  
     { 
       alterCommand.setOperationType(AlterCommand.OperationType.CHANGE);
       alterCommand.addColumnSpec(column, columnSpec);
@@ -450,7 +471,7 @@ DropCommand dropCommand() :
 {
    <DROP>
    <TABLE>
-   tableList = TableList()
+   tableList = tableList()
    { 
      drop.setTableList(tableList);
      return drop;
@@ -468,16 +489,15 @@ InsertCommand insertCommand() :
 {
   <INSERT>
   <INTO>
-  table = Identifier()
+  table = identifier()
   { 
      in.setTable(table); 
   }
-    
   columnfamilies = getColumns()
   {
      in.setColumnfamilies(columnfamilies);
   }
-    
+  
   <VALUES> values = getLiteralValues()
   {
      in.setValues(values);
@@ -502,13 +522,13 @@ DeleteCommand deleteCommand() :
 }
 {
   <DELETE>
-  columnList = ColumnList()
+  columnList = columnList()
   { 
     deleteCommand.setColumnList(columnList); 
   }
 
   <FROM>
-  table = Identifier()
+  table = identifier()
   { 
     deleteCommand.setTable(table); 
   }
@@ -534,9 +554,9 @@ SelectCommand selectCommand() :
 }
 {
   <SELECT>
-  columns = ColumnList()
+  columns = columnList()
   <FROM>
-  tableName = Identifier()
+  tableName = identifier()
   { 
      select.setColumns(columns);
      select.setTable(tableName);
@@ -583,7 +603,7 @@ EnableCommand enableCommand() :
 }
 {
   <ENABLE> 
-  table = Identifier()
+  table = identifier()
   { 
     enableCommand.setTable(table);
     return enableCommand;
@@ -597,7 +617,7 @@ DisableCommand disableCommand() :
 }
 {
   <DISABLE> 
-  table = Identifier()
+  table = identifier()
   { 
     disableCommand.setTable(table); 
     return disableCommand;
@@ -615,8 +635,95 @@ ClearCommand clearCommand() :
    }
 }
 
-////////////////////////////////////////////////
-// Utility expansion units...
+SubstituteCommand substituteCommand() :
+{
+  Token key = null;
+  Token chainKey = null;
+  Token operation = null;
+  String tableName = null;
+  String condition = "";
+  List<String> notInList = new ArrayList<String>();
+  SubstituteCommand substitute = new SubstituteCommand(this.out);
+  Token extendedKey = null;
+}
+{
+  key=<ID><EQUALS>
+  { substitute.setKey(key.image.toString()); }
+  (
+      chainKey=<ID><DOT>
+    { substitute.setChainKey(chainKey.image.toString()); }
+      operation = <ID> 
+    { substitute.setOperation(operation.image.toString()); }
+    <LPAREN>
+    {
+      String operationType = operation.image.toLowerCase();
+      if(operationType.equals("projection")) {
+        List<String> columnList = columnList();
+        for (int i = 0; i < columnList.size(); i++) {
+          condition += appendIndicator(columnList.get(i)) + " ";
+        }
+    
+      } else {
+        condition = booleanTerm();
+      }
+      
+      substitute.setCondition(condition);
+    }
+    <RPAREN>
+    [
+      <AND> extendedKey=<ID>
+      {
+        String eKey = extendedKey.image.toString();
+        String cKey = chainKey.image.toString();
+        substitute.setCondition(condition);
+        if (secondR.equals(eKey)) {
+          substitute.resetVariableRelation(eKey, cKey);
+        } else {
+          substitute.resetVariableRelation(cKey, eKey);
+        }
+      }
+    ]
+  | <TABLE><LPAREN>
+    tableName = identifier() 
+    { substitute.setInput(tableName); }
+    <RPAREN>
+  | operation=<GROUP>chainKey=<ID><BY>
+    <LPAREN>
+      { 
+        List<String> columnList = columnList(); 
+        for (int i = 0; i < columnList.size(); i++) {
+          condition += appendIndicator(columnList.get(i));
+        }  
+      }
+    <RPAREN>
+    { 
+      substitute.setChainKey(chainKey.image.toString());
+      substitute.setOperation(operation.image.toString());
+      substitute.setCondition(condition);
+    }
+  )
+  
+  {
+    return substitute;
+  }
+}
+
+SaveCommand saveCommand() :
+{
+  Token t = null;
+  String tableName;
+  SaveCommand save = new SaveCommand(this.out);
+}
+{
+  <SAVE> t=<ID>
+  { save.setStatement(t.image.toString()); }
+  <INTO><TABLE><LPAREN>
+  tableName = identifier() { save.setOutput(tableName); }
+  <RPAREN>
+  {
+    return save;
+  }
+}
 
 List<String> getLiteralValues() :
 {
@@ -657,6 +764,19 @@ String getStringLiteral() :
  }
 }
 
+String getColumn() :
+{
+  Token col;
+}
+{
+  (
+    ( col=<ID> | col=<INTEGER_LITERAL> | col=<ASTERISK> )
+      { return col.image.toString(); }
+    | (col=<QUOTED_IDENTIFIER> | col=<STRING_LITERAL> )
+      { return col.image.substring(1,col.image.toString().length() - 1); }
+  )
+}
+
 List<String> getColumns() : // return parenthesized column list
 {
   List<String> values = new ArrayList<String>();
@@ -680,34 +800,21 @@ List<String> getColumns() : // return parenthesized column list
     }
 }
 
-String getColumn() :
-{
-  Token col;
-}
-{
-  (
-    ( col=<ID> | col=<ASTERISK> )
-      { return col.image.toString(); }
-    | (col=<QUOTED_IDENTIFIER> | col=<STRING_LITERAL> )
-      { return col.image.substring(1,col.image.toString().length() - 1); }
-  )
-}
-
-List<String> TableList() :
+List<String> tableList() :
 {
   List<String> tableList = new ArrayList<String>();
   String table = null;
 }
 {
-  table = Identifier() { tableList.add(table); }
-  ( <COMMA> table = Identifier()
+  table = identifier() { tableList.add(table); }
+  ( <COMMA> table = identifier()
     { tableList.add(table); } 
   )*
   
   { return tableList; }
 }
 
-List<String> ColumnList() :
+List<String> columnList() :
 {
   List<String> columnList = new ArrayList<String>();  
   String column = null;
@@ -737,7 +844,7 @@ int Number() :
   { return Integer.parseInt(t.image.toString()); }
 }
 
-String Identifier() :
+String identifier() :
 {
   Token t = null;
 }
@@ -748,4 +855,155 @@ String Identifier() :
    | ( t=<QUOTED_IDENTIFIER> | t=<STRING_LITERAL> )
      { return t.image.substring(1,t.image.toString().length() - 1); }
   )
+}
+
+String booleanTerm() :
+{
+  String query = "";
+  String tmp = null;
+  String joinTerm = null;
+  String connector = null;
+}
+{
+  query = booleanTerms()
+  {
+    if(query.endsWith(".ROW")) {
+      joinTerm = query;
+      query = "";
+    }
+  }
+  (
+      (
+       <AND> { connector = " AND ";  }
+       | <OR> { connector = " OR "; }
+      ) tmp = booleanTerms() { 
+     if(tmp.endsWith(".ROW")) {
+      joinTerm = tmp; 
+     } else {
+       if(!query.equals(""))
+         query += connector;
+        query += tmp; 
+     }
+      }
+  )*
+  { 
+    if(joinTerm != null) {
+      return joinTerm + " BOOL " + query;
+    } else {
+      return query;
+    }
+  }
+}
+
+String booleanTerms() : 
+{
+  Token tSearchName, tComparand;
+  List<String> inList = new ArrayList<String>();
+  String searchName=null,comparator=null,comparand=null;
+  Token joinColumn = null;
+  Token joinKey = null;
+  String result = null;
+}
+{
+  ( 
+    tSearchName=<ID> { searchName = tSearchName.image.toString(); }
+    [
+      <DOT> 
+      (  
+        joinColumn=<ID>
+        { searchName += "." + joinColumn.image.toString(); }
+        | <ROW>
+        { 
+          secondR = searchName;
+          searchName += ".ROW";
+        }
+      )
+    ]
+  )
+  comparator = getComparator()
+  (
+     tComparand=<INTEGER_LITERAL> 
+      { comparand = tComparand.image.toString(); }
+    | tComparand=<STRING_LITERAL> 
+      { comparand = tComparand.image.substring(1,tComparand.image.length() - 1); }
+    | tComparand=<ID>
+     { comparand = tComparand.image.toString(); }
+      [
+        <DOT>
+      (
+          <ROW>
+          { 
+            secondR = comparand;
+            comparand += ".ROW"; 
+            }
+          | joinColumn=<ID>
+          { comparand += "." + joinColumn.image.toString(); }
+      )
+      ]
+    | inList = getColumns()
+    { 
+      if(comparator == null) {
+        comparator = "==";
+      }
+      comparand = "";
+      try{
+        for(int i=0; i<inList.size(); i++) {     
+          comparand += URLEncoder.encode(inList.get(i), "UTF-8");
+          if(inList.size() != (i+1)) { comparand += "|"; }
+        }
+      } catch (UnsupportedEncodingException e) {
+          e.printStackTrace();
+      }
+    }
+  )
+   { 
+    if(searchName.endsWith(".ROW")) {
+      result = appendIndicator(comparand) 
+      + " " + comparator + " " + searchName;
+    } else {
+      result = appendIndicator(searchName) 
+      + " " + comparator + " " + comparand;
+    }
+    
+     return result; 
+   }
+}
+
+String getComparator() :
+{
+  Token t = null;
+  String comparator = null;
+}
+{
+  (  
+      t=<LCOMP> 
+        { comparator = t.image.toString(); } 
+      [<EQUALS> { comparator += "="; }]
+    | t=<RCOMP> 
+        { comparator = t.image.toString(); } 
+      [<EQUALS> { comparator += "="; }]
+    | t=<EQUALS> 
+        { comparator = t.image.toString(); }
+      [<LCOMP> { comparator = ">" + comparator; } ]
+      [<RCOMP> { comparator = "<" + comparator; } ]
+    | t=<NOTEQUAL>
+        { comparator = t.image.toString(); }
+    | <NOT><IN>
+        { comparator = "!!"; }
+    | <IN>
+        { comparator = "=="; }
+  )
+  
+  { return comparator; }
+}
+
+String appendIndicator(String columnName) :
+{
+  String column = columnName;
+}
+{
+  {
+     return (!column.endsWith(":") && column.indexOf(":") == -1) 
+     ? column + ":" : column;
+  }
 }

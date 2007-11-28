@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -30,16 +31,16 @@ import org.apache.hadoop.hbase.HTableDescriptor;
  * Shows all available tables.
  */
 public class ShowCommand extends BasicCommand {
-  private static final String [] HEADER = new String [] {"Name", "Descriptor"};
+  private static final String[] HEADER = new String[] { "Name", "Descriptor" };
   private String command;
   private final TableFormatter formatter;
-  
+
   // Not instantiable
   @SuppressWarnings("unused")
   private ShowCommand() {
     this(null, null);
   }
-  
+
   public ShowCommand(final Writer o, final TableFormatter f) {
     this(o, f, null);
   }
@@ -67,12 +68,37 @@ public class ShowCommand extends BasicCommand {
         formatter.header(HEADER);
         for (int i = 0; i < tableLength; i++) {
           String tableName = tables[i].getName().toString();
-          formatter.row(new String [] {tableName, tables[i].toString()});
+          formatter.row(new String[] { tableName, tables[i].toString() });
         }
         formatter.footer();
         return new ReturnMsg(1, tableLength + " table(s) in set");
+      } else {
+        Map<String, VariableRef> refer = VariablesPool.get(command);
+        if (refer == null) {
+          return new ReturnMsg(0, "Unknown arguments.");
+        }
+
+        String msg = null;
+        for (Map.Entry<String, VariableRef> e : refer.entrySet()) {
+          msg = command + " = ";
+          if (e.getKey() != null) {
+            msg += e.getKey() + ".";
+          }
+          msg += e.getValue().getOperation() + "(";
+          if (e.getValue().getOperation().equals("projection")) {
+            String[] proj = e.getValue().getArgument().split(" ");
+            for (int i = 0; i < proj.length; i++) {
+              msg += "'" + proj[i] + "'";
+              if (i + 1 != proj.length)
+                msg += ", ";
+            }
+          } else {
+            msg += e.getValue().getArgument().replace(" BOOL ", " and ");
+          }
+          msg += ");\n";
+        }
+        return new ReturnMsg(0, msg);
       }
-      return new ReturnMsg(0, "Missing parameters. Please check 'Show' syntax");
     } catch (IOException e) {
       return new ReturnMsg(0, "error msg : " + e.toString());
     }

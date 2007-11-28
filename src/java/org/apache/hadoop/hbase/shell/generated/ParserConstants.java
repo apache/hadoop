@@ -38,29 +38,36 @@ public interface ParserConstants {
   int LPAREN = 36;
   int RPAREN = 37;
   int EQUALS = 38;
-  int NOTEQUAL = 39;
-  int ASTERISK = 40;
-  int MAX_VERSIONS = 41;
-  int MAX_LENGTH = 42;
-  int COMPRESSION = 43;
-  int NONE = 44;
-  int BLOCK = 45;
-  int RECORD = 46;
-  int IN_MEMORY = 47;
-  int BLOOMFILTER = 48;
-  int COUNTING_BLOOMFILTER = 49;
-  int RETOUCHED_BLOOMFILTER = 50;
-  int VECTOR_SIZE = 51;
-  int NUM_HASH = 52;
-  int NUM_ENTRIES = 53;
-  int ADD = 54;
-  int CHANGE = 55;
-  int ID = 56;
-  int INTEGER_LITERAL = 57;
-  int FLOATING_POINT_LITERAL = 58;
-  int EXPONENT = 59;
-  int QUOTED_IDENTIFIER = 60;
-  int STRING_LITERAL = 61;
+  int LCOMP = 39;
+  int RCOMP = 40;
+  int NOT = 41;
+  int IN = 42;
+  int NOTEQUAL = 43;
+  int ASTERISK = 44;
+  int MAX_VERSIONS = 45;
+  int MAX_LENGTH = 46;
+  int COMPRESSION = 47;
+  int NONE = 48;
+  int BLOCK = 49;
+  int RECORD = 50;
+  int IN_MEMORY = 51;
+  int BLOOMFILTER = 52;
+  int COUNTING_BLOOMFILTER = 53;
+  int RETOUCHED_BLOOMFILTER = 54;
+  int VECTOR_SIZE = 55;
+  int NUM_HASH = 56;
+  int NUM_ENTRIES = 57;
+  int ADD = 58;
+  int CHANGE = 59;
+  int SAVE = 60;
+  int GROUP = 61;
+  int BY = 62;
+  int ID = 63;
+  int INTEGER_LITERAL = 64;
+  int FLOATING_POINT_LITERAL = 65;
+  int EXPONENT = 66;
+  int QUOTED_IDENTIFIER = 67;
+  int STRING_LITERAL = 68;
 
   int DEFAULT = 0;
 
@@ -104,7 +111,11 @@ public interface ParserConstants {
     "\"(\"",
     "\")\"",
     "\"=\"",
-    "\"<>\"",
+    "\">\"",
+    "\"<\"",
+    "\"not\"",
+    "\"in\"",
+    "\"!=\"",
     "\"*\"",
     "\"max_versions\"",
     "\"max_length\"",
@@ -121,6 +132,9 @@ public interface ParserConstants {
     "\"num_entries\"",
     "\"add\"",
     "\"change\"",
+    "\"save\"",
+    "\"group\"",
+    "\"by\"",
     "<ID>",
     "<INTEGER_LITERAL>",
     "<FLOATING_POINT_LITERAL>",
