@@ -573,6 +573,32 @@ public class HTable implements HConstants {
    * Start an atomic row insertion/update.  No changes are committed until the 
    * call to commit() returns. A call to abort() will abandon any updates in
    * progress.
+   * 
+   * <p>
+   * Example:
+   * <br>
+   * <pre><span style="font-family: monospace;">
+   * long lockid = table.startUpdate(new Text(article.getName()));
+   * for (File articleInfo: article.listFiles(new NonDirectories())) {
+   *   String article = null;
+   *   try {
+   *     DataInputStream in = new DataInputStream(new FileInputStream(articleInfo));
+   *     article = in.readUTF();
+   *   } catch (IOException e) {
+   *     // Input error - abandon update
+   *     table.abort(lockid);
+   *     throw e;
+   *   }
+   *   try {
+   *     table.put(lockid, columnName(articleInfo.getName()), article.getBytes());
+   *   } catch (RuntimeException e) {
+   *     // Put failed - abandon update
+   *     table.abort(lockid);
+   *     throw e;
+   *   }
+   * }
+   * table.commit(lockid);
+   * </span></pre>
    *
    * 
    * @param row Name of row to start update against.  Note, choose row names
@@ -686,7 +712,12 @@ public class HTable implements HConstants {
   }
   
   /** 
-   * Abort a row mutation
+   * Abort a row mutation.
+   * 
+   * This method should be called only when an update has been started and it
+   * is determined that the update should not be committed.
+   * 
+   * Releases resources being held by the update in progress.
    *
    * @param lockid lock id returned from startUpdate
    */
@@ -699,12 +730,16 @@ public class HTable implements HConstants {
   }
   
   /** 
-   * Finalize a row mutation
+   * Finalize a row mutation.
+   * 
    * When this method is specified, we pass the server a value that says use
    * the 'latest' timestamp.  If we are doing a put, on the server-side, cells
    * will be given the servers's current timestamp.  If the we are commiting
    * deletes, then delete removes the most recently modified cell of stipulated
    * column.
+   * 
+   * @see #commit(long, long)
+   * 
    * @param lockid lock id returned from startUpdate
    * @throws IOException
    */
@@ -713,7 +748,8 @@ public class HTable implements HConstants {
   }
 
   /** 
-   * Finalize a row mutation
+   * Finalize a row mutation and release any resources associated with the update.
+   * 
    * @param lockid lock id returned from startUpdate
    * @param timestamp time to associate with the change
    * @throws IOException

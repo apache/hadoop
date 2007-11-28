@@ -503,9 +503,6 @@ public class HConnectionManager implements HConstants {
         }
         if (!waited) {
           try {
-            for (int tries = 0; tries < numRetries; tries++) {
-              boolean success = true;                         // assume this works
-
               SortedMap<Text, HRegionLocation> metaServers =
                 this.tablesToServers.get(META_TABLE_NAME);
               if (metaServers == null) {
@@ -515,22 +512,9 @@ public class HConnectionManager implements HConstants {
               metaServers = metaServers.tailMap(firstMetaRegion);
 
               for (HRegionLocation t: metaServers.values()) {
-                try {
                   srvrs.putAll(scanOneMetaRegion(t, tableName));
+              }
 
-                } catch (IOException e) {
-                  if (tries < numRetries - 1) {
-                    metaServers = findServersForTable(META_TABLE_NAME);
-                    success = false;
-                    break;
-                  }
-                  throw e;
-                }
-              }
-              if (success) {
-                break;
-              }
-            }
           } finally {
             synchronized (this.tablesBeingLocated) {
               // Wake up the threads waiting for us to find the table
@@ -738,9 +722,6 @@ public class HConnectionManager implements HConstants {
                 regionInfo, new HServerAddress(serverAddress)));
           }
         } catch (IOException e) {
-          if (e instanceof TableNotFoundException) {
-            throw e;                                    // don't retry
-          }
           if (tries == numRetries - 1) {                // no retries left
             if (e instanceof RemoteException) {
               e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
