@@ -1296,39 +1296,45 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     String serverName = serverInfo.getServerAddress().toString().trim();
     long serverLabel = getServerLabel(serverName);
     if (msgs.length > 0 && msgs[0].getMsg() == HMsg.MSG_REPORT_EXITING) {
-      // HRegionServer is shutting down. Cancel the server's lease.
-      // Note that canceling the server's lease takes care of updating
-      // serversToServerInfo, etc.
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Region server " + serverName +
+      synchronized (serversToServerInfo) {
+        try {
+          // HRegionServer is shutting down. Cancel the server's lease.
+          // Note that canceling the server's lease takes care of updating
+          // serversToServerInfo, etc.
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Region server " + serverName +
             ": MSG_REPORT_EXITING -- cancelling lease");
-      }
-      
-      if (cancelLease(serverName, serverLabel)) {
-        // Only process the exit message if the server still has a lease.
-        // Otherwise we could end up processing the server exit twice.
-        LOG.info("Region server " + serverName +
-            ": MSG_REPORT_EXITING -- lease cancelled");
-        // Get all the regions the server was serving reassigned
-        // (if we are not shutting down).
-        if (!closed.get()) {
-          for (int i = 1; i < msgs.length; i++) {
-            HRegionInfo info = msgs[i].getRegionInfo();
-            if (info.getTableDesc().getName().equals(ROOT_TABLE_NAME)) {
-              rootRegionLocation.set(null);
-            } else if (info.getTableDesc().getName().equals(META_TABLE_NAME)) {
-              onlineMetaRegions.remove(info.getStartKey());
-            }
-
-            this.unassignedRegions.put(info.getRegionName(), info);
-            this.assignAttempts.put(info.getRegionName(), Long.valueOf(0L));
           }
+
+          if (cancelLease(serverName, serverLabel)) {
+            // Only process the exit message if the server still has a lease.
+            // Otherwise we could end up processing the server exit twice.
+            LOG.info("Region server " + serverName +
+            ": MSG_REPORT_EXITING -- lease cancelled");
+            // Get all the regions the server was serving reassigned
+            // (if we are not shutting down).
+            if (!closed.get()) {
+              for (int i = 1; i < msgs.length; i++) {
+                HRegionInfo info = msgs[i].getRegionInfo();
+                if (info.getTableDesc().getName().equals(ROOT_TABLE_NAME)) {
+                  rootRegionLocation.set(null);
+                } else if (info.getTableDesc().getName().equals(META_TABLE_NAME)) {
+                  onlineMetaRegions.remove(info.getStartKey());
+                }
+
+                this.unassignedRegions.put(info.getRegionName(), info);
+                this.assignAttempts.put(info.getRegionName(), Long.valueOf(0L));
+              }
+            }
+          }
+
+          // We don't need to return anything to the server because it isn't
+          // going to do any more work.
+          return new HMsg[0];
+        } finally {
+          serversToServerInfo.notifyAll();
         }
       }
-
-      // We don't need to return anything to the server because it isn't
-      // going to do any more work.
-      return new HMsg[0];
     }
 
     if (closed.get()) {
@@ -1433,9 +1439,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           loadToServers.put(load, servers);
         }
       }
-    }
-    synchronized (serversToServerInfo) {
-      serversToServerInfo.notifyAll();
     }
     return leaseCancelled;
   }
