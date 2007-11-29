@@ -196,6 +196,11 @@ public class SecondaryNameNode implements FSConstants, Runnable {
         LOG.error("Exception in doCheckpoint:");
         LOG.error(StringUtils.stringifyException(e));
         e.printStackTrace();
+      } catch (Throwable e) {
+        LOG.error("Throwable Exception in doCheckpoint:");
+        LOG.error(StringUtils.stringifyException(e));
+        e.printStackTrace();
+        Runtime.getRuntime().exit(-1);
       }
     }
   }

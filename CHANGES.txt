@@ -169,6 +169,9 @@ Trunk (unreleased changes)
     an infinite loop while deleting excess replicas that were created by 
     block rebalancing.  (Hairong Kuang via dhruba)
 
+    HADOOP-2209. SecondaryNamenode process exits if it encounters exceptions 
+    that it cannot handle.  (Dhruba Borthakur via dhruba)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES
