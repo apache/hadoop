@@ -88,6 +88,9 @@ Trunk (unreleased changes)
     HADOOP-1898.  Release the lock protecting the last time of the last stack
     dump while the dump is happening. (Amareshwari Sri Ramadasu via omalley)
 
+    HADOOP-1965. Makes the sortAndSpill in MapTask a separate thread.
+    (Amar Kamat via ddas)
+
   BUG FIXES
 
     HADOOP-2100.  Remove faulty check for existence of $HADOOP_PID_DIR and let
