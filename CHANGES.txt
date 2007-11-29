@@ -79,6 +79,10 @@ Trunk (unreleased changes)
     permits each to determine what files are copied into release
     builds.  (stack via cutting)
 
+    HADOOP-1984. Makes the backoff for failed fetches exponential. 
+    Earlier, it was a random backoff from an interval. 
+    (Amar Kamat via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
