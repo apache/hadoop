@@ -39,6 +39,7 @@ Trunk (unreleased changes)
                may not restart)
    HADOOP-2253 getRow can return HBASE::DELETEVAL cells
                (Bryan Duxbury via Stack)
+   HADOOP-2295 Fix assigning a region to multiple servers
 
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable

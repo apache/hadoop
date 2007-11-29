@@ -1136,12 +1136,16 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
     // Join up with all threads
     try {
-      rootScannerThread.join();         // Wait for the root scanner to finish.
+      if (rootScannerThread.isAlive()) {
+        rootScannerThread.join();       // Wait for the root scanner to finish.
+      }
     } catch (Exception iex) {
       LOG.warn("root scanner", iex);
     }
     try {
-      metaScannerThread.join();         // Wait for meta scanner to finish.
+      if (metaScannerThread.isAlive()) {
+        metaScannerThread.join();       // Wait for meta scanner to finish.
+      }
     } catch(Exception iex) {
       LOG.warn("meta scanner", iex);
     }
@@ -1460,10 +1464,25 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     // Get reports on what the RegionServer did.
 
     for (int i = 0; i < incomingMsgs.length; i++) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Received " + incomingMsgs[i].toString() + "from " +
+            serverName);
+      }
       HRegionInfo region = incomingMsgs[i].getRegionInfo();
 
       switch (incomingMsgs[i].getMsg()) {
 
+      case HMsg.MSG_REPORT_PROCESS_OPEN:
+        synchronized (this.assignAttempts) {
+          // Region server has acknowledged request to open region.
+          // Extend region open time by 1/2 max region open time.
+          assignAttempts.put(region.getRegionName(), 
+              Long.valueOf(assignAttempts.get(
+                  region.getRegionName()).longValue() +
+                  (this.maxRegionOpenTime / 2)));
+        }
+        break;
+        
       case HMsg.MSG_REPORT_OPEN:
         HRegionInfo regionInfo = unassignedRegions.get(region.getRegionName());
 
@@ -1484,9 +1503,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         } else {
           LOG.info(info.getServerAddress().toString() + " serving " +
               region.getRegionName());
-          // Remove from unassigned list so we don't assign it to someone else
-          this.unassignedRegions.remove(region.getRegionName());
-          this.assignAttempts.remove(region.getRegionName());
+
           if (region.getRegionName().compareTo(
               HRegionInfo.rootRegionInfo.getRegionName()) == 0) {
             // Store the Root Region location (in memory)
@@ -1495,21 +1512,23 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
                   new HServerAddress(info.getServerAddress()));
               this.rootRegionLocation.notifyAll();
             }
-            break;
-          }
+          } else {
+            // Note that the table has been assigned and is waiting for the meta
+            // table to be updated.
 
-          // Note that the table has been assigned and is waiting for the meta
-          // table to be updated.
+            pendingRegions.add(region.getRegionName());
 
-          pendingRegions.add(region.getRegionName());
+            // Queue up an update to note the region location.
 
-          // Queue up an update to note the region location.
-
-          try {
-            msgQueue.put(new ProcessRegionOpen(info, region));
-          } catch (InterruptedException e) {
-            throw new RuntimeException("Putting into msgQueue was interrupted.", e);
-          }
+            try {
+              msgQueue.put(new ProcessRegionOpen(info, region));
+            } catch (InterruptedException e) {
+              throw new RuntimeException("Putting into msgQueue was interrupted.", e);
+            }
+          } 
+          // Remove from unassigned list so we don't assign it to someone else
+          this.unassignedRegions.remove(region.getRegionName());
+          this.assignAttempts.remove(region.getRegionName());
         }
         break;
 

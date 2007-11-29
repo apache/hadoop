@@ -22,19 +22,10 @@ package org.apache.hadoop.hbase;
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
 
-import java.io.PrintWriter;
-import org.apache.hadoop.util.ReflectionUtils;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 /**
  * Test ability of HBase to handle DFS failure
  */
 public class DFSAbort extends HBaseClusterTestCase {
-  private static final Log LOG =
-    LogFactory.getLog(DFSAbort.class.getName());
-
   /** constructor */
   public DFSAbort() {
     super();
@@ -66,8 +57,6 @@ public class DFSAbort extends HBaseClusterTestCase {
       // By now the Mini DFS is running, Mini HBase is running and we have
       // created a table. Now let's yank the rug out from HBase
       cluster.getDFSCluster().shutdown();
-      // Now wait for Mini HBase Cluster to shut down
-//      cluster.join();
       threadDumpingJoin();
     } catch (Exception e) {
       e.printStackTrace();

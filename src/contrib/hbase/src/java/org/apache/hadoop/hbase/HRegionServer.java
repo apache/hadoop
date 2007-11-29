@@ -742,6 +742,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                       throw new RuntimeException("Putting into msgQueue was " +
                         "interrupted.", e);
                     }
+                    if (msgs[i].getMsg() == HMsg.MSG_REGION_OPEN) {
+                      outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_PROCESS_OPEN,
+                          msgs[i].getRegionInfo()));
+                    }
                   }
                 }
               }
@@ -982,11 +986,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Presumption is that all closes and stops have already been called.
    */
   void join() {
-    join(this.workerThread);
     join(this.logRoller);
     join(this.cacheFlusher);
     join(this.compactor);
     join(this.splitter);
+    join(this.workerThread);
   }
 
   private void join(final Thread t) {
@@ -1161,8 +1165,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       } finally {
         this.lock.writeLock().unlock();
       }
+      reportOpen(region); 
     }
-    reportOpen(region); 
   }
 
   void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)

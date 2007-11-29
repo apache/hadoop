@@ -53,7 +53,9 @@ public class LocalHBaseCluster implements HConstants {
   private final HMaster master;
   private final List<RegionServerThread> regionThreads;
   private final static int DEFAULT_NO = 1;
+  /** local mode */
   public static final String LOCAL = "local";
+  /** 'local:' */
   public static final String LOCAL_COLON = LOCAL + ":";
   private final HBaseConfiguration conf;
 
@@ -146,12 +148,14 @@ public class LocalHBaseCluster implements HConstants {
   public String waitOnRegionServer(int serverNumber) {
     RegionServerThread regionServerThread =
       this.regionThreads.remove(serverNumber);
-    try {
-      LOG.info("Waiting on " +
-        regionServerThread.getRegionServer().serverInfo.toString());
-      regionServerThread.join();
-    } catch (InterruptedException e) {
-      e.printStackTrace();
+    while (regionServerThread.isAlive()) {
+      try {
+        LOG.info("Waiting on " +
+            regionServerThread.getRegionServer().serverInfo.toString());
+        regionServerThread.join();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
     }
     return regionServerThread.getName();
   }
@@ -217,10 +221,12 @@ public class LocalHBaseCluster implements HConstants {
       }
     }
     if (this.master != null) {
-      try {
-        this.master.join();
-      } catch(InterruptedException e) {
-        // continue
+      while (this.master.isAlive()) {
+        try {
+          this.master.join();
+        } catch(InterruptedException e) {
+          // continue
+        }
       }
     }
     LOG.info("Shutdown " +

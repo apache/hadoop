@@ -53,6 +53,9 @@ public class HMsg implements Writable {
   
   /** region server is no longer serving the specified region */
   public static final byte MSG_REPORT_CLOSE = 101;
+  
+  /** region server is processing open request */
+  public static final byte MSG_REPORT_PROCESS_OPEN = 102;
 
   /**
    * region server split the region associated with this message.
@@ -140,6 +143,10 @@ public class HMsg implements Writable {
       
     case MSG_REGION_CLOSE_WITHOUT_REPORT:
       message.append("MSG_REGION_CLOSE_WITHOUT_REPORT : ");
+      break;
+      
+    case MSG_REPORT_PROCESS_OPEN:
+      message.append("MSG_REPORT_PROCESS_OPEN : ");
       break;
       
     case MSG_REPORT_OPEN:
