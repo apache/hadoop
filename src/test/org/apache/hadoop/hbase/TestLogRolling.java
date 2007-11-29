@@ -127,33 +127,41 @@ public class TestLogRolling extends HBaseTestCase {
 
     this.server = cluster.getRegionThreads().get(0).getRegionServer();
     this.log = server.getLog();
-    
+
     // When the META table can be opened, the region servers are running
-    @SuppressWarnings("unused")
     HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
     
-    // Create the test table and open it
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    admin.createTable(desc);
-    HTable table = new HTable(conf, new Text(tableName));
+    try {
 
-    for (int i = 1; i <= 2048; i++) {    // 2048 writes should cause 8 log rolls
-      long lockid =
-        table.startUpdate(new Text("row" + String.format("%1$04d", i)));
-      table.put(lockid, HConstants.COLUMN_FAMILY, value);
-      table.commit(lockid);
-      
-      if (i % 256 == 0) {
-        // After every 256 writes sleep to let the log roller run
-        
-        try {
-          Thread.sleep(2000);
-        } catch (InterruptedException e) {
-          // continue
+      // Create the test table and open it
+      HTableDescriptor desc = new HTableDescriptor(tableName);
+      desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      admin.createTable(desc);
+      HTable table = new HTable(conf, new Text(tableName));
+
+      try {
+        for (int i = 1; i <= 2048; i++) {    // 2048 writes should cause 8 log rolls
+          long lockid =
+            table.startUpdate(new Text("row" + String.format("%1$04d", i)));
+          table.put(lockid, HConstants.COLUMN_FAMILY, value);
+          table.commit(lockid);
+
+          if (i % 256 == 0) {
+            // After every 256 writes sleep to let the log roller run
+
+            try {
+              Thread.sleep(2000);
+            } catch (InterruptedException e) {
+              // continue
+            }
+          }
         }
+      } finally {
+        table.close();
       }
+    } finally {
+      meta.close();
     }
   }
   

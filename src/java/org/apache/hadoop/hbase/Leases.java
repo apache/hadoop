@@ -108,11 +108,13 @@ public class Leases {
   public void close() {
     LOG.info(Thread.currentThread().getName() + " closing leases");
     this.stop.set(true);
-    try {
-      this.leaseMonitorThread.interrupt();
-      this.leaseMonitorThread.join();
-    } catch (InterruptedException iex) {
-      // Ignore
+    while (this.leaseMonitorThread.isAlive()) {
+      try {
+        this.leaseMonitorThread.interrupt();
+        this.leaseMonitorThread.join();
+      } catch (InterruptedException iex) {
+        // Ignore
+      }
     }
     synchronized(leases) {
       synchronized(sortedLeases) {
@@ -211,10 +213,16 @@ public class Leases {
    * Its a daemon thread.
    */
   class LeaseMonitor extends Chore {
+    /**
+     * @param p
+     * @param s
+     */
     public LeaseMonitor(int p, AtomicBoolean s) {
       super(p, s);
     }
 
+    /** {@inheritDoc} */
+    @Override
     protected void chore() {
       synchronized(leases) {
         synchronized(sortedLeases) {
