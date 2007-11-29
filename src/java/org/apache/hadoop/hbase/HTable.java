@@ -164,6 +164,22 @@ public class HTable implements HConstants {
   }
 
   /**
+   * @return table metadata 
+   * @throws IOException
+   */
+  public HTableDescriptor getMetadata() throws IOException {
+    HTableDescriptor [] metas = this.connection.listTables();
+    HTableDescriptor result = null;
+    for (int i = 0; i < metas.length; i++) {
+      if (metas[i].getName().equals(this.tableName)) {
+        result = metas[i];
+        break;
+      }
+    }
+    return result;
+  }
+
+  /**
    * Gets the starting row key for every region in the currently open table
    * @return Array of region starting row keys
    */
