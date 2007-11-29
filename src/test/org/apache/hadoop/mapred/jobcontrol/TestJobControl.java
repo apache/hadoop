@@ -18,112 +18,18 @@
 
 package org.apache.hadoop.mapred.jobcontrol;
 
-import java.io.IOException;
-import java.text.NumberFormat;
-import java.util.Iterator;
 import java.util.ArrayList;
-import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reducer;
-import org.apache.hadoop.mapred.Reporter;
 
 /**
  * This class performs unit test for Job/JobControl classes.
  *  
  */
 public class TestJobControl extends junit.framework.TestCase {
-
-  private static NumberFormat idFormat = NumberFormat.getInstance();
-  static {
-    idFormat.setMinimumIntegerDigits(4);
-    idFormat.setGroupingUsed(false);
-  }
-
-  static private Random rand = new Random();
-
-  private static void cleanData(FileSystem fs, Path dirPath)
-    throws IOException {
-    fs.delete(dirPath);
-  }
-
-  private static String generateRandomWord() {
-    return idFormat.format(rand.nextLong());
-  }
-
-  private static String generateRandomLine() {
-    long r = rand.nextLong() % 7;
-    long n = r + 20;
-    StringBuffer sb = new StringBuffer();
-    for (int i = 0; i < n; i++) {
-      sb.append(generateRandomWord()).append(" ");
-    }
-    sb.append("\n");
-    return sb.toString();
-  }
-
-  private static void generateData(FileSystem fs, Path dirPath)
-    throws IOException {
-    FSDataOutputStream out = fs.create(new Path(dirPath, "data.txt"));
-    for (int i = 0; i < 100000; i++) {
-      String line = TestJobControl.generateRandomLine();
-      out.write(line.getBytes("UTF-8"));
-    }
-    out.close();
-  }
-
-  public static class DataCopy extends MapReduceBase
-    implements Mapper<WritableComparable, Text, Text, Text>,
-               Reducer<Text, Text, Text, Text> {
-    public void map(WritableComparable key, Text value,
-                    OutputCollector<Text, Text> output,
-                    Reporter reporter) throws IOException {
-      output.collect(new Text(key.toString()), value);
-    }
-
-    public void reduce(Text key, Iterator<Text> values,
-                       OutputCollector<Text, Text> output,
-                       Reporter reporter) throws IOException {
-      Text dumbKey = new Text("");
-      while (values.hasNext()) {
-        Text data = (Text) values.next();
-        output.collect(dumbKey, data);
-      }
-    }
-  }
-
-  private static JobConf createCopyJob(ArrayList indirs, Path outdir)
-    throws Exception {
-
-    Configuration defaults = new Configuration();
-    JobConf theJob = new JobConf(defaults, TestJobControl.class);
-    theJob.setJobName("DataMoveJob");
-
-    theJob.setInputPath((Path) indirs.get(0));
-    if (indirs.size() > 1) {
-      for (int i = 1; i < indirs.size(); i++) {
-        theJob.addInputPath((Path) indirs.get(i));
-      }
-    }
-    theJob.setMapperClass(DataCopy.class);
-    theJob.setOutputPath(outdir);
-    theJob.setOutputKeyClass(Text.class);
-    theJob.setOutputValueClass(Text.class);
-    theJob.setReducerClass(DataCopy.class);
-    theJob.setNumMapTasks(12);
-    theJob.setNumReduceTasks(4);
-    return theJob;
-  }
 
   /**
    * This is a main function for testing JobControl class.
@@ -139,11 +45,9 @@ public class TestJobControl extends junit.framework.TestCase {
    * Then it creates a JobControl object and add the 4 jobs to the JobControl object.
    * Finally, it creates a thread to run the JobControl object and monitors/reports
    * the job states.
-   * 
-   * @param args
    */
   public static void doJobControlTest() throws Exception {
-        
+
     Configuration defaults = new Configuration();
     FileSystem fs = FileSystem.get(defaults);
     Path rootDataDir = new Path(System.getProperty("test.build.data", "."), "TestJobControlData");
@@ -153,29 +57,29 @@ public class TestJobControl extends junit.framework.TestCase {
     Path outdir_3 = new Path(rootDataDir, "outdir_3");
     Path outdir_4 = new Path(rootDataDir, "outdir_4");
 
-    cleanData(fs, indir);
-    generateData(fs, indir);
+    JobControlTestUtils.cleanData(fs, indir);
+    JobControlTestUtils.generateData(fs, indir);
 
-    cleanData(fs, outdir_1);
-    cleanData(fs, outdir_2);
-    cleanData(fs, outdir_3);
-    cleanData(fs, outdir_4);
+    JobControlTestUtils.cleanData(fs, outdir_1);
+    JobControlTestUtils.cleanData(fs, outdir_2);
+    JobControlTestUtils.cleanData(fs, outdir_3);
+    JobControlTestUtils.cleanData(fs, outdir_4);
 
     ArrayList<Job> dependingJobs = null;
 
     ArrayList<Path> inPaths_1 = new ArrayList<Path>();
     inPaths_1.add(indir);
-    JobConf jobConf_1 = createCopyJob(inPaths_1, outdir_1);
+    JobConf jobConf_1 = JobControlTestUtils.createCopyJob(inPaths_1, outdir_1);
     Job job_1 = new Job(jobConf_1, dependingJobs);
     ArrayList<Path> inPaths_2 = new ArrayList<Path>();
     inPaths_2.add(indir);
-    JobConf jobConf_2 = createCopyJob(inPaths_2, outdir_2);
+    JobConf jobConf_2 = JobControlTestUtils.createCopyJob(inPaths_2, outdir_2);
     Job job_2 = new Job(jobConf_2, dependingJobs);
 
     ArrayList<Path> inPaths_3 = new ArrayList<Path>();
     inPaths_3.add(outdir_1);
     inPaths_3.add(outdir_2);
-    JobConf jobConf_3 = createCopyJob(inPaths_3, outdir_3);
+    JobConf jobConf_3 = JobControlTestUtils.createCopyJob(inPaths_3, outdir_3);
     dependingJobs = new ArrayList<Job>();
     dependingJobs.add(job_1);
     dependingJobs.add(job_2);
@@ -183,7 +87,7 @@ public class TestJobControl extends junit.framework.TestCase {
 
     ArrayList<Path> inPaths_4 = new ArrayList<Path>();
     inPaths_4.add(outdir_3);
-    JobConf jobConf_4 = createCopyJob(inPaths_4, outdir_4);
+    JobConf jobConf_4 = JobControlTestUtils.createCopyJob(inPaths_4, outdir_4);
     dependingJobs = new ArrayList<Job>();
     dependingJobs.add(job_3);
     Job job_4 = new Job(jobConf_4, dependingJobs);

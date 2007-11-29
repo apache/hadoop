@@ -158,6 +158,8 @@ Trunk (unreleased changes)
     HADOOP-2244.  Fixes the MapWritable.readFields to clear the instance 
     field variable every time readFields is called. (Michael Stack via ddas).
 
+    HADOOP-2245.  Fixes LocalJobRunner to include a jobId in the mapId. Also,  
+    adds a testcase for JobControl. (Adrian Woodhead via ddas).
 
 Branch 0.15 (unreleased)
 
