@@ -187,7 +187,10 @@ class HStore implements HConstants {
         Text itCol = itKey.getColumn();
         if (results.get(itCol) == null && key.matchesWithoutColumn(itKey)) {
           byte [] val = tailMap.get(itKey);
-          results.put(itCol, val);
+
+          if (!HLogEdit.isDeleted(val)) {
+            results.put(itCol, val);
+          }
 
         } else if (key.getRow().compareTo(itKey.getRow()) < 0) {
           break;
