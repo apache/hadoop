@@ -998,6 +998,16 @@ class FSNamesystem implements FSConstants {
                                                            null,
                                                            blockSize);
     if (targets.length < this.minReplication) {
+      // if we could not find any targets, remove this block from file
+      synchronized (this) {
+        INodeFile iFile = dir.getFileINode(src);
+        if (iFile != null && iFile.isUnderConstruction()) {
+          INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction)iFile;
+          if (pendingFile.getClientName().equals(clientName)) {
+            dir.removeBlock(src, pendingFile, newBlock);
+          }
+        }
+      }
       throw new IOException("File " + src + " could only be replicated to " +
                             targets.length + " nodes, instead of " +
                             minReplication);

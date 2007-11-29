@@ -161,6 +161,10 @@ Trunk (unreleased changes)
     HADOOP-2245.  Fixes LocalJobRunner to include a jobId in the mapId. Also,  
     adds a testcase for JobControl. (Adrian Woodhead via ddas).
 
+    HADOOP-2275. Fix erroneous detection of corrupted file when namenode 
+    fails to allocate any datanodes for newly allocated block.
+    (Dhruba Borthakur via dhruba)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES

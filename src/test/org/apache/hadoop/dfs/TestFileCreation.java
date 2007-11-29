@@ -19,6 +19,7 @@ package org.apache.hadoop.dfs;
 
 import junit.framework.TestCase;
 import java.io.*;
+import java.net.*;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -28,6 +29,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
+
 
 /**
  * This class tests that a file need not be closed before its
@@ -188,6 +191,80 @@ public class TestFileCreation extends TestCase {
     }
   }
 
+  /**
+   * Test that file data does not become corrupted even in the face of errors.
+   */
+  public void testFileCreationError1() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setInt("heartbeat.recheck.interval", 1000);
+    conf.setInt("dfs.heartbeat.interval", 1);
+    if (simulatedStorage) {
+      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+    }
+    // create cluster
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    FileSystem fs = cluster.getFileSystem();
+    cluster.waitActive();
+    InetSocketAddress addr = new InetSocketAddress("localhost",
+                                                   cluster.getNameNodePort());
+    DFSClient client = new DFSClient(addr, conf);
+
+    try {
+
+      // create a new file.
+      //
+      Path file1 = new Path("/filestatus.dat");
+      FSDataOutputStream stm = createFile(fs, file1, 1);
+      System.out.println("testFileCreationError1: "
+                         + "Created file filestatus.dat with one "
+                         + " replicas.");
+
+      // verify that file exists in FS namespace
+      assertTrue(file1 + " should be a file", 
+                  fs.getFileStatus(file1).isDir() == false);
+      System.out.println("Path : \"" + file1 + "\"");
+
+      // kill the datanode
+      cluster.shutdownDataNodes();
+
+      // wait for the datanode to be declared dead
+      while (true) {
+        DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
+        if (info.length == 0) {
+          break;
+        }
+        System.out.println("testFileCreationError1: waiting for datanode " +
+                           " to die.");
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+        }
+      }
+
+      // write 1 byte to file. 
+      // This should fail because all datanodes are dead.
+      byte[] buffer = new byte[1];
+      Random rand = new Random(seed);
+      rand.nextBytes(buffer);
+      try {
+        stm.write(buffer);
+        stm.close();
+      } catch (Exception e) {
+        System.out.println("Encountered expected exception");
+      }
+
+      // verify that no blocks are associated with this file
+      // bad block allocations were cleaned up earlier.
+      LocatedBlocks locations = client.namenode.getBlockLocations(
+                                  file1.toString(), 0, Long.MAX_VALUE);
+      System.out.println("locations = " + locations.locatedBlockCount());
+      assertTrue("Error blocks were not cleaned up",
+                 locations.locatedBlockCount() == 0);
+    } finally {
+      fs.close();
+      cluster.shutdown();
+    }
+  }
 
 /**
  * Test that file data becomes available before file is closed.
