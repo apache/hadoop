@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,6 +39,9 @@ import junit.framework.TestCase;
  * This class tests if block replacement request to data nodes work correctly.
  */
 public class TestBlockReplacement extends TestCase {
+  private static final Log LOG = LogFactory.getLog(
+  "org.apache.hadoop.dfs.TestBlockReplacement");
+
   MiniDFSCluster cluster;
   public void testThrottler() throws IOException {
     Configuration conf = new Configuration();
@@ -136,15 +141,22 @@ public class TestBlockReplacement extends TestCase {
       
       // start to replace the block
       // case 1: proxySource does not contain the block
+      LOG.info("Testcase 1: Proxy " + newNode.getName() 
+          + "does not contain the block " + b.getBlockName() );
       assertFalse(replaceBlock(b, source, newNode, proxies.get(0)));
       // case 2: destination contains the block
+      LOG.info("Testcase 2: Destination " + proxies.get(1).getName() 
+          + "contains the block " + b.getBlockName() );
       assertFalse(replaceBlock(b, source, proxies.get(0), proxies.get(1)));
       // case 3: correct case
+      LOG.info("Testcase 3: Proxy=" + source.getName() + "source=" + 
+          proxies.get(0).getName() + " destination=" + newNode.getName() );
       assertTrue(replaceBlock(b, source, proxies.get(0), newNode));
       // block locations should contain two proxies and newNode
       checkBlocks(source, fileName.toString(), 
           DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR);
       // case 4: proxies.get(1) is not a valid del hint
+      LOG.info("Testcase 3: invalid del hint " + proxies.get(0).getName() );
       assertTrue(replaceBlock(b, proxies.get(1), proxies.get(0), source));
       /* block locations should contain two proxies and source;
        * newNode was deleted.
@@ -161,22 +173,26 @@ public class TestBlockReplacement extends TestCase {
       long fileLen, short replFactor) throws IOException {
     Boolean notDone;
     do {
+      try {
+        Thread.sleep(100);
+      } catch(InterruptedException e) {
+      }
       List<LocatedBlock> blocks = cluster.getNameNode().
       getBlockLocations(fileName, 0, fileLen).getLocatedBlocks();
       assertEquals(1, blocks.size());
       DatanodeInfo[] nodes = blocks.get(0).getLocations();
       notDone = (nodes.length != replFactor);
-      if(!notDone) {
-      for(DatanodeInfo node:nodes) {
-        if(node.equals(excludedNode) ) {
-          notDone=true; 
-          try {
-            Thread.sleep(100);
-          } catch(InterruptedException e) {
+      if (notDone) {
+        LOG.info("Expected replication factor is " + replFactor +
+            " but the real replication factor is " + nodes.length );
+      } else {
+        for( DatanodeInfo node : nodes) {
+          if (node.equals(excludedNode) ) {
+            notDone=true; 
+            LOG.info("Unexpected block location " + excludedNode.getName() );
+            break;
           }
-          break;
         }
-      }
       }
     } while(notDone);
   }

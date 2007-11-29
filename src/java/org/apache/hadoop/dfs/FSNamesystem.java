@@ -2431,13 +2431,14 @@ class FSNamesystem implements FSConstants {
     // pick one node to delete that favors the delete hint
     // otherwise pick one with least space from priSet if it is not empty
     // otherwise one node with least space from remains
+    boolean firstOne = true;
     while (nonExcess.size() - replication > 0) {
       DatanodeInfo cur = null;
       long minSpace = Long.MAX_VALUE;
 
       // check if we can del delNodeHint
-      if( delNodeHint !=null && (priSet.contains(delNodeHint) ||
-          (addedNode != null && !priSet.contains(addedNode))) ) {
+      if (firstOne && delNodeHint !=null && nonExcess.contains(delNodeHint) &&
+            (priSet.contains(delNodeHint) || (addedNode != null && !priSet.contains(addedNode))) ) {
           cur = delNodeHint;
       } else { // regular excessive replica removal
         Iterator<DatanodeDescriptor> iter = 
@@ -2453,6 +2454,7 @@ class FSNamesystem implements FSConstants {
           }
       }
 
+      firstOne = false;
       // adjust rackmap, priSet, and remains
       String rack = cur.getNetworkLocation();
       ArrayList<DatanodeDescriptor> datanodes = rackMap.get(rack);

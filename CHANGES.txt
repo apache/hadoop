@@ -165,6 +165,10 @@ Trunk (unreleased changes)
     fails to allocate any datanodes for newly allocated block.
     (Dhruba Borthakur via dhruba)
 
+    HADOOP-2256. Fix a buf in the namenode that could cause it to encounter
+    an infinite loop while deleting excess replicas that were created by 
+    block rebalancing.  (Hairong Kuang via dhruba)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES
