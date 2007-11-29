@@ -71,6 +71,11 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     // put some data into table A
     
     HTable a = new HTable(conf, tableAname);
+    
+    // Assert the metadata is good.
+    HTableDescriptor meta = a.getMetadata();
+    assertTrue(meta.equals(tableAdesc));
+    
     long lockid = a.startUpdate(row);
     a.put(lockid, COLUMN_FAMILY, value);
     a.commit(lockid);
