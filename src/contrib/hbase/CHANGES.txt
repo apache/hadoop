@@ -65,6 +65,7 @@ Trunk (unreleased changes)
    HADOOP-1608 Relational Algrebra Operators
                (Edward Yoon via Stack)
    HADOOP-2198 HTable should have method to return table metadata
+   HADOOP-2296 hbase shell: phantom columns show up from select command
 
 
 Release 0.15.1

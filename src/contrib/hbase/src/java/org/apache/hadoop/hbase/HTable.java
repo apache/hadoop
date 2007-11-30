@@ -945,16 +945,17 @@ public class HTable implements HConstants {
       }
       return true;
     }
-    
-    /**
-     * {@inheritDoc}
-     */
-    public boolean next(HStoreKey key, SortedMap<Text, byte[]> results) throws IOException {
+
+    public boolean next(HStoreKey key, SortedMap<Text, byte[]> results)
+    throws IOException {
       checkClosed();
       if (this.closed) {
         return false;
       }
       MapWritable values = null;
+      // Clear the results so we don't inherit any values from any previous
+      // calls to next.
+      results.clear();
       do {
         values = this.server.next(this.scannerId);
       } while (values != null && values.size() == 0 && nextScanner());
