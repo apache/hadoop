@@ -137,7 +137,7 @@ TOKEN :
 
 TOKEN : /** Literals */
 {
-   <ID: ["A"-"Z","a"-"z","_","-",":","/"] (["A"-"Z","a"-"z","0"-"9","_","-",":","/"])* >
+   <ID: ["A"-"Z","a"-"z","_","-",":","/","~"] (["A"-"Z","a"-"z","0"-"9","_","-",":","/","~"])* >
  | <INTEGER_LITERAL: (["0"-"9"])+ >
  | <FLOATING_POINT_LITERAL:
    (["0"-"9"])+ "." (["0"-"9"])+ (<EXPONENT>)?
@@ -228,11 +228,19 @@ JarCommand jarCommand() :
   Token t = null;
   JarCommand jar = new JarCommand(this.out);
   List<String> query = new ArrayList<String>();
+  String path = "";
 }
 {
   <JAR>
   (
-      ( t = <ID> | t = <INTEGER_LITERAL> )
+      ( t=<ID> | t=<INTEGER_LITERAL> | t=<DOT> | t=<FLOATING_POINT_LITERAL> )
+      { path += t.image.toString(); }
+  )*
+  t=<JAR>
+  { query.add(path + t.image.toString()); }
+  
+  (
+      ( t=<ID> | t=<INTEGER_LITERAL> | t=<FLOATING_POINT_LITERAL> )
       { query.add(t.image.toString()); }
   )*
   
