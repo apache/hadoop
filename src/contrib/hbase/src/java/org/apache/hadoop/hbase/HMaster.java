@@ -229,14 +229,19 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           if (values == null || values.size() == 0) {
             break;
           }
-
           for (Map.Entry<Writable, Writable> e: values.entrySet()) {
             HStoreKey key = (HStoreKey) e.getKey();
             results.put(key.getColumn(),
                 ((ImmutableBytesWritable) e.getValue()).get());
           }
-          HRegionInfo info = (HRegionInfo) Writables.getWritable(
-              results.get(COL_REGIONINFO), new HRegionInfo());
+          byte [] bytes = results.get(COL_REGIONINFO);
+          if (bytes == null) {
+            LOG.warn(COL_REGIONINFO.toString() + " is empty; has keys: " +
+              values.keySet().toString());
+            continue;
+          }
+          HRegionInfo info = (HRegionInfo) Writables.getWritable(bytes,
+            new HRegionInfo());
           String serverName = Writables.bytesToString(results.get(COL_SERVER));
           long startCode = Writables.bytesToLong(results.get(COL_STARTCODE));
           if (LOG.isDebugEnabled()) {
