@@ -71,6 +71,8 @@ Trunk (unreleased changes)
    HADOOP-2296 hbase shell: phantom columns show up from select command
    HADOOP-2297 System.exit() Handling in hbase shell jar command
                (Edward Yoon via Stack)
+   HADOOP-2224 Add HTable.getRow(ROW, ts)
+               (Bryan Duxbury via Stack)
 
 
 Release 0.15.1

@@ -347,13 +347,24 @@ public class HTable implements HConstants {
   }
     
   /** 
-   * Get all the data for the specified row
+   * Get all the data for the specified row at the latest timestamp
    * 
    * @param row row key
    * @return map of colums to values
    * @throws IOException
    */
   public SortedMap<Text, byte[]> getRow(Text row) throws IOException {
+    return getRow(row, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /** 
+   * Get all the data for the specified row at a specified timestamp
+   * 
+   * @param row row key
+   * @return map of colums to values
+   * @throws IOException
+   */
+  public SortedMap<Text, byte[]> getRow(Text row, long ts) throws IOException {
     checkClosed();
     MapWritable value = null;
     for (int tries = 0; tries < numRetries; tries++) {
@@ -362,7 +373,7 @@ public class HTable implements HConstants {
         connection.getHRegionConnection(r.getServerAddress());
       
       try {
-        value = server.getRow(r.getRegionInfo().getRegionName(), row);
+        value = server.getRow(r.getRegionInfo().getRegionName(), row, ts);
         break;
         
       } catch (IOException e) {
@@ -395,6 +406,7 @@ public class HTable implements HConstants {
     }
     return results;
   }
+
 
   /** 
    * Get a scanner on the current table starting at the specified row.

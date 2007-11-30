@@ -1017,7 +1017,25 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public Map<Text, byte []> getFull(Text row) throws IOException {
-    HStoreKey key = new HStoreKey(row, System.currentTimeMillis());
+    return getFull(row, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Fetch all the columns for the indicated row at a specified timestamp.
+   * Returns a TreeMap that maps column names to values.
+   *
+   * We should eventually use Bloom filters here, to reduce running time.  If 
+   * the database has many column families and is very sparse, then we could be 
+   * checking many files needlessly.  A small Bloom for each row would help us 
+   * determine which column groups are useful for that row.  That would let us 
+   * avoid a bunch of disk activity.
+   *
+   * @param row
+   * @return Map<columnName, byte[]> values
+   * @throws IOException
+   */
+  public Map<Text, byte []> getFull(Text row, long ts) throws IOException {
+    HStoreKey key = new HStoreKey(row, ts);
     obtainRowLock(row);
     try {
       TreeMap<Text, byte []> result = new TreeMap<Text, byte[]>();

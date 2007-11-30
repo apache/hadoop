@@ -100,6 +100,18 @@ public interface HRegionInterface extends VersionedProtocol {
   throws IOException;
 
   /**
+   * Get all the data for the specified row at a given timestamp
+   * 
+   * @param regionName region name
+   * @param row row key
+   * @return map of values
+   * @throws IOException
+   */
+  public MapWritable getRow(final Text regionName, final Text row, final long ts)
+  throws IOException;
+
+
+  /**
    * Applies a batch of updates via one RPC
    * 
    * @param regionName name of the region to update

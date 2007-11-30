@@ -1291,6 +1291,29 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
+  public MapWritable getRow(final Text regionName, final Text row, final long ts)
+    throws IOException {
+
+    checkOpen();
+    requestCount.incrementAndGet();
+    try {
+      HRegion region = getRegion(regionName);
+      MapWritable result = new MapWritable();
+      Map<Text, byte[]> map = region.getFull(row);
+      for (Map.Entry<Text, byte []> es: map.entrySet()) {
+        result.put(new HStoreKey(row, es.getKey()),
+            new ImmutableBytesWritable(es.getValue()));
+      }
+      return result;
+      
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
+    }
+  }
+
+
+  /** {@inheritDoc} */
   public MapWritable next(final long scannerId) throws IOException {
 
     checkOpen();
