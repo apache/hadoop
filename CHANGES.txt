@@ -40,6 +40,7 @@ Trunk (unreleased changes)
    HADOOP-2253 getRow can return HBASE::DELETEVAL cells
                (Bryan Duxbury via Stack)
    HADOOP-2295 Fix assigning a region to multiple servers
+   HADOOP-2234 TableInputFormat erroneously aggregates map values
 
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
