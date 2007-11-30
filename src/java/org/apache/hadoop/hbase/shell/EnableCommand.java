@@ -33,19 +33,19 @@ import org.apache.hadoop.io.Text;
  */
 public class EnableCommand extends BasicCommand {
   private String tableName;
-  
+
   public EnableCommand(Writer o) {
     super(o);
   }
- 
+
   public ReturnMsg execute(HBaseConfiguration conf) {
     assert tableName != null;
     try {
       HConnection conn = HConnectionManager.getConnection(conf);
       if (!conn.tableExists(new Text(this.tableName))) {
-        return new ReturnMsg(0, "'" + this.tableName + "' Table not found");
+        return new ReturnMsg(0, "'" + this.tableName + "'" + TABLE_NOT_FOUND);
       }
-      
+
       HBaseAdmin admin = new HBaseAdmin(conf);
       admin.enableTable(new Text(tableName));
       return new ReturnMsg(1, "Table enabled successfully.");
@@ -58,7 +58,7 @@ public class EnableCommand extends BasicCommand {
   public void setTable(String table) {
     this.tableName = table;
   }
-  
+
   @Override
   public CommandType getCommandType() {
     return CommandType.DDL;

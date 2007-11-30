@@ -31,13 +31,14 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class FsCommand extends BasicCommand {
   private List<String> query;
-  
+
   public FsCommand(Writer o) {
     super(o);
   }
 
-  public ReturnMsg execute(@SuppressWarnings("unused") HBaseConfiguration conf) {
-    // This commmand will write the 
+  public ReturnMsg execute(@SuppressWarnings("unused")
+  HBaseConfiguration conf) {
+    // This commmand will write the
     FsShell shell = new FsShell();
     try {
       ToolRunner.run(shell, getQuery());
@@ -55,7 +56,7 @@ public class FsCommand extends BasicCommand {
   private String[] getQuery() {
     return query.toArray(new String[] {});
   }
-  
+
   @Override
   public CommandType getCommandType() {
     return CommandType.SHELL;

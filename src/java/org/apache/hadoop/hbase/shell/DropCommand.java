@@ -25,6 +25,8 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConnection;
+import org.apache.hadoop.hbase.HConnectionManager;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -32,25 +34,36 @@ import org.apache.hadoop.io.Text;
  */
 public class DropCommand extends BasicCommand {
   private List<String> tableList;
-  
+
   public DropCommand(Writer o) {
     super(o);
   }
 
   public ReturnMsg execute(HBaseConfiguration conf) {
     if (tableList == null) {
-      throw new IllegalArgumentException("List of tables is null");
+      throw new IllegalArgumentException("List of tables is null.");
     }
- 
+
     try {
       HBaseAdmin admin = new HBaseAdmin(conf);
-      
+      HConnection conn = HConnectionManager.getConnection(conf);
+
+      int count = 0;
       for (String table : tableList) {
-        println("Dropping " + table + "... Please wait.");
-        admin.deleteTable(new Text(table));
+        if (!conn.tableExists(new Text(table))) {
+          println("'" + table + "' table not found.");
+        } else {
+          println("Dropping " + table + "... Please wait.");
+          admin.deleteTable(new Text(table));
+          count++;
+        }
       }
-      
-      return new ReturnMsg(1, "Table(s) dropped successfully.");
+
+      if (count > 0) {
+        return new ReturnMsg(1, count + " table(s) dropped successfully.");
+      } else {
+        return new ReturnMsg(0, count + " table(s) dropped.");
+      }
     } catch (IOException e) {
       return new ReturnMsg(0, extractErrMsg(e));
     }
@@ -59,7 +72,7 @@ public class DropCommand extends BasicCommand {
   public void setTableList(List<String> tableList) {
     this.tableList = tableList;
   }
-  
+
   @Override
   public CommandType getCommandType() {
     return CommandType.DDL;

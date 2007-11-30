@@ -67,7 +67,8 @@ public class SubstituteCommand extends BasicCommand {
   public void resetVariableRelation(String r1, String r2) {
     setChainKey(r1);
     String tableName = VariablesPool.get(r1).get(null).getArgument();
-    VariableRef formula = new VariableRef(Constants.JOIN_SECOND_RELATION, tableName);
+    VariableRef formula = new VariableRef(Constants.JOIN_SECOND_RELATION,
+        tableName);
     VariablesPool.put(r1, r2, formula);
   }
 

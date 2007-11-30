@@ -45,8 +45,7 @@ public class ShowCommand extends BasicCommand {
     this(o, f, null);
   }
 
-  public ShowCommand(final Writer o, final TableFormatter f,
-      final String argument) {
+  public ShowCommand(final Writer o, final TableFormatter f, final String argument) {
     super(o);
     this.formatter = f;
     this.command = argument;
@@ -54,7 +53,7 @@ public class ShowCommand extends BasicCommand {
 
   public ReturnMsg execute(final HBaseConfiguration conf) {
     if (this.command == null) {
-      return new ReturnMsg(0, "Syntax error : Please check 'Show' syntax");
+      return new ReturnMsg(0, "Syntax error : Please check 'Show' syntax.");
     }
     try {
       HBaseAdmin admin = new HBaseAdmin(conf);
@@ -63,7 +62,7 @@ public class ShowCommand extends BasicCommand {
         HTableDescriptor[] tables = admin.listTables();
         tableLength = tables.length;
         if (tableLength == 0) {
-          return new ReturnMsg(0, "No tables found");
+          return new ReturnMsg(0, "No tables found.");
         }
         formatter.header(HEADER);
         for (int i = 0; i < tableLength; i++) {
@@ -71,7 +70,7 @@ public class ShowCommand extends BasicCommand {
           formatter.row(new String[] { tableName, tables[i].toString() });
         }
         formatter.footer();
-        return new ReturnMsg(1, tableLength + " table(s) in set");
+        return new ReturnMsg(1, tableLength + " table(s) in set.");
       } else {
         Map<String, VariableRef> refer = VariablesPool.get(command);
         if (refer == null) {

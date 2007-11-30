@@ -33,42 +33,41 @@ import org.apache.hadoop.io.Text;
  * Prints information about tables.
  */
 public class DescCommand extends BasicCommand {
-  private static final String [] HEADER =
-    new String [] {"Column Family Descriptor"};
+  private static final String[] HEADER = new String[] { "Column Family Descriptor" };
   private Text tableName;
   private final TableFormatter formatter;
-  
+
   // Not instantiable
   @SuppressWarnings("unused")
   private DescCommand() {
     this(null, null);
   }
-  
+
   public DescCommand(final Writer o, final TableFormatter f) {
     super(o);
     this.formatter = f;
   }
-  
+
   public ReturnMsg execute(final HBaseConfiguration conf) {
-    if (this.tableName == null) 
-      return new ReturnMsg(0, "Syntax error : Please check 'Describe' syntax");
+    if (this.tableName == null)
+      return new ReturnMsg(0, "Syntax error : Please check 'Describe' syntax.");
     try {
       HConnection conn = HConnectionManager.getConnection(conf);
       if (!conn.tableExists(this.tableName)) {
-        return new ReturnMsg(0, "Table not found");
+        return new ReturnMsg(0, "Table not found.");
       }
-      HTableDescriptor [] tables = conn.listTables();
-      HColumnDescriptor [] columns = null;
+      HTableDescriptor[] tables = conn.listTables();
+      HColumnDescriptor[] columns = null;
       for (int i = 0; i < tables.length; i++) {
         if (tables[i].getName().equals(this.tableName)) {
-          columns = tables[i].getFamilies().values().
-            toArray(new HColumnDescriptor [] {});
+          columns = tables[i].getFamilies().values().toArray(
+              new HColumnDescriptor[] {});
           break;
         }
       }
       formatter.header(HEADER);
       // Do a toString on the HColumnDescriptors
-      String [] columnStrs = new String[columns.length];
+      String[] columnStrs = new String[columns.length];
       for (int i = 0; i < columns.length; i++) {
         String tmp = columns[i].toString();
         // Strip the curly-brackets if present.
@@ -76,10 +75,10 @@ public class DescCommand extends BasicCommand {
           tmp = tmp.substring(1, tmp.length() - 1);
         }
         columnStrs[i] = tmp;
-        formatter.row(new String [] {columnStrs[i]});
+        formatter.row(new String[] { columnStrs[i] });
       }
       formatter.footer();
-      return new ReturnMsg(1, columns.length + " columnfamily(s) in set");
+      return new ReturnMsg(1, columns.length + " columnfamily(s) in set.");
     } catch (IOException e) {
       return new ReturnMsg(0, "error msg : " + e.toString());
     }

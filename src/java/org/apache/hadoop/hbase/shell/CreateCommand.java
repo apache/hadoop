@@ -37,20 +37,19 @@ import org.apache.hadoop.io.Text;
  */
 public class CreateCommand extends SchemaModificationCommand {
   private Text tableName;
-  private Map<String, Map<String, Object>> columnSpecMap =
-    new HashMap<String, Map<String, Object>>();
-  
+  private Map<String, Map<String, Object>> columnSpecMap = new HashMap<String, Map<String, Object>>();
+
   public CreateCommand(Writer o) {
     super(o);
   }
-  
+
   public ReturnMsg execute(HBaseConfiguration conf) {
     try {
       HConnection conn = HConnectionManager.getConnection(conf);
       if (conn.tableExists(this.tableName)) {
-        return new ReturnMsg(0, "'" + this.tableName + "' Table already exist");
+        return new ReturnMsg(0, "'" + this.tableName + "' table already exist.");
       }
-      
+
       HBaseAdmin admin = new HBaseAdmin(conf);
       HTableDescriptor tableDesc = new HTableDescriptor(tableName.toString());
       HColumnDescriptor columnDesc = null;
@@ -59,19 +58,19 @@ public class CreateCommand extends SchemaModificationCommand {
         columnDesc = getColumnDescriptor(column, columnSpecMap.get(column));
         tableDesc.addFamily(columnDesc);
       }
-      
+
       println("Creating table... Please wait.");
-      
+
       admin.createTable(tableDesc);
       return new ReturnMsg(0, "Table created successfully.");
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       return new ReturnMsg(0, extractErrMsg(e));
     }
   }
 
   /**
    * Sets the table to be created.
+   * 
    * @param tableName Table to be created
    */
   public void setTable(String tableName) {
@@ -79,13 +78,14 @@ public class CreateCommand extends SchemaModificationCommand {
   }
 
   /**
-   * Adds a column specification.  
+   * Adds a column specification.
+   * 
    * @param columnSpec Column specification
    */
   public void addColumnSpec(String column, Map<String, Object> columnSpec) {
     columnSpecMap.put(column, columnSpec);
   }
-  
+
   @Override
   public CommandType getCommandType() {
     return CommandType.DDL;

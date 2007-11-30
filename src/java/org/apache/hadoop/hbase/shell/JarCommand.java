@@ -43,14 +43,15 @@ import org.apache.hadoop.util.RunJar;
  */
 public class JarCommand extends BasicCommand {
   private List<String> query;
-  
+
   public JarCommand(Writer o) {
     super(o);
   }
 
   @SuppressWarnings("deprecation")
-  public ReturnMsg execute(@SuppressWarnings("unused") HBaseConfiguration conf) {
-    
+  public ReturnMsg execute(@SuppressWarnings("unused")
+  HBaseConfiguration conf) {
+
     try {
       String[] args = getQuery();
       String usage = "JAR jarFile [mainClass] args...;\n";
@@ -67,9 +68,9 @@ public class JarCommand extends BasicCommand {
       JarFile jarFile;
       try {
         jarFile = new JarFile(fileName);
-      } catch(IOException io) {
+      } catch (IOException io) {
         throw new IOException("Error opening job jar: " + fileName + "\n")
-          .initCause(io);
+            .initCause(io);
       }
 
       Manifest manifest = jarFile.getManifest();
@@ -88,7 +89,7 @@ public class JarCommand extends BasicCommand {
 
       File tmpDir = new File(new Configuration().get("hadoop.tmp.dir"));
       tmpDir.mkdirs();
-      if (!tmpDir.isDirectory()) { 
+      if (!tmpDir.isDirectory()) {
         return new ReturnMsg(0, "Mkdirs failed to create " + tmpDir + "\n");
       }
       final File workDir = File.createTempFile("hadoop-unjar", "", tmpDir);
@@ -99,19 +100,19 @@ public class JarCommand extends BasicCommand {
       }
 
       Runtime.getRuntime().addShutdownHook(new Thread() {
-          public void run() {
-            try {
-              FileUtil.fullyDelete(workDir);
-            } catch (IOException e) {
-              e.printStackTrace();
-            }
+        public void run() {
+          try {
+            FileUtil.fullyDelete(workDir);
+          } catch (IOException e) {
+            e.printStackTrace();
           }
-        });
+        }
+      });
 
       RunJar.unJar(file, workDir);
-      
+
       ArrayList<URL> classPath = new ArrayList<URL>();
-      classPath.add(new File(workDir+"/").toURL());
+      classPath.add(new File(workDir + "/").toURL());
       classPath.add(file.toURL());
       classPath.add(new File(workDir, "classes/").toURL());
       File[] libs = new File(workDir, "lib").listFiles();
@@ -120,29 +121,26 @@ public class JarCommand extends BasicCommand {
           classPath.add(libs[i].toURL());
         }
       }
-      ClassLoader loader =
-        new URLClassLoader(classPath.toArray(new URL[0]));
+      ClassLoader loader = new URLClassLoader(classPath.toArray(new URL[0]));
 
       Thread.currentThread().setContextClassLoader(loader);
       Class<?> mainClass = Class.forName(mainClassName, true, loader);
-      Method main = mainClass.getMethod("main", new Class[] {
-        Array.newInstance(String.class, 0).getClass()
-      });
-      String[] newArgs = Arrays.asList(args)
-        .subList(firstArg, args.length).toArray(new String[0]);
+      Method main = mainClass.getMethod("main", new Class[] { Array.newInstance(
+          String.class, 0).getClass() });
+      String[] newArgs = Arrays.asList(args).subList(firstArg, args.length)
+          .toArray(new String[0]);
       try {
         main.invoke(null, new Object[] { newArgs });
       } catch (InvocationTargetException e) {
         throw e.getTargetException();
       }
-
     } catch (Throwable e) {
       e.printStackTrace();
     }
-    
+
     return null;
   }
-  
+
   public void setQuery(List<String> query) {
     this.query = query;
   }
@@ -150,7 +148,7 @@ public class JarCommand extends BasicCommand {
   private String[] getQuery() {
     return query.toArray(new String[] {});
   }
-  
+
   @Override
   public CommandType getCommandType() {
     return CommandType.SHELL;

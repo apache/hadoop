@@ -25,20 +25,24 @@ import java.io.Writer;
 /**
  * Takes the lowest-common-denominator {@link Writer} doing its own printlns,
  * etc.
- * @see <a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseShell">HBaseShell</a>
+ * 
+ * @see <a
+ *      href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseShell">HBaseShell</a>
  */
 public abstract class BasicCommand implements Command, CommandFactory {
   private final Writer out;
   public final String LINE_SEPARATOR = System.getProperty("line.separator");
+  public final String TABLE_NOT_FOUND = " is non-existant table.";
 
   // Shutdown constructor.
   @SuppressWarnings("unused")
   private BasicCommand() {
     this(null);
   }
-  
+
   /**
    * Constructor
+   * 
    * @param o A Writer.
    */
   public BasicCommand(final Writer o) {
@@ -48,29 +52,29 @@ public abstract class BasicCommand implements Command, CommandFactory {
   public BasicCommand getBasicCommand() {
     return this;
   }
-  
+
   /** basic commands are their own factories. */
   public Command getCommand() {
     return this;
   }
-  
+
   protected String extractErrMsg(String msg) {
     int index = msg.indexOf(":");
     int eofIndex = msg.indexOf("\n");
     return msg.substring(index + 1, eofIndex);
   }
-  
+
   protected String extractErrMsg(Exception e) {
     return extractErrMsg(e.getMessage());
   }
- 
+
   /**
-   * Appends, if it does not exist, a delimiter (colon) 
-   * at the end of the column name.
+   * Appends, if it does not exist, a delimiter (colon) at the end of the column
+   * name.
    */
   protected String appendDelimiter(String column) {
-    return (!column.endsWith(FAMILY_INDICATOR) && column.indexOf(FAMILY_INDICATOR) == -1)?
-      column + FAMILY_INDICATOR: column;
+    return (!column.endsWith(FAMILY_INDICATOR) && column
+        .indexOf(FAMILY_INDICATOR) == -1) ? column + FAMILY_INDICATOR : column;
   }
 
   /**
@@ -79,17 +83,17 @@ public abstract class BasicCommand implements Command, CommandFactory {
   public Writer getOut() {
     return this.out;
   }
-  
+
   public void print(final String msg) throws IOException {
     this.out.write(msg);
   }
-  
+
   public void println(final String msg) throws IOException {
     print(msg);
     print(LINE_SEPARATOR);
     this.out.flush();
   }
-  
+
   public CommandType getCommandType() {
     return CommandType.SELECT;
   }

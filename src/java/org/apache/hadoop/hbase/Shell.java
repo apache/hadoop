@@ -27,6 +27,7 @@ import jline.ConsoleReader;
 
 import org.apache.hadoop.hbase.shell.Command;
 import org.apache.hadoop.hbase.shell.HelpCommand;
+import org.apache.hadoop.hbase.shell.ShellSecurityManager;
 import org.apache.hadoop.hbase.shell.ReturnMsg;
 import org.apache.hadoop.hbase.shell.TableFormatterFactory;
 import org.apache.hadoop.hbase.shell.generated.ParseException;
@@ -63,23 +64,22 @@ public class Shell {
         " sec)":
       "";
   }
-
  
   /**
    * Main method
    * @param args not used
    * @throws IOException
    */
-  public static void main(@SuppressWarnings("unused") String args[])
-  throws IOException {
+  public static void main(String args[])  throws IOException {
     HBaseConfiguration conf = new HBaseConfiguration();
     ConsoleReader reader = new ConsoleReader();
+    System.setSecurityManager(new ShellSecurityManager());
     reader.setBellEnabled(conf.getBoolean("hbaseshell.jline.bell.enabled",
       DEFAULT_BELL_ENABLED));
     Writer out = new OutputStreamWriter(System.out, "UTF-8");
     TableFormatterFactory tff = new TableFormatterFactory(out, conf);
     HelpCommand help = new HelpCommand(out, tff.get());
-    help.printVersion();
+    if(args.length == 0) help.printVersion();
     StringBuilder queryStr = new StringBuilder();
     String extendedLine;
     while ((extendedLine = reader.readLine(getPrompt(queryStr))) != null) {
@@ -91,16 +91,16 @@ public class Shell {
         try {
           Command cmd = parser.terminatedCommand();
           if (cmd != null) {
-            rs = cmd.execute(conf);
+              rs = cmd.execute(conf);
           }
-        } catch (ParseException pe) {
+        }  catch (ParseException pe) {
           String[] msg = pe.getMessage().split("[\n]");
           System.out.println("Syntax error : Type 'help;' for usage.\nMessage : " + msg[0]);
         } catch (TokenMgrError te) {
           String[] msg = te.getMessage().split("[\n]");
           System.out.println("Lexical error : Type 'help;' for usage.\nMessage : " + msg[0]);
-        }
-
+        } 
+        
         long end = System.currentTimeMillis();
         if (rs != null && rs.getType() > -1)
           System.out.println(rs.getMsg()

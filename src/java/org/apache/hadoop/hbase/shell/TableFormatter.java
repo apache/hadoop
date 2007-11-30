@@ -27,33 +27,37 @@ import org.apache.hadoop.hbase.shell.formatter.AsciiTableFormatter;
 /**
  * Interface implemented by table formatters outputting select results.
  * Implementations must have a constructor that takes a Writer.
+ * 
  * @see AsciiTableFormatter
  */
 public interface TableFormatter {
   /**
    * Output header.
+   * 
    * @param titles Titles to emit.
    * @throws IOException
    */
-  public void header(final String [] titles) throws IOException;
-  
+  public void header(final String[] titles) throws IOException;
+
   /**
    * Output footer.
+   * 
    * @throws IOException
    */
   public void footer() throws IOException;
-  
+
   /**
    * Output a row.
+   * 
    * @param cells
    * @throws IOException
    */
-  public void row(final String [] cells) throws IOException;
+  public void row(final String[] cells) throws IOException;
 
   /**
-   * @return Output stream being used (This is in interface to enforce fact
-   * that formatters use Writers -- that they operate on character streams
-   * rather than on byte streams).
+   * @return Output stream being used (This is in interface to enforce fact that
+   *         formatters use Writers -- that they operate on character streams
+   *         rather than on byte streams).
    */
   public Writer getOut();
 }
