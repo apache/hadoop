@@ -46,6 +46,7 @@ Trunk (unreleased changes)
    HADOOP-2304 Abbreviated symbol parsing error of dir path in jar command
                (Edward Yoon via Stack)
    HADOOP-2320 Committed TestGet2 is managled (breaks build).
+   HADOOP-2322 getRow(row, TS) client interface not properly connected
 
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
