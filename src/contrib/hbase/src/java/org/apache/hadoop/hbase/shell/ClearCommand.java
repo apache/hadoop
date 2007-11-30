@@ -25,14 +25,15 @@ import java.io.Writer;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 
 /**
- * Clears the console screen. 
+ * Clears the console screen.
  */
 public class ClearCommand extends BasicCommand {
   public ClearCommand(Writer o) {
     super(o);
   }
 
-  public ReturnMsg execute(@SuppressWarnings("unused") HBaseConfiguration conf) {
+  public ReturnMsg execute(@SuppressWarnings("unused")
+  HBaseConfiguration conf) {
     clear();
     return null;
   }
@@ -57,7 +58,7 @@ public class ClearCommand extends BasicCommand {
       }
     }
   }
-  
+
   @Override
   public CommandType getCommandType() {
     return CommandType.SHELL;

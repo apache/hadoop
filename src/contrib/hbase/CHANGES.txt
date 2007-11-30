@@ -66,6 +66,7 @@ Trunk (unreleased changes)
                (Edward Yoon via Stack)
    HADOOP-2198 HTable should have method to return table metadata
    HADOOP-2296 hbase shell: phantom columns show up from select command
+   HADOOP-2297 System.exit() Handling in hbase shell jar command
 
 
 Release 0.15.1

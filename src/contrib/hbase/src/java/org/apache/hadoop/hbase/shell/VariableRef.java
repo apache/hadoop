@@ -34,6 +34,7 @@ public class VariableRef {
 
   /**
    * Return argument of an operation
+   * 
    * @return argument
    */
   public String getArgument() {
@@ -42,6 +43,7 @@ public class VariableRef {
 
   /**
    * Return operation
+   * 
    * @return operation
    */
   public String getOperation() {

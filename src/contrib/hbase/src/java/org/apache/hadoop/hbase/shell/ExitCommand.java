@@ -28,13 +28,14 @@ public class ExitCommand extends BasicCommand {
     super(o);
   }
 
-  public ReturnMsg execute(@SuppressWarnings("unused") HBaseConfiguration conf) {
-    // TOD: Is this the best way to exit?  Would be a problem if shell is run
+  public ReturnMsg execute(@SuppressWarnings("unused")
+  HBaseConfiguration conf) {
+    // TOD: Is this the best way to exit? Would be a problem if shell is run
     // inside another program -- St.Ack 09/11/2007
-    System.exit(1);
+    System.exit(9999);
     return null;
   }
-  
+
   @Override
   public CommandType getCommandType() {
     return CommandType.SHELL;

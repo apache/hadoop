@@ -30,8 +30,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 
 public class HelpCommand extends BasicCommand {
   private String argument;
-  private static final String[] HEADER = new String[] { "Command",
-      "Description", "Example" };
+  private static final String[] HEADER = new String[] { "Command", "Description",
+      "Example" };
 
   /** application name */
   public static final String APP_NAME = "Hbase Shell";
@@ -74,10 +74,10 @@ public class HelpCommand extends BasicCommand {
 
     load.put("FS", new String[] {
         "Hadoop FsShell; entering a lone 'FS;' " + "will emit usage",
-        "FS -copyFromLocal /home/user/backup.dat fs/user/backup;" });
+        "FS [-option] arguments..;" });
 
     load.put("JAR", new String[] { "Hadoop RunJar util",
-        "JAR ./build/hadoop-examples.jar pi 10 10;" });
+        "JAR jarFile [mainClass] arguments...;" });
     load.put("CLEAR", new String[] { "Clear the screen", "CLEAR;" });
 
     load.put("DESCRIBE", new String[] { "Print table information",
@@ -125,11 +125,12 @@ public class HelpCommand extends BasicCommand {
     // model of
     // data.
 
-    load.put("TABLE",
-        new String[] { "Load a table", "A = table('table_name');" });
+    load
+        .put("TABLE", new String[] { "Load a table", "A = table('table_name');" });
     load.put("SUBSTITUTE", new String[] { "Substitute expression to [A~Z]",
         "D = A.projection('cf_name1'[, 'cf_name2']);" });
-    load.put("SAVE", new String[] { "Save results into specified table (It runs a mapreduce job)",
+    load.put("SAVE", new String[] {
+        "Save results into specified table (It runs a mapreduce job)",
         "SAVE A INTO table('table_name');" });
 
     // Relational Operations
@@ -146,14 +147,11 @@ public class HelpCommand extends BasicCommand {
                     + " B = A.Selection(cf_name1 > 100 [AND cf_name2 = 'string_value']);" });
 
     // Aggregation Functions
-    //TODO : and apply aggregate function independently to each group of rows 
-    load
-        .put(
-            "GROUP",
-            new String[] {
-                "Group rows by value of an attribute",
-                "A = Table('table_name');"
-                    + " B = Group A by ('cf_name1'[, 'cf_name2']);" });
+    // TODO : and apply aggregate function independently to each group of rows
+    load.put("GROUP", new String[] {
+        "Group rows by value of an attribute",
+        "A = Table('table_name');"
+            + " B = Group A by ('cf_name1'[, 'cf_name2']);" });
 
     return load;
   }

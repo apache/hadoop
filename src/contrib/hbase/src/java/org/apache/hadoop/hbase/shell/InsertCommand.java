@@ -48,12 +48,12 @@ public class InsertCommand extends BasicCommand {
 
     HConnection conn = HConnectionManager.getConnection(conf);
     if (!conn.tableExists(this.tableName)) {
-      return new ReturnMsg(0, "'" + this.tableName + "' Table not found");
+      return new ReturnMsg(0, "'" + this.tableName + "'" + TABLE_NOT_FOUND);
     }
-    
+
     if (this.columnfamilies.size() != this.values.size())
       return new ReturnMsg(0,
-          "Mismatch between values list and columnfamilies list");
+          "Mismatch between values list and columnfamilies list.");
 
     try {
       HTable table = new HTable(conf, this.tableName);
@@ -61,7 +61,7 @@ public class InsertCommand extends BasicCommand {
 
       for (int i = 0; i < this.values.size(); i++) {
         Text column = null;
-        if(getColumn(i).toString().contains(":"))
+        if (getColumn(i).toString().contains(":"))
           column = getColumn(i);
         else
           column = new Text(getColumn(i) + ":");
@@ -103,7 +103,7 @@ public class InsertCommand extends BasicCommand {
   public byte[] getValue(int i) {
     return this.values.get(i).getBytes();
   }
-  
+
   @Override
   public CommandType getCommandType() {
     return CommandType.INSERT;

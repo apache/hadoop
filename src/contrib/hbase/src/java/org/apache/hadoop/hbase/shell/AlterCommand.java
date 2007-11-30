@@ -36,10 +36,12 @@ import org.apache.hadoop.io.Text;
  * Alters tables.
  */
 public class AlterCommand extends SchemaModificationCommand {
-  public enum OperationType {ADD, DROP, CHANGE, NOOP}
+  public enum OperationType {
+    ADD, DROP, CHANGE, NOOP
+  }
+
   private OperationType operationType = OperationType.NOOP;
-  private Map<String, Map<String, Object>> columnSpecMap =
-    new HashMap<String, Map<String, Object>>();
+  private Map<String, Map<String, Object>> columnSpecMap = new HashMap<String, Map<String, Object>>();
   private String tableName;
   private String column; // column to be dropped
 
@@ -51,37 +53,36 @@ public class AlterCommand extends SchemaModificationCommand {
     try {
       HConnection conn = HConnectionManager.getConnection(conf);
       if (!conn.tableExists(new Text(this.tableName))) {
-        return new ReturnMsg(0, "'" + this.tableName + "' Table not found");
+        return new ReturnMsg(0, "'" + this.tableName + "'" + TABLE_NOT_FOUND);
       }
-      
+
       HBaseAdmin admin = new HBaseAdmin(conf);
       Set<String> columns = null;
       HColumnDescriptor columnDesc = null;
       switch (operationType) {
-      case ADD:
-        disableTable(admin, tableName);
-        columns = columnSpecMap.keySet();
-        for (String c : columns) {
-          columnDesc = getColumnDescriptor(c, columnSpecMap.get(c));
-          println("Adding " + c + " to " + tableName +
-            "... Please wait.");
-          admin.addColumn(new Text(tableName), columnDesc);
-        }
-        enableTable(admin, tableName);
-        break;
-      case DROP:
-        disableTable(admin, tableName);
-        println("Dropping " + column + " from " + tableName +
-          "... Please wait.");
-        column = appendDelimiter(column);
-        admin.deleteColumn(new Text(tableName), new Text(column));
-        enableTable(admin, tableName);
-        break;
-      case CHANGE:
-        // Not yet supported
-        return new ReturnMsg(0, "" + operationType + " is not yet supported.");
-      case NOOP:
-        return new ReturnMsg(0, "Invalid operation type.");
+        case ADD:
+          disableTable(admin, tableName);
+          columns = columnSpecMap.keySet();
+          for (String c : columns) {
+            columnDesc = getColumnDescriptor(c, columnSpecMap.get(c));
+            println("Adding " + c + " to " + tableName + "... Please wait.");
+            admin.addColumn(new Text(tableName), columnDesc);
+          }
+          enableTable(admin, tableName);
+          break;
+        case DROP:
+          disableTable(admin, tableName);
+          println("Dropping " + column + " from " + tableName
+              + "... Please wait.");
+          column = appendDelimiter(column);
+          admin.deleteColumn(new Text(tableName), new Text(column));
+          enableTable(admin, tableName);
+          break;
+        case CHANGE:
+          // Not yet supported
+          return new ReturnMsg(0, "" + operationType + " is not yet supported.");
+        case NOOP:
+          return new ReturnMsg(0, "Invalid operation type.");
       }
       return new ReturnMsg(0, "Table altered successfully.");
     } catch (Exception e) {
@@ -135,7 +136,7 @@ public class AlterCommand extends SchemaModificationCommand {
   public void setOperationType(OperationType operationType) {
     this.operationType = operationType;
   }
-  
+
   @Override
   public CommandType getCommandType() {
     return CommandType.DDL;

@@ -50,9 +50,9 @@ public class DeleteCommand extends BasicCommand {
     try {
       HConnection conn = HConnectionManager.getConnection(conf);
       if (!conn.tableExists(new Text(this.tableName))) {
-        return new ReturnMsg(0, "'" + this.tableName + "' Table not found");
+        return new ReturnMsg(0, "'" + this.tableName + "'" + TABLE_NOT_FOUND);
       }
-      
+
       HBaseAdmin admin = new HBaseAdmin(conf);
       HTable hTable = new HTable(conf, new Text(tableName));
       long lockID = hTable.startUpdate(new Text(rowKey));
@@ -77,6 +77,7 @@ public class DeleteCommand extends BasicCommand {
 
   /**
    * Sets the column list.
+   * 
    * @param columnList
    */
   public void setColumnList(List<String> columnList) {
@@ -92,7 +93,8 @@ public class DeleteCommand extends BasicCommand {
     Text[] columns = null;
     try {
       if (this.columnList.contains("*")) {
-        columns = hTable.getRow(new Text(this.rowKey)).keySet().toArray(new Text[] {});
+        columns = hTable.getRow(new Text(this.rowKey)).keySet().toArray(
+            new Text[] {});
       } else {
         List<Text> tmpList = new ArrayList<Text>();
         for (int i = 0; i < this.columnList.size(); i++) {
@@ -111,7 +113,7 @@ public class DeleteCommand extends BasicCommand {
     }
     return columns;
   }
-  
+
   @Override
   public CommandType getCommandType() {
     return CommandType.DELETE;

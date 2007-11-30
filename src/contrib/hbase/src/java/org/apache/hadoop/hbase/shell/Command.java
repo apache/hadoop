@@ -24,10 +24,14 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 public interface Command {
   /** family indicator */
   public static final String FAMILY_INDICATOR = ":";
-  
-  public enum CommandType {DDL, UPDATE, SELECT, INSERT, DELETE, SHELL}
 
-  /** Execute a command
+  public enum CommandType {
+    DDL, UPDATE, SELECT, INSERT, DELETE, SHELL
+  }
+
+  /**
+   * Execute a command
+   * 
    * @param conf Configuration
    * @return Result of command execution
    */
@@ -35,7 +39,7 @@ public interface Command {
 
   /**
    * @return Type of this command whether DDL, SELECT, INSERT, UPDATE, DELETE,
-   * or SHELL.
+   *         or SHELL.
    */
   public CommandType getCommandType();
 }

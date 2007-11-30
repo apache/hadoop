@@ -28,34 +28,34 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.shell.formatter.AsciiTableFormatter;
 
 /**
- * Table formatter.
- * Specify formatter by setting "hbaseshell.formatter" property in
- * <code>hbase-site.xml</code> or by setting system property
- * <code>hbaseshell.formatter</code>. System property setting prevails over all
- * other configurations.  Outputs UTF-8 encoded Strings even if
- * original data is binary.  On static initialization, changes System.out to be
- * a UTF-8 output stream.
- * .
- * <p>TODO: Mysql has --skip-column-names and --silent which inserts a tab as
- * separator.  Also has --html and --xml.
- * <p>To use the html formatter, currently set HBASE_OPTS as in:
+ * Table formatter. Specify formatter by setting "hbaseshell.formatter" property
+ * in <code>hbase-site.xml</code> or by setting system property
+ * <code>hbaseshell.formatter</code>. System property setting prevails over
+ * all other configurations. Outputs UTF-8 encoded Strings even if original data
+ * is binary. On static initialization, changes System.out to be a UTF-8 output
+ * stream. .
+ * <p>
+ * TODO: Mysql has --skip-column-names and --silent which inserts a tab as
+ * separator. Also has --html and --xml.
+ * <p>
+ * To use the html formatter, currently set HBASE_OPTS as in:
  * <code>$ HBASE_OPTS="-Dhbaseshell.formatter=org.apache.hadoop.hbase.shell.formatter.HtmlTableFormatter" ./bin/hbase shell</code>
  * </p>
  */
 public class TableFormatterFactory {
-  private static final Log LOG =
-    LogFactory.getLog(TableFormatterFactory.class.getName());
+  private static final Log LOG = LogFactory.getLog(TableFormatterFactory.class
+      .getName());
   private static final String FORMATTER_KEY = "hbaseshell.formatter";
   private final TableFormatter formatter;
-  
+
   /**
    * Not instantiable
    */
-  @SuppressWarnings({ "unchecked", "unused" })
+  @SuppressWarnings( { "unchecked", "unused" })
   private TableFormatterFactory() {
     this(null, null);
   }
-  
+
   @SuppressWarnings("unchecked")
   public TableFormatterFactory(final Writer out, final Configuration c) {
     String className = System.getProperty(FORMATTER_KEY);
@@ -64,10 +64,10 @@ public class TableFormatterFactory {
     }
     LOG.debug("Table formatter class: " + className);
     try {
-      Class<TableFormatter> clazz =
-        (Class<TableFormatter>) Class.forName(className);
+      Class<TableFormatter> clazz = (Class<TableFormatter>) Class
+          .forName(className);
       Constructor<?> constructor = clazz.getConstructor(Writer.class);
-      this.formatter =  (TableFormatter)constructor.newInstance(out);
+      this.formatter = (TableFormatter) constructor.newInstance(out);
     } catch (Exception e) {
       throw new RuntimeException("Failed instantiation of " + className, e);
     }

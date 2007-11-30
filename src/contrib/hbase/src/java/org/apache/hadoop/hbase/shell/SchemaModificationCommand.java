@@ -42,7 +42,7 @@ public abstract class SchemaModificationCommand extends BasicCommand {
   private int vectorSize;
   private int numHash;
   private int numEntries;
-  
+
   public SchemaModificationCommand(Writer o) {
     super(o);
   }
@@ -77,8 +77,8 @@ public abstract class SchemaModificationCommand extends BasicCommand {
       } else if (spec.equals("IN_MEMORY")) {
         inMemory = (Boolean) columnSpec.get(spec);
       } else if (spec.equals("BLOOMFILTER")) {
-        bloomFilterType = BloomFilterType.valueOf(((String) columnSpec
-            .get(spec)).toUpperCase());
+        bloomFilterType = BloomFilterType.valueOf(((String) columnSpec.get(spec))
+            .toUpperCase());
       } else if (spec.equals("VECTOR_SIZE")) {
         vectorSize = (Integer) columnSpec.get(spec);
       } else if (spec.equals("NUM_HASH")) {
@@ -95,8 +95,8 @@ public abstract class SchemaModificationCommand extends BasicCommand {
       if (specs.contains("NUM_ENTRIES")) {
         bloomFilterDesc = new BloomFilterDescriptor(bloomFilterType, numEntries);
       } else {
-        bloomFilterDesc = new BloomFilterDescriptor(bloomFilterType,
-            vectorSize, numHash);
+        bloomFilterDesc = new BloomFilterDescriptor(bloomFilterType, vectorSize,
+            numHash);
       }
     }
 
