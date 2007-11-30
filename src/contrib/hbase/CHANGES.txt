@@ -42,6 +42,8 @@ Trunk (unreleased changes)
    HADOOP-2295 Fix assigning a region to multiple servers
    HADOOP-2234 TableInputFormat erroneously aggregates map values
    HADOOP-2308 null regioninfo breaks meta scanner
+   HADOOP-2304 Abbreviated symbol parsing error of dir path in jar command
+               (Edward Yoon via Stack)
 
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
@@ -68,6 +70,7 @@ Trunk (unreleased changes)
    HADOOP-2198 HTable should have method to return table metadata
    HADOOP-2296 hbase shell: phantom columns show up from select command
    HADOOP-2297 System.exit() Handling in hbase shell jar command
+               (Edward Yoon via Stack)
 
 
 Release 0.15.1
