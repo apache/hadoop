@@ -89,17 +89,26 @@ public class InfoServer {
     this.webServer.addContext(staticContext);
 
     // set up the context for "/" jsp files
-    String webappDir = null;
-    try {
-      webappDir = getWebAppsPath("webapps" + File.separator + name);
-    } catch (FileNotFoundException e) {
-      // Retry.  Resource may be inside jar on a windows machine.
-      webappDir = getWebAppsPath("webapps/" + name);
-    }
-    this.webAppContext = 
+    String webappDir = getWebAppDir(name);
+    this.webAppContext =
       this.webServer.addWebApplication("/", webappDir);
+    if (name.equals("master")) {
+      // Put up the rest webapp.
+      this.webServer.addWebApplication("/api", getWebAppDir("rest"));
+    }
     addServlet("stacks", "/stacks", StatusHttpServer.StackServlet.class);
     addServlet("logLevel", "/logLevel", org.apache.hadoop.log.LogLevel.Servlet.class);
+  }
+  
+  private String getWebAppDir(final String webappName) throws IOException {
+    String webappDir = null;
+    try {
+      webappDir = getWebAppsPath("webapps" + File.separator + webappName);
+    } catch (FileNotFoundException e) {
+      // Retry.  Resource may be inside jar on a windows machine.
+      webappDir = getWebAppsPath("webapps/" + webappName);
+    }
+    return webappDir;
   }
 
   /**
