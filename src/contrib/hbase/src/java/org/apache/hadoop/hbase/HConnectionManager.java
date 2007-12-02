@@ -28,6 +28,8 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -113,10 +115,10 @@ public class HConnectionManager implements HConstants {
     private Set<Text> closedTables;
     
     // Set of tables currently being located
-    private HashSet<Text> tablesBeingLocated;
+    private Set<Text> tablesBeingLocated;
 
     // Known region HServerAddress.toString() -> HRegionInterface 
-    private HashMap<String, HRegionInterface> servers;
+    private Map<String, HRegionInterface> servers;
 
     /** 
      * constructor
@@ -145,13 +147,14 @@ public class HConnectionManager implements HConstants {
       this.master = null;
       this.masterChecked = false;
 
-      this.tablesToServers = Collections.synchronizedMap(
-        new HashMap<Text, SortedMap<Text, HRegionLocation>>());
+      this.tablesToServers = 
+        new ConcurrentHashMap<Text, SortedMap<Text, HRegionLocation>>();
       
       this.closedTables = Collections.synchronizedSet(new HashSet<Text>());
-      this.tablesBeingLocated = new HashSet<Text>();
+      this.tablesBeingLocated = Collections.synchronizedSet(
+          new HashSet<Text>());
       
-      this.servers = new HashMap<String, HRegionInterface>();
+      this.servers = new ConcurrentHashMap<String, HRegionInterface>();
     }
     
     /** {@inheritDoc} */

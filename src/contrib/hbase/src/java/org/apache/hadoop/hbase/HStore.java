@@ -99,9 +99,11 @@ class HStore implements HConstants {
     void snapshot() {
       this.lock.writeLock().lock();
       try {
-        if (memcache.size() != 0) {
-          snapshot.putAll(memcache);
-          memcache.clear();
+        synchronized (memcache) {
+          if (memcache.size() != 0) {
+            snapshot.putAll(memcache);
+            memcache.clear();
+          }
         }
       } finally {
         this.lock.writeLock().unlock();
@@ -149,9 +151,14 @@ class HStore implements HConstants {
     List<byte[]> get(final HStoreKey key, final int numVersions) {
       this.lock.readLock().lock();
       try {
-        ArrayList<byte []> results = internalGet(memcache, key, numVersions);
-        results.addAll(results.size(),
+        List<byte []> results;
+        synchronized (memcache) {
+          results = internalGet(memcache, key, numVersions);
+        }
+        synchronized (snapshot) {
+          results.addAll(results.size(),
               internalGet(snapshot, key, numVersions - results.size()));
+        }
         return results;
         
       } finally {
@@ -170,8 +177,12 @@ class HStore implements HConstants {
     void getFull(HStoreKey key, SortedMap<Text, byte[]> results) {
       this.lock.readLock().lock();
       try {
-        internalGetFull(memcache, key, results);
-        internalGetFull(snapshot, key, results);
+        synchronized (memcache) {
+          internalGetFull(memcache, key, results);
+        }
+        synchronized (snapshot) {
+          internalGetFull(snapshot, key, results);
+        }
 
       } finally {
         this.lock.readLock().unlock();
@@ -248,11 +259,15 @@ class HStore implements HConstants {
     List<HStoreKey> getKeys(final HStoreKey origin, final int versions) {
       this.lock.readLock().lock();
       try {
-        List<HStoreKey> results =
-          internalGetKeys(this.memcache, origin, versions);
-        results.addAll(results.size(), internalGetKeys(snapshot, origin,
-            versions == HConstants.ALL_VERSIONS ? versions :
-              (versions - results.size())));
+        List<HStoreKey> results;
+        synchronized (memcache) {
+          results = internalGetKeys(this.memcache, origin, versions);
+        }
+        synchronized (snapshot) {
+          results.addAll(results.size(), internalGetKeys(snapshot, origin,
+              versions == HConstants.ALL_VERSIONS ? versions :
+                (versions - results.size())));
+        }
         return results;
 
       } finally {

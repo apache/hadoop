@@ -52,8 +52,8 @@ package org.onelab.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -146,7 +146,7 @@ public abstract class Filter implements WritableComparable {
    * Adds a list of keys to <i>this</i> filter.
    * @param keys The list of keys.
    */
-  public void add(ArrayList<Key> keys){
+  public void add(List<Key> keys){
     if(keys == null) {
       throw new IllegalArgumentException("ArrayList<Key> may not be null");
     }

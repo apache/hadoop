@@ -104,10 +104,12 @@ public class LocalHBaseCluster implements HConstants {
    * @return Region server added.
    */
   public RegionServerThread addRegionServer() throws IOException {
-    RegionServerThread t = new RegionServerThread(new HRegionServer(conf),
-      this.regionThreads.size());
-    this.regionThreads.add(t);
-    return t;
+    synchronized (regionThreads) {
+      RegionServerThread t = new RegionServerThread(new HRegionServer(conf),
+          this.regionThreads.size());
+      this.regionThreads.add(t);
+      return t;
+    }
   }
 
   /** runs region servers */
@@ -146,8 +148,10 @@ public class LocalHBaseCluster implements HConstants {
    * @return Name of region server that just went down.
    */
   public String waitOnRegionServer(int serverNumber) {
-    RegionServerThread regionServerThread =
-      this.regionThreads.remove(serverNumber);
+    RegionServerThread regionServerThread;
+    synchronized (regionThreads) {
+      regionServerThread = this.regionThreads.remove(serverNumber);
+    }
     while (regionServerThread.isAlive()) {
       try {
         LOG.info("Waiting on " +
@@ -193,8 +197,10 @@ public class LocalHBaseCluster implements HConstants {
    */
   public String startup() {
     this.master.start();
-    for (RegionServerThread t: this.regionThreads) {
-      t.start();
+    synchronized (regionThreads) {
+      for (RegionServerThread t: this.regionThreads) {
+        t.start();
+      }
     }
     return this.master.getMasterAddress().toString();
   }
