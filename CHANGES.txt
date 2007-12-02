@@ -47,6 +47,7 @@ Trunk (unreleased changes)
                (Edward Yoon via Stack)
    HADOOP-2320 Committed TestGet2 is managled (breaks build).
    HADOOP-2322 getRow(row, TS) client interface not properly connected
+   HADOOP-2309 ConcurrentModificationException doing get of all region start keys
 
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable

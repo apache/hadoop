@@ -372,27 +372,63 @@ public class TestTableMapReduce extends MultiRegionTable {
       TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
       
       while(scanner.next(key, results)) {
+        if (LOG.isDebugEnabled()) {
+          if (results.size() > 2 ) {
+            LOG.debug("Too many results, expected 2 got " + results.size());
+          }
+        }
         byte[] firstValue = null;
         byte[] secondValue = null;
         int count = 0;
-        
         for(Map.Entry<Text, byte[]> e: results.entrySet()) {
           if (count == 0)
             firstValue = e.getValue();
           if (count == 1)
             secondValue = e.getValue();
           count++;
+          if (count == 2) {
+            break;
+          }
         }
         
-        // verify second value is the reverse of the first
-        assertNotNull(firstValue);
-        assertNotNull(secondValue);
-        assertEquals(firstValue.length, secondValue.length);
-        byte[] secondReversed = new byte[secondValue.length];
-        for (int i = 0, j = secondValue.length - 1; j >= 0; j--, i++) {
-          secondReversed[i] = secondValue[j];
+        String first = "";
+        if (firstValue == null) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("row=" + key.getRow() + ": first value is null");
+          }
+          fail();
+
+        } else {
+          first = new String(firstValue, HConstants.UTF8_ENCODING);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("row=" + key.getRow() + ": first value=" + first);
+          }
         }
-        assertTrue(Arrays.equals(firstValue, secondReversed));
+        
+        String second = "";
+        if (secondValue == null) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("row=" + key.getRow() + ": second value is null");
+          }
+          fail();
+          
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("row=" + key.getRow() + ": second value=" +
+                new String(secondValue, HConstants.UTF8_ENCODING));
+          }
+          byte[] secondReversed = new byte[secondValue.length];
+          for (int i = 0, j = secondValue.length - 1; j >= 0; j--, i++) {
+            secondReversed[i] = secondValue[j];
+          }
+          second = new String(secondReversed, HConstants.UTF8_ENCODING);
+        }
+        if (first.compareTo(second) != 0) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("second key is not the reverse of first");
+          }
+          fail();
+        }
       }
       
     } finally {

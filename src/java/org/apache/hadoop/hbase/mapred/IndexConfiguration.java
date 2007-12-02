@@ -23,7 +23,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringWriter;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
@@ -105,7 +105,8 @@ public class IndexConfiguration extends Configuration {
     }
   }
 
-  private HashMap<String, ColumnConf> columnMap = new HashMap<String, ColumnConf>();
+  private Map<String, ColumnConf> columnMap =
+    new ConcurrentHashMap<String, ColumnConf>();
 
   public Iterator<String> columnNameIterator() {
     return columnMap.keySet().iterator();

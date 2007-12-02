@@ -52,6 +52,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 /**
@@ -76,12 +78,12 @@ implements RemoveScheme {
   /**
    * KeyList vector (or ElementList Vector, as defined in the paper) of false positives.
    */
-  ArrayList<Key>[] fpVector;
+  List<Key>[] fpVector;
 
   /**
    * KeyList vector of keys recorded in the filter.
    */
-  ArrayList<Key>[] keyVector;
+  List<Key>[] keyVector;
 
   /**
    * Ratio vector.
@@ -158,7 +160,7 @@ implements RemoveScheme {
    * Adds a list of false positive information to <i>this</i> retouched Bloom filter.
    * @param keys The list of false positive.
    */
-  public void addFalsePositive(ArrayList<Key> keys){
+  public void addFalsePositive(List<Key> keys){
     if(keys == null) {
       throw new NullPointerException("ArrayList<Key> can not be null");
     }
@@ -306,8 +308,8 @@ implements RemoveScheme {
       throw new ArrayIndexOutOfBoundsException(index);
     }
 
-    ArrayList<Key> kl = keyVector[index];
-    ArrayList<Key> fpl = fpVector[index];
+    List<Key> kl = keyVector[index];
+    List<Key> fpl = fpVector[index];
 
     // update key list
     int listSize = kl.size();
@@ -339,7 +341,7 @@ implements RemoveScheme {
    * @param k The key to remove.
    * @param vector The counting vector associated to the key.
    */
-  private void removeKey(Key k, ArrayList<Key>[] vector) {
+  private void removeKey(Key k, List<Key>[] vector) {
     if(k == null) {
       throw new NullPointerException("Key can not be null");
     }
@@ -369,7 +371,7 @@ implements RemoveScheme {
     }//end for - i
   }//end computeRatio()
 
-  private double getWeight(ArrayList<Key> keyList) {
+  private double getWeight(List<Key> keyList) {
     double weight = 0.0;
     for(Key k: keyList) {
       weight += k.getWeight();
@@ -382,13 +384,13 @@ implements RemoveScheme {
    */
   @SuppressWarnings("unchecked")
   private void createVector() {
-    fpVector = new ArrayList[vectorSize];
-    keyVector = new ArrayList[vectorSize];
+    fpVector = new List[vectorSize];
+    keyVector = new List[vectorSize];
     ratio = new double[vectorSize];
 
     for(int i = 0; i < vectorSize; i++) {
-      fpVector[i] = new ArrayList<Key>();
-      keyVector[i] = new ArrayList<Key>();
+      fpVector[i] = Collections.synchronizedList(new ArrayList<Key>());
+      keyVector[i] = Collections.synchronizedList(new ArrayList<Key>());
       ratio[i] = 0.0;
     }//end for -i
   }//end createVector()
@@ -422,14 +424,14 @@ implements RemoveScheme {
   public void write(DataOutput out) throws IOException {
     super.write(out);
     for(int i = 0; i < fpVector.length; i++) {
-      ArrayList<Key> list = fpVector[i];
+      List<Key> list = fpVector[i];
       out.writeInt(list.size());
       for(Key k: list) {
         k.write(out);
       }
     }
     for(int i = 0; i < keyVector.length; i++) {
-      ArrayList<Key> list = keyVector[i];
+      List<Key> list = keyVector[i];
       out.writeInt(list.size());
       for(Key k: list) {
         k.write(out);
@@ -446,7 +448,7 @@ implements RemoveScheme {
     super.readFields(in);
     createVector();
     for(int i = 0; i < fpVector.length; i++) {
-      ArrayList<Key> list = fpVector[i];
+      List<Key> list = fpVector[i];
       int size = in.readInt();
       for(int j = 0; j < size; j++) {
         Key k = new Key();
@@ -455,7 +457,7 @@ implements RemoveScheme {
       }
     }
     for(int i = 0; i < keyVector.length; i++) {
-      ArrayList<Key> list = keyVector[i];
+      List<Key> list = keyVector[i];
       int size = in.readInt();
       for(int j = 0; j < size; j++) {
         Key k = new Key();
@@ -478,8 +480,8 @@ implements RemoveScheme {
     RetouchedBloomFilter other = (RetouchedBloomFilter)o;
       
     for(int i = 0; result == 0 && i < fpVector.length; i++) {
-      ArrayList<Key> mylist = fpVector[i];
-      ArrayList<Key> otherlist = other.fpVector[i];
+      List<Key> mylist = fpVector[i];
+      List<Key> otherlist = other.fpVector[i];
         
       for(int j = 0; result == 0 && j < mylist.size(); j++) {
         result = mylist.get(j).compareTo(otherlist.get(j));
@@ -487,8 +489,8 @@ implements RemoveScheme {
     }
 
     for(int i = 0; result == 0 && i < keyVector.length; i++) {
-      ArrayList<Key> mylist = keyVector[i];
-      ArrayList<Key> otherlist = other.keyVector[i];
+      List<Key> mylist = keyVector[i];
+      List<Key> otherlist = other.keyVector[i];
         
       for(int j = 0; result == 0 && j < mylist.size(); j++) {
         result = mylist.get(j).compareTo(otherlist.get(j));
