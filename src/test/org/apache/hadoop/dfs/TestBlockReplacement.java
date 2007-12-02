@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -142,34 +143,36 @@ public class TestBlockReplacement extends TestCase {
       // start to replace the block
       // case 1: proxySource does not contain the block
       LOG.info("Testcase 1: Proxy " + newNode.getName() 
-          + "does not contain the block " + b.getBlockName() );
+          + " does not contain the block " + b.getBlockName() );
       assertFalse(replaceBlock(b, source, newNode, proxies.get(0)));
       // case 2: destination contains the block
       LOG.info("Testcase 2: Destination " + proxies.get(1).getName() 
-          + "contains the block " + b.getBlockName() );
+          + " contains the block " + b.getBlockName() );
       assertFalse(replaceBlock(b, source, proxies.get(0), proxies.get(1)));
       // case 3: correct case
-      LOG.info("Testcase 3: Proxy=" + source.getName() + "source=" + 
+      LOG.info("Testcase 3: Proxy=" + source.getName() + " source=" + 
           proxies.get(0).getName() + " destination=" + newNode.getName() );
       assertTrue(replaceBlock(b, source, proxies.get(0), newNode));
       // block locations should contain two proxies and newNode
-      checkBlocks(source, fileName.toString(), 
+      checkBlocks(new DatanodeInfo[]{newNode, proxies.get(0), proxies.get(1)},
+          fileName.toString(), 
           DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR);
-      // case 4: proxies.get(1) is not a valid del hint
-      LOG.info("Testcase 3: invalid del hint " + proxies.get(0).getName() );
+      // case 4: proxies.get(0) is not a valid del hint
+      LOG.info("Testcase 4: invalid del hint " + proxies.get(0).getName() );
       assertTrue(replaceBlock(b, proxies.get(1), proxies.get(0), source));
-      /* block locations should contain two proxies and source;
-       * newNode was deleted.
+      /* block locations should contain two proxies,
+       * and either of source or newNode
        */
-      checkBlocks(newNode, fileName.toString(), 
+      checkBlocks(proxies.toArray(new DatanodeInfo[proxies.size()]), 
+          fileName.toString(), 
           DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR);
     } finally {
       cluster.shutdown();
     }
   }
   
-  /* file's blocks do not exist at excludedNode */
-  private void checkBlocks(DatanodeInfo excludedNode, String fileName, 
+  /* check if file's blocks exist at includeNodes */
+  private void checkBlocks(DatanodeInfo[] includeNodes, String fileName, 
       long fileLen, short replFactor) throws IOException {
     Boolean notDone;
     do {
@@ -186,10 +189,11 @@ public class TestBlockReplacement extends TestCase {
         LOG.info("Expected replication factor is " + replFactor +
             " but the real replication factor is " + nodes.length );
       } else {
-        for( DatanodeInfo node : nodes) {
-          if (node.equals(excludedNode) ) {
+        List<DatanodeInfo> nodeLocations = Arrays.asList(nodes);
+        for (DatanodeInfo node : includeNodes) {
+          if (!nodeLocations.contains(node) ) {
             notDone=true; 
-            LOG.info("Unexpected block location " + excludedNode.getName() );
+            LOG.info("Block is not located at " + node.getName() );
             break;
           }
         }

@@ -172,6 +172,9 @@ Trunk (unreleased changes)
     HADOOP-2209. SecondaryNamenode process exits if it encounters exceptions 
     that it cannot handle.  (Dhruba Borthakur via dhruba)
 
+    HADOOP-2314. Prevent TestBlockReplacement from occasionally getting
+    into an infinite loop.  (Hairong Kuang via dhruba)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES
