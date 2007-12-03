@@ -122,10 +122,12 @@ public class HTable implements HConstants {
    * other methods will throw an IllegalStateException
    */
   public synchronized void close() {
-    closed = true;
-    tableServers = null;
-    batch.set(null);
-    connection.close(tableName);
+    if (!closed) {
+      closed = true;
+      tableServers = null;
+      batch.set(null);
+      connection.close(tableName);
+    }
   }
   
   /**
@@ -361,6 +363,7 @@ public class HTable implements HConstants {
    * Get all the data for the specified row at a specified timestamp
    * 
    * @param row row key
+   * @param ts timestamp
    * @return map of colums to values
    * @throws IOException
    */

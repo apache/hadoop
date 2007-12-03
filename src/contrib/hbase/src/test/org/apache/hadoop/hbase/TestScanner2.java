@@ -78,14 +78,18 @@ public class TestScanner2 extends HBaseClusterTestCase {
     Text tableName = new Text(getName());
     createTable(new HBaseAdmin(this.conf), tableName);
     HTable table = new HTable(this.conf, tableName);
-    final String lastKey = "aac";
-    addContent(new HTableIncommon(table), FIRST_COLKEY + ":");
-    HScannerInterface scanner =
-      table.obtainScanner(new Text [] {new Text(FIRST_COLKEY + ":")},
-        HConstants.EMPTY_START_ROW, new Text(lastKey));
-    for (Map.Entry<HStoreKey, SortedMap<Text, byte []>> e: scanner) {
-      LOG.info(e.getKey());
-      assertTrue(e.getKey().getRow().toString().compareTo(lastKey) < 0);
+    try {
+      final String lastKey = "aac";
+      addContent(new HTableIncommon(table), FIRST_COLKEY + ":");
+      HScannerInterface scanner =
+        table.obtainScanner(new Text [] {new Text(FIRST_COLKEY + ":")},
+            HConstants.EMPTY_START_ROW, new Text(lastKey));
+      for (Map.Entry<HStoreKey, SortedMap<Text, byte []>> e: scanner) {
+        LOG.info(e.getKey());
+        assertTrue(e.getKey().getRow().toString().compareTo(lastKey) < 0);
+      }
+    } finally {
+      table.close();
     }
   }
   
@@ -94,12 +98,16 @@ public class TestScanner2 extends HBaseClusterTestCase {
    */
   public void testIterator() throws Exception {
     HTable table = new HTable(this.conf, HConstants.ROOT_TABLE_NAME);
-    HScannerInterface scanner =
-      table.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY,
-      HConstants.EMPTY_START_ROW);
-    for (Map.Entry<HStoreKey, SortedMap<Text, byte []>> e: scanner) {
-      assertNotNull(e.getKey());
-      assertNotNull(e.getValue());
+    try {
+      HScannerInterface scanner =
+        table.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY,
+            HConstants.EMPTY_START_ROW);
+      for (Map.Entry<HStoreKey, SortedMap<Text, byte []>> e: scanner) {
+        assertNotNull(e.getKey());
+        assertNotNull(e.getValue());
+      }
+    } finally {
+      table.close();
     }
   }
 
@@ -114,18 +122,22 @@ public class TestScanner2 extends HBaseClusterTestCase {
     Text tableName = new Text(getName());
     createTable(admin, tableName);
     HTable table = new HTable(this.conf, tableName);
-    // Add a row to columns without qualifiers and then two with.  Make one
-    // numbers only so easy to find w/ a regex.
-    long id = table.startUpdate(new Text(getName()));
-    final String firstColkeyFamily = Character.toString(FIRST_COLKEY) + ":";
-    table.put(id, new Text(firstColkeyFamily + getName()), GOOD_BYTES);
-    table.put(id, new Text(firstColkeyFamily + "22222"), GOOD_BYTES);
-    table.put(id, new Text(firstColkeyFamily), GOOD_BYTES);
-    table.commit(id);
-    // Now do a scan using a regex for a column name.
-    checkRegexingScanner(table, firstColkeyFamily + "\\d+");
-    // Do a new scan that only matches on column family.
-    checkRegexingScanner(table, firstColkeyFamily + "$");
+    try {
+      // Add a row to columns without qualifiers and then two with.  Make one
+      // numbers only so easy to find w/ a regex.
+      long id = table.startUpdate(new Text(getName()));
+      final String firstColkeyFamily = Character.toString(FIRST_COLKEY) + ":";
+      table.put(id, new Text(firstColkeyFamily + getName()), GOOD_BYTES);
+      table.put(id, new Text(firstColkeyFamily + "22222"), GOOD_BYTES);
+      table.put(id, new Text(firstColkeyFamily), GOOD_BYTES);
+      table.commit(id);
+      // Now do a scan using a regex for a column name.
+      checkRegexingScanner(table, firstColkeyFamily + "\\d+");
+      // Do a new scan that only matches on column family.
+      checkRegexingScanner(table, firstColkeyFamily + "$");
+    } finally {
+      table.close();
+    }
   }
   
   /*
@@ -170,18 +182,22 @@ public class TestScanner2 extends HBaseClusterTestCase {
     
     // Enter data
     HTable table = new HTable(conf, tableName);
-    for (char i = FIRST_ROWKEY; i <= LAST_ROWKEY; i++) {
-      Text rowKey = new Text(new String(new char[] { i }));
-      long lockID = table.startUpdate(rowKey);
-      for (char j = 0; j < colKeys.length; j++) {
-        table.put(lockID, colKeys[j], (i >= FIRST_BAD_RANGE_ROWKEY && 
-          i <= LAST_BAD_RANGE_ROWKEY)? BAD_BYTES : GOOD_BYTES);
+    try {
+      for (char i = FIRST_ROWKEY; i <= LAST_ROWKEY; i++) {
+        Text rowKey = new Text(new String(new char[] { i }));
+        long lockID = table.startUpdate(rowKey);
+        for (char j = 0; j < colKeys.length; j++) {
+          table.put(lockID, colKeys[j], (i >= FIRST_BAD_RANGE_ROWKEY && 
+              i <= LAST_BAD_RANGE_ROWKEY)? BAD_BYTES : GOOD_BYTES);
+        }
+        table.commit(lockID);
       }
-      table.commit(lockID);
+
+      regExpFilterTest(table, colKeys);
+      rowFilterSetTest(table, colKeys);
+    } finally {
+      table.close();
     }
-    
-    regExpFilterTest(table, colKeys);
-    rowFilterSetTest(table, colKeys);
   }
   
   /**
@@ -269,40 +285,43 @@ public class TestScanner2 extends HBaseClusterTestCase {
    */
   public void testSplitDeleteOneAddTwoRegions() throws IOException {
     HTable metaTable = new HTable(conf, HConstants.META_TABLE_NAME);
-    // First add a new table.  Its intial region will be added to META region.
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    Text tableName = new Text(getName());
-    admin.createTable(new HTableDescriptor(tableName.toString()));
-    List<HRegionInfo> regions = scan(metaTable);
-    assertEquals("Expected one region", 1, regions.size());
-    HRegionInfo region = regions.get(0);
-    assertTrue("Expected region named for test",
-      region.getRegionName().toString().startsWith(getName()));
-    // Now do what happens at split time; remove old region and then add two
-    // new ones in its place.
-    removeRegionFromMETA(new HTable(conf, HConstants.META_TABLE_NAME),
-      region.getRegionName());
-    HTableDescriptor desc = region.getTableDesc();
-    Path homedir = new Path(getName());
-    List<HRegion> newRegions = new ArrayList<HRegion>(2);
-    newRegions.add(HRegion.createHRegion(
-      new HRegionInfo(desc, null, new Text("midway")),
-      homedir, this.conf, null));
-    newRegions.add(HRegion.createHRegion(
-      new HRegionInfo(desc, new Text("midway"), null),
-        homedir, this.conf, null));
     try {
-      for (HRegion r : newRegions) {
-        addRegionToMETA(metaTable, r, this.cluster.getHMasterAddress(),
-          -1L);
+      // First add a new table.  Its intial region will be added to META region.
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      Text tableName = new Text(getName());
+      admin.createTable(new HTableDescriptor(tableName.toString()));
+      List<HRegionInfo> regions = scan(metaTable);
+      assertEquals("Expected one region", 1, regions.size());
+      HRegionInfo region = regions.get(0);
+      assertTrue("Expected region named for test",
+          region.getRegionName().toString().startsWith(getName()));
+      // Now do what happens at split time; remove old region and then add two
+      // new ones in its place.
+      removeRegionFromMETA(metaTable, region.getRegionName());
+      HTableDescriptor desc = region.getTableDesc();
+      Path homedir = new Path(getName());
+      List<HRegion> newRegions = new ArrayList<HRegion>(2);
+      newRegions.add(HRegion.createHRegion(
+          new HRegionInfo(desc, null, new Text("midway")),
+          homedir, this.conf, null));
+      newRegions.add(HRegion.createHRegion(
+          new HRegionInfo(desc, new Text("midway"), null),
+          homedir, this.conf, null));
+      try {
+        for (HRegion r : newRegions) {
+          addRegionToMETA(metaTable, r, this.cluster.getHMasterAddress(),
+              -1L);
+        }
+        regions = scan(metaTable);
+        assertEquals("Should be two regions only", 2, regions.size());
+      } finally {
+        for (HRegion r : newRegions) {
+          r.close();
+          r.getLog().closeAndDelete();
+        }
       }
-      regions = scan(metaTable);
-      assertEquals("Should be two regions only", 2, regions.size());
     } finally {
-      for (HRegion r : newRegions) {
-        r.close();
-        r.getLog().closeAndDelete();
-      }
+      metaTable.close();
     }
   }
   
@@ -388,17 +407,13 @@ public class TestScanner2 extends HBaseClusterTestCase {
    */
   private void removeRegionFromMETA(final HTable t, final Text regionName)
   throws IOException {
-    try {
-      long lockid = t.startUpdate(regionName);
-      t.delete(lockid, HConstants.COL_REGIONINFO);
-      t.delete(lockid, HConstants.COL_SERVER);
-      t.delete(lockid, HConstants.COL_STARTCODE);
-      t.commit(lockid);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Removed " + regionName + " from table " + t.getTableName());
-      }
-    } finally {
-      t.close();
+    long lockid = t.startUpdate(regionName);
+    t.delete(lockid, HConstants.COL_REGIONINFO);
+    t.delete(lockid, HConstants.COL_SERVER);
+    t.delete(lockid, HConstants.COL_STARTCODE);
+    t.commit(lockid);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Removed " + regionName + " from table " + t.getTableName());
     }
   }
 }
