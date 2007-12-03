@@ -50,6 +50,8 @@ Trunk (unreleased changes)
    HADOOP-2309 ConcurrentModificationException doing get of all region start keys
    HADOOP-2321 TestScanner2 does not release resources which sometimes cause the
                test to time out
+   HADOOP-2315 REST servlet doesn't treat / characters in row key correctly
+               (Bryan Duxbury via Stack)
 
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
