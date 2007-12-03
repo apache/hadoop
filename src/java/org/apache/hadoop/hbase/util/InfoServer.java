@@ -100,7 +100,7 @@ public class InfoServer {
     addServlet("logLevel", "/logLevel", org.apache.hadoop.log.LogLevel.Servlet.class);
   }
   
-  private String getWebAppDir(final String webappName) throws IOException {
+  public static String getWebAppDir(final String webappName) throws IOException {
     String webappDir = null;
     try {
       webappDir = getWebAppsPath("webapps" + File.separator + webappName);

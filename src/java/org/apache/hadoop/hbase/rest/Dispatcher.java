@@ -19,15 +19,23 @@
  */
 package org.apache.hadoop.hbase.rest;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.mortbay.http.SocketListener;
 
-import org.apache.hadoop.hbase.HBaseAdmin;
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import java.io.File;
+import java.io.FileNotFoundException;
+
+import java.net.URL;
+import org.mortbay.http.HttpContext;
+
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.util.InfoServer;
 
 /**
  * Servlet implementation class for hbase REST interface.
@@ -159,5 +167,55 @@ implements javax.servlet.Servlet {
   private String [] getPathSegments(final HttpServletRequest request) {
     int context_len = request.getContextPath().length() + 1;
     return request.getRequestURI().substring(context_len).split("/");
+  }
+
+
+  /*
+   * Start up the REST servlet in standalone mode.
+   */
+  public static void main(String[] args) throws Exception{
+    int port = 60050;
+    String bindAddress = "0.0.0.0";
+    
+    // grab the port and bind addresses from the command line if supplied
+    for(int i = 0; i < args.length; i++){
+      if(args[i].equals("--port")){
+        port = Integer.parseInt(args[++i]);
+      } else if(args[i].equals("--bind")){
+        bindAddress = args[++i];
+      } else if(args[i].equals("--help")){
+        printUsage();
+        return;
+      } else {
+        System.out.println("Unrecognized switch " + args[i]);
+        printUsage();
+        return;
+      }
+    }
+    
+    org.mortbay.jetty.Server webServer = new org.mortbay.jetty.Server();
+
+    SocketListener listener = new SocketListener();
+    listener.setPort(port);
+    listener.setHost(bindAddress);
+    webServer.addListener(listener);
+  
+    webServer.addWebApplication("/api", InfoServer.getWebAppDir("rest"));
+    
+    webServer.start();
+  }  
+  
+  /*
+   * Print out the usage of this class from the command line.
+   */ 
+  private static void printUsage(){
+    System.out.println("Start up the HBase REST servlet.");
+    System.out.println("Options:");
+    System.out.println("--port [port]");
+    System.out.println("\tPort to listen on. Defaults to 60050.");
+    System.out.println("--bind [addr]");
+    System.out.println("\tAddress to bind on. Defaults to 0.0.0.0.");
+    System.out.println("--help");
+    System.out.println("\tPrint this message and exit.");
   }
 }

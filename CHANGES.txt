@@ -3,11 +3,15 @@ HBase Change Log
 
 Trunk (unreleased changes)
   INCOMPATIBLE CHANGES
+   HADOOP-2056 A table with row keys containing colon fails to split regions
+   HADOOP-2079 Fix generated HLog, HRegion names
 
   NEW FEATURES
     HADOOP-2061 Add new Base64 dialects
     HADOOP-2084 Add a LocalHBaseCluster
     HADOOP-2068 RESTful interface (Bryan Duxbury via Stack)
+    HADOOP-2316 Run REST servlet outside of master
+                (Bryan Duxbury via Stack)
 
   OPTIMIZATIONS
 
@@ -15,8 +19,6 @@ Trunk (unreleased changes)
    HADOOP-2059 In tests, exceptions in min dfs shutdown should not fail test
                (e.g. nightly #272)
    HADOOP-2064 TestSplit assertion and NPE failures (Patch build #952 and #953)
-   HADOOP-2056 A table with row keys containing colon fails to split regions
-   HADOOP-2079 HADOOP-2056 Fix generated HLog, HRegion names
    HADOOP-2124 Use of `hostname` does not work on Cygwin in some cases
    HADOOP-2083 TestTableIndex failed in #970 and #956
    HADOOP-2109 Fixed race condition in processing server lease timeout.
