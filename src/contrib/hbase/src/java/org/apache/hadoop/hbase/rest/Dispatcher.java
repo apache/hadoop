@@ -157,6 +157,7 @@ implements javax.servlet.Servlet {
    * element in pathSegment is not the empty string.
    */
   private String [] getPathSegments(final HttpServletRequest request) {
-    return request.getPathInfo().substring(1).split("/");
+    int context_len = request.getContextPath().length() + 1;
+    return request.getRequestURI().substring(context_len).split("/");
   }
 }
