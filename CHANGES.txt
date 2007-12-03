@@ -175,6 +175,10 @@ Trunk (unreleased changes)
     HADOOP-2314. Prevent TestBlockReplacement from occasionally getting
     into an infinite loop.  (Hairong Kuang via dhruba)
 
+    HADOOP-2300. This fixes a bug where mapred.tasktracker.tasks.maximum
+    would be ignored even if it was set in hadoop-site.xml.
+    (Amareshwari Sri Ramadasu via ddas)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES

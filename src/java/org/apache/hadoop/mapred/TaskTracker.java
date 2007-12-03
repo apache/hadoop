@@ -713,14 +713,14 @@ public class TaskTracker
                                        String oldMax,
                                        int def) {
     try {
-      if (newMax != null) {
-        return Integer.parseInt(newMax);
-      }
       if (oldMax != null ) {
         LOG.warn("mapred.tasktracker.tasks.maximum is deprecated. Use " +
                  "mapred.tasktracker.map.tasks.maximum and " +
                  "mapred.tasktracker.reduce.tasks.maximum instead.");
         return Integer.parseInt(oldMax);
+      }
+      if (newMax != null) {
+        return Integer.parseInt(newMax);
       }
     } catch (NumberFormatException ne) {
       return def;
