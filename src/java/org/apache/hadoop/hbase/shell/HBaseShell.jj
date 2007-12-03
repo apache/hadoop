@@ -126,6 +126,8 @@ TOKEN: /** for HQL statements */
    | <NUM_ENTRIES: "num_entries">
    | <ADD: "add">
    | <CHANGE: "change">
+   | <META_TABLE: ".META.">
+   | <ROOT_TABLE: "-ROOT-">
 }
 
 TOKEN : 
@@ -565,6 +567,7 @@ SelectCommand selectCommand() :
   columns = columnList()
   <FROM>
   tableName = identifier()
+  
   { 
      select.setColumns(columns);
      select.setTable(tableName);
@@ -858,7 +861,7 @@ String identifier() :
 }
 {
   (
-     t = <ID>
+     ( t=<ID> | t=<META_TABLE> | t=<ROOT_TABLE> )
      { return t.image.toString(); }
    | ( t=<QUOTED_IDENTIFIER> | t=<STRING_LITERAL> )
      { return t.image.substring(1,t.image.toString().length() - 1); }

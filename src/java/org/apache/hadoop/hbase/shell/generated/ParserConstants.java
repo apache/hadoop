@@ -59,15 +59,17 @@ public interface ParserConstants {
   int NUM_ENTRIES = 57;
   int ADD = 58;
   int CHANGE = 59;
-  int SAVE = 60;
-  int GROUP = 61;
-  int BY = 62;
-  int ID = 63;
-  int INTEGER_LITERAL = 64;
-  int FLOATING_POINT_LITERAL = 65;
-  int EXPONENT = 66;
-  int QUOTED_IDENTIFIER = 67;
-  int STRING_LITERAL = 68;
+  int META_TABLE = 60;
+  int ROOT_TABLE = 61;
+  int SAVE = 62;
+  int GROUP = 63;
+  int BY = 64;
+  int ID = 65;
+  int INTEGER_LITERAL = 66;
+  int FLOATING_POINT_LITERAL = 67;
+  int EXPONENT = 68;
+  int QUOTED_IDENTIFIER = 69;
+  int STRING_LITERAL = 70;
 
   int DEFAULT = 0;
 
@@ -132,6 +134,8 @@ public interface ParserConstants {
     "\"num_entries\"",
     "\"add\"",
     "\"change\"",
+    "\".META.\"",
+    "\"-ROOT-\"",
     "\"save\"",
     "\"group\"",
     "\"by\"",

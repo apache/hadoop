@@ -52,6 +52,8 @@ Trunk (unreleased changes)
                test to time out
    HADOOP-2315 REST servlet doesn't treat / characters in row key correctly
                (Bryan Duxbury via Stack)
+   HADOOP-2332 Meta table data selection in Hbase Shell
+               (Edward Yoon via Stack)
 
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
