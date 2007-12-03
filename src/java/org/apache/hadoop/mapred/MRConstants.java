@@ -25,7 +25,9 @@ interface MRConstants {
   //
   // Timeouts, constants
   //
-  public static final long HEARTBEAT_INTERVAL = 10 * 1000;
+  public static final int HEARTBEAT_INTERVAL_MIN = 5 * 1000;
+  
+  public static final int CLUSTER_INCREMENT = 50;
 
   //for the inmemory filesystem (to do in-memory merge)
   /**

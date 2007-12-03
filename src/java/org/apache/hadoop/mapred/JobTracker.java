@@ -1179,6 +1179,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       actions.addAll(killTasksList);
     }
      
+    // calculate next heartbeat interval and put in heartbeat response
+    int nextInterval = getNextHeartbeatInterval();
+    response.setHeartbeatInterval(nextInterval);
     response.setActions(
                         actions.toArray(new TaskTrackerAction[actions.size()]));
         
@@ -1190,7 +1193,21 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         
     return response;
   }
-    
+  
+  /**
+   * Calculates next heartbeat interval using cluster size.
+   * Heartbeat interval is incremented 1second for every 50 nodes. 
+   * @return next heartbeat interval.
+   */
+  private int getNextHeartbeatInterval() {
+    // get the no of task trackers
+    int clusterSize = getClusterStatus().getTaskTrackers();
+    int heartbeatInterval =  Math.max(
+                                1000 * (clusterSize / CLUSTER_INCREMENT + 1),
+                                HEARTBEAT_INTERVAL_MIN) ;
+    return heartbeatInterval;
+  }
+
   /**
    * Return if the specified tasktracker is in the hosts list, 
    * if one was configured.  If none was configured, then this 

@@ -91,6 +91,9 @@ Trunk (unreleased changes)
     HADOOP-1965. Makes the sortAndSpill in MapTask a separate thread.
     (Amar Kamat via ddas)
 
+    HADOOP-1900. Makes the heartbeat and task event queries interval 
+    dependent on the cluster size.  (Amareshwari Sri Ramadasu via ddas)
+
   BUG FIXES
 
     HADOOP-2100.  Remove faulty check for existence of $HADOOP_PID_DIR and let

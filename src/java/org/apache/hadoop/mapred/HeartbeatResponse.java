@@ -35,6 +35,7 @@ import org.apache.hadoop.io.WritableUtils;
 class HeartbeatResponse implements Writable, Configurable {
   Configuration conf = null;
   short responseId;
+  int heartbeatInterval;
   TaskTrackerAction[] actions;
 
   HeartbeatResponse() {}
@@ -42,6 +43,7 @@ class HeartbeatResponse implements Writable, Configurable {
   HeartbeatResponse(short responseId, TaskTrackerAction[] actions) {
     this.responseId = responseId;
     this.actions = actions;
+    this.heartbeatInterval = MRConstants.HEARTBEAT_INTERVAL_MIN;
   }
   
   public void setResponseId(short responseId) {
@@ -68,8 +70,17 @@ class HeartbeatResponse implements Writable, Configurable {
     return conf;
   }
 
+  public void setHeartbeatInterval(int interval) {
+    this.heartbeatInterval = interval;
+  }
+  
+  public int getHeartbeatInterval() {
+    return heartbeatInterval;
+  }
+  
   public void write(DataOutput out) throws IOException {
     out.writeShort(responseId);
+    out.writeInt(heartbeatInterval);
     if (actions == null) {
       WritableUtils.writeVInt(out, 0);
     } else {
@@ -84,6 +95,7 @@ class HeartbeatResponse implements Writable, Configurable {
   
   public void readFields(DataInput in) throws IOException {
     this.responseId = in.readShort();
+    this.heartbeatInterval = in.readInt();
     int length = WritableUtils.readVInt(in);
     if (length > 0) {
       actions = new TaskTrackerAction[length];
