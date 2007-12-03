@@ -81,7 +81,7 @@ public class SelectCommand extends BasicCommand {
     }
     try {
       HConnection conn = HConnectionManager.getConnection(conf);
-      if (!conn.tableExists(this.tableName)) {
+      if (!conn.tableExists(this.tableName) && !isMetaTable()) {
         return new ReturnMsg(0, "'" + this.tableName + "'" + TABLE_NOT_FOUND);
       }
 
@@ -98,6 +98,11 @@ public class SelectCommand extends BasicCommand {
       String[] msg = e.getMessage().split("[,]");
       return new ReturnMsg(0, msg[0]);
     }
+  }
+
+  private boolean isMetaTable() {
+    return (this.tableName.equals(HConstants.ROOT_TABLE_NAME)
+        || this.tableName.equals(HConstants.META_TABLE_NAME)) ? true : false;
   }
 
   private int compoundWherePrint(HTable table, HBaseAdmin admin) {
