@@ -63,13 +63,7 @@ public abstract class HBaseTestCase extends TestCase {
    */
   public HBaseTestCase() {
     super();
-    conf = new HBaseConfiguration();
-    try {
-      START_KEY =
-        new String(START_KEY_BYTES, HConstants.UTF8_ENCODING) + PUNCTUATION;
-    } catch (UnsupportedEncodingException e) {
-      fail();
-    }
+    init();
   }
   
   /**
@@ -77,6 +71,10 @@ public abstract class HBaseTestCase extends TestCase {
    */
   public HBaseTestCase(String name) {
     super(name);
+    init();
+  }
+  
+  private void init() {
     conf = new HBaseConfiguration();
     try {
       START_KEY =

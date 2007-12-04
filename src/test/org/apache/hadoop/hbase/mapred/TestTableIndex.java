@@ -142,9 +142,11 @@ public class TestTableIndex extends MultiRegionTable {
    */
   @SuppressWarnings("static-access")
   public void testTableIndex() throws IOException {
-    long firstK = 32;
-    LOG.info("Print table contents before map/reduce");
-    scanTable(conf, firstK);
+    boolean printResults = false;
+    if (printResults) {
+      LOG.info("Print table contents before map/reduce");
+    }
+    scanTable(conf, printResults);
 
     @SuppressWarnings("deprecation")
     MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
@@ -174,8 +176,10 @@ public class TestTableIndex extends MultiRegionTable {
       mrCluster.shutdown();
     }
 
-    LOG.info("Print table contents after map/reduce");
-    scanTable(conf, firstK);
+    if (printResults) {
+      LOG.info("Print table contents after map/reduce");
+    }
+    scanTable(conf, printResults);
 
     // verify index results
     verify(conf);
@@ -214,25 +218,25 @@ public class TestTableIndex extends MultiRegionTable {
     return c.toString();
   }
 
-  private void scanTable(HBaseConfiguration c, long firstK)
+  private void scanTable(HBaseConfiguration c, boolean printResults)
   throws IOException {
     HTable table = new HTable(c, new Text(TABLE_NAME));
     Text[] columns = { TEXT_INPUT_COLUMN, TEXT_OUTPUT_COLUMN };
     HScannerInterface scanner = table.obtainScanner(columns,
         HConstants.EMPTY_START_ROW);
-    long count = 0;
     try {
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
       while (scanner.next(key, results)) {
-        if (count < firstK)
+        if (printResults) {
           LOG.info("row: " + key.getRow());
+        }
         for (Map.Entry<Text, byte[]> e : results.entrySet()) {
-          if (count < firstK)
+          if (printResults) {
             LOG.info(" column: " + e.getKey() + " value: "
                 + new String(e.getValue(), HConstants.UTF8_ENCODING));
+          }
         }
-        count++;
       }
     } finally {
       scanner.close();

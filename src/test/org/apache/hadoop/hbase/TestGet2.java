@@ -23,8 +23,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
@@ -36,9 +34,9 @@ import org.apache.hadoop.io.Text;
  * This class 
  */
 public class TestGet2 extends HBaseTestCase {
-  private final Log LOG = LogFactory.getLog(this.getClass().getName());
   private MiniDFSCluster miniHdfs;
 
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
     this.miniHdfs = new MiniDFSCluster(this.conf, 1, true, null);

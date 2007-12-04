@@ -71,7 +71,7 @@ public class StaticTestEnvironment {
       
     Logger rootLogger = Logger.getRootLogger();
     rootLogger.setLevel(Level.WARN);
-
+    
     Level logLevel = Level.DEBUG;
     value = System.getenv("LOGGING_LEVEL");
     if(value != null && value.length() != 0) {
@@ -112,6 +112,12 @@ public class StaticTestEnvironment {
       }
     }
     LOG.setLevel(logLevel);
+
+    if (!debugging) {
+      // Turn off all the filter logging unless debug is set.
+      // It is way too noisy.
+      Logger.getLogger("org.apache.hadoop.hbase.filter").setLevel(Level.INFO);
+    }
   }
   
   /**

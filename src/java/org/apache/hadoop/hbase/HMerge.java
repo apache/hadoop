@@ -63,17 +63,19 @@ class HMerge implements HConstants {
    * @param tableName   - Table to be compacted
    * @throws IOException
    */
-  public static void merge(HBaseConfiguration conf, FileSystem fs, Text tableName)
-      throws IOException {
+  public static void merge(HBaseConfiguration conf, FileSystem fs,
+      Text tableName) throws IOException {
+    
     HConnection connection = HConnectionManager.getConnection(conf);
     boolean masterIsRunning = connection.isMasterRunning();
+    HConnectionManager.deleteConnection(conf);
     if(tableName.equals(META_TABLE_NAME)) {
-        if(masterIsRunning) {
-          throw new IllegalStateException(
-              "Can not compact META table if instance is on-line");
-        }
-        new OfflineMerger(conf, fs, META_TABLE_NAME).process();
-      
+      if(masterIsRunning) {
+        throw new IllegalStateException(
+            "Can not compact META table if instance is on-line");
+      }
+      new OfflineMerger(conf, fs, META_TABLE_NAME).process();
+
     } else {
       if(!masterIsRunning) {
         throw new IllegalStateException(

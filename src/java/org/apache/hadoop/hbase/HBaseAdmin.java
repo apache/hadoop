@@ -114,8 +114,24 @@ public class HBaseAdmin implements HConstants {
   throws IOException {
     createTableAsync(desc);
 
-    // Wait for new table to come on-line
-    connection.getTableServers(desc.getName());
+    for (int tries = 0; tries < numRetries; tries++) {
+      try {
+        // Wait for new table to come on-line
+        connection.getTableServers(desc.getName());
+        break;
+        
+      } catch (TableNotFoundException e) {
+        if (tries == numRetries - 1) {
+          // Ran out of tries
+          throw e;
+        }
+      }
+      try {
+        Thread.sleep(pause);
+      } catch (InterruptedException e) {
+        // continue
+      }
+    }
   }
   
   /**
