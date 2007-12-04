@@ -78,16 +78,23 @@ import org.apache.hadoop.util.GenericOptionsParser;
  */
 public class ValueAggregatorJob {
 
-  public static JobControl createValueAggregatorJobs(String args[])
-    throws IOException {
+  public static JobControl createValueAggregatorJobs(String args[]
+    , Class<? extends ValueAggregatorDescriptor>[] descriptors) throws IOException {
+    
     JobControl theControl = new JobControl("ValueAggregatorJobs");
     ArrayList dependingJobs = new ArrayList();
     JobConf aJobConf = createValueAggregatorJob(args);
+    if(descriptors != null)
+      setAggregatorDescriptors(aJobConf, descriptors);
     Job aJob = new Job(aJobConf, dependingJobs);
     theControl.addJob(aJob);
     return theControl;
   }
 
+  public static JobControl createValueAggregatorJobs(String args[]) throws IOException {
+    return createValueAggregatorJobs(args, null);
+  }
+  
   /**
    * Create an Aggregate based map/reduce job.
    * 
@@ -174,6 +181,23 @@ public class ValueAggregatorJob {
     return theJob;
   }
 
+  public static JobConf createValueAggregatorJob(String args[]
+    , Class<? extends ValueAggregatorDescriptor>[] descriptors)
+  throws IOException {
+    JobConf job = createValueAggregatorJob(args);
+    setAggregatorDescriptors(job, descriptors);
+    return job;
+  }
+  
+  public static void setAggregatorDescriptors(JobConf job
+      , Class<? extends ValueAggregatorDescriptor>[] descriptors) {
+    job.setInt("aggregator.descriptor.num", descriptors.length);
+    //specify the aggregator descriptors
+    for(int i=0; i< descriptors.length; i++) {
+      job.set("aggregator.descriptor." + i, "UserDefined," + descriptors[i].getName());
+    }    
+  }
+  
   /**
    * create and run an Aggregate based map/reduce job.
    * 

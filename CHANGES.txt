@@ -16,6 +16,10 @@ Trunk (unreleased changes)
     Configuration no longer supports the notion of default/final resources.
     (acmurthy) 
 
+    HADOOP-1302.  Remove deprecated abacus code from the contrib directory.
+    This also fixes a configuration bug in AggregateWordCount, so that the
+    job now works.  (enis)
+
   NEW FEATURES
 
     HADOOP-1857.  Ability to run a script when a task fails to capture stack
