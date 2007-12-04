@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -240,7 +239,7 @@ public class TestTableMapReduce extends MultiRegionTable {
       }
 
       LOG.info("Print table contents before map/reduce");
-      scanTable(conf, SINGLE_REGION_TABLE_NAME);
+      scanTable(conf, SINGLE_REGION_TABLE_NAME, true);
 
       @SuppressWarnings("deprecation")
       MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
@@ -264,7 +263,7 @@ public class TestTableMapReduce extends MultiRegionTable {
       }
     
       LOG.info("Print table contents after map/reduce");
-      scanTable(conf, SINGLE_REGION_TABLE_NAME);
+      scanTable(conf, SINGLE_REGION_TABLE_NAME, true);
 
       // verify map-reduce results
       verify(conf, SINGLE_REGION_TABLE_NAME);
@@ -326,8 +325,8 @@ public class TestTableMapReduce extends MultiRegionTable {
     }
   }
 
-  private void scanTable(HBaseConfiguration conf, String tableName)
-  throws IOException {
+  private void scanTable(HBaseConfiguration conf, String tableName,
+      boolean printValues) throws IOException {
     HTable table = new HTable(conf, new Text(tableName));
     
     Text[] columns = {
@@ -342,11 +341,13 @@ public class TestTableMapReduce extends MultiRegionTable {
       TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
       
       while(scanner.next(key, results)) {
-        LOG.info("row: " + key.getRow());
-        
-        for(Map.Entry<Text, byte[]> e: results.entrySet()) {
-          LOG.info(" column: " + e.getKey() + " value: "
-              + new String(e.getValue(), HConstants.UTF8_ENCODING));
+        if (printValues) {
+          LOG.info("row: " + key.getRow());
+
+          for(Map.Entry<Text, byte[]> e: results.entrySet()) {
+            LOG.info(" column: " + e.getKey() + " value: "
+                + new String(e.getValue(), HConstants.UTF8_ENCODING));
+          }
         }
       }
       

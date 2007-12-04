@@ -85,8 +85,10 @@ public class TestScanner2 extends HBaseClusterTestCase {
         table.obtainScanner(new Text [] {new Text(FIRST_COLKEY + ":")},
             HConstants.EMPTY_START_ROW, new Text(lastKey));
       for (Map.Entry<HStoreKey, SortedMap<Text, byte []>> e: scanner) {
-        LOG.info(e.getKey());
-        assertTrue(e.getKey().getRow().toString().compareTo(lastKey) < 0);
+        if(e.getKey().getRow().toString().compareTo(lastKey) >= 0) {
+          LOG.info(e.getKey());
+          fail();
+        }
       }
     } finally {
       table.close();

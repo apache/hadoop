@@ -23,6 +23,13 @@ import java.io.IOException;
 
 /** Tests region merging */
 public class TestMergeMeta extends AbstractMergeTestBase {
+
+  /** constructor */
+  public TestMergeMeta() {
+    super();
+    conf.setLong("hbase.client.pause", 1 * 1000);
+    conf.setInt("hbase.client.retries.number", 2);
+  }
   
   /**
    * test case
