@@ -22,6 +22,7 @@ import java.io.*;
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
 /****************************************************************
@@ -104,23 +105,13 @@ public class FilterFileSystem extends FileSystem {
     return fs.open(f, bufferSize);
   }
   
-  /**
-   * Opens an FSDataOutputStream at the indicated Path with write-progress
-   * reporting.
-   * @param f the file name to open
-   * @param overwrite if a file with this name already exists, then if true,
-   *   the file will be overwritten, and if false an error will be thrown.
-   * @param bufferSize the size of the buffer to be used.
-   * @param replication required block replication for the file. 
-   */
-  public FSDataOutputStream create(Path f, 
-                                   boolean overwrite,
-                                   int bufferSize,
-                                   short replication,
-                                   long blockSize,
-                                   Progressable progress
-                                   ) throws IOException {
-    return fs.create(f, overwrite, bufferSize, replication, blockSize, progress);
+  /** {@inheritDoc} */
+  @Override
+  public FSDataOutputStream create(Path f, FsPermission permission,
+      boolean overwrite, int bufferSize, short replication, long blockSize,
+      Progressable progress) throws IOException {
+    return fs.create(f, permission,
+        overwrite, bufferSize, replication, blockSize, progress);
   }
 
   /**
@@ -180,13 +171,10 @@ public class FilterFileSystem extends FileSystem {
     return fs.getWorkingDirectory();
   }
   
-  /**
-   * Make the given file and all non-existent parents into directories. Has
-   * the semantics of Unix 'mkdir -p'. Existence of the directory hierarchy is
-   * not an error.
-   */
-  public boolean mkdirs(Path f) throws IOException {
-    return fs.mkdirs(f);
+  /** {@inheritDoc} */
+  @Override
+  public boolean mkdirs(Path f, FsPermission permission) throws IOException {
+    return fs.mkdirs(f, permission);
   }
 
   /**
@@ -260,5 +248,19 @@ public class FilterFileSystem extends FileSystem {
   public void close() throws IOException {
     super.close();
     fs.close();
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public void setOwner(Path p, String username, String groupname
+      ) throws IOException {
+    fs.setOwner(p, username, groupname);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public void setPermission(Path p, FsPermission permission
+      ) throws IOException {
+    fs.setPermission(p, permission);
   }
 }

@@ -21,7 +21,7 @@ package org.apache.hadoop.dfs;
 import java.io.*;
 import java.net.*;
 
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
@@ -114,7 +114,8 @@ public class DistributedFileSystem extends FileSystem {
     return new DFSClient.DFSDataInputStream(dfs.open(getPathName(f),bufferSize));
   }
 
-  public FSDataOutputStream create(Path f, boolean overwrite,
+  public FSDataOutputStream create(Path f, FsPermission permission,
+    boolean overwrite,
     int bufferSize, short replication, long blockSize,
     Progressable progress) throws IOException {
 
@@ -173,7 +174,7 @@ public class DistributedFileSystem extends FileSystem {
     return stats;
   }
 
-  public boolean mkdirs(Path f) throws IOException {
+  public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     return dfs.mkdirs(getPathName(f));
   }
 

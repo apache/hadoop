@@ -20,6 +20,9 @@ Trunk (unreleased changes)
     This also fixes a configuration bug in AggregateWordCount, so that the
     job now works.  (enis)
 
+    HADOOP-2288.  Enhance FileSystem API to support access control.
+    (Tsz Wo (Nicholas), SZE via dhruba)
+    
   NEW FEATURES
 
     HADOOP-1857.  Ability to run a script when a task fails to capture stack

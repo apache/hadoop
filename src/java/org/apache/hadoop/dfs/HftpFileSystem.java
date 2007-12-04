@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
 /** An implementation of a protocol for accessing filesystems over HTTP.
@@ -218,7 +219,8 @@ public class HftpFileSystem extends FileSystem {
   public void setWorkingDirectory(Path f) { }
 
   @Override
-  public FSDataOutputStream create(Path f, boolean overwrite, int bufferSize,
+  public FSDataOutputStream create(Path f, FsPermission permission,
+                                   boolean overwrite, int bufferSize,
                                    short replication, long blockSize,
                                    Progressable progress) throws IOException {
     throw new IOException("Not supported");
@@ -235,7 +237,7 @@ public class HftpFileSystem extends FileSystem {
   }
 
   @Override
-  public boolean mkdirs(Path f) throws IOException {
+  public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     throw new IOException("Not supported");
   }
 

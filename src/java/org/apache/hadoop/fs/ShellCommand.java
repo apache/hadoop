@@ -23,6 +23,17 @@ import java.io.BufferedReader;
 
 /** A base class for running a unix command like du or df*/
 abstract public class ShellCommand {
+  /** a Unix command to get a list of groups */
+  public static final String GROUPS_COMMAND = "groups";
+  /** a Unix command to set permission */
+  public static final String SET_PERMISSION_COMMAND = "chmod";
+  /** a Unix command to set owner */
+  public static final String SET_OWNER_COMMAND = "chown";
+  /** Return a Unix command to get permission information. */
+  public static String[] getGET_PERMISSION_COMMAND() {
+    return new String[]{"ls", "-ld"};
+  }
+
   private long    interval;   // refresh interval in msec
   private long    lastTime;   // last time the command was performed
   
@@ -104,7 +115,7 @@ abstract public class ShellCommand {
    * Static method to execute a command. Covers most of the simple cases 
    * without requiring the user to implement Command interface.
    */
-  public static String execCommand(String[] cmd) throws IOException {
+  public static String execCommand(String ... cmd) throws IOException {
     SimpleCommandExecutor exec = new SimpleCommandExecutor(cmd);
     exec.run();
     return exec.getReply();

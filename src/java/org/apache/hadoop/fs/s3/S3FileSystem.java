@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
@@ -127,8 +128,11 @@ public class S3FileSystem extends FileSystem {
     return store.inodeExists(makeAbsolute(path));
   }
 
+  /**
+   * @param permission Currently ignored.
+   */
   @Override
-  public boolean mkdirs(Path path) throws IOException {
+  public boolean mkdirs(Path path, FsPermission permission) throws IOException {
     Path absolutePath = makeAbsolute(path);
     INode inode = store.retrieveINode(absolutePath);
     if (inode == null) {
@@ -178,9 +182,13 @@ public class S3FileSystem extends FileSystem {
     return ret.toArray(new FileStatus[0]);
   }
 
+  /**
+   * @param permission Currently ignored.
+   */
   @Override
-  public FSDataOutputStream create(Path file, boolean overwrite, int bufferSize,
-                                   short replication, long blockSize, Progressable progress)
+  public FSDataOutputStream create(Path file, FsPermission permission,
+      boolean overwrite, int bufferSize,
+      short replication, long blockSize, Progressable progress)
     throws IOException {
 
     INode inode = store.retrieveINode(makeAbsolute(file));

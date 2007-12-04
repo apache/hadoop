@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.*;
 
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Progressable;
@@ -187,7 +188,11 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
       }
     }
   
-    public FSDataOutputStream create(Path f, boolean overwrite, int bufferSize,
+    /**
+     * @param permission Currently ignored.
+     */
+    public FSDataOutputStream create(Path f, FsPermission permission,
+                                     boolean overwrite, int bufferSize,
                                      short replication, long blockSize, Progressable progress)
       throws IOException {
       synchronized (this) {
@@ -274,7 +279,10 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
       return staticWorkingDir;
     }
 
-    public boolean mkdirs(Path f) throws IOException {
+    /**
+     * @param permission Currently ignored.
+     */
+    public boolean mkdirs(Path f, FsPermission permission) throws IOException {
       return true;
     }
   

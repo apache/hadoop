@@ -27,6 +27,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.dfs.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
+import org.apache.hadoop.fs.permission.FsPermission;
 
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
@@ -378,13 +379,38 @@ public abstract class FileSystem extends Configured {
    * @param bufferSize the size of the buffer to be used.
    * @param replication required block replication for the file. 
    */
-  public abstract FSDataOutputStream create(Path f, 
+  public FSDataOutputStream create(Path f,
                                             boolean overwrite,
                                             int bufferSize,
                                             short replication,
                                             long blockSize,
                                             Progressable progress
-                                            ) throws IOException;
+                                            ) throws IOException {
+    return this.create(f, FsPermission.getDefault(getConf()),
+        overwrite, bufferSize, replication, blockSize, progress);
+  }
+
+  /**
+   * Opens an FSDataOutputStream at the indicated Path with write-progress
+   * reporting.
+   * @param f the file name to open
+   * @param permission
+   * @param overwrite if a file with this name already exists, then if true,
+   *   the file will be overwritten, and if false an error will be thrown.
+   * @param bufferSize the size of the buffer to be used.
+   * @param replication required block replication for the file.
+   * @param blockSize
+   * @param progress
+   * @throws IOException
+   * @see #setPermission(Path, FsPermission)
+   */
+  public abstract FSDataOutputStream create(Path f,
+      FsPermission permission,
+      boolean overwrite,
+      int bufferSize,
+      short replication,
+      long blockSize,
+      Progressable progress) throws IOException;
 
   /**
    * Creates the given Path as a brand-new zero-length file.  If
@@ -804,13 +830,21 @@ public abstract class FileSystem extends Configured {
    * @return the directory pathname
    */
   public abstract Path getWorkingDirectory();
-    
+
+  /**
+   * Call {@link #mkdirs(Path, FsPermission)} with default permission.
+   */
+  public boolean mkdirs(Path f) throws IOException {
+    return mkdirs(f, FsPermission.getDefault(getConf()));
+  }
+
   /**
    * Make the given file and all non-existent parents into
    * directories. Has the semantics of Unix 'mkdir -p'.
    * Existence of the directory hierarchy is not an error.
    */
-  public abstract boolean mkdirs(Path f) throws IOException;
+  public abstract boolean mkdirs(Path f, FsPermission permission
+      ) throws IOException;
 
   /**
    * The src file is on the local disk.  Add it to FS at
@@ -956,7 +990,7 @@ public abstract class FileSystem extends Configured {
    */
   public short getDefaultReplication() { return 1; }
 
-  /* 
+  /**
    * Return a file status object that represents the
    * file.
    * @param f The path to the file we want information from
@@ -964,4 +998,24 @@ public abstract class FileSystem extends Configured {
    * @throws IOException see specific implementation
    */
   public abstract FileStatus getFileStatus(Path f) throws IOException;
+
+  /**
+   * Set permission of a path.
+   * @param p
+   * @param permission
+   */
+  public void setPermission(Path p, FsPermission permission
+      ) throws IOException {
+  }
+
+  /**
+   * Set owner of a path (i.e. a file or a directory).
+   * The parameters username and groupname cannot both be null.
+   * @param p The path
+   * @param username If it is null, the original username remains unchanged.
+   * @param groupname If it is null, the original groupname remains unchanged.
+   */
+  public void setOwner(Path p, String username, String groupname
+      ) throws IOException {
+  }
 }

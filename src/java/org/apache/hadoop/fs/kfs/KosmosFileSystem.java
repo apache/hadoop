@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -100,7 +101,8 @@ public class KosmosFileSystem extends FileSystem {
         return kfsImpl.exists(srep);
     }
 
-    public boolean mkdirs(Path path) throws IOException {
+    public boolean mkdirs(Path path, FsPermission permission
+        ) throws IOException {
 	Path absolute = makeAbsolute(path);
         String srep = absolute.toUri().getPath();
 
@@ -244,7 +246,8 @@ public class KosmosFileSystem extends FileSystem {
 
     }
 
-    public FSDataOutputStream create(Path file, boolean overwrite, int bufferSize,
+    public FSDataOutputStream create(Path file, FsPermission permission,
+                                     boolean overwrite, int bufferSize,
 				     short replication, long blockSize, Progressable progress)
 	throws IOException {
 

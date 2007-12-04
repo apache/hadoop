@@ -25,7 +25,9 @@ import java.nio.channels.FileLock;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.StringUtils;
 
 /****************************************************************
  * Implement the FileSystem API for the raw local filesystem.
@@ -190,6 +192,17 @@ public class RawLocalFileSystem extends FileSystem {
     return new FSDataOutputStream(
         new BufferedOutputStream(new LocalFSFileOutputStream(f), bufferSize));
   }
+
+  /** {@inheritDoc} */
+  @Override
+  public FSDataOutputStream create(Path f, FsPermission permission,
+      boolean overwrite, int bufferSize, short replication, long blockSize,
+      Progressable progress) throws IOException {
+    FSDataOutputStream out = create(f,
+        overwrite, bufferSize, replication, blockSize, progress);
+    setPermission(f, permission);
+    return out;
+  }
   
   public boolean rename(Path src, Path dst) throws IOException {
     if (useCopyForRename) {
@@ -216,7 +229,8 @@ public class RawLocalFileSystem extends FileSystem {
       return null;
     }
     if (localf.isFile()) {
-      return new FileStatus[] { new RawLocalFileStatus(localf) };
+      return new FileStatus[] {
+          new RawLocalFileStatus(localf, getDefaultBlockSize()) };
     }
 
     String[] names = localf.list();
@@ -239,6 +253,14 @@ public class RawLocalFileSystem extends FileSystem {
     File p2f = pathToFile(f);
     return (parent == null || mkdirs(parent)) &&
       (p2f.mkdir() || p2f.isDirectory());
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public boolean mkdirs(Path f, FsPermission permission) throws IOException {
+    boolean b = mkdirs(f);
+    setPermission(f, permission);
+    return b;
   }
   
   /**
@@ -330,14 +352,77 @@ public class RawLocalFileSystem extends FileSystem {
     return "LocalFS";
   }
   
-  public FileStatus getFileStatus(Path f) throws IOException {
-    return new RawLocalFileStatus(pathToFile(f));
+  public FileStatus getFileStatus(Path f) {
+    return new RawLocalFileStatus(pathToFile(f), getDefaultBlockSize());
   }
 
-  private class RawLocalFileStatus extends FileStatus {
-    RawLocalFileStatus(File f) throws IOException {
-      super(f.length(), f.isDirectory(), 1, getDefaultBlockSize(),
+  static class RawLocalFileStatus extends FileStatus {
+    private File file;
+    private PermissionStatus permissions;
+
+    RawLocalFileStatus(File f, long defaultBlockSize) {
+      super(f.length(), f.isDirectory(), 1, defaultBlockSize,
             f.lastModified(), new Path(f.toURI().toString()));
+      file = f;
     }
+
+    PermissionStatus getPermissionStatus() {
+      if (permissions == null) {
+        try {
+          permissions = getPermissionStatus(file);
+        }
+        catch(IOException e) {
+          LOG.debug(StringUtils.stringifyException(e));
+        }
+      }
+      return permissions;
+    }
+
+    private static PermissionStatus getPermissionStatus(File f
+        ) throws IOException {
+      StringTokenizer t = new StringTokenizer(
+          execCommand(f, ShellCommand.getGET_PERMISSION_COMMAND()));
+      //expected format
+      //-rw-------    1 username groupname ...
+      FsPermission p = FsPermission.valueOf(t.nextToken());
+      t.nextToken();
+      return new PermissionStatus(t.nextToken(), t.nextToken(), p);
+    }
+  }
+
+  /**
+   * Use the command chown to set owner.
+   */
+  @Override
+  public void setOwner(Path p, String username, String groupname
+      ) throws IOException {
+    if (username == null && groupname == null) {
+      throw new IOException("username == null && groupname == null");
+    }
+
+    //[OWNER][:[GROUP]]
+    String s = (username == null? "": username)
+             + (groupname == null? "": ":" + groupname);
+    execCommand(pathToFile(p), ShellCommand.SET_OWNER_COMMAND, s);
+  }
+
+  /**
+   * Use the command chmod to set permission.
+   */
+  @Override
+  public void setPermission(Path p, FsPermission permission
+      ) throws IOException {
+    execCommand(pathToFile(p), ShellCommand.SET_PERMISSION_COMMAND,
+        String.format("%04o", permission.toShort()));
+  }
+
+  private static String execCommand(File f, String... cmd) throws IOException {
+    String[] args = new String[cmd.length + 1];
+    System.arraycopy(cmd, 0, args, 0, cmd.length);
+    args[cmd.length] = f.getCanonicalPath();
+    LOG.debug("args=" + Arrays.asList(args));
+    String output = ShellCommand.execCommand(args);
+    LOG.debug("output=" + output);
+    return output;
   }
 }
