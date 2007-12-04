@@ -39,8 +39,8 @@ public class DeleteCommand extends BasicCommand {
     super(o);
   }
 
-  private String tableName;
-  private String rowKey;
+  private Text tableName;
+  private Text rowKey;
   private List<String> columnList;
 
   public ReturnMsg execute(HBaseConfiguration conf) {
@@ -49,17 +49,27 @@ public class DeleteCommand extends BasicCommand {
     }
     try {
       HConnection conn = HConnectionManager.getConnection(conf);
-      if (!conn.tableExists(new Text(this.tableName))) {
-        return new ReturnMsg(0, "'" + this.tableName + "'" + TABLE_NOT_FOUND);
+      if (!conn.tableExists(tableName)) {
+        return new ReturnMsg(0, "'" + tableName + "'" + TABLE_NOT_FOUND);
       }
 
       HBaseAdmin admin = new HBaseAdmin(conf);
-      HTable hTable = new HTable(conf, new Text(tableName));
-      long lockID = hTable.startUpdate(new Text(rowKey));
-      for (Text column : getColumnList(admin, hTable)) {
-        hTable.delete(lockID, new Text(column));
+      HTable hTable = new HTable(conf, tableName);
+
+      if (rowKey != null) {
+        long lockID = hTable.startUpdate(rowKey);
+        for (Text column : getColumnList(admin, hTable)) {
+          hTable.delete(lockID, new Text(column));
+        }
+        hTable.commit(lockID);
+      } else {
+        admin.disableTable(tableName);
+        for (Text column : getColumnList(admin, hTable)) {
+          admin.deleteColumn(tableName, new Text(column));
+        }
+        admin.enableTable(tableName);
       }
-      hTable.commit(lockID);
+
       return new ReturnMsg(1, "Column(s) deleted successfully.");
     } catch (IOException e) {
       String[] msg = e.getMessage().split("[\n]");
@@ -67,12 +77,12 @@ public class DeleteCommand extends BasicCommand {
     }
   }
 
-  public void setTable(String table) {
-    this.tableName = table;
+  public void setTable(String tableName) {
+    this.tableName = new Text(tableName);
   }
 
   public void setRow(String row) {
-    this.rowKey = row;
+    this.rowKey = new Text(row);
   }
 
   /**

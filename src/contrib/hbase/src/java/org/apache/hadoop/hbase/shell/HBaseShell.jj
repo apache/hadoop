@@ -543,12 +543,13 @@ DeleteCommand deleteCommand() :
     deleteCommand.setTable(table); 
   }
 
-  <WHERE> 
-  <ROW> <EQUALS> ( t=<STRING_LITERAL> | t=<QUOTED_IDENTIFIER> )
-  { 
-    deleteCommand.setRow(t.image.substring(1, t.image.length()-1)); 
-  }
-
+  [
+   <WHERE> 
+   <ROW> <EQUALS> ( t=<STRING_LITERAL> | t=<QUOTED_IDENTIFIER> )
+   { 
+     deleteCommand.setRow(t.image.substring(1, t.image.length()-1)); 
+   }
+  ]
   { return deleteCommand; }
 }
 

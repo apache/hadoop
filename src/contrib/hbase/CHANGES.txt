@@ -85,6 +85,8 @@ Trunk (unreleased changes)
                (Edward Yoon via Stack)
    HADOOP-2224 Add HTable.getRow(ROW, ts)
                (Bryan Duxbury via Stack)
+   HADOOP-2339 Delete command with no WHERE clause
+               (Edward Yoon via Stack)
 
 
 Release 0.15.1
