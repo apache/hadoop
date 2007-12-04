@@ -87,6 +87,7 @@ Trunk (unreleased changes)
                (Bryan Duxbury via Stack)
    HADOOP-2339 Delete command with no WHERE clause
                (Edward Yoon via Stack)
+   HADOOP-2299 Support inclusive scans (Bryan Duxbury via Stack)
 
 
 Release 0.15.1

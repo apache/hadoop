@@ -34,7 +34,7 @@ import org.apache.hadoop.io.Text;
  */
 public class StopRowFilter implements RowFilterInterface {
 
-  private Text stopRowKey;
+  protected Text stopRowKey;
   
   static final Log LOG = LogFactory.getLog(StopRowFilter.class);
   
