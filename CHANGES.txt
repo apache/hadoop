@@ -27,6 +27,9 @@ Trunk (unreleased changes)
 
     HADOOP-1857.  Ability to run a script when a task fails to capture stack
     traces. (Amareshwari Sri Ramadasu via ddas)
+
+    HADOOP-2299.  Defination of a login interface.  A simple implementation for
+    Unix users and groups. (Hairong Kuang via dhruba)
     
   IMPROVEMENTS
 

@@ -23,7 +23,9 @@ import java.io.BufferedReader;
 
 /** A base class for running a unix command like du or df*/
 abstract public class ShellCommand {
-  /** a Unix command to get a list of groups */
+  /** a Unix command to get the current user's name */
+  public final static String USER_NAME_COMMAND = "whoami";
+  /** a Unix command to get the current user's groups list */
   public static final String GROUPS_COMMAND = "groups";
   /** a Unix command to set permission */
   public static final String SET_PERMISSION_COMMAND = "chmod";
