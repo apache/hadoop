@@ -476,7 +476,9 @@ public class HRegion implements HConstants {
     return this.conf;
   }
 
-  /** @return region directory Path */
+  /** @return region directory Path
+   * @see HRegion#getRegionDir(Path, String)
+   */
   public Path getRegionDir() {
     return this.regiondir;
   }
@@ -878,11 +880,6 @@ public class HRegion implements HConstants {
    */
   private boolean internalFlushcache(long startTime) throws IOException {
     if (startTime == -1) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Not flushing cache for region " +
-            regionInfo.getRegionName() +
-            ": snapshotMemcaches() determined that there was nothing to do");
-      }
       return false;
     }
 
@@ -1633,13 +1630,17 @@ public class HRegion implements HConstants {
    * 
    * @param fs the file system object
    * @param baseDirectory base directory for HBase
-   * @param name region file name
+   * @param name region file name ENCODED!
    * @throws IOException
    * @return True if deleted.
+   * @see HRegionInfo#encodeRegionName(Text)
    */
   static boolean deleteRegion(FileSystem fs, Path baseDirectory, String name)
     throws IOException {
     Path p = HRegion.getRegionDir(fs.makeQualified(baseDirectory), name);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("DELETING region " + p.toString());
+    }
     return fs.delete(p);
   }
 
@@ -1647,8 +1648,9 @@ public class HRegion implements HConstants {
    * Computes the Path of the HRegion
    * 
    * @param dir hbase home directory
-   * @param name region file name
+   * @param name region file name ENCODED!
    * @return Path of HRegion directory
+   * @see HRegionInfo#encodeRegionName(Text)
    */
   public static Path getRegionDir(final Path dir, final String name) {
     return new Path(dir, new Path(HREGIONDIR_PREFIX + name));
