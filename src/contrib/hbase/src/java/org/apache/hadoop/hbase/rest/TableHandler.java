@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.io.Text;
 import org.mortbay.servlet.MultiPartResponse;
 import org.w3c.dom.Document;
@@ -67,14 +68,14 @@ public class TableHandler extends GenericHandler {
       getTableMetadata(request, response, pathSegments[0]);
     }
     else{
-      focusTable(pathSegments[0]);
+      HTable table = getTable(pathSegments[0]);
       if (pathSegments[1].toLowerCase().equals(REGIONS)) {
         // get a region list
-        getTableRegions(request, response);
+        getTableRegions(table, request, response);
       }
       else if (pathSegments[1].toLowerCase().equals(ROW)) {
         // get a row
-        getRow(request, response, pathSegments);
+        getRow(table, request, response, pathSegments);
       }
       else{
         doNotFound(response, "Not handled in TableHandler");
@@ -108,7 +109,7 @@ public class TableHandler extends GenericHandler {
    * @throws IOException
    * Retrieve a row in one of several output formats.
    */
-  private void getRow(final HttpServletRequest request,
+  private void getRow(HTable table, final HttpServletRequest request,
     final HttpServletResponse response, final String [] pathSegments)
   throws IOException {
     // pull the row key out of the path
@@ -132,8 +133,8 @@ public class TableHandler extends GenericHandler {
 
       // Presumption is that this.table has already been focused on target table.
       Map<Text, byte[]> result = timestampStr == null ? 
-        this.table.getRow(new Text(row)) 
-        : this.table.getRow(new Text(row), Long.parseLong(timestampStr));
+        table.getRow(new Text(row)) 
+        : table.getRow(new Text(row), Long.parseLong(timestampStr));
         
       if (result == null || result.size() == 0) {
         doNotFound(response, "Row not found!");
@@ -151,7 +152,7 @@ public class TableHandler extends GenericHandler {
         }
       }
     } else {
-       Map<Text, byte[]> prefiltered_result = this.table.getRow(new Text(row));
+      Map<Text, byte[]> prefiltered_result = table.getRow(new Text(row));
     
       if (prefiltered_result == null || prefiltered_result.size() == 0) {
         doNotFound(response, "Row not found!");
@@ -243,13 +244,14 @@ public class TableHandler extends GenericHandler {
   private void putRow(final HttpServletRequest request,
     final HttpServletResponse response, final String [] pathSegments)
   throws IOException, ServletException {
-    focusTable(pathSegments[0]);
+    HTable table = getTable(pathSegments[0]);
+    
     switch(ContentType.getContentType(request.getHeader(CONTENT_TYPE))) {
       case XML:
-        putRowXml(request, response, pathSegments);
+        putRowXml(table, request, response, pathSegments);
         break;
       case MIME:
-        doNotAcceptable(response);
+        doNotAcceptable(response, "Don't support multipart/related yet...");
         break;
       default:
         doNotAcceptable(response, "Unsupported Accept Header Content: " +
@@ -263,7 +265,7 @@ public class TableHandler extends GenericHandler {
    * @param pathSegments
    * Decode supplied XML and do a put to Hbase.
    */
-  private void putRowXml(final HttpServletRequest request,
+  private void putRowXml(HTable table, final HttpServletRequest request,
     final HttpServletResponse response, final String [] pathSegments)
   throws IOException, ServletException{
 
@@ -291,7 +293,7 @@ public class TableHandler extends GenericHandler {
     try{
       // start an update
       Text key = new Text(pathSegments[2]);
-      lock_id = this.table.startUpdate(key);
+      lock_id = table.startUpdate(key);
 
       // set the columns from the xml
       NodeList columns = doc.getElementsByTagName("column");
@@ -310,15 +312,15 @@ public class TableHandler extends GenericHandler {
         byte[] value = org.apache.hadoop.hbase.util.Base64.decode(value_node.getFirstChild().getNodeValue());
 
         // put the value
-        this.table.put(lock_id, name, value);
+        table.put(lock_id, name, value);
       }
 
       // commit the update
       if (timestamp != null) {
-        this.table.commit(lock_id, Long.parseLong(timestamp));
+        table.commit(lock_id, Long.parseLong(timestamp));
       }
       else{
-        this.table.commit(lock_id);      
+        table.commit(lock_id);      
       }
 
       // respond with a 200
@@ -326,7 +328,7 @@ public class TableHandler extends GenericHandler {
     }
     catch(Exception e){
       if (lock_id != -1) {
-        this.table.abort(lock_id);
+        table.abort(lock_id);
       }
       throw new ServletException(e);
     }
@@ -337,11 +339,11 @@ public class TableHandler extends GenericHandler {
    * @param request
    * @param response
    */
-  private void getTableRegions(final HttpServletRequest request,
-      final HttpServletResponse response)
+  private void getTableRegions(HTable table, final HttpServletRequest request,
+    final HttpServletResponse response)
   throws IOException {
     // Presumption is that this.table has already been focused on target table.
-    Text [] startKeys = this.table.getStartKeys();
+    Text [] startKeys = table.getStartKeys();
     // Presumption is that this.table has already been set against target table
     switch (ContentType.getContentType(request.getHeader(ACCEPT))) {
       case XML:
@@ -445,7 +447,7 @@ public class TableHandler extends GenericHandler {
     final HttpServletResponse response, final String [] pathSegments)
   throws IOException, ServletException {
     // grab the table we're operating on
-    focusTable(getTableName(pathSegments));
+    HTable table = getTable(getTableName(pathSegments));
     
     Text key = new Text(pathSegments[2]);
 
@@ -465,7 +467,7 @@ public class TableHandler extends GenericHandler {
       } else{
         // delete each column in turn      
         for(int i = 0; i < columns.length; i++){
-          this.table.deleteAll(key, new Text(columns[i]));
+          table.deleteAll(key, new Text(columns[i]));
         }
       }
       response.setStatus(202);

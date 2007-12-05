@@ -44,7 +44,7 @@ public class MetaHandler extends GenericHandler {
   }
    
    
-   public void doGet(HttpServletRequest request, HttpServletResponse response, 
+  public void doGet(HttpServletRequest request, HttpServletResponse response, 
     String[] pathSegments)
   throws ServletException, IOException {
     getTables(request, response);
@@ -77,6 +77,7 @@ public class MetaHandler extends GenericHandler {
     final HttpServletResponse response)
   throws IOException {
     HTableDescriptor [] tables = this.admin.listTables();
+
     switch (ContentType.getContentType(request.getHeader(ACCEPT))) {
       case XML:
         setResponseHeader(response, tables.length > 0? 200: 204,
