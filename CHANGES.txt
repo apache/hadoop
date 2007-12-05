@@ -22,6 +22,9 @@ Trunk (unreleased changes)
 
     HADOOP-2288.  Enhance FileSystem API to support access control.
     (Tsz Wo (Nicholas), SZE via dhruba)
+
+    HADOOP-2184.  RPC Support for user permissions and authentication.
+    (Raghu Angadi via dhruba)
     
   NEW FEATURES
 

@@ -35,7 +35,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
@@ -48,9 +47,11 @@ import java.util.Random;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.SocketChannelOutputStream;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.*;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
@@ -65,6 +66,9 @@ public abstract class Server {
    * The first four bytes of Hadoop RPC connections
    */
   public static final ByteBuffer HEADER = ByteBuffer.wrap("hrpc".getBytes());
+  
+  // 1 : Ticket is added to connection header
+  public static final byte CURRENT_VERSION = 1;
   
   /**
    * How much time should be allocated for actually running the handler?
@@ -112,6 +116,14 @@ public abstract class Server {
   public static String getRemoteAddress() {
     InetAddress addr = getRemoteIp();
     return (addr == null) ? null : addr.getHostAddress();
+  }
+
+  /** Returns {@link UserGroupInformation} associated with current RPC.
+   *  returns null if user information is not available.
+   */
+  public static UserGroupInformation getUserInfo() {
+    Call call = CurCall.get();
+    return (call == null) ? null : call.connection.ticket;
   }
   
   private String bindAddress; 
@@ -418,7 +430,10 @@ public abstract class Server {
 
   /** Reads calls from a connection and queues them for handling. */
   private class Connection {
-    private boolean firstData = true;
+    private boolean versionRead = false; //if initial signature and
+                                         //version are read
+    private boolean headerRead = false;  //if the connection header that
+                                         //follows version is read.
     private SocketChannel channel;
     private SelectionKey key;
     private ByteBuffer data;
@@ -432,6 +447,7 @@ public abstract class Server {
     // disconnected, we can say where it used to connect to.
     private String hostAddress;
     private int remotePort;
+    private UserGroupInformation ticket = null;
 
     public Connection(SelectionKey key, SocketChannel channel, 
                       long lastContact) {
@@ -476,42 +492,74 @@ public abstract class Server {
     }
 
     public int readAndProcess() throws IOException, InterruptedException {
-      int count = -1;
-      if (dataLengthBuffer.remaining() > 0) {
-        count = channel.read(dataLengthBuffer);       
-        if (count < 0 || dataLengthBuffer.remaining() > 0) 
-          return count;        
-        dataLengthBuffer.flip(); 
-        // Is this a new style header?
-        if (firstData && HEADER.equals(dataLengthBuffer)) {
-          // If so, read the version
+      while (true) {
+        /* Read at most one RPC. If the header is not read completely yet
+         * then iterate until we read first RPC or until there is no data left.
+         */    
+        int count = -1;
+        if (dataLengthBuffer.remaining() > 0) {
+          count = channel.read(dataLengthBuffer);       
+          if (count < 0 || dataLengthBuffer.remaining() > 0) 
+            return count;
+        }
+      
+        if (!versionRead) {
+          //Every connection is expected to send the header.
           ByteBuffer versionBuffer = ByteBuffer.allocate(1);
           count = channel.read(versionBuffer);
-          if (count < 0) {
+          if (count <= 0) {
             return count;
           }
-          // read the first length
+          int version = versionBuffer.get(0);
+          
+          dataLengthBuffer.flip();          
+          if (!HEADER.equals(dataLengthBuffer) || version != CURRENT_VERSION) {
+            //Warning is ok since this is not supposed to happen.
+            LOG.warn("Incorrect header or version mismatch from " + 
+                     hostAddress + ":" + remotePort);
+            return -1;
+          }
           dataLengthBuffer.clear();
-          count = channel.read(dataLengthBuffer);
-          if (count < 0 || dataLengthBuffer.remaining() > 0) {
-            return count;
-          }
-          dataLengthBuffer.flip();
-          firstData = false;
+          versionRead = true;
+          continue;
         }
-        dataLength = dataLengthBuffer.getInt();
-        data = ByteBuffer.allocate(dataLength);
+        
+        if (data == null) {
+          dataLengthBuffer.flip();
+          dataLength = dataLengthBuffer.getInt();
+          data = ByteBuffer.allocate(dataLength);
+        }
+        
+        count = channel.read(data);
+        
+        if (data.remaining() == 0) {
+          dataLengthBuffer.clear();
+          data.flip();
+          if (headerRead) {
+            processData();
+            data = null;
+            return count;
+          } else {
+            processHeader();
+            headerRead = true;
+            data = null;
+            continue;
+          }
+        } 
+        return count;
       }
-      count = channel.read(data);
-      if (data.remaining() == 0) {
-        data.flip();
-        processData();
-        dataLengthBuffer.flip();
-        data = null; 
-      }
-      return count;
     }
 
+    /// Reads the header following version
+    private void processHeader() throws IOException {
+      /* In the current version, it is just a ticket.
+       * Later we could introduce a "ConnectionHeader" class.
+       */
+      DataInputStream in =
+        new DataInputStream(new ByteArrayInputStream(data.array()));
+      ticket = (UserGroupInformation) ObjectWritable.readObject(in, conf);
+    }
+    
     private void processData() throws  IOException, InterruptedException {
       DataInputStream dis =
         new DataInputStream(new ByteArrayInputStream(data.array()));

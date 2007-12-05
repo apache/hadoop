@@ -26,6 +26,8 @@ import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.dfs.DistributedFileSystem.DiskStatus;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.*;
 
 import org.apache.commons.logging.*;
@@ -38,6 +40,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.net.SocketFactory;
+import javax.security.auth.login.LoginException;
 
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and 
@@ -112,9 +115,16 @@ class DFSClient implements FSConstants {
     methodNameToPolicyMap.put("getEditLogSize", methodPolicy);
     methodNameToPolicyMap.put("create", methodPolicy);
 
+    UserGroupInformation userInfo;
+    try {
+      userInfo = UnixUserGroupInformation.login(conf);
+    } catch (LoginException e) {
+      throw new IOException(e.getMessage());
+    }
+
     return (ClientProtocol) RetryProxy.create(ClientProtocol.class,
         RPC.getProxy(ClientProtocol.class,
-            ClientProtocol.versionID, nameNodeAddr, conf,
+            ClientProtocol.versionID, nameNodeAddr, userInfo, conf,
             NetUtils.getSocketFactory(conf, ClientProtocol.class)),
         methodNameToPolicyMap);
   }

@@ -37,6 +37,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.conf.*;
 
 /** A simple RPC mechanism.
@@ -169,12 +170,13 @@ public class RPC {
 
   private static class Invoker implements InvocationHandler {
     private InetSocketAddress address;
+    private UserGroupInformation ticket;
     private Client client;
 
-    public Invoker(InetSocketAddress address, Configuration conf,
-        SocketFactory factory) {
-
+    public Invoker(InetSocketAddress address, UserGroupInformation ticket, 
+                   Configuration conf, SocketFactory factory) {
       this.address = address;
+      this.ticket = ticket;
       this.client = getClient(conf, factory);
     }
 
@@ -182,7 +184,7 @@ public class RPC {
       throws Throwable {
       long startTime = System.currentTimeMillis();
       ObjectWritable value = (ObjectWritable)
-        client.call(new Invocation(method, args), address);
+        client.call(new Invocation(method, args), address, ticket);
       long callTime = System.currentTimeMillis() - startTime;
       LOG.debug("Call: " + method.getName() + " " + callTime);
       return value.get();
@@ -261,11 +263,19 @@ public class RPC {
   public static VersionedProtocol getProxy(Class<?> protocol,
       long clientVersion, InetSocketAddress addr, Configuration conf,
       SocketFactory factory) throws IOException {
+    return getProxy(protocol, clientVersion, addr, null, conf, factory);
+  }
+  
+  /** Construct a client-side proxy object that implements the named protocol,
+   * talking to a server at the named address. */
+  public static VersionedProtocol getProxy(Class<?> protocol,
+      long clientVersion, InetSocketAddress addr, UserGroupInformation ticket,
+      Configuration conf, SocketFactory factory) throws IOException {    
 
     VersionedProtocol proxy =
         (VersionedProtocol) Proxy.newProxyInstance(
             protocol.getClassLoader(), new Class[] { protocol },
-            new Invoker(addr, conf, factory));
+            new Invoker(addr, ticket, conf, factory));
     long serverVersion = proxy.getProtocolVersion(protocol.getName(), 
                                                   clientVersion);
     if (serverVersion == clientVersion) {
