@@ -195,6 +195,9 @@ Trunk (unreleased changes)
     would be ignored even if it was set in hadoop-site.xml.
     (Amareshwari Sri Ramadasu via ddas)
 
+    HADOOP-2349.  Improve code layout in file system transaction logging code.
+    (Tsz Wo (Nicholas), SZE via dhruba)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES

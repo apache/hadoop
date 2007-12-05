@@ -603,7 +603,7 @@ class FSEditLog {
    * Write an operation to the edit log. Do not sync to persistent
    * store yet.
    */
-  synchronized void logEdit(byte op, Writable w1, Writable w2) {
+  synchronized void logEdit(byte op, Writable ... writables) {
     assert this.getNumEditStreams() > 0 : "no editlog streams";
     long start = FSNamesystem.now();
     for (int idx = 0; idx < editStreams.size(); idx++) {
@@ -611,11 +611,8 @@ class FSEditLog {
       try {
         DataOutputStream od = eStream.getOutputStream();
         od.write(op);
-        if (w1 != null) {
-          w1.write(od);
-        }
-        if (w2 != null) {
-          w2.write(od);
+        for(Writable w : writables) {
+          w.write(od);
         }
       } catch (IOException ie) {
         try {
@@ -763,7 +760,7 @@ class FSEditLog {
       new UTF8(path),
       FSEditLog.toLogLong(newNode.getModificationTime())
     };
-    logEdit(OP_MKDIR, new ArrayWritable(UTF8.class, info), null);
+    logEdit(OP_MKDIR, new ArrayWritable(UTF8.class, info));
   }
   
   /** 
@@ -775,7 +772,7 @@ class FSEditLog {
       new UTF8(src),
       new UTF8(dst),
       FSEditLog.toLogLong(timestamp)};
-    logEdit(OP_RENAME, new ArrayWritable(UTF8.class, info), null);
+    logEdit(OP_RENAME, new ArrayWritable(UTF8.class, info));
   }
   
   /** 
@@ -794,7 +791,7 @@ class FSEditLog {
     UTF8 info[] = new UTF8[] { 
       new UTF8(src),
       FSEditLog.toLogLong(timestamp)};
-    logEdit(OP_DELETE, new ArrayWritable(UTF8.class, info), null);
+    logEdit(OP_DELETE, new ArrayWritable(UTF8.class, info));
   }
   
   static UTF8 toLogReplication(short replication) {
