@@ -56,6 +56,8 @@ Trunk (unreleased changes)
                (Bryan Duxbury via Stack)
    HADOOP-2332 Meta table data selection in Hbase Shell
                (Edward Yoon via Stack)
+   HADOOP-2347 REST servlet not thread safe but run in a threaded manner
+               (Bryan Duxbury via Stack)
 
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable

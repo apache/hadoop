@@ -31,6 +31,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HScannerInterface;
@@ -248,8 +249,8 @@ public class ScannerHandler extends GenericHandler {
   private void openScanner(final HttpServletRequest request,
       final HttpServletResponse response, final String [] pathSegments)
   throws IOException, ServletException {
-    // focus on the table
-    focusTable(getTableName(pathSegments));
+    // get the table
+    HTable table = getTable(getTableName(pathSegments));
     
     // get the list of columns we're supposed to interact with
     String[] raw_columns = request.getParameterValues(COLUMN);
@@ -284,8 +285,8 @@ public class ScannerHandler extends GenericHandler {
         HConstants.UTF8_ENCODING));
 
     HScannerInterface scanner = (request.getParameter(END_ROW) == null)?
-       this.table.obtainScanner(columns, startRow):
-       this.table.obtainScanner(columns, startRow, endRow);
+       table.obtainScanner(columns, startRow):
+       table.obtainScanner(columns, startRow, endRow);
     
     // Make a scanner id by hashing the object toString value (object name +
     // an id).  Will make identifier less burdensome and more url friendly.

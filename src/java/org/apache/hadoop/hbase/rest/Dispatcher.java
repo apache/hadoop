@@ -61,9 +61,6 @@ import org.apache.hadoop.hbase.util.InfoServer;
  */
 public class Dispatcher extends javax.servlet.http.HttpServlet
 implements javax.servlet.Servlet {
-  
-  private static final long serialVersionUID = 1045003206345359301L;
-  
   private MetaHandler metaHandler;
   private TableHandler tableHandler;
   private ScannerHandler scannerHandler;

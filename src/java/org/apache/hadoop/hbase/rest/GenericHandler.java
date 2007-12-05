@@ -44,12 +44,8 @@ import org.znerd.xmlenc.XMLOutputter;
  * REST handler types take advantage of.
  */
 public abstract class GenericHandler {
-
-  protected static final long serialVersionUID = 6939910503474376143L;
-  
   protected HBaseConfiguration conf;
   protected HBaseAdmin admin;
-  protected HTable table = null;
 
   protected static final String ACCEPT = "accept";
   protected static final String COLUMN = "column";
@@ -255,16 +251,10 @@ public abstract class GenericHandler {
     }  
   }
  
-  protected void focusTable(final String tableName) throws IOException {
-    // Do we have an HTable instance to suit?  TODO, keep a pool of
-    // instances of HTable. For now, allocate a new one each time table
-    // focus changes.
-    if (this.table == null ||
-        !this.table.getTableName().toString().equals(tableName)) {
-      if (this.table != null) {
-        this.table.close();
-      }
-      this.table = new HTable(this.conf, new Text(tableName));
-    }
+  /*
+   * Get an HTable instance by it's table name.
+   */
+  protected HTable getTable(final String tableName) throws IOException {
+    return new HTable(this.conf, new Text(tableName));
   }
 }
