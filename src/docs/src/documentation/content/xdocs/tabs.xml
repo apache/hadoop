@@ -14,7 +14,8 @@
     directory (ends in '/'), in which case /index.html will be added
   -->
 
-  <tab label="Main" dir="" />  
+  <tab label="Project" href="http://lucene.apache.org/hadoop/" />
   <tab label="Wiki" href="http://wiki.apache.org/lucene-hadoop" />
+  <tab label="Hadoop 0.16 Documentation" dir="" />  
   
 </tabs>

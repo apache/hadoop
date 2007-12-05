@@ -607,6 +607,14 @@
   <!-- ================================================================== -->
   <!-- Documentation                                                      -->
   <!-- ================================================================== -->
+  
+  <target name="docs">
+    <exec dir="src/docs" executable="forrest"/>
+    <copy todir="docs/">
+      <fileset dir="src/docs/build/site/" />
+    </copy>
+  </target>
+
   <target name="javadoc" depends="default-doc" description="Generate documentation">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
@@ -764,7 +772,8 @@
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
   <target name="clean" depends="clean-contrib" description="Clean.  Delete the build files, and their directories">
-  	<delete dir="${build.dir}"/>
+    <delete dir="${build.dir}"/>
+    <delete dir="src/docs/build"/>
   </target>
 
   <!-- ================================================================== -->

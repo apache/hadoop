@@ -5,7 +5,7 @@
 <meta content="Apache Forrest" name="Generator">
 <meta name="Forrest-version" content="0.8">
 <meta name="Forrest-skin-name" content="pelt">
-<title>Welcome to Hadoop!</title>
+<title>Hadoop Documentation</title>
 <link type="text/css" href="skin/basic.css" rel="stylesheet">
 <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
 <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
@@ -60,11 +60,14 @@
     |start Tabs
     +-->
 <ul id="tabs">
-<li class="current">
-<a class="selected" href="index.html">Main</a>
+<li>
+<a class="unselected" href="http://lucene.apache.org/hadoop/">Project</a>
 </li>
 <li>
 <a class="unselected" href="http://wiki.apache.org/lucene-hadoop">Wiki</a>
+</li>
+<li class="current">
+<a class="selected" href="index.html">Hadoop 0.16 Documentation</a>
 </li>
 </ul>
 <!--+
@@ -99,25 +102,10 @@ document.write("Last Published: " + document.lastModified);
     |start Menu
     +-->
 <div id="menu">
-<div onclick="SwitchMenu('menu_1.1', 'skin/')" id="menu_1.1Title" class="menutitle">Project</div>
-<div id="menu_1.1" class="menuitemgroup">
-<div class="menuitem">
-<a href="releases.html">Releases</a>
-</div>
-<div class="menuitem">
-<a href="releases.html#News">News</a>
-</div>
-<div class="menuitem">
-<a href="credits.html">Credits</a>
-</div>
-<div class="menuitem">
-<a href="http://www.cafepress.com/hadoop/">Buy Stuff</a>
-</div>
-</div>
-<div onclick="SwitchMenu('menu_1.2', 'skin/')" id="menu_1.2Title" class="menutitle">Documentation</div>
-<div id="menu_1.2" class="menuitemgroup">
-<div class="menuitem">
-<a href="documentation.html">Overview</a>
+<div onclick="SwitchMenu('menu_selected_1.1', 'skin/')" id="menu_selected_1.1Title" class="menutitle" style="background-image: url('skin/images/chapter_open.gif');">Documentation</div>
+<div id="menu_selected_1.1" class="selectedmenuitemgroup" style="display: block;">
+<div class="menupage">
+<div class="menupagetitle">Overview</div>
 </div>
 <div class="menuitem">
 <a href="quickstart.html">Quickstart</a>
@@ -141,25 +129,7 @@ document.write("Last Published: " + document.lastModified);
 <a href="http://wiki.apache.org/lucene-hadoop/FAQ">FAQ</a>
 </div>
 <div class="menuitem">
-<a href="mailing_lists.html#Users">Mailing Lists</a>
-</div>
-</div>
-<div onclick="SwitchMenu('menu_1.3', 'skin/')" id="menu_1.3Title" class="menutitle">Developers</div>
-<div id="menu_1.3" class="menuitemgroup">
-<div class="menuitem">
-<a href="mailing_lists.html#Developers">Mailing Lists</a>
-</div>
-<div class="menuitem">
-<a href="issue_tracking.html">Issue Tracking</a>
-</div>
-<div class="menuitem">
-<a href="version_control.html">Version Control</a>
-</div>
-<div class="menuitem">
-<a href="http://lucene.zones.apache.org:8080/hudson/job/Hadoop-Nightly/">Nightly Build</a>
-</div>
-<div class="menuitem">
-<a href="irc.html">IRC Channel</a>
+<a href="http://lucene.apache.org/hadoop/mailing_lists.html">Mailing Lists</a>
 </div>
 </div>
 <div id="credit">
@@ -184,122 +154,45 @@ document.write("Last Published: " + document.lastModified);
 <a class="dida" href="index.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
         PDF</a>
 </div>
-<h1>Welcome to Hadoop!</h1>
-<div id="minitoc-area">
-<ul class="minitoc">
-<li>
-<a href="#Getting+Started"> Getting Started </a>
-</li>
-<li>
-<a href="#Getting+Involved"> Getting Involved </a>
-</li>
-</ul>
-</div>
+<h1>Hadoop Documentation</h1>
     
 <p>
-    Hadoop is a software platform that lets one easily write and run
-    applications that process vast amounts of data.</p>
-
-    
-<p>Here's what makes Hadoop especially useful:</p>
+    The following documents provide concepts and procedures that will help you 
+    get started using Hadoop. If you have more questions, you can ask the 
+    <a href="http://lucene.apache.org/hadoop/mailing_lists.html">mailing list</a> or browse the archives.
+    </p>
     
 <ul>
       
 <li>
-<strong>Scalable:</strong>
-      Hadoop can reliably store and process petabytes.</li>
+<a href="quickstart.html">Hadoop Quickstart</a>
+</li>
       
 <li>
-<strong>Economical:</strong>
-      It distributes the data and processing across clusters of
-      commonly available computers. These clusters can number into the
-      thousands of nodes.</li>
+<a href="cluster_setup.html">Hadoop Cluster Setup</a>
+</li>
       
 <li>
-<strong>Efficient:</strong>
-      By distributing the data, Hadoop can process it in parallel on
-      the nodes where the data is located. This makes it extremely
-      rapid.</li>
+<a href="hdfs_design.html">Hadoop Distributed File System</a>
+</li>
       
 <li>
-<strong>Reliable:</strong>
-      Hadoop automatically maintains multiple copies of data and
-      automatically redeploys computing tasks based on failures.</li>
+<a href="mapred_tutorial.html">Hadoop Map-Reduce Tutorial</a>
+</li>
+      
+<li>
+<a href="api/index.html">API Docs</a>
+</li>
+      
+<li>
+<a href="http://wiki.apache.org/lucene-hadoop/">Wiki</a>
+</li>
+      
+<li>
+<a href="http://wiki.apache.org/lucene-hadoop/FAQ">FAQ</a>
+</li>
     
 </ul>
-    
-<p>
-    Hadoop implements <a href="http://wiki.apache.org/lucene-hadoop/HadoopMapReduce">MapReduce</a>,
-    using the Hadoop Distributed File System (<a href="hdfs_design.html"><acronym title="Hadoop Distributed File System">HDFS</acronym></a>) (see figure below.)  MapReduce divides
-    applications into many small blocks of work.  HDFS creates
-    multiple replicas of data blocks for reliability, placing them on
-    compute nodes around the cluster.  MapReduce can then process the
-    data where it is located.
-    </p>
-
-    
-<p>Hadoop has been demonstrated on clusters with 2000 nodes.
-    The current design target is 10,000 node clusters.</p>
-
-    
-<p>Hadoop is a <a href="http://lucene.apache.org/">Lucene</a> sub-project
-    that contains the distributed computing platform that was
-    formerly a part of <a href="http://lucene.apache.org/nutch/">Nutch</a>. 
-    </p>
-
-    
-<p>For more information about Hadoop, please see the <a href="http://wiki.apache.org/lucene-hadoop/">Hadoop wiki.</a>
-</p>     
-
-
-    
-<div id="" style="text-align: center;">
-<img id="" class="figure" alt="architecture" src="images/architecture.gif"></div>
-
-    
-<a name="N1004E"></a><a name="Getting+Started"></a>
-<h2 class="h3"> Getting Started </h2>
-<div class="section">
-<p>
-      The Hadoop project plans to scale Hadoop up to handling thousands of computers. However, to begin with you can start by installing in on a single machine or a very small cluster.
-      </p>
-<ol>
-        
-<li>
-<a href="documentation.html">Learn about</a> Hadoop by reading the documentation.</li>
-        
-<li>
-<a href="releases.html">Download</a> Hadoop from the release page.</li>
-        
-<li>Hadoop <a href="quickstart.html">Quickstart</a>.</li>
-        
-<li>
-<a href="cluster_setup.html">Hadoop Cluster Setup</a>.</li>
-        
-<li>
-<a href="mailing_lists.html">Discuss it</a> on the mailing list.</li>
-      
-</ol>
-</div>
-
-    
-<a name="N1007A"></a><a name="Getting+Involved"></a>
-<h2 class="h3"> Getting Involved </h2>
-<div class="section">
-<p>
-      Hadoop is an open source volunteer project under the Apache Software Foundation. We encourage you to learn about the project and contribute your expertise. Here are some starter links:
-      </p>
-<ol>
-        
-<li>See our <a href="http://wiki.apache.org/lucene-hadoop/HowToContribute">How to Contribute to Hadoop</a> page.</li>
-        
-<li>Give us <a href="issue_tracking.html">feedback</a>: What can we do better?</li>
-        
-<li>Join the <a href="mailing_lists.html">mailing list</a>: Meet the community.</li>
-      
-</ol>
-</div>
-
   
 </div>
 <!--+

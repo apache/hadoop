@@ -16,15 +16,8 @@ See http://forrest.apache.org/docs/linking.html for more info.
 
 <site label="Hadoop" href="" xmlns="http://apache.org/forrest/linkmap/1.0">
 
-  <project label="Project">
-    <releases  label="Releases"           href="releases.html" />
-    <news      label="News"               href="releases.html#News" />
-    <credits   label="Credits"            href="credits.html" /> 
-    <store     label="Buy Stuff"          href="ext:store" />    
-  </project>
-
   <docs label="Documentation"> 
-    <overview  label="Overview"           href="documentation.html" />
+    <overview  label="Overview"           href="index.html" />
     <quickstart label="Quickstart"        href="quickstart.html" />
     <setup     label="Cluster Setup"      href="cluster_setup.html" />
     <hdfs      label="HDFS Architecture"  href="hdfs_design.html" />
@@ -32,23 +25,16 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <api       label="API Docs"           href="ext:api/index" />
     <wiki      label="Wiki"               href="ext:wiki" />
     <faq       label="FAQ"                href="ext:faq" />
-    <usermail  label="Mailing Lists"      href="mailing_lists.html#Users" />
+    <lists     label="Mailing Lists"      href="ext:lists" />
   </docs>
 
-  <resources label="Developers">
-    <devmail   label="Mailing Lists"      href="mailing_lists.html#Developers" />
-    <issues    label="Issue Tracking"     href="issue_tracking.html" />
-    <vcs       label="Version Control"    href="version_control.html" />
-    <nightly   label="Nightly Build"      href="ext:nightly" />
-    <irc       label="IRC Channel"        href="irc.html" />
-  </resources>
-
   <external-refs>
+    <site      href="http://lucene.apache.org/hadoop/"/>
+    <lists     href="http://lucene.apache.org/hadoop/mailing_lists.html"/>
+    <releases  href="http://lucene.apache.org/hadoop/releases.html"/>
+    <jira      href="http://lucene.apache.org/hadoop/issue_tracking.html"/>
     <wiki      href="http://wiki.apache.org/lucene-hadoop/" />
     <faq       href="http://wiki.apache.org/lucene-hadoop/FAQ" />
-    <nightly   href="http://lucene.zones.apache.org:8080/hudson/job/Hadoop-Nightly/" />
-    <releases  href="http://www.apache.org/dyn/closer.cgi/lucene/hadoop/" />
-    <store     href="http://www.cafepress.com/hadoop/" />
     <lucene    href="http://lucene.apache.org/" />
     <nutch     href="http://lucene.apache.org/nutch/" />
     <hadoop-default href="http://lucene.apache.org/hadoop/hadoop-default.html" />

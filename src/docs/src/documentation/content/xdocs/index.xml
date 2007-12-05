@@ -1,87 +1,28 @@
 <?xml version="1.0"?>
 
-<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" 
-          "http://forrest.apache.org/dtd/document-v20.dtd">
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
 
-<document> 
-
-  <header> 
-    <title>Welcome to Hadoop!</title> 
-  </header> 
-
+<document>
+  
+  <header>
+    <title>Hadoop Documentation</title>
+  </header>
+  
   <body>
     <p>
-    Hadoop is a software platform that lets one easily write and run
-    applications that process vast amounts of data.</p>
-
-    <p>Here's what makes Hadoop especially useful:</p>
+    The following documents provide concepts and procedures that will help you 
+    get started using Hadoop. If you have more questions, you can ask the 
+    <a href="ext:lists">mailing list</a> or browse the archives.
+    </p>
     <ul>
-      <li><strong>Scalable:</strong>
-      Hadoop can reliably store and process petabytes.</li>
-      <li><strong>Economical:</strong>
-      It distributes the data and processing across clusters of
-      commonly available computers. These clusters can number into the
-      thousands of nodes.</li>
-      <li><strong>Efficient:</strong>
-      By distributing the data, Hadoop can process it in parallel on
-      the nodes where the data is located. This makes it extremely
-      rapid.</li>
-      <li><strong>Reliable:</strong>
-      Hadoop automatically maintains multiple copies of data and
-      automatically redeploys computing tasks based on failures.</li>
+      <li><a href="quickstart.html">Hadoop Quickstart</a></li>
+      <li><a href="cluster_setup.html">Hadoop Cluster Setup</a></li>
+      <li><a href="hdfs_design.html">Hadoop Distributed File System</a></li>
+      <li><a href="mapred_tutorial.html">Hadoop Map-Reduce Tutorial</a></li>
+      <li><a href="ext:api/index">API Docs</a></li>
+      <li><a href="ext:wiki">Wiki</a></li>
+      <li><a href="ext:faq">FAQ</a></li>
     </ul>
-    <p>
-    Hadoop implements <a
-    href="http://wiki.apache.org/lucene-hadoop/HadoopMapReduce">MapReduce</a>,
-    using the Hadoop Distributed File System (<a
-    href="hdfs_design.html"><acronym title="Hadoop Distributed File
-    System">HDFS</acronym></a>) (see figure below.)  MapReduce divides
-    applications into many small blocks of work.  HDFS creates
-    multiple replicas of data blocks for reliability, placing them on
-    compute nodes around the cluster.  MapReduce can then process the
-    data where it is located.
-    </p>
-
-    <p>Hadoop has been demonstrated on clusters with 2000 nodes.
-    The current design target is 10,000 node clusters.</p>
-
-    <p>Hadoop is a <a href="ext:lucene">Lucene</a> sub-project
-    that contains the distributed computing platform that was
-    formerly a part of <a href="ext:nutch">Nutch</a>. 
-    </p>
-
-    <p>For more information about Hadoop, please see the <a
-    href="ext:wiki">Hadoop wiki.</a></p>     
-
-
-    <figure alt="architecture" src="images/architecture.gif" />
-
-    <section>
-      <title> Getting Started </title>
-      <p>
-      The Hadoop project plans to scale Hadoop up to handling thousands of computers. However, to begin with you can start by installing in on a single machine or a very small cluster.
-      </p>
-      <ol>
-        <li><a href="documentation.html">Learn about</a> Hadoop by reading the documentation.</li>
-        <li><a href="releases.html">Download</a> Hadoop from the release page.</li>
-        <li>Hadoop <a href="quickstart.html">Quickstart</a>.</li>
-        <li><a href="cluster_setup.html">Hadoop Cluster Setup</a>.</li>
-        <li><a href="mailing_lists.html">Discuss it</a> on the mailing list.</li>
-      </ol>
-    </section>
-
-    <section>
-      <title> Getting Involved </title>
-      <p>
-      Hadoop is an open source volunteer project under the Apache Software Foundation. We encourage you to learn about the project and contribute your expertise. Here are some starter links:
-      </p>
-      <ol>
-        <li>See our <a href="http://wiki.apache.org/lucene-hadoop/HowToContribute">How to Contribute to Hadoop</a> page.</li>
-        <li>Give us <a href="issue_tracking.html">feedback</a>: What can we do better?</li>
-        <li>Join the <a href="mailing_lists.html">mailing list</a>: Meet the community.</li>
-      </ol>
-    </section>
-
   </body>
-
+  
 </document>
