@@ -151,11 +151,12 @@ public class HLog implements HConstants {
     try {
       for (int i = 0; i < logfiles.length; i++) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Splitting " + logfiles[i]);
+          LOG.debug("Splitting " + i + " of " + logfiles.length + ": " +
+            logfiles[i]);
         }
         // Check for empty file.
         if (fs.getFileStatus(logfiles[i]).getLen() <= 0) {
-          LOG.warn("Skipping " + logfiles[i].toString() +
+          LOG.info("Skipping " + logfiles[i].toString() +
             " because zero length");
           continue;
         }
@@ -164,25 +165,28 @@ public class HLog implements HConstants {
         try {
           HLogKey key = new HLogKey();
           HLogEdit val = new HLogEdit();
-          while (in.next(key, val)) {
+          int count = 0;
+          for (; in.next(key, val); count++) {
             Text regionName = key.getRegionName();
             SequenceFile.Writer w = logWriters.get(regionName);
             if (w == null) {
               Path logfile = new Path(HRegion.getRegionDir(rootDir,
                 HRegionInfo.encodeRegionName(regionName)),
                 HREGION_OLDLOGFILE_NAME);
-              
               if (LOG.isDebugEnabled()) {
-                LOG.debug("getting new log file writer for path " + logfile);
+                LOG.debug("Creating new log file writer for path " + logfile);
               }
               w = SequenceFile.createWriter(fs, conf, logfile, HLogKey.class,
                 HLogEdit.class);
               logWriters.put(regionName, w);
             }
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Edit " + key.toString() + "=" + val.toString());
+            if (count % 100 == 0 && count > 0 && LOG.isDebugEnabled()) {
+              LOG.debug("Applied " + count + " edits");
             }
             w.append(key, val);
+          }
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Applied " + count + " total edits");
           }
         } finally {
           in.close();

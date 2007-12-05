@@ -245,9 +245,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           String serverName = Writables.bytesToString(results.get(COL_SERVER));
           long startCode = Writables.bytesToLong(results.get(COL_STARTCODE));
           if (LOG.isDebugEnabled()) {
-            LOG.debug(Thread.currentThread().getName() + " scanner: " +
-              Long.valueOf(scannerId) + " regioninfo: {" + info.toString() +
-              "}, server: " + serverName + ", startCode: " + startCode);
+            LOG.debug(Thread.currentThread().getName() + " regioninfo: {" +
+              info.toString() + "}, server: " + serverName + ", startCode: " +
+              startCode);
           }
 
           // Note Region has been assigned.
@@ -447,9 +447,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         storedInfo = serversToServerInfo.get(serverName);
         deadServer = deadServers.contains(serverName);
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Checking " + info.getRegionName() + " is assigned");
-      }
+
       /*
        * If the server is not dead and either:
        *   the stored info is not null and the start code does not match

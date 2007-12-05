@@ -91,6 +91,7 @@ Trunk (unreleased changes)
                (Edward Yoon via Stack)
    HADOOP-2299 Support inclusive scans (Bryan Duxbury via Stack)
    HADOOP-2333 Client side retries happen at the wrong level
+   HADOOP-2357 Compaction cleanup; less deleting + prevent possible file leaks
 
 
 Release 0.15.1
