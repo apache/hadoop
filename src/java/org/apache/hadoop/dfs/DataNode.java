@@ -115,10 +115,10 @@ public class DataNode implements FSConstants, Runnable {
   int defaultBytesPerChecksum = 512;
 
   // The following three fields are to support balancing
-  final private static long BALANCE_BANDWIDTH = 1024L*1024; // 1MB/s
-  final private static short MAX_BALANCING_THREADS = 5;
+  final static short MAX_BALANCING_THREADS = 5;
   private Semaphore balancingSem = new Semaphore(MAX_BALANCING_THREADS);
-  private Throttler balancingThrottler = new Throttler(BALANCE_BANDWIDTH);
+  long balanceBandwidth;
+  private Throttler balancingThrottler;
 
   private static class DataNodeMetrics implements Updater {
     private final MetricsRecord metricsRecord;
@@ -287,6 +287,11 @@ public class DataNode implements FSConstants, Runnable {
       blockReportIntervalBasis - new Random().nextInt((int)(blockReportIntervalBasis/10));
     this.heartBeatInterval = conf.getLong("dfs.heartbeat.interval", HEARTBEAT_INTERVAL) * 1000L;
     DataNode.nameNodeAddr = nameNodeAddr;
+
+    //set up parameter for cluster balancing
+    this.balanceBandwidth = conf.getLong("dfs.balance.bandwidthPerSec", 1024L*1024);
+    LOG.info("Balancing bandwith is "+balanceBandwidth + " bytes/s");
+    this.balancingThrottler = new Throttler(balanceBandwidth);
 
     //create a servlet to serve full-file content
     String infoAddr = conf.get("dfs.datanode.http.bindAddress", "0.0.0.0:50075");
@@ -554,8 +559,10 @@ public class DataNode implements FSConstants, Runnable {
         synchronized(receivedBlockList) {
           synchronized(delHints) {
             int numBlocks = receivedBlockList.size();
-            if (receivedBlockList.size() > 0) {
-              assert(numBlocks==delHints.size());
+            if (numBlocks > 0) {
+              if(numBlocks!=delHints.size()) {
+                LOG.warn("Panic: receiveBlockList and delHints are not of the same length" );
+              }
               //
               // Send newly-received blockids to namenode
               //
@@ -565,6 +572,9 @@ public class DataNode implements FSConstants, Runnable {
           }
         }
         if (blockArray != null) {
+          if(delHintArray == null || delHintArray.length != blockArray.length ) {
+            LOG.warn("Panic: block array & delHintArray are not the same" );
+          }
           namenode.blockReceived(dnRegistration, blockArray, delHintArray);
           synchronized (receivedBlockList) {
             synchronized (delHints) {
@@ -753,6 +763,9 @@ public class DataNode implements FSConstants, Runnable {
    * client? For now we don't.
    */
   private void notifyNamenodeReceivedBlock(Block block, String delHint) {
+    if(block==null || delHint==null) {
+      throw new IllegalArgumentException(block==null?"Block is null":"delHint is null");
+    }
     synchronized (receivedBlockList) {
       synchronized (delHints) {
         receivedBlockList.add(block);
@@ -1149,7 +1162,7 @@ public class DataNode implements FSConstants, Runnable {
         // notify name node
         notifyNamenodeReceivedBlock(block, sourceID);
 
-        LOG.info("Received block " + block + 
+        LOG.info("Moved block " + block + 
             " from " + s.getRemoteSocketAddress());
       } catch (IOException ioe) {
         opStatus = OP_STATUS_ERROR;
@@ -1181,7 +1194,7 @@ public class DataNode implements FSConstants, Runnable {
 
     /** Constructor */
     Throttler(long bandwidthPerSec) {
-      this(1000, bandwidthPerSec);  // by default throttling period is 1s
+      this(500, bandwidthPerSec);  // by default throttling period is 500ms 
     }
 
     /** Constructor */

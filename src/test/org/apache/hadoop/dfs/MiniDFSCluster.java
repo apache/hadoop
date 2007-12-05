@@ -234,6 +234,13 @@ public class MiniDFSCluster {
           + "] is less than the number of datanodes [" + numDataNodes + "].");
     }
 
+    if (simulatedCapacities != null 
+        && numDataNodes > simulatedCapacities.length) {
+      throw new IllegalArgumentException( "The length of simulatedCapacities [" 
+          + simulatedCapacities.length
+          + "] is less than the number of datanodes [" + numDataNodes + "].");
+    }
+
     // Set up the right ports for the datanodes
     conf.set("dfs.datanode.bindAddress", "0.0.0.0:0");
     conf.set("dfs.datanode.http.bindAddress", "0.0.0.0:0");
@@ -263,9 +270,8 @@ public class MiniDFSCluster {
       }
       if (simulatedCapacities != null) {
         dnConf.setBoolean("dfs.datanode.simulateddatastorage", true);
-      }
-      if (simulatedCapacities != null && i < simulatedCapacities.length) {
-        dnConf.setLong(SimulatedFSDataset.CONFIG_PROPERTY_CAPACITY, simulatedCapacities[i]);
+        dnConf.setLong(SimulatedFSDataset.CONFIG_PROPERTY_CAPACITY,
+            simulatedCapacities[i-curDatanodesNum]);
       }
       System.out.println("Starting DataNode " + i + " with dfs.data.dir: " 
                          + dnConf.get("dfs.data.dir"));

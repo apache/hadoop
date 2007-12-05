@@ -75,7 +75,7 @@ class DFSClient implements FSConstants {
   private TreeMap<String, OutputStream> pendingCreates =
     new TreeMap<String, OutputStream>();
     
-  private static ClientProtocol createNamenode(
+  static ClientProtocol createNamenode(
       InetSocketAddress nameNodeAddr, Configuration conf)
     throws IOException {
     RetryPolicy timeoutPolicy = RetryPolicies.exponentialBackoffRetry(

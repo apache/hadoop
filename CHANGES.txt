@@ -37,6 +37,9 @@ Trunk (unreleased changes)
 
     HADOOP-2299.  Defination of a login interface.  A simple implementation for
     Unix users and groups. (Hairong Kuang via dhruba)
+
+    HADOOP-1652.  A utility to balance data among datanodes in a HDFS cluster.
+    (Hairong Kuang via dhruba)
     
   IMPROVEMENTS
 

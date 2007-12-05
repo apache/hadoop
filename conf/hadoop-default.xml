@@ -389,6 +389,16 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.balance.bandwidthPerSec</name>
+  <value>1048576</value>
+  <description>
+        Specifies the maximum amount of bandwidth that each datanode
+        can utilize for the balancing purpose in term of
+        the number of bytes per second.
+  </description>
+</property>
+
+<property>
   <name>dfs.hosts</name>
   <value></value>
   <description>Names a file that contains a list of hosts that are

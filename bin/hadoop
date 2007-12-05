@@ -40,6 +40,7 @@ if [ $# = 0 ]; then
   echo "  dfsadmin             run a DFS admin client"
   echo "  fsck                 run a DFS filesystem checking utility"
   echo "  fs                   run a generic filesystem user client"
+  echo "  balancer             run a cluster balancing utility"
   echo "  jobtracker           run the MapReduce job Tracker node" 
   echo "  pipes                run a Pipes job"
   echo "  tasktracker          run a MapReduce task Tracker node" 
@@ -180,6 +181,8 @@ elif [ "$COMMAND" = "dfsadmin" ] ; then
   CLASS=org.apache.hadoop.dfs.DFSAdmin
 elif [ "$COMMAND" = "fsck" ] ; then
   CLASS=org.apache.hadoop.dfs.DFSck
+elif [ "$COMMAND" = "balancer" ] ; then
+  CLASS=org.apache.hadoop.dfs.Balancer
 elif [ "$COMMAND" = "jobtracker" ] ; then
   CLASS=org.apache.hadoop.mapred.JobTracker
 elif [ "$COMMAND" = "tasktracker" ] ; then
