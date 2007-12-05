@@ -25,6 +25,10 @@ Trunk (unreleased changes)
 
     HADOOP-2184.  RPC Support for user permissions and authentication.
     (Raghu Angadi via dhruba)
+
+    HADOOP-2185.  RPC Server uses any available port if the specified port is
+    zero. Otherwise it uses the specified port.
+    (Konstantin Shvachko via dhruba)
     
   NEW FEATURES
 

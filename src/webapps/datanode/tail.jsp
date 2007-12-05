@@ -9,6 +9,7 @@
   import="org.apache.hadoop.io.*"
   import="org.apache.hadoop.conf.*"
   import="org.apache.hadoop.net.DNS"
+	import="org.apache.hadoop.net.NetUtils"
   import="java.text.DateFormat"
 %>
 
@@ -85,7 +86,7 @@
       dfs.close();
       return;
     }      
-    InetSocketAddress addr = DataNode.createSocketAddr(chosenNode.getName());
+    InetSocketAddress addr = NetUtils.createSocketAddr(chosenNode.getName());
     //view the last chunkSizeToView bytes while Tailing
     if (blockSize >= chunkSizeToView)
       startOffset = blockSize - chunkSizeToView;

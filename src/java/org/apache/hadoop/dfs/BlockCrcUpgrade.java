@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.retry.*;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Daemon;
 
@@ -179,7 +180,7 @@ class BlockCrcUpgradeUtils {
       dnStr += dn.getName() + " ";
       Socket dnSock = null;
       try {
-        InetSocketAddress dnAddr = DataNode.createSocketAddr(dn.getName());
+        InetSocketAddress dnAddr = NetUtils.createSocketAddr(dn.getName());
         dnSock = new Socket();
         dnSock.connect(dnAddr, FSConstants.READ_TIMEOUT);
         dnSock.setSoTimeout(FSConstants.READ_TIMEOUT);
@@ -843,7 +844,7 @@ class BlockCrcUpgradeUtils {
     
     try {
       do {
-        InetSocketAddress dnAddr = DataNode.createSocketAddr(dnInfo.getName());
+        InetSocketAddress dnAddr = NetUtils.createSocketAddr(dnInfo.getName());
         dnSock = new Socket();
         dnSock.connect(dnAddr, FSConstants.READ_TIMEOUT);
         dnSock.setSoTimeout(FSConstants.READ_TIMEOUT);

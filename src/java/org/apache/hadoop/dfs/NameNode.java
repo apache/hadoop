@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 
 import java.io.*;
@@ -108,16 +109,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   /**
    * Initialize the server
    * 
-   * @param hostname which hostname to bind to
-   * @param port the port number to bind to
+   * @param address hostname:port to bind to
    * @param conf the configuration
    */
-  private void init(String hostname, int port, 
-                    Configuration conf
-                    ) throws IOException {
+  private void initialize(String address, Configuration conf) throws IOException {
+    InetSocketAddress socAddr = NetUtils.createSocketAddr(address);
     this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
-    this.server = RPC.getServer(this, hostname, port, handlerCount, 
-                                false, conf);
+    this.server = RPC.getServer(this, socAddr.getHostName(), socAddr.getPort(),
+                                handlerCount, false, conf);
 
     // The rpc-server port can be ephemeral... ensure we have the correct info
     this.nameNodeAddress = this.server.getListenerAddress(); 
@@ -125,19 +124,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     LOG.info("Namenode up at: " + this.nameNodeAddress);
 
     myMetrics = new NameNodeMetrics(conf);
-        
-    try {
-      this.namesystem = new FSNamesystem(this.nameNodeAddress.getHostName(), this.nameNodeAddress.getPort(), this, conf);
-      this.server.start();  //start RPC server   
-  
-      this.emptier = new Thread(new Trash(conf).getEmptier(), "Trash Emptier");
-      this.emptier.setDaemon(true);
-      this.emptier.start();
-    } catch (IOException e) {
-      this.server.stop();
-      throw e;
-    }
-    
+
+    this.namesystem = new FSNamesystem(this, conf);
+    this.server.start();  //start RPC server   
+
+    this.emptier = new Thread(new Trash(conf).getEmptier(), "Trash Emptier");
+    this.emptier.setDaemon(true);
+    this.emptier.start();
   }
     
   /**
@@ -163,9 +156,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * @throws IOException
    */
   public NameNode(Configuration conf) throws IOException {
-    InetSocketAddress addr = 
-      DataNode.createSocketAddr(conf.get("fs.default.name"));
-    init(addr.getHostName(), addr.getPort(), conf);
+    this(conf.get("fs.default.name"), conf);
   }
 
   /**
@@ -175,10 +166,15 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * the NameNode is up and running if the user passes the port as
    * <code>zero</code>.  
    */
-  public NameNode(String bindAddress, int port, 
+  public NameNode(String bindAddress,
                   Configuration conf
                   ) throws IOException {
-    init(bindAddress, port, conf);
+    try {
+      initialize(bindAddress, conf);
+    } catch (IOException e) {
+      this.stop();
+      throw e;
+    }
   }
 
   /**
@@ -196,12 +192,12 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * Stop all NameNode threads and wait for all to finish.
    */
   public void stop() {
-    if (!stopRequested) {
-      stopRequested = true;
-      namesystem.close();
-      emptier.interrupt();
-      server.stop();
-    }
+    if (stopRequested)
+      return;
+    stopRequested = true;
+    if(namesystem != null) namesystem.close();
+    if(emptier != null) emptier.interrupt();
+    if(server != null) server.stop();
   }
   
   /////////////////////////////////////////////////////

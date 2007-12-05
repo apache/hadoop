@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
-import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException; 
@@ -70,6 +69,7 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.RunJar;
@@ -414,19 +414,22 @@ public class TaskTracker
     this.myMetrics = new TaskTrackerMetrics();
     
     // bind address
-    String bindAddress =
-      this.fConf.get("mapred.task.tracker.report.bindAddress", "127.0.0.1");
+    String address = 
+      this.fConf.get("mapred.task.tracker.report.bindAddress", "127.0.0.1:0");
+    InetSocketAddress socAddr = NetUtils.createSocketAddr(address);
+    String bindAddress = socAddr.getHostName();
+    int tmpPort = socAddr.getPort();
 
     // RPC initialization
     int max = maxCurrentMapTasks > maxCurrentReduceTasks ? 
                        maxCurrentMapTasks : maxCurrentReduceTasks;
     this.taskReportServer =
-      RPC.getServer(this, bindAddress, 0, max, false, this.fConf);
+      RPC.getServer(this, bindAddress, tmpPort, max, false, this.fConf);
     this.taskReportServer.start();
 
     // get the assigned address
     this.taskReportAddress = taskReportServer.getListenerAddress();
-    this.fConf.set("mapred.task.tracker.report.address",
+    this.fConf.set("mapred.task.tracker.report.bindAddress",
                    taskReportAddress.toString());
     LOG.info("TaskTracker up at: " + this.taskReportAddress);
 
@@ -772,9 +775,13 @@ public class TaskTracker
     this.jobTrackAddr = JobTracker.getAddress(conf);
     this.mapOutputFile = new MapOutputFile();
     this.mapOutputFile.setConf(conf);
-    int httpPort = conf.getInt("tasktracker.http.port", 50060);
-    String httpBindAddress = conf.get("tasktracker.http.bindAddress", "0.0.0.0");
-    this.server = new StatusHttpServer("task", httpBindAddress, httpPort, true);
+    String infoAddr = conf.get("mapred.task.tracker.http.bindAddress", 
+                                "0.0.0.0:50060");
+    InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
+    String httpBindAddress = infoSocAddr.getHostName();
+    int httpPort = infoSocAddr.getPort();
+    this.server = new StatusHttpServer(
+                        "task", httpBindAddress, httpPort, httpPort == 0);
     workerThreads = conf.getInt("tasktracker.http.threads", 40);
     this.shuffleServerMetrics = new ShuffleServerMetrics(fConf);
     server.setThreads(1, workerThreads);

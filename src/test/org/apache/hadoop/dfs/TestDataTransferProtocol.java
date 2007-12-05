@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.dfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
@@ -134,7 +135,7 @@ public class TestDataTransferProtocol extends TestCase {
                  new InetSocketAddress("localhost", cluster.getNameNodePort()),
                  conf);                
     datanode = dfsClient.datanodeReport(DatanodeReportType.LIVE)[0];
-    dnAddr = DataNode.createSocketAddr(datanode.getName());
+    dnAddr = NetUtils.createSocketAddr(datanode.getName());
     FileSystem fileSys = cluster.getFileSystem();
     
     int fileLen = Math.min(conf.getInt("dfs.block.size", 4096), 4096);

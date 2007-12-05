@@ -34,6 +34,7 @@ import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.net.NetUtils;
 
 import junit.framework.TestCase;
 /**
@@ -209,7 +210,7 @@ public class TestBlockReplacement extends TestCase {
   private boolean replaceBlock( Block block, DatanodeInfo source,
       DatanodeInfo sourceProxy, DatanodeInfo destination) throws IOException {
     Socket sock = new Socket();
-    sock.connect(DataNode.createSocketAddr(
+    sock.connect(NetUtils.createSocketAddr(
         sourceProxy.getName()), FSConstants.READ_TIMEOUT);
     sock.setSoTimeout(FSConstants.READ_TIMEOUT);
     // sendRequest

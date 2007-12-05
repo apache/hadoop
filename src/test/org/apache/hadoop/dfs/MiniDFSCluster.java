@@ -152,7 +152,7 @@ public class MiniDFSCluster {
     
     // Setup the NameNode configuration
     conf.set("fs.default.name", "localhost:"+ Integer.toString(nameNodePort));
-    conf.setInt("dfs.info.port", 0);
+    conf.get("dfs.http.bindAddress", "0.0.0.0:0");
     if (manageDfsDirs) {
       conf.set("dfs.name.dir", new File(base_dir, "name1").getPath()+","+
                new File(base_dir, "name2").getPath());
@@ -235,7 +235,8 @@ public class MiniDFSCluster {
     }
 
     // Set up the right ports for the datanodes
-    conf.setInt("dfs.datanode.info.port", 0);
+    conf.set("dfs.datanode.bindAddress", "0.0.0.0:0");
+    conf.set("dfs.datanode.http.bindAddress", "0.0.0.0:0");
     
     String[] args = (operation == null ||
                      operation == StartupOption.FORMAT ||
@@ -286,7 +287,6 @@ public class MiniDFSCluster {
    * @param operation the operation with which to start the DataNodes.  If null
    *          or StartupOption.FORMAT, then StartupOption.REGULAR will be used.
    * @param racks array of strings indicating the rack that each DataNode is on
-   * @param simulatedCapacities array of capacities of the simulated data nodes
    *
    * @throws IllegalStateException if NameNode has been shutdown
    */

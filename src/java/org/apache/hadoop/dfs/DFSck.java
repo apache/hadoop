@@ -20,7 +20,6 @@ package org.apache.hadoop.dfs;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
@@ -67,10 +66,7 @@ public class DFSck extends Configured implements Tool {
   }
   
   private String getInfoServer() throws IOException {
-    InetSocketAddress addr = 
-      DataNode.createSocketAddr(getConf().get("fs.default.name"));
-    int infoPort = getConf().getInt("dfs.info.port", 50070);
-    return addr.getHostName() + ":" + infoPort;
+    return getConf().get("dfs.http.bindAddress", "0.0.0.0:50070");
   }
   
   /**

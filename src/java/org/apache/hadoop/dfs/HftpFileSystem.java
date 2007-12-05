@@ -39,6 +39,7 @@ import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.helpers.XMLReaderFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSInputStream;
@@ -67,9 +68,11 @@ public class HftpFileSystem extends FileSystem {
   public void initialize(URI name, Configuration conf) throws IOException {
     setConf(conf);
     this.fshostname = name.getHost();
-    this.fsport = name.getPort() != -1
-      ? name.getPort()
-      : conf.getInt("dfs.info.port", -1);
+    this.fsport = name.getPort();
+    if(fsport >= 0)
+      return;
+    String infoAddr = conf.get("dfs.http.bindAddress", "0.0.0.0:50070");
+    this.fsport = NetUtils.createSocketAddr(infoAddr).getPort();
   }
 
   @Override

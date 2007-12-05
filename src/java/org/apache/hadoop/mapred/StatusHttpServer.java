@@ -44,8 +44,6 @@ import org.mortbay.jetty.servlet.WebApplicationContext;
  *   "/" -> the jsp server code from (src/webapps/<name>)
  */
 public class StatusHttpServer {
-  private static final boolean isWindows = 
-    System.getProperty("os.name").startsWith("Windows");
   private org.mortbay.jetty.Server webServer;
   private SocketListener listener;
   private boolean findPort;
@@ -184,21 +182,20 @@ public class StatusHttpServer {
           webServer.start();
           break;
         } catch (org.mortbay.util.MultiException ex) {
-          // look for the multi exception containing a bind exception,
-          // in that case try the next port number.
+          // if the multi exception contains ONLY a bind exception,
+          // then try the next port number.
           boolean needNewPort = false;
-          for(int i=0; i < ex.size(); ++i) {
-            Exception sub = ex.getException(i);
+          if(ex.size() == 1) {
+            Exception sub = ex.getException(0);
             if (sub instanceof java.net.BindException) {
+              if(!findPort)
+                throw sub; // java.net.BindException
               needNewPort = true;
-              break;
             }
           }
-          if (!findPort || !needNewPort) {
+          if (!needNewPort)
             throw ex;
-          } else {
-            listener.setPort(listener.getPort() + 1);
-          }
+          listener.setPort(listener.getPort() + 1);
         }
       }
     } catch (IOException ie) {

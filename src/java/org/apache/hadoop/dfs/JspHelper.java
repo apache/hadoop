@@ -34,6 +34,7 @@ import javax.servlet.jsp.JspWriter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.net.NetUtils;
 
 public class JspHelper {
   static FSNamesystem fsn = null;
@@ -73,7 +74,8 @@ public class JspHelper {
       chosenNode = nodes[index];
 
       //just ping to check whether the node is alive
-      InetSocketAddress targetAddr = DataNode.createSocketAddr(chosenNode.getHost() + ":" + chosenNode.getInfoPort());
+      InetSocketAddress targetAddr = NetUtils.createSocketAddr(
+          chosenNode.getHost() + ":" + chosenNode.getInfoPort());
         
       try {
         s = new Socket();

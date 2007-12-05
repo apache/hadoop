@@ -26,6 +26,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.dfs.*;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 
@@ -69,7 +70,7 @@ public abstract class FileSystem extends Configured {
     String cmd = argv[i];
     if ("-dfs".equals(cmd)) {
       i++;
-      InetSocketAddress addr = DataNode.createSocketAddr(argv[i++]);
+      InetSocketAddress addr = NetUtils.createSocketAddr(argv[i++]);
       fs = new DistributedFileSystem(addr, conf);
     } else if ("-local".equals(cmd)) {
       i++;

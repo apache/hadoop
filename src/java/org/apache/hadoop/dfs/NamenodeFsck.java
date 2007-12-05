@@ -31,6 +31,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 
@@ -264,8 +265,8 @@ public class NamenodeFsck {
   
   private void lostFoundMove(DFSFileInfo file, LocatedBlocks blocks)
     throws IOException {
-    DFSClient dfs = new DFSClient(DataNode.createSocketAddr(
-                                                            conf.get("fs.default.name", "local")), conf);
+    DFSClient dfs = new DFSClient(NetUtils.createSocketAddr(
+                              conf.get("fs.default.name", "local")), conf);
     if (!lfInited) {
       lostFoundInit(dfs);
     }
@@ -296,12 +297,12 @@ public class NamenodeFsck {
         if (fos == null) {
           fos = dfs.create(target + "/" + chain, true);
           if (fos != null) chain++;
-        }
-        if (fos == null) {
-          LOG.warn(errmsg + ": could not store chain " + chain);
-          // perhaps we should bail out here...
-          // return;
-          continue;
+          else {
+            LOG.warn(errmsg + ": could not store chain " + chain);
+            // perhaps we should bail out here...
+            // return;
+            continue;
+          }
         }
         
         // copy the block. It's a pity it's not abstracted from DFSInputStream ...
@@ -344,7 +345,7 @@ public class NamenodeFsck {
       
       try {
         chosenNode = bestNode(dfs, lblock.getLocations(), deadNodes);
-        targetAddr = DataNode.createSocketAddr(chosenNode.getName());
+        targetAddr = NetUtils.createSocketAddr(chosenNode.getName());
       }  catch (IOException ie) {
         if (failures >= DFSClient.MAX_BLOCK_ACQUIRE_FAILURES) {
           throw new IOException("Could not obtain block " + lblock);
@@ -421,22 +422,10 @@ public class NamenodeFsck {
         (nodes.length - deadNodes.size() < 1)) {
       throw new IOException("No live nodes contain current block");
     }
-    DatanodeInfo chosenNode = null;
-    for (int i = 0; i < nodes.length; i++) {
-      if (deadNodes.contains(nodes[i])) {
-        continue;
-      }
-      String nodename = nodes[i].getName();
-      int colon = nodename.indexOf(':');
-      if (colon >= 0) {
-        nodename = nodename.substring(0, colon);
-      }
-    }
-    if (chosenNode == null) {
-      do  {
-        chosenNode = nodes[r.nextInt(nodes.length)];
-      } while (deadNodes.contains(chosenNode));
-    }
+    DatanodeInfo chosenNode;
+    do {
+      chosenNode = nodes[r.nextInt(nodes.length)];
+    } while (deadNodes.contains(chosenNode));
     return chosenNode;
   }
   

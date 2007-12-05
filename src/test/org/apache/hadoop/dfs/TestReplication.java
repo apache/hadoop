@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.net.NetUtils;
 
 /**
  * This class tests the replication of a DFS file.
@@ -64,10 +65,10 @@ public class TestReplication extends TestCase {
     throws IOException {
     Configuration conf = fileSys.getConf();
     ClientProtocol namenode = (ClientProtocol) RPC.getProxy(
-                                                            ClientProtocol.class,
-                                                            ClientProtocol.versionID,
-                                                            DataNode.createSocketAddr(conf.get("fs.default.name")), 
-                                                            conf);
+                      ClientProtocol.class,
+                      ClientProtocol.versionID,
+                      NetUtils.createSocketAddr(conf.get("fs.default.name")), 
+                      conf);
       
     LocatedBlocks locations;
     boolean isReplicationDone;

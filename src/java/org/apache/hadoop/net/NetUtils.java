@@ -1,8 +1,11 @@
 package org.apache.hadoop.net;
 
+import java.net.InetSocketAddress;
+import java.net.URI;
 import javax.net.SocketFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -74,5 +77,31 @@ public class NetUtils {
     } catch (ClassNotFoundException cnfe) {
       throw new RuntimeException("Socket Factory class not found: " + cnfe);
     }
+  }
+
+  /**
+   * Util method to build socket addr from either:
+   *   <host>:<post>
+   *   <fs>://<host>:<port>/<path>
+   */
+  public static InetSocketAddress createSocketAddr(String target) {
+    int colonIndex = target.indexOf(':');
+    if (colonIndex < 0) {
+      throw new RuntimeException("Not a host:port pair: " + target);
+    }
+    String hostname;
+    int port;
+    if (!target.contains("/")) {
+      // must be the old style <host>:<port>
+      hostname = target.substring(0, colonIndex);
+      port = Integer.parseInt(target.substring(colonIndex + 1));
+    } else {
+      // a new uri
+      URI addr = new Path(target).toUri();
+      hostname = addr.getHost();
+      port = addr.getPort();
+    }
+  
+    return new InetSocketAddress(hostname, port);
   }
 }

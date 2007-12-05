@@ -91,8 +91,8 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     // Create connection to the namenode.
     //
     shouldRun = true;
-    nameNodeAddr = DataNode.createSocketAddr(
-                                             conf.get("fs.default.name", "local"));
+    nameNodeAddr = NetUtils.createSocketAddr(
+                              conf.get("fs.default.name", "local"));
     this.conf = conf;
     this.namenode =
         (ClientProtocol) RPC.waitForProxy(ClientProtocol.class,
@@ -101,9 +101,13 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     //
     // initialize the webserver for uploading files.
     //
-    infoPort = conf.getInt("dfs.secondary.info.port", 50090);
-    infoBindAddress = conf.get("dfs.secondary.info.bindAddress", "0.0.0.0");
-    infoServer = new StatusHttpServer("dfs", infoBindAddress, infoPort, true);
+    String infoAddr = conf.get("dfs.secondary.http.bindAddress", 
+                                "0.0.0.0:50090");
+    InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
+    infoBindAddress = infoSocAddr.getHostName();
+    int tmpInfoPort = infoSocAddr.getPort();
+    infoServer = new StatusHttpServer("dfs", infoBindAddress, tmpInfoPort, 
+                                      tmpInfoPort == 0);
     infoServer.setAttribute("name.secondary", this);
     this.infoServer.setAttribute("name.conf", conf);
     infoServer.addServlet("getimage", "/getimage", GetImageServlet.class);
@@ -111,8 +115,9 @@ public class SecondaryNameNode implements FSConstants, Runnable {
 
     // The web-server port can be ephemeral... ensure we have the correct info
     infoPort = infoServer.getPort();
-    conf.setInt("dfs.secondary.info.port", infoPort);
-    LOG.info("Secondary Web-server up at: " + conf.get("dfs.secondary.info.port"));
+    conf.set("dfs.secondary.http.bindAddress", infoBindAddress + ":" +infoPort); 
+    LOG.info("Secondary Web-server up at: " 
+              + conf.get("dfs.secondary.http.bindAddress"));
 
     //
     // Initialize other scheduling parameters from the configuration
@@ -248,9 +253,7 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     if (fsName.equals("local")) {
       throw new IOException("This is not a DFS");
     }
-    String[] splits = fsName.split(":", 2);
-    int infoPort = conf.getInt("dfs.info.port", 50070);
-    return splits[0]+":"+infoPort;
+    return conf.get("dfs.http.bindAddress", "0.0.0.0:50070");
   }
 
   /*

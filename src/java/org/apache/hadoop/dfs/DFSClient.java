@@ -1119,7 +1119,8 @@ class DFSClient implements FSConstants {
         DatanodeInfo[] nodes = block.getLocations();
         try {
           DatanodeInfo chosenNode = bestNode(nodes, deadNodes);
-          InetSocketAddress targetAddr = DataNode.createSocketAddr(chosenNode.getName());
+          InetSocketAddress targetAddr = 
+                            NetUtils.createSocketAddr(chosenNode.getName());
           return new DNAddrPair(chosenNode, targetAddr);
         } catch (IOException ie) {
           String blockInfo = block.getBlock() + " file=" + src;
@@ -1485,7 +1486,7 @@ class DFSClient implements FSConstants {
         //
         // Connect to first DataNode in the list.  Abort if this fails.
         //
-        InetSocketAddress target = DataNode.createSocketAddr(nodes[0].getName());
+        InetSocketAddress target = NetUtils.createSocketAddr(nodes[0].getName());
         try {
           s = socketFactory.createSocket();
           s.connect(target, READ_TIMEOUT);

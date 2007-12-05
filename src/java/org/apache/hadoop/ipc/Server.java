@@ -358,7 +358,7 @@ public abstract class Server {
     }
 
     InetSocketAddress getAddress() {
-      return new InetSocketAddress(acceptChannel.socket().getInetAddress(), acceptChannel.socket().getLocalPort());
+      return (InetSocketAddress)acceptChannel.socket().getLocalSocketAddress();
     }
     
     void doAccept(SelectionKey key) throws IOException,  OutOfMemoryError {

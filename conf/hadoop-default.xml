@@ -191,48 +191,38 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.secondary.info.port</name>
-  <value>50090</value>
-  <description>The base number for the Secondary namenode info port.
-  </description>
-</property>
-
-<property>
-  <name>dfs.secondary.info.bindAddress</name>
-  <value>0.0.0.0</value>
+  <name>dfs.secondary.http.bindAddress</name>
+  <value>0.0.0.0:50090</value>
   <description>
-    The address where the secondary namenode web UI will listen to.
+    The secondary namenode http server bind address and port.
+    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
 <property>
   <name>dfs.datanode.bindAddress</name>
-  <value>0.0.0.0</value>
+  <value>0.0.0.0:50010</value>
   <description>
-    the address where the datanode will listen to.
+    The address where the datanode will listen to.
+    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
 <property>
-  <name>dfs.datanode.port</name>
-  <value>50010</value>
-  <description>The port number that the dfs datanode server uses as a starting 
-	       point to look for a free port to listen on.
-</description>
-</property>
-
-<property>
-  <name>dfs.info.bindAddress</name>
-  <value>0.0.0.0</value>
+  <name>dfs.datanode.http.bindAddress</name>
+  <value>0.0.0.0:50075</value>
   <description>
-    the address where the dfs namenode web ui will listen on.
+    The datanode http server bind address and port.
+    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
 <property>
-  <name>dfs.info.port</name>
-  <value>50070</value>
-  <description>The base port number for the dfs namenode web ui.
+  <name>dfs.http.bindAddress</name>
+  <value>0.0.0.0:50070</value>
+  <description>
+    The address and the base port where the dfs namenode web ui will listen on.
+    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -458,17 +448,11 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>mapred.job.tracker.info.bindAddress</name>
-  <value>0.0.0.0</value>
+  <name>mapred.job.tracker.http.bindAddress</name>
+  <value>0.0.0.0:50030</value>
   <description>
-    the address where the job tracker info webserver will be binded on.
-  </description>
-</property>
-
-<property>
-  <name>mapred.job.tracker.info.port</name>
-  <value>50030</value>
-  <description>The port that the MapReduce job tracker info webserver runs at.
+    The job tracker http server bind address and port.
+    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
@@ -483,7 +467,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>mapred.task.tracker.report.bindAddress</name>
-  <value>127.0.0.1</value>
+  <value>127.0.0.1:0</value>
   <description>The interface that task processes use to communicate
   with their parent tasktracker process.</description>
 </property>
@@ -709,17 +693,11 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>tasktracker.http.bindAddress</name>
-  <value>0.0.0.0</value>
+  <name>mapred.task.tracker.http.bindAddress</name>
+  <value>0.0.0.0:50060</value>
   <description>
-    the address where the task tracker http server will be binded on.
-  </description>
-</property>
-
-<property>
-  <name>tasktracker.http.port</name>
-  <value>50060</value>
-  <description>The default port for task trackers to use as their http server.
+    The task tracker http server bind address and port.
+    If the port is 0 then the server will start on a free port.
   </description>
 </property>
 

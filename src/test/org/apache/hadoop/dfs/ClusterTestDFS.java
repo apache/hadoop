@@ -28,7 +28,6 @@ import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.conf.Configuration;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -219,7 +218,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
     int nameNodePort = 9000 + testCycleNumber++; // ToDo: settable base port
     String nameNodeSocketAddr = "localhost:" + nameNodePort;
     conf.set("dfs.name.dir", nameFSDir);
-    NameNode nameNodeDaemon = new NameNode("localhost", nameNodePort, conf);
+    NameNode nameNodeDaemon = new NameNode(nameNodeSocketAddr, conf);
     DFSClient dfsClient = null;
     try {
       //

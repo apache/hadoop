@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.dfs.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.mapred.StatusHttpServer;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.Server;
@@ -32,6 +33,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.Map.Entry;
 import java.text.SimpleDateFormat;
@@ -119,7 +121,6 @@ class FSNamesystem implements FSConstants {
   //
   StatusHttpServer infoServer;
   int infoPort;
-  String infoBindAddress;
   Date startTime;
     
   //
@@ -205,17 +206,26 @@ class FSNamesystem implements FSConstants {
 
 
   /**
-   * dirs is a list of directories where the filesystem directory state 
-   * is stored
+   * FSNamesystem constructor.
    */
-  public FSNamesystem(String hostname,
-                      int port,
-                      NameNode nn, Configuration conf) throws IOException {
+  FSNamesystem(NameNode nn, Configuration conf) throws IOException {
     fsNamesystemObject = this;
+    try {
+      initialize(nn, conf);
+    } catch(IOException e) {
+      close();
+      throw e;
+    }
+  }
+
+  /**
+   * Initialize FSNamesystem.
+   */
+  private void initialize(NameNode nn, Configuration conf) throws IOException {
     setConfigurationParameters(conf);
 
-    this.localMachine = hostname;
-    this.port = port;
+    this.localMachine = nn.getNameNodeAddress().getHostName();
+    this.port = nn.getNameNodeAddress().getPort();
     this.dir = new FSDirectory(this, conf);
     StartupOption startOpt = NameNode.getStartupOption(conf);
     this.dir.loadFSImage(getNamespaceDirs(conf), startOpt);
@@ -223,7 +233,7 @@ class FSNamesystem implements FSConstants {
     setBlockTotal();
     pendingReplications = new PendingReplicationBlocks(
                             conf.getInt("dfs.replication.pending.timeout.sec", 
-                                        -1) * 1000);
+                                        -1) * 1000L);
     this.hbthread = new Daemon(new HeartbeatMonitor());
     this.lmthread = new Daemon(new LeaseMonitor());
     this.replthread = new Daemon(new ReplicationMonitor());
@@ -232,15 +242,18 @@ class FSNamesystem implements FSConstants {
     replthread.start();
     this.systemStart = now();
     this.startTime = new Date(systemStart); 
-        
+
     this.hostsReader = new HostsFileReader(conf.get("dfs.hosts",""),
                                            conf.get("dfs.hosts.exclude",""));
     this.dnthread = new Daemon(new DecommissionedMonitor());
     dnthread.start();
 
-    this.infoPort = conf.getInt("dfs.info.port", 50070);
-    this.infoBindAddress = conf.get("dfs.info.bindAddress", "0.0.0.0");
-    this.infoServer = new StatusHttpServer("dfs", infoBindAddress, infoPort, false);
+    String infoAddr = conf.get("dfs.http.bindAddress", "0.0.0.0:50070");
+    InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
+    String infoHost = infoSocAddr.getHostName();
+    int tmpInfoPort = infoSocAddr.getPort();
+    this.infoServer = new StatusHttpServer("dfs", infoHost, tmpInfoPort, 
+                                            tmpInfoPort == 0);
     this.infoServer.setAttribute("name.system", this);
     this.infoServer.setAttribute("name.node", nn);
     this.infoServer.setAttribute("name.conf", conf);
@@ -249,11 +262,11 @@ class FSNamesystem implements FSConstants {
     this.infoServer.addServlet("listPaths", "/listPaths/*", ListPathsServlet.class);
     this.infoServer.addServlet("data", "/data/*", FileDataServlet.class);
     this.infoServer.start();
-        
+
     // The web-server port can be ephemeral... ensure we have the correct info
     this.infoPort = this.infoServer.getPort();
-    conf.setInt("dfs.info.port", this.infoPort); 
-    LOG.info("Web-server up at: " + conf.get("dfs.info.port"));
+    conf.set("dfs.http.bindAddress", infoHost + ":" + infoPort); 
+    LOG.info("Web-server up at: " + conf.get("dfs.http.bindAddress"));
   }
 
   static Collection<File> getNamespaceDirs(Configuration conf) {
@@ -563,7 +576,7 @@ class FSNamesystem implements FSConstants {
    * total size is <code>size</code>
    * 
    * @param datanode on which blocks are located
-   * @parm size total size of blocks
+   * @param size total size of blocks
    */
   synchronized BlocksWithLocations getBlocks(DatanodeID datanode, long size)
       throws IOException {

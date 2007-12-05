@@ -71,6 +71,7 @@ public class Client {
   private int maxIdleTime; //connections will be culled if it was idle for 
                            //maxIdleTime msecs
   private int maxRetries; //the max. no. of retries for socket connections
+  private Thread connectionCullerThread;
   private SocketFactory socketFactory;           // how to create sockets
 
   /** A call waiting for a value. */
@@ -450,12 +451,12 @@ public class Client {
     this.maxRetries = conf.getInt("ipc.client.connect.max.retries", 10);
     this.conf = conf;
     this.socketFactory = factory;
-    Thread t = new ConnectionCuller();
-    t.setDaemon(true);
-    t.setName(valueClass.getName() + " Connection Culler");
+    this.connectionCullerThread = new ConnectionCuller();
+    connectionCullerThread.setDaemon(true);
+    connectionCullerThread.setName(valueClass.getName() + " Connection Culler");
     LOG.debug(valueClass.getName() + 
               "Connection culler maxidletime= " + maxIdleTime + "ms");
-    t.start();
+    connectionCullerThread.start();
   }
 
   /**
@@ -472,6 +473,10 @@ public class Client {
   public void stop() {
     LOG.info("Stopping client");
     running = false;
+    connectionCullerThread.interrupt();
+    try {
+      connectionCullerThread.join();
+    } catch(InterruptedException e) {}
   }
 
   /** Sets the timeout used for network i/o. */

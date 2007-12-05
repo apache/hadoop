@@ -54,6 +54,7 @@ import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.StringUtils;
 
@@ -598,7 +599,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
   // Used to provide an HTML view on Job, Task, and TaskTracker structures
   StatusHttpServer infoServer;
-  String infoBindAddress;
   int infoPort;
 
   Server interTrackerServer;
@@ -653,9 +653,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       }
     }
 
-    this.infoPort = conf.getInt("mapred.job.tracker.info.port", 50030);
-    this.infoBindAddress = conf.get("mapred.job.tracker.info.bindAddress","0.0.0.0");
-    infoServer = new StatusHttpServer("job", infoBindAddress, infoPort, false);
+    String infoAddr = conf.get("mapred.job.tracker.http.bindAddress",
+                                "0.0.0.0:50030");
+    InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
+    String infoBindAddress = infoSocAddr.getHostName();
+    int tmpInfoPort = infoSocAddr.getPort();
+    infoServer = new StatusHttpServer("job", infoBindAddress, tmpInfoPort, 
+                                      tmpInfoPort == 0);
     infoServer.setAttribute("job.tracker", this);
     infoServer.start();
 
@@ -671,7 +675,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     this.conf.set("mapred.job.tracker", (this.localMachine + ":" + this.port));
     LOG.info("JobTracker up at: " + this.port);
     this.infoPort = this.infoServer.getPort();
-    this.conf.setInt("mapred.job.tracker.info.port", this.infoPort); 
+    this.conf.set("mapred.job.tracker.http.bindAddress", 
+        infoBindAddress + ":" + this.infoPort); 
     LOG.info("JobTracker webserver: " + this.infoServer.getPort());
     this.systemDir = jobConf.getSystemDir();
 
@@ -705,13 +710,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   public static InetSocketAddress getAddress(Configuration conf) {
     String jobTrackerStr =
       conf.get("mapred.job.tracker", "localhost:8012");
-    int colon = jobTrackerStr.indexOf(":");
-    if (colon < 0) {
-      throw new RuntimeException("Bad mapred.job.tracker: "+jobTrackerStr);
-    }
-    String jobTrackerName = jobTrackerStr.substring(0, colon);
-    int jobTrackerPort = Integer.parseInt(jobTrackerStr.substring(colon+1));
-    return new InetSocketAddress(jobTrackerName, jobTrackerPort);
+    return NetUtils.createSocketAddr(jobTrackerStr);
   }
 
 
@@ -751,13 +750,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       LOG.info("Stopping expireTrackers");
       this.expireTrackers.stopTracker();
       try {
-        this.expireTrackersThread.interrupt();
-        this.expireTrackersThread.join();
+        if(expireTrackersThread != null) {
+          this.expireTrackersThread.interrupt();
+          this.expireTrackersThread.join();
+        }
       } catch (InterruptedException ex) {
         ex.printStackTrace();
       }
     }
-    if (this.retireJobs != null) {
+    if (this.retireJobsThread != null) {
       LOG.info("Stopping retirer");
       this.retireJobsThread.interrupt();
       try {
@@ -766,7 +767,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         ex.printStackTrace();
       }
     }
-    if (this.initJobs != null) {
+    if (this.initJobsThread != null) {
       LOG.info("Stopping initer");
       this.initJobsThread.interrupt();
       try {
