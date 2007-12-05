@@ -609,7 +609,7 @@
   <!-- ================================================================== -->
   
   <target name="docs">
-    <exec dir="src/docs" executable="forrest"/>
+    <exec dir="src/docs" executable="forrest" failonerror="true" />
     <copy todir="docs/">
       <fileset dir="src/docs/build/site/" />
     </copy>
