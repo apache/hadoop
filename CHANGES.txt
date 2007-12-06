@@ -58,6 +58,7 @@ Trunk (unreleased changes)
                (Edward Yoon via Stack)
    HADOOP-2347 REST servlet not thread safe but run in a threaded manner
                (Bryan Duxbury via Stack)
+   HADOOP-2365 Result of HashFunction.hash() contains all identical values
 
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
