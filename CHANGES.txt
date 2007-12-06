@@ -222,6 +222,13 @@ Branch 0.15 (unreleased)
     HDFS but not the default filesystem.  HDFS paths returned by the
     listStatus() method are now fully-qualified.  (cutting)
 
+  IMPROVEMENTS
+
+    HADOOP-2160.  Remove project-level, non-user documentation from
+    releases, since it's now maintained in a separate tree.
+
+    HADOOP-1327.  Add user documentation for streaming.
+
 
 Release 0.15.1 - 2007-11-27
 
