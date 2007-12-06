@@ -208,6 +208,9 @@ Trunk (unreleased changes)
     HADOOP-2349.  Improve code layout in file system transaction logging code.
     (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-2368.  Fix unit tests on Windows.
+    (Tsz Wo (Nicholas), SZE via dhruba)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES

@@ -303,7 +303,7 @@ public class UnixUserGroupInformation implements UserGroupInformation {
    * @throws IOException if encounter any error when running the command
    */
   private static String[] getUnixGroups() throws IOException {
-    return executeShellCommand(new String[]{ShellCommand.GROUPS_COMMAND});
+    return executeShellCommand(ShellCommand.getGROUPS_COMMAND());
   }
   
   /* Execute a command and return the result as an array of Strings */
