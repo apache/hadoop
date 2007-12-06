@@ -112,7 +112,7 @@ public final class HashFunction{
       }
       int[] result = new int[nbHash];
       for (int i = 0, initval = 0; i < nbHash; i++) {
-        result[i] = Math.abs(JenkinsHash.hash(b, initval)) % maxValue;
+        initval = result[i] = Math.abs(JenkinsHash.hash(b, initval)) % maxValue;
       }
       return result;
   }//end hash() 
