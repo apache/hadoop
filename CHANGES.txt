@@ -103,6 +103,9 @@ Trunk (unreleased changes)
     Earlier, it was a random backoff from an interval. 
     (Amar Kamat via ddas)
 
+    HADOOP-1327.  Include website documentation for streaming. (Rob Weltman
+    via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
