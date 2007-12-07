@@ -48,6 +48,9 @@ public class HMsg implements Writable {
 
   /** Stop serving the specified region and don't report back that it's closed */
   public static final byte MSG_REGION_CLOSE_WITHOUT_REPORT = 6;
+  
+  /** Stop serving user regions */
+  public static final byte MSG_REGIONSERVER_QUIESCE = 7;
 
   // Messages sent from the region server to the master
   
@@ -72,9 +75,12 @@ public class HMsg implements Writable {
    * region server is shutting down
    * 
    * note that this message is followed by MSG_REPORT_CLOSE messages for each
-   * region the region server was serving.
+   * region the region server was serving, unless it was told to quiesce.
    */
   public static final byte MSG_REPORT_EXITING = 104;
+  
+  /** region server has closed all user regions but is still serving meta regions */
+  public static final byte MSG_REPORT_QUIESCED = 105;
 
   byte msg;
   HRegionInfo info;
@@ -148,6 +154,10 @@ public class HMsg implements Writable {
       message.append("MSG_REGION_CLOSE_WITHOUT_REPORT : ");
       break;
       
+    case MSG_REGIONSERVER_QUIESCE:
+      message.append("MSG_REGIONSERVER_QUIESCE : ");
+      break;
+      
     case MSG_REPORT_PROCESS_OPEN:
       message.append("MSG_REPORT_PROCESS_OPEN : ");
       break;
@@ -166,6 +176,10 @@ public class HMsg implements Writable {
       
     case MSG_REPORT_EXITING:
       message.append("MSG_REPORT_EXITING : ");
+      break;
+      
+    case MSG_REPORT_QUIESCED:
+      message.append("MSG_REPORT_QUIESCED : ");
       break;
       
     default:

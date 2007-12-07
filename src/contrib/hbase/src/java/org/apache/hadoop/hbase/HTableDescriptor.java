@@ -52,7 +52,8 @@ public class HTableDescriptor implements WritableComparable {
             HColumnDescriptor.CompressionType.NONE, false, Integer.MAX_VALUE,
             null));
   
-
+  private boolean rootregion;
+  private boolean metaregion;
   private Text name;
   // TODO: Does this need to be a treemap?  Can it be a HashMap?
   private final TreeMap<Text, HColumnDescriptor> families;
@@ -69,6 +70,8 @@ public class HTableDescriptor implements WritableComparable {
 
   /** Used to construct the table descriptors for root and meta tables */
   private HTableDescriptor(Text name, HColumnDescriptor family) {
+    rootregion = name.equals(HConstants.ROOT_TABLE_NAME);
+    this.metaregion = true;
     this.name = new Text(name);
     this.families = new TreeMap<Text, HColumnDescriptor>();
     families.put(family.getName(), family);
@@ -92,13 +95,30 @@ public class HTableDescriptor implements WritableComparable {
    * <code>[a-zA-Z_0-9]
    */
   public HTableDescriptor(String name) {
+    this();
     Matcher m = LEGAL_TABLE_NAME.matcher(name);
     if (m == null || !m.matches()) {
       throw new IllegalArgumentException(
           "Table names can only contain 'word characters': i.e. [a-zA-Z_0-9");
     }
-    this.name = new Text(name);
-    this.families = new TreeMap<Text, HColumnDescriptor>();
+    this.name.set(name);
+    this.rootregion = false;
+    this.metaregion = false;
+  }
+  
+  /** @return true if this is the root region */
+  public boolean isRootRegion() {
+    return rootregion;
+  }
+  
+  /** @return true if table is the meta table */
+  public boolean isMetaTable() {
+    return metaregion && !rootregion;
+  }
+  
+  /** @return true if this is a meta region (part of the root or meta tables) */
+  public boolean isMetaRegion() {
+    return metaregion;
   }
 
   /** @return name of table */
@@ -165,6 +185,8 @@ public class HTableDescriptor implements WritableComparable {
 
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
+    out.writeBoolean(rootregion);
+    out.writeBoolean(metaregion);
     name.write(out);
     out.writeInt(families.size());
     for(Iterator<HColumnDescriptor> it = families.values().iterator();
@@ -175,6 +197,8 @@ public class HTableDescriptor implements WritableComparable {
 
   /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
+    this.rootregion = in.readBoolean();
+    this.metaregion = in.readBoolean();
     this.name.readFields(in);
     int numCols = in.readInt();
     families.clear();
