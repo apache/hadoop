@@ -22,7 +22,7 @@
   <property name="conf.dir" value="${basedir}/conf"/>
   <property name="docs.dir" value="${basedir}/docs"/>
   <property name="contrib.dir" value="${basedir}/src/contrib"/>
-  <property name="docs.src" value="${basedir}/src/web"/>
+  <property name="docs.src" value="${basedir}/src/docs"/>
   <property name="c++.src" value="${basedir}/src/c++"/>
   <property name="c++.utils.src" value="${c++.src}/utils"/>
   <property name="c++.pipes.src" value="${c++.src}/pipes"/>
@@ -608,14 +608,16 @@
   <!-- Documentation                                                      -->
   <!-- ================================================================== -->
   
-  <target name="docs">
-    <exec dir="src/docs" executable="forrest" failonerror="true" />
-    <copy todir="docs/">
-      <fileset dir="src/docs/build/site/" />
+  <target name="docs" description="Generate documentation">
+    <exec dir="${docs.src}" executable="forrest" failonerror="true" />
+    <copy todir="${docs.dir}">
+      <fileset dir="${docs.src}/build/site/" />
     </copy>
+    <style basedir="${conf.dir}" destdir="${docs.dir}"
+           includes="hadoop-default.xml" style="conf/configuration.xsl"/>
   </target>
 
-  <target name="javadoc" depends="default-doc" description="Generate documentation">
+  <target name="javadoc" description="Generate javadoc">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
       overview="${src.dir}/overview.html"
@@ -655,14 +657,6 @@
     </javadoc>
   </target>	
 	
-  <target name="default-doc">
-    <style basedir="${conf.dir}" destdir="${build.docs}"
-           includes="hadoop-default.xml" style="conf/configuration.xsl"/>
-    <copy todir="${build.docs}">
-      <fileset dir="${docs.dir}" />
-    </copy>
-  </target>
-
   <!-- ================================================================== -->
   <!-- D I S T R I B U T I O N                                            -->
   <!-- ================================================================== -->
@@ -716,6 +710,7 @@
     </copy>
 
     <copy todir="${dist.dir}/docs">
+      <fileset dir="${docs.dir}" />
       <fileset dir="${build.docs}"/>
     </copy>
 
@@ -773,7 +768,7 @@
   <!-- ================================================================== -->
   <target name="clean" depends="clean-contrib" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
-    <delete dir="src/docs/build"/>
+    <delete dir="${docs.src}/build"/>
   </target>
 
   <!-- ================================================================== -->

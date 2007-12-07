@@ -243,9 +243,11 @@ Branch 0.15 (unreleased)
   IMPROVEMENTS
 
     HADOOP-2160.  Remove project-level, non-user documentation from
-    releases, since it's now maintained in a separate tree.
+    releases, since it's now maintained in a separate tree.  (cutting)
 
-    HADOOP-1327.  Add user documentation for streaming.
+    HADOOP-1327.  Add user documentation for streaming.  (cutting)
+
+    HADOOP-2382.  Add hadoop-default.html to subversion. (cutting)
 
 
 Release 0.15.1 - 2007-11-27
