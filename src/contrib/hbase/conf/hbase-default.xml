@@ -153,7 +153,7 @@
   </property>
   <property>
     <name>hbase.hregion.memcache.flush.size</name>
-    <value>16777216</value>
+    <value>67108864</value>
     <description>
     A HRegion memcache will be flushed to disk if size of the memcache
     exceeds this number of bytes.  Value is checked by a thread that runs
@@ -174,11 +174,10 @@
   </property>
   <property>
     <name>hbase.hregion.max.filesize</name>
-    <value>67108864</value>
+    <value>268435456</value>
     <description>
     Maximum desired file size for an HRegion.  If filesize exceeds
-    value + (value / 2), the HRegion is split in two.  Default: 64M.
-    If too large, splits will take so long, clients timeout.
+    value + (value / 2), the HRegion is split in two.  Default: 256M.
     </description>
   </property>
   <property>

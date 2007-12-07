@@ -94,6 +94,7 @@ Trunk (unreleased changes)
    HADOOP-2299 Support inclusive scans (Bryan Duxbury via Stack)
    HADOOP-2333 Client side retries happen at the wrong level
    HADOOP-2357 Compaction cleanup; less deleting + prevent possible file leaks
+   HADOOP-2377 Holding open MapFile.Readers is expensive, so use less of them
 
 
 Release 0.15.1

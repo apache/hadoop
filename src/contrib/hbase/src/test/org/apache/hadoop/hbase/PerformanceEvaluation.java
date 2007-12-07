@@ -64,15 +64,6 @@ import org.apache.log4j.Logger;
  * 
  * <p>If number of clients > 1, we start up a MapReduce job. Each map task
  * runs an individual client. Each client does about 1GB of data.
- * 
- * <p>If client == 1, the test table is created and deleted at end of each run
- * and the <code>sequentialWrite</code> test is run first if a test requires
- * a populated test table: e.g. if you are running the
- * <code>sequentialRead</code> test, the test table must hold data for it to
- * read.  If client > 1, and we are running clients in a map task, the table
- * is not deleted at the end-of-run.  Also, if running the
- * <code>sequentialRead</code> or </code>randomRead</code> tests, the
- * <code>sequentialWrite</code> test is not automatically run first.
  */
 public class PerformanceEvaluation implements HConstants {
   static final Logger LOG =
@@ -553,23 +544,10 @@ public class PerformanceEvaluation implements HConstants {
     try {
       admin = new HBaseAdmin(this.conf);
       checkTable(admin);
-
-      if (cmd.equals(RANDOM_READ) || cmd.equals(RANDOM_READ_MEM) ||
-          cmd.equals(SCAN) || cmd.equals(SEQUENTIAL_READ)) {
-        status.setStatus("Running " + SEQUENTIAL_WRITE + " first so " +
-            cmd + " has data to work against");
-        runOneClient(SEQUENTIAL_WRITE, 0, this.R, this.R, status);
-      }
-      
       runOneClient(cmd, 0, this.R, this.R, status);
     } catch (Exception e) {
       LOG.error("Failed", e);
-    } finally {
-      LOG.info("Deleting table " + tableDescriptor.getName());
-      if (admin != null) {
-        admin.deleteTable(tableDescriptor.getName());
-      }
-    }
+    } 
   }
   
   private void runTest(final String cmd) throws IOException {

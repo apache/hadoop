@@ -310,9 +310,9 @@ public class HRegion implements HConstants {
       fs.delete(merges);
     }
 
-    // By default, we flush the cache when 16M.
+    // By default, we flush the cache when 64M.
     this.memcacheFlushSize = conf.getInt("hbase.hregion.memcache.flush.size",
-        1024*1024*16);
+      1024*1024*64);
     this.flushListener = listener;
     this.blockingMemcacheSize = this.memcacheFlushSize *
       conf.getInt("hbase.hregion.memcache.block.multiplier", 2);
