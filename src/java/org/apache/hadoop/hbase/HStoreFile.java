@@ -504,14 +504,19 @@ public class HStoreFile implements HConstants, WritableComparable {
    */
   static Reference readSplitInfo(final Path p, final FileSystem fs)
   throws IOException {
+    Reference r = null;
     FSDataInputStream in = fs.open(p);
-    String rn = in.readUTF();
-    HStoreKey midkey = new HStoreKey();
-    midkey.readFields(in);
-    long fid = in.readLong();
-    boolean tmp = in.readBoolean();
-    return new Reference(rn, fid, midkey, tmp? Range.top: Range.bottom);
-    
+    try {
+      String rn = in.readUTF();
+      HStoreKey midkey = new HStoreKey();
+      midkey.readFields(in);
+      long fid = in.readLong();
+      boolean tmp = in.readBoolean();
+      r =  new Reference(rn, fid, midkey, tmp? Range.top: Range.bottom);
+    } finally {
+      in.close();
+    }
+    return r; 
   }
 
   private void createOrFail(final FileSystem fs, final Path p)
