@@ -81,6 +81,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // Chore threads need to know about the hosting class.
   protected final AtomicBoolean stopRequested = new AtomicBoolean(false);
   
+  protected final AtomicBoolean quiesced = new AtomicBoolean(false);
+  
   // Go down hard.  Used if file system becomes unavailable and also in
   // debugging and unit tests.
   protected volatile boolean abortRequested;
@@ -652,6 +654,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * load/unload instructions.
    */
   public void run() {
+    boolean quiesceRequested = false;
     try {
       init(reportForDuty());
       long lastMsg = 0;
@@ -682,6 +685,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               HMsg msgs[] =
                 this.hbaseMaster.regionServerReport(serverInfo, outboundArray);
               lastMsg = System.currentTimeMillis();
+              
+              if (this.quiesced.get() && onlineRegions.size() == 0) {
+                // We've just told the master we're exiting because we aren't
+                // serving any regions. So set the stop bit and exit.
+                LOG.info("Server quiesced and not serving any regions. " +
+                    "Starting shutdown");
+                stopRequested.set(true);
+                continue;
+              }
+              
               // Queue up the HMaster's instruction stream for processing
               boolean restart = false;
               for(int i = 0; i < msgs.length && !stopRequested.get() &&
@@ -689,9 +702,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 switch(msgs[i].getMsg()) {
                 
                 case HMsg.MSG_CALL_SERVER_STARTUP:
-                  if (LOG.isDebugEnabled()) {
-                    LOG.debug("Got call server startup message");
-                  }
+                  LOG.info("Got call server startup message");
                   // We the MSG_CALL_SERVER_STARTUP on startup but we can also
                   // get it when the master is panicing because for instance
                   // the HDFS has been yanked out from under it.  Be wary of
@@ -725,10 +736,21 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                   break;
 
                 case HMsg.MSG_REGIONSERVER_STOP:
-                  if (LOG.isDebugEnabled()) {
-                    LOG.debug("Got regionserver stop message");
-                  }
+                  LOG.info("Got regionserver stop message");
                   stopRequested.set(true);
+                  break;
+                  
+                case HMsg.MSG_REGIONSERVER_QUIESCE:
+                  if (!quiesceRequested) {
+                    LOG.info("Got quiesce server message");
+                    try {
+                      toDo.put(new ToDoEntry(msgs[i]));
+                    } catch (InterruptedException e) {
+                      throw new RuntimeException("Putting into msgQueue was " +
+                        "interrupted.", e);
+                    }
+                    quiesceRequested = true;
+                  }
                   break;
 
                 default:
@@ -1101,6 +1123,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
           try {
             LOG.info(e.msg.toString());
             switch(e.msg.getMsg()) {
+            
+            case HMsg.MSG_REGIONSERVER_QUIESCE:
+              closeUserRegions();
+              break;
 
             case HMsg.MSG_REGION_OPEN:
               // Open a region
@@ -1149,12 +1175,19 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
   
-  void openRegion(final HRegionInfo regionInfo) throws IOException {
+  void openRegion(final HRegionInfo regionInfo) {
     HRegion region = onlineRegions.get(regionInfo.getRegionName());
     if(region == null) {
-      region = new HRegion(new Path(this.conf.get(HConstants.HBASE_DIR)),
-        this.log, FileSystem.get(conf), conf, regionInfo, null,
-        this.cacheFlusher);
+      try {
+        region = new HRegion(new Path(this.conf.get(HConstants.HBASE_DIR)),
+            this.log, FileSystem.get(conf), conf, regionInfo, null,
+            this.cacheFlusher);
+        
+      } catch (IOException e) {
+        LOG.error("error opening region " + regionInfo.getRegionName(), e);
+        reportClose(region);
+        return;
+      }
       this.lock.writeLock().lock();
       try {
         this.log.setSequenceNumber(region.getMinSequenceId());
@@ -1206,6 +1239,45 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
     }
     return regionsToClose;
+  }
+
+  /** Called as the first stage of cluster shutdown. */
+  void closeUserRegions() {
+    ArrayList<HRegion> regionsToClose = new ArrayList<HRegion>();
+    this.lock.writeLock().lock();
+    try {
+      synchronized (onlineRegions) {
+        for (Iterator<Map.Entry<Text, HRegion>> i =
+          onlineRegions.entrySet().iterator();
+        i.hasNext();) {
+          Map.Entry<Text, HRegion> e = i.next();
+          HRegion r = e.getValue();
+          if (!r.getRegionInfo().isMetaRegion()) {
+            regionsToClose.add(r);
+            i.remove();
+          }
+        }
+      }
+    } finally {
+      this.lock.writeLock().unlock();
+    }
+    for(HRegion region: regionsToClose) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("closing region " + region.getRegionName());
+      }
+      try {
+        region.close(false);
+      } catch (IOException e) {
+        LOG.error("error closing region " + region.getRegionName(),
+          RemoteExceptionHandler.checkIOException(e));
+      }
+    }
+    this.quiesced.set(true);
+    if (onlineRegions.size() == 0) {
+      outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_EXITING));
+    } else {
+      outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_QUIESCED));
+    }
   }
 
   //

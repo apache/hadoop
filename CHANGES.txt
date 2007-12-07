@@ -60,6 +60,7 @@ Trunk (unreleased changes)
                (Bryan Duxbury via Stack)
    HADOOP-2365 Result of HashFunction.hash() contains all identical values
    HADOOP-2362 Leaking hdfs file handle on region split
+   HADOOP-2338 Fix NullPointerException in master server.
 
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable

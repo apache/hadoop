@@ -193,6 +193,21 @@ public class HRegionInfo implements WritableComparable {
     return tableDesc;
   }
   
+  /** @return true if this is the root region */
+  public boolean isRootRegion() {
+    return this.tableDesc.isRootRegion();
+  }
+  
+  /** @return true if this is the meta table */
+  public boolean isMetaTable() {
+    return this.tableDesc.isMetaTable();
+  }
+
+  /** @return true if this region is a meta region */
+  public boolean isMetaRegion() {
+    return this.tableDesc.isMetaRegion();
+  }
+  
   /**
    * @return True if has been split and has daughters.
    */
