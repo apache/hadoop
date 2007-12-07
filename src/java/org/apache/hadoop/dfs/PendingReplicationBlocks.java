@@ -184,7 +184,7 @@ class PendingReplicationBlocks {
           pendingReplicationCheck();
           Thread.sleep(period);
         } catch (InterruptedException ie) {
-          FSNamesystem.LOG.warn(
+          FSNamesystem.LOG.debug(
                 "PendingReplicationMonitor thread received exception. " + ie);
         }
       }

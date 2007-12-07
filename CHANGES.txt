@@ -223,6 +223,9 @@ Trunk (unreleased changes)
 
     HADOOP-2313.  Fail the build if building libhdfs fails. (nigel via omalley)
 
+    HADOOP-2359.  Remove warning for interruptted exception when closing down
+    minidfs. (dhruba via omalley)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES
