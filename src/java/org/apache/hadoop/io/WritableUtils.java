@@ -218,7 +218,7 @@ public final class WritableUtils  {
         return new CopyInCopyOutBuffer();
       }
     };
-  
+
   /**
    * Make a copy of a writable object using serialization to a buffer.
    * @param orig The object to copy
@@ -226,19 +226,30 @@ public final class WritableUtils  {
    */
   public static Writable clone(Writable orig, JobConf conf) {
     try {
-      Writable newInst = (Writable)ReflectionUtils.newInstance(orig.getClass(),
-                                                               conf);
-      CopyInCopyOutBuffer buffer = (CopyInCopyOutBuffer)cloneBuffers.get();
-      buffer.outBuffer.reset();
-      orig.write(buffer.outBuffer);
-      buffer.moveData();
-      newInst.readFields(buffer.inBuffer);
+      Writable newInst =
+        (Writable)ReflectionUtils.newInstance(orig.getClass(), conf);
+      cloneInto(newInst, orig);
       return newInst;
     } catch (IOException e) {
       throw new RuntimeException("Error writing/reading clone buffer", e);
     }
   }
- 
+
+  /**
+   * Make a copy of the writable object using serialiation to a buffer
+   * @param dst the object to copy from
+   * @param src the object to copy into, which is destroyed
+   * @throws IOException
+   */
+  public static void cloneInto(Writable dst, Writable src) throws IOException {
+    CopyInCopyOutBuffer buffer = (CopyInCopyOutBuffer)cloneBuffers.get();
+    buffer.outBuffer.reset();
+    src.write(buffer.outBuffer);
+    buffer.moveData();
+    dst.readFields(buffer.inBuffer);
+    return;
+  }
+
   /**
    * Serializes an integer to a binary stream with zero-compressed encoding.
    * For -120 <= i <= 127, only one byte is used with the actual value.

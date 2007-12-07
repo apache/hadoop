@@ -48,6 +48,7 @@ public class ExampleDriver {
       "A map/reduce tile laying program to find solutions to pentomino problems.");
       pgd.addClass("sudoku", Sudoku.class, "A sudoku solver.");
       pgd.addClass("sleep", SleepJob.class, "A job that sleeps at each map and reduce task.");
+      pgd.addClass("join", Join.class, "A job that effects a join over sorted, equally partitioned datasets");
       pgd.driver(argv);
     }
     catch(Throwable e){
