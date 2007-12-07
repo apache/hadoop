@@ -218,6 +218,9 @@ Trunk (unreleased changes)
     in parallel. The bug was introduced in HADOOP-2185 that changed
     port-rolling behaviour.  (Konstantin Shvachko via dhruba)
 
+    HADOOP-2271.  Fix chmod task to be non-parallel. (Adrian Woodhead via
+    omalley)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES

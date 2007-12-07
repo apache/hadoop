@@ -735,7 +735,7 @@
 
     <copy todir="${dist.dir}/" file="build.xml"/>
 
-    <chmod perm="ugo+x" type="file">
+    <chmod perm="ugo+x" type="file" parallel="false">
         <fileset dir="${dist.dir}/bin"/>
         <fileset dir="${dist.dir}/src/contrib/">
           <include name="*/bin/*" />
