@@ -331,6 +331,7 @@ public class TestCheckpoint extends TestCase {
     Collection<File> namedirs = null;
 
     Configuration conf = new Configuration();
+    conf.set("dfs.secondary.http.bindAddress", "0.0.0.0:0");
     replication = (short)conf.getInt("dfs.replication", 3);  
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
     cluster.waitActive();

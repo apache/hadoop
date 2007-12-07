@@ -211,6 +211,10 @@ Trunk (unreleased changes)
     HADOOP-2368.  Fix unit tests on Windows.
     (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-2363.  This fix allows running multiple instances of the unit test
+    in parallel. The bug was introduced in HADOOP-2185 that changed
+    port-rolling behaviour.  (Konstantin Shvachko via dhruba)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES
