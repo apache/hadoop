@@ -29,8 +29,6 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.DataInputBuffer;
-import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -124,9 +122,6 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
   protected long timestamp;                                     // The timestamp to match entries against
   private boolean wildcardMatch;
   private boolean multipleMatchers;
-  
-  protected DataOutputBuffer outbuf = new DataOutputBuffer();
-  protected DataInputBuffer inbuf = new DataInputBuffer();
 
   /** Constructor for abstract base class */
   HAbstractScanner(long timestamp, Text[] targetCols) throws IOException {

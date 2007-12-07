@@ -445,9 +445,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         synchronized(cacheFlusherLock) { // Don't interrupt while we're working
           if (e != null) {
             try {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("flushing region " + e.getRegion().getRegionName());
-              }
               if (e.getRegion().flushcache()) {
                 compactor.compactionRequested(e);
               }

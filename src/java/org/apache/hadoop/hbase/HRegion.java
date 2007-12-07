@@ -608,8 +608,10 @@ public class HRegion implements HConstants {
     // under each region.
     HRegion regionA =
       new HRegion(rootDir, log, fs, conf, regionAInfo, dirA, null);
+    regionA.close();
     HRegion regionB =
       new HRegion(rootDir, log, fs, conf, regionBInfo, dirB, null);
+    regionB.close();
 
     // Cleanup
     boolean deleted = fs.delete(splits);    // Get rid of splits directory
@@ -1581,13 +1583,12 @@ public class HRegion implements HConstants {
    * @param info Info for region to create.
    * @param rootDir Root directory for HBase instance
    * @param conf
-   * @param initialFiles InitialFiles to pass new HRegion. Pass null if none.
    * @return new HRegion
    * 
    * @throws IOException
    */
   static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
-      final HBaseConfiguration conf, final Path initialFiles)
+      final HBaseConfiguration conf)
   throws IOException {
     Path regionDir = HRegion.getRegionDir(rootDir,
         HRegionInfo.encodeRegionName(info.getRegionName()));
@@ -1595,7 +1596,7 @@ public class HRegion implements HConstants {
     fs.mkdirs(regionDir);
     return new HRegion(rootDir,
       new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf, null),
-      fs, conf, info, initialFiles, null);
+      fs, conf, info, null, null);
   }
   
   /**

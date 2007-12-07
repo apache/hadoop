@@ -59,6 +59,7 @@ Trunk (unreleased changes)
    HADOOP-2347 REST servlet not thread safe but run in a threaded manner
                (Bryan Duxbury via Stack)
    HADOOP-2365 Result of HashFunction.hash() contains all identical values
+   HADOOP-2362 Leaking hdfs file handle on region split
 
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable

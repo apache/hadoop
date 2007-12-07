@@ -85,67 +85,92 @@ public class TestSplit extends MultiRegionTable {
     Text midkey = new Text();
     assertTrue(region.needsSplit(midkey));
     HRegion [] regions = split(region);
-    // Assert can get rows out of new regions.  Should be able to get first
-    // row from first region and the midkey from second region.
-    assertGet(regions[0], COLFAMILY_NAME3, new Text(START_KEY));
-    assertGet(regions[1], COLFAMILY_NAME3, midkey);
-    // Test I can get scanner and that it starts at right place.
-    assertScan(regions[0], COLFAMILY_NAME3, new Text(START_KEY));
-    assertScan(regions[1], COLFAMILY_NAME3, midkey);
-    // Now prove can't split regions that have references.
-    Text [] midkeys = new Text[regions.length];
-    for (int i = 0; i < regions.length; i++) {
-      midkeys[i] = new Text();
-      // Even after above splits, still needs split but after splits its
-      // unsplitable because biggest store file is reference.  References
-      // make the store unsplittable, until something bigger comes along.
-      assertFalse(regions[i].needsSplit(midkeys[i]));
-      // Add so much data to this region, we create a store file that is > than
-      // one of our unsplitable references.
-      // it will.
-      for (int j = 0; j < 2; j++) {
-        addContent(regions[i], COLFAMILY_NAME3);
+    try {
+      // Need to open the regions.
+      // TODO: Add an 'open' to HRegion... don't do open by constructing
+      // instance.
+      for (int i = 0; i < regions.length; i++) {
+        regions[i] = openClosedRegion(regions[i]);
       }
-      addContent(regions[i], COLFAMILY_NAME2);
-      addContent(regions[i], COLFAMILY_NAME1);
-      regions[i].flushcache();
-    }
-    
-    // Assert that even if one store file is larger than a reference, the
-    // region is still deemed unsplitable (Can't split region if references
-    // presen).
-    for (int i = 0; i < regions.length; i++) {
-      midkeys[i] = new Text();
-      // Even after above splits, still needs split but after splits its
-      // unsplitable because biggest store file is reference.  References
-      // make the store unsplittable, until something bigger comes along.
-      assertFalse(regions[i].needsSplit(midkeys[i]));
-    }
-    
-    // To make regions splitable force compaction.
-    for (int i = 0; i < regions.length; i++) {
-      regions[i].compactStores();
-    }
+      // Assert can get rows out of new regions. Should be able to get first
+      // row from first region and the midkey from second region.
+      assertGet(regions[0], COLFAMILY_NAME3, new Text(START_KEY));
+      assertGet(regions[1], COLFAMILY_NAME3, midkey);
+      // Test I can get scanner and that it starts at right place.
+      assertScan(regions[0], COLFAMILY_NAME3, new Text(START_KEY));
+      assertScan(regions[1], COLFAMILY_NAME3, midkey);
+      // Now prove can't split regions that have references.
+      Text[] midkeys = new Text[regions.length];
+      for (int i = 0; i < regions.length; i++) {
+        midkeys[i] = new Text();
+        // Even after above splits, still needs split but after splits its
+        // unsplitable because biggest store file is reference. References
+        // make the store unsplittable, until something bigger comes along.
+        assertFalse(regions[i].needsSplit(midkeys[i]));
+        // Add so much data to this region, we create a store file that is >
+        // than
+        // one of our unsplitable references.
+        // it will.
+        for (int j = 0; j < 2; j++) {
+          addContent(regions[i], COLFAMILY_NAME3);
+        }
+        addContent(regions[i], COLFAMILY_NAME2);
+        addContent(regions[i], COLFAMILY_NAME1);
+        regions[i].flushcache();
+      }
 
-    TreeMap<String, HRegion> sortedMap = new TreeMap<String, HRegion>();
-    // Split these two daughter regions so then I'll have 4 regions.  Will
-    // split because added data above.
-    for (int i = 0; i < regions.length; i++) {
-      HRegion [] rs = split(regions[i]);
-      for (int j = 0; j < rs.length; j++) {
-        sortedMap.put(rs[j].getRegionName().toString(), rs[j]);
+      // Assert that even if one store file is larger than a reference, the
+      // region is still deemed unsplitable (Can't split region if references
+      // presen).
+      for (int i = 0; i < regions.length; i++) {
+        midkeys[i] = new Text();
+        // Even after above splits, still needs split but after splits its
+        // unsplitable because biggest store file is reference. References
+        // make the store unsplittable, until something bigger comes along.
+        assertFalse(regions[i].needsSplit(midkeys[i]));
+      }
+
+      // To make regions splitable force compaction.
+      for (int i = 0; i < regions.length; i++) {
+        regions[i].compactStores();
+      }
+
+      TreeMap<String, HRegion> sortedMap = new TreeMap<String, HRegion>();
+      // Split these two daughter regions so then I'll have 4 regions. Will
+      // split because added data above.
+      for (int i = 0; i < regions.length; i++) {
+        HRegion[] rs = split(regions[i]);
+        for (int j = 0; j < rs.length; j++) {
+          sortedMap.put(rs[j].getRegionName().toString(),
+            openClosedRegion(rs[j]));
+        }
+      }
+      LOG.info("Made 4 regions");
+      // The splits should have been even. Test I can get some arbitrary row out
+      // of each.
+      int interval = (LAST_CHAR - FIRST_CHAR) / 3;
+      byte[] b = START_KEY.getBytes(HConstants.UTF8_ENCODING);
+      for (HRegion r : sortedMap.values()) {
+        assertGet(r, COLFAMILY_NAME3, new Text(new String(b,
+            HConstants.UTF8_ENCODING)));
+        b[0] += interval;
+      }
+    } finally {
+      for (int i = 0; i < regions.length; i++) {
+        try {
+          regions[i].close();
+        } catch (IOException e) {
+          // Ignore.
+        }
       }
     }
-    LOG.info("Made 4 regions");
-    // The splits should have been even.  Test I can get some arbitrary row out
-    // of each.
-    int interval = (LAST_CHAR - FIRST_CHAR) / 3;
-    byte[] b = START_KEY.getBytes(HConstants.UTF8_ENCODING);
-    for (HRegion r: sortedMap.values()) {
-      assertGet(r, COLFAMILY_NAME3,
-          new Text(new String(b, HConstants.UTF8_ENCODING)));
-      b[0] += interval;
-    }
+  }
+  
+  private HRegion openClosedRegion(final HRegion closedRegion)
+  throws IOException {
+    return new HRegion(closedRegion.getRootDir(), closedRegion.getLog(),
+      closedRegion.getFilesystem(), closedRegion.getConf(),
+      closedRegion.getRegionInfo(), null, null);
   }
   
   /**
