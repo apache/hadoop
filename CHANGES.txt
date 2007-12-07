@@ -221,6 +221,8 @@ Trunk (unreleased changes)
     HADOOP-2271.  Fix chmod task to be non-parallel. (Adrian Woodhead via
     omalley)
 
+    HADOOP-2313.  Fail the build if building libhdfs fails. (nigel via omalley)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES

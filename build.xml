@@ -791,7 +791,7 @@
   <!-- ================================================================== -->
   <target name="compile-libhdfs" depends="init">
     <mkdir dir="${build.libhdfs}"/>
-    <exec dir="${libhdfs.src}" executable="make">
+    <exec dir="${libhdfs.src}" executable="make" failonerror="true">
       <env key="OS_NAME" value="${os.name}"/>
       <env key="OS_ARCH" value="${os.arch}"/>
       <env key="SHLIB_VERSION" value="${libhdfs.version}"/>
