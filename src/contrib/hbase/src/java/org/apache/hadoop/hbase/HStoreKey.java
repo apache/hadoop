@@ -331,4 +331,3 @@ public class HStoreKey implements WritableComparable {
     timestamp = in.readLong();
   }
 }
-

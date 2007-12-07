@@ -19,9 +19,12 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.io.*;
 
-import java.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import org.apache.hadoop.io.Writable;
 
 /*******************************************************************************
  * HMsg is for communicating instructions between the HMaster and the 

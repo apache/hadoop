@@ -19,9 +19,12 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
-import java.io.*;
+import org.apache.hadoop.io.Writable;
+
 
 /**
  * HServerInfo contains metainfo about an HRegionServer, Currently it only
@@ -139,7 +142,6 @@ public class HServerInfo implements Writable {
 
 
   // Writable
-  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     this.serverAddress.readFields(in);
     this.startCode = in.readLong();
@@ -147,7 +149,6 @@ public class HServerInfo implements Writable {
     this.infoPort = in.readInt();
   }
 
-  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     this.serverAddress.write(out);
     out.writeLong(this.startCode);

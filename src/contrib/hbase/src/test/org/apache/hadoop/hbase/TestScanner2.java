@@ -305,10 +305,10 @@ public class TestScanner2 extends HBaseClusterTestCase {
       List<HRegion> newRegions = new ArrayList<HRegion>(2);
       newRegions.add(HRegion.createHRegion(
           new HRegionInfo(desc, null, new Text("midway")),
-          homedir, this.conf, null));
+          homedir, this.conf));
       newRegions.add(HRegion.createHRegion(
           new HRegionInfo(desc, new Text("midway"), null),
-          homedir, this.conf, null));
+          homedir, this.conf));
       try {
         for (HRegion r : newRegions) {
           addRegionToMETA(metaTable, r, this.cluster.getHMasterAddress(),

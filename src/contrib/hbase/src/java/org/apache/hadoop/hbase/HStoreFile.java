@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -351,17 +350,15 @@ public class HStoreFile implements HConstants, WritableComparable {
   static HStoreFile obtainNewHStoreFile(HBaseConfiguration conf, Path dir, 
       String encodedRegionName, Text colFamily, FileSystem fs)
       throws IOException {
-    
     Path mapdir = HStoreFile.getMapDir(dir, encodedRegionName, colFamily);
-    long fileId = Math.abs(rand.nextLong());
-
-    Path testpath1 = new Path(mapdir, createHStoreFilename(fileId));
-    Path testpath2 = new Path(mapdir, createHStoreInfoFilename(fileId));
-    while(fs.exists(testpath1) || fs.exists(testpath2)) {
+    Path testpath1 = null;
+    Path testpath2 = null;
+    long fileId = -1;
+    do {
       fileId = Math.abs(rand.nextLong());
       testpath1 = new Path(mapdir, createHStoreFilename(fileId));
       testpath2 = new Path(mapdir, createHStoreInfoFilename(fileId));
-    }
+    } while(fs.exists(testpath1) || fs.exists(testpath2));
     return new HStoreFile(conf, dir, encodedRegionName, colFamily, fileId);
   }
 
@@ -606,7 +603,7 @@ public class HStoreFile implements HConstants, WritableComparable {
    */
   void writeInfo(FileSystem fs, long infonum) throws IOException {
     Path p = getInfoFilePath();
-    DataOutputStream out = new DataOutputStream(fs.create(p));
+    FSDataOutputStream out = fs.create(p);
     try {
       out.writeByte(INFO_SEQ_NUM);
       out.writeLong(infonum);

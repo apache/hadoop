@@ -908,9 +908,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         LOG.info("bootstrap: creating ROOT and first META regions");
         try {
           HRegion root = HRegion.createHRegion(HRegionInfo.rootRegionInfo,
-              this.dir, this.conf, null);
+              this.dir, this.conf);
           HRegion meta = HRegion.createHRegion(HRegionInfo.firstMetaRegionInfo,
-            this.dir, this.conf, null);
+            this.dir, this.conf);
 
           // Add first region from the META table to the ROOT region.
           HRegion.addRegionToMETA(root, meta);
@@ -2545,7 +2545,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       // 2. Create the HRegion
           
       HRegion region =
-        HRegion.createHRegion(newRegion, this.dir, this.conf, null);
+        HRegion.createHRegion(newRegion, this.dir, this.conf);
 
       // 3. Insert into meta
           

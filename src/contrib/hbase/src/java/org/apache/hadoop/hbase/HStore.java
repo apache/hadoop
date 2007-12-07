@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase;
 
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -760,9 +759,11 @@ class HStore implements HConstants {
         bloomFilter = new RetouchedBloomFilter();
       }
       FSDataInputStream in = fs.open(filterFile);
-      bloomFilter.readFields(in);
-      fs.close();
-      
+      try {
+        bloomFilter.readFields(in);
+      } finally {
+        fs.close();
+      }
     } else {
       if (LOG.isDebugEnabled()) {
         LOG.debug("creating bloom filter for " + this.storeName);
@@ -913,7 +914,6 @@ class HStore implements HConstants {
           HStoreKey curkey = es.getKey();
           if (this.familyName.equals(HStoreKey.extractFamily(
               curkey.getColumn()))) {
-              
             out.append(curkey, new ImmutableBytesWritable(es.getValue()));
           }
         }
@@ -1040,7 +1040,7 @@ class HStore implements HConstants {
 
       // Write out a list of data files that we're replacing
       Path filesToReplace = new Path(curCompactStore, COMPACTION_TO_REPLACE);
-      DataOutputStream out = new DataOutputStream(fs.create(filesToReplace));
+      FSDataOutputStream out = fs.create(filesToReplace);
       try {
         out.writeInt(filesToCompact.size());
         for (HStoreFile hsf : filesToCompact) {
@@ -1052,7 +1052,7 @@ class HStore implements HConstants {
 
       // Indicate that we're done.
       Path doneFile = new Path(curCompactStore, COMPACTION_DONE);
-      (new DataOutputStream(fs.create(doneFile))).close();
+      fs.create(doneFile).close();
 
       // Move the compaction into place.
       completeCompaction(curCompactStore);
@@ -2151,5 +2151,4 @@ class HStore implements HConstants {
         "next(HStoreKey, StortedMap(...) is more efficient");
     }
   }
-  
 }
