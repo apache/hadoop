@@ -308,8 +308,16 @@ public class TableHandler extends GenericHandler {
 
         Node value_node = column.getElementsByTagName("value").item(0);
 
-        // decode the base64'd value
-        byte[] value = org.apache.hadoop.hbase.util.Base64.decode(value_node.getFirstChild().getNodeValue());
+        byte[] value = new byte[0];
+        
+        // for some reason there's no value here. probably indicates that
+        // the consumer passed a null as the cell value.
+        if(value_node.getFirstChild() != null && 
+          value_node.getFirstChild().getNodeValue() != null){
+          // decode the base64'd value
+          value = org.apache.hadoop.hbase.util.Base64.decode(
+            value_node.getFirstChild().getNodeValue());
+        }
 
         // put the value
         table.put(lock_id, name, value);
