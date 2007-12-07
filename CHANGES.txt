@@ -11,7 +11,7 @@ Trunk (unreleased changes)
     HADOOP-2084 Add a LocalHBaseCluster
     HADOOP-2068 RESTful interface (Bryan Duxbury via Stack)
     HADOOP-2316 Run REST servlet outside of master
-                (Bryan Duxbury via Stack)
+                (Bryan Duxbury & Stack)
 
   OPTIMIZATIONS
 
@@ -61,6 +61,8 @@ Trunk (unreleased changes)
    HADOOP-2365 Result of HashFunction.hash() contains all identical values
    HADOOP-2362 Leaking hdfs file handle on region split
    HADOOP-2338 Fix NullPointerException in master server.
+   HADOOP-2380 REST servlet throws NPE when any value node has an empty string
+               (Bryan Duxbury via Stack)
 
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
