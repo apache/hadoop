@@ -134,6 +134,18 @@ public interface HRegionInterface extends VersionedProtocol {
    */
   public void deleteAll(Text regionName, Text row, Text column, long timestamp)
   throws IOException;
+
+  /**
+   * Delete all cells that match the passed row and whose
+   * timestamp is equal-to or older than the passed timestamp.
+   *
+   * @param regionName region name
+   * @param row row key
+   * @param timestamp Delete all entries that have this timestamp or older
+   * @throws IOException
+   */
+  public void deleteAll(Text regionName, Text row, long timestamp)
+  throws IOException;
   
   //
   // remote scanner interface

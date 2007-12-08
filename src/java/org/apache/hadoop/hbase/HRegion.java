@@ -1060,7 +1060,7 @@ public class HRegion implements HConstants {
    */
   private List<HStoreKey> getKeys(final HStoreKey origin, final int versions)
     throws IOException {
-    
+
     List<HStoreKey> keys = null;
     Text colFamily = HStoreKey.extractFamily(origin.getColumn());
     HStore targetStore = stores.get(colFamily);
@@ -1071,7 +1071,7 @@ public class HRegion implements HConstants {
     }
     return keys;
   }
-
+  
   /**
    * Return an iterator that scans over the HRegion, returning the indicated 
    * columns for only the rows that match the data filter.  This Iterator must
@@ -1248,6 +1248,33 @@ public class HRegion implements HConstants {
       releaseRowLock(row);
     }
   }
+
+  /**
+   * Delete all cells of the same age as the passed timestamp or older.
+   * @param row
+   * @param ts Delete all entries that have this timestamp or older
+   * @throws IOException
+   */
+  public void deleteAll(final Text row, final long ts)
+    throws IOException {
+    
+    obtainRowLock(row);    
+    
+    try {
+      for(Map.Entry<Text, HStore> store : stores.entrySet()){
+        List<HStoreKey> keys = store.getValue().getKeys(new HStoreKey(row, ts), ALL_VERSIONS);
+
+        TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>();
+        for (HStoreKey key: keys) {
+          edits.put(key, HLogEdit.deleteBytes.get());
+        }
+        update(edits);
+      }
+    } finally {
+      releaseRowLock(row);
+    }
+  }
+
   
   /**
    * Delete one or many cells.

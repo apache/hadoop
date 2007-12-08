@@ -268,7 +268,7 @@ class HStore implements HConstants {
                 (versions - results.size())));
         }
         return results;
-
+        
       } finally {
         this.lock.readLock().unlock();
       }
@@ -289,9 +289,28 @@ class HStore implements HConstants {
       SortedMap<HStoreKey, byte []> tailMap = map.tailMap(origin);
       for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
         HStoreKey key = es.getKey();
-        if (!key.matchesRowCol(origin)) {
-          break;
+    
+        // if there's no column name, then compare rows and timestamps
+        if (origin.getColumn().toString().equals("")) {
+          // if the current and origin row don't match, then we can jump
+          // out of the loop entirely.
+          if (!key.getRow().equals(origin.getRow())) {
+            break;
+          }
+          // if the rows match but the timestamp is newer, skip it so we can
+          // get to the ones we actually want.
+          if (key.getTimestamp() > origin.getTimestamp()) {
+            continue;
+          }
         }
+        else{ // compare rows and columns
+          // if the key doesn't match the row and column, then we're done, since 
+          // all the cells are ordered.
+          if (!key.matchesRowCol(origin)) {
+            break;
+          }
+        }
+
         if (!HLogEdit.isDeleted(es.getValue())) {
           result.add(key);
           if (versions != HConstants.ALL_VERSIONS && result.size() >= versions) {
@@ -1429,6 +1448,7 @@ class HStore implements HConstants {
    */
   void getFull(HStoreKey key, TreeMap<Text, byte []> results)
     throws IOException {
+    Map<Text, List<Long>> deletes = new HashMap<Text, List<Long>>();
     
     this.lock.readLock().lock();
     memcache.getFull(key, results);
@@ -1447,7 +1467,7 @@ class HStore implements HConstants {
             Text readcol = readkey.getColumn();
             if (results.get(readcol) == null
                 && key.matchesWithoutColumn(readkey)) {
-              if(HLogEdit.isDeleted(readval.get())) {
+              if(isDeleted(readkey, readval.get(), true, deletes)) {
                 break;
               }
               results.put(new Text(readcol), readval.get());
@@ -1598,6 +1618,8 @@ class HStore implements HConstants {
         MapFile.Reader map = maparray[i];
         synchronized(map) {
           map.reset();
+          
+          // do the priming read
           ImmutableBytesWritable readval = new ImmutableBytesWritable();
           HStoreKey readkey = (HStoreKey)map.getClosest(origin, readval);
           if (readkey == null) {
@@ -1607,30 +1629,79 @@ class HStore implements HConstants {
             // BEFORE.
             continue;
           }
-          if (!readkey.matchesRowCol(origin)) {
-            continue;
-          }
-          if (!isDeleted(readkey, readval.get(), false, null) &&
-              !keys.contains(readkey)) {
-            keys.add(new HStoreKey(readkey));
-          }
-          for (readval = new ImmutableBytesWritable();
-              map.next(readkey, readval) &&
-              readkey.matchesRowCol(origin);
-              readval = new ImmutableBytesWritable()) {
-            if (!isDeleted(readkey, readval.get(), false, null) &&
-                !keys.contains(readkey)) {
-              keys.add(new HStoreKey(readkey));
-              if (versions != ALL_VERSIONS && keys.size() >= versions) {
-                break;
+          
+          do{
+            // if the row matches, we might want this one.
+            if(rowMatches(origin, readkey)){
+              // if the cell matches, then we definitely want this key.
+              if (cellMatches(origin, readkey)) {
+                // store the key if it isn't deleted or superceeded by what's
+                // in the memcache
+                if (!isDeleted(readkey, readval.get(), false, null) &&
+                    !keys.contains(readkey)) {
+                  keys.add(new HStoreKey(readkey));
+
+                  // if we've collected enough versions, then exit the loop.
+                  if (versions != ALL_VERSIONS && keys.size() >= versions) {
+                    break;
+                  }
+                }
+              } else {
+                // the cell doesn't match, but there might be more with different
+                // timestamps, so move to the next key
+                continue;
               }
+            } else{
+              // the row doesn't match, so we've gone too far.
+              break;
             }
-          }
+          }while(map.next(readkey, readval)); // advance to the next key
         }
       }
+      
       return keys;
     } finally {
       this.lock.readLock().unlock();
+    }
+  }
+  
+  /**
+   * Test that the <i>target</i> matches the <i>origin</i>. If the 
+   * <i>origin</i> has an empty column, then it's assumed to mean any column 
+   * matches and only match on row and timestamp. Otherwise, it compares the
+   * keys with HStoreKey.matchesRowCol().
+   * @param origin The key we're testing against
+   * @param target The key we're testing
+   */
+  private boolean cellMatches(HStoreKey origin, HStoreKey target){
+    // if the origin's column is empty, then we're matching any column
+    if (origin.getColumn().equals(new Text())){
+      // if the row matches, then...
+      if (target.getRow().equals(origin.getRow())) {
+        // check the timestamp
+        return target.getTimestamp() <= origin.getTimestamp();
+      } else {
+        return false;
+      }
+    } else { // otherwise, we want to match on row and column
+      return target.matchesRowCol(origin);
+    }
+  }
+  
+  /**
+   * Test that the <i>target</i> matches the <i>origin</i>. If the <i>origin</i>
+   * has an empty column, then it just tests row equivalence. Otherwise, it uses
+   * HStoreKey.matchesRowCol().
+   * @param origin Key we're testing against
+   * @param target Key we're testing
+   */
+  private boolean rowMatches(HStoreKey origin, HStoreKey target){
+    // if the origin's column is empty, then we're matching any column
+    if (origin.getColumn().equals(new Text())){
+      // if the row matches, then...
+      return target.getRow().equals(origin.getRow());
+    } else { // otherwise, we want to match on row and column
+      return target.matchesRowCol(origin);
     }
   }
   
