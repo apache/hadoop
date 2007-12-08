@@ -69,7 +69,7 @@ public class TestScanner extends HBaseTestCase {
   private void scan(boolean validateStartcode, String serverName)
       throws IOException {
     
-    HInternalScannerInterface scanner = null;
+    HScannerInterface scanner = null;
     TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
     HStoreKey key = new HStoreKey();
 
@@ -108,7 +108,7 @@ public class TestScanner extends HBaseTestCase {
         }
 
       } finally {
-        HInternalScannerInterface s = scanner;
+        HScannerInterface s = scanner;
         scanner = null;
         if(s != null) {
           s.close();

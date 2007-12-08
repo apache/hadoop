@@ -283,7 +283,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     startTime = System.currentTimeMillis();
 
-    HInternalScannerInterface s =
+    HScannerInterface s =
       r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
     int numFetched = 0;
     try {
@@ -630,7 +630,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
     
     long startTime = System.currentTimeMillis();
     
-    HInternalScannerInterface s =
+    HScannerInterface s =
       r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
 
     try {

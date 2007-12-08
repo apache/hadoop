@@ -228,7 +228,7 @@ public class TestSplit extends MultiRegionTable {
       final Text firstValue)
   throws IOException {
     Text [] cols = new Text[] {new Text(column)};
-    HInternalScannerInterface s = r.getScanner(cols,
+    HScannerInterface s = r.getScanner(cols,
       HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
     try {
       HStoreKey curKey = new HStoreKey();

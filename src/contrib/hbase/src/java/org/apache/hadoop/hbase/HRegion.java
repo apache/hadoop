@@ -1088,7 +1088,7 @@ public class HRegion implements HConstants {
    * @return HScannerInterface
    * @throws IOException
    */
-  public HInternalScannerInterface getScanner(Text[] cols, Text firstRow,
+  public HScannerInterface getScanner(Text[] cols, Text firstRow,
       long timestamp, RowFilterInterface filter) throws IOException {
     lock.readLock().lock();
     try {
@@ -1485,33 +1485,21 @@ public class HRegion implements HConstants {
   /**
    * HScanner is an iterator through a bunch of rows in an HRegion.
    */
-  private class HScanner implements HInternalScannerInterface {
+  private class HScanner implements HScannerInterface {
     private HInternalScannerInterface[] scanners;
-    private boolean wildcardMatch = false;
-    private boolean multipleMatchers = false;
+    private TreeMap<Text, byte []>[] resultSets;
+    private HStoreKey[] keys;
 
     /** Create an HScanner with a handle on many HStores. */
     @SuppressWarnings("unchecked")
     HScanner(Text[] cols, Text firstRow, long timestamp, HStore[] stores,
         RowFilterInterface filter) throws IOException {
-      this.scanners = new HInternalScannerInterface[stores.length];
 
-//       Advance to the first key in each store.
-//       All results will match the required column-set and scanTime.
-      
+      this.scanners = new HInternalScannerInterface[stores.length];
       try {
         for (int i = 0; i < stores.length; i++) {
-          HInternalScannerInterface scanner =
-          scanners[i] =
-            stores[i].getScanner(timestamp, cols, firstRow, filter);
-          
-            if (scanner.isWildcardScanner()) {
-              this.wildcardMatch = true;
-            }
-            if (scanner.isMultipleMatchScanner()) {
-              this.multipleMatchers = true;
-            }
-          }
+          scanners[i] = stores[i].getScanner(timestamp, cols, firstRow, filter);
+        }
 
       } catch(IOException e) {
         for (int i = 0; i < this.scanners.length; i++) {
@@ -1521,35 +1509,100 @@ public class HRegion implements HConstants {
         }
         throw e;
       }
+
+//       Advance to the first key in each store.
+//       All results will match the required column-set and scanTime.
+      
+      this.resultSets = new TreeMap[scanners.length];
+      this.keys = new HStoreKey[scanners.length];
+      for (int i = 0; i < scanners.length; i++) {
+        keys[i] = new HStoreKey();
+        resultSets[i] = new TreeMap<Text, byte []>();
+        if(scanners[i] != null && !scanners[i].next(keys[i], resultSets[i])) {
+          closeScanner(i);
+        }
+      }
+
       // As we have now successfully completed initialization, increment the
       // activeScanner count.
       activeScannerCount.incrementAndGet();
     }
 
-    /** @return true if the scanner is a wild card scanner */
-    public boolean isWildcardScanner() {
-      return wildcardMatch;
-    }
-
-    /** @return true if the scanner is a multiple match scanner */
-    public boolean isMultipleMatchScanner() {
-      return multipleMatchers;
-    }
-
     /** {@inheritDoc} */
     public boolean next(HStoreKey key, SortedMap<Text, byte[]> results)
     throws IOException {
-      boolean haveResults = false;
+      boolean moreToFollow = false;
+
+      // Find the lowest-possible key.
+
+      Text chosenRow = null;
+      long chosenTimestamp = -1;
+      for (int i = 0; i < this.keys.length; i++) {
+        if (scanners[i] != null &&
+            (chosenRow == null ||
+                (keys[i].getRow().compareTo(chosenRow) < 0) ||
+                ((keys[i].getRow().compareTo(chosenRow) == 0) &&
+                    (keys[i].getTimestamp() > chosenTimestamp)))) {
+          chosenRow = new Text(keys[i].getRow());
+          chosenTimestamp = keys[i].getTimestamp();
+        }
+      }
+
+      // Store the key and results for each sub-scanner. Merge them as
+      // appropriate.
+      if (chosenTimestamp >= 0) {
+        // Here we are setting the passed in key with current row+timestamp
+        key.setRow(chosenRow);
+        key.setVersion(chosenTimestamp);
+        key.setColumn(HConstants.EMPTY_TEXT);
+
+        for (int i = 0; i < scanners.length; i++) {
+          if (scanners[i] != null && keys[i].getRow().compareTo(chosenRow) == 0) {
+            // NOTE: We used to do results.putAll(resultSets[i]);
+            // but this had the effect of overwriting newer
+            // values with older ones. So now we only insert
+            // a result if the map does not contain the key.
+            for (Map.Entry<Text, byte[]> e : resultSets[i].entrySet()) {
+              if (!results.containsKey(e.getKey())) {
+                results.put(e.getKey(), e.getValue());
+              }
+            }
+            resultSets[i].clear();
+            if (!scanners[i].next(keys[i], resultSets[i])) {
+              closeScanner(i);
+            }
+          }
+        }
+      }
+
       for (int i = 0; i < scanners.length; i++) {
-        if (scanners[i] != null) {
-          if (scanners[i].next(key, results)) {
-            haveResults = true;
-          } else {
+        // If the current scanner is non-null AND has a lower-or-equal
+        // row label, then its timestamp is bad. We need to advance it.
+        while ((scanners[i] != null) &&
+            (keys[i].getRow().compareTo(chosenRow) <= 0)) {
+          
+          resultSets[i].clear();
+          if (!scanners[i].next(keys[i], resultSets[i])) {
             closeScanner(i);
           }
         }
       }
-      return haveResults;
+
+      moreToFollow = chosenTimestamp >= 0;
+      if (results == null || results.size() <= 0) {
+        // If we got no results, then there is no more to follow.
+        moreToFollow = false;
+      }
+
+      // Make sure scanners closed if no more results
+      if (!moreToFollow) {
+        for (int i = 0; i < scanners.length; i++) {
+          if (null != scanners[i]) {
+            closeScanner(i);
+          }
+        }
+      }
+      return moreToFollow;
     }
 
     
@@ -1563,6 +1616,8 @@ public class HRegion implements HConstants {
         }
       } finally {
         scanners[i] = null;
+        resultSets[i] = null;
+        keys[i] = null;
       }
     }
 
