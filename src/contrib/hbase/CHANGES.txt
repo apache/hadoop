@@ -12,6 +12,7 @@ Trunk (unreleased changes)
     HADOOP-2068 RESTful interface (Bryan Duxbury via Stack)
     HADOOP-2316 Run REST servlet outside of master
                 (Bryan Duxbury & Stack)
+    HADOOP-1550 No means of deleting a'row' (Bryan Duxbuery via Stack)
 
   OPTIMIZATIONS
 

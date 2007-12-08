@@ -742,6 +742,53 @@ public class HTable implements HConstants {
     }
   }
   
+  /**
+   * Completely delete the row's cells of the same timestamp or older.
+   *
+   * @param row Key of the row you want to completely delete.
+   * @param ts Timestamp of cells to delete
+   */
+  public void deleteAll(final Text row, long ts)
+  throws IOException {
+    checkClosed();
+    for(int tries = 0; tries < numRetries; tries++) {
+      HRegionLocation r = getRegionLocation(row);
+      HRegionInterface server =
+        connection.getHRegionConnection(r.getServerAddress());
+      try {
+        server.deleteAll(r.getRegionInfo().getRegionName(), row, ts);
+        break;
+
+      } catch (IOException e) {
+        if (e instanceof RemoteException) {
+          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+        }
+        if (tries == numRetries - 1) {
+          throw e;
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("reloading table servers because: " + e.getMessage());
+        }
+        tableServers = connection.reloadTableServers(tableName);
+      }
+      try {
+        Thread.sleep(this.pause);
+      } catch (InterruptedException x) {
+        // continue
+      }
+    }
+  }
+      
+  /**
+   * Completely delete the row's cells.
+   *
+   * @param row Key of the row you want to completely delete.
+   */
+  public void deleteAll(final Text row)
+  throws IOException {
+    deleteAll(row, HConstants.LATEST_TIMESTAMP);
+  }
+  
   /** 
    * Abort a row mutation.
    * 

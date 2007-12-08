@@ -1516,6 +1516,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.deleteAll(row, column, timestamp);
   }
 
+  /** {@inheritDoc} */
+  public void deleteAll(final Text regionName, final Text row,
+      final long timestamp) 
+  throws IOException {
+    HRegion region = getRegion(regionName);
+    region.deleteAll(row, timestamp);
+  }
+
   /**
    * @return Info on this server.
    */
