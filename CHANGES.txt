@@ -64,6 +64,8 @@ Trunk (unreleased changes)
    HADOOP-2338 Fix NullPointerException in master server.
    HADOOP-2380 REST servlet throws NPE when any value node has an empty string
                (Bryan Duxbury via Stack)
+   HADOOP-2350 Scanner api returns null row names, or skips row names if
+               different column families do not have entries for some rows
 
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable

@@ -332,7 +332,7 @@ class HMerge implements HConstants {
       HRegion root =
         new HRegion(dir, hlog,fs, conf, HRegionInfo.rootRegionInfo, null, null);
 
-      HInternalScannerInterface rootScanner =
+      HScannerInterface rootScanner =
         root.getScanner(META_COLS, new Text(), System.currentTimeMillis(), null);
       
       try {
