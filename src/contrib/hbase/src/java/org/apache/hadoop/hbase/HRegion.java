@@ -1275,6 +1275,35 @@ public class HRegion implements HConstants {
     }
   }
 
+  /**
+   * Delete all cells for a row with matching column family with timestamps
+   * less than or equal to <i>timestamp</i>.
+   *
+   * @param row The row to operate on
+   * @param family The column family to match
+   * @param timestamp Timestamp to match
+   */
+  public void deleteFamily(Text row, Text family, long timestamp)
+  throws IOException{
+    obtainRowLock(row);    
+    
+    try {
+      // find the HStore for the column family
+      LOG.info(family);
+      HStore store = stores.get(HStoreKey.extractFamily(family));
+      // find all the keys that match our criteria
+      List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp), ALL_VERSIONS);
+      
+      // delete all the cells
+      TreeMap<HStoreKey, byte []> edits = new TreeMap<HStoreKey, byte []>();
+      for (HStoreKey key: keys) {
+        edits.put(key, HLogEdit.deleteBytes.get());
+      }
+      update(edits);
+    } finally {
+      releaseRowLock(row);
+    }
+  }
   
   /**
    * Delete one or many cells.

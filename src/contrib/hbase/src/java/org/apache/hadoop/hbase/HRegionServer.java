@@ -1523,6 +1523,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.deleteAll(row, timestamp);
   }
 
+  public void deleteFamily(Text regionName, Text row, Text family, 
+    long timestamp)
+  throws IOException{
+    getRegion(regionName).deleteFamily(row, family, timestamp);
+  }
+
+
   /**
    * @return Info on this server.
    */
