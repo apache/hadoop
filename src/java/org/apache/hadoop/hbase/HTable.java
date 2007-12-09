@@ -789,6 +789,56 @@ public class HTable implements HConstants {
     deleteAll(row, HConstants.LATEST_TIMESTAMP);
   }
   
+  /**
+   * Delete all cells for a row with matching column family with timestamps
+   * less than or equal to <i>timestamp</i>.
+   *
+   * @param row The row to operate on
+   * @param family The column family to match
+   * @param timestamp Timestamp to match
+   */
+  public void deleteFamily(final Text row, final Text family, long timestamp)
+  throws IOException {
+    checkClosed();
+    for(int tries = 0; tries < numRetries; tries++) {
+      HRegionLocation r = getRegionLocation(row);
+      HRegionInterface server =
+        connection.getHRegionConnection(r.getServerAddress());
+      try {
+        server.deleteFamily(r.getRegionInfo().getRegionName(), row, family, timestamp);
+        break;
+
+      } catch (IOException e) {
+        if (e instanceof RemoteException) {
+          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
+        }
+        if (tries == numRetries - 1) {
+          throw e;
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("reloading table servers because: " + e.getMessage());
+        }
+        tableServers = connection.reloadTableServers(tableName);
+      }
+      try {
+        Thread.sleep(this.pause);
+      } catch (InterruptedException x) {
+        // continue
+      }
+    }
+  }
+
+  /**
+   * Delete all cells for a row with matching column family at all timestamps.
+   *
+   * @param row The row to operate on
+   * @param family The column family to match
+   */  
+  public void deleteFamily(final Text row, final Text family)
+  throws IOException{
+    deleteFamily(row, family, HConstants.LATEST_TIMESTAMP);
+  }
+  
   /** 
    * Abort a row mutation.
    * 

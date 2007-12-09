@@ -13,6 +13,8 @@ Trunk (unreleased changes)
     HADOOP-2316 Run REST servlet outside of master
                 (Bryan Duxbury & Stack)
     HADOOP-1550 No means of deleting a'row' (Bryan Duxbuery via Stack)
+    HADOOP-2384 Delete all members of a column family on a specific row
+                (Bryan Duxbury via Stack)
 
   OPTIMIZATIONS
 
