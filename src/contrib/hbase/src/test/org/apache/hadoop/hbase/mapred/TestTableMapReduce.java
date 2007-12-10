@@ -401,9 +401,6 @@ public class TestTableMapReduce extends MultiRegionTable {
 
         } else {
           first = new String(firstValue, HConstants.UTF8_ENCODING);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("row=" + key.getRow() + ": first value=" + first);
-          }
         }
         
         String second = "";
@@ -414,10 +411,6 @@ public class TestTableMapReduce extends MultiRegionTable {
           fail();
           
         } else {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("row=" + key.getRow() + ": second value=" +
-                new String(secondValue, HConstants.UTF8_ENCODING));
-          }
           byte[] secondReversed = new byte[secondValue.length];
           for (int i = 0, j = secondValue.length - 1; j >= 0; j--, i++) {
             secondReversed[i] = secondValue[j];
@@ -426,7 +419,9 @@ public class TestTableMapReduce extends MultiRegionTable {
         }
         if (first.compareTo(second) != 0) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("second key is not the reverse of first");
+            LOG.debug("second key is not the reverse of first. row=" +
+                key.getRow() + ", first value=" + first + ", second value=" +
+                second);
           }
           fail();
         }

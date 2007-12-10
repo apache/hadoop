@@ -2142,12 +2142,6 @@ class HStore implements HConstants {
           }
           if (dataFilter.filterAllRemaining()) {
             moreToFollow = false;
-            LOG.debug("page limit");
-          }
-        }
-        if (LOG.isDebugEnabled()) {
-          if (this.dataFilter != null) {
-            LOG.debug("ROWKEY = " + chosenRow + ", FILTERED = " + filtered);
           }
         }
         

@@ -35,14 +35,19 @@ import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MultiRegionTable;
+import org.apache.hadoop.hbase.mapred.TableReduce;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 
+/**
+ * HBase shell join test
+ */
 public class TestTableJoinMapReduce extends MultiRegionTable {
   @SuppressWarnings("hiding")
   private static final Log LOG = LogFactory.getLog(TestTableJoinMapReduce.class
@@ -64,7 +69,6 @@ public class TestTableJoinMapReduce extends MultiRegionTable {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    conf.setLong("hbase.hregion.max.filesize", 256 * 1024);
     dfsCluster = new MiniDFSCluster(conf, 1, true, (String[]) null);
     try {
       fs = dfsCluster.getFileSystem();
@@ -73,10 +77,7 @@ public class TestTableJoinMapReduce extends MultiRegionTable {
       // Start up HBase cluster
       hCluster = new MiniHBaseCluster(conf, 1, dfsCluster);
     } catch (Exception e) {
-      if (dfsCluster != null) {
-        dfsCluster.shutdown();
-        dfsCluster = null;
-      }
+      StaticTestEnvironment.shutdownDfs(dfsCluster);
       throw e;
     }
   }
@@ -90,21 +91,11 @@ public class TestTableJoinMapReduce extends MultiRegionTable {
     if (hCluster != null) {
       hCluster.shutdown();
     }
-
-    if (dfsCluster != null) {
-      dfsCluster.shutdown();
-    }
-
-    if (fs != null) {
-      try {
-        fs.close();
-      } catch (IOException e) {
-        LOG.info("During tear down got a " + e.getMessage());
-      }
-    }
+    StaticTestEnvironment.shutdownDfs(dfsCluster);
   }
 
   public void testTableJoinMapReduce() {
+    HTable table = null;
     try {
       HTableDescriptor desc = new HTableDescriptor(FIRST_RELATION);
       String[] columns = FIRST_COLUMNS.split(" ");
@@ -115,7 +106,7 @@ public class TestTableJoinMapReduce extends MultiRegionTable {
       admin.createTable(desc);
 
       // insert random data into the input table
-      HTable table = new HTable(conf, new Text(FIRST_RELATION));
+      table = new HTable(conf, new Text(FIRST_RELATION));
       for (int j = 0; j < 5; j++) {
         long lockid = table.startUpdate(new Text("rowKey" + j));
         table.put(lockid, new Text("a:"), Integer.toString(j).getBytes(
@@ -131,6 +122,10 @@ public class TestTableJoinMapReduce extends MultiRegionTable {
       e.printStackTrace();
     } catch (IOException e) {
       e.printStackTrace();
+    } finally {
+      if (table != null) {
+        table.close();
+      }
     }
 
     try {
@@ -143,8 +138,7 @@ public class TestTableJoinMapReduce extends MultiRegionTable {
       admin.createTable(desc);
 
       // insert random data into the input table
-      HTable table = new HTable(conf, new Text(SECOND_RELATION));
-
+      table = new HTable(conf, new Text(SECOND_RELATION));
       for (int j = 0; j < 3; j++) {
         long lockid = table.startUpdate(new Text("joinKey-" + j));
         table.put(lockid, new Text("d:"), ("s-" + Integer.toString(j))
@@ -158,6 +152,10 @@ public class TestTableJoinMapReduce extends MultiRegionTable {
       e.printStackTrace();
     } catch (IOException e) {
       e.printStackTrace();
+    } finally {
+      if (table != null) {
+        table.close();
+      }
     }
 
     try {
@@ -186,7 +184,7 @@ public class TestTableJoinMapReduce extends MultiRegionTable {
 
       IndexJoinMap.initJob(FIRST_RELATION, SECOND_RELATION, FIRST_COLUMNS,
           SECOND_COLUMNS, JOIN_EXPRESSION, IndexJoinMap.class, jobConf);
-      IndexJoinReduce.initJob(OUTPUT_TABLE, IndexJoinReduce.class, jobConf);
+      TableReduce.initJob(OUTPUT_TABLE, IndexJoinReduce.class, jobConf);
 
       JobClient.runJob(jobConf);
 
@@ -197,7 +195,7 @@ public class TestTableJoinMapReduce extends MultiRegionTable {
     }
 
     try {
-      verify(conf, OUTPUT_TABLE);
+    verify(conf, OUTPUT_TABLE);
     } catch (IOException e) {
       e.printStackTrace();
     }

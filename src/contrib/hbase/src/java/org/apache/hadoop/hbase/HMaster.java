@@ -1111,17 +1111,15 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     } catch (Throwable t) {
       LOG.fatal("Unhandled exception", t);
     }
+    // The region servers won't all exit until we stop scanning the meta regions
+    stopScanners();
+    
+    // Wait for all the remaining region servers to report in.
     letRegionServersShutdown();
 
     /*
      * Clean up and close up shop
      */
-    synchronized(rootScannerLock) {
-      rootScannerThread.interrupt();    // Wake root scanner
-    }
-    synchronized(metaScannerLock) {
-      metaScannerThread.interrupt();    // Wake meta scanner
-    }
     if (this.infoServer != null) {
       LOG.info("Stopping infoServer");
       try {
@@ -1190,6 +1188,23 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       // Something happened during startup. Shut things down.
       this.closed.set(true);
       LOG.error("Failed startup", e);
+    }
+  }
+  
+  /*
+   * Stop the root and meta scanners so that the region servers serving meta
+   * regions can shut down.
+   */
+  private void stopScanners() {
+    synchronized(rootScannerLock) {
+      if (rootScannerThread.isAlive()) {
+        rootScannerThread.interrupt();  // Wake root scanner
+      }
+    }
+    synchronized(metaScannerLock) {
+      if (metaScannerThread.isAlive()) {
+        metaScannerThread.interrupt();  // Wake meta scanner
+      }
     }
   }
 
@@ -1348,6 +1363,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           // proceed with shutdown
           LOG.info("All user tables quiesced. Proceeding with shutdown");
           closed.set(true);
+          stopScanners();
           synchronized(toDoQueue) {
             toDoQueue.clear();                         // Empty the queue
             delayedToDoQueue.clear();                  // Empty shut down queue
