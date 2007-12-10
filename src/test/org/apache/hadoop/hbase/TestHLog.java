@@ -30,16 +30,63 @@ import org.apache.hadoop.io.SequenceFile.Reader;
 
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
+  private Path dir;
+  private FileSystem fs;
+  
+  @Override
+  protected void setUp() throws Exception {
+    super.setUp();
+    this.dir = getUnitTestdir(getName());
+    this.fs = FileSystem.get(this.conf);
+    if (fs.exists(dir)) {
+      fs.delete(dir);
+    }
+  }
+
+  @Override
+  protected void tearDown() throws Exception {
+    if (this.fs.exists(this.dir)) {
+      this.fs.delete(this.dir);
+    }
+    super.tearDown();
+  }
+ 
+  /**
+   * Just write multiple logs then split.  Before fix for HADOOP-2283, this
+   * would fail.
+   * @throws IOException
+   */
+  public void testSplit() throws IOException {
+    final Text tableName = new Text(getName());
+    final Text rowName = tableName;
+    HLog log = new HLog(this.fs, this.dir, this.conf, null);
+    // Add edits for three regions.
+    try {
+      for (int ii = 0; ii < 3; ii++) {
+        for (int i = 0; i < 3; i++) {
+          for (int j = 0; j < 3; j++) {
+            TreeMap<HStoreKey, byte[]> edit = new TreeMap<HStoreKey, byte[]>();
+            Text column = new Text(Integer.toString(j));
+            edit.put(
+                new HStoreKey(rowName, column, System.currentTimeMillis()),
+                column.getBytes());
+            log.append(new Text(Integer.toString(i)), tableName, edit);
+          }
+        }
+        log.rollWriter();
+      }
+      HLog.splitLog(this.testDir, this.dir, this.fs, this.conf);
+    } finally {
+      if (log != null) {
+        log.closeAndDelete();
+      }
+    }
+  }
 
   /**
    * @throws IOException
    */
   public void testAppend() throws IOException {
-    Path dir = getUnitTestdir(getName());
-    FileSystem fs = FileSystem.get(this.conf);
-    if (fs.exists(dir)) {
-      fs.delete(dir);
-    }
     final int COL_COUNT = 10;
     final Text regionName = new Text("regionname");
     final Text tableName = new Text("tablename");
@@ -88,9 +135,6 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       }
       if (reader != null) {
         reader.close();
-      }
-      if (fs.exists(dir)) {
-        fs.delete(dir);
       }
     }
   }
