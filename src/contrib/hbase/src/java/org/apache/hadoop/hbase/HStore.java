@@ -823,9 +823,11 @@ class HStore implements HConstants {
     }
     FSDataOutputStream out =
       fs.create(new Path(filterDir, BLOOMFILTER_FILE_NAME));
-    
-    bloomFilter.write(out);
-    out.close();
+    try {
+      bloomFilter.write(out);
+    } finally {
+      out.close();
+    }
     if (LOG.isDebugEnabled()) {
       LOG.debug("flushed bloom filter for " + this.storeName);
     }

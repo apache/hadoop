@@ -68,6 +68,8 @@ Trunk (unreleased changes)
                (Bryan Duxbury via Stack)
    HADOOP-2350 Scanner api returns null row names, or skips row names if
                different column families do not have entries for some rows
+   HADOOP-2283 AlreadyBeingCreatedException (Was: Stuck replay of failed
+               regionserver edits)
 
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable

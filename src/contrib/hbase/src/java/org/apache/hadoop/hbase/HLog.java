@@ -160,11 +160,10 @@ public class HLog implements HConstants {
             " because zero length");
           continue;
         }
-        SequenceFile.Reader in =
-          new SequenceFile.Reader(fs, logfiles[i], conf);
+        HLogKey key = new HLogKey();
+        HLogEdit val = new HLogEdit();
+        SequenceFile.Reader in = new SequenceFile.Reader(fs, logfiles[i], conf);
         try {
-          HLogKey key = new HLogKey();
-          HLogEdit val = new HLogEdit();
           int count = 0;
           for (; in.next(key, val); count++) {
             Text regionName = key.getRegionName();
@@ -174,13 +173,16 @@ public class HLog implements HConstants {
                 HRegionInfo.encodeRegionName(regionName)),
                 HREGION_OLDLOGFILE_NAME);
               if (LOG.isDebugEnabled()) {
-                LOG.debug("Creating new log file writer for path " + logfile);
+                LOG.debug("Creating new log file writer for path " + logfile +
+                  "; map content " + logWriters.toString());
               }
               w = SequenceFile.createWriter(fs, conf, logfile, HLogKey.class,
                 HLogEdit.class);
-              logWriters.put(regionName, w);
+              // Use copy of regionName; regionName object is reused inside in
+              // HStoreKey.getRegionName so its content changes as we iterate.
+              logWriters.put(new Text(regionName), w);
             }
-            if (count % 100 == 0 && count > 0 && LOG.isDebugEnabled()) {
+            if (count % 10000 == 0 && count > 0 && LOG.isDebugEnabled()) {
               LOG.debug("Applied " + count + " edits");
             }
             w.append(key, val);

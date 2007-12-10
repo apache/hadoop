@@ -492,11 +492,14 @@ public class HStoreFile implements HConstants, WritableComparable {
       throw new IOException("File already exists " + p.toString());
     }
     FSDataOutputStream out = fs.create(p);
-    out.writeUTF(getReference().getEncodedRegionName());
-    getReference().getMidkey().write(out);
-    out.writeLong(getReference().getFileId());
-    out.writeBoolean(isTopFileRegion(getReference().getFileRegion()));
-    out.close();
+    try {
+      out.writeUTF(getReference().getEncodedRegionName());
+      getReference().getMidkey().write(out);
+      out.writeLong(getReference().getFileId());
+      out.writeBoolean(isTopFileRegion(getReference().getFileRegion()));
+    } finally {
+      out.close();
+   }
   }
   
   /*
@@ -559,7 +562,6 @@ public class HStoreFile implements HConstants, WritableComparable {
           in.close();
         }
       }
-      
     } finally {
       out.close();
     }
@@ -867,7 +869,6 @@ public class HStoreFile implements HConstants, WritableComparable {
     static class Writer extends MapFile.Writer {
       private final Filter bloomFilter;
       
-
       /**
        * Constructor
        * 
