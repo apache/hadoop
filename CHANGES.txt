@@ -120,6 +120,10 @@ Trunk (unreleased changes)
     HADOOP-1900. Makes the heartbeat and task event queries interval 
     dependent on the cluster size.  (Amareshwari Sri Ramadasu via ddas)
 
+    HADOOP-2158. hdfsListDirectory calls FileSystem.listStatus instead
+    of FileSystem.listPaths. This reduces the number of RPC calls on the
+    namenode, thereby improving scalability.  (Christian Kunz via dhruba)
+
   BUG FIXES
 
     HADOOP-2100.  Remove faulty check for existence of $HADOOP_PID_DIR and let
