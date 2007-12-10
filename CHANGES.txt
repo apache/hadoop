@@ -109,6 +109,10 @@ Trunk (unreleased changes)
     HADOOP-1327.  Include website documentation for streaming. (Rob Weltman
     via omalley)
 
+    HADOOP-2000.  Rewrite NNBench to measure namenode performance accurately.
+    It now uses the map-reduce framework for load generation.
+    (Mukund Madhugiri via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
