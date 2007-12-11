@@ -116,6 +116,7 @@ public class HelpCommand extends BasicCommand {
         "Alter structure of table",
         "ALTER TABLE table_name ADD column_spec | "
             + "ADD (column_spec, column_spec, ...) | "
+            + "CHANGE column_family column_spec | "
             + "DROP column_family_name | " + "CHANGE column_spec;" });
 
     load.put("EXIT", new String[] { "Exit shell", "EXIT;" });

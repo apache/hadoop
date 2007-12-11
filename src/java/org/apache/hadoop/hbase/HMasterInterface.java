@@ -61,6 +61,18 @@ public interface HMasterInterface extends VersionedProtocol {
   public void addColumn(Text tableName, HColumnDescriptor column) throws IOException;
 
   /**
+   * Modifies an existing column on the specified table
+   * @param tableName
+   * @param columnName name of the column to edit
+   * @param descriptor new column descriptor
+   * @throws IOException
+   */
+  public void modifyColumn(Text tableName, Text columnName, 
+    HColumnDescriptor descriptor) 
+  throws IOException;
+
+
+  /**
    * Deletes a column from the specified table
    * @param tableName
    * @param columnName

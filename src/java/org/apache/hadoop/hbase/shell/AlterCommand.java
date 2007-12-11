@@ -28,9 +28,13 @@ import java.util.Set;
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HConnection;
 import org.apache.hadoop.hbase.HConnectionManager;
 import org.apache.hadoop.io.Text;
+
+import org.apache.hadoop.hbase.BloomFilterDescriptor;
+import org.apache.hadoop.hbase.BloomFilterDescriptor.BloomFilterType;
 
 /**
  * Alters tables.
@@ -79,8 +83,29 @@ public class AlterCommand extends SchemaModificationCommand {
           enableTable(admin, tableName);
           break;
         case CHANGE:
-          // Not yet supported
-          return new ReturnMsg(0, "" + operationType + " is not yet supported.");
+          disableTable(admin, tableName);
+          
+          Map.Entry<String, Map<String, Object>> columnEntry = 
+            (Map.Entry<String, Map<String, Object>>)columnSpecMap.entrySet().toArray()[0];
+
+          // add the : if there isn't one
+          Text columnName = new Text(columnEntry.getKey().endsWith(":") ? 
+            columnEntry.getKey() : columnEntry.getKey() + ":");
+          
+          // get the table descriptor so we can get the old column descriptor
+          HTableDescriptor tDesc = getTableDescByName(admin, tableName);
+          HColumnDescriptor oldColumnDesc = tDesc.families().get(columnName);
+
+          // combine the options specified in the shell with the options 
+          // from the exiting descriptor to produce the new descriptor
+          columnDesc = getColumnDescriptor(columnName.toString(), 
+            columnEntry.getValue(), oldColumnDesc);
+          
+          // send the changes out to the master
+          admin.modifyColumn(new Text(tableName), columnName, columnDesc);
+          
+          enableTable(admin, tableName);
+          break;
         case NOOP:
           return new ReturnMsg(0, "Invalid operation type.");
       }
@@ -141,4 +166,84 @@ public class AlterCommand extends SchemaModificationCommand {
   public CommandType getCommandType() {
     return CommandType.DDL;
   }
+  
+  private HTableDescriptor getTableDescByName(HBaseAdmin admin, String tableName)
+  throws IOException{
+    HTableDescriptor[] tables = admin.listTables();
+    for(HTableDescriptor tDesc : tables){
+      if (tDesc.getName().toString().equals(tableName)) {
+        return tDesc;
+      }
+    }
+    return null;
+  }
+  
+  /**
+   * Given a column name, column spec, and original descriptor, returns an 
+   * instance of HColumnDescriptor representing the column spec, with empty
+   * values drawn from the original as defaults
+   */
+  protected HColumnDescriptor getColumnDescriptor(String column,
+    Map<String, Object> columnSpec, HColumnDescriptor original) 
+  throws IllegalArgumentException {
+    initOptions(original);
+
+    Set<String> specs = columnSpec.keySet();
+    for (String spec : specs) {
+      spec = spec.toUpperCase();
+
+      if (spec.equals("MAX_VERSIONS")) {
+        maxVersions = (Integer) columnSpec.get(spec);
+      } else if (spec.equals("MAX_LENGTH")) {
+        maxLength = (Integer) columnSpec.get(spec);
+      } else if (spec.equals("COMPRESSION")) {
+        compression = HColumnDescriptor.CompressionType
+            .valueOf(((String) columnSpec.get(spec)).toUpperCase());
+      } else if (spec.equals("IN_MEMORY")) {
+        inMemory = (Boolean) columnSpec.get(spec);
+      } else if (spec.equals("BLOOMFILTER")) {
+        bloomFilterType = BloomFilterType.valueOf(((String) columnSpec.get(spec))
+            .toUpperCase());
+      } else if (spec.equals("VECTOR_SIZE")) {
+        vectorSize = (Integer) columnSpec.get(spec);
+      } else if (spec.equals("NUM_HASH")) {
+        numHash = (Integer) columnSpec.get(spec);
+      } else if (spec.equals("NUM_ENTRIES")) {
+        numEntries = (Integer) columnSpec.get(spec);
+      } else {
+        throw new IllegalArgumentException("Invalid option: " + spec);
+      }
+    }
+
+    // Now we gather all the specified options for this column.
+    if (bloomFilterType != null) {
+      if (specs.contains("NUM_ENTRIES")) {
+        bloomFilterDesc = new BloomFilterDescriptor(bloomFilterType, numEntries);
+      } else {
+        bloomFilterDesc = new BloomFilterDescriptor(bloomFilterType, vectorSize,
+            numHash);
+      }
+    }
+
+    column = appendDelimiter(column);
+
+    HColumnDescriptor columnDesc = new HColumnDescriptor(new Text(column),
+        maxVersions, compression, inMemory, maxLength, bloomFilterDesc);
+
+    return columnDesc;
+  }
+
+  private void initOptions(HColumnDescriptor original) {
+    if (original == null) {
+      initOptions();
+      return;
+    }
+    maxVersions = original.getMaxVersions();
+    maxLength = original.getMaxValueLength();
+    compression = original.getCompression();
+    inMemory = original.isInMemory();
+    bloomFilterDesc = original.getBloomFilter();
+  }
+
+  
 }
