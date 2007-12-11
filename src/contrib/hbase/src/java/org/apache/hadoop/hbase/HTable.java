@@ -352,7 +352,7 @@ public class HTable implements HConstants {
    * Get all the data for the specified row at the latest timestamp
    * 
    * @param row row key
-   * @return map of colums to values
+   * @return Map of columns to values.  Map is empty if row does not exist.
    * @throws IOException
    */
   public SortedMap<Text, byte[]> getRow(Text row) throws IOException {
@@ -364,7 +364,7 @@ public class HTable implements HConstants {
    * 
    * @param row row key
    * @param ts timestamp
-   * @return map of colums to values
+   * @return Map of columns to values.  Map is empty if row does not exist.
    * @throws IOException
    */
   public SortedMap<Text, byte[]> getRow(Text row, long ts) throws IOException {
@@ -650,12 +650,12 @@ public class HTable implements HConstants {
   }
   
   /** 
-   * Change a value for the specified column.
+   * Update a value for the specified column.
    * Runs {@link #abort(long)} if exception thrown.
    *
    * @param lockid lock id returned from startUpdate
    * @param column column whose value is being set
-   * @param val new value for column
+   * @param val new value for column.  Cannot be null.
    */
   public void put(long lockid, Text column, byte val[]) {
     checkClosed();
@@ -667,12 +667,12 @@ public class HTable implements HConstants {
   }
   
   /** 
-   * Change a value for the specified column.
+   * Update a value for the specified column.
    * Runs {@link #abort(long)} if exception thrown.
    *
    * @param lockid lock id returned from startUpdate
    * @param column column whose value is being set
-   * @param val new value for column
+   * @param val new value for column.  Cannot be null.
    * @throws IOException throws this if the writable can't be
    * converted into a byte array 
    */
