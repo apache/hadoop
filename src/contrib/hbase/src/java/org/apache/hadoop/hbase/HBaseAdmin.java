@@ -479,6 +479,31 @@ public class HBaseAdmin implements HConstants {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
   }
+
+  /**
+   * Modify an existing column family on a table
+   * 
+   * @param tableName name of table
+   * @param columnName name of column to be modified
+   * @param descriptor new column descriptor to use
+   * @throws IOException
+   */
+  public void modifyColumn(Text tableName, Text columnName, 
+    HColumnDescriptor descriptor)
+  throws IOException {
+    if (this.master == null) {
+      throw new MasterNotRunningException("master has been shut down");
+    }
+    
+    checkReservedTableName(tableName);
+    try {
+      this.master.modifyColumn(tableName, columnName, descriptor);
+      
+    } catch (RemoteException e) {
+      throw RemoteExceptionHandler.decodeRemoteException(e);
+    }
+  }
+
   
   /** 
    * Shuts down the HBase instance 

@@ -2636,6 +2636,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   /** {@inheritDoc} */
+  public void modifyColumn(Text tableName, Text columnName, 
+    HColumnDescriptor descriptor)
+  throws IOException {
+    new ModifyColumn(tableName, columnName, descriptor).process();
+  }
+
+  /** {@inheritDoc} */
   public void deleteColumn(Text tableName, Text columnName) throws IOException {
     new DeleteColumn(tableName, HStoreKey.extractFamily(columnName)).process();
   }
@@ -3075,6 +3082,41 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       }
     }
   }
+
+  /** Instantiated to modify an existing column family on a table */
+  private class ModifyColumn extends ColumnOperation {
+    private HColumnDescriptor descriptor;
+    private Text columnName;
+    
+    ModifyColumn(Text tableName, Text columnName, HColumnDescriptor _descriptor) 
+      throws IOException {
+      super(tableName);
+      this.descriptor = _descriptor;
+      this.columnName = columnName;
+    }
+
+    @Override
+    protected void postProcessMeta(MetaRegion m, HRegionInterface server)
+      throws IOException {
+
+      for (HRegionInfo i: unservedRegions) {
+        // get the column families map from the table descriptor
+        Map<Text, HColumnDescriptor> families = i.getTableDesc().families();
+        
+        // if the table already has this column, then put the new descriptor 
+        // version.
+        if (families.get(columnName) != null){
+          families.put(columnName, descriptor);
+          updateRegionInfo(server, m.getRegionName(), i);          
+        }
+        else{ // otherwise, we have an error.
+          throw new IOException("Column family '" + columnName + 
+            "' doesn't exist, so cannot be modified.");
+        }
+      }
+    }
+  }
+
 
   /*
    * Managing leases

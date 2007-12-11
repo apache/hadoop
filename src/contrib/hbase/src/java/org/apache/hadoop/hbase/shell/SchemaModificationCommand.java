@@ -33,21 +33,21 @@ import org.apache.hadoop.io.Text;
  * Command. Provides utility methods for alteration operations.
  */
 public abstract class SchemaModificationCommand extends BasicCommand {
-  private int maxVersions;
-  private int maxLength;
-  private HColumnDescriptor.CompressionType compression;
-  private boolean inMemory;
-  private BloomFilterDescriptor bloomFilterDesc;
-  private BloomFilterType bloomFilterType;
-  private int vectorSize;
-  private int numHash;
-  private int numEntries;
+  protected int maxVersions;
+  protected int maxLength;
+  protected HColumnDescriptor.CompressionType compression;
+  protected boolean inMemory;
+  protected BloomFilterDescriptor bloomFilterDesc;
+  protected BloomFilterType bloomFilterType;
+  protected int vectorSize;
+  protected int numHash;
+  protected int numEntries;
 
   public SchemaModificationCommand(Writer o) {
     super(o);
   }
 
-  private void initOptions() {
+  protected void initOptions() {
     maxVersions = HColumnDescriptor.DEFAULT_N_VERSIONS;
     maxLength = HColumnDescriptor.DEFAULT_MAX_VALUE_LENGTH;
     compression = HColumnDescriptor.DEFAULT_COMPRESSION_TYPE;
