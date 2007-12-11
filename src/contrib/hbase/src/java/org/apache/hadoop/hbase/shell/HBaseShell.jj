@@ -327,6 +327,9 @@ Map<String, Object> ColumnSpec() :
     <MAX_VERSIONS> 
      <EQUALS> n = Number() 
     { 
+       if(n < 0) {
+         n = Integer.MAX_VALUE;
+       }
       columnSpec.put("MAX_VERSIONS", n); 
     }
    |
@@ -850,10 +853,17 @@ List<String> columnList() :
 int Number() :
 {
   Token t = null;
+  Token minusSignedInt = null;
 }
 {
-  t = <INTEGER_LITERAL>
-  { return Integer.parseInt(t.image.toString()); }
+  ( minusSignedInt=<ID> |  t=<INTEGER_LITERAL> )
+  {
+    if(minusSignedInt != null) {
+      return Integer.parseInt(minusSignedInt.image.toString()); 
+    } else {
+      return Integer.parseInt(t.image.toString());
+    }
+    }
 }
 
 String identifier() :

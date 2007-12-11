@@ -108,6 +108,8 @@ Trunk (unreleased changes)
    HADOOP-2357 Compaction cleanup; less deleting + prevent possible file leaks
    HADOOP-2377 Holding open MapFile.Readers is expensive, so use less of them
    HADOOP-2392 TestRegionServerExit has new failure mode since HADOOP-2338
+   HADOOP-2370 Allow column families with an unlimited number of versions
+               (Edward Yoon via Stack)
 
 Release 0.15.1
 Branch 0.15
