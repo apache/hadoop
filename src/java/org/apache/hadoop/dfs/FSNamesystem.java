@@ -979,19 +979,7 @@ class FSNamesystem implements FSConstants {
         throw new SafeModeException("Cannot add block to " + src, safeMode);
       }
 
-      //
-      // make sure that we still have the lease on this file
-      //
-      INodeFile iFile = dir.getFileINode(src);
-      if (iFile == null || !iFile.isUnderConstruction()) {
-        throw new LeaseExpiredException("No lease on " + src);
-      }
-      INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) iFile;
-      if (!pendingFile.getClientName().equals(clientName)) {
-        throw new LeaseExpiredException("Lease mismatch on " + src + " owned by "
-                                        + pendingFile.getClientName()
-                                        + " and appended by " + clientName);
-      }
+      INodeFileUnderConstruction pendingFile  = checkLease(src, clientName);
 
       //
       // If we fail this, bad things happen!
@@ -1033,20 +1021,34 @@ class FSNamesystem implements FSConstants {
   /**
    * The client would like to let go of the given block
    */
-  public synchronized boolean abandonBlock(Block b, String src) throws IOException {
+  public synchronized boolean abandonBlock(Block b, String src, String holder
+      ) throws IOException {
     //
     // Remove the block from the pending creates list
     //
     NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: "
                                   +b.getBlockName()+"of file "+src);
-    INode file = dir.getFileINode(src);
-    if (file != null) {
-      dir.removeBlock(src, file, b);
-    }
+    INode file = checkLease(src, holder);
+    dir.removeBlock(src, file, b);
     NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: "
                                     + b.getBlockName()
                                     + " is removed from pendingCreates");
     return true;
+  }
+  
+  // make sure that we still have the lease on this file
+  private INodeFileUnderConstruction checkLease(String src, String holder
+      ) throws IOException {
+    INode file = dir.getFileINode(src);
+    if (file == null || !file.isUnderConstruction()) {
+      throw new LeaseExpiredException("No lease on " + src);
+    }
+    INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction)file;
+    if (!pendingFile.getClientName().equals(holder)) {
+      throw new LeaseExpiredException("Lease mismatch on " + src + " owned by "
+          + pendingFile.getClientName() + " but is accessed by " + holder);
+    }
+    return pendingFile;    
   }
 
   /**

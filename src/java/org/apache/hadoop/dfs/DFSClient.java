@@ -1500,7 +1500,7 @@ class DFSClient implements FSConstants {
             Thread.sleep(6000);
           } catch (InterruptedException iex) {
           }
-          namenode.abandonBlock(block, src.toString());
+          namenode.abandonBlock(block, src, clientName);
           retry = true;
           continue;
         }
@@ -1690,7 +1690,7 @@ class DFSClient implements FSConstants {
         LOG.warn("Error closing socket.", ie2);
       }
       //XXX Why are we abondoning the block? There could be retries left.
-      namenode.abandonBlock(block, src.toString());
+      namenode.abandonBlock(block, src, clientName);
     }
 
     private void internalClose() throws IOException {

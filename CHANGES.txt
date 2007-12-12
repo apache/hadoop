@@ -29,6 +29,10 @@ Trunk (unreleased changes)
     HADOOP-2185.  RPC Server uses any available port if the specified port is
     zero. Otherwise it uses the specified port.
     (Konstantin Shvachko via dhruba)
+
+    HADOOP-2401.  Only the current leaseholder can abandon a block for
+    a HDFS file.  ClientProtocol version changed from 20 to 21.
+    (Tsz Wo (Nicholas), SZE via dhruba)
     
   NEW FEATURES
 

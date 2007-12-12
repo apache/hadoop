@@ -35,9 +35,10 @@ interface ClientProtocol extends VersionedProtocol {
    * 17 : getBlockSize replaced by getPreferredBlockSize
    * 18 : datanodereport returns dead, live or all nodes.
    * 19 : rollEditLog() returns a token to uniquely identify the editfile.
-   * 20 : getContentLength reutrns the total size in bytes of a directory subtree
+   * 20 : getContentLength returns the total size in bytes of a directory subtree
+   * 21 : add lease holder as a parameter in abandonBlock(...)
    */
-  public static final long versionID = 20L;
+  public static final long versionID = 21L;
   
   ///////////////////////////////////////
   // File contents
@@ -126,7 +127,8 @@ interface ClientProtocol extends VersionedProtocol {
    *
    * Any partial writes to the block will be garbage-collected.
    */
-  public void abandonBlock(Block b, String src) throws IOException;
+  public void abandonBlock(Block b, String src, String holder
+      ) throws IOException;
 
   /**
    * A client that wants to write an additional block to the 

@@ -292,10 +292,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   /**
    * The client needs to give up on the block.
    */
-  public void abandonBlock(Block b, String src) throws IOException {
+  public void abandonBlock(Block b, String src, String holder
+      ) throws IOException {
     stateChangeLog.debug("*BLOCK* NameNode.abandonBlock: "
                          +b.getBlockName()+" of file "+src);
-    if (!namesystem.abandonBlock(b, src)) {
+    if (!namesystem.abandonBlock(b, src, holder)) {
       throw new IOException("Cannot abandon block during write to " + src);
     }
   }
