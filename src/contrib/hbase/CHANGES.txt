@@ -115,6 +115,7 @@ Trunk (unreleased changes)
    HADOOP-2392 TestRegionServerExit has new failure mode since HADOOP-2338
    HADOOP-2370 Allow column families with an unlimited number of versions
                (Edward Yoon via Stack)
+   HADOOP-2407 Keeping MapFile.Reader open is expensive: Part 2
 
 Release 0.15.1
 Branch 0.15
