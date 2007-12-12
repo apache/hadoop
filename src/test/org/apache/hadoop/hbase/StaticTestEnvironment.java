@@ -108,7 +108,7 @@ public class StaticTestEnvironment {
       Layout layout = consoleAppender.getLayout();
       if(layout instanceof PatternLayout) {
         PatternLayout consoleLayout = (PatternLayout)layout;
-        consoleLayout.setConversionPattern("%d %-5p [%t] %l: %m%n");
+        consoleLayout.setConversionPattern("%d %-5p [%t] %C{2}(%L): %m%n");
       }
     }
     LOG.setLevel(logLevel);

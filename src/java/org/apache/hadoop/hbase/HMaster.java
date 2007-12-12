@@ -92,38 +92,38 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   // started here in HMaster rather than have them have to know about the
   // hosting class
   volatile AtomicBoolean closed = new AtomicBoolean(true);
-  volatile AtomicBoolean shutdownRequested = new AtomicBoolean(false);
+  volatile boolean shutdownRequested = false;
   volatile AtomicInteger quiescedMetaServers = new AtomicInteger(0);
-  volatile boolean fsOk;
-  Path dir;
-  HBaseConfiguration conf;
-  FileSystem fs;
-  Random rand;
-  int threadWakeFrequency; 
-  int numRetries;
-  long maxRegionOpenTime;
+  volatile boolean fsOk = true;
+  final Path dir;
+  final HBaseConfiguration conf;
+  final FileSystem fs;
+  final Random rand;
+  final int threadWakeFrequency; 
+  final int numRetries;
+  final long maxRegionOpenTime;
 
-  DelayQueue<RegionServerOperation> delayedToDoQueue =
+  volatile DelayQueue<RegionServerOperation> delayedToDoQueue =
     new DelayQueue<RegionServerOperation>();
-  BlockingQueue<RegionServerOperation> toDoQueue =
+  volatile BlockingQueue<RegionServerOperation> toDoQueue =
     new LinkedBlockingQueue<RegionServerOperation>();
 
-  int leaseTimeout;
-  private Leases serverLeases;
-  private Server server;
-  private HServerAddress address;
+  final int leaseTimeout;
+  private final Leases serverLeases;
+  private final Server server;
+  private final HServerAddress address;
 
-  HConnection connection;
+  final HConnection connection;
 
-  int metaRescanInterval;
+  final int metaRescanInterval;
 
-  final AtomicReference<HServerAddress> rootRegionLocation =
+  volatile AtomicReference<HServerAddress> rootRegionLocation =
     new AtomicReference<HServerAddress>(null);
   
-  Lock splitLogLock = new ReentrantLock();
+  final Lock splitLogLock = new ReentrantLock();
   
   // A Sleeper that sleeps for threadWakeFrequency
-  protected Sleeper sleeper;
+  protected final Sleeper sleeper;
   
   // Default access so accesible from unit tests. MASTER is name of the webapp
   // and the attribute name used stuffing this instance into web context.
@@ -183,7 +183,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     protected boolean rootRegion;
     protected final Text tableName;
 
-    protected abstract void initialScan();
+    protected abstract boolean initialScan();
     protected abstract void maintenanceScan();
 
     BaseScanner(final Text tableName, final int period,
@@ -194,8 +194,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
     
     @Override
-    protected void initialChore() {
-      initialScan();
+    protected boolean initialChore() {
+      return initialScan();
     }
     
     @Override
@@ -473,7 +473,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         // This is only done from here if we are restarting and there is stale
         // data in the meta region. Once we are on-line, dead server log
         // recovery is handled by lease expiration and ProcessServerShutdown
-        if (serverName.length() != 0) {
+        if (!initialMetaScanComplete && serverName.length() != 0) {
           StringBuilder dirName = new StringBuilder("log_");
           dirName.append(serverName.replace(":", "_"));
           Path logDir = new Path(dir, dirName.toString());
@@ -500,7 +500,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
   }
 
-  volatile boolean rootScanned;
+  volatile boolean rootScanned = false;
 
   /** Scanner for the <code>ROOT</code> HRegion. */
   class RootScanner extends BaseScanner {
@@ -509,60 +509,51 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       super(HConstants.ROOT_TABLE_NAME, metaRescanInterval, closed);
     }
 
-    private void scanRoot() {
-      int tries = 0;
-      while (!closed.get() && tries < numRetries) {
-        synchronized (rootRegionLocation) {
-          while(!closed.get() && rootRegionLocation.get() == null) {
-            // rootRegionLocation will be filled in when we get an 'open region'
-            // regionServerReport message from the HRegionServer that has been
-            // allocated the ROOT region below.
-            try {
-              rootRegionLocation.wait();
-            } catch (InterruptedException e) {
-              // continue
-            }
+    private boolean scanRoot() {
+      // Don't retry if we get an error while scanning. Errors are most often
+      // caused by the server going away. Wait until next rescan interval when
+      // things should be back to normal
+      boolean scanSuccessful = false;
+      synchronized (rootRegionLocation) {
+        while(!closed.get() && rootRegionLocation.get() == null) {
+          // rootRegionLocation will be filled in when we get an 'open region'
+          // regionServerReport message from the HRegionServer that has been
+          // allocated the ROOT region below.
+          try {
+            rootRegionLocation.wait();
+          } catch (InterruptedException e) {
+            // continue
           }
         }
-        if (closed.get()) {
-          continue;
-        }
-
-        try {
-          // Don't interrupt us while we're working
-          synchronized(rootScannerLock) {
-            scanRegion(new MetaRegion(rootRegionLocation.get(),
-                HRegionInfo.rootRegionInfo.getRegionName(), null));
-          }
-          break;
-        } catch (IOException e) {
-          e = RemoteExceptionHandler.checkIOException(e);
-          tries += 1;
-          if (tries == 1) {
-            LOG.warn("Scan ROOT region", e);
-          } else {
-            LOG.error("Scan ROOT region", e);
-          if (tries == numRetries - 1) {
-              // We ran out of tries. Make sure the file system is still
-              // available
-              if (!checkFileSystem()) {
-                continue; // Avoid sleeping.
-              }
-            }
-          }
-        } catch (Exception e) {
-          // If for some reason we get some other kind of exception, 
-          // at least log it rather than go out silently.
-          LOG.error("Unexpected exception", e);
-        }
-        sleeper.sleep();
       }
+      if (closed.get()) {
+        return scanSuccessful;
+      }
+
+      try {
+        // Don't interrupt us while we're working
+        synchronized(rootScannerLock) {
+          scanRegion(new MetaRegion(rootRegionLocation.get(),
+              HRegionInfo.rootRegionInfo.getRegionName(), null));
+        }
+        scanSuccessful = true;
+      } catch (IOException e) {
+        e = RemoteExceptionHandler.checkIOException(e);
+        LOG.warn("Scan ROOT region", e);
+        // Make sure the file system is still available
+        checkFileSystem();
+      } catch (Exception e) {
+        // If for some reason we get some other kind of exception, 
+        // at least log it rather than go out silently.
+        LOG.error("Unexpected exception", e);
+      }
+      return scanSuccessful;
     }
 
     @Override
-    protected void initialScan() {
-      scanRoot();
-      rootScanned = true;
+    protected boolean initialScan() {
+      rootScanned = scanRoot();
+      return rootScanned;
     }
 
     @Override
@@ -571,8 +562,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
   }
 
-  private RootScanner rootScannerThread;
-  Integer rootScannerLock = new Integer(0);
+  private final RootScanner rootScannerThread;
+  final Integer rootScannerLock = new Integer(0);
 
   /** Describes a meta region and its server */
   @SuppressWarnings("unchecked")
@@ -652,18 +643,18 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   /** Set by root scanner to indicate the number of meta regions */
-  final AtomicInteger numberOfMetaRegions = new AtomicInteger();
+  volatile AtomicInteger numberOfMetaRegions = new AtomicInteger();
 
   /** Work for the meta scanner is queued up here */
-  final BlockingQueue<MetaRegion> metaRegionsToScan =
+  volatile BlockingQueue<MetaRegion> metaRegionsToScan =
     new LinkedBlockingQueue<MetaRegion>();
 
   /** These are the online meta regions */
-  final SortedMap<Text, MetaRegion> onlineMetaRegions =
+  volatile SortedMap<Text, MetaRegion> onlineMetaRegions =
     Collections.synchronizedSortedMap(new TreeMap<Text, MetaRegion>());
 
   /** Set by meta scanner after initial scan */
-  volatile boolean initialMetaScanComplete;
+  volatile boolean initialMetaScanComplete = false;
 
   /**
    * MetaScanner <code>META</code> table.
@@ -675,65 +666,58 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * action would prevent other work from getting done.
    */
   class MetaScanner extends BaseScanner {
+    private final List<MetaRegion> metaRegionsToRescan =
+      new ArrayList<MetaRegion>();
+    
     /** Constructor */
     public MetaScanner() {
       super(HConstants.META_TABLE_NAME, metaRescanInterval, closed);
     }
 
-    private void scanOneMetaRegion(MetaRegion region) {
-      int tries = 0;
-      while (!closed.get() && tries < numRetries) {
-        while (!closed.get() && !rootScanned &&
-            rootRegionLocation.get() == null) {
-          sleeper.sleep();
-        }
-        if (closed.get()) {
-          continue;
-        }
-
-        try {
-          // Don't interrupt us while we're working
-          synchronized (metaScannerLock) {
-            scanRegion(region);
-            onlineMetaRegions.put(region.getStartKey(), region);
-          }
-          break;
-        } catch (IOException e) {
-          e = RemoteExceptionHandler.checkIOException(e);
-          tries += 1;
-          if (tries == 1) {
-            LOG.warn("Scan one META region: " + region.toString(), e);
-          } else {
-            LOG.error("Scan one META region: " + region.toString(), e);
-          }
-          // The region may have moved (TestRegionServerAbort, etc.).  If
-          // so, either it won't be in the onlineMetaRegions list or its host
-          // address has changed and the containsValue will fail. If not
-          // found, best thing to do here is probably break.
-          if (!onlineMetaRegions.containsValue(region)) {
-            LOG.debug("Scanned region is no longer in map of online " +
-              "regions or its value has changed");
-            break;
-          }
-          if (tries == numRetries - 1) {
-            // We ran out of tries. Make sure the file system is still
-            // available
-            if (!checkFileSystem()) {
-              continue; // avoid sleeping
-            }
-          }
-        } catch (Exception e) {
-          // If for some reason we get some other kind of exception, 
-          // at least log it rather than go out silently.
-          LOG.error("Unexpected exception", e);
-        }
-        // Sleep before going around again.
+    private boolean scanOneMetaRegion(MetaRegion region) {
+      // Don't retry if we get an error while scanning. Errors are most often
+      // caused by the server going away. Wait until next rescan interval when
+      // things should be back to normal
+      boolean scanSuccessful = false;
+      while (!closed.get() && !rootScanned &&
+          rootRegionLocation.get() == null) {
         sleeper.sleep();
       }
+      if (closed.get()) {
+        return scanSuccessful;
+      }
+
+      try {
+        // Don't interrupt us while we're working
+        synchronized (metaScannerLock) {
+          scanRegion(region);
+          onlineMetaRegions.put(region.getStartKey(), region);
+        }
+        scanSuccessful = true;
+      } catch (IOException e) {
+        e = RemoteExceptionHandler.checkIOException(e);
+        LOG.warn("Scan one META region: " + region.toString(), e);
+        // The region may have moved (TestRegionServerAbort, etc.).  If
+        // so, either it won't be in the onlineMetaRegions list or its host
+        // address has changed and the containsValue will fail. If not
+        // found, best thing to do here is probably return.
+        if (!onlineMetaRegions.containsValue(region.getStartKey())) {
+          LOG.debug("Scanned region is no longer in map of online " +
+          "regions or its value has changed");
+          return scanSuccessful;
+        }
+        // Make sure the file system is still available
+        checkFileSystem();
+      } catch (Exception e) {
+        // If for some reason we get some other kind of exception, 
+        // at least log it rather than go out silently.
+        LOG.error("Unexpected exception", e);
+      }
+      return scanSuccessful;
     }
 
     @Override
-    protected void initialScan() {
+    protected boolean initialScan() {
       MetaRegion region = null;
       while (!closed.get() && region == null && !metaRegionsScanned()) {
         try {
@@ -742,12 +726,17 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         } catch (InterruptedException e) {
           // continue
         }
-
+        if (region == null && metaRegionsToRescan.size() != 0) {
+          region = metaRegionsToRescan.remove(0);
+        }
         if (region != null) {
-          scanOneMetaRegion(region);
+          if (!scanOneMetaRegion(region)) {
+            metaRegionsToRescan.add(region);
+          }
         }
       }
       initialMetaScanComplete = true;
+      return true;
     }
 
     @Override
@@ -797,23 +786,23 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
   }
 
-  MetaScanner metaScannerThread;
-  Integer metaScannerLock = new Integer(0);
+  final MetaScanner metaScannerThread;
+  final Integer metaScannerLock = new Integer(0);
 
   /** The map of known server names to server info */
-  final Map<String, HServerInfo> serversToServerInfo =
+  volatile Map<String, HServerInfo> serversToServerInfo =
     new ConcurrentHashMap<String, HServerInfo>();
   
   /** Set of known dead servers */
-  final Set<String> deadServers =
+  volatile Set<String> deadServers =
     Collections.synchronizedSet(new HashSet<String>());
 
   /** SortedMap server load -> Set of server names */
-  final SortedMap<HServerLoad, Set<String>> loadToServers =
+  volatile SortedMap<HServerLoad, Set<String>> loadToServers =
     Collections.synchronizedSortedMap(new TreeMap<HServerLoad, Set<String>>());
 
   /** Map of server names -> server load */
-  final Map<String, HServerLoad> serversToLoad =
+  volatile Map<String, HServerLoad> serversToLoad =
     new ConcurrentHashMap<String, HServerLoad>();
 
   /**
@@ -827,36 +816,36 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * <p>Items are removed from this list when a region server reports in that
    * the region has been deployed.
    */
-  final SortedMap<HRegionInfo, Long> unassignedRegions =
+  volatile SortedMap<HRegionInfo, Long> unassignedRegions =
     Collections.synchronizedSortedMap(new TreeMap<HRegionInfo, Long>());
 
   /**
    * Regions that have been assigned, and the server has reported that it has
    * started serving it, but that we have not yet recorded in the meta table.
    */
-  final Set<Text> pendingRegions =
+  volatile Set<Text> pendingRegions =
     Collections.synchronizedSet(new HashSet<Text>());
 
   /**
    * The 'killList' is a list of regions that are going to be closed, but not
    * reopened.
    */
-  final Map<String, HashMap<Text, HRegionInfo>> killList =
+  volatile Map<String, HashMap<Text, HRegionInfo>> killList =
     new ConcurrentHashMap<String, HashMap<Text, HRegionInfo>>();
 
   /** 'killedRegions' contains regions that are in the process of being closed */
-  final Set<Text> killedRegions =
+  volatile Set<Text> killedRegions =
     Collections.synchronizedSet(new HashSet<Text>());
 
   /**
    * 'regionsToDelete' contains regions that need to be deleted, but cannot be
    * until the region server closes it
    */
-  final Set<Text> regionsToDelete =
+  volatile Set<Text> regionsToDelete =
     Collections.synchronizedSet(new HashSet<Text>());
 
   /** Set of tables currently in creation. */
-  private Set<Text> tableInCreation = 
+  private volatile Set<Text> tableInCreation = 
     Collections.synchronizedSet(new HashSet<Text>());
 
   /** Build the HMaster out of a raw configuration item.
@@ -881,7 +870,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public HMaster(Path dir, HServerAddress address, HBaseConfiguration conf)
     throws IOException {
     
-    this.fsOk = true;
     this.dir = dir;
     this.conf = conf;
     this.fs = FileSystem.get(conf);
@@ -945,11 +933,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       conf.getInt("hbase.master.meta.thread.rescanfrequency", 60 * 1000);
 
     // The root region
-    this.rootScanned = false;
     this.rootScannerThread = new RootScanner();
 
     // Scans the meta table
-    this.initialMetaScanComplete = false;
     this.metaScannerThread = new MetaScanner();
     
     unassignRootRegion();
@@ -1021,7 +1007,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   public HServerAddress getRootRegionLocation() {
     HServerAddress rootServer = null;
-    if (!shutdownRequested.get() && !closed.get()) {
+    if (!shutdownRequested && !closed.get()) {
       rootServer = this.rootRegionLocation.get();
     }
     return rootServer;
@@ -1313,9 +1299,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   throws IOException {
     String serverName = serverInfo.getServerAddress().toString().trim();
     long serverLabel = getServerLabel(serverName);
-//    if (LOG.isDebugEnabled()) {
-//      LOG.debug("received heartbeat from " + serverName);
-//    }
     if (msgs.length > 0) {
       if (msgs[0].getMsg() == HMsg.MSG_REPORT_EXITING) {
         synchronized (serversToServerInfo) {
@@ -1373,7 +1356,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       }
     }
 
-    if (shutdownRequested.get() && !closed.get()) {
+    if (shutdownRequested && !closed.get()) {
       // Tell the server to stop serving any user regions
       return new HMsg[]{new HMsg(HMsg.MSG_REGIONSERVER_QUIESCE)};
     }
@@ -1411,7 +1394,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         LOG.debug("region server race condition detected: " + serverName);
       }
 
-      cancelLease(serverName, serverLabel);
+      synchronized (serversToServerInfo) {
+        cancelLease(serverName, serverLabel);
+        serversToServerInfo.notifyAll();
+      }
       return new HMsg[]{new HMsg(HMsg.MSG_REGIONSERVER_STOP)};
 
     } else {
@@ -1460,13 +1446,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   private boolean cancelLease(final String serverName, final long serverLabel) {
     boolean leaseCancelled = false;
     HServerInfo info = serversToServerInfo.remove(serverName);
-    if (rootRegionLocation.get() != null &&
-        info.getServerAddress().equals(rootRegionLocation.get())) {
-      unassignRootRegion();
-    }
     if (info != null) {
       // Only cancel lease and update load information once.
       // This method can be called a couple of times during shutdown.
+      if (rootRegionLocation.get() != null &&
+          info.getServerAddress().equals(rootRegionLocation.get())) {
+        unassignRootRegion();
+      }
       LOG.info("Cancelling lease for " + serverName);
       serverLeases.cancelLease(serverLabel, serverLabel);
       leaseCancelled = true;
@@ -1502,7 +1488,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
     for (int i = 0; i < incomingMsgs.length; i++) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Received " + incomingMsgs[i].toString() + "from " +
+        LOG.debug("Received " + incomingMsgs[i].toString() + " from " +
             serverName);
       }
       HRegionInfo region = incomingMsgs[i].getRegionInfo();
@@ -2513,7 +2499,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /** {@inheritDoc} */
   public void shutdown() {
     LOG.info("Cluster shutdown requested. Starting to quiesce servers");
-    this.shutdownRequested.set(true);
+    this.shutdownRequested = true;
   }
 
   /** {@inheritDoc} */

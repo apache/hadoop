@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.TreeMap;
 
+import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
@@ -30,24 +31,33 @@ import org.apache.hadoop.io.SequenceFile.Reader;
 
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
-  private Path dir;
+  private final Path dir = new Path("/hbase");
   private FileSystem fs;
+  private MiniDFSCluster cluster;
+
+  /** constructor */
+  public TestHLog() {
+    this.cluster = null;
+  }
   
+  /** {@inheritDoc} */
   @Override
-  protected void setUp() throws Exception {
+  public void setUp() throws Exception {
     super.setUp();
-    this.dir = getUnitTestdir(getName());
-    this.fs = FileSystem.get(this.conf);
+    cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+    this.fs = cluster.getFileSystem();
     if (fs.exists(dir)) {
       fs.delete(dir);
     }
   }
 
+  /** {@inheritDoc} */
   @Override
-  protected void tearDown() throws Exception {
+  public void tearDown() throws Exception {
     if (this.fs.exists(this.dir)) {
       this.fs.delete(this.dir);
     }
+    StaticTestEnvironment.shutdownDfs(cluster);
     super.tearDown();
   }
  
@@ -76,6 +86,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         log.rollWriter();
       }
       HLog.splitLog(this.testDir, this.dir, this.fs, this.conf);
+      log = null;
     } finally {
       if (log != null) {
         log.closeAndDelete();

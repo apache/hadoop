@@ -1005,11 +1005,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Presumption is that all closes and stops have already been called.
    */
   void join() {
-    join(this.logRoller);
+    join(this.workerThread);
     join(this.cacheFlusher);
     join(this.compactor);
     join(this.splitter);
-    join(this.workerThread);
+    join(this.logRoller);
   }
 
   private void join(final Thread t) {
@@ -1523,9 +1523,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     region.deleteAll(row, timestamp);
   }
 
+  /** {@inheritDoc} */
   public void deleteFamily(Text regionName, Text row, Text family, 
-    long timestamp)
-  throws IOException{
+    long timestamp) throws IOException{
     getRegion(regionName).deleteFamily(row, family, timestamp);
   }
 
