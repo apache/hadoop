@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.util.Sleeper;
 public abstract class Chore extends Thread {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private final Sleeper sleeper;
-  protected final AtomicBoolean stop;
+  protected volatile AtomicBoolean stop;
   
   /**
    * @param p Period at which we should run.  Will be adjusted appropriately
@@ -49,9 +49,13 @@ public abstract class Chore extends Thread {
     this.stop = s;
   }
 
+  /** {@inheritDoc} */
+  @Override
   public void run() {
     try {
-      initialChore();
+      while (!initialChore()) {
+        this.sleeper.sleep();
+      }
       this.sleeper.sleep();
       while(!this.stop.get()) {
         long startTime = System.currentTimeMillis();
@@ -65,9 +69,11 @@ public abstract class Chore extends Thread {
   
   /**
    * Override to run a task before we start looping.
+   * @return true if initial chore was successful
    */
-  protected void initialChore() {
+  protected boolean initialChore() {
     // Default does nothing.
+    return true;
   }
   
   /**

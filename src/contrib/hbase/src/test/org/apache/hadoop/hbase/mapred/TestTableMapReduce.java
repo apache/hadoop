@@ -86,13 +86,6 @@ public class TestTableMapReduce extends MultiRegionTable {
   /** constructor */
   public TestTableMapReduce() {
     super();
-
-    // The region server doesn't have to talk to the master quite so often
-    conf.setInt("hbase.regionserver.msginterval", 2000);
-    
-    // Make the thread wake frequency a little slower so other threads
-    // can run
-    conf.setInt("hbase.server.thread.wakefrequency", 2000);
     
     // Make sure the cache gets flushed so we trigger a compaction(s) and
     // hence splits.

@@ -72,6 +72,11 @@ Trunk (unreleased changes)
                different column families do not have entries for some rows
    HADOOP-2283 AlreadyBeingCreatedException (Was: Stuck replay of failed
                regionserver edits)
+   HADOOP-2392 TestRegionServerExit has new failure mode since HADOOP-2338
+   HADOOP-2324 Fix assertion failures in TestTableMapReduce
+   HADOOP-2396 NPE in HMaster.cancelLease
+   HADOOP-2397 The only time that a meta scanner should try to recover a log is
+               when the master is starting
 
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
