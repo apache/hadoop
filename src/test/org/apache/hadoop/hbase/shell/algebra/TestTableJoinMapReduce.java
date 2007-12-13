@@ -28,7 +28,6 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseAdmin;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HScannerInterface;
@@ -94,7 +93,10 @@ public class TestTableJoinMapReduce extends MultiRegionTable {
     StaticTestEnvironment.shutdownDfs(dfsCluster);
   }
 
-  public void testTableJoinMapReduce() {
+  /**
+   * @throws Exception
+   */
+  public void testTableJoinMapReduce() throws Exception {
     HTable table = null;
     try {
       HTableDescriptor desc = new HTableDescriptor(FIRST_RELATION);
@@ -188,16 +190,20 @@ public class TestTableJoinMapReduce extends MultiRegionTable {
 
       JobClient.runJob(jobConf);
 
-    } catch (IOException e) {
+    } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
-      mrCluster.shutdown();
+      if (mrCluster != null) {
+        mrCluster.shutdown();
+      }
     }
 
     try {
-    verify(conf, OUTPUT_TABLE);
-    } catch (IOException e) {
+      verify(OUTPUT_TABLE);
+    } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     }
   }
 
@@ -208,8 +214,16 @@ public class TestTableJoinMapReduce extends MultiRegionTable {
    * @param outputTable
    * @throws IOException
    */
-  private void verify(HBaseConfiguration conf, String outputTable)
-      throws IOException {
+  private void verify(String outputTable) throws IOException {
+    // Sleep before we start the verify to ensure that when the scanner takes
+    // its snapshot, all the updates have made it into the cache.
+    try {
+      Thread.sleep(conf.getLong("hbase.regionserver.optionalcacheflushinterval",
+          60L * 1000L));
+    } catch (InterruptedException e) {
+      // ignore
+    }
+
     HTable table = new HTable(conf, new Text(outputTable));
     Text[] columns = { new Text("a:"), new Text("b:"), new Text("c:"),
         new Text("d:"), new Text("e:") };
@@ -222,8 +236,8 @@ public class TestTableJoinMapReduce extends MultiRegionTable {
 
       int i = 0;
       while (scanner.next(key, results)) {
-        assertTrue(results.keySet().size() == 5);
         LOG.info("result_table.column.size: " + results.keySet().size());
+        assertEquals(5, results.keySet().size());
         i++;
       }
       assertTrue(i == 3);
