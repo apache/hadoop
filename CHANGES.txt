@@ -24,6 +24,9 @@ Branch 0.15 (unreleased)
 
     HADOOP-2382.  Add hadoop-default.html to subversion. (cutting)
 
+    HADOOP-2158. hdfsListDirectory calls FileSystem.listStatus instead
+    of FileSystem.listPaths. This reduces the number of RPC calls on the
+    namenode, thereby improving scalability.  (Christian Kunz via dhruba)
 
 Release 0.15.1 - 2007-11-27
 

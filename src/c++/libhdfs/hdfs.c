@@ -1316,41 +1316,9 @@ tOffset hdfsGetUsed(hdfsFS fs)
 
  
 static int
-getFileInfo(JNIEnv *env, jobject jFS, jobject jPath, hdfsFileInfo *fileInfo)
+getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
 {
-    // JAVA EQUIVALENT:
-    //  fs.isDirectory(f)
-    //  fs.lastModified() ??
-    //  fs.getLength(f)
-    //  f.getPath()
-
-    jobject jStat;
-    jvalue  jVal;
-
-    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                     "exists", JMETHOD1(JPARAM(HADOOP_PATH), "Z"),
-                     jPath) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileSystem::exists failed!\n");
-        errno = EINTERNAL;
-        return -1;
-    }
-
-    if (jVal.z == 0) {
-      errno = ENOENT;
-      return -1;
-    }
-
-    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                     "getFileStatus", JMETHOD1(JPARAM(HADOOP_PATH), JPARAM(HADOOP_STAT)),
-                     jPath) != 0) {
-        fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileSystem::getFileStatus failed!\n");
-        errno = EINTERNAL;
-        return -1;
-    }
-    jStat = jVal.l;
-
+    jvalue jVal;
     if (invokeMethod(env, &jVal, INSTANCE, jStat,
                      HADOOP_STAT, "isDir", "()Z") != 0) {
         fprintf(stderr, "Call to org.apache.hadoop.fs."
@@ -1398,6 +1366,17 @@ getFileInfo(JNIEnv *env, jobject jFS, jobject jPath, hdfsFileInfo *fileInfo)
         fileInfo->mSize = jVal.j;
     }
 
+    jobject jPath;
+    if (invokeMethod(env, &jVal, INSTANCE, jStat, HADOOP_STAT,
+                     "getPath", "()Lorg/apache/hadoop/fs/Path;") ||
+            jVal.l == NULL) { 
+        fprintf(stderr, "Call to org.apache.hadoop.fs."
+                "FileStatus::getPath failed!\n");
+        errno = EINTERNAL;
+        return -1;
+    }
+    jPath = jVal.l;
+
     jstring     jPathName;
     const char *cPathName;
     if (invokeMethod(env, &jVal, INSTANCE, jPath, HADOOP_PATH,
@@ -1405,15 +1384,57 @@ getFileInfo(JNIEnv *env, jobject jFS, jobject jPath, hdfsFileInfo *fileInfo)
         fprintf(stderr, "Call to org.apache.hadoop.fs."
                 "Path::toString failed!\n");
         errno = EINTERNAL;
+        destroyLocalReference(env, jPath);
         return -1;
     }
     jPathName = jVal.l;
     cPathName = (const char*) ((*env)->GetStringUTFChars(env, jPathName, NULL));
     fileInfo->mName = strdup(cPathName);
     (*env)->ReleaseStringUTFChars(env, jPathName, cPathName);
+    destroyLocalReference(env, jPath);
     destroyLocalReference(env, jPathName);
 
     return 0;
+}
+
+static int
+getFileInfo(JNIEnv *env, jobject jFS, jobject jPath, hdfsFileInfo *fileInfo)
+{
+    // JAVA EQUIVALENT:
+    //  fs.isDirectory(f)
+    //  fs.lastModified() ??
+    //  fs.getLength(f)
+    //  f.getPath()
+
+    jobject jStat;
+    jvalue  jVal;
+
+    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+                     "exists", JMETHOD1(JPARAM(HADOOP_PATH), "Z"),
+                     jPath) != 0) {
+        fprintf(stderr, "Call to org.apache.hadoop.fs."
+                "FileSystem::exists failed!\n");
+        errno = EINTERNAL;
+        return -1;
+    }
+
+    if (jVal.z == 0) {
+      errno = ENOENT;
+      return -1;
+    }
+
+    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+                     "getFileStatus", JMETHOD1(JPARAM(HADOOP_PATH), JPARAM(HADOOP_STAT)),
+                     jPath) != 0) {
+        fprintf(stderr, "Call to org.apache.hadoop.fs."
+                "FileSystem::getFileStatus failed!\n");
+        errno = EINTERNAL;
+        return -1;
+    }
+    jStat = jVal.l;
+    int ret =  getFileInfoFromStat(env, jStat, fileInfo); 
+    destroyLocalReference(env, jStat);
+    return ret;
 }
 
 
@@ -1441,11 +1462,11 @@ hdfsFileInfo* hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries)
 
     jobjectArray jPathList = NULL;
     jvalue jVal;
-    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS, "listPaths",
-                     JMETHOD1(JPARAM(HADOOP_PATH), JARRPARAM(HADOOP_PATH)),
+    if (invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_DFS, "listStatus",
+                     JMETHOD1(JPARAM(HADOOP_PATH), JARRPARAM(HADOOP_STAT)),
                      jPath) != 0) {
         fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileSystem::listPaths failed!\n");
+                "FileSystem::listStatus failed!\n");
         errno = EINTERNAL;
         destroyLocalReference(env, jPath);
         return NULL;
@@ -1469,17 +1490,17 @@ hdfsFileInfo* hdfsListDirectory(hdfsFS fs, const char* path, int *numEntries)
 
     //Save path information in pathList
     jsize i;
-    jobject tmpPath;
+    jobject tmpStat;
     for (i=0; i < jPathListSize; ++i) {
-        tmpPath = (*env)->GetObjectArrayElement(env, jPathList, i);
-        if (getFileInfo(env, jFS, tmpPath, &pathList[i])) {
+        tmpStat = (*env)->GetObjectArrayElement(env, jPathList, i);
+        if (getFileInfoFromStat(env, tmpStat, &pathList[i])) {
             errno = EINTERNAL;
             hdfsFreeFileInfo(pathList, jPathListSize);
-            destroyLocalReference(env, tmpPath);
+            destroyLocalReference(env, tmpStat);
             pathList = NULL;
             goto done;
         }
-        destroyLocalReference(env, tmpPath);
+        destroyLocalReference(env, tmpStat);
     }
 
     done:
