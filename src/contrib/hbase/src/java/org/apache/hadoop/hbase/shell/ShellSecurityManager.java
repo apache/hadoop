@@ -47,7 +47,7 @@ public class ShellSecurityManager extends SecurityManager {
       // I didn't figure out How can catch the ExitException in shell main.
       // So, I just Re-launching the shell.
       Shell shell = new Shell();
-      String[] args = new String[] { String.valueOf(status) };
+      String[] args = new String[] { String.valueOf(7) };
       try {
         shell.main(args);
       } catch (IOException e) {
