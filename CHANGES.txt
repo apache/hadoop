@@ -116,6 +116,7 @@ Trunk (unreleased changes)
    HADOOP-2370 Allow column families with an unlimited number of versions
                (Edward Yoon via Stack)
    HADOOP-2407 Keeping MapFile.Reader open is expensive: Part 2
+   HADOOP-2047 Add an '--master=X' and '--html' command-line parameters to shell
 
 Release 0.15.1
 Branch 0.15
