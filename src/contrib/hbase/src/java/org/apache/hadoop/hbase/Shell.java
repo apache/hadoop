@@ -47,6 +47,7 @@ public class Shell {
   public static final boolean DEFAULT_BELL_ENABLED = true;
   public static String MASTER_ADDRESS = null;
   public static String HTML_OPTION = null;
+  public static int RELAUNCH_FLAG = 7;
 
   /** Return the boolean value indicating whether end of command or not */
   static boolean isEndOfCommand(String line) {
@@ -78,6 +79,14 @@ public class Shell {
    */
   public static void main(String args[]) throws IOException {
     argumentParsing(args);
+    if (args.length != 0) {
+      if (args[0].equals("--help") || args[0].equals("-h")) {
+        System.out
+            .println("Usage: ./bin/hbase shell [--master:master_address:port] [--html]\n");
+        System.exit(1);
+      }
+    }
+    
     HBaseConfiguration conf = new HBaseConfiguration();
     ConsoleReader reader = new ConsoleReader();
     System.setSecurityManager(new ShellSecurityManager());
@@ -90,11 +99,10 @@ public class Shell {
     }
     if (HTML_OPTION != null) {
       tableFormater = new HtmlTableFormatter(out);
-      System.out.println("--html");
     }
 
     HelpCommand help = new HelpCommand(out, tableFormater);
-    if (args.length == 0 || !args[0].equals("7")) {
+    if (args.length == 0 || !args[0].equals(String.valueOf(Shell.RELAUNCH_FLAG))) {
       help.printVersion();
     }
     StringBuilder queryStr = new StringBuilder();

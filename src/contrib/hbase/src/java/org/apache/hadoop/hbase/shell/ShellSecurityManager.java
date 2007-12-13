@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
 import java.security.Permission;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.hbase.Shell;
 
@@ -47,9 +49,16 @@ public class ShellSecurityManager extends SecurityManager {
       // I didn't figure out How can catch the ExitException in shell main.
       // So, I just Re-launching the shell.
       Shell shell = new Shell();
-      String[] args = new String[] { String.valueOf(7) };
+
+      List<String> argList = new ArrayList<String>();
+      argList.add(String.valueOf(Shell.RELAUNCH_FLAG));
+      if(Shell.HTML_OPTION != null)
+        argList.add(Shell.HTML_OPTION);
+      if(Shell.MASTER_ADDRESS != null)
+        argList.add(Shell.MASTER_ADDRESS);
+
       try {
-        shell.main(args);
+        shell.main(argList.toArray(new String[] {}));
       } catch (IOException e) {
         e.printStackTrace();
       }
