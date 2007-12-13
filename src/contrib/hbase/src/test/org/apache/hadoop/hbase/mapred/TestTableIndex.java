@@ -34,7 +34,6 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseAdmin;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HScannerInterface;
@@ -68,6 +67,11 @@ public class TestTableIndex extends MultiRegionTable {
   static final Text TEXT_OUTPUT_COLUMN = new Text(OUTPUT_COLUMN);
   static final String ROWKEY_NAME = "key";
   static final String INDEX_DIR = "testindex";
+  private static final Text[] columns = {
+    TEXT_INPUT_COLUMN,
+    TEXT_OUTPUT_COLUMN
+  };
+
 
   private HTableDescriptor desc;
 
@@ -146,7 +150,7 @@ public class TestTableIndex extends MultiRegionTable {
     if (printResults) {
       LOG.info("Print table contents before map/reduce");
     }
-    scanTable(conf, printResults);
+    scanTable(printResults);
 
     @SuppressWarnings("deprecation")
     MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
@@ -179,10 +183,10 @@ public class TestTableIndex extends MultiRegionTable {
     if (printResults) {
       LOG.info("Print table contents after map/reduce");
     }
-    scanTable(conf, printResults);
+    scanTable(printResults);
 
     // verify index results
-    verify(conf);
+    verify();
   }
 
   private String createIndexConfContent() {
@@ -218,10 +222,9 @@ public class TestTableIndex extends MultiRegionTable {
     return c.toString();
   }
 
-  private void scanTable(HBaseConfiguration c, boolean printResults)
+  private void scanTable(boolean printResults)
   throws IOException {
-    HTable table = new HTable(c, new Text(TABLE_NAME));
-    Text[] columns = { TEXT_INPUT_COLUMN, TEXT_OUTPUT_COLUMN };
+    HTable table = new HTable(conf, new Text(TABLE_NAME));
     HScannerInterface scanner = table.obtainScanner(columns,
         HConstants.EMPTY_START_ROW);
     try {
@@ -243,7 +246,16 @@ public class TestTableIndex extends MultiRegionTable {
     }
   }
 
-  private void verify(HBaseConfiguration c) throws IOException {
+  private void verify() throws IOException {
+    // Sleep before we start the verify to ensure that when the scanner takes
+    // its snapshot, all the updates have made it into the cache.
+    try {
+      Thread.sleep(conf.getLong("hbase.regionserver.optionalcacheflushinterval",
+          60L * 1000L));
+    } catch (InterruptedException e) {
+      // ignore
+    }
+
     Path localDir = new Path(this.testDir, "index_" +
       Integer.toString(new Random().nextInt()));
     this.fs.copyToLocalFile(new Path(INDEX_DIR), localDir);
@@ -265,15 +277,14 @@ public class TestTableIndex extends MultiRegionTable {
         throw new IOException("no index directory found");
       }
 
-      HTable table = new HTable(c, new Text(TABLE_NAME));
-      Text[] columns = { TEXT_INPUT_COLUMN, TEXT_OUTPUT_COLUMN };
+      HTable table = new HTable(conf, new Text(TABLE_NAME));
       scanner = table.obtainScanner(columns, HConstants.EMPTY_START_ROW);
 
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
 
       IndexConfiguration indexConf = new IndexConfiguration();
-      String content = c.get("hbase.index.conf");
+      String content = conf.get("hbase.index.conf");
       if (content != null) {
         indexConf.addFromXML(content);
       }

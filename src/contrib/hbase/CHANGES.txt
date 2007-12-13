@@ -78,6 +78,8 @@ Trunk (unreleased changes)
    HADOOP-2397 The only time that a meta scanner should try to recover a log is
                when the master is starting
    HADOOP-2417 Fix critical shutdown problem introduced by HADOOP-2338
+   HADOOP-2418 Fix assertion failures in TestTableMapReduce, TestTableIndex,
+               and TestTableJoinMapReduce
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
