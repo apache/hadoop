@@ -117,6 +117,10 @@ Trunk (unreleased changes)
                (Edward Yoon via Stack)
    HADOOP-2407 Keeping MapFile.Reader open is expensive: Part 2
    HADOOP-2047 Add an '--master=X' and '--html' command-line parameters to shell
+               (Edward Yoon via Stack)
+   HADOOP-2351 If select command returns no result, it doesn't need to show the
+               header information (Edward Yoon via Stack)
+               
 
 Release 0.15.1
 Branch 0.15

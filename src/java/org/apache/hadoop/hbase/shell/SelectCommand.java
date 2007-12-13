@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.Shell;
 import org.apache.hadoop.hbase.shell.generated.Parser;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
@@ -113,8 +114,10 @@ public class SelectCommand extends BasicCommand {
         byte[][] result = null;
         ParsedColumns parsedColumns = getColumns(admin, false);
         boolean multiple = parsedColumns.isMultiple() || this.version > 1;
-        formatter.header(multiple ? HEADER_COLUMN_CELL : null);
         for (Text column : parsedColumns.getColumns()) {
+          if(count == 0) {
+            formatter.header(multiple ? HEADER_COLUMN_CELL : null);
+          }
           if (this.timestamp != 0) {
             result = table.get(this.rowKey, column, this.timestamp, this.version);
           } else {
@@ -131,8 +134,10 @@ public class SelectCommand extends BasicCommand {
           }
         }
       } else {
-        formatter.header(isMultiple() ? HEADER_COLUMN_CELL : null);
         for (Map.Entry<Text, byte[]> e : table.getRow(this.rowKey).entrySet()) {
+          if(count == 0) {
+            formatter.header(isMultiple() ? HEADER_COLUMN_CELL : null);
+          }
           Text key = e.getKey();
           String keyStr = key.toString();
           if (!this.columns.contains(STAR) && !this.columns.contains(keyStr)) {
@@ -146,6 +151,10 @@ public class SelectCommand extends BasicCommand {
           }
           count++;
         }
+      }
+      
+      if(count == 0 && Shell.HTML_OPTION != null) {
+        formatter.header(isMultiple() ? HEADER_COLUMN_CELL : null);
       }
       formatter.footer();
     } catch (IOException e) {
@@ -209,8 +218,10 @@ public class SelectCommand extends BasicCommand {
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
       // If only one column in query, then don't print out the column.
-      formatter.header((parsedColumns.isMultiple()) ? HEADER : HEADER_ROW_CELL);
       while (scan.next(key, results) && checkLimit(count)) {
+        if(count == 0) {
+          formatter.header((parsedColumns.isMultiple()) ? HEADER : HEADER_ROW_CELL);
+        }
         Text r = key.getRow();
         for (Text columnKey : results.keySet()) {
           String cellData = toString(columnKey, results.get(columnKey));
@@ -229,6 +240,11 @@ public class SelectCommand extends BasicCommand {
         // Clear results else subsequent results polluted w/ previous finds.
         results.clear();
       }
+      
+      if(count == 0 && Shell.HTML_OPTION != null) {
+        formatter.header((parsedColumns.isMultiple()) ? HEADER : HEADER_ROW_CELL);
+      }
+      
       formatter.footer();
       scan.close();
     } catch (IOException e) {
