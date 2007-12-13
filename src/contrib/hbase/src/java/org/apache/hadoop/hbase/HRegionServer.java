@@ -79,9 +79,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // of HRegionServer in isolation. We use AtomicBoolean rather than
   // plain boolean so we can pass a reference to Chore threads.  Otherwise,
   // Chore threads need to know about the hosting class.
-  protected final AtomicBoolean stopRequested = new AtomicBoolean(false);
+  protected volatile AtomicBoolean stopRequested = new AtomicBoolean(false);
   
-  protected final AtomicBoolean quiesced = new AtomicBoolean(false);
+  protected volatile AtomicBoolean quiesced = new AtomicBoolean(false);
   
   // Go down hard.  Used if file system becomes unavailable and also in
   // debugging and unit tests.
@@ -95,13 +95,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private final Random rand = new Random();
   
   // region name -> HRegion
-  protected final SortedMap<Text, HRegion> onlineRegions =
+  protected volatile SortedMap<Text, HRegion> onlineRegions =
     Collections.synchronizedSortedMap(new TreeMap<Text, HRegion>());
-  protected final Map<Text, HRegion> retiringRegions =
+  protected volatile Map<Text, HRegion> retiringRegions =
     new ConcurrentHashMap<Text, HRegion>();
  
   protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-  private final List<HMsg> outboundMsgs =
+  private volatile List<HMsg> outboundMsgs =
     Collections.synchronizedList(new ArrayList<HMsg>());
 
   final int numRetries;
@@ -120,7 +120,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private final Leases leases;
   
   // Request counter
-  private final AtomicInteger requestCount = new AtomicInteger();
+  private volatile AtomicInteger requestCount = new AtomicInteger();
   
   // A sleeper that sleeps for msgInterval.
   private final Sleeper sleeper;
@@ -296,7 +296,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // splitting a 'normal' region, and the ROOT table needs to be
       // updated if we are splitting a META region.
       HTable t = null;
-      if (region.getRegionInfo().getTableDesc().getName().equals(META_TABLE_NAME)) {
+      if (region.getRegionInfo().isMetaTable()) {
         // We need to update the root region
         if (this.root == null) {
           this.root = new HTable(conf, ROOT_TABLE_NAME);

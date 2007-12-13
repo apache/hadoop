@@ -181,16 +181,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   abstract class BaseScanner extends Chore {
     protected boolean rootRegion;
-    protected final Text tableName;
 
     protected abstract boolean initialScan();
     protected abstract void maintenanceScan();
 
-    BaseScanner(final Text tableName, final int period,
+    BaseScanner(final boolean rootRegion, final int period,
         final AtomicBoolean stop) {
       super(period, stop);
-      this.tableName = tableName;
-      this.rootRegion = tableName.equals(ROOT_TABLE_NAME);
+      this.rootRegion = rootRegion;
     }
     
     @Override
@@ -506,7 +504,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   class RootScanner extends BaseScanner {
     /** Constructor */
     public RootScanner() {
-      super(HConstants.ROOT_TABLE_NAME, metaRescanInterval, closed);
+      super(true, metaRescanInterval, closed);
     }
 
     private boolean scanRoot() {
@@ -671,7 +669,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     
     /** Constructor */
     public MetaScanner() {
-      super(HConstants.META_TABLE_NAME, metaRescanInterval, closed);
+      super(false, metaRescanInterval, closed);
     }
 
     private boolean scanOneMetaRegion(MetaRegion region) {
@@ -1182,15 +1180,24 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * regions can shut down.
    */
   private void stopScanners() {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("telling root scanner to stop");
+    }
     synchronized(rootScannerLock) {
       if (rootScannerThread.isAlive()) {
         rootScannerThread.interrupt();  // Wake root scanner
       }
     }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("telling meta scanner to stop");
+    }
     synchronized(metaScannerLock) {
       if (metaScannerThread.isAlive()) {
         metaScannerThread.interrupt();  // Wake meta scanner
       }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("meta and root scanners notified");
     }
   }
 
@@ -1341,18 +1348,23 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         }
       } else if (msgs[0].getMsg() == HMsg.MSG_REPORT_QUIESCED) {
         LOG.info("Region server " + serverName + " quiesced");
-        if(quiescedMetaServers.incrementAndGet() == serversToServerInfo.size()) {
-          // If the only servers we know about are meta servers, then we can
-          // proceed with shutdown
-          LOG.info("All user tables quiesced. Proceeding with shutdown");
-          closed.set(true);
-          stopScanners();
-          synchronized(toDoQueue) {
-            toDoQueue.clear();                         // Empty the queue
-            delayedToDoQueue.clear();                  // Empty shut down queue
-            toDoQueue.notifyAll();                     // Wake main thread
-          }
-        }
+        quiescedMetaServers.incrementAndGet();
+      }
+    }
+
+    if(quiescedMetaServers.get() >= serversToServerInfo.size()) {
+      // If the only servers we know about are meta servers, then we can
+      // proceed with shutdown
+      LOG.info("All user tables quiesced. Proceeding with shutdown");
+      closed.set(true);
+      stopScanners();
+      synchronized(toDoQueue) {
+        toDoQueue.clear();                         // Empty the queue
+        delayedToDoQueue.clear();                  // Empty shut down queue
+        toDoQueue.notifyAll();                     // Wake main thread
+      }
+      synchronized (serversToServerInfo) {
+        serversToServerInfo.notifyAll();
       }
     }
 
@@ -1638,7 +1650,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             " split. New regions are: " + newRegionA.getRegionName() + ", " +
             newRegionB.getRegionName());
 
-        if (region.getTableDesc().getName().equals(META_TABLE_NAME)) {
+        if (region.isMetaTable()) {
           // A meta region has split.
 
           onlineMetaRegions.remove(region.getStartKey());
@@ -2028,7 +2040,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
               serverName + "> (or server is null). Marking unassigned if " +
           "meta and clearing pendingRegions");
 
-          if (info.getTableDesc().getName().equals(META_TABLE_NAME)) {
+          if (info.isMetaTable()) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("removing meta region " + info.getRegionName() +
                   " from online meta regions");
