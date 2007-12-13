@@ -238,6 +238,9 @@ Trunk (unreleased changes)
     HADOOP-2359.  Remove warning for interruptted exception when closing down
     minidfs. (dhruba via omalley)
 
+    HADOOP-1841. Prevent slow clients from consuming threads in the NameNode. 
+    (dhruba)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES

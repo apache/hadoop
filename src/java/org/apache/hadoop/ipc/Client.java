@@ -73,6 +73,7 @@ public class Client {
   private int maxRetries; //the max. no. of retries for socket connections
   private Thread connectionCullerThread;
   private SocketFactory socketFactory;           // how to create sockets
+  private boolean simulateError = false;         // unit tests
 
   /** A call waiting for a value. */
   private class Call {
@@ -286,6 +287,7 @@ public class Client {
           } else {
             Writable value = (Writable)ReflectionUtils.newInstance(valueClass, conf);
             try {
+              waitForEndSimulation();
               readingCall = call;
               value.readFields(in);                 // read value
             } finally {
@@ -609,4 +611,19 @@ public class Client {
       return address.hashCode() ^ System.identityHashCode(ticket);
     }
   }  
+
+  void simulateError(boolean flag) {
+    simulateError = flag;
+  }
+ 
+  // If errors are being simulated, then wait.
+  private void waitForEndSimulation() {
+    while (simulateError) {
+      try {
+        LOG.info("RPC Client waiting for simulation to end");
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+      }
+    }
+  }
 }

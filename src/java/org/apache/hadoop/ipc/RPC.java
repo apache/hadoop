@@ -30,6 +30,7 @@ import java.net.SocketTimeoutException;
 import java.io.*;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Collection;
 
 import javax.net.SocketFactory;
 
@@ -166,6 +167,17 @@ public class RPC {
     for (Client client : CLIENTS.values())
       client.stop();
     CLIENTS.clear();
+  }
+
+  /*
+   * remove specified client from the list of clients.
+   */
+  static synchronized void removeClients() {
+    CLIENTS.clear();
+  }
+
+  static synchronized Collection allClients() {
+    return CLIENTS.values();
   }
 
   private static class Invoker implements InvocationHandler {
@@ -415,5 +427,4 @@ public class RPC {
       value = value.substring(0, 55)+"...";
     LOG.info(value);
   }
-  
 }
