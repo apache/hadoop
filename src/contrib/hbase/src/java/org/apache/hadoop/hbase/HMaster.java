@@ -1029,6 +1029,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
      */
     try {
       for (RegionServerOperation op = null; !closed.get(); ) {
+        if (shutdownRequested && serversToServerInfo.size() == 0) {
+          startShutdown();
+          break;
+        }
         if (rootRegionLocation.get() != null) {
           // We can't process server shutdowns unless the root region is online 
 
@@ -1174,7 +1178,23 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       LOG.error("Failed startup", e);
     }
   }
-  
+
+  /*
+   * Start shutting down the master
+   */
+  private void startShutdown() {
+    closed.set(true);
+    stopScanners();
+    synchronized(toDoQueue) {
+      toDoQueue.clear();                         // Empty the queue
+      delayedToDoQueue.clear();                  // Empty shut down queue
+      toDoQueue.notifyAll();                     // Wake main thread
+    }
+    synchronized (serversToServerInfo) {
+      serversToServerInfo.notifyAll();
+    }
+  }
+
   /*
    * Stop the root and meta scanners so that the region servers serving meta
    * regions can shut down.
@@ -1356,16 +1376,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       // If the only servers we know about are meta servers, then we can
       // proceed with shutdown
       LOG.info("All user tables quiesced. Proceeding with shutdown");
-      closed.set(true);
-      stopScanners();
-      synchronized(toDoQueue) {
-        toDoQueue.clear();                         // Empty the queue
-        delayedToDoQueue.clear();                  // Empty shut down queue
-        toDoQueue.notifyAll();                     // Wake main thread
-      }
-      synchronized (serversToServerInfo) {
-        serversToServerInfo.notifyAll();
-      }
+      startShutdown();
     }
 
     if (shutdownRequested && !closed.get()) {
