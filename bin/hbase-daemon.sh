@@ -128,10 +128,14 @@ case $startStop in
     if [ -f $pid ]; then
       if kill -0 `cat $pid` > /dev/null 2>&1; then
         echo -n stopping $command
-        nohup nice -n $HADOOP_NICENESS "$HBASE_HOME"/bin/hbase \
-            --hadoop "${HADOOP_HOME}" \
-            --config "${HADOOP_CONF_DIR}" --hbaseconfig "${HBASE_CONF_DIR}" \
-            $command $startStop "$@" > "$log" 2>&1 < /dev/null &
+        if [ "$command" = "regionserver" ]; then
+          kill `cat $pid` > /dev/null 2>&1
+        else
+          nohup nice -n $HADOOP_NICENESS "$HBASE_HOME"/bin/hbase \
+              --hadoop "${HADOOP_HOME}" \
+              --config "${HADOOP_CONF_DIR}" --hbaseconfig "${HBASE_CONF_DIR}" \
+              $command $startStop "$@" > "$log" 2>&1 < /dev/null &
+        fi
         while kill -0 `cat $pid` > /dev/null 2>&1; do
           echo -n "."
           sleep 1;
