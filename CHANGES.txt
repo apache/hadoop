@@ -81,6 +81,7 @@ Trunk (unreleased changes)
    HADOOP-2418 Fix assertion failures in TestTableMapReduce, TestTableIndex,
                and TestTableJoinMapReduce
    HADOOP-2414 Fix ArrayIndexOutOfBoundsException in bloom filters.
+   HADOOP-2430 Master will not shut down if there are no active region servers
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
