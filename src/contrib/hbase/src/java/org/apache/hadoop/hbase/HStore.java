@@ -597,9 +597,10 @@ class HStore implements HConstants {
     }
 
     if(LOG.isDebugEnabled()) {
-      LOG.debug("starting " + this.storeName +
-        ((reconstructionLog == null || !fs.exists(reconstructionLog))?
-          " (no reconstruction log)": " with reconstruction log: " +
+      LOG.debug("starting " + this.regionName + "/" + this.familyName + " ("
+          + this.storeName +
+          ((reconstructionLog == null || !fs.exists(reconstructionLog)) ?
+          ") (no reconstruction log)": " with reconstruction log: (" +
           reconstructionLog.toString()));
     }
 
@@ -624,8 +625,8 @@ class HStore implements HConstants {
     
     this.maxSeqId = getMaxSequenceId(hstoreFiles);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("maximum sequence id for hstore " + storeName + " is " +
-          this.maxSeqId);
+      LOG.debug("maximum sequence id for hstore " + regionName + "/" +
+          familyName + " (" + storeName + ") is " + this.maxSeqId);
     }
     
     doReconstructionLog(reconstructionLog, maxSeqId);
@@ -758,7 +759,8 @@ class HStore implements HConstants {
     Path filterFile = new Path(filterDir, BLOOMFILTER_FILE_NAME);
     if(fs.exists(filterFile)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("loading bloom filter for " + this.storeName);
+        LOG.debug("loading bloom filter for " + this.regionName + "/" +
+            this.familyName + " (" + this.storeName + ")");
       }
       
       BloomFilterDescriptor.BloomFilterType type =
@@ -785,7 +787,8 @@ class HStore implements HConstants {
       }
     } else {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("creating bloom filter for " + this.storeName);
+        LOG.debug("creating bloom filter for " + this.regionName + "/" +
+            this.familyName + " (" + this.storeName + ")");
       }
 
       BloomFilterDescriptor.BloomFilterType type =
@@ -819,7 +822,8 @@ class HStore implements HConstants {
    */
   private void flushBloomFilter() throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("flushing bloom filter for " + this.storeName);
+      LOG.debug("flushing bloom filter for " + this.regionName + "/" +
+          this.familyName + " (" + this.storeName + ")");
     }
     FSDataOutputStream out =
       fs.create(new Path(filterDir, BLOOMFILTER_FILE_NAME));
@@ -829,7 +833,8 @@ class HStore implements HConstants {
       out.close();
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("flushed bloom filter for " + this.storeName);
+      LOG.debug("flushed bloom filter for " + this.regionName + "/" +
+          this.familyName + " (" + this.storeName + ")");
     }
   }
   
@@ -871,7 +876,8 @@ class HStore implements HConstants {
       this.readers.clear();
       result = new ArrayList<HStoreFile>(storefiles.values());
       this.storefiles.clear();
-      LOG.debug("closed " + this.storeName);
+      LOG.debug("closed " + this.regionName + "/" + this.familyName + " ("
+          + this.storeName + ")");
       return result;
     } finally {
       this.lock.writeLock().unlock();
@@ -962,7 +968,8 @@ class HStore implements HConstants {
         if(LOG.isDebugEnabled()) {
           LOG.debug("Added " + name +
               " with sequence id " + logCacheFlushId + " and size " +
-              StringUtils.humanReadableInt(flushedFile.length()));
+              StringUtils.humanReadableInt(flushedFile.length()) + " for " +
+              this.regionName + "/" + this.familyName);
         }
       } finally {
         this.lock.writeLock().unlock();
@@ -1014,7 +1021,8 @@ class HStore implements HConstants {
       Path curCompactStore = getCompactionDir();
       if (LOG.isDebugEnabled()) {
         LOG.debug("started compaction of " + storefiles.size() +
-          " files using " + curCompactStore.toString());
+          " files using " + curCompactStore.toString() + " for " +
+          this.regionName + "/" + this.familyName);
       }
       if (this.fs.exists(curCompactStore)) {
         // Clean out its content in prep. for this new compaction.  Has either
@@ -1033,13 +1041,16 @@ class HStore implements HConstants {
       if (filesToCompact.size() < 1 ||
         (filesToCompact.size() == 1 && !filesToCompact.get(0).isReference())) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("nothing to compact for " + this.storeName);
+          LOG.debug("nothing to compact for " + this.regionName + "/" +
+              this.familyName + " (" + this.storeName + ")");
         }
         return false;
       }
 
       if (!fs.exists(curCompactStore) && !fs.mkdirs(curCompactStore)) {
-        LOG.warn("Mkdir on " + curCompactStore.toString() + " failed");
+        LOG.warn("Mkdir on " + curCompactStore.toString() + " for " +
+            this.regionName + "/" +
+            this.familyName + " failed");
         return false;
       }
 
@@ -1108,7 +1119,8 @@ class HStore implements HConstants {
         // exception message so output a message here where we know the
         // culprit.
         LOG.warn("Failed with " + e.toString() + ": " + hsf.toString() +
-          (hsf.isReference()? " " + hsf.getReference().toString(): ""));
+          (hsf.isReference() ? " " + hsf.getReference().toString() : "") +
+          " for " + this.regionName + "/" + this.familyName);
         closeCompactionReaders(rdrs);
         throw e;
       }
@@ -1208,7 +1220,8 @@ class HStore implements HConstants {
         try {
           rdrs[i].close();
         } catch (IOException e) {
-          LOG.warn("Exception closing reader", e);
+          LOG.warn("Exception closing reader for " + this.regionName + "/" +
+              this.familyName, e);
         }
       }
     }
@@ -1359,7 +1372,8 @@ class HStore implements HConstants {
         if (!fs.exists(doneFile)) {
           // The last execution didn't finish the compaction, so there's nothing 
           // we can do.  We'll just have to redo it. Abandon it and return.
-          LOG.warn("Redo failed compaction (missing 'done' file)");
+          LOG.warn("Redo failed compaction (missing 'done' file) for " +
+              this.regionName + "/" + this.familyName);
           return;
         }
 
@@ -1387,12 +1401,14 @@ class HStore implements HConstants {
             encodedRegionName, familyName, fs);
         if(LOG.isDebugEnabled()) {
           LOG.debug("moving " + compactedFile.toString() + " in " +
-              this.compactionDir.toString() +
-              " to " + finalCompactedFile.toString() + " in " + dir.toString());
+              this.compactionDir.toString() + " to " +
+              finalCompactedFile.toString() + " in " + dir.toString() +
+              " for " + this.regionName + "/" + this.familyName);
         }
         if (!compactedFile.rename(this.fs, finalCompactedFile)) {
           LOG.error("Failed move of compacted file " +
-              finalCompactedFile.toString());
+              finalCompactedFile.toString() + " for " + this.regionName + "/" +
+              this.familyName);
           return;
         }
 
@@ -1422,10 +1438,11 @@ class HStore implements HConstants {
             finalCompactedFile.getReader(this.fs, this.bloomFilter));
           this.storefiles.put(orderVal, finalCompactedFile);
         } catch (IOException e) {
-          LOG.error("Failed replacing compacted files. Compacted file is " +
-            finalCompactedFile.toString() + ".  Files replaced are " +
-            toCompactFiles.toString() +
-            " some of which may have been already removed", e);
+          LOG.error("Failed replacing compacted files for " +
+              this.regionName + "/" + this.familyName + ". Compacted file is " +
+              finalCompactedFile.toString() + ".  Files replaced are " +
+              toCompactFiles.toString() +
+              " some of which may have been already removed", e);
         }
       } finally {
         // 8. Releasing the write-lock
@@ -1682,12 +1699,11 @@ class HStore implements HConstants {
       if (target.getRow().equals(origin.getRow())) {
         // check the timestamp
         return target.getTimestamp() <= origin.getTimestamp();
-      } else {
-        return false;
       }
-    } else { // otherwise, we want to match on row and column
-      return target.matchesRowCol(origin);
+      return false;
     }
+    // otherwise, we want to match on row and column
+    return target.matchesRowCol(origin);
   }
   
   /**
@@ -1702,9 +1718,9 @@ class HStore implements HConstants {
     if (origin.getColumn().equals(new Text())){
       // if the row matches, then...
       return target.getRow().equals(origin.getRow());
-    } else { // otherwise, we want to match on row and column
-      return target.matchesRowCol(origin);
     }
+    // otherwise, we want to match on row and column
+    return target.matchesRowCol(origin);
   }
   
   /*
@@ -1779,7 +1795,8 @@ class HStore implements HConstants {
         midKey.set(((HStoreKey)midkey).getRow());
       }
     } catch(IOException e) {
-      LOG.warn("Failed getting store size", e);
+      LOG.warn("Failed getting store size for " + this.regionName + "/" +
+          this.familyName, e);
     } finally {
       this.lock.readLock().unlock();
     }
@@ -1922,7 +1939,7 @@ class HStore implements HConstants {
           try {
             readers[i].close();
           } catch(IOException e) {
-            LOG.error("Sub-scanner close", e);
+            LOG.error(regionName + "/" + familyName + " closing sub-scanner", e);
           }
         }
         
@@ -1942,7 +1959,7 @@ class HStore implements HConstants {
               try {
                 readers[i].close();
               } catch(IOException e) {
-                LOG.error("Scanner close", e);
+                LOG.error(regionName + "/" + familyName + " closing scanner", e);
               }
             }
           }
@@ -2178,7 +2195,8 @@ class HStore implements HConstants {
         try {
           scanners[i].close();
         } catch (IOException e) {
-          LOG.warn("Failed closeing scanner " + i, e);
+          LOG.warn(regionName + "/" + familyName + " failed closing scanner "
+              + i, e);
         }
       } finally {
         scanners[i] = null;
@@ -2199,7 +2217,8 @@ class HStore implements HConstants {
         synchronized (activeScanners) {
           int numberOfScanners = activeScanners.decrementAndGet();
           if (numberOfScanners < 0) {
-            LOG.error("number of active scanners less than zero: " +
+            LOG.error(regionName + "/" + familyName +
+                " number of active scanners less than zero: " +
                 numberOfScanners + " resetting to zero");
             activeScanners.set(0);
             numberOfScanners = 0;

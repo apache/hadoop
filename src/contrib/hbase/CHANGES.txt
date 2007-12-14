@@ -82,6 +82,7 @@ Trunk (unreleased changes)
                and TestTableJoinMapReduce
    HADOOP-2414 Fix ArrayIndexOutOfBoundsException in bloom filters.
    HADOOP-2430 Master will not shut down if there are no active region servers
+   HADOOP-2199 Add tools for going from hregion filename to region name in logs
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
