@@ -36,7 +36,6 @@ import org.apache.hadoop.io.TestSetFile;
 import org.apache.hadoop.io.TestSequenceFile;
 import org.apache.hadoop.ipc.TestIPC;
 import org.apache.hadoop.ipc.TestRPC;
-import org.apache.hadoop.mapred.ThreadedMapBenchmark;
 
 public class AllTestDriver {
   
@@ -46,9 +45,6 @@ public class AllTestDriver {
   public static void main(String argv[]){
     ProgramDriver pgd = new ProgramDriver();
     try {
-      pgd.addClass("threadedmapbench", ThreadedMapBenchmark.class, 
-                   "A map/reduce benchmark that compares the performance " + 
-                   "of maps with multiple spills over maps with 1 spill");
       pgd.addClass("mrbench", MRBench.class, "A map/reduce benchmark that can create many small jobs");
       pgd.addClass("nnbench", NNBench.class, "A benchmark that stresses the namenode.");
       pgd.addClass("mapredtest", TestMapRed.class, "A map/reduce test check.");
