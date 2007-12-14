@@ -132,6 +132,31 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   /** region server process name */
   public static final String REGIONSERVER = "regionserver";
+  
+  /**
+   * Thread to shutdown the region server in an orderly manner.  This thread
+   * is registered as a shutdown hook in the HRegionServer constructor and is
+   * only called when the HRegionServer receives a kill signal.
+   */
+  class ShutdownThread 
+    extends Thread {
+    
+    private final HRegionServer instance;
+    
+    public ShutdownThread(HRegionServer instance) {
+      this.instance = instance;
+    }
+
+    public synchronized void start() {
+      LOG.info("Starting shutdown thread.");
+      
+      // tell the region server to stop and wait for it to complete
+      instance.stop();
+      instance.join();
+      LOG.info("Shutdown thread complete");
+    }    
+    
+  }
 
   /** Queue entry passed to flusher, compactor and splitter threads */
   class QueueEntry implements Delayed {
@@ -646,6 +671,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
      this.leases = new Leases(
        conf.getInt("hbase.regionserver.lease.period", 3 * 60 * 1000),
        this.threadWakeFrequency);
+     
+     // Register shutdown hook for HRegionServer, runs an orderly shutdown
+     // when a kill signal is recieved
+     Runtime.getRuntime().addShutdownHook(new ShutdownThread(this));
   }
 
   /**
@@ -1736,8 +1765,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       
       if (cmd.equals("stop")) {
-        printUsageAndExit("There is no regionserver stop mechanism. To stop " +
-          "regionservers, shutdown the hbase master");
+        printUsageAndExit("To shutdown the regionserver run " +
+        		"bin/hbase-daemon.sh stop regionserver or send a kill signal to" +
+        		"the regionserver pid");
       }
       
       // Print out usage if we get to here.

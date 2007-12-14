@@ -123,7 +123,9 @@ Trunk (unreleased changes)
                (Edward Yoon via Stack)
    HADOOP-2351 If select command returns no result, it doesn't need to show the
                header information (Edward Yoon via Stack)
+   HADOOP-2285 Add being able to shutdown regionservers (Dennis Kubes via Stack)
                
+
 
 Release 0.15.1
 Branch 0.15
