@@ -251,6 +251,9 @@ Branch 0.15 (unreleased)
     HDFS but not the default filesystem.  HDFS paths returned by the
     listStatus() method are now fully-qualified.  (cutting)
 
+    HADOOP-2378.  Fixes a problem where the last task completion event would
+    get created after the job completes. (Alejandro Abdelnur via ddas)
+
   IMPROVEMENTS
 
     HADOOP-2160.  Remove project-level, non-user documentation from

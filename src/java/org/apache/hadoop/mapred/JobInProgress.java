@@ -401,7 +401,6 @@ class JobInProgress {
 
       TaskCompletionEvent taskEvent = null;
       if (state == TaskStatus.State.SUCCEEDED) {
-        completedTask(tip, status, metrics);
         taskEvent = new TaskCompletionEvent(
                                             taskCompletionEventTracker, 
                                             status.getTaskId(),
@@ -452,9 +451,17 @@ class JobInProgress {
       }          
 
       // Add the 'complete' task i.e. successful/failed
+      // It _is_ safe to add the TaskCompletionEvent.Status.SUCCEEDED
+      // *before* calling TIP.completedTask since:
+      // a. One and only one task of a TIP is declared as a SUCCESS, the
+      //    other (speculative tasks) are marked KILLED by the TaskCommitThread
+      // b. TIP.completedTask *does not* throw _any_ exception at all.
       if (taskEvent != null) {
         this.taskCompletionEvents.add(taskEvent);
         taskCompletionEventTracker++;
+        if (state == TaskStatus.State.SUCCEEDED) {
+          completedTask(tip, status, metrics);
+        }
       }
     }
         
