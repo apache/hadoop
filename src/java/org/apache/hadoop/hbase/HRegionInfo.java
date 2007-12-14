@@ -39,8 +39,8 @@ public class HRegionInfo implements WritableComparable {
    * @return the encodedName
    */
   public static String encodeRegionName(final Text regionName) {
-    return String.valueOf(
-        JenkinsHash.hash(regionName.getBytes(), regionName.getLength(), 0));
+    return String.valueOf(Math.abs(
+        JenkinsHash.hash(regionName.getBytes(), regionName.getLength(), 0)));
   }
 
   /** delimiter used between portions of a region name */
@@ -242,7 +242,8 @@ public class HRegionInfo implements WritableComparable {
   @Override
   public String toString() {
     return "regionname: " + this.regionName.toString() + ", startKey: <" +
-      this.startKey.toString() + ">," +
+      this.startKey.toString() + ">, encodedName(" +
+      encodeRegionName(this.regionName) + ")" +
       (isOffline()? " offline: true,": "") +
       (isSplit()? " split: true,": "") +
       " tableDesc: {" + this.tableDesc.toString() + "}";
