@@ -357,36 +357,78 @@ public class RawLocalFileSystem extends FileSystem {
   }
 
   static class RawLocalFileStatus extends FileStatus {
-    private File file;
-    private PermissionStatus permissions;
-
+    /* We can add extra fields here. It breaks at least CopyFiles.FilePair().
+     * We recognize if the information is already loaded by check if
+     * onwer.equals("").
+     */
+    private boolean isPermissionLoaded() {
+      return !super.getOwner().equals(""); 
+    }
+    
     RawLocalFileStatus(File f, long defaultBlockSize) {
       super(f.length(), f.isDirectory(), 1, defaultBlockSize,
             f.lastModified(), new Path(f.toURI().toString()));
-      file = f;
+    }
+    
+    @Override
+    public FsPermission getPermission() {
+      if (!isPermissionLoaded()) {
+        loadPermissionInfo();
+      }
+      return super.getPermission();
     }
 
-    PermissionStatus getPermissionStatus() {
-      if (permissions == null) {
-        try {
-          permissions = getPermissionStatus(file);
-        }
-        catch(IOException e) {
-          LOG.debug(StringUtils.stringifyException(e));
+    @Override
+    public String getOwner() {
+      if (!isPermissionLoaded()) {
+        loadPermissionInfo();
+      }
+      return super.getOwner();
+    }
+
+    @Override
+    public String getGroup() {
+      if (isPermissionLoaded()) {
+        loadPermissionInfo();
+      }
+      return super.getGroup();
+    }
+
+    /// loads permissions, owner, and group from `ls -ld`
+    private void loadPermissionInfo() {
+      try {
+        StringTokenizer t = new StringTokenizer(
+            execCommand(new File(getPath().toUri()), 
+                        ShellCommand.getGET_PERMISSION_COMMAND()));
+        //expected format
+        //-rw-------    1 username groupname ...
+        setPermission(FsPermission.valueOf(t.nextToken()));
+        t.nextToken();
+        setOwner(t.nextToken());
+        setGroup(t.nextToken());
+      } catch (IOException e) {
+        if (e.getMessage().contains("No such file or directory")) {                                    
+          /* XXX This is a temporary hack till HADOOP-2344 goes in.
+           * will fix it soon.
+           */
+          setPermission(null);
+          setOwner(null);
+          setGroup(null);
+        } else {
+          //this is not expected
+          throw new RuntimeException("Error while running command to get " +
+                                     "file permissions : " + 
+                                     StringUtils.stringifyException(e));
         }
       }
-      return permissions;
     }
 
-    private static PermissionStatus getPermissionStatus(File f
-        ) throws IOException {
-      StringTokenizer t = new StringTokenizer(
-          execCommand(f, ShellCommand.getGET_PERMISSION_COMMAND()));
-      //expected format
-      //-rw-------    1 username groupname ...
-      FsPermission p = FsPermission.valueOf(t.nextToken());
-      t.nextToken();
-      return new PermissionStatus(t.nextToken(), t.nextToken(), p);
+    @Override
+    public void write(DataOutput out) throws IOException {
+      if (!isPermissionLoaded()) {
+        loadPermissionInfo();
+      }
+      super.write(out);
     }
   }
 
@@ -420,9 +462,7 @@ public class RawLocalFileSystem extends FileSystem {
     String[] args = new String[cmd.length + 1];
     System.arraycopy(cmd, 0, args, 0, cmd.length);
     args[cmd.length] = f.getCanonicalPath();
-    LOG.debug("args=" + Arrays.asList(args));
     String output = ShellCommand.execCommand(args);
-    LOG.debug("output=" + output);
     return output;
   }
 }

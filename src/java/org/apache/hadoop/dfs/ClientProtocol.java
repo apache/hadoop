@@ -37,8 +37,9 @@ interface ClientProtocol extends VersionedProtocol {
    * 19 : rollEditLog() returns a token to uniquely identify the editfile.
    * 20 : getContentLength returns the total size in bytes of a directory subtree
    * 21 : add lease holder as a parameter in abandonBlock(...)
+   * 22 : Serialization of FileStatus has changed.
    */
-  public static final long versionID = 21L;
+  public static final long versionID = 22L;
   
   ///////////////////////////////////////
   // File contents

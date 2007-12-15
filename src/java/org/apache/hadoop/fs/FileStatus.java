@@ -21,6 +21,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
@@ -34,22 +35,33 @@ public class FileStatus implements Writable {
   private short block_replication;
   private long blocksize;
   private long modification_time;
-
-  public FileStatus() { this(0, false, 0, 0, 0, null); }
-
+  private FsPermission permission;
+  private String owner;
+  private String group;
+  
+  public FileStatus() { this(0, false, 0, 0, 0, null, null, null, null); }
+  
+  //We should deprecate this soon?
   public FileStatus(long length, boolean isdir, int block_replication,
-             long blocksize, long modification_time, Path path) {
-    this(length, isdir, (short)block_replication, blocksize,
-         modification_time, path);
-  }
+                    long blocksize, long modification_time, Path path) {
 
-  public FileStatus(long length, boolean isdir, short block_replication,
-             long blocksize, long modification_time, Path path) {
+    this(length, isdir, block_replication, blocksize, modification_time,
+         null, null, null, path);
+  }
+  
+  public FileStatus(long length, boolean isdir, int block_replication,
+                    long blocksize, long modification_time,
+                    FsPermission permission, String owner, String group, 
+                    Path path) {
     this.length = length;
     this.isdir = isdir;
-    this.block_replication = block_replication;
+    this.block_replication = (short)block_replication;
     this.blocksize = blocksize;
     this.modification_time = modification_time;
+    this.permission = (permission == null) ? 
+                      FsPermission.getDefault() : permission;
+    this.owner = (owner == null) ? "" : owner;
+    this.group = (group == null) ? "" : group;
     this.path = path;
   }
 
@@ -92,10 +104,69 @@ public class FileStatus implements Writable {
     return modification_time;
   }
 
+  /**
+   * Get FsPermission associated with the file.
+   * @return permssion. If a filesystem does not have a notion of permissions
+   *         or if permissions could not be determined, then default 
+   *         permissions equivalent of "rwxrwxrwx" is returned.
+   */
+  public FsPermission getPermission() {
+    return permission;
+  }
+  
+  /**
+   * Get the owner of the file.
+   * @return owner of the file. The string could be empty if there is no
+   *         notion of owner of a file in a filesystem or if it could not 
+   *         be determined (rare).
+   */
+  public String getOwner() {
+    return owner;
+  }
+  
+  /**
+   * Get the group associated with the file.
+   * @return group for the file. The string could be empty if there is no
+   *         notion of group of a file in a filesystem or if it could not 
+   *         be determined (rare).
+   */
+  public String getGroup() {
+    return group;
+  }
+  
   public Path getPath() {
     return path;
   }
 
+  /* These are provided so that these values could be loaded lazily 
+   * by a filesystem (e.g. local file system).
+   */
+  
+  /**
+   * Sets permission.
+   * @param permission if permission is null, default value is set
+   */
+  protected void setPermission(FsPermission permission) {
+    this.permission = (permission == null) ? 
+                      FsPermission.getDefault() : permission;
+  }
+  
+  /**
+   * Sets owner.
+   * @param owner if it is null, default value is set
+   */  
+  protected void setOwner(String owner) {
+    this.owner = (owner == null) ? "" : owner;
+  }
+  
+  /**
+   * Sets group.
+   * @param group if it is null, default value is set
+   */  
+  protected void setGroup(String group) {
+    this.group = (group == null) ? "" :  group;
+  }
+  
   //////////////////////////////////////////////////
   // Writable
   //////////////////////////////////////////////////
@@ -106,6 +177,9 @@ public class FileStatus implements Writable {
     out.writeShort(block_replication);
     out.writeLong(blocksize);
     out.writeLong(modification_time);
+    permission.write(out);
+    Text.writeString(out, owner);
+    Text.writeString(out, group);
   }
 
   public void readFields(DataInput in) throws IOException {
@@ -116,6 +190,9 @@ public class FileStatus implements Writable {
     this.block_replication = in.readShort();
     blocksize = in.readLong();
     modification_time = in.readLong();
+    permission.readFields(in);
+    owner = Text.readString(in);
+    group = Text.readString(in);
   }
 
 }

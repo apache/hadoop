@@ -387,7 +387,7 @@ public abstract class FileSystem extends Configured {
                                             long blockSize,
                                             Progressable progress
                                             ) throws IOException {
-    return this.create(f, FsPermission.getDefault(getConf()),
+    return this.create(f, FsPermission.getDefault(),
         overwrite, bufferSize, replication, blockSize, progress);
   }
 
@@ -836,7 +836,7 @@ public abstract class FileSystem extends Configured {
    * Call {@link #mkdirs(Path, FsPermission)} with default permission.
    */
   public boolean mkdirs(Path f) throws IOException {
-    return mkdirs(f, FsPermission.getDefault(getConf()));
+    return mkdirs(f, FsPermission.getDefault());
   }
 
   /**

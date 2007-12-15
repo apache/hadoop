@@ -146,14 +146,9 @@ public class FsPermission implements Writable {
     conf.setInt(UMASK_LABEL, umask.toShort());
   }
 
-  private static final FsPermission NONE = new FsPermission((short)0);
-
-  /**
-   * Get the default permission from conf.
-   * @param conf
-   */
-  public static FsPermission getDefault(Configuration conf) {
-    return NONE.applyUMask(getUMask(conf));
+  /** Get the default permission. */
+  public static FsPermission getDefault() {
+    return new FsPermission((short)0777);
   }
 
   /**
@@ -169,7 +164,7 @@ public class FsPermission implements Writable {
     for(int i = 1; i < unixSymbolicPermission.length(); i++) {
       n = n << 1;
       char c = unixSymbolicPermission.charAt(i);
-      n += c == '-' || c == 'T'? 0: 1;
+      n += (c == '-' || c == 'T' || c == 'S') ? 0: 1;
     }
     return new FsPermission((short)n);
   }

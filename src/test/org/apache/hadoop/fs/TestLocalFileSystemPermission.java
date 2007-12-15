@@ -93,9 +93,7 @@ public class TestLocalFileSystemPermission extends TestCase {
   }
 
   FsPermission getPermission(LocalFileSystem fs, Path p) throws IOException {
-    RawLocalFileSystem.RawLocalFileStatus s
-      = (RawLocalFileSystem.RawLocalFileStatus)fs.getFileStatus(p);
-    return s.getPermissionStatus().getPermission();
+    return fs.getFileStatus(p).getPermission();
   }
 
   /** Test LocalFileSystem.setOwner */
@@ -148,8 +146,6 @@ public class TestLocalFileSystemPermission extends TestCase {
   }
 
   String getGroup(LocalFileSystem fs, Path p) throws IOException {
-    RawLocalFileSystem.RawLocalFileStatus s
-      = (RawLocalFileSystem.RawLocalFileStatus)fs.getFileStatus(p);
-    return s.getPermissionStatus().getGroupName();
+    return fs.getFileStatus(p).getGroup();
   }
 }

@@ -551,9 +551,11 @@ public class FsShell extends Configured implements Tool {
     }
   }
 
-  /* list all files under the directory <i>src</i>*/
+  /* list all files under the directory <i>src</i>
+   * ideally we should provide "-l" option, that lists like "ls -l".
+   */
   private void ls(Path src, boolean recursive, boolean printHeader) throws IOException {
-    Path items[] = fs.listPaths(src);
+    FileStatus items[] = fs.listStatus(src);
     if (items == null) {
       throw new IOException("Could not get listing for " + src);
     } else {
@@ -561,15 +563,18 @@ public class FsShell extends Configured implements Tool {
         System.out.println("Found " + items.length + " items");
       }
       for (int i = 0; i < items.length; i++) {
-        Path cur = items[i];
-        FileStatus stat = fs.getFileStatus(cur);
+        FileStatus stat = items[i];
+        Path cur = stat.getPath();
         String mdate = dateForm.format(new Date(stat.getModificationTime()));
         System.out.println(cur.toUri().getPath() + "\t" 
                            + (stat.isDir() ? 
                               "<dir>\t" : 
                               ("<r " + stat.getReplication() 
                                + ">\t" + stat.getLen()))
-                           + "\t" + mdate);
+                           + "\t" + mdate 
+                           + "\t" + stat.getPermission()
+                           + "\t" + stat.getOwner() 
+                           + "\t" + stat.getGroup());
         if (recursive && stat.isDir()) {
           ls(cur, recursive, printHeader);
         }

@@ -33,6 +33,9 @@ Trunk (unreleased changes)
     HADOOP-2401.  Only the current leaseholder can abandon a block for
     a HDFS file.  ClientProtocol version changed from 20 to 21.
     (Tsz Wo (Nicholas), SZE via dhruba)
+
+    HADOOP-2381.  Support permission information in FileStatus. Client
+    Protocol version changed from 21 to 22.  (Raghu Angadi via dhruba)
     
   NEW FEATURES
 
