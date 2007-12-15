@@ -263,6 +263,10 @@ Branch 0.15 (unreleased)
     HADOOP-2378.  Fixes a problem where the last task completion event would
     get created after the job completes. (Alejandro Abdelnur via ddas)
 
+    HADOOP-2228.  Checks whether a job with a certain jobId is already running
+    and then tries to create the JobInProgress object. 
+    (Johan Oskarsson via ddas)
+
   IMPROVEMENTS
 
     HADOOP-2160.  Remove project-level, non-user documentation from

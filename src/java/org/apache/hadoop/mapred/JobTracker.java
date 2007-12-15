@@ -1531,10 +1531,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    * asynchronously to handle split-computation and build up
    * the right TaskTracker/Block mapping.
    */
-  public synchronized JobStatus submitJob(String jobFile) throws IOException {
+  public synchronized JobStatus submitJob(String jobId) throws IOException {
     ensureRunning();
+    if(jobs.containsKey(jobId)) {
+      //job already running, don't start twice
+      return jobs.get(jobId).getStatus();
+    }
+    
     totalSubmissions++;
-    JobInProgress job = new JobInProgress(jobFile, this, this.conf);
+    JobInProgress job = new JobInProgress(jobId, this, this.conf);
     synchronized (jobs) {
       synchronized (jobsByPriority) {
         synchronized (jobInitQueue) {
