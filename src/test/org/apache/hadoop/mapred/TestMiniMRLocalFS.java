@@ -69,6 +69,11 @@ public class TestMiniMRLocalFS extends TestCase {
       assertEquals("number of maps", 1, reports.length);
       reports = client.getReduceTaskReports(jobid);
       assertEquals("number of reduces", 1, reports.length);
+      Counters counters = ret.job.getCounters();
+      assertEquals("number of map inputs", 3, 
+                   counters.getCounter(Task.Counter.MAP_INPUT_RECORDS));
+      assertEquals("number of reduce outputs", 9, 
+                   counters.getCounter(Task.Counter.REDUCE_OUTPUT_RECORDS));
       runCustomFormats(mr);
     } finally {
       if (mr != null) { mr.shutdown(); }

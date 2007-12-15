@@ -36,8 +36,9 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    *         TaskUmbilicalProtocol.progress(String, float, String, 
    *         org.apache.hadoop.mapred.TaskStatus.Phase, Counters) 
    *         with {@link #statusUpdate(String, TaskStatus)}
+   * Version 5 changed counters representation for HADOOP-2248
    * */
-  public static final long versionID = 4L;
+  public static final long versionID = 5L;
   
   /** Called when a child task process starts, to get its task.*/
   Task getTask(String taskid) throws IOException;

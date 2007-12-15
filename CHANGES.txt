@@ -120,6 +120,9 @@ Trunk (unreleased changes)
     It now uses the map-reduce framework for load generation.
     (Mukund Madhugiri via dhruba)
 
+    HADOOP-2248. Speeds up the framework w.r.t Counters. Also has API
+    updates to the Counters part. (Owen O'Malley via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

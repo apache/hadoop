@@ -175,14 +175,12 @@ class JobInProgress {
    */
   public void updateMetrics() {
     Counters counters = getCounters();
-    for (String groupName : counters.getGroupNames()) {
-      Counters.Group group = counters.getGroup(groupName);
+    for (Counters.Group group : counters) {
       jobMetrics.setTag("group", group.getDisplayName());
           
-      for (String counter : group.getCounterNames()) {
-        long value = group.getCounter(counter);
-        jobMetrics.setTag("counter", group.getDisplayName(counter));
-        jobMetrics.setMetric("value", (float) value);
+      for (Counters.Counter counter : group) {
+        jobMetrics.setTag("counter", counter.getDisplayName());
+        jobMetrics.setMetric("value", (float) counter.getCounter());
         jobMetrics.update();
       }
     }
@@ -504,14 +502,14 @@ class JobInProgress {
    *  Returns map phase counters by summing over all map tasks in progress.
    */
   public synchronized Counters getMapCounters() {
-    return sumTaskCounters(maps);
+    return incrementTaskCounters(new Counters(), maps);
   }
     
   /**
    *  Returns map phase counters by summing over all map tasks in progress.
    */
   public synchronized Counters getReduceCounters() {
-    return sumTaskCounters(reduces);
+    return incrementTaskCounters(new Counters(), reduces);
   }
     
   /**
@@ -519,16 +517,20 @@ class JobInProgress {
    *  the map and the reduce counters.
    */
   public Counters getCounters() {
-    return Counters.sum(getJobCounters(), 
-                        Counters.sum(getMapCounters(), getReduceCounters()));
+    Counters result = new Counters();
+    result.incrAllCounters(getJobCounters());
+    incrementTaskCounters(result, maps);
+    return incrementTaskCounters(result, reduces);
   }
     
   /**
-   * Returns a Counters instance representing the sum of all the counters in
-   * the array of tasks in progress.
+   * Increments the counters with the counters from each task.
+   * @param counters the counters to increment
+   * @param tips the tasks to add in to counters
+   * @return counters the same object passed in as counters
    */
-  private Counters sumTaskCounters(TaskInProgress[] tips) {
-    Counters counters = new Counters();
+  private Counters incrementTaskCounters(Counters counters,
+                                         TaskInProgress[] tips) {
     for (TaskInProgress tip : tips) {
       counters.incrAllCounters(tip.getCounters());
     }

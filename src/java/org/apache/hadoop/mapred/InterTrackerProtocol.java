@@ -38,8 +38,9 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * version 7 replaces maxTasks by maxMapTasks and maxReduceTasks in 
    * TaskTrackerStatus for HADOOP-1274
    * Version 8: HeartbeatResponse is added with the next heartbeat interval.
+   * version 9 changes the counter representation for HADOOP-2248
    */
-  public static final long versionID = 8L;
+  public static final long versionID = 9L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;

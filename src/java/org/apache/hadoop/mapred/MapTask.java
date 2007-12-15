@@ -49,7 +49,6 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.mapred.ReduceTask.ValuesIterator;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.mapred.Task.Counter.*;
 
@@ -114,6 +113,51 @@ class MapTask extends Task {
     return instantiatedSplit;
   }
 
+  /**
+   * This class wraps the user's record reader to update the counters and progress
+   * as records are read.
+   * @param <K>
+   * @param <V>
+   */
+  class TrackedRecordReader<K extends WritableComparable, V extends Writable> 
+      implements RecordReader<K,V> {
+    private RecordReader<K,V> rawIn;
+    private Counters.Counter inputByteCounter;
+    private Counters.Counter inputRecordCounter;
+    
+    TrackedRecordReader(RecordReader<K,V> raw, Counters counters) {
+      rawIn = raw;
+      inputRecordCounter = counters.findCounter(MAP_INPUT_RECORDS);
+      inputByteCounter = counters.findCounter(MAP_INPUT_BYTES);
+    }
+
+    public K createKey() {
+      return rawIn.createKey();
+    }
+      
+    public V createValue() {
+      return rawIn.createValue();
+    }
+     
+    public synchronized boolean next(K key, V value)
+      throws IOException {
+
+      setProgress(getProgress());
+      long beforePos = getPos();
+      boolean ret = rawIn.next(key, value);
+      if (ret) {
+        inputRecordCounter.increment(1);
+        inputByteCounter.increment(getPos() - beforePos);
+      }
+      return ret;
+    }
+    public long getPos() throws IOException { return rawIn.getPos(); }
+    public void close() throws IOException { rawIn.close(); }
+    public float getProgress() throws IOException {
+      return rawIn.getProgress();
+    }
+  };
+
   @SuppressWarnings("unchecked")
   public void run(final JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
@@ -153,37 +197,9 @@ class MapTask extends Task {
       job.setLong("map.input.length", fileSplit.getLength());
     }
       
-    final RecordReader rawIn =                  // open input
+    RecordReader rawIn =                  // open input
       job.getInputFormat().getRecordReader(instantiatedSplit, job, reporter);
-
-    RecordReader in = new RecordReader() {      // wrap in progress reporter
-
-        public WritableComparable createKey() {
-          return rawIn.createKey();
-        }
-          
-        public Writable createValue() {
-          return rawIn.createValue();
-        }
-         
-        public synchronized boolean next(WritableComparable key, Writable value)
-          throws IOException {
-
-          setProgress(getProgress());
-          long beforePos = getPos();
-          boolean ret = rawIn.next(key, value);
-          if (ret) {
-            reporter.incrCounter(MAP_INPUT_RECORDS, 1);
-            reporter.incrCounter(MAP_INPUT_BYTES, (getPos() - beforePos));
-          }
-          return ret;
-        }
-        public long getPos() throws IOException { return rawIn.getPos(); }
-        public void close() throws IOException { rawIn.close(); }
-        public float getProgress() throws IOException {
-          return rawIn.getProgress();
-        }
-      };
+    RecordReader in = new TrackedRecordReader(rawIn, getCounters());
 
     MapRunnable runner =
       (MapRunnable)ReflectionUtils.newInstance(job.getMapRunnerClass(), job);
@@ -251,7 +267,6 @@ class MapTask extends Task {
     private Partitioner partitioner;
     private JobConf job;
     private Reporter reporter;
-    final private TaskUmbilicalProtocol umbilical;
 
     private DataOutputBuffer keyValBuffer; //the buffer where key/val will
                                            //be stored before they are 
@@ -271,6 +286,11 @@ class MapTask extends Task {
     private FSDataOutputStream out;
     private FSDataOutputStream indexOut;
     private long segmentStart;
+    private Counters.Counter mapOutputByteCounter;
+    private Counters.Counter mapOutputRecordCounter;
+    private Counters.Counter combineInputCounter;
+    private Counters.Counter combineOutputCounter;
+    
     public MapOutputBuffer(TaskUmbilicalProtocol umbilical, JobConf job, 
                            Reporter reporter) throws IOException {
       this.partitions = job.getNumReduceTasks();
@@ -281,7 +301,6 @@ class MapTask extends Task {
 
       this.job = job;
       this.reporter = reporter;
-      this.umbilical = umbilical;
       this.comparator = job.getOutputKeyComparator();
       this.keyClass = job.getMapOutputKeyClass();
       this.valClass = job.getMapOutputValueClass();
@@ -299,6 +318,11 @@ class MapTask extends Task {
           ReflectionUtils.newInstance(codecClass, job);
       }
       sortImpl = new BufferSorter[partitions];
+      Counters counters = getCounters();
+      mapOutputByteCounter = counters.findCounter(MAP_OUTPUT_BYTES);
+      mapOutputRecordCounter = counters.findCounter(MAP_OUTPUT_RECORDS);
+      combineInputCounter = getCounters().findCounter(COMBINE_INPUT_RECORDS);
+      combineOutputCounter = counters.findCounter(COMBINE_OUTPUT_RECORDS);
       for (int i = 0; i < partitions; i++)
         sortImpl[i] = (BufferSorter)ReflectionUtils.newInstance(
                                                                 job.getClass("map.sort.class", MergeSorter.class,
@@ -352,9 +376,8 @@ class MapTask extends Task {
         int partNumber = partitioner.getPartition(key, value, partitions);
         sortImpl[partNumber].addKeyValue(keyOffset, keyLength, valLength);
 
-        reporter.incrCounter(MAP_OUTPUT_RECORDS, 1);
-        reporter.incrCounter(MAP_OUTPUT_BYTES,
-                             (keyValBuffer.getLength() - keyOffset));
+        mapOutputRecordCounter.increment(1);
+        mapOutputByteCounter.increment(keyValBuffer.getLength() - keyOffset);
 
         //now check whether we need to spill to disk
         long totalMem = 0;
@@ -438,7 +461,7 @@ class MapTask extends Task {
       while (values.more()) {
         combiner.reduce(values.getKey(), values, combineCollector, reporter);
         values.nextKey();
-        reporter.incrCounter(COMBINE_OUTPUT_RECORDS, 1);
+        combineOutputCounter.increment(1);
         // indicate we're making progress
         reporter.progress();
       }
@@ -589,7 +612,7 @@ class MapTask extends Task {
       }
       
       public Object next() {
-        reporter.incrCounter(COMBINE_INPUT_RECORDS, 1);
+        combineInputCounter.increment(1);
         return super.next();
       }
     }

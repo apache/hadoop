@@ -340,7 +340,6 @@ abstract class Task implements Writable, Configurable {
           setProgressFlag();
         }
         public void incrCounter(Enum key, long amount) {
-          Counters counters = getCounters();
           if (counters != null) {
             counters.incrCounter(key, amount);
           }

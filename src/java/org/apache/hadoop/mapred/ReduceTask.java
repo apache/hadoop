@@ -89,6 +89,12 @@ class ReduceTask extends Task {
   private Progress copyPhase = getProgress().addPhase("copy");
   private Progress sortPhase  = getProgress().addPhase("sort");
   private Progress reducePhase = getProgress().addPhase("reduce");
+  private Counters.Counter reduceInputKeyCounter = 
+    getCounters().findCounter(REDUCE_INPUT_GROUPS);
+  private Counters.Counter reduceInputValueCounter = 
+    getCounters().findCounter(REDUCE_INPUT_RECORDS);
+  private Counters.Counter reduceOutputCounter = 
+    getCounters().findCounter(REDUCE_OUTPUT_RECORDS);
 
   public ReduceTask() {
     super();
@@ -232,7 +238,7 @@ class ReduceTask extends Task {
       reporter.progress();
     }
     public Object next() {
-      reporter.incrCounter(REDUCE_INPUT_RECORDS, 1);
+      reduceInputValueCounter.increment(1);
       return super.next();
     }
   }
@@ -306,7 +312,7 @@ class ReduceTask extends Task {
         public void collect(WritableComparable key, Writable value)
           throws IOException {
           out.write(key, value);
-          reporter.incrCounter(REDUCE_OUTPUT_RECORDS, 1);
+          reduceOutputCounter.increment(1);
           // indicate that progress update needs to be sent
           reporter.progress();
         }
@@ -322,7 +328,7 @@ class ReduceTask extends Task {
           job, reporter);
       values.informReduceProgress();
       while (values.more()) {
-        reporter.incrCounter(REDUCE_INPUT_GROUPS, 1);
+        reduceInputKeyCounter.increment(1);
         reducer.reduce(values.getKey(), values, collector, reporter);
         values.nextKey();
         values.informReduceProgress();
