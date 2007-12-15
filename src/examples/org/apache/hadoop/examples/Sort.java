@@ -74,8 +74,6 @@ public class Sort extends Configured implements Tool {
 
     JobClient client = new JobClient(jobConf);
     ClusterStatus cluster = client.getClusterStatus();
-    int num_maps = cluster.getTaskTrackers() * 
-    jobConf.getInt("test.sort.maps_per_host", 10);
     int num_reduces = (int) (cluster.getMaxReduceTasks() * 0.9);
     String sort_reduces = jobConf.get("test.sort.reduces_per_host");
     if (sort_reduces != null) {
@@ -92,7 +90,7 @@ public class Sort extends Configured implements Tool {
     for(int i=0; i < args.length; ++i) {
       try {
         if ("-m".equals(args[i])) {
-          num_maps = Integer.parseInt(args[++i]);
+          jobConf.setNumMapTasks(Integer.parseInt(args[++i]));
         } else if ("-r".equals(args[i])) {
           num_reduces = Integer.parseInt(args[++i]);
         } else if ("-inFormat".equals(args[i])) {
@@ -121,7 +119,6 @@ public class Sort extends Configured implements Tool {
     }
 
     // Set user-supplied (possibly default) job configs
-    jobConf.setNumMapTasks(num_maps);
     jobConf.setNumReduceTasks(num_reduces);
 
     jobConf.setInputFormat(inputFormatClass);
