@@ -25,8 +25,6 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.hadoop.io.Text;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 
 /**
  * Test HBase Master and Region servers, client API 
@@ -43,7 +41,6 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     this.desc = null;
     this.admin = null;
     this.table = null;
-    Logger.getRootLogger().setLevel(Level.INFO);
 
     // Make the thread wake frequency a little slower so other threads
     // can run
@@ -116,19 +113,22 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
       Text rowlabel = new Text("row_" + k);
 
       byte bodydata[] = table.get(rowlabel, CONTENTS_BASIC);
-      assertNotNull("no data for row " + rowlabel, bodydata);
-      String bodystr = new String(bodydata, HConstants.UTF8_ENCODING).trim();
+      assertNotNull("no data for row " + rowlabel + "/" + CONTENTS_BASIC,
+          bodydata);
+      String bodystr = new String(bodydata, HConstants.UTF8_ENCODING);
       String teststr = CONTENTSTR + k;
-      assertEquals("Incorrect value for key: (" + rowlabel + "," + CONTENTS_BASIC
-          + "), expected: '" + teststr + "' got: '" + bodystr + "'",
-          bodystr, teststr);
+      assertTrue("Incorrect value for key: (" + rowlabel + "/" +
+          CONTENTS_BASIC + "), expected: '" + teststr + "' got: '" +
+          bodystr + "'", teststr.compareTo(bodystr) == 0);
+      
       collabel = new Text(ANCHORNUM + k);
       bodydata = table.get(rowlabel, collabel);
-      bodystr = new String(bodydata, HConstants.UTF8_ENCODING).trim();
+      assertNotNull("no data for row " + rowlabel + "/" + collabel, bodydata);
+      bodystr = new String(bodydata, HConstants.UTF8_ENCODING);
       teststr = ANCHORSTR + k;
-      assertEquals("Incorrect value for key: (" + rowlabel + "," + collabel
-          + "), expected: '" + teststr + "' got: '" + bodystr + "'",
-          bodystr, teststr);
+      assertTrue("Incorrect value for key: (" + rowlabel + "/" + collabel +
+          "), expected: '" + teststr + "' got: '" + bodystr + "'",
+          teststr.compareTo(bodystr) == 0);
     }
 
     System.out.println("Read " + NUM_VALS + " rows. Elapsed time: "
