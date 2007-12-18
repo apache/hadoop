@@ -246,6 +246,10 @@ Trunk (unreleased changes)
     HADOOP-2376. Prevents sort example from overriding the number of maps.
     (Owen O'Malley via ddas)
 
+    HADOOP-2434. FSDatasetInterface read interface causes HDFS reads to occur 
+    in 1 byte chunks, causing performance degradation.
+    (Raghu Angadi via dhruba)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES

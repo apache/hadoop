@@ -64,8 +64,8 @@ public interface FSDatasetInterface {
     }
     
     @Override
-    public int read(byte[] b) throws IOException { 
-      return inStream.read(b);
+    public int read(byte[] b, int off, int len) throws IOException {
+      return inStream.read(b, off, len);
     }
     
     public long getLength() {
