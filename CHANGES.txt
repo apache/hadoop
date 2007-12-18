@@ -314,6 +314,8 @@ Release 0.15.1 - 2007-11-27
     by HADOOP-1917 weren't correctly copied over to the trunk/docs directory. 
     Also fixed a couple of minor typos and broken links. (acmurthy)
 
+    HADOOP-2422.  dfs -cat multiple files fail with 'Unable to write to 
+    output stream'.  (Raghu Angadi via dhruba)
 
 Release 0.15.0 - 2007-11-2
 

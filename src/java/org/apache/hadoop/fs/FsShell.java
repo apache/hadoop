@@ -101,7 +101,11 @@ public class FsShell extends Configured implements Tool {
    * Print from src to stdout.
    */
   private void printToStdout(InputStream in) throws IOException {
-    IOUtils.copyBytes(in, System.out, getConf(), true);
+    try {
+      IOUtils.copyBytes(in, System.out, getConf(), false);
+    } finally {
+      in.close();
+    }
   }
 
   /**

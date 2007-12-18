@@ -329,12 +329,16 @@ public class TestDFSShell extends TestCase {
       Path myFile = new Path("/test/mkdirs/myFile");
       writeFile(fileSys, myFile);
       assertTrue(fileSys.exists(myFile));
+      Path myFile2 = new Path("/test/mkdirs/myFile2");      
+      writeFile(fileSys, myFile2);
+      assertTrue(fileSys.exists(myFile2));
 
       // Verify that we can read the file
       {
-        String[] args = new String[2];
+        String[] args = new String[3];
         args[0] = "-cat";
         args[1] = "/test/mkdirs/myFile";
+        args[2] = "/test/mkdirs/myFile2";        
         int val = -1;
         try {
           val = shell.run(args);
@@ -344,6 +348,7 @@ public class TestDFSShell extends TestCase {
         }
         assertTrue(val == 0);
       }
+      fileSys.delete(myFile2);
 
       // Verify that we can get with and without crc
       {
