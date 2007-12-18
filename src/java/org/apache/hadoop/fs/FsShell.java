@@ -97,7 +97,11 @@ public class FsShell extends Configured implements Tool {
       throw new IOException("Source must be a file.");
     }
     FSDataInputStream in = fs.open(src);
-    IOUtils.copyBytes(in, System.out, getConf(), true);
+    try {
+      IOUtils.copyBytes(in, System.out, getConf(), false);
+    } finally {
+      in.close();
+    }
   }
 
   /**
