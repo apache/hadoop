@@ -30,8 +30,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 
 public class HelpCommand extends BasicCommand {
   private String argument;
-  private static final String[] HEADER = new String[] { "Command", "Description",
-      "Example" };
+  private static final String[] HEADER = new String[] { "Command",
+      "Description", "Example" };
 
   /** application name */
   public static final String APP_NAME = "Hbase Shell";
@@ -90,8 +90,8 @@ public class HelpCommand extends BasicCommand {
                 "Create tables",
                 "CREATE TABLE table_name (column_family_name [MAX_VERSIONS=n] "
                     + "[MAX_LENGTH=n] [COMPRESSION=NONE|RECORD|BLOCK] [IN_MEMORY] "
-                    + "[BLOOMFILTER=NONE|BLOOM|COUNTING|RETOUCHED VECTOR_SIZE=n NUM_HASH=n], "
-                    + "...)" });
+                    + "[BLOOMFILTER=NONE|BLOOMFILTER|COUNTING_BLOOMFILTER|RETOUCHED_BLOOMFILTER "
+                    + "VECTOR_SIZE=n NUM_HASH=n], " + "...)" });
     load.put("DROP", new String[] { "Drop tables",
         "DROP TABLE table_name [, table_name] ...;" });
 
@@ -126,8 +126,8 @@ public class HelpCommand extends BasicCommand {
     // model of
     // data.
 
-    load
-        .put("TABLE", new String[] { "Load a table", "A = table('table_name');" });
+    load.put("TABLE",
+        new String[] { "Load a table", "A = table('table_name');" });
     load.put("SUBSTITUTE", new String[] { "Substitute expression to [A~Z]",
         "D = A.projection('cf_name1'[, 'cf_name2']);" });
     load.put("SAVE", new String[] {
