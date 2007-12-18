@@ -559,7 +559,7 @@ public class HRegion implements HConstants {
         throw new IOException("Cannot split; target file collision at " + dirA);
       }
       HRegionInfo regionBInfo = new HRegionInfo(this.regionInfo.getTableDesc(),
-          midKey, null);
+          midKey, this.regionInfo.getEndKey());
       Path dirB = getSplitRegionDir(splits,
           HRegionInfo.encodeRegionName(regionBInfo.getRegionName()));
       if(this.fs.exists(dirB)) {
