@@ -86,7 +86,8 @@ Trunk (unreleased changes)
    HADOOP-2441 Fix build failures in TestHBaseCluster
    HADOOP-2451 End key is incorrectly assigned in many region splits
    HADOOP-2455 Error in Help-string of CREATE command (Edward Yoon via Stack)
-         
+   HADOOP-2465 When split parent regions are cleaned up, not all the columns are
+               deleted
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
@@ -131,6 +132,8 @@ Trunk (unreleased changes)
    HADOOP-2351 If select command returns no result, it doesn't need to show the
                header information (Edward Yoon via Stack)
    HADOOP-2285 Add being able to shutdown regionservers (Dennis Kubes via Stack)
+   HADOOP-2458 HStoreFile.writeSplitInfo should just call 
+               HStoreFile.Reference.write
                
 
 
