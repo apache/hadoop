@@ -259,6 +259,11 @@ Trunk (unreleased changes)
     HADOOP-2459. Fix package target so that src/docs/build files are not
     included in the release.  (nigel)
 
+    HADOOP-2215.  Fix documentation in cluster_setup.html &
+    mapred_tutorial.html reflect that mapred.tasktracker.tasks.maximum has
+    been superceeded by mapred.tasktracker.{map|reduce}.tasks.maximum. 
+    (Amareshwari Sri Ramadasu via acmurthy)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES

@@ -182,9 +182,9 @@
 		      <td>Multiple paths help spread disk i/o.</td>
 		    </tr>
 		    <tr>
-		      <td>mapred.tasktracker.tasks.maximum</td>
+		      <td>mapred.tasktracker.{map|reduce}.tasks.maximum</td>
 		      <td>
-		        The maximum number of map and reduce tasks, which are run 
+		        The maximum number of map/reduce tasks, which are run 
 		        simultaneously on a given <code>TaskTracker</code>, individually.
 		      </td>
 		      <td>

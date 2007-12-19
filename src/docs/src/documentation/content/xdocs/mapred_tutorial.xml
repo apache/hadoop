@@ -861,7 +861,7 @@
  
             <p>The right number of reduces seems to be <code>0.95</code> or 
             <code>1.75</code> multiplied by (&lt;<em>no. of nodes</em>&gt; * 
-            <code>mapred.tasktracker.tasks.maximum</code>).</p>
+            <code>mapred.tasktracker.reduce.tasks.maximum</code>).</p>
  
             <p>With <code>0.95</code> all of the reduces can launch immediately 
             and start transfering map outputs as the maps finish. With 

@@ -1331,7 +1331,7 @@ document.write("Last Published: " + document.lastModified);
 <h5>How Many Reduces?</h5>
 <p>The right number of reduces seems to be <span class="codefrag">0.95</span> or 
             <span class="codefrag">1.75</span> multiplied by (&lt;<em>no. of nodes</em>&gt; * 
-            <span class="codefrag">mapred.tasktracker.tasks.maximum</span>).</p>
+            <span class="codefrag">mapred.tasktracker.reduce.tasks.maximum</span>).</p>
 <p>With <span class="codefrag">0.95</span> all of the reduces can launch immediately 
             and start transfering map outputs as the maps finish. With 
             <span class="codefrag">1.75</span> the faster nodes will finish their first round of 
