@@ -103,6 +103,8 @@ public class DataNode implements FSConstants, Runnable {
   Daemon dataXceiveServer = null;
   long blockReportInterval;
   long lastBlockReport = 0;
+  boolean resetBlockReportTime = true;
+  long initialBlockReportDelay = BLOCKREPORT_INITIAL_DELAY * 1000L;
   long lastHeartbeat = 0;
   long heartBeatInterval;
   private DataStorage storage = null;
@@ -285,6 +287,13 @@ public class DataNode implements FSConstants, Runnable {
       conf.getLong("dfs.blockreport.intervalMsec", BLOCKREPORT_INTERVAL);
     this.blockReportInterval =
       blockReportIntervalBasis - new Random().nextInt((int)(blockReportIntervalBasis/10));
+    this.initialBlockReportDelay = conf.getLong("dfs.blockreport.initialDelay",
+                                            BLOCKREPORT_INITIAL_DELAY)* 1000L; 
+    if (this.initialBlockReportDelay >= blockReportIntervalBasis) {
+      this.initialBlockReportDelay = 0;
+      LOG.info("dfs.blockreport.initialDelay is greater than " +
+      	"dfs.blockreport.intervalMsec." + " Setting initial delay to 0 msec:");
+    }
     this.heartBeatInterval = conf.getLong("dfs.heartbeat.interval", HEARTBEAT_INTERVAL) * 1000L;
     DataNode.nameNodeAddr = nameNodeAddr;
 
@@ -520,7 +529,8 @@ public class DataNode implements FSConstants, Runnable {
    */
   public void offerService() throws Exception {
      
-    LOG.info("using BLOCKREPORT_INTERVAL of " + blockReportInterval + "msec");
+    LOG.info("using BLOCKREPORT_INTERVAL of " + blockReportInterval + "msec" + 
+       " Initial delay: " + initialBlockReportDelay + "msec");
 
     //
     // Now loop for a long time....
@@ -599,8 +609,9 @@ public class DataNode implements FSConstants, Runnable {
           // If we have sent the first block report, then wait a random
           // time before we start the periodic block reports.
           //
-          if (lastBlockReport == 0) {
+          if (resetBlockReportTime) {
             lastBlockReport = now - new Random().nextInt((int)(blockReportInterval));
+            resetBlockReportTime = false;
           } else {
             lastBlockReport = now;
           }
@@ -672,9 +683,10 @@ public class DataNode implements FSConstants, Runnable {
       this.shutdown();
       return false;
     case DatanodeProtocol.DNA_REGISTER:
-      // namenode requested a registration
+      // namenode requested a registration - at start or if NN lost contact
       register();
-      scheduleBlockReport();
+      // random short delay - helps scatter the BR from all DNs
+      scheduleBlockReport(initialBlockReportDelay);
       break;
     case DatanodeProtocol.DNA_FINALIZE:
       storage.finalizeUpgrade();
@@ -1923,9 +1935,14 @@ public class DataNode implements FSConstants, Runnable {
   /**
    * This methods  arranges for the data node to send the block report at the next heartbeat.
    */
-  public void scheduleBlockReport() {
-    lastHeartbeat=0;
-    lastBlockReport=0;
+  public void scheduleBlockReport(long delay) {
+    if (delay > 0) { // send BR after random delay
+      lastBlockReport = System.currentTimeMillis()
+  							- ( blockReportInterval - new Random().nextInt((int)(delay)));
+    } else { // send at next heartbeat
+      lastBlockReport = lastHeartbeat - blockReportInterval;
+    }
+    resetBlockReportTime = true; // reset future BRs for randomness
   }
   
   

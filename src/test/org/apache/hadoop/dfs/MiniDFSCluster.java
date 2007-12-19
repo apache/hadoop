@@ -219,6 +219,10 @@ public class MiniDFSCluster {
                              String[] racks,
                              long[] simulatedCapacities) throws IOException {
 
+    // for mincluster's the default initialDelay for BRs is 0
+    if (conf.get("dfs.blockreport.initialDelay") == null) {
+      conf.setLong("dfs.blockreport.initialDelay", 0);
+    }
     // If minicluster's name node is null assume that the conf has been
     // set with the right address:port of the name node.
     //
@@ -484,7 +488,7 @@ public class MiniDFSCluster {
     }
     SimulatedFSDataset sdataset = (SimulatedFSDataset) dataSet;
     sdataset.injectBlocks(blocksToInject);
-    dataNodes.get(dataNodeIndex).scheduleBlockReport();
+    dataNodes.get(dataNodeIndex).scheduleBlockReport(0);
   }
   
   /**

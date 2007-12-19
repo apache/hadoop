@@ -123,6 +123,9 @@ Trunk (unreleased changes)
     HADOOP-2248. Speeds up the framework w.r.t Counters. Also has API
     updates to the Counters part. (Owen O'Malley via ddas)
 
+    HADOOP-2326. The initial block report at Datanode startup time has
+    a random backoff period.  (Sanjay Radia via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
