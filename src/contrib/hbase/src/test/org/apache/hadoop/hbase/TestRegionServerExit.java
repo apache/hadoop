@@ -39,9 +39,10 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
   /** constructor */
   public TestRegionServerExit() {
     super(2);
-    conf.setInt("ipc.client.timeout", 10000);          // reduce client timeout
-    conf.setInt("ipc.client.connect.max.retries", 5);  // and number of retries
-    conf.setInt("hbase.client.retries.number", 5);     // reduce HBase retries
+    conf.setInt("ipc.client.connect.max.retries", 5); // reduce ipc retries
+    conf.setInt("ipc.client.timeout", 10000);         // and ipc timeout 
+    conf.setInt("hbase.client.pause", 10000);         // increase client timeout
+    conf.setInt("hbase.client.retries.number", 10);   // increase HBase retries
   }
   
   /**
