@@ -88,6 +88,7 @@ Trunk (unreleased changes)
    HADOOP-2455 Error in Help-string of CREATE command (Edward Yoon via Stack)
    HADOOP-2465 When split parent regions are cleaned up, not all the columns are
                deleted
+   HADOOP-2468 TestRegionServerExit failed in Hadoop-Nightly #338
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
