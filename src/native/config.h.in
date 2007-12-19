@@ -21,12 +21,6 @@
 /* Define to 1 if you have the `jvm' library (-ljvm). */
 #undef HAVE_LIBJVM
 
-/* Define to 1 if you have the `lzo2' library (-llzo2). */
-#undef HAVE_LIBLZO2
-
-/* Define to 1 if you have the `z' library (-lz). */
-#undef HAVE_LIBZ
-
 /* Define to 1 if you have the <lzo/lzo1a.h> header file. */
 #undef HAVE_LZO_LZO1A_H
 

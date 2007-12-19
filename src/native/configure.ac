@@ -61,12 +61,6 @@ AC_CHECK_LIB([jvm], [JNI_GetCreatedJavaVMs])
 LDFLAGS=$ldflags_bak
 AC_SUBST([JNI_LDFLAGS])
 
-dnl Check for '-lz'
-AC_CHECK_LIB([z], [deflate])
-
-dnl Check for '-llzo2'
-AC_CHECK_LIB([lzo2], [lzo_init])
-
 # Checks for header files.
 dnl Check for Ansi C headers
 AC_HEADER_STDC
