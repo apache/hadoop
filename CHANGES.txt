@@ -293,6 +293,10 @@ Branch 0.15 (unreleased)
     free-space on any one of the available disks. (Amareshwari Sri Ramadasu
     via acmurthy)
 
+    HADOOP-2453. Fix the configuration for wordcount-simple example in Hadoop 
+    Pipes which currently produces an XML parsing error. (Amareshwari Sri
+    Ramadasu via acmurthy)
+
   IMPROVEMENTS
 
     HADOOP-2160.  Remove project-level, non-user documentation from

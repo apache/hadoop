@@ -9,7 +9,7 @@
 <property>
   <name>hadoop.pipes.executable</name>
   <value>/examples/bin/wordcount-simple#wordcount-simple</value>
-  <description> Executable path is given as <path>#<executable-name>
+  <description> Executable path is given as "path#executable-name"
                 sothat the executable will have a symlink in working directory.
                 This can be used for gdb debugging etc.
   </description>
