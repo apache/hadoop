@@ -34,6 +34,7 @@ import java.nio.channels.FileChannel;
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * FSEditLog maintains a log of the namespace modifications.
@@ -345,10 +346,10 @@ class FSEditLog {
           Runtime.getRuntime().exit(-1);
       }
       try {
-        processIOError(idx);         
+        processIOError(j);         
       } catch (IOException e) {
-        FSNamesystem.LOG.error("Unable to sync edit log. " +
-                               "Fatal Error.");
+        FSNamesystem.LOG.error("Unable to sync edit log. Fatal Error : " + 
+                               StringUtils.stringifyException(e));
         Runtime.getRuntime().exit(-1);
       }
     }

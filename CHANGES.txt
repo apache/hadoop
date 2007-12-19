@@ -274,6 +274,13 @@ Branch 0.15 (unreleased)
     and then tries to create the JobInProgress object. 
     (Johan Oskarsson via ddas)
 
+    HADOOP-2422.  dfs -cat multiple files fail with 'Unable to write to 
+    output stream'.  (Raghu Angadi via dhruba)
+
+    HADOOP-2460.  When the namenode encounters ioerrors on writing a
+    transaction log, it stops writing new transactions to that one.
+    (Raghu Angadi via dhruba)
+
   IMPROVEMENTS
 
     HADOOP-2160.  Remove project-level, non-user documentation from
@@ -320,9 +327,6 @@ Release 0.15.1 - 2007-11-27
     HADOOP-2205.  Regenerate the Hadoop website since some of the changes made
     by HADOOP-1917 weren't correctly copied over to the trunk/docs directory. 
     Also fixed a couple of minor typos and broken links. (acmurthy)
-
-    HADOOP-2422.  dfs -cat multiple files fail with 'Unable to write to 
-    output stream'.  (Raghu Angadi via dhruba)
 
 Release 0.15.0 - 2007-11-2
 
