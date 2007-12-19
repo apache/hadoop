@@ -343,6 +343,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         b.delete(lockid, COL_REGIONINFO);
         b.delete(lockid, COL_SERVER);
         b.delete(lockid, COL_STARTCODE);
+        b.delete(lockid, COL_SPLITA);
+        b.delete(lockid, COL_SPLITB);
         srvr.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
         result = true;
       } else if (LOG.isDebugEnabled()) {

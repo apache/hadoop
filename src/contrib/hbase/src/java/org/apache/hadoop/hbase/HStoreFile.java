@@ -493,10 +493,7 @@ public class HStoreFile implements HConstants, WritableComparable {
     }
     FSDataOutputStream out = fs.create(p);
     try {
-      out.writeUTF(getReference().getEncodedRegionName());
-      getReference().getMidkey().write(out);
-      out.writeLong(getReference().getFileId());
-      out.writeBoolean(isTopFileRegion(getReference().getFileRegion()));
+      reference.write(out);
     } finally {
       out.close();
    }
@@ -507,19 +504,14 @@ public class HStoreFile implements HConstants, WritableComparable {
    */
   static Reference readSplitInfo(final Path p, final FileSystem fs)
   throws IOException {
-    Reference r = null;
     FSDataInputStream in = fs.open(p);
     try {
-      String rn = in.readUTF();
-      HStoreKey midkey = new HStoreKey();
-      midkey.readFields(in);
-      long fid = in.readLong();
-      boolean tmp = in.readBoolean();
-      r =  new Reference(rn, fid, midkey, tmp? Range.top: Range.bottom);
+      Reference r = new Reference();
+      r.readFields(in);
+      return r;
     } finally {
       in.close();
     }
-    return r; 
   }
 
   private void createOrFail(final FileSystem fs, final Path p)
