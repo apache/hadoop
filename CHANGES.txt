@@ -126,6 +126,9 @@ Trunk (unreleased changes)
     HADOOP-2326. The initial block report at Datanode startup time has
     a random backoff period.  (Sanjay Radia via dhruba)
 
+    HADOOP-2432. HDFS includes the name of the file while throwing 
+    "File does not exist"  exception. (Jim Kellerman via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

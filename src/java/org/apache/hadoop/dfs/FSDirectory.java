@@ -486,7 +486,7 @@ class FSDirectory implements FSConstants {
     synchronized (rootDir) {
       INode targetNode = rootDir.getNode(srcs);
       if (targetNode == null) {
-        throw new IOException("File does not exist");
+        throw new IOException("File does not exist: " + srcs);
       }
       else {
         return new DFSFileInfo(srcs, targetNode);

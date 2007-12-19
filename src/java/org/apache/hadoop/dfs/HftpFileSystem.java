@@ -177,7 +177,7 @@ public class HftpFileSystem extends FileSystem {
     public FileStatus getFileStatus(Path f) throws IOException {
       fetchList(f.toUri().getPath(), false);
       if (fslist.size() == 0) {
-        throw new IOException("File does not exist");
+        throw new IOException("File does not exist: " + f);
       }
       return fslist.get(0);
     }
