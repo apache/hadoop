@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.filecache.*;
 import org.apache.hadoop.util.*;
 import java.io.*;
@@ -91,18 +92,52 @@ abstract class TaskRunner extends Thread {
       //all the archives
       File workDir = new File(t.getJobFile()).getParentFile();
       String taskid = t.getTaskId();
-      File jobCacheDir = new File(workDir.getParent(), "work");
+      LocalDirAllocator lDirAlloc = new LocalDirAllocator("mapred.local.dir");
+      File jobCacheDir = null;
+      try {
+        jobCacheDir = new File(lDirAlloc.getLocalPathToRead(
+                                    TaskTracker.getJobCacheSubdir() 
+                                    + Path.SEPARATOR + t.getJobId() 
+                                    + Path.SEPARATOR  
+                                    + "work", conf).toString());
+      } catch (IOException ioe) {
+        LOG.warn("work directory doesnt exist");
+      }
       URI[] archives = DistributedCache.getCacheArchives(conf);
       URI[] files = DistributedCache.getCacheFiles(conf);
+      FileStatus fileStatus;
+      FileSystem fileSystem;
+      Path localPath;
+      String baseDir;
+
       if ((archives != null) || (files != null)) {
         if (archives != null) {
-          String[] archivesTimestamps = DistributedCache.getArchiveTimestamps(conf);
+          String[] archivesTimestamps = 
+                               DistributedCache.getArchiveTimestamps(conf);
           Path[] p = new Path[archives.length];
           for (int i = 0; i < archives.length;i++){
+            fileSystem = FileSystem.get(archives[i], conf);
+            fileStatus = fileSystem.getFileStatus(
+                                      new Path(archives[i].getPath()));
+            String cacheId = DistributedCache.makeRelative(archives[i],conf);
+            String cachePath = TaskTracker.getCacheSubdir() + 
+                                 Path.SEPARATOR + cacheId;
+            if (lDirAlloc.ifExists(cachePath, conf)) {
+              localPath =  lDirAlloc.getLocalPathToRead(cachePath, conf);
+            }
+            else {
+              localPath = lDirAlloc.getLocalPathForWrite(cachePath,
+                                      fileStatus.getLen(), conf);
+            }
+            baseDir = localPath.toString().replace(cacheId, "");
             p[i] = DistributedCache.getLocalCache(archives[i], conf, 
-                                                  conf.getLocalPath(TaskTracker.getCacheSubdir()), 
-                                                  true, Long.parseLong(archivesTimestamps[i]), 
-                                                  new Path(workDir.getAbsolutePath()));
+                                                  new Path(baseDir),
+                                                  fileStatus,
+                                                  true, Long.parseLong(
+                                                        archivesTimestamps[i]),
+                                                  new Path(workDir.
+                                                        getAbsolutePath()));
+            
           }
           DistributedCache.setLocalArchives(conf, stringifyPathArray(p));
         }
@@ -110,10 +145,26 @@ abstract class TaskRunner extends Thread {
           String[] fileTimestamps = DistributedCache.getFileTimestamps(conf);
           Path[] p = new Path[files.length];
           for (int i = 0; i < files.length;i++){
+            fileSystem = FileSystem.get(files[i], conf);
+            fileStatus = fileSystem.getFileStatus(
+                                      new Path(files[i].getPath()));
+            String cacheId = DistributedCache.makeRelative(files[i], conf);
+            String cachePath = TaskTracker.getCacheSubdir() +
+                                 Path.SEPARATOR + cacheId;
+            if (lDirAlloc.ifExists(cachePath,conf)) {
+              localPath =  lDirAlloc.getLocalPathToRead(cachePath, conf);
+            } else {
+              localPath = lDirAlloc.getLocalPathForWrite(cachePath,
+                                      fileStatus.getLen(), conf);
+            }
+            baseDir = localPath.toString().replace(cacheId, "");
             p[i] = DistributedCache.getLocalCache(files[i], conf, 
-                                                  conf.getLocalPath(TaskTracker.getCacheSubdir()), 
-                                                  false, Long.parseLong(fileTimestamps[i]), 
-                                                  new Path(workDir.getAbsolutePath()));
+                                                  new Path(baseDir),
+                                                  fileStatus,
+                                                  false, Long.parseLong(
+                                                           fileTimestamps[i]),
+                                                  new Path(workDir.
+                                                        getAbsolutePath()));
           }
           DistributedCache.setLocalFiles(conf, stringifyPathArray(p));
         }
