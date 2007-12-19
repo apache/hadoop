@@ -721,7 +721,7 @@
     </copy>
 
     <copy todir="${dist.dir}/src" includeEmptyDirs="true">
-      <fileset dir="src" excludes="**/*.template"/>
+      <fileset dir="src" excludes="**/*.template **/docs/build/**/*"/>
     </copy>
   	
     <copy todir="${dist.dir}/c++" includeEmptyDirs="false">

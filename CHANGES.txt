@@ -250,6 +250,9 @@ Trunk (unreleased changes)
     in 1 byte chunks, causing performance degradation.
     (Raghu Angadi via dhruba)
 
+    HADOOP-2459. Fix package target so that src/docs/build files are not
+    included in the release.  (nigel)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES
