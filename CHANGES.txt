@@ -287,6 +287,12 @@ Branch 0.15 (unreleased)
     transaction log, it stops writing new transactions to that one.
     (Raghu Angadi via dhruba)
 
+    HADOOP-2227.  Use the LocalDirAllocator uniformly for handling all of the
+    temporary storage required for a given task. It also implies that
+    mapred.local.dir.minspacestart is handled by checking if there is enough
+    free-space on any one of the available disks. (Amareshwari Sri Ramadasu
+    via acmurthy)
+
   IMPROVEMENTS
 
     HADOOP-2160.  Remove project-level, non-user documentation from

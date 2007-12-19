@@ -53,6 +53,7 @@ import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSError;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -601,20 +602,44 @@ public class TaskTracker
     }
   }
 
+  private LocalDirAllocator lDirAlloc = 
+                              new LocalDirAllocator("mapred.local.dir");
+
   // intialize the job directory
   private void localizeJob(TaskInProgress tip) throws IOException {
     Path localJarFile = null;
     Task t = tip.getTask();
     String jobId = t.getJobId();
-    Path localJobFile = new Path(fConf.getLocalPath(getJobCacheSubdir()), 
-                                 jobId + Path.SEPARATOR + "job.xml");
+    String jobFile = t.getJobFile();
+    // Get sizes of JobFile and JarFile
+    // sizes are -1 if they are not present.
+    FileSystem fileSystem = FileSystem.get(fConf);
+    FileStatus status[] = fileSystem.listStatus(new Path(jobFile).getParent());
+    long jarFileSize = -1;
+    long jobFileSize = -1;
+    for(FileStatus stat : status) {
+      if (stat.getPath().toString().contains("job.xml")) {
+        jobFileSize = stat.getLen();
+      } else {
+        jobFileSize = -1;
+      }
+      if (stat.getPath().toString().contains("job.jar")) {
+        jarFileSize = stat.getLen();
+      } else {
+        jarFileSize = -1;
+      }
+    }
+    // Here we check for double the size of jobfile to accommodate for
+    // localize task file and we check four times the size of jarFileSize to 
+    // accommodate for unjarring the jar file in work directory 
+    Path localJobFile = lDirAlloc.getLocalPathForWrite((getJobCacheSubdir()
+                                    + Path.SEPARATOR + jobId 
+                                    + Path.SEPARATOR + "job.xml"),
+                                    2 * jobFileSize + 5 * jarFileSize, fConf);
     RunningJob rjob = addTaskToJob(jobId, localJobFile, tip);
     synchronized (rjob) {
       if (!rjob.localized) {
-        localJarFile = new Path(fConf.getLocalPath(getJobCacheSubdir()), 
-                                jobId + Path.SEPARATOR + "job.jar");
   
-        String jobFile = t.getJobFile();
         FileSystem localFs = FileSystem.getLocal(fConf);
         // this will happen on a partial execution of localizeJob.
         // Sometimes the job.xml gets copied but copying job.jar
@@ -632,6 +657,7 @@ public class TaskTracker
         JobConf localJobConf = new JobConf(localJobFile);
         String jarFile = localJobConf.getJar();
         if (jarFile != null) {
+          localJarFile = new Path(jobDir,"job.jar");
           fs.copyToLocalFile(new Path(jarFile), localJarFile);
           localJobConf.setJar(localJarFile.toString());
           OutputStream out = localFs.create(localJobFile);
@@ -1208,11 +1234,11 @@ public class TaskTracker
         localDirsDf.put(localDirs[i], df);
       }
 
-      if (df.getAvailable() < minSpace)
-        return false;
+      if (df.getAvailable() > minSpace)
+        return true;
     }
 
-    return true;
+    return false;
   }
     
   /**
@@ -1345,9 +1371,10 @@ public class TaskTracker
     }
         
     private void localizeTask(Task task) throws IOException{
-      Path localTaskDir =
-        new Path(this.defaultJobConf.getLocalPath(TaskTracker.getJobCacheSubdir()), 
-                 (task.getJobId() + Path.SEPARATOR + task.getTaskId()));
+      Path localTaskDir = 
+        lDirAlloc.getLocalPathForWrite((TaskTracker.getJobCacheSubdir() + 
+                    Path.SEPARATOR + task.getJobId() + Path.SEPARATOR +
+                    task.getTaskId()), defaultJobConf );
       FileSystem localFs = FileSystem.getLocal(fConf);
       if (!localFs.mkdirs(localTaskDir)) {
         throw new IOException("Mkdirs failed to create " + localTaskDir.toString());

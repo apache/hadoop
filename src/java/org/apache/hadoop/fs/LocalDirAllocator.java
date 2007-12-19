@@ -165,6 +165,18 @@ public class LocalDirAllocator {
     }
   }
     
+  /** We search through all the configured dirs for the file's existence
+   *  and return true when we find  
+   *  @param pathStr the requested file (this will be searched)
+   *  @param conf the Configuration object
+   *  @return true if files exist. false otherwise
+   *  @throws IOException
+   */
+  public boolean ifExists(String pathStr,Configuration conf) {
+    AllocatorPerContext context = obtainContext(contextCfgItemName);
+    return context.ifExists(pathStr, conf);
+  }
+
   private static class AllocatorPerContext {
 
     private final Log LOG =
@@ -326,6 +338,31 @@ public class LocalDirAllocator {
       //no path found
       throw new DiskErrorException ("Could not find " + pathStr +" in any of" +
       " the configured local directories");
+    }
+
+    /** We search through all the configured dirs for the file's existence
+     *  and return true when we find one 
+     */
+    public synchronized boolean ifExists(String pathStr,Configuration conf) {
+      try {
+        int numDirs = localDirs.length;
+        int numDirsSearched = 0;
+        //remove the leading slash from the path (to make sure that the uri
+        //resolution results in a valid path on the dir being checked)
+        if (pathStr.startsWith("/")) {
+          pathStr = pathStr.substring(1);
+        }
+        while (numDirsSearched < numDirs) {
+          Path file = new Path(localDirs[numDirsSearched], pathStr);
+          if (localFS.exists(file)) {
+            return true;
+          }
+          numDirsSearched++;
+        }
+      } catch (IOException e) {
+        // IGNORE and try again
+      }
+      return false;
     }
   }
 }

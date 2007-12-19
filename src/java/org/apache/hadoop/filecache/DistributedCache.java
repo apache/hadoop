@@ -128,6 +128,7 @@ public class DistributedCache {
    * being used in the Configuration
    * @param conf The Confguration file which contains the filesystem
    * @param baseDir The base cache Dir where you wnat to localize the files/archives
+   * @param fileStatus The file status on the dfs.
    * @param isArchive if the cache is an archive or a file. In case it is an archive
    *  with a .zip or .jar extension it will be unzipped/unjarred automatically 
    *  and the directory where the archive is unjarred is returned as the Path.
@@ -140,8 +141,10 @@ public class DistributedCache {
    * the path to the file where the file is copied locally 
    * @throws IOException
    */
-  public static Path getLocalCache(URI cache, Configuration conf, Path baseDir,
-                                   boolean isArchive, long confFileStamp, Path currentWorkDir) 
+  public static Path getLocalCache(URI cache, Configuration conf, 
+                                   Path baseDir, FileStatus fileStatus,
+                                   boolean isArchive, long confFileStamp,
+                                   Path currentWorkDir) 
   throws IOException {
     String cacheId = makeRelative(cache, conf);
     CacheStatus lcacheStatus;
@@ -156,7 +159,7 @@ public class DistributedCache {
       
       synchronized (lcacheStatus) {
         localizedPath = localizeCache(conf, cache, confFileStamp, lcacheStatus, 
-                                      isArchive, currentWorkDir);
+                                      fileStatus, isArchive, currentWorkDir);
         lcacheStatus.refcount++;
       }
     }
@@ -170,6 +173,38 @@ public class DistributedCache {
       deleteCache(conf);
     }
     return localizedPath;
+  }
+  
+  /**
+   * Get the locally cached file or archive; it could either be 
+   * previously cached (and valid) or copy it from the {@link FileSystem} now.
+   * 
+   * @param cache the cache to be localized, this should be specified as 
+   * new URI(hdfs://hostname:port/absolute_path_to_file#LINKNAME). If no schema 
+   * or hostname:port is provided the file is assumed to be in the filesystem
+   * being used in the Configuration
+   * @param conf The Confguration file which contains the filesystem
+   * @param baseDir The base cache Dir where you wnat to localize the files/archives
+   * @param isArchive if the cache is an archive or a file. In case it is an archive
+   *  with a .zip or .jar extension it will be unzipped/unjarred automatically 
+   *  and the directory where the archive is unjarred is returned as the Path.
+   *  In case of a file, the path to the file is returned
+   * @param confFileStamp this is the hdfs file modification timestamp to verify that the 
+   * file to be cached hasn't changed since the job started
+   * @param currentWorkDir this is the directory where you would want to create symlinks 
+   * for the locally cached files/archives
+   * @return the path to directory where the archives are unjarred in case of archives,
+   * the path to the file where the file is copied locally 
+   * @throws IOException
+
+   */
+  public static Path getLocalCache(URI cache, Configuration conf, 
+                                   Path baseDir, boolean isArchive,
+                                   long confFileStamp, Path currentWorkDir) 
+  throws IOException {
+    return getLocalCache(cache, conf, 
+                         baseDir, null, isArchive,
+                         confFileStamp, currentWorkDir);
   }
   
   /**
@@ -220,7 +255,7 @@ public class DistributedCache {
    * relative path is hostname of DFS this mapred cluster is running
    * on/absolute_path
    */
-  private static String makeRelative(URI cache, Configuration conf)
+  public static String makeRelative(URI cache, Configuration conf)
     throws IOException {
     String fsname = cache.getScheme();
     String path;
@@ -243,6 +278,7 @@ public class DistributedCache {
   private static Path localizeCache(Configuration conf, 
                                     URI cache, long confFileStamp,
                                     CacheStatus cacheStatus,
+                                    FileStatus fileStatus,
                                     boolean isArchive, 
                                     Path currentWorkDir) 
   throws IOException {
@@ -250,7 +286,8 @@ public class DistributedCache {
     FileSystem fs = getFileSystem(cache, conf);
     String link = currentWorkDir.toString() + Path.SEPARATOR + cache.getFragment();
     File flink = new File(link);
-    if (ifExistsAndFresh(conf, fs, cache, confFileStamp, cacheStatus)) {
+    if (ifExistsAndFresh(conf, fs, cache, confFileStamp,
+                           cacheStatus, fileStatus)) {
       if (isArchive) {
         if (doSymlink){
           if (!flink.exists())
@@ -280,6 +317,7 @@ public class DistributedCache {
       localFs.delete(cacheStatus.localLoadPath);
       Path parchive = new Path(cacheStatus.localLoadPath,
                                new Path(cacheStatus.localLoadPath.getName()));
+      
       if (!localFs.mkdirs(cacheStatus.localLoadPath)) {
         throw new IOException("Mkdirs failed to create directory " + 
                               cacheStatus.localLoadPath.toString());
@@ -334,13 +372,19 @@ public class DistributedCache {
   // Checks if the cache has already been localized and is fresh
   private static boolean ifExistsAndFresh(Configuration conf, FileSystem fs, 
                                           URI cache, long confFileStamp, 
-                                          CacheStatus lcacheStatus) 
+                                          CacheStatus lcacheStatus,
+                                          FileStatus fileStatus) 
   throws IOException {
     // check for existence of the cache
     if (lcacheStatus.currentStatus == false) {
       return false;
     } else {
-      long dfsFileStamp = getTimestamp(conf, cache);
+      long dfsFileStamp;
+      if (fileStatus != null) {
+        dfsFileStamp = fileStatus.getModificationTime();
+      } else {
+        dfsFileStamp = getTimestamp(conf, cache);
+      }
 
       // ensure that the file on hdfs hasn't been modified since the job started 
       if (dfsFileStamp != confFileStamp) {
@@ -382,7 +426,8 @@ public class DistributedCache {
    */
   public static void createAllSymlink(Configuration conf, File jobCacheDir, File workDir)
     throws IOException{
-    if ((!jobCacheDir.isDirectory()) || (!workDir.isDirectory())){
+    if ((jobCacheDir == null || !jobCacheDir.isDirectory()) ||
+           workDir == null || (!workDir.isDirectory())) {
       return;
     }
     boolean createSymlink = getSymlink(conf);

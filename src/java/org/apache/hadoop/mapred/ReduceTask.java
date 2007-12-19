@@ -43,6 +43,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.InMemoryFileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
@@ -796,12 +797,19 @@ class ReduceTask extends Task {
       // get the work directory which holds the elements we are dynamically
       // adding to the classpath
       File workDir = new File(task.getJobFile()).getParentFile();
-      File jobCacheDir = new File(workDir.getParent(), "work");
       ArrayList<URL> urllist = new ArrayList<URL>();
       
       // add the jars and directories to the classpath
       String jar = conf.getJar();
       if (jar != null) {      
+        LocalDirAllocator lDirAlloc = 
+                            new LocalDirAllocator("mapred.local.dir");
+        File jobCacheDir = new File(lDirAlloc.getLocalPathToRead(
+                                      TaskTracker.getJobCacheSubdir() 
+                                      + Path.SEPARATOR + getJobId() 
+                                      + Path.SEPARATOR  
+                                      + "work", conf).toString());
+
         File[] libs = new File(jobCacheDir, "lib").listFiles();
         if (libs != null) {
           for (int i = 0; i < libs.length; i++) {
