@@ -25,7 +25,6 @@ import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Formatter;
 import java.util.List;
 import java.util.Random;
 import java.util.TreeMap;
@@ -36,9 +35,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.MapFile.Writer;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
@@ -86,6 +87,7 @@ public class PerformanceEvaluation implements HConstants {
   private static final String SEQUENTIAL_READ = "sequentialRead";
   private static final String SEQUENTIAL_WRITE = "sequentialWrite";
   private static final String SCAN = "scan";
+  private static final String MAPFILE = "mapfile";
   
   private static final List<String> COMMANDS =
     Arrays.asList(new String [] {RANDOM_READ,
@@ -93,7 +95,8 @@ public class PerformanceEvaluation implements HConstants {
       RANDOM_WRITE,
       SEQUENTIAL_READ,
       SEQUENTIAL_WRITE,
-      SCAN});
+      SCAN,
+      MAPFILE});
   
   volatile HBaseConfiguration conf;
   private boolean miniCluster = false;
@@ -285,7 +288,6 @@ public class PerformanceEvaluation implements HConstants {
     protected HBaseAdmin admin;
     protected HTable table;
     protected volatile HBaseConfiguration conf;
-    private Formatter formatter = new Formatter();
     
     Test(final HBaseConfiguration conf, final int startRow,
         final int perClientRunRows, final int totalRows, final Status status) {
@@ -296,23 +298,6 @@ public class PerformanceEvaluation implements HConstants {
       this.status = status;
       this.table = null;
       this.conf = conf;
-    }
-    
-    /*
-     * @return Generated random value to insert into a table cell.
-     */
-    byte[] generateValue() {
-      StringBuilder val = new StringBuilder();
-      while(val.length() < ROW_LENGTH) {
-        val.append(Long.toString(this.rand.nextLong()));
-      }
-      byte[] value = null;
-      try {
-        value = val.toString().getBytes(HConstants.UTF8_ENCODING);
-      } catch (UnsupportedEncodingException e) {
-        assert(false);
-      }
-      return value;
     }
     
     private String generateStatus(final int sr, final int i, final int lr) {
@@ -358,15 +343,6 @@ public class PerformanceEvaluation implements HConstants {
       return elapsedTime;
     }
     
-    Text getRandomRow() {
-      return new Text(format(this.rand.nextInt(Integer.MAX_VALUE) %
-        this.totalRows));
-    }
-    
-    public Text format(final int i) {
-      return new Text(String.format("%010d", Integer.valueOf(i)));
-    }
-    
     /*
      * Test for individual row.
      * @param i Row index.
@@ -387,7 +363,7 @@ public class PerformanceEvaluation implements HConstants {
     
     @Override
     void testRow(@SuppressWarnings("unused") final int i) throws IOException {
-      this.table.get(getRandomRow(), COLUMN_NAME);
+      this.table.get(getRandomRow(this.rand, this.totalRows), COLUMN_NAME);
     }
 
     @Override
@@ -410,9 +386,9 @@ public class PerformanceEvaluation implements HConstants {
     
     @Override
     void testRow(@SuppressWarnings("unused") final int i) throws IOException {
-      Text row = getRandomRow();
+      Text row = getRandomRow(this.rand, this.totalRows);
       long lockid = table.startUpdate(row);
-      table.put(lockid, COLUMN_NAME, generateValue());
+      table.put(lockid, COLUMN_NAME, generateValue(this.rand));
       table.commit(lockid);
     }
 
@@ -486,7 +462,7 @@ public class PerformanceEvaluation implements HConstants {
     @Override
     void testRow(final int i) throws IOException {
       long lockid = table.startUpdate(format(i));
-      table.put(lockid, COLUMN_NAME, generateValue());
+      table.put(lockid, COLUMN_NAME, generateValue(this.rand));
       table.commit(lockid);
     }
 
@@ -494,6 +470,31 @@ public class PerformanceEvaluation implements HConstants {
     String getTestName() {
       return "sequentialWrite";
     }
+  }
+  
+  static Text format(final int i) {
+    return new Text(String.format("%010d", Integer.valueOf(i)));
+  }
+  
+  /*
+   * @return Generated random value to insert into a table cell.
+   */
+  static byte[] generateValue(final Random r) {
+    StringBuilder val = new StringBuilder();
+    while(val.length() < ROW_LENGTH) {
+      val.append(Long.toString(r.nextLong()));
+    }
+    byte[] value = null;
+    try {
+      value = val.toString().getBytes(HConstants.UTF8_ENCODING);
+    } catch (UnsupportedEncodingException e) {
+      assert(false);
+    }
+    return value;
+  }
+  
+  static Text getRandomRow(final Random random, final int totalRows) {
+    return new Text(format(random.nextInt(Integer.MAX_VALUE) % totalRows));
   }
   
   long runOneClient(final String cmd, final int startRow,
@@ -550,6 +551,55 @@ public class PerformanceEvaluation implements HConstants {
     } 
   }
   
+  private void doMapFile() throws IOException {
+    final int ROW_COUNT = 1000000;
+    Random random = new Random();
+    Configuration c = new Configuration();
+    FileSystem fs = FileSystem.get(c);
+    Path mf = new Path("performanceevaluation.mapfile");
+    if (fs.exists(mf)) {
+      fs.delete(mf);
+    }
+    Writer writer = new MapFile.Writer(c, fs, mf.toString(),
+      Text.class, Text.class);
+    LOG.info("Writing " + ROW_COUNT + " rows to " + mf.toString());
+    long startTime = System.currentTimeMillis();
+    // Add 1M rows.
+    for (int i = 0; i < ROW_COUNT; i++) {
+      writer.append(PerformanceEvaluation.format(i),
+        new Text(PerformanceEvaluation.generateValue(random)));
+    }
+    writer.close();
+    LOG.info("Writing " + ROW_COUNT + " records took " +
+      (System.currentTimeMillis() - startTime) + "ms");
+    // Do random reads.
+    LOG.info("Reading " + ROW_COUNT + " random rows");
+    MapFile.Reader reader = new MapFile.Reader(fs, mf.toString(), c);
+    startTime = System.currentTimeMillis();
+    for (int i = 0; i < ROW_COUNT; i++) {
+      if (i > 0 && i % (ROW_COUNT / 10) == 0) {
+        LOG.info("Read " + i);
+      }
+      reader.get(PerformanceEvaluation.getRandomRow(random, ROW_COUNT),
+        new Text());
+    }
+    reader.close();
+    LOG.info("Reading " + ROW_COUNT + " random records took " +
+      (System.currentTimeMillis() - startTime) + "ms");
+    // Do random reads.
+    LOG.info("Reading " + ROW_COUNT + " rows sequentially");
+    reader = new MapFile.Reader(fs, mf.toString(), c);
+    startTime = System.currentTimeMillis();
+    Text key = new Text();
+    Text val = new Text();
+    for (int i = 0; reader.next(key, val); i++) {
+      continue;
+    }
+    reader.close();
+    LOG.info("Reading " + ROW_COUNT + " records serially took " +
+      (System.currentTimeMillis() - startTime) + "ms");
+  }
+  
   private void runTest(final String cmd) throws IOException {
     if (cmd.equals(RANDOM_READ_MEM)) {
       // For this one test, so all fits in memory, make R smaller (See
@@ -563,7 +613,9 @@ public class PerformanceEvaluation implements HConstants {
     }
     
     try {
-      if (N == 1) {
+      if (cmd.equals(MAPFILE)) {
+        doMapFile();
+      } else if (N == 1) {
         // If there is only one client and one HRegionServer, we assume nothing
         // has been set up at all.
         runNIsOne(cmd);
@@ -603,6 +655,7 @@ public class PerformanceEvaluation implements HConstants {
     System.err.println(" sequentialRead  Run sequential read test");
     System.err.println(" sequentialWrite Run sequential write test");
     System.err.println(" scan            Run scan test");
+    System.err.println(" mapfile         Do read, write tests against mapfile");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" nclients        Integer. Required. Total number of " +
