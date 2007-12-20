@@ -136,6 +136,7 @@ Trunk (unreleased changes)
    HADOOP-2285 Add being able to shutdown regionservers (Dennis Kubes via Stack)
    HADOOP-2458 HStoreFile.writeSplitInfo should just call 
                HStoreFile.Reference.write
+   HADOOP-2471 Add reading/writing MapFile to PerformanceEvaluation suite
                
 
 
