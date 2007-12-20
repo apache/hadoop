@@ -72,6 +72,54 @@ public class TestScanner2 extends HBaseClusterTestCase {
   }
 
   /**
+   * Test for HADOOP-2467 fix.  If scanning more than one column family,
+   * filters such as the {@line WhileMatchRowFilter} could prematurely
+   * shutdown scanning if one of the stores ran started returned filter = true.
+   * @throws MasterNotRunningException
+   * @throws IOException
+   */
+  public void testScanningMultipleFamiliesOfDifferentVintage()
+  throws MasterNotRunningException, IOException {
+    Text tableName = new Text(getName());
+    final Text [] families = createTable(new HBaseAdmin(this.conf), tableName);
+    HTable table = new HTable(this.conf, tableName);
+    HScannerInterface scanner = null;
+    try {
+      long time = System.currentTimeMillis();
+      LOG.info("Current time " + time);
+      for (int i = 0; i < families.length; i++) {
+        final byte [] lastKey = new byte [] {'a', 'a', (byte)('b' + i)};
+        Incommon inc = new HTableIncommon(table);
+        addContent(inc, families[i].toString(),
+          START_KEY_BYTES, new Text(lastKey), time + (1000 * i));
+        // Add in to the first store a record that is in excess of the stop
+        // row specified below setting up the scanner filter.  Add 'bbb'.
+        // Use a stop filter of 'aad'.  The store scanner going to 'bbb' was
+        // flipping the switch in StopRowFilter stopping us returning all
+        // of the rest of the other store content.
+        if (i == 0) {
+          long id = inc.startBatchUpdate(new Text("bbb"));
+          inc.put(id, families[0], "bbb".getBytes());
+          inc.commit(id);
+        }
+      }
+      RowFilterInterface f =
+        new WhileMatchRowFilter(new StopRowFilter(new Text("aad")));
+      scanner = table.obtainScanner(families, HConstants.EMPTY_START_ROW,
+        HConstants.LATEST_TIMESTAMP, f);
+      int count = 0;
+      for (Map.Entry<HStoreKey, SortedMap<Text, byte []>> e: scanner) {
+        count++;
+      }
+      // Should get back 3 rows: aaa, aab, and aac.
+      assertEquals(count, 3);
+    } finally {
+      scanner.close();
+      table.close();
+    }
+  }
+
+  /**
    * @throws Exception
    */
   public void testStopRow() throws Exception {

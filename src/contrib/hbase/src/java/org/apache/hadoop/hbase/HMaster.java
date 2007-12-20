@@ -592,7 +592,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     /** {@inheritDoc} */
     @Override
     public String toString() {
-      return "regionname: " + this.regionName.toString() + ", startKey: <" +
+      return "{regionname: " + this.regionName.toString() + ", startKey: <" +
         this.startKey.toString() + ">, server: " + this.server.toString() + "}";
     }
 

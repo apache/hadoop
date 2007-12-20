@@ -1848,7 +1848,6 @@ class HStore implements HConstants {
         this.readers = new MapFile.Reader[storefiles.size()];
         
         // Most recent map file should be first
-        
         int i = readers.length - 1;
         for(HStoreFile curHSF: storefiles.values()) {
           readers[i--] = curHSF.getReader(fs, bloomFilter);

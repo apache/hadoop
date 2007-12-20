@@ -77,8 +77,7 @@ public abstract class HBaseTestCase extends TestCase {
   private void init() {
     conf = new HBaseConfiguration();
     try {
-      START_KEY =
-        new String(START_KEY_BYTES, HConstants.UTF8_ENCODING) + PUNCTUATION;
+      START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_ENCODING) + PUNCTUATION;
     } catch (UnsupportedEncodingException e) {
       fail();
     }
@@ -125,10 +124,23 @@ public abstract class HBaseTestCase extends TestCase {
           null), fs, conf, info, null, null);
   }
   
+  /**
+   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * families.
+   * @param name Name to give table.
+   * @return Column descriptor.
+   */
   protected HTableDescriptor createTableDescriptor(final String name) {
     return createTableDescriptor(name, MAXVERSIONS);
   }
   
+  /**
+   * Create a table of name <code>name</code> with {@link COLUMNS} for
+   * families.
+   * @param name Name to give table.
+   * @param versions How many versions to allow per column.
+   * @return Column descriptor.
+   */
   protected HTableDescriptor createTableDescriptor(final String name,
       final int versions) {
     HTableDescriptor htd = new HTableDescriptor(name);
