@@ -177,12 +177,22 @@ public class LocalDirAllocator {
     return context.ifExists(pathStr, conf);
   }
 
+  /**
+   * Get the current directory index for the given configuration item.
+   * @return the current directory index for the given configuration item.
+   */
+  int getCurrentDirectoryIndex() {
+    AllocatorPerContext context = obtainContext(contextCfgItemName);
+    return context.getCurrentDirectoryIndex();
+  }
+  
   private static class AllocatorPerContext {
 
     private final Log LOG =
       LogFactory.getLog("org.apache.hadoop.fs.AllocatorPerContext");
 
     private int dirNumLastAccessed;
+    private Random dirIndexRandomizer = new Random();
     private FileSystem localFS;
     private DF[] dirDF;
     private String contextCfgItemName;
@@ -227,8 +237,10 @@ public class LocalDirAllocator {
         }
         localDirs = dirs.toArray(new String[dirs.size()]);
         dirDF = dfList.toArray(new DF[dirs.size()]);
-        dirNumLastAccessed = 0;
         savedLocalDirs = newLocalDirs;
+        
+        // randomize the first disk picked in the round-robin selection 
+        dirNumLastAccessed = dirIndexRandomizer.nextInt(dirs.size());
       }
     }
 
@@ -246,6 +258,14 @@ public class LocalDirAllocator {
       }
     }
 
+    /**
+     * Get the current directory index.
+     * @return the current directory index.
+     */
+    int getCurrentDirectoryIndex() {
+      return dirNumLastAccessed;
+    }
+    
     /** Get a path from the local FS. This method should be used if the size of 
      *  the file is not known apriori. We go round-robin over the set of disks
      *  (via the configured dirs) and return the first complete path where
