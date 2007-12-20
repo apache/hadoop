@@ -608,8 +608,8 @@
   <!-- Documentation                                                      -->
   <!-- ================================================================== -->
   
-  <target name="docs" description="Generate documentation">
-    <exec dir="${docs.src}" executable="forrest" failonerror="true" />
+  <target name="docs" depends="forrest.check" description="Generate forrest-based documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." if="forrest.home">
+    <exec dir="${docs.src}" executable="${forrest.home}/bin/forrest" failonerror="true" />
     <copy todir="${docs.dir}">
       <fileset dir="${docs.src}/build/site/" />
     </copy>
@@ -617,6 +617,10 @@
            includes="hadoop-default.xml" style="conf/configuration.xsl"/>
   </target>
 
+  <target name="forrest.check" unless="forrest.home">
+    <fail message="'forrest.home' is not defined. Please pass -Dforrest.home=&lt;base of Apache Forrest installation&gt; to Ant on the command-line." />
+  </target>
+	
   <target name="javadoc" description="Generate javadoc">
     <mkdir dir="${build.javadoc}"/>
     <javadoc

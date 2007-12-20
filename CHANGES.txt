@@ -129,6 +129,9 @@ Trunk (unreleased changes)
     HADOOP-2432. HDFS includes the name of the file while throwing 
     "File does not exist"  exception. (Jim Kellerman via dhruba)
 
+    HADOOP-2457. Added a 'forrest.home' property to the 'docs' target in
+    build.xml. (acmurthy) 
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
