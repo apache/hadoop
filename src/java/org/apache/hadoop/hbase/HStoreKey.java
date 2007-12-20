@@ -27,6 +27,8 @@ import java.io.*;
  * A Key for a stored row
  */
 public class HStoreKey implements WritableComparable {
+  public static final char COLUMN_FAMILY_DELIMITER = ':';
+  
   // TODO: Move these utility methods elsewhere (To a Column class?).
   /**
    * Extracts the column family name from a column
@@ -83,7 +85,13 @@ public class HStoreKey implements WritableComparable {
   
   private static int getColonOffset(final Text col)
   throws InvalidColumnNameException {
-    int offset = col.find(":");
+    int offset = -1;
+    for (int i = 0; i < col.getLength(); i++) {
+      if (col.charAt(i) == COLUMN_FAMILY_DELIMITER) {
+        offset = i;
+        break;
+      }
+    }
     if(offset < 0) {
       throw new InvalidColumnNameException(col + " is missing the colon " +
         "family/qualifier separator");
@@ -294,23 +302,24 @@ public class HStoreKey implements WritableComparable {
 
   // Comparable
 
-  /** {@inheritDoc} */
   public int compareTo(Object o) {
     HStoreKey other = (HStoreKey) o;
     int result = this.row.compareTo(other.row);
-    if(result == 0) {
-      result = this.column.compareTo(other.column);
-      if(result == 0) {
-        // The below older timestamps sorting ahead of newer timestamps looks
-        // wrong but it is intentional.  This way, newer timestamps are first
-        // found when we iterate over a memcache and newer versions are the
-        // first we trip over when reading from a store file.
-        if(this.timestamp < other.timestamp) {
-          result = 1;
-        } else if(this.timestamp > other.timestamp) {
-          result = -1;
-        }
-      }
+    if (result != 0) {
+      return result;
+    }
+    result = this.column.compareTo(other.column);
+    if (result != 0) {
+      return result;
+    }
+    // The below older timestamps sorting ahead of newer timestamps looks
+    // wrong but it is intentional. This way, newer timestamps are first
+    // found when we iterate over a memcache and newer versions are the
+    // first we trip over when reading from a store file.
+    if (this.timestamp < other.timestamp) {
+      result = 1;
+    } else if (this.timestamp > other.timestamp) {
+      result = -1;
     }
     return result;
   }

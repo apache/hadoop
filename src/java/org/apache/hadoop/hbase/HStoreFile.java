@@ -815,6 +815,15 @@ public class HStoreFile implements HConstants, WritableComparable {
       throws IOException {
         super(fs, dirName, conf);
         this.bloomFilter = filter;
+        // Force reading of the mapfile index by calling midKey.
+        // Reading the index will bring the index into memory over
+        // here on the client and then close the index file freeing
+        // up socket connection and resources in the datanode. 
+        // Usually, the first access on a MapFile.Reader will load the
+        // index force the issue in HStoreFile MapFiles because an
+        // access may not happen for some time; meantime we're
+        // using up datanode resources.  See HADOOP-2341.
+        midKey();
       }
       
       /** {@inheritDoc} */

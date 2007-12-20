@@ -1113,6 +1113,7 @@ public class HRegion implements HConstants {
           continue;
         }
         storelist.add(stores.get(family));
+        
       }
       return new HScanner(cols, firstRow, timestamp,
         storelist.toArray(new HStore [storelist.size()]), filter);
@@ -1296,7 +1297,6 @@ public class HRegion implements HConstants {
     
     try {
       // find the HStore for the column family
-      LOG.info(family);
       HStore store = stores.get(HStoreKey.extractFamily(family));
       // find all the keys that match our criteria
       List<HStoreKey> keys = store.getKeys(new HStoreKey(row, timestamp), ALL_VERSIONS);
@@ -1422,8 +1422,8 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   private void checkColumn(Text columnName) throws IOException {
-    Text family = new Text(HStoreKey.extractFamily(columnName) + ":");
-    if(! regionInfo.getTableDesc().hasFamily(family)) {
+    Text family = HStoreKey.extractFamily(columnName, true);
+    if (!regionInfo.getTableDesc().hasFamily(family)) {
       throw new IOException("Requested column family " + family 
           + " does not exist in HRegion " + regionInfo.getRegionName()
           + " for table " + regionInfo.getTableDesc().getName());
@@ -1529,14 +1529,21 @@ public class HRegion implements HConstants {
     /** Create an HScanner with a handle on many HStores. */
     @SuppressWarnings("unchecked")
     HScanner(Text[] cols, Text firstRow, long timestamp, HStore[] stores,
-        RowFilterInterface filter) throws IOException {
-
+        RowFilterInterface filter)
+    throws IOException {
       this.scanners = new HInternalScannerInterface[stores.length];
       try {
         for (int i = 0; i < stores.length; i++) {
-          scanners[i] = stores[i].getScanner(timestamp, cols, firstRow, filter);
+          // TODO: The cols passed in here can include columns from other
+          // stores; add filter so only pertinent columns are passed.
+          //
+          // Also, if more than one store involved, need to replicate filters.
+          // At least WhileMatchRowFilter will mess up the scan if only
+          // one shared across many rows. See HADOOP-2467.
+          scanners[i] = stores[i].getScanner(timestamp, cols, firstRow,
+            (i > 0 && filter != null)?
+              (RowFilterInterface)Writables.clone(filter, conf): filter);
         }
-
       } catch(IOException e) {
         for (int i = 0; i < this.scanners.length; i++) {
           if(scanners[i] != null) {
@@ -1546,9 +1553,8 @@ public class HRegion implements HConstants {
         throw e;
       }
 
-//       Advance to the first key in each store.
-//       All results will match the required column-set and scanTime.
-      
+      // Advance to the first key in each store.
+      // All results will match the required column-set and scanTime.
       this.resultSets = new TreeMap[scanners.length];
       this.keys = new HStoreKey[scanners.length];
       for (int i = 0; i < scanners.length; i++) {
@@ -1616,7 +1622,6 @@ public class HRegion implements HConstants {
         // row label, then its timestamp is bad. We need to advance it.
         while ((scanners[i] != null) &&
             (keys[i].getRow().compareTo(chosenRow) <= 0)) {
-          
           resultSets[i].clear();
           if (!scanners[i].next(keys[i], resultSets[i])) {
             closeScanner(i);

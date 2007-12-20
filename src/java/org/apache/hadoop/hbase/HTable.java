@@ -426,7 +426,7 @@ public class HTable implements HConstants {
    */
   public HScannerInterface obtainScanner(Text[] columns, Text startRow)
   throws IOException {
-    return obtainScanner(columns, startRow, System.currentTimeMillis(), null);
+    return obtainScanner(columns, startRow, HConstants.LATEST_TIMESTAMP, null);
   }
   
   /** 
@@ -466,7 +466,7 @@ public class HTable implements HConstants {
   public HScannerInterface obtainScanner(Text[] columns, Text startRow,
       RowFilterInterface filter)
   throws IOException { 
-    return obtainScanner(columns, startRow, System.currentTimeMillis(), filter);
+    return obtainScanner(columns, startRow, HConstants.LATEST_TIMESTAMP, filter);
   }
 
   /** 
@@ -490,7 +490,7 @@ public class HTable implements HConstants {
       final Text startRow, final Text stopRow)
   throws IOException {
     return obtainScanner(columns, startRow, stopRow,
-      System.currentTimeMillis());
+      HConstants.LATEST_TIMESTAMP);
   }
 
   /** 
