@@ -273,6 +273,9 @@ Trunk (unreleased changes)
     HADOOP-2352. Remove AC_CHECK_LIB for libz and liblzo to ensure that
     libhadoop.so doesn't have a dependency on them. (acmurthy) 
 
+    HADOOP-2476. Unit test failure while reading permission bits of local
+    file system (on Windows) fixed.  (Raghu Angadi via dhruba)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES

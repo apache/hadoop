@@ -402,7 +402,11 @@ public class RawLocalFileSystem extends FileSystem {
                         ShellCommand.getGET_PERMISSION_COMMAND()));
         //expected format
         //-rw-------    1 username groupname ...
-        setPermission(FsPermission.valueOf(t.nextToken()));
+        String permission = t.nextToken();
+        if (permission.length() > 10) { //files with ACLs might have a '+'
+          permission = permission.substring(0, 10);
+        }
+        setPermission(FsPermission.valueOf(permission));
         t.nextToken();
         setOwner(t.nextToken());
         setGroup(t.nextToken());
