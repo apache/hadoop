@@ -311,6 +311,10 @@ Branch 0.15 (unreleased)
     Pipes which currently produces an XML parsing error. (Amareshwari Sri
     Ramadasu via acmurthy)
 
+    HADOOP-2437.  Fix the LocalDirAllocator to choose the seed for the
+    round-robin disk selections randomly. This helps in spreading data across
+    multiple partitions much better. (acmurhty)
+
   IMPROVEMENTS
 
     HADOOP-2160.  Remove project-level, non-user documentation from

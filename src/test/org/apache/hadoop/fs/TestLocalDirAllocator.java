@@ -68,8 +68,8 @@ public class TestLocalDirAllocator extends TestCase {
   
   private void validateTempDirCreation(int i) throws IOException {
     File result = createTempFile();
-    assertTrue(result.getPath().startsWith(
-        new File(BUFFER_DIR[i], FILENAME).getPath()));
+    assertTrue("Checking for " + BUFFER_DIR[i] + " in " + result + " - FAILED!", 
+        result.getPath().startsWith(new File(BUFFER_DIR[i], FILENAME).getPath()));
   }
   
   private File createTempFile() throws IOException {
@@ -119,10 +119,16 @@ public class TestLocalDirAllocator extends TestCase {
     if (isWindows) return;
     try {
       conf.set(CONTEXT, BUFFER_DIR[2]+","+BUFFER_DIR[3]);
-      validateTempDirCreation(2);
-      validateTempDirCreation(3);
-      validateTempDirCreation(2);
-      validateTempDirCreation(3);
+
+      // create the first file, and then figure the round-robin sequence
+      createTempFile();
+      int firstDirIdx = (dirAllocator.getCurrentDirectoryIndex() == 0) ? 2 : 3;
+      int secondDirIdx = (firstDirIdx == 2) ? 3 : 2;
+      
+      // check if tmp dirs are allocated in a round-robin manner
+      validateTempDirCreation(firstDirIdx);
+      validateTempDirCreation(secondDirIdx);
+      validateTempDirCreation(firstDirIdx);
     } finally {
       rmBufferDirs();
     }
@@ -139,8 +145,11 @@ public class TestLocalDirAllocator extends TestCase {
       assertTrue(localFs.mkdirs(BUFFER_PATH[3]));
       assertTrue(localFs.mkdirs(BUFFER_PATH[4]));
       
-      validateTempDirCreation(3);
-      validateTempDirCreation(4);
+      // create the first file, and then figure the round-robin sequence
+      createTempFile();
+
+      int nextDirIdx = (dirAllocator.getCurrentDirectoryIndex() == 0) ? 3 : 4;
+      validateTempDirCreation(nextDirIdx);
 
       // change buffer directory 2 to be read only
       new File(BUFFER_DIR[4]).setReadOnly();
