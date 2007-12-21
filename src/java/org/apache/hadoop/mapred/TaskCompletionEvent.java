@@ -33,7 +33,6 @@ public class TaskCompletionEvent implements Writable{
     
   private int eventId; 
   private String taskTrackerHttp;
-  private int taskRunTime; // using int since runtime is the time difference
   private String taskId;
   Status status; 
   boolean isMap = false;
@@ -96,22 +95,6 @@ public class TaskCompletionEvent implements Writable{
   public String getTaskTrackerHttp() {
     return taskTrackerHttp;
   }
-
-  /**
-   * Returns time (in millisec) the task took to complete. 
-   */
-  public int getTaskRunTime() {
-    return taskRunTime;
-  }
-
-  /**
-   * Set the task completion time
-   * @param taskCompletionTime time (in millisec) the task took to complete
-   */
-  public void setTaskRunTime(int taskCompletionTime) {
-    this.taskRunTime = taskCompletionTime;
-  }
-
   /**
    * set event Id. should be assigned incrementally starting from 0. 
    * @param eventId
@@ -170,7 +153,6 @@ public class TaskCompletionEvent implements Writable{
     out.writeBoolean(isMap);
     WritableUtils.writeEnum(out, status); 
     WritableUtils.writeString(out, taskTrackerHttp);
-    WritableUtils.writeVInt(out, taskRunTime);
   }
   
   public void readFields(DataInput in) throws IOException {
@@ -179,6 +161,5 @@ public class TaskCompletionEvent implements Writable{
     this.isMap = in.readBoolean();
     this.status = WritableUtils.readEnum(in, Status.class);
     this.taskTrackerHttp = WritableUtils.readString(in);
-    this.taskRunTime = WritableUtils.readVInt(in);
   }
 }
