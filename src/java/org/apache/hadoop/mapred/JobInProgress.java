@@ -79,6 +79,9 @@ class JobInProgress {
   // The maximum percentage of trackers in cluster added to the 'blacklist'.
   private static final double CLUSTER_BLACKLIST_PERCENT = 0.25;
   
+  // The maximum percentage of fetch failures allowed for a map 
+  private static final double MAX_ALLOWED_FETCH_FAILURES_PERCENT = 0.5;
+  
   // No. of tasktrackers in the cluster
   private volatile int clusterSize = 0;
   
@@ -407,6 +410,8 @@ class JobInProgress {
                                             TaskCompletionEvent.Status.SUCCEEDED,
                                             httpTaskLogLocation 
                                            );
+        taskEvent.setTaskRunTime((int)(status.getFinishTime() 
+                                       - status.getStartTime()));
         tip.setSuccessEventNumber(taskCompletionEventTracker); 
       }
       //For a failed task update the JT datastructures.For the task state where
@@ -1174,7 +1179,13 @@ class JobInProgress {
     LOG.info("Failed fetch notification #" + fetchFailures + " for task " + 
             mapTaskId);
     
-    if (fetchFailures == MAX_FETCH_FAILURES_NOTIFICATIONS) {
+    float failureRate = (float)fetchFailures / runningReduceTasks;
+    // declare faulty if fetch-failures >= max-allowed-failures
+    boolean isMapFaulty = (failureRate >= MAX_ALLOWED_FETCH_FAILURES_PERCENT) 
+                          ? true
+                          : false;
+    if (fetchFailures >= MAX_FETCH_FAILURES_NOTIFICATIONS
+        && isMapFaulty) {
       LOG.info("Too many fetch-failures for output of task: " + mapTaskId 
                + " ... killing it");
       

@@ -318,6 +318,14 @@ Branch 0.15 (unreleased)
     round-robin disk selections randomly. This helps in spreading data across
     multiple partitions much better. (acmurhty)
 
+    HADOOP-2247.  Fine-tune the strategies for killing mappers and reducers
+    due to failures while fetching map-outputs. Now the map-completion times
+    and number of currently running reduces are taken into account by the
+    JobTracker before  killing the mappers, while the progress made by the
+    reducer and the number of fetch-failures vis-a-vis total number of
+    fetch-attempts are taken into account before teh reducer kills itself.
+    (Amar Kamat via acmurthy)
+
   IMPROVEMENTS
 
     HADOOP-2160.  Remove project-level, non-user documentation from
