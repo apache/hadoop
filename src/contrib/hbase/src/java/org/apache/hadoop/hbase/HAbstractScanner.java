@@ -64,7 +64,7 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
   private static class ColumnMatcher {
     private boolean wildCardmatch;
     private MATCH_TYPE matchType;
-    private String family;
+    private Text family;
     private Pattern columnMatcher;
     private Text col;
   
@@ -73,7 +73,7 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
       try {
         if(qualifier == null || qualifier.getLength() == 0) {
           this.matchType = MATCH_TYPE.FAMILY_ONLY;
-          this.family = HStoreKey.extractFamily(col).toString();
+          this.family = HStoreKey.extractFamily(col).toText();
           this.wildCardmatch = true;
         } else if(isRegexPattern.matcher(qualifier.toString()).matches()) {
           this.matchType = MATCH_TYPE.REGEX;
@@ -93,13 +93,10 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
     boolean matches(Text c) throws IOException {
       if(this.matchType == MATCH_TYPE.SIMPLE) {
         return c.equals(this.col);
-        
       } else if(this.matchType == MATCH_TYPE.FAMILY_ONLY) {
-        return HStoreKey.extractFamily(c).toString().equals(this.family);
-        
+        return HStoreKey.extractFamily(c).equals(this.family);
       } else if(this.matchType == MATCH_TYPE.REGEX) {
         return this.columnMatcher.matcher(c.toString()).matches();
-        
       } else {
         throw new IOException("Invalid match type: " + this.matchType);
       }
@@ -130,7 +127,7 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
     this.multipleMatchers = false;
     this.okCols = new TreeMap<Text, Vector<ColumnMatcher>>();
     for(int i = 0; i < targetCols.length; i++) {
-      Text family = HStoreKey.extractFamily(targetCols[i]);
+      Text family = HStoreKey.extractFamily(targetCols[i]).toText();
       Vector<ColumnMatcher> matchers = okCols.get(family);
       if(matchers == null) {
         matchers = new Vector<ColumnMatcher>();
@@ -160,8 +157,8 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
    */
   boolean columnMatch(int i) throws IOException {
     Text column = keys[i].getColumn();
-    Text family = HStoreKey.extractFamily(column);
-    Vector<ColumnMatcher> matchers = okCols.get(family);
+    Vector<ColumnMatcher> matchers =
+      okCols.get(HStoreKey.extractFamily(column));
     if(matchers == null) {
       return false;
     }

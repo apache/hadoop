@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -472,25 +471,28 @@ public class PerformanceEvaluation implements HConstants {
     }
   }
   
+  /*
+   * Format passed integer.
+   * This method takes some time and is done inline uploading data.  For
+   * example, doing the mapfile test, generation of the key and value
+   * consumes about 30% of CPU time.
+   * @param i
+   * @return Integer as String zero padded.
+   */
   static Text format(final int i) {
     return new Text(String.format("%010d", Integer.valueOf(i)));
   }
   
   /*
+   * This method takes some time and is done inline uploading data.  For
+   * example, doing the mapfile test, generation of the key and value
+   * consumes about 30% of CPU time.
    * @return Generated random value to insert into a table cell.
    */
   static byte[] generateValue(final Random r) {
-    StringBuilder val = new StringBuilder();
-    while(val.length() < ROW_LENGTH) {
-      val.append(Long.toString(r.nextLong()));
-    }
-    byte[] value = null;
-    try {
-      value = val.toString().getBytes(HConstants.UTF8_ENCODING);
-    } catch (UnsupportedEncodingException e) {
-      assert(false);
-    }
-    return value;
+    byte [] b = new byte [ROW_LENGTH];
+    r.nextBytes(b);
+    return b;
   }
   
   static Text getRandomRow(final Random random, final int totalRows) {
@@ -556,7 +558,7 @@ public class PerformanceEvaluation implements HConstants {
     Random random = new Random();
     Configuration c = new Configuration();
     FileSystem fs = FileSystem.get(c);
-    Path mf = new Path("performanceevaluation.mapfile");
+    Path mf = fs.makeQualified(new Path("performanceevaluation.mapfile"));
     if (fs.exists(mf)) {
       fs.delete(mf);
     }
@@ -571,7 +573,9 @@ public class PerformanceEvaluation implements HConstants {
     }
     writer.close();
     LOG.info("Writing " + ROW_COUNT + " records took " +
-      (System.currentTimeMillis() - startTime) + "ms");
+      (System.currentTimeMillis() - startTime) + "ms (Note: generation of keys " +
+        "and values is done inline and has been seen to consume " +
+        "significant time: e.g. ~30% of cpu time");
     // Do random reads.
     LOG.info("Reading " + ROW_COUNT + " random rows");
     MapFile.Reader reader = new MapFile.Reader(fs, mf.toString(), c);
@@ -585,7 +589,9 @@ public class PerformanceEvaluation implements HConstants {
     }
     reader.close();
     LOG.info("Reading " + ROW_COUNT + " random records took " +
-      (System.currentTimeMillis() - startTime) + "ms");
+      (System.currentTimeMillis() - startTime) + "ms (Note: generation of " +
+        "random key is done in line and takes a significant amount of cpu " +
+        "time: e.g 10-15%");
     // Do random reads.
     LOG.info("Reading " + ROW_COUNT + " rows sequentially");
     reader = new MapFile.Reader(fs, mf.toString(), c);
@@ -599,7 +605,7 @@ public class PerformanceEvaluation implements HConstants {
     LOG.info("Reading " + ROW_COUNT + " records serially took " +
       (System.currentTimeMillis() - startTime) + "ms");
   }
-  
+
   private void runTest(final String cmd) throws IOException {
     if (cmd.equals(RANDOM_READ_MEM)) {
       // For this one test, so all fits in memory, make R smaller (See

@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.TextSequence;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -565,7 +566,7 @@ class HStore implements HConstants {
     this.regionName = regionName;
     this.encodedRegionName = encodedName;
     this.family = family;
-    this.familyName = HStoreKey.extractFamily(this.family.getName());
+    this.familyName = HStoreKey.extractFamily(this.family.getName()).toText();
     this.compression = SequenceFile.CompressionType.NONE;
     this.storeName = this.encodedRegionName + "/" + this.familyName.toString();
     
@@ -939,8 +940,8 @@ class HStore implements HConstants {
       try {
         for (Map.Entry<HStoreKey, byte []> es: cache.entrySet()) {
           HStoreKey curkey = es.getKey();
-          if (this.familyName.equals(HStoreKey.extractFamily(
-              curkey.getColumn()))) {
+          TextSequence f = HStoreKey.extractFamily(curkey.getColumn());
+          if (f.equals(this.familyName)) {
             out.append(curkey, new ImmutableBytesWritable(es.getValue()));
           }
         }
