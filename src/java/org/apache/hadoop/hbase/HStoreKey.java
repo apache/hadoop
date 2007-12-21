@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.hbase.io.TextSequence;
 import org.apache.hadoop.io.*;
 
 import java.io.*;
@@ -27,94 +28,14 @@ import java.io.*;
  * A Key for a stored row
  */
 public class HStoreKey implements WritableComparable {
+  /**
+   * Colon character in UTF-8
+   */
   public static final char COLUMN_FAMILY_DELIMITER = ':';
   
-  // TODO: Move these utility methods elsewhere (To a Column class?).
-  /**
-   * Extracts the column family name from a column
-   * For example, returns 'info' if the specified column was 'info:server'
-   * @param col name of column
-   * @return column family name
-   * @throws InvalidColumnNameException 
-   */
-  public static Text extractFamily(final Text col)
-  throws InvalidColumnNameException {
-    return extractFamily(col, false);
-  }
-  
-  /**
-   * Extracts the column family name from a column
-   * For example, returns 'info' if the specified column was 'info:server'
-   * @param col name of column
-   * @param withColon if returned family name should include the ':' suffix.
-   * @return column family name
-   * @throws InvalidColumnNameException 
-   */
-  public static Text extractFamily(final Text col, final boolean withColon)
-  throws InvalidColumnNameException {
-    int offset = getColonOffset(col);
-    // Include ':' in copy?
-    offset += (withColon)? 1: 0;
-    if (offset == col.getLength()) {
-      return col;
-    }
-    byte [] buffer = new byte[offset];
-    System.arraycopy(col.getBytes(), 0, buffer, 0, offset);
-    return new Text(buffer);
-  }
-  
-  /**
-   * Extracts the column qualifier, the portion that follows the colon (':')
-   * family/qualifier separator.
-   * For example, returns 'server' if the specified column was 'info:server'
-   * @param col name of column
-   * @return column qualifier or null if there is no qualifier.
-   * @throws InvalidColumnNameException 
-   */
-  public static Text extractQualifier(final Text col)
-  throws InvalidColumnNameException {
-    int offset = getColonOffset(col);
-    if (offset + 1 == col.getLength()) {
-      return null;
-    }
-    int bufferLength = col.getLength() - (offset + 1);
-    byte [] buffer = new byte[bufferLength];
-    System.arraycopy(col.getBytes(), offset + 1, buffer, 0, bufferLength);
-    return new Text(buffer);
-  }
-  
-  private static int getColonOffset(final Text col)
-  throws InvalidColumnNameException {
-    int offset = -1;
-    for (int i = 0; i < col.getLength(); i++) {
-      if (col.charAt(i) == COLUMN_FAMILY_DELIMITER) {
-        offset = i;
-        break;
-      }
-    }
-    if(offset < 0) {
-      throw new InvalidColumnNameException(col + " is missing the colon " +
-        "family/qualifier separator");
-    }
-    return offset;
-  }
-
-  /**
-   * Returns row and column bytes out of an HStoreKey.
-   * @param hsk Store key.
-   * @return byte array encoding of HStoreKey
-   * @throws UnsupportedEncodingException
-   */
-  public static byte[] getBytes(final HStoreKey hsk)
-  throws UnsupportedEncodingException {
-    StringBuilder s = new StringBuilder(hsk.getRow().toString());
-    s.append(hsk.getColumn().toString());
-    return s.toString().getBytes(HConstants.UTF8_ENCODING);
-  }
-
-  Text row;
-  Text column;
-  long timestamp;
+  private Text row;
+  private Text column;
+  private long timestamp;
 
 
   /** Default constructor used in conjunction with Writable interface */
@@ -163,6 +84,7 @@ public class HStoreKey implements WritableComparable {
    * @param timestamp timestamp value
    */
   public HStoreKey(Text row, Text column, long timestamp) {
+    // Make copies by doing 'new Text(arg)'.
     this.row = new Text(row);
     this.column = new Text(column);
     this.timestamp = timestamp;
@@ -338,5 +260,91 @@ public class HStoreKey implements WritableComparable {
     row.readFields(in);
     column.readFields(in);
     timestamp = in.readLong();
+  }
+  
+  // Statics
+  // TODO: Move these utility methods elsewhere (To a Column class?).
+  
+  /**
+   * Extracts the column family name from a column
+   * For example, returns 'info' if the specified column was 'info:server'
+   * @param col name of column
+   * @return column famile as a TextSequence based on the passed
+   * <code>col</code>.  If <code>col</code> is reused, make a new Text of
+   * the result by calling {@link TextSequence#toText()}.
+   * @throws InvalidColumnNameException 
+   */
+  public static TextSequence extractFamily(final Text col)
+  throws InvalidColumnNameException {
+    return extractFamily(col, false);
+  }
+  
+  /**
+   * Extracts the column family name from a column
+   * For example, returns 'info' if the specified column was 'info:server'
+   * @param col name of column
+   * @return column famile as a TextSequence based on the passed
+   * <code>col</code>.  If <code>col</code> is reused, make a new Text of
+   * the result by calling {@link TextSequence#toText()}.
+   * @throws InvalidColumnNameException 
+   */
+  public static TextSequence extractFamily(final Text col,
+    final boolean withColon)
+  throws InvalidColumnNameException {
+    int offset = getColonOffset(col);
+    // Include ':' in copy?
+    offset += (withColon)? 1: 0;
+    if (offset == col.getLength()) {
+      return new TextSequence(col);
+    }
+    return new TextSequence(col, 0, offset);
+  }
+  
+  /**
+   * Extracts the column qualifier, the portion that follows the colon (':')
+   * family/qualifier separator.
+   * For example, returns 'server' if the specified column was 'info:server'
+   * @param col name of column
+   * @return column qualifier as a TextSequence based on the passed
+   * <code>col</code>.  If <code>col</code> is reused, make a new Text of
+   * the result by calling {@link TextSequence#toText()}.
+   * @throws InvalidColumnNameException 
+   */
+  public static TextSequence extractQualifier(final Text col)
+  throws InvalidColumnNameException {
+    int offset = getColonOffset(col);
+    if (offset + 1 == col.getLength()) {
+      return null;
+    }
+    return new TextSequence(col, offset + 1);
+  }
+  
+  private static int getColonOffset(final Text col)
+  throws InvalidColumnNameException {
+    int offset = -1;
+    for (int i = 0; i < col.getLength(); i++) {
+      if (col.charAt(i) == COLUMN_FAMILY_DELIMITER) {
+        offset = i;
+        break;
+      }
+    }
+    if(offset < 0) {
+      throw new InvalidColumnNameException(col + " is missing the colon " +
+        "family/qualifier separator");
+    }
+    return offset;
+  }
+
+  /**
+   * Returns row and column bytes out of an HStoreKey.
+   * @param hsk Store key.
+   * @return byte array encoding of HStoreKey
+   * @throws UnsupportedEncodingException
+   */
+  public static byte[] getBytes(final HStoreKey hsk)
+  throws UnsupportedEncodingException {
+    StringBuilder s = new StringBuilder(hsk.getRow().toString());
+    s.append(hsk.getColumn().toString());
+    return s.toString().getBytes(HConstants.UTF8_ENCODING);
   }
 }

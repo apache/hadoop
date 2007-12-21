@@ -283,7 +283,7 @@ public class HRegion implements HConstants {
     long maxSeqId = -1;
     for(Map.Entry<Text, HColumnDescriptor> e :
       this.regionInfo.getTableDesc().families().entrySet()) {
-      Text colFamily = HStoreKey.extractFamily(e.getKey());
+      Text colFamily = HStoreKey.extractFamily(e.getKey()).toText();
 
       HStore store = new HStore(rootDir, this.regionInfo.getRegionName(),
           this.encodedRegionName, e.getValue(), fs, oldLogFile, conf); 

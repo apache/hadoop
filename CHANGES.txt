@@ -19,6 +19,7 @@ Trunk (unreleased changes)
                 (Bryan Duxbury via Stack)
 
   OPTIMIZATIONS
+   HADOOP-2479 Save on number of Text object creations
 
   BUG FIXES
    HADOOP-2059 In tests, exceptions in min dfs shutdown should not fail test
