@@ -276,6 +276,14 @@ Trunk (unreleased changes)
     HADOOP-2476. Unit test failure while reading permission bits of local
     file system (on Windows) fixed.  (Raghu Angadi via dhruba)
 
+    HADOOP-2247.  Fine-tune the strategies for killing mappers and reducers
+    due to failures while fetching map-outputs. Now the map-completion times
+    and number of currently running reduces are taken into account by the
+    JobTracker before  killing the mappers, while the progress made by the
+    reducer and the number of fetch-failures vis-a-vis total number of
+    fetch-attempts are taken into account before teh reducer kills itself.
+    (Amar Kamat via acmurthy)
+
 Branch 0.15 (unreleased)
 
   BUG FIXES
@@ -317,14 +325,6 @@ Branch 0.15 (unreleased)
     HADOOP-2437.  Fix the LocalDirAllocator to choose the seed for the
     round-robin disk selections randomly. This helps in spreading data across
     multiple partitions much better. (acmurhty)
-
-    HADOOP-2247.  Fine-tune the strategies for killing mappers and reducers
-    due to failures while fetching map-outputs. Now the map-completion times
-    and number of currently running reduces are taken into account by the
-    JobTracker before  killing the mappers, while the progress made by the
-    reducer and the number of fetch-failures vis-a-vis total number of
-    fetch-attempts are taken into account before teh reducer kills itself.
-    (Amar Kamat via acmurthy)
 
   IMPROVEMENTS
 
