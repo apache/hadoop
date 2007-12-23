@@ -283,6 +283,9 @@ Trunk (unreleased changes)
     reducer and the number of fetch-failures vis-a-vis total number of
     fetch-attempts are taken into account before teh reducer kills itself.
     (Amar Kamat via acmurthy)
+    
+    HADOOP-2452. Fix eclipse plug-in build.xml to refers to the right
+    location where hadoop-*-core.jar is generated. (taton)
 
 Branch 0.15 (unreleased)
 
