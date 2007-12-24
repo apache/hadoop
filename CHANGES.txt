@@ -132,6 +132,10 @@ Trunk (unreleased changes)
     HADOOP-2457. Added a 'forrest.home' property to the 'docs' target in
     build.xml. (acmurthy) 
 
+    HADOOP-2149.  A new benchmark for three name-node operation: file create, 
+    open, and block report, to evaluate the name-node performance 
+    for optimizations or new features. (Konstantin Shvachko via shv)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

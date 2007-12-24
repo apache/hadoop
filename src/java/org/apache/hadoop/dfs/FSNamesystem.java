@@ -1702,9 +1702,9 @@ class FSNamesystem implements FSConstants {
 
     String dnAddress = Server.getRemoteAddress();
     if (dnAddress == null) {
-      //Mostly not called inside an RPC.
-      throw new IOException("Could not find remote address for " +
-                            "registration from " + nodeReg.getName());
+      // Mostly called inside an RPC.
+      // But if not, use address passed by the data-node.
+      dnAddress = nodeReg.getHost();
     }      
 
     String hostName = nodeReg.getHost();
