@@ -333,6 +333,10 @@ Branch 0.15 (unreleased)
     round-robin disk selections randomly. This helps in spreading data across
     multiple partitions much better. (acmurhty)
 
+    HADOOP-2486. When the list of files from the InMemoryFileSystem is obtained
+    for merging, this patch will ensure that only those files whose checksums
+    have also got created (renamed) are returned. (ddas)
+
   IMPROVEMENTS
 
     HADOOP-2160.  Remove project-level, non-user documentation from

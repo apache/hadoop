@@ -1386,8 +1386,11 @@ class ReduceTask extends Task {
       public void run() {
         LOG.info(reduceTask.getTaskId() + " Thread started: " + getName());
         try {
+          Path[] inMemClosedFiles;
           //initiate merge
-          Path[] inMemClosedFiles = inMemFileSys.getFiles(MAP_OUTPUT_FILTER);
+          synchronized (ReduceTask.this) {
+            inMemClosedFiles = inMemFileSys.getFiles(MAP_OUTPUT_FILTER);
+          }
           //Note that the above Path[] could be of length 0 if all copies are 
           //in flight. So we make sure that we have some 'closed' map
           //output files to merge to get the benefit of in-memory merge
