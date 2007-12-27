@@ -20,6 +20,8 @@ Trunk (unreleased changes)
 
   OPTIMIZATIONS
    HADOOP-2479 Save on number of Text object creations
+   HADOOP-2485 Make mapfile index interval configurable (Set default to 32
+               instead of 128)
 
   BUG FIXES
    HADOOP-2059 In tests, exceptions in min dfs shutdown should not fail test
