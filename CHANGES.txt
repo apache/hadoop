@@ -140,6 +140,10 @@ Trunk (unreleased changes)
     non-static method to allow sub-classes to provide alternate
     implementations. (Alejandro Abdelnur via acmurthy) 
 
+    HADOOP-2425. Change TextOutputFormat to handle Text specifically for better
+    performance. Make NullWritable implement Comparable. Make TextOutputFormat
+    treat NullWritable like null. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

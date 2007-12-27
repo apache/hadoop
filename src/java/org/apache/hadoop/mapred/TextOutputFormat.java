@@ -20,11 +20,14 @@ package org.apache.hadoop.mapred;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
 
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -39,6 +42,17 @@ public class TextOutputFormat<K extends WritableComparable,
   protected static class LineRecordWriter<K extends WritableComparable,
                                           V extends Writable>
     implements RecordWriter<K, V> {
+    private static final String utf8 = "UTF-8";
+    private static final byte[] tab;
+    private static final byte[] newline;
+    static {
+      try {
+        tab = "\t".getBytes(utf8);
+        newline = "\n".getBytes(utf8);
+      } catch (UnsupportedEncodingException uee) {
+        throw new IllegalArgumentException("can't find " + utf8 + " encoding");
+      }
+    }
     
     private DataOutputStream out;
     
@@ -46,22 +60,39 @@ public class TextOutputFormat<K extends WritableComparable,
       this.out = out;
     }
     
+    /**
+     * Write the object to the byte stream, handling Text as a special
+     * case.
+     * @param o the object to print
+     * @throws IOException if the write throws, we pass it on
+     */
+    private void writeObject(Object o) throws IOException {
+      if (o instanceof Text) {
+        Text to = (Text) o;
+        out.write(to.getBytes(), 0, to.getLength());
+      } else {
+        out.write(o.toString().getBytes(utf8));
+      }
+    }
+
     public synchronized void write(K key, V value)
       throws IOException {
 
-      if (key == null && value == null) {
+      boolean nullKey = key == null || key instanceof NullWritable;
+      boolean nullValue = value == null || value instanceof NullWritable;
+      if (nullKey && nullValue) {
         return;
       }
-      if (key != null) {
-        out.write(key.toString().getBytes("UTF-8"));
+      if (!nullKey) {
+        writeObject(key);
       }
-      if (key != null && value != null) {
-        out.write("\t".getBytes("UTF-8"));
+      if (!(nullKey || nullValue)) {
+        out.write(tab);
       }
-      if (value != null) {
-        out.write(value.toString().getBytes("UTF-8"));
+      if (!nullValue) {
+        writeObject(value);
       }
-      out.writeByte('\n');
+      out.write(newline);
     }
 
     public synchronized void close(Reporter reporter) throws IOException {
@@ -82,7 +113,8 @@ public class TextOutputFormat<K extends WritableComparable,
       FSDataOutputStream fileOut = fs.create(new Path(dir, name), progress);
       return new LineRecordWriter<K, V>(fileOut);
     } else {
-      Class codecClass = getOutputCompressorClass(job, GzipCodec.class);
+      Class<? extends CompressionCodec> codecClass = 
+        getOutputCompressorClass(job, GzipCodec.class);
       // create the named codec
       CompressionCodec codec = (CompressionCodec)
         ReflectionUtils.newInstance(codecClass, job);

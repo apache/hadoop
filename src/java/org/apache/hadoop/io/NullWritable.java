@@ -21,7 +21,7 @@ package org.apache.hadoop.io;
 import java.io.*;
 
 /** Singleton Writable with no data. */
-public class NullWritable implements Writable {
+public class NullWritable implements WritableComparable {
 
   private static final NullWritable THIS = new NullWritable();
 
@@ -34,6 +34,15 @@ public class NullWritable implements Writable {
     return "(null)";
   }
 
+  public int hashCode() { return 0; }
+  public int compareTo(Object other) {
+    if (!(other instanceof NullWritable)) {
+      throw new ClassCastException("can't compare " + other.getClass().getName() 
+                                   + " to NullWritable");
+    }
+    return 0;
+  }
+  public boolean equals(Object other) { return other instanceof NullWritable; }
   public void readFields(DataInput in) throws IOException {}
   public void write(DataOutput out) throws IOException {}
 }
