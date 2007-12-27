@@ -937,11 +937,13 @@ class HStore implements HConstants {
       //
       // Related, looks like 'merging compactions' in BigTable paper interlaces
       // a memcache flush.  We don't.
+      int entries = 0;
       try {
         for (Map.Entry<HStoreKey, byte []> es: cache.entrySet()) {
           HStoreKey curkey = es.getKey();
           TextSequence f = HStoreKey.extractFamily(curkey.getColumn());
           if (f.equals(this.familyName)) {
+            entries++;
             out.append(curkey, new ImmutableBytesWritable(es.getValue()));
           }
         }
@@ -967,10 +969,10 @@ class HStore implements HConstants {
             flushedFile.getReader(this.fs, this.bloomFilter));
         this.storefiles.put(flushid, flushedFile);
         if(LOG.isDebugEnabled()) {
-          LOG.debug("Added " + name +
-              " with sequence id " + logCacheFlushId + " and size " +
-              StringUtils.humanReadableInt(flushedFile.length()) + " for " +
-              this.regionName + "/" + this.familyName);
+          LOG.debug("Added " + name + " with " + entries +
+            " entries, sequence id " + logCacheFlushId + ", and size " +
+            StringUtils.humanReadableInt(flushedFile.length()) + " for " +
+            this.regionName + "/" + this.familyName);
         }
       } finally {
         this.lock.writeLock().unlock();
