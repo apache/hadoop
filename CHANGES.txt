@@ -136,6 +136,10 @@ Trunk (unreleased changes)
     open, and block report, to evaluate the name-node performance 
     for optimizations or new features. (Konstantin Shvachko via shv)
 
+    HADOOP-2466. Change FileInputFormat.computeSplitSize to a protected
+    non-static method to allow sub-classes to provide alternate
+    implementations. (Alejandro Abdelnur via acmurthy) 
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

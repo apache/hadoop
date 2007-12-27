@@ -205,7 +205,7 @@ public abstract class FileInputFormat<K extends WritableComparable,
     return splits.toArray(new FileSplit[splits.size()]);
   }
 
-  private static long computeSplitSize(long goalSize, long minSize,
+  protected long computeSplitSize(long goalSize, long minSize,
                                        long blockSize) {
     return Math.max(minSize, Math.min(goalSize, blockSize));
   }
