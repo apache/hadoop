@@ -345,6 +345,10 @@ Branch 0.15 (unreleased)
     for merging, this patch will ensure that only those files whose checksums
     have also got created (renamed) are returned. (ddas)
 
+    HADOOP-2456. Hardcode English locale to prevent NumberFormatException
+    from occurring when starting the NameNode with certain locales.
+    (Matthias Friedrich via nigel)
+
   IMPROVEMENTS
 
     HADOOP-2160.  Remove project-level, non-user documentation from

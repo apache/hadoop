@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
@@ -53,7 +54,12 @@ public class FsShell extends Configured implements Tool {
   }
   static final String SETREP_SHORT_USAGE="-setrep [-R] [-w] <rep> <path/file>";
   static final String TAIL_USAGE="-tail [-f] <file>";
-  private static final DecimalFormat decimalFormat = new DecimalFormat("#.##");
+  private static final DecimalFormat decimalFormat;
+  static {
+	  NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.ENGLISH);
+	  decimalFormat = (DecimalFormat) numberFormat;
+	  decimalFormat.applyPattern("#.##");
+  }
 
   /**
    */
