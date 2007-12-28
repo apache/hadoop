@@ -1,10 +1,10 @@
 /*
-* Licensed to the Apache Software Foundation (ASF) under one or more
-* contributor license agreements.  See the NOTICE file distributed with
-* this work for additional information regarding copyright ownership.
-* The ASF licenses this file to You under the Apache License, Version 2.0
-* (the "License"); you may not use this file except in compliance with
-* the License.  You may obtain a copy of the License at
+* Copyright 2002-2004 The Apache Software Foundation or its licensors,
+* as applicable.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
 *
 *     http://www.apache.org/licenses/LICENSE-2.0
 *
@@ -32,17 +32,19 @@ function SwitchMenu(obj)
     var title = document.getElementById(obj+'Title');
 
     if(obj.indexOf("_selected_")==0&&el.style.display == ""){
+      //nicolaken: doesn't work :-(
+      //title.style.backgroundImage = "url('images/chapter_open.gif')";
       el.style.display = "block";
-      title.className = "pagegroupselected";
     }
 
-    if(el.style.display != "block"){
+    if(el.style.display != "block"){ 
+      //nicolaken: doesn't work :-(
+      //title.style.backgroundImage = 'url([url]images/chapter_open.gif[/url])';
       el.style.display = "block";
-      title.className = "pagegroupopen";
-    }
-    else{
+    }else{
+      //nicolaken: doesn't work :-(
+      //title.style.backgroundImage = "url('images/chapter.gif')";
       el.style.display = "none";
-      title.className = "pagegroup";
     }
   }// end -  if(document.getElementById) 
 }//end - function SwitchMenu(obj)
