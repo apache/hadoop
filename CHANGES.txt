@@ -303,7 +303,7 @@ Trunk (unreleased changes)
     HADOOP-2452. Fix eclipse plug-in build.xml to refers to the right
     location where hadoop-*-core.jar is generated. (taton)
 
-Branch 0.15 (unreleased)
+Release 0.15.2 - 2008-01-02
 
   BUG FIXES
 
