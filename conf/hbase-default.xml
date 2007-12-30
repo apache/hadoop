@@ -211,6 +211,13 @@
     skip every nth index member when reading back the index into memory.
     </description>
   </property>
+  <property>
+    <name>hbase.io.seqfile.compression.type</name>
+    <value>NONE</value>
+    <description>The compression type for hbase sequencefile.Writers
+    such as hlog.
+    </description>
+  </property>
 
   <!-- HbaseShell Configurations -->
   <property>

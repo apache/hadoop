@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Reader;
 
 /**
@@ -177,7 +178,7 @@ public class HLog implements HConstants {
                   "; map content " + logWriters.toString());
               }
               w = SequenceFile.createWriter(fs, conf, logfile, HLogKey.class,
-                HLogEdit.class);
+                HLogEdit.class, getCompressionType(conf));
               // Use copy of regionName; regionName object is reused inside in
               // HStoreKey.getRegionName so its content changes as we iterate.
               logWriters.put(new Text(regionName), w);
@@ -237,6 +238,16 @@ public class HLog implements HConstants {
     }
     fs.mkdirs(dir);
     rollWriter();
+  }
+  
+  /**
+   * Get the compression type for the hlog files.
+   * @param c Configuration to use.
+   * @return the kind of compression to use
+   */
+  private static CompressionType getCompressionType(final Configuration c) {
+    String name = c.get("hbase.io.seqfile.compression.type");
+    return name == null? CompressionType.NONE: CompressionType.valueOf(name);
   }
 
   /**
@@ -298,7 +309,7 @@ public class HLog implements HConstants {
         }
         Path newPath = computeFilename(filenum++);
         this.writer = SequenceFile.createWriter(this.fs, this.conf, newPath,
-            HLogKey.class, HLogEdit.class);
+            HLogKey.class, HLogEdit.class, getCompressionType(this.conf));
         LOG.info("new log writer created at " + newPath);
 
         // Can we delete any of the old log files?

@@ -19,11 +19,6 @@
  */
 package org.apache.hadoop.hbase.io;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.io.Text;
 
@@ -54,19 +49,5 @@ public class TestTextSequence extends HBaseTestCase {
     final TextSequence ts = new TextSequence(column, 0, family.getLength());
     assertTrue(ts.compareTo(family) == 0);
     assertTrue(ts.equals(family));
-  }
-  
-  public void testSerialize() throws Exception {
-    final Text t = new Text(getName());
-    final TextSequence ts = new TextSequence(t, 1, 3);
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    DataOutputStream dao = new DataOutputStream(baos);
-    ts.write(dao);
-    dao.close();
-    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-    DataInputStream dis = new DataInputStream(bais);
-    TextSequence deserializeTs = new TextSequence();
-    deserializeTs.readFields(dis);
-    assertTrue(ts.equals(deserializeTs));
   }
 }

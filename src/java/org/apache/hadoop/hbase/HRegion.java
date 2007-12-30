@@ -1155,15 +1155,12 @@ public class HRegion implements HConstants {
       for (BatchOperation op: b) {
         HStoreKey key = new HStoreKey(row, op.getColumn(), commitTime);
         byte[] val = null;
-        switch(op.getOp()) {
-        case PUT:
+        if (op.isPut()) {
           val = op.getValue();
           if (HLogEdit.isDeleted(val)) {
             throw new IOException("Cannot insert value: " + val);
           }
-          break;
-
-        case DELETE:
+        } else {
           if (timestamp == LATEST_TIMESTAMP) {
             // Save off these deletes
             if (deletes == null) {
@@ -1173,7 +1170,6 @@ public class HRegion implements HConstants {
           } else {
             val = HLogEdit.deleteBytes.get();
           }
-          break;
         }
         if (val != null) {
           localput(lockid, key, val);

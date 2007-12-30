@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.ipc.HbaseRPC;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Sleeper;
@@ -62,7 +63,6 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.StringUtils;
@@ -661,7 +661,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.workerThread = new Thread(worker);
     this.sleeper = new Sleeper(this.msgInterval, this.stopRequested);
     // Server to handle client requests
-    this.server = RPC.getServer(this, address.getBindAddress(), 
+    this.server = HbaseRPC.getServer(this, address.getBindAddress(), 
       address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
       false, conf);
     this.serverInfo = new HServerInfo(new HServerAddress(
@@ -1060,7 +1060,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       LOG.debug("Telling master we are up");
     }
     // Do initial RPC setup.
-    this.hbaseMaster = (HMasterRegionInterface)RPC.waitForProxy(
+    this.hbaseMaster = (HMasterRegionInterface)HbaseRPC.waitForProxy(
       HMasterRegionInterface.class, HMasterRegionInterface.versionID,
       new HServerAddress(conf.get(MASTER_ADDRESS)).getInetSocketAddress(),
       this.conf);
