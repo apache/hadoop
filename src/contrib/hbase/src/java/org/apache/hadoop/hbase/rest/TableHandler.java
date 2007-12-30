@@ -245,10 +245,13 @@ public class TableHandler extends GenericHandler {
     final HttpServletResponse response, final String [] pathSegments)
   throws IOException, ServletException {
     HTable table = getTable(pathSegments[0]);
+
+    // pull the row key out of the path
+    String row = URLDecoder.decode(pathSegments[2], HConstants.UTF8_ENCODING);
     
     switch(ContentType.getContentType(request.getHeader(CONTENT_TYPE))) {
       case XML:
-        putRowXml(table, request, response, pathSegments);
+        putRowXml(table, row, request, response, pathSegments);
         break;
       case MIME:
         doNotAcceptable(response, "Don't support multipart/related yet...");
@@ -265,8 +268,9 @@ public class TableHandler extends GenericHandler {
    * @param pathSegments
    * Decode supplied XML and do a put to Hbase.
    */
-  private void putRowXml(HTable table, final HttpServletRequest request,
-    final HttpServletResponse response, final String [] pathSegments)
+  private void putRowXml(HTable table, String row, 
+    final HttpServletRequest request, final HttpServletResponse response, 
+    final String [] pathSegments)
   throws IOException, ServletException{
 
     DocumentBuilderFactory docBuilderFactory 
@@ -292,7 +296,7 @@ public class TableHandler extends GenericHandler {
     
     try{
       // start an update
-      Text key = new Text(pathSegments[2]);
+      Text key = new Text(row);
       lock_id = table.startUpdate(key);
 
       // set the columns from the xml
@@ -457,7 +461,10 @@ public class TableHandler extends GenericHandler {
     // grab the table we're operating on
     HTable table = getTable(getTableName(pathSegments));
     
-    Text key = new Text(pathSegments[2]);
+    // pull the row key out of the path
+    String row = URLDecoder.decode(pathSegments[2], HConstants.UTF8_ENCODING);
+    
+    Text key = new Text(row);
 
     String[] columns = request.getParameterValues(COLUMN);
         
