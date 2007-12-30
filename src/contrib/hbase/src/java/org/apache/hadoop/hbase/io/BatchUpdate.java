@@ -99,12 +99,16 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    *
    * @param lid lock id returned from startUpdate
    * @param column column whose value is being set
-   * @param val new value for column
+   * @param val new value for column.  Cannot be null (can be empty).
    */
   public synchronized void put(final long lid, final Text column,
       final byte val[]) {
     if(this.lockid != lid) {
       throw new IllegalArgumentException("invalid lockid " + lid);
+    }
+    if (val == null) {
+      // If null, the PUT becomes a DELETE operation.
+      throw new IllegalArgumentException("Passed value cannot be null");
     }
     operations.add(new BatchOperation(column, val));
   }
@@ -138,10 +142,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
   // Writable
   //
 
-  /**
-   * {@inheritDoc}
-   */
-  public void readFields(DataInput in) throws IOException {
+  public void readFields(final DataInput in) throws IOException {
     row.readFields(in);
     int nOps = in.readInt();
     for (int i = 0; i < nOps; i++) {
@@ -151,10 +152,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
-  public void write(DataOutput out) throws IOException {
+  public void write(final DataOutput out) throws IOException {
     row.write(out);
     out.writeInt(operations.size());
     for (BatchOperation op: operations) {

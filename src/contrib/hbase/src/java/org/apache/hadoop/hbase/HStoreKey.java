@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.io.TextSequence;
 import org.apache.hadoop.io.*;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 
 /**
  * A Key for a stored row
@@ -225,7 +226,7 @@ public class HStoreKey implements WritableComparable {
   // Comparable
 
   public int compareTo(Object o) {
-    HStoreKey other = (HStoreKey) o;
+    HStoreKey other = (HStoreKey)o;
     int result = this.row.compareTo(other.row);
     if (result != 0) {
       return result;
@@ -322,9 +323,11 @@ public class HStoreKey implements WritableComparable {
   private static int getColonOffset(final Text col)
   throws InvalidColumnNameException {
     int offset = -1;
-    for (int i = 0; i < col.getLength(); i++) {
-      if (col.charAt(i) == COLUMN_FAMILY_DELIMITER) {
-        offset = i;
+    ByteBuffer bb = ByteBuffer.wrap(col.getBytes());
+    for (int lastPosition = bb.position(); bb.hasRemaining();
+        lastPosition = bb.position()) {
+      if (Text.bytesToCodePoint(bb) == COLUMN_FAMILY_DELIMITER) {
+        offset = lastPosition;
         break;
       }
     }

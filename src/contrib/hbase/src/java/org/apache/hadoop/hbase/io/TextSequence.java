@@ -127,8 +127,9 @@ public class TextSequence extends Text {
 
   public int hashCode() {
     int hash = 1;
-    for (int i = this.start; i < getLength(); i++)
-      hash = (31 * hash) + this.delegatee.getBytes()[i];
+    byte [] b = this.delegatee.getBytes();
+    for (int i = this.start, length = getLength(); i < length; i++)
+      hash = (31 * hash) + b[i];
     return hash;
   }
 

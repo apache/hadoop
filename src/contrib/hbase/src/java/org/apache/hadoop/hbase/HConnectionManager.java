@@ -34,11 +34,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.ipc.HbaseRPC;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
@@ -177,7 +177,7 @@ public class HConnectionManager implements HConstants {
               MASTER_ADDRESS, DEFAULT_MASTER_ADDRESS));
 
           try {
-            HMasterInterface tryMaster = (HMasterInterface)RPC.getProxy(
+            HMasterInterface tryMaster = (HMasterInterface)HbaseRPC.getProxy(
                 HMasterInterface.class, HMasterInterface.versionID, 
                 masterLocation.getInetSocketAddress(), this.conf);
             
@@ -360,13 +360,11 @@ public class HConnectionManager implements HConstants {
           try {
             versionId =
               serverInterfaceClass.getDeclaredField("versionID").getLong(server);
-
           } catch (IllegalAccessException e) {
             // Should never happen unless visibility of versionID changes
             throw new UnsupportedOperationException(
                 "Unable to open a connection to a " +
                 serverInterfaceClass.getName() + " server.", e);
-
           } catch (NoSuchFieldException e) {
             // Should never happen unless versionID field name changes in HRegionInterface
             throw new UnsupportedOperationException(
@@ -375,13 +373,11 @@ public class HConnectionManager implements HConstants {
           }
 
           try {
-            server = (HRegionInterface) RPC.waitForProxy(serverInterfaceClass,
+            server = (HRegionInterface)HbaseRPC.waitForProxy(serverInterfaceClass,
                 versionId, regionServer.getInetSocketAddress(), this.conf);
-
           } catch (RemoteException e) {
             throw RemoteExceptionHandler.decodeRemoteException(e);
           }
-
           this.servers.put(regionServer.toString(), server);
         }
       }

@@ -27,56 +27,38 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
 /**
- * Batch update operations such as put, delete, and deleteAll.
+ * Batch update operation.
+ * 
+ * If value is null, its a DELETE operation.  If its non-null, its a PUT.
+ * This object is purposely bare-bones because many instances are created
+ * during bulk uploads.  We have one class for DELETEs and PUTs rather than
+ * a class per type because it makes the serialization easier.
+ * @see BatchUpdate 
  */
 public class BatchOperation implements Writable {
-  /** 
-   * Operation types.
-   * @see org.apache.hadoop.io.SequenceFile.Writer
-   */
-  public static enum Operation {
-    /** update a field */
-    PUT,
-    /** delete a field */
-    DELETE}
-
-  private Operation op;
   private Text column;
-  private byte[] value;
   
-  /** default constructor used by Writable */
+  // A null value defines DELETE operations.
+  private byte[] value;
+
+  /** Default constructor used by Writable */
   public BatchOperation() {
     this(new Text());
   }
   /**
-   * Creates a DELETE operation
-   * 
+   * Creates a DELETE batch operation.
    * @param column column name
    */
   public BatchOperation(final Text column) {
-    this(Operation.DELETE, column, null);
+    this(column, null);
   }
 
   /**
-   * Creates a PUT operation
-   * 
+   * Create a batch operation.
    * @param column column name
-   * @param value column value
+   * @param value column value.  If non-null, this is a PUT operation.
    */
   public BatchOperation(final Text column, final byte [] value) {
-    this(Operation.PUT, column, value);
-  }
-  
-  /**
-   * Creates a put operation
-   *
-   * @param operation the operation (put or get)
-   * @param column column name
-   * @param value column value
-   */
-  public BatchOperation(final Operation operation, final Text column,
-      final byte[] value) {
-    this.op = operation;
     this.column = column;
     this.value = value;
   }
@@ -85,47 +67,42 @@ public class BatchOperation implements Writable {
    * @return the column
    */
   public Text getColumn() {
-    return column;
-  }
-
-  /**
-   * @return the operation
-   */
-  public Operation getOp() {
-    return this.op;
+    return this.column;
   }
 
   /**
    * @return the value
    */
   public byte[] getValue() {
-    return value;
+    return this.value;
   }
-  
-  //
-  // Writable
-  //
 
   /**
-   * {@inheritDoc}
+   * @return True if this is a PUT operation (this.value is not null).
    */
-  public void readFields(DataInput in) throws IOException {
-    int ordinal = in.readInt();
-    this.op = Operation.values()[ordinal];
-    column.readFields(in);
-    if (this.op == Operation.PUT) {
-      value = new byte[in.readInt()];
-      in.readFully(value);
+  public boolean isPut() {
+    return this.value != null;
+  }
+  
+  // Writable methods
+
+  // This is a hotspot when updating deserializing incoming client submissions.
+  // In Performance Evaluation sequentialWrite, 70% of object allocations are
+  // done in here.
+  public void readFields(final DataInput in) throws IOException {
+    this.column.readFields(in);
+    // Is there a value to read?
+    if (in.readBoolean()) {
+      this.value = new byte[in.readInt()];
+      in.readFully(this.value);
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(this.op.ordinal());
-    column.write(out);
-    if (this.op == Operation.PUT) {
+  public void write(final DataOutput out) throws IOException {
+    this.column.write(out);
+    boolean p = isPut();
+    out.writeBoolean(p);
+    if (p) {
       out.writeInt(value.length);
       out.write(value);
     }
