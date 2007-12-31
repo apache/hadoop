@@ -96,6 +96,7 @@ Trunk (unreleased changes)
    HADOOP-2467 scanner truncates resultset when > 1 column families
    HADOOP-2503 REST Insert / Select encoding issue
                (Bryan Duxbury via Stack)
+   HADOOP-2505 formatter classes missing apache license
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
