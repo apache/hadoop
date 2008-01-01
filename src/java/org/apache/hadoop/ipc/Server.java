@@ -505,7 +505,8 @@ public abstract class Server {
           LOG.warn("Out of Memory in server select", e);
           try { Thread.sleep(60000); } catch (Exception ie) {}
         } catch (Exception e) {
-          LOG.warn("Exception in Responder " + e);
+          LOG.warn("Exception in Responder " + 
+                   StringUtils.stringifyException(e));
         }
       }
       LOG.info("Stopping " + this.getName());
@@ -912,10 +913,12 @@ public abstract class Server {
           responder.doRespond(call);
         } catch (InterruptedException e) {
           if (running) {                          // unexpected -- log it
-            LOG.info(getName() + " caught: " + e, e);
+            LOG.info(getName() + " caught: " +
+                     StringUtils.stringifyException(e));
           }
         } catch (Exception e) {
-          LOG.info(getName() + " caught: " + e, e);
+          LOG.info(getName() + " caught: " +
+                   StringUtils.stringifyException(e));
         }
       }
       LOG.info(getName() + ": exiting");
