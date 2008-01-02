@@ -58,6 +58,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -75,7 +76,6 @@ import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.ShellUtil;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.log4j.LogManager;
 
@@ -1637,22 +1637,13 @@ public class TaskTracker
      * @throws IOException
      */
     public void runScript(List<String> args, File dir) throws IOException {
-      Process process = null;
-      try {
-        ShellUtil shexec = new ShellUtil(args, dir, System.getenv());
-        shexec.execute();
-        process = shexec.getProcess();
-        int exit_code = shexec.getExitCode();
-        if (exit_code != 0) {
-          throw new IOException("Task debug script exit with nonzero "
-                                +"status of " + exit_code + ".");
-        }
-      } catch (InterruptedException e) {
-          throw new IOException(e.toString());
-      } finally {
-        if (process != null) {
-          process.destroy();
-        }
+      ShellCommandExecutor shexec = 
+              new ShellCommandExecutor(args.toArray(new String[0]), dir);
+      shexec.execute();
+      int exitCode = shexec.getExitCode();
+      if (exitCode != 0) {
+        throw new IOException("Task debug script exit with nonzero status of " 
+                              + exitCode + ".");
       }
     }
 

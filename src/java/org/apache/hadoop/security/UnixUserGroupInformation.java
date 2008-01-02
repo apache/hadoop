@@ -29,7 +29,7 @@ import java.util.TreeSet;
 import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.ShellCommand;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -289,10 +289,10 @@ public class UnixUserGroupInformation implements UserGroupInformation {
    */
   static String getUnixUserName() throws IOException {
     String[] result = executeShellCommand(
-        new String[]{ShellCommand.USER_NAME_COMMAND});
+        new String[]{Shell.USER_NAME_COMMAND});
     if (result.length!=1) {
       throw new IOException("Expect one token as the result of " + 
-          ShellCommand.USER_NAME_COMMAND + ": " + toString(result));
+          Shell.USER_NAME_COMMAND + ": " + toString(result));
     }
     return result[0];
   }
@@ -303,13 +303,13 @@ public class UnixUserGroupInformation implements UserGroupInformation {
    * @throws IOException if encounter any error when running the command
    */
   private static String[] getUnixGroups() throws IOException {
-    return executeShellCommand(ShellCommand.getGROUPS_COMMAND());
+    return executeShellCommand(Shell.getGROUPS_COMMAND());
   }
   
   /* Execute a command and return the result as an array of Strings */
   private static String[] executeShellCommand(String[] command)
   throws IOException {
-    String groups = ShellCommand.execCommand(command);
+    String groups = Shell.execCommand(command);
     StringTokenizer tokenizer = new StringTokenizer(groups);
     int numOfTokens = tokenizer.countTokens();
     String[] tokens = new String[numOfTokens];

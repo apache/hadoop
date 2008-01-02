@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Shell;
 
 import java.io.*;
 import java.util.*;
@@ -138,7 +139,7 @@ public class TestLocalFileSystemPermission extends TestCase {
 
   static List<String> getGroups() throws IOException {
     List<String> a = new ArrayList<String>();
-    String s = ShellCommand.execCommand(ShellCommand.getGROUPS_COMMAND());
+    String s = Shell.execCommand(Shell.getGROUPS_COMMAND());
     for(StringTokenizer t = new StringTokenizer(s); t.hasMoreTokens(); ) {
       a.add(t.nextToken());
     }

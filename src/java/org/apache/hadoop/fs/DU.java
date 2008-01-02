@@ -23,9 +23,10 @@ import java.io.BufferedReader;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants;
+import org.apache.hadoop.util.Shell;
 
 /** Filesystem disk space usage statistics.  Uses the unix 'du' program*/
-public class DU extends ShellCommand {
+public class DU extends Shell {
   private String  dirPath;
 
   private long used;

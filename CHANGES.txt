@@ -306,6 +306,14 @@ Trunk (unreleased changes)
     HADOOP-2492. Additional debugging in the rpc server to better 
     diagnose ConcurrentModificationException. (dhruba)
 
+    HADOOP-2344. Enhance the utility for executing shell commands to read the
+    stdout/stderr streams while waiting for the command to finish (to free up
+    the buffers). Also, this patch throws away stderr of the DF utility.
+    @deprecated 
+      org.apache.hadoop.fs.ShellCommand for org.apache.hadoop.util.Shell
+      org.apache.hadoop.util.ShellUtil for 
+        org.apache.hadoop.util.Shell.ShellCommandExecutor
+
 Release 0.15.2 - 2008-01-02
 
   BUG FIXES

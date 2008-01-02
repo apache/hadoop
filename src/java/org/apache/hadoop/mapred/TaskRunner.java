@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.filecache.*;
 import org.apache.hadoop.util.*;
@@ -38,7 +39,7 @@ abstract class TaskRunner extends Thread {
     LogFactory.getLog("org.apache.hadoop.mapred.TaskRunner");
 
   volatile boolean killed = false;
-  private Process process;
+  private ShellCommandExecutor shexec; // shell terminal for running the task
   private Task t;
   private TaskTracker tracker;
 
@@ -440,57 +441,27 @@ abstract class TaskRunner extends Thread {
   }
 
   /**
-   * Append the contents of the input stream to the output file. Both streams 
-   * are closed upon exit.
-   * @param in the stream to read
-   * @param outName the filename to append the data to
-   * @throws IOException if something goes wrong
-   */
-  private void copyStream(InputStream in, File outName) throws IOException {
-    try {
-      OutputStream out = new FileOutputStream(outName, true);
-      try {
-        byte[] buffer = new byte[1024];
-        int len = in.read(buffer);
-        while (len > 0) {
-          out.write(buffer, 0, len);
-          len = in.read(buffer);
-        }
-      } finally {
-        out.close();
-      }
-    } finally {
-      in.close();
-    }
-  }
-
-  /**
    * Run the child process
    */
   private void runChild(List<String> args, File dir,
                         String taskid) throws IOException {
 
     try {
-      ShellUtil shexec = new ShellUtil(args, dir, System.getenv());
+      shexec = new ShellCommandExecutor(args.toArray(new String[0]), dir);
       shexec.execute();
-      process = shexec.getProcess();
+    } catch (IOException ioe) {
+      // do nothing
+      // error and output are appropriately redirected
+    } finally { // handle the exit code
       int exit_code = shexec.getExitCode();
      
       if (!killed && exit_code != 0) {
         if (exit_code == 65) {
           tracker.getTaskTrackerMetrics().taskFailedPing();
         }
-        copyStream(process.getInputStream(), 
-                   TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDOUT));
-        copyStream(process.getErrorStream(), 
-                   TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDERR));
         throw new IOException("Task process exit with nonzero status of " +
                               exit_code + ".");
       }
-    } catch (InterruptedException e) {
-      throw new IOException(e.toString());
-    } finally {
-      kill();      
     }
   }
 
@@ -498,8 +469,11 @@ abstract class TaskRunner extends Thread {
    * Kill the child process
    */
   public void kill() {
-    if (process != null) {
-      process.destroy();
+    if (shexec != null) {
+      Process process = shexec.getProcess();
+      if (process != null) {
+        process.destroy();
+      }
     }
     killed = true;
   }

@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Shell;
 
 /****************************************************************
  * Implement the FileSystem API for the raw local filesystem.
@@ -399,7 +400,7 @@ public class RawLocalFileSystem extends FileSystem {
       try {
         StringTokenizer t = new StringTokenizer(
             execCommand(new File(getPath().toUri()), 
-                        ShellCommand.getGET_PERMISSION_COMMAND()));
+                        Shell.getGET_PERMISSION_COMMAND()));
         //expected format
         //-rw-------    1 username groupname ...
         String permission = t.nextToken();
@@ -449,7 +450,7 @@ public class RawLocalFileSystem extends FileSystem {
     //[OWNER][:[GROUP]]
     String s = (username == null? "": username)
              + (groupname == null? "": ":" + groupname);
-    execCommand(pathToFile(p), ShellCommand.SET_OWNER_COMMAND, s);
+    execCommand(pathToFile(p), Shell.SET_OWNER_COMMAND, s);
   }
 
   /**
@@ -458,7 +459,7 @@ public class RawLocalFileSystem extends FileSystem {
   @Override
   public void setPermission(Path p, FsPermission permission
       ) throws IOException {
-    execCommand(pathToFile(p), ShellCommand.SET_PERMISSION_COMMAND,
+    execCommand(pathToFile(p), Shell.SET_PERMISSION_COMMAND,
         String.format("%04o", permission.toShort()));
   }
 
@@ -466,7 +467,7 @@ public class RawLocalFileSystem extends FileSystem {
     String[] args = new String[cmd.length + 1];
     System.arraycopy(cmd, 0, args, 0, cmd.length);
     args[cmd.length] = f.getCanonicalPath();
-    String output = ShellCommand.execCommand(args);
+    String output = Shell.execCommand(args);
     return output;
   }
 }

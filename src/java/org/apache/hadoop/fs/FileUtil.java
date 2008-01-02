@@ -25,6 +25,7 @@ import java.util.zip.ZipFile;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Shell;
 
 /**
  * A collection of file-processing util methods
@@ -257,7 +258,7 @@ public class FileUtil {
   /**
    * This class is only used on windows to invoke the cygpath command.
    */
-  private static class CygPathCommand extends ShellCommand {
+  private static class CygPathCommand extends Shell {
     String[] command;
     String result;
     CygPathCommand(String path) throws IOException {

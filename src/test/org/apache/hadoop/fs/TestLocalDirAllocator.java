@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Shell;
 
 import junit.framework.TestCase;
 
@@ -90,7 +91,7 @@ public class TestLocalDirAllocator extends TestCase {
       validateTempDirCreation(1);
       validateTempDirCreation(1);
     } finally {
-      ShellCommand.execCommand(new String[]{"chmod", "u+w", BUFFER_DIR_ROOT});
+      Shell.execCommand(new String[]{"chmod", "u+w", BUFFER_DIR_ROOT});
       rmBufferDirs();
     }
   }
@@ -108,7 +109,7 @@ public class TestLocalDirAllocator extends TestCase {
       validateTempDirCreation(2);
       validateTempDirCreation(2);
     } finally {
-      ShellCommand.execCommand(new String[]{"chmod", "u+w", BUFFER_DIR_ROOT});
+      Shell.execCommand(new String[]{"chmod", "u+w", BUFFER_DIR_ROOT});
       rmBufferDirs();
     }
   }
