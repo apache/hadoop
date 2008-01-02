@@ -313,6 +313,7 @@ Trunk (unreleased changes)
       org.apache.hadoop.fs.ShellCommand for org.apache.hadoop.util.Shell
       org.apache.hadoop.util.ShellUtil for 
         org.apache.hadoop.util.Shell.ShellCommandExecutor
+    (Amar Kamat via acmurthy)
 
 Release 0.15.2 - 2008-01-02
 
