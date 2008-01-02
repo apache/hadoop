@@ -64,8 +64,8 @@ abstract public class Shell {
   }
   
   /**
-   * @param Interval the minimum duration to wait before re-executing the 
-   * command.
+   * @param interval the minimum duration to wait before re-executing the 
+   *        command.
    */
   public Shell( long interval ) {
     this.interval = interval;

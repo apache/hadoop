@@ -315,6 +315,9 @@ Trunk (unreleased changes)
         org.apache.hadoop.util.Shell.ShellCommandExecutor
     (Amar Kamat via acmurthy)
 
+    HADOOP-2511. Fix a javadoc warning in org.apache.hadoop.util.Shell
+    introduced by HADOOP-2344. (acmurthy) 
+
 Release 0.15.2 - 2008-01-02
 
   BUG FIXES
