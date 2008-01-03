@@ -121,39 +121,6 @@ public class HelpCommand extends BasicCommand {
 
     load.put("EXIT", new String[] { "Exit shell", "EXIT;" });
 
-    // A Algebraic Query Commands
-    // this is a tentative query language based on a hbase which uses relational
-    // model of
-    // data.
-
-    load.put("TABLE",
-        new String[] { "Load a table", "A = table('table_name');" });
-    load.put("SUBSTITUTE", new String[] { "Substitute expression to [A~Z]",
-        "D = A.projection('cf_name1'[, 'cf_name2']);" });
-    load.put("SAVE", new String[] {
-        "Save results into specified table (It runs a mapreduce job)",
-        "SAVE A INTO table('table_name');" });
-
-    // Relational Operations
-    load.put("PROJECTION", new String[] {
-        "Selects a subset of the columnfamilies of a relation",
-        "A = TABLE('table_name');"
-            + " B = A.Projection('cf_name1'[, 'cf_name2']);" });
-    load
-        .put(
-            "SELECTION",
-            new String[] {
-                "Selects a subset of the rows in a relation that satisfy a selection condition (>, <, AND, OR, etc.)",
-                "A = Table('table_name');"
-                    + " B = A.Selection(cf_name1 > 100 [AND cf_name2 = 'string_value']);" });
-
-    // Aggregation Functions
-    // TODO : and apply aggregate function independently to each group of rows
-    load.put("GROUP", new String[] {
-        "Group rows by value of an attribute",
-        "A = Table('table_name');"
-            + " B = Group A by ('cf_name1'[, 'cf_name2']);" });
-
     return load;
   }
 
