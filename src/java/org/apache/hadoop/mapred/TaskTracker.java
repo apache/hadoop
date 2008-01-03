@@ -958,12 +958,25 @@ public class TaskTracker
     return State.NORMAL;
   }
 
+  private long previousUpdate = 0;
+
   /**
    * Build and transmit the heart beat to the JobTracker
    * @return false if the tracker was unknown
    * @throws IOException
    */
   private HeartbeatResponse transmitHeartBeat() throws IOException {
+    // Send Counters in the status once every COUNTER_UPDATE_INTERVAL
+    long now = System.currentTimeMillis();
+    boolean sendCounters;
+    if (now > (previousUpdate + COUNTER_UPDATE_INTERVAL)) {
+      sendCounters = true;
+      previousUpdate = now;
+    }
+    else {
+      sendCounters = false;
+    }
+
     // 
     // Check if the last heartbeat got through... 
     // if so then build the heartbeat information for the JobTracker;
@@ -972,7 +985,9 @@ public class TaskTracker
     if (status == null) {
       synchronized (this) {
         status = new TaskTrackerStatus(taskTrackerName, localHostname, 
-                                       httpPort, cloneAndResetRunningTaskStatuses(), 
+                                       httpPort, 
+                                       cloneAndResetRunningTaskStatuses(
+                                         sendCounters), 
                                        failures, 
                                        maxCurrentMapTasks,
                                        maxCurrentReduceTasks); 
@@ -2060,10 +2075,16 @@ public class TaskTracker
     return taskTrackerName;
   }
     
-  private synchronized List<TaskStatus> cloneAndResetRunningTaskStatuses() {
+  private synchronized List<TaskStatus> cloneAndResetRunningTaskStatuses(
+                                          boolean sendCounters) {
     List<TaskStatus> result = new ArrayList<TaskStatus>(runningTasks.size());
     for(TaskInProgress tip: runningTasks.values()) {
       TaskStatus status = tip.getStatus();
+      status.setIncludeCounters(sendCounters);
+      // send counters for finished or failed tasks.
+      if (status.getRunState() != TaskStatus.State.RUNNING) {
+        status.setIncludeCounters(true);
+      }
       result.add((TaskStatus)status.clone());
       status.clearStatus();
     }

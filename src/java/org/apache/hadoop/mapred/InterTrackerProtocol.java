@@ -39,8 +39,9 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * TaskTrackerStatus for HADOOP-1274
    * Version 8: HeartbeatResponse is added with the next heartbeat interval.
    * version 9 changes the counter representation for HADOOP-2248
+   * version 10 changes the TaskStatus representation for HADOOP-2208
    */
-  public static final long versionID = 9L;
+  public static final long versionID = 10L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;

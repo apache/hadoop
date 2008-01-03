@@ -55,6 +55,7 @@ abstract class TaskStatus implements Writable, Cloneable {
     
   private Phase phase = Phase.STARTING; 
   private Counters counters;
+  private boolean includeCounters;
 
   public TaskStatus() {}
 
@@ -70,6 +71,7 @@ abstract class TaskStatus implements Writable, Cloneable {
     this.taskTracker = taskTracker;
     this.phase = phase;
     this.counters = counters;
+    this.includeCounters = true;
   }
   
   public String getTaskId() { return taskid; }
@@ -181,6 +183,15 @@ abstract class TaskStatus implements Writable, Cloneable {
     }
     this.phase = phase; 
   }
+  
+  public boolean getIncludeCounters() {
+    return includeCounters; 
+  }
+  
+  public void setIncludeCounters(boolean send) {
+    includeCounters = send;
+  }
+  
   /**
    * Get task's counters.
    */
@@ -281,7 +292,10 @@ abstract class TaskStatus implements Writable, Cloneable {
     WritableUtils.writeEnum(out, phase);
     out.writeLong(startTime);
     out.writeLong(finishTime);
-    counters.write(out);
+    out.writeBoolean(includeCounters);
+    if (includeCounters) {
+      counters.write(out);
+    }
   }
 
   public void readFields(DataInput in) throws IOException {
@@ -294,7 +308,10 @@ abstract class TaskStatus implements Writable, Cloneable {
     this.startTime = in.readLong(); 
     this.finishTime = in.readLong(); 
     counters = new Counters();
-    counters.readFields(in);
+    this.includeCounters = in.readBoolean();
+    if (includeCounters) {
+      counters.readFields(in);
+    }
   }
   
   //////////////////////////////////////////////////////////////////////////////

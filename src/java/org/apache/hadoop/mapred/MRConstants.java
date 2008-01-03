@@ -29,6 +29,8 @@ interface MRConstants {
   
   public static final int CLUSTER_INCREMENT = 50;
 
+  public static final long COUNTER_UPDATE_INTERVAL = 60 * 1000;
+
   //for the inmemory filesystem (to do in-memory merge)
   /**
    * Constant denoting when a merge of in memory files will be triggered 
