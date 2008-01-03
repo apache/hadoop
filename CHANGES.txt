@@ -331,7 +331,7 @@ Trunk (unreleased changes)
     to work on more platforms. (Raghu Angadi via nigel)
 
     HADOOP-2488. Fix a regression in random read performance.
-    (Mickael Stack via rangadi)
+    (Michael Stack via rangadi)
 
 Release 0.15.2 - 2008-01-02
 
