@@ -144,6 +144,9 @@ Trunk (unreleased changes)
     performance. Make NullWritable implement Comparable. Make TextOutputFormat
     treat NullWritable like null. (omalley)
 
+    HADOOP-1719. Improves the utilization of shuffle copier threads.
+    (Amar Kamat via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
