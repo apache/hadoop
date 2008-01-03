@@ -389,7 +389,7 @@ public class RawLocalFileSystem extends FileSystem {
 
     @Override
     public String getGroup() {
-      if (isPermissionLoaded()) {
+      if (!isPermissionLoaded()) {
         loadPermissionInfo();
       }
       return super.getGroup();
@@ -447,10 +447,13 @@ public class RawLocalFileSystem extends FileSystem {
       throw new IOException("username == null && groupname == null");
     }
 
-    //[OWNER][:[GROUP]]
-    String s = (username == null? "": username)
-             + (groupname == null? "": ":" + groupname);
-    execCommand(pathToFile(p), Shell.SET_OWNER_COMMAND, s);
+    if (username == null) {
+      execCommand(pathToFile(p), Shell.SET_GROUP_COMMAND, groupname); 
+    } else {
+      //OWNER[:[GROUP]]
+      String s = username + (groupname == null? "": ":" + groupname);
+      execCommand(pathToFile(p), Shell.SET_OWNER_COMMAND, s);
+    }
   }
 
   /**

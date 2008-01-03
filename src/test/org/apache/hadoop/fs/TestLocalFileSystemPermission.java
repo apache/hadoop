@@ -118,9 +118,9 @@ public class TestLocalFileSystemPermission extends TestCase {
       System.out.println("Cannot run test");
       return;
     }
-    if (groups == null || groups.size() < 2) {
-      System.out.println("Cannot run test: need at least two groups.  groups="
-          + groups);
+    if (groups == null || groups.size() < 1) {
+      System.out.println("Cannot run test: need at least one group.  groups="
+                         + groups);
       return;
     }
 
@@ -130,10 +130,15 @@ public class TestLocalFileSystemPermission extends TestCase {
       localfs.setOwner(f, null, g0);
       assertEquals(g0, getGroup(localfs, f));
 
-      String g1 = groups.get(1);
-      localfs.setOwner(f, null, g1);
-      assertEquals(g1, getGroup(localfs, f));
-    }
+      if (groups.size() > 1) {
+        String g1 = groups.get(1);
+        localfs.setOwner(f, null, g1);
+        assertEquals(g1, getGroup(localfs, f));
+      } else {
+        System.out.println("Not testing changing the group since user " +
+                           "belongs to only one group.");
+      }
+    } 
     finally {cleanupFile(localfs, f);}
   }
 

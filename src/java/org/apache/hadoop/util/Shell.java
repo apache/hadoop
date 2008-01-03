@@ -47,11 +47,17 @@ abstract public class Shell {
   public static final String SET_PERMISSION_COMMAND = "chmod";
   /** a Unix command to set owner */
   public static final String SET_OWNER_COMMAND = "chown";
+  public static final String SET_GROUP_COMMAND = "chgrp";
   /** Return a Unix command to get permission information. */
   public static String[] getGET_PERMISSION_COMMAND() {
-    return new String[]{"ls", "-ld"};
+    //force /bin/ls, except on windows.
+    return new String[] {(WINDOWS ? "ls" : "/bin/ls"), "-ld"};
   }
 
+  /** Set to true on Windows platforms */
+  public static final boolean WINDOWS /* borrowed from Path.WINDOWS */
+                = System.getProperty("os.name").startsWith("Windows");
+  
   private long    interval;   // refresh interval in msec
   private long    lastTime;   // last time the command was performed
   private Map<String, String> environment; // env for the command execution
