@@ -302,6 +302,64 @@ public class TestDFSShell extends TestCase {
   }
 
   /**
+   * Test chmod, getOwner(). 
+   * How do we test chown and chgrp?
+   */
+  public void testFilePermissions() throws IOException {
+    Configuration conf = new Configuration();
+    //Temperorily use LocalFileSystem until HADOOP-1298 is committed
+    conf.set("fs.default.name", "local");
+    FileSystem fs = FileSystem.getLocal(conf);
+    
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+    
+    try {
+     String chmodDir = (new File(TEST_ROOT_DIR, "chmodTest")).getAbsolutePath(); 
+     
+     //first make dir
+     Path dir = new Path(chmodDir);
+     fs.delete(dir);
+     fs.mkdirs(dir);
+
+     shell.run(new String[]{ "-chmod", "u+rwx,g=rw,o-rwx", chmodDir });
+     assertEquals("rwxrw----",
+                  fs.getFileStatus(dir).getPermission().toString());
+
+     //create an empty file
+     Path file = new Path(chmodDir, "file");
+     TestDFSShell.createLocalFile(new File(file.toString()));
+
+     //test octal mode
+     shell.run(new String[]{ "-chmod", "644", file.toString()});
+     assertEquals("rw-r--r--",
+                  fs.getFileStatus(file).getPermission().toString());
+
+     //test recursive
+     shell.run(new String[]{ "-chmod", "-R", "a+rwX", chmodDir });
+     assertEquals("rwxrwxrwx",
+                  fs.getFileStatus(dir).getPermission().toString()); 
+     assertEquals("rw-rw-rw-",
+                  fs.getFileStatus(file).getPermission().toString());
+     
+     //test username
+     assertEquals(System.getProperty("user.name"), 
+                  fs.getFileStatus(file).getOwner());
+
+     fs.delete(dir);     
+    } catch (IOException e) {
+      throw e;
+    } catch (RuntimeException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new IOException(StringUtils.stringifyException(e));
+    } finally {
+      shell.close();
+      fs.close();
+    }
+    
+  }
+  /**
    * Tests various options of DFSShell.
    */
   public void testDFSShell() throws IOException {

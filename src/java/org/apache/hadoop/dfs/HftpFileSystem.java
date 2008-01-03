@@ -143,11 +143,15 @@ public class HftpFileSystem extends FileSystem {
               Long.valueOf(attrs.getValue("size")).longValue(), false,
               Short.valueOf(attrs.getValue("replication")).shortValue(),
               Long.valueOf(attrs.getValue("blocksize")).longValue(),
-              modif, new Path("hftp", fshostname + ":" + fsport,
-              attrs.getValue("path")))
+              modif, FsPermission.valueOf(attrs.getValue("permission")),
+              attrs.getValue("owner"), attrs.getValue("group"),
+              new Path("hftp", fshostname + ":" + fsport, 
+                       attrs.getValue("path")))
         : new FileStatus(0L, true, 0, 0L,
-              modif, new Path("hftp", fshostname + ":" + fsport,
-              attrs.getValue("path")));
+              modif, FsPermission.valueOf(attrs.getValue("permission")),
+              attrs.getValue("owner"), attrs.getValue("group"),
+              new Path("hftp", fshostname + ":" + fsport, 
+                       attrs.getValue("path")));
       fslist.add(fs);
     }
 

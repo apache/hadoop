@@ -169,6 +169,7 @@ public class DistributedFileSystem extends FileSystem {
       DFSFileInfo f = (DFSFileInfo)infos[i];
       stats[i] = new FileStatus(f.getLen(), f.isDir(), f.getReplication(),
                                 f.getBlockSize(), f.getModificationTime(),
+                                f.getPermission(), f.getOwner(), f.getGroup(),
                                 new DfsPath(f, this)); // fully-qualify path
     }
     return stats;

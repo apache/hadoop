@@ -23,7 +23,6 @@ import org.znerd.xmlenc.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -31,7 +30,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
 import java.util.TimeZone;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import javax.servlet.ServletException;
@@ -66,6 +64,9 @@ public class ListPathsServlet extends HttpServlet {
       doc.attribute("replication", String.valueOf(i.getReplication()));
       doc.attribute("blocksize", String.valueOf(i.getBlockSize()));
     }
+    doc.attribute("permission", i.getPermission().toString());
+    doc.attribute("owner", i.getOwner());
+    doc.attribute("group", i.getGroup());
     doc.endTag();
   }
 
