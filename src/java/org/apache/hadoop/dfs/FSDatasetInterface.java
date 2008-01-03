@@ -18,6 +18,7 @@
 package org.apache.hadoop.dfs;
 
 
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -50,23 +51,12 @@ public interface FSDatasetInterface {
    * of a block
    *
    */
-  static class MetaDataInputStream extends java.io.InputStream {
+  static class MetaDataInputStream extends FilterInputStream {
     MetaDataInputStream(InputStream stream, long len) {
-      inStream = stream;
+      super(stream);
       length = len;
     }
-    private InputStream inStream;
     private long length;
-    
-    @Override
-    public int read() throws IOException {
-      return inStream.read();
-    }
-    
-    @Override
-    public int read(byte[] b, int off, int len) throws IOException {
-      return inStream.read(b, off, len);
-    }
     
     public long getLength() {
       return length;
