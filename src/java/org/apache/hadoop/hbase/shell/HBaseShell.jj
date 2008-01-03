@@ -101,7 +101,6 @@ TOKEN: /** for HQL statements */
    | <AND: "and">
    | <OR:  "or">
    | <COMMA: ",">
-   | <DOT: ".">
    | <LPAREN: "(">
    | <RPAREN: ")">
    | <EQUALS: "=">
@@ -126,20 +125,11 @@ TOKEN: /** for HQL statements */
    | <NUM_ENTRIES: "num_entries">
    | <ADD: "add">
    | <CHANGE: "change">
-   | <META_TABLE: ".META.">
-   | <ROOT_TABLE: "-ROOT-">
-}
-
-TOKEN : 
-{
-     <SAVE: "save">
-   | <GROUP: "group">
-   | <BY: "by">
 }
 
 TOKEN : /** Literals */
 {
-   <ID: ["A"-"Z","a"-"z","_","-",":","/","~"] (["A"-"Z","a"-"z","0"-"9","_","-",":","/","~"])* >
+   <ID: ["A"-"Z","a"-"z","_","-",":","/","~","."] (["A"-"Z","a"-"z","0"-"9","_","-",":","/","~","."])* >
  | <INTEGER_LITERAL: (["0"-"9"])+ >
  | <FLOATING_POINT_LITERAL:
    (["0"-"9"])+ "." (["0"-"9"])+ (<EXPONENT>)?
@@ -190,8 +180,6 @@ Command cmdStatement() :
       | cmd = clearCommand()
       | cmd = fsCommand()
       | cmd = jarCommand()
-      | cmd = substituteCommand()
-      | cmd = saveCommand()
   )
    {
        return cmd;
@@ -235,7 +223,7 @@ JarCommand jarCommand() :
 {
   <JAR>
   (
-      ( t=<ID> | t=<INTEGER_LITERAL> | t=<DOT> | t=<FLOATING_POINT_LITERAL> )
+      ( t=<ID> | t=<INTEGER_LITERAL> | t=<FLOATING_POINT_LITERAL> )
       { path += t.image.toString(); }
   )*
   t=<JAR>
@@ -274,8 +262,6 @@ HelpCommand helpCommand() :
        | t=<CLEAR>
        | t=<FS>
        | t=<JAR>
-       | t=<GROUP>
-       | t=<SAVE>
        | t=<ID>
      ) { argument = t.image.toString(); }
    ]
@@ -650,96 +636,6 @@ ClearCommand clearCommand() :
    }
 }
 
-SubstituteCommand substituteCommand() :
-{
-  Token key = null;
-  Token chainKey = null;
-  Token operation = null;
-  String tableName = null;
-  String condition = "";
-  List<String> notInList = new ArrayList<String>();
-  SubstituteCommand substitute = new SubstituteCommand(this.out);
-  Token extendedKey = null;
-}
-{
-  key=<ID><EQUALS>
-  { substitute.setKey(key.image.toString()); }
-  (
-      chainKey=<ID><DOT>
-    { substitute.setChainKey(chainKey.image.toString()); }
-      operation = <ID> 
-    { substitute.setOperation(operation.image.toString()); }
-    <LPAREN>
-    {
-      String operationType = operation.image.toLowerCase();
-      if(operationType.equals("projection")) {
-        List<String> columnList = columnList();
-        for (int i = 0; i < columnList.size(); i++) {
-          condition += appendIndicator(columnList.get(i)) + " ";
-        }
-    
-      } else {
-        condition = booleanTerm();
-      }
-      
-      substitute.setCondition(condition);
-    }
-    <RPAREN>
-    [
-      <AND> extendedKey=<ID>
-      {
-        String eKey = extendedKey.image.toString();
-        String cKey = chainKey.image.toString();
-        substitute.setCondition(condition);
-        if (secondR.equals(eKey)) {
-          substitute.resetVariableRelation(eKey, cKey);
-        } else {
-          substitute.resetVariableRelation(cKey, eKey);
-        }
-      }
-    ]
-  | <TABLE><LPAREN>
-    tableName = identifier() 
-    { substitute.setInput(tableName); }
-    <RPAREN>
-  | operation=<GROUP>chainKey=<ID><BY>
-    <LPAREN>
-      { 
-        List<String> columnList = columnList(); 
-        for (int i = 0; i < columnList.size(); i++) {
-          condition += appendIndicator(columnList.get(i));
-        }  
-      }
-    <RPAREN>
-    { 
-      substitute.setChainKey(chainKey.image.toString());
-      substitute.setOperation(operation.image.toString());
-      substitute.setCondition(condition);
-    }
-  )
-  
-  {
-    return substitute;
-  }
-}
-
-SaveCommand saveCommand() :
-{
-  Token t = null;
-  String tableName;
-  SaveCommand save = new SaveCommand(this.out);
-}
-{
-  <SAVE> t=<ID>
-  { save.setStatement(t.image.toString()); }
-  <INTO><TABLE><LPAREN>
-  tableName = identifier() { save.setOutput(tableName); }
-  <RPAREN>
-  {
-    return save;
-  }
-}
-
 List<String> getLiteralValues() :
 {
   List<String> values = new ArrayList<String>();
@@ -872,151 +768,11 @@ String identifier() :
 }
 {
   (
-     ( t=<ID> | t=<META_TABLE> | t=<ROOT_TABLE> )
+     t=<ID>
      { return t.image.toString(); }
    | ( t=<QUOTED_IDENTIFIER> | t=<STRING_LITERAL> )
      { return t.image.substring(1,t.image.toString().length() - 1); }
   )
-}
-
-String booleanTerm() :
-{
-  String query = "";
-  String tmp = null;
-  String joinTerm = null;
-  String connector = null;
-}
-{
-  query = booleanTerms()
-  {
-    if(query.endsWith(".ROW")) {
-      joinTerm = query;
-      query = "";
-    }
-  }
-  (
-      (
-       <AND> { connector = " AND ";  }
-       | <OR> { connector = " OR "; }
-      ) tmp = booleanTerms() { 
-     if(tmp.endsWith(".ROW")) {
-      joinTerm = tmp; 
-     } else {
-       if(!query.equals(""))
-         query += connector;
-        query += tmp; 
-     }
-      }
-  )*
-  { 
-    if(joinTerm != null) {
-      return joinTerm + " BOOL " + query;
-    } else {
-      return query;
-    }
-  }
-}
-
-String booleanTerms() : 
-{
-  Token tSearchName, tComparand;
-  List<String> inList = new ArrayList<String>();
-  String searchName=null,comparator=null,comparand=null;
-  Token joinColumn = null;
-  Token joinKey = null;
-  String result = null;
-}
-{
-  ( 
-    tSearchName=<ID> { searchName = tSearchName.image.toString(); }
-    [
-      <DOT> 
-      (  
-        joinColumn=<ID>
-        { searchName += "." + joinColumn.image.toString(); }
-        | <ROW>
-        { 
-          secondR = searchName;
-          searchName += ".ROW";
-        }
-      )
-    ]
-  )
-  comparator = getComparator()
-  (
-     tComparand=<INTEGER_LITERAL> 
-      { comparand = tComparand.image.toString(); }
-    | tComparand=<STRING_LITERAL> 
-      { comparand = tComparand.image.substring(1,tComparand.image.length() - 1); }
-    | tComparand=<ID>
-     { comparand = tComparand.image.toString(); }
-      [
-        <DOT>
-      (
-          <ROW>
-          { 
-            secondR = comparand;
-            comparand += ".ROW"; 
-            }
-          | joinColumn=<ID>
-          { comparand += "." + joinColumn.image.toString(); }
-      )
-      ]
-    | inList = getColumns()
-    { 
-      if(comparator == null) {
-        comparator = "==";
-      }
-      comparand = "";
-      try{
-        for(int i=0; i<inList.size(); i++) {     
-          comparand += URLEncoder.encode(inList.get(i), "UTF-8");
-          if(inList.size() != (i+1)) { comparand += "|"; }
-        }
-      } catch (UnsupportedEncodingException e) {
-          e.printStackTrace();
-      }
-    }
-  )
-   { 
-    if(searchName.endsWith(".ROW")) {
-      result = appendIndicator(comparand) 
-      + " " + comparator + " " + searchName;
-    } else {
-      result = appendIndicator(searchName) 
-      + " " + comparator + " " + comparand;
-    }
-    
-     return result; 
-   }
-}
-
-String getComparator() :
-{
-  Token t = null;
-  String comparator = null;
-}
-{
-  (  
-      t=<LCOMP> 
-        { comparator = t.image.toString(); } 
-      [<EQUALS> { comparator += "="; }]
-    | t=<RCOMP> 
-        { comparator = t.image.toString(); } 
-      [<EQUALS> { comparator += "="; }]
-    | t=<EQUALS> 
-        { comparator = t.image.toString(); }
-      [<LCOMP> { comparator = ">" + comparator; } ]
-      [<RCOMP> { comparator = "<" + comparator; } ]
-    | t=<NOTEQUAL>
-        { comparator = t.image.toString(); }
-    | <NOT><IN>
-        { comparator = "!!"; }
-    | <IN>
-        { comparator = "=="; }
-  )
-  
-  { return comparator; }
 }
 
 String appendIndicator(String columnName) :

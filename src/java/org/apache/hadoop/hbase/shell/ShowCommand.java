@@ -45,7 +45,8 @@ public class ShowCommand extends BasicCommand {
     this(o, f, null);
   }
 
-  public ShowCommand(final Writer o, final TableFormatter f, final String argument) {
+  public ShowCommand(final Writer o, final TableFormatter f,
+      final String argument) {
     super(o);
     this.formatter = f;
     this.command = argument;
@@ -58,46 +59,18 @@ public class ShowCommand extends BasicCommand {
     try {
       HBaseAdmin admin = new HBaseAdmin(conf);
       int tableLength = 0;
-      if ("tables".equals(this.command)) {
-        HTableDescriptor[] tables = admin.listTables();
-        tableLength = tables.length;
-        if (tableLength == 0) {
-          return new ReturnMsg(0, "No tables found.");
-        }
-        formatter.header(HEADER);
-        for (int i = 0; i < tableLength; i++) {
-          String tableName = tables[i].getName().toString();
-          formatter.row(new String[] { tableName, tables[i].toString() });
-        }
-        formatter.footer();
-        return new ReturnMsg(1, tableLength + " table(s) in set.");
-      } else {
-        Map<String, VariableRef> refer = VariablesPool.get(command);
-        if (refer == null) {
-          return new ReturnMsg(0, "Unknown arguments.");
-        }
-
-        String msg = null;
-        for (Map.Entry<String, VariableRef> e : refer.entrySet()) {
-          msg = command + " = ";
-          if (e.getKey() != null) {
-            msg += e.getKey() + ".";
-          }
-          msg += e.getValue().getOperation() + "(";
-          if (e.getValue().getOperation().equals("projection")) {
-            String[] proj = e.getValue().getArgument().split(" ");
-            for (int i = 0; i < proj.length; i++) {
-              msg += "'" + proj[i] + "'";
-              if (i + 1 != proj.length)
-                msg += ", ";
-            }
-          } else {
-            msg += e.getValue().getArgument().replace(" BOOL ", " and ");
-          }
-          msg += ");\n";
-        }
-        return new ReturnMsg(0, msg);
+      HTableDescriptor[] tables = admin.listTables();
+      tableLength = tables.length;
+      if (tableLength == 0) {
+        return new ReturnMsg(0, "No tables found.");
       }
+      formatter.header(HEADER);
+      for (int i = 0; i < tableLength; i++) {
+        String tableName = tables[i].getName().toString();
+        formatter.row(new String[] { tableName, tables[i].toString() });
+      }
+      formatter.footer();
+      return new ReturnMsg(1, tableLength + " table(s) in set.");
     } catch (IOException e) {
       return new ReturnMsg(0, "error msg : " + e.toString());
     }

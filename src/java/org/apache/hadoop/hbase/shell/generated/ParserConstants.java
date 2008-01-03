@@ -34,42 +34,36 @@ public interface ParserConstants {
   int AND = 32;
   int OR = 33;
   int COMMA = 34;
-  int DOT = 35;
-  int LPAREN = 36;
-  int RPAREN = 37;
-  int EQUALS = 38;
-  int LCOMP = 39;
-  int RCOMP = 40;
-  int NOT = 41;
-  int IN = 42;
-  int NOTEQUAL = 43;
-  int ASTERISK = 44;
-  int MAX_VERSIONS = 45;
-  int MAX_LENGTH = 46;
-  int COMPRESSION = 47;
-  int NONE = 48;
-  int BLOCK = 49;
-  int RECORD = 50;
-  int IN_MEMORY = 51;
-  int BLOOMFILTER = 52;
-  int COUNTING_BLOOMFILTER = 53;
-  int RETOUCHED_BLOOMFILTER = 54;
-  int VECTOR_SIZE = 55;
-  int NUM_HASH = 56;
-  int NUM_ENTRIES = 57;
-  int ADD = 58;
-  int CHANGE = 59;
-  int META_TABLE = 60;
-  int ROOT_TABLE = 61;
-  int SAVE = 62;
-  int GROUP = 63;
-  int BY = 64;
-  int ID = 65;
-  int INTEGER_LITERAL = 66;
-  int FLOATING_POINT_LITERAL = 67;
-  int EXPONENT = 68;
-  int QUOTED_IDENTIFIER = 69;
-  int STRING_LITERAL = 70;
+  int LPAREN = 35;
+  int RPAREN = 36;
+  int EQUALS = 37;
+  int LCOMP = 38;
+  int RCOMP = 39;
+  int NOT = 40;
+  int IN = 41;
+  int NOTEQUAL = 42;
+  int ASTERISK = 43;
+  int MAX_VERSIONS = 44;
+  int MAX_LENGTH = 45;
+  int COMPRESSION = 46;
+  int NONE = 47;
+  int BLOCK = 48;
+  int RECORD = 49;
+  int IN_MEMORY = 50;
+  int BLOOMFILTER = 51;
+  int COUNTING_BLOOMFILTER = 52;
+  int RETOUCHED_BLOOMFILTER = 53;
+  int VECTOR_SIZE = 54;
+  int NUM_HASH = 55;
+  int NUM_ENTRIES = 56;
+  int ADD = 57;
+  int CHANGE = 58;
+  int ID = 59;
+  int INTEGER_LITERAL = 60;
+  int FLOATING_POINT_LITERAL = 61;
+  int EXPONENT = 62;
+  int QUOTED_IDENTIFIER = 63;
+  int STRING_LITERAL = 64;
 
   int DEFAULT = 0;
 
@@ -109,7 +103,6 @@ public interface ParserConstants {
     "\"and\"",
     "\"or\"",
     "\",\"",
-    "\".\"",
     "\"(\"",
     "\")\"",
     "\"=\"",
@@ -134,11 +127,6 @@ public interface ParserConstants {
     "\"num_entries\"",
     "\"add\"",
     "\"change\"",
-    "\".META.\"",
-    "\"-ROOT-\"",
-    "\"save\"",
-    "\"group\"",
-    "\"by\"",
     "<ID>",
     "<INTEGER_LITERAL>",
     "<FLOATING_POINT_LITERAL>",

@@ -5,6 +5,8 @@ Trunk (unreleased changes)
   INCOMPATIBLE CHANGES
    HADOOP-2056 A table with row keys containing colon fails to split regions
    HADOOP-2079 Fix generated HLog, HRegion names
+   HADOOP-2495 Minor performance improvements: Slim-down BatchOperation, etc. 
+   HADOOP-2506 Remove the algebra package
 
   NEW FEATURES
     HADOOP-2061 Add new Base64 dialects
@@ -22,7 +24,6 @@ Trunk (unreleased changes)
    HADOOP-2479 Save on number of Text object creations
    HADOOP-2485 Make mapfile index interval configurable (Set default to 32
                instead of 128)
-   HADOOP-2495 Minor performance improvements: Slim-down BatchOperation, etc. 
 
   BUG FIXES
    HADOOP-2059 In tests, exceptions in min dfs shutdown should not fail test
