@@ -129,7 +129,7 @@ public class ScannerHandler extends GenericHandler {
   public void doDelete(HttpServletRequest request, HttpServletResponse response, 
     String[] pathSegments)
   throws ServletException, IOException {
-    doMethodNotAllowed(response, "Not hooked back up yet!");    
+    deleteScanner(response, pathSegments[2]);
   }
   
   /*
