@@ -1,0 +1,330 @@
+#Licensed to the Apache Software Foundation (ASF) under one
+#or more contributor license agreements.  See the NOTICE file
+#distributed with this work for additional information
+#regarding copyright ownership.  The ASF licenses this file
+#to you under the Apache License, Version 2.0 (the
+#"License"); you may not use this file except in compliance
+#with the License.  You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+#Unless required by applicable law or agreed to in writing, software
+#distributed under the License is distributed on an "AS IS" BASIS,
+#WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#See the License for the specific language governing permissions and
+#limitations under the License.
+#!/bin/sh
+""":"
+work_dir=$(dirname $0)
+base_name=$(basename $0)
+cd $work_dir
+
+if [ $HOD_PYTHON_HOME ]; then
+    exec $HOD_PYTHON_HOME -OO $base_name ${1+"$@"}
+elif [ -e /usr/bin/python ]; then
+    exec /usr/bin/python -OO $base_name ${1+"$@"}
+elif [ -e /usr/local/bin/python ]; then
+    exec /usr/local/bin/python -OO $base_name ${1+"$@"}
+else
+    exec python -OO $base_name ${1+"$@"}
+fi
+":"""
+
+"""The executable to be used by the user"""
+import sys, os, re, getpass
+
+myName          = os.path.basename(sys.argv[0])
+myName          = re.sub(".*/", "", myName)
+binDirectory    = os.path.realpath(sys.argv[0])
+rootDirectory   = re.sub("/bin/.*", "", binDirectory)
+libDirectory    = rootDirectory
+
+sys.path.append(libDirectory)
+
+from hodlib.RingMaster.ringMaster import main
+from hodlib.Common.setup import *
+from hodlib.Common.descGenerator import *
+from hodlib.Common.util import local_fqdn, filter_warnings
+from hodlib.Common.logger import hodLog
+from hodlib.Common.util import get_exception_string, get_exception_error_string
+
+filter_warnings()
+
+reVersion = re.compile(".*(\d+_\d+).*")
+
+VERSION = '$HeadURL$'
+
+reMatch = reVersion.match(VERSION)
+if reMatch:
+    VERSION = reMatch.group(1)
+    VERSION = re.sub("_", ".", VERSION)
+else:
+    VERSION = 'DEV'
+
+# Definition tuple is of the form:
+#  (name, type, description, default value, required?, validate?)
+#
+defList = { 'ringmaster' : (
+             ('work-dirs', 'list', 'hod work directories',
+              False, None, True, False),
+
+             ('temp-dir', 'directory', 'Ringmaster temporary directory.',
+              False, None, True, False),
+              
+             ('log-dir', 'directory', 'hod logging directory.', 
+              False, os.path.join(rootDirectory, 'logs'), False, True),
+              
+             ('syslog-address', 'address', 'Syslog address.',
+              False, None, False, True),
+               
+             ('xrs-port-range', 'range', 'XML-RPC port range n-m.',
+              False, None, True, True),
+              
+             ('http-port-range', 'range', 'HTTP port range n-m.',
+              False, None, True, True),
+              
+             ('debug', 'pos_int', 'Debugging level, 0-4.',
+              False, 3, True,   True),
+               
+             ('register', 'bool', 'Register with service registry?',
+              False, True, True, True),
+               
+             ('stream', 'bool', 'Output to stderr.',
+              False, False, False, True),
+              
+             ('userid', 'user_account', 
+              'User ID the hod shell is running under.',
+              False, None, True, False),
+               
+             ('svcrgy-addr', 'address', 'Download HTTP address.',
+              False, None, False, True),             
+             
+             ('hadoop-tar-ball', 'string', 'hadoop program tar ball.',
+              False, None, False, False),
+        
+             ('max-connect','pos_int','max connections allowed for a single tarball server',
+             False, 30, False, True),
+
+             ('jt-poll-interval', 'pos_int', 'How often to poll the Job tracker for idleness',
+             False, 120, False, True),
+
+             ('idleness-limit', 'pos_int', 'Limit after which to deallocate the cluster',
+             False, 3600, False, True)),
+
+            'resource_manager' : (
+             ('id', 'string', 'Batch scheduler ID: torque|condor.',
+              False, None, True, True),
+
+             ('pbs-user', 'user_account', 'User ID jobs are submitted under.',
+              False, None, False, True),
+
+             ('pbs-server', 'hostname', 'Hostname of PBS server.',
+              False, None, False, True),    
+
+             ('pbs-account', 'string', 'User Account jobs are submitted under.',
+              False, None, True, False),
+
+             ('queue', 'string', 'Queue of the batch scheduler to query.',
+              False, None, False, False),
+              
+             ('batch-home', 'directory', 'Scheduler installation directory.',
+              False, None, True, True),
+             
+             ('options', 'keyval', 'Options to pass to the scheduler.',
+              False, None, False, True),                    
+
+             ('env-vars', 'keyval', 'Environment variables to pass to the submitted jobs.',
+              False, None, False, True)),
+
+            'gridservice-mapred' : (   
+             ('external', 'bool', "Connect to an already running MapRed?",
+              False, False, True, True),
+                          
+             ('host', 'hostname', 'Mapred hostname.', 
+              False, 'localhost', False, True),
+
+             ('info_port', 'pos_int', 'Mapred info port.',
+              False, None, True, True), 
+             
+             ('tracker_port', 'pos_int', 'Mapred job tracker port.',
+              False, None, True, True),                  
+                          
+             ('cmdline-params', 'keyval', 'Hadoop cmdline key/value list.',
+              False, None, False, False),
+
+             ('server-params', 'keyval', 'Hadoop xml key/value list',
+              False, None, False, False),
+
+             ('final-server-params', 'keyval', 'Hadoop final xml params',
+              False, None, False, False),
+              
+             ('envs', 'keyval', 'environment to run this package in',
+              False, None, False, False),
+              
+             ('java-opts', 'keyval', 'java jvm options',
+              False, None, False, False),
+               
+             ('pkgs', 'directory', "directory where the package is installed",
+              False, None, False, True)), 
+               
+               
+            'gridservice-hdfs' : (
+             ('external', 'bool', "Connect to an already running HDFS?",
+              False, False, True, True),
+              
+             ('host', 'hostname', 'HDFS hostname.', 
+              False, 'localhost', True, True),
+             
+             ('fs_port', 'pos_int', 'HDFS port range.',
+              False, None, True, True),
+              
+             ('info_port', 'pos_int', 'HDFS info port.',
+              False, None, True, True), 
+             
+             ('cmdline-params', 'keyval', 'Hadoop cmdline key/value list.',
+              False, None, False, False),
+
+             ('server-params', 'keyval', 'Hadoop xml key/value list',
+              False, None, False, False),
+
+             ('final-server-params', 'keyval', 'Hadoop final xml params',
+              False, None, False, False),
+           
+             ('envs', 'keyval', 'Environment in which to run this package.',
+              False, None, False, False),
+
+             ('java-opts', 'list', 'java jvm options',
+              False, None, False, False),
+            
+             ('pkgs', 'directory', "directory where the package is installed",
+              False, None, False, True)),          
+             
+             
+            'hodring' : (
+             ('temp-dir', 'directory', 'hod work directories',
+              False, None, True, False),
+              
+             ('log-dir', 'directory', 'hod logging directory.', 
+              False, os.path.join(rootDirectory, 'logs'), False, False), 
+
+             ('log-destination-uri', 'string', 
+              'URI to store logs to, local://some_path or '
+              + 'hdfs://host:port/some_path', 
+              False, None, False, True),             
+
+             ('pkgs', 'directory', 'Path to Hadoop to use in case of uploading to HDFS',
+              False, None, False, True),
+              
+             ('syslog-address', 'address', 'Syslog address.',
+              False, None, False, True),
+          
+             ('java-home', 'directory', 'Java home directory.',
+              False, None, True, False),
+              
+             ('debug', 'pos_int', 'Debugging level, 0-4.',
+              False, 3, True, True),
+               
+             ('register', 'bool', 'Register with service registry?',
+              False, True, True, True),
+               
+             ('stream', 'bool', 'Output to stderr.',
+              False, False, False, True),
+
+             ('userid', 'user_account', 
+              'User ID the hod shell is running under.',
+              False, None, True, False),
+
+             ('xrs-port-range', 'range', 'XML-RPC port range n-m.',
+              False, None, True, True),
+               
+             ('http-port-range', 'range', 'HTTP port range n-m.',
+              False, None, True, True),
+               
+             ('command', 'string', 'Command for hodring to run.',
+              False, None, False, True),
+              
+             ('service-id', 'string', 'Service ID.',
+              False, None, False, True),
+              
+             ('download-addr', 'address', 'Download HTTP address.',
+              False, None, False, True),
+               
+             ('svcrgy-addr', 'address', 'Download HTTP address.',
+              False, None, False, True),
+    
+             ('ringmaster-xrs-addr', 'address', 'Ringmaster XML-RPC address.',
+              False, None, False, True),
+ 
+             ('tarball-retry-initial-time', 'pos_float','initial retry time for tarball download',
+              False, 1, False, True),
+              
+             ('tarball-retry-interval', 'pos_float','interval to spread retries for tarball download',
+              False, 3, False, True),
+              
+             ('cmd-retry-initial-time', 'pos_float','initial retry time for getting commands',
+              False, 2, False, True),
+             
+             ('cmd-retry-interval', 'pos_float','interval to spread retries for getting commands',
+              False, 2, False, True)) 
+
+              }   
+
+             
+defOrder = [ 'ringmaster', 'hodring', 'resource_manager', 
+             'gridservice-mapred', 'gridservice-hdfs' ]
+
+def getLogger(cfg):
+  user = cfg['userid']
+  baseLogger = hodLog('ringmaster')
+  log = baseLogger.add_logger('main')
+  
+  if cfg['stream']:
+    baseLogger.add_stream(level=cfg['debug'], addToLoggerNames=('main',))
+
+  if cfg.has_key('log-dir'):
+    serviceId = os.getenv('PBS_JOBID')
+    if serviceId:
+      logDir = os.path.join(cfg['log-dir'], "%s.%s" % (user, serviceId))
+    else:
+      logDir = os.path.join(cfg['log-dir'], user) 
+    if not os.path.exists(logDir):
+      os.mkdir(logDir)
+
+    baseLogger.add_file(logDirectory=logDir, level=cfg['debug'], 
+             addToLoggerNames=('main',))
+
+  if cfg.has_key('syslog-address'):
+    baseLogger.add_syslog(cfg['syslog-address'], 
+      level=cfg['debug'], addToLoggerNames=('main',))
+    
+  return log
+
+def ensureLogDir(logDir):
+  """Verify that the passed in log directory exists, and if it doesn't
+  create it."""
+  if not os.path.exists(logDir):
+    try:
+      old_mask = os.umask(0)
+      os.makedirs(logDir, 01777)
+      os.umask(old_mask)
+    except Exception, e:
+      print >>sys.stderr, "Could not create log directories %s. Exception: %s. Stack Trace: %s" % (logDir, get_exception_error_string(), get_exception_string())
+      raise e
+      
+
+if __name__ == '__main__':
+  confDef = definition()
+  confDef.add_defs(defList, defOrder)
+  ringMasterOptions = options(confDef, "./%s [OPTIONS]" % myName, VERSION)
+  ensureLogDir(ringMasterOptions['ringmaster']['log-dir'])
+  log = getLogger(ringMasterOptions['ringmaster'])
+
+  try:
+    (status, statusMsgs) = ringMasterOptions.verify()
+    if not status:
+      raise Exception("%s" % statusMsgs)
+    ringMasterOptions['ringmaster']['base-dir'] = rootDirectory 
+    main(ringMasterOptions,log)
+    sys.exit(0)
+  except Exception, e:
+    log.error("bin/ringmaster failed to start.%s. Stack trace follows:\n%s" % (get_exception_error_string(),get_exception_string()))

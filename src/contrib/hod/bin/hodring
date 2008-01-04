@@ -1,0 +1,198 @@
+#Licensed to the Apache Software Foundation (ASF) under one
+#or more contributor license agreements.  See the NOTICE file
+#distributed with this work for additional information
+#regarding copyright ownership.  The ASF licenses this file
+#to you under the Apache License, Version 2.0 (the
+#"License"); you may not use this file except in compliance
+#with the License.  You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+#Unless required by applicable law or agreed to in writing, software
+#distributed under the License is distributed on an "AS IS" BASIS,
+#WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#See the License for the specific language governing permissions and
+#limitations under the License.
+#!/bin/sh
+""":"
+work_dir=$(dirname $0)
+base_name=$(basename $0)
+cd $work_dir
+
+if [ $HOD_PYTHON_HOME ]; then
+    exec $HOD_PYTHON_HOME -OO $base_name ${1+"$@"}
+elif [ -e /usr/bin/python ]; then
+    exec /usr/bin/python -OO $base_name ${1+"$@"}
+elif [ -e /usr/local/bin/python ]; then
+    exec /usr/local/bin/python -OO $base_name ${1+"$@"}
+else
+    exec python -OO $base_name ${1+"$@"}
+fi
+":"""
+
+"""The executable to be used by the user"""
+import sys, os, re
+
+
+myName          = os.path.basename(sys.argv[0])
+myName          = re.sub(".*/", "", myName)
+binDirectory    = os.path.realpath(sys.argv[0])
+rootDirectory   = re.sub("/bin/.*", "", binDirectory)
+libDirectory    = rootDirectory
+
+sys.path.append(libDirectory)
+
+from hodlib.HodRing.hodRing import HodRing
+from hodlib.Common.setup import *
+from hodlib.Common.util import filter_warnings,get_exception_string, get_exception_error_string
+from hodlib.Common.logger import hodLog
+
+filter_warnings()
+
+reVersion = re.compile(".*(\d+_\d+).*")
+
+VERSION = '$HeadURL$'
+
+reMatch = reVersion.match(VERSION)
+if reMatch:
+    VERSION = reMatch.group(1)
+    VERSION = re.sub("_", ".", VERSION)
+else:
+    VERSION = 'DEV'
+
+# Definition tuple is of the form:
+#  (name, type, description, default value, required?, validate?)
+#
+defList = { 'hodring' : (
+             ('temp-dir', 'directory', 'hod work directories',
+              False, None, True, False),
+              
+             ('log-dir', 'directory', 'hod logging directory.', 
+              False, os.path.join(rootDirectory, 'logs'), False, True), 
+
+             ('log-destination-uri', 'string', 
+              'URI to store logs to, local://some_path or '
+              + 'hdfs://host:port/some_path', 
+              False, None, False, True), 
+
+             ('pkgs', 'directory', 'Path to Hadoop to use in case of uploading to HDFS',
+              False, None, False, True),
+              
+             ('syslog-address', 'address', 'Syslog address.',
+              False, None, False, True),
+          
+             ('java-home', 'directory', 'Java home directory.',
+              False, None, True, True),
+              
+             ('debug', 'pos_int', 'Debugging level, 0-4.',
+              False, 3, True, True),
+               
+             ('register', 'bool', 'Register with service registry?',
+              False, True, True, True),
+               
+             ('stream', 'bool', 'Output to stderr.',
+              False, False, False, True),
+
+             ('userid', 'user_account', 
+              'User ID the hod shell is running under.',
+              False, None, True, False),
+
+             ('xrs-port-range', 'range', 'XML-RPC port range n-m.',
+              False, None, True, True),
+               
+             ('http-port-range', 'range', 'HTTP port range n-m.',
+              False, None, True, True),
+               
+             ('command', 'string', 'Command for hodring to run.',
+              False, None, False, True),
+              
+             ('service-id', 'string', 'Service ID.',
+              False, None, False, True),
+              
+             ('download-addr', 'string', 'Download HTTP address.',
+              False, None, False, True),
+               
+             ('svcrgy-addr', 'address', 'Service registry XMLRPC address.',
+              False, None, True, True), 
+    
+             ('ringmaster-xrs-addr', 'address', 'Ringmaster XML-RPC address.',
+              False, None, False, True),
+ 
+             ('tarball-retry-initial-time', 'pos_float','initial retry time for tarball download',
+              False, 1, False, True),
+              
+             ('tarball-retry-interval', 'pos_float','interval to spread retries for tarball download',
+              False, 3, False, True),
+              
+             ('cmd-retry-initial-time', 'pos_float','initial retry time for getting commands',
+              False, 2, False, True),
+             
+             ('cmd-retry-interval', 'pos_float','interval to spread retries for getting commands',
+              False, 2, False, True)) 
+            }            
+
+def getLogger(hodRingOptions):
+  if hodRingOptions['hodring']['debug'] > 0:
+    _baseLogger = hodLog('hodring')
+    log = _baseLogger.add_logger('main')
+
+    if hodRingOptions['hodring'].has_key('stream'):
+      if hodRingOptions['hodring']['stream']:
+        _baseLogger.add_stream(level=hodRingOptions['hodring']['debug'],
+                             addToLoggerNames=('main',))
+
+    _serviceID = os.getenv('PBS_JOBID')
+
+    if hodRingOptions['hodring'].has_key('log-dir'):
+      if _serviceID:
+          __logDir = os.path.join(hodRingOptions['hodring']['log-dir'], "%s.%s" % (
+                                   hodRingOptions['hodring']['userid'], _serviceID))
+      else:
+          __logDir = os.path.join(hodRingOptions['hodring']['log-dir'],
+                                       hodRingOptions['hodring']['userid'])
+      if not os.path.exists(__logDir):
+        os.mkdir(__logDir)
+
+      _baseLogger.add_file(logDirectory=__logDir,
+        level=hodRingOptions['hodring']['debug'], addToLoggerNames=('main',))
+
+    if hodRingOptions['hodring'].has_key('syslog-address'):
+      _baseLogger.add_syslog(hodRingOptions['hodring']['syslog-address'],
+        level=hodRingOptions['hodring']['debug'], addToLoggerNames=('main',))
+    return log
+
+def ensureLogDir(logDir):
+  """Verify that the passed in log directory exists, and if it doesn't
+  create it."""
+  if not os.path.exists(logDir):
+    try:
+      old_mask = os.umask(0)
+      os.makedirs(logDir, 01777)
+      os.umask(old_mask)
+    except Exception, e:
+      print >>sys.stderr, "Could not create log directories %s. Exception: %s. Stack Trace: %s" % (logDir, get_exception_error_string(), get_exception_string())
+      raise e
+
+if __name__ == '__main__':
+
+  confDef = definition()
+  confDef.add_defs(defList)
+  hodRingOptions = options(confDef, "./%s [OPTIONS]" % myName, VERSION)
+  ensureLogDir(hodRingOptions['hodring']['log-dir'])
+  service = None
+  try:
+    (status, statusMsgs) = hodRingOptions.verify()
+    if not status:
+      raise Exception("%s" % statusMsgs)
+    hodRingOptions['hodring']['base-dir'] = rootDirectory
+    service = HodRing(hodRingOptions)
+    service.start()
+    service.wait()
+
+  except Exception:
+    if service:
+      if service.log:
+        log = service.log
+    else:
+      log = getLogger(hodRingOptions)
+    log.error("bin/hodring failed to start. %s. \nStack trace:\n%s" %(get_exception_error_string(),get_exception_string()))

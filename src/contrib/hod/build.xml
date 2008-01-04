@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+
+<project name="hod" default="compile">
+    <import file="../build-contrib.xml"/>
+    <target name="compile">
+        <mkdir dir="${build.dir}"/>
+        <copy todir="${build.dir}">
+            <fileset dir="${basedir}"/>
+        </copy>
+    </target>
+    <target name="package" depends="compile">
+        <mkdir dir="${dist.dir}/contrib/${name}"/>
+        <copy todir="${dist.dir}/contrib/${name}">
+            <fileset dir="${build.dir}"/>
+        </copy>
+        <chmod dir="${dist.dir}/contrib/${name}/bin" perm="a+x" includes="*"/>
+    </target>
+</project>
