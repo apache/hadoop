@@ -32,9 +32,11 @@ import java.io.IOException;
 public interface HMasterInterface extends VersionedProtocol {
   /**
    * Interface version.
-   * Version was incremented to 2 when we brought the hadoop RPC local to hbase.
+   * Version was incremented to 2 when we brought the hadoop RPC local to hbase
+   * -- HADOOP-2495 and then to 3 when we changed the RPC to send codes instead
+   * of actual class names (HADOOP-2519).
    */
-  public static final long versionID = 2L;
+  public static final long versionID = 3L;
 
   /** @return true if master is available */
   public boolean isMasterRunning();
