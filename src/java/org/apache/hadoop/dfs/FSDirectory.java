@@ -22,6 +22,7 @@ import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.MetricsContext;
@@ -39,7 +40,7 @@ import org.apache.hadoop.dfs.BlocksMap.BlockInfo;
 class FSDirectory implements FSConstants {
 
   FSNamesystem namesystem = null;
-  INodeDirectory rootDir = new INodeDirectory(INodeDirectory.ROOT_NAME);
+  final INodeDirectory rootDir;
   FSImage fsImage;  
   boolean ready = false;
   // Metrics record
@@ -47,12 +48,12 @@ class FSDirectory implements FSConstants {
     
   /** Access an existing dfs name directory. */
   public FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
-    this.fsImage = new FSImage();
-    namesystem = ns;
-    initialize(conf);
+    this(new FSImage(), ns, conf);
   }
 
   public FSDirectory(FSImage fsImage, FSNamesystem ns, Configuration conf) throws IOException {
+    rootDir = new INodeDirectory(INodeDirectory.ROOT_NAME,
+        ns.createFsOwnerPermissions(new FsPermission((short)0755)));
     this.fsImage = fsImage;
     namesystem = ns;
     initialize(conf);
@@ -116,6 +117,7 @@ class FSDirectory implements FSConstants {
    * Add the given filename to the fs.
    */
   INode addFile(String path, 
+                PermissionStatus permissions,
                 short replication,
                 long preferredBlockSize,
                 String clientName,
@@ -126,10 +128,11 @@ class FSDirectory implements FSConstants {
 
     // Always do an implicit mkdirs for parent directory tree.
     long modTime = FSNamesystem.now();
-    if (!mkdirs(new Path(path).getParent().toString(), modTime)) {
+    if (!mkdirs(new Path(path).getParent().toString(), permissions, true,
+        modTime)) {
       return null;
     }
-    INodeFile newNode = new INodeFileUnderConstruction(replication, 
+    INodeFile newNode = new INodeFileUnderConstruction(permissions,replication,
                                  preferredBlockSize, modTime, clientName, 
                                  clientMachine, clientNode);
     synchronized (rootDir) {
@@ -155,16 +158,17 @@ class FSDirectory implements FSConstants {
   /**
    */
   INode unprotectedAddFile( String path, 
+                            PermissionStatus permissions,
                             Block[] blocks, 
                             short replication,
                             long modificationTime,
                             long preferredBlockSize) {
     INode newNode;
     if (blocks == null)
-      newNode = new INodeDirectory(modificationTime);
+      newNode = new INodeDirectory(permissions, modificationTime);
     else
-      newNode = new INodeFile(blocks.length, replication, modificationTime,
-                              preferredBlockSize);
+      newNode = new INodeFile(permissions, blocks.length, replication,
+          modificationTime, preferredBlockSize);
     synchronized (rootDir) {
       try {
         newNode = rootDir.addNode(path, newNode);
@@ -376,6 +380,47 @@ class FSDirectory implements FSConstants {
       return ((INodeFile)fileNode).getPreferredBlockSize();
     }
   }
+
+  boolean exists(String src) {
+    src = normalizePath(src);
+    synchronized(rootDir) {
+      INode inode = rootDir.getNode(src);
+      if (inode == null) {
+         return false;
+      }
+      return inode.isDirectory()? true: ((INodeFile)inode).getBlocks() != null;
+    }
+  }
+
+  void setPermission(String src, FsPermission permission
+      ) throws IOException {
+    unprotectedSetPermission(src, permission);
+    fsImage.getEditLog().logSetPermissions(src, permission);
+  }
+
+  void unprotectedSetPermission(String src, FsPermission permissions) {
+    synchronized(rootDir) {
+      rootDir.getNode(src).setPermission(permissions);
+    }
+  }
+
+  void setOwner(String src, String username, String groupname
+      ) throws IOException {
+    unprotectedSetOwner(src, username, groupname);
+    fsImage.getEditLog().logSetOwner(src, username, groupname);
+  }
+
+  void unprotectedSetOwner(String src, String username, String groupname) {
+    synchronized(rootDir) {
+      INode inode = rootDir.getNode(src);
+      if (username != null) {
+        inode.setUser(username);
+      }
+      if (groupname != null) {
+        inode.setGroup(groupname);
+      }
+    }
+  }
     
   /**
    * Remove the file from management, return blocks
@@ -551,7 +596,8 @@ class FSDirectory implements FSConstants {
   /**
    * Create directory entries for every item
    */
-  boolean mkdirs(String src, long now) {
+  boolean mkdirs(String src, PermissionStatus permissions,
+      boolean inheritPermission, long now) {
     src = normalizePath(src);
 
     // Use this to collect all the dirs we need to construct
@@ -573,7 +619,8 @@ class FSDirectory implements FSConstants {
     for (int i = numElts - 1; i >= 0; i--) {
       String cur = v.get(i);
       try {
-        INode inserted = unprotectedMkdir(cur, now);
+        INode inserted = unprotectedMkdir(cur, permissions,
+            inheritPermission || i != 0, now);
         if (inserted != null) {
           NameNode.stateChangeLog.debug("DIR* FSDirectory.mkdirs: "
                                         +"created directory "+cur);
@@ -596,9 +643,11 @@ class FSDirectory implements FSConstants {
 
   /**
    */
-  INode unprotectedMkdir(String src, long timestamp) throws FileNotFoundException {
+  INodeDirectory unprotectedMkdir(String src, PermissionStatus permissions,
+      boolean inheritPermission, long timestamp) throws FileNotFoundException {
     synchronized (rootDir) {
-      return rootDir.addNode(src, new INodeDirectory(timestamp));
+      return rootDir.addNode(src, new INodeDirectory(permissions, timestamp),
+          inheritPermission);
     }
   }
 

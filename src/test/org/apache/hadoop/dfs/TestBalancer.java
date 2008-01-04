@@ -79,7 +79,7 @@ public class TestBalancer extends TestCase {
       long fileLen = size/replicationFactor;
       createFile(fileLen, replicationFactor);
 
-      List<LocatedBlock> locatedBlocks = cluster.getNameNode().
+      List<LocatedBlock> locatedBlocks = client.
       getBlockLocations(fileName, 0, fileLen).getLocatedBlocks();
 
       int numOfBlocks = locatedBlocks.size();

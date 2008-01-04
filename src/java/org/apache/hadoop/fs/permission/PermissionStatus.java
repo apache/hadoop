@@ -34,6 +34,19 @@ public class PermissionStatus implements Writable {
     WritableFactories.setFactory(PermissionStatus.class, FACTORY);
   }
 
+  /** Create an immutable {@link PermissionStatus} object. */
+  public static PermissionStatus createImmutable(
+      String user, String group, FsPermission permission) {
+    return new PermissionStatus(user, group, permission) {
+      public PermissionStatus applyUMask(FsPermission umask) {
+        throw new UnsupportedOperationException();
+      }
+      public void readFields(DataInput in) throws IOException {
+        throw new UnsupportedOperationException();
+      }
+    };
+  }
+
   private String username;
   private String groupname;
   private FsPermission permission;
@@ -55,6 +68,15 @@ public class PermissionStatus implements Writable {
 
   /** Return permission */
   public FsPermission getPermission() {return permission;}
+
+  /**
+   * Apply umask.
+   * @see FsPermission#applyUMask(FsPermission)
+   */
+  public PermissionStatus applyUMask(FsPermission umask) {
+    permission = permission.applyUMask(umask);
+    return this;
+  }
 
   /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {

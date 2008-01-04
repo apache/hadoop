@@ -22,6 +22,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.conf.*;
@@ -333,17 +334,37 @@ class DFSClient implements FSConstants {
         conf.getInt("io.file.buffer.size", 4096));
   }
   /**
+   * Call
+   * {@link #create(String,FsPermission,boolean,short,long,Progressable,int)}
+   * with default permission.
+   * @see FsPermission#getDefault(Configuration)
+   */
+  public OutputStream create(String src,
+      boolean overwrite,
+      short replication,
+      long blockSize,
+      Progressable progress,
+      int buffersize
+      ) throws IOException {
+    return create(src, FsPermission.getDefault(),
+        overwrite, replication, blockSize, progress, buffersize);
+  }
+  /**
    * Create a new dfs file with the specified block replication 
    * with write-progress reporting and return an output stream for writing
    * into the file.  
    * 
    * @param src stream name
+   * @param permission The permission of the directory being created.
+   * If permission == null, use {@link FsPermission#getDefault()}.
    * @param overwrite do not check for file existence if true
    * @param replication block replication
    * @return output stream
    * @throws IOException
+   * @see {@link ClientProtocol#create(String, FsPermission, String, boolean, short, long)}
    */
   public OutputStream create(String src, 
+                             FsPermission permission,
                              boolean overwrite, 
                              short replication,
                              long blockSize,
@@ -351,8 +372,13 @@ class DFSClient implements FSConstants {
                              int buffersize
                              ) throws IOException {
     checkOpen();
-    OutputStream result = new DFSOutputStream(
-        src, overwrite, replication, blockSize, progress, buffersize);
+    if (permission == null) {
+      permission = FsPermission.getDefault();
+    }
+    FsPermission masked = permission.applyUMask(FsPermission.getUMask(conf));
+    LOG.debug(src + ": masked=" + masked);
+    OutputStream result = new DFSOutputStream(src, masked,
+        overwrite, replication, blockSize, progress, buffersize);
     synchronized (pendingCreates) {
       pendingCreates.put(src.toString(), result);
     }
@@ -491,7 +517,27 @@ class DFSClient implements FSConstants {
    */
   public boolean mkdirs(String src) throws IOException {
     checkOpen();
-    return namenode.mkdirs(src);
+    return namenode.mkdirs(src, null);
+  }
+
+  /**
+   * Create a directory (or hierarchy of directories) with the given
+   * name and permission.
+   *
+   * @param src The path of the directory being created
+   * @param permission The permission of the directory being created.
+   * If permission == null, use {@link FsPermission#getDefault()}.
+   * @return True if the operation success.
+   * @see {@link ClientProtocol#mkdirs(String, FsPermission)}
+   */
+  public boolean mkdirs(String src, FsPermission permission)throws IOException{
+    checkOpen();
+    if (permission == null) {
+      permission = FsPermission.getDefault();
+    }
+    FsPermission masked = permission.applyUMask(FsPermission.getUMask(conf));
+    LOG.debug(src + ": masked=" + masked);
+    return namenode.mkdirs(src, masked);
   }
 
   /**
@@ -1394,8 +1440,10 @@ class DFSClient implements FSConstants {
     private Progressable progress;
     /**
      * Create a new output stream to the given DataNode.
+     * @see {@link ClientProtocol#create(String, FsPermission, String, boolean, short, long)}
      */
-    public DFSOutputStream(String src, boolean overwrite, 
+    public DFSOutputStream(String src, FsPermission masked,
+                           boolean overwrite,
                            short replication, long blockSize,
                            Progressable progress,
                            int buffersize
@@ -1422,7 +1470,7 @@ class DFSClient implements FSConstants {
       checksum = DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 
                                               bytesPerChecksum);
       namenode.create(
-          src.toString(), clientName, overwrite, replication, blockSize);
+          src, masked, clientName, overwrite, replication, blockSize);
     }
 
     private void openBackupStream() throws IOException {

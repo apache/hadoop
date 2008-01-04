@@ -20,6 +20,7 @@ package org.apache.hadoop.dfs;
 import java.io.*;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
+import org.apache.hadoop.fs.permission.*;
 
 /**********************************************************************
  * ClientProtocol is used by a piece of DFS user code to communicate 
@@ -38,8 +39,9 @@ interface ClientProtocol extends VersionedProtocol {
    * 20 : getContentLength returns the total size in bytes of a directory subtree
    * 21 : add lease holder as a parameter in abandonBlock(...)
    * 22 : Serialization of FileStatus has changed.
+   * 23 : added setOwner(...) and setPermission(...); changed create(...) and mkdir(...)
    */
-  public static final long versionID = 22L;
+  public static final long versionID = 23L;
   
   ///////////////////////////////////////
   // File contents
@@ -95,8 +97,16 @@ interface ClientProtocol extends VersionedProtocol {
    * Blocks have a maximum size.  Clients that intend to
    * create multi-block files must also use reportWrittenBlock()
    * and addBlock().
+   *
+   * If permission denied,
+   * an {@link AccessControlException} will be thrown as an
+   * {@link org.apache.hadoop.ipc.RemoteException}.
+   *
+   * @param src The path of the directory being created
+   * @param masked The masked permission
    */
   public void create(String src, 
+                     FsPermission masked,
                              String clientName, 
                              boolean overwrite, 
                              short replication,
@@ -120,6 +130,22 @@ interface ClientProtocol extends VersionedProtocol {
   public boolean setReplication(String src, 
                                 short replication
                                 ) throws IOException;
+
+  /**
+   * Set permissions for an existing file/directory.
+   */
+  public void setPermission(String src, FsPermission permission
+      ) throws IOException;
+
+  /**
+   * Set owner of a path (i.e. a file or a directory).
+   * The parameters username and groupname cannot both be null.
+   * @param src
+   * @param username If it is null, the original username remains unchanged.
+   * @param groupname If it is null, the original groupname remains unchanged.
+   */
+  public void setOwner(String src, String username, String groupname
+      ) throws IOException;
 
   /**
    * If the client has not yet called reportWrittenBlock(), it can
@@ -203,9 +229,17 @@ interface ClientProtocol extends VersionedProtocol {
 
   /**
    * Create a directory (or hierarchy of directories) with the given
-   * name.
+   * name and permission.
+   *
+   * If permission denied,
+   * an {@link AccessControlException} will be thrown as an
+   * {@link org.apache.hadoop.ipc.RemoteException}.
+   *
+   * @param src The path of the directory being created
+   * @param masked The masked permission of the directory being created
+   * @return True if the operation success.
    */
-  public boolean mkdirs(String src) throws IOException;
+  public boolean mkdirs(String src, FsPermission masked) throws IOException;
 
   /**
    * Get a listing of the indicated directory

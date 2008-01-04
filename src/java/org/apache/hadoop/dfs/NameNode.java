@@ -21,6 +21,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Trash;
+import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.StringUtils;
@@ -254,9 +255,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     return clientMachine;
   }
 
-  /**
-   */
+  /** {@inheritDoc} */
   public void create(String src, 
+                     FsPermission masked,
                              String clientName, 
                              boolean overwrite,
                              short replication,
@@ -269,8 +270,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       throw new IOException("create: Pathname too long.  Limit " 
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
-    namesystem.startFile(
-        src, clientName, clientMachine, overwrite, replication, blockSize);
+    namesystem.startFile(src,
+        new PermissionStatus(Server.getUserInfo().getUserName(), null, masked),
+        clientName, clientMachine, overwrite, replication, blockSize);
     myMetrics.createFile();
   }
 
@@ -280,6 +282,18 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     return namesystem.setReplication(src, replication);
   }
     
+  /** {@inheritDoc} */
+  public void setPermission(String src, FsPermission permissions
+      ) throws IOException {
+    namesystem.setPermission(src, permissions);
+  }
+
+  /** {@inheritDoc} */
+  public void setOwner(String src, String username, String groupname
+      ) throws IOException {
+    namesystem.setOwner(src, username, groupname);
+  }
+
   /**
    */
   public LocatedBlock addBlock(String src, 
@@ -389,15 +403,15 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
             srcPath.depth() <= MAX_PATH_DEPTH);
   }
     
-  /**
-   */
-  public boolean mkdirs(String src) throws IOException {
+  /** {@inheritDoc} */
+  public boolean mkdirs(String src, FsPermission masked) throws IOException {
     stateChangeLog.debug("*DIR* NameNode.mkdirs: " + src);
     if (!checkPathLength(src)) {
       throw new IOException("mkdirs: Pathname too long.  Limit " 
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
-    return namesystem.mkdirs(src);
+    return namesystem.mkdirs(src,
+        new PermissionStatus(Server.getUserInfo().getUserName(), null, masked));
   }
 
   /**

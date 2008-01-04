@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.permission.*;
 
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.UTF8;
@@ -57,8 +58,11 @@ public class TestEditLog extends TestCase {
 
     // add a bunch of transactions.
     public void run() {
+      PermissionStatus p = FSNamesystem.getFSNamesystem(
+          ).createFsOwnerPermissions(new FsPermission((short)0777));
+
       for (int i = 0; i < numTransactions; i++) {
-        INodeFile inode = new INodeFile(0, replication, 0, blockSize);
+        INodeFile inode = new INodeFile(p, 0, replication, 0, blockSize);
         editLog.logCreateFile("/filename" + i, inode);
         editLog.logSync();
       }

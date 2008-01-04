@@ -17,11 +17,15 @@
  */
 package org.apache.hadoop.security;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Writable;
 
 /** A {@link Writable} interface for storing user and groups information.
  */
 public interface UserGroupInformation extends Writable {
+  public static final Log LOG = LogFactory.getLog(UserGroupInformation.class);
+
   /** Get username
    * 
    * @return the user's name
@@ -33,10 +37,4 @@ public interface UserGroupInformation extends Writable {
    * @return an array of group names
    */
   public String[] getGroupNames();
-  
-  /** Get the default group name.
-   * 
-   * @return the default the group name
-   */
-  public String getDefaultGroupName();
 }

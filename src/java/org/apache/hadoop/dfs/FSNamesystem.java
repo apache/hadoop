@@ -21,11 +21,14 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.dfs.BlocksWithLocations.BlockWithLocations;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.mapred.StatusHttpServer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.ipc.Server;
 
 import java.io.BufferedWriter;
@@ -37,6 +40,8 @@ import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.Map.Entry;
 import java.text.SimpleDateFormat;
+
+import javax.security.auth.login.LoginException;
 
 /***************************************************
  * FSNamesystem does the actual bookkeeping work for the
@@ -52,6 +57,10 @@ import java.text.SimpleDateFormat;
  ***************************************************/
 class FSNamesystem implements FSConstants {
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.FSNamesystem");
+
+  private boolean isPermissionEnabled;
+  private UserGroupInformation fsOwner;
+  private String supergroup;
 
   //
   // Stores the correct file name hierarchy
@@ -204,12 +213,10 @@ class FSNamesystem implements FSConstants {
   private static final SimpleDateFormat DATE_FORM =
     new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-
   /**
    * FSNamesystem constructor.
    */
   FSNamesystem(NameNode nn, Configuration conf) throws IOException {
-    fsNamesystemObject = this;
     try {
       initialize(nn, conf);
     } catch(IOException e) {
@@ -285,7 +292,6 @@ class FSNamesystem implements FSConstants {
    * is stored
    */
   FSNamesystem(FSImage fsImage, Configuration conf) throws IOException {
-    fsNamesystemObject = this;
     setConfigurationParameters(conf);
     this.dir = new FSDirectory(fsImage, this, conf);
   }
@@ -295,6 +301,19 @@ class FSNamesystem implements FSConstants {
    */
   private void setConfigurationParameters(Configuration conf) 
                                           throws IOException {
+    fsNamesystemObject = this;
+    try {
+      fsOwner = UnixUserGroupInformation.login(conf);
+    } catch (LoginException e) {
+      throw new IOException(StringUtils.stringifyException(e));
+    }
+    LOG.info("fsOwner=" + fsOwner);
+
+    this.supergroup = conf.get("dfs.permissions.supergroup", "supergroup");
+    this.isPermissionEnabled = conf.getBoolean("dfs.permissions", true);
+    LOG.info("supergroup=" + supergroup);
+    LOG.info("isPermissionEnabled=" + isPermissionEnabled);
+
     this.replicator = new ReplicationTargetChooser(
                          conf.getBoolean("dfs.replication.considerLoad", true),
                          this,
@@ -645,12 +664,48 @@ class FSNamesystem implements FSConstants {
   //
   /////////////////////////////////////////////////////////
   /**
+   * Set permissions for an existing file.
+   * @throws IOException
+   */
+  public synchronized void setPermission(String src, FsPermission permission
+      ) throws IOException {
+    checkOwner(src);
+    dir.setPermission(src, permission);
+    getEditLog().logSync();
+  }
+
+  /**
+   * Set owner for an existing file.
+   * @throws IOException
+   */
+  public synchronized void setOwner(String src, String username, String group
+      ) throws IOException {
+    PermissionChecker pc = checkOwner(src);
+    if (!pc.isSuper) {
+      if (username != null && !pc.user.equals(username)) {
+        throw new AccessControlException("Non-super user cannot change owner.");
+      }
+      if (group != null && !pc.containsGroup(group)) {
+        throw new AccessControlException("User does not belong to " + group
+            + " .");
+      }
+    }
+    dir.setOwner(src, username, group);
+    getEditLog().logSync();
+  }
+
+  /**
    * Get block locations within the specified range.
    * 
    * @see ClientProtocol#open(String, long, long)
    * @see ClientProtocol#getBlockLocations(String, long, long)
    */
-  LocatedBlocks getBlockLocations(String clientMachine,
+  LocatedBlocks getBlockLocations(String clientMachine, String src,
+      long offset, long length) throws IOException {
+    checkPathAccess(src, FsAction.READ);
+    return getBlockLocationsInternal(clientMachine, src, offset, length);
+  }
+  LocatedBlocks getBlockLocationsInternal(String clientMachine,
                                   String src, 
                                   long offset, 
                                   long length
@@ -663,7 +718,7 @@ class FSNamesystem implements FSConstants {
     }
 
     DatanodeDescriptor client = null;
-    LocatedBlocks blocks =  getBlockLocations(dir.getFileINode(src), 
+    LocatedBlocks blocks =  getBlockLocationInternal(dir.getFileINode(src),
                                               offset, length, 
                                               Integer.MAX_VALUE);
     if (blocks == null) {
@@ -679,7 +734,7 @@ class FSNamesystem implements FSConstants {
     return blocks;
   }
   
-  private synchronized LocatedBlocks getBlockLocations(INodeFile inode, 
+  private synchronized LocatedBlocks getBlockLocationInternal(INodeFile inode,
                                                        long offset, 
                                                        long length,
                                                        int nrBlocksToReturn) {
@@ -760,6 +815,7 @@ class FSNamesystem implements FSConstants {
     if (isInSafeMode())
       throw new SafeModeException("Cannot set replication for " + src, safeMode);
     verifyReplication(src, replication, null);
+    checkPathAccess(src, FsAction.WRITE);
 
     int[] oldReplication = new int[1];
     Block[] fileBlocks;
@@ -786,7 +842,8 @@ class FSNamesystem implements FSConstants {
     return true;
   }
     
-  public long getPreferredBlockSize(String filename) throws IOException {
+  long getPreferredBlockSize(String filename) throws IOException {
+    checkTraverse(filename);
     return dir.getPreferredBlockSize(filename);
   }
     
@@ -811,10 +868,11 @@ class FSNamesystem implements FSConstants {
                             text + " is less than the required minimum " + minReplication);
   }
 
-  void startFile(String src, String holder, String clientMachine, 
+  void startFile(String src, PermissionStatus permissions,
+                 String holder, String clientMachine,
                  boolean overwrite, short replication, long blockSize
                 ) throws IOException {
-    startFileInternal(src, holder, clientMachine, overwrite,
+    startFileInternal(src, permissions, holder, clientMachine, overwrite,
                       replication, blockSize);
     getEditLog().logSync();
   }
@@ -830,7 +888,8 @@ class FSNamesystem implements FSConstants {
    * @throws IOException if the filename is invalid
    *         {@link FSDirectory#isValidToCreate(String)}.
    */
-  synchronized void startFileInternal(String src, 
+  private synchronized void startFileInternal(String src,
+                                              PermissionStatus permissions,
                                               String holder, 
                                               String clientMachine, 
                                               boolean overwrite,
@@ -844,6 +903,13 @@ class FSNamesystem implements FSConstants {
     if (!isValidName(src)) {
       throw new IOException("Invalid file name: " + src);      	  
     }
+    if (overwrite && exists(src)) {
+      checkPathAccess(src, FsAction.WRITE);
+    }
+    else {
+      checkAncestorAccess(src, FsAction.WRITE);
+    }
+
     try {
       INode myFile = dir.getFileINode(src);
       if (myFile != null && myFile.isUnderConstruction()) {
@@ -934,10 +1000,8 @@ class FSNamesystem implements FSConstants {
       // Now we can add the name to the filesystem. This file has no
       // blocks associated with it.
       //
-      INode newNode = dir.addFile(src, replication, blockSize,
-                                  holder, 
-                                  clientMachine, 
-                                  clientNode);
+      INode newNode = dir.addFile(src, permissions,
+          replication, blockSize, holder, clientMachine, clientNode);
       if (newNode == null) {
         throw new IOException("DIR* NameSystem.startFile: " +
                               "Unable to add file to namespace.");
@@ -1287,22 +1351,25 @@ class FSNamesystem implements FSConstants {
   // are made, edit namespace and return to client.
   ////////////////////////////////////////////////////////////////
 
+  /** Change the indicated filename. */
   public boolean renameTo(String src, String dst) throws IOException {
     boolean status = renameToInternal(src, dst);
     getEditLog().logSync();
     return status;
   }
 
-  /**
-   * Change the indicated filename.
-   */
-  public synchronized boolean renameToInternal(String src, String dst) throws IOException {
+  private synchronized boolean renameToInternal(String src, String dst
+      ) throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.renameTo: " + src + " to " + dst);
     if (isInSafeMode())
       throw new SafeModeException("Cannot rename " + src, safeMode);
     if (!isValidName(dst)) {
       throw new IOException("Invalid name: " + dst);
     }
+
+    checkParentAccess(src, FsAction.WRITE);
+    checkAncestorAccess(dst, FsAction.WRITE);
+
     return dir.renameTo(src, dst);
   }
 
@@ -1311,7 +1378,7 @@ class FSNamesystem implements FSConstants {
    * invalidate some blocks that make up the file.
    */
   public boolean delete(String src) throws IOException {
-    boolean status = deleteInternal(src, true);
+    boolean status = deleteInternal(src, true, true);
     getEditLog().logSync();
     return status;
   }
@@ -1320,7 +1387,7 @@ class FSNamesystem implements FSConstants {
    * An internal delete function that does not enforce safe mode
    */
   boolean deleteInSafeMode(String src) throws IOException {
-    boolean status = deleteInternal(src, false);
+    boolean status = deleteInternal(src, false, false);
     getEditLog().logSync();
     return status;
   }
@@ -1329,11 +1396,14 @@ class FSNamesystem implements FSConstants {
    * invalidate some blocks that make up the file.
    */
   private synchronized boolean deleteInternal(String src, 
-                                              boolean enforceSafeMode) 
-                                              throws IOException {
+      boolean enforceSafeMode, boolean enforcePermission) throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
     if (enforceSafeMode && isInSafeMode())
       throw new SafeModeException("Cannot delete " + src, safeMode);
+    if (enforcePermission) {
+      checkPermission(src, false, null, FsAction.WRITE, null, FsAction.ALL);
+    }
+
     Block deletedBlocks[] = dir.delete(src);
     if (deletedBlocks != null) {
       for (int i = 0; i < deletedBlocks.length; i++) {
@@ -1356,27 +1426,26 @@ class FSNamesystem implements FSConstants {
   /**
    * Return whether the given filename exists
    */
-  public boolean exists(String src) {
-    if (dir.getFileBlocks(src) != null || dir.isDir(src)) {
-      return true;
-    } else {
-      return false;
-    }
+  public boolean exists(String src) throws AccessControlException {
+    checkTraverse(src);
+    return dir.exists(src);
   }
 
   /**
    * Whether the given name is a directory
    */
-  public boolean isDir(String src) {
+  public boolean isDir(String src) throws AccessControlException {
+    checkTraverse(src);
     return dir.isDir(src);
   }
 
-  /* Get the file info for a specific file.
+  /** Get the file info for a specific file.
    * @param src The string representation of the path to the file
    * @throws IOException if file does not exist
    * @return object containing information regarding the file
    */
   DFSFileInfo getFileInfo(String src) throws IOException {
+    checkTraverse(src);
     return dir.getFileInfo(src);
   }
 
@@ -1407,8 +1476,9 @@ class FSNamesystem implements FSConstants {
   /**
    * Create all the necessary directories
    */
-  public boolean mkdirs(String src) throws IOException {
-    boolean status = mkdirsInternal(src);
+  public boolean mkdirs(String src, PermissionStatus permissions
+      ) throws IOException {
+    boolean status = mkdirsInternal(src, permissions);
     getEditLog().logSync();
     return status;
   }
@@ -1416,19 +1486,20 @@ class FSNamesystem implements FSConstants {
   /**
    * Create all the necessary directories
    */
-  private synchronized boolean mkdirsInternal(String src) throws IOException {
-    boolean    success;
+  private synchronized boolean mkdirsInternal(String src,
+      PermissionStatus permissions) throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
     if (isInSafeMode())
       throw new SafeModeException("Cannot create directory " + src, safeMode);
     if (!isValidName(src)) {
       throw new IOException("Invalid directory name: " + src);
     }
-    success = dir.mkdirs(src, now());
-    if (!success) {
+    checkAncestorAccess(src, FsAction.WRITE);
+
+    if (!dir.mkdirs(src, permissions, false, now())) {
       throw new IOException("Invalid directory name: " + src);
     }
-    return success;
+    return true;
   }
 
   /* Get the size of the specified directory subtree.
@@ -1437,6 +1508,7 @@ class FSNamesystem implements FSConstants {
    * @return size in bytes
    */
   long getContentLength(String src) throws IOException {
+    checkPermission(src, false, null, null, null, FsAction.READ_EXECUTE);
     return dir.getContentLength(src);
   }
 
@@ -1660,7 +1732,13 @@ class FSNamesystem implements FSConstants {
    * Get a listing of all files at 'src'.  The Object[] array
    * exists so we can return file attributes (soon to be implemented)
    */
-  public DFSFileInfo[] getListing(String src) {
+  public DFSFileInfo[] getListing(String src) throws IOException {
+    if (dir.isDir(src)) {
+      checkPathAccess(src, FsAction.READ);
+    }
+    else {
+      checkTraverse(src);
+    }
     return dir.getListing(src);
   }
 
@@ -3754,5 +3832,51 @@ class FSNamesystem implements FSConstants {
 
   boolean startDistributedUpgradeIfNeeded() throws IOException {
     return upgradeManager.startUpgrade();
+  }
+
+  PermissionStatus createFsOwnerPermissions(FsPermission permission) {
+    return new PermissionStatus(fsOwner.getUserName(), supergroup, permission);
+  }
+
+  private PermissionChecker checkOwner(String path) throws AccessControlException {
+    return checkPermission(path, true, null, null, null, null);
+  }
+
+  private PermissionChecker checkPathAccess(String path, FsAction access
+      ) throws AccessControlException {
+    return checkPermission(path, false, null, null, access, null);
+  }
+
+  private PermissionChecker checkParentAccess(String path, FsAction access
+      ) throws AccessControlException {
+    return checkPermission(path, false, null, access, null, null);
+  }
+
+  private PermissionChecker checkAncestorAccess(String path, FsAction access
+      ) throws AccessControlException {
+    return checkPermission(path, false, access, null, null, null);
+  }
+
+  private PermissionChecker checkTraverse(String path
+      ) throws AccessControlException {
+    return checkPermission(path, false, null, null, null, null);
+  }
+
+  /**
+   * Check whether current user have permissions to access the path.
+   * For more details of the parameters, see
+   * {@link PermissionChecker#checkPermission(INodeDirectory, boolean, FsAction, FsAction, FsAction)}.
+   */
+  private PermissionChecker checkPermission(String path, boolean doCheckOwner,
+      FsAction ancestorAccess, FsAction parentAccess, FsAction access,
+      FsAction subAccess) throws AccessControlException {
+    PermissionChecker pc = new PermissionChecker(
+        fsOwner.getUserName(), supergroup);
+    if (isPermissionEnabled && !pc.isSuper) {
+      dir.waitForReady();
+      pc.checkPermission(path, dir.rootDir, doCheckOwner,
+          ancestorAccess, parentAccess, access, subAccess);
+    }
+    return pc;
   }
 }

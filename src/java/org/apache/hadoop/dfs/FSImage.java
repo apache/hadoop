@@ -36,6 +36,7 @@ import java.util.Properties;
 import java.util.Random;
 import java.lang.Math;
 
+import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
 import org.apache.hadoop.dfs.FSConstants.NodeType;
 import org.apache.hadoop.io.UTF8;
@@ -711,8 +712,12 @@ class FSImage extends Storage {
             blockSize = Math.max(fsNamesys.getDefaultBlockSize(), first);
           }
         }
-        fsDir.unprotectedAddFile(name.toString(), blocks, replication,
-                                 modificationTime, blockSize);
+        PermissionStatus permissions = PermissionChecker.ANONYMOUS;
+        if (imgVersion <= -11) {
+          permissions = PermissionStatus.read(in);
+        }
+        fsDir.unprotectedAddFile(name.toString(), permissions,
+            blocks, replication, modificationTime, blockSize);
       }
       
       // load datanode info
@@ -847,6 +852,7 @@ class FSImage extends Storage {
         out.writeInt(blocks.length);
         for (Block blk : blocks)
           blk.write(out);
+        fileINode.getPermissionStatus().write(out);
         return;
       }
       // write directory inode
@@ -854,6 +860,7 @@ class FSImage extends Storage {
       out.writeLong(inode.getModificationTime());
       out.writeLong(0);   // preferred block size
       out.writeInt(-1);    // # of blocks
+      inode.getPermissionStatus().write(out);
     }
     for(INode child : ((INodeDirectory)inode).getChildren()) {
       saveImage(fullName, child, out);

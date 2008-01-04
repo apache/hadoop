@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.NetUtils;
 
 import junit.framework.TestCase;
 /**
@@ -69,7 +70,9 @@ public class TestGetBlocks extends TestCase {
       DatanodeInfo[] dataNodes=null;
       boolean notWritten;
       do {
-        locatedBlocks = cluster.getNameNode().
+        DFSClient dfsclient = new DFSClient(
+            NetUtils.createSocketAddr(CONF.get("fs.default.name")), CONF);
+        locatedBlocks = dfsclient.namenode.
           getBlockLocations("/tmp.txt", 0, fileLen).getLocatedBlocks();
         assertEquals(2, locatedBlocks.size());
         notWritten = false;

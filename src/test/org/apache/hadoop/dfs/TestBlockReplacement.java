@@ -93,7 +93,11 @@ public class TestBlockReplacement extends TestCase {
           DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR, r.nextLong());
       DFSTestUtil.waitReplication(fs,fileName, REPLICATION_FACTOR);
       
-      List<LocatedBlock> locatedBlocks = cluster.getNameNode().
+      // get all datanodes
+      InetSocketAddress addr = new InetSocketAddress("localhost",
+          cluster.getNameNodePort());
+      DFSClient client = new DFSClient(addr, CONF);
+      List<LocatedBlock> locatedBlocks = client.namenode.
         getBlockLocations("/tmp.txt", 0, DEFAULT_BLOCK_SIZE).getLocatedBlocks();
       assertEquals(1, locatedBlocks.size());
       LocatedBlock block = locatedBlocks.get(0);
@@ -105,10 +109,6 @@ public class TestBlockReplacement extends TestCase {
       cluster.startDataNodes(CONF, 1, true, null, NEW_RACKS);
       cluster.waitActive();
       
-      // get all datanodes
-      InetSocketAddress addr = new InetSocketAddress("localhost",
-          cluster.getNameNodePort());
-      DFSClient client = new DFSClient(addr, CONF);
       DatanodeInfo[] datanodes = client.datanodeReport(DatanodeReportType.ALL);
 
       // find out the new node
@@ -157,7 +157,7 @@ public class TestBlockReplacement extends TestCase {
       // block locations should contain two proxies and newNode
       checkBlocks(new DatanodeInfo[]{newNode, proxies.get(0), proxies.get(1)},
           fileName.toString(), 
-          DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR);
+          DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR, client);
       // case 4: proxies.get(0) is not a valid del hint
       LOG.info("Testcase 4: invalid del hint " + proxies.get(0).getName() );
       assertTrue(replaceBlock(b, proxies.get(1), proxies.get(0), source));
@@ -166,7 +166,7 @@ public class TestBlockReplacement extends TestCase {
        */
       checkBlocks(proxies.toArray(new DatanodeInfo[proxies.size()]), 
           fileName.toString(), 
-          DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR);
+          DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR, client);
     } finally {
       cluster.shutdown();
     }
@@ -174,14 +174,14 @@ public class TestBlockReplacement extends TestCase {
   
   /* check if file's blocks exist at includeNodes */
   private void checkBlocks(DatanodeInfo[] includeNodes, String fileName, 
-      long fileLen, short replFactor) throws IOException {
+      long fileLen, short replFactor, DFSClient client) throws IOException {
     Boolean notDone;
     do {
       try {
         Thread.sleep(100);
       } catch(InterruptedException e) {
       }
-      List<LocatedBlock> blocks = cluster.getNameNode().
+      List<LocatedBlock> blocks = client.namenode.
       getBlockLocations(fileName, 0, fileLen).getLocatedBlocks();
       assertEquals(1, blocks.size());
       DatanodeInfo[] nodes = blocks.get(0).getLocations();

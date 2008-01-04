@@ -31,9 +31,8 @@ import java.util.ArrayList;
 import java.lang.Math;
 import java.nio.channels.FileChannel;
 
-import org.apache.hadoop.io.ArrayWritable;
-import org.apache.hadoop.io.UTF8;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -49,6 +48,8 @@ class FSEditLog {
   //the following two are used only for backword compatibility :
   @Deprecated private static final byte OP_DATANODE_ADD = 5;
   @Deprecated private static final byte OP_DATANODE_REMOVE = 6;
+  private static final byte OP_SET_PERMISSIONS = 7;
+  private static final byte OP_SET_OWNER = 8;
   private static int sizeFlushBuffer = 512*1024;
 
   private ArrayList<EditLogOutputStream> editStreams = null;
@@ -470,10 +471,14 @@ class FSEditLog {
                 blockSize = Math.max(fsNamesys.getDefaultBlockSize(), first);
               }
             }
+            PermissionStatus permissions = PermissionChecker.ANONYMOUS;
+            if (logVersion <= -11) {
+              permissions = PermissionStatus.read(in);
+            }
 
             // add to the file tree
-            fsDir.unprotectedAddFile(name.toString(), blocks, replication, 
-                                     mtime, blockSize);
+            fsDir.unprotectedAddFile(name.toString(), permissions,
+                blocks, replication, mtime, blockSize);
             break;
           }
           case OP_SET_REPLICATION: {
@@ -535,6 +540,7 @@ class FSEditLog {
           }
           case OP_MKDIR: {
             UTF8 src = null;
+            PermissionStatus permissions = PermissionChecker.ANONYMOUS;
             if (logVersion >= -4) {
               src = new UTF8();
               src.readFields(in);
@@ -550,8 +556,12 @@ class FSEditLog {
               }
               src = (UTF8) writables[0];
               timestamp = Long.parseLong(((UTF8)writables[1]).toString());
+
+              if (logVersion <= -11) {
+                permissions = PermissionStatus.read(in);
+              }
             }
-            fsDir.unprotectedMkdir(src.toString(), timestamp);
+            fsDir.unprotectedMkdir(src.toString(),permissions,false,timestamp);
             break;
           }
           case OP_DATANODE_ADD: {
@@ -572,6 +582,22 @@ class FSEditLog {
             //Datanodes are not persistent any more.
             break;
           }
+          case OP_SET_PERMISSIONS: {
+            if (logVersion > -11)
+              throw new IOException("Unexpected opcode " + opcode
+                                    + " for version " + logVersion);
+            fsDir.unprotectedSetPermission(
+                readUTF8String(in), FsPermission.read(in));
+            break;
+          }
+          case OP_SET_OWNER: {
+            if (logVersion > -11)
+              throw new IOException("Unexpected opcode " + opcode
+                                    + " for version " + logVersion);
+            fsDir.unprotectedSetOwner(
+                readUTF8String(in), readUTF8String(in), readUTF8String(in));
+            break;
+          }
           default: {
             throw new IOException("Never seen opcode " + opcode);
           }
@@ -587,6 +613,13 @@ class FSEditLog {
     return numEdits;
   }
   
+  private String readUTF8String(DataInputStream in) throws IOException {
+    UTF8 utf8 = new UTF8();
+    utf8.readFields(in);
+    String s = utf8.toString();
+    return s.length() == 0? null: s;
+  }
+
   static short adjustReplication(short replication) {
     FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
     short minReplication = fsNamesys.getMinReplication();
@@ -750,7 +783,8 @@ class FSEditLog {
       FSEditLog.toLogLong(newNode.getPreferredBlockSize())};
     logEdit(OP_ADD,
             new ArrayWritable(UTF8.class, nameReplicationPair), 
-            new ArrayWritable(Block.class, newNode.getBlocks()));
+            new ArrayWritable(Block.class, newNode.getBlocks()),
+            newNode.getPermissionStatus());
   }
   
   /** 
@@ -761,7 +795,8 @@ class FSEditLog {
       new UTF8(path),
       FSEditLog.toLogLong(newNode.getModificationTime())
     };
-    logEdit(OP_MKDIR, new ArrayWritable(UTF8.class, info));
+    logEdit(OP_MKDIR, new ArrayWritable(UTF8.class, info),
+        newNode.getPermissionStatus());
   }
   
   /** 
@@ -785,6 +820,18 @@ class FSEditLog {
             FSEditLog.toLogReplication(replication));
   }
   
+  /**  Add set permissions record to edit log */
+  void logSetPermissions(String src, FsPermission permissions) {
+    logEdit(OP_SET_PERMISSIONS, new UTF8(src), permissions);
+  }
+
+  /**  Add set owner record to edit log */
+  void logSetOwner(String src, String username, String groupname) {
+    UTF8 u = new UTF8(username == null? "": username);
+    UTF8 g = new UTF8(groupname == null? "": groupname);
+    logEdit(OP_SET_OWNER, new UTF8(src), u, g);
+  }
+
   /** 
    * Add delete file record to edit log
    */

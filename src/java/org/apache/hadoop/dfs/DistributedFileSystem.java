@@ -119,9 +119,8 @@ public class DistributedFileSystem extends FileSystem {
     int bufferSize, short replication, long blockSize,
     Progressable progress) throws IOException {
 
-    return new FSDataOutputStream( dfs.create(getPathName(f), overwrite, 
-                                              replication, blockSize, 
-                                              progress, bufferSize) );
+    return new FSDataOutputStream(dfs.create(getPathName(f), permission,
+        overwrite, replication, blockSize, progress, bufferSize));
   }
 
   public boolean setReplication(Path src, 
@@ -176,7 +175,7 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
-    return dfs.mkdirs(getPathName(f));
+    return dfs.mkdirs(getPathName(f), permission);
   }
 
   public void close() throws IOException {
@@ -332,5 +331,20 @@ public class DistributedFileSystem extends FileSystem {
       DFSFileInfo p = dfs.getFileInfo(getPathName(f));
       return p;
     }
+  }
+
+  /** {@inheritDoc }*/
+  public void setPermission(Path p, FsPermission permission
+      ) throws IOException {
+    dfs.namenode.setPermission(getPathName(p), permission);
+  }
+
+  /** {@inheritDoc }*/
+  public void setOwner(Path p, String username, String groupname
+      ) throws IOException {
+    if (username == null && groupname == null) {
+      throw new IOException("username == null && groupname == null");
+    }
+    dfs.namenode.setOwner(getPathName(p), username, groupname);
   }
 }

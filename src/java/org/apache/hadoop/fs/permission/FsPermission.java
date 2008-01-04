@@ -35,6 +35,18 @@ public class FsPermission implements Writable {
     WritableFactories.setFactory(FsPermission.class, FACTORY);
   }
 
+  /** Create an immutable {@link FsPermission} object. */
+  public static FsPermission createImmutable(short permission) {
+    return new FsPermission(permission) {
+      public FsPermission applyUMask(FsPermission umask) {
+        throw new UnsupportedOperationException();
+      }
+      public void readFields(DataInput in) throws IOException {
+        throw new UnsupportedOperationException();
+      }
+    };
+  }
+
   //POSIX permission style
   private FsAction useraction = null;
   private FsAction groupaction = null;

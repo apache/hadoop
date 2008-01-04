@@ -26,6 +26,7 @@ import java.util.List;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.dfs.BlocksMap.BlockInfo;
 
 /**
@@ -38,15 +39,88 @@ abstract class INode implements Comparable<byte[]> {
   protected INodeDirectory parent;
   protected long modificationTime;
 
-  protected INode(String name) {
-    this(0L);
+  //Only updated by updatePermissionStatus(...).
+  //Other codes should not modify it.
+  private long permission;
+
+  private static enum PermissionStatusFormat {
+    MODE(0, 16),
+    GROUP(MODE.OFFSET + MODE.LENGTH, 25),
+    USER(GROUP.OFFSET + GROUP.LENGTH, 23);
+
+    final int OFFSET;
+    final int LENGTH; //bit length
+    final long MASK;
+
+    PermissionStatusFormat(int offset, int length) {
+      OFFSET = offset;
+      LENGTH = length;
+      MASK = ((-1L) >>> (64 - LENGTH)) << OFFSET;
+    }
+
+    long retrieve(long record) {
+      return (record & MASK) >>> OFFSET;
+    }
+
+    long combine(long bits, long record) {
+      return (record & ~MASK) | (bits << OFFSET);
+    }
+  }
+
+  protected INode(String name, PermissionStatus permissions) {
+    this(permissions, 0L);
     setLocalName(name);
   }
 
-  INode(long mTime) {
+  INode(PermissionStatus permissions, long mTime) {
     this.name = null;
     this.parent = null;
     this.modificationTime = mTime;
+    setPermissionStatus(permissions);
+  }
+
+  /** Set the {@link PermissionStatus} */
+  protected void setPermissionStatus(PermissionStatus ps) {
+    setUser(ps.getUserName());
+    setGroup(ps.getGroupName());
+    setPermission(ps.getPermission());
+  }
+  /** Get the {@link PermissionStatus} */
+  protected PermissionStatus getPermissionStatus() {
+    return new PermissionStatus(getUserName(),getGroupName(),getFsPermission());
+  }
+  private synchronized void updatePermissionStatus(
+      PermissionStatusFormat f, long n) {
+    permission = f.combine(n, permission);
+  }
+  /** Get user name */
+  protected String getUserName() {
+    int n = (int)PermissionStatusFormat.USER.retrieve(permission);
+    return SerialNumberManager.INSTANCE.getUser(n);
+  }
+  /** Set user */
+  protected void setUser(String user) {
+    int n = SerialNumberManager.INSTANCE.getUserSerialNumber(user);
+    updatePermissionStatus(PermissionStatusFormat.USER, n);
+  }
+  /** Get group name */
+  protected String getGroupName() {
+    int n = (int)PermissionStatusFormat.GROUP.retrieve(permission);
+    return SerialNumberManager.INSTANCE.getGroup(n);
+  }
+  /** Set group */
+  protected void setGroup(String group) {
+    int n = SerialNumberManager.INSTANCE.getGroupSerialNumber(group);
+    updatePermissionStatus(PermissionStatusFormat.GROUP, n);
+  }
+  /** Get the {@link FsPermission} */
+  protected FsPermission getFsPermission() {
+    return new FsPermission(
+        (short)PermissionStatusFormat.MODE.retrieve(permission));
+  }
+  /** Set the {@link FsPermission} of this {@link INode} */
+  protected void setPermission(FsPermission permission) {
+    updatePermissionStatus(PermissionStatusFormat.MODE, permission.toShort());
   }
 
   /**
@@ -69,6 +143,11 @@ abstract class INode implements Comparable<byte[]> {
    */
   void setLocalName(String name) {
     this.name = string2Bytes(name);
+  }
+
+  /** {@inheritDoc} */
+  public String toString() {
+    return "\"" + getLocalName() + "\":" + getPermissionStatus();
   }
 
   /**
@@ -231,13 +310,13 @@ class INodeDirectory extends INode {
 
   private List<INode> children;
 
-  INodeDirectory(String name) {
-    super(name);
+  INodeDirectory(String name, PermissionStatus permissions) {
+    super(name, permissions);
     this.children = null;
   }
 
-  INodeDirectory(long mTime) {
-    super(mTime);
+  INodeDirectory(PermissionStatus permissions, long mTime) {
+    super(permissions, mTime);
     this.children = null;
   }
 
@@ -380,19 +459,31 @@ class INodeDirectory extends INode {
     children.add(-low - 1, node);
     // update modification time of the parent directory
     setModificationTime(node.getModificationTime());
+    if (node.getGroupName() == null) {
+      node.setGroup(getGroupName());
+    }
     return node;
   }
 
+  /**
+   * Equivalent to addNode(path, newNode, false).
+   * @see #addNode(String, INode, boolean)
+   */
+  <T extends INode> T addNode(String path, T newNode) throws FileNotFoundException {
+    return addNode(path, newNode, false);
+  }
   /**
    * Add new INode to the file tree.
    * Find the parent and insert 
    * 
    * @param path file path
    * @param newNode INode to be added
+   * @param inheritPermission If true, copy the parent's permission to newNode.
    * @return null if the node already exists; inserted INode, otherwise
-   * @throws FileNotFoundException 
+   * @throws FileNotFoundException
    */
-  <T extends INode> T addNode(String path, T newNode) throws FileNotFoundException {
+  <T extends INode> T addNode(String path, T newNode, boolean inheritPermission
+      ) throws FileNotFoundException {
     byte[][] pathComponents = getPathComponents(path);
     assert pathComponents != null : "Incorrect path " + path;
     int pathLen = pathComponents.length;
@@ -409,6 +500,17 @@ class INodeDirectory extends INode {
       throw new FileNotFoundException("Parent path is not a directory: "+path);
     }
     INodeDirectory parentNode = (INodeDirectory)node;
+
+    if (inheritPermission) {
+      FsPermission p = parentNode.getFsPermission();
+      //make sure the  permission has wx for the user
+      if (!p.getUserAction().implies(FsAction.WRITE_EXECUTE)) {
+        p = new FsPermission(p.getUserAction().or(FsAction.WRITE_EXECUTE),
+            p.getGroupAction(), p.getOtherAction());
+      }
+      newNode.setPermission(p);
+    }
+
     // insert into the parent children list
     newNode.name = pathComponents[pathLen-1];
     return parentNode.addChild(newNode);
@@ -466,26 +568,35 @@ class INodeDirectory extends INode {
 }
 
 class INodeFile extends INode {
+  static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
+
   private BlockInfo blocks[] = null;
   protected short blockReplication;
   protected long preferredBlockSize;
 
-  /**
-   */
-  INodeFile(int nrBlocks, short replication, long modificationTime,
+  INodeFile(PermissionStatus permissions,
+            int nrBlocks, short replication, long modificationTime,
             long preferredBlockSize) {
-    super(modificationTime);
-    this.blockReplication = replication;
-    this.preferredBlockSize = preferredBlockSize;
-    allocateBlocks(nrBlocks);
+    this(permissions, new BlockInfo[nrBlocks], replication,
+        modificationTime, preferredBlockSize);
   }
 
-  protected INodeFile(BlockInfo[] blklist, short replication, long modificationTime,
+  protected INodeFile(PermissionStatus permissions, BlockInfo[] blklist,
+                      short replication, long modificationTime,
                       long preferredBlockSize) {
-    super(modificationTime);
+    super(permissions, modificationTime);
     this.blockReplication = replication;
     this.preferredBlockSize = preferredBlockSize;
     blocks = blklist;
+  }
+
+  /**
+   * Set the {@link FsPermission} of this {@link INodeFile}.
+   * Since this is a file,
+   * the {@link FsAction#EXECUTE} action, if any, is ignored.
+   */
+  protected void setPermission(FsPermission permission) {
+    super.setPermission(permission.applyUMask(UMASK));
   }
 
   boolean isDirectory() {
@@ -510,14 +621,6 @@ class INodeFile extends INode {
    */
   BlockInfo[] getBlocks() {
     return this.blocks;
-  }
-
-  /**
-   * Allocate space for blocks.
-   * @param nrBlocks number of blocks
-   */
-  void allocateBlocks(int nrBlocks) {
-    this.blocks = new BlockInfo[nrBlocks];
   }
 
   /**
@@ -609,14 +712,16 @@ class INodeFileUnderConstruction extends INodeFile {
   protected StringBytesWritable clientMachine;
   protected DatanodeDescriptor clientNode; // if client is a cluster node too.
 
-  INodeFileUnderConstruction(short replication,
+  INodeFileUnderConstruction(PermissionStatus permissions,
+                             short replication,
                              long preferredBlockSize,
                              long modTime,
                              String clientName,
                              String clientMachine,
                              DatanodeDescriptor clientNode) 
                              throws IOException {
-    super(0, replication, modTime, preferredBlockSize);
+    super(permissions.applyUMask(UMASK), 0, replication, modTime,
+        preferredBlockSize);
     this.clientName = new StringBytesWritable(clientName);
     this.clientMachine = new StringBytesWritable(clientMachine);
     this.clientNode = clientNode;
@@ -646,7 +751,8 @@ class INodeFileUnderConstruction extends INodeFile {
   // converts a INodeFileUnderConstruction into a INodeFile
   //
   INodeFile convertToInodeFile() {
-    INodeFile obj = new INodeFile(getBlocks(),
+    INodeFile obj = new INodeFile(getPermissionStatus(),
+                                  getBlocks(),
                                   getReplication(),
                                   getModificationTime(),
                                   getPreferredBlockSize());

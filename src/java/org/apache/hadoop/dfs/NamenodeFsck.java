@@ -68,6 +68,7 @@ public class NamenodeFsck {
   public static final int FIXING_DELETE = 2;
   
   private NameNode nn;
+  private ClientProtocol namenodeproxy;
   private String lostFound = null;
   private boolean lfInited = false;
   private boolean lfInitedOk = false;
@@ -95,6 +96,7 @@ public class NamenodeFsck {
                       HttpServletResponse response) throws IOException {
     this.conf = conf;
     this.nn = nn;
+    this.namenodeproxy =DFSClient.createNamenode(nn.getNameNodeAddress(),conf);
     this.out = response.getWriter();
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
       String key = it.next();
@@ -114,7 +116,7 @@ public class NamenodeFsck {
    */
   public void fsck() throws IOException {
     try {
-      DFSFileInfo[] files = nn.getListing(path);
+      DFSFileInfo[] files = namenodeproxy.getListing(path);
       FsckResult res = new FsckResult();
       res.setReplication((short) conf.getInt("dfs.replication", 3));
       if (files != null) {
@@ -144,7 +146,7 @@ public class NamenodeFsck {
         out.println(file.getPath().toString() + " <dir>");
       }
       res.totalDirs++;
-      DFSFileInfo[] files = nn.getListing(file.getPath().toString());
+      DFSFileInfo[] files =namenodeproxy.getListing(file.getPath().toString());
       for (int i = 0; i < files.length; i++) {
         check(files[i], res);
       }
@@ -153,8 +155,8 @@ public class NamenodeFsck {
     res.totalFiles++;
     long fileLen = file.getLen();
     res.totalSize += fileLen;
-    LocatedBlocks blocks = nn.getBlockLocations(file.getPath().toString(),
-        0, fileLen);
+    LocatedBlocks blocks = namenodeproxy.getBlockLocations(
+        file.getPath().toString(), 0, fileLen);
     res.totalBlocks += blocks.locatedBlockCount();
     if (showFiles) {
       out.print(file.getPath().toString() + " " + fileLen + " bytes, " +
@@ -248,7 +250,7 @@ public class NamenodeFsck {
         lostFoundMove(file, blocks);
         break;
       case FIXING_DELETE:
-        nn.delete(file.getPath().toString());
+        namenodeproxy.delete(file.getPath().toString());
       }
     }
     if (showFiles) {
@@ -276,7 +278,7 @@ public class NamenodeFsck {
     String target = lostFound + file.getPath();
     String errmsg = "Failed to move " + file.getPath() + " to /lost+found";
     try {
-      if (!nn.mkdirs(target)) {
+      if (!namenodeproxy.mkdirs(target, file.getPermission())) {
         LOG.warn(errmsg);
         return;
       }

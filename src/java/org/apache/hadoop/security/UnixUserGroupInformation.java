@@ -110,12 +110,6 @@ public class UnixUserGroupInformation implements UserGroupInformation {
     return userName;
   }
 
-  /** Return the default  group name
-   */
-  public String getDefaultGroupName() {
-    return groupNames[0];
-  }
-
   /* The following two methods implements Writable interface */
   final private static String UGI_TECHNOLOGY = "STRING_UGI"; 
   /** Deserialize this object
@@ -218,13 +212,14 @@ public class UnixUserGroupInformation implements UserGroupInformation {
     return currentUGI;
   }
   
-  /* Get current user's name and the names of all its groups from Unix.
+  /**
+   * Get current user's name and the names of all its groups from Unix.
    * It's assumed that there is only one UGI per user. If this user already
    * has a UGI in the ugi map, return the ugi in the map.
    * Otherwise get the current user's information from Unix, store it
    * in the map, and return it.
    */
-  private static UnixUserGroupInformation login() throws LoginException {
+  public static UnixUserGroupInformation login() throws LoginException {
     try {
       String userName =  getUnixUserName();
 
@@ -263,6 +258,7 @@ public class UnixUserGroupInformation implements UserGroupInformation {
     UnixUserGroupInformation ugi = readFromConf(conf, UGI_PROPERTY_NAME);
     if (ugi == null) {
       ugi = login();
+      LOG.debug("Unix Login: " + ugi);
     } 
     return ugi;
   }

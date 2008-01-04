@@ -21,7 +21,6 @@ package org.apache.hadoop.ipc;
 import java.io.IOException;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 
@@ -45,6 +44,8 @@ import java.util.List;
 import java.util.Iterator;
 import java.util.Random;
 
+import javax.security.auth.login.LoginException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -52,9 +53,9 @@ import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.ipc.SocketChannelOutputStream;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.*;
+import org.apache.hadoop.security.UnixUserGroupInformation;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -125,7 +126,16 @@ public abstract class Server {
    */
   public static UserGroupInformation getUserInfo() {
     Call call = CurCall.get();
-    return (call == null) ? null : call.connection.ticket;
+    if (call != null)
+      return call.connection.ticket;
+    // This is to support local calls (as opposed to rpc ones) to the name-node.
+    // Currently it is name-node specific and should be placed somewhere else.
+    try {
+      return UnixUserGroupInformation.login();
+    } catch(LoginException le) {
+      LOG.info(StringUtils.stringifyException(le));
+      return null;
+    }
   }
   
   private String bindAddress; 

@@ -9,6 +9,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.StringUtils;
@@ -443,8 +444,8 @@ public class NNThroughputBenchmark {
     throws IOException {
       long start = System.currentTimeMillis();
       // dummyActionNoSynch(fileIdx);
-      nameNode.create(fileNames[daemonId][inputIdx], clientName, 
-                      true, replication, BLOCK_SIZE);
+      nameNode.create(fileNames[daemonId][inputIdx], FsPermission.getDefault(),
+                      clientName, true, replication, BLOCK_SIZE);
       long end = System.currentTimeMillis();
       return end-start;
     }
@@ -656,7 +657,8 @@ public class NNThroughputBenchmark {
       String clientName = getClientName(007);
       for(int idx=0; idx < nrFiles; idx++) {
         String fileName = nameGenerator.getNextFileName();
-        nameNode.create(fileName, clientName, true, replication, BLOCK_SIZE);
+        nameNode.create(fileName, FsPermission.getDefault(),
+                        clientName, true, replication, BLOCK_SIZE);
         addBlocks(fileName, clientName);
         nameNode.complete(fileName, clientName);
       }

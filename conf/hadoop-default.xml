@@ -280,6 +280,24 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.permissions</name>
+  <value>false</value>
+  <description>
+    If "true", enable permission checking in HDFS.
+    If "false", permission checking is turned off,
+    but all other behavior is unchanged.
+    Switching from one parameter value to the other does not change the mode,
+    owner or group of files or directories.
+  </description>
+</property>
+
+<property>
+  <name>dfs.permissions.supergroup</name>
+  <value>supergroup</value>
+  <description>The name of the group of super-users.</description>
+</property>
+
+<property>
   <name>dfs.client.buffer.dir</name>
   <value>${hadoop.tmp.dir}/dfs/tmp</value>
   <description>Determines where on the local filesystem an DFS client

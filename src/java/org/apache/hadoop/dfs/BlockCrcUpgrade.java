@@ -2074,7 +2074,7 @@ class BlockCrcUpgradeObjectNamenode extends UpgradeObjectNamenode {
   }
   
   void updateBlockLevelStats(String path, BlockLevelStats stats) {
-    DFSFileInfo[] fileArr = getFSNamesystem().getListing(path);
+    DFSFileInfo[] fileArr = getFSNamesystem().dir.getListing(path);
     
     for (DFSFileInfo file:fileArr) {
       if (file.isDir()) {
@@ -2083,7 +2083,7 @@ class BlockCrcUpgradeObjectNamenode extends UpgradeObjectNamenode {
         // Get the all the blocks.
         LocatedBlocks blockLoc = null;
         try {
-          blockLoc = getFSNamesystem().getBlockLocations(null,
+          blockLoc = getFSNamesystem().getBlockLocationsInternal(null,
               file.getPath().toString(), 0, file.getLen());
           int numBlocks = blockLoc.locatedBlockCount();
           for (int i=0; i<numBlocks; i++) {
@@ -2142,7 +2142,7 @@ class BlockCrcUpgradeObjectNamenode extends UpgradeObjectNamenode {
   
   private int deleteCrcFiles(String path) {
     // Recursively deletes files
-    DFSFileInfo[] fileArr = getFSNamesystem().getListing(path);
+    DFSFileInfo[] fileArr = getFSNamesystem().dir.getListing(path);
     
     int numFilesDeleted = 0;
     
