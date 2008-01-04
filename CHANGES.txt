@@ -54,6 +54,8 @@ Trunk (unreleased changes)
     HADOOP-1301.  Hadoop-On-Demand (HOD): resource management 
     provisioning for Hadoop. (Hemanth Yamijala via nigel)
 
+    HADOOP-2336. Shell commands to modify file permissions. (rangadi)
+
   IMPROVEMENTS
 
     HADOOP-2045.  Change committer list on website to a table, so that
@@ -149,9 +151,6 @@ Trunk (unreleased changes)
 
     HADOOP-1719. Improves the utilization of shuffle copier threads.
     (Amar Kamat via ddas)
-
-    HADOOP-2336. Shell commands to modify file permissions.
-    (Raghu Angadi via rangadi)
  
   OPTIMIZATIONS
 
