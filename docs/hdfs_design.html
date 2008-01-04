@@ -1,9 +1,9 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta content="Apache Forrest" name="Generator">
-<meta name="Forrest-version" content="0.8">
+<meta name="Forrest-version" content="0.7">
 <meta name="Forrest-skin-name" content="pelt">
 <title> 
       The Hadoop Distributed File System: Architecture and Design
@@ -18,91 +18,46 @@
 <body onload="init()">
 <script type="text/javascript">ndeSetTextSize();</script>
 <div id="top">
-<!--+
-    |breadtrail
-    +-->
 <div class="breadtrail">
 <a href="http://www.apache.org/">Apache</a> &gt; <a href="http://lucene.apache.org/">Lucene</a> &gt; <a href="http://lucene.apache.org/hadoop/">Hadoop</a><script src="skin/breadcrumbs.js" language="JavaScript" type="text/javascript"></script>
 </div>
-<!--+
-    |header
-    +-->
 <div class="header">
-<!--+
-    |start group logo
-    +-->
 <div class="grouplogo">
 <a href="http://lucene.apache.org/"><img class="logoImage" alt="Lucene" src="images/lucene_green_150.gif" title="Apache Lucene"></a>
 </div>
-<!--+
-    |end group logo
-    +-->
-<!--+
-    |start Project Logo
-    +-->
 <div class="projectlogo">
 <a href="http://lucene.apache.org/hadoop/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
 </div>
-<!--+
-    |end Project Logo
-    +-->
-<!--+
-    |start Search
-    +-->
 <div class="searchbox">
 <form action="http://www.google.com/search" method="get" class="roundtopsmall">
 <input value="lucene.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp; 
-                    <input name="Search" value="Search" type="submit">
+                    <input attr="value" name="Search" value="Search" type="submit">
 </form>
 </div>
-<!--+
-    |end search
-    +-->
-<!--+
-    |start Tabs
-    +-->
 <ul id="tabs">
 <li>
-<a class="unselected" href="http://lucene.apache.org/hadoop/">Project</a>
+<a class="base-not-selected" href="http://lucene.apache.org/hadoop/">Project</a>
 </li>
 <li>
-<a class="unselected" href="http://wiki.apache.org/lucene-hadoop">Wiki</a>
+<a class="base-not-selected" href="http://wiki.apache.org/lucene-hadoop">Wiki</a>
 </li>
 <li class="current">
-<a class="selected" href="index.html">Hadoop 0.16 Documentation</a>
+<a class="base-selected" href="index.html">Hadoop 0.16 Documentation</a>
 </li>
 </ul>
-<!--+
-    |end Tabs
-    +-->
 </div>
 </div>
 <div id="main">
 <div id="publishedStrip">
-<!--+
-    |start Subtabs
-    +-->
 <div id="level2tabs"></div>
-<!--+
-    |end Endtabs
-    +-->
 <script type="text/javascript"><!--
-document.write("Last Published: " + document.lastModified);
+document.write("<text>Last Published:</text> " + document.lastModified);
 //  --></script>
 </div>
-<!--+
-    |breadtrail
-    +-->
 <div class="breadtrail">
-
+             
              &nbsp;
            </div>
-<!--+
-    |start Menu, mainarea
-    +-->
-<!--+
-    |start Menu
-    +-->
 <div id="menu">
 <div onclick="SwitchMenu('menu_selected_1.1', 'skin/')" id="menu_selected_1.1Title" class="menutitle" style="background-image: url('skin/images/chapter_open.gif');">Documentation</div>
 <div id="menu_selected_1.1" class="selectedmenuitemgroup" style="display: block;">
@@ -125,6 +80,9 @@ document.write("Last Published: " + document.lastModified);
 <a href="streaming.html">Streaming</a>
 </div>
 <div class="menuitem">
+<a href="hod.html">Hadoop On Demand</a>
+</div>
+<div class="menuitem">
 <a href="api/index.html">API Docs</a>
 </div>
 <div class="menuitem">
@@ -140,17 +98,8 @@ document.write("Last Published: " + document.lastModified);
 <div id="credit"></div>
 <div id="roundbottom">
 <img style="display: none" class="corner" height="15" width="15" alt="" src="skin/images/rc-b-l-15-1body-2menu-3menu.png"></div>
-<!--+
-  |alternative credits
-  +-->
 <div id="credit2"></div>
 </div>
-<!--+
-    |end Menu
-    +-->
-<!--+
-    |start content
-    +-->
 <div id="content">
 <div title="Portable Document Format" class="pdflink">
 <a class="dida" href="hdfs_design.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
@@ -330,8 +279,8 @@ document.write("Last Published: " + document.lastModified);
 <p>
       HDFS has a master/slave architecture. An HDFS cluster consists of a single <em>Namenode</em>, a master server that manages the file system namespace and regulates access to files by clients. In addition, there are a number of <em>Datanodes</em>, usually one per node in the cluster, which manage storage attached to the nodes that they run on. HDFS exposes a file system namespace and allows user data to be stored in files. Internally, a file is split into one or more blocks and these blocks are stored in a set of Datanodes. The Namenode executes file system namespace operations like opening, closing, and renaming files and directories. It also determines the mapping of blocks to Datanodes. The Datanodes are responsible for serving read and write requests from the file system&rsquo;s clients. The Datanodes also perform block creation, deletion, and replication upon instruction from the Namenode.
       </p>
-<div id="" style="text-align: center;">
-<img id="" class="figure" alt="HDFS Architecture" src="images/hdfsarchitecture.gif"></div>
+<div style="text-align: center;">
+<img class="figure" alt="HDFS Architecture" src="images/hdfsarchitecture.gif"></div>
 <p>
       The Namenode and Datanode are pieces of software designed to run on commodity machines. These machines typically run a GNU/Linux operating system (<acronym title="operating system">OS</acronym>). HDFS is built using the Java language; any machine that supports Java can run the Namenode or the Datanode software. Usage of the highly portable Java language means that HDFS can be deployed on a wide range of machines. A typical deployment has a dedicated machine that runs only the Namenode software. Each of the other machines in the cluster runs one instance of the Datanode software. The architecture does not preclude running multiple Datanodes on the same machine but in a real deployment that is rarely the case.
       </p>
@@ -366,8 +315,8 @@ document.write("Last Published: " + document.lastModified);
 <p>
       The Namenode makes all decisions regarding replication of blocks. It periodically receives a <em>Heartbeat</em> and a <em>Blockreport</em> from each of the Datanodes in the cluster. Receipt of a Heartbeat implies that the Datanode is functioning properly. A Blockreport contains a list of all blocks on a Datanode. 
     </p>
-<div id="" style="text-align: center;">
-<img id="" class="figure" alt="HDFS Datanodes" src="images/hdfsdatanodes.gif"></div>
+<div style="text-align: center;">
+<img class="figure" alt="HDFS Datanodes" src="images/hdfsdatanodes.gif"></div>
 <a name="N100AC"></a><a name="Replica+Placement%3A+The+First+Baby+Steps"></a>
 <h3 class="h4"> Replica Placement: The First Baby Steps </h3>
 <p>
@@ -443,7 +392,7 @@ document.write("Last Published: " + document.lastModified);
 <a name="N1013F"></a><a name="Data+Integrity"></a>
 <h3 class="h4"> Data Integrity </h3>
 <p>
-        <!-- XXX "checksum checking" sounds funny -->
+        
         It is possible that a block of data fetched from a Datanode arrives corrupted. This corruption can occur because of faults in a storage device, network faults, or buggy software. The HDFS client software implements checksum checking on the contents of HDFS files. When a client creates an HDFS file, it computes a checksum of each block of the file and stores these checksums in a separate hidden file in the same HDFS namespace. When a client retrieves file contents it verifies that the data it received from each Datanode matches the checksum stored in the associated checksum file. If not, then the client can opt to retrieve that block from another Datanode that has a replica of that block.
         </p>
 <a name="N1014B"></a><a name="Metadata+Disk+Failure"></a>
@@ -612,27 +561,18 @@ document.write("Last Published: " + document.lastModified);
 <font size="-2">by&nbsp;Dhruba Borthakur</font>
 </p>
 </div>
-<!--+
-    |end content
-    +-->
 <div class="clearboth">&nbsp;</div>
 </div>
 <div id="footer">
-<!--+
-    |start bottomstrip
-    +-->
 <div class="lastmodified">
 <script type="text/javascript"><!--
-document.write("Last Published: " + document.lastModified);
+document.write("<text>Last Published:</text> " + document.lastModified);
 //  --></script>
 </div>
 <div class="copyright">
         Copyright &copy;
          2007 <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
 </div>
-<!--+
-    |end bottomstrip
-    +-->
 </div>
 </body>
 </html>

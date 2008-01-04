@@ -51,6 +51,9 @@ Trunk (unreleased changes)
     HADOOP-2085.  A library to support map-side joins of consistently 
     partitioned and sorted data sets. (Chris Douglas via omalley)
 
+    HADOOP-1301.  Hadoop-On-Demand (HOD): resource management 
+    provisioning for Hadoop. (Hemanth Yamijala via nigel)
+
   IMPROVEMENTS
 
     HADOOP-2045.  Change committer list on website to a table, so that

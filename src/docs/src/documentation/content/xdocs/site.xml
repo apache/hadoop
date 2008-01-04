@@ -23,6 +23,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <hdfs      label="HDFS Architecture"  href="hdfs_design.html" />
     <mapred    label="Map-Reduce Tutorial" href="mapred_tutorial.html" />
     <streaming label="Streaming"          href="streaming.html" />
+    <hod       label="Hadoop On Demand"   href="hod.html" />
     <api       label="API Docs"           href="ext:api/index" />
     <wiki      label="Wiki"               href="ext:wiki" />
     <faq       label="FAQ"                href="ext:faq" />
