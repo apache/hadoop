@@ -231,7 +231,9 @@ public abstract class GenericHandler {
   throws IllegalStateException, IllegalArgumentException, IOException {
     for (Map.Entry<Text, byte[]> e: m.entrySet()) {
       outputter.startTag(COLUMN);
-      doElement(outputter, "name", e.getKey().toString());
+      doElement(outputter, "name", 
+        org.apache.hadoop.hbase.util.Base64.encodeBytes(
+          e.getKey().getBytes()));
       // We don't know String from binary data so we always base64 encode.
       doElement(outputter, "value",
         org.apache.hadoop.hbase.util.Base64.encodeBytes(e.getValue()));

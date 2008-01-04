@@ -101,6 +101,8 @@ Trunk (unreleased changes)
    HADOOP-2505 formatter classes missing apache license
    HADOOP-2504 REST servlet method for deleting a scanner was not properly
                mapped (Bryan Duxbury via Stack)
+   HADOOP-2507 REST servlet does not properly base64 row keys and column names
+               (Bryan Duxbury via Stack)
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
