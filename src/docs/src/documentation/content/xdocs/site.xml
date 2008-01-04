@@ -22,6 +22,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <setup     label="Cluster Setup"      href="cluster_setup.html" />
     <hdfs      label="HDFS Architecture"  href="hdfs_design.html" />
     <mapred    label="Map-Reduce Tutorial" href="mapred_tutorial.html" />
+    <mapred    label="Native Hadoop Libraries" href="native_libraries.html" />
     <streaming label="Streaming"          href="streaming.html" />
     <hod       label="Hadoop On Demand"   href="hod.html" />
     <api       label="API Docs"           href="ext:api/index" />
@@ -33,13 +34,20 @@ See http://forrest.apache.org/docs/linking.html for more info.
   <external-refs>
     <site      href="http://lucene.apache.org/hadoop/"/>
     <lists     href="http://lucene.apache.org/hadoop/mailing_lists.html"/>
-    <releases  href="http://lucene.apache.org/hadoop/releases.html"/>
+    <releases  href="http://lucene.apache.org/hadoop/releases.html">
+      <download href="#Download" />
+    </releases>
     <jira      href="http://lucene.apache.org/hadoop/issue_tracking.html"/>
     <wiki      href="http://wiki.apache.org/lucene-hadoop/" />
     <faq       href="http://wiki.apache.org/lucene-hadoop/FAQ" />
     <lucene    href="http://lucene.apache.org/" />
     <nutch     href="http://lucene.apache.org/nutch/" />
     <hadoop-default href="http://lucene.apache.org/hadoop/hadoop-default.html" />
+    <zlib      href="http://www.zlib.net/" />
+    <lzo       href="http://www.oberhumer.com/opensource/lzo/" />
+    <gzip      href="http://www.gzip.org/" />
+    <cygwin    href="http://www.cygwin.com/" />
+    <osx       href="http://www.apple.com/macosx" />
     <api href="api/">
       <index href="index.html" />
       <org href="org/">
@@ -63,6 +71,11 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <close href="#close()" />
               </closeable>
               <sequencefile href="SequenceFile.html" />
+              <sequencefilecompressiontype href="SequenceFile.CompressionType.html">
+                <none href="#NONE" />
+                <record href="#RECORD" />
+                <block href="#BLOCK" />
+              </sequencefilecompressiontype>
               <writable href="Writable.html" />
               <writablecomparable href="WritableComparable.html" />
               <compress href="compress/">
@@ -99,6 +112,9 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <setmaxmaptaskfailurespercent href="#setMaxMapTaskFailuresPercent(int)" />
                 <setmaxreducetaskfailurespercent href="#setMaxReduceTaskFailuresPercent(int)" />
                 <setjobendnotificationuri href="#setJobEndNotificationURI(java.lang.String)" />
+                <setcompressmapoutput href="#setCompressMapOutput(boolean)" />
+                <setmapoutputcompressiontype href="#setMapOutputCompressionType(org.apache.hadoop.io.SequenceFile.CompressionType)" />
+                <setmapoutputcompressorclass href="#setMapOutputCompressorClass(java.lang.Class)" />
               </jobconf>
               <jobconfigurable href="JobConfigurable.html">
                 <configure href="#configure(org.apache.hadoop.mapred.JobConf)" />
@@ -113,6 +129,13 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <collect href="#collect(K, V)" />
               </outputcollector>
               <outputformat href="OutputFormat.html" />
+              <outputformatbase href="OutputFormatBase.html">
+                <setcompressoutput href="#setCompressOutput(org.apache.hadoop.mapred.JobConf,%20boolean)" />
+                <setoutputcompressorclass href="#setOutputCompressorClass(org.apache.hadoop.mapred.JobConf,%20java.lang.Class)" />
+              </outputformatbase>
+              <sequencefileoutputformat href="SequenceFileOutputFormat.html">
+                <setoutputcompressiontype href="#setOutputCompressionType(org.apache.hadoop.mapred.JobConf,%20org.apache.hadoop.io.SequenceFile.CompressionType)" />
+              </sequencefileoutputformat>
               <partitioner href="Partitioner.html" />
               <recordreader href="RecordReader.html" />
               <recordwriter href="RecordWriter.html" />

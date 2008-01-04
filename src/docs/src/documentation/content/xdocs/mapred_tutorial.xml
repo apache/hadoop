@@ -1109,8 +1109,14 @@
         individual task.</p>
 
         <p><a href="ext:api/org/apache/hadoop/mapred/textinputformat">
-        TextInputFormat</a> is the default <code>InputFormat</code>.
-        </p>
+        TextInputFormat</a> is the default <code>InputFormat</code>.</p>
+        
+        <p>If <code>TextInputFormat</code> is the <code>InputFormat</code> for a 
+        given job, the framework detects input-files with the <em>.gz</em> and 
+        <em>.lzo</em> extensions and automatically decompresses them using the 
+        appropriate <code>CompressionCodec</code>. However, it must be noted that
+        compressed files with the above extensions cannot be <em>split</em> and 
+        each compressed file is processed in its entirety by a single mapper.</p>
         
         <section>
           <title>InputSplit</title>
@@ -1336,6 +1342,70 @@
           JobControl</a> is a utility which encapsulates a set of Map-Reduce jobs
           and their dependencies.</p>
         </section>
+        
+        <section>
+          <title>Data Compression</title>
+          
+          <p>Hadoop Map-Reduce provides facilities for the application-writer to
+          specify compression for both intermediate map-outputs and the
+          job-outputs i.e. output of the reduces. It also comes bundled with
+          <a href="ext:api/org/apache/hadoop/io/compress/compressioncodec">
+          CompressionCodec</a> implementations for the 
+          <a href="ext:zlib">zlib</a> and <a href="ext:lzo">lzo</a> compression 
+          algorithms. The <a href="ext:gzip">gzip</a> file format is also
+          supported.</p>
+          
+          <p>Hadoop also provides native implementations of the above compression
+          codecs for reasons of both performance (zlib) and non-availability of
+          Java libraries (lzo). More details on their usage and availability are
+          available <a href="native_libraries.html">here</a>.</p>
+          
+          <section>
+            <title>Intermediate Outputs</title>
+            
+            <p>Applications can control compression of intermediate map-outputs
+            via the 
+            <a href="ext:api/org/apache/hadoop/mapred/jobconf/setcompressmapoutput">
+            JobConf.setCompressMapOutput(boolean)</a> api and the 
+            <code>CompressionCodec</code> to be used via the
+            <a href="ext:api/org/apache/hadoop/mapred/jobconf/setmapoutputcompressorclass">
+            JobConf.setMapOutputCompressorClass(Class)</a> api. Since 
+            the intermediate map-outputs are always stored in the 
+            <a href="ext:api/org/apache/hadoop/io/sequencefile">SequenceFile</a>
+            format, the
+            <a href="ext:api/org/apache/hadoop/io/sequencefilecompressiontype">
+            SequenceFile.CompressionType</a> (i.e.
+            <a href="ext:api/org/apache/hadoop/io/sequencefilecompressiontype/record">
+            RECORD</a> / 
+            <a href="ext:api/org/apache/hadoop/io/sequencefilecompressiontype/block">
+            BLOCK</a> - defaults to <code>RECORD</code>) can be specified via the
+            <a href="ext:api/org/apache/hadoop/mapred/jobconf/setmapoutputcompressiontype">
+            JobConf.setMapOutputCompressionType(SequenceFile.CompressionType)</a> 
+            api.</p>
+          </section>
+          
+          <section>
+            <title>Job Outputs</title>
+            
+            <p>Applications can control compression of job-outputs via the
+            <a href="ext:api/org/apache/hadoop/mapred/outputformatbase/setcompressoutput">
+            OutputFormatBase.setCompressOutput(JobConf, boolean)</a> api and the 
+            <code>CompressionCodec</code> to be used can be specified via the
+            <a href="ext:api/org/apache/hadoop/mapred/outputformatbase/setoutputcompressorclass">
+            OutputFormatBase.setOutputCompressorClass(JobConf, Class)</a> api.</p>
+            
+            <p>If the job outputs are to be stored in the 
+            <a href="ext:api/org/apache/hadoop/mapred/sequencefileoutputformat">
+            SequenceFileOutputFormat</a>, the required
+            <code>SequenceFile.CompressionType</code> (i.e. <code>RECORD</code> / 
+            <code>BLOCK</code> - defaults to <code>RECORD</code>)can be specified 
+            via the 
+            <a href="ext:api/org/apache/hadoop/mapred/sequencefileoutputformat/setoutputcompressiontype">
+            SequenceFileOutputFormat.setOutputCompressionType(JobConf, 
+            SequenceFile.CompressionType)</a> api.</p>
+          </section>
+        </section>
+        
       </section>
     </section>
 

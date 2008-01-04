@@ -1,10 +1,10 @@
 /*
-* Copyright 2002-2004 The Apache Software Foundation or its licensors,
-* as applicable.
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
+* Licensed to the Apache Software Foundation (ASF) under one or more
+* contributor license agreements.  See the NOTICE file distributed with
+* this work for additional information regarding copyright ownership.
+* The ASF licenses this file to You under the Apache License, Version 2.0
+* (the "License"); you may not use this file except in compliance with
+* the License.  You may obtain a copy of the License at
 *
 *     http://www.apache.org/licenses/LICENSE-2.0
 *
@@ -15,17 +15,25 @@
 * limitations under the License.
 */
 /**
- * This script, when included in a html file and called from a form text field, will set the value of this field to ""
+ * getBlank script - when included in a html file and called from a form text field, will set the value of this field to ""
  * if the text value is still the standard value.
+ * getPrompt script - when included in a html file and called from a form text field, will set the value of this field to the prompt
+ * if the text value is empty.
  *
  * Typical usage:
  * <script type="text/javascript" language="JavaScript" src="getBlank.js"></script>
- * <input type="text" id="query" value="Search the site:" onFocus="getBlank (this, 'Search the site:');"/>
+ * <input type="text" id="query" value="Search the site:" onFocus="getBlank (this, 'Search the site:');" onBlur="getBlank (this, 'Search the site:');"/>
  */
 <!--
 function getBlank (form, stdValue){
 if (form.value == stdValue){
 	form.value = '';
+	}
+return true;
+}
+function getPrompt (form, stdValue){
+if (form.value == ''){
+	form.value = stdValue;
 	}
 return true;
 }

@@ -152,6 +152,9 @@ Trunk (unreleased changes)
     HADOOP-1719. Improves the utilization of shuffle copier threads.
     (Amar Kamat via ddas)
  
+    HADOOP-2390. Added documentation for user-controls for intermediate
+    map-outputs & final job-outputs and native-hadoop libraries. (acmurthy) 
+ 
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

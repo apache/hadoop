@@ -19,6 +19,7 @@
       <li><a href="cluster_setup.html">Hadoop Cluster Setup</a></li>
       <li><a href="hdfs_design.html">Hadoop Distributed File System</a></li>
       <li><a href="mapred_tutorial.html">Hadoop Map-Reduce Tutorial</a></li>
+      <li><a href="native_libraries.html">Native Hadoop Libraries</a></li>
       <li><a href="ext:api/index">API Docs</a></li>
       <li><a href="ext:wiki">Wiki</a></li>
       <li><a href="ext:faq">FAQ</a></li>
