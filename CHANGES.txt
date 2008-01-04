@@ -7,6 +7,7 @@ Trunk (unreleased changes)
    HADOOP-2079 Fix generated HLog, HRegion names
    HADOOP-2495 Minor performance improvements: Slim-down BatchOperation, etc. 
    HADOOP-2506 Remove the algebra package
+   HADOOP-2519 Performance improvements: Customized RPC serialization
 
   NEW FEATURES
     HADOOP-2061 Add new Base64 dialects
