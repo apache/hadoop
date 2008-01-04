@@ -180,12 +180,15 @@ public class ScannerHandler extends GenericHandler {
     outputter.startTag(ROW);
     
     // write the row key
-    doElement(outputter, "name", key.getRow().toString());
+    doElement(outputter, "name", 
+      org.apache.hadoop.hbase.util.Base64.encodeBytes(key.getRow().getBytes()));
     
     // Normally no column is supplied when scanning.
     if (key.getColumn() != null &&
         key.getColumn().getLength() > 0) {
-      doElement(outputter, "key-column", key.getColumn().toString());
+      doElement(outputter, "key-column", 
+        org.apache.hadoop.hbase.util.Base64.encodeBytes(
+          key.getColumn().getBytes()));
     }
     
     doElement(outputter, "timestamp", Long.toString(key.getTimestamp()));
