@@ -338,6 +338,9 @@ Trunk (unreleased changes)
     HADOOP-2488. Fix a regression in random read performance.
     (Michael Stack via rangadi)
 
+    HADOOP-2523. Fix TestDFSShell.testFilePermissions on Windows.
+    (Raghu Angadi via nigel)
+
 Release 0.15.2 - 2008-01-02
 
   BUG FIXES

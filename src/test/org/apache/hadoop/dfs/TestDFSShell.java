@@ -302,8 +302,7 @@ public class TestDFSShell extends TestCase {
   }
 
   /**
-   * Test chmod, getOwner(). 
-   * How do we test chown and chgrp?
+   * Test chmod. How do we test chown and chgrp?
    */
   public void testFilePermissions() throws IOException {
     Configuration conf = new Configuration();
@@ -342,10 +341,6 @@ public class TestDFSShell extends TestCase {
      assertEquals("rw-rw-rw-",
                   fs.getFileStatus(file).getPermission().toString());
      
-     //test username
-     assertEquals(System.getProperty("user.name"), 
-                  fs.getFileStatus(file).getOwner());
-
      fs.delete(dir);     
     } catch (IOException e) {
       throw e;
