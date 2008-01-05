@@ -87,6 +87,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
     // Other java types
     addToMap(String.class, code++);
     addToMap(byte [].class, code++);
+    addToMap(byte [][].class, code++);
     // Hadoop types
     addToMap(Text.class, code++);
     addToMap(Writable.class, code++);
