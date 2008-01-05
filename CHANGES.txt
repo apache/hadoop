@@ -103,6 +103,7 @@ Trunk (unreleased changes)
                mapped (Bryan Duxbury via Stack)
    HADOOP-2507 REST servlet does not properly base64 row keys and column names
                (Bryan Duxbury via Stack)
+   HADOOP-2530 Missing type in new hbase custom RPC serializer
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
