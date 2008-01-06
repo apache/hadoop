@@ -152,6 +152,8 @@ Trunk (unreleased changes)
    HADOOP-2458 HStoreFile.writeSplitInfo should just call 
                HStoreFile.Reference.write
    HADOOP-2471 Add reading/writing MapFile to PerformanceEvaluation suite
+   HADOOP-2522 Separate MapFile benchmark from PerformanceEvaluation
+               (Tom White via Stack)
                
 
 

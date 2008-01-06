@@ -34,11 +34,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.MapFile.Writer;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
@@ -86,7 +84,6 @@ public class PerformanceEvaluation implements HConstants {
   private static final String SEQUENTIAL_READ = "sequentialRead";
   private static final String SEQUENTIAL_WRITE = "sequentialWrite";
   private static final String SCAN = "scan";
-  private static final String MAPFILE = "mapfile";
   
   private static final List<String> COMMANDS =
     Arrays.asList(new String [] {RANDOM_READ,
@@ -94,8 +91,7 @@ public class PerformanceEvaluation implements HConstants {
       RANDOM_WRITE,
       SEQUENTIAL_READ,
       SEQUENTIAL_WRITE,
-      SCAN,
-      MAPFILE});
+      SCAN});
   
   volatile HBaseConfiguration conf;
   private boolean miniCluster = false;
@@ -552,59 +548,6 @@ public class PerformanceEvaluation implements HConstants {
       LOG.error("Failed", e);
     } 
   }
-  
-  private void doMapFile() throws IOException {
-    final int ROW_COUNT = 1000000;
-    Random random = new Random();
-    Configuration c = new Configuration();
-    FileSystem fs = FileSystem.get(c);
-    Path mf = fs.makeQualified(new Path("performanceevaluation.mapfile"));
-    if (fs.exists(mf)) {
-      fs.delete(mf);
-    }
-    Writer writer = new MapFile.Writer(c, fs, mf.toString(),
-      Text.class, Text.class);
-    LOG.info("Writing " + ROW_COUNT + " rows to " + mf.toString());
-    long startTime = System.currentTimeMillis();
-    // Add 1M rows.
-    for (int i = 0; i < ROW_COUNT; i++) {
-      writer.append(PerformanceEvaluation.format(i),
-        new Text(PerformanceEvaluation.generateValue(random)));
-    }
-    writer.close();
-    LOG.info("Writing " + ROW_COUNT + " records took " +
-      (System.currentTimeMillis() - startTime) + "ms (Note: generation of keys " +
-        "and values is done inline and has been seen to consume " +
-        "significant time: e.g. ~30% of cpu time");
-    // Do random reads.
-    LOG.info("Reading " + ROW_COUNT + " random rows");
-    MapFile.Reader reader = new MapFile.Reader(fs, mf.toString(), c);
-    startTime = System.currentTimeMillis();
-    for (int i = 0; i < ROW_COUNT; i++) {
-      if (i > 0 && i % (ROW_COUNT / 10) == 0) {
-        LOG.info("Read " + i);
-      }
-      reader.get(PerformanceEvaluation.getRandomRow(random, ROW_COUNT),
-        new Text());
-    }
-    reader.close();
-    LOG.info("Reading " + ROW_COUNT + " random records took " +
-      (System.currentTimeMillis() - startTime) + "ms (Note: generation of " +
-        "random key is done in line and takes a significant amount of cpu " +
-        "time: e.g 10-15%");
-    // Do random reads.
-    LOG.info("Reading " + ROW_COUNT + " rows sequentially");
-    reader = new MapFile.Reader(fs, mf.toString(), c);
-    startTime = System.currentTimeMillis();
-    Text key = new Text();
-    Text val = new Text();
-    for (int i = 0; reader.next(key, val); i++) {
-      continue;
-    }
-    reader.close();
-    LOG.info("Reading " + ROW_COUNT + " records serially took " +
-      (System.currentTimeMillis() - startTime) + "ms");
-  }
 
   private void runTest(final String cmd) throws IOException {
     if (cmd.equals(RANDOM_READ_MEM)) {
@@ -619,9 +562,7 @@ public class PerformanceEvaluation implements HConstants {
     }
     
     try {
-      if (cmd.equals(MAPFILE)) {
-        doMapFile();
-      } else if (N == 1) {
+      if (N == 1) {
         // If there is only one client and one HRegionServer, we assume nothing
         // has been set up at all.
         runNIsOne(cmd);
@@ -661,7 +602,6 @@ public class PerformanceEvaluation implements HConstants {
     System.err.println(" sequentialRead  Run sequential read test");
     System.err.println(" sequentialWrite Run sequential write test");
     System.err.println(" scan            Run scan test");
-    System.err.println(" mapfile         Do read, write tests against mapfile");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" nclients        Integer. Required. Total number of " +
