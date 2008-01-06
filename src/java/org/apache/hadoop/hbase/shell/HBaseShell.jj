@@ -79,6 +79,7 @@ TOKEN: /** for HQL statements */
    | <DESC: "desc">
    | <CREATE: "create">   
    | <DROP: "drop">
+   | <TRUNCATE: "truncate">
    | <FS: "fs">
    | <JAR: "jar">
    | <EXIT: "exit">
@@ -171,6 +172,7 @@ Command cmdStatement() :
       | cmd = descCommand()
       | cmd = createCommand()
       | cmd = dropCommand()
+      | cmd = truncateCommand()
       | cmd = alterCommand()
       | cmd = insertCommand()
       | cmd = deleteCommand()
@@ -218,17 +220,9 @@ JarCommand jarCommand() :
   Token t = null;
   JarCommand jar = new JarCommand(this.out);
   List<String> query = new ArrayList<String>();
-  String path = "";
 }
 {
   <JAR>
-  (
-      ( t=<ID> | t=<INTEGER_LITERAL> | t=<FLOATING_POINT_LITERAL> )
-      { path += t.image.toString(); }
-  )*
-  t=<JAR>
-  { query.add(path + t.image.toString()); }
-  
   (
       ( t=<ID> | t=<INTEGER_LITERAL> | t=<FLOATING_POINT_LITERAL> )
       { query.add(t.image.toString()); }
@@ -237,6 +231,22 @@ JarCommand jarCommand() :
   {
     jar.setQuery(query);
     return jar;
+  }
+}
+
+TruncateCommand truncateCommand() :
+{
+  TruncateCommand truncate = new TruncateCommand(this.out);
+  String tableName = null;
+}
+{
+  <TRUNCATE><TABLE>
+  [
+    tableName = identifier()
+  ]
+  {
+    truncate.setTableName(tableName);
+    return truncate;
   }
 }
 
@@ -311,7 +321,7 @@ Map<String, Object> ColumnSpec() :
 {
   (
     <MAX_VERSIONS> 
-     <EQUALS> n = Number() 
+     <EQUALS> n = number() 
     { 
        if(n < 0) {
          n = Integer.MAX_VALUE;
@@ -320,7 +330,7 @@ Map<String, Object> ColumnSpec() :
     }
    |
     <MAX_LENGTH>
-     <EQUALS> n = Number()
+     <EQUALS> n = number()
     {  
       columnSpec.put("MAX_LENGTH", n); 
     }
@@ -350,18 +360,18 @@ Map<String, Object> ColumnSpec() :
     }
    |  
     <VECTOR_SIZE> 
-    <EQUALS> n = Number() 
+    <EQUALS> n = number() 
     { 
       columnSpec.put("VECTOR_SIZE", n); 
     }
    |
     <NUM_HASH>
-    <EQUALS> n = Number()
+    <EQUALS> n = number()
     { 
       columnSpec.put("NUM_HASH", n); 
     }  
    |
-    <NUM_ENTRIES> <EQUALS> n = Number()
+    <NUM_ENTRIES> <EQUALS> n = number()
     { 
       columnSpec.put("NUM_ENTRIES", n); 
     }
@@ -581,13 +591,13 @@ SelectCommand selectCommand() :
   ]
    
   [
-     <NUM_VERSIONS><EQUALS> numVersion = Number()
+     <NUM_VERSIONS><EQUALS> numVersion = number()
       {
         select.setVersion(numVersion);
       }
   ]
 
-  [ <LIMIT><EQUALS> limit = Number() {
+  [ <LIMIT><EQUALS> limit = number() {
       try{
         select.setLimit(limit);
       }catch(ClassCastException ce) {
@@ -746,7 +756,7 @@ List<String> columnList() :
   { return columnList; }
 }
 
-int Number() :
+int number() :
 {
   Token t = null;
   Token minusSignedInt = null;

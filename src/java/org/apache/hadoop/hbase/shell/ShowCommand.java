@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.shell;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;

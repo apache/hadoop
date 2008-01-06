@@ -53,6 +53,7 @@ public class AlterCommand extends SchemaModificationCommand {
     super(o);
   }
 
+  @SuppressWarnings("unchecked")
   public ReturnMsg execute(HBaseConfiguration conf) {
     try {
       HConnection conn = HConnectionManager.getConnection(conf);
@@ -76,34 +77,34 @@ public class AlterCommand extends SchemaModificationCommand {
           break;
         case DROP:
           disableTable(admin, tableName);
-          println("Dropping " + column + " from " + tableName
-              + "... Please wait.");
+          println("Dropping " + column + " from " + tableName + "... Please wait.");
           column = appendDelimiter(column);
           admin.deleteColumn(new Text(tableName), new Text(column));
           enableTable(admin, tableName);
           break;
         case CHANGE:
           disableTable(admin, tableName);
-          
-          Map.Entry<String, Map<String, Object>> columnEntry = 
-            (Map.Entry<String, Map<String, Object>>)columnSpecMap.entrySet().toArray()[0];
+
+          Map.Entry<String, Map<String, Object>> columnEntry = (Map.Entry<String, Map<String, Object>>) columnSpecMap
+              .entrySet().toArray()[0];
 
           // add the : if there isn't one
-          Text columnName = new Text(columnEntry.getKey().endsWith(":") ? 
-            columnEntry.getKey() : columnEntry.getKey() + ":");
-          
+          Text columnName = new Text(
+              columnEntry.getKey().endsWith(":") ? columnEntry.getKey()
+                  : columnEntry.getKey() + ":");
+
           // get the table descriptor so we can get the old column descriptor
           HTableDescriptor tDesc = getTableDescByName(admin, tableName);
           HColumnDescriptor oldColumnDesc = tDesc.families().get(columnName);
 
-          // combine the options specified in the shell with the options 
+          // combine the options specified in the shell with the options
           // from the exiting descriptor to produce the new descriptor
-          columnDesc = getColumnDescriptor(columnName.toString(), 
-            columnEntry.getValue(), oldColumnDesc);
-          
+          columnDesc = getColumnDescriptor(columnName.toString(), columnEntry
+              .getValue(), oldColumnDesc);
+
           // send the changes out to the master
           admin.modifyColumn(new Text(tableName), columnName, columnDesc);
-          
+
           enableTable(admin, tableName);
           break;
         case NOOP:
@@ -166,26 +167,26 @@ public class AlterCommand extends SchemaModificationCommand {
   public CommandType getCommandType() {
     return CommandType.DDL;
   }
-  
+
   private HTableDescriptor getTableDescByName(HBaseAdmin admin, String tableName)
-  throws IOException{
+      throws IOException {
     HTableDescriptor[] tables = admin.listTables();
-    for(HTableDescriptor tDesc : tables){
+    for (HTableDescriptor tDesc : tables) {
       if (tDesc.getName().toString().equals(tableName)) {
         return tDesc;
       }
     }
     return null;
   }
-  
+
   /**
-   * Given a column name, column spec, and original descriptor, returns an 
+   * Given a column name, column spec, and original descriptor, returns an
    * instance of HColumnDescriptor representing the column spec, with empty
    * values drawn from the original as defaults
    */
   protected HColumnDescriptor getColumnDescriptor(String column,
-    Map<String, Object> columnSpec, HColumnDescriptor original) 
-  throws IllegalArgumentException {
+      Map<String, Object> columnSpec, HColumnDescriptor original)
+      throws IllegalArgumentException {
     initOptions(original);
 
     Set<String> specs = columnSpec.keySet();
@@ -197,8 +198,8 @@ public class AlterCommand extends SchemaModificationCommand {
       } else if (spec.equals("MAX_LENGTH")) {
         maxLength = (Integer) columnSpec.get(spec);
       } else if (spec.equals("COMPRESSION")) {
-        compression = HColumnDescriptor.CompressionType
-            .valueOf(((String) columnSpec.get(spec)).toUpperCase());
+        compression = HColumnDescriptor.CompressionType.valueOf(((String) columnSpec
+            .get(spec)).toUpperCase());
       } else if (spec.equals("IN_MEMORY")) {
         inMemory = (Boolean) columnSpec.get(spec);
       } else if (spec.equals("BLOOMFILTER")) {
@@ -244,6 +245,4 @@ public class AlterCommand extends SchemaModificationCommand {
     inMemory = original.isInMemory();
     bloomFilterDesc = original.getBloomFilter();
   }
-
-  
 }

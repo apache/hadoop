@@ -43,7 +43,7 @@ public class ShellSecurityManager extends SecurityManager {
    */
   @SuppressWarnings("static-access")
   public void checkExit(int status) {
-    if (status != 9999) {
+    if (status != Shell.EXIT_FLAG) {
       // throw new ExitException(status);
 
       // I didn't figure out How can catch the ExitException in shell main.
