@@ -119,6 +119,10 @@ public class HelpCommand extends BasicCommand {
             + "CHANGE column_family column_spec | "
             + "DROP column_family_name | " + "CHANGE column_spec;" });
 
+    load.put("TRUNCATE", new String[] {
+         "Truncate table is used to clean all data from a table",
+         "TRUNCATE TABLE table_name;" });
+    
     load.put("EXIT", new String[] { "Exit shell", "EXIT;" });
 
     return load;

@@ -48,6 +48,7 @@ public class Shell {
   public static String MASTER_ADDRESS = null;
   public static String HTML_OPTION = null;
   public static int RELAUNCH_FLAG = 7;
+  public static int EXIT_FLAG = 9999;
 
   /** Return the boolean value indicating whether end of command or not */
   static boolean isEndOfCommand(String line) {

@@ -20,6 +20,7 @@ Trunk (unreleased changes)
                 (Bryan Duxbury via Stack)
     HADOOP-2395 Implement "ALTER TABLE ... CHANGE column" operation
                 (Bryan Duxbury via Stack)
+    HADOOP-2240 Truncate for hbase (Edward Yoon via Stack)
 
   OPTIMIZATIONS
    HADOOP-2479 Save on number of Text object creations
