@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.shell;
 import java.io.Writer;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.Shell;
 
 public class ExitCommand extends BasicCommand {
   public ExitCommand(Writer o) {
@@ -32,7 +33,7 @@ public class ExitCommand extends BasicCommand {
   HBaseConfiguration conf) {
     // TOD: Is this the best way to exit? Would be a problem if shell is run
     // inside another program -- St.Ack 09/11/2007
-    System.exit(9999);
+    System.exit(Shell.EXIT_FLAG);
     return null;
   }
 

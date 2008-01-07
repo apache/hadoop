@@ -37,29 +37,30 @@ public class InsertCommand extends BasicCommand {
   private List<String> columnfamilies;
   private List<String> values;
   private String rowKey;
+  private String timestamp = null;
 
   public InsertCommand(Writer o) {
     super(o);
   }
 
   public ReturnMsg execute(HBaseConfiguration conf) {
-    if (this.tableName == null || this.values == null || this.rowKey == null)
+    if (tableName == null || values == null || rowKey == null)
       return new ReturnMsg(0, "Syntax error : Please check 'Insert' syntax.");
 
     HConnection conn = HConnectionManager.getConnection(conf);
-    if (!conn.tableExists(this.tableName)) {
-      return new ReturnMsg(0, "'" + this.tableName + "'" + TABLE_NOT_FOUND);
+    if (!conn.tableExists(tableName)) {
+      return new ReturnMsg(0, "'" + tableName + "'" + TABLE_NOT_FOUND);
     }
 
-    if (this.columnfamilies.size() != this.values.size())
+    if (columnfamilies.size() != values.size())
       return new ReturnMsg(0,
           "Mismatch between values list and columnfamilies list.");
 
     try {
-      HTable table = new HTable(conf, this.tableName);
+      HTable table = new HTable(conf, tableName);
       long lockId = table.startUpdate(getRow());
 
-      for (int i = 0; i < this.values.size(); i++) {
+      for (int i = 0; i < values.size(); i++) {
         Text column = null;
         if (getColumn(i).toString().contains(":"))
           column = getColumn(i);
@@ -67,7 +68,11 @@ public class InsertCommand extends BasicCommand {
           column = new Text(getColumn(i) + ":");
         table.put(lockId, column, getValue(i));
       }
-      table.commit(lockId);
+      
+      if(timestamp != null) 
+        table.commit(lockId, Long.parseLong(timestamp));
+      else
+        table.commit(lockId);
 
       return new ReturnMsg(1, "1 row inserted successfully.");
     } catch (IOException e) {
@@ -103,7 +108,11 @@ public class InsertCommand extends BasicCommand {
   public byte[] getValue(int i) {
     return this.values.get(i).getBytes();
   }
-
+  
+  public void setTimestamp(String timestamp) {
+    this.timestamp = timestamp;
+  }
+  
   @Override
   public CommandType getCommandType() {
     return CommandType.INSERT;

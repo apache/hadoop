@@ -69,15 +69,9 @@
   <property name="hbaseshell.src.dir" 
        value="${src.dir}/org/apache/hadoop/hbase/shell" /> 
      <mkdir dir="${hbaseshell.src.dir}/generated" />
-     <mkdir dir="${hbaseshell.src.dir}/algebra/generated"/>
      <javacc
        target="${hbaseshell.src.dir}/HBaseShell.jj"
        outputdirectory="${hbaseshell.src.dir}/generated"
-       javacchome="${javacc.home}"
-     />
-     <javacc
-       target="${hbaseshell.src.dir}/algebra/ExpressionParser.jj"
-       outputdirectory="${hbaseshell.src.dir}/algebra/generated"
        javacchome="${javacc.home}"
      />
   </target>

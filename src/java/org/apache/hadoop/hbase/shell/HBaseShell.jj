@@ -493,6 +493,7 @@ InsertCommand insertCommand() :
   List<String> columnfamilies = null;
   List<String> values = null;
   String table = null;
+  String timestamp = null;
   Token t = null;       
 }
 {
@@ -517,6 +518,14 @@ InsertCommand insertCommand() :
   { 
      in.setRow(t.image.substring(1, t.image.length()-1)); 
   }
+
+  [ <TIMESTAMP> 
+    timestamp = getStringLiteral()
+    {
+       in.setTimestamp(timestamp);
+    }
+  ]
+
   {
     return in;
   }

@@ -48,14 +48,14 @@ public class TruncateCommand extends BasicCommand {
       HConnection conn = HConnectionManager.getConnection(conf);
       HBaseAdmin admin = new HBaseAdmin(conf);
 
-      if (!conn.tableExists(this.tableName)) {
+      if (!conn.tableExists(tableName)) {
         return new ReturnMsg(0, "Table not found.");
       }
 
       HTableDescriptor[] tables = conn.listTables();
       HColumnDescriptor[] columns = null;
       for (int i = 0; i < tables.length; i++) {
-        if (tables[i].getName().equals(this.tableName)) {
+        if (tables[i].getName().equals(tableName)) {
           columns = tables[i].getFamilies().values().toArray(
               new HColumnDescriptor[] {});
           break;

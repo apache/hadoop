@@ -70,7 +70,7 @@ public class HelpCommand extends BasicCommand {
   private Map<? extends String, ? extends String[]> load() {
     Map<String, String[]> load = new HashMap<String, String[]>();
     load.put("SHOW", new String[] { "Show information about selected title",
-        "SHOW TABLES[or substitution variable name];" });
+        "SHOW TABLES [or substitution variable name];" });
 
     load.put("FS", new String[] {
         "Hadoop FsShell; entering a lone 'FS;' " + "will emit usage",
@@ -98,7 +98,8 @@ public class HelpCommand extends BasicCommand {
     load.put("INSERT", new String[] {
         "Insert values into table",
         "INSERT INTO table_name (column_name, ...) "
-            + "VALUES ('value', ...) WHERE row='row_key';" });
+            + "VALUES ('value', ...) WHERE row='row_key'" +
+            " [TIMESTAMP 'timestamp'];" });
 
     load.put("DELETE", new String[] {
         "Delete table data",

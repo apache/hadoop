@@ -46,8 +46,8 @@ public class CreateCommand extends SchemaModificationCommand {
   public ReturnMsg execute(HBaseConfiguration conf) {
     try {
       HConnection conn = HConnectionManager.getConnection(conf);
-      if (conn.tableExists(this.tableName)) {
-        return new ReturnMsg(0, "'" + this.tableName + "' table already exist.");
+      if (conn.tableExists(tableName)) {
+        return new ReturnMsg(0, "'" + tableName + "' table already exist.");
       }
 
       HBaseAdmin admin = new HBaseAdmin(conf);

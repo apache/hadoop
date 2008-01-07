@@ -60,7 +60,7 @@ public class SelectCommand extends BasicCommand {
   private static final String[] HEADER_COLUMN_CELL = new String[] { "Column",
       "Cell" };
   private static final String[] HEADER = new String[] { "Row", "Column", "Cell" };
-  private static final String STAR = "*";
+  private static final String ASTERISK = "*";
 
   private final TableFormatter formatter;
 
@@ -76,20 +76,19 @@ public class SelectCommand extends BasicCommand {
   }
 
   public ReturnMsg execute(final HBaseConfiguration conf) {
-    if (this.tableName.equals("") || this.rowKey == null
-        || this.columns.size() == 0) {
+    if (tableName.equals("") || rowKey == null || columns.size() == 0) {
       return new ReturnMsg(0, "Syntax error : Please check 'Select' syntax.");
     }
     try {
       HConnection conn = HConnectionManager.getConnection(conf);
-      if (!conn.tableExists(this.tableName) && !isMetaTable()) {
-        return new ReturnMsg(0, "'" + this.tableName + "'" + TABLE_NOT_FOUND);
+      if (!conn.tableExists(tableName) && !isMetaTable()) {
+        return new ReturnMsg(0, "'" + tableName + "'" + TABLE_NOT_FOUND);
       }
 
-      HTable table = new HTable(conf, this.tableName);
+      HTable table = new HTable(conf, tableName);
       HBaseAdmin admin = new HBaseAdmin(conf);
       int count = 0;
-      if (this.whereClause) {
+      if (whereClause) {
         count = compoundWherePrint(table, admin);
       } else {
         count = scanPrint(table, admin);
@@ -102,26 +101,26 @@ public class SelectCommand extends BasicCommand {
   }
 
   private boolean isMetaTable() {
-    return (this.tableName.equals(HConstants.ROOT_TABLE_NAME)
-        || this.tableName.equals(HConstants.META_TABLE_NAME)) ? true : false;
+    return (tableName.equals(HConstants.ROOT_TABLE_NAME)
+        || tableName.equals(HConstants.META_TABLE_NAME)) ? true : false;
   }
 
   private int compoundWherePrint(HTable table, HBaseAdmin admin) {
     int count = 0;
     try {
-      if (this.version != 0) {
+      if (version != 0) {
         // A number of versions has been specified.
         byte[][] result = null;
         ParsedColumns parsedColumns = getColumns(admin, false);
-        boolean multiple = parsedColumns.isMultiple() || this.version > 1;
+        boolean multiple = parsedColumns.isMultiple() || version > 1;
         for (Text column : parsedColumns.getColumns()) {
           if(count == 0) {
             formatter.header(multiple ? HEADER_COLUMN_CELL : null);
           }
-          if (this.timestamp != 0) {
-            result = table.get(this.rowKey, column, this.timestamp, this.version);
+          if (timestamp != 0) {
+            result = table.get(rowKey, column, timestamp, version);
           } else {
-            result = table.get(this.rowKey, column, this.version);
+            result = table.get(rowKey, column, version);
           }
           for (int ii = 0; result != null && ii < result.length; ii++) {
             if (multiple) {
@@ -134,13 +133,13 @@ public class SelectCommand extends BasicCommand {
           }
         }
       } else {
-        for (Map.Entry<Text, byte[]> e : table.getRow(this.rowKey).entrySet()) {
+        for (Map.Entry<Text, byte[]> e : table.getRow(rowKey).entrySet()) {
           if(count == 0) {
             formatter.header(isMultiple() ? HEADER_COLUMN_CELL : null);
           }
           Text key = e.getKey();
           String keyStr = key.toString();
-          if (!this.columns.contains(STAR) && !this.columns.contains(keyStr)) {
+          if (!columns.contains(ASTERISK) && !columns.contains(keyStr)) {
             continue;
           }
           String cellData = toString(key, e.getValue());
@@ -210,10 +209,10 @@ public class SelectCommand extends BasicCommand {
     try {
       ParsedColumns parsedColumns = getColumns(admin, true);
       Text[] cols = parsedColumns.getColumns().toArray(new Text[] {});
-      if (this.timestamp == 0) {
-        scan = table.obtainScanner(cols, this.rowKey);
+      if (timestamp == 0) {
+        scan = table.obtainScanner(cols, rowKey);
       } else {
-        scan = table.obtainScanner(cols, this.rowKey, this.timestamp);
+        scan = table.obtainScanner(cols, rowKey, timestamp);
       }
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
@@ -233,7 +232,7 @@ public class SelectCommand extends BasicCommand {
             formatter.row(new String[] { r.toString(), cellData });
           }
           count++;
-          if (this.limit > 0 && count >= this.limit) {
+          if (limit > 0 && count >= limit) {
             break;
           }
         }
@@ -262,24 +261,22 @@ public class SelectCommand extends BasicCommand {
   public ParsedColumns getColumns(final HBaseAdmin admin, final boolean scanning) {
     ParsedColumns result = null;
     try {
-      if (this.columns.contains("*")) {
-        if (this.tableName.equals(HConstants.ROOT_TABLE_NAME)
-            || this.tableName.equals(HConstants.META_TABLE_NAME)) {
-          result = new ParsedColumns(Arrays
-              .asList(HConstants.COLUMN_FAMILY_ARRAY));
+      if (columns.contains(ASTERISK)) {
+        if (tableName.equals(HConstants.ROOT_TABLE_NAME)
+            || tableName.equals(HConstants.META_TABLE_NAME)) {
+          result = new ParsedColumns(Arrays.asList(HConstants.COLUMN_FAMILY_ARRAY));
         } else {
           HTableDescriptor[] tables = admin.listTables();
           for (int i = 0; i < tables.length; i++) {
-            if (tables[i].getName().equals(this.tableName)) {
-              result = new ParsedColumns(new ArrayList<Text>(tables[i].families()
-                  .keySet()));
+            if (tables[i].getName().equals(tableName)) {
+              result = new ParsedColumns(new ArrayList<Text>(tables[i].families().keySet()));
               break;
             }
           }
         }
       } else {
         List<Text> tmpList = new ArrayList<Text>();
-        for (int i = 0; i < this.columns.size(); i++) {
+        for (int i = 0; i < columns.size(); i++) {
           Text column = null;
           // Add '$' to column name if we are scanning. Scanners support
           // regex column names. Adding '$', the column becomes a
@@ -287,9 +284,8 @@ public class SelectCommand extends BasicCommand {
           // Otherwise, if the specified column is a column family, then
           // default behavior is to fetch all columns that have a matching
           // column family.
-          column = (this.columns.get(i).contains(":")) ? new Text(this.columns
-              .get(i)
-              + (scanning ? "$" : "")) : new Text(this.columns.get(i) + ":"
+          column = (columns.get(i).contains(":")) ? new Text(columns.get(i)
+              + (scanning ? "$" : "")) : new Text(columns.get(i) + ":"
               + (scanning ? "$" : ""));
           tmpList.add(column);
         }
@@ -305,7 +301,7 @@ public class SelectCommand extends BasicCommand {
    * @return True if query contains multiple columns.
    */
   private boolean isMultiple() {
-    return this.columns.size() > 1 || this.columns.contains(STAR);
+    return this.columns.size() > 1 || this.columns.contains(ASTERISK);
   }
 
   private boolean checkLimit(int count) {
