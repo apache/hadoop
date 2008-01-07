@@ -269,10 +269,7 @@ abstract class TaskRunner extends Thread {
 
       vargs.add(jvm.toString());
 
-      // Add child java ops.  Also, mapred.child.heap.size has been superceded
-      // by // mapred.child.java.opts.  Manage case where both are present
-      // letting the mapred.child.heap.size win over any setting of heap size in
-      // mapred.child.java.opts (Emit a warning that heap.size is deprecated).
+      // Add child (task) java-vm options.
       //
       // The following symbols if present in mapred.child.java.opts value are
       // replaced:
@@ -284,65 +281,67 @@ abstract class TaskRunner extends Thread {
       // connect with jconsole and the likes to watch child memory, threads
       // and get thread dumps.
       //
-      //     <name>mapred.child.optional.jvm.args</name>
-      //     <value>-verbose:gc -Xloggc:/tmp/@taskid@.gc \
-        //     -Dcom.sun.management.jmxremote.authenticate=false \
-        //     -Dcom.sun.management.jmxremote.ssl=false \
-        //     </value>
-        //
-        String javaOpts = handleDeprecatedHeapSize(
-                                                   conf.get("mapred.child.java.opts", "-Xmx200m"),
-                                                   conf.get("mapred.child.heap.size"));
-        javaOpts = replaceAll(javaOpts, "@taskid@", taskid);
-        String [] javaOptsSplit = javaOpts.split(" ");
-        //Add java.library.path; necessary for native-hadoop libraries
-        String libraryPath = System.getProperty("java.library.path");
-        if (libraryPath != null) {
-          boolean hasLibrary = false;
-          for(int i=0; i<javaOptsSplit.length ;i++) { 
-            if(javaOptsSplit[i].startsWith("-Djava.library.path=")) {
-              javaOptsSplit[i] += sep + libraryPath;
-              hasLibrary = true;
-              break;
-            }
+      //  <property>
+      //    <name>mapred.child.java.opts</name>
+      //    <value>-verbose:gc -Xloggc:/tmp/@taskid@.gc \
+      //           -Dcom.sun.management.jmxremote.authenticate=false \
+      //           -Dcom.sun.management.jmxremote.ssl=false \
+      //    </value>
+      //  </property>
+      //
+      String javaOpts = conf.get("mapred.child.java.opts", "-Xmx200m");
+      javaOpts = replaceAll(javaOpts, "@taskid@", taskid);
+      String [] javaOptsSplit = javaOpts.split(" ");
+      
+      //Add java.library.path; necessary for native-hadoop libraries
+      String libraryPath = System.getProperty("java.library.path");
+      if (libraryPath != null) {
+        boolean hasLibrary = false;
+        for(int i=0; i<javaOptsSplit.length ;i++) { 
+          if(javaOptsSplit[i].startsWith("-Djava.library.path=")) {
+            javaOptsSplit[i] += sep + libraryPath;
+            hasLibrary = true;
+            break;
           }
-          if(!hasLibrary)
-            vargs.add("-Djava.library.path=" + libraryPath);
         }
-        for (int i = 0; i < javaOptsSplit.length; i++) {
-          vargs.add(javaOptsSplit[i]);
-        }
-        
-        // Add classpath.
-        vargs.add("-classpath");
-        vargs.add(classPath.toString());
+        if(!hasLibrary)
+          vargs.add("-Djava.library.path=" + libraryPath);
+      }
+      for (int i = 0; i < javaOptsSplit.length; i++) {
+        vargs.add(javaOptsSplit[i]);
+      }
 
-        // Setup the log4j prop
-        long logSize = TaskLog.getTaskLogLength(conf);
-        vargs.add("-Dhadoop.log.dir=" + 
-                  new File(System.getProperty("hadoop.log.dir")
-                           ).getAbsolutePath());
-        vargs.add("-Dhadoop.root.logger=INFO,TLA");
-        vargs.add("-Dhadoop.tasklog.taskid=" + taskid);
-        vargs.add("-Dhadoop.tasklog.totalLogFileSize=" + logSize);
+      // Add classpath.
+      vargs.add("-classpath");
+      vargs.add(classPath.toString());
 
-        // Add main class and its arguments 
-        vargs.add(TaskTracker.Child.class.getName());  // main of Child
-        // pass umbilical address
-        InetSocketAddress address = tracker.getTaskTrackerReportAddress();
-        vargs.add(address.getAddress().getHostAddress()); 
-        vargs.add(Integer.toString(address.getPort())); 
-        vargs.add(taskid);                      // pass task identifier
+      // Setup the log4j prop
+      long logSize = TaskLog.getTaskLogLength(conf);
+      vargs.add("-Dhadoop.log.dir=" + 
+          new File(System.getProperty("hadoop.log.dir")
+          ).getAbsolutePath());
+      vargs.add("-Dhadoop.root.logger=INFO,TLA");
+      vargs.add("-Dhadoop.tasklog.taskid=" + taskid);
+      vargs.add("-Dhadoop.tasklog.totalLogFileSize=" + logSize);
 
-        // Run java
-        File stdout = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDOUT);
-        File stderr = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDERR);
-        stdout.getParentFile().mkdirs();
+      // Add main class and its arguments 
+      vargs.add(TaskTracker.Child.class.getName());  // main of Child
+      // pass umbilical address
+      InetSocketAddress address = tracker.getTaskTrackerReportAddress();
+      vargs.add(address.getAddress().getHostAddress()); 
+      vargs.add(Integer.toString(address.getPort())); 
+      vargs.add(taskid);                      // pass task identifier
 
-        List<String> wrappedCommand = 
-          TaskLog.captureOutAndError(vargs, stdout, stderr, logSize);
-        runChild(wrappedCommand, workDir, taskid);
-                 
+      // Set up the redirection of the task's stdout and stderr streams
+      File stdout = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDOUT);
+      File stderr = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDERR);
+      stdout.getParentFile().mkdirs();
+      List<String> wrappedCommand = 
+        TaskLog.captureOutAndError(vargs, stdout, stderr, logSize);
+      
+      // Run the task as child of the parent TaskTracker process
+      runChild(wrappedCommand, workDir, taskid);
+
     } catch (FSError e) {
       LOG.fatal("FSError", e);
       try {
@@ -378,36 +377,6 @@ abstract class TaskRunner extends Thread {
       }
       tracker.reportTaskFinished(t.getTaskId());
     }
-  }
-
-  
-  /**
-   * Handle deprecated mapred.child.heap.size.
-   * If present, interpolate into mapred.child.java.opts value with
-   * warning.
-   * @param javaOpts Value of mapred.child.java.opts property.
-   * @param heapSize Value of mapred.child.heap.size property.
-   * @return A <code>javaOpts</code> with <code>heapSize</code>
-   * interpolated if present.
-   */
-  private String handleDeprecatedHeapSize(String javaOpts,
-                                          final String heapSize) {
-    if (heapSize == null || heapSize.length() <= 0) {
-      return javaOpts;
-    }
-    final String MX = "-Xmx";
-    int index = javaOpts.indexOf(MX);
-    if (index < 0) {
-      javaOpts = javaOpts + " " + MX + heapSize;
-    } else {
-      int end = javaOpts.indexOf(" ", index + MX.length());
-      javaOpts = javaOpts.substring(0, index + MX.length()) +
-        heapSize + ((end < 0)? "": javaOpts.substring(end));
-    }
-    LOG.warn("mapred.child.heap.size is deprecated. Use " +
-             "mapred.child.java.opt instead. Meantime, mapred.child.heap.size " +
-             "is interpolated into mapred.child.java.opt: " + javaOpts);
-    return javaOpts;
   }
 
   /**

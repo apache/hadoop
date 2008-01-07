@@ -345,6 +345,11 @@ Trunk (unreleased changes)
     HADOOP-2523. Fix TestDFSShell.testFilePermissions on Windows.
     (Raghu Angadi via nigel)
 
+    HADOOP-2535. Removed support for deprecated mapred.child.heap.size and
+    fixed some indentation issues in TaskRunner. (acmurthy)
+    Configuration changes to hadoop-default.xml:
+      remove mapred.child.heap.size
+
 Release 0.15.2 - 2008-01-02
 
   BUG FIXES

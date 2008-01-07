@@ -163,6 +163,18 @@ creations/deletions), or "all".</td>
       directories, for redundancy. </td>
 </tr>
 <tr>
+<td><a name="dfs.permissions">dfs.permissions</a></td><td>false</td><td>
+    If "true", enable permission checking in HDFS.
+    If "false", permission checking is turned off,
+    but all other behavior is unchanged.
+    Switching from one parameter value to the other does not change the mode,
+    owner or group of files or directories.
+  </td>
+</tr>
+<tr>
+<td><a name="dfs.permissions.supergroup">dfs.permissions.supergroup</a></td><td>supergroup</td><td>The name of the group of super-users.</td>
+</tr>
+<tr>
 <td><a name="dfs.client.buffer.dir">dfs.client.buffer.dir</a></td><td>${hadoop.tmp.dir}/dfs/tmp</td><td>Determines where on the local filesystem an DFS client
   should store its blocks before it sends them to the datanode.
   </td>
@@ -383,13 +395,10 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
-<td><a name="mapred.child.java.opts">mapred.child.java.opts</a></td><td>-Xmx200m</td><td>Java opts for the task tracker child processes.  Subsumes
-  'mapred.child.heap.size' (If a mapred.child.heap.size value is found
-  in a configuration, its maximum heap size will be used and a warning
-  emitted that heap.size has been deprecated). Also, the following symbol,
-  if present, will be interpolated: @taskid@ is replaced by current TaskID.
-  Any other occurrences of '@' will go unchanged. For
-  example, to enable verbose gc logging to a file named for the taskid in
+<td><a name="mapred.child.java.opts">mapred.child.java.opts</a></td><td>-Xmx200m</td><td>Java opts for the task tracker child processes.  
+  The following symbol, if present, will be interpolated: @taskid@ is replaced 
+  by current TaskID. Any other occurrences of '@' will go unchanged.
+  For example, to enable verbose gc logging to a file named for the taskid in
   /tmp and to set the heap maximum to be a gigabyte, pass a 'value' of:
         -Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc
   </td>
