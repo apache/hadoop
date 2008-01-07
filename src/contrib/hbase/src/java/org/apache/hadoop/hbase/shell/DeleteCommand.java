@@ -102,17 +102,17 @@ public class DeleteCommand extends BasicCommand {
   public Text[] getColumnList(HBaseAdmin admin, HTable hTable) {
     Text[] columns = null;
     try {
-      if (this.columnList.contains("*")) {
+      if (columnList.contains("*")) {
         columns = hTable.getRow(new Text(this.rowKey)).keySet().toArray(
             new Text[] {});
       } else {
         List<Text> tmpList = new ArrayList<Text>();
-        for (int i = 0; i < this.columnList.size(); i++) {
+        for (int i = 0; i < columnList.size(); i++) {
           Text column = null;
-          if (this.columnList.get(i).contains(":"))
-            column = new Text(this.columnList.get(i));
+          if (columnList.get(i).contains(":"))
+            column = new Text(columnList.get(i));
           else
-            column = new Text(this.columnList.get(i) + ":");
+            column = new Text(columnList.get(i) + ":");
 
           tmpList.add(column);
         }

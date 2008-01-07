@@ -52,7 +52,7 @@ public class ShowCommand extends BasicCommand {
   }
 
   public ReturnMsg execute(final HBaseConfiguration conf) {
-    if (this.command == null) {
+    if (command == null) {
       return new ReturnMsg(0, "Syntax error : Please check 'Show' syntax.");
     }
     try {

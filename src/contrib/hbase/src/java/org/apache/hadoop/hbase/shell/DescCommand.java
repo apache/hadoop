@@ -49,17 +49,17 @@ public class DescCommand extends BasicCommand {
   }
 
   public ReturnMsg execute(final HBaseConfiguration conf) {
-    if (this.tableName == null)
+    if (tableName == null)
       return new ReturnMsg(0, "Syntax error : Please check 'Describe' syntax.");
     try {
       HConnection conn = HConnectionManager.getConnection(conf);
-      if (!conn.tableExists(this.tableName)) {
+      if (!conn.tableExists(tableName)) {
         return new ReturnMsg(0, "Table not found.");
       }
       HTableDescriptor[] tables = conn.listTables();
       HColumnDescriptor[] columns = null;
       for (int i = 0; i < tables.length; i++) {
-        if (tables[i].getName().equals(this.tableName)) {
+        if (tables[i].getName().equals(tableName)) {
           columns = tables[i].getFamilies().values().toArray(
               new HColumnDescriptor[] {});
           break;

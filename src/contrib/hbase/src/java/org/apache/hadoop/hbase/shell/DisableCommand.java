@@ -43,8 +43,8 @@ public class DisableCommand extends BasicCommand {
 
     try {
       HConnection conn = HConnectionManager.getConnection(conf);
-      if (!conn.tableExists(new Text(this.tableName))) {
-        return new ReturnMsg(0, "'" + this.tableName + "'" + TABLE_NOT_FOUND);
+      if (!conn.tableExists(new Text(tableName))) {
+        return new ReturnMsg(0, "'" + tableName + "'" + TABLE_NOT_FOUND);
       }
 
       HBaseAdmin admin = new HBaseAdmin(conf);

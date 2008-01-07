@@ -154,6 +154,8 @@ Trunk (unreleased changes)
    HADOOP-2471 Add reading/writing MapFile to PerformanceEvaluation suite
    HADOOP-2522 Separate MapFile benchmark from PerformanceEvaluation
                (Tom White via Stack)
+   HADOOP-2502 Insert/Select timestamp, Timestamp data type in HQL
+               (Edward Yoon via Stack)
                
 
 
