@@ -26,45 +26,46 @@ public interface ParserConstants {
   int STARTING = 24;
   int WHERE = 25;
   int FROM = 26;
-  int ROW = 27;
-  int VALUES = 28;
-  int COLUMNFAMILIES = 29;
-  int TIMESTAMP = 30;
-  int NUM_VERSIONS = 31;
-  int LIMIT = 32;
-  int AND = 33;
-  int OR = 34;
-  int COMMA = 35;
-  int LPAREN = 36;
-  int RPAREN = 37;
-  int EQUALS = 38;
-  int LCOMP = 39;
-  int RCOMP = 40;
-  int NOT = 41;
-  int IN = 42;
-  int NOTEQUAL = 43;
-  int ASTERISK = 44;
-  int MAX_VERSIONS = 45;
-  int MAX_LENGTH = 46;
-  int COMPRESSION = 47;
-  int NONE = 48;
-  int BLOCK = 49;
-  int RECORD = 50;
-  int IN_MEMORY = 51;
-  int BLOOMFILTER = 52;
-  int COUNTING_BLOOMFILTER = 53;
-  int RETOUCHED_BLOOMFILTER = 54;
-  int VECTOR_SIZE = 55;
-  int NUM_HASH = 56;
-  int NUM_ENTRIES = 57;
-  int ADD = 58;
-  int CHANGE = 59;
-  int ID = 60;
-  int INTEGER_LITERAL = 61;
-  int FLOATING_POINT_LITERAL = 62;
-  int EXPONENT = 63;
-  int QUOTED_IDENTIFIER = 64;
-  int STRING_LITERAL = 65;
+  int UNTIL = 27;
+  int ROW = 28;
+  int VALUES = 29;
+  int COLUMNFAMILIES = 30;
+  int TIMESTAMP = 31;
+  int NUM_VERSIONS = 32;
+  int LIMIT = 33;
+  int AND = 34;
+  int OR = 35;
+  int COMMA = 36;
+  int LPAREN = 37;
+  int RPAREN = 38;
+  int EQUALS = 39;
+  int LCOMP = 40;
+  int RCOMP = 41;
+  int NOT = 42;
+  int IN = 43;
+  int NOTEQUAL = 44;
+  int ASTERISK = 45;
+  int MAX_VERSIONS = 46;
+  int MAX_LENGTH = 47;
+  int COMPRESSION = 48;
+  int NONE = 49;
+  int BLOCK = 50;
+  int RECORD = 51;
+  int IN_MEMORY = 52;
+  int BLOOMFILTER = 53;
+  int COUNTING_BLOOMFILTER = 54;
+  int RETOUCHED_BLOOMFILTER = 55;
+  int VECTOR_SIZE = 56;
+  int NUM_HASH = 57;
+  int NUM_ENTRIES = 58;
+  int ADD = 59;
+  int CHANGE = 60;
+  int ID = 61;
+  int INTEGER_LITERAL = 62;
+  int FLOATING_POINT_LITERAL = 63;
+  int EXPONENT = 64;
+  int QUOTED_IDENTIFIER = 65;
+  int STRING_LITERAL = 66;
 
   int DEFAULT = 0;
 
@@ -96,6 +97,7 @@ public interface ParserConstants {
     "\"starting\"",
     "\"where\"",
     "\"from\"",
+    "\"until\"",
     "\"row\"",
     "\"values\"",
     "\"columnfamilies\"",

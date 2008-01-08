@@ -93,6 +93,7 @@ TOKEN: /** for HQL statements */
    | <STARTING: "starting">
    | <WHERE: "where">
    | <FROM: "from">
+   | <UNTIL: "until">
    | <ROW: "row">
    | <VALUES: "values">
    | <COLUMNFAMILIES: "columnfamilies">
@@ -566,6 +567,7 @@ SelectCommand selectCommand() :
   SelectCommand select = new SelectCommand(this.out, this.formatter);
   List<String> columns = null;
   String rowKey = "";
+  String stopRow = "";
   String timestamp = null;
   int numVersion = 0;
   String tableName = null;
@@ -590,6 +592,9 @@ SelectCommand selectCommand() :
      {
        select.setRowKey(rowKey); 
      }
+     [<UNTIL>
+      stopRow = getStringLiteral()
+     {select.setStopRow(stopRow);} ]
   ]
 
   [ <TIMESTAMP> 
