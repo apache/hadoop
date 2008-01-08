@@ -26,6 +26,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.compress.*;
+import org.apache.hadoop.mapred.LineRecordReader.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
 
 public class TestTextInputFormat extends TestCase {
@@ -126,47 +127,39 @@ public class TestTextInputFormat extends TestCase {
     }
   }
 
-  private InputStream makeStream(String str) throws IOException {
-    Text text = new Text(str);
-    return new ByteArrayInputStream(text.getBytes(), 0, text.getLength());
+  private static LineReader makeStream(String str) throws IOException {
+    return new LineRecordReader.LineReader(new ByteArrayInputStream
+                                             (str.getBytes("UTF-8")), 
+                                           defaultConf);
   }
   
   public void testUTF8() throws Exception {
-    InputStream in = makeStream("abcd\u20acbdcd\u20ac");
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    LineRecordReader.readLine(in, out);
+    LineReader in = makeStream("abcd\u20acbdcd\u20ac");
     Text line = new Text();
-    line.set(out.toByteArray());
+    in.readLine(line);
     assertEquals("readLine changed utf8 characters", 
                  "abcd\u20acbdcd\u20ac", line.toString());
     in = makeStream("abc\u200axyz");
-    out.reset();
-    LineRecordReader.readLine(in, out);
-    line.set(out.toByteArray());
+    in.readLine(line);
     assertEquals("split on fake newline", "abc\u200axyz", line.toString());
   }
 
   public void testNewLines() throws Exception {
-    InputStream in = makeStream("a\nbb\n\nccc\rdddd\r\neeeee");
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    LineRecordReader.readLine(in, out);
-    assertEquals("line1 length", 1, out.size());
-    out.reset();
-    LineRecordReader.readLine(in, out);
-    assertEquals("line2 length", 2, out.size());
-    out.reset();
-    LineRecordReader.readLine(in, out);
-    assertEquals("line3 length", 0, out.size());
-    out.reset();
-    LineRecordReader.readLine(in, out);
-    assertEquals("line4 length", 3, out.size());
-    out.reset();
-    LineRecordReader.readLine(in, out);
-    assertEquals("line5 length", 4, out.size());
-    out.reset();
-    LineRecordReader.readLine(in, out);
-    assertEquals("line5 length", 5, out.size());
-    assertEquals("end of file", 0, LineRecordReader.readLine(in, out));
+    LineReader in = makeStream("a\nbb\n\nccc\rdddd\r\neeeee");
+    Text out = new Text();
+    in.readLine(out);
+    assertEquals("line1 length", 1, out.getLength());
+    in.readLine(out);
+    assertEquals("line2 length", 2, out.getLength());
+    in.readLine(out);
+    assertEquals("line3 length", 0, out.getLength());
+    in.readLine(out);
+    assertEquals("line4 length", 3, out.getLength());
+    in.readLine(out);
+    assertEquals("line5 length", 4, out.getLength());
+    in.readLine(out);
+    assertEquals("line5 length", 5, out.getLength());
+    assertEquals("end of file", 0, in.readLine(out));
   }
   
   private static void writeFile(FileSystem fs, Path name, 
@@ -252,7 +245,46 @@ public class TestTextInputFormat extends TestCase {
     assertEquals("Compressed empty file length == 0", 0, results.size());
   }
   
+  private static String unquote(String in) {
+    StringBuffer result = new StringBuffer();
+    for(int i=0; i < in.length(); ++i) {
+      char ch = in.charAt(i);
+      if (ch == '\\') {
+        ch = in.charAt(++i);
+        switch (ch) {
+        case 'n':
+          result.append('\n');
+          break;
+        case 'r':
+          result.append('\r');
+          break;
+        default:
+          result.append(ch);
+          break;
+        }
+      } else {
+        result.append(ch);
+      }
+    }
+    return result.toString();
+  }
+
+  /**
+   * Parse the command line arguments into lines and display the result.
+   * @param args
+   * @throws Exception
+   */
   public static void main(String[] args) throws Exception {
-    new TestTextInputFormat().testFormat();
+    for(String arg: args) {
+      System.out.println("Working on " + arg);
+      LineReader reader = makeStream(unquote(arg));
+      Text line = new Text();
+      int size = reader.readLine(line);
+      while (size > 0) {
+        System.out.println("Got: " + line.toString());
+        size = reader.readLine(line);
+      }
+      reader.close();
+    }
   }
 }

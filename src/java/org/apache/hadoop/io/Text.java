@@ -188,9 +188,28 @@ public class Text implements WritableComparable {
    * @param len the number of bytes of the new string
    */
   public void set(byte[] utf8, int start, int len) {
-    setCapacity(len);
+    setCapacity(len, false);
     System.arraycopy(utf8, start, bytes, 0, len);
     this.length = len;
+  }
+
+  /**
+   * Append a range of bytes to the end of the given text
+   * @param utf8 the data to copy from
+   * @param start the first position to append from utf8
+   * @param len the number of bytes to append
+   */
+  public void append(byte[] utf8, int start, int len) {
+    setCapacity(length + len, true);
+    System.arraycopy(utf8, start, bytes, length, len);
+    length += len;
+  }
+
+  /**
+   * Clear the string to empty.
+   */
+  public void clear() {
+    length = 0;
   }
 
   /*
@@ -199,12 +218,18 @@ public class Text implements WritableComparable {
    * then the capacity and existing content of the buffer are
    * unchanged. If <code>len</code> is larger
    * than the current capacity, the Text object's capacity is
-   * increased to match. The existing contents of the buffer
-   * (if any) are deleted.
+   * increased to match.
+   * @param len the number of bytes we need
+   * @param keepData should the old data be kept
    */
-  private void setCapacity(int len) {
-    if (bytes == null || bytes.length < len)
-      bytes = new byte[len];      
+  private void setCapacity(int len, boolean keepData) {
+    if (bytes == null || bytes.length < len) {
+      byte[] newBytes = new byte[len];
+      if (bytes != null && keepData) {
+        System.arraycopy(bytes, 0, newBytes, 0, length);
+      }
+      bytes = newBytes;
+    }
   }
    
   /** 
@@ -222,9 +247,10 @@ public class Text implements WritableComparable {
   /** deserialize 
    */
   public void readFields(DataInput in) throws IOException {
-    length = WritableUtils.readVInt(in);
-    setCapacity(length);
-    in.readFully(bytes, 0, length);
+    int newLength = WritableUtils.readVInt(in);
+    setCapacity(newLength, false);
+    in.readFully(bytes, 0, newLength);
+    length = newLength;
   }
 
   /** Skips over one Text in the input. */

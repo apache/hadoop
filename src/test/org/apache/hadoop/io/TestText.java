@@ -24,12 +24,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 /** Unit tests for LargeUTF8. */
 public class TestText extends TestCase {
-  private static final Log LOG= LogFactory.getLog("org.apache.hadoop.io.TestText");
   private static final int NUM_ITERATIONS = 100;
   public TestText(String name) { super(name); }
 
@@ -208,6 +204,9 @@ public class TestText extends TestCase {
     Text b=new Text("a");
     b.set(a);
     assertEquals("abc", b.toString());
+    a.append("xdefgxxx".getBytes(), 1, 4);
+    assertEquals("modified aliased string", "abc", b.toString());
+    assertEquals("appended string incorrectly", "abcdefg", a.toString());
   }
 
   public static void main(String[] args)  throws Exception
