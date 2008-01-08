@@ -293,19 +293,31 @@ abstract class TaskRunner extends Thread {
       javaOpts = replaceAll(javaOpts, "@taskid@", taskid);
       String [] javaOptsSplit = javaOpts.split(" ");
       
-      //Add java.library.path; necessary for native-hadoop libraries
+      // Add java.library.path; necessary for loading native libraries.
+      //
+      // 1. To support native-hadoop library i.e. libhadoop.so, we add the 
+      //    parent processes' java.library.path to the child. 
+      // 2. We also add the 'cwd' of the task to it's java.library.path to help 
+      //    users distribute native libraries via the DistributedCache.
+      // 3. The user can also specify extra paths to be added to the 
+      //    java.library.path via mapred.child.java.opts.
+      //
       String libraryPath = System.getProperty("java.library.path");
-      if (libraryPath != null) {
-        boolean hasLibrary = false;
-        for(int i=0; i<javaOptsSplit.length ;i++) { 
-          if(javaOptsSplit[i].startsWith("-Djava.library.path=")) {
-            javaOptsSplit[i] += sep + libraryPath;
-            hasLibrary = true;
-            break;
-          }
+      if (libraryPath == null) {
+        libraryPath = workDir.getAbsolutePath();
+      } else {
+        libraryPath += sep + workDir;
+      }
+      boolean hasUserLDPath = false;
+      for(int i=0; i<javaOptsSplit.length ;i++) { 
+        if(javaOptsSplit[i].startsWith("-Djava.library.path=")) {
+          javaOptsSplit[i] += sep + libraryPath;
+          hasUserLDPath = true;
+          break;
         }
-        if(!hasLibrary)
-          vargs.add("-Djava.library.path=" + libraryPath);
+      }
+      if(!hasUserLDPath) {
+        vargs.add("-Djava.library.path=" + libraryPath);
       }
       for (int i = 0; i < javaOptsSplit.length; i++) {
         vargs.add(javaOptsSplit[i]);

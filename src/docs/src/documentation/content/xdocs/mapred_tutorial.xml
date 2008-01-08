@@ -1003,6 +1003,64 @@
       </section>
 
       <section>
+        <title>Task Execution &amp; Environment</title>
+
+        <p>The <code>TaskTracker</code> executes the <code>Mapper</code>/ 
+        <code>Reducer</code>  <em>task</em> as a child process in a separate jvm.
+        </p>
+        
+        <p>The child-task inherits the environment of the parent 
+        <code>TaskTracker</code>. The user can specify additional options to the
+        child-jvm via the <code>mapred.child.java.opts</code> configuration
+        parameter in the <code>JobConf</code> such as non-standard paths for the 
+        run-time linker to search shared libraries via 
+        <code>-Djava.library.path=&lt;&gt;</code> etc. If the 
+        <code>mapred.child.java.opts</code> contains the symbol <em>@taskid@</em> 
+        it is interpolated with value of <code>taskid</code> of the map/reduce
+        task.</p>
+        
+        <p>Here is an example with multiple arguments and substitutions, 
+        showing jvm GC logging, and start of a passwordless JVM JMX agent so that
+        it can connect with jconsole and the likes to watch child memory, 
+        threads and get thread dumps. It also sets the maximum heap-size of the 
+        child jvm to 512MB and adds an additional path to the 
+        <code>java.library.path</code> of the child-jvm.</p>
+
+        <p>
+          <code>&lt;property&gt;</code><br/>
+          &nbsp;&nbsp;<code>&lt;name&gt;mapred.child.java.opts&lt;/name&gt;</code><br/>
+          &nbsp;&nbsp;<code>&lt;value&gt;</code><br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;<code>
+                    -Xmx512M -Djava.library.path=/home/mycompany/lib
+                    -verbose:gc -Xloggc:/tmp/@taskid@.gc</code><br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;<code>
+                    -Dcom.sun.management.jmxremote.authenticate=false 
+                    -Dcom.sun.management.jmxremote.ssl=false</code><br/>
+          &nbsp;&nbsp;<code>&lt;/value&gt;</code><br/>
+          <code>&lt;/property&gt;</code>
+        </p>
+        
+        <p>The <a href="#DistributedCache">DistributedCache</a> can also be used
+        as a rudimentary software distribution mechanism for use in the map 
+        and/or reduce tasks. It can be used to distribute both jars and 
+        native libraries. The 
+        <a href="ext:api/org/apache/hadoop/filecache/distributedcache/addarchivetoclasspath">
+        DistributedCache.addArchiveToClassPath(Path, Configuration)</a> or 
+        <a href="ext:api/org/apache/hadoop/filecache/distributedcache/addfiletoclasspath">
+        DistributedCache.addFileToClassPath(Path, Configuration)</a> api can 
+        be used to cache files/jars and also add them to the <em>classpath</em> 
+        of child-jvm. Similarly the facility provided by the 
+        <code>DistributedCache</code> where-in it symlinks the cached files into
+        the working directory of the task can be used to distribute native 
+        libraries and load them. The underlying detail is that child-jvm always 
+        has its <em>current working directory</em> added to the
+        <code>java.library.path</code> and hence the cached libraries can be 
+        loaded via <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/lang/System.html#loadLibrary(java.lang.String)">
+        System.loadLibrary</a> or <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/lang/System.html#load(java.lang.String)">
+        System.load</a>.</p>
+      </section>
+      
+      <section>
         <title>Job Submission and Monitoring</title>
         
         <p><a href="ext:api/org/apache/hadoop/mapred/jobclient">
@@ -1260,19 +1318,20 @@
           efficiency stems from the fact that the files are only copied once 
           per job and the ability to cache archives which are un-archived on 
           the slaves.</p> 
+          
+          <p><code>DistributedCache</code> tracks the modification timestamps of 
+          the cached files. Clearly the cache files should not be modified by 
+          the application or externally while the job is executing.</p>
 
           <p><code>DistributedCache</code> can be used to distribute simple, 
           read-only data/text files and more complex types such as archives and
           jars. Archives (zip files) are <em>un-archived</em> at the slave nodes.
-          Jars maybe be optionally added to the classpath of the tasks, a
-          rudimentary <em>software distribution</em> mechanism.  Files have 
-          <em>execution permissions</em> set. Optionally users can also direct the
-          <code>DistributedCache</code> to <em>symlink</em> the cached file(s) 
-          into the working directory of the task.</p>
- 
-          <p><code>DistributedCache</code> tracks the modification timestamps of 
-          the cached files. Clearly the cache files should not be modified by 
-          the application or externally while the job is executing.</p>
+          Optionally users can also direct the <code>DistributedCache</code> to 
+          <em>symlink</em> the cached file(s) into the <code>current working 
+          directory</code> of the task via the 
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/createsymlink">
+          DistributedCache.createSymlink(Path, Configuration)</a> api. Files 
+          have <em>execution permissions</em> set.</p>
         </section>
         
         <section>

@@ -61,7 +61,11 @@ See http://forrest.apache.org/docs/linking.html for more info.
               </configuration>
             </conf>
             <filecache href="filecache/">
-              <distributedcache href="DistributedCache.html" />
+              <distributedcache href="DistributedCache.html">
+                <addarchivetoclasspath href="#addArchiveToClassPath(org.apache.hadoop.fs.Path,%20org.apache.hadoop.conf.Configuration)" />
+                <addfiletoclasspath href="#addFileToClassPath(org.apache.hadoop.fs.Path,%20org.apache.hadoop.conf.Configuration)" />
+                <createsymlink href="#createSymlink(org.apache.hadoop.conf.Configuration)" />
+              </distributedcache>  
             </filecache>
             <fs href="fs/">
               <filesystem href="FileSystem.html" />

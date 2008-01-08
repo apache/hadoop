@@ -163,6 +163,10 @@ Trunk (unreleased changes)
     HADOOP-2390. Added documentation for user-controls for intermediate
     map-outputs & final job-outputs and native-hadoop libraries. (acmurthy) 
  
+    HADOOP-1660. Add the cwd of the map/reduce task to the java.library.path
+    of the child-jvm to support loading of native libraries distributed via
+    the DistributedCache. (acmurthy)
+ 
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
