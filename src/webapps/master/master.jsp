@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.*"
   import="org.apache.hadoop.io.Text"
+  import="org.apache.hadoop.util.VersionInfo"
   import="org.apache.hadoop.hbase.HMaster"
     import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HMaster.MetaRegion"
@@ -42,6 +43,8 @@
 <h2>Master Attributes</h2>
 <table>
 <tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
+<tr><td>Version</td><td><%= VersionInfo.getVersion() %>, r<%= VersionInfo.getRevision() %></td><td>Hbase version and svn revision</td></tr>
+<tr><td>Compiled</td><td><%= VersionInfo.getDate() %>, <%= VersionInfo.getUser() %></td><td>When this version was compiled and by whom</td></tr>
 <tr><td>Filesystem</td><td><%= conf.get("fs.default.name") %></td><td>Filesystem hbase is running on</td></tr>
 <tr><td>Hbase Root Directory</td><td><%= master.getRootDir().toString() %></td><td>Location of hbase home directory</td></tr>
 </table>

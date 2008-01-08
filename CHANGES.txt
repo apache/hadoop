@@ -156,6 +156,7 @@ Trunk (unreleased changes)
                (Tom White via Stack)
    HADOOP-2502 Insert/Select timestamp, Timestamp data type in HQL
                (Edward Yoon via Stack)
+   HADOOP-2450 Show version (and svn revision) in hbase web ui
                
 
 
