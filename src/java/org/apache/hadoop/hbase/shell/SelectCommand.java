@@ -38,6 +38,9 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Shell;
+import org.apache.hadoop.hbase.filter.RowFilterInterface;
+import org.apache.hadoop.hbase.filter.StopRowFilter;
+import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.shell.generated.Parser;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
@@ -50,6 +53,7 @@ import org.apache.hadoop.io.Text;
 public class SelectCommand extends BasicCommand {
   private Text tableName;
   private Text rowKey = new Text("");
+  private Text stopRow = new Text("");
   private List<String> columns;
   private long timestamp;
   private int limit;
@@ -214,6 +218,12 @@ public class SelectCommand extends BasicCommand {
       } else {
         scan = table.obtainScanner(cols, rowKey, timestamp);
       }
+      
+      if(this.stopRow.toString().length() > 0) {
+        RowFilterInterface filter =  new WhileMatchRowFilter(new StopRowFilter(stopRow));
+        scan = table.obtainScanner(cols, rowKey, filter);
+      }
+      
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
       // If only one column in query, then don't print out the column.
@@ -336,6 +346,10 @@ public class SelectCommand extends BasicCommand {
       this.rowKey = new Text(rowKey);
   }
 
+  public void setStopRow(String stopRow) {
+    this.stopRow = new Text(stopRow);
+  }
+  
   /**
    * @param version Set maximum versions for this selection
    */
