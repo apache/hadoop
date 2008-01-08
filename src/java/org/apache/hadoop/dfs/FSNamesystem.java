@@ -2296,11 +2296,12 @@ class FSNamesystem implements FSConstants {
    * update the (machine-->blocklist) and (block-->machinelist) tables.
    */
   public synchronized Block[] processReport(DatanodeID nodeID, 
-                                            Block newReport[]
+                                            BlockListAsLongs newReport
                                             ) throws IOException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("BLOCK* NameSystem.processReport: "
-                                    +"from "+nodeID.getName()+" "+newReport.length+" blocks");
+                             + "from " + nodeID.getName()+" " + 
+                             newReport.getNumberOfBlocks()+" blocks");
     }
     DatanodeDescriptor node = getDatanode(nodeID);
     if (node == null) {

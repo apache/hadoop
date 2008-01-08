@@ -32,8 +32,9 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 interface DatanodeProtocol extends VersionedProtocol {
   /*
    * 10: blockReceived also sends hints for deletion
+   * 11 Block reports as long[]
    */
-  public static final long versionID = 10L;
+  public static final long versionID = 11L;
   
   // error code
   final static int NOTIFY = 0;
@@ -83,9 +84,16 @@ interface DatanodeProtocol extends VersionedProtocol {
    * and should be deleted.  This function is meant to upload *all*
    * the locally-stored blocks.  It's invoked upon startup and then
    * infrequently afterwards.
+   * @param registration
+   * @param blocks - the block list as an array of longs.
+   *     Each block is represented as 2 longs.
+   *     This is done instead of Block[] to reduce memory used by block reports.
+   *     
+   * @return - the next command for DN to process.
+   * @throws IOException
    */
   public DatanodeCommand blockReport(DatanodeRegistration registration,
-                                     Block blocks[]) throws IOException;
+                                     long[] blocks) throws IOException;
     
   /**
    * blockReceived() allows the DataNode to tell the NameNode about

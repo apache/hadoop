@@ -693,7 +693,8 @@ public class NNThroughputBenchmark {
       assert daemonId < numThreads : "Wrong daemonId.";
       TinyDatanode dn = datanodes[daemonId];
       long start = System.currentTimeMillis();
-      nameNode.blockReport(dn.dnRegistration, dn.blocks);
+      nameNode.blockReport(dn.dnRegistration,
+          BlockListAsLongs.convertToArrayLongs(dn.blocks));
       long end = System.currentTimeMillis();
       return end-start;
     }

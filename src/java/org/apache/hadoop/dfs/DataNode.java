@@ -121,6 +121,14 @@ public class DataNode implements FSConstants, Runnable {
   private Semaphore balancingSem = new Semaphore(MAX_BALANCING_THREADS);
   long balanceBandwidth;
   private Throttler balancingThrottler;
+  
+  /**
+   * Current system time.
+   * @return current time in msec.
+   */
+  static long now() {
+    return System.currentTimeMillis();
+  }
 
   private static class DataNodeMetrics implements Updater {
     private final MetricsRecord metricsRecord;
@@ -603,8 +611,13 @@ public class DataNode implements FSConstants, Runnable {
           // Get back a list of local block(s) that are obsolete
           // and can be safely GC'ed.
           //
+          long brStartTime = now();
+          Block[] bReport = data.getBlockReport();
           DatanodeCommand cmd = namenode.blockReport(dnRegistration,
-                                                     data.getBlockReport());
+                  BlockListAsLongs.convertToArrayLongs(bReport));
+          long brTime = now() - brStartTime;
+          LOG.info("BlockReport of " + bReport.length +
+              " blocks got processed in " + brTime + " msecs");
           //
           // If we have sent the first block report, then wait a random
           // time before we start the periodic block reports.

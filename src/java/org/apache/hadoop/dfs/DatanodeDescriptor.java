@@ -318,7 +318,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   void reportDiff(BlocksMap blocksMap,
-                  Block[] newReport,
+                  BlockListAsLongs newReport,
                   Collection<Block> toAdd,
                   Collection<Block> toRemove) {
     // place a deilimiter in the list which separates blocks 
@@ -327,12 +327,20 @@ public class DatanodeDescriptor extends DatanodeInfo {
     boolean added = this.addBlock(delimiter);
     assert added : "Delimiting block cannot be present in the node";
     if(newReport == null)
-      newReport = new Block[0];
+      newReport = new BlockListAsLongs( new long[0]);
     // scan the report and collect newly reported blocks
-    for(Block blk : newReport) {
-      BlockInfo storedBlock = blocksMap.getStoredBlock(blk);
-      if(storedBlock == null || storedBlock.findDatanode(this) < 0) {
-        toAdd.add(blk);
+    // Note we are taking special precaution to limit tmp blocks allocated
+    // as part this block report - which why block list is stored as longs
+    Block iblk = new Block(); // a fixed new'ed block to be reused with index i
+    for (int i = 0; i < newReport.getNumberOfBlocks(); ++i) {
+      iblk.set(newReport.getBlockId(i), newReport.getBlockLen(i));
+      BlockInfo storedBlock = blocksMap.getStoredBlock(iblk);
+      if(storedBlock == null) { // Brand new block
+        toAdd.add(new Block(iblk));
+        continue;
+      }
+      if(storedBlock.findDatanode(this) < 0) {// Known block, but not on the DN
+        toAdd.add(storedBlock);
         continue;
       }
       // move block to the head of the list

@@ -59,7 +59,7 @@ class Block implements Writable, Comparable {
 
   /**
    */
-  public Block(long blkid, long len) {
+  public Block(final long blkid, final long len) {
     this.blkid = blkid;
     this.len = len;
   }
@@ -81,6 +81,10 @@ class Block implements Writable, Comparable {
     this.len = len;
   }
 
+  public void set(long blkid, long len) {
+    this.blkid = blkid;
+    this.len = len;
+  }
   /**
    */
   public long getBlockId() {

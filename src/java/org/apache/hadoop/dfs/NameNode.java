@@ -602,12 +602,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   public DatanodeCommand blockReport(DatanodeRegistration nodeReg,
-                                     Block blocks[]) throws IOException {
+                                     long[] blocks) throws IOException {
     verifyRequest(nodeReg);
+    BlockListAsLongs blist = new BlockListAsLongs(blocks);
     stateChangeLog.debug("*BLOCK* NameNode.blockReport: "
-                         +"from "+nodeReg.getName()+" "+blocks.length+" blocks");
+           +"from "+nodeReg.getName()+" "+blist.getNumberOfBlocks() +" blocks");
 
-    Block blocksToDelete[] = namesystem.processReport(nodeReg, blocks);
+    Block blocksToDelete[] = namesystem.processReport(nodeReg, blist);
     if (blocksToDelete != null && blocksToDelete.length > 0)
       return new BlockCommand(blocksToDelete);
     if (getFSImage().isUpgradeFinalized())

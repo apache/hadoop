@@ -36,6 +36,10 @@ Trunk (unreleased changes)
 
     HADOOP-2381.  Support permission information in FileStatus. Client
     Protocol version changed from 21 to 22.  (Raghu Angadi via dhruba)
+
+    HADOOP-2110. Block report processing creates fewer transient objects.
+    Datanode Protocol version changed from 10 to 11.  
+    (Sanjay Radia via dhruba)
     
   NEW FEATURES
 
