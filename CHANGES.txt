@@ -354,6 +354,9 @@ Trunk (unreleased changes)
     Configuration changes to hadoop-default.xml:
       remove mapred.child.heap.size
 
+    HADOOP-2512. Fix error stream handling in Shell. Use exit code to
+    detect shell command errors in RawLocalFileSystem. (Raghu Angadi)
+
 Release 0.15.2 - 2008-01-02
 
   BUG FIXES

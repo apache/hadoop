@@ -397,6 +397,7 @@ public class RawLocalFileSystem extends FileSystem {
 
     /// loads permissions, owner, and group from `ls -ld`
     private void loadPermissionInfo() {
+      IOException e = null;
       try {
         StringTokenizer t = new StringTokenizer(
             execCommand(new File(getPath().toUri()), 
@@ -411,16 +412,18 @@ public class RawLocalFileSystem extends FileSystem {
         t.nextToken();
         setOwner(t.nextToken());
         setGroup(t.nextToken());
-      } catch (IOException e) {
-        if (e.getMessage().contains("No such file or directory")) {                                    
-          /* XXX This is a temporary hack till HADOOP-2344 goes in.
-           * will fix it soon.
-           */
+      } catch (Shell.ExitCodeException ioe) {
+        if (ioe.getExitCode() != 1) {
+          e = ioe;
+        } else {
           setPermission(null);
           setOwner(null);
           setGroup(null);
-        } else {
-          //this is not expected
+        }
+      } catch (IOException ioe) {
+        e = ioe;
+      } finally {
+        if (e != null) {
           throw new RuntimeException("Error while running command to get " +
                                      "file permissions : " + 
                                      StringUtils.stringifyException(e));

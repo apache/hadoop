@@ -130,7 +130,7 @@ abstract public class Shell {
           String line = errReader.readLine();
           while((line != null) && !isInterrupted()) {
             errMsg.append(line);
-            errMsg.append(System.getProperty("line.seperator"));
+            errMsg.append(System.getProperty("line.separator"));
             line = errReader.readLine();
           }
         } catch(IOException ioe) {
@@ -150,13 +150,16 @@ abstract public class Shell {
       }
       // wait for the process to finish and check the exit code
       exitCode = process.waitFor();
-      if (exitCode != 0) {
-        if (errMsg.length() == 0) {
-          errMsg.append("Command exit with status code " + exitCode);
-        }
-        throw new IOException(errMsg.toString());
+      try {
+        // make sure that the error thread exits
+        errThread.join();
+      } catch (InterruptedException ie) {
+        LOG.warn("Interrupted while reading the error stream", ie);
       }
       completed = true;
+      if (exitCode != 0) {
+        throw new ExitCodeException(exitCode, errMsg.toString());
+      }
     } catch (InterruptedException ie) {
       throw new IOException(ie.toString());
     } finally {
@@ -166,14 +169,7 @@ abstract public class Shell {
       } catch (IOException ioe) {
         LOG.warn("Error while closing the input stream", ioe);
       }
-      if (completed) {
-        try {
-          // make sure that the error thread exits
-          errThread.join();
-        } catch (InterruptedException ie) {
-          LOG.warn("Interrupted while reading the error stream", ie);
-        }
-      } else {
+      if (!completed) {
         errThread.interrupt();
       }
       try {
@@ -207,6 +203,22 @@ abstract public class Shell {
     return exitCode;
   }
 
+  /**
+   * This is an IOException with exit code added.
+   */
+  public static class ExitCodeException extends IOException {
+    int exitCode;
+    
+    public ExitCodeException(int exitCode, String message) {
+      super(message);
+      this.exitCode = exitCode;
+    }
+    
+    public int getExitCode() {
+      return exitCode;
+    }
+  }
+  
   /**
    * A simple shell command executor.
    * 
