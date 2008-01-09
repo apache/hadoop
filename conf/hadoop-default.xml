@@ -281,7 +281,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.permissions</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     If "true", enable permission checking in HDFS.
     If "false", permission checking is turned off,

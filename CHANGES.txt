@@ -60,8 +60,7 @@ Trunk (unreleased changes)
 
     HADOOP-2336. Shell commands to modify file permissions. (rangadi)
 
-    HADOOP-1298. Implement file permissions for HDFS, disabled by
-    default.  Enable with dfs.permissions=true.
+    HADOOP-1298. Implement file permissions for HDFS.
     (Tsz Wo (Nicholas) & taton via cutting)
 
     HADOOP-2447. HDFS can be configured to limit the total number of 
