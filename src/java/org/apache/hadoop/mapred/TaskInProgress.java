@@ -320,23 +320,28 @@ class TaskInProgress {
    * or the task is killed by the user
    */
   public boolean shouldClose(String taskid) {
-    // If the thing has never been closed,
-    // and it belongs to this TIP,
-    // and this TIP is somehow FINISHED,
-    // then true
+    /**
+     * If the task hasn't been closed yet, and it belongs to a completed
+     * TaskInProgress close it.
+     * 
+     * However, for completed map tasks we do not close the task which
+     * actually was the one responsible for _completing_ the TaskInProgress. 
+     */
+    boolean close = false;
     TaskStatus ts = taskStatuses.get(taskid);
     if ((ts != null) &&
         (!tasksReportedClosed.contains(taskid)) &&
         (job.getStatus().getRunState() != JobStatus.RUNNING)) {
       tasksReportedClosed.add(taskid);
-      return true;
-    } else if (!isMapTask() && isComplete() && 
-               !tasksReportedClosed.contains(taskid)){
+      close = true;
+    } else if (isComplete() && !(isMapTask() && isComplete(taskid)) &&
+               !tasksReportedClosed.contains(taskid)) {
       tasksReportedClosed.add(taskid);
-      return true; 
+      close = true; 
     } else {
-      return tasksToKill.keySet().contains(taskid);
-    }
+      close = tasksToKill.keySet().contains(taskid);
+    }   
+    return close;
   }
 
   /**

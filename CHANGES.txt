@@ -381,6 +381,9 @@ Trunk (unreleased changes)
     HADOOP-2537. Make build process compatible with Ant 1.7.0.
     (Hrishikesh via nigel)
 
+    HADOOP-1281. Ensure running tasks of completed map TIPs (e.g. speculative
+    tasks) are killed as soon as the TIP completed. (acmurthy)
+
 Release 0.15.2 - 2008-01-02
 
   BUG FIXES
