@@ -148,7 +148,7 @@
     <mkdir dir="${test.build.dir}"/>
     <mkdir dir="${test.build.classes}"/>
     <mkdir dir="${test.build.testjar}"/>
-    <touch datetime="01/25/1971 2:00 pm">
+    <touch millis="0">
       <fileset dir="${conf.dir}" includes="**/*.template"/>
       <fileset dir="${contrib.dir}" includes="**/*.template"/>
     </touch>

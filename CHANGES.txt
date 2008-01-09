@@ -175,6 +175,9 @@ Trunk (unreleased changes)
     HADOOP-2369. Adds a set of scripts for simulating a mix of user map/reduce
     workloads. (Runping Qi via cdouglas)
 
+    HADOOP-2547. Removes use of a 'magic number' in build.xml. 
+    (Hrishikesh via nigel)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
