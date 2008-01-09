@@ -19,12 +19,13 @@
 package org.apache.hadoop.test;
 
 import org.apache.hadoop.util.ProgramDriver;
+import org.apache.hadoop.mapred.BigMapOutput;
+import org.apache.hadoop.mapred.GenericMRLoadGenerator;
 import org.apache.hadoop.mapred.MRBench;
 import org.apache.hadoop.mapred.SortValidator;
 import org.apache.hadoop.mapred.TestMapRed;
-import org.apache.hadoop.mapred.BigMapOutput;
-import org.apache.hadoop.mapred.TestTextInputFormat;
 import org.apache.hadoop.mapred.TestSequenceFileInputFormat;
+import org.apache.hadoop.mapred.TestTextInputFormat;
 import org.apache.hadoop.dfs.ClusterTestDFS;
 import org.apache.hadoop.dfs.NNBench;
 import org.apache.hadoop.fs.DistributedFSCheck;
@@ -32,8 +33,8 @@ import org.apache.hadoop.fs.TestDFSIO;
 import org.apache.hadoop.fs.DFSCIOTest;
 import org.apache.hadoop.fs.TestFileSystem;
 import org.apache.hadoop.io.TestArrayFile;
-import org.apache.hadoop.io.TestSetFile;
 import org.apache.hadoop.io.TestSequenceFile;
+import org.apache.hadoop.io.TestSetFile;
 import org.apache.hadoop.ipc.TestIPC;
 import org.apache.hadoop.ipc.TestRPC;
 
@@ -65,6 +66,7 @@ public class AllTestDriver {
       pgd.addClass("testbigmapoutput", BigMapOutput.class, 
                    "A map/reduce program that works on a very big " + 
                    "non-splittable file and does identity map/reduce");
+      pgd.addClass("loadgen", GenericMRLoadGenerator.class, "Generic map/reduce load generator");
       pgd.driver(argv);
     } catch(Throwable e) {
       e.printStackTrace();

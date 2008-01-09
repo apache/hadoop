@@ -66,9 +66,6 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
-    HADOOP-2285. Speeds up TextInputFormat. Also includes updates to the
-    Text API. (Owen O'Malley via cdouglas)
-
     HADOOP-2045.  Change committer list on website to a table, so that
     folks can list their organization, timezone, etc.  (cutting)
 
@@ -170,6 +167,11 @@ Trunk (unreleased changes)
     of the child-jvm to support loading of native libraries distributed via
     the DistributedCache. (acmurthy)
  
+    HADOOP-2285. Speeds up TextInputFormat. Also includes updates to the
+    Text API. (Owen O'Malley via cdouglas)
+
+    HADOOP-2233. Adds a generic load generator for modeling MR jobs. (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
