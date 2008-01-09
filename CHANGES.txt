@@ -375,6 +375,9 @@ Trunk (unreleased changes)
     HADOOP-2446. Fixes TestHDFSServerPorts and TestMRServerPorts so they
     do not rely on statically configured ports and cleanup better. (nigel)
 
+    HADOOP-2537. Make build process compatible with Ant 1.7.0.
+    (Hrishikesh via nigel)
+
 Release 0.15.2 - 2008-01-02
 
   BUG FIXES

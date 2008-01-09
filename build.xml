@@ -148,11 +148,12 @@
     <mkdir dir="${test.build.dir}"/>
     <mkdir dir="${test.build.classes}"/>
     <mkdir dir="${test.build.testjar}"/>
-    <touch millis="0">
+    <tempfile property="touch.temp.file" destDir="${java.io.tmpdir}"/>
+    <touch millis="0" file="${touch.temp.file}">
       <fileset dir="${conf.dir}" includes="**/*.template"/>
       <fileset dir="${contrib.dir}" includes="**/*.template"/>
     </touch>
-
+    <delete file="${touch.temp.file}"/>
     <!-- copy all of the jsp and static files -->
     <copy todir="${build.webapps}">
       <fileset dir="${src.webapps}">
