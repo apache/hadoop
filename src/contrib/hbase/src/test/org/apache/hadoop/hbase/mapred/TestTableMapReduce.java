@@ -122,6 +122,8 @@ public class TestTableMapReduce extends MultiRegionTable {
       dir = new Path("/hbase");
       fs.mkdirs(dir);
       // Start up HBase cluster
+      // Only one region server.  MultiRegionServer manufacturing code below
+      // depends on there being one region server only.
       hCluster = new MiniHBaseCluster(conf, 1, dfsCluster);
       LOG.info("Master is at " + this.conf.get(HConstants.MASTER_ADDRESS));
     } catch (Exception e) {
@@ -235,7 +237,8 @@ public class TestTableMapReduce extends MultiRegionTable {
         }
       }
 
-      LOG.info("Print table contents before map/reduce");
+      LOG.info("Print table contents before map/reduce for " +
+        SINGLE_REGION_TABLE_NAME);
       scanTable(SINGLE_REGION_TABLE_NAME, true);
 
       @SuppressWarnings("deprecation")
@@ -252,19 +255,18 @@ public class TestTableMapReduce extends MultiRegionTable {
 
         TableReduce.initJob(SINGLE_REGION_TABLE_NAME,
             IdentityTableReduce.class, jobConf);
-
+        LOG.info("Started " + SINGLE_REGION_TABLE_NAME);
         JobClient.runJob(jobConf);
+        
+        LOG.info("Print table contents after map/reduce for " +
+          SINGLE_REGION_TABLE_NAME);
+        scanTable(SINGLE_REGION_TABLE_NAME, true);
 
+        // verify map-reduce results
+        verify(SINGLE_REGION_TABLE_NAME);
       } finally {
         mrCluster.shutdown();
       }
-    
-      LOG.info("Print table contents after map/reduce");
-      scanTable(SINGLE_REGION_TABLE_NAME, true);
-
-      // verify map-reduce results
-      verify(SINGLE_REGION_TABLE_NAME);
-
     } finally {
       table.close();
     }
@@ -307,16 +309,14 @@ public class TestTableMapReduce extends MultiRegionTable {
 
         TableReduce.initJob(MULTI_REGION_TABLE_NAME,
             IdentityTableReduce.class, jobConf);
-
+        LOG.info("Started " + MULTI_REGION_TABLE_NAME);
         JobClient.runJob(jobConf);
-
+        
+        // verify map-reduce results
+        verify(MULTI_REGION_TABLE_NAME);
       } finally {
         mrCluster.shutdown();
       }
-
-      // verify map-reduce results
-      verify(MULTI_REGION_TABLE_NAME);
-      
     } finally {
       table.close();
     }

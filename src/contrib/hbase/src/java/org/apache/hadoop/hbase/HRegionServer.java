@@ -1057,7 +1057,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   private MapWritable reportForDuty() throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Telling master we are up");
+      LOG.debug("Telling master at " +
+        conf.get(MASTER_ADDRESS) + " that we are up");
     }
     // Do initial RPC setup.
     this.hbaseMaster = (HMasterRegionInterface)HbaseRPC.waitForProxy(

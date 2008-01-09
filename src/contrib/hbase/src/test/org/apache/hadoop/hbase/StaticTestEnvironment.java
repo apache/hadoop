@@ -138,7 +138,13 @@ public class StaticTestEnvironment {
       }
 
       LOG.info("Shutting down Mini DFS ");
-      cluster.shutdown();
+      try {
+        cluster.shutdown();
+      } catch (Exception e) {
+        /// Can get a java.lang.reflect.UndeclaredThrowableException thrown
+        // here because of an InterruptedException. Don't let exceptions in
+        // here be cause of test failure.
+      }
     }
   }
 }
