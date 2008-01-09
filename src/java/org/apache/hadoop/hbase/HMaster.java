@@ -462,12 +462,17 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
                   !pendingRegions.contains(info.getRegionName())
               )
           )
-      ) {
+        ) {
 
         // The current assignment is no good
         if (LOG.isDebugEnabled()) {
           LOG.debug("Current assignment of " + info.getRegionName() +
-          " is no good");
+            " is no good: storedInfo: " + storedInfo + ", startCode: " +
+            startCode + ", storedInfo.startCode: " +
+            ((storedInfo != null)? storedInfo.getStartCode(): -1) +
+            ", unassignedRegions: " + unassignedRegions.containsKey(info) +
+            ", pendingRegions: " +
+            pendingRegions.contains(info.getRegionName()));
         }
         // Recover the region server's log if there is one.
         // This is only done from here if we are restarting and there is stale
@@ -1026,9 +1031,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     final String threadName = "HMaster";
     Thread.currentThread().setName(threadName);
     startServiceThreads();
-    /*
-     * Main processing loop
-     */
+    /* Main processing loop */
     try {
       for (RegionServerOperation op = null; !closed.get(); ) {
         if (shutdownRequested && serversToServerInfo.size() == 0) {
@@ -1037,7 +1040,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         }
         if (rootRegionLocation.get() != null) {
           // We can't process server shutdowns unless the root region is online 
-
           op = this.delayedToDoQueue.poll();
         }
         if (op == null ) {
@@ -1178,6 +1180,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       // Something happened during startup. Shut things down.
       this.closed.set(true);
       LOG.error("Failed startup", e);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Started service threads");
     }
   }
 

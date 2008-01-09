@@ -37,6 +37,11 @@ import org.apache.hadoop.io.WritableComparator;
  * 
  * <p>Equals considers a Text equal if the TextSequence brackets the same bytes.
  * 
+ * <p>TextSequence will not always work as a Text.  For instance, the following
+ * fails <code>Text c = new Text(new TextSequence(new Text("some string")));
+ * </code> because the Text constructor accesses private Text data members
+ * making the new instance from the passed 'Text'.
+ * 
  * <p>TODO: Should this be an Interface as CharSequence is?
  */
 public class TextSequence extends Text {

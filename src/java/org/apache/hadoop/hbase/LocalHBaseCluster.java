@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -27,6 +28,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * This class creates a single process HBase cluster. One thread is created for
@@ -229,7 +231,10 @@ public class LocalHBaseCluster implements HConstants {
     if (this.master != null) {
       while (this.master.isAlive()) {
         try {
-          this.master.join();
+          // The below has been replaced to debug sometime hangs on end of
+          // tests.
+          // this.master.join():
+          threadDumpingJoin(this.master);
         } catch(InterruptedException e) {
           // continue
         }
@@ -238,6 +243,22 @@ public class LocalHBaseCluster implements HConstants {
     LOG.info("Shutdown " +
       ((this.regionThreads != null)? this.master.getName(): "0 masters") +
       " " + this.regionThreads.size() + " region server(s)");
+  }
+
+  public void threadDumpingJoin(final Thread t) throws InterruptedException {
+    if (t == null) {
+      return;
+    }
+    long startTime = System.currentTimeMillis();
+    while (t.isAlive()) {
+      Thread.sleep(1000);
+      if (System.currentTimeMillis() - startTime > 60000) {
+        startTime = System.currentTimeMillis();
+        ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
+            "Automatic Stack Trace every 60 seconds waiting on " +
+            t.getName());
+      }
+    }
   }
 
   /**
