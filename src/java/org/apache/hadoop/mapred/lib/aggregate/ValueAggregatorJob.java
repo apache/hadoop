@@ -82,7 +82,7 @@ public class ValueAggregatorJob {
     , Class<? extends ValueAggregatorDescriptor>[] descriptors) throws IOException {
     
     JobControl theControl = new JobControl("ValueAggregatorJobs");
-    ArrayList dependingJobs = new ArrayList();
+    ArrayList<Job> dependingJobs = new ArrayList<Job>();
     JobConf aJobConf = createValueAggregatorJob(args);
     if(descriptors != null)
       setAggregatorDescriptors(aJobConf, descriptors);

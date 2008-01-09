@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.io.IOException;
 
 /** This class encapsulates a MapReduce job and its dependency. It monitors 
@@ -58,7 +59,7 @@ public class Job {
   private String jobName;		// external name, assigned/used by client app
   private String message;		// some info for human consumption, 
   // e.g. the reason why the job failed
-  private ArrayList dependingJobs;	// the jobs the current job depends on
+  private ArrayList<Job> dependingJobs;	// the jobs the current job depends on
 	
   private JobClient jc = null;		// the map reduce job client
 	
@@ -67,7 +68,7 @@ public class Job {
    * @param jobConf a mapred job configuration representing a job to be executed.
    * @param dependingJobs an array of jobs the current job depends on
    */
-  public Job(JobConf jobConf, ArrayList dependingJobs) throws IOException {
+  public Job(JobConf jobConf, ArrayList<Job> dependingJobs) throws IOException {
     this.theJobConf = jobConf;
     this.dependingJobs = dependingJobs;
     this.state = Job.WAITING;
@@ -202,7 +203,7 @@ public class Job {
   /**
    * @return the depending jobs of this job
    */
-  public ArrayList getDependingJobs() {
+  public ArrayList<Job> getDependingJobs() {
     return this.dependingJobs;
   }
   
@@ -216,7 +217,7 @@ public class Job {
   public synchronized boolean addDependingJob(Job dependingJob) {
     if (this.state == Job.WAITING) { //only allowed to add jobs when waiting
       if (this.dependingJobs == null) {
-        this.dependingJobs = new ArrayList();
+        this.dependingJobs = new ArrayList<Job>();
       }
       return this.dependingJobs.add(dependingJob);
     } else {

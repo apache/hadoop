@@ -181,6 +181,10 @@ Trunk (unreleased changes)
     HADOOP-2547. Removes use of a 'magic number' in build.xml. 
     (Hrishikesh via nigel)
 
+    HADOOP-2268. Fix org.apache.hadoop.mapred.jobcontrol classes to use the
+    List/Map interfaces rather than concrete ArrayList/HashMap classes
+    internally. (Adrian Woodhead via acmurthy)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

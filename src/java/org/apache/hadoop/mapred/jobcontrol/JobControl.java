@@ -21,7 +21,7 @@ package org.apache.hadoop.mapred.jobcontrol;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Hashtable;
-import java.util.Iterator;
+import java.util.Map;
 
 /** This class encapsulates a set of MapReduce jobs and its dependency. It tracks 
  *  the states of the jobs by placing them into different tables according to their 
@@ -48,11 +48,11 @@ public class JobControl implements Runnable{
 	
   private int runnerState;			// the thread state
 	
-  private Hashtable<String, Job> waitingJobs;
-  private Hashtable<String, Job> readyJobs;
-  private Hashtable<String, Job> runningJobs;
-  private Hashtable<String, Job> successfulJobs;
-  private Hashtable<String, Job> failedJobs;
+  private Map<String, Job> waitingJobs;
+  private Map<String, Job> readyJobs;
+  private Map<String, Job> runningJobs;
+  private Map<String, Job> successfulJobs;
+  private Map<String, Job> failedJobs;
 	
   private long nextJobID;
   private String groupName;
@@ -70,17 +70,15 @@ public class JobControl implements Runnable{
     this.nextJobID = -1;
     this.groupName = groupName;
     this.runnerState = JobControl.READY;
-		
   }
 	
-  private static ArrayList<Job> toArrayList(Hashtable<String, Job> jobs) {
+  private static ArrayList<Job> toArrayList(Map<String, Job> jobs) {
     ArrayList<Job> retv = new ArrayList<Job>();
     synchronized (jobs) {
       for (Job job : jobs.values()) {
         retv.add(job);
       }
     }
-		
     return retv;
   }
 	
@@ -121,19 +119,19 @@ public class JobControl implements Runnable{
     return this.groupName + this.nextJobID;
   }
 	
-  private static void addToQueue(Job aJob, Hashtable<String, Job> queue) {
+  private static void addToQueue(Job aJob, Map<String, Job> queue) {
     synchronized(queue) {
       queue.put(aJob.getJobID(), aJob);
     }		
   }
 	
   private void addToQueue(Job aJob) {
-    Hashtable<String, Job> queue = getQueue(aJob.getState());
+    Map<String, Job> queue = getQueue(aJob.getState());
     addToQueue(aJob, queue);	
   }
 	
-  private Hashtable<String, Job> getQueue(int state) {
-    Hashtable<String, Job> retv = null;
+  private Map<String, Job> getQueue(int state) {
+    Map<String, Job> retv = null;
     if (state == Job.WAITING) {
       retv = this.waitingJobs;
     } else if (state == Job.READY) {
@@ -146,7 +144,6 @@ public class JobControl implements Runnable{
       retv = this.failedJobs;
     } 
     return retv;
-			
   }
 
   /**
@@ -207,7 +204,7 @@ public class JobControl implements Runnable{
 	
   synchronized private void checkRunningJobs() {
 		
-    Hashtable<String, Job> oldJobs = null;
+    Map<String, Job> oldJobs = null;
     oldJobs = this.runningJobs;
     this.runningJobs = new Hashtable<String, Job>();
 		
@@ -224,7 +221,7 @@ public class JobControl implements Runnable{
   }
 	
   synchronized private void checkWaitingJobs() {
-    Hashtable<String, Job> oldJobs = null;
+    Map<String, Job> oldJobs = null;
     oldJobs = this.waitingJobs;
     this.waitingJobs = new Hashtable<String, Job>();
 		
@@ -241,7 +238,7 @@ public class JobControl implements Runnable{
   }
 	
   synchronized private void startReadyJobs() {
-    Hashtable<String, Job> oldJobs = null;
+    Map<String, Job> oldJobs = null;
     oldJobs = this.readyJobs;
     this.readyJobs = new Hashtable<String, Job>();
 		
