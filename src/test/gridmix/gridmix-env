@@ -1,0 +1,50 @@
+#!/bin/bash
+
+
+## Environment configuration
+# Hadoop installation
+export HADOOP_HOME=
+# Base directory for gridmix install
+export GRID_MIX_HOME=${GRID_DIR}
+# Hadoop example jar
+export EXAMPLE_JAR=${HADOOP_HOME}/hadoop-0.15.2-dev-examples.jar
+# Hadoop test jar
+export APP_JAR=${HADOOP_HOME}/hadoop-0.15.2-dev-test.jar
+# Hadoop streaming jar
+export STREAM_JAR=${HADOOP_HOME}/contrib/hadoop-0.15.2-streaming.jar
+# Location on default filesystem for writing gridmix data (usually HDFS)
+# Default: /gridmix/data
+export GRID_MIX_DATA=/gridmix/data
+# Location of executables in default filesystem (usually HDFS)
+# Default: /gridmix/programs
+export GRID_MIX_PROG=/gridmix/programs
+
+## Data sources
+# Variable length key, value compressed SequenceFile
+export VARCOMPSEQ=${GRID_MIX_DATA}/WebSimulationBlockCompressed
+# Fixed length key, value compressed SequenceFile
+export FIXCOMPSEQ=${GRID_MIX_DATA}/MonsterQueryBlockCompressed
+# Variable length key, value uncompressed Text File
+export VARINFLTEXT=${GRID_MIX_DATA}/SortUncompressed
+# Fixed length key, value compressed Text File
+export FIXCOMPTEXT=${GRID_MIX_DATA}/EntropySimulationCompressed
+
+## Job sizing
+export NUM_OF_LARGE_JOBS_PER_CLASS=3
+export NUM_OF_MEDIUM_JOBS_PER_CLASS=20
+export NUM_OF_SMALL_JOBS_PER_CLASS=40
+
+export NUM_OF_REDUCERS_FOR_LARGE_JOB=370
+export NUM_OF_REDUCERS_FOR_MEDIUM_JOB=170
+export NUM_OF_REDUCERS_FOR_SMALL_JOB=15
+
+## Throttling
+export INTERVAL_BETWEEN_SUBMITION=20
+
+## Hod
+#export HOD_OPTIONS="--ringmaster.hadoop-tar-ball=/path/to/hadoop-0.15.0-dev.tar.gz"
+#export HOD_CONFIG=
+#export ALL_HOD_OPTIONS="$HOD_OPTIONS -c ${HOD_CONFIG}"
+#export SMALL_JOB_HOD_OPTIONS="$ALL_HOD_OPTIONS -m 5"
+#export MEDIUM_JOB_HOD_OPTIONS="$ALL_HOD_OPTIONS -m 50"
+#export LARGE_JOB_HOD_OPTIONS="$ALL_HOD_OPTIONS -m 100"

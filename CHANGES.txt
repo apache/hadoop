@@ -172,6 +172,9 @@ Trunk (unreleased changes)
 
     HADOOP-2233. Adds a generic load generator for modeling MR jobs. (cdouglas)
 
+    HADOOP-2369. Adds a set of scripts for simulating a mix of user map/reduce
+    workloads. (Runping Qi via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
