@@ -229,7 +229,6 @@ public class HTable implements HConstants {
       }
       try {
         Thread.sleep(this.pause);
-        
       } catch (InterruptedException x) {
         // continue
       }
@@ -275,7 +274,6 @@ public class HTable implements HConstants {
       }
       try {
         Thread.sleep(this.pause);
-        
       } catch (InterruptedException x) {
         // continue
       }
@@ -332,7 +330,6 @@ public class HTable implements HConstants {
       }
       try {
         Thread.sleep(this.pause);
-        
       } catch (InterruptedException x) {
         // continue
       }
@@ -394,7 +391,6 @@ public class HTable implements HConstants {
       }
       try {
         Thread.sleep(this.pause);
-        
       } catch (InterruptedException x) {
         // continue
       }
@@ -915,7 +911,6 @@ public class HTable implements HConstants {
         }
         try {
           Thread.sleep(pause);
-
         } catch (InterruptedException e) {
           // continue
         }
@@ -1047,7 +1042,11 @@ public class HTable implements HConstants {
             loadRegions();
           }
         }
-
+        try {
+          Thread.sleep(pause);
+        } catch (InterruptedException e) {
+          // continue
+        }
       } catch (IOException e) {
         close();
         if (e instanceof RemoteException) {

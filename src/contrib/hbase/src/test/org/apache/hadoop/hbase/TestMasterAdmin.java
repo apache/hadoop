@@ -19,10 +19,14 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 
 /** tests administrative functions */
 public class TestMasterAdmin extends HBaseClusterTestCase {
+  private final Log LOG = LogFactory.getLog(this.getClass().getName());
+  
   private static final Text COLUMN_NAME = new Text("col1:");
   private static HTableDescriptor testDesc;
   static {
@@ -55,17 +59,17 @@ public class TestMasterAdmin extends HBaseClusterTestCase {
     }
     assertTrue(exception);
     admin.createTable(testDesc);
+    LOG.info("Table " + testDesc.getName().toString() + " created");
     admin.disableTable(testDesc.getName());
-
+    LOG.info("Table " + testDesc.getName().toString() + " disabled");
     try {
       @SuppressWarnings("unused")
       HTable table = new HTable(conf, testDesc.getName());
-
-    } catch(IllegalStateException e) {
+    } catch (IllegalStateException e) {
       // Expected
       
       // This exception is not actually thrown.  It doesn't look like it should
-      // thrown since the connection manager is already filled w/ data
+      // throw since the connection manager is already filled w/ data
       // -- noticed by St.Ack 09/09/2007
     }
 

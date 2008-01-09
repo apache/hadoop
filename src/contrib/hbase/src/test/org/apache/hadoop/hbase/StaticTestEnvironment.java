@@ -118,6 +118,8 @@ public class StaticTestEnvironment {
       // It is way too noisy.
       Logger.getLogger("org.apache.hadoop.hbase.filter").setLevel(Level.INFO);
     }
+    // Enable mapreduce loggging for the mapreduce jobs.
+    Logger.getLogger("org.apache.hadoop.mapred").setLevel(Level.DEBUG);
   }
   
   /**
