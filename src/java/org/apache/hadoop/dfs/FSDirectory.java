@@ -45,6 +45,8 @@ class FSDirectory implements FSConstants {
   boolean ready = false;
   // Metrics record
   private MetricsRecord directoryMetrics = null;
+
+  volatile private long totalInodes = 1;   // number of inodes, for rootdir
     
   /** Access an existing dfs name directory. */
   public FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
@@ -141,6 +143,9 @@ class FSDirectory implements FSConstants {
       } catch (FileNotFoundException e) {
         newNode = null;
       }
+      if (newNode != null) {
+        totalInodes++;
+      }
     }
     if (newNode == null) {
       NameNode.stateChangeLog.info("DIR* FSDirectory.addFile: "
@@ -182,6 +187,9 @@ class FSDirectory implements FSConstants {
         }
       } catch (FileNotFoundException e) {
         return null;
+      }
+      if (newNode != null) {
+        totalInodes++;
       }
       return newNode;
     }
@@ -461,6 +469,7 @@ class FSDirectory implements FSConstants {
           ArrayList<Block> v = new ArrayList<Block>();
           int filesRemoved = targetNode.collectSubtreeBlocks(v);
           incrDeletedFileCount(filesRemoved);
+          totalInodes -= filesRemoved;
           for (Block b : v) {
             namesystem.blocksMap.removeINode(b);
           }
@@ -597,7 +606,7 @@ class FSDirectory implements FSConstants {
    * Create directory entries for every item
    */
   boolean mkdirs(String src, PermissionStatus permissions,
-      boolean inheritPermission, long now) {
+      boolean inheritPermission, long now) throws IOException {
     src = normalizePath(src);
 
     // Use this to collect all the dirs we need to construct
@@ -619,8 +628,15 @@ class FSDirectory implements FSConstants {
     for (int i = numElts - 1; i >= 0; i--) {
       String cur = v.get(i);
       try {
-        INode inserted = unprotectedMkdir(cur, permissions,
-            inheritPermission || i != 0, now);
+        INode inserted = null;
+        synchronized (rootDir) {
+          inserted = rootDir.addNode(cur, 
+                             new INodeDirectory(permissions, now),
+                             inheritPermission || i != 0);
+          if (inserted != null) {
+            totalInodes++;
+          }
+        }
         if (inserted != null) {
           NameNode.stateChangeLog.debug("DIR* FSDirectory.mkdirs: "
                                         +"created directory "+cur);
@@ -643,11 +659,15 @@ class FSDirectory implements FSConstants {
 
   /**
    */
-  INodeDirectory unprotectedMkdir(String src, PermissionStatus permissions,
+  INode unprotectedMkdir(String src, PermissionStatus permissions,
       boolean inheritPermission, long timestamp) throws FileNotFoundException {
     synchronized (rootDir) {
-      return rootDir.addNode(src, new INodeDirectory(permissions, timestamp),
-          inheritPermission);
+      INode newNode = rootDir.addNode(src, new INodeDirectory(permissions, 
+                                      timestamp), inheritPermission);
+      if (newNode != null) {
+        totalInodes++;
+      }
+      return newNode;
     }
   }
 
@@ -672,6 +692,12 @@ class FSDirectory implements FSConstants {
       else {
         return targetNode.computeContentsLength();
       }
+    }
+  }
+
+  long totalInodes() {
+    synchronized (rootDir) {
+      return totalInodes;
     }
   }
 }

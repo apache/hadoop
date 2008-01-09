@@ -64,6 +64,9 @@ Trunk (unreleased changes)
     default.  Enable with dfs.permissions=true.
     (Tsz Wo (Nicholas) & taton via cutting)
 
+    HADOOP-2447. HDFS can be configured to limit the total number of 
+    objects (inodes and blocks) in the file system. (dhruba)
+
   IMPROVEMENTS
 
     HADOOP-2045.  Change committer list on website to a table, so that

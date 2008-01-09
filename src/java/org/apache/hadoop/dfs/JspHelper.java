@@ -34,6 +34,7 @@ import javax.servlet.jsp.JspWriter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.net.NetUtils;
 
 public class JspHelper {
@@ -171,6 +172,28 @@ public class JspHelper {
     if (!fsn.isInSafeMode())
       return "";
     return "Safe mode is ON. <em>" + fsn.getSafeModeTip() + "</em><br>";
+  }
+
+  public String getInodeLimitText() {
+    long inodes = fsn.dir.totalInodes();
+    long blocks = fsn.getBlockTotal();
+    long maxobjects = fsn.getMaxObjects();
+    long totalMemory = Runtime.getRuntime().totalMemory();   
+    long maxMemory = Runtime.getRuntime().maxMemory();   
+
+    long used = (totalMemory * 100)/maxMemory;
+ 
+    String str = inodes + " files and directories, " +
+                 blocks + " blocks = " +
+                 (inodes + blocks) + " total";
+    if (maxobjects != 0) {
+      long pct = ((inodes + blocks) * 100)/maxobjects;
+      str += " / " + maxobjects + " (" + pct + "%)";
+    }
+    str += ".  Heap Size is " + FsShell.byteDesc(totalMemory) + " / " + 
+           FsShell.byteDesc(maxMemory) + 
+           " (" + used + "%) <br>";
+    return str;
   }
 
   public String getUpgradeStatusText() {

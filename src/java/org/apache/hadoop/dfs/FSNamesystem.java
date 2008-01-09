@@ -213,6 +213,8 @@ class FSNamesystem implements FSConstants {
   private static final SimpleDateFormat DATE_FORM =
     new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+  private long maxFsObjects = 0;          // maximum number of fs objects
+
   /**
    * FSNamesystem constructor.
    */
@@ -347,6 +349,7 @@ class FSNamesystem implements FSConstants {
                                                    "dfs.namenode.decommission.interval",
                                                    5 * 60 * 1000);    
     this.defaultBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    this.maxFsObjects = conf.getLong("dfs.max.objects", 0);
   }
 
   /** Return the FSNamesystem object
@@ -1000,6 +1003,7 @@ class FSNamesystem implements FSConstants {
       // Now we can add the name to the filesystem. This file has no
       // blocks associated with it.
       //
+      checkFsObjectLimit();
       INode newNode = dir.addFile(src, permissions,
           replication, blockSize, holder, clientMachine, clientNode);
       if (newNode == null) {
@@ -1042,6 +1046,9 @@ class FSNamesystem implements FSConstants {
       if (isInSafeMode()) {
         throw new SafeModeException("Cannot add block to " + src, safeMode);
       }
+
+      // have we exceeded the configured limit of fs objects.
+      checkFsObjectLimit();
 
       INodeFileUnderConstruction pendingFile  = checkLease(src, clientName);
 
@@ -1495,6 +1502,11 @@ class FSNamesystem implements FSConstants {
       throw new IOException("Invalid directory name: " + src);
     }
     checkAncestorAccess(src, FsAction.WRITE);
+
+    // validate that we have enough inodes. This is, at best, a 
+    // heuristic because the mkdirs() operation migth need to 
+    // create multiple inodes.
+    checkFsObjectLimit();
 
     if (!dir.mkdirs(src, permissions, false, now())) {
       throw new IOException("Invalid directory name: " + src);
@@ -3701,6 +3713,13 @@ class FSNamesystem implements FSConstants {
   }
 
   /**
+   * Get the total number of blocks in the system. 
+   */
+  long getBlockTotal() {
+    return blocksMap.size();
+  }
+
+  /**
    * Enter safe mode manually.
    * @throws IOException
    */
@@ -3879,5 +3898,24 @@ class FSNamesystem implements FSConstants {
           ancestorAccess, parentAccess, access, subAccess);
     }
     return pc;
+  }
+
+  /*
+   * Check to see if we have exceeded the limit on the number
+   * of inodes.
+   */
+  void checkFsObjectLimit() throws IOException {
+    if (maxFsObjects != 0 &&
+        maxFsObjects <= dir.totalInodes() + getBlockTotal()) {
+      throw new IOException("Exceeded the configured number of objects " +
+                             maxFsObjects + " in the filesystem.");
+    }
+  }
+
+  /**
+   * Get the total number of objects in the system. 
+   */
+  long getMaxObjects() {
+    return maxFsObjects;
   }
 }

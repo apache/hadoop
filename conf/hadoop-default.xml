@@ -435,6 +435,15 @@ creations/deletions), or "all".</description>
 </property> 
 
 <property>
+  <name>dfs.max.objects</name>
+  <value>0</value>
+  <description>The maximum number of files, directories and blocks
+  dfs supports. A value of zero indicates no limit to the number
+  of objects that dfs supports.
+  </description>
+</property>
+
+<property>
   <name>fs.s3.block.size</name>
   <value>67108864</value>
   <description>Block size to use when writing files to S3.</description>
