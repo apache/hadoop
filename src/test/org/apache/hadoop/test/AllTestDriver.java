@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.DistributedFSCheck;
 import org.apache.hadoop.fs.TestDFSIO;
 import org.apache.hadoop.fs.DFSCIOTest;
 import org.apache.hadoop.fs.TestFileSystem;
+import org.apache.hadoop.io.FileBench;
 import org.apache.hadoop.io.TestArrayFile;
 import org.apache.hadoop.io.TestSequenceFile;
 import org.apache.hadoop.io.TestSetFile;
@@ -67,6 +68,7 @@ public class AllTestDriver {
                    "A map/reduce program that works on a very big " + 
                    "non-splittable file and does identity map/reduce");
       pgd.addClass("loadgen", GenericMRLoadGenerator.class, "Generic map/reduce load generator");
+      pgd.addClass("filebench", FileBench.class, "Benchmark SequenceFile(Input|Output)Format (block,record compressed and uncompressed), Text(Input|Output)Format (compressed and uncompressed)");
       pgd.driver(argv);
     } catch(Throwable e) {
       e.printStackTrace();

@@ -185,6 +185,9 @@ Trunk (unreleased changes)
     List/Map interfaces rather than concrete ArrayList/HashMap classes
     internally. (Adrian Woodhead via acmurthy)
 
+    HADOOP-2406. Add a benchmark for measuring read/write performance through
+    the InputFormat interface, particularly with compression. (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
