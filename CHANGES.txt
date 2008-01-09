@@ -372,6 +372,9 @@ Trunk (unreleased changes)
     HADOOP-2512. Fix error stream handling in Shell. Use exit code to
     detect shell command errors in RawLocalFileSystem. (Raghu Angadi)
 
+    HADOOP-2446. Fixes TestHDFSServerPorts and TestMRServerPorts so they
+    do not rely on statically configured ports and cleanup better. (nigel)
+
 Release 0.15.2 - 2008-01-02
 
   BUG FIXES

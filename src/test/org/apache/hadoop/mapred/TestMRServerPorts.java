@@ -93,68 +93,78 @@ public class TestMRServerPorts extends TestCase {
    * Verify JobTracker port usage.
    */
   public void testJobTrackerPorts() throws Exception {
-    NameNode nn = hdfs.startNameNode();
+    NameNode nn = null;
+    try {
+      nn = hdfs.startNameNode();
 
-    // start job tracker on the same port as name-node
-    JobConf conf2 = new JobConf(hdfs.getConfig());
-    conf2.set("mapred.job.tracker", TestHDFSServerPorts.NAME_NODE_ADDRESS);
-    conf2.set("mapred.job.tracker.http.bindAddress",
+      // start job tracker on the same port as name-node
+      JobConf conf2 = new JobConf(hdfs.getConfig());
+      conf2.set("mapred.job.tracker", hdfs.getConfig().get("fs.default.name"));
+      conf2.set("mapred.job.tracker.http.bindAddress",
         TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
-    boolean started = canStartJobTracker(conf2);
-    assertFalse(started); // should fail
+      boolean started = canStartJobTracker(conf2);
+      assertFalse(started); // should fail
 
-    // bind http server to the same port as name-node
-    conf2.set("mapred.job.tracker", TestHDFSServerPorts.NAME_NODE_HOST + 0);
-    conf2.set("mapred.job.tracker.http.bindAddress",
-        TestHDFSServerPorts.NAME_NODE_HTTP_ADDRESS);
-    started = canStartJobTracker(conf2);
-    assertFalse(started); // should fail again
+      // bind http server to the same port as name-node
+      conf2.set("mapred.job.tracker", TestHDFSServerPorts.NAME_NODE_HOST + 0);
+      conf2.set("mapred.job.tracker.http.bindAddress",
+        hdfs.getConfig().get("dfs.http.bindAddress"));
+      started = canStartJobTracker(conf2);
+      assertFalse(started); // should fail again
 
-    // both ports are different from the name-node ones
-    conf2.set("mapred.job.tracker", TestHDFSServerPorts.NAME_NODE_HOST + 0);
-    conf2.set("mapred.job.tracker.http.bindAddress",
+      // both ports are different from the name-node ones
+      conf2.set("mapred.job.tracker", TestHDFSServerPorts.NAME_NODE_HOST + 0);
+      conf2.set("mapred.job.tracker.http.bindAddress",
         TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
-    started = canStartJobTracker(conf2);
-    assertTrue(started); // should start now
+      started = canStartJobTracker(conf2);
+      assertTrue(started); // should start now
 
-    hdfs.stopNameNode(nn);
+    } finally {
+      hdfs.stopNameNode(nn);
+    }
   }
 
   /**
    * Verify JobTracker port usage.
    */
   public void testTaskTrackerPorts() throws Exception {
-    NameNode nn = hdfs.startNameNode();
+    NameNode nn = null;
+    JobTracker jt = null;
+    try {
+      nn = hdfs.startNameNode();
 
-    JobConf conf2 = new JobConf(hdfs.getConfig());
-    JobTracker jt = startJobTracker(conf2);
+      JobConf conf2 = new JobConf(hdfs.getConfig());
+      jt = startJobTracker(conf2);
 
-    // start job tracker on the same port as name-node
-    conf2.set("mapred.task.tracker.report.bindAddress",
-        TestHDFSServerPorts.NAME_NODE_ADDRESS);
-    conf2.set("mapred.task.tracker.http.bindAddress",
+      // start job tracker on the same port as name-node
+      conf2.set("mapred.task.tracker.report.bindAddress",
+        hdfs.getConfig().get("fs.default.name"));
+      conf2.set("mapred.task.tracker.http.bindAddress",
         TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
-    boolean started = canStartTaskTracker(conf2);
-    assertFalse(started); // should fail
+      boolean started = canStartTaskTracker(conf2);
+      assertFalse(started); // should fail
 
-    // bind http server to the same port as name-node
-    conf2.set("mapred.task.tracker.report.bindAddress",
+      // bind http server to the same port as name-node
+      conf2.set("mapred.task.tracker.report.bindAddress",
         TestHDFSServerPorts.NAME_NODE_HOST + 0);
-    conf2.set("mapred.task.tracker.http.bindAddress",
-        TestHDFSServerPorts.NAME_NODE_HTTP_ADDRESS);
-    started = canStartTaskTracker(conf2);
-    assertFalse(started); // should fail again
+      conf2.set("mapred.task.tracker.http.bindAddress",
+        hdfs.getConfig().get("dfs.http.bindAddress"));
+      started = canStartTaskTracker(conf2);
+      assertFalse(started); // should fail again
 
-    // both ports are different from the name-node ones
-    conf2.set("mapred.task.tracker.report.bindAddress",
+      // both ports are different from the name-node ones
+      conf2.set("mapred.task.tracker.report.bindAddress",
         TestHDFSServerPorts.NAME_NODE_HOST + 0);
-    conf2.set("mapred.task.tracker.http.bindAddress",
+      conf2.set("mapred.task.tracker.http.bindAddress",
         TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
-    started = canStartTaskTracker(conf2);
-    assertTrue(started); // should start now
-
-    jt.fs.close();
-    jt.stopTracker();
-    hdfs.stopNameNode(nn);
+      started = canStartTaskTracker(conf2);
+      assertTrue(started); // should start now
+    } finally {
+      if (jt != null) {
+        jt.fs.close();
+        jt.stopTracker();
+      }
+      hdfs.stopNameNode(nn);
+    }
   }
 }
