@@ -8,6 +8,8 @@ Trunk (unreleased changes)
    HADOOP-2495 Minor performance improvements: Slim-down BatchOperation, etc. 
    HADOOP-2506 Remove the algebra package
    HADOOP-2519 Performance improvements: Customized RPC serialization
+   HADOOP-2478 Restructure how HBase lays out files in the file system (phase 1)
+               (test input data)
 
   NEW FEATURES
     HADOOP-2061 Add new Base64 dialects
