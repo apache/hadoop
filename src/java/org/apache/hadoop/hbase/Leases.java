@@ -354,7 +354,7 @@ public class Leases {
     @Override
     public int hashCode() {
       int result = this.getLeaseName().hashCode();
-      result ^= Long.valueOf(this.lastUpdate).hashCode();
+      result ^= this.lastUpdate;
       return result;
     }
     

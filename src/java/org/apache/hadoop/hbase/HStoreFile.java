@@ -995,7 +995,7 @@ public class HStoreFile implements HConstants, WritableComparable {
     int result = this.dir.hashCode();
     result ^= this.encodedRegionName.hashCode();
     result ^= this.colFamily.hashCode();
-    result ^= Long.valueOf(this.fileId).hashCode();
+    result ^= this.fileId;
     return result;
   }
 

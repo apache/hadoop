@@ -219,7 +219,7 @@ public class HStoreKey implements WritableComparable {
   public int hashCode() {
     int result = this.row.hashCode();
     result ^= this.column.hashCode();
-    result ^= Long.valueOf(this.timestamp).hashCode();
+    result ^= this.timestamp;
     return result;
   }
 

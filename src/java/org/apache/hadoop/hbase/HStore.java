@@ -229,14 +229,12 @@ class HStore implements HConstants {
       // TODO: If get is of a particular version -- numVersions == 1 -- we
       // should be able to avoid all of the tailmap creations and iterations
       // below.
-      HStoreKey curKey = new HStoreKey(key);
-      SortedMap<HStoreKey, byte []> tailMap = map.tailMap(curKey);
+      SortedMap<HStoreKey, byte []> tailMap = map.tailMap(key);
       for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
         HStoreKey itKey = es.getKey();
-        if (itKey.matchesRowCol(curKey)) {
+        if (itKey.matchesRowCol(key)) {
           if (!HLogEdit.isDeleted(es.getValue())) {
             result.add(tailMap.get(itKey));
-            curKey.setVersion(itKey.getTimestamp() - 1);
           }
         }
         if (numVersions > 0 && result.size() >= numVersions) {
