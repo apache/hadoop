@@ -72,8 +72,7 @@ public class MultiRegionTable extends HBaseTestCase {
     HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
     int count = count(meta, tableName);
     HTable t = new HTable(conf, new Text(tableName));
-    // We created the table.  Get the parent region here now.  One will
-    // have been created though nought in it.
+    // Get the parent region here now.
     HRegionInfo parent =
       t.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
     LOG.info("Parent region " + parent.toString());
@@ -104,7 +103,6 @@ public class MultiRegionTable extends HBaseTestCase {
     }
 
     // Flush the cache
-    
     cluster.getRegionThreads().get(0).getRegionServer().getCacheFlushListener().
       flushRequested(r);
 
@@ -145,17 +143,14 @@ public class MultiRegionTable extends HBaseTestCase {
         splitB.getRegionName());
     
     // Recalibrate will cause us to wait on new regions' deployment
-    
     recalibrate(t, new Text(columnName), retries, waitTime);
     
     // Compact a region at a time so we can test case where one region has
     // no references but the other still has some
-    
     compact(cluster, splitA);
     
     // Wait till the parent only has reference to remaining split, one that
     // still has references.
-    
     while (true) {
       data = getSplitParentInfo(meta, parent);
       if (data == null || data.size() == 3) {
@@ -168,10 +163,9 @@ public class MultiRegionTable extends HBaseTestCase {
       }
       break;
     }
-    LOG.info("Parent split returned " + data.keySet().toString());
+    LOG.info("Parent split info returned " + data.keySet().toString());
     
     // Call second split.
-    
     compact(cluster, splitB);
     
     // Now wait until parent disappears.
@@ -231,7 +225,9 @@ public class MultiRegionTable extends HBaseTestCase {
       }
       return size;
     } finally {
-      s.close();
+      if (s != null) {
+        s.close();
+      }
     }
   }
 

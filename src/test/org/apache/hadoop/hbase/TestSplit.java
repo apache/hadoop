@@ -172,39 +172,7 @@ public class TestSplit extends MultiRegionTable {
       closedRegion.getFilesystem(), closedRegion.getConf(),
       closedRegion.getRegionInfo(), null, null);
   }
-  
-  /**
-   * Test that a region is cleaned up after its daughter splits release all
-   * references.
-   * @throws Exception
-   */
-  public void testSplitRegionIsDeleted() throws Exception {
-    // Make sure the cache gets flushed so we trigger a compaction(s) and
-    // hence splits. This is done here rather than in the constructor because
-    // the first test runs without a cluster, and will block when the cache
-    // fills up.
-    conf.setInt("hbase.hregion.memcache.flush.size", 1024 * 1024);
 
-    try {
-      // Start up a hbase cluster
-      MiniHBaseCluster cluster = new MiniHBaseCluster(conf, 1, true);
-      try {
-        // Create a table.
-        HBaseAdmin admin = new HBaseAdmin(this.conf);
-        admin.createTable(createTableDescriptor(getName()));
-        // This builds a multi-region table by splitting.  It will assert
-        // the parent region gets cleaned-up.
-        MultiRegionTable.makeMultiRegionTable(conf, cluster,
-            this.localFs, getName(), COLFAMILY_NAME3);
-      } finally {
-        cluster.shutdown();
-      }
-    } catch (Exception e) {
-      LOG.error("test failed", e);
-      throw e;
-    }
-  }
-  
   private void assertGet(final HRegion r, final String family, final Text k)
   throws IOException {
     // Now I have k, get values out and assert they are as expected.
