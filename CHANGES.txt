@@ -390,6 +390,8 @@ Trunk (unreleased changes)
     HADOOP-1281. Ensure running tasks of completed map TIPs (e.g. speculative
     tasks) are killed as soon as the TIP completed. (acmurthy)
 
+    HADOOP-2571. Suppress a suprious warning in test code. (cdouglas)
+
 Release 0.15.2 - 2008-01-02
 
   BUG FIXES

@@ -332,6 +332,7 @@ public class FileBench extends Configured implements Tool {
     return set;
   }
 
+  @SuppressWarnings("unchecked")
   public static <T extends Enum<T>> EnumSet<T> add(Class<T> c,
       EnumSet<T> set, String s) {
     if (null != fullmap.get(c) && fullmap.get(c).get(s) != null) {
