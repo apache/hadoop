@@ -102,7 +102,7 @@ public class HLogKey implements WritableComparable {
   public int hashCode() {
     int result = this.regionName.hashCode();
     result ^= this.row.hashCode(); 
-    result ^= Long.valueOf(this.logSeqNum).hashCode();
+    result ^= this.logSeqNum;
     return result;
   }
 

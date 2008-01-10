@@ -82,7 +82,7 @@ public class HRegionInfo implements WritableComparable {
   
   private void setHashCode() {
     int result = this.regionName.hashCode();
-    result ^= Long.valueOf(this.regionId).hashCode();
+    result ^= this.regionId;
     result ^= this.startKey.hashCode();
     result ^= this.endKey.hashCode();
     result ^= Boolean.valueOf(this.offLine).hashCode();

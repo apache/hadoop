@@ -332,13 +332,13 @@ public class HLog implements HConstants {
             // equal to the oldest pending region operation
             TreeSet<Long> sequenceNumbers =
               new TreeSet<Long>(this.outputfiles.headMap(
-                (oldestOutstandingSeqNum + Long.valueOf(1L))).keySet());
+                (Long.valueOf(oldestOutstandingSeqNum.longValue() + 1L))).keySet());
             // Now remove old log files (if any)
             if (LOG.isDebugEnabled()) {
               // Find region associated with oldest key -- helps debugging.
               Text oldestRegion = null;
               for (Map.Entry<Text, Long> e: this.lastSeqWritten.entrySet()) {
-                if (e.getValue().longValue() == oldestOutstandingSeqNum) {
+                if (e.getValue().longValue() == oldestOutstandingSeqNum.longValue()) {
                   oldestRegion = e.getKey();
                   break;
                 }

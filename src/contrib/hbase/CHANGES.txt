@@ -162,6 +162,7 @@ Trunk (unreleased changes)
                (Edward Yoon via Stack)
    HADOOP-2450 Show version (and svn revision) in hbase web ui
    HADOOP-2472 Range selection using filter (Edward Yoon via Stack)
+   HADOOP-2553 Don't make Long objects calculating hbase type hash codes
                
 
 
