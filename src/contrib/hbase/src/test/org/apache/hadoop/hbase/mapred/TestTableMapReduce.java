@@ -351,19 +351,39 @@ public class TestTableMapReduce extends MultiRegionTable {
 
   @SuppressWarnings("null")
   private void verify(String tableName) throws IOException {
-    // Sleep before we start the verify to ensure that when the scanner takes
-    // its snapshot, all the updates have made it into the cache.
-    try {
-      Thread.sleep(conf.getLong("hbase.regionserver.optionalcacheflushinterval",
-          60L * 1000L));
-    } catch (InterruptedException e) {
-      // ignore
-    }
     HTable table = new HTable(conf, new Text(tableName));
-    
+    boolean verified = false;
+    long pause = conf.getLong("hbase.client.pause", 5 * 1000);
+    int numRetries = conf.getInt("hbase.client.retries.number", 5);
+    for (int i = 0; i < numRetries; i++) {
+      try {
+        verifyAttempt(table);
+        verified = true;
+        break;
+      } catch (NullPointerException e) {
+        // If here, a cell was empty.  Presume its because updates came in
+        // after the scanner had been opened.  Wait a while and retry.
+        LOG.debug("Verification attempt failed: " + e.getMessage());
+      }
+      try {
+        Thread.sleep(pause);
+      } catch (InterruptedException e) {
+        // continue
+      }
+    }
+    assertTrue(verified);
+  }
+
+  /**
+   * Looks at every value of the mapreduce output and verifies that indeed
+   * the values have been reversed.
+   * @param table Table to scan.
+   * @throws IOException
+   * @throws NullPointerException if we failed to find a cell value
+   */
+  private void verifyAttempt(final HTable table) throws IOException, NullPointerException {
     HScannerInterface scanner =
       table.obtainScanner(columns, HConstants.EMPTY_START_ROW);
-    
     try {
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
@@ -371,17 +391,20 @@ public class TestTableMapReduce extends MultiRegionTable {
       while(scanner.next(key, results)) {
         if (LOG.isDebugEnabled()) {
           if (results.size() > 2 ) {
-            LOG.debug("Too many results, expected 2 got " + results.size());
+            throw new IOException("Too many results, expected 2 got " +
+              results.size());
           }
         }
         byte[] firstValue = null;
         byte[] secondValue = null;
         int count = 0;
         for(Map.Entry<Text, byte[]> e: results.entrySet()) {
-          if (count == 0)
+          if (count == 0) {
             firstValue = e.getValue();
-          if (count == 1)
+          }
+          if (count == 1) {
             secondValue = e.getValue();
+          }
           count++;
           if (count == 2) {
             break;
@@ -390,29 +413,22 @@ public class TestTableMapReduce extends MultiRegionTable {
         
         String first = "";
         if (firstValue == null) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("row=" + key.getRow() + ": first value is null");
-          }
-          fail();
-
-        } else {
-          first = new String(firstValue, HConstants.UTF8_ENCODING);
+          throw new NullPointerException(key.getRow().toString() +
+            ": first value is null");
         }
+        first = new String(firstValue, HConstants.UTF8_ENCODING);
         
         String second = "";
         if (secondValue == null) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("row=" + key.getRow() + ": second value is null");
-          }
-          fail();
-          
-        } else {
-          byte[] secondReversed = new byte[secondValue.length];
-          for (int i = 0, j = secondValue.length - 1; j >= 0; j--, i++) {
-            secondReversed[i] = secondValue[j];
-          }
-          second = new String(secondReversed, HConstants.UTF8_ENCODING);
+          throw new NullPointerException(key.getRow().toString() +
+            ": second value is null");
         }
+        byte[] secondReversed = new byte[secondValue.length];
+        for (int i = 0, j = secondValue.length - 1; j >= 0; j--, i++) {
+          secondReversed[i] = secondValue[j];
+        }
+        second = new String(secondReversed, HConstants.UTF8_ENCODING);
+
         if (first.compareTo(second) != 0) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("second key is not the reverse of first. row=" +
@@ -422,7 +438,6 @@ public class TestTableMapReduce extends MultiRegionTable {
           fail();
         }
       }
-      
     } finally {
       scanner.close();
     }
