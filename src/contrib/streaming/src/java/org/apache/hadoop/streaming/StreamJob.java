@@ -502,8 +502,10 @@ public class StreamJob {
     System.out.println("  because the input filename and the map input order are preserved");
     System.out.println("  This equivalent -reducer NONE");
     System.out.println();
+    System.out.println("To speed up the last maps:");
+    System.out.println("  -jobconf mapred.map.tasks.speculative.execution=true");
     System.out.println("To speed up the last reduces:");
-    System.out.println("  -jobconf mapred.speculative.execution=true");
+    System.out.println("  -jobconf mapred.reduce.tasks.speculative.execution=true");
     System.out.println("To name the job (appears in the JobTracker Web UI):");
     System.out.println("  -jobconf mapred.job.name='My Job' ");
     System.out.println("To change the local temp directory:");

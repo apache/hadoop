@@ -163,7 +163,7 @@ creations/deletions), or "all".</td>
       directories, for redundancy. </td>
 </tr>
 <tr>
-<td><a name="dfs.permissions">dfs.permissions</a></td><td>false</td><td>
+<td><a name="dfs.permissions">dfs.permissions</a></td><td>true</td><td>
     If "true", enable permission checking in HDFS.
     If "false", permission checking is turned off,
     but all other behavior is unchanged.
@@ -259,6 +259,12 @@ creations/deletions), or "all".</td>
   not permitted to connect to the namenode.  The full pathname of the
   file must be specified.  If the value is empty, no hosts are
   excluded.</td>
+</tr>
+<tr>
+<td><a name="dfs.max.objects">dfs.max.objects</a></td><td>0</td><td>The maximum number of files, directories and blocks
+  dfs supports. A value of zero indicates no limit to the number
+  of objects that dfs supports.
+  </td>
 </tr>
 <tr>
 <td><a name="fs.s3.block.size">fs.s3.block.size</a></td><td>67108864</td><td>Block size to use when writing files to S3.</td>
@@ -412,7 +418,11 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
-<td><a name="mapred.speculative.execution">mapred.speculative.execution</a></td><td>true</td><td>If true, then multiple instances of some map and reduce tasks 
+<td><a name="mapred.map.tasks.speculative.execution">mapred.map.tasks.speculative.execution</a></td><td>true</td><td>If true, then multiple instances of some map tasks 
+               may be executed in parallel.</td>
+</tr>
+<tr>
+<td><a name="mapred.reduce.tasks.speculative.execution">mapred.reduce.tasks.speculative.execution</a></td><td>true</td><td>If true, then multiple instances of some reduce tasks 
                may be executed in parallel.</td>
 </tr>
 <tr>

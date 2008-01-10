@@ -828,6 +828,9 @@ public class JobConf extends Configuration {
   }
   
   /**
+   * @deprecated Use {{@link #getMapSpeculativeExecution()} or
+   *             {@link #getReduceSpeculativeExecution()} instead.
+   * 
    * Should speculative execution be used for this job? 
    * Defaults to <code>true</code>.
    * 
@@ -839,6 +842,9 @@ public class JobConf extends Configuration {
   }
   
   /**
+   * @deprecated Use {@link #setMapSpeculativeExecution(boolean)} or
+   *                 {@link #setReduceSpeculativeExecution(boolean)} instead. 
+   * 
    * Turn speculative execution on or off for this job. 
    * 
    * @param speculativeExecution <code>true</code> if speculative execution 
@@ -847,7 +853,54 @@ public class JobConf extends Configuration {
   public void setSpeculativeExecution(boolean speculativeExecution) {
     setBoolean("mapred.speculative.execution", speculativeExecution);
   }
+
+  /**
+   * Should speculative execution be used for this job for map tasks? 
+   * Defaults to <code>true</code>.
+   * 
+   * @return <code>true</code> if speculative execution be 
+   *                           used for this job for map tasks,
+   *         <code>false</code> otherwise.
+   */
+  public boolean getMapSpeculativeExecution() { 
+    return getBoolean("mapred.map.tasks.speculative.execution", true);
+  }
   
+  /**
+   * Turn speculative execution on or off for this job for map tasks. 
+   * 
+   * @param speculativeExecution <code>true</code> if speculative execution 
+   *                             should be turned on for map tasks,
+   *                             else <code>false</code>.
+   */
+  public void setMapSpeculativeExecution(boolean speculativeExecution) {
+    setBoolean("mapred.map.tasks.speculative.execution", speculativeExecution);
+  }
+
+  /**
+   * Should speculative execution be used for this job for reduce tasks? 
+   * Defaults to <code>true</code>.
+   * 
+   * @return <code>true</code> if speculative execution be used 
+   *                           for reduce tasks for this job,
+   *         <code>false</code> otherwise.
+   */
+  public boolean getReduceSpeculativeExecution() { 
+    return getBoolean("mapred.reduce.tasks.speculative.execution", true);
+  }
+  
+  /**
+   * Turn speculative execution on or off for this job for reduce tasks. 
+   * 
+   * @param speculativeExecution <code>true</code> if speculative execution 
+   *                             should be turned on for reduce tasks,
+   *                             else <code>false</code>.
+   */
+  public void setReduceSpeculativeExecution(boolean speculativeExecution) {
+    setBoolean("mapred.reduce.tasks.speculative.execution", 
+               speculativeExecution);
+  }
+
   /**
    * Get configured the number of reduce tasks for this job.
    * Defaults to <code>1</code>.

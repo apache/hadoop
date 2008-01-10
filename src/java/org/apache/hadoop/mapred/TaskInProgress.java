@@ -131,6 +131,7 @@ class TaskInProgress {
     this.conf = conf;
     this.partition = partition;
     setMaxTaskAttempts();
+    this.runSpeculative = conf.getMapSpeculativeExecution();
     init(JobTracker.getJobUniqueString(jobid));
   }
         
@@ -148,8 +149,10 @@ class TaskInProgress {
     this.job = job;
     this.conf = conf;
     setMaxTaskAttempts();
+    this.runSpeculative = conf.getReduceSpeculativeExecution();
     init(JobTracker.getJobUniqueString(jobid));
   }
+  
   /**
    * Set the max number of attempts before we declare a TIP as "failed"
    */
@@ -201,7 +204,11 @@ class TaskInProgress {
    */
   void init(String jobUniqueString) {
     this.startTime = System.currentTimeMillis();
-    this.runSpeculative = conf.getSpeculativeExecution();
+    if ("true".equals(conf.get("mapred.speculative.execution"))) {
+      this.runSpeculative = true;
+    } else if ("false".equals(conf.get("mapred.speculative.execution"))) {
+      this.runSpeculative = false;
+    }
     this.taskIdPrefix = makeUniqueString(jobUniqueString);
     this.id = "tip_" + this.taskIdPrefix;
   }

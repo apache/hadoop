@@ -191,6 +191,15 @@ Trunk (unreleased changes)
     HADOOP-2406. Add a benchmark for measuring read/write performance through
     the InputFormat interface, particularly with compression. (cdouglas)
 
+    HADOOP-2131. Allow finer-grained control over speculative-execution. Now
+    users can set it for maps and reduces independently.
+    Configuration changes to hadoop-default.xml:
+      deprecated mapred.speculative.execution
+      add mapred.map.tasks.speculative.execution
+      add mapred.reduce.tasks.speculative.execution
+    (Amareshwari Sri Ramadasu via acmurthy) 
+      
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

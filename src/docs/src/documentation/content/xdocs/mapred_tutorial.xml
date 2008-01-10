@@ -989,7 +989,7 @@
         user-provided scripts
         (<a href="ext:api/org/apache/hadoop/mapred/jobconf/setmapdebugscript">setMapDebugScript(String)</a>/<a href="ext:api/org/apache/hadoop/mapred/jobconf/setreducedebugscript">setReduceDebugScript(String)</a>) 
         , whether job tasks can be executed in a <em>speculative</em> manner 
-        (<a href="ext:api/org/apache/hadoop/mapred/jobconf/setspeculativeexecution">setSpeculativeExecution(boolean)</a>)
+        (<a href="ext:api/org/apache/hadoop/mapred/jobconf/setmapspeculativeexecution">setMapSpeculativeExecution(boolean)</a>)/(<a href="ext:api/org/apache/hadoop/mapred/jobconf/setreducespeculativeexecution">setReduceSpeculativeExecution(boolean)</a>)
         , maximum number of attempts per task
         (<a href="ext:api/org/apache/hadoop/mapred/jobconf/setmaxmapattempts">setMaxMapAttempts(int)</a>/<a href="ext:api/org/apache/hadoop/mapred/jobconf/setmaxreduceattempts">setMaxReduceAttempts(int)</a>) 
         , percentage of tasks failure which can be tolerated by the job

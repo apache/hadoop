@@ -110,7 +110,8 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <setcombinerclass href="#setCombinerClass(java.lang.Class)" />
                 <setmapdebugscript href="#setMapDebugScript(java.lang.String)" />
                 <setreducedebugscript href="#setReduceDebugScript(java.lang.String)" />
-                <setspeculativeexecution href="#setSpeculativeExecution(boolean)" />
+                <setmapspeculativeexecution href="#setMapSpeculativeExecution(boolean)" />
+                <setreducespeculativeexecution href="#setReduceSpeculativeExecution(boolean)" />
                 <setmaxmapattempts href="#setMaxMapAttempts(int)" />
                 <setmaxreduceattempts href="#setMaxReduceAttempts(int)" />
                 <setmaxmaptaskfailurespercent href="#setMaxMapTaskFailuresPercent(int)" />
