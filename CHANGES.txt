@@ -66,6 +66,10 @@ Trunk (unreleased changes)
     HADOOP-2447. HDFS can be configured to limit the total number of 
     objects (inodes and blocks) in the file system. (dhruba)
 
+    HADOOP-2487. Added an option to get statuses for all submitted/run jobs.
+    This information can be used to develop tools for analysing jobs.
+    (Amareshwari Sri Ramadasu via acmurthy)
+
   IMPROVEMENTS
 
     HADOOP-2045.  Change committer list on website to a table, so that

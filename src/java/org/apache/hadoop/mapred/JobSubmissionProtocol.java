@@ -36,8 +36,9 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
    *Version 5: max_tasks in ClusterStatus is replaced by
    * max_map_tasks and max_reduce_tasks for HADOOP-1274
    * Version 6: change the counters representation for HADOOP-2248
+   * Version 7: added getAllJobs for HADOOP-2487
    */
-  public static final long versionID = 6L;
+  public static final long versionID = 7L;
 
   /**
    * Allocate a name for the job.
@@ -114,6 +115,12 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
    */
   public JobStatus[] jobsToComplete() throws IOException;
     
+  /** 
+   * Get all the jobs submitted. 
+   * @return array of JobStatus for the submitted jobs
+   */
+  public JobStatus[] getAllJobs() throws IOException;
+  
   /**
    * Get task completion events for the jobid, starting from fromEventId. 
    * Returns empty aray if no events are available. 

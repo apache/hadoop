@@ -728,6 +728,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   }
     
   /** 
+   * Get the jobs that are submitted.
+   * 
+   * @return array of {@link JobStatus} for the submitted jobs.
+   * @throws IOException
+   */
+  public JobStatus[] getAllJobs() throws IOException {
+    return jobSubmitClient.getAllJobs();
+  }
+  
+  /** 
    * Utility that submits a job, then polls for progress until the job is
    * complete.
    * 
@@ -947,6 +957,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     System.out.printf("\t-kill\t<job-id>\n");
     System.out.printf("\t-events\t<job-id> <from-event-#> <#-of-events>\n");
     System.out.printf("\t-list\n");
+    System.out.printf("\t-list\tall\n");
     System.out.printf("\t-kill-task <task-id>\n");
     System.out.printf("\t-fail-task <task-id>\n\n");
     ToolRunner.printGenericCommandUsage(System.out);
@@ -964,6 +975,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     boolean killJob = false;
     boolean listEvents = false;
     boolean listJobs = false;
+    boolean listAllJobs = false;
     boolean killTask = false;
     boolean failTask = false;
     
@@ -992,7 +1004,13 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       nEvents = Integer.parseInt(argv[3]);
       listEvents = true;
     } else if ("-list".equals(argv[0])) {
-      listJobs = true;
+      if (argv.length != 1 && !(argv.length == 2 && "all".equals(argv[1])))
+        displayUsage();
+      if (argv.length == 2 && "all".equals(argv[1])) {
+        listAllJobs = true;
+      } else {
+        listJobs = true;
+      }
     } else if("-kill-task".equals(argv[0])) {
       if(argv.length != 2)
         displayUsage();
@@ -1047,6 +1065,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       } else if (listJobs) {
         listJobs();
         exitCode = 0;
+      } else if (listAllJobs) {
+          listAllJobs();
+          exitCode = 0;
       } else if(killTask) {
         if(jobSubmitClient.killTask(taskid, false)) {
           System.out.println("Killed task " + taskid);
@@ -1105,6 +1126,25 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     }
   }
     
+  /**
+   * Dump a list of all jobs submitted.
+   * @throws IOException
+   */
+  private void listAllJobs() throws IOException {
+    JobStatus[] jobs = getAllJobs();
+    if (jobs == null)
+      jobs = new JobStatus[0];
+
+    System.out.printf("%d jobs submitted\n", jobs.length);
+    System.out.printf("States are:\n\tRunning : 1\tSucceded : 2" +
+                       "\tFailed : 3\tPrep : 4\n");
+    System.out.printf("JobId\tState\tStartTime\tUserName\n");
+    for (JobStatus job : jobs) {
+      System.out.printf("%s\t%d\t%d\t%s\n", job.getJobId(), job.getRunState(),
+          job.getStartTime(), job.getUsername());
+    }
+  }
+
   /**
    */
   public static void main(String argv[]) throws Exception {

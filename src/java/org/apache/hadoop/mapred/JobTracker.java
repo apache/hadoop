@@ -1767,6 +1767,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
     return v.toArray(new JobStatus[v.size()]);
   } 
+  
+  public JobStatus[] getAllJobs() {
+    Vector<JobStatus> v = new Vector<JobStatus>();
+    for (Iterator it = jobs.values().iterator(); it.hasNext();) {
+      JobInProgress jip = (JobInProgress) it.next();
+      JobStatus status = jip.getStatus();
+      status.setStartTime(jip.getStartTime());
+      status.setUsername(jip.getProfile().getUser());
+      v.add(status);
+    }
+    return v.toArray(new JobStatus[v.size()]);
+  }
     
   ///////////////////////////////////////////////////////////////
   // JobTracker methods
