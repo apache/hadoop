@@ -201,6 +201,50 @@ public abstract class FileSystem extends Configured {
     return path.makeQualified(this);
   }
     
+  /** create a file with the provided permission
+   * The permission of the file is set to be the provided permission as in
+   * setPermission, not permission&~umask
+   * 
+   * It is implemented using two RPCs. It is understood that it is inefficient,
+   * but the implementation is thread-safe. The other option is to change the
+   * value of umask in configuration to be 0, but it is not thread-safe.
+   * 
+   * @param fs file system handle
+   * @param file the name of the file to be created
+   * @param permission the permission of the file
+   * @return an output stream
+   * @throws IOException
+   */
+  public static FSDataOutputStream create(FileSystem fs,
+      Path file, FsPermission permission) throws IOException {
+    // create the file with default permission
+    FSDataOutputStream out = fs.create(file);
+    // set its permission to the supplied one
+    fs.setPermission(file, permission);
+    return out;
+  }
+
+  /** create a directory with the provided permission
+   * The permission of the directory is set to be the provided permission as in
+   * setPermission, not permission&~umask
+   * 
+   * @see #create(FileSystem, Path, FsPermission)
+   * 
+   * @param fs file system handle
+   * @param dir the name of the directory to be created
+   * @param permission the permission of the directory
+   * @return true if the directory creation succeeds; false otherwise
+   * @throws IOException
+   */
+  public static boolean mkdirs(FileSystem fs, Path dir, FsPermission permission)
+  throws IOException {
+    // create the directory using the default permission
+    boolean result = fs.mkdirs(dir);
+    // set its permission to be the supplied one
+    fs.setPermission(dir, permission);
+    return result;
+  }
+
   ///////////////////////////////////////////////////////////////
   // FileSystem
   ///////////////////////////////////////////////////////////////

@@ -69,6 +69,17 @@ public class FsPermission implements Writable {
    */
   public FsPermission(short mode) { fromShort(mode); }
 
+  /**
+   * Copy constructor
+   * 
+   * @param other other permission
+   */
+  public FsPermission(FsPermission other) {
+    this.useraction = other.useraction;
+    this.groupaction = other.groupaction;
+    this.otheraction = other.otheraction;
+  }
+  
   /** Return user {@link FsAction}. */
   public FsAction getUserAction() {return useraction;}
 

@@ -46,7 +46,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AccessControlException;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics.MetricsContext;
@@ -677,11 +680,17 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         // clean up the system dir, which will only work if hdfs is out of 
         // safe mode
         fs.delete(systemDir);
-        if (fs.mkdirs(systemDir)) {
+        if (FileSystem.mkdirs(fs, systemDir, 
+            new FsPermission(JobClient.SYSTEM_DIR_PERMISSION))) {
           break;
         }
         LOG.error("Mkdirs failed to create " + systemDir);
       } catch (IOException ie) {
+        if (ie instanceof RemoteException && 
+            AccessControlException.class.getName().equals(
+                ((RemoteException)ie).getClassName())) {
+          throw ie;
+        }
         LOG.info("problem cleaning system directory: " + systemDir, ie);
       }
       Thread.sleep(SYSTEM_DIR_CLEANUP_RETRY_PERIOD);

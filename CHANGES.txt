@@ -70,6 +70,9 @@ Trunk (unreleased changes)
     This information can be used to develop tools for analysing jobs.
     (Amareshwari Sri Ramadasu via acmurthy)
 
+		HADOOP-1873. Implement user permissions for Map/Reduce framework.
+		(Hairong Kuang via shv)
+
   IMPROVEMENTS
 
     HADOOP-2045.  Change committer list on website to a table, so that
@@ -677,7 +680,7 @@ Release 0.15.0 - 2007-11-2
     (Jim Kellerman via cutting)
 
     HADOOP-1795.  Fix so that jobs can generate output file names with
-    special characters.  (Frédéric Bertin via cutting)
+    special characters.  (Fr??d??ric Bertin via cutting)
 
     HADOOP-1810.  Fix incorrect value type in MRBench (SmallJobs)
     (Devaraj Das via tomwhite)
@@ -3425,7 +3428,7 @@ Release 0.6.0 - 2006-09-08
     on the NameNode.  (Milind Bhandarkar via cutting)
 
 30. HADOOP-424.  Fix MapReduce so that jobs which generate zero splits
-    do not fail.  (Frédéric Bertin via cutting)
+    do not fail.  (Fr??d??ric Bertin via cutting)
 
 31. HADOOP-408.  Adjust some timeouts and remove some others so that
     unit tests run faster.  (cutting)
@@ -3491,7 +3494,7 @@ Release 0.5.0 - 2006-08-04
     StreamSequenceRecordReader.  (Michel Tourn via cutting)
 
  5. HADOOP-358.  Fix a NPE bug in Path.equals().
-    (Frédéric Bertin via cutting)
+    (Fr??d??ric Bertin via cutting)
 
  6. HADOOP-327.  Fix ToolBase to not call System.exit() when
     exceptions are thrown.  (Hairong Kuang via cutting)
