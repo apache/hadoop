@@ -270,7 +270,14 @@ class MapTask extends Task {
 
     private DataOutputBuffer keyValBuffer; //the buffer where key/val will
                                            //be stored before they are 
-                                           //spilled to disk
+                                           //passed on to the pending buffer
+    private DataOutputBuffer pendingKeyvalBuffer; // the key value buffer used
+                                                  // while spilling
+    // a lock used for sync sort-spill with collect
+    private final Object pendingKeyvalBufferLock = new Object();
+    // since sort-spill and collect are done concurrently, exceptions are 
+    // passed through shared variable
+    private volatile IOException sortSpillException; 
     private int maxBufferSize; //the max amount of in-memory space after which
                                //we will spill the keyValBuffer to disk
     private int numSpills; //maintains the no. of spills to disk done so far
@@ -282,6 +289,7 @@ class MapTask extends Task {
     private Class valClass;
     private WritableComparator comparator;
     private BufferSorter []sortImpl;
+    private BufferSorter []pendingSortImpl; // sort impl for the pending buffer
     private SequenceFile.Writer writer;
     private FSDataOutputStream out;
     private FSDataOutputStream indexOut;
@@ -296,7 +304,8 @@ class MapTask extends Task {
       this.partitions = job.getNumReduceTasks();
       this.partitioner = (Partitioner)ReflectionUtils.newInstance(
                                                                   job.getPartitionerClass(), job);
-      maxBufferSize = job.getInt("io.sort.mb", 100) * 1024 * 1024;
+      maxBufferSize = job.getInt("io.sort.mb", 100) * 1024 * 1024 / 2;
+      this.sortSpillException = null;
       keyValBuffer = new DataOutputBuffer();
 
       this.job = job;
@@ -348,8 +357,8 @@ class MapTask extends Task {
     }
     
     @SuppressWarnings("unchecked")
-    public void collect(WritableComparable key,
-                        Writable value) throws IOException {
+    public synchronized void collect(WritableComparable key,
+                                     Writable value) throws IOException {
       
       if (key.getClass() != keyClass) {
         throw new IOException("Type mismatch in key from map: expected "
@@ -362,45 +371,88 @@ class MapTask extends Task {
                               + value.getClass().getName());
       }
       
-      synchronized (this) {
-        if (keyValBuffer == null) {
-          keyValBuffer = new DataOutputBuffer();
-        }
-        //dump the key/value to buffer
-        int keyOffset = keyValBuffer.getLength(); 
-        key.write(keyValBuffer);
-        int keyLength = keyValBuffer.getLength() - keyOffset;
-        value.write(keyValBuffer);
-        int valLength = keyValBuffer.getLength() - (keyOffset + keyLength);
+      // check if the earlier sort-spill generated an exception
+      if (sortSpillException != null) {
+        throw sortSpillException;
+      }
       
-        int partNumber = partitioner.getPartition(key, value, partitions);
-        sortImpl[partNumber].addKeyValue(keyOffset, keyLength, valLength);
-
-        mapOutputRecordCounter.increment(1);
-        mapOutputByteCounter.increment(keyValBuffer.getLength() - keyOffset);
-
-        //now check whether we need to spill to disk
-        long totalMem = 0;
+      if (keyValBuffer == null) {
+        keyValBuffer = new DataOutputBuffer();
+        sortImpl = new BufferSorter[partitions];
         for (int i = 0; i < partitions; i++)
-          totalMem += sortImpl[i].getMemoryUtilized();
-        if ((keyValBuffer.getLength() + totalMem) >= maxBufferSize) {
-          sortAndSpillToDisk();
-          //we don't reuse the keyValBuffer. We want to maintain consistency
-          //in the memory model (for negligible performance loss).
-          keyValBuffer = null;
-          for (int i = 0; i < partitions; i++) {
-            sortImpl[i].close();
+          sortImpl[i] = (BufferSorter)ReflectionUtils.newInstance(
+                            job.getClass("map.sort.class", MergeSorter.class, 
+                                         BufferSorter.class), job);
+      }
+      
+      //dump the key/value to buffer
+      int keyOffset = keyValBuffer.getLength(); 
+      key.write(keyValBuffer);
+      int keyLength = keyValBuffer.getLength() - keyOffset;
+      value.write(keyValBuffer);
+      int valLength = keyValBuffer.getLength() - (keyOffset + keyLength);
+      int partNumber = partitioner.getPartition(key, value, partitions);
+      sortImpl[partNumber].addKeyValue(keyOffset, keyLength, valLength);
+
+      mapOutputRecordCounter.increment(1);
+      mapOutputByteCounter.increment(keyValBuffer.getLength() - keyOffset);
+
+      //now check whether we need to spill to disk
+      long totalMem = 0;
+      for (int i = 0; i < partitions; i++)
+        totalMem += sortImpl[i].getMemoryUtilized();
+      totalMem += keyValBuffer.getLength();
+      if (totalMem  >= maxBufferSize) {
+        // check if the earlier spill is pending
+        synchronized (pendingKeyvalBufferLock) {
+          // check if the spill is over, there could be a case where the 
+          // sort-spill is yet to start and collect acquired the lock
+          while (pendingKeyvalBuffer != null) {
+            try {
+              // indicate that we are making progress
+              this.reporter.progress();
+              pendingKeyvalBufferLock.wait(); // wait for the pending spill to
+                                              // start and finish sort-spill
+            } catch (InterruptedException ie) {
+              LOG.warn("Buffer interrupted while waiting for the writer", ie);
+            }
           }
+          // prepare for spilling
+          pendingKeyvalBuffer = keyValBuffer;
+          pendingSortImpl = sortImpl;
+          keyValBuffer = null;
+          sortImpl = null;
         }
+
+        // check if the earlier sort-spill thread generated an exception
+        if (sortSpillException != null) {
+          throw sortSpillException;
+        }
+        
+        // Start the sort-spill thread. While the sort and spill takes place 
+        // using the pending variables, the output collector can collect the 
+        // key-value without getting blocked. Thus making key-value collection 
+        // and sort-spill concurrent.
+        Thread bufferWriter = new Thread() {
+          public void run() {
+            synchronized (pendingKeyvalBufferLock) {
+              sortAndSpillToDisk();
+            }
+          }
+        };
+        bufferWriter.setDaemon(true); // to make sure that the buffer writer 
+                                      // gets killed if collector is killed.
+        bufferWriter.setName("SortSpillThread");
+        bufferWriter.start();
       }
     }
     
     //sort, combine and spill to disk
-    private void sortAndSpillToDisk() throws IOException {
-      synchronized (this) {
+    private void sortAndSpillToDisk() {
+      try {
         //approximate the length of the output file to be the length of the
         //buffer + header lengths for the partitions
-        long size = keyValBuffer.getLength() + 
+        long size = pendingKeyvalBuffer.getLength() + 
                     partitions * APPROX_HEADER_LENGTH;
         Path filename = mapOutputFile.getSpillFileForWrite(getTaskId(), 
                                       numSpills, size);
@@ -414,9 +466,9 @@ class MapTask extends Task {
           
         //invoke the sort
         for (int i = 0; i < partitions; i++) {
-          sortImpl[i].setInputBuffer(keyValBuffer);
-          sortImpl[i].setProgressable(reporter);
-          RawKeyValueIterator rIter = sortImpl[i].sort();
+          pendingSortImpl[i].setInputBuffer(pendingKeyvalBuffer);
+          pendingSortImpl[i].setProgressable(reporter);
+          RawKeyValueIterator rIter = pendingSortImpl[i].sort();
           
           startPartition(i);
           if (rIter != null) {
@@ -449,6 +501,14 @@ class MapTask extends Task {
         numSpills++;
         out.close();
         indexOut.close();
+      } catch (IOException ioe) {
+        sortSpillException = ioe;
+      } finally { // make sure that the collector never waits indefinitely
+        pendingKeyvalBuffer = null;
+        for (int i = 0; i < partitions; i++) {
+          pendingSortImpl[i].close();
+        }
+        pendingKeyvalBufferLock.notify();
       }
     }
     
@@ -617,15 +677,46 @@ class MapTask extends Task {
       }
     }
 
-    public void flush() throws IOException 
+    public synchronized void flush() throws IOException 
     {
       //check whether the length of the key/value buffer is 0. If not, then
       //we need to spill that to disk. Note that we reset the key/val buffer
       //upon each spill (so a length > 0 means that we have not spilled yet)
-      synchronized (this) {
-        if (keyValBuffer != null && keyValBuffer.getLength() > 0) {
+      
+      // check if the earlier spill is pending
+      synchronized (pendingKeyvalBufferLock) {
+        // this could mean that either the sort-spill is over or is yet to 
+        // start so make sure that the earlier sort-spill is over.
+        while (pendingKeyvalBuffer != null) {
+          try {
+            // indicate that we are making progress
+            this.reporter.progress();
+            pendingKeyvalBufferLock.wait();
+          } catch (InterruptedException ie) {
+            LOG.info("Buffer interrupted while for the pending spill", ie);
+          }
+        }
+      }
+      
+      // check if the earlier sort-spill thread generated an exception
+      if (sortSpillException != null) {
+        throw sortSpillException;
+      }
+      
+      if (keyValBuffer != null && keyValBuffer.getLength() > 0) {
+        // prepare for next spill
+        synchronized (pendingKeyvalBufferLock) {
+          pendingKeyvalBuffer = keyValBuffer;
+          pendingSortImpl = sortImpl;
+          keyValBuffer = null;
+          sortImpl = null;
           sortAndSpillToDisk();
         }
+      }  
+      
+      // check if the last sort-spill thread generated an exception
+      if (sortSpillException != null) {
+        throw sortSpillException;
       }
       mergeParts();
     }
