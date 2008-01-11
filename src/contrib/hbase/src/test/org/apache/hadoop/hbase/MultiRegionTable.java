@@ -306,8 +306,12 @@ public class MultiRegionTable extends HBaseTestCase {
    * @throws IOException
    */
   private static void compact(final MiniHBaseCluster cluster,
-      final HRegionInfo r) throws IOException {
-    
+      final HRegionInfo r)
+  throws IOException {
+    if (r == null) {
+      LOG.debug("Passed region is null");
+      return;
+    }
     LOG.info("Starting compaction");
     for (LocalHBaseCluster.RegionServerThread thread:
         cluster.getRegionThreads()) {
