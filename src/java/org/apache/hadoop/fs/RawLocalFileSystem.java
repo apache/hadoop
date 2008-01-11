@@ -36,8 +36,7 @@ import org.apache.hadoop.util.Shell;
  *****************************************************************/
 public class RawLocalFileSystem extends FileSystem {
   static final URI NAME = URI.create("file:///");
-  private Path workingDir =
-    new Path(System.getProperty("user.dir"));
+  private Path workingDir;
   TreeMap<File, FileInputStream> sharedLockDataSet =
     new TreeMap<File, FileInputStream>();
   TreeMap<File, FileOutputStream> nonsharedLockDataSet =
@@ -46,7 +45,9 @@ public class RawLocalFileSystem extends FileSystem {
   // by default use copy/delete instead of rename
   boolean useCopyForRename = true;
   
-  public RawLocalFileSystem() {}
+  public RawLocalFileSystem() {
+    workingDir = new Path(System.getProperty("user.dir")).makeQualified(this);
+  }
   
   /** Convert a path to a File. */
   public File pathToFile(Path path) {
@@ -264,6 +265,11 @@ public class RawLocalFileSystem extends FileSystem {
     return b;
   }
   
+  @Override
+  public Path getHomeDirectory() {
+    return new Path(System.getProperty("user.home")).makeQualified(this);
+  }
+
   /**
    * Set the working directory to the given directory.
    */

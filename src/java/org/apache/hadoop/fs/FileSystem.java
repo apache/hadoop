@@ -863,6 +863,15 @@ public abstract class FileSystem extends Configured {
     }
   }
     
+  /** Return the current user's home directory in this filesystem.
+   * The default implementation returns "/user/$USER/".
+   */
+  public Path getHomeDirectory() {
+    return new Path("/user/"+System.getProperty("user.name"))
+      .makeQualified(this);
+  }
+
+
   /**
    * Set the current working directory for the given file system. All relative
    * paths will be resolved relative to it.

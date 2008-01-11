@@ -270,7 +270,7 @@ public class TestDecommission extends TestCase {
     assertTrue(localFileSys.mkdirs(dir));
     hostsFile = new Path(dir, "hosts");
     excludeFile = new Path(dir, "exclude");
-    conf.set("dfs.hosts.exclude", excludeFile.toString());
+    conf.set("dfs.hosts.exclude", excludeFile.toUri().getPath());
     writeConfigFile(localFileSys, excludeFile, null);
 
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);

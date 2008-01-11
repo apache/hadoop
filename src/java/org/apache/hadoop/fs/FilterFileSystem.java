@@ -152,6 +152,11 @@ public class FilterFileSystem extends FileSystem {
     return fs.listStatus(f);
   }
   
+  public Path getHomeDirectory() {
+    return fs.getHomeDirectory();
+  }
+
+
   /**
    * Set the current working directory for the given file system. All relative
    * paths will be resolved relative to it.

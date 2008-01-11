@@ -35,8 +35,7 @@ import org.apache.hadoop.util.*;
  *
  *****************************************************************/
 public class DistributedFileSystem extends FileSystem {
-  private Path workingDir =
-    new Path("/user", System.getProperty("user.name")); 
+  private Path workingDir;
   private URI uri;
 
   DFSClient dfs;
@@ -64,6 +63,7 @@ public class DistributedFileSystem extends FileSystem {
     int port = uri.getPort();
     this.dfs = new DFSClient(new InetSocketAddress(host, port), conf);
     this.uri = URI.create("hdfs://"+host+":"+port);
+    this.workingDir = getHomeDirectory();
   }
 
   public Path getWorkingDirectory() {
@@ -87,8 +87,8 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   public void setWorkingDirectory(Path dir) {
-    Path result = makeAbsolute(dir);
-    if (!FSNamesystem.isValidName(result.toString())) {
+    String result = makeAbsolute(dir).toUri().getPath();
+    if (!FSNamesystem.isValidName(result)) {
       throw new IllegalArgumentException("Invalid DFS directory name " + 
                                          result);
     }

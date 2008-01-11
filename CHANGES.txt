@@ -41,6 +41,13 @@ Trunk (unreleased changes)
     Datanode Protocol version changed from 10 to 11.  
     (Sanjay Radia via dhruba)
     
+    HADOOP-2567.  Add FileSystem#getHomeDirectory(), which returns the
+    user's home directory in a FileSystem as a fully-qualified path.
+    FileSystem#getWorkingDirectory() is also changed to return a
+    fully-qualified path, which can break applications that attempt
+    to, e.g., pass LocalFileSystem#getWorkingDir().toString() directly
+    to java.io methods that accept file names. (cutting)
+
   NEW FEATURES
 
     HADOOP-1857.  Ability to run a script when a task fails to capture stack
