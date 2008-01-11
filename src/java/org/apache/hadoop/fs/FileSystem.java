@@ -803,6 +803,7 @@ public abstract class FileSystem extends Configured {
           fileRegex.append('(');
           pCh = '(';
           curlyOpen++;
+          hasPattern = true;
         } else if (pCh == ',' && curlyOpen > 0) {
           fileRegex.append(")|");
           pCh = '(';

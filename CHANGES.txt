@@ -408,6 +408,12 @@ Trunk (unreleased changes)
 
     HADOOP-2571. Suppress a suprious warning in test code. (cdouglas)
 
+Release 0.15.3 - (unreleased changes)
+
+  BUG FIXES
+
+    HADOOP-2562. globPaths supports {ab,cd}.  (Hairong Kuang via dhruba)
+
 Release 0.15.2 - 2008-01-02
 
   BUG FIXES

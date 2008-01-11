@@ -271,12 +271,15 @@ public class TestGlobPaths extends TestCase {
       files = new String[] {USER_DIR+"/}bc"};
       matchedPath = prepareTesting(USER_DIR+"/}{a,b}c", files);
       assertEquals(matchedPath.length, 1);
+      assertEquals(matchedPath[0], path[0]);
       // test {b}
       matchedPath = prepareTesting(USER_DIR+"/}{b}c", files);
       assertEquals(matchedPath.length, 1);
+      assertEquals(matchedPath[0], path[0]);
       // test {}
-      matchedPath = prepareTesting(USER_DIR+"}{}bc", files);
+      matchedPath = prepareTesting(USER_DIR+"/}{}bc", files);
       assertEquals(matchedPath.length, 1);
+      assertEquals(matchedPath[0], path[0]);
 
       // test ill-formed curly
       boolean hasException = false;
