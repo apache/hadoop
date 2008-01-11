@@ -70,8 +70,8 @@ Trunk (unreleased changes)
     This information can be used to develop tools for analysing jobs.
     (Amareshwari Sri Ramadasu via acmurthy)
 
-		HADOOP-1873. Implement user permissions for Map/Reduce framework.
-		(Hairong Kuang via shv)
+    HADOOP-1873. Implement user permissions for Map/Reduce framework.
+    (Hairong Kuang via shv)
 
   IMPROVEMENTS
 
