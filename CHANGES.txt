@@ -109,7 +109,7 @@ Trunk (unreleased changes)
                (Bryan Duxbury via Stack)
    HADOOP-2530 Missing type in new hbase custom RPC serializer
    HADOOP-2490 Failure in nightly #346 (Added debugging of hudson failures).
-   HADOOP-2558 fixes for build up on hudson (part 1, part 2, part 3)
+   HADOOP-2558 fixes for build up on hudson (part 1, part 2, part 3, part 4)
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
