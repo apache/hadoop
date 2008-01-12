@@ -428,6 +428,8 @@ Release 0.15.3 - (unreleased changes)
 
     HADOOP-2562. globPaths supports {ab,cd}.  (Hairong Kuang via dhruba)
 
+    HADOOP-2540. fsck reports missing blocks incorrectly. (dhruba)
+
 Release 0.15.2 - 2008-01-02
 
   BUG FIXES

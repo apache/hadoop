@@ -215,6 +215,9 @@ class FSNamesystem implements FSConstants {
 
   private long maxFsObjects = 0;          // maximum number of fs objects
 
+  private long softLimit = LEASE_SOFTLIMIT_PERIOD;
+  private long hardLimit = LEASE_HARDLIMIT_PERIOD;
+
   /**
    * FSNamesystem constructor.
    */
@@ -1115,7 +1118,7 @@ class FSNamesystem implements FSConstants {
       throw new LeaseExpiredException("No lease on " + src);
     }
     INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction)file;
-    if (!pendingFile.getClientName().equals(holder)) {
+    if (holder != null && !pendingFile.getClientName().equals(holder)) {
       throw new LeaseExpiredException("Lease mismatch on " + src + " owned by "
           + pendingFile.getClientName() + " but is accessed by " + holder);
     }
@@ -1548,7 +1551,7 @@ class FSNamesystem implements FSConstants {
      * Returns true if the Hard Limit Timer has expired
      */
     public boolean expiredHardLimit() {
-      if (now() - lastUpdate > LEASE_HARDLIMIT_PERIOD) {
+      if (now() - lastUpdate > hardLimit) {
         return true;
       }
       return false;
@@ -1557,7 +1560,7 @@ class FSNamesystem implements FSConstants {
      * Returns true if the Soft Limit Timer has expired
      */
     public boolean expiredSoftLimit() {
-      if (now() - lastUpdate > LEASE_SOFTLIMIT_PERIOD) {
+      if (now() - lastUpdate > softLimit) {
         return true;
       }
       return false;
@@ -1704,7 +1707,7 @@ class FSNamesystem implements FSConstants {
     // will report this block as a missing block because no datanodes have it.
     // Delete this block.
     Block[] blocks = pendingFile.getBlocks();
-    if (blocks != null && blocks.length > 1) {
+    if (blocks != null && blocks.length > 0) {
       Block last = blocks[blocks.length - 1];
       if (last.getNumBytes() == 0) {
           pendingFile.removeBlock(last);
@@ -3917,5 +3920,14 @@ class FSNamesystem implements FSConstants {
    */
   long getMaxObjects() {
     return maxFsObjects;
+  }
+
+  /**
+   * Used by unit tests to change lease periods
+   */
+  void setLeasePeriod(long softLimit, long hardLimit) {
+    this.softLimit = softLimit;
+    this.hardLimit = hardLimit; 
+    this.lmthread.interrupt();
   }
 }

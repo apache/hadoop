@@ -508,4 +508,11 @@ public class MiniDFSCluster {
      injectBlocks(i, blocksToInject[i]);
     }
   }
+
+  /**
+   * Set the softLimit and hardLimit of client lease periods
+   */
+  void setLeasePeriod(long soft, long hard) {
+    nameNode.namesystem.setLeasePeriod(soft, hard);
+  }
 }

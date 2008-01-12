@@ -85,7 +85,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.NameNode");
   public static final Log stateChangeLog = LogFactory.getLog("org.apache.hadoop.dfs.StateChange");
 
-  private FSNamesystem namesystem;
+  FSNamesystem namesystem;
   private Server server;
   private Thread emptier;
   private int handlerCount = 2;
