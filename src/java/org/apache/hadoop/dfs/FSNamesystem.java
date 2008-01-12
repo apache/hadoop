@@ -1600,7 +1600,7 @@ class FSNamesystem implements FSConstants {
     // will report this block as a missing block because no datanodes have it.
     // Delete this block.
     Block[] blocks = pendingFile.getBlocks();
-    if (blocks != null && blocks.length > 1) {
+    if (blocks != null && blocks.length > 0) {
       Block last = blocks[blocks.length - 1];
       if (last.getNumBytes() == 0) {
           pendingFile.removeBlock(last);
