@@ -46,6 +46,7 @@ import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.OutputCollector;
 
 /**
  * Test Map/Reduce job over HBase tables
@@ -147,13 +148,7 @@ public class TestTableMapReduce extends MultiRegionTable {
   /**
    * Pass the given key and processed record reduce
    */
-  public static class ProcessContentsMapper extends TableMap {
-
-    /** constructor */
-    public ProcessContentsMapper() {
-      super();
-    }
-
+  public static class ProcessContentsMapper extends TableMap<Text, MapWritable> {
     /**
      * Pass the key, and reversed value to reduce
      *
@@ -162,7 +157,7 @@ public class TestTableMapReduce extends MultiRegionTable {
     @SuppressWarnings("unchecked")
     @Override
     public void map(HStoreKey key, MapWritable value,
-        TableOutputCollector output,
+        OutputCollector<Text, MapWritable> output,
         @SuppressWarnings("unused") Reporter reporter) throws IOException {
       
       Text tKey = key.getRow();
