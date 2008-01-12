@@ -301,58 +301,121 @@ public class TestDFSShell extends TestCase {
     }
   }
 
-  /**
-   * Test chmod. How do we test chown and chgrp?
-   */
-  public void testFilePermissions() throws IOException {
-    Configuration conf = new Configuration();
-    //Temperorily use LocalFileSystem until HADOOP-1298 is committed
-    conf.set("fs.default.name", "local");
-    FileSystem fs = FileSystem.getLocal(conf);
-    
-    FsShell shell = new FsShell();
-    shell.setConf(conf);
-    
+  //throws IOException instead of Exception as shell.run() does.
+  private int runCmd(FsShell shell, String... args) throws IOException {
     try {
-     String chmodDir = (new File(TEST_ROOT_DIR, "chmodTest")).getAbsolutePath(); 
-     
-     //first make dir
-     Path dir = new Path(chmodDir);
-     fs.delete(dir);
-     fs.mkdirs(dir);
-
-     shell.run(new String[]{ "-chmod", "u+rwx,g=rw,o-rwx", chmodDir });
-     assertEquals("rwxrw----",
-                  fs.getFileStatus(dir).getPermission().toString());
-
-     //create an empty file
-     Path file = new Path(chmodDir, "file");
-     TestDFSShell.createLocalFile(new File(file.toString()));
-
-     //test octal mode
-     shell.run(new String[]{ "-chmod", "644", file.toString()});
-     assertEquals("rw-r--r--",
-                  fs.getFileStatus(file).getPermission().toString());
-
-     //test recursive
-     shell.run(new String[]{ "-chmod", "-R", "a+rwX", chmodDir });
-     assertEquals("rwxrwxrwx",
-                  fs.getFileStatus(dir).getPermission().toString()); 
-     assertEquals("rw-rw-rw-",
-                  fs.getFileStatus(file).getPermission().toString());
-     
-     fs.delete(dir);     
+      return shell.run(args);
     } catch (IOException e) {
       throw e;
     } catch (RuntimeException e) {
       throw e;
     } catch (Exception e) {
       throw new IOException(StringUtils.stringifyException(e));
-    } finally {
-      shell.close();
-      fs.close();
     }
+  }
+  
+  /**
+   * Test chmod.
+   */
+  void testChmod(Configuration conf, FileSystem fs, String chmodDir) 
+                                                    throws IOException {
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
     
+    try {
+     //first make dir
+     Path dir = new Path(chmodDir);
+     fs.delete(dir);
+     fs.mkdirs(dir);
+
+     runCmd(shell, "-chmod", "u+rwx,g=rw,o-rwx", chmodDir);
+     assertEquals("rwxrw----",
+                  fs.getFileStatus(dir).getPermission().toString());
+
+     //create an empty file
+     Path file = new Path(chmodDir, "file");
+     TestDFSShell.writeFile(fs, file);
+
+     //test octal mode
+     runCmd(shell, "-chmod", "644", file.toString());
+     assertEquals("rw-r--r--",
+                  fs.getFileStatus(file).getPermission().toString());
+
+     //test recursive
+     runCmd(shell, "-chmod", "-R", "a+rwX", chmodDir);
+     assertEquals("rwxrwxrwx",
+                  fs.getFileStatus(dir).getPermission().toString()); 
+     assertEquals("rw-rw-rw-",
+                  fs.getFileStatus(file).getPermission().toString());
+     
+     fs.delete(dir);     
+    } finally {
+      try {
+        fs.close();
+        shell.close();
+      } catch (IOException ignored) {}
+    }
+  }
+  
+  private void confirmOwner(String owner, String group, 
+                            FileSystem fs, Path... paths) throws IOException {
+    for(Path path : paths) {
+      if (owner != null) {
+        assertEquals(owner, fs.getFileStatus(path).getOwner());
+      }
+      if (group != null) {
+        assertEquals(group, fs.getFileStatus(path).getGroup());
+      }
+    }
+  }
+  
+  public void testFilePermissions() throws IOException {
+    Configuration conf = new Configuration();
+    
+    //test chnmod on local fs
+    FileSystem fs = FileSystem.getLocal(conf);
+    testChmod(conf, fs, 
+              (new File(TEST_ROOT_DIR, "chmodTest")).getAbsolutePath());
+    
+    conf.set("dfs.permissions", "true");
+    
+    //test chmod on DFS
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    fs = cluster.getFileSystem();
+    testChmod(conf, fs, "/tmp/chmodTest");
+    
+    // test chown and chgrp on DFS:
+    
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+    fs = cluster.getFileSystem();
+    
+    /* For dfs, I am the super user and I can change ower of any file to
+     * anything. "-R" option is already tested by chmod test above.
+     */
+    
+    String file = "/tmp/chownTest";
+    Path path = new Path(file);
+    Path parent = new Path("/tmp");
+    Path root = new Path("/");
+    TestDFSShell.writeFile(fs, path);
+    
+    runCmd(shell, "-chgrp", "-R", "herbivores", "/*", "unknownFile*");
+    confirmOwner(null, "herbivores", fs, parent, path);
+    
+    runCmd(shell, "-chgrp", "mammals", file);
+    confirmOwner(null, "mammals", fs, path);
+    
+    runCmd(shell, "-chown", "-R", ":reptiles", "/");
+    confirmOwner(null, "reptiles", fs, root, parent, path);
+    
+    runCmd(shell, "-chown", "python:", "/nonExistentFile", file);
+    confirmOwner("python", "reptiles", fs, path);
+
+    runCmd(shell, "-chown", "-R", "hadoop:toys", "unknownFile", "/");
+    confirmOwner("hadoop", "toys", fs, root, parent, path);
+    
+    cluster.shutdown();
   }
   /**
    * Tests various options of DFSShell.

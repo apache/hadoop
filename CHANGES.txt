@@ -213,6 +213,9 @@ Trunk (unreleased changes)
     Mapper.map method. This is done by splitting the 'io.sort.mb' buffer into
     two and using one half for collecting map-outputs and the other half for
     sort/spill. (Amar Kamat via acmurthy)
+    
+    HADOOP-2464. Unit tests for chmod, chown, and chgrp using DFS.
+    (Raghu Angadi)
 
   OPTIMIZATIONS
 
