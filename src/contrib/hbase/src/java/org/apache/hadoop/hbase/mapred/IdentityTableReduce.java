@@ -24,28 +24,23 @@ import java.util.Iterator;
 
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
 
 /**
  * Write to table each key, record pair
  */
-public class IdentityTableReduce extends TableReduce {
-
-  /** constructor */
-  public IdentityTableReduce() {
-    super();
-  }
-
+public class IdentityTableReduce extends TableReduce<Text, MapWritable> {
   /**
    * No aggregation, output pairs of (key, record)
    *
-   * @see org.apache.hadoop.hbase.mapred.TableReduce#reduce(org.apache.hadoop.io.Text, java.util.Iterator, org.apache.hadoop.hbase.mapred.TableOutputCollector, org.apache.hadoop.mapred.Reporter)
+   * @see org.apache.hadoop.hbase.mapred.TableReduce#reduce(org.apache.hadoop.io.WritableComparable, java.util.Iterator, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
    */
   @Override
-  public void reduce(Text key, @SuppressWarnings("unchecked") Iterator values,
-      TableOutputCollector output,
-      @SuppressWarnings("unused") Reporter reporter) throws IOException {
+  public void reduce(Text key, Iterator<MapWritable> values,
+      OutputCollector<Text, MapWritable> output, Reporter reporter)
+      throws IOException {
     
     while(values.hasNext()) {
       MapWritable r = (MapWritable)values.next();

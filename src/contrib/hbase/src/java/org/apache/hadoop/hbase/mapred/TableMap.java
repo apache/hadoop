@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -30,8 +32,6 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HStoreKey;
 
 /**
  * Scan an HBase table to sort by a specified sort column.
@@ -39,14 +39,8 @@ import org.apache.hadoop.hbase.HStoreKey;
  *
  */
 @SuppressWarnings("unchecked")
-public abstract class TableMap extends MapReduceBase implements Mapper {
-  private TableOutputCollector m_collector;
-
-  /** constructor*/
-  public TableMap() {
-    m_collector = new TableOutputCollector();
-  }
-
+public abstract class TableMap<K extends WritableComparable, V extends Writable>
+    extends MapReduceBase implements Mapper<HStoreKey, MapWritable, K, V> {
   /**
    * Use this before submitting a TableMap job. It will
    * appropriately set up the JobConf.
@@ -56,36 +50,14 @@ public abstract class TableMap extends MapReduceBase implements Mapper {
    * @param mapper mapper class
    * @param job job configuration
    */
-  public static void initJob(String table, String columns, 
+  public static void initJob(String table, String columns,
       Class<? extends TableMap> mapper, JobConf job) {
-    
     job.setInputFormat(TableInputFormat.class);
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(MapWritable.class);
     job.setMapperClass(mapper);
     job.setInputPath(new Path(table));
     job.set(TableInputFormat.COLUMN_LIST, columns);
-  }
-
-  /**
-   * Input:
-   * @param key is of type HStoreKey
-   * @param value is of type KeyedDataArrayWritable
-   * @param output output collector
-   * @param reporter object to use for status updates
-   * @throws IOException
-   * 
-   * Output:
-   * The key is a specific column, including the input key or any value
-   * The value is of type LabeledData
-   */
-  public void map(WritableComparable key, Writable value,
-      OutputCollector output, Reporter reporter) throws IOException {
-    
-    if(m_collector.collector == null) {
-      m_collector.collector = output;
-    }
-    map((HStoreKey)key, (MapWritable)value, m_collector, reporter);
   }
 
   /**
@@ -98,6 +70,6 @@ public abstract class TableMap extends MapReduceBase implements Mapper {
    * @param reporter
    * @throws IOException
    */
-  public abstract void map(HStoreKey key, MapWritable value, 
-      TableOutputCollector output, Reporter reporter) throws IOException;
+  public abstract void map(HStoreKey key, MapWritable value,
+      OutputCollector<K, V> output, Reporter reporter) throws IOException;
 }

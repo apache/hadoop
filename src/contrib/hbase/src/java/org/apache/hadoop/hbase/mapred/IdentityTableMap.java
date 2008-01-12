@@ -24,13 +24,14 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
 
 /**
  * Pass the given key and record as-is to reduce
  */
-public class IdentityTableMap extends TableMap {
+public class IdentityTableMap extends TableMap<Text, MapWritable> {
 
   /** constructor */
   public IdentityTableMap() {
@@ -40,11 +41,11 @@ public class IdentityTableMap extends TableMap {
   /**
    * Pass the key, value to reduce
    *
-   * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.io.MapWritable, org.apache.hadoop.hbase.mapred.TableOutputCollector, org.apache.hadoop.mapred.Reporter)
+   * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.io.MapWritable, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
    */
   @Override
   public void map(HStoreKey key, MapWritable value,
-      TableOutputCollector output,
+      OutputCollector<Text,MapWritable> output,
       @SuppressWarnings("unused") Reporter reporter) throws IOException {
     
     Text tKey = key.getRow();

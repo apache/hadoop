@@ -27,18 +27,18 @@ import java.util.Map;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
 
 /**
  * Extract grouping columns from input record
  */
-public class GroupingTableMap extends TableMap {
+public class GroupingTableMap extends TableMap<Text,MapWritable> {
 
   /**
    * JobConf parameter to specify the columns used to produce the key passed to 
@@ -48,11 +48,6 @@ public class GroupingTableMap extends TableMap {
     "hbase.mapred.groupingtablemap.columns";
   
   protected Text[] m_columns;
-
-  /** default constructor */
-  public GroupingTableMap() {
-    super();
-  }
 
   /**
    * Use this before submitting a TableMap job. It will appropriately set up the
@@ -65,6 +60,7 @@ public class GroupingTableMap extends TableMap {
    * @param mapper map class
    * @param job job configuration object
    */
+  @SuppressWarnings("unchecked")
   public static void initJob(String table, String columns, String groupColumns, 
       Class<? extends TableMap> mapper, JobConf job) {
     
@@ -89,11 +85,11 @@ public class GroupingTableMap extends TableMap {
    * Pass the new key and value to reduce.
    * If any of the grouping columns are not found in the value, the record is skipped.
    *
-   * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.io.MapWritable, org.apache.hadoop.hbase.mapred.TableOutputCollector, org.apache.hadoop.mapred.Reporter)
+   * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.io.MapWritable, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
    */
   @Override
   public void map(@SuppressWarnings("unused") HStoreKey key,
-      MapWritable value, TableOutputCollector output,
+      MapWritable value, OutputCollector<Text,MapWritable> output,
       @SuppressWarnings("unused") Reporter reporter) throws IOException {
     
     byte[][] keyVals = extractKeyValues(value);
