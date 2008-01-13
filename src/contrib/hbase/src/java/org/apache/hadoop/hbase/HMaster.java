@@ -464,10 +464,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           )
         ) {
 
-        // The current assignment is no good
+        // The current assignment is invalid
         if (LOG.isDebugEnabled()) {
           LOG.debug("Current assignment of " + info.getRegionName() +
-            " is no good: storedInfo: " + storedInfo + ", startCode: " +
+            " is not valid: storedInfo: " + storedInfo + ", startCode: " +
             startCode + ", storedInfo.startCode: " +
             ((storedInfo != null)? storedInfo.getStartCode(): -1) +
             ", unassignedRegions: " + unassignedRegions.containsKey(info) +
@@ -963,7 +963,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   void unassignRootRegion() {
     this.rootRegionLocation.set(null);
-    this.unassignedRegions.put(HRegionInfo.rootRegionInfo, ZERO_L);
+    if (!this.shutdownRequested) {
+      this.unassignedRegions.put(HRegionInfo.rootRegionInfo, ZERO_L);
+    }
   }
 
   /**
@@ -1622,10 +1624,15 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
           // Root region
 
+          if (region.isOffline()) {
+            // Can't proceed without root region. Shutdown.
+            LOG.fatal("root region is marked offline");
+            shutdown();
+          }
           unassignRootRegion();
 
         } else {
-          boolean reassignRegion = true;
+          boolean reassignRegion = !region.isOffline();
           boolean deleteRegion = false;
 
           if (killedRegions.remove(region.getRegionName())) {

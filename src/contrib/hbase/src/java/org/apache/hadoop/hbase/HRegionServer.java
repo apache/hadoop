@@ -1091,13 +1091,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** Add to the outbound message buffer */
-  private void reportOpen(HRegion region) {
-    outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_OPEN, region.getRegionInfo()));
+  private void reportOpen(HRegionInfo region) {
+    outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_OPEN, region));
   }
 
   /** Add to the outbound message buffer */
-  private void reportClose(HRegion region) {
-    outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_CLOSE, region.getRegionInfo()));
+  private void reportClose(HRegionInfo region) {
+    outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_CLOSE, region));
   }
   
   /**
@@ -1222,7 +1222,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         
       } catch (IOException e) {
         LOG.error("error opening region " + regionInfo.getRegionName(), e);
-        reportClose(region);
+        
+        // Mark the region offline.
+        // TODO: add an extra field in HRegionInfo to indicate that there is
+        // an error. We can't do that now because that would be an incompatible
+        // change that would require a migration
+        
+        regionInfo.setOffline(true);
+        reportClose(regionInfo);
         return;
       }
       this.lock.writeLock().lock();
@@ -1232,7 +1239,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       } finally {
         this.lock.writeLock().unlock();
       }
-      reportOpen(region); 
+      reportOpen(regionInfo); 
     }
   }
 
@@ -1249,7 +1256,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     if(region != null) {
       region.close();
       if(reportWhenCompleted) {
-        reportClose(region);
+        reportClose(hri);
       }
     }
   }
@@ -1269,7 +1276,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         LOG.debug("closing region " + region.getRegionName());
       }
       try {
-        region.close(abortRequested);
+        region.close(abortRequested, null);
       } catch (IOException e) {
         LOG.error("error closing region " + region.getRegionName(),
           RemoteExceptionHandler.checkIOException(e));
@@ -1303,7 +1310,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         LOG.debug("closing region " + region.getRegionName());
       }
       try {
-        region.close(false);
+        region.close();
       } catch (IOException e) {
         LOG.error("error closing region " + region.getRegionName(),
           RemoteExceptionHandler.checkIOException(e));

@@ -105,7 +105,8 @@ public class TestTimestamp extends HBaseTestCase {
    * @throws IOException
    */
   public void testTimestamps() throws IOException {
-    final MiniHBaseCluster cluster = new MiniHBaseCluster(this.conf, 1);
+    final MiniHBaseCluster cluster =
+      new MiniHBaseCluster(this.conf, 1, this.cluster, true);
     try {
       HTable t = createTable();
       Incommon incommon = new HTableIncommon(t);
