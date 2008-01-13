@@ -108,7 +108,7 @@ public class HelpCommand extends BasicCommand {
 
     load.put("SELECT", new String[] {
         "Select values from table",
-        "SELECT {column_name, [, column_name] ... | *} FROM table_name "
+        "SELECT {column_name, [, column_name] ... | expr[alias] | * } FROM table_name "
             + "[WHERE row='row_key' | STARTING FROM 'row-key' [UNTIL 'stop-key']] "
             + "[NUM_VERSIONS = version_count] " + "[TIMESTAMP 'timestamp'] "
             + "[LIMIT = row_count] " + "[INTO FILE 'file_name'];" });

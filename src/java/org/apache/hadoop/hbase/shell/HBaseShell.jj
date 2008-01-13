@@ -129,6 +129,11 @@ TOKEN: /** for HQL statements */
    | <CHANGE: "change">
 }
 
+TOKEN : /** Functions */
+{
+   <COUNT: "count">
+}
+ 
 TOKEN : /** Literals */
 {
    <ID: ["A"-"Z","a"-"z","_","-",":","/","~","."] (["A"-"Z","a"-"z","0"-"9","_","-",":","/","~","."])* >
@@ -575,10 +580,13 @@ SelectCommand selectCommand() :
 }
 {
   <SELECT>
-  columns = columnList()
+  (
+      <COUNT>  columns = getLiteralValues()
+      { select.setCountFunction(true); }
+    | columns = columnList()
+  )
   <FROM>
   tableName = identifier()
-  
   { 
      select.setColumns(columns);
      select.setTable(tableName);
@@ -667,20 +675,17 @@ List<String> getLiteralValues() :
 }
 {    
 <LPAREN>
- { literal = getStringLiteral();
- if(literal != null) values.add(literal); 
+ {
+    literal = getStringLiteral();
+    if(literal != null) values.add(literal); 
  }
+
     (
-<COMMA> { 
-   literal = getStringLiteral(); 
-   if(literal != null) values.add(literal); 
-}
-| ( 
-       <ID>
-     | <STRING_LITERAL>
-     | <QUOTED_IDENTIFIER>
-  )  { values.removeAll(values); }
-        )*
+        <COMMA> { 
+           literal = getStringLiteral(); 
+           if(literal != null) values.add(literal); 
+        }
+    )*
 <RPAREN>
    { 
      return values;
@@ -690,13 +695,21 @@ List<String> getLiteralValues() :
 String getStringLiteral() :
 {
   Token s;
+  String value = null;
 }
 {
- ( s=<STRING_LITERAL> | s=<QUOTED_IDENTIFIER> )
- { 
-   String value = s.image.toString();
-   return value.substring(1,value.length() - 1);
- }
+  (
+    ( s=<STRING_LITERAL> | s=<QUOTED_IDENTIFIER> )
+   { 
+     value = s.image.toString();
+     return value.substring(1,value.length() - 1);
+   }
+   | ( s=<ID> | s=<INTEGER_LITERAL> | s=<ASTERISK> )
+   { 
+     value = s.image.toString();
+     return value;
+   }
+ )
 }
 
 String getColumn() :
