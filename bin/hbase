@@ -58,9 +58,11 @@ esac
 if [ $# = 0 ]; then
   echo "Usage: hbase [--hadoop=hadoopdir] <command>"
   echo "where <command> is one of:"
-  echo "  shell            run the hbase shell"
-  echo "  master           run a hbase HMaster node" 
-  echo "  regionserver     run a hbase HRegionServer node" 
+  echo "  shell            run the Hbase shell"
+  echo "  master           run an Hbase HMaster node" 
+  echo "  regionserver     run an Hbase HRegionServer node" 
+  echo "  rest             run an Hbase REST server" 
+  echo "  thrift           run an Hbase Thrift server" 
   echo " or"
   echo "  CLASSNAME        run the class named CLASSNAME"
   echo "Most commands print help when invoked w/o parameters."
@@ -213,6 +215,10 @@ elif [ "$COMMAND" = "master" ] ; then
   CLASS='org.apache.hadoop.hbase.HMaster'
 elif [ "$COMMAND" = "regionserver" ] ; then
   CLASS='org.apache.hadoop.hbase.HRegionServer'
+elif [ "$COMMAND" = "rest" ] ; then
+  CLASS='org.apache.hadoop.hbase.rest.Dispatcher'
+elif [ "$COMMAND" = "thrift" ] ; then
+  CLASS='org.apache.hadoop.hbase.thrift.ThriftServer'
 else
   CLASS=$COMMAND
 fi
