@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
@@ -224,7 +224,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         int numberOfRegionsFound = 0;
         while (true) {
           SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-          MapWritable values = regionServer.next(scannerId);
+          HbaseMapWritable values = regionServer.next(scannerId);
           if (values == null || values.size() == 0) {
             break;
           }
@@ -1185,6 +1185,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     if (LOG.isDebugEnabled()) {
       LOG.debug("Started service threads");
     }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Started service threads");
+    }
   }
 
   /*
@@ -1262,7 +1265,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   /** {@inheritDoc} */
   @SuppressWarnings("unused")
-  public MapWritable regionServerStartup(HServerInfo serverInfo)
+  public HbaseMapWritable regionServerStartup(HServerInfo serverInfo)
     throws IOException {
 
     String s = serverInfo.getServerAddress().toString().trim();
@@ -1315,12 +1318,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * @return Subset of configuration to pass initializing regionservers: e.g.
    * the filesystem to use and root directory to use.
    */
-  protected MapWritable createConfigurationSubset() {
-    MapWritable mw = addConfig(new MapWritable(), HConstants.HBASE_DIR);
+  protected HbaseMapWritable createConfigurationSubset() {
+    HbaseMapWritable mw = addConfig(new HbaseMapWritable(), HConstants.HBASE_DIR);
     return addConfig(mw, "fs.default.name");
   }
 
-  private MapWritable addConfig(final MapWritable mw, final String key) {
+  private HbaseMapWritable addConfig(final HbaseMapWritable mw, final String key) {
     mw.put(new Text(key), new Text(this.conf.get(key)));
     return mw;
   }
@@ -1992,7 +1995,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
       try {
         while (true) {
-          MapWritable values = null;
+          HbaseMapWritable values = null;
           try {
             values = server.next(scannerId);
           } catch (IOException e) {
@@ -2588,7 +2591,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       long scannerid = server.openScanner(metaRegionName, COL_REGIONINFO_ARRAY,
           tableName, System.currentTimeMillis(), null);
       try {
-        MapWritable data = server.next(scannerid);
+        HbaseMapWritable data = server.next(scannerid);
             
         // Test data and that the row for the data is for our table. If table
         // does not exist, scanner will return row after where our table would
@@ -2743,7 +2746,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
                   String serverName = null;
                   long startCode = -1L;
 
-                  MapWritable values = server.next(scannerId);
+                  HbaseMapWritable values = server.next(scannerId);
                   if(values == null || values.size() == 0) {
                     break;
                   }

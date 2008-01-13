@@ -28,7 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
@@ -190,7 +190,7 @@ public class HBaseAdmin implements HConstants {
         scannerId =
           server.openScanner(firstMetaServer.getRegionInfo().getRegionName(),
             COL_REGIONINFO_ARRAY, tableName, System.currentTimeMillis(), null);
-        MapWritable values = server.next(scannerId);
+        HbaseMapWritable values = server.next(scannerId);
         if (values == null || values.size() == 0) {
           break;
         }
@@ -274,7 +274,7 @@ public class HBaseAdmin implements HConstants {
         boolean isenabled = false;
         
         while (true) {
-          MapWritable values = server.next(scannerId);
+          HbaseMapWritable values = server.next(scannerId);
           if (values == null || values.size() == 0) {
             if (valuesfound == 0) {
               throw new NoSuchElementException(
@@ -375,7 +375,7 @@ public class HBaseAdmin implements HConstants {
         
         boolean disabled = false;
         while (true) {
-          MapWritable values = server.next(scannerId);
+          HbaseMapWritable values = server.next(scannerId);
           if (values == null || values.size() == 0) {
             if (valuesfound == 0) {
               throw new NoSuchElementException("table " + tableName + " not found");
