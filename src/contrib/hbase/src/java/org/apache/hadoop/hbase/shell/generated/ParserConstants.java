@@ -60,12 +60,13 @@ public interface ParserConstants {
   int NUM_ENTRIES = 58;
   int ADD = 59;
   int CHANGE = 60;
-  int ID = 61;
-  int INTEGER_LITERAL = 62;
-  int FLOATING_POINT_LITERAL = 63;
-  int EXPONENT = 64;
-  int QUOTED_IDENTIFIER = 65;
-  int STRING_LITERAL = 66;
+  int COUNT = 61;
+  int ID = 62;
+  int INTEGER_LITERAL = 63;
+  int FLOATING_POINT_LITERAL = 64;
+  int EXPONENT = 65;
+  int QUOTED_IDENTIFIER = 66;
+  int STRING_LITERAL = 67;
 
   int DEFAULT = 0;
 
@@ -131,6 +132,7 @@ public interface ParserConstants {
     "\"num_entries\"",
     "\"add\"",
     "\"change\"",
+    "\"count\"",
     "<ID>",
     "<INTEGER_LITERAL>",
     "<FLOATING_POINT_LITERAL>",

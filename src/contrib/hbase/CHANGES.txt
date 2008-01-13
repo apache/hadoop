@@ -2,6 +2,7 @@ HBase Change Log
 
 
 Trunk (unreleased changes)
+
   INCOMPATIBLE CHANGES
    HADOOP-2056 A table with row keys containing colon fails to split regions
    HADOOP-2079 Fix generated HLog, HRegion names
@@ -169,8 +170,7 @@ Trunk (unreleased changes)
    HADOOP-2553 Don't make Long objects calculating hbase type hash codes
    HADOOP-2548 Make TableMap and TableReduce generic
                (Frederik Hedberg via Stack)
-               
-
+   HADOOP-2557 Shell count function (Edward Yoon via Stack)
 
 Release 0.15.1
 Branch 0.15

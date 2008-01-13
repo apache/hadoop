@@ -47,8 +47,6 @@ import org.apache.hadoop.io.Text;
 
 /**
  * Selects values from tables.
- * 
- * TODO: INTO FILE is not yet implemented.
  */
 public class SelectCommand extends BasicCommand {
   private Text tableName;
@@ -59,10 +57,10 @@ public class SelectCommand extends BasicCommand {
   private int limit;
   // Count of versions to return.
   private int version;
+  private boolean countFunction = false;
   private boolean whereClause = false;
   private static final String[] HEADER_ROW_CELL = new String[] { "Row", "Cell" };
-  private static final String[] HEADER_COLUMN_CELL = new String[] { "Column",
-      "Cell" };
+  private static final String[] HEADER_COLUMN_CELL = new String[] { "Column", "Cell" };
   private static final String[] HEADER = new String[] { "Row", "Column", "Cell" };
   private static final String ASTERISK = "*";
 
@@ -93,7 +91,11 @@ public class SelectCommand extends BasicCommand {
       HBaseAdmin admin = new HBaseAdmin(conf);
       int count = 0;
       if (whereClause) {
-        count = compoundWherePrint(table, admin);
+        if (countFunction) {
+          count = 1;
+        } else {
+          count = compoundWherePrint(table, admin);
+        }
       } else {
         count = scanPrint(table, admin);
       }
@@ -105,8 +107,8 @@ public class SelectCommand extends BasicCommand {
   }
 
   private boolean isMetaTable() {
-    return (tableName.equals(HConstants.ROOT_TABLE_NAME)
-        || tableName.equals(HConstants.META_TABLE_NAME)) ? true : false;
+    return (tableName.equals(HConstants.ROOT_TABLE_NAME) || tableName
+        .equals(HConstants.META_TABLE_NAME)) ? true : false;
   }
 
   private int compoundWherePrint(HTable table, HBaseAdmin admin) {
@@ -118,7 +120,7 @@ public class SelectCommand extends BasicCommand {
         ParsedColumns parsedColumns = getColumns(admin, false);
         boolean multiple = parsedColumns.isMultiple() || version > 1;
         for (Text column : parsedColumns.getColumns()) {
-          if(count == 0) {
+          if (count == 0) {
             formatter.header(multiple ? HEADER_COLUMN_CELL : null);
           }
           if (timestamp != 0) {
@@ -138,7 +140,7 @@ public class SelectCommand extends BasicCommand {
         }
       } else {
         for (Map.Entry<Text, byte[]> e : table.getRow(rowKey).entrySet()) {
-          if(count == 0) {
+          if (count == 0) {
             formatter.header(isMultiple() ? HEADER_COLUMN_CELL : null);
           }
           Text key = e.getKey();
@@ -155,15 +157,15 @@ public class SelectCommand extends BasicCommand {
           count++;
         }
       }
-      
-      if(count == 0 && Shell.HTML_OPTION != null) {
+
+      if (count == 0 && Shell.HTML_OPTION != null) {
         formatter.header(isMultiple() ? HEADER_COLUMN_CELL : null);
       }
       formatter.footer();
     } catch (IOException e) {
       e.printStackTrace();
     }
-    return count;
+    return 1;
   }
 
   private String toString(final Text columnName, final byte[] cell)
@@ -218,42 +220,48 @@ public class SelectCommand extends BasicCommand {
       } else {
         scan = table.obtainScanner(cols, rowKey, timestamp);
       }
-      
-      if(this.stopRow.toString().length() > 0) {
-        RowFilterInterface filter =  new WhileMatchRowFilter(new StopRowFilter(stopRow));
+
+      if (this.stopRow.toString().length() > 0) {
+        RowFilterInterface filter = new WhileMatchRowFilter(new StopRowFilter(
+            stopRow));
         scan = table.obtainScanner(cols, rowKey, filter);
       }
-      
+
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
       // If only one column in query, then don't print out the column.
       while (scan.next(key, results) && checkLimit(count)) {
-        if(count == 0) {
+        if (count == 0 && !countFunction) {
           formatter.header((parsedColumns.isMultiple()) ? HEADER : HEADER_ROW_CELL);
         }
+
         Text r = key.getRow();
-        for (Text columnKey : results.keySet()) {
-          String cellData = toString(columnKey, results.get(columnKey));
-          if (parsedColumns.isMultiple()) {
-            formatter.row(new String[] { r.toString(), columnKey.toString(),
-                cellData });
-          } else {
-            // Don't print out the column since only one specified in query.
-            formatter.row(new String[] { r.toString(), cellData });
-          }
-          count++;
-          if (limit > 0 && count >= limit) {
-            break;
+
+        if (!countFunction) {
+          for (Text columnKey : results.keySet()) {
+            String cellData = toString(columnKey, results.get(columnKey));
+            if (parsedColumns.isMultiple()) {
+              formatter.row(new String[] { r.toString(), columnKey.toString(),
+                  cellData });
+            } else {
+              // Don't print out the column since only one specified in query.
+              formatter.row(new String[] { r.toString(), cellData });
+            }
+            if (limit > 0 && count >= limit) {
+              break;
+            }
           }
         }
+
+        count++;
         // Clear results else subsequent results polluted w/ previous finds.
         results.clear();
       }
-      
-      if(count == 0 && Shell.HTML_OPTION != null) {
+
+      if (count == 0 && Shell.HTML_OPTION != null && !countFunction) {
         formatter.header((parsedColumns.isMultiple()) ? HEADER : HEADER_ROW_CELL);
       }
-      
+
       formatter.footer();
       scan.close();
     } catch (IOException e) {
@@ -279,7 +287,8 @@ public class SelectCommand extends BasicCommand {
           HTableDescriptor[] tables = admin.listTables();
           for (int i = 0; i < tables.length; i++) {
             if (tables[i].getName().equals(tableName)) {
-              result = new ParsedColumns(new ArrayList<Text>(tables[i].families().keySet()));
+              result = new ParsedColumns(new ArrayList<Text>(tables[i].families()
+                  .keySet()));
               break;
             }
           }
@@ -346,10 +355,14 @@ public class SelectCommand extends BasicCommand {
       this.rowKey = new Text(rowKey);
   }
 
+  public void setCountFunction(boolean countFunction) {
+    this.countFunction = countFunction;
+  }
+
   public void setStopRow(String stopRow) {
     this.stopRow = new Text(stopRow);
   }
-  
+
   /**
    * @param version Set maximum versions for this selection
    */
