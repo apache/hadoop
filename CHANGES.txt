@@ -240,6 +240,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-2583.  Fixes a bug in the Eclipse plug-in UI to edit locations.
+    Plug-in version is now synchronized with Hadoop version.
+
     HADOOP-2100.  Remove faulty check for existence of $HADOOP_PID_DIR and let
     'mkdir -p' check & create it. (Michael Bieniosek via acmurthy)
 

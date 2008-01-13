@@ -242,9 +242,11 @@ public class HadoopLocationWizard extends WizardPage {
     }
     this.setControl(panel /* mediator.folder */);
     {
-      final Button validate = new Button(panel, SWT.NONE);
-      validate.setText("&Load from file");
-      validate.addListener(SWT.Selection, new Listener() {
+      final Button btn = new Button(panel, SWT.NONE);
+      btn.setText("&Load from file");
+      btn.setEnabled(false);
+      btn.setToolTipText("Not yet implemented");
+      btn.addListener(SWT.Selection, new Listener() {
         public void handleEvent(Event e) {
           // TODO
         }
@@ -253,6 +255,8 @@ public class HadoopLocationWizard extends WizardPage {
     {
       final Button validate = new Button(panel, SWT.NONE);
       validate.setText("&Validate location");
+      validate.setEnabled(false);
+      validate.setToolTipText("Not yet implemented");
       validate.addListener(SWT.Selection, new Listener() {
         public void handleEvent(Event e) {
           testLocation();
@@ -311,7 +315,7 @@ public class HadoopLocationWizard extends WizardPage {
         return;
 
       location.setConfProp(prop, propValue);
-      Display.getDefault().asyncExec(new Runnable() {
+      Display.getDefault().syncExec(new Runnable() {
         public void run() {
           getContainer().updateButtons();
         }
@@ -347,7 +351,7 @@ public class HadoopLocationWizard extends WizardPage {
       final String socksProxyPort =
           location.getConfProp(ConfProp.PI_SOCKS_PROXY_PORT);
 
-      Display.getDefault().asyncExec(new Runnable() {
+      Display.getDefault().syncExec(new Runnable() {
         public void run() {
           switch (prop) {
             case PI_JOB_TRACKER_HOST: {
@@ -856,7 +860,7 @@ public class HadoopLocationWizard extends WizardPage {
     public void modifyText(ModifyEvent e) {
       final Text text = (Text) e.widget;
       final ConfProp prop = (ConfProp) text.getData("hProp");
-      Display.getDefault().asyncExec(new Runnable() {
+      Display.getDefault().syncExec(new Runnable() {
         public void run() {
           mediator.notifyChange(TabMain.this, prop, text.getText());
         }
@@ -873,7 +877,7 @@ public class HadoopLocationWizard extends WizardPage {
       final Button button = (Button) e.widget;
       final ConfProp prop = (ConfProp) button.getData("hProp");
 
-      Display.getDefault().asyncExec(new Runnable() {
+      Display.getDefault().syncExec(new Runnable() {
         public void run() {
           // We want to receive the update also!
           mediator.notifyChange(null, prop, button.getSelection() ? "yes"
@@ -953,7 +957,7 @@ public class HadoopLocationWizard extends WizardPage {
       final String propName =
           (hPropName != null) ? (String) hPropName : null;
 
-      Display.getDefault().asyncExec(new Runnable() {
+      Display.getDefault().syncExec(new Runnable() {
         public void run() {
           if (prop != null)
             mediator.notifyChange(TabAdvanced.this, prop, text.getText());
