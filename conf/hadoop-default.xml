@@ -893,6 +893,33 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+  <property>
+    <name>mapred.job.tracker.persist.jobstatus.active</name>
+    <value>false</value>
+    <description>Indicates if persistency of job status information is
+      active or not.
+    </description>
+  </property>
+
+  <property>
+  <name>mapred.job.tracker.persist.jobstatus.hours</name>
+  <value>0</value>
+  <description>The number of hours job status information is persisted in DFS.
+    The job status information will be available after it drops of the memory
+    queue and between jobtracker restarts. With a zero value the job status
+    information is not persisted at all in DFS.
+  </description>
+</property>
+
+  <property>
+    <name>mapred.job.tracker.persist.jobstatus.dir</name>
+    <value>/jobtracker/jobsInfo</value>
+    <description>The directory where the job status information is persisted
+      in a file system to be available after it drops of the memory queue and
+      between jobtracker restarts.
+    </description>
+  </property>
+
 <!-- ipc properties -->
 
 <property>

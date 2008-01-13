@@ -217,6 +217,16 @@ Trunk (unreleased changes)
     HADOOP-2464. Unit tests for chmod, chown, and chgrp using DFS.
     (Raghu Angadi)
 
+    HADOOP-1876. Persist statuses of completed jobs in HDFS so that the
+    JobClient can query and get information about decommissioned jobs and also
+    across JobTracker restarts.
+    Configuration changes to hadoop-default.xml:
+      add mapred.job.tracker.persist.jobstatus.active (default value of false)
+      add mapred.job.tracker.persist.jobstatus.hours (default value of 0)
+      add mapred.job.tracker.persist.jobstatus.dir (default value of
+                                                    /jobtracker/jobsInfo)
+    (Alejandro Abdelnur via acmurthy) 
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

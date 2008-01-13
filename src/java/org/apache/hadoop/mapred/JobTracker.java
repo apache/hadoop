@@ -563,7 +563,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   ExpireLaunchingTasks expireLaunchingTasks = new ExpireLaunchingTasks();
   Thread expireLaunchingTaskThread = new Thread(expireLaunchingTasks,
                                                 "expireLaunchingTasks");
-    
+
+  CompletedJobStatusStore completedJobStatusStore = null;
+  Thread completedJobsStoreThread = null;
+
   /**
    * It might seem like a bug to maintain a TreeSet of status objects,
    * which can be updated at any time.  But that's not what happens!  We
@@ -701,6 +704,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     synchronized (this) {
       state = State.RUNNING;
     }
+
+    //initializes the job status store
+    completedJobStatusStore = new CompletedJobStatusStore(conf);
+
     LOG.info("Starting RUNNING");
   }
 
@@ -725,6 +732,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     expireLaunchingTaskThread.start();
     this.taskCommitThread = new TaskCommitQueue();
     this.taskCommitThread.start();
+
+    if (completedJobStatusStore.isActive()) {
+      completedJobsStoreThread = new Thread(completedJobStatusStore,
+                                            "completedjobsStore-housekeeper");
+      completedJobsStoreThread.start();
+    }
 
     this.interTrackerServer.join();
     LOG.info("Stopped interTrackerServer");
@@ -784,6 +797,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       this.taskCommitThread.interrupt();
       try {
         this.taskCommitThread.join();
+      } catch (InterruptedException ex) {
+        ex.printStackTrace();
+      }
+    }
+    if (this.completedJobsStoreThread != null &&
+        this.completedJobsStoreThread.isAlive()) {
+      LOG.info("Stopping completedJobsStore thread");
+      this.completedJobsStoreThread.interrupt();
+      try {
+        this.completedJobsStoreThread.join();
       } catch (InterruptedException ex) {
         ex.printStackTrace();
       }
@@ -895,7 +918,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         LOG.info("Removed completed task '" + taskid + "' from '" + 
                  taskTracker + "'");
       }
-      // Clear 
+      // Clear
       trackerToMarkedTasksMap.remove(taskTracker);
     }
   }
@@ -937,6 +960,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     // Mark the 'non-running' tasks for pruning
     markCompletedJob(job);
 
+    //persists the job info in DFS
+    completedJobStatusStore.store(job);
+    
     JobEndNotifier.registerNotification(job.getJobConf(), job.getStatus());
 
     // Purge oldest jobs and keep at-most MAX_COMPLETE_USER_JOBS_IN_MEMORY jobs of a given user
@@ -1611,7 +1637,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     if (job != null) {
       return job.getProfile();
     } else {
-      return null;
+      return completedJobStatusStore.readJobProfile(jobid);
     }
   }
   public synchronized JobStatus getJobStatus(String jobid) {
@@ -1619,7 +1645,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     if (job != null) {
       return job.getStatus();
     } else {
-      return null;
+      return completedJobStatusStore.readJobStatus(jobid);
     }
   }
   public synchronized Counters getJobCounters(String jobid) {
@@ -1627,7 +1653,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     if (job != null) {
       return job.getCounters();
     } else {
-      return null;
+      return completedJobStatusStore.readCounters(jobid);
     }
   }
   public synchronized TaskReport[] getMapTaskReports(String jobid) {
@@ -1679,10 +1705,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
    */
   public synchronized TaskCompletionEvent[] getTaskCompletionEvents(
                                                                     String jobid, int fromEventId, int maxEvents) throws IOException{
-    TaskCompletionEvent[] events = TaskCompletionEvent.EMPTY_ARRAY;
+    TaskCompletionEvent[] events;
     JobInProgress job = this.jobs.get(jobid);
     if (null != job) {
       events = job.getTaskCompletionEvents(fromEventId, maxEvents);
+    }
+    else {
+      events = completedJobStatusStore.readJobTaskCompletionEvents(jobid, fromEventId, maxEvents);
     }
     return events;
   }
