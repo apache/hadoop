@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
-import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -91,7 +91,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
     // Hadoop types
     addToMap(Text.class, code++);
     addToMap(Writable.class, code++);
-    addToMap(MapWritable.class, code++);
+    addToMap(HbaseMapWritable.class, code++);
     addToMap(NullInstance.class, code++);
     try {
       addToMap(Class.forName("[Lorg.apache.hadoop.io.Text;"), code++);

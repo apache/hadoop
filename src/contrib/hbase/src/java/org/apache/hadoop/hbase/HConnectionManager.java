@@ -36,7 +36,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.ipc.HbaseRPC;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
@@ -259,7 +259,7 @@ public class HConnectionManager implements HConstants {
               null);
 
           while (true) {
-            MapWritable values = server.next(scannerId);
+            HbaseMapWritable values = server.next(scannerId);
             if (values == null || values.size() == 0) {
               break;
             }
@@ -715,7 +715,7 @@ public class HConnectionManager implements HConstants {
             COLUMN_FAMILY_ARRAY, tableName, System.currentTimeMillis(), null);
 
         while (true) {
-          MapWritable values = server.next(scannerId);
+          HbaseMapWritable values = server.next(scannerId);
           if (values == null || values.size() == 0) {
             if (servers.size() == 0) {
               // If we didn't find any servers then the table does not exist

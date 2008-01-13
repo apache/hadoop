@@ -24,7 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 
-import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.VersionedProtocol;
 
@@ -96,7 +96,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return map of values
    * @throws IOException
    */
-  public MapWritable getRow(final Text regionName, final Text row)
+  public HbaseMapWritable getRow(final Text regionName, final Text row)
   throws IOException;
 
   /**
@@ -107,7 +107,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return map of values
    * @throws IOException
    */
-  public MapWritable getRow(final Text regionName, final Text row, final long ts)
+  public HbaseMapWritable getRow(final Text regionName, final Text row, final long ts)
   throws IOException;
 
 
@@ -192,7 +192,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return map of values
    * @throws IOException
    */
-  public MapWritable next(long scannerId) throws IOException;
+  public HbaseMapWritable next(long scannerId) throws IOException;
   
   /**
    * Close a scanner

@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
@@ -366,7 +366,7 @@ public class HTable implements HConstants {
    */
   public SortedMap<Text, byte[]> getRow(Text row, long ts) throws IOException {
     checkClosed();
-    MapWritable value = null;
+    HbaseMapWritable value = null;
     for (int tries = 0; tries < numRetries; tries++) {
       HRegionLocation r = getRegionLocation(row);
       HRegionInterface server =
@@ -1063,7 +1063,7 @@ public class HTable implements HConstants {
       if (this.closed) {
         return false;
       }
-      MapWritable values = null;
+      HbaseMapWritable values = null;
       // Clear the results so we don't inherit any values from any previous
       // calls to next.
       results.clear();

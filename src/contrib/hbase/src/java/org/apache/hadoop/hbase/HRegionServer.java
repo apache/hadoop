@@ -60,7 +60,7 @@ import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Server;
@@ -909,7 +909,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Run init. Sets up hlog and starts up all server threads.
    * @param c Extra configuration.
    */
-  private void init(final MapWritable c) throws IOException {
+  private void init(final HbaseMapWritable c) throws IOException {
     try {
       for (Map.Entry<Writable, Writable> e: c.entrySet()) {
         String key = e.getKey().toString();
@@ -1059,7 +1059,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Let the master know we're here
    * Run initialization using parameters passed us by the master.
    */
-  private MapWritable reportForDuty() throws IOException {
+  private HbaseMapWritable reportForDuty() throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Telling master at " +
         conf.get(MASTER_ADDRESS) + " that we are up");
@@ -1069,7 +1069,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       HMasterRegionInterface.class, HMasterRegionInterface.versionID,
       new HServerAddress(conf.get(MASTER_ADDRESS)).getInetSocketAddress(),
       this.conf);
-    MapWritable result = null;
+    HbaseMapWritable result = null;
     long lastMsg = 0;
     while(!stopRequested.get()) {
       try {
@@ -1375,20 +1375,20 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public MapWritable getRow(final Text regionName, final Text row)
+  public HbaseMapWritable getRow(final Text regionName, final Text row)
     throws IOException {
     return getRow(regionName, row, HConstants.LATEST_TIMESTAMP);
   }
 
   /** {@inheritDoc} */
-  public MapWritable getRow(final Text regionName, final Text row, final long ts)
+  public HbaseMapWritable getRow(final Text regionName, final Text row, final long ts)
     throws IOException {
 
     checkOpen();
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
-      MapWritable result = new MapWritable();
+      HbaseMapWritable result = new HbaseMapWritable();
       Map<Text, byte[]> map = region.getFull(row, ts);
       for (Map.Entry<Text, byte []> es: map.entrySet()) {
         result.put(new HStoreKey(row, es.getKey()),
@@ -1404,7 +1404,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
 
   /** {@inheritDoc} */
-  public MapWritable next(final long scannerId) throws IOException {
+  public HbaseMapWritable next(final long scannerId) throws IOException {
 
     checkOpen();
     requestCount.incrementAndGet();
@@ -1417,7 +1417,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.leases.renewLease(scannerId, scannerId);
 
       // Collect values to be returned here
-      MapWritable values = new MapWritable();
+      HbaseMapWritable values = new HbaseMapWritable();
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
       while (s.next(key, results)) {
@@ -1445,7 +1445,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** {@inheritDoc} */
   public void batchUpdate(Text regionName, long timestamp, BatchUpdate b)
     throws IOException {
-    
     checkOpen();
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
