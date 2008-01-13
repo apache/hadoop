@@ -21,15 +21,10 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.TreeMap;
 
 import org.apache.hadoop.dfs.MiniDFSCluster;
-import org.apache.hadoop.hbase.filter.StopRowFilter;
-import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.io.Text;
 import org.apache.commons.logging.*;
-
-import java.util.List;
 
 /**
  * Test the functionality of deleteAll.
@@ -37,11 +32,16 @@ import java.util.List;
 public class TestDeleteAll extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestDeleteAll.class);
   private MiniDFSCluster miniHdfs;
-
+  
   @Override
   protected void setUp() throws Exception {
     super.setUp();
-    this.miniHdfs = new MiniDFSCluster(this.conf, 1, true, null);
+    try {
+      this.miniHdfs = new MiniDFSCluster(this.conf, 1, true, null);
+    } catch (Exception e) {
+      LOG.fatal("error starting MiniDFSCluster", e);
+      throw e;
+    }
   }
   
   /**
@@ -51,14 +51,9 @@ public class TestDeleteAll extends HBaseTestCase {
   public void testDeleteAll() throws Exception {
     HRegion region = null;
     HRegionIncommon region_incommon = null;
-    HLog hlog = new HLog(this.miniHdfs.getFileSystem(), this.testDir,
-      this.conf, null);
-    
-    try{
+    try {
       HTableDescriptor htd = createTableDescriptor(getName());
-      HRegionInfo hri = new HRegionInfo(htd, null, null);
-      region = new HRegion(this.testDir, hlog, this.miniHdfs.getFileSystem(),
-        this.conf, hri, null, null);
+      region = createNewHRegion(htd, null, null);
       region_incommon = new HRegionIncommon(region);
       
       // test memcache
@@ -73,8 +68,8 @@ public class TestDeleteAll extends HBaseTestCase {
         } catch (Exception e) {
           e.printStackTrace();
         }
+        region.getLog().closeAndDelete();
       }
-      hlog.closeAndDelete();
     }
   }
     
@@ -157,7 +152,8 @@ public class TestDeleteAll extends HBaseTestCase {
   private String cellData(int tsNum, boolean flush){
     return "t" + tsNum + " data" + (flush ? " - with flush" : "");
   }
-  
+
+  @Override
   protected void tearDown() throws Exception {
     if (this.miniHdfs != null) {
       StaticTestEnvironment.shutdownDfs(this.miniHdfs);

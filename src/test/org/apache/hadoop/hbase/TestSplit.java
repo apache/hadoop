@@ -24,6 +24,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -64,18 +65,21 @@ public class TestSplit extends MultiRegionTable {
    * @throws Exception
    */
   public void testBasicSplit() throws Exception {
+    MiniDFSCluster cluster = null;
     HRegion region = null;
-    HLog hlog = new HLog(this.localFs, this.testDir, this.conf, null);
     try {
+      cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
       HTableDescriptor htd = createTableDescriptor(getName());
-      HRegionInfo hri = new HRegionInfo(htd, null, null);
-      region = new HRegion(testDir, hlog, this.localFs, this.conf, hri, null, null);
+      region = createNewHRegion(htd, null, null);
       basicSplit(region);
     } finally {
       if (region != null) {
         region.close();
+        region.getLog().closeAndDelete();
       }
-      hlog.closeAndDelete();
+      if (cluster != null) {
+        StaticTestEnvironment.shutdownDfs(cluster);
+      }
     }
   }
   
@@ -166,13 +170,6 @@ public class TestSplit extends MultiRegionTable {
     }
   }
   
-  private HRegion openClosedRegion(final HRegion closedRegion)
-  throws IOException {
-    return new HRegion(closedRegion.getRootDir(), closedRegion.getLog(),
-      closedRegion.getFilesystem(), closedRegion.getConf(),
-      closedRegion.getRegionInfo(), null, null);
-  }
-
   private void assertGet(final HRegion r, final String family, final Text k)
   throws IOException {
     // Now I have k, get values out and assert they are as expected.

@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.TreeMap;
 
+import org.apache.hadoop.dfs.MiniDFSCluster;
+
 import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
@@ -43,7 +45,29 @@ public class TestTimestamp extends HBaseTestCase {
   // When creating column descriptor, how many versions of a cell to allow.
   private static final int VERSIONS = 3;
   
+  private MiniDFSCluster cluster;
 
+  /** constructor */
+  public TestTimestamp() {
+    super();
+    this.cluster = null;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public void setUp() throws Exception {
+    this.cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+    super.setUp();
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public void tearDown() throws Exception {
+    if (this.cluster != null) {
+      StaticTestEnvironment.shutdownDfs(cluster);
+    }
+  }
+  
   /**
    * Test that delete works according to description in <a
    * href="https://issues.apache.org/jira/browse/HADOOP-1784">hadoop-1784</a>.
@@ -310,11 +334,9 @@ public class TestTimestamp extends HBaseTestCase {
   }
   
   private HRegion createRegion() throws IOException {
-    HLog hlog = new HLog(this.localFs, this.testDir, this.conf, null);
     HTableDescriptor htd = createTableDescriptor(getName());
     htd.addFamily(new HColumnDescriptor(COLUMN, VERSIONS,
       CompressionType.NONE, false, Integer.MAX_VALUE, null));
-    HRegionInfo hri = new HRegionInfo(htd, null, null);
-    return new HRegion(testDir, hlog, this.localFs, this.conf, hri, null, null);
+    return createNewHRegion(htd, null, null);
   }
 }

@@ -95,7 +95,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   volatile boolean shutdownRequested = false;
   volatile AtomicInteger quiescedMetaServers = new AtomicInteger(0);
   volatile boolean fsOk = true;
-  final Path dir;
+  final Path rootdir;
   final HBaseConfiguration conf;
   final FileSystem fs;
   final Random rand;
@@ -333,8 +333,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       if (!hasReferencesA && !hasReferencesB) {
         LOG.info("Deleting region " + parent.getRegionName() +
         " because daughter splits no longer hold references");
-        if (!HRegion.deleteRegion(fs, dir,
-            HRegionInfo.encodeRegionName(parent.getRegionName()))) {
+        if (!HRegion.deleteRegion(fs, rootdir, parent)) {
           LOG.warn("Deletion of " + parent.getRegionName() + " failed");
         }
         
@@ -378,10 +377,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       if (split == null) {
         return result;
       }
-      for (Text family: split.getTableDesc().families().keySet()) {
-        Path p = HStoreFile.getMapDir(fs.makeQualified(dir),
-            HRegionInfo.encodeRegionName(split.getRegionName()),
-            HStoreKey.extractFamily(family));
+      Path tabledir =
+        HTableDescriptor.getTableDir(rootdir, split.getTableDesc().getName());
+      for (HColumnDescriptor family: split.getTableDesc().families().values()) {
+        Path p = HStoreFile.getMapDir(tabledir, split.getEncodedName(),
+            family.getFamilyName());
 
         // Look for reference files.  Call listPaths with an anonymous
         // instance of PathFilter.
@@ -389,7 +389,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         Path [] ps = fs.listPaths(p,
             new PathFilter () {
               public boolean accept(Path path) {
-                return HStoreFile.isReference(path);
+                return HStore.isReference(path);
               }
             }
         );
@@ -481,12 +481,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         if (!initialMetaScanComplete && serverName.length() != 0) {
           StringBuilder dirName = new StringBuilder("log_");
           dirName.append(serverName.replace(":", "_"));
-          Path logDir = new Path(dir, dirName.toString());
+          Path logDir = new Path(rootdir, dirName.toString());
           try {
             if (fs.exists(logDir)) {
               splitLogLock.lock();
               try {
-                HLog.splitLog(dir, logDir, fs, conf);
+                HLog.splitLog(rootdir, logDir, fs, conf);
               } finally {
                 splitLogLock.unlock();
               }
@@ -866,37 +866,38 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   /** 
    * Build the HMaster
-   * @param dir base directory
+   * @param rootdir base directory of this HBase instance
    * @param address server address and port number
    * @param conf configuration
    * 
    * @throws IOException
    */
-  public HMaster(Path dir, HServerAddress address, HBaseConfiguration conf)
+  public HMaster(Path rootdir, HServerAddress address, HBaseConfiguration conf)
     throws IOException {
     
-    this.dir = dir;
     this.conf = conf;
     this.fs = FileSystem.get(conf);
+    this.rootdir = fs.makeQualified(rootdir);
+    this.conf.set(HConstants.HBASE_DIR, this.rootdir.toString());
     this.rand = new Random();
     
-    Path rootRegionDir = HRegion.getRegionDir(dir,
-        HRegionInfo.encodeRegionName(HRegionInfo.rootRegionInfo.getRegionName()));
+    Path rootRegionDir =
+      HRegion.getRegionDir(rootdir, HRegionInfo.rootRegionInfo);
     LOG.info("Root region dir: " + rootRegionDir.toString());
 
     try {
       // Make sure the root directory exists!
-      if(! fs.exists(dir)) {
-        fs.mkdirs(dir);
+      if(! fs.exists(rootdir)) {
+        fs.mkdirs(rootdir);
       }
 
       if (!fs.exists(rootRegionDir)) {
         LOG.info("bootstrap: creating ROOT and first META regions");
         try {
           HRegion root = HRegion.createHRegion(HRegionInfo.rootRegionInfo,
-              this.dir, this.conf);
+              this.rootdir, this.conf);
           HRegion meta = HRegion.createHRegion(HRegionInfo.firstMetaRegionInfo,
-            this.dir, this.conf);
+            this.rootdir, this.conf);
 
           // Add first region from the META table to the ROOT region.
           HRegion.addRegionToMETA(root, meta);
@@ -990,7 +991,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * @return Hbase root dir.
    */
   public Path getRootDir() {
-    return this.dir;
+    return this.rootdir;
   }
 
   /**
@@ -1973,7 +1974,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       dirName.append(serverInfo.getStartCode());
       dirName.append("_");
       dirName.append(deadServer.getPort());
-      this.oldLogDir = new Path(dir, dirName.toString());
+      this.oldLogDir = new Path(rootdir, dirName.toString());
     }
 
     /** {@inheritDoc} */
@@ -2148,7 +2149,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             return false;
           }
           try {
-            HLog.splitLog(dir, oldLogDir, fs, conf);
+            HLog.splitLog(rootdir, oldLogDir, fs, conf);
           } finally {
             splitLogLock.unlock();
           }
@@ -2415,8 +2416,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
       } else if (deleteRegion) {
         try {
-          HRegion.deleteRegion(fs, dir,
-              HRegionInfo.encodeRegionName(regionInfo.getRegionName()));
+          HRegion.deleteRegion(fs, rootdir, regionInfo);
         } catch (IOException e) {
           e = RemoteExceptionHandler.checkIOException(e);
           LOG.error("failed delete region " + regionInfo.getRegionName(), e);
@@ -2613,7 +2613,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       // 2. Create the HRegion
           
       HRegion region =
-        HRegion.createHRegion(newRegion, this.dir, this.conf);
+        HRegion.createHRegion(newRegion, this.rootdir, this.conf);
 
       // 3. Insert into meta
           
@@ -2999,8 +2999,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         // Delete the region
       
         try {
-          HRegion.deleteRegion(fs, dir,
-              HRegionInfo.encodeRegionName(i.getRegionName()));
+          HRegion.deleteRegion(fs, rootdir, i);
         
         } catch (IOException e) {
           LOG.error("failed to delete region " + i.getRegionName(),
@@ -3061,15 +3060,16 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     protected void postProcessMeta(MetaRegion m, HRegionInterface server)
       throws IOException {
 
+      Path tabledir = new Path(rootdir, tableName.toString());
       for (HRegionInfo i: unservedRegions) {
         i.getTableDesc().families().remove(columnName);
         updateRegionInfo(server, m.getRegionName(), i);
 
         // Delete the directories used by the column
 
-        String encodedName = HRegionInfo.encodeRegionName(i.getRegionName());
-        fs.delete(HStoreFile.getMapDir(dir, encodedName, columnName));
-        fs.delete(HStoreFile.getInfoDir(dir, encodedName, columnName));
+        String encodedName = i.getEncodedName();
+        fs.delete(HStoreFile.getMapDir(tabledir, encodedName, columnName));
+        fs.delete(HStoreFile.getInfoDir(tabledir, encodedName, columnName));
       }
     }
   }

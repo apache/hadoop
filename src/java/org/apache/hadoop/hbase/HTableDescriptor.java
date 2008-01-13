@@ -30,6 +30,7 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -242,5 +243,14 @@ public class HTableDescriptor implements WritableComparable {
    */
   public SortedMap<Text, HColumnDescriptor> getFamilies() {
     return Collections.unmodifiableSortedMap(this.families);
+  }
+
+  /**
+   * @param rootdir qualified path of HBase root directory
+   * @param tableName name of table
+   * @return path for table
+   */
+  public static Path getTableDir(Path rootdir, Text tableName) {
+    return new Path(rootdir, tableName.toString());
   }
 }

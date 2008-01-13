@@ -23,6 +23,13 @@
 -->
 <configuration>
   <property>
+    <name>fs.default.name</name>
+    <value></value>
+    <description>Use hdfs as file system by default. Modify this to run on
+    local file system.
+    </description>
+  </property>
+  <property>
     <name>hbase.regionserver.msginterval</name>
     <value>1000</value>
     <description>Interval between messages from the RegionServer to HMaster

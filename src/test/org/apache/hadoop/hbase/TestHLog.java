@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.TreeMap;
 
 import org.apache.hadoop.dfs.MiniDFSCluster;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -31,21 +30,15 @@ import org.apache.hadoop.io.SequenceFile.Reader;
 
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
-  private final Path dir = new Path("/hbase");
-  private FileSystem fs;
+  private Path dir;
   private MiniDFSCluster cluster;
 
-  /** constructor */
-  public TestHLog() {
-    this.cluster = null;
-  }
-  
   /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
-    super.setUp();
     cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
-    this.fs = cluster.getFileSystem();
+    super.setUp();
+    this.dir = new Path("/hbase", getName());
     if (fs.exists(dir)) {
       fs.delete(dir);
     }

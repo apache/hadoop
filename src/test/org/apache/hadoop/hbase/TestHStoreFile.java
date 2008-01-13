@@ -24,7 +24,6 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.MapFile;
@@ -39,7 +38,6 @@ public class TestHStoreFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestHStoreFile.class);
   private static String DIR = "/";
   private MiniDFSCluster cluster;
-  private FileSystem fs;
   private Path dir = null;
   
   /** {@inheritDoc} */
@@ -47,7 +45,6 @@ public class TestHStoreFile extends HBaseTestCase {
   public void setUp() throws Exception {
     try {
       this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
-      this.fs = cluster.getFileSystem();
       this.dir = new Path(DIR, getName());
     } catch (IOException e) {
       StaticTestEnvironment.shutdownDfs(cluster);
@@ -121,8 +118,8 @@ public class TestHStoreFile extends HBaseTestCase {
   public void testReference()
   throws IOException {
     // Make a store file and write data to it.
-    HStoreFile hsf = new HStoreFile(this.conf, this.dir, getName(),
-        new Text("colfamily"), 1234567890L);
+    HStoreFile hsf = new HStoreFile(this.conf, this.fs, this.dir, getName(),
+        new Text("colfamily"), 1234567890L, null);
     MapFile.Writer writer =
       hsf.getWriter(this.fs, SequenceFile.CompressionType.NONE, null);
     writeStoreFile(writer);
@@ -138,16 +135,16 @@ public class TestHStoreFile extends HBaseTestCase {
     HStoreFile.Reference reference =
       new HStoreFile.Reference(hsf.getEncodedRegionName(), hsf.getFileId(),
           midkey, HStoreFile.Range.top);
-    HStoreFile refHsf = new HStoreFile(this.conf, new Path(DIR, getName()),
-        getName() + "_reference", hsf.getColFamily(), 456,
-        reference);
+    HStoreFile refHsf = new HStoreFile(this.conf, this.fs, 
+        new Path(DIR, getName()), getName() + "_reference", hsf.getColFamily(),
+        456, reference);
     // Assert that reference files are written and that we can write and
     // read the info reference file at least.
     refHsf.writeReferenceFiles(this.fs);
     assertTrue(this.fs.exists(refHsf.getMapFilePath()));
     assertTrue(this.fs.exists(refHsf.getInfoFilePath()));
     HStoreFile.Reference otherReference =
-      HStoreFile.readSplitInfo(refHsf.getInfoFilePath(), this.fs);
+      HStore.readSplitInfo(refHsf.getInfoFilePath(), this.fs);
     assertEquals(reference.getEncodedRegionName(),
         otherReference.getEncodedRegionName());
     assertEquals(reference.getFileId(),

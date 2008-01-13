@@ -25,16 +25,12 @@ import java.io.DataOutput;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -89,7 +85,7 @@ import org.onelab.filter.Key;
  * <p>When merging or splitting HRegions, we might want to modify one of the 
  * params for an HStoreFile (effectively moving it elsewhere).
  */
-public class HStoreFile implements HConstants, WritableComparable {
+public class HStoreFile implements HConstants {
   static final Log LOG = LogFactory.getLog(HStoreFile.class.getName());
   static final byte INFO_SEQ_NUM = 0;
   static final String HSTORE_DATFILE_DIR = "mapfiles";
@@ -107,342 +103,113 @@ public class HStoreFile implements HConstants, WritableComparable {
     bottom
   }
   
-  /*
-   * Regex that will work for straight filenames and for reference names.
-   * If reference, then the regex has more than just one group.  Group 1 is
-   * this files id.  Group 2 the referenced region name, etc.
-   */
-  private static Pattern REF_NAME_PARSER =
-    Pattern.compile("^(\\d+)(?:\\.(.+))?$");
-  
-  private static Random rand = new Random();
+  private final static Random rand = new Random();
 
-  private Path dir;
-  private String encodedRegionName;
-  private Text colFamily;
-  private long fileId;
+  private final Path basedir;
+  private final String encodedRegionName;
+  private final Text colFamily;
+  private final long fileId;
   private final HBaseConfiguration conf;
-  private Reference reference;
-
-  /** Shutdown constructor used by Writable */
-  HStoreFile(HBaseConfiguration conf) {
-    this(conf, new Path(Path.CUR_DIR), "", new Text(), 0);
-  }
-  
-  /**
-   * Constructor that fully initializes the object
-   * @param conf Configuration object
-   * @param dir directory path
-   * @param encodedRegionName name of the region
-   * @param colFamily name of the column family
-   * @param fileId file identifier
-   */
-  HStoreFile(final HBaseConfiguration conf, final Path dir, 
-      final String encodedRegionName, final Text colFamily, final long fileId) {
-    this(conf, dir, encodedRegionName, colFamily, fileId, null);
-  }
+  private final FileSystem fs;
+  private final Reference reference;
 
   /**
    * Constructor that fully initializes the object
    * @param conf Configuration object
-   * @param dir directory path
+   * @param basedir qualified path that is parent of region directory
    * @param encodedRegionName file name friendly name of the region
    * @param colFamily name of the column family
    * @param fileId file identifier
    * @param ref Reference to another HStoreFile.
+   * @throws IOException
    */
-  HStoreFile(HBaseConfiguration conf, Path dir, String encodedRegionName, 
-      Text colFamily, long fileId, final Reference ref) {
+  HStoreFile(HBaseConfiguration conf, FileSystem fs, Path basedir,
+      String encodedRegionName, Text colFamily, long fileId,
+      final Reference ref) throws IOException {
     this.conf = conf;
-    this.dir = dir;
+    this.fs = fs;
+    this.basedir = basedir;
     this.encodedRegionName = encodedRegionName;
     this.colFamily = new Text(colFamily);
-    this.fileId = fileId;
+    
+    long id = fileId;
+    if (id == -1) {
+      Path mapdir = HStoreFile.getMapDir(basedir, encodedRegionName, colFamily);
+      Path testpath = null;
+      do {
+        id = Math.abs(rand.nextLong());
+        testpath = new Path(mapdir, createHStoreFilename(id, null));
+      } while(fs.exists(testpath));
+    }
+    this.fileId = id;
+    
     // If a reference, construction does not write the pointer files.  Thats
     // done by invocations of writeReferenceFiles(hsf, fs).  Happens at fast
     // split time.
     this.reference = ref;
   }
 
-  /*
-   * Data structure to hold reference to a store file over in another region.
-   */
-  static class Reference implements Writable {
-    private String encodedRegionName;
-    private long fileid;
-    private Range region;
-    private HStoreKey midkey;
-    
-    Reference(final String ern, final long fid, final HStoreKey m,
-        final Range fr) {
-      this.encodedRegionName = ern;
-      this.fileid = fid;
-      this.region = fr;
-      this.midkey = m;
-    }
-    
-    Reference() {
-      this(null, -1, null, Range.bottom);
-    }
-
-    long getFileId() {
-      return this.fileid;
-    }
-
-    Range getFileRegion() {
-      return this.region;
-    }
-    
-    HStoreKey getMidkey() {
-      return this.midkey;
-    }
-    
-    String getEncodedRegionName() {
-      return this.encodedRegionName;
-    }
-   
-    /** {@inheritDoc} */
-    @Override
-    public String toString() {
-      return this.encodedRegionName + "/" + this.fileid + "/" + this.region;
-    }
-
-    // Make it serializable.
-
-    /** {@inheritDoc} */
-    public void write(DataOutput out) throws IOException {
-      out.writeUTF(this.encodedRegionName);
-      out.writeLong(this.fileid);
-      // Write true if we're doing top of the file.
-      out.writeBoolean(isTopFileRegion(this.region));
-      this.midkey.write(out);
-    }
-
-    /** {@inheritDoc} */
-    public void readFields(DataInput in) throws IOException {
-      this.encodedRegionName = in.readUTF();
-      this.fileid = in.readLong();
-      boolean tmp = in.readBoolean();
-      // If true, set region to top.
-      this.region = tmp? Range.top: Range.bottom;
-      this.midkey = new HStoreKey();
-      this.midkey.readFields(in);
-    }
-  }
-
-  static boolean isTopFileRegion(final Range r) {
-    return r.equals(Range.top);
-  }
-
   /** @return the region name */
   boolean isReference() {
-    return this.reference != null;
+    return reference != null;
   }
   
   Reference getReference() {
-    return this.reference;
+    return reference;
   }
 
   String getEncodedRegionName() {
-    return this.encodedRegionName;
+    return encodedRegionName;
   }
 
   /** @return the column family */
   Text getColFamily() {
-    return this.colFamily;
+    return colFamily;
   }
 
   /** @return the file identifier */
   long getFileId() {
-    return this.fileId;
+    return fileId;
   }
 
   // Build full filenames from those components
+  
   /** @return path for MapFile */
   Path getMapFilePath() {
-    return isReference()?
-      getMapFilePath(this.encodedRegionName, this.fileId,
-        this.reference.getEncodedRegionName()):
-      getMapFilePath(this.encodedRegionName, this.fileId);
+    if (isReference()) {
+      return getMapFilePath(encodedRegionName, fileId,
+          reference.getEncodedRegionName());
+    }
+    return getMapFilePath(encodedRegionName, fileId, null);
   }
 
   private Path getMapFilePath(final Reference r) {
-    return r == null?
-      getMapFilePath():
-      getMapFilePath(r.getEncodedRegionName(), r.getFileId());
+    if (r == null) {
+      return getMapFilePath();
+    }
+    return getMapFilePath(r.getEncodedRegionName(), r.getFileId(), null);
   }
 
-  private Path getMapFilePath(final String encodedName, final long fid) {
-    return new Path(HStoreFile.getMapDir(dir, encodedName, colFamily), 
-      createHStoreFilename(fid, null));
-  }
-  
   private Path getMapFilePath(final String encodedName, final long fid,
       final String ern) {
-    return new Path(HStoreFile.getMapDir(dir, encodedName, colFamily), 
+    return new Path(HStoreFile.getMapDir(basedir, encodedName, colFamily), 
       createHStoreFilename(fid, ern));
   }
 
   /** @return path for info file */
   Path getInfoFilePath() {
-    return isReference()?
-      getInfoFilePath(this.encodedRegionName, this.fileId,
-        this.reference.getEncodedRegionName()):
-      getInfoFilePath(this.encodedRegionName, this.fileId);
-  }
-  
-  private Path getInfoFilePath(final String encodedName, final long fid) {
-    return new Path(HStoreFile.getInfoDir(dir, encodedName, colFamily), 
-      createHStoreFilename(fid, null));
+    if (isReference()) {
+      return getInfoFilePath(encodedRegionName, fileId,
+          reference.getEncodedRegionName());
+ 
+    }
+    return getInfoFilePath(encodedRegionName, fileId, null);
   }
   
   private Path getInfoFilePath(final String encodedName, final long fid,
       final String ern) {
-    return new Path(HStoreFile.getInfoDir(dir, encodedName, colFamily), 
+    return new Path(HStoreFile.getInfoDir(basedir, encodedName, colFamily), 
       createHStoreFilename(fid, ern));
-  }
-
-  // Static methods to build partial paths to internal directories.  Useful for 
-  // HStore construction and log-rebuilding.
-  private static String createHStoreFilename(final long fid) {
-    return createHStoreFilename(fid, null);
-  }
-  
-  private static String createHStoreFilename(final long fid,
-      final String encodedRegionName) {
-    return Long.toString(fid) +
-      ((encodedRegionName != null) ? "." + encodedRegionName : "");
-  }
-  
-  private static String createHStoreInfoFilename(final long fid) {
-    return createHStoreFilename(fid, null);
-  }
-  
-  static Path getMapDir(Path dir, String encodedRegionName, Text colFamily) {
-    return new Path(dir, new Path(HREGIONDIR_PREFIX + encodedRegionName, 
-        new Path(colFamily.toString(), HSTORE_DATFILE_DIR)));
-  }
-
-  /** @return the info directory path */
-  static Path getInfoDir(Path dir, String encodedRegionName, Text colFamily) {
-    return new Path(dir, new Path(HREGIONDIR_PREFIX + encodedRegionName, 
-        new Path(colFamily.toString(), HSTORE_INFO_DIR)));
-  }
-
-  /** @return the bloom filter directory path */
-  static Path getFilterDir(Path dir, String encodedRegionName, Text colFamily) {
-    return new Path(dir, new Path(HREGIONDIR_PREFIX + encodedRegionName,
-        new Path(colFamily.toString(), HSTORE_FILTER_DIR)));
-  }
-
-  /** @return the HStore directory path */
-  static Path getHStoreDir(Path dir, String encodedRegionName, Text colFamily) {
-    return new Path(dir, new Path(HREGIONDIR_PREFIX + encodedRegionName, 
-        colFamily.toString()));
-  }
-
-  /**
-   * @return a brand-new randomly-named HStoreFile.
-   * 
-   * Checks the filesystem to determine if the file already exists. If so, it
-   * will keep generating names until it generates a name that does not exist.
-   */
-  static HStoreFile obtainNewHStoreFile(HBaseConfiguration conf, Path dir, 
-      String encodedRegionName, Text colFamily, FileSystem fs)
-      throws IOException {
-    Path mapdir = HStoreFile.getMapDir(dir, encodedRegionName, colFamily);
-    Path testpath1 = null;
-    Path testpath2 = null;
-    long fileId = -1;
-    do {
-      fileId = Math.abs(rand.nextLong());
-      testpath1 = new Path(mapdir, createHStoreFilename(fileId));
-      testpath2 = new Path(mapdir, createHStoreInfoFilename(fileId));
-    } while(fs.exists(testpath1) || fs.exists(testpath2));
-    return new HStoreFile(conf, dir, encodedRegionName, colFamily, fileId);
-  }
-
-  /*
-   * Creates a series of HStoreFiles loaded from the given directory.
-   * There must be a matching 'mapdir' and 'loginfo' pair of files.
-   * If only one exists, we'll delete it.
-   *
-   * @param conf Configuration object
-   * @param dir directory path
-   * @param regionName region name
-   * @param colFamily column family
-   * @param fs file system
-   * @return List of store file instances loaded from passed dir.
-   * @throws IOException
-   */
-  static List<HStoreFile> loadHStoreFiles(HBaseConfiguration conf, Path dir, 
-      String encodedRegionName, Text colFamily, FileSystem fs)
-  throws IOException {
-    // Look first at info files.  If a reference, these contain info we need
-    // to create the HStoreFile.
-    Path infodir = HStoreFile.getInfoDir(dir, encodedRegionName, colFamily);
-    Path infofiles[] = fs.listPaths(new Path[] {infodir});
-    ArrayList<HStoreFile> results = new ArrayList<HStoreFile>(infofiles.length);
-    ArrayList<Path> mapfiles = new ArrayList<Path>(infofiles.length);
-    for (int i = 0; i < infofiles.length; i++) {
-      Path p = infofiles[i];
-      Matcher m = REF_NAME_PARSER.matcher(p.getName());
-      boolean isReference =  isReference(p, m);
-      long fid = Long.parseLong(m.group(1));
-      HStoreFile curfile = null;
-      if (isReference) {
-        Reference reference = readSplitInfo(infofiles[i], fs);
-        curfile = new HStoreFile(conf, dir, encodedRegionName, colFamily, fid,
-          reference);
-      } else {
-        curfile = new HStoreFile(conf, dir, encodedRegionName, colFamily, fid);
-      }
-      Path mapfile = curfile.getMapFilePath();
-      if (!fs.exists(mapfile)) {
-        fs.delete(curfile.getInfoFilePath());
-        LOG.warn("Mapfile " + mapfile.toString() + " does not exist. " +
-          "Cleaned up info file.  Continuing...");
-        continue;
-      }
-      
-      // TODO: Confirm referent exists.
-      
-      // Found map and sympathetic info file.  Add this hstorefile to result.
-      results.add(curfile);
-      // Keep list of sympathetic data mapfiles for cleaning info dir in next
-      // section.  Make sure path is fully qualified for compare.
-      Path qualified = fs.makeQualified(mapfile);
-      mapfiles.add(qualified);
-    }
-    
-    Path mapdir = HStoreFile.getMapDir(dir, encodedRegionName, colFamily);
-    // List paths by experience returns fully qualified names -- at least when
-    // running on a mini hdfs cluster.
-    Path datfiles[] = fs.listPaths(new Path[] {mapdir});
-    for (int i = 0; i < datfiles.length; i++) {
-      // If does not have sympathetic info file, delete.
-      if (!mapfiles.contains(fs.makeQualified(datfiles[i]))) {
-        fs.delete(datfiles[i]);
-      }
-    }
-    return results;
-  }
-  
-  /**
-   * @param p Path to check.
-   * @return True if the path has format of a HStoreFile reference.
-   */
-  static boolean isReference(final Path p) {
-    return isReference(p, REF_NAME_PARSER.matcher(p.getName()));
-  }
- 
-  private static boolean isReference(final Path p, final Matcher m) {
-    if (m == null || !m.matches()) {
-      LOG.warn("Failed match of store file name " + p.toString());
-      throw new RuntimeException("Failed match of store file name " +
-          p.toString());
-    }
-    return m.groupCount() > 1 && m.group(2) != null;
   }
 
   // File handling
@@ -499,21 +266,6 @@ public class HStoreFile implements HConstants, WritableComparable {
    }
   }
   
-  /*
-   * @see writeSplitInfo(Path p, HStoreFile hsf, FileSystem fs)
-   */
-  static Reference readSplitInfo(final Path p, final FileSystem fs)
-  throws IOException {
-    FSDataInputStream in = fs.open(p);
-    try {
-      Reference r = new Reference();
-      r.readFields(in);
-      return r;
-    } finally {
-      in.close();
-    }
-  }
-
   private void createOrFail(final FileSystem fs, final Path p)
   throws IOException {
     if (fs.exists(p)) {
@@ -577,10 +329,13 @@ public class HStoreFile implements HConstants, WritableComparable {
    * @throws IOException
    */
   long loadInfo(FileSystem fs) throws IOException {
-    Path p = isReference() ?
-        getInfoFilePath(this.reference.getEncodedRegionName(),
-            this.reference.getFileId()) :
-              getInfoFilePath();
+    Path p = null;
+    if (isReference()) {
+      p = getInfoFilePath(reference.getEncodedRegionName(),
+          reference.getFileId(), null);
+    } else {
+      p = getInfoFilePath();
+    }
     DataInputStream in = new DataInputStream(fs.open(p));
     try {
       byte flag = in.readByte();
@@ -616,12 +371,8 @@ public class HStoreFile implements HConstants, WritableComparable {
    * @throws IOException 
    */
   public void delete() throws IOException {
-    delete(getMapFilePath());
-    delete(getInfoFilePath());
-  }
-  
-  private void delete(final Path p) throws IOException {
-    p.getFileSystem(this.conf).delete(p);
+    fs.delete(getMapFilePath());
+    fs.delete(getInfoFilePath());
   }
   
   /**
@@ -655,138 +406,6 @@ public class HStoreFile implements HConstants, WritableComparable {
   }
   
   /**
-   * Hbase customizations of MapFile.
-   */
-  static class HbaseMapFile extends MapFile {
-
-    static class HbaseReader extends MapFile.Reader {
-      public HbaseReader(FileSystem fs, String dirName, Configuration conf)
-      throws IOException {
-        super(fs, dirName, conf);
-        // Force reading of the mapfile index by calling midKey.
-        // Reading the index will bring the index into memory over
-        // here on the client and then close the index file freeing
-        // up socket connection and resources in the datanode. 
-        // Usually, the first access on a MapFile.Reader will load the
-        // index force the issue in HStoreFile MapFiles because an
-        // access may not happen for some time; meantime we're
-        // using up datanode resources.  See HADOOP-2341.
-        midKey();
-      }
-    }
-    
-    static class HbaseWriter extends MapFile.Writer {
-      public HbaseWriter(Configuration conf, FileSystem fs, String dirName,
-          Class<Writable> keyClass, Class<Writable> valClass,
-          SequenceFile.CompressionType compression)
-      throws IOException {
-        super(conf, fs, dirName, keyClass, valClass, compression);
-        // Default for mapfiles is 128.  Makes random reads faster if we
-        // have more keys indexed and we're not 'next'-ing around in the
-        // mapfile.
-        setIndexInterval(conf.getInt("hbase.index.interval", 128));
-      }
-    }
-  }
-  
-  /**
-   * On write, all keys are added to a bloom filter.  On read, all keys are
-   * tested first against bloom filter. Keys are HStoreKey.  If passed bloom
-   * filter is null, just passes invocation to parent.
-   */
-  static class BloomFilterMapFile extends HbaseMapFile {
-    static class Reader extends HbaseReader {
-      private final Filter bloomFilter;
-
-      public Reader(FileSystem fs, String dirName, Configuration conf,
-          final Filter filter)
-      throws IOException {
-        super(fs, dirName, conf);
-        this.bloomFilter = filter;
-      }
-      
-      @Override
-      public Writable get(WritableComparable key, Writable val)
-      throws IOException {
-        if (this.bloomFilter == null) {
-          return super.get(key, val);
-        }
-        if(this.bloomFilter.membershipTest(getBloomFilterKey(key))) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("bloom filter reported that key exists");
-          }
-          return super.get(key, val);
-        }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("bloom filter reported that key does not exist");
-        }
-        return null;
-      }
-
-      @Override
-      public WritableComparable getClosest(WritableComparable key,
-          Writable val)
-      throws IOException {
-        if (this.bloomFilter == null) {
-          return super.getClosest(key, val);
-        }
-        // Note - the key being passed to us is always a HStoreKey
-        if(this.bloomFilter.membershipTest(getBloomFilterKey(key))) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("bloom filter reported that key exists");
-          }
-          return super.getClosest(key, val);
-        }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("bloom filter reported that key does not exist");
-        }
-        return null;
-      }
-    }
-    
-    static class Writer extends HbaseWriter {
-      private final Filter bloomFilter;
-      
-      @SuppressWarnings("unchecked")
-      public Writer(Configuration conf, FileSystem fs, String dirName,
-          Class keyClass, Class valClass,
-          SequenceFile.CompressionType compression, final Filter filter)
-      throws IOException {
-        super(conf, fs, dirName, keyClass, valClass, compression);
-        this.bloomFilter = filter;
-      }
-      
-      @Override
-      public void append(WritableComparable key, Writable val)
-      throws IOException {
-        if (this.bloomFilter != null) {
-          this.bloomFilter.add(getBloomFilterKey(key));
-        }
-        super.append(key, val);
-      }
-    }
-  }
-  
-  /**
-   * Custom bloom filter key maker.
-   * @param key
-   * @return Key made of bytes of row and column only.
-   * @throws IOException
-   */
-  static Key getBloomFilterKey(WritableComparable key)
-  throws IOException {
-    HStoreKey hsk = (HStoreKey)key;
-    byte [] bytes = null;
-    try {
-      bytes = (hsk.getRow().toString() + hsk.getColumn().toString()).
-        getBytes(UTF8_ENCODING);
-    } catch (UnsupportedEncodingException e) {
-      throw new IOException(e.toString());
-    }
-    return new Key(bytes);
-  }
-
-  /**
    * Get reader for the store file map file.
    * Client is responsible for closing file when done.
    * @param fs
@@ -795,16 +414,15 @@ public class HStoreFile implements HConstants, WritableComparable {
    * @throws IOException
    */
   public synchronized MapFile.Reader getReader(final FileSystem fs,
-      final Filter bloomFilter)
-  throws IOException {
-    return isReference()?
-      new HStoreFile.HalfMapFileReader(fs,
-        getMapFilePath(getReference().getEncodedRegionName(),
-          getReference().getFileId()).toString(),
-        this.conf, getReference().getFileRegion(), getReference().getMidkey(),
-        bloomFilter):
-      new BloomFilterMapFile.Reader(fs, getMapFilePath().toString(),
-        this.conf, bloomFilter);
+      final Filter bloomFilter) throws IOException {
+    
+    if (isReference()) {
+      return new HStoreFile.HalfMapFileReader(fs,
+          getMapFilePath(reference).toString(), conf, 
+          reference.getFileRegion(), reference.getMidkey(), bloomFilter);
+    }
+    return new BloomFilterMapFile.Reader(fs, getMapFilePath().toString(),
+        conf, bloomFilter);
   }
 
   /**
@@ -831,6 +449,283 @@ public class HStoreFile implements HConstants, WritableComparable {
   }
 
   /**
+   * @return Length of the store map file.  If a reference, size is
+   * approximation.
+   * @throws IOException
+   */
+  public long length() throws IOException {
+    Path p = new Path(getMapFilePath(reference), MapFile.DATA_FILE_NAME);
+    long l = p.getFileSystem(conf).getFileStatus(p).getLen();
+    return (isReference())? l / 2: l;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public String toString() {
+    return encodedRegionName + "/" + colFamily + "/" + fileId +
+      (isReference()? "/" + reference.toString(): "");
+  }
+  
+  /**
+   * Custom bloom filter key maker.
+   * @param key
+   * @return Key made of bytes of row and column only.
+   * @throws IOException
+   */
+  static Key getBloomFilterKey(WritableComparable key)
+  throws IOException {
+    HStoreKey hsk = (HStoreKey)key;
+    byte [] bytes = null;
+    try {
+      bytes = (hsk.getRow().toString() + hsk.getColumn().toString()).
+        getBytes(UTF8_ENCODING);
+    } catch (UnsupportedEncodingException e) {
+      throw new IOException(e.toString());
+    }
+    return new Key(bytes);
+  }
+
+  static boolean isTopFileRegion(final Range r) {
+    return r.equals(Range.top);
+  }
+
+  private static String createHStoreFilename(final long fid,
+      final String encodedRegionName) {
+    return Long.toString(fid) +
+      ((encodedRegionName != null) ? "." + encodedRegionName : "");
+  }
+  
+  static Path getMapDir(Path dir, String encodedRegionName, Text colFamily) {
+    return new Path(dir, new Path(encodedRegionName, 
+        new Path(colFamily.toString(), HSTORE_DATFILE_DIR)));
+  }
+
+  /** @return the info directory path */
+  static Path getInfoDir(Path dir, String encodedRegionName, Text colFamily) {
+    return new Path(dir, new Path(encodedRegionName, 
+        new Path(colFamily.toString(), HSTORE_INFO_DIR)));
+  }
+
+  /** @return the bloom filter directory path */
+  static Path getFilterDir(Path dir, String encodedRegionName, Text colFamily) {
+    return new Path(dir, new Path(encodedRegionName,
+        new Path(colFamily.toString(), HSTORE_FILTER_DIR)));
+  }
+
+  /*
+   * Data structure to hold reference to a store file over in another region.
+   */
+  static class Reference implements Writable {
+    private String encodedRegionName;
+    private long fileid;
+    private Range region;
+    private HStoreKey midkey;
+    
+    Reference(final String ern, final long fid, final HStoreKey m,
+        final Range fr) {
+      this.encodedRegionName = ern;
+      this.fileid = fid;
+      this.region = fr;
+      this.midkey = m;
+    }
+    
+    Reference() {
+      this(null, -1, null, Range.bottom);
+    }
+
+    long getFileId() {
+      return fileid;
+    }
+
+    Range getFileRegion() {
+      return region;
+    }
+    
+    HStoreKey getMidkey() {
+      return midkey;
+    }
+    
+    String getEncodedRegionName() {
+      return encodedRegionName;
+    }
+   
+    /** {@inheritDoc} */
+    @Override
+    public String toString() {
+      return encodedRegionName + "/" + fileid + "/" + region;
+    }
+
+    // Make it serializable.
+
+    /** {@inheritDoc} */
+    public void write(DataOutput out) throws IOException {
+      out.writeUTF(encodedRegionName);
+      out.writeLong(fileid);
+      // Write true if we're doing top of the file.
+      out.writeBoolean(isTopFileRegion(region));
+      midkey.write(out);
+    }
+
+    /** {@inheritDoc} */
+    public void readFields(DataInput in) throws IOException {
+      encodedRegionName = in.readUTF();
+      fileid = in.readLong();
+      boolean tmp = in.readBoolean();
+      // If true, set region to top.
+      region = tmp? Range.top: Range.bottom;
+      midkey = new HStoreKey();
+      midkey.readFields(in);
+    }
+  }
+
+  /**
+   * Hbase customizations of MapFile.
+   */
+  static class HbaseMapFile extends MapFile {
+
+    static class HbaseReader extends MapFile.Reader {
+      /**
+       * @param fs
+       * @param dirName
+       * @param conf
+       * @throws IOException
+       */
+      public HbaseReader(FileSystem fs, String dirName, Configuration conf)
+      throws IOException {
+        super(fs, dirName, conf);
+        // Force reading of the mapfile index by calling midKey.
+        // Reading the index will bring the index into memory over
+        // here on the client and then close the index file freeing
+        // up socket connection and resources in the datanode. 
+        // Usually, the first access on a MapFile.Reader will load the
+        // index force the issue in HStoreFile MapFiles because an
+        // access may not happen for some time; meantime we're
+        // using up datanode resources.  See HADOOP-2341.
+        midKey();
+      }
+    }
+    
+    static class HbaseWriter extends MapFile.Writer {
+      /**
+       * @param conf
+       * @param fs
+       * @param dirName
+       * @param keyClass
+       * @param valClass
+       * @param compression
+       * @throws IOException
+       */
+      public HbaseWriter(Configuration conf, FileSystem fs, String dirName,
+          Class<Writable> keyClass, Class<Writable> valClass,
+          SequenceFile.CompressionType compression)
+      throws IOException {
+        super(conf, fs, dirName, keyClass, valClass, compression);
+        // Default for mapfiles is 128.  Makes random reads faster if we
+        // have more keys indexed and we're not 'next'-ing around in the
+        // mapfile.
+        setIndexInterval(conf.getInt("hbase.index.interval", 128));
+      }
+    }
+  }
+  
+  /**
+   * On write, all keys are added to a bloom filter.  On read, all keys are
+   * tested first against bloom filter. Keys are HStoreKey.  If passed bloom
+   * filter is null, just passes invocation to parent.
+   */
+  static class BloomFilterMapFile extends HbaseMapFile {
+    static class Reader extends HbaseReader {
+      private final Filter bloomFilter;
+
+      /**
+       * @param fs
+       * @param dirName
+       * @param conf
+       * @param filter
+       * @throws IOException
+       */
+      public Reader(FileSystem fs, String dirName, Configuration conf,
+          final Filter filter)
+      throws IOException {
+        super(fs, dirName, conf);
+        bloomFilter = filter;
+      }
+      
+      /** {@inheritDoc} */
+      @Override
+      public Writable get(WritableComparable key, Writable val)
+      throws IOException {
+        if (bloomFilter == null) {
+          return super.get(key, val);
+        }
+        if(bloomFilter.membershipTest(getBloomFilterKey(key))) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("bloom filter reported that key exists");
+          }
+          return super.get(key, val);
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("bloom filter reported that key does not exist");
+        }
+        return null;
+      }
+
+      /** {@inheritDoc} */
+      @Override
+      public WritableComparable getClosest(WritableComparable key,
+          Writable val) throws IOException {
+        if (bloomFilter == null) {
+          return super.getClosest(key, val);
+        }
+        // Note - the key being passed to us is always a HStoreKey
+        if(bloomFilter.membershipTest(getBloomFilterKey(key))) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("bloom filter reported that key exists");
+          }
+          return super.getClosest(key, val);
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("bloom filter reported that key does not exist");
+        }
+        return null;
+      }
+    }
+    
+    static class Writer extends HbaseWriter {
+      private final Filter bloomFilter;
+      
+      /**
+       * @param conf
+       * @param fs
+       * @param dirName
+       * @param keyClass
+       * @param valClass
+       * @param compression
+       * @param filter
+       * @throws IOException
+       */
+      @SuppressWarnings("unchecked")
+      public Writer(Configuration conf, FileSystem fs, String dirName,
+          Class keyClass, Class valClass,
+          SequenceFile.CompressionType compression, final Filter filter)
+      throws IOException {
+        super(conf, fs, dirName, keyClass, valClass, compression);
+        bloomFilter = filter;
+      }
+      
+      /** {@inheritDoc} */
+      @Override
+      public void append(WritableComparable key, Writable val)
+      throws IOException {
+        if (bloomFilter != null) {
+          bloomFilter.add(getBloomFilterKey(key));
+        }
+        super.append(key, val);
+      }
+    }
+  }
+  
+  /**
    * A facade for a {@link MapFile.Reader} that serves up either the top or
    * bottom half of a MapFile (where 'bottom' is the first half of the file
    * containing the keys that sort lowest and 'top' is the second half of the
@@ -856,19 +751,19 @@ public class HStoreFile implements HConstants, WritableComparable {
         final WritableComparable midKey, final Filter filter)
     throws IOException {
       super(fs, dirName, conf, filter);
-      this.top = isTopFileRegion(r);
-      this.midkey = midKey;
+      top = isTopFileRegion(r);
+      midkey = midKey;
     }
     
     @SuppressWarnings("unchecked")
     private void checkKey(final WritableComparable key)
     throws IOException {
-      if (this.top) {
-        if (key.compareTo(this.midkey) < 0) {
+      if (top) {
+        if (key.compareTo(midkey) < 0) {
           throw new IOException("Illegal Access: Key is less than midKey of " +
           "backing mapfile");
         }
-      } else if (key.compareTo(this.midkey) >= 0) {
+      } else if (key.compareTo(midkey) >= 0) {
         throw new IOException("Illegal Access: Key is greater than or equal " +
         "to midKey of backing mapfile");
       }
@@ -896,11 +791,11 @@ public class HStoreFile implements HConstants, WritableComparable {
     public synchronized WritableComparable getClosest(WritableComparable key,
         Writable val)
     throws IOException {
-      if (this.top) {
-        if (key.compareTo(this.midkey) < 0) {
-          return this.midkey;
+      if (top) {
+        if (key.compareTo(midkey) < 0) {
+          return midkey;
         }
-      } else if (key.compareTo(this.midkey) >= 0) {
+      } else if (key.compareTo(midkey) >= 0) {
         // Contract says return null if EOF.
         return null;
       }
@@ -920,12 +815,12 @@ public class HStoreFile implements HConstants, WritableComparable {
     @Override
     public synchronized boolean next(WritableComparable key, Writable val)
     throws IOException {
-      if (this.top && this.topFirstNextCall) {
-        this.topFirstNextCall = false;
+      if (top && topFirstNextCall) {
+        topFirstNextCall = false;
         return doFirstNextProcessing(key, val);
       }
       boolean result = super.next(key, val);
-      if (!top && key.compareTo(this.midkey) >= 0) {
+      if (!top && key.compareTo(midkey) >= 0) {
         result = false;
       }
       return result;
@@ -935,7 +830,7 @@ public class HStoreFile implements HConstants, WritableComparable {
     throws IOException {
       // Seek to midkey.  Midkey may not exist in this file.  That should be
       // fine.  Then we'll either be positioned at end or start of file.
-      WritableComparable nearest = getClosest(this.midkey, val);
+      WritableComparable nearest = getClosest(midkey, val);
       // Now copy the mid key into the passed key.
       if (nearest != null) {
         Writables.copyWritable(nearest, key);
@@ -948,8 +843,8 @@ public class HStoreFile implements HConstants, WritableComparable {
     @Override
     public synchronized void reset() throws IOException {
       if (top) {
-        this.topFirstNextCall = true;
-        seek(this.midkey);
+        topFirstNextCall = true;
+        seek(midkey);
         return;
       }
       super.reset();
@@ -962,91 +857,5 @@ public class HStoreFile implements HConstants, WritableComparable {
       checkKey(key);
       return super.seek(key);
     }
-  }
-
-  /**
-   * @return Length of the store map file.  If a reference, size is
-   * approximation.
-   * @throws IOException
-   */
-  public long length() throws IOException {
-    Path p = new Path(getMapFilePath(getReference()), MapFile.DATA_FILE_NAME);
-    long l = p.getFileSystem(this.conf).getFileStatus(p).getLen();
-    return (isReference())? l / 2: l;
-  }
-
-  /** {@inheritDoc} */
-  @Override
-  public String toString() {
-    return this.encodedRegionName.toString() + "/" + this.colFamily.toString() +
-      "/" + this.fileId +
-      (isReference()? "/" + this.reference.toString(): "");
-  }
-  
-  /** {@inheritDoc} */
-  @Override
-  public boolean equals(Object o) {
-    return this.compareTo(o) == 0;
-  }
-  
-  /** {@inheritDoc} */
-  @Override
-  public int hashCode() {
-    int result = this.dir.hashCode();
-    result ^= this.encodedRegionName.hashCode();
-    result ^= this.colFamily.hashCode();
-    result ^= this.fileId;
-    return result;
-  }
-
-  // Writable
-
-  /** {@inheritDoc} */
-  public void write(DataOutput out) throws IOException {
-    out.writeUTF(dir.toString());
-    out.writeUTF(this.encodedRegionName);
-    this.colFamily.write(out);
-    out.writeLong(fileId);
-    out.writeBoolean(isReference());
-    if (isReference()) {
-      this.reference.write(out);
-    }
-  }
-  
-  /** {@inheritDoc} */
-  public void readFields(DataInput in) throws IOException {
-    this.dir = new Path(in.readUTF());
-    this.encodedRegionName = in.readUTF();
-    this.colFamily.readFields(in);
-    this.fileId = in.readLong();
-    this.reference = null;
-    boolean isReferent = in.readBoolean();
-    this.reference = new HStoreFile.Reference();
-    if (isReferent) {
-      this.reference.readFields(in);
-    }
-  }
-
-  // Comparable
-
-  /** {@inheritDoc} */
-  public int compareTo(Object o) {
-    HStoreFile other = (HStoreFile) o;
-    int result = this.dir.compareTo(other.dir);    
-    if(result == 0) {
-      this.encodedRegionName.compareTo(other.encodedRegionName);
-    }
-    if(result == 0) {
-      result = this.colFamily.compareTo(other.colFamily);
-    }    
-    if(result == 0) {
-      if(this.fileId < other.fileId) {
-        result = -1;
-        
-      } else if(this.fileId > other.fileId) {
-        result = 1;
-      }
-    }
-    return result;
   }
 }

@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -28,13 +27,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.Vector;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -64,7 +63,7 @@ import org.onelab.filter.RetouchedBloomFilter;
  * Locking and transactions are handled at a higher level.  This API should not 
  * be called directly by any writer, but rather by an HRegion manager.
  */
-class HStore implements HConstants {
+public class HStore implements HConstants {
   static final Log LOG = LogFactory.getLog(HStore.class);
 
   /**
@@ -474,50 +473,51 @@ class HStore implements HConstants {
     }
   }
   
-  static final String COMPACTION_TO_REPLACE = "toreplace";    
-  static final String COMPACTION_DONE = "done";
+  /*
+   * Regex that will work for straight filenames and for reference names.
+   * If reference, then the regex has more than just one group.  Group 1 is
+   * this files id.  Group 2 the referenced region name, etc.
+   */
+  private static Pattern REF_NAME_PARSER =
+    Pattern.compile("^(\\d+)(?:\\.(.+))?$");
   
   private static final String BLOOMFILTER_FILE_NAME = "filter";
 
   final Memcache memcache = new Memcache();
-  Path dir;
-  Text regionName;
-  String encodedRegionName;
-  HColumnDescriptor family;
-  Text familyName;
-  SequenceFile.CompressionType compression;
-  FileSystem fs;
-  HBaseConfiguration conf;
-  Path mapdir;
-  Path loginfodir;
-  Path filterDir;
-  Filter bloomFilter;
-  private String storeName;
+  private final Path basedir;
+  private final HRegionInfo info;
+  private final HColumnDescriptor family;
+  private final SequenceFile.CompressionType compression;
+  final FileSystem fs;
+  private final HBaseConfiguration conf;
+  private final Path filterDir;
+  final Filter bloomFilter;
   private final Path compactionDir;
 
-  Integer compactLock = new Integer(0);
-  Integer flushLock = new Integer(0);
+  private final Integer compactLock = new Integer(0);
+  private final Integer flushLock = new Integer(0);
 
-  final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   final AtomicInteger activeScanners = new AtomicInteger(0);
 
-  /* Sorted Map of readers keyed by sequence id (Most recent should be last in
+  final String storeName;
+
+  /*
+   * Sorted Map of readers keyed by sequence id (Most recent should be last in
    * in list).
    */
-  SortedMap<Long, HStoreFile> storefiles =
+  final SortedMap<Long, HStoreFile> storefiles =
     Collections.synchronizedSortedMap(new TreeMap<Long, HStoreFile>());
   
-  /* Sorted Map of readers keyed by sequence id (Most recent should be last in
+  /*
+   * Sorted Map of readers keyed by sequence id (Most recent should be last in
    * in list).
    */
-  TreeMap<Long, MapFile.Reader> readers = new TreeMap<Long, MapFile.Reader>();
+  private final SortedMap<Long, MapFile.Reader> readers =
+    new TreeMap<Long, MapFile.Reader>();
 
-  Random rand = new Random();
-  
   private volatile long maxSeqId;
-  
   private final int compactionThreshold;
-  
   private final ReentrantReadWriteLock newScannerLock =
     new ReentrantReadWriteLock();
 
@@ -545,70 +545,72 @@ class HStore implements HConstants {
    * <p>It's assumed that after this constructor returns, the reconstructionLog
    * file will be deleted (by whoever has instantiated the HStore).
    *
-   * @param dir log file directory
-   * @param regionName
-   * @param encodedName
-   * @param family name of column family
+   * @param basedir qualified path under which the region directory lives
+   * @param info HRegionInfo for this region
+   * @param family HColumnDescriptor for this column
    * @param fs file system object
    * @param reconstructionLog existing log file to apply if any
    * @param conf configuration object
    * @throws IOException
    */
-  HStore(Path dir, Text regionName, String encodedName,
-      HColumnDescriptor family, FileSystem fs, Path reconstructionLog,
-      HBaseConfiguration conf) throws IOException {  
+  HStore(Path basedir, HRegionInfo info, HColumnDescriptor family,
+      FileSystem fs, Path reconstructionLog, HBaseConfiguration conf)
+      throws IOException {  
     
-    this.dir = dir;
-    this.compactionDir = new Path(HRegion.getRegionDir(dir, encodedName),
-      "compaction.dir");
-    this.regionName = regionName;
-    this.encodedRegionName = encodedName;
+    this.basedir = basedir;
+    this.info = info;
     this.family = family;
-    this.familyName = HStoreKey.extractFamily(this.family.getName()).toText();
-    this.compression = SequenceFile.CompressionType.NONE;
-    this.storeName = this.encodedRegionName + "/" + this.familyName.toString();
-    
-    if(family.getCompression() != HColumnDescriptor.CompressionType.NONE) {
-      if(family.getCompression() == HColumnDescriptor.CompressionType.BLOCK) {
-        this.compression = SequenceFile.CompressionType.BLOCK;
-      } else if(family.getCompression() ==
-          HColumnDescriptor.CompressionType.RECORD) {
-        this.compression = SequenceFile.CompressionType.RECORD;
-      } else {
-        assert(false);
-      }
-    }
-    
     this.fs = fs;
     this.conf = conf;
-    this.mapdir = HStoreFile.getMapDir(dir, encodedRegionName, familyName);
-    fs.mkdirs(mapdir);
-    this.loginfodir = HStoreFile.getInfoDir(dir, encodedRegionName, familyName);
-    fs.mkdirs(loginfodir);
+    
+    this.compactionDir = new Path(basedir, "compaction.dir");
+    this.storeName =
+      this.info.getEncodedName() + "/" + this.family.getFamilyName();
+    
+    if (family.getCompression() == HColumnDescriptor.CompressionType.BLOCK) {
+      this.compression = SequenceFile.CompressionType.BLOCK;
+    } else if (family.getCompression() ==
+      HColumnDescriptor.CompressionType.RECORD) {
+      this.compression = SequenceFile.CompressionType.RECORD;
+    } else {
+      this.compression = SequenceFile.CompressionType.NONE;
+    }
+    
+    Path mapdir = HStoreFile.getMapDir(basedir, info.getEncodedName(),
+        family.getFamilyName());
+    if (!fs.exists(mapdir)) {
+      fs.mkdirs(mapdir);
+    }
+    Path infodir = HStoreFile.getInfoDir(basedir, info.getEncodedName(),
+        family.getFamilyName());
+    if (!fs.exists(infodir)) {
+      fs.mkdirs(infodir);
+    }
+    
     if(family.getBloomFilter() == null) {
       this.filterDir = null;
       this.bloomFilter = null;
     } else {
-      this.filterDir =
-        HStoreFile.getFilterDir(dir, encodedRegionName, familyName);
-      fs.mkdirs(filterDir);
-      loadOrCreateBloomFilter();
+      this.filterDir = HStoreFile.getFilterDir(basedir, info.getEncodedName(),
+          family.getFamilyName());
+      if (!fs.exists(filterDir)) {
+        fs.mkdirs(filterDir);
+      }
+      this.bloomFilter = loadOrCreateBloomFilter();
     }
 
     if(LOG.isDebugEnabled()) {
-      LOG.debug("starting " + this.regionName + "/" + this.familyName + " ("
-          + this.storeName +
+      LOG.debug("starting " + storeName +
           ((reconstructionLog == null || !fs.exists(reconstructionLog)) ?
-          ") (no reconstruction log)": " with reconstruction log: (" +
-          reconstructionLog.toString()));
+          " (no reconstruction log)" :
+            " with reconstruction log: " + reconstructionLog.toString()));
     }
 
-    // Go through the 'mapdir' and 'loginfodir' together, make sure that all 
+    // Go through the 'mapdir' and 'infodir' together, make sure that all 
     // MapFiles are in a reliable state.  Every entry in 'mapdir' must have a 
     // corresponding one in 'loginfodir'. Without a corresponding log info
     // file, the entry in 'mapdir' must be deleted.
-    List<HStoreFile> hstoreFiles = HStoreFile.loadHStoreFiles(conf, dir,
-        encodedRegionName, familyName, fs);
+    List<HStoreFile> hstoreFiles = loadHStoreFiles(infodir, mapdir);
     for(HStoreFile hsf: hstoreFiles) {
       this.storefiles.put(Long.valueOf(hsf.loadInfo(fs)), hsf);
     }
@@ -624,8 +626,8 @@ class HStore implements HConstants {
     
     this.maxSeqId = getMaxSequenceId(hstoreFiles);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("maximum sequence id for hstore " + regionName + "/" +
-          familyName + " (" + storeName + ") is " + this.maxSeqId);
+      LOG.debug("maximum sequence id for hstore " + storeName + " is " +
+          this.maxSeqId);
     }
     
     doReconstructionLog(reconstructionLog, maxSeqId);
@@ -693,14 +695,14 @@ class HStore implements HConstants {
     TreeMap<HStoreKey, byte []> reconstructedCache =
       new TreeMap<HStoreKey, byte []>();
       
-    SequenceFile.Reader login = new SequenceFile.Reader(this.fs,
+    SequenceFile.Reader logReader = new SequenceFile.Reader(this.fs,
         reconstructionLog, this.conf);
     
     try {
       HLogKey key = new HLogKey();
       HLogEdit val = new HLogEdit();
       long skippedEdits = 0;
-      while (login.next(key, val)) {
+      while (logReader.next(key, val)) {
         maxSeqIdInLog = Math.max(maxSeqIdInLog, key.getLogSeqNum());
         if (key.getLogSeqNum() <= maxSeqID) {
           skippedEdits++;
@@ -714,14 +716,14 @@ class HStore implements HConstants {
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
         Text column = val.getColumn();
         if (column.equals(HLog.METACOLUMN)
-            || !key.getRegionName().equals(regionName)
-            || !HStoreKey.extractFamily(column).equals(this.familyName)) {
+            || !key.getRegionName().equals(info.getRegionName())
+            || !HStoreKey.extractFamily(column).equals(family.getFamilyName())) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Passing on edit " + key.getRegionName() + ", " +
                 column.toString() + ": " + 
                 new String(val.getVal(), UTF8_ENCODING) +
-                ", my region: " + regionName + ", my column: " +
-                this.familyName);
+                ", my region: " + info.getRegionName() + ", my column: " +
+                family.getFamilyName());
           }
           continue;
         }
@@ -733,7 +735,7 @@ class HStore implements HConstants {
         reconstructedCache.put(k, val.getVal());
       }
     } finally {
-      login.close();
+      logReader.close();
     }
     
     if (reconstructedCache.size() > 0) {
@@ -745,6 +747,76 @@ class HStore implements HConstants {
     }
   }
   
+  /*
+   * Creates a series of HStoreFiles loaded from the given directory.
+   * There must be a matching 'mapdir' and 'loginfo' pair of files.
+   * If only one exists, we'll delete it.
+   *
+   * @param infodir qualified path for info file directory
+   * @param mapdir qualified path for map file directory
+   * @throws IOException
+   */
+  private List<HStoreFile> loadHStoreFiles(Path infodir, Path mapdir)
+  throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("infodir: " + infodir.toString() + " mapdir: " +
+          mapdir.toString());
+    }
+    // Look first at info files.  If a reference, these contain info we need
+    // to create the HStoreFile.
+    Path infofiles[] = fs.listPaths(new Path[] {infodir});
+    ArrayList<HStoreFile> results = new ArrayList<HStoreFile>(infofiles.length);
+    ArrayList<Path> mapfiles = new ArrayList<Path>(infofiles.length);
+    for (Path p: infofiles) {
+      Matcher m = REF_NAME_PARSER.matcher(p.getName());
+      /*
+       *  *  *  *  *  N O T E  *  *  *  *  *
+       *  
+       *  We call isReference(Path, Matcher) here because it calls
+       *  Matcher.matches() which must be called before Matcher.group(int)
+       *  and we don't want to call Matcher.matches() twice.
+       *  
+       *  *  *  *  *  N O T E  *  *  *  *  *
+       */
+      boolean isReference = isReference(p, m);
+      long fid = Long.parseLong(m.group(1));
+
+      HStoreFile curfile = null;
+      HStoreFile.Reference reference = null;
+      if (isReference) {
+        reference = readSplitInfo(p, fs);
+      }
+      curfile = new HStoreFile(conf, fs, basedir, info.getEncodedName(),
+          family.getFamilyName(), fid, reference);
+      Path mapfile = curfile.getMapFilePath();
+      if (!fs.exists(mapfile)) {
+        fs.delete(curfile.getInfoFilePath());
+        LOG.warn("Mapfile " + mapfile.toString() + " does not exist. " +
+          "Cleaned up info file.  Continuing...");
+        continue;
+      }
+      
+      // TODO: Confirm referent exists.
+      
+      // Found map and sympathetic info file.  Add this hstorefile to result.
+      results.add(curfile);
+      // Keep list of sympathetic data mapfiles for cleaning info dir in next
+      // section.  Make sure path is fully qualified for compare.
+      mapfiles.add(mapfile);
+    }
+    
+    // List paths by experience returns fully qualified names -- at least when
+    // running on a mini hdfs cluster.
+    Path datfiles[] = fs.listPaths(new Path[] {mapdir});
+    for (int i = 0; i < datfiles.length; i++) {
+      // If does not have sympathetic info file, delete.
+      if (!mapfiles.contains(fs.makeQualified(datfiles[i]))) {
+        fs.delete(datfiles[i]);
+      }
+    }
+    return results;
+  }
+  
   //////////////////////////////////////////////////////////////////////////////
   // Bloom filters
   //////////////////////////////////////////////////////////////////////////////
@@ -754,12 +826,12 @@ class HStore implements HConstants {
    * If the HStore already exists, it will read in the bloom filter saved
    * previously. Otherwise, it will create a new bloom filter.
    */
-  private void loadOrCreateBloomFilter() throws IOException {
+  private Filter loadOrCreateBloomFilter() throws IOException {
     Path filterFile = new Path(filterDir, BLOOMFILTER_FILE_NAME);
+    Filter bloomFilter = null;
     if(fs.exists(filterFile)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("loading bloom filter for " + this.regionName + "/" +
-            this.familyName + " (" + this.storeName + ")");
+        LOG.debug("loading bloom filter for " + this.storeName);
       }
       
       BloomFilterDescriptor.BloomFilterType type =
@@ -777,6 +849,11 @@ class HStore implements HConstants {
         
       case RETOUCHED_BLOOMFILTER:
         bloomFilter = new RetouchedBloomFilter();
+        break;
+      
+      default:
+        throw new IllegalArgumentException("unknown bloom filter type: " +
+            type);
       }
       FSDataInputStream in = fs.open(filterFile);
       try {
@@ -786,8 +863,7 @@ class HStore implements HConstants {
       }
     } else {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("creating bloom filter for " + this.regionName + "/" +
-            this.familyName + " (" + this.storeName + ")");
+        LOG.debug("creating bloom filter for " + this.storeName);
       }
 
       BloomFilterDescriptor.BloomFilterType type =
@@ -812,6 +888,7 @@ class HStore implements HConstants {
             family.getBloomFilter().nbHash);
       }
     }
+    return bloomFilter;
   }
 
   /**
@@ -821,8 +898,7 @@ class HStore implements HConstants {
    */
   private void flushBloomFilter() throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("flushing bloom filter for " + this.regionName + "/" +
-          this.familyName + " (" + this.storeName + ")");
+      LOG.debug("flushing bloom filter for " + this.storeName);
     }
     FSDataOutputStream out =
       fs.create(new Path(filterDir, BLOOMFILTER_FILE_NAME));
@@ -832,8 +908,7 @@ class HStore implements HConstants {
       out.close();
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("flushed bloom filter for " + this.regionName + "/" +
-          this.familyName + " (" + this.storeName + ")");
+      LOG.debug("flushed bloom filter for " + this.storeName);
     }
   }
   
@@ -875,8 +950,7 @@ class HStore implements HConstants {
       this.readers.clear();
       result = new ArrayList<HStoreFile>(storefiles.values());
       this.storefiles.clear();
-      LOG.debug("closed " + this.regionName + "/" + this.familyName + " ("
-          + this.storeName + ")");
+      LOG.debug("closed " + this.storeName);
       return result;
     } finally {
       this.lock.writeLock().unlock();
@@ -918,8 +992,8 @@ class HStore implements HConstants {
     
     synchronized(flushLock) {
       // A. Write the Maps out to the disk
-      HStoreFile flushedFile = HStoreFile.obtainNewHStoreFile(conf, dir,
-        encodedRegionName, familyName, fs);
+      HStoreFile flushedFile = new HStoreFile(conf, fs, basedir,
+        info.getEncodedName(), family.getFamilyName(), -1L, null);
       String name = flushedFile.toString();
       MapFile.Writer out = flushedFile.getWriter(this.fs, this.compression,
         this.bloomFilter);
@@ -940,7 +1014,7 @@ class HStore implements HConstants {
         for (Map.Entry<HStoreKey, byte []> es: cache.entrySet()) {
           HStoreKey curkey = es.getKey();
           TextSequence f = HStoreKey.extractFamily(curkey.getColumn());
-          if (f.equals(this.familyName)) {
+          if (f.equals(this.family.getFamilyName())) {
             entries++;
             out.append(curkey, new ImmutableBytesWritable(es.getValue()));
           }
@@ -970,7 +1044,7 @@ class HStore implements HConstants {
           LOG.debug("Added " + name + " with " + entries +
             " entries, sequence id " + logCacheFlushId + ", and size " +
             StringUtils.humanReadableInt(flushedFile.length()) + " for " +
-            this.regionName + "/" + this.familyName);
+            this.storeName);
         }
       } finally {
         this.lock.writeLock().unlock();
@@ -991,7 +1065,7 @@ class HStore implements HConstants {
     if (this.storefiles != null) {
       compactionNeeded = this.storefiles.size() >= this.compactionThreshold;
       if (LOG.isDebugEnabled()) {
-        LOG.debug("compaction for HStore " + regionName + "/" + familyName +
+        LOG.debug("compaction for HStore " + storeName +
             (compactionNeeded ? " " : " not ") + "needed.");
       }
     }
@@ -1019,17 +1093,16 @@ class HStore implements HConstants {
    */
   boolean compact() throws IOException {
     synchronized (compactLock) {
-      Path curCompactStore = getCompactionDir();
       if (LOG.isDebugEnabled()) {
         LOG.debug("started compaction of " + storefiles.size() +
-          " files using " + curCompactStore.toString() + " for " +
-          this.regionName + "/" + this.familyName);
+          " files using " + compactionDir.toString() + " for " +
+          this.storeName);
       }
-      if (this.fs.exists(curCompactStore)) {
+      if (this.fs.exists(compactionDir)) {
         // Clean out its content in prep. for this new compaction.  Has either
         // aborted previous compaction or it has content of a previous
         // compaction.
-        Path [] toRemove = this.fs.listPaths(new Path [] {curCompactStore});
+        Path [] toRemove = this.fs.listPaths(new Path [] {compactionDir});
         for (int i = 0; i < toRemove.length; i++) {
           this.fs.delete(toRemove[i]);
         }
@@ -1042,22 +1115,21 @@ class HStore implements HConstants {
       if (filesToCompact.size() < 1 ||
         (filesToCompact.size() == 1 && !filesToCompact.get(0).isReference())) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("nothing to compact for " + this.regionName + "/" +
-              this.familyName + " (" + this.storeName + ")");
+          LOG.debug("nothing to compact for " + this.storeName);
         }
         return false;
       }
 
-      if (!fs.exists(curCompactStore) && !fs.mkdirs(curCompactStore)) {
-        LOG.warn("Mkdir on " + curCompactStore.toString() + " for " +
-            this.regionName + "/" +
-            this.familyName + " failed");
+      if (!fs.exists(compactionDir) && !fs.mkdirs(compactionDir)) {
+        LOG.warn("Mkdir on " + compactionDir.toString() + " for " +
+            this.storeName + " failed");
         return false;
       }
 
-      // Step through them, writing to the brand-new TreeMap
-      HStoreFile compactedOutputFile = new HStoreFile(conf, this.compactionDir,
-        encodedRegionName, familyName, -1);
+      // Step through them, writing to the brand-new MapFile
+      HStoreFile compactedOutputFile = new HStoreFile(conf, fs, 
+          this.compactionDir, info.getEncodedName(), family.getFamilyName(),
+          -1L, null);
       MapFile.Writer compactedOut = compactedOutputFile.getWriter(this.fs,
         this.compression, this.bloomFilter);
       try {
@@ -1071,24 +1143,8 @@ class HStore implements HConstants {
       long maxId = getMaxSequenceId(filesToCompact);
       compactedOutputFile.writeInfo(fs, maxId);
 
-      // Write out a list of data files that we're replacing
-      Path filesToReplace = new Path(curCompactStore, COMPACTION_TO_REPLACE);
-      FSDataOutputStream out = fs.create(filesToReplace);
-      try {
-        out.writeInt(filesToCompact.size());
-        for (HStoreFile hsf : filesToCompact) {
-          hsf.write(out);
-        }
-      } finally {
-        out.close();
-      }
-
-      // Indicate that we're done.
-      Path doneFile = new Path(curCompactStore, COMPACTION_DONE);
-      fs.create(doneFile).close();
-
       // Move the compaction into place.
-      completeCompaction(curCompactStore);
+      completeCompaction(filesToCompact, compactedOutputFile);
       return true;
     }
   }
@@ -1121,7 +1177,7 @@ class HStore implements HConstants {
         // culprit.
         LOG.warn("Failed with " + e.toString() + ": " + hsf.toString() +
           (hsf.isReference() ? " " + hsf.getReference().toString() : "") +
-          " for " + this.regionName + "/" + this.familyName);
+          " for " + this.storeName);
         closeCompactionReaders(rdrs);
         throw e;
       }
@@ -1221,8 +1277,7 @@ class HStore implements HConstants {
         try {
           rdrs[i].close();
         } catch (IOException e) {
-          LOG.warn("Exception closing reader for " + this.regionName + "/" +
-              this.familyName, e);
+          LOG.warn("Exception closing reader for " + this.storeName, e);
         }
       }
     }
@@ -1348,11 +1403,15 @@ class HStore implements HConstants {
    * 9) Allow new scanners to proceed.
    * </pre>
    * 
-   * @param curCompactStore Compaction to complete.
+   * @param compactedFiles list of files that were compacted
+   * @param compactedFile HStoreFile that is the result of the compaction
+   * @throws IOException
    */
-  private void completeCompaction(final Path curCompactStore)
-  throws IOException {
+  private void completeCompaction(List<HStoreFile> compactedFiles,
+      HStoreFile compactedFile) throws IOException {
+    
     // 1. Wait for active scanners to exit
+    
     newScannerLock.writeLock().lock();                  // prevent new scanners
     try {
       synchronized (activeScanners) {
@@ -1369,54 +1428,27 @@ class HStore implements HConstants {
       }
 
       try {
-        Path doneFile = new Path(curCompactStore, COMPACTION_DONE);
-        if (!fs.exists(doneFile)) {
-          // The last execution didn't finish the compaction, so there's nothing 
-          // we can do.  We'll just have to redo it. Abandon it and return.
-          LOG.warn("Redo failed compaction (missing 'done' file) for " +
-              this.regionName + "/" + this.familyName);
-          return;
-        }
-
-        // 3. Load in the files to be deleted.
-        Vector<HStoreFile> toCompactFiles = new Vector<HStoreFile>();
-        Path filesToReplace = new Path(curCompactStore, COMPACTION_TO_REPLACE);
-        DataInputStream in = new DataInputStream(fs.open(filesToReplace));
-        try {
-          int numfiles = in.readInt();
-          for(int i = 0; i < numfiles; i++) {
-            HStoreFile hsf = new HStoreFile(conf);
-            hsf.readFields(in);
-            toCompactFiles.add(hsf);
-          }
-        } finally {
-          in.close();
-        }
-
-        // 4. Moving the new MapFile into place.
-        HStoreFile compactedFile = new HStoreFile(conf, this.compactionDir,
-            encodedRegionName, familyName, -1);
-        // obtainNewHStoreFile does its best to generate a filename that does not
-        // currently exist.
-        HStoreFile finalCompactedFile = HStoreFile.obtainNewHStoreFile(conf, dir,
-            encodedRegionName, familyName, fs);
+        // 3. Moving the new MapFile into place.
+        
+        HStoreFile finalCompactedFile = new HStoreFile(conf, fs, basedir,
+            info.getEncodedName(), family.getFamilyName(), -1, null);
         if(LOG.isDebugEnabled()) {
           LOG.debug("moving " + compactedFile.toString() + " in " +
               this.compactionDir.toString() + " to " +
-              finalCompactedFile.toString() + " in " + dir.toString() +
-              " for " + this.regionName + "/" + this.familyName);
+              finalCompactedFile.toString() + " in " + basedir.toString() +
+              " for " + this.storeName);
         }
         if (!compactedFile.rename(this.fs, finalCompactedFile)) {
           LOG.error("Failed move of compacted file " +
-              finalCompactedFile.toString() + " for " + this.regionName + "/" +
-              this.familyName);
+              finalCompactedFile.toString() + " for " + this.storeName);
           return;
         }
 
-        // 5. and 6. Unload all the replaced MapFiles, close and delete.
-        Vector<Long> toDelete = new Vector<Long>(toCompactFiles.size());
+        // 4. and 5. Unload all the replaced MapFiles, close and delete.
+        
+        List<Long> toDelete = new ArrayList<Long>();
         for (Map.Entry<Long, HStoreFile> e: this.storefiles.entrySet()) {
-          if (!toCompactFiles.contains(e.getValue())) {
+          if (!compactedFiles.contains(e.getValue())) {
             continue;
           }
           Long key = e.getKey();
@@ -1433,24 +1465,24 @@ class HStore implements HConstants {
             hsf.delete();
           }
 
-          // 7. Loading the new TreeMap.
+          // 6. Loading the new TreeMap.
           Long orderVal = Long.valueOf(finalCompactedFile.loadInfo(fs));
           this.readers.put(orderVal,
             finalCompactedFile.getReader(this.fs, this.bloomFilter));
           this.storefiles.put(orderVal, finalCompactedFile);
         } catch (IOException e) {
-          LOG.error("Failed replacing compacted files for " +
-              this.regionName + "/" + this.familyName + ". Compacted file is " +
-              finalCompactedFile.toString() + ".  Files replaced are " +
-              toCompactFiles.toString() +
+          e = RemoteExceptionHandler.checkIOException(e);
+          LOG.error("Failed replacing compacted files for " + this.storeName +
+              ". Compacted file is " + finalCompactedFile.toString() +
+              ".  Files replaced are " + compactedFiles.toString() +
               " some of which may have been already removed", e);
         }
       } finally {
-        // 8. Releasing the write-lock
+        // 7. Releasing the write-lock
         this.lock.writeLock().unlock();
       }
     } finally {
-      // 9. Allow new scanners to proceed.
+      // 8. Allow new scanners to proceed.
       newScannerLock.writeLock().unlock();
     }
   }
@@ -1505,18 +1537,7 @@ class HStore implements HConstants {
     }
   }
   
-  /*
-   * @return Path to the compaction directory for this column family.
-   * Compaction dir is a subdirectory of the region.  Needs to have the
-   * same regiondir/storefamily path prefix; HStoreFile constructor presumes
-   * it (TODO: Fix).
-   */
-  private Path getCompactionDir() {
-    return HStoreFile.getHStoreDir(this.compactionDir,
-      this.encodedRegionName, this.familyName);
-  }
-  
-  private MapFile.Reader [] getReaders() {
+  MapFile.Reader [] getReaders() {
     return this.readers.values().
       toArray(new MapFile.Reader[this.readers.size()]);
   }
@@ -1796,8 +1817,7 @@ class HStore implements HConstants {
         midKey.set(((HStoreKey)midkey).getRow());
       }
     } catch(IOException e) {
-      LOG.warn("Failed getting store size for " + this.regionName + "/" +
-          this.familyName, e);
+      LOG.warn("Failed getting store size for " + this.storeName, e);
     } finally {
       this.lock.readLock().unlock();
     }
@@ -1833,6 +1853,38 @@ class HStore implements HConstants {
   @Override
   public String toString() {
     return this.storeName;
+  }
+
+  /*
+   * @see writeSplitInfo(Path p, HStoreFile hsf, FileSystem fs)
+   */
+  static HStoreFile.Reference readSplitInfo(final Path p, final FileSystem fs)
+  throws IOException {
+    FSDataInputStream in = fs.open(p);
+    try {
+      HStoreFile.Reference r = new HStoreFile.Reference();
+      r.readFields(in);
+      return r;
+    } finally {
+      in.close();
+    }
+  }
+
+  /**
+   * @param p Path to check.
+   * @return True if the path has format of a HStoreFile reference.
+   */
+  public static boolean isReference(final Path p) {
+    return isReference(p, REF_NAME_PARSER.matcher(p.getName()));
+  }
+ 
+  private static boolean isReference(final Path p, final Matcher m) {
+    if (m == null || !m.matches()) {
+      LOG.warn("Failed match of store file name " + p.toString());
+      throw new RuntimeException("Failed match of store file name " +
+          p.toString());
+    }
+    return m.groupCount() > 1 && m.group(2) != null;
   }
 
   /**
@@ -1939,7 +1991,7 @@ class HStore implements HConstants {
           try {
             readers[i].close();
           } catch(IOException e) {
-            LOG.error(regionName + "/" + familyName + " closing sub-scanner", e);
+            LOG.error(storeName + " closing sub-scanner", e);
           }
         }
         
@@ -1959,7 +2011,7 @@ class HStore implements HConstants {
               try {
                 readers[i].close();
               } catch(IOException e) {
-                LOG.error(regionName + "/" + familyName + " closing scanner", e);
+                LOG.error(storeName + " closing scanner", e);
               }
             }
           }
@@ -2195,8 +2247,7 @@ class HStore implements HConstants {
         try {
           scanners[i].close();
         } catch (IOException e) {
-          LOG.warn(regionName + "/" + familyName + " failed closing scanner "
-              + i, e);
+          LOG.warn(storeName + " failed closing scanner " + i, e);
         }
       } finally {
         scanners[i] = null;
@@ -2217,7 +2268,7 @@ class HStore implements HConstants {
         synchronized (activeScanners) {
           int numberOfScanners = activeScanners.decrementAndGet();
           if (numberOfScanners < 0) {
-            LOG.error(regionName + "/" + familyName +
+            LOG.error(storeName +
                 " number of active scanners less than zero: " +
                 numberOfScanners + " resetting to zero");
             activeScanners.set(0);

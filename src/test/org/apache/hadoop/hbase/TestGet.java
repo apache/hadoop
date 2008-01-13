@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
@@ -28,8 +26,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.util.Writables;
@@ -42,6 +38,7 @@ public class TestGet extends HBaseTestCase {
   private static final Text ROW_KEY =
     new Text(HRegionInfo.rootRegionInfo.getRegionName());
   private static final String SERVER_ADDRESS = "foo.bar.com:1234";
+
 
   
   private void verifyGet(final HRegionIncommon r, final String expectedServer)
@@ -74,56 +71,35 @@ public class TestGet extends HBaseTestCase {
    */
   public void testGet() throws IOException {
     MiniDFSCluster cluster = null;
+    HRegion region = null;
 
     try {
       
       // Initialization
       
       cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
-      FileSystem fs = cluster.getFileSystem();
-      Path dir = new Path("/hbase");
-      fs.mkdirs(dir);
       
       HTableDescriptor desc = new HTableDescriptor("test");
       desc.addFamily(new HColumnDescriptor(CONTENTS.toString()));
       desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
       
-      HRegionInfo info = new HRegionInfo(desc, null, null);
-      Path regionDir = HRegion.getRegionDir(dir,
-          HRegionInfo.encodeRegionName(info.getRegionName()));
-      fs.mkdirs(regionDir);
-      
-      HLog log = new HLog(fs, new Path(regionDir, "log"), conf, null);
-
-      HRegion region = new HRegion(dir, log, fs, conf, info, null, null);
+      region = createNewHRegion(desc, null, null);
       HRegionIncommon r = new HRegionIncommon(region);
       
       // Write information to the table
       
       long lockid = r.startUpdate(ROW_KEY);
-      ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-      DataOutputStream s = new DataOutputStream(bytes);
-      CONTENTS.write(s);
-      r.put(lockid, CONTENTS, bytes.toByteArray());
-
-      bytes.reset();
-      HRegionInfo.rootRegionInfo.write(s);
-      
+      r.put(lockid, CONTENTS, Writables.getBytes(CONTENTS));
       r.put(lockid, HConstants.COL_REGIONINFO, 
           Writables.getBytes(HRegionInfo.rootRegionInfo));
-      
       r.commit(lockid, System.currentTimeMillis());
       
       lockid = r.startUpdate(ROW_KEY);
-
       r.put(lockid, HConstants.COL_SERVER, 
         Writables.stringToBytes(new HServerAddress(SERVER_ADDRESS).toString()));
-      
       r.put(lockid, HConstants.COL_STARTCODE, Writables.longToBytes(lockid));
-      
       r.put(lockid, new Text(HConstants.COLUMN_FAMILY + "region"), 
         "region".getBytes(HConstants.UTF8_ENCODING));
-
       r.commit(lockid, System.currentTimeMillis());
       
       // Verify that get works the same from memcache as when reading from disk
@@ -134,8 +110,7 @@ public class TestGet extends HBaseTestCase {
       // Close and re-open region, forcing updates to disk
       
       region.close();
-      log.rollWriter();
-      region = new HRegion(dir, log, fs, conf, info, null, null);
+      region = openClosedRegion(region);
       r = new HRegionIncommon(region);
       
       // Read it back
@@ -145,17 +120,13 @@ public class TestGet extends HBaseTestCase {
       // Update one family member and add a new one
       
       lockid = r.startUpdate(ROW_KEY);
-
       r.put(lockid, new Text(HConstants.COLUMN_FAMILY + "region"),
         "region2".getBytes(HConstants.UTF8_ENCODING));
-
       String otherServerName = "bar.foo.com:4321";
       r.put(lockid, HConstants.COL_SERVER, 
         Writables.stringToBytes(new HServerAddress(otherServerName).toString()));
-      
       r.put(lockid, new Text(HConstants.COLUMN_FAMILY + "junk"),
         "junk".getBytes(HConstants.UTF8_ENCODING));
-      
       r.commit(lockid, System.currentTimeMillis());
 
       verifyGet(r, otherServerName);
@@ -163,21 +134,22 @@ public class TestGet extends HBaseTestCase {
       // Close region and re-open it
       
       region.close();
-      log.rollWriter();
-      region = new HRegion(dir, log, fs, conf, info, null, null);
+      region = openClosedRegion(region);
       r = new HRegionIncommon(region);
 
       // Read it back
       
       verifyGet(r, otherServerName);
 
-      // Close region once and for all
-      
-      region.close();
-      log.closeAndDelete();
-      
     } finally {
-      StaticTestEnvironment.shutdownDfs(cluster);
+      if (region != null) {
+        // Close region once and for all
+        region.close();
+        region.getLog().closeAndDelete();
+      }
+      if (cluster != null) {
+        StaticTestEnvironment.shutdownDfs(cluster);
+      }
     }
   }
 }

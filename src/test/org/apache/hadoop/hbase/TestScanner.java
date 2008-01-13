@@ -25,8 +25,6 @@ import java.io.IOException;
 import java.util.TreeMap;
 
 import org.apache.hadoop.dfs.MiniDFSCluster;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 
@@ -50,9 +48,18 @@ public class TestScanner extends HBaseTestCase {
   
   private static final long START_CODE = Long.MAX_VALUE;
 
+  private MiniDFSCluster cluster = null;
   private HRegion r;
   private HRegionIncommon region;
 
+  /** {@inheritDoc} */
+  @Override
+  public void setUp() throws Exception {
+    cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+    super.setUp();
+    
+  }
+  
   /** Compare the HRegionInfo we read from HBase to what we stored */
   private void validateRegionInfo(byte [] regionBytes) throws IOException {
     HRegionInfo info =
@@ -127,26 +134,8 @@ public class TestScanner extends HBaseTestCase {
    * @throws IOException
    */
   public void testScanner() throws IOException {
-    MiniDFSCluster cluster = null;
-    FileSystem fs = null;
-    
     try {
-      
-      // Initialization
-      
-      HBaseConfiguration conf = new HBaseConfiguration();
-      cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
-      fs = cluster.getFileSystem();
-      Path dir = new Path("/hbase");
-      fs.mkdirs(dir);
-      
-      Path regionDir = HRegion.getRegionDir(dir,
-          HRegionInfo.encodeRegionName(REGION_INFO.getRegionName()));
-      fs.mkdirs(regionDir);
-      
-      HLog log = new HLog(fs, new Path(regionDir, "log"), conf, null);
-
-      r = new HRegion(dir, log, fs, conf, REGION_INFO, null, null);
+      r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
       region = new HRegionIncommon(r);
       
       // Write information to the meta table
@@ -168,8 +157,7 @@ public class TestScanner extends HBaseTestCase {
       // Close and re-open
       
       r.close();
-      log.rollWriter();
-      r = new HRegion(dir, log, fs, conf, REGION_INFO, null, null);
+      r = openClosedRegion(r);
       region = new HRegionIncommon(r);
 
       // Verify we can get the data back now that it is on disk.
@@ -209,8 +197,7 @@ public class TestScanner extends HBaseTestCase {
       // Close and reopen
       
       r.close();
-      log.rollWriter();
-      r = new HRegion(dir, log, fs, conf, REGION_INFO, null, null);
+      r = openClosedRegion(r);
       region = new HRegionIncommon(r);
 
       // Validate again
@@ -246,8 +233,7 @@ public class TestScanner extends HBaseTestCase {
       // Close and reopen
       
       r.close();
-      log.rollWriter();
-      r = new HRegion(dir, log, fs, conf, REGION_INFO, null, null);
+      r = openClosedRegion(r);
       region = new HRegionIncommon(r);
 
       // Validate again
@@ -258,7 +244,7 @@ public class TestScanner extends HBaseTestCase {
       // clean up
       
       r.close();
-      log.closeAndDelete();
+      r.getLog().closeAndDelete();
       
     } finally {
       StaticTestEnvironment.shutdownDfs(cluster);

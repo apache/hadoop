@@ -33,15 +33,20 @@ import org.apache.hadoop.io.Text;
  */
 public class TestInfoServers extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestInfoServers.class);
-  
+
+  @Override  
   protected void setUp() throws Exception {
     super.setUp();
   }
 
+  @Override
   protected void tearDown() throws Exception {
     super.tearDown();
   }
   
+  /**
+   * @throws Exception
+   */
   public void testInfoServersAreUp() throws Exception {
     // Bring up info servers on 'odd' port numbers in case the test is not
     // sourcing the src/test/hbase-default.xml.
