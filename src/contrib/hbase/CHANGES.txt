@@ -26,6 +26,7 @@ Trunk (unreleased changes)
                 (Bryan Duxbury via Stack)
     HADOOP-2240 Truncate for hbase (Edward Yoon via Stack)
     HADOOP-2389 Provide multiple language bindings for HBase (Thrift)
+                (David Simpson via Stack)
 
   OPTIMIZATIONS
    HADOOP-2479 Save on number of Text object creations

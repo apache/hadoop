@@ -152,6 +152,18 @@ public class BloomFilterDescriptor implements WritableComparable {
     return value.toString();
   }
 
+  public BloomFilterType getType() {
+    return filterType;
+  }
+  
+  public int getVectorSize() {
+    return vectorSize;
+  }
+  
+  public int getNbHash() {
+    return nbHash;
+  }
+  
   /** {@inheritDoc} */
   @Override
   public boolean equals(Object obj) {
