@@ -22,14 +22,16 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
-import org.apache.commons.logging.*;
 
 /**
  * Test the functionality of deleteFamily.
  */
 public class TestDeleteFamily extends HBaseTestCase {
+  static final Log LOG = LogFactory.getLog(TestDeleteFamily.class);
   private MiniDFSCluster miniHdfs;
 
   @Override
@@ -45,14 +47,9 @@ public class TestDeleteFamily extends HBaseTestCase {
   public void testDeleteFamily() throws Exception {
     HRegion region = null;
     HRegionIncommon region_incommon = null;
-    HLog hlog = new HLog(this.miniHdfs.getFileSystem(), this.testDir,
-      this.conf, null);
-    
-    try{
+    try {
       HTableDescriptor htd = createTableDescriptor(getName());
-      HRegionInfo hri = new HRegionInfo(htd, null, null);
-      region = new HRegion(this.testDir, hlog, this.miniHdfs.getFileSystem(),
-        this.conf, hri, null, null);
+      region = createNewHRegion(htd, null, null);
       region_incommon = new HRegionIncommon(region);
       
       // test memcache
@@ -67,8 +64,8 @@ public class TestDeleteFamily extends HBaseTestCase {
         } catch (Exception e) {
           e.printStackTrace();
         }
+        region.getLog().closeAndDelete();
       }
-      hlog.closeAndDelete();
     }
   }
     
@@ -156,7 +153,8 @@ public class TestDeleteFamily extends HBaseTestCase {
   private String cellData(int tsNum, boolean flush){
     return "t" + tsNum + " data" + (flush ? " - with flush" : "");
   }
-  
+
+  @Override
   protected void tearDown() throws Exception {
     if (this.miniHdfs != null) {
       this.miniHdfs.shutdown();

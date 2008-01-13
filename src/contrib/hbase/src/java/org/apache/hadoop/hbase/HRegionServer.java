@@ -92,6 +92,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   protected final HServerInfo serverInfo;
   protected final HBaseConfiguration conf;
+  private FileSystem fs;
+  private Path rootDir;
   private final Random rand = new Random();
   
   // region name -> HRegion
@@ -138,15 +140,18 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * is registered as a shutdown hook in the HRegionServer constructor and is
    * only called when the HRegionServer receives a kill signal.
    */
-  class ShutdownThread 
-    extends Thread {
-    
+  class ShutdownThread extends Thread {
     private final HRegionServer instance;
     
+    /**
+     * @param instance
+     */
     public ShutdownThread(HRegionServer instance) {
       this.instance = instance;
     }
 
+    /** {@inheritDoc} */
+    @Override
     public synchronized void start() {
       LOG.info("Starting shutdown thread.");
       
@@ -914,6 +919,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         }
         this.conf.set(key, value);
       }
+      this.fs = FileSystem.get(this.conf);
+      this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
       this.log = setupHLog();
       startServiceThreads();
     } catch (IOException e) {
@@ -929,15 +936,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private HLog setupHLog() throws RegionServerRunningException,
     IOException {
     
-    String rootDir = this.conf.get(HConstants.HBASE_DIR);
-    LOG.info("Root dir: " + rootDir);
-    Path logdir = new Path(new Path(rootDir), "log" + "_" + getThisIP() + "_" +
+    Path logdir = new Path(rootDir, "log" + "_" + getThisIP() + "_" +
         this.serverInfo.getStartCode() + "_" + 
         this.serverInfo.getServerAddress().getPort());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Log dir " + logdir);
     }
-    FileSystem fs = FileSystem.get(this.conf);
     if (fs.exists(logdir)) {
       throw new RegionServerRunningException("region server already " +
         "running at " + this.serverInfo.getServerAddress().toString() +
@@ -1209,9 +1213,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     HRegion region = onlineRegions.get(regionInfo.getRegionName());
     if(region == null) {
       try {
-        region = new HRegion(new Path(this.conf.get(HConstants.HBASE_DIR)),
-            this.log, FileSystem.get(conf), conf, regionInfo, null,
-            this.cacheFlusher);
+        region = new HRegion(
+            HTableDescriptor.getTableDir(rootDir,
+                regionInfo.getTableDesc().getName()
+            ),
+            this.log, this.fs, conf, regionInfo, null, this.cacheFlusher
+        );
         
       } catch (IOException e) {
         LOG.error("error opening region " + regionInfo.getRegionName(), e);
@@ -1651,9 +1658,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   protected boolean checkFileSystem() {
     if (this.fsOk) {
-      FileSystem fs = null;
       try {
-        fs = FileSystem.get(this.conf);
         if (fs != null && !FSUtils.isFileSystemAvailable(fs)) {
           LOG.fatal("Shutting down HRegionServer: file system not available");
           this.abortRequested = true;

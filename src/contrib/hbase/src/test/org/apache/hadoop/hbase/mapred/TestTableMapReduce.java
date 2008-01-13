@@ -27,7 +27,6 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -69,7 +68,6 @@ public class TestTableMapReduce extends MultiRegionTable {
   };
 
   private MiniDFSCluster dfsCluster = null;
-  private FileSystem fs;
   private Path dir;
   private MiniHBaseCluster hCluster = null;
   
@@ -116,16 +114,19 @@ public class TestTableMapReduce extends MultiRegionTable {
    */
   @Override
   public void setUp() throws Exception {
-    super.setUp();
     dfsCluster = new MiniDFSCluster(conf, 1, true, (String[])null);
+
+    // Must call super.setup() after starting mini dfs cluster. Otherwise
+    // we get a local file system instead of hdfs
+    
+    super.setUp();
     try {
-      fs = dfsCluster.getFileSystem();
       dir = new Path("/hbase");
       fs.mkdirs(dir);
       // Start up HBase cluster
       // Only one region server.  MultiRegionServer manufacturing code below
       // depends on there being one region server only.
-      hCluster = new MiniHBaseCluster(conf, 1, dfsCluster);
+      hCluster = new MiniHBaseCluster(conf, 1, dfsCluster, true);
       LOG.info("Master is at " + this.conf.get(HConstants.MASTER_ADDRESS));
     } catch (Exception e) {
       StaticTestEnvironment.shutdownDfs(dfsCluster);
@@ -252,13 +253,13 @@ public class TestTableMapReduce extends MultiRegionTable {
             IdentityTableReduce.class, jobConf);
         LOG.info("Started " + SINGLE_REGION_TABLE_NAME);
         JobClient.runJob(jobConf);
-        
+
         LOG.info("Print table contents after map/reduce for " +
           SINGLE_REGION_TABLE_NAME);
-        scanTable(SINGLE_REGION_TABLE_NAME, true);
+      scanTable(SINGLE_REGION_TABLE_NAME, true);
 
-        // verify map-reduce results
-        verify(SINGLE_REGION_TABLE_NAME);
+      // verify map-reduce results
+      verify(SINGLE_REGION_TABLE_NAME);
       } finally {
         mrCluster.shutdown();
       }
@@ -306,7 +307,7 @@ public class TestTableMapReduce extends MultiRegionTable {
             IdentityTableReduce.class, jobConf);
         LOG.info("Started " + MULTI_REGION_TABLE_NAME);
         JobClient.runJob(jobConf);
-        
+
         // verify map-reduce results
         verify(MULTI_REGION_TABLE_NAME);
       } finally {

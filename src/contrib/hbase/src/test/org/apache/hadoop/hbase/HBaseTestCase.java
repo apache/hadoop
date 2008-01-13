@@ -26,7 +26,8 @@ import java.util.Random;
 
 import junit.framework.TestCase;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
@@ -37,13 +38,16 @@ import org.apache.hadoop.io.Text;
  * Abstract base class for test cases. Performs all static initialization
  */
 public abstract class HBaseTestCase extends TestCase {
+  private static final Log LOG = LogFactory.getLog(HBaseTestCase.class);
+
   protected final static String COLFAMILY_NAME1 = "colfamily1:";
   protected final static String COLFAMILY_NAME2 = "colfamily2:";
   protected final static String COLFAMILY_NAME3 = "colfamily3:";
   protected static Text [] COLUMNS = new Text [] {new Text(COLFAMILY_NAME1),
     new Text(COLFAMILY_NAME2), new Text(COLFAMILY_NAME3)};
+  private boolean localfs = false;
   protected Path testDir = null;
-  protected FileSystem localFs = null;
+  protected FileSystem fs = null;
   protected static final char FIRST_CHAR = 'a';
   protected static final char LAST_CHAR = 'z';
   protected static final String PUNCTUATION = "~`@#$%^&*()-_+=:;',.<>/?[]{}|";
@@ -58,9 +62,7 @@ public abstract class HBaseTestCase extends TestCase {
   
   protected volatile HBaseConfiguration conf;
 
-  /**
-   * constructor
-   */
+  /** constructor */
   public HBaseTestCase() {
     super();
     init();
@@ -77,51 +79,88 @@ public abstract class HBaseTestCase extends TestCase {
   private void init() {
     conf = new HBaseConfiguration();
     try {
-      START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_ENCODING) + PUNCTUATION;
+      START_KEY =
+        new String(START_KEY_BYTES, HConstants.UTF8_ENCODING) + PUNCTUATION;
     } catch (UnsupportedEncodingException e) {
+      LOG.fatal("error during initialization", e);
       fail();
     }
   }
   
-  /** {@inheritDoc} */
+  /**
+   * {@inheritDoc}
+   * 
+   * Note that this method must be called after the mini hdfs cluster has
+   * started or we end up with a local file system.
+   * 
+   */
   @Override
   protected void setUp() throws Exception {
     super.setUp();
-    this.testDir = getUnitTestdir(getName());
-    this.localFs = FileSystem.getLocal(this.conf);
-    if (localFs.exists(testDir)) {
-      localFs.delete(testDir);
+    localfs =
+      (conf.get("fs.default.name", "file:///").compareTo("file::///") == 0);
+
+    try {
+      this.fs = FileSystem.get(conf);
+    } catch (IOException e) {
+      LOG.fatal("error getting file system", e);
+      throw e;
+    }
+    try {
+      if (localfs) {
+        this.testDir = getUnitTestdir(getName());
+        if (fs.exists(testDir)) {
+          fs.delete(testDir);
+        }
+      } else {
+        this.testDir = fs.makeQualified(
+            new Path(conf.get(HConstants.HBASE_DIR, HConstants.DEFAULT_HBASE_DIR))
+        );
+      }
+    } catch (Exception e) {
+      LOG.fatal("error during setup", e);
+      throw e;
     }
   }
   
   /** {@inheritDoc} */
   @Override
   protected void tearDown() throws Exception {
-    if (this.localFs != null && this.testDir != null &&
-        this.localFs.exists(testDir)) {
-      this.localFs.delete(testDir);
+    try {
+      if (localfs) {
+        if (this.fs.exists(testDir)) {
+          this.fs.delete(testDir);
+        }
+      }
+    } catch (Exception e) {
+      LOG.fatal("error during tear down", e);
     }
     super.tearDown();
   }
 
   protected Path getUnitTestdir(String testName) {
-    return new Path(StaticTestEnvironment.TEST_DIRECTORY_KEY, testName);
+    return new Path(
+        conf.get(StaticTestEnvironment.TEST_DIRECTORY_KEY, "test/build/data"),
+        testName);
   }
 
-  protected HRegion createNewHRegion(Path dir, Configuration c,
-      HTableDescriptor desc, Text startKey, Text endKey) throws IOException {
-    return createNewHRegion(dir, c, new HRegionInfo(desc, startKey, endKey));
+  protected HRegion createNewHRegion(HTableDescriptor desc, Text startKey,
+      Text endKey) throws IOException {
+    
+    FileSystem fs = FileSystem.get(conf);
+    Path rootdir = fs.makeQualified(
+        new Path(conf.get(HConstants.HBASE_DIR, HConstants.DEFAULT_HBASE_DIR)));
+    fs.mkdirs(rootdir);
+    
+    return HRegion.createHRegion(new HRegionInfo(desc, startKey, endKey),
+        rootdir, conf);
   }
   
-  protected HRegion createNewHRegion(Path dir, Configuration c,
-        HRegionInfo info) throws IOException {
-    Path regionDir = HRegion.getRegionDir(dir
-        , HRegionInfo.encodeRegionName(info.getRegionName()));
-    FileSystem fs = dir.getFileSystem(c);
-    fs.mkdirs(regionDir);
-    return new HRegion(dir,
-      new HLog(fs, new Path(regionDir, HConstants.HREGION_LOGDIR_NAME), conf,
-          null), fs, conf, info, null, null);
+  protected HRegion openClosedRegion(final HRegion closedRegion)
+  throws IOException {
+    return new HRegion(closedRegion.basedir, closedRegion.getLog(),
+      closedRegion.getFilesystem(), closedRegion.getConf(),
+      closedRegion.getRegionInfo(), null, null);
   }
   
   /**
@@ -275,6 +314,9 @@ public abstract class HBaseTestCase extends TestCase {
    * Implementors can flushcache.
    */
   public static interface FlushCache {
+    /**
+     * @throws IOException
+     */
     public void flushcache() throws IOException;
   }
   
@@ -285,21 +327,82 @@ public abstract class HBaseTestCase extends TestCase {
    * TOOD: Come up w/ a better name for this interface.
    */
   public static interface Incommon {
+    /**
+     * @param row
+     * @param column
+     * @return value for row/column pair
+     * @throws IOException
+     */
     public byte [] get(Text row, Text column) throws IOException;
-    public byte [][] get(Text row, Text column, int versions)
-    throws IOException;
+    /**
+     * @param row
+     * @param column
+     * @param versions
+     * @return value for row/column pair for number of versions requested
+     * @throws IOException
+     */
+    public byte [][] get(Text row, Text column, int versions) throws IOException;
+    /**
+     * @param row
+     * @param column
+     * @param ts
+     * @param versions
+     * @return value for row/column/timestamp tuple for number of versions
+     * @throws IOException
+     */
     public byte [][] get(Text row, Text column, long ts, int versions)
     throws IOException;
+    /**
+     * @param row
+     * @return batch update identifier
+     * @throws IOException
+     */
     public long startBatchUpdate(final Text row) throws IOException;
+    /**
+     * @param lockid
+     * @param column
+     * @param val
+     * @throws IOException
+     */
     public void put(long lockid, Text column, byte val[]) throws IOException;
+    /**
+     * @param lockid
+     * @param column
+     * @throws IOException
+     */
     public void delete(long lockid, Text column) throws IOException;
+    /**
+     * @param row
+     * @param column
+     * @param ts
+     * @throws IOException
+     */
     public void deleteAll(Text row, Text column, long ts) throws IOException;
+    /**
+     * @param lockid
+     * @throws IOException
+     */
     public void commit(long lockid) throws IOException;
+    /**
+     * @param lockid
+     * @param ts
+     * @throws IOException
+     */
     public void commit(long lockid, long ts) throws IOException;
+    /**
+     * @param lockid
+     * @throws IOException
+     */
     public void abort(long lockid) throws IOException;
+    /**
+     * @param columns
+     * @param firstRow
+     * @param ts
+     * @return scanner for specified columns, first row and timestamp
+     * @throws IOException
+     */
     public HScannerInterface getScanner(Text [] columns, Text firstRow,
-      long ts)
-    throws IOException;
+      long ts) throws IOException;
   }
   
   /**
@@ -316,17 +419,24 @@ public abstract class HBaseTestCase extends TestCase {
       }
     }
     
+    /**
+     * @param HRegion
+     */
     public HRegionIncommon(final HRegion HRegion) {
       this.region = HRegion;
       this.batch = null;
     }
-    public void abort(long lockid) throws IOException {
+    /** {@inheritDoc} */
+    public void abort(@SuppressWarnings("unused") long lockid) {
       this.batch = null;
     }
+    /** {@inheritDoc} */
     public void commit(long lockid) throws IOException {
       commit(lockid, HConstants.LATEST_TIMESTAMP);
     }
-    public void commit(long lockid, final long ts) throws IOException {
+    /** {@inheritDoc} */
+    public void commit(@SuppressWarnings("unused") long lockid, final long ts)
+    throws IOException {
       checkBatch();
       try {
         this.region.batchUpdate(ts, batch);
@@ -334,21 +444,29 @@ public abstract class HBaseTestCase extends TestCase {
         this.batch = null;
       }
     }
-    public void put(long lockid, Text column, byte[] val) throws IOException {
+    /** {@inheritDoc} */
+    public void put(long lockid, Text column, byte[] val) {
       checkBatch();
       this.batch.put(lockid, column, val);
     }
-    public void delete(long lockid, Text column) throws IOException {
+    /** {@inheritDoc} */
+    public void delete(long lockid, Text column) {
       checkBatch();
       this.batch.delete(lockid, column);
     }
+    /** {@inheritDoc} */
     public void deleteAll(Text row, Text column, long ts) throws IOException {
       this.region.deleteAll(row, column, ts);
     }
-    public long startBatchUpdate(Text row) throws IOException {
+    /** {@inheritDoc} */
+    public long startBatchUpdate(Text row) {
       return startUpdate(row);
     }
-    public long startUpdate(Text row) throws IOException {
+    /**
+     * @param row
+     * @return update id
+     */
+    public long startUpdate(Text row) {
       if (this.batch != null) {
         throw new IllegalStateException("Update already in progress");
       }
@@ -356,24 +474,33 @@ public abstract class HBaseTestCase extends TestCase {
       this.batch = new BatchUpdate(lockid);
       return batch.startUpdate(row);
     }
+    /** {@inheritDoc} */
     public HScannerInterface getScanner(Text [] columns, Text firstRow,
-        long ts)
-    throws IOException {
+        long ts) throws IOException {
       return this.region.getScanner(columns, firstRow, ts, null);
     }
+    /** {@inheritDoc} */
     public byte[] get(Text row, Text column) throws IOException {
       return this.region.get(row, column);
     }
+    /** {@inheritDoc} */
     public byte[][] get(Text row, Text column, int versions) throws IOException {
       return this.region.get(row, column, versions);
     }
+    /** {@inheritDoc} */
     public byte[][] get(Text row, Text column, long ts, int versions)
         throws IOException {
       return this.region.get(row, column, ts, versions);
     }
+    /**
+     * @param row
+     * @return values for each column in the specified row
+     * @throws IOException
+     */
     public Map<Text, byte []> getFull(Text row) throws IOException {
       return region.getFull(row);
     }
+    /** {@inheritDoc} */
     public void flushcache() throws IOException {
       this.region.flushcache();
     }
@@ -384,43 +511,55 @@ public abstract class HBaseTestCase extends TestCase {
    */
   public static class HTableIncommon implements Incommon {
     final HTable table;
+    /**
+     * @param table
+     */
     public HTableIncommon(final HTable table) {
       super();
       this.table = table;
     }
-    public void abort(long lockid) throws IOException {
+    /** {@inheritDoc} */
+    public void abort(long lockid) {
       this.table.abort(lockid);
     }
+    /** {@inheritDoc} */
     public void commit(long lockid) throws IOException {
       this.table.commit(lockid);
     }
+    /** {@inheritDoc} */
     public void commit(long lockid, final long ts) throws IOException {
       this.table.commit(lockid, ts);
     }
-    public void put(long lockid, Text column, byte[] val) throws IOException {
+    /** {@inheritDoc} */
+    public void put(long lockid, Text column, byte[] val) {
       this.table.put(lockid, column, val);
     }
-    public void delete(long lockid, Text column) throws IOException {
+    /** {@inheritDoc} */
+    public void delete(long lockid, Text column) {
       this.table.delete(lockid, column);
     }
+    /** {@inheritDoc} */
     public void deleteAll(Text row, Text column, long ts) throws IOException {
       this.table.deleteAll(row, column, ts);
     }
+    /** {@inheritDoc} */
     public long startBatchUpdate(Text row) {
       return this.table.startUpdate(row);
     }
+    /** {@inheritDoc} */
     public HScannerInterface getScanner(Text [] columns, Text firstRow,
-        long ts)
-    throws IOException {
+        long ts) throws IOException {
       return this.table.obtainScanner(columns, firstRow, ts, null);
     }
+    /** {@inheritDoc} */
     public byte[] get(Text row, Text column) throws IOException {
       return this.table.get(row, column);
     }
-    public byte[][] get(Text row, Text column, int versions)
-    throws IOException {
+    /** {@inheritDoc} */
+    public byte[][] get(Text row, Text column, int versions) throws IOException {
       return this.table.get(row, column, versions);
     }
+    /** {@inheritDoc} */
     public byte[][] get(Text row, Text column, long ts, int versions)
     throws IOException {
       return this.table.get(row, column, ts, versions);

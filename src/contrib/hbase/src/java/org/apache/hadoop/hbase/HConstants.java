@@ -78,9 +78,6 @@ public interface HConstants {
   /** Default HBase instance root directory */
   static final String DEFAULT_HBASE_DIR = "/hbase";
   
-  /** Used to construct the name of the directory in which a HRegion resides */
-  static final String HREGIONDIR_PREFIX = "hregion_";
-  
   /** Used to construct the name of the log directory for a region server */
   static final String HREGION_LOGDIR_NAME = "log";
 

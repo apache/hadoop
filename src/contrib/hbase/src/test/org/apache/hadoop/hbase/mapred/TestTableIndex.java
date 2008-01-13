@@ -76,15 +76,12 @@ public class TestTableIndex extends MultiRegionTable {
   private HTableDescriptor desc;
 
   private MiniDFSCluster dfsCluster = null;
-  private FileSystem fs;
   private Path dir;
   private MiniHBaseCluster hCluster = null;
 
   /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
-    super.setUp();
-
     // Make sure the cache gets flushed so we trigger a compaction(s) and
     // hence splits.
     conf.setInt("hbase.hregion.memcache.flush.size", 1024 * 1024);
@@ -101,21 +98,25 @@ public class TestTableIndex extends MultiRegionTable {
     desc.addFamily(new HColumnDescriptor(OUTPUT_COLUMN));
 
     dfsCluster = new MiniDFSCluster(conf, 1, true, (String[]) null);
-    try {
-      fs = dfsCluster.getFileSystem();
 
+    // Must call super.setUp after mini dfs cluster is started or else
+    // filesystem ends up being local
+    
+    super.setUp();
+
+    try {
       dir = new Path("/hbase");
       fs.mkdirs(dir);
 
       // Start up HBase cluster
-      hCluster = new MiniHBaseCluster(conf, 1, dfsCluster);
+      hCluster = new MiniHBaseCluster(conf, 1, dfsCluster, true);
 
       // Create a table.
       HBaseAdmin admin = new HBaseAdmin(conf);
       admin.createTable(desc);
 
       // Populate a table into multiple regions
-      makeMultiRegionTable(conf, hCluster, null, TABLE_NAME, INPUT_COLUMN);
+      makeMultiRegionTable(conf, hCluster, this.fs, TABLE_NAME, INPUT_COLUMN);
 
       // Verify table indeed has multiple regions
       HTable table = new HTable(conf, new Text(TABLE_NAME));
@@ -256,10 +257,11 @@ public class TestTableIndex extends MultiRegionTable {
       // ignore
     }
 
-    Path localDir = new Path(this.testDir, "index_" +
+    Path localDir = new Path(getUnitTestdir(getName()), "index_" +
       Integer.toString(new Random().nextInt()));
     this.fs.copyToLocalFile(new Path(INDEX_DIR), localDir);
-    Path [] indexDirs = this.localFs.listPaths(new Path [] {localDir});
+    FileSystem localfs = FileSystem.getLocal(conf);
+    Path [] indexDirs = localfs.listPaths(new Path [] {localDir});
     Searcher searcher = null;
     HScannerInterface scanner = null;
     try {

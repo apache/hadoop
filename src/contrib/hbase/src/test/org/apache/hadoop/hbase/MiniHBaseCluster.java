@@ -86,15 +86,17 @@ public class MiniHBaseCluster implements HConstants {
    * @param conf
    * @param nRegionNodes
    * @param dfsCluster
+   * @param deleteOnExit
    * @throws IOException
    */
   public MiniHBaseCluster(HBaseConfiguration conf, int nRegionNodes,
-      MiniDFSCluster dfsCluster) throws IOException {
+      MiniDFSCluster dfsCluster, boolean deleteOnExit) throws IOException {
 
     this.conf = conf;
     this.fs = dfsCluster.getFileSystem();
     this.cluster = dfsCluster;
     this.shutdownDFS = false;
+    this.deleteOnExit = deleteOnExit;
     init(nRegionNodes);
   }
 

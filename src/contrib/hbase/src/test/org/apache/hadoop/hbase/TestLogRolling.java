@@ -118,7 +118,7 @@ public class TestLogRolling extends HBaseTestCase {
   }
   
   private void startAndWriteData() throws Exception {
-    cluster = new MiniHBaseCluster(conf, 1, dfs);
+    cluster = new MiniHBaseCluster(conf, 1, dfs, true);
     try {
       Thread.sleep(10 * 1000);                  // Wait for region server to start
     } catch (InterruptedException e) {

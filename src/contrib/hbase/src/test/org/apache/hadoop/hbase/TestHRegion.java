@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.TreeMap;
 
 import org.apache.hadoop.dfs.MiniDFSCluster;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 
@@ -39,7 +38,8 @@ import org.apache.log4j.Logger;
  * A lot of the meta information for an HRegion now lives inside other
  * HRegions or in the HBaseMaster, so only basic testing is possible.
  */
-public class TestHRegion extends HBaseTestCase implements RegionUnavailableListener {
+public class TestHRegion extends HBaseTestCase
+implements RegionUnavailableListener {
   static final Logger LOG =
     Logger.getLogger(TestHRegion.class.getName());
   
@@ -61,6 +61,12 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
       read();
       cleanup();
     } finally {
+      if (r != null) {
+        r.close();
+      }
+      if (log != null) {
+        log.closeAndDelete();
+      }
       StaticTestEnvironment.shutdownDfs(cluster);
     }
   }
@@ -78,9 +84,6 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
   private static final Text ANCHOR_SECONDCOL = new Text("anchor:secondcol");
   
   private MiniDFSCluster cluster = null;
-  private FileSystem fs = null;
-  private Path parentdir = null;
-  private Path newlogdir = null;
   private HLog log = null;
   private HTableDescriptor desc = null;
   HRegion r = null;
@@ -93,17 +96,12 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
   private void setup() throws IOException {
 
     cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
-    fs = cluster.getFileSystem();
-    parentdir = new Path("/hbase");
-    fs.mkdirs(parentdir);
-    newlogdir = new Path(parentdir, "log");
 
-    log = new HLog(fs, newlogdir, conf, null);
     desc = new HTableDescriptor("test");
     desc.addFamily(new HColumnDescriptor("contents:"));
     desc.addFamily(new HColumnDescriptor("anchor:"));
-    r = new HRegion(parentdir, log, fs, conf, 
-        new HRegionInfo(desc, null, null), null, null);
+    r = createNewHRegion(desc, null, null);
+    log = r.getLog();
     region = new HRegionIncommon(r);
   }
 
@@ -162,7 +160,7 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
         + ((System.currentTimeMillis() - startTime) / 1000.0));
   }
   
-  private void badPuts() throws IOException {
+  private void badPuts() {
     
     // Try put with bad lockid.
     boolean exceptionThrown = false;
@@ -799,7 +797,10 @@ public class TestHRegion extends HBaseTestCase implements RegionUnavailableListe
   
   private void cleanup() {
     try {
+      r.close();
+      r = null;
       log.closeAndDelete();
+      log = null;
     } catch (IOException e) {
       e.printStackTrace();
     }

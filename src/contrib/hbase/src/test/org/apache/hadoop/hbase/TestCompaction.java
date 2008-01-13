@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
+import org.apache.hadoop.dfs.MiniDFSCluster;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -32,7 +34,6 @@ import org.apache.hadoop.io.Text;
  */
 public class TestCompaction extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
-  private HLog hlog = null;
   private HRegion r = null;
   private static final String COLUMN_FAMILY = COLFAMILY_NAME1;
   private final Text STARTROW;
@@ -40,6 +41,8 @@ public class TestCompaction extends HBaseTestCase {
   private static final Text COLUMN_FAMILY_TEXT_MINUS_COLON =
     new Text(COLUMN_FAMILY.substring(0, COLUMN_FAMILY.length() - 1));
   private static final int COMPACTION_THRESHOLD = MAXVERSIONS;
+
+  private MiniDFSCluster cluster;
   
   /** constructor */
   public TestCompaction() {
@@ -48,24 +51,27 @@ public class TestCompaction extends HBaseTestCase {
     
     // Set cache flush size to 1MB
     conf.setInt("hbase.hregion.memcache.flush.size", 1024*1024);
+    this.cluster = null;
   }
   
   /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
+    this.cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
     super.setUp();
-    this.hlog = new HLog(this.localFs, this.testDir, this.conf, null);
     HTableDescriptor htd = createTableDescriptor(getName());
-    HRegionInfo hri = new HRegionInfo(htd, null, null);
-    this.r =
-      new HRegion(testDir, hlog, this.localFs, this.conf, hri, null, null);
+    this.r = createNewHRegion(htd, null, null);
   }
   
   /** {@inheritDoc} */
   @Override
   public void tearDown() throws Exception {
+    HLog hlog = r.getLog();
     this.r.close();
-    this.hlog.closeAndDelete();
+    hlog.closeAndDelete();
+    if (this.cluster != null) {
+      StaticTestEnvironment.shutdownDfs(cluster);
+    }
     super.tearDown();
   }
   
@@ -158,7 +164,7 @@ public class TestCompaction extends HBaseTestCase {
     assertNull(bytes);
     // Assert the store files do not have the first record 'aaa' keys in them.
     for (MapFile.Reader reader:
-        this.r.stores.get(COLUMN_FAMILY_TEXT_MINUS_COLON).readers.values()) {
+        this.r.stores.get(COLUMN_FAMILY_TEXT_MINUS_COLON).getReaders()) {
       reader.reset();
       HStoreKey key = new HStoreKey();
       ImmutableBytesWritable val = new ImmutableBytesWritable();

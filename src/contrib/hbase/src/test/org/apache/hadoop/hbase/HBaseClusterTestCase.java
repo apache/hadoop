@@ -115,7 +115,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     threadDumpingJoin(this.cluster.getMaster());
   }
 
-  public void threadDumpingJoin(final Thread t) {
+  protected void threadDumpingJoin(final Thread t) {
     if (t == null) {
       return;
     }

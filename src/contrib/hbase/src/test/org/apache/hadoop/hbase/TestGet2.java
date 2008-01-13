@@ -49,13 +49,9 @@ public class TestGet2 extends HBaseTestCase {
   public void testGetFull() throws Exception {
     HRegion region = null;
     HScannerInterface scanner = null;
-    HLog hlog = new HLog(this.miniHdfs.getFileSystem(), this.testDir,
-      this.conf, null);
     try {
       HTableDescriptor htd = createTableDescriptor(getName());
-      HRegionInfo hri = new HRegionInfo(htd, null, null);
-      region = new HRegion(this.testDir, hlog, this.miniHdfs.getFileSystem(),
-        this.conf, hri, null, null);
+      region = createNewHRegion(htd, null, null);
       for (int i = 0; i < COLUMNS.length; i++) {
         addContent(region, COLUMNS[i].toString());
       }
@@ -95,22 +91,20 @@ public class TestGet2 extends HBaseTestCase {
         } catch (Exception e) {
           e.printStackTrace();
         }
+        region.getLog().closeAndDelete();
       }
-      hlog.closeAndDelete();
     }
   }
   
+  /**
+   * @throws IOException
+   */
   public void testGetAtTimestamp() throws IOException{
     HRegion region = null;
     HRegionIncommon region_incommon = null;
-    HLog hlog = new HLog(this.miniHdfs.getFileSystem(), this.testDir,
-      this.conf, null);
-
     try {
       HTableDescriptor htd = createTableDescriptor(getName());
-      HRegionInfo hri = new HRegionInfo(htd, null, null);
-      region = new HRegion(this.testDir, hlog, this.miniHdfs.getFileSystem(),
-        this.conf, hri, null, null);
+      region = createNewHRegion(htd, null, null);
       region_incommon = new HRegionIncommon(region);
       
       long right_now = System.currentTimeMillis();
@@ -141,10 +135,9 @@ public class TestGet2 extends HBaseTestCase {
         } catch (Exception e) {
           e.printStackTrace();
         }
+        region.getLog().closeAndDelete();
       }
-      hlog.closeAndDelete();
     }
-    
   }
   
   
@@ -176,6 +169,7 @@ public class TestGet2 extends HBaseTestCase {
     assertEquals("count of columns", columnCount, COLUMNS.length);
   }
 
+  @Override
   protected void tearDown() throws Exception {
     if (this.miniHdfs != null) {
       this.miniHdfs.shutdown();

@@ -45,14 +45,14 @@ public class MultiRegionTable extends HBaseTestCase {
    * daughter splits release all references.
    * @param conf
    * @param cluster
-   * @param localFs
+   * @param fs
    * @param tableName
    * @param columnName
    * @throws IOException
    */
   @SuppressWarnings("null")
   public static void makeMultiRegionTable(HBaseConfiguration conf,
-      MiniHBaseCluster cluster, FileSystem localFs, String tableName,
+      MiniHBaseCluster cluster, FileSystem fs, String tableName,
       String columnName) throws IOException {  
     final int retries = 10; 
     final long waitTime = 20L * 1000L;
@@ -63,8 +63,6 @@ public class MultiRegionTable extends HBaseTestCase {
     assertTrue(conf.getLong("hbase.hregion.max.filesize",
       HConstants.DEFAULT_MAX_FILE_SIZE) <= 1024 * 1024);
 
-    FileSystem fs = (cluster.getDFSCluster() == null) ?
-      localFs : cluster.getDFSCluster().getFileSystem();
     assertNotNull(fs);
     Path d = fs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
 
@@ -135,8 +133,8 @@ public class MultiRegionTable extends HBaseTestCase {
       Writables.getHRegionInfoOrNull(data.get(HConstants.COL_SPLITA));
     HRegionInfo splitB =
       Writables.getHRegionInfoOrNull(data.get(HConstants.COL_SPLITB));
-    Path parentDir = HRegion.getRegionDir(d,
-        HRegionInfo.encodeRegionName(parent.getRegionName()));
+    Path parentDir = HRegion.getRegionDir(new Path(d, tableName),
+        parent.getEncodedName());
     assertTrue(fs.exists(parentDir));
     LOG.info("Split happened. Parent is " + parent.getRegionName() +
         " and daughters are " +

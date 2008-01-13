@@ -10,6 +10,8 @@ Trunk (unreleased changes)
    HADOOP-2519 Performance improvements: Customized RPC serialization
    HADOOP-2478 Restructure how HBase lays out files in the file system (phase 1)
                (test input data)
+   HADOOP-2478 Restructure how HBase lays out files in the file system (phase 2)
+               Includes migration tool org.apache.hadoop.hbase.util.Migrate
 
   NEW FEATURES
     HADOOP-2061 Add new Base64 dialects

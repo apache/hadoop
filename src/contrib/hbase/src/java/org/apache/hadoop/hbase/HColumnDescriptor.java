@@ -28,6 +28,8 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
+import org.apache.hadoop.hbase.io.TextSequence;
+
 /**
  * An HColumnDescriptor contains information about a column family such as the
  * number of versions, compression settings, etc.
@@ -101,6 +103,8 @@ public class HColumnDescriptor implements WritableComparable {
   private BloomFilterDescriptor bloomFilter;
   // Version number of this class
   private byte versionNumber;
+  // Family name without the ':'
+  private transient Text familyName = null;
   
   /**
    * Default constructor. Must be present for Writable.
@@ -172,6 +176,17 @@ public class HColumnDescriptor implements WritableComparable {
   public Text getName() {
     return name;
   }
+
+  /** @return name of column family without trailing ':' */
+  public synchronized Text getFamilyName() {
+    if (name != null) {
+      if (familyName == null) {
+        familyName = new TextSequence(name, 0, name.getLength() - 1).toText();
+      }
+      return familyName;
+    }
+    return null;
+  }
   
   /** @return compression type being used for the column family */
   public CompressionType getCompression() {
@@ -211,6 +226,7 @@ public class HColumnDescriptor implements WritableComparable {
     return this.bloomFilter;
   }
 
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     // Output a name minus ':'.

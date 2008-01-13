@@ -19,20 +19,18 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.io.BatchUpdate;
@@ -43,7 +41,6 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
  */
 class HMerge implements HConstants {
   static final Log LOG = LogFactory.getLog(HMerge.class);
-  static final Text[] META_COLS = {COL_REGIONINFO};
   static final Random rand = new Random();
   
   private HMerge() {
@@ -74,7 +71,7 @@ class HMerge implements HConstants {
         throw new IllegalStateException(
             "Can not compact META table if instance is on-line");
       }
-      new OfflineMerger(conf, fs, META_TABLE_NAME).process();
+      new OfflineMerger(conf, fs).process();
 
     } else {
       if(!masterIsRunning) {
@@ -86,42 +83,40 @@ class HMerge implements HConstants {
   }
 
   private static abstract class Merger {
-    protected HBaseConfiguration conf;
-    protected FileSystem fs;
-    protected Text tableName;
-    protected Path dir;
-    protected Path basedir;
-    protected HLog hlog;
-    protected DataInputBuffer in;
-    protected boolean more;
-    protected HStoreKey key;
-    protected HRegionInfo info;
+    protected final HBaseConfiguration conf;
+    protected final FileSystem fs;
+    protected final Path tabledir;
+    protected final HLog hlog;
+    private final long maxFilesize;
+
     
     protected Merger(HBaseConfiguration conf, FileSystem fs, Text tableName)
         throws IOException {
       
       this.conf = conf;
       this.fs = fs;
-      this.tableName = tableName;
-      this.in = new DataInputBuffer();
-      this.more = true;
-      this.key = new HStoreKey();
-      this.info = new HRegionInfo();
-      this.dir = new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
-      this.basedir = new Path(dir, "merge_" + System.currentTimeMillis());
-      fs.mkdirs(basedir);
+      this.maxFilesize =
+        conf.getLong("hbase.hregion.max.filesize", DEFAULT_MAX_FILE_SIZE);
+
+      this.tabledir = new Path(
+          fs.makeQualified(new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR))),
+          tableName.toString()
+      );
+      Path logdir = new Path(tabledir, "merge_" + System.currentTimeMillis() +
+          HREGION_LOGDIR_NAME);
       this.hlog =
-        new HLog(fs, new Path(basedir, HREGION_LOGDIR_NAME), conf, null);
+        new HLog(fs, logdir, conf, null);
     }
     
     void process() throws IOException {
       try {
-        while(more) {
-          TreeSet<HRegionInfo> regionsToMerge = next();
-          if(regionsToMerge == null) {
-            break;
+        for(HRegionInfo[] regionsToMerge = next();
+        regionsToMerge != null;
+        regionsToMerge = next()) {
+
+          if (!merge(regionsToMerge)) {
+            return;
           }
-          merge(regionsToMerge.toArray(new HRegionInfo[regionsToMerge.size()]));
         }
       } finally {
         try {
@@ -130,19 +125,13 @@ class HMerge implements HConstants {
         } catch(IOException e) {
           LOG.error(e);
         }
-        try {
-          fs.delete(basedir);
-          
-        } catch(IOException e) {
-          LOG.error(e);
-        }
       }
     }
     
-    private void merge(HRegionInfo[] regions) throws IOException {
-      if(regions.length < 2) {
+    private boolean merge(HRegionInfo[] info) throws IOException {
+      if(info.length < 2) {
         LOG.info("only one region - nothing to merge");
-        return;
+        return false;
       }
       
       HRegion currentRegion = null;
@@ -150,20 +139,18 @@ class HMerge implements HConstants {
       HRegion nextRegion = null;
       long nextSize = 0;
       Text midKey = new Text();
-      for(int i = 0; i < regions.length - 1; i++) {
-        if(currentRegion == null) {
+      for (int i = 0; i < info.length - 1; i++) {
+        if (currentRegion == null) {
           currentRegion =
-            new HRegion(dir, hlog, fs, conf, regions[i], null, null);
+            new HRegion(tabledir, hlog, fs, conf, info[i], null, null);
           currentSize = currentRegion.largestHStore(midKey).getAggregate();
         }
         nextRegion =
-          new HRegion(dir, hlog, fs, conf, regions[i + 1], null, null);
+          new HRegion(tabledir, hlog, fs, conf, info[i + 1], null, null);
 
         nextSize = nextRegion.largestHStore(midKey).getAggregate();
 
-        long maxFilesize =
-          conf.getLong("hbase.hregion.max.filesize", DEFAULT_MAX_FILE_SIZE);
-        if((currentSize + nextSize) <= (maxFilesize / 2)) {
+        if ((currentSize + nextSize) <= (maxFilesize / 2)) {
           // We merge two adjacent regions if their total size is less than
           // one half of the desired maximum size
 
@@ -175,10 +162,7 @@ class HMerge implements HConstants {
           updateMeta(currentRegion.getRegionName(), nextRegion.getRegionName(),
               mergedRegion);
 
-          currentRegion = null;
-          i++;
-          continue;
-          
+          break;
         }
         LOG.info("not merging regions " + currentRegion.getRegionName()
             + " and " + nextRegion.getRegionName());
@@ -190,9 +174,10 @@ class HMerge implements HConstants {
       if(currentRegion != null) {
         currentRegion.close();
       }
+      return true;
     }
     
-    protected abstract TreeSet<HRegionInfo> next() throws IOException;
+    protected abstract HRegionInfo[] next() throws IOException;
     
     protected abstract void updateMeta(Text oldRegion1, Text oldRegion2,
         HRegion newRegion) throws IOException;
@@ -201,55 +186,63 @@ class HMerge implements HConstants {
 
   /** Instantiated to compact a normal user table */
   private static class OnlineMerger extends Merger {
-    private HTable table;
-    private HScannerInterface metaScanner;
+    private final Text tableName;
+    private final HTable table;
+    private final HScannerInterface metaScanner;
     private HRegionInfo latestRegion;
     
     OnlineMerger(HBaseConfiguration conf, FileSystem fs, Text tableName)
     throws IOException {
       
       super(conf, fs, tableName);
+      this.tableName = tableName;
       this.table = new HTable(conf, META_TABLE_NAME);
-      this.metaScanner = table.obtainScanner(META_COLS, new Text());
+      this.metaScanner = table.obtainScanner(COL_REGIONINFO_ARRAY, tableName);
       this.latestRegion = null;
     }
     
     private HRegionInfo nextRegion() throws IOException {
       try {
+        HStoreKey key = new HStoreKey();
         TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-        if(! metaScanner.next(key, results)) {
-          more = false;
+        if (! metaScanner.next(key, results)) {
           return null;
         }
         byte[] bytes = results.get(COL_REGIONINFO);
-        if(bytes == null || bytes.length == 0) {
+        if (bytes == null || bytes.length == 0) {
           throw new NoSuchElementException("meta region entry missing "
               + COL_REGIONINFO);
         }
         HRegionInfo region =
           (HRegionInfo) Writables.getWritable(bytes, new HRegionInfo());
 
-        if(!region.isOffline()) {
+        if (!region.getTableDesc().getName().equals(tableName)) {
+          return null;
+        }
+        
+        if (!region.isOffline()) {
           throw new TableNotDisabledException("region " + region.getRegionName()
               + " is not disabled");
         }
         return region;
         
-      } catch(IOException e) {
+      } catch (IOException e) {
+        e = RemoteExceptionHandler.checkIOException(e);
+        LOG.error("meta scanner error", e);
         try {
           metaScanner.close();
           
-        } catch(IOException ex) {
-          LOG.error(ex);
+        } catch (IOException ex) {
+          ex = RemoteExceptionHandler.checkIOException(ex);
+          LOG.error("error closing scanner", ex);
         }
-        more = false;
         throw e;
       }
     }
 
     @Override
-    protected TreeSet<HRegionInfo> next() throws IOException {
-      TreeSet<HRegionInfo> regions = new TreeSet<HRegionInfo>();
+    protected HRegionInfo[] next() throws IOException {
+      List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
       if(latestRegion == null) {
         latestRegion = nextRegion();
       }
@@ -260,7 +253,7 @@ class HMerge implements HConstants {
       if(latestRegion != null) {
         regions.add(latestRegion);
       }
-      return regions;
+      return regions.toArray(new HRegionInfo[regions.size()]);
     }
 
     @Override
@@ -280,6 +273,8 @@ class HMerge implements HConstants {
           table.delete(lockid, COL_REGIONINFO);
           table.delete(lockid, COL_SERVER);
           table.delete(lockid, COL_STARTCODE);
+          table.delete(lockid, COL_SPLITA);
+          table.delete(lockid, COL_SPLITB);
           table.commit(lockid);
           lockid = -1L;
 
@@ -292,14 +287,12 @@ class HMerge implements HConstants {
           }
         }
       }
-      ByteArrayOutputStream byteValue = new ByteArrayOutputStream();
-      DataOutputStream s = new DataOutputStream(byteValue);
       newRegion.getRegionInfo().setOffline(true);
-      newRegion.getRegionInfo().write(s);
       long lockid = -1L;
       try {
         lockid = table.startUpdate(newRegion.getRegionName());
-        table.put(lockid, COL_REGIONINFO, byteValue.toByteArray());
+        table.put(lockid, COL_REGIONINFO,
+            Writables.getBytes(newRegion.getRegionInfo()));
         table.commit(lockid);
         lockid = -1L;
 
@@ -317,31 +310,35 @@ class HMerge implements HConstants {
 
   /** Instantiated to compact the meta region */
   private static class OfflineMerger extends Merger {
-    private TreeSet<HRegionInfo> metaRegions;
-    private TreeMap<Text, byte []> results;
+    private final List<HRegionInfo> metaRegions = new ArrayList<HRegionInfo>();
+    private final HRegion root;
     
-    OfflineMerger(HBaseConfiguration conf, FileSystem fs, Text tableName)
+    OfflineMerger(HBaseConfiguration conf, FileSystem fs)
         throws IOException {
       
-      super(conf, fs, tableName);
-      this.metaRegions = new TreeSet<HRegionInfo>();
-      this.results = new TreeMap<Text, byte []>();
+      super(conf, fs, META_TABLE_NAME);
+
+      Path rootTableDir = HTableDescriptor.getTableDir(
+          fs.makeQualified(new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR))),
+          ROOT_TABLE_NAME);
 
       // Scan root region to find all the meta regions
       
-      HRegion root =
-        new HRegion(dir, hlog,fs, conf, HRegionInfo.rootRegionInfo, null, null);
+      root = new HRegion(rootTableDir, hlog, fs, conf,
+          HRegionInfo.rootRegionInfo, null, null);
 
-      HScannerInterface rootScanner =
-        root.getScanner(META_COLS, new Text(), System.currentTimeMillis(), null);
+      HScannerInterface rootScanner = root.getScanner(COL_REGIONINFO_ARRAY,
+          new Text(), System.currentTimeMillis(), null);
       
       try {
+        HStoreKey key = new HStoreKey();
+        TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
         while(rootScanner.next(key, results)) {
           for(byte [] b: results.values()) {
-            in.reset(b, b.length);
-            info.readFields(in);
-            metaRegions.add(info);
-            results.clear();
+            HRegionInfo info = Writables.getHRegionInfoOrNull(b);
+            if (info != null) {
+              metaRegions.add(info);
+            }
           }
         }
       } finally {
@@ -356,18 +353,19 @@ class HMerge implements HConstants {
     }
 
     @Override
-    protected TreeSet<HRegionInfo> next() {
-      more = false;
-      return metaRegions;
+    protected HRegionInfo[] next() {
+      HRegionInfo[] results = null;
+      if (metaRegions.size() > 0) {
+        results = metaRegions.toArray(new HRegionInfo[metaRegions.size()]);
+        metaRegions.clear();
+      }
+      return results;
     }
 
     @Override
     protected void updateMeta(Text oldRegion1, Text oldRegion2,
         HRegion newRegion) throws IOException {
       
-      HRegion root =
-        new HRegion(dir, hlog, fs, conf, HRegionInfo.rootRegionInfo, null, null);
-
       Text[] regionsToDelete = {
           oldRegion1,
           oldRegion2
@@ -379,6 +377,8 @@ class HMerge implements HConstants {
         b.delete(lockid, COL_REGIONINFO);
         b.delete(lockid, COL_SERVER);
         b.delete(lockid, COL_STARTCODE);
+        b.delete(lockid, COL_SPLITA);
+        b.delete(lockid, COL_SPLITB);
         root.batchUpdate(System.currentTimeMillis(), b);
         lockid = -1L;
 
@@ -386,14 +386,12 @@ class HMerge implements HConstants {
           LOG.debug("updated columns in row: " + regionsToDelete[r]);
         }
       }
-      ByteArrayOutputStream byteValue = new ByteArrayOutputStream();
-      DataOutputStream s = new DataOutputStream(byteValue);
-      newRegion.getRegionInfo().setOffline(true);
-      newRegion.getRegionInfo().write(s);
+      HRegionInfo newInfo = newRegion.getRegionInfo();
+      newInfo.setOffline(true);
       long lockid = Math.abs(rand.nextLong());
       BatchUpdate b = new BatchUpdate(lockid);
       lockid = b.startUpdate(newRegion.getRegionName());
-      b.put(lockid, COL_REGIONINFO, byteValue.toByteArray());
+      b.put(lockid, COL_REGIONINFO, Writables.getBytes(newInfo));
       root.batchUpdate(System.currentTimeMillis(), b);
       if(LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: " + newRegion.getRegionName());

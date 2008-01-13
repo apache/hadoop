@@ -79,6 +79,7 @@ public class HRegionInfo implements WritableComparable {
   private Text startKey;
   private HTableDescriptor tableDesc;
   private int hashCode;
+  private transient String encodedName = null;
   
   private void setHashCode() {
     int result = this.regionName.hashCode();
@@ -182,6 +183,14 @@ public class HRegionInfo implements WritableComparable {
   public Text getRegionName(){
     return regionName;
   }
+  
+  /** @return the encoded region name */
+  public synchronized String getEncodedName() {
+    if (encodedName == null) {
+      encodedName = encodeRegionName(regionName);
+    }
+    return encodedName;
+  }
 
   /** @return the startKey */
   public Text getStartKey(){
@@ -242,10 +251,8 @@ public class HRegionInfo implements WritableComparable {
   @Override
   public String toString() {
     return "regionname: " + this.regionName.toString() + ", startKey: <" +
-      this.startKey.toString() + ">, encodedName(" +
-      encodeRegionName(this.regionName) + ")" +
-      (isOffline()? " offline: true,": "") +
-      (isSplit()? " split: true,": "") +
+      this.startKey.toString() + ">, encodedName(" + getEncodedName() + ")" +
+      (isOffline()? " offline: true,": "") + (isSplit()? " split: true,": "") +
       " tableDesc: {" + this.tableDesc.toString() + "}";
   }
     

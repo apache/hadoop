@@ -131,88 +131,6 @@ public class HLog implements HConstants {
   private final Integer updateLock = new Integer(0);
 
   /**
-   * Split up a bunch of log files, that are no longer being written to, into
-   * new files, one per region. Delete the old log files when finished.
-   *
-   * @param rootDir Root directory of the HBase instance
-   * @param srcDir Directory of log files to split: e.g.
-   *                <code>${ROOTDIR}/log_HOST_PORT</code>
-   * @param fs FileSystem
-   * @param conf HBaseConfiguration
-   * @throws IOException
-   */
-  static void splitLog(Path rootDir, Path srcDir, FileSystem fs,
-    Configuration conf)
-  throws IOException {
-    Path logfiles[] = fs.listPaths(new Path[] { srcDir });
-    LOG.info("splitting " + logfiles.length + " log(s) in " +
-      srcDir.toString());
-    Map<Text, SequenceFile.Writer> logWriters =
-      new HashMap<Text, SequenceFile.Writer>();
-    try {
-      for (int i = 0; i < logfiles.length; i++) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Splitting " + i + " of " + logfiles.length + ": " +
-            logfiles[i]);
-        }
-        // Check for empty file.
-        if (fs.getFileStatus(logfiles[i]).getLen() <= 0) {
-          LOG.info("Skipping " + logfiles[i].toString() +
-            " because zero length");
-          continue;
-        }
-        HLogKey key = new HLogKey();
-        HLogEdit val = new HLogEdit();
-        SequenceFile.Reader in = new SequenceFile.Reader(fs, logfiles[i], conf);
-        try {
-          int count = 0;
-          for (; in.next(key, val); count++) {
-            Text regionName = key.getRegionName();
-            SequenceFile.Writer w = logWriters.get(regionName);
-            if (w == null) {
-              Path logfile = new Path(HRegion.getRegionDir(rootDir,
-                HRegionInfo.encodeRegionName(regionName)),
-                HREGION_OLDLOGFILE_NAME);
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Creating new log file writer for path " + logfile +
-                  "; map content " + logWriters.toString());
-              }
-              w = SequenceFile.createWriter(fs, conf, logfile, HLogKey.class,
-                HLogEdit.class, getCompressionType(conf));
-              // Use copy of regionName; regionName object is reused inside in
-              // HStoreKey.getRegionName so its content changes as we iterate.
-              logWriters.put(new Text(regionName), w);
-            }
-            if (count % 10000 == 0 && count > 0 && LOG.isDebugEnabled()) {
-              LOG.debug("Applied " + count + " edits");
-            }
-            w.append(key, val);
-          }
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Applied " + count + " total edits");
-          }
-        } finally {
-          in.close();
-        }
-      }
-    } finally {
-      for (SequenceFile.Writer w : logWriters.values()) {
-        w.close();
-      }
-    }
-
-    if (fs.exists(srcDir)) {
-      if (!fs.delete(srcDir)) {
-        LOG.error("Cannot delete: " + srcDir);
-        if (!FileUtil.fullyDelete(new File(srcDir.toString()))) {
-          throw new IOException("Cannot delete: " + srcDir);
-        }
-      }
-    }
-    LOG.info("log file splitting completed for " + srcDir.toString());
-  }
-
-  /**
    * Create an edit log at the given <code>dir</code> location.
    *
    * You should never have to load an existing log. If there is a log at
@@ -222,9 +140,10 @@ public class HLog implements HConstants {
    * @param fs
    * @param dir
    * @param conf
+   * @param listener
    * @throws IOException
    */
-  HLog(final FileSystem fs, final Path dir, final Configuration conf,
+  public HLog(final FileSystem fs, final Path dir, final Configuration conf,
       final LogRollListener listener) throws IOException {
     this.fs = fs;
     this.dir = dir;
@@ -381,7 +300,7 @@ public class HLog implements HConstants {
    *
    * @throws IOException
    */
-  void closeAndDelete() throws IOException {
+  public void closeAndDelete() throws IOException {
     close();
     fs.delete(dir);
   }
@@ -557,6 +476,92 @@ public class HLog implements HConstants {
    */
   void abortCacheFlush() {
     this.cacheFlushLock.unlock();
+  }
+
+  /**
+   * Split up a bunch of log files, that are no longer being written to, into
+   * new files, one per region. Delete the old log files when finished.
+   *
+   * @param rootDir qualified root directory of the HBase instance
+   * @param srcDir Directory of log files to split: e.g.
+   *                <code>${ROOTDIR}/log_HOST_PORT</code>
+   * @param fs FileSystem
+   * @param conf HBaseConfiguration
+   * @throws IOException
+   */
+  static void splitLog(Path rootDir, Path srcDir, FileSystem fs,
+    Configuration conf) throws IOException {
+    Path logfiles[] = fs.listPaths(new Path[] { srcDir });
+    LOG.info("splitting " + logfiles.length + " log(s) in " +
+      srcDir.toString());
+    Map<Text, SequenceFile.Writer> logWriters =
+      new HashMap<Text, SequenceFile.Writer>();
+    try {
+      for (int i = 0; i < logfiles.length; i++) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Splitting " + i + " of " + logfiles.length + ": " +
+            logfiles[i]);
+        }
+        // Check for empty file.
+        if (fs.getFileStatus(logfiles[i]).getLen() <= 0) {
+          LOG.info("Skipping " + logfiles[i].toString() +
+            " because zero length");
+          continue;
+        }
+        HLogKey key = new HLogKey();
+        HLogEdit val = new HLogEdit();
+        SequenceFile.Reader in = new SequenceFile.Reader(fs, logfiles[i], conf);
+        try {
+          int count = 0;
+          for (; in.next(key, val); count++) {
+            Text tableName = key.getTablename();
+            Text regionName = key.getRegionName();
+            SequenceFile.Writer w = logWriters.get(regionName);
+            if (w == null) {
+              Path logfile = new Path(
+                  HRegion.getRegionDir(
+                      HTableDescriptor.getTableDir(rootDir, tableName),
+                      HRegionInfo.encodeRegionName(regionName)
+                  ),
+                  HREGION_OLDLOGFILE_NAME
+              );
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Creating new log file writer for path " + logfile +
+                  "; map content " + logWriters.toString());
+              }
+              w = SequenceFile.createWriter(fs, conf, logfile, HLogKey.class,
+                HLogEdit.class, getCompressionType(conf));
+              // Use copy of regionName; regionName object is reused inside in
+              // HStoreKey.getRegionName so its content changes as we iterate.
+              logWriters.put(new Text(regionName), w);
+            }
+            if (count % 10000 == 0 && count > 0 && LOG.isDebugEnabled()) {
+              LOG.debug("Applied " + count + " edits");
+            }
+            w.append(key, val);
+          }
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Applied " + count + " total edits");
+          }
+        } finally {
+          in.close();
+        }
+      }
+    } finally {
+      for (SequenceFile.Writer w : logWriters.values()) {
+        w.close();
+      }
+    }
+
+    if (fs.exists(srcDir)) {
+      if (!fs.delete(srcDir)) {
+        LOG.error("Cannot delete: " + srcDir);
+        if (!FileUtil.fullyDelete(new File(srcDir.toString()))) {
+          throw new IOException("Cannot delete: " + srcDir);
+        }
+      }
+    }
+    LOG.info("log file splitting completed for " + srcDir.toString());
   }
 
   private static void usage() {
