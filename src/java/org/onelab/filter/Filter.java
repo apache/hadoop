@@ -54,7 +54,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Defines the general behavior of a filter.
@@ -74,7 +74,7 @@ import org.apache.hadoop.io.WritableComparable;
  * @see org.onelab.filter.Key The general behavior of a key
  * @see org.onelab.filter.HashFunction A hash function
  */
-public abstract class Filter implements WritableComparable {
+public abstract class Filter implements Writable {
   /** The vector size of <i>this</i> filter. */
   int vectorSize;
 
@@ -182,14 +182,6 @@ public abstract class Filter implements WritableComparable {
     }
   }//end add()
   
-  /** {@inheritDoc} */
-  @Override
-  public int hashCode() {
-    int result = Integer.valueOf(this.nbHash).hashCode();
-    result ^= Integer.valueOf(this.vectorSize);
-    return result;
-  }
-
   // Writable interface
   
   /** {@inheritDoc} */
@@ -204,19 +196,4 @@ public abstract class Filter implements WritableComparable {
     this.vectorSize = in.readInt();
     this.hash = new HashFunction(this.vectorSize, this.nbHash);
   }
-  
-  // Comparable interface
-  
-  /** {@inheritDoc} */
-  public int compareTo(Object o) {
-    Filter other = (Filter)o;
-    int result = this.vectorSize - other.vectorSize;
-    if(result == 0) {
-      result = this.nbHash - other.nbHash;
-    }
-    
-    return result;
-  }
-
-  
 }//end class

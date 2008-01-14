@@ -247,22 +247,6 @@ public class DynamicBloomFilter extends Filter {
     return dbf;
   }//end clone()
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean equals(Object o) {
-    return this.compareTo(o) == 0;
-  }
-  
-  /** {@inheritDoc} */
-  @Override
-  public int hashCode() {
-    int result = super.hashCode();
-    for(int i = 0; i < matrix.length; i++) {
-      result ^= matrix[i].hashCode();
-    }
-    return result;
-  }
-
   // Writable
 
   /** {@inheritDoc} */
@@ -283,35 +267,6 @@ public class DynamicBloomFilter extends Filter {
       matrix[i].readFields(in);
     }
   }
-
-  // Comparable
-  
-  /** {@inheritDoc} */
-  @Override
-  public int compareTo(Object o) {
-    int result = super.compareTo(o);
-    
-    if(result == 0) {
-      DynamicBloomFilter other = (DynamicBloomFilter)o;
-      
-      result = this.nr - other.nr;
-      
-      if(result == 0) {
-        result = this.currentNbRecord - other.currentNbRecord;
-        
-        if(result == 0) {
-          for(int i = 0; i < matrix.length; i++) {
-            result = matrix[i].compareTo(other.matrix[i]) ;
-            
-            if(result != 0) {
-              break;
-            }
-          }
-        }
-      }
-    }
-    return result;
-  }// end compareTo
 
   /**
    * Adds a new row to <i>this</i> dynamic Bloom filter.

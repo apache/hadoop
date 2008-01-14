@@ -213,22 +213,6 @@ public final class CountingBloomFilter extends Filter {
     return cbf;
   }//end clone()
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean equals(Object o) {
-    return this.compareTo(o) == 0;
-  }
-  
-  /** {@inheritDoc} */
-  @Override
-  public int hashCode() {
-    int result = super.hashCode();
-    for(int i = 0; i < vector.length; i++) {
-      result ^= Byte.valueOf(vector[i]).hashCode();
-    }
-    return result;
-  }
-
   // Writable
 
   /** {@inheritDoc} */
@@ -249,25 +233,4 @@ public final class CountingBloomFilter extends Filter {
       vector[i] = in.readByte();
     }
   }
-
-  // Comparable
-  
-  /** {@inheritDoc} */
-  @Override
-  public int compareTo(Object o) {
-    int result = super.compareTo(o);
-    
-    if(result == 0) {
-      CountingBloomFilter other = (CountingBloomFilter)o;
-      
-      for(int i = 0; i < vector.length; i++) {
-        result = vector[i] - other.vector[i];
-        
-        if(result != 0) {
-          break;
-        }
-      }
-    }
-    return result;
-  }// end compareTo
 }//end class

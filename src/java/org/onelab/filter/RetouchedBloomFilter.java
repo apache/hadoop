@@ -118,7 +118,7 @@ implements RemoveScheme {
     hash.clear();
 
     for(int i = 0; i < nbHash; i++) {
-      vector[h[i]] = true;
+      bits.set(h[i]);
       keyVector[h[i]].add(key);
     }//end for - i
   }//end add()
@@ -333,7 +333,7 @@ implements RemoveScheme {
     ratio[index] = 0.0;
 
     //update bit vector
-    vector[index] = false;
+    bits.clear(index);
   }//end clearBit()
 
   /**
@@ -395,28 +395,6 @@ implements RemoveScheme {
     }//end for -i
   }//end createVector()
   
-  /** {@inheritDoc} */
-  @Override
-  public boolean equals(Object o) {
-    return this.compareTo(o) == 0;
-  }
-  
-  /** {@inheritDoc} */
-  @Override
-  public int hashCode() {
-    int result = super.hashCode();
-    for(int i = 0; i < fpVector.length; i++) {
-      result ^= fpVector[i].hashCode();
-    }
-    for(int i = 0; i < keyVector.length; i++) {
-      result ^= keyVector[i].hashCode();
-    }
-    for(int i = 0; i < ratio.length; i++) {
-      result ^= Double.valueOf(ratio[i]).hashCode();
-    }
-    return result;
-  }
-
   // Writable
 
   /** {@inheritDoc} */
@@ -469,38 +447,4 @@ implements RemoveScheme {
       ratio[i] = in.readDouble();
     }
   }
-
-  // Comparable
-  
-  /** {@inheritDoc} */
-  @Override
-  public int compareTo(Object o) {
-    int result = super.compareTo(o);
-    
-    RetouchedBloomFilter other = (RetouchedBloomFilter)o;
-      
-    for(int i = 0; result == 0 && i < fpVector.length; i++) {
-      List<Key> mylist = fpVector[i];
-      List<Key> otherlist = other.fpVector[i];
-        
-      for(int j = 0; result == 0 && j < mylist.size(); j++) {
-        result = mylist.get(j).compareTo(otherlist.get(j));
-      }
-    }
-
-    for(int i = 0; result == 0 && i < keyVector.length; i++) {
-      List<Key> mylist = keyVector[i];
-      List<Key> otherlist = other.keyVector[i];
-        
-      for(int j = 0; result == 0 && j < mylist.size(); j++) {
-        result = mylist.get(j).compareTo(otherlist.get(j));
-      }
-    }
-
-    for(int i = 0; result == 0 && i < ratio.length; i++) {
-      result = Double.valueOf(this.ratio[i] - other.ratio[i]).intValue();
-    }
-    
-    return result;
-  }// end compareTo
 }//end class

@@ -51,6 +51,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.BitSet;
+
 /**
  * Implements a <i>Bloom filter</i>, as defined by Bloom in 1970.
  * <p>
@@ -72,11 +74,24 @@ import java.io.IOException;
  * @see <a href="http://portal.acm.org/citation.cfm?id=362692&dl=ACM&coll=portal">Space/Time Trade-Offs in Hash Coding with Allowable Errors</a>
  */
 public class BloomFilter extends Filter {
+  private static final byte[] bitvalues = new byte[] {
+    (byte)0x01,
+    (byte)0x02,
+    (byte)0x04,
+    (byte)0x08,
+    (byte)0x10,
+    (byte)0x20,
+    (byte)0x40,
+    (byte)0x80
+  };
+  
   /** The bit vector. */
-  boolean[] vector;
+  BitSet bits;
 
   /** Default constructor - use with readFields */
-  public BloomFilter() {}
+  public BloomFilter() {
+    super();
+  }
   
   /**
    * Constructor
@@ -86,7 +101,7 @@ public class BloomFilter extends Filter {
   public BloomFilter(int vectorSize, int nbHash){
     super(vectorSize, nbHash);
 
-    vector = new boolean[this.vectorSize];
+    bits = new BitSet(this.vectorSize);
   }//end constructor
 
   /** {@inheritDoc} */
@@ -100,7 +115,7 @@ public class BloomFilter extends Filter {
     hash.clear();
 
     for(int i = 0; i < nbHash; i++) {
-      vector[h[i]] = true;
+      bits.set(h[i]);
     }
   }//end add()
 
@@ -114,11 +129,7 @@ public class BloomFilter extends Filter {
       throw new IllegalArgumentException("filters cannot be and-ed");
     }
 
-    BloomFilter bf = (BloomFilter)filter;
-
-    for(int i = 0; i < vectorSize; i++) {
-      this.vector[i] &= bf.vector[i];
-    }
+    this.bits.and(((BloomFilter) filter).bits);
   }//end and()
 
   /** {@inheritDoc} */
@@ -131,7 +142,7 @@ public class BloomFilter extends Filter {
     int[] h = hash.hash(key);
     hash.clear();
     for(int i = 0; i < nbHash; i++) {
-      if(!vector[h[i]]) {
+      if(!bits.get(h[i])) {
         return false;
       }
     }
@@ -141,9 +152,7 @@ public class BloomFilter extends Filter {
   /** {@inheritDoc} */
   @Override
   public void not(){
-    for(int i = 0; i < vectorSize; i++) {
-      vector[i] = !vector[i];
-    }
+    bits.flip(0, vectorSize - 1);
   }//end not()
 
   /** {@inheritDoc} */
@@ -155,12 +164,7 @@ public class BloomFilter extends Filter {
         || filter.nbHash != this.nbHash) {
       throw new IllegalArgumentException("filters cannot be or-ed");
     }
-
-    BloomFilter bf = (BloomFilter)filter;
-
-    for(int i = 0; i < vectorSize; i++) {
-      this.vector[i] |= bf.vector[i];
-    }
+    bits.or(((BloomFilter) filter).bits);
   }//end or()
 
   /** {@inheritDoc} */
@@ -172,24 +176,13 @@ public class BloomFilter extends Filter {
         || filter.nbHash != this.nbHash) {
       throw new IllegalArgumentException("filters cannot be xor-ed");
     }
-
-    BloomFilter bf = (BloomFilter)filter;
-
-    for(int i = 0; i < vectorSize; i++) {
-      this.vector[i] = (this.vector[i] && !bf.vector[i])
-      || (!this.vector[i] && bf.vector[i]);
-    }
+    bits.xor(((BloomFilter) filter).bits);
   }//and xor()
 
   /** {@inheritDoc} */
   @Override
   public String toString(){
-    StringBuilder res = new StringBuilder();
-
-    for(int i = 0; i < vectorSize; i++) {
-      res.append(vector[i] ? "1" : "0");
-    }
-    return res.toString();
+    return bits.toString();
   }//end toString()
 
   /** {@inheritDoc} */
@@ -200,56 +193,50 @@ public class BloomFilter extends Filter {
     return bf;
   }//end clone()
 
-  /** {@inheritDoc} */
-  @Override
-  public boolean equals(Object o) {
-    return this.compareTo(o) == 0;
-  }
-  
-  /** {@inheritDoc} */
-  @Override
-  public int hashCode() {
-    int result = super.hashCode();
-    for(int i = 0; i < vector.length; i++) {
-      result ^= Boolean.valueOf(vector[i]).hashCode();
-    }
-    return result;
-  }
-
   // Writable
 
   /** {@inheritDoc} */
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
-    for(int i = 0; i < vector.length; i++) {
-      out.writeBoolean(vector[i]);
+    byte[] bytes = new byte[getNBytes()];
+    for(int i = 0, byteIndex = 0, bitIndex = 0; i < vectorSize; i++, bitIndex++) {
+      if (bitIndex == 8) {
+        bitIndex = 0;
+        byteIndex++;
+      }
+      if (bitIndex == 0) {
+        bytes[byteIndex] = 0;
+      }
+      if (bits.get(i)) {
+        bytes[byteIndex] |= bitvalues[bitIndex];
+      }
     }
+    out.write(bytes);
   }
 
   /** {@inheritDoc} */
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
-    vector = new boolean[vectorSize];
-    for(int i = 0; i < vector.length; i++) {
-      vector[i] = in.readBoolean();
+    byte[] bytes = new byte[getNBytes()];
+    in.readFully(bytes);
+    for(int i = 0, byteIndex = 0, bitIndex = 0; i < vectorSize; i++, bitIndex++) {
+      if (bitIndex == 8) {
+        bitIndex = 0;
+        byteIndex++;
+      }
+      if (bitIndex == 0) {
+        bytes[byteIndex] = 0;
+      }
+      if ((bytes[byteIndex] & bitvalues[bitIndex]) != 0) {
+        bits.set(i);
+      }
     }
   }
-
-  // Comparable
   
-  /** {@inheritDoc} */
-  @Override
-  public int compareTo(Object o) {
-    int result = super.compareTo(o);
-    
-    BloomFilter other = (BloomFilter)o;
-      
-    for(int i = 0; result == 0 && i < vector.length; i++) {
-      result = (vector[i] == other.vector[i] ? 0
-          : (vector[i] ? 1 : -1));
-    }
-    return result;
-  }// end compareTo
+  /* @return number of bytes needed to hold bit vector */
+  private int getNBytes() {
+    return (vectorSize + 7) / 8;
+  }
 }//end class
