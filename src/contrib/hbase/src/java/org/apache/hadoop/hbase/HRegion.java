@@ -551,6 +551,7 @@ public class HRegion implements HConstants {
       if (closed.get() || !needsSplit(midKey)) {
         return null;
       }
+
       long startTime = System.currentTimeMillis();
       Path splits = new Path(this.regiondir, SPLITDIR);
       if(!this.fs.exists(splits)) {
@@ -1033,6 +1034,57 @@ public class HRegion implements HConstants {
       return result;
     } finally {
       releaseRowLock(row);
+    }
+  }
+
+  /**
+   * Return all the data for the row that matches <i>row</i> exactly, 
+   * or the one that immediately preceeds it, at or immediately before 
+   * <i>ts</i>.
+   * 
+   * @param row row key
+   * @return map of values
+   * @throws IOException
+   */
+  public Map<Text, byte[]> getClosestRowBefore(final Text row, final long ts)
+  throws IOException{
+    // look across all the HStores for this region and determine what the
+    // closest key is across all column families, since the data may be sparse
+    
+    HStoreKey key = null;
+    checkRow(row);
+    lock.readLock().lock();
+    try {
+      // examine each column family for the preceeding or matching key
+      for(Text colFamily : stores.keySet()){
+        HStore store = stores.get(colFamily);
+
+        // get the closest key
+        Text closestKey = store.getRowKeyAtOrBefore(row, ts);
+        
+        // if it happens to be an exact match, we can stop looping
+        if (row.equals(closestKey)) {
+          key = new HStoreKey(closestKey, ts);
+          break;
+        }
+
+        // otherwise, we need to check if it's the max and move to the next
+        if (closestKey != null 
+          && (key == null || closestKey.compareTo(key.getRow()) > 0) ) {
+          key = new HStoreKey(closestKey, ts);
+        }
+      }
+          
+      // now that we've found our key, get the values
+      TreeMap<Text, byte []> result = new TreeMap<Text, byte[]>();
+      for (Text colFamily: stores.keySet()) {
+        HStore targetStore = stores.get(colFamily);
+        targetStore.getFull(key, result);
+      }
+      
+      return result;
+    } finally {
+      lock.readLock().unlock();
     }
   }
 

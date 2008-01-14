@@ -126,6 +126,7 @@ public class TestTableIndex extends MultiRegionTable {
       StaticTestEnvironment.shutdownDfs(dfsCluster);
       throw e;
     }
+    LOG.debug("\n\n\n\n\t\t\tSetup Complete\n\n\n\n");
   }
 
   /** {@inheritDoc} */
@@ -252,7 +253,7 @@ public class TestTableIndex extends MultiRegionTable {
     // its snapshot, all the updates have made it into the cache.
     try {
       Thread.sleep(conf.getLong("hbase.regionserver.optionalcacheflushinterval",
-          60L * 1000L));
+        60L * 1000L));
     } catch (InterruptedException e) {
       // ignore
     }
@@ -295,13 +296,16 @@ public class TestTableIndex extends MultiRegionTable {
       int count = 0;
       while (scanner.next(key, results)) {
         String value = key.getRow().toString();
+        LOG.debug("Scanned over " + key.getRow());
         Term term = new Term(rowkeyName, value);
         int hitCount = searcher.search(new TermQuery(term)).length();
         assertEquals("check row " + value, 1, hitCount);
         count++;
       }
-      int maxDoc = searcher.maxDoc();
-      assertEquals("check number of rows", count, maxDoc);
+      LOG.debug("Searcher.maxDoc: " + searcher.maxDoc());
+      LOG.debug("IndexReader.numDocs: " + ((IndexSearcher)searcher).getIndexReader().numDocs());      
+      int maxDoc = ((IndexSearcher)searcher).getIndexReader().numDocs();
+      assertEquals("check number of rows", maxDoc, count);
     } finally {
       if (null != searcher)
         searcher.close();

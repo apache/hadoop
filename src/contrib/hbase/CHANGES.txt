@@ -38,6 +38,8 @@ Trunk (unreleased changes)
    HADOOP-2407 Keeping MapFile.Reader open is expensive: Part 2
    HADOOP-2533 Performance: Scanning, just creating MapWritable in next
                consumes >20% CPU
+   HADOOP-2443 Keep lazy cache of regions in client rather than an
+               'authoritative' list (Bryan Duxbury via Stack)
 
   BUG FIXES
    HADOOP-2059 In tests, exceptions in min dfs shutdown should not fail test
