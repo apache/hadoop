@@ -443,6 +443,9 @@ Release 0.15.3 - (unreleased changes)
 
     HADOOP-2540. fsck reports missing blocks incorrectly. (dhruba)
 
+    HADOOP-2570. "work" directory created unconditionally, and symlinks
+    created from the task cwds.
+
 Release 0.15.2 - 2008-01-02
 
   BUG FIXES
