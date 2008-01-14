@@ -584,6 +584,13 @@ Release 0.15.0 - 2007-11-2
     and codec, independent of the final output's compression
     parameters.  (Arun C Murthy via cutting)
 
+    HADOOP-1819.  Jobtracker cleanups, including binding ports before
+    clearing state directories, so that inadvertently starting a
+    second jobtracker doesn't trash one that's already running. Removed
+    method JobTracker.getTracker() because the static variable, which
+    stored the value caused initialization problems.
+    (omalley via cutting)
+
   NEW FEATURES
 
     HADOOP-89.  A client can access file data even before the creator
@@ -966,11 +973,6 @@ Release 0.15.0 - 2007-11-2
 
     HADOOP-1718.  Add ant targets for measuring code coverage with clover.
     (simonwillnauer via nigel)
-
-    HADOOP-1819.  Jobtracker cleanups, including binding ports before
-    clearing state directories, so that inadvertently starting a
-    second jobtracker doesn't trash one that's already running.
-    (omalley via cutting)
 
     HADOOP-1592.  Log error messages to the client console when tasks
     fail.  (Amar Kamat via cutting)
