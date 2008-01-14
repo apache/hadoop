@@ -546,6 +546,24 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
+<td><a name="mapred.job.tracker.persist.jobstatus.active">mapred.job.tracker.persist.jobstatus.active</a></td><td>false</td><td>Indicates if persistency of job status information is
+      active or not.
+    </td>
+</tr>
+<tr>
+<td><a name="mapred.job.tracker.persist.jobstatus.hours">mapred.job.tracker.persist.jobstatus.hours</a></td><td>0</td><td>The number of hours job status information is persisted in DFS.
+    The job status information will be available after it drops of the memory
+    queue and between jobtracker restarts. With a zero value the job status
+    information is not persisted at all in DFS.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.job.tracker.persist.jobstatus.dir">mapred.job.tracker.persist.jobstatus.dir</a></td><td>/jobtracker/jobsInfo</td><td>The directory where the job status information is persisted
+      in a file system to be available after it drops of the memory queue and
+      between jobtracker restarts.
+    </td>
+</tr>
+<tr>
 <td><a name="ipc.client.timeout">ipc.client.timeout</a></td><td>60000</td><td>Defines the timeout for IPC calls in milliseconds.</td>
 </tr>
 <tr>
