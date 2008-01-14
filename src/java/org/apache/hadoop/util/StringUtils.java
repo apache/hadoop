@@ -310,10 +310,18 @@ public class StringUtils {
                                      final org.apache.commons.logging.Log LOG) {
     final String hostname = getHostname();
     final String classname = clazz.getSimpleName();
-    LOG.info(toStartupShutdownString("STARTUP_MSG: ", new String[]{
-      "Starting " + classname,
-      "  host = " + hostname,
-      "  args = " + Arrays.asList(args)}));
+    LOG.info(
+        toStartupShutdownString("STARTUP_MSG: ", new String[] {
+            "Starting " + classname,
+            "  host = " + hostname,
+            "  args = " + Arrays.asList(args),
+            "  version = " + VersionInfo.getVersion(),
+            "  build = " + VersionInfo.getUrl() + " -r "
+                         + VersionInfo.getRevision()  
+                         + "; compiled by '" + VersionInfo.getUser()
+                         + "' on " + VersionInfo.getDate()}
+        )
+      );
 
     Runtime.getRuntime().addShutdownHook(new Thread() {
       public void run() {

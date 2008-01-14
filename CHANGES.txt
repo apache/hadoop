@@ -227,6 +227,9 @@ Trunk (unreleased changes)
                                                     /jobtracker/jobsInfo)
     (Alejandro Abdelnur via acmurthy) 
 
+    HADOOP-2077. Added version and build information to STARTUP_MSG for all
+    hadoop daemons to aid error-reporting, debugging etc. (acmurthy) 
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
