@@ -177,6 +177,8 @@ Trunk (unreleased changes)
    HADOOP-2548 Make TableMap and TableReduce generic
                (Frederik Hedberg via Stack)
    HADOOP-2557 Shell count function (Edward Yoon via Stack)
+   HADOOP-2558 org.onelab.filter.BloomFilter class uses 8X the memory it should
+               be using
 
 Release 0.15.1
 Branch 0.15
