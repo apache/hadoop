@@ -609,6 +609,17 @@ public class TaskTracker
         }
         fs.copyToLocalFile(new Path(jobFile), localJobFile);
         JobConf localJobConf = new JobConf(localJobFile);
+        
+        // create the 'work' directory
+        File workDir = new File(new File(localJobFile.toString()).getParent(),
+                                "work");
+        if (!workDir.mkdirs()) {
+          if (!workDir.isDirectory()) {
+            throw new IOException("Mkdirs failed to create " + workDir.toString());
+          }
+        }
+        
+        // unjar the job.jar files in workdir
         String jarFile = localJobConf.getJar();
         if (jarFile != null) {
           localJarFile = new Path(jobDir,"job.jar");
@@ -621,15 +632,6 @@ public class TaskTracker
             out.close();
           }
 
-          // also unjar the job.jar files in workdir
-          File workDir = new File(
-                                  new File(localJobFile.toString()).getParent(),
-                                  "work");
-          if (!workDir.mkdirs()) {
-            if (!workDir.isDirectory()) {
-              throw new IOException("Mkdirs failed to create " + workDir.toString());
-            }
-          }
           RunJar.unJar(new File(localJarFile.toString()), workDir);
         }
         rjob.keepJobFiles = ((localJobConf.getKeepTaskFilesPattern() != null) ||
@@ -1280,6 +1282,20 @@ public class TaskTracker
                     Path.SEPARATOR + task.getJobId() + Path.SEPARATOR +
                     task.getTaskId()), defaultJobConf );
       FileSystem localFs = FileSystem.getLocal(fConf);
+      
+      // create symlink for ../work if it already doesnt exist
+      String workDir = lDirAlloc.getLocalPathToRead(
+                         TaskTracker.getJobCacheSubdir() 
+                         + Path.SEPARATOR + task.getJobId() 
+                         + Path.SEPARATOR  
+                         + "work", defaultJobConf).toString();
+      String link = localTaskDir.getParent().toString() 
+                      + Path.SEPARATOR + "work";
+      File flink = new File(link);
+      if (!flink.exists())
+        FileUtil.symLink(workDir, link);
+      
+      // create the working-directory of the task 
       if (!localFs.mkdirs(localTaskDir)) {
         throw new IOException("Mkdirs failed to create " + localTaskDir.toString());
       }
