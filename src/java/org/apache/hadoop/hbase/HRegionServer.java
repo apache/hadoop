@@ -1409,6 +1409,38 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
 
+  /** {@inheritDoc} */
+  public HbaseMapWritable getClosestRowBefore(final Text regionName, 
+    final Text row)
+  throws IOException {
+    return getClosestRowBefore(regionName, row, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /** {@inheritDoc} */
+  public HbaseMapWritable getClosestRowBefore(final Text regionName, 
+    final Text row, final long ts)
+  throws IOException {
+
+    checkOpen();
+    requestCount.incrementAndGet();
+    try {
+      // locate the region we're operating on
+      HRegion region = getRegion(regionName);
+      HbaseMapWritable result = new HbaseMapWritable();
+      // ask the region for all the data 
+      Map<Text, byte[]> map = region.getClosestRowBefore(row, ts);
+      // convert to a MapWritable
+      for (Map.Entry<Text, byte []> es: map.entrySet()) {
+        result.put(new HStoreKey(row, es.getKey()),
+            new ImmutableBytesWritable(es.getValue()));
+      }
+      return result;
+      
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
+    }
+  }
 
   /** {@inheritDoc} */
   public HbaseMapWritable next(final long scannerId) throws IOException {
@@ -1428,6 +1460,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
       while (s.next(key, results)) {
+/*        LOG.debug("RegionServer scanning on row " + key.getRow());*/
         for(Map.Entry<Text, byte []> e: results.entrySet()) {
           values.put(new HStoreKey(key.getRow(), e.getKey(), key.getTimestamp()),
             new ImmutableBytesWritable(e.getValue()));

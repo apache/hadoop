@@ -191,6 +191,10 @@ public class HStore implements HConstants {
     private void internalGetFull(SortedMap<HStoreKey, byte []> map, HStoreKey key, 
         SortedMap<Text, byte []> results) {
 
+      if (map.isEmpty()) {
+        return;
+      }
+
       SortedMap<HStoreKey, byte []> tailMap = map.tailMap(key);
       for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
         HStoreKey itKey = es.getKey();
@@ -208,6 +212,96 @@ public class HStore implements HConstants {
       }
     }
 
+    /**
+     * Find the key that matches <i>row</i> exactly, or the one that immediately
+     * preceeds it.
+     */
+    public Text getRowKeyAtOrBefore(final Text row, long timestamp)
+    throws IOException{
+      this.lock.readLock().lock();
+      
+      Text key_memcache = null;
+      Text key_snapshot = null;
+      
+      try {
+        synchronized (memcache) {
+          key_memcache = internalGetRowKeyAtOrBefore(memcache, row, timestamp);
+        }
+        synchronized (snapshot) {
+          key_snapshot = internalGetRowKeyAtOrBefore(snapshot, row, timestamp);
+        }
+
+        if (key_memcache == null && key_snapshot == null) {
+          // didn't find any candidates, return null
+          return null;
+        } else if (key_memcache == null && key_snapshot != null) {
+          return key_snapshot;
+        } else if (key_memcache != null && key_snapshot == null) {
+          return key_memcache;
+        } else {
+          // if either is a precise match, return the original row.
+          if ( (key_memcache != null && key_memcache.equals(row)) 
+            || (key_snapshot != null && key_snapshot.equals(row)) ) {
+            return row;
+          } else {
+            // no precise matches, so return the one that is closer to the search
+            // key (greatest)
+            return key_memcache.compareTo(key_snapshot) > 0 ? 
+              key_memcache : key_snapshot;
+          }          
+        }
+      } finally {
+        this.lock.readLock().unlock();
+      }
+    }
+
+    private Text internalGetRowKeyAtOrBefore(SortedMap<HStoreKey, byte []> map, 
+      Text key, long timestamp) {
+      // TODO: account for deleted cells
+
+      HStoreKey search_key = new HStoreKey(key, timestamp);
+
+      // get all the entries that come equal or after our search key
+      SortedMap<HStoreKey, byte []> tailMap = map.tailMap(search_key);
+
+      // if the first item in the tail has a matching row, then we have an 
+      // exact match, and we should return that item
+      if (!tailMap.isEmpty() && tailMap.firstKey().getRow().equals(key)) {
+        // seek forward past any cells that don't fulfill the timestamp
+        // argument
+        Iterator<HStoreKey> key_iterator = tailMap.keySet().iterator();
+        HStoreKey found_key = key_iterator.next();
+        
+        // keep seeking so long as we're in the same row, and the timstamp
+        // isn't as small as we'd like, and there are more cells to check
+        while (found_key.getRow().equals(key)
+          && found_key.getTimestamp() > timestamp && key_iterator.hasNext()) {
+          found_key = key_iterator.next();
+        }
+        
+        // if this check fails, then we've iterated through all the keys that 
+        // match by row, but none match by timestamp, so we fall through to
+        // the headMap case.
+        if (found_key.getTimestamp() <= timestamp) {
+          // we didn't find a key that matched by timestamp, so we have to 
+          // return null;
+/*          LOG.debug("Went searching for " + key + ", found " + found_key.getRow());*/
+          return found_key.getRow();
+        }
+      }
+      
+      // the tail didn't contain the key we're searching for, so we should
+      // use the last key in the headmap as the closest before
+      SortedMap<HStoreKey, byte []> headMap = map.headMap(search_key);
+      if (headMap.isEmpty()) {
+/*        LOG.debug("Went searching for " + key + ", found nothing!");*/
+        return null;
+      } else {
+/*        LOG.debug("Went searching for " + key + ", found " + headMap.lastKey().getRow());*/
+        return headMap.lastKey().getRow();
+      }
+    }
+    
     /**
      * Examine a single map for the desired key.
      *
@@ -1707,6 +1801,116 @@ public class HStore implements HConstants {
   }
   
   /**
+   * Find the key that matches <i>row</i> exactly, or the one that immediately
+   * preceeds it.
+   */
+  public Text getRowKeyAtOrBefore(final Text row, final long timestamp)
+  throws IOException{
+    // if the exact key is found, return that key
+    // if we find a key that is greater than our search key, then use the 
+    // last key we processed, and if that was null, return null.
+
+    Text foundKey = memcache.getRowKeyAtOrBefore(row, timestamp);
+    if (foundKey != null) {
+      return foundKey;
+    }
+    
+    // obtain read lock
+    this.lock.readLock().lock();
+    try {
+      MapFile.Reader[] maparray = getReaders();
+      
+      Text bestSoFar = null;
+      
+      HStoreKey rowKey = new HStoreKey(row, timestamp);
+      
+      // process each store file
+      for(int i = maparray.length - 1; i >= 0; i--) {
+        Text row_from_mapfile = 
+          rowAtOrBeforeFromMapFile(maparray[i], row, timestamp);
+
+        // for when we have MapFile.Reader#getClosest before functionality
+/*        Text row_from_mapfile = null;
+        WritableComparable value = null; 
+        
+        HStoreKey hskResult = 
+          (HStoreKey)maparray[i].getClosest(rowKey, value, true);
+        
+        if (hskResult != null) {
+          row_from_mapfile = hskResult.getRow();
+        }*/
+                
+/*        LOG.debug("Best from this mapfile was " + row_from_mapfile);*/
+        
+        // short circuit on an exact match
+        if (row.equals(row_from_mapfile)) {
+          return row;
+        }
+        
+        // check to see if we've found a new closest row key as a result
+        if (bestSoFar == null || bestSoFar.compareTo(row_from_mapfile) < 0) {
+          bestSoFar = row_from_mapfile;
+        }
+      }
+      
+/*      LOG.debug("Went searching for " + row + ", found " + bestSoFar);*/
+      return bestSoFar;
+    } finally {
+      this.lock.readLock().unlock();
+    }
+  }
+  
+  /**
+   * Check an individual MapFile for the row at or before a given key 
+   * and timestamp
+   */
+  private Text rowAtOrBeforeFromMapFile(MapFile.Reader map, Text row, 
+    long timestamp)
+  throws IOException {
+    Text previousRow = null;
+    ImmutableBytesWritable readval = new ImmutableBytesWritable();
+    HStoreKey readkey = new HStoreKey();
+    
+    synchronized(map) {
+      // start at the beginning of the map
+      // TODO: this sucks. do a clever binary search instead.
+      map.reset();
+    
+      while(map.next(readkey, readval)){
+        if (readkey.getRow().compareTo(row) == 0) {
+          // exact match on row
+          if (readkey.getTimestamp() <= timestamp) {
+            // timestamp fits, return this key
+            return readkey.getRow();
+          }
+          
+          // getting here means that we matched the row, but the timestamp
+          // is too recent - hopefully one of the next cells will match
+          // better, so keep rolling
+        }        
+        // if the row key we just read is beyond the key we're searching for,
+        // then we're done; return the last key we saw before this one
+        else if (readkey.getRow().toString().compareTo(row.toString()) > 0 ) {
+          return previousRow;
+        } else {
+          // so, the row key doesn't match, and we haven't gone past the row
+          // we're seeking yet, so this row is a candidate for closest, as
+          // long as the timestamp is correct.
+          if (readkey.getTimestamp() <= timestamp) {
+            previousRow = new Text(readkey.getRow());
+          }
+          // otherwise, ignore this key, because it doesn't fulfill our 
+          // requirements.
+        }
+      }
+    }
+    // getting here means we exhausted all of the cells in the mapfile.
+    // whatever satisfying row we reached previously is the row we should 
+    // return
+    return previousRow;
+  }
+  
+  /**
    * Test that the <i>target</i> matches the <i>origin</i>. If the 
    * <i>origin</i> has an empty column, then it's assumed to mean any column 
    * matches and only match on row and timestamp. Otherwise, it compares the
@@ -1727,7 +1931,7 @@ public class HStore implements HConstants {
     // otherwise, we want to match on row and column
     return target.matchesRowCol(origin);
   }
-  
+    
   /**
    * Test that the <i>target</i> matches the <i>origin</i>. If the <i>origin</i>
    * has an empty column, then it just tests row equivalence. Otherwise, it uses

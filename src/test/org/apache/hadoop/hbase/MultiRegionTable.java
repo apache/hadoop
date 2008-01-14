@@ -136,39 +136,47 @@ public class MultiRegionTable extends HBaseTestCase {
     Path parentDir = HRegion.getRegionDir(new Path(d, tableName),
         parent.getEncodedName());
     assertTrue(fs.exists(parentDir));
-    LOG.info("Split happened. Parent is " + parent.getRegionName() +
-        " and daughters are " +
-        ((splitA != null)? splitA.getRegionName(): "-") + ", " +
-        ((splitB != null)? splitB.getRegionName(): "-"));
-    
+
+    LOG.info("Split happened. Parent is " + parent.getRegionName());
+
     // Recalibrate will cause us to wait on new regions' deployment
     recalibrate(t, new Text(columnName), retries, waitTime);
-    
-    // Compact a region at a time so we can test case where one region has
-    // no references but the other still has some
-    compact(cluster, splitA);
-    
-    // Wait till the parent only has reference to remaining split, one that
-    // still has references.
-    while (true) {
-      data = getSplitParentInfo(meta, parent);
-      if (data == null || data.size() == 3) {
-        try {
-          Thread.sleep(waitTime);
-        } catch (InterruptedException e) {
-          // continue
+
+    if (splitA == null) {
+      LOG.info("splitA was already null. Assuming it was previously compacted.");
+    } else {
+      LOG.info("Daughter splitA: " + splitA.getRegionName());
+      // Compact a region at a time so we can test case where one region has
+      // no references but the other still has some
+      compact(cluster, splitA);
+      
+      // Wait till the parent only has reference to remaining split, one that
+      // still has references.
+      while (true) {
+        data = getSplitParentInfo(meta, parent);
+        if (data == null || data.size() == 3) {
+          try {
+            Thread.sleep(waitTime);
+          } catch (InterruptedException e) {
+            // continue
+          }
+          continue;
         }
-        continue;
+        break;
       }
-      break;
+      LOG.info("Parent split info returned " + data.keySet().toString());
     }
-    LOG.info("Parent split info returned " + data.keySet().toString());
-    
-    // Call second split.
-    compact(cluster, splitB);
-    
-    // Now wait until parent disappears.
-    
+
+    if (splitB == null) {
+      LOG.info("splitB was already null. Assuming it was previously compacted.");
+    } else {
+      LOG.info("Daughter splitB: " + splitA.getRegionName());
+
+      // Call second split.
+      compact(cluster, splitB);
+    }
+  
+    // Now wait until parent disappears.    
     LOG.info("Waiting on parent " + parent.getRegionName() + " to disappear");
     for (int i = 0; i < retries; i++) {
       if (getSplitParentInfo(meta, parent) == null) {

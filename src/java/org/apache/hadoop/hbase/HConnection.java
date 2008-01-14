@@ -57,24 +57,26 @@ public interface HConnection {
   public HTableDescriptor[] listTables() throws IOException;
   
   /**
-   * Gets the servers of the given table.
-   * 
-   * @param tableName - the table to be located
-   * @return map of startRow -> RegionLocation
-   * @throws IOException - if the table can not be located after retrying
+   * Find the location of the region of <i>tableName</i> that <i>row</i>
+   * lives in.
+   * @param tableName name of the table <i>row</i> is in
+   * @param row row key you're trying to find the region of
+   * @return HRegionLocation that describes where to find the reigon in 
+   * question
    */
-  public SortedMap<Text, HRegionLocation> getTableServers(Text tableName)
+  public HRegionLocation locateRegion(Text tableName, Text row)
   throws IOException;
   
   /**
-   * Reloads servers for the specified table.
-   * 
-   * @param tableName name of table whose servers are to be reloaded
-   * @return map of start key -> RegionLocation
-   * @throws IOException
+   * Find the location of the region of <i>tableName</i> that <i>row</i>
+   * lives in, ignoring any value that might be in the cache.
+   * @param tableName name of the table <i>row</i> is in
+   * @param row row key you're trying to find the region of
+   * @return HRegionLocation that describes where to find the reigon in 
+   * question
    */
-  public SortedMap<Text, HRegionLocation>
-  reloadTableServers(final Text tableName) throws IOException;
+  public HRegionLocation relocateRegion(Text tableName, Text row)
+  throws IOException;  
   
   /** 
    * Establishes a connection to the region server at the specified address.

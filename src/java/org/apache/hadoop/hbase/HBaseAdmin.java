@@ -117,7 +117,7 @@ public class HBaseAdmin implements HConstants {
     for (int tries = 0; tries < numRetries; tries++) {
       try {
         // Wait for new table to come on-line
-        connection.getTableServers(desc.getName());
+        connection.locateRegion(desc.getName(), EMPTY_START_ROW);
         break;
         
       } catch (TableNotFoundException e) {
@@ -541,9 +541,7 @@ public class HBaseAdmin implements HConstants {
   
   private HRegionLocation getFirstMetaServerForTable(Text tableName)
   throws IOException {
-    SortedMap<Text, HRegionLocation> metaservers =
-      connection.getTableServers(META_TABLE_NAME); 
-    return metaservers.get((metaservers.containsKey(tableName)) ?
-        tableName : metaservers.headMap(tableName).lastKey());
+    Text tableKey = new Text(tableName.toString() + ",,99999999999999");
+    return connection.locateRegion(META_TABLE_NAME, tableKey);
   }
 }

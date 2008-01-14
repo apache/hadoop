@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -55,7 +56,6 @@ public class HTable implements HConstants {
   protected final long pause;
   protected final int numRetries;
   protected Random rand;
-  protected volatile SortedMap<Text, HRegionLocation> tableServers;
   protected AtomicReference<BatchUpdate> batch;
 
   protected volatile boolean tableDoesNotExist;
@@ -89,7 +89,6 @@ public class HTable implements HConstants {
     this.numRetries = conf.getInt("hbase.client.retries.number", 5);
     this.rand = new Random();
     this.batch = new AtomicReference<BatchUpdate>();
-    tableServers = connection.getTableServers(tableName);
     tableDoesNotExist = false;
     closed = false;
   }
@@ -99,17 +98,21 @@ public class HTable implements HConstants {
    * @param row Row to find.
    * @return Location of row.
    */
-  HRegionLocation getRegionLocation(Text row) {
+  HRegionLocation getRegionLocation(Text row) throws IOException {
     checkClosed();
-    if (this.tableServers == null) {
-      throw new IllegalStateException("Must open table first");
-    }
-    
-    // Only one server will have the row we are looking for
-    Text serverKey = (this.tableServers.containsKey(row)) ?
-        row : this.tableServers.headMap(row).lastKey();
-    return this.tableServers.get(serverKey);
+    return this.connection.locateRegion(this.tableName, row);
   }
+
+  /**
+   * Find region location hosting passed row using cached info
+   * @param row Row to find.
+   * @return Location of row.
+   */
+  HRegionLocation getRegionLocation(Text row, boolean reload) throws IOException {
+    checkClosed();
+    return this.connection.relocateRegion(this.tableName, row);
+  }
+
 
   /** @return the connection */
   public HConnection getConnection() {
@@ -124,7 +127,6 @@ public class HTable implements HConstants {
   public synchronized void close() {
     if (!closed) {
       closed = true;
-      tableServers = null;
       batch.set(null);
       connection.close(tableName);
     }
@@ -185,14 +187,78 @@ public class HTable implements HConstants {
    * Gets the starting row key for every region in the currently open table
    * @return Array of region starting row keys
    */
-  public Text[] getStartKeys() {
+  public Text[] getStartKeys() throws IOException {
     checkClosed();
-    Text[] keys = new Text[tableServers.size()];
-    int i = 0;
-    for(Text key: tableServers.keySet()){
-      keys[i++] = key;
+    List<Text> keyList = new ArrayList<Text>();
+
+    long scannerId = -1L;
+
+    Text startRow = new Text(tableName.toString() + ",,999999999999999");
+    HRegionLocation metaLocation = null;
+
+    // scan over the each meta region
+    do {
+      try{
+        // turn the start row into a location
+        metaLocation = 
+          connection.locateRegion(META_TABLE_NAME, startRow);
+
+        // connect to the server hosting the .META. region
+        HRegionInterface server = 
+          connection.getHRegionConnection(metaLocation.getServerAddress());
+
+        // open a scanner over the meta region
+        scannerId = server.openScanner(
+          metaLocation.getRegionInfo().getRegionName(),
+          COLUMN_FAMILY_ARRAY, EMPTY_START_ROW, LATEST_TIMESTAMP,
+          null);
+        
+        // iterate through the scanner, accumulating unique table names
+        SCANNER_LOOP: while (true) {
+          HbaseMapWritable values = server.next(scannerId);
+          if (values == null || values.size() == 0) {
+            break;
+          }
+          for (Map.Entry<Writable, Writable> e: values.entrySet()) {
+            HStoreKey key = (HStoreKey) e.getKey();
+            if (key.getColumn().equals(COL_REGIONINFO)) {
+              HRegionInfo info = new HRegionInfo();
+              info = (HRegionInfo) Writables.getWritable(
+                  ((ImmutableBytesWritable) e.getValue()).get(), info);
+
+              if (!info.getTableDesc().getName().equals(this.tableName)) {
+                break SCANNER_LOOP;
+              }
+
+              if (info.isOffline()) {
+                LOG.debug("Region " + info + " was offline!");
+                break;
+              }
+
+              if (info.isSplit()) {
+                LOG.debug("Region " + info + " was split!");
+                break;
+              }
+
+              keyList.add(info.getStartKey());
+            }
+          }
+        }
+          
+        // advance the startRow to the end key of the current region
+        startRow = metaLocation.getRegionInfo().getEndKey();          
+      } catch (IOException e) {
+        // need retry logic?
+        throw e;
+      }
+    } while (startRow.compareTo(EMPTY_START_ROW) != 0);
+
+    Text[] arr = new Text[keyList.size()];
+    for (int i = 0; i < keyList.size(); i++ ){
+      arr[i] = keyList.get(i);
     }
-    return keys;
+    
+    return arr;
   }
   
   /** 
@@ -225,7 +291,7 @@ public class HTable implements HConstants {
         if (LOG.isDebugEnabled()) {
           LOG.debug("reloading table servers because: " + e.getMessage());
         }
-        tableServers = connection.reloadTableServers(tableName);
+        r = getRegionLocation(row, true);
       }
       try {
         Thread.sleep(this.pause);
@@ -270,7 +336,7 @@ public class HTable implements HConstants {
         if (LOG.isDebugEnabled()) {
           LOG.debug("reloading table servers because: " + e.getMessage());
         }
-        tableServers = connection.reloadTableServers(tableName);
+        r = getRegionLocation(row, true);
       }
       try {
         Thread.sleep(this.pause);
@@ -326,7 +392,7 @@ public class HTable implements HConstants {
         if (LOG.isDebugEnabled()) {
           LOG.debug("reloading table servers because: " + e.getMessage());
         }
-        tableServers = connection.reloadTableServers(tableName);
+        r = getRegionLocation(row, true);
       }
       try {
         Thread.sleep(this.pause);
@@ -387,7 +453,7 @@ public class HTable implements HConstants {
         if (LOG.isDebugEnabled()) {
           LOG.debug("reloading table servers because: " + e.getMessage());
         }
-        tableServers = connection.reloadTableServers(tableName);
+        r = getRegionLocation(row, true);        
       }
       try {
         Thread.sleep(this.pause);
@@ -728,7 +794,7 @@ public class HTable implements HConstants {
         if (LOG.isDebugEnabled()) {
           LOG.debug("reloading table servers because: " + e.getMessage());
         }
-        tableServers = connection.reloadTableServers(tableName);
+        r = getRegionLocation(row, true);
       }
       try {
         Thread.sleep(this.pause);
@@ -765,7 +831,8 @@ public class HTable implements HConstants {
         if (LOG.isDebugEnabled()) {
           LOG.debug("reloading table servers because: " + e.getMessage());
         }
-        tableServers = connection.reloadTableServers(tableName);
+/*        tableServers = connection.reloadTableServers(tableName);*/
+        r = getRegionLocation(row, true);
       }
       try {
         Thread.sleep(this.pause);
@@ -814,7 +881,7 @@ public class HTable implements HConstants {
         if (LOG.isDebugEnabled()) {
           LOG.debug("reloading table servers because: " + e.getMessage());
         }
-        tableServers = connection.reloadTableServers(tableName);
+        r = getRegionLocation(row, true);
       }
       try {
         Thread.sleep(this.pause);
@@ -900,11 +967,11 @@ public class HTable implements HConstants {
             e = RemoteExceptionHandler.decodeRemoteException(
                 (RemoteException) e);
           }
-          if (tries < numRetries -1) {
+          if (tries < numRetries - 1) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("reloading table servers because: " + e.getMessage());
             }
-            tableServers = connection.reloadTableServers(tableName);
+            r = getRegionLocation(batch.get().getRow(), true);
           } else {
             throw e;
           }
@@ -945,87 +1012,89 @@ public class HTable implements HConstants {
     private long scanTime;
     @SuppressWarnings("hiding")
     private boolean closed;
-    private AtomicReferenceArray<HRegionLocation> regions;
-    @SuppressWarnings("hiding")
-    private int currentRegion;
+    private HRegionLocation currentRegionLocation;
     private HRegionInterface server;
     private long scannerId;
     private RowFilterInterface filter;
     
-    private void loadRegions() {
-      checkClosed();
-      Text firstServer = null;
-      if (this.startRow == null || this.startRow.getLength() == 0) {
-        firstServer = tableServers.firstKey();
-
-      } else if(tableServers.containsKey(startRow)) {
-        firstServer = startRow;
-
-      } else {
-        firstServer = tableServers.headMap(startRow).lastKey();
-      }
-      Collection<HRegionLocation> info =
-        tableServers.tailMap(firstServer).values();
-      
-      this.regions = new AtomicReferenceArray<HRegionLocation>(
-          info.toArray(new HRegionLocation[info.size()]));
-    }
-    
     protected ClientScanner(Text[] columns, Text startRow, long timestamp,
-        RowFilterInterface filter) throws IOException {
-      
+      RowFilterInterface filter) 
+    throws IOException {
+
+      LOG.info("Creating scanner over " + tableName + " starting at key " + startRow);
+
+      // defaults
+      this.closed = false;
+      this.server = null;
+      this.scannerId = -1L;
+    
+      // save off the simple parameters
       this.columns = columns;
       this.startRow = startRow;
       this.scanTime = timestamp;
-      this.closed = false;
+      
+      // save the filter, and make sure that the filter applies to the data
+      // we're expecting to pull back
       this.filter = filter;
       if (filter != null) {
         filter.validate(columns);
       }
-      loadRegions();
-      this.currentRegion = -1;
-      this.server = null;
-      this.scannerId = -1L;
+
       nextScanner();
     }
-    
+        
     /*
      * Gets a scanner for the next region.
      * Returns false if there are no more scanners.
      */
     private boolean nextScanner() throws IOException {
       checkClosed();
+      
+      // close the previous scanner if it's open
       if (this.scannerId != -1L) {
         this.server.close(this.scannerId);
         this.scannerId = -1L;
       }
-      this.currentRegion += 1;
-      if (this.currentRegion == this.regions.length()) {
-        close();
-        return false;
-      }
+
+      // if we're at the end of the table, then close and return false
+      // to stop iterating
+      if (this.currentRegionLocation != null){
+        LOG.debug("Advancing forward from region " 
+          + this.currentRegionLocation.getRegionInfo());
+        
+        if (this.currentRegionLocation.getRegionInfo().getEndKey() == null
+          || this.currentRegionLocation.getRegionInfo().getEndKey().equals(EMPTY_TEXT)) {
+            LOG.debug("We're at the end of the region, returning.");
+            close();
+            return false;
+        }
+      } 
+      
+      HRegionLocation oldLocation = this.currentRegionLocation;
+      
+      Text localStartKey = oldLocation == null ? 
+        startRow : oldLocation.getRegionInfo().getEndKey();
+
+      // advance to the region that starts with the current region's end key
+      LOG.debug("Advancing internal scanner to startKey " + localStartKey);
+      this.currentRegionLocation = getRegionLocation(localStartKey);
+      
+      LOG.debug("New region: " + this.currentRegionLocation);
+      
       try {
         for (int tries = 0; tries < numRetries; tries++) {
-          HRegionLocation r = this.regions.get(currentRegion);
-          this.server =
-            connection.getHRegionConnection(r.getServerAddress());
+          // connect to the server
+          server = connection.getHRegionConnection(
+            this.currentRegionLocation.getServerAddress());
           
           try {
-            if (this.filter == null) {
-              this.scannerId =
-                this.server.openScanner(r.getRegionInfo().getRegionName(),
-                    this.columns, currentRegion == 0 ? this.startRow
-                        : EMPTY_START_ROW, scanTime, null);
+            // open a scanner on the region server starting at the 
+            // beginning of the region
+            scannerId = server.openScanner(
+              this.currentRegionLocation.getRegionInfo().getRegionName(),
+              this.columns, localStartKey, scanTime, filter);
               
-            } else {
-              this.scannerId =
-                this.server.openScanner(r.getRegionInfo().getRegionName(),
-                    this.columns, currentRegion == 0 ? this.startRow
-                        : EMPTY_START_ROW, scanTime, filter);
-            }
-
             break;
-        
           } catch (IOException e) {
             if (e instanceof RemoteException) {
               e = RemoteExceptionHandler.decodeRemoteException(
@@ -1038,8 +1107,7 @@ public class HTable implements HConstants {
             if (LOG.isDebugEnabled()) {
               LOG.debug("reloading table servers because: " + e.getMessage());
             }
-            tableServers = connection.reloadTableServers(tableName);
-            loadRegions();
+            currentRegionLocation = getRegionLocation(localStartKey, true);
           }
         }
         try {
@@ -1068,7 +1136,7 @@ public class HTable implements HConstants {
       // calls to next.
       results.clear();
       do {
-        values = this.server.next(this.scannerId);
+        values = server.next(scannerId);
       } while (values != null && values.size() == 0 && nextScanner());
 
       if (values != null && values.size() != 0) {
@@ -1089,9 +1157,9 @@ public class HTable implements HConstants {
      */
     public void close() throws IOException {
       checkClosed();
-      if (this.scannerId != -1L) {
+      if (scannerId != -1L) {
         try {
-          this.server.close(this.scannerId);
+          server.close(scannerId);
           
         } catch (IOException e) {
           if (e instanceof RemoteException) {
@@ -1101,10 +1169,10 @@ public class HTable implements HConstants {
             throw e;
           }
         }
-        this.scannerId = -1L;
+        scannerId = -1L;
       }
-      this.server = null;
-      this.closed = true;
+      server = null;
+      closed = true;
     }
 
     /** {@inheritDoc} */
