@@ -770,6 +770,8 @@ public class NNBench {
             totalTimeAL2 += (System.currentTimeMillis() - startTimeAL);
             successfulOp = true;
             successfulFileOps ++;
+
+            reporter.setStatus("Finish "+ l + " files");
           } catch (IOException e) {
             TaskTracker.LOG.info("Exception recorded in op: " +
                     "Create/Write/Close");
@@ -811,6 +813,8 @@ public class NNBench {
             input.close();
             successfulOp = true;
             successfulFileOps ++;
+
+            reporter.setStatus("Finish "+ l + " files");
           } catch (IOException e) {
             TaskTracker.LOG.info("Exception recorded in op: OpenRead " + e);
             numOfExceptions++;
@@ -841,6 +845,8 @@ public class NNBench {
             
             successfulOp = true;
             successfulFileOps ++;
+
+            reporter.setStatus("Finish "+ l + " files");
           } catch (IOException e) {
             TaskTracker.LOG.info("Exception recorded in op: Rename");
 
@@ -870,6 +876,8 @@ public class NNBench {
             
             successfulOp = true;
             successfulFileOps ++;
+
+            reporter.setStatus("Finish "+ l + " files");
           } catch (IOException e) {
             TaskTracker.LOG.info("Exception in recorded op: Delete");
 

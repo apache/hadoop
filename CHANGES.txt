@@ -442,6 +442,9 @@ Trunk (unreleased changes)
 
     HADOOP-2571. Suppress a suprious warning in test code. (cdouglas)
 
+    HADOOP-2481. NNBench report its progress periodically.
+    (Hairong Kuang via dhruba)
+
 Release 0.15.3 - (unreleased changes)
 
   BUG FIXES
