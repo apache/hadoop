@@ -135,6 +135,12 @@
       <p><code>WordCount</code> is a simple application that counts the number of
       occurences of each word in a given input set.</p>
       
+      <p>This works with a 
+      <a href="quickstart.html#Standalone+Operation">local-standalone</a>,
+      <a href="quickstart.html#SingleNodeSetup">pseudo-distributed</a> or
+      <a href="quickstart.html#Fully-Distributed+Operation">fully-distributed</a> 
+      Hadoop installation.</p>
+      
       <section>
         <title>Source Code</title>
         
@@ -156,7 +162,7 @@
           <tr>
             <td>3.</td>
             <td>
-              <code>import java.io.Exception;</code>
+              <code>import java.io.IOException;</code>
             </td>
           </tr>
           <tr>
@@ -218,7 +224,7 @@
             <td>
               &nbsp;&nbsp;
               <code>
-                public static class MapClass extends MapReduceBase 
+                public static class Map extends MapReduceBase 
                 implements Mapper&lt;LongWritable, Text, Text, IntWritable&gt; {
               </code>
             </td>
@@ -439,7 +445,7 @@
             <td>45.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
-              <code>conf.setMapperClass(MapClass.class);</code>
+              <code>conf.setMapperClass(Map.class);</code>
             </td>
           </tr>
           <tr>
@@ -482,14 +488,14 @@
             <td>52.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
-              <code>conf.setInputPath(new Path(args[1]));</code>
+              <code>conf.setInputPath(new Path(args[0]));</code>
             </td>
           </tr>
           <tr>
             <td>53.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
-              <code>conf.setOutputPath(new Path(args[2]));</code>
+              <code>conf.setOutputPath(new Path(args[1]));</code>
             </td>
           </tr>
           <tr>
@@ -530,11 +536,12 @@
         <code>HADOOP_VERSION</code> is the Hadoop version installed, compile 
         <code>WordCount.java</code> and create a jar:</p>
         <p>
+          <code>$ mkdir wordcount_classes</code><br/>
           <code>
             $ javac -classpath ${HADOOP_HOME}/hadoop-${HADOOP_VERSION}-core.jar 
-              WordCount.java
+              -d wordcount_classes WordCount.java
           </code><br/>
-          <code>$ jar -cvf /usr/joe/wordcount.jar WordCount.class</code> 
+          <code>$ jar -cvf /usr/joe/wordcount.jar -C wordcount_classes/ .</code> 
         </p>
         
         <p>Assuming that:</p>
@@ -1472,7 +1479,13 @@
       <title>Example: WordCount v2.0</title>
       
       <p>Here is a more complete <code>WordCount</code> which uses many of the
-      features provided by the Map-Reduce framework we discussed so far:</p>
+      features provided by the Map-Reduce framework we discussed so far.</p>
+      
+      <p>This needs the HDFS to be up and running, especially for the 
+      <code>DistributedCache</code>-related features. Hence it only works with a 
+      <a href="quickstart.html#SingleNodeSetup">pseudo-distributed</a> or
+      <a href="quickstart.html#Fully-Distributed+Operation">fully-distributed</a> 
+      Hadoop installation.</p>      
       
       <section>
         <title>Source Code</title>
@@ -1563,7 +1576,7 @@
             <td>
               &nbsp;&nbsp;
               <code>
-                public static class MapClass extends MapReduceBase 
+                public static class Map extends MapReduceBase 
                 implements Mapper&lt;LongWritable, Text, Text, IntWritable&gt; {
               </code>
             </td>
@@ -1672,36 +1685,43 @@
             <td>32.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <code>Path[] patternsFiles = new Path[0];</code>
+              <code>if (job.getBoolean("wordcount.skip.patterns", false)) {</code>
             </td>
           </tr>
           <tr>
             <td>33.</td>
             <td>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <code>try {</code>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <code>Path[] patternsFiles = new Path[0];</code>
             </td>
           </tr>
           <tr>
             <td>34.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <code>try {</code>
+            </td>
+          </tr>
+          <tr>
+            <td>35.</td>
+            <td>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>
                 patternsFiles = DistributedCache.getLocalCacheFiles(job);
               </code>
             </td>
           </tr>
           <tr>
-            <td>35.</td>
+            <td>36.</td>
             <td>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>} catch (IOException ioe) {</code>
             </td>
           </tr>
           <tr>
-            <td>36.</td>
+            <td>37.</td>
             <td>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>
                 System.err.println("Caught exception while getting cached files: " 
                 + StringUtils.stringifyException(ioe));
@@ -1709,60 +1729,67 @@
             </td>
           </tr>
           <tr>
-            <td>37.</td>
-            <td>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <code>}</code>
-            </td>
-          </tr>
-          <tr>
             <td>38.</td>
             <td>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <code>for (Path patternsFile : patternsFiles) {</code>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <code>}</code>
             </td>
           </tr>
           <tr>
             <td>39.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <code>parseSkipFile(patternsFile);</code>
+              <code>for (Path patternsFile : patternsFiles) {</code>
             </td>
           </tr>
           <tr>
             <td>40.</td>
+            <td>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <code>parseSkipFile(patternsFile);</code>
+            </td>
+          </tr>
+          <tr>
+            <td>41.</td>
+            <td>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <code>}</code>
+            </td>
+          </tr>
+          <tr>
+            <td>42.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>}</code>
             </td>
           </tr>
           <tr>
-            <td>41.</td>
+            <td>43.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>}</code>
             </td>
           </tr>
           <tr>
-            <td>42.</td>
+            <td>44.</td>
             <td></td>
           </tr>
           <tr>
-            <td>43.</td>
+            <td>45.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>private void parseSkipFile(Path patternsFile) {</code>
             </td>
           </tr>
           <tr>
-            <td>44.</td>
+            <td>46.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>try {</code>
             </td>
           </tr>
           <tr>
-            <td>45.</td>
+            <td>47.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>
@@ -1772,42 +1799,42 @@
             </td>
           </tr>
           <tr>
-            <td>46.</td>
+            <td>48.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>String pattern = null;</code>
             </td>
           </tr>
           <tr>
-            <td>47.</td>
+            <td>49.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>while ((pattern = fis.readLine()) != null) {</code>
             </td>
           </tr>
           <tr>
-            <td>48.</td>
+            <td>50.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>patternsToSkip.add(pattern);</code>
             </td>
           </tr>
           <tr>
-            <td>49.</td>
+            <td>51.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>}</code>
             </td>
           </tr>
           <tr>
-            <td>50.</td>
+            <td>52.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>} catch (IOException ioe) {</code>
             </td>
           </tr>
           <tr>
-            <td>51.</td>
+            <td>53.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>
@@ -1819,25 +1846,25 @@
             </td>
           </tr>
           <tr>
-            <td>52.</td>
+            <td>54.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>}</code>
             </td>
           </tr>
           <tr>
-            <td>53.</td>
+            <td>55.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>}</code>
             </td>
           </tr>
           <tr>
-            <td>54.</td>
+            <td>56.</td>
             <td></td>
           </tr>
           <tr>
-            <td>55.</td>
+            <td>57.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>
@@ -1848,7 +1875,7 @@
             </td>
           </tr>
           <tr>
-            <td>56.</td>
+            <td>58.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>
@@ -1859,89 +1886,89 @@
             </td>
           </tr>
           <tr>
-            <td>57.</td>
+            <td>59.</td>
             <td></td>
           </tr>
           <tr>
-            <td>58.</td>
+            <td>60.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>for (String pattern : patternsToSkip) {</code>
             </td>
           </tr>
           <tr>
-            <td>59.</td>
+            <td>61.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>line = line.replaceAll(pattern, "");</code>
             </td>
           </tr>
           <tr>
-            <td>60.</td>
+            <td>62.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>}</code>
             </td>
           </tr>
           <tr>
-            <td>61.</td>
+            <td>63.</td>
             <td></td>
           </tr>
           <tr>
-            <td>62.</td>
+            <td>64.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>StringTokenizer tokenizer = new StringTokenizer(line);</code>
             </td>
           </tr>
           <tr>
-            <td>63.</td>
+            <td>65.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>while (tokenizer.hasMoreTokens()) {</code>
             </td>
           </tr>
           <tr>
-            <td>64.</td>
+            <td>66.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>word.set(tokenizer.nextToken());</code>
             </td>
           </tr>
           <tr>
-            <td>65.</td>
+            <td>67.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>output.collect(word, one);</code>
             </td>
           </tr>
           <tr>
-            <td>66.</td>
+            <td>68.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>reporter.incrCounter(Counters.INPUT_WORDS, 1);</code>
             </td>
           </tr>
           <tr>
-            <td>67.</td>
+            <td>69.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>}</code>
             </td>
           </tr>
           <tr>
-            <td>68.</td>
+            <td>70.</td>
             <td></td>
           </tr>
           <tr>
-            <td>69.</td>
+            <td>71.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>if ((++numRecords % 100) == 0) {</code>
             </td>
           </tr>
           <tr>
-            <td>70.</td>
+            <td>72.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>
@@ -1952,32 +1979,32 @@
             </td>
           </tr>
           <tr>
-            <td>71.</td>
+            <td>73.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>}</code>
             </td>
           </tr>
           <tr>
-            <td>72.</td>
+            <td>74.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>}</code>
             </td>
           </tr>
           <tr>
-            <td>73.</td>
+            <td>75.</td>
             <td>
               &nbsp;&nbsp;
               <code>}</code>
             </td>
           </tr>
           <tr>
-            <td>74.</td>
+            <td>76.</td>
             <td></td>
           </tr>
           <tr>
-            <td>75.</td>
+            <td>77.</td>
             <td>
               &nbsp;&nbsp;
               <code>
@@ -1987,7 +2014,7 @@
             </td>
           </tr>
           <tr>
-            <td>76.</td>
+            <td>78.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>
@@ -1998,67 +2025,67 @@
             </td>
           </tr>
           <tr>
-            <td>77.</td>
+            <td>79.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>int sum = 0;</code>
             </td>
           </tr>
           <tr>
-            <td>78.</td>
+            <td>80.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>while (values.hasNext()) {</code>
             </td>
           </tr>
           <tr>
-            <td>79.</td>
+            <td>81.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>sum += values.next().get();</code>
             </td>
           </tr>
           <tr>
-            <td>80.</td>
-            <td>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <code>}</code>
-            </td>
-          </tr>
-          <tr>
-            <td>81.</td>
-            <td>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <code>output.collect(key, new IntWritable(sum));</code>
-            </td>
-          </tr>
-          <tr>
             <td>82.</td>
             <td>
-              &nbsp;&nbsp;&nbsp;&nbsp;
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>}</code>
             </td>
           </tr>
           <tr>
             <td>83.</td>
             <td>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <code>output.collect(key, new IntWritable(sum));</code>
+            </td>
+          </tr>
+          <tr>
+            <td>84.</td>
+            <td>
+              &nbsp;&nbsp;&nbsp;&nbsp;
+              <code>}</code>
+            </td>
+          </tr>
+          <tr>
+            <td>85.</td>
+            <td>
               &nbsp;&nbsp;
               <code>}</code>
             </td>
           </tr>
           <tr>
-            <td>84.</td>
+            <td>86.</td>
             <td></td>
           </tr>
           <tr>
-            <td>85.</td>
+            <td>87.</td>
             <td>
               &nbsp;&nbsp;
               <code>public int run(String[] args) throws Exception {</code>
             </td>
           </tr>
           <tr>
-            <td>86.</td>
+            <td>88.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>
@@ -2067,79 +2094,79 @@
             </td>
           </tr>
           <tr>
-            <td>87.</td>
+            <td>89.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>conf.setJobName("wordcount");</code>
             </td>
           </tr>
           <tr>
-            <td>88.</td>
+            <td>90.</td>
             <td></td>
           </tr>
           <tr>
-            <td>89.</td>
+            <td>91.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>conf.setOutputKeyClass(Text.class);</code>
             </td>
           </tr>
           <tr>
-            <td>90.</td>
+            <td>92.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>conf.setOutputValueClass(IntWritable.class);</code>
             </td>
           </tr>
           <tr>
-            <td>91.</td>
+            <td>93.</td>
             <td></td>
           </tr>
           <tr>
-            <td>92.</td>
+            <td>94.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
-              <code>conf.setMapperClass(MapClass.class);</code>
+              <code>conf.setMapperClass(Map.class);</code>
             </td>
           </tr>
           <tr>
-            <td>93.</td>
+            <td>95.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>conf.setCombinerClass(Reduce.class);</code>
             </td>
           </tr>
           <tr>
-            <td>94.</td>
+            <td>96.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>conf.setReducerClass(Reduce.class);</code>
             </td>
           </tr>
           <tr>
-            <td>95.</td>
+            <td>97.</td>
             <td></td>
           </tr>
           <tr>
-            <td>96.</td>
+            <td>98.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>conf.setInputFormat(TextInputFormat.class);</code>
             </td>
           </tr>
           <tr>
-            <td>97.</td>
+            <td>99.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>conf.setOutputFormat(TextOutputFormat.class);</code>
             </td>
           </tr>
           <tr>
-            <td>98.</td>
+            <td>100.</td>
             <td></td>
           </tr>
           <tr>
-            <td>99.</td>
+            <td>101.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>
@@ -2148,21 +2175,21 @@
             </td>
           </tr>
           <tr>
-            <td>100.</td>
+            <td>102.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>for (int i=0; i &lt; args.length; ++i) {</code>
             </td>
           </tr>
           <tr>
-            <td>101.</td>
+            <td>103.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-              <code>if ("-skip".equals(args[i]) {</code>
+              <code>if ("-skip".equals(args[i])) {</code>
             </td>
           </tr>
           <tr>
-            <td>102.</td>
+            <td>104.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>
@@ -2171,49 +2198,40 @@
             </td>
           </tr>
           <tr>
-            <td>103.</td>
+            <td>105.</td>
+            <td>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <code>
+                conf.setBoolean("wordcount.skip.patterns", true);
+              </code>
+            </td>
+          </tr>
+          <tr>
+            <td>106.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>} else {</code>
             </td>
           </tr>
           <tr>
-            <td>104.</td>
+            <td>107.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>other_args.add(args[i]);</code>
             </td>
           </tr>
           <tr>
-            <td>105.</td>
+            <td>108.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
               <code>}</code>
             </td>
           </tr>
           <tr>
-            <td>106.</td>
-            <td>
-              &nbsp;&nbsp;&nbsp;&nbsp;
-              <code>}</code>
-            </td>
-          </tr>
-          <tr>
-            <td>107.</td>
-            <td></td>
-          </tr>
-          <tr>
-            <td>108.</td>
-            <td>
-              &nbsp;&nbsp;&nbsp;&nbsp;
-              <code>conf.setInputPath(new Path(other_args[0]));</code>
-            </td>
-          </tr>
-          <tr>
             <td>109.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
-              <code>conf.setOutputPath(new Path(other_args[1]));</code>
+              <code>}</code>
             </td>
           </tr>
           <tr>
@@ -2224,29 +2242,47 @@
             <td>111.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
-              <code>JobClient.runJob(conf);</code>
+              <code>conf.setInputPath(new Path(other_args.get(0)));</code>
             </td>
           </tr>
           <tr>
             <td>112.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
-              <code>return 0;</code>
+              <code>conf.setOutputPath(new Path(other_args.get(1)));</code>
             </td>
           </tr>
           <tr>
             <td>113.</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>114.</td>
+            <td>
+              &nbsp;&nbsp;&nbsp;&nbsp;
+              <code>JobClient.runJob(conf);</code>
+            </td>
+          </tr>
+          <tr>
+            <td>115.</td>
+            <td>
+              &nbsp;&nbsp;&nbsp;&nbsp;
+              <code>return 0;</code>
+            </td>
+          </tr>
+          <tr>
+            <td>116.</td>
             <td>
               &nbsp;&nbsp;
               <code>}</code>
             </td>
           </tr>
           <tr>
-            <td>114.</td>
+            <td>117.</td>
             <td></td>
           </tr>
           <tr>
-            <td>115.</td>
+            <td>118.</td>
             <td>
               &nbsp;&nbsp;
               <code>
@@ -2255,7 +2291,7 @@
             </td>
           </tr>
           <tr>
-            <td>116.</td>
+            <td>119.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>
@@ -2265,27 +2301,27 @@
             </td>
           </tr>
           <tr>
-            <td>117.</td>
+            <td>120.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
               <code>System.exit(res);</code>
             </td>
           </tr>
           <tr>
-            <td>118.</td>
+            <td>121.</td>
             <td>
               &nbsp;&nbsp;
               <code>}</code>
             </td>
           </tr>
           <tr>
-            <td>119.</td>
+            <td>122.</td>
             <td>
               <code>}</code>
             </td>
           </tr>
           <tr>
-            <td>120.</td>
+            <td>123.</td>
             <td></td>
           </tr>
         </table>
@@ -2304,7 +2340,7 @@
           <code>Hello World, Bye World!</code><br/>
           <br/>
           <code>$ bin/hadoop dfs -cat /usr/joe/wordcount/input/file02</code><br/>
-          <code>Hello Hadoop, Goodbye the Hadoop.</code>
+          <code>Hello Hadoop, Goodbye to hadoop.</code>
         </p>
         
         <p>Run the application:</p>
@@ -2324,11 +2360,11 @@
           <code>Bye    1</code><br/>
           <code>Goodbye    1</code><br/>
           <code>Hadoop,    1</code><br/>
-          <code>Hadoop.    1</code><br/>
           <code>Hello    2</code><br/>
           <code>World!    1</code><br/>
           <code>World,    1</code><br/>
-          <code>the    1</code><br/>
+          <code>hadoop.    1</code><br/>
+          <code>to    1</code><br/>
         </p>
         
         <p>Notice that the inputs differ from the first version we looked at, 
@@ -2342,7 +2378,7 @@
           <code>\.</code><br/>
           <code>\,</code><br/>
           <code>\!</code><br/>
-          <code>the</code><br/>
+          <code>to</code><br/>
         </p>
         
         <p>Run it again, this time with more options:</p>
@@ -2362,9 +2398,10 @@
           <br/>
           <code>Bye    1</code><br/>
           <code>Goodbye    1</code><br/>
-          <code>Hadoop    2</code><br/>
+          <code>Hadoop    1</code><br/>
           <code>Hello    2</code><br/>
           <code>World    2</code><br/>
+          <code>hadoop    1</code><br/>
         </p>
         
         <p>Run it once more, this time switch-off case-sensitivity:</p>
@@ -2391,7 +2428,7 @@
       </section>
       
       <section>
-        <title>Salient Points</title>
+        <title>Highlights</title>
         
         <p>The second version of <code>WordCount</code> improves upon the 
         previous one by using some features offered by the Map-Reduce framework:
@@ -2400,23 +2437,23 @@
           <li>
             Demonstrates how applications can access configuration parameters
             in the <code>configure</code> method of the <code>Mapper</code> (and
-            <code>Reducer</code>) implementations (lines 28-41).
+            <code>Reducer</code>) implementations (lines 28-43).
           </li>
           <li>
             Demonstrates how the <code>DistributedCache</code> can be used to 
             distribute read-only data needed by the jobs. Here it allows the user 
-            to specify word-patterns to skip while counting (line 102).
+            to specify word-patterns to skip while counting (line 104).
           </li>
           <li>
             Demonstrates the utility of the <code>Tool</code> interface and the
             <code>GenericOptionsParser</code> to handle generic Hadoop 
-            command-line options (lines 85-86, 116).
+            command-line options (lines 87-116, 119).
           </li>
           <li>
-            Demonstrates how applications can use <code>Counters</code> (line 66)
+            Demonstrates how applications can use <code>Counters</code> (line 68)
             and how they can set application-specific status information via 
             the <code>Reporter</code> instance passed to the <code>map</code> (and
-            <code>reduce</code>) method (line 70).
+            <code>reduce</code>) method (line 72).
           </li>
         </ul>
         

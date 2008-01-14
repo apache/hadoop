@@ -449,6 +449,9 @@ Release 0.15.3 - (unreleased changes)
     HADOOP-2570. "work" directory created unconditionally, and symlinks
     created from the task cwds.
 
+    HADOOP-2574. Fixed mapred_tutorial.xml to correct minor errors with the
+    WordCount examples. (acmurthy) 
+
 Release 0.15.2 - 2008-01-02
 
   BUG FIXES
