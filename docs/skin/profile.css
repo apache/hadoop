@@ -46,10 +46,15 @@ a.external  {
 #tabs li a:visited { color: #000000; }
 #tabs li a:hover { color: #000000; }
 
-#level2tabs       { background-color: #4C6C8F ;} 
+#level2tabs a.selected      { background-color: #4C6C8F ;} 
 #level2tabs a:link {  color: #ffffff;  }
 #level2tabs a:visited { color: #ffffff; }
 #level2tabs a:hover { color: #ffffff; }
+
+#level2tabs { background-color: #E5E4D9;}
+#level2tabs a.unselected:link {  color: #000000;  }
+#level2tabs a.unselected:visited { color: #000000; }
+#level2tabs a.unselected:hover { color: #000000; }
 
 .heading { background-color: #E5E4D9;} 
 
@@ -80,7 +85,8 @@ color: #000000;
 background: #E5E4D9; 
 }
 
-#menu .menupagetitle  { background-color: #CFDCED}
+#menu .menupagetitle  { background-color: #CFDCED;
+  color: #000000;}
 
 #menu           { border-color: #999999;}
 #menu .menupagetitle  { border-color: #999999;}
@@ -104,7 +110,6 @@ background-color: #E5E4D9 ;
 color: #000000; 
 } 
  
-#menu .menupagetitle  { color: #000000;}    
 #menu .menupageitemgroup     { 
 background-color: #E5E4D9;
 }
@@ -123,8 +128,8 @@ background-color: #ffffff;
 color: #000000;
 } 
 a:link { color:#0000ff} 
-a:visited { color:#0000ff} 
-a:hover { color:#0000ff} 
+a:visited { color:#009999} 
+a:hover { color:#6587ff} 
 
  
 .ForrestTable      { background-color: #ccc;} 
