@@ -400,7 +400,7 @@ public class HbaseRPC {
       this.verbose = verbose;
     }
 
-    public Writable call(Writable param) throws IOException {
+    public Writable call(Writable param, long receiveTime) throws IOException {
       try {
         Invocation call = (Invocation)param;
         if (verbose) log("Call: " + call);
