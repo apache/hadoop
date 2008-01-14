@@ -17,35 +17,62 @@
  */
 package org.apache.hadoop.dfs;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.Updater;
+import org.apache.hadoop.dfs.namenode.metrics.NameNodeMgt;
+import org.apache.hadoop.metrics.*;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.hadoop.metrics.util.MetricsIntValue;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
-class NameNodeMetrics implements Updater {
+/**
+ * 
+ * This class is for maintaining  the various NameNode statistics
+ * and publishing them through the metrics interfaces.
+ * This also registers the JMX MBean for RPC.
+ * <p>
+ * This class has a number of metrics variables that are publicly accessible;
+ * these variables (objects) have methods to update their values;
+ *  for example:
+ *  <p> {@link #syncs}.inc()
+ *
+ */
+public class NameNodeMetrics implements Updater {
+    private static Log log = LogFactory.getLog(NameNodeMetrics.class);
     private final MetricsRecord metricsRecord;
     
-    private int numFilesCreated = 0;
-    private int numFilesOpened = 0;
-    private int numFilesRenamed = 0;
-    private int numFilesListed = 0;
+    public MetricsTimeVaryingInt numFilesCreated = new MetricsTimeVaryingInt("FilesCreated");
+    public MetricsTimeVaryingInt numFilesOpened = new MetricsTimeVaryingInt("FilesOpened");
+    public MetricsTimeVaryingInt numFilesRenamed = new MetricsTimeVaryingInt("FilesRenamed");
+    public MetricsTimeVaryingInt numFilesListed = new MetricsTimeVaryingInt("FilesListed");
 
-    private int numTransactions = 0;
-    private int totalTimeTransactionsLogMemory = 0;
-    private int numSyncs = 0;
-    private int totalTimeSyncs = 0;
+    
+    public MetricsTimeVaryingRate transactions = new MetricsTimeVaryingRate("Transactions");
+    public MetricsTimeVaryingRate syncs = new MetricsTimeVaryingRate("Syncs");
+    public MetricsTimeVaryingRate blockReport = new MetricsTimeVaryingRate("blockReport");
+    public MetricsIntValue safeModeTime = new MetricsIntValue("SafemodeTime");
+    public MetricsIntValue fsImageLoadTime = 
+                                        new MetricsIntValue("fsImageLoadTime");
+
       
-    NameNodeMetrics(Configuration conf) {
+    NameNodeMetrics(Configuration conf, NameNode nameNode) {
       String sessionId = conf.get("session.id");
       // Initiate Java VM metrics
       JvmMetrics.init("NameNode", sessionId);
+
+      
+      // Now the Mbean for the name node
+      new NameNodeMgt(sessionId, this, nameNode);
+      
       // Create a record for NameNode metrics
       MetricsContext metricsContext = MetricsUtil.getContext("dfs");
       metricsRecord = MetricsUtil.createRecord(metricsContext, "namenode");
       metricsRecord.setTag("sessionId", sessionId);
       metricsContext.registerUpdater(this);
+      log.info("Initializing NameNodeMeterics using context object:" +
+                metricsContext.getClass().getName());
     }
       
     /**
@@ -54,66 +81,42 @@ class NameNodeMetrics implements Updater {
      */
     public void doUpdates(MetricsContext unused) {
       synchronized (this) {
-        metricsRecord.incrMetric("files_created", numFilesCreated);
-        metricsRecord.incrMetric("files_opened", numFilesOpened);
-        metricsRecord.incrMetric("files_renamed", numFilesRenamed);
-        metricsRecord.incrMetric("files_listed", numFilesListed);
-        metricsRecord.incrMetric("num_transactions", numTransactions);
-        metricsRecord.incrMetric("avg_time_transactions_memory", 
-                                 getAverageTimeTransaction());
-        metricsRecord.incrMetric("num_syncs", numSyncs);
-        metricsRecord.incrMetric("avg_time_transactions_sync", 
-                                 getAverageTimeSync());
-              
-        numFilesCreated = 0;
-        numFilesOpened = 0;
-        numFilesRenamed = 0;
-        numFilesListed = 0;
-        numTransactions = 0;
-        totalTimeTransactionsLogMemory = 0;
-        numSyncs = 0;
-        totalTimeSyncs = 0;
+        numFilesCreated.pushMetric(metricsRecord);
+        numFilesOpened.pushMetric(metricsRecord);
+        numFilesRenamed.pushMetric(metricsRecord);
+        numFilesListed.pushMetric(metricsRecord);
+
+
+        transactions.pushMetric(metricsRecord);
+        syncs.pushMetric(metricsRecord);
+        blockReport.pushMetric(metricsRecord);
+        safeModeTime.pushMetric(metricsRecord);
+        fsImageLoadTime.pushMetric(metricsRecord);
       }
       metricsRecord.update();
     }
       
-    synchronized void createFile() {
-      ++numFilesCreated;
+    void createFile() {
+      numFilesCreated.inc();
     }
       
-    synchronized void openFile() {
-      ++numFilesOpened;
+    void openFile() {
+      numFilesOpened.inc();
     }
       
-    synchronized void renameFile() {
-      ++numFilesRenamed;
+    void renameFile() {
+      numFilesRenamed.inc();
     }
       
-    synchronized void listFile(int nfiles) {
-      numFilesListed += nfiles;
+    void listFile(int nfiles) {
+      numFilesListed.inc(nfiles);
     }
 
-    synchronized void incrNumTransactions(int count, int time) {
-      numTransactions += count;
-      totalTimeTransactionsLogMemory += time;
+    void incrNumTransactions(int count, int time) {
+      transactions.inc(count, time);
     }
 
-    synchronized void incrSyncs(int count, int time) {
-      numSyncs += count;
-      totalTimeSyncs += time;
-    }
-
-    synchronized private int getAverageTimeTransaction() {
-      if (numTransactions == 0) {
-        return 0;
-      }
-      return totalTimeTransactionsLogMemory/numTransactions;
-    }
-
-    synchronized private int getAverageTimeSync() {
-      if (numSyncs == 0) {
-        return 0;
-      }
-      return totalTimeSyncs/numSyncs;
+    void incrSyncs(int count, int time) {
+      syncs.inc(count, time);
     }
 }

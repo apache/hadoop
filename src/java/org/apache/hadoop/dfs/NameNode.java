@@ -124,7 +124,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     conf.set("fs.default.name", nameNodeAddress.getHostName() + ":" + nameNodeAddress.getPort());
     LOG.info("Namenode up at: " + this.nameNodeAddress);
 
-    myMetrics = new NameNodeMetrics(conf);
+    myMetrics = new NameNodeMetrics(conf, this);
 
     this.namesystem = new FSNamesystem(this, conf);
     this.server.start();  //start RPC server   
@@ -479,7 +479,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   /**
    * Is the cluster currently in safe mode?
    */
-  boolean isInSafeMode() {
+  public boolean isInSafeMode() {
     return namesystem.isInSafeMode();
   }
 

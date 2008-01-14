@@ -230,6 +230,10 @@ Trunk (unreleased changes)
     HADOOP-2077. Added version and build information to STARTUP_MSG for all
     hadoop daemons to aid error-reporting, debugging etc. (acmurthy) 
 
+    HADOOP-2398. Additional instrumentation for NameNode and RPC server.
+    Add support for accessing instrumentation statistics via JMX.
+    (Sanjay radia via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

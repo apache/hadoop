@@ -54,7 +54,7 @@ public class TestIPC extends TestCase {
       this.sleep = sleep;
     }
 
-    public Writable call(Writable param) throws IOException {
+    public Writable call(Writable param, long receivedTime) throws IOException {
       if (sleep) {
         try {
           Thread.sleep(RANDOM.nextInt(200));      // sleep a bit

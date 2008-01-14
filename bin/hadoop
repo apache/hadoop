@@ -167,12 +167,13 @@ unset IFS
 # figure out which class to run
 if [ "$COMMAND" = "namenode" ] ; then
   CLASS='org.apache.hadoop.dfs.NameNode'
+  HADOOP_OPTS="-Dcom.sun.management.jmxremote $HADOOP_OPTS" 
 elif [ "$COMMAND" = "secondarynamenode" ] ; then
   CLASS='org.apache.hadoop.dfs.SecondaryNameNode'
+  HADOOP_OPTS="-Dcom.sun.management.jmxremote $HADOOP_OPTS" 
 elif [ "$COMMAND" = "datanode" ] ; then
   CLASS='org.apache.hadoop.dfs.DataNode'
-elif [ "$COMMAND" = "datanodecluster" ] ; then
-  CLASS='org.apache.hadoop.dfs.DataNodeCluster'
+  HADOOP_OPTS="-Dcom.sun.management.jmxremote $HADOOP_OPTS" 
 elif [ "$COMMAND" = "fs" ] ; then
   CLASS=org.apache.hadoop.fs.FsShell
 elif [ "$COMMAND" = "dfs" ] ; then
@@ -183,8 +184,10 @@ elif [ "$COMMAND" = "fsck" ] ; then
   CLASS=org.apache.hadoop.dfs.DFSck
 elif [ "$COMMAND" = "balancer" ] ; then
   CLASS=org.apache.hadoop.dfs.Balancer
+  HADOOP_OPTS="-Dcom.sun.management.jmxremote $HADOOP_OPTS" 
 elif [ "$COMMAND" = "jobtracker" ] ; then
   CLASS=org.apache.hadoop.mapred.JobTracker
+  HADOOP_OPTS="-Dcom.sun.management.jmxremote $HADOOP_OPTS" 
 elif [ "$COMMAND" = "tasktracker" ] ; then
   CLASS=org.apache.hadoop.mapred.TaskTracker
 elif [ "$COMMAND" = "job" ] ; then

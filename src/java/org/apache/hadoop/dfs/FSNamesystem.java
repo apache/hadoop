@@ -234,6 +234,8 @@ class FSNamesystem implements FSConstants {
    * Initialize FSNamesystem.
    */
   private void initialize(NameNode nn, Configuration conf) throws IOException {
+    this.systemStart = now();
+    this.startTime = new Date(systemStart); 
     setConfigurationParameters(conf);
 
     this.localMachine = nn.getNameNodeAddress().getHostName();
@@ -241,6 +243,10 @@ class FSNamesystem implements FSConstants {
     this.dir = new FSDirectory(this, conf);
     StartupOption startOpt = NameNode.getStartupOption(conf);
     this.dir.loadFSImage(getNamespaceDirs(conf), startOpt);
+    long timeTakenToLoadFSImage = now() - systemStart;
+    LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
+    NameNode.getNameNodeMetrics().fsImageLoadTime.set(
+                              (int) timeTakenToLoadFSImage);
     this.safeMode = new SafeModeInfo(conf);
     setBlockTotal();
     pendingReplications = new PendingReplicationBlocks(
@@ -252,8 +258,7 @@ class FSNamesystem implements FSConstants {
     hbthread.start();
     lmthread.start();
     replthread.start();
-    this.systemStart = now();
-    this.startTime = new Date(systemStart); 
+
 
     this.hostsReader = new HostsFileReader(conf.get("dfs.hosts",""),
                                            conf.get("dfs.hosts.exclude",""));
@@ -2313,6 +2318,7 @@ class FSNamesystem implements FSConstants {
   public synchronized Block[] processReport(DatanodeID nodeID, 
                                             BlockListAsLongs newReport
                                             ) throws IOException {
+    long startTime = now();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("BLOCK* NameSystem.processReport: "
                              + "from " + nodeID.getName()+" " + 
@@ -2377,6 +2383,7 @@ class FSNamesystem implements FSConstants {
                                       +"ask "+nodeID.getName()+" to delete "+b.getBlockName());
       }
     }
+    NameNode.getNameNodeMetrics().blockReport.inc((int) (now() - startTime));
     return obsolete.toArray(new Block[obsolete.size()]);
   }
 
@@ -3501,9 +3508,14 @@ class FSNamesystem implements FSConstants {
           return;
         }
       }
-      if (reached >= 0)
+      long timeInSafemode = now() - systemStart;
+      LOG.info("Leaving safemode after " + timeInSafemode + " msecs");
+      NameNode.getNameNodeMetrics().safeModeTime.set((int) timeInSafemode);
+      
+      if (reached >= 0) {
         NameNode.stateChangeLog.info(
                                      "STATE* SafeModeInfo.leave: " + "Safe mode is OFF."); 
+      }
       reached = -1;
       safeMode = null;
       NameNode.stateChangeLog.info("STATE* Network topology has "

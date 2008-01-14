@@ -371,7 +371,15 @@ public class RPC {
       throws IOException {
       this(instance, conf,  bindAddress, port, 1, false);
     }
-
+    
+    private static String classNameBase(String className) {
+      String[] names = className.split("\\.", -1);
+      if (names == null || names.length == 0) {
+        return className;
+      }
+      return names[names.length-1];
+    }
+    
     /** Construct an RPC server.
      * @param instance the instance whose methods will be called
      * @param conf the configuration to use
@@ -382,13 +390,13 @@ public class RPC {
      */
     public Server(Object instance, Configuration conf, String bindAddress,  int port,
                   int numHandlers, boolean verbose) throws IOException {
-      super(bindAddress, port, Invocation.class, numHandlers, conf);
+      super(bindAddress, port, Invocation.class, numHandlers, conf, classNameBase(instance.getClass().getName()));
       this.instance = instance;
       this.implementation = instance.getClass();
       this.verbose = verbose;
     }
 
-    public Writable call(Writable param) throws IOException {
+    public Writable call(Writable param, long receivedTime) throws IOException {
       try {
         Invocation call = (Invocation)param;
         if (verbose) log("Call: " + call);
@@ -399,8 +407,14 @@ public class RPC {
 
         long startTime = System.currentTimeMillis();
         Object value = method.invoke(instance, call.getParameters());
-        long callTime = System.currentTimeMillis() - startTime;
-        LOG.debug("Served: " + call.getMethodName() + " " + callTime);
+        int processingTime = (int) (System.currentTimeMillis() - startTime);
+        int qTime = (int) (startTime-receivedTime);
+        LOG.debug("Served: " + call.getMethodName() +
+            " queueTime= " + qTime +
+            " procesingTime= " + processingTime);
+        rpcMetrics.rpcQueueTime.inc(qTime);
+        rpcMetrics.rpcProcessingTime.inc(processingTime);
+        
         if (verbose) log("Return: "+value);
 
         return new ObjectWritable(method.getReturnType(), value);

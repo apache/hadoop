@@ -54,6 +54,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 
@@ -91,7 +92,7 @@ public abstract class Server {
   private static final ThreadLocal<Server> SERVER = new ThreadLocal<Server>();
 
   /** Returns the server instance called under or null.  May be called under
-   * {@link #call(Writable)} implementations, and under {@link Writable}
+   * {@link #call(Writable, long)} implementations, and under {@link Writable}
    * methods of paramters and return values.  Permits applications to access
    * the server context.*/
   public static Server get() {
@@ -151,6 +152,8 @@ public abstract class Server {
   int maxConnectionsToNuke;                       // the max number of 
                                                   // connections to nuke
                                                   //during a cleanup
+  
+  protected RpcMetrics  rpcMetrics;
   
   private Configuration conf;
 
@@ -884,9 +887,11 @@ public abstract class Server {
           if (System.currentTimeMillis() - call.receivedTime > 
               maxCallStartAge) {
             ReflectionUtils.logThreadInfo(LOG, "Discarding call " + call, 30);
+            int timeInQ = (int) (System.currentTimeMillis() - call.receivedTime);
             LOG.warn(getName()+", call "+call
                      +": discarded for being too old (" +
-                     (System.currentTimeMillis() - call.receivedTime) + ")");
+                     timeInQ + ")");
+            rpcMetrics.rpcDiscardedOps.inc(timeInQ);
             continue;
           }
           
@@ -900,7 +905,7 @@ public abstract class Server {
           
           CurCall.set(call);
           try {
-            value = call(call.param);             // make the call
+            value = call(call.param, call.receivedTime);             // make the call
           } catch (Throwable e) {
             LOG.info(getName()+", call "+call+": error: " + e, e);
             errorClass = e.getClass().getName();
@@ -935,12 +940,19 @@ public abstract class Server {
     }
 
   }
+  
+  protected Server(String bindAddress, int port, Class paramClass, int handlerCount, Configuration conf)
+    throws IOException 
+  {
+    this(bindAddress, port, paramClass, handlerCount,  conf, Integer.toString(port));
+  }
   /** Constructs a server listening on the named port and address.  Parameters passed must
    * be of the named class.  The <code>handlerCount</handlerCount> determines
    * the number of handler threads that will be used to process calls.
    * 
    */
-  protected Server(String bindAddress, int port, Class paramClass, int handlerCount, Configuration conf) 
+  protected Server(String bindAddress, int port, Class paramClass, int handlerCount, Configuration conf,
+                  String serverName) 
     throws IOException {
     this.bindAddress = bindAddress;
     this.conf = conf;
@@ -954,6 +966,7 @@ public abstract class Server {
     this.maxIdleTime = conf.getInt("ipc.client.maxidletime", 120000);
     this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);
     this.thresholdIdleConnections = conf.getInt("ipc.client.idlethreshold", 4000);
+    this.rpcMetrics = new RpcMetrics(serverName, Integer.toString(port), this);
     
     // Start the listener here and let it bind to the port
     listener = new Listener();
@@ -1017,6 +1030,24 @@ public abstract class Server {
   }
   
   /** Called for each call. */
-  public abstract Writable call(Writable param) throws IOException;
+  public abstract Writable call(Writable param, long receiveTime)
+                                                throws IOException;
+  
+  
+  /**
+   * The number of open RPC conections
+   * @return the number of open rpc connections
+   */
+  public int getNumOpenConnections() {
+    return numConnections;
+  }
+  
+  /**
+   * The number of rpc calls in the queue.
+   * @return The number of rpc calls in the queue.
+   */
+  public int getCallQueueLen() {
+    return callQueue.size();
+  }
   
 }
