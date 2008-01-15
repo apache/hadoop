@@ -129,6 +129,8 @@ Trunk (unreleased changes)
                previously (Bryan Duxbury via Stack)
    HADOOP-2587 Splits blocked by compactions cause region to be offline for
                duration of compaction. 
+   HADOOP-2592 Scanning, a region can let out a row that its not supposed
+               to have
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
