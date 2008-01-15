@@ -368,12 +368,30 @@ public class MapFile {
     /** 
      * Positions the reader at the named key, or if none such exists, at the
      * first entry after the named key.
-     * 
+     *
      * @return  0   - exact match found
      *          < 0 - positioned at next record
      *          1   - no more records in file
      */
     private synchronized int seekInternal(WritableComparable key)
+      throws IOException {
+      return seekInternal(key, false);
+    }
+
+    /** 
+     * Positions the reader at the named key, or if none such exists, at the
+     * key that falls just before or just after dependent on how the
+     * <code>before</code> parameter is set.
+     * 
+     * @param before - IF true, and <code>key</code> does not exist, position
+     * file at entry that falls just before <code>key</code>.  Otherwise,
+     * position file at record that sorts just after.
+     * @return  0   - exact match found
+     *          < 0 - positioned at next record
+     *          1   - no more records in file
+     */
+    private synchronized int seekInternal(WritableComparable key,
+        final boolean before)
       throws IOException {
       readIndex();                                // make sure index is read
 
@@ -397,10 +415,18 @@ public class MapFile {
       
       if (nextKey == null)
         nextKey = comparator.newKey();
-
+      long oldPosition = -1;
+      if (before) {
+        oldPosition = data.getPosition();
+      }
       while (data.next(nextKey)) {
         int c = comparator.compare(key, nextKey);
         if (c <= 0) {                             // at or beyond desired
+          if (before && c != 0) {
+            // Need to back up to previous record.
+            data.seek(oldPosition);
+            data.next(nextKey);
+          }
           return c;
         }
       }
@@ -447,15 +473,34 @@ public class MapFile {
 
     /** 
      * Finds the record that is the closest match to the specified key.
+     * Returns <code>key</code> or if it does not exist, at the first entry
+     * after the named key.
+     * 
+-     * @param key       - key that we're trying to find
+-     * @param val       - data value if key is found
+-     * @return          - the key that was the closest match or null if eof.
+     */
+    public synchronized WritableComparable getClosest(WritableComparable key,
+      Writable val)
+    throws IOException {
+      return getClosest(key, val, false);
+    }
+
+    /** 
+     * Finds the record that is the closest match to the specified key.
      * 
      * @param key       - key that we're trying to find
      * @param val       - data value if key is found
-     * @return          - returns the key that was the closest match or null if eof.
+     * @param before    - IF true, and <code>key</code> does not exist, return
+     * the first entry that falls just before the <code>key</code>.  Otherwise,
+     * return the record that sorts just after.
+     * @return          - the key that was the closest match or null if eof.
      */
-    public synchronized WritableComparable getClosest(WritableComparable key, Writable val)
+    public synchronized WritableComparable getClosest(WritableComparable key,
+        Writable val, final boolean before)
       throws IOException {
       
-      if (seekInternal(key) > 0) {
+      if (seekInternal(key, before) > 0) {
         return null;
       }
       data.getCurrentValue(val);
@@ -465,7 +510,7 @@ public class MapFile {
     /** Close the map. */
     public synchronized void close() throws IOException {
       if (!indexClosed) {
-	index.close();
+        index.close();
       }
       data.close();
     }
