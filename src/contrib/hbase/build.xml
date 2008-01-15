@@ -66,12 +66,12 @@
 
   <target name="javacc" if="javacc.home">
   <echo message="javacc.home: ${javacc.home}"/>
-  <property name="hbaseshell.src.dir" 
-       value="${src.dir}/org/apache/hadoop/hbase/shell" /> 
-     <mkdir dir="${hbaseshell.src.dir}/generated" />
+  <property name="hql.src.dir" 
+       value="${src.dir}/org/apache/hadoop/hbase/hql" /> 
+     <mkdir dir="${hql.src.dir}/generated" />
      <javacc
-       target="${hbaseshell.src.dir}/HBaseShell.jj"
-       outputdirectory="${hbaseshell.src.dir}/generated"
+       target="${hql.src.dir}/HQLParser.jj"
+       outputdirectory="${hql.src.dir}/generated"
        javacchome="${javacc.home}"
      />
   </target>
