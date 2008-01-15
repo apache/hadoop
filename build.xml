@@ -762,6 +762,7 @@
       </tarfileset>
       <tarfileset dir="${build.dir}" mode="755">
         <include name="${final.name}/bin/*" />
+        <include name="${final.name}/contrib/*/bin/*" />
         <include name="${final.name}/src/contrib/ec2/bin/*" />
         <include name="${final.name}/src/contrib/ec2/bin/image/*" />
       </tarfileset>
