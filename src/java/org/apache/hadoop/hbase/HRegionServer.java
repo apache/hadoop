@@ -232,6 +232,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
     private HTable root = null;
     private HTable meta = null;
+    private long startTime;
 
     /** constructor */
     public Splitter() {
@@ -240,6 +241,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
     /** {@inheritDoc} */
     public void closing(final Text regionName) {
+      startTime = System.currentTimeMillis();
       lock.writeLock().lock();
       try {
         // Remove region from regions Map and add it to the Map of retiring
@@ -367,10 +369,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       reportSplit(oldRegionInfo, newRegions[0].getRegionInfo(),
         newRegions[1].getRegionInfo());
-      LOG.info("region split, META update, and report to master all" +
+      LOG.info("region split, META updated, and report to master all" +
         " successful. Old region=" + oldRegionInfo.getRegionName() +
         ", new regions: " + newRegions[0].getRegionName() + ", " +
-        newRegions[1].getRegionName());
+        newRegions[1].getRegionName() + ". Split took " +
+        StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
       
       // Do not serve the new regions. Let the Master assign them.
     }
