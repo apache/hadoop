@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegion;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTable;
@@ -249,13 +250,12 @@ public class TestTableIndex extends MultiRegionTable {
   }
 
   private void verify() throws IOException {
-    // Sleep before we start the verify to ensure that when the scanner takes
-    // its snapshot, all the updates have made it into the cache.
-    try {
-      Thread.sleep(conf.getLong("hbase.regionserver.optionalcacheflushinterval",
-        60L * 1000L));
-    } catch (InterruptedException e) {
-      // ignore
+    // Force a cache flush for every online region to ensure that when the
+    // scanner takes its snapshot, all the updates have made it into the cache.
+    for (HRegion r : hCluster.getRegionThreads().get(0).getRegionServer().
+        getOnlineRegions().values()) {
+      HRegionIncommon region = new HRegionIncommon(r);
+      region.flushcache();
     }
 
     Path localDir = new Path(getUnitTestdir(getName()), "index_" +

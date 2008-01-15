@@ -373,31 +373,45 @@ public class HRegion implements HConstants {
    */
   List<HStoreFile> close(boolean abort,
       final RegionUnavailableListener listener) throws IOException {
+    Text regionName = this.regionInfo.getRegionName(); 
     if (isClosed()) {
-      LOG.info("region " + this.regionInfo.getRegionName() + " already closed");
+      LOG.info("region " + regionName + " already closed");
       return null;
     }
     synchronized (splitLock) {
-      lock.writeLock().lock();
-      try {
-        synchronized (writestate) {
-          while (writestate.compacting || writestate.flushing) {
-            try {
-              writestate.wait();
-            } catch (InterruptedException iex) {
-              // continue
-            }
+      synchronized (writestate) {
+        while (writestate.compacting || writestate.flushing) {
+          LOG.debug("waiting for" +
+              (writestate.compacting ? " compaction" : "") +
+              (writestate.flushing ?
+                  (writestate.compacting ? "," : "") + " cache flush" :
+                    ""
+              ) + " to complete for region " + regionName
+          );
+          try {
+            writestate.wait();
+          } catch (InterruptedException iex) {
+            // continue
           }
-          // Disable compacting and flushing by background threads for this
-          // region.
-          writestate.writesEnabled = false;
         }
-
+        // Disable compacting and flushing by background threads for this
+        // region.
+        writestate.writesEnabled = false;
+        LOG.debug("compactions and cache flushes disabled for region " +
+            regionName);
+      }
+      lock.writeLock().lock();
+      LOG.debug("new updates and scanners for region " + regionName +
+          " disabled");
+      
+      try {
         // Wait for active scanners to finish. The write lock we hold will prevent
         // new scanners from being created.
 
         synchronized (activeScannerCount) {
           while (activeScannerCount.get() != 0) {
+            LOG.debug("waiting for " + activeScannerCount.get() +
+                " scanners to finish");
             try {
               activeScannerCount.wait();
 
@@ -406,12 +420,14 @@ public class HRegion implements HConstants {
             }
           }
         }
+        LOG.debug("no more active scanners for region " + regionName);
 
         // Write lock means no more row locks can be given out.  Wait on
         // outstanding row locks to come in before we close so we do not drop
         // outstanding updates.
         waitOnRowLocks();
-
+        LOG.debug("no more write locks outstanding on region " + regionName);
+        
         if (listener != null) {
           // If there is a listener, let them know that we have now
           // acquired all the necessary locks and are starting to
@@ -551,8 +567,6 @@ public class HRegion implements HConstants {
       if (closed.get() || !needsSplit(midKey)) {
         return null;
       }
-
-      long startTime = System.currentTimeMillis();
       Path splits = new Path(this.regiondir, SPLITDIR);
       if(!this.fs.exists(splits)) {
         this.fs.mkdirs(splits);
@@ -618,10 +632,6 @@ public class HRegion implements HConstants {
         LOG.debug("Cleaned up " + splits.toString() + " " + deleted);
       }
       HRegion regions[] = new HRegion [] {regionA, regionB};
-      LOG.info("Region split of " + this.regionInfo.getRegionName() +
-          " complete; " + "new regions: " + regions[0].getRegionName() + ", " +
-          regions[1].getRegionName() + ". Split took " +
-          StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
       return regions;
     }
   }
@@ -771,39 +781,39 @@ public class HRegion implements HConstants {
    * because a Snapshot was not properly persisted.
    */
   boolean flushcache() throws IOException {
-    lock.readLock().lock();                      // Prevent splits and closes
-    try {
-      if (this.closed.get()) {
-        return false;
-      }
-      synchronized (writestate) {
-        if ((!writestate.flushing) && writestate.writesEnabled) {
-          writestate.flushing = true;
+    if (this.closed.get()) {
+      return false;
+    }
+    synchronized (writestate) {
+      if ((!writestate.flushing) && writestate.writesEnabled) {
+        writestate.flushing = true;
 
-        } else {
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("NOT flushing memcache for region " +
-                this.regionInfo.getRegionName() + ", flushing=" +
-                writestate.flushing + ", writesEnabled=" +
-                writestate.writesEnabled);
-          }
-          return false;  
+      } else {
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("NOT flushing memcache for region " +
+              this.regionInfo.getRegionName() + ", flushing=" +
+              writestate.flushing + ", writesEnabled=" +
+              writestate.writesEnabled);
         }
+        return false;  
       }
-      long startTime = -1;
-      synchronized (updateLock) {// Stop updates while we snapshot the memcaches
-        startTime = snapshotMemcaches();
-      }
+    }
+    try {
+      lock.readLock().lock();                      // Prevent splits and closes
       try {
+        long startTime = -1;
+        synchronized (updateLock) {// Stop updates while we snapshot the memcaches
+          startTime = snapshotMemcaches();
+        }
         return internalFlushcache(startTime);
       } finally {
-        synchronized (writestate) {
-          writestate.flushing = false;
-          writestate.notifyAll();
-        }
+        lock.readLock().unlock();
       }
     } finally {
-      lock.readLock().unlock();
+      synchronized (writestate) {
+        writestate.flushing = false;
+        writestate.notifyAll();
+      }
     }
   }
 
@@ -1043,6 +1053,7 @@ public class HRegion implements HConstants {
    * <i>ts</i>.
    * 
    * @param row row key
+   * @param ts
    * @return map of values
    * @throws IOException
    */
@@ -1537,6 +1548,7 @@ public class HRegion implements HConstants {
   private void waitOnRowLocks() {
     synchronized (rowsToLocks) {
       while (this.rowsToLocks.size() > 0) {
+        LOG.debug("waiting for " + this.rowsToLocks.size() + " row locks");
         try {
           this.rowsToLocks.wait();
         } catch (InterruptedException e) {

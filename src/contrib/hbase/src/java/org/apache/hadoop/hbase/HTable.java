@@ -1105,16 +1105,16 @@ public class HTable implements HConstants {
               // No more tries
               throw e;
             }
+            try {
+              Thread.sleep(pause);
+            } catch (InterruptedException ie) {
+              // continue
+            }
             if (LOG.isDebugEnabled()) {
               LOG.debug("reloading table servers because: " + e.getMessage());
             }
             currentRegionLocation = getRegionLocation(localStartKey, true);
           }
-        }
-        try {
-          Thread.sleep(pause);
-        } catch (InterruptedException e) {
-          // continue
         }
       } catch (IOException e) {
         close();
