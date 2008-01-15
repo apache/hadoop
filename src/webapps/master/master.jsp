@@ -10,10 +10,10 @@
   import="org.apache.hadoop.hbase.HServerAddress"
   import="org.apache.hadoop.hbase.HRegionInfo"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
-  import="org.apache.hadoop.hbase.shell.ShowCommand"
-  import="org.apache.hadoop.hbase.shell.TableFormatter"
-    import="org.apache.hadoop.hbase.shell.ReturnMsg"
-  import="org.apache.hadoop.hbase.shell.formatter.HtmlTableFormatter"
+  import="org.apache.hadoop.hbase.hql.ShowCommand"
+  import="org.apache.hadoop.hbase.hql.TableFormatter"
+    import="org.apache.hadoop.hbase.hql.ReturnMsg"
+  import="org.apache.hadoop.hbase.hql.formatter.HtmlTableFormatter"
   import="org.apache.hadoop.hbase.HTableDescriptor" %><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   HBaseConfiguration conf = new HBaseConfiguration();

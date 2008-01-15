@@ -25,16 +25,13 @@ import java.io.Writer;
 
 import jline.ConsoleReader;
 
-import org.apache.hadoop.hbase.shell.Command;
-import org.apache.hadoop.hbase.shell.HelpCommand;
-import org.apache.hadoop.hbase.shell.ReturnMsg;
-import org.apache.hadoop.hbase.shell.ShellSecurityManager;
-import org.apache.hadoop.hbase.shell.TableFormatter;
-import org.apache.hadoop.hbase.shell.TableFormatterFactory;
-import org.apache.hadoop.hbase.shell.formatter.HtmlTableFormatter;
-import org.apache.hadoop.hbase.shell.generated.ParseException;
-import org.apache.hadoop.hbase.shell.generated.Parser;
-import org.apache.hadoop.hbase.shell.generated.TokenMgrError;
+import org.apache.hadoop.hbase.hql.HQLClient;
+import org.apache.hadoop.hbase.hql.HelpCommand;
+import org.apache.hadoop.hbase.hql.ReturnMsg;
+import org.apache.hadoop.hbase.hql.HQLSecurityManager;
+import org.apache.hadoop.hbase.hql.TableFormatter;
+import org.apache.hadoop.hbase.hql.TableFormatterFactory;
+import org.apache.hadoop.hbase.hql.formatter.HtmlTableFormatter;
 
 /**
  * An hbase shell.
@@ -90,7 +87,7 @@ public class Shell {
     
     HBaseConfiguration conf = new HBaseConfiguration();
     ConsoleReader reader = new ConsoleReader();
-    System.setSecurityManager(new ShellSecurityManager());
+    System.setSecurityManager(new HQLSecurityManager());
     reader.setBellEnabled(conf.getBoolean("hbaseshell.jline.bell.enabled",
         DEFAULT_BELL_ENABLED));
     Writer out = new OutputStreamWriter(System.out, "UTF-8");
@@ -112,22 +109,9 @@ public class Shell {
       if (isEndOfCommand(extendedLine)) {
         queryStr.append(" " + extendedLine);
         long start = System.currentTimeMillis();
-        Parser parser = new Parser(queryStr.toString(), out, tableFormater);
-        ReturnMsg rs = null;
-        try {
-          Command cmd = parser.terminatedCommand();
-          if (cmd != null) {
-            rs = cmd.execute(conf);
-          }
-        } catch (ParseException pe) {
-          String[] msg = pe.getMessage().split("[\n]");
-          System.out.println("Syntax error : Type 'help;' for usage.\nMessage : "
-              + msg[0]);
-        } catch (TokenMgrError te) {
-          String[] msg = te.getMessage().split("[\n]");
-          System.out.println("Lexical error : Type 'help;' for usage.\nMessage : "
-              + msg[0]);
-        }
+
+        HQLClient hql = new HQLClient(conf, MASTER_ADDRESS, out, tableFormater);
+        ReturnMsg rs = hql.executeQuery(queryStr.toString());
 
         long end = System.currentTimeMillis();
         if (rs != null && rs.getType() > -1)

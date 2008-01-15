@@ -229,7 +229,7 @@
   </property>  
   <property>
  	<name>hbaseshell.formatter</name>
-  	<value>org.apache.hadoop.hbase.shell.formatter.AsciiTableFormatter</value>
+  	<value>org.apache.hadoop.hbase.hql.formatter.AsciiTableFormatter</value>
   	<description>TableFormatter to use outputting HQL result sets.
   	</description>
   </property>  

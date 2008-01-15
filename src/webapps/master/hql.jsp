@@ -1,11 +1,11 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.*"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
-  import="org.apache.hadoop.hbase.shell.TableFormatter"
-  import="org.apache.hadoop.hbase.shell.ReturnMsg"
-  import="org.apache.hadoop.hbase.shell.generated.Parser"
-  import="org.apache.hadoop.hbase.shell.Command"
-  import="org.apache.hadoop.hbase.shell.formatter.HtmlTableFormatter" 
+  import="org.apache.hadoop.hbase.hql.TableFormatter"
+  import="org.apache.hadoop.hbase.hql.ReturnMsg"
+  import="org.apache.hadoop.hbase.hql.generated.Parser"
+  import="org.apache.hadoop.hbase.hql.Command"
+  import="org.apache.hadoop.hbase.hql.formatter.HtmlTableFormatter" 
 %><?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
@@ -41,7 +41,7 @@
  %>
  <hr/>
  <%
-    Parser parser = new Parser(query, out, new HtmlTableFormatter(out));
+    HQLParser parser = new HQLParser(query, out, new HtmlTableFormatter(out));
     Command cmd = parser.terminatedCommand();
     if (cmd.getCommandType() != Command.CommandType.SELECT) {
  %>

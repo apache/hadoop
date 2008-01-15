@@ -1,0 +1,823 @@
+options {
+  STATIC = false;
+  IGNORE_CASE = true;
+}
+
+PARSER_BEGIN(HQLParser)
+package org.apache.hadoop.hbase.hql.generated;
+
+/**
+ * Copyright 2007 The Apache Software Foundation
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.io.StringReader;
+import java.io.Reader;
+import java.io.Writer;
+import java.net.URLEncoder;
+import java.io.UnsupportedEncodingException;
+
+import org.apache.hadoop.hbase.hql.*;
+
+/**
+ * Parsing command line.
+ */
+public class HQLParser {
+  private String QueryString;
+  private TableFormatter formatter;
+  private Writer out;
+  
+  public HQLParser(final String query, final Writer o, final TableFormatter f) {
+    this((Reader)(new StringReader(query)));
+    this.QueryString = query;
+    this.formatter = f;
+    this.out = o;
+  }
+  
+  public String getQueryStr() {
+    return this.QueryString;
+  }
+}
+
+PARSER_END(HQLParser)
+
+SKIP :                             
+{
+    " "
+ | "\t"
+ | "\r"
+ | "\n"
+}
+
+TOKEN: /** for HQL statements */
+{
+   <HELP: "help">
+   | <ALTER: "alter">
+   | <CLEAR: "clear">
+   | <SHOW: "show">
+   | <DESCRIBE: "describe">
+   | <DESC: "desc">
+   | <CREATE: "create">   
+   | <DROP: "drop">
+   | <TRUNCATE: "truncate">
+   | <FS: "fs">
+   | <JAR: "jar">
+   | <EXIT: "exit">
+   | <INSERT: "insert">
+   | <INTO: "into">
+   | <TABLE: "table">
+   | <DELETE: "delete">
+   | <SELECT: "select">
+   | <ENABLE: "enable">
+   | <DISABLE: "disable">
+   | <STARTING: "starting">
+   | <WHERE: "where">
+   | <FROM: "from">
+   | <UNTIL: "until">
+   | <ROW: "row">
+   | <VALUES: "values">
+   | <COLUMNFAMILIES: "columnfamilies">
+   | <TIMESTAMP: "timestamp">
+   | <NUM_VERSIONS: "num_versions">
+   | <LIMIT: "limit">
+   | <AND: "and">
+   | <OR:  "or">
+   | <COMMA: ",">
+   | <LPAREN: "(">
+   | <RPAREN: ")">
+   | <EQUALS: "=">
+   | <LCOMP: ">">
+   | <RCOMP: "<">
+   | <NOT: "not">
+   | <IN: "in">
+   | <NOTEQUAL: "!=">
+   | <ASTERISK: "*">
+   | <MAX_VERSIONS: "max_versions">
+   | <MAX_LENGTH: "max_length">
+   | <COMPRESSION: "compression">
+   | <NONE: "none">
+   | <BLOCK: "block">
+   | <RECORD: "record">
+   | <IN_MEMORY: "in_memory">
+   | <BLOOMFILTER: "bloomfilter">
+   | <COUNTING_BLOOMFILTER: "counting_bloomfilter">
+   | <RETOUCHED_BLOOMFILTER: "retouched_bloomfilter">
+   | <VECTOR_SIZE: "vector_size">
+   | <NUM_HASH: "num_hash">
+   | <NUM_ENTRIES: "num_entries">
+   | <ADD: "add">
+   | <CHANGE: "change">
+}
+
+TOKEN : /** Functions */
+{
+   <COUNT: "count">
+}
+ 
+TOKEN : /** Literals */
+{
+   <ID: ["A"-"Z","a"-"z","_","-",":","/","~","."] (["A"-"Z","a"-"z","0"-"9","_","-",":","/","~","."])* >
+ | <INTEGER_LITERAL: (["0"-"9"])+ >
+ | <FLOATING_POINT_LITERAL:
+   (["0"-"9"])+ "." (["0"-"9"])+ (<EXPONENT>)?
+  | "." (["0"-"9"])+ (<EXPONENT>)?
+  | (["0"-"9"])+ <EXPONENT>
+  | (["0"-"9"])+ (<EXPONENT>)?
+   >
+ | <#EXPONENT: ["e","E"] (["+","-"])? (["0"-"9"])+ >
+ | <QUOTED_IDENTIFIER: "\"" (~["\""])+ "\"" >
+ | <STRING_LITERAL: "'" (~["'"])* ( "''" (~["'"])* )* "'" >
+}
+
+/**
+ * Parses the given array of command line arguments.
+ */
+Command terminatedCommand() :
+{
+    Command statement = null;
+}
+{
+    (
+      [statement = cmdStatement()] ";" | <EOF>
+    )
+  
+    {
+        return statement;
+    }
+}
+
+Command cmdStatement() :
+{
+    Command cmd = null;
+}
+{
+  (
+      cmd = exitCommand()
+      | cmd = helpCommand()
+      | cmd = showCommand()
+      | cmd = descCommand()
+      | cmd = createCommand()
+      | cmd = dropCommand()
+      | cmd = truncateCommand()
+      | cmd = alterCommand()
+      | cmd = insertCommand()
+      | cmd = deleteCommand()
+      | cmd = selectCommand()
+      | cmd = enableCommand()
+      | cmd = disableCommand()
+      | cmd = clearCommand()
+      | cmd = fsCommand()
+      | cmd = jarCommand()
+  )
+   {
+       return cmd;
+   }
+}
+
+ExitCommand exitCommand() :
+{
+  ExitCommand exit = new ExitCommand(this.out);
+}
+{
+   <EXIT>  { return exit; }
+}
+
+FsCommand fsCommand() :
+{
+  Token t = null;
+  FsCommand fs = new FsCommand(this.out);
+  List<String> query = new ArrayList<String>();
+}
+{
+  <FS>
+  (
+      t = <ID>
+      { query.add(t.image.toString()); }
+  )*
+  
+  {
+    fs.setQuery(query);
+    return fs;
+  }
+}
+
+JarCommand jarCommand() :
+{
+  Token t = null;
+  JarCommand jar = new JarCommand(this.out);
+  List<String> query = new ArrayList<String>();
+}
+{
+  <JAR>
+  (
+      ( t=<ID> | t=<INTEGER_LITERAL> | t=<FLOATING_POINT_LITERAL> )
+      { query.add(t.image.toString()); }
+  )*
+  
+  {
+    jar.setQuery(query);
+    return jar;
+  }
+}
+
+TruncateCommand truncateCommand() :
+{
+  TruncateCommand truncate = new TruncateCommand(this.out);
+  String tableName = null;
+}
+{
+  <TRUNCATE><TABLE>
+  [
+    tableName = identifier()
+  ]
+  {
+    truncate.setTableName(tableName);
+    return truncate;
+  }
+}
+
+HelpCommand helpCommand() :
+{
+  Token t = null;
+  HelpCommand help = new HelpCommand(this.out, this.formatter);
+  String argument = "";
+}
+{
+   <HELP>
+   [
+     (
+         t=<SHOW>
+       | t=<DESCRIBE>
+       | t=<CREATE>
+       | t=<DROP>
+       | t=<EXIT>
+       | t=<INSERT>
+       | t=<DELETE>
+       | t=<SELECT>
+       | t=<ALTER>
+       | t=<CLEAR>
+       | t=<FS>
+       | t=<JAR>
+       | t=<ID>
+     ) { argument = t.image.toString(); }
+   ]
+   
+  { 
+      help.setArgument(argument);
+      return help;  
+  }
+}
+
+ShowCommand showCommand() :
+{
+  ShowCommand show = new ShowCommand(this.out, this.formatter);
+  String argument = null;
+}
+{
+   <SHOW>
+   [
+       argument = identifier()
+   ]
+  { 
+      show.setArgument(argument);
+      return show;
+  }
+}
+
+DescCommand descCommand() :
+{
+  DescCommand desc = new DescCommand(this.out, this.formatter);
+  String argument = null;
+}
+{
+  ( <DESCRIBE> | <DESC> )
+  argument = identifier()
+  { 
+    desc.setArgument(argument);
+    return desc;
+  }
+}
+
+Map<String, Object> ColumnSpec() :
+{
+  Map<String, Object> columnSpec = new HashMap<String, Object>();
+  int n = -1;
+  Token t = null;
+}
+{
+  (
+    <MAX_VERSIONS> 
+     <EQUALS> n = number() 
+    { 
+       if(n < 0) {
+         n = Integer.MAX_VALUE;
+       }
+      columnSpec.put("MAX_VERSIONS", n); 
+    }
+   |
+    <MAX_LENGTH>
+     <EQUALS> n = number()
+    {  
+      columnSpec.put("MAX_LENGTH", n); 
+    }
+   |
+    <COMPRESSION>
+     <EQUALS> 
+    (  t=<NONE>
+     | t=<BLOCK>
+     | t=<RECORD> )
+    { 
+      columnSpec.put("COMPRESSION", t.image.toString()); 
+    }
+   |
+    <IN_MEMORY> 
+    { 
+      columnSpec.put("IN_MEMORY", true); 
+    } 
+   |  
+    <BLOOMFILTER>
+    <EQUALS> 
+    (  t=<BLOOMFILTER> 
+     | t=<COUNTING_BLOOMFILTER> 
+     | t=<RETOUCHED_BLOOMFILTER> 
+    )
+    { 
+      columnSpec.put("BLOOMFILTER", t.image.toString()); 
+    }
+   |  
+    <VECTOR_SIZE> 
+    <EQUALS> n = number() 
+    { 
+      columnSpec.put("VECTOR_SIZE", n); 
+    }
+   |
+    <NUM_HASH>
+    <EQUALS> n = number()
+    { 
+      columnSpec.put("NUM_HASH", n); 
+    }  
+   |
+    <NUM_ENTRIES> <EQUALS> n = number()
+    { 
+      columnSpec.put("NUM_ENTRIES", n); 
+    }
+  )*
+
+  { return columnSpec; }  
+}
+
+CreateCommand createCommand() :
+{
+  CreateCommand createCommand = new CreateCommand(this.out);
+  String table = null;
+  Map<String, Object> columnSpec = null;
+  String column = null;
+}
+{
+  <CREATE> 
+  <TABLE> 
+  table = identifier() 
+  { 
+    createCommand.setTable(table); 
+  }
+  
+  <LPAREN>
+  
+  column = identifier() 
+  columnSpec = ColumnSpec()
+  { 
+    createCommand.addColumnSpec(column, columnSpec); 
+  }
+  
+  (
+     <COMMA> 
+      column = identifier() 
+      columnSpec = ColumnSpec() 
+      { 
+        createCommand.addColumnSpec(column, columnSpec); 
+      }
+  )*
+  
+  <RPAREN> 
+  { return createCommand; }
+}
+
+AlterCommand alterCommand() :
+{
+  AlterCommand alterCommand = new AlterCommand(this.out);
+  String table = null;
+  String column = null;
+  Map<String, Object> columnSpec = null;
+}
+{
+  <ALTER> 
+  <TABLE> table = identifier() 
+  { alterCommand.setTable(table); }
+
+  (
+    LOOKAHEAD(2)
+      <ADD> column = identifier() columnSpec = ColumnSpec() 
+      { 
+         alterCommand.setOperationType(AlterCommand.OperationType.ADD);
+         alterCommand.addColumnSpec(column, columnSpec); 
+      }
+  |
+    <ADD>
+    <LPAREN> 
+    { 
+      alterCommand.setOperationType(AlterCommand.OperationType.ADD); 
+    }
+      
+    column = identifier() columnSpec = ColumnSpec() 
+    { 
+      alterCommand.addColumnSpec(column, columnSpec); 
+    }
+      
+    ( 
+        <COMMA> 
+        column = identifier()
+        columnSpec = ColumnSpec() 
+        { 
+          alterCommand.addColumnSpec(column, columnSpec); 
+        }
+    )*
+    <RPAREN>
+  |
+    <DROP> column = identifier()
+    { 
+      alterCommand.setOperationType(AlterCommand.OperationType.DROP);
+      alterCommand.setColumn(column); 
+    }
+  |
+    <CHANGE> column = identifier() columnSpec = ColumnSpec()  
+    { 
+      alterCommand.setOperationType(AlterCommand.OperationType.CHANGE);
+      alterCommand.addColumnSpec(column, columnSpec);
+    }
+  )
+  { return alterCommand; }
+}
+
+DropCommand dropCommand() :
+{
+  DropCommand drop = new DropCommand(this.out);
+  List<String> tableList = null;
+}
+{
+   <DROP>
+   <TABLE>
+   tableList = tableList()
+   { 
+     drop.setTableList(tableList);
+     return drop;
+   }
+}
+
+InsertCommand insertCommand() :
+{
+  InsertCommand in = new InsertCommand(this.out);
+  List<String> columnfamilies = null;
+  List<String> values = null;
+  String table = null;
+  String timestamp = null;
+  Token t = null;       
+}
+{
+  <INSERT>
+  <INTO>
+  table = identifier()
+  { 
+     in.setTable(table); 
+  }
+  columnfamilies = getColumns()
+  {
+     in.setColumnfamilies(columnfamilies);
+  }
+  
+  <VALUES> values = getLiteralValues()
+  {
+     in.setValues(values);
+  }
+      
+  <WHERE> 
+  <ROW> <EQUALS> ( t=<STRING_LITERAL> | t=<QUOTED_IDENTIFIER> )
+  { 
+     in.setRow(t.image.substring(1, t.image.length()-1)); 
+  }
+
+  [ <TIMESTAMP> 
+    timestamp = getStringLiteral()
+    {
+       in.setTimestamp(timestamp);
+    }
+  ]
+
+  {
+    return in;
+  }
+}
+
+DeleteCommand deleteCommand() :
+{
+  DeleteCommand deleteCommand = new DeleteCommand(this.out);
+  List<String> columnList = null;
+  Token t = null;
+  String table = null;
+}
+{
+  <DELETE>
+  columnList = columnList()
+  { 
+    deleteCommand.setColumnList(columnList); 
+  }
+
+  <FROM>
+  table = identifier()
+  { 
+    deleteCommand.setTable(table); 
+  }
+
+  [
+   <WHERE> 
+   <ROW> <EQUALS> ( t=<STRING_LITERAL> | t=<QUOTED_IDENTIFIER> )
+   { 
+     deleteCommand.setRow(t.image.substring(1, t.image.length()-1)); 
+   }
+  ]
+  { return deleteCommand; }
+}
+
+SelectCommand selectCommand() :
+{
+  SelectCommand select = new SelectCommand(this.out, this.formatter);
+  List<String> columns = null;
+  String rowKey = "";
+  String stopRow = "";
+  String timestamp = null;
+  int numVersion = 0;
+  String tableName = null;
+  int limit;
+}
+{
+  <SELECT>
+  (
+      <COUNT>  columns = getLiteralValues()
+      { select.setCountFunction(true); }
+    | columns = columnList()
+  )
+  <FROM>
+  tableName = identifier()
+  { 
+     select.setColumns(columns);
+     select.setTable(tableName);
+  }
+
+  [ ( <WHERE> <ROW> <EQUALS>
+     { select.setWhere(true); }
+     | <STARTING> <FROM> )
+    
+     rowKey = getStringLiteral()
+     {
+       select.setRowKey(rowKey); 
+     }
+     [<UNTIL>
+      stopRow = getStringLiteral()
+     {select.setStopRow(stopRow);} ]
+  ]
+
+  [ <TIMESTAMP> 
+    timestamp = getStringLiteral()
+    {
+       select.setTimestamp(timestamp);
+    }
+  ]
+   
+  [
+     <NUM_VERSIONS><EQUALS> numVersion = number()
+      {
+        select.setVersion(numVersion);
+      }
+  ]
+
+  [ <LIMIT><EQUALS> limit = number() {
+      try{
+        select.setLimit(limit);
+      }catch(ClassCastException ce) {
+        throw generateParseException();
+      }
+   } ]
+  { return select; }
+}
+
+EnableCommand enableCommand() :
+{
+  EnableCommand enableCommand = new EnableCommand(this.out);
+  String table = null;
+}
+{
+  <ENABLE> 
+  table = identifier()
+  { 
+    enableCommand.setTable(table);
+    return enableCommand;
+  }
+}
+
+DisableCommand disableCommand() :
+{
+  DisableCommand disableCommand = new DisableCommand(this.out);
+  String table = null;
+}
+{
+  <DISABLE> 
+  table = identifier()
+  { 
+    disableCommand.setTable(table); 
+    return disableCommand;
+  }
+}
+
+ClearCommand clearCommand() :
+{
+  ClearCommand clear = new ClearCommand(this.out);
+}
+{
+   <CLEAR>
+   { 
+     return clear; 
+   }
+}
+
+List<String> getLiteralValues() :
+{
+  List<String> values = new ArrayList<String>();
+  String literal = null;
+}
+{    
+<LPAREN>
+ {
+    literal = getStringLiteral();
+    if(literal != null) values.add(literal); 
+ }
+
+    (
+        <COMMA> { 
+           literal = getStringLiteral(); 
+           if(literal != null) values.add(literal); 
+        }
+    )*
+<RPAREN>
+   { 
+     return values;
+    }
+}
+
+String getStringLiteral() :
+{
+  Token s;
+  String value = null;
+}
+{
+  (
+    ( s=<STRING_LITERAL> | s=<QUOTED_IDENTIFIER> )
+   { 
+     value = s.image.toString();
+     return value.substring(1,value.length() - 1);
+   }
+   | ( s=<ID> | s=<INTEGER_LITERAL> | s=<ASTERISK> )
+   { 
+     value = s.image.toString();
+     return value;
+   }
+ )
+}
+
+String getColumn() :
+{
+  Token col;
+}
+{
+  (
+    ( col=<ID> | col=<INTEGER_LITERAL> | col=<ASTERISK> )
+      { return col.image.toString(); }
+    | (col=<QUOTED_IDENTIFIER> | col=<STRING_LITERAL> )
+      { return col.image.substring(1,col.image.toString().length() - 1); }
+  )
+}
+
+List<String> getColumns() : // return parenthesized column list
+{
+  List<String> values = new ArrayList<String>();
+  String literal = null;
+}
+{    
+<LPAREN>
+ { literal = getColumn();
+ if(literal != null) values.add(literal); 
+ }
+    (
+        <COMMA> 
+      { 
+        literal = getColumn(); 
+        if(literal != null) values.add(literal); 
+      }
+    )*
+<RPAREN>
+   { 
+     return values;
+    }
+}
+
+List<String> tableList() :
+{
+  List<String> tableList = new ArrayList<String>();
+  String table = null;
+}
+{
+  table = identifier() { tableList.add(table); }
+  ( <COMMA> table = identifier()
+    { tableList.add(table); } 
+  )*
+  
+  { return tableList; }
+}
+
+List<String> columnList() :
+{
+  List<String> columnList = new ArrayList<String>();  
+  String column = null;
+}
+{ 
+    column = getColumn() 
+    { 
+      if(column != null) {
+        columnList.add(column);
+      } else {
+        return columnList;
+      }
+    }
+  ( <COMMA> column = getColumn()  
+    { columnList.add(column); }
+  )*
+  
+  { return columnList; }
+}
+
+int number() :
+{
+  Token t = null;
+  Token minusSignedInt = null;
+}
+{
+  ( minusSignedInt=<ID> |  t=<INTEGER_LITERAL> )
+  {
+    if(minusSignedInt != null) {
+      return Integer.parseInt(minusSignedInt.image.toString()); 
+    } else {
+      return Integer.parseInt(t.image.toString());
+    }
+    }
+}
+
+String identifier() :
+{
+  Token t = null;
+}
+{
+  (
+     t=<ID>
+     { return t.image.toString(); }
+   | ( t=<QUOTED_IDENTIFIER> | t=<STRING_LITERAL> )
+     { return t.image.substring(1,t.image.toString().length() - 1); }
+  )
+}
+
+String appendIndicator(String columnName) :
+{
+  String column = columnName;
+}
+{
+  {
+     return (!column.endsWith(":") && column.indexOf(":") == -1) 
+     ? column + ":" : column;
+  }
+}

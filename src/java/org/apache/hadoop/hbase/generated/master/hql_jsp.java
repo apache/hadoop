@@ -5,11 +5,11 @@ import javax.servlet.http.*;
 import javax.servlet.jsp.*;
 import java.util.*;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.shell.TableFormatter;
-import org.apache.hadoop.hbase.shell.ReturnMsg;
-import org.apache.hadoop.hbase.shell.generated.Parser;
-import org.apache.hadoop.hbase.shell.Command;
-import org.apache.hadoop.hbase.shell.formatter.HtmlTableFormatter;
+import org.apache.hadoop.hbase.hql.TableFormatter;
+import org.apache.hadoop.hbase.hql.ReturnMsg;
+import org.apache.hadoop.hbase.hql.generated.HQLParser;
+import org.apache.hadoop.hbase.hql.Command;
+import org.apache.hadoop.hbase.hql.formatter.HtmlTableFormatter;
 
 public final class hql_jsp extends org.apache.jasper.runtime.HttpJspBase
     implements org.apache.jasper.runtime.JspSourceDependent {
@@ -60,7 +60,7 @@ public final class hql_jsp extends org.apache.jasper.runtime.HttpJspBase
  
       out.write("\n <hr/>\n ");
 
-    Parser parser = new Parser(query, out, new HtmlTableFormatter(out));
+    HQLParser parser = new HQLParser(query, out, new HtmlTableFormatter(out));
     Command cmd = parser.terminatedCommand();
     if (cmd.getCommandType() != Command.CommandType.SELECT) {
  
