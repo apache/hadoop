@@ -125,6 +125,7 @@ Trunk (unreleased changes)
    HADOOP-2500 Unreadable region kills region servers
    HADOOP-2587 Splits blocked by compactions cause region to be offline for
                duration of compaction. 
+               (Bryan Duxbury via Stack)
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable

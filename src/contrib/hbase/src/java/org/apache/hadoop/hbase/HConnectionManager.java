@@ -377,10 +377,6 @@ public class HConnectionManager implements HConstants {
       if (useCache) {
         location = getCachedLocation(tableName, row);
         if (location != null) {
-          LOG.debug("Looking in " + parentTable + " for " 
-            + tableName + "/" + row
-            + ", got a cache hit with " 
-            + location.getRegionInfo().getRegionName());
           return location;
         }
       } else{

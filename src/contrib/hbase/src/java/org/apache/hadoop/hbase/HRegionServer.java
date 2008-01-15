@@ -1460,7 +1460,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
       while (s.next(key, results)) {
-/*        LOG.debug("RegionServer scanning on row " + key.getRow());*/
         for(Map.Entry<Text, byte []> e: results.entrySet()) {
           values.put(new HStoreKey(key.getRow(), e.getKey(), key.getTimestamp()),
             new ImmutableBytesWritable(e.getValue()));
