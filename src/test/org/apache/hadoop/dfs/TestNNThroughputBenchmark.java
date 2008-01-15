@@ -10,7 +10,7 @@ public class TestNNThroughputBenchmark extends TestCase {
    */
   public void testNNThroughput() throws Exception {
     Configuration conf = new Configuration();
-    conf.set("fs.default.name", "localhost:"+Integer.toString(50017));
+    conf.set("fs.default.name", "localhost:" + 0);
     NameNode.format(conf);
     NNThroughputBenchmark.runBenchmark(conf, new String[] {"-op", "all"});
   }

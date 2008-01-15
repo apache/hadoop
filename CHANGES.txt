@@ -445,6 +445,9 @@ Trunk (unreleased changes)
     HADOOP-2481. NNBench report its progress periodically.
     (Hairong Kuang via dhruba)
 
+		HADOOP-2601. Start name-node on a free port for TestNNThroughputBenchmark.
+		(Konstantin Shvachko)
+
 Release 0.15.3 - (unreleased changes)
 
   BUG FIXES
