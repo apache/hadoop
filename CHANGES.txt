@@ -48,6 +48,11 @@ Trunk (unreleased changes)
     to, e.g., pass LocalFileSystem#getWorkingDir().toString() directly
     to java.io methods that accept file names. (cutting)
 
+    HADOOP-2514.  Change trash feature to maintain a per-user trash
+    directory, named ".Trash" in the user's home directory.  The
+    "fs.trash.root" parameter is no longer used.  Full source paths
+    are also no longer reproduced within the trash.
+
   NEW FEATURES
 
     HADOOP-1857.  Ability to run a script when a task fails to capture stack

@@ -25,25 +25,33 @@ import java.util.Date;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.fs.permission.*;
 
-/** Provides a <i>trash</i> feature.  Files may be moved to a trash directory.
- * They're initially stored in a <i>current</i> sub-directory of the trash
- * directory.  Within that sub-directory their original path is preserved.
- * Periodically one may checkpoint the current trash and remove older
- * checkpoints.  (This design permits trash management without enumeration of
- * the full trash content, without date support in the filesystem, and without
- * clock synchronization.)
+/** Provides a <i>trash</i> feature.  Files are moved to a user's trash
+ * directory, a subdirectory of their home directory named ".Trash".  Files are
+ * initially moved to a <i>current</i> sub-directory of the trash directory.
+ * Within that sub-directory their original path is preserved.  Periodically
+ * one may checkpoint the current trash and remove older checkpoints.  (This
+ * design permits trash management without enumeration of the full trash
+ * content, without date support in the filesystem, and without clock
+ * synchronization.)
  */
 public class Trash extends Configured {
   private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.fs.Trash");
 
-  private static final String CURRENT = "Current";
+  private static final Path CURRENT = new Path("Current");
+  private static final Path TRASH = new Path(".Trash/");
+  private static final Path HOMES = new Path("/user/");
+
+  private static final FsPermission PERMISSION =
+    new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE);
+
   private static final DateFormat CHECKPOINT = new SimpleDateFormat("yyMMddHHmm");
   private static final int MSECS_PER_MINUTE = 60*1000;
 
   private FileSystem fs;
-  private Path root;
+  private Path trash;
   private Path current;
   private long interval;
 
@@ -51,17 +59,15 @@ public class Trash extends Configured {
    * @param conf a Configuration
    */
   public Trash(Configuration conf) throws IOException {
+    this(FileSystem.get(conf).getHomeDirectory(), conf);
+  }
+
+  private Trash(Path home, Configuration conf) throws IOException {
     super(conf);
 
-    Path root = new Path(conf.get("fs.trash.root", "/tmp/Trash"));
-
-    this.fs = root.getFileSystem(conf);
-
-    if (!root.isAbsolute())
-      root = new Path(fs.getWorkingDirectory(), root);
-
-    this.root = root;
-    this.current = new Path(root, CURRENT);
+    this.fs = home.getFileSystem(conf);
+    this.trash = new Path(home, TRASH);
+    this.current = new Path(trash, CURRENT);
     this.interval = conf.getLong("fs.trash.interval", 60) * MSECS_PER_MINUTE;
   }
 
@@ -78,24 +84,24 @@ public class Trash extends Configured {
     if (!fs.exists(path))                         // check that path exists
       throw new FileNotFoundException(path.toString());
 
-    URI rootUri = root.toUri();
-    String dirPath = path.toUri().getPath();
-
-    if (dirPath.startsWith(rootUri.getPath())) {  // already in trash
-      return false;
+    if (path.toString().startsWith(trash.toString())) {
+      return false;                               // already in trash
     }
 
-    Path trashPath =                              // create path in current
-      new Path(rootUri.getScheme(), rootUri.getAuthority(),
-               current.toUri().getPath()+dirPath);
+    Path trashPath = new Path(current, path.getName());
 
     IOException cause = null;
-    
+
     // try twice, in case checkpoint between the mkdirs() & rename()
     for (int i = 0; i < 2; i++) {
-      Path trashDir = trashPath.getParent();
-      if (!fs.mkdirs(trashDir)) {                 // make parent directory
-        throw new IOException("Failed to create trash directory: "+trashDir);
+      try {
+        if (!fs.mkdirs(current, PERMISSION)) {      // create current
+          LOG.warn("Can't create trash directory: "+current);
+          return false;
+        }
+      } catch (IOException e) {
+        LOG.warn("Can't create trash directory: "+current);
+        return false;
       }
       try {
         //
@@ -123,11 +129,11 @@ public class Trash extends Configured {
 
     Path checkpoint;
     synchronized (CHECKPOINT) {
-      checkpoint = new Path(root, CHECKPOINT.format(new Date()));
+      checkpoint = new Path(trash, CHECKPOINT.format(new Date()));
     }
 
     if (fs.rename(current, checkpoint)) {
-      LOG.info("Created trash checkpoint: "+checkpoint);
+      LOG.info("Created trash checkpoint: "+checkpoint.toUri().getPath());
     } else {
       throw new IOException("Failed to checkpoint trash: "+checkpoint);
     }
@@ -135,12 +141,13 @@ public class Trash extends Configured {
 
   /** Delete old checkpoints. */
   public void expunge() throws IOException {
-    Path[] dirs = fs.listPaths(root);             // scan trash sub-directories
+    Path[] dirs = fs.listPaths(trash);            // scan trash sub-directories
     long now = System.currentTimeMillis();
     for (int i = 0; i < dirs.length; i++) {
-      Path dir = dirs[i];
-      String name = dir.getName();
-      if (name.equals(CURRENT))                   // skip current
+      Path path = dirs[i];
+      String dir = path.toUri().getPath();
+      String name = path.getName();
+      if (name.equals(CURRENT.getName()))         // skip current
         continue;
 
       long time;
@@ -154,7 +161,7 @@ public class Trash extends Configured {
       }
 
       if ((now - interval) > time) {
-        if (fs.delete(dir)) {
+        if (fs.delete(path)) {
           LOG.info("Deleted trash checkpoint: "+dir);
         } else {
           LOG.warn("Couldn't delete checkpoint: "+dir+" Ignoring.");
@@ -170,22 +177,34 @@ public class Trash extends Configured {
     return current;
   }
 
-  /** Return a {@link Runnable} that periodically empties the trash.
-   * Only one checkpoint is kept at a time.
+  /** Return a {@link Runnable} that periodically empties the trash of all
+   * users, intended to be run by the superuser.  Only one checkpoint is kept
+   * at a time.
    */
-  public Runnable getEmptier() {
-    return new Emptier();
+  public Runnable getEmptier() throws IOException {
+    return new Emptier(getConf());
   }
 
-  private class Emptier implements Runnable {
+  private static class Emptier implements Runnable {
+
+    private Configuration conf;
+    private FileSystem fs;
+    private long interval;
+
+    public Emptier(Configuration conf) throws IOException {
+      this.conf = conf;
+      this.interval = conf.getLong("fs.trash.interval", 60) * MSECS_PER_MINUTE;
+      this.fs = FileSystem.get(conf);
+    }
 
     public void run() {
       if (interval == 0)
         return;                                   // trash disabled
 
       long now = System.currentTimeMillis();
-      long end = ceiling(now, interval);
+      long end;
       while (true) {
+        end = ceiling(now, interval);
         try {                                     // sleep for interval
           Thread.sleep(end - now);
         } catch (InterruptedException e) {
@@ -195,19 +214,28 @@ public class Trash extends Configured {
         now = System.currentTimeMillis();
         if (now >= end) {
 
+          FileStatus[] homes = null;
           try {
-            expunge();
+            homes = fs.listStatus(HOMES);         // list all home dirs
           } catch (IOException e) {
-            LOG.warn("Trash expunge caught: "+e+". Ignoring.");
+            LOG.warn("Trash can't list homes: "+e+" Sleeping.");
+            continue;
           }
 
-          try {
-            checkpoint();
-          } catch (IOException e) {
-            LOG.warn("Trash checkpoint caught: "+e+". Ignoring.");
-          }
+          if (homes == null)
+            continue;
 
-          end = ceiling(now, interval);
+          for (FileStatus home : homes) {         // dump each trash
+            if (!home.isDir())
+              continue;
+            try {
+              Trash trash = new Trash(home.getPath(), conf);
+              trash.expunge();
+              trash.checkpoint();
+            } catch (IOException e) {
+              LOG.warn("Trash caught: "+e+". Skipping "+home.getPath()+".");
+            }
+          }
         }
       }
     }

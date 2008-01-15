@@ -48,14 +48,14 @@ public class TestTrash extends TestCase {
   // check that the specified file is in Trash
   static void checkTrash(FileSystem fs, Path trashRoot, String pathname)
                          throws IOException {
-    Path p = new Path(trashRoot + pathname);
+    Path p = new Path(trashRoot+"/"+new Path(pathname).getName());
     assertTrue(fs.exists(p));
   }
 
   // check that the specified file is not in Trash
   static void checkNotInTrash(FileSystem fs, Path trashRoot, String pathname)
                               throws IOException {
-    Path p = new Path(trashRoot + pathname);
+    Path p = new Path(trashRoot+"/"+ new Path(pathname).getName());
     assertTrue(!fs.exists(p));
   }
 
@@ -69,8 +69,6 @@ public class TestTrash extends TestCase {
   public void testTrash() throws IOException {
     Configuration conf = new Configuration();
     conf.set("fs.trash.interval", 10); // 10 minute
-    conf.set("fs.trash.root", 
-             conf.get("hadoop.tmp.dir") + "/Trash");
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fs = cluster.getFileSystem();
     DistributedFileSystem fileSys = (DistributedFileSystem) fs;
