@@ -431,7 +431,7 @@ public class TaskTracker
     // get the assigned address
     this.taskReportAddress = taskReportServer.getListenerAddress();
     this.fConf.set("mapred.task.tracker.report.bindAddress",
-                   taskReportAddress.toString());
+        taskReportAddress.getHostName() + ":" + taskReportAddress.getPort());
     LOG.info("TaskTracker up at: " + this.taskReportAddress);
 
     this.taskTrackerName = "tracker_" + localHostname + ":" + taskReportAddress;

@@ -454,6 +454,9 @@ Trunk (unreleased changes)
     HADOOP-2494.  Set +x on contrib/*/bin/* in packaged tar bundle.
     (stack via tomwhite)
 
+    HADOOP-2605. Remove bogus leading slash in task-tracker report bindAddress.
+    (Konstantin Shvachko)
+
 Release 0.15.3 - (unreleased changes)
 
   BUG FIXES
