@@ -25,10 +25,15 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.io.Text;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+
 /**
  * Tests HTable
  */
 public class TestHTable extends HBaseClusterTestCase implements HConstants {
+  private static final Log LOG = LogFactory.getLog(TestHTable.class);
   private static final HColumnDescriptor column =
     new HColumnDescriptor(COLUMN_FAMILY.toString());
 
@@ -134,4 +139,47 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     // to be reloaded.
     
   }
+  
+  /**
+    * For HADOOP-2579
+    */
+  public void testTableNotFoundExceptionWithoutAnyTables() {
+    try {
+      new HTable(conf, new Text("notATable"));
+      fail("Should have thrown a TableNotFoundException");
+    } catch (TableNotFoundException e) {
+      // expected
+    } catch (IOException e) {
+      e.printStackTrace();
+      fail("Should have thrown a TableNotFoundException instead of a " +
+        e.getClass());
+    }
+  }
+  
+  /**
+    * For HADOOP-2579
+    */
+  public void testTableNotFoundExceptionWithATable() {
+    try {
+      HColumnDescriptor column =
+        new HColumnDescriptor(COLUMN_FAMILY.toString());
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      HTableDescriptor testTableADesc =
+        new HTableDescriptor("table");
+      testTableADesc.addFamily(column);
+      admin.createTable(testTableADesc);
+
+      // This should throw a TableNotFoundException, it has not been created
+      new HTable(conf, new Text("notATable"));
+      
+      fail("Should have thrown a TableNotFoundException");
+    } catch (TableNotFoundException e) {
+      // expected
+    } catch (IOException e) {
+      e.printStackTrace();
+      fail("Should have thrown a TableNotFoundException instead of a " +
+        e.getClass());
+    }
+  }
+  
 }

@@ -1430,6 +1430,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       // ask the region for all the data 
       Map<Text, byte[]> map = region.getClosestRowBefore(row, ts);
       // convert to a MapWritable
+      if (map == null) {
+        return null;
+      }
       for (Map.Entry<Text, byte []> es: map.entrySet()) {
         result.put(new HStoreKey(row, es.getKey()),
             new ImmutableBytesWritable(es.getValue()));

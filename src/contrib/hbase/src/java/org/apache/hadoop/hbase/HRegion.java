@@ -1074,6 +1074,10 @@ public class HRegion implements HConstants {
           key = new HStoreKey(closestKey, ts);
         }
       }
+
+      if (key == null) {
+        return null;
+      }
           
       // now that we've found our key, get the values
       TreeMap<Text, byte []> result = new TreeMap<Text, byte[]>();

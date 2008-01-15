@@ -89,6 +89,7 @@ public class HTable implements HConstants {
     this.numRetries = conf.getInt("hbase.client.retries.number", 5);
     this.rand = new Random();
     this.batch = new AtomicReference<BatchUpdate>();
+    this.connection.locateRegion(tableName, EMPTY_START_ROW);
     tableDoesNotExist = false;
     closed = false;
   }
