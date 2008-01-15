@@ -191,7 +191,7 @@ public class HStore implements HConstants {
     private void internalGetFull(SortedMap<HStoreKey, byte []> map, HStoreKey key, 
         SortedMap<Text, byte []> results) {
 
-      if (map.isEmpty()) {
+      if (map.isEmpty() || key == null) {
         return;
       }
 
@@ -1595,6 +1595,10 @@ public class HStore implements HConstants {
   void getFull(HStoreKey key, TreeMap<Text, byte []> results)
     throws IOException {
     Map<Text, List<Long>> deletes = new HashMap<Text, List<Long>>();
+    
+    if (key == null) {
+      return;
+    }
     
     this.lock.readLock().lock();
     memcache.getFull(key, results);

@@ -409,6 +409,11 @@ public class HConnectionManager implements HConstants {
             metaLocation.getRegionInfo().getRegionName(), 
             metaKey, HConstants.LATEST_TIMESTAMP);
 
+          if (regionInfoRow == null) {
+            throw new TableNotFoundException("Table '" + tableName + 
+              "' does not exist.");
+          }
+
           // convert the MapWritable into a Map we can use
           SortedMap<Text, byte[]> results = 
             sortedMapFromMapWritable(regionInfoRow);

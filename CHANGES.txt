@@ -126,6 +126,10 @@ Trunk (unreleased changes)
    HADOOP-2587 Splits blocked by compactions cause region to be offline for
                duration of compaction. 
                (Bryan Duxbury via Stack)
+   HADOOP-2579 Initializing a new HTable object against a nonexistent table
+               throws a NoServerForRegionException instead of a
+               TableNotFoundException when a different table has been created
+               previously (Bryan Duxbury via Stack)
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
