@@ -737,7 +737,7 @@ public class HStoreFile implements HConstants {
   static class HalfMapFileReader extends BloomFilterMapFile.Reader {
     private final boolean top;
     private final WritableComparable midkey;
-    private boolean topFirstNextCall = true;
+    private boolean firstNextCall = true;
     
     HalfMapFileReader(final FileSystem fs, final String dirName, 
         final Configuration conf, final Range r,
@@ -789,17 +789,32 @@ public class HStoreFile implements HConstants {
     @SuppressWarnings("unchecked")
     @Override
     public synchronized WritableComparable getClosest(WritableComparable key,
-        Writable val)
+      Writable val)
     throws IOException {
+      WritableComparable closest = null;
       if (top) {
-        if (key.compareTo(midkey) < 0) {
-          return midkey;
+        // If top, the lowest possible key is midkey.  Do not have to check
+        // what comes back from super getClosest.  Will return exact match or
+        // greater.
+        closest = (key.compareTo(this.midkey) < 0)?
+          this.midkey: super.getClosest(key, val);
+      } else {
+        // We're serving bottom of the file.
+        if (key.compareTo(this.midkey) < 0) {
+          // Check key is within range for bottom.
+          closest = super.getClosest(key, val);
+          // midkey was made against largest store file at time of split. Smaller
+          // store files could have anything in them.  Check return value is
+          // not beyond the midkey (getClosest returns exact match or next
+          // after).
+          if (closest != null && closest.compareTo(this.midkey) >= 0) {
+            // Don't let this value out.
+            closest = null;
+          }
         }
-      } else if (key.compareTo(midkey) >= 0) {
-        // Contract says return null if EOF.
-        return null;
+        // Else, key is > midkey so let out closest = null.
       }
-      return super.getClosest(key, val);
+      return closest;
     }
 
     /** {@inheritDoc} */
@@ -815,9 +830,19 @@ public class HStoreFile implements HConstants {
     @Override
     public synchronized boolean next(WritableComparable key, Writable val)
     throws IOException {
-      if (top && topFirstNextCall) {
-        topFirstNextCall = false;
-        return doFirstNextProcessing(key, val);
+      if (firstNextCall) {
+        firstNextCall = false;
+        if (this.top) {
+          // Seek to midkey.  Midkey may not exist in this file.  That should be
+          // fine.  Then we'll either be positioned at end or start of file.
+          WritableComparable nearest = getClosest(midkey, val);
+          // Now copy the mid key into the passed key.
+          if (nearest != null) {
+            Writables.copyWritable(nearest, key);
+            return true;
+          }
+          return false;
+        }
       }
       boolean result = super.next(key, val);
       if (!top && key.compareTo(midkey) >= 0) {
@@ -825,25 +850,12 @@ public class HStoreFile implements HConstants {
       }
       return result;
     }
-    
-    private boolean doFirstNextProcessing(WritableComparable key, Writable val)
-    throws IOException {
-      // Seek to midkey.  Midkey may not exist in this file.  That should be
-      // fine.  Then we'll either be positioned at end or start of file.
-      WritableComparable nearest = getClosest(midkey, val);
-      // Now copy the mid key into the passed key.
-      if (nearest != null) {
-        Writables.copyWritable(nearest, key);
-        return true;
-      }
-      return false;
-    }
 
     /** {@inheritDoc} */
     @Override
     public synchronized void reset() throws IOException {
       if (top) {
-        topFirstNextCall = true;
+        firstNextCall = true;
         seek(midkey);
         return;
       }
