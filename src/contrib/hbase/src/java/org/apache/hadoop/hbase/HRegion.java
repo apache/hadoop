@@ -654,7 +654,8 @@ public class HRegion implements HConstants {
    */
   boolean needsSplit(Text midKey) {
     HStore.HStoreSize biggest = largestHStore(midKey);
-    if (biggest == null) {
+    if (biggest == null || midKey.getLength() == 0 || 
+      (midKey.equals(getStartKey()) && midKey.equals(getEndKey())) ) {
       return false;
     }
     long triggerSize = this.desiredMaxFileSize + (this.desiredMaxFileSize / 2);
