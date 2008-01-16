@@ -461,6 +461,9 @@ Trunk (unreleased changes)
 
     HADOOP-2605. Remove bogus leading slash in task-tracker report bindAddress.
     (Konstantin Shvachko)
+    
+    HADOOP-2620. Trivial. 'bin/hadoop fs -help' did not list chmod, chown, and
+    chgrp. (Raghu Angadi)
 
 Release 0.15.3 - 2008-01-18
 

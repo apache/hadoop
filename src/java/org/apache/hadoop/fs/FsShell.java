@@ -1143,6 +1143,9 @@ public class FsShell extends Configured implements Tool {
       "[-mkdir <path>] [-report] [" + SETREP_SHORT_USAGE + "]\n\t" +
       "[-touchz <path>] [-test -[ezd] <path>] [-stat [format] <path>]\n\t" +
       "[-tail [-f] <path>] [-text <path>]\n\t" +
+      "[" + FsShellPermissions.CHMOD_USAGE + "]\n\t" +
+      "[" + FsShellPermissions.CHOWN_USAGE + "]\n\t" +
+      "[" + FsShellPermissions.CHGRP_USAGE + "]\n\t" +      
       "[-help [cmd]]\n";
 
     String conf ="-conf <configuration file>:  Specify an application configuration file.";
@@ -1359,6 +1362,9 @@ public class FsShell extends Configured implements Tool {
       System.out.println(moveToLocal);
       System.out.println(mkdir);
       System.out.println(setrep);
+      System.out.println(chmod);
+      System.out.println(chown);      
+      System.out.println(chgrp);
       System.out.println(help);
     }        
 
