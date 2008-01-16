@@ -42,6 +42,9 @@ Trunk (unreleased changes)
                consumes >20% CPU
    HADOOP-2443 Keep lazy cache of regions in client rather than an
                'authoritative' list (Bryan Duxbury via Stack)
+   HADOOP-2600 Performance: HStore.getRowKeyAtOrBefore should use
+               MapFile.Reader#getClosest (before)
+               (Bryan Duxbury via Stack)
 
   BUG FIXES
    HADOOP-2059 In tests, exceptions in min dfs shutdown should not fail test

@@ -201,7 +201,6 @@ public class TestGet2 extends HBaseTestCase {
       assertEquals(new String(results.get(COLUMNS[0])), "t20 bytes");
 
       // try "050", should get stuff from "040"
-      t50 = new Text("050");
       results = region.getClosestRowBefore(t50, HConstants.LATEST_TIMESTAMP);
       assertEquals(new String(results.get(COLUMNS[0])), "t40 bytes");
     } finally {

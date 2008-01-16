@@ -1871,30 +1871,46 @@ public class HStore implements HConstants {
   private Text rowAtOrBeforeFromMapFile(MapFile.Reader map, Text row, 
     long timestamp)
   throws IOException {
+    HStoreKey searchKey = new HStoreKey(row, timestamp);
     Text previousRow = null;
     ImmutableBytesWritable readval = new ImmutableBytesWritable();
     HStoreKey readkey = new HStoreKey();
     
     synchronized(map) {
-      // start at the beginning of the map
-      // TODO: this sucks. do a clever binary search instead.
+      // don't bother with the rest of this if the file is empty
       map.reset();
-    
-      while(map.next(readkey, readval)){
+      if (!map.next(readkey, readval)) {
+        return null;
+      }
+      
+      HStoreKey finalKey = new HStoreKey(); 
+      map.finalKey(finalKey);
+      if (finalKey.getRow().compareTo(row) < 0) {
+        return finalKey.getRow();
+      }
+      
+      // seek to the exact row, or the one that would be immediately before it
+      readkey = (HStoreKey)map.getClosest(searchKey, readval, true);
+      
+      if (readkey == null) {
+        // didn't find anything that would match, so returns
+        return null;
+      }
+      
+      do {
         if (readkey.getRow().compareTo(row) == 0) {
           // exact match on row
           if (readkey.getTimestamp() <= timestamp) {
             // timestamp fits, return this key
             return readkey.getRow();
           }
-          
           // getting here means that we matched the row, but the timestamp
           // is too recent - hopefully one of the next cells will match
           // better, so keep rolling
-        }        
-        // if the row key we just read is beyond the key we're searching for,
-        // then we're done; return the last key we saw before this one
-        else if (readkey.getRow().toString().compareTo(row.toString()) > 0 ) {
+          continue;
+        } else if (readkey.getRow().toString().compareTo(row.toString()) > 0 ) {
+          // if the row key we just read is beyond the key we're searching for,
+          // then we're done; return the last key we saw before this one
           return previousRow;
         } else {
           // so, the row key doesn't match, and we haven't gone past the row
@@ -1905,8 +1921,8 @@ public class HStore implements HConstants {
           }
           // otherwise, ignore this key, because it doesn't fulfill our 
           // requirements.
-        }
-      }
+        }        
+      } while(map.next(readkey, readval));
     }
     // getting here means we exhausted all of the cells in the mapfile.
     // whatever satisfying row we reached previously is the row we should 
