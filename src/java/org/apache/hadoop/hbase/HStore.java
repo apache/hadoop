@@ -2020,9 +2020,28 @@ public class HStore implements HConstants {
         }
       }
       MapFile.Reader r = this.readers.get(mapIndex);
-      WritableComparable midkey = r.midKey();
+      
+      // seek back to the beginning of mapfile
+      r.reset();
+      
+      // get the first and last keys
+      HStoreKey firstKey = new HStoreKey();
+      HStoreKey lastKey = new HStoreKey();
+      Writable value = new ImmutableBytesWritable();
+      r.next((WritableComparable)firstKey, value);
+      r.finalKey((WritableComparable)lastKey);
+      
+      // get the midkey
+      HStoreKey midkey = (HStoreKey)r.midKey();
+
       if (midkey != null) {
         midKey.set(((HStoreKey)midkey).getRow());
+        // if the midkey is the same as the first and last keys, then we cannot
+        // (ever) split this region. 
+        if (midkey.getRow().equals(firstKey.getRow()) && 
+          midkey.getRow().equals(lastKey.getRow())) {
+          return new HStoreSize(aggregateSize, maxSize, false);
+        } 
       }
     } catch(IOException e) {
       LOG.warn("Failed getting store size for " + this.storeName, e);

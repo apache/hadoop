@@ -770,11 +770,18 @@ public class HStoreFile implements HConstants {
     }
 
     /** {@inheritDoc} */
-    @SuppressWarnings({ "unused"})
     @Override
     public synchronized void finalKey(WritableComparable key)
     throws IOException {
-      throw new UnsupportedOperationException("Unsupported");
+      if (top) {
+        checkKey(key);
+        super.finalKey(key); 
+      } else {
+        reset();
+        Writable value = new ImmutableBytesWritable();
+        
+        key = super.getClosest(midkey, value, true);
+      }
     }
 
     /** {@inheritDoc} */
