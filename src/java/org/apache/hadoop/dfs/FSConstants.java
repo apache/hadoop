@@ -93,6 +93,7 @@ public interface FSConstants {
   public static final int OP_STATUS_ERROR_CHECKSUM = 2;  
   public static final int OP_STATUS_ERROR_INVALID = 3;  
   public static final int OP_STATUS_ERROR_EXISTS = 4;  
+  public static final int OP_STATUS_CHECKSUM_OK = 5;  
 
   
   /** Version for data transfers between clients and datanodes

@@ -27,7 +27,6 @@ import org.apache.hadoop.dfs.FSConstants.NodeType;
 import static org.apache.hadoop.dfs.FSConstants.NodeType.NAME_NODE;
 import static org.apache.hadoop.dfs.FSConstants.NodeType.DATA_NODE;
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
-import org.apache.hadoop.fs.Path;
 
 /**
 * This test ensures the appropriate response (successful or failure) from
@@ -179,7 +178,9 @@ public class TestDFSStorageStateRecovery extends TestCase {
     UpgradeUtilities.initialize();
 
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
-      conf = UpgradeUtilities.initializeStorageStateConf(numDirs);
+      conf = new Configuration();
+      conf.setInt("dfs.datanode.scan.period.hours", -1);      
+      conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
       for (int i = 0; i < testCases.length; i++) {
         boolean[] testCase = testCases[i];
         boolean shouldRecover = testCase[4];

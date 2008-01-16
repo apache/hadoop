@@ -838,6 +838,24 @@ class DFSClient implements FSConstants {
     int readAll(byte[] buf, int offset, int len) throws IOException {
       return readFully(this, buf, offset, len);
     }
+    
+    /* When the reader reaches end of a block and there are no checksum
+     * errors, we send OP_STATUS_CHECKSUM_OK to datanode to inform that 
+     * checksum was verified and there was no error.
+     */ 
+    void checksumOk(Socket sock) {
+      try {
+        OutputStream out = sock.getOutputStream();
+        byte buf[] = { (OP_STATUS_CHECKSUM_OK >>> 8) & 0xff,
+                       (OP_STATUS_CHECKSUM_OK) & 0xff };
+        out.write(buf);
+        out.flush();
+      } catch (IOException e) {
+        // its ok not to be able to send this.
+        LOG.debug("Could not write to datanode " + sock.getInetAddress() +
+                  ": " + e.getMessage());
+      }
+    }
   }
     
   /****************************************************************
@@ -1135,6 +1153,9 @@ class DFSClient implements FSConstants {
             
             if (result >= 0) {
               pos += result;
+              if ( pos > blockEnd ) {
+                blockReader.checksumOk(s);
+              }
             } else {
               // got a EOS from reader though we expect more data on it.
               throw new IOException("Unexpected EOS from the reader");

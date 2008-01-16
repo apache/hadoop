@@ -83,7 +83,14 @@ public class TestDFSFinalize extends TestCase {
     UpgradeUtilities.initialize();
     
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
-      conf = UpgradeUtilities.initializeStorageStateConf(numDirs);
+      /* This test requires that "current" directory not change after
+       * the upgrade. Actually it is ok for those contents to change.
+       * For now disabling block verification so that the contents are 
+       * not changed.
+       */
+      conf = new Configuration();
+      conf.setInt("dfs.datanode.scan.period.hours", -1);
+      conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
       String[] nameNodeDirs = conf.getStrings("dfs.name.dir");
       String[] dataNodeDirs = conf.getStrings("dfs.data.dir");
       

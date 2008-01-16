@@ -165,7 +165,8 @@ public class TestDFSStartupVersions extends TestCase {
    */
   public void testVersions() throws Exception {
     UpgradeUtilities.initialize();
-    Configuration conf = UpgradeUtilities.initializeStorageStateConf(1);
+    Configuration conf = UpgradeUtilities.initializeStorageStateConf(1, 
+                                                      new Configuration());
     StorageInfo[] versions = initializeVersions();
     UpgradeUtilities.createStorageDirs(
                                        NAME_NODE, conf.getStrings("dfs.name.dir"), "current");

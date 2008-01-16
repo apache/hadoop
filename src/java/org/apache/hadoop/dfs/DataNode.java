@@ -19,6 +19,7 @@ package org.apache.hadoop.dfs;
 
 import org.apache.commons.logging.*;
 
+import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.*;
@@ -115,6 +116,9 @@ public class DataNode implements FSConstants, Runnable {
   private Thread dataNodeThread = null;
   String machineName;
   int defaultBytesPerChecksum = 512;
+  
+  private DataBlockScanner blockScanner;
+  private Daemon blockScannerThread;
 
   // The following three fields are to support balancing
   final static short MAX_BALANCING_THREADS = 5;
@@ -130,7 +134,7 @@ public class DataNode implements FSConstants, Runnable {
     return System.currentTimeMillis();
   }
 
-  private static class DataNodeMetrics implements Updater {
+  static class DataNodeMetrics implements Updater {
     private final MetricsRecord metricsRecord;
     private int bytesWritten = 0;
     private int bytesRead = 0;
@@ -138,6 +142,8 @@ public class DataNode implements FSConstants, Runnable {
     private int blocksRead = 0;
     private int blocksReplicated = 0;
     private int blocksRemoved = 0;
+    private int blocksVerified = 0;
+    private int blockVerificationFailures = 0;
       
     DataNodeMetrics(Configuration conf) {
       String sessionId = conf.get("session.id"); 
@@ -162,6 +168,9 @@ public class DataNode implements FSConstants, Runnable {
         metricsRecord.incrMetric("blocks_written", blocksWritten);
         metricsRecord.incrMetric("blocks_replicated", blocksReplicated);
         metricsRecord.incrMetric("blocks_removed", blocksRemoved);
+        metricsRecord.incrMetric("blocks_verified", blocksVerified);
+        metricsRecord.incrMetric("block_verification_failures", 
+                                                  blockVerificationFailures);        
               
         bytesWritten = 0;
         bytesRead = 0;
@@ -169,6 +178,8 @@ public class DataNode implements FSConstants, Runnable {
         blocksRead = 0;
         blocksReplicated = 0;
         blocksRemoved = 0;
+        blocksVerified = 0;
+        blockVerificationFailures = 0;
       }
       metricsRecord.update();
     }
@@ -196,6 +207,14 @@ public class DataNode implements FSConstants, Runnable {
     synchronized void removedBlocks(int nblocks) {
       blocksRemoved += nblocks;
     }
+    
+    synchronized void verifiedBlocks(int nblocks) {
+      blocksVerified += nblocks;
+    }
+    
+    synchronized void verificationFailures(int failures) {
+      blockVerificationFailures += failures;
+    }    
   }
     
   /**
@@ -310,6 +329,21 @@ public class DataNode implements FSConstants, Runnable {
     LOG.info("Balancing bandwith is "+balanceBandwidth + " bytes/s");
     this.balancingThrottler = new Throttler(balanceBandwidth);
 
+    //initialize periodic block scanner
+    String reason = null;
+    if (conf.getInt("dfs.datanode.scan.period.hours", 0) < 0) {
+      reason = "verification is turned off by configuration";
+    } else if ( !(data instanceof FSDataset) ) {
+      reason = "verifcation is supported only with FSDataset";
+    } 
+    if ( reason == null ) {
+      blockScanner = new DataBlockScanner(this, (FSDataset)data, conf);
+      blockScannerThread = new Daemon(blockScanner);
+    } else {
+      LOG.info("Periodic Block Verification is disabled because " +
+               reason + ".");
+    }
+    
     //create a servlet to serve full-file content
     String infoAddr = conf.get("dfs.datanode.http.bindAddress", "0.0.0.0:50075");
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
@@ -317,6 +351,9 @@ public class DataNode implements FSConstants, Runnable {
     int tmpInfoPort = infoSocAddr.getPort();
     this.infoServer = new StatusHttpServer("datanode", infoHost, tmpInfoPort, tmpInfoPort == 0);
     this.infoServer.addServlet(null, "/streamFile/*", StreamFile.class);
+    this.infoServer.setAttribute("datanode.blockScanner", blockScanner);
+    this.infoServer.addServlet(null, "/blockScannerReport", 
+                               DataBlockScanner.Servlet.class);
     this.infoServer.start();
     // adjust info port
     this.dnRegistration.setInfoPort(this.infoServer.getPort());
@@ -372,6 +409,10 @@ public class DataNode implements FSConstants, Runnable {
     return nameNodeAddr;
   }
     
+  DataNodeMetrics getMetrics() {
+    return myMetrics;
+  }
+  
   /**
    * Return the namenode's identifier
    */
@@ -473,6 +514,10 @@ public class DataNode implements FSConstants, Runnable {
     }
     if(upgradeManager != null)
       upgradeManager.shutdownUpgrade();
+    if (blockScannerThread != null) {
+      blockScanner.shutdown();
+      blockScannerThread.interrupt();
+    }
     if (storage != null) {
       try {
         this.storage.unlockAll();
@@ -684,6 +729,9 @@ public class DataNode implements FSConstants, Runnable {
       //
       Block toDelete[] = ((BlockCommand)cmd).getBlocks();
       try {
+        if (blockScanner != null) {
+          blockScanner.deleteBlocks(toDelete);
+        }
         data.invalidate(toDelete);
       } catch(IOException e) {
         checkDiskError();
@@ -910,7 +958,8 @@ public class DataNode implements FSConstants, Runnable {
       BlockSender blockSender = null;
       try {
         try {
-          blockSender = new BlockSender(block, startOffset, length, true, true);
+          blockSender = new BlockSender(block, startOffset, length, 
+                                        true, true, false);
         } catch(IOException e) {
           out.writeShort(OP_STATUS_ERROR);
           throw e;
@@ -919,6 +968,17 @@ public class DataNode implements FSConstants, Runnable {
         out.writeShort(DataNode.OP_STATUS_SUCCESS); // send op status
         long read = blockSender.sendBlock(out, null); // send data
 
+        if (blockSender.isBlockReadFully()) {
+          // See if client verification succeeded. 
+          // This is an optional response from client.
+          try {
+            if (in.readShort() == OP_STATUS_CHECKSUM_OK  && 
+                blockScanner != null) {
+              blockScanner.verifiedByClient(block);
+            }
+          } catch (IOException ignored) {}
+        }
+        
         myMetrics.readBytes((int) read);
         myMetrics.readBlocks(1);
         LOG.info(dnRegistration + "Served block " + block + " to " + s.getInetAddress());
@@ -1013,6 +1073,10 @@ public class DataNode implements FSConstants, Runnable {
         // notify name node
         notifyNamenodeReceivedBlock(block, EMPTY_DEL_HINT);
 
+        if (blockScanner != null) {
+          blockScanner.addBlock(block);
+        }
+        
         String msg = "Received block " + block + " from " +
                      s.getInetAddress();
 
@@ -1111,7 +1175,7 @@ public class DataNode implements FSConstants, Runnable {
         balancingSem.acquireUninterruptibly();
         
         // check if the block exists or not
-        blockSender = new BlockSender(block, 0, -1, false, false);
+        blockSender = new BlockSender(block, 0, -1, false, false, false);
 
         // get the output stream to the target
         InetSocketAddress targetAddr = NetUtils.createSocketAddr(target.getName());
@@ -1217,12 +1281,19 @@ public class DataNode implements FSConstants, Runnable {
     private long curReserve;     // remaining bytes can be sent in the period
     private long bytesAlreadyUsed;
 
-    /** Constructor */
+    /** Constructor 
+     * @param bandwidthPerSec bandwidth allowed in bytes per second. 
+     */
     Throttler(long bandwidthPerSec) {
       this(500, bandwidthPerSec);  // by default throttling period is 500ms 
     }
 
-    /** Constructor */
+    /**
+     * Constructor
+     * @param period in milliseconds. Bandwidth is enforced over this
+     *        period.
+     * @param bandwidthPerSec bandwidth allowed in bytes per second. 
+     */
     Throttler(long period, long bandwidthPerSec) {
       this.curPeriodStart = System.currentTimeMillis();
       this.period = period;
@@ -1230,6 +1301,26 @@ public class DataNode implements FSConstants, Runnable {
       this.periodExtension = period*3;
     }
 
+    /**
+     * @return current throttle bandwidth in bytes per second.
+     */
+    public synchronized long getBandwidth() {
+      return bytesPerPeriod*1000/period;
+    }
+    
+    /**
+     * Sets throttle bandwidth. This takes affect latest by the end of current
+     * period.
+     * 
+     * @param bytesPerSecond 
+     */
+    public synchronized void setBandwidth(long bytesPerSecond) {
+      if ( bytesPerSecond <= 0 ) {
+        throw new IllegalArgumentException("" + bytesPerSecond);
+      }
+      bytesPerPeriod = bytesPerSecond*period/1000;
+    }
+    
     /** Given the numOfBytes sent/received since last time throttle was called,
      * make the current thread sleep if I/O rate is too fast
      * compared to the given bandwidth
@@ -1269,30 +1360,35 @@ public class DataNode implements FSConstants, Runnable {
     }
   }
 
-  private class BlockSender implements java.io.Closeable {
+  class BlockSender implements java.io.Closeable {
     private Block block; // the block to read from
     private DataInputStream blockIn; // data strean
     private DataInputStream checksumIn; // checksum datastream
     private DataChecksum checksum; // checksum stream
     private long offset; // starting position to read
     private long endOffset; // ending position
+    private long blockLength;
     private byte buf[]; // buffer to store data read from the block file & crc
     private int bytesPerChecksum; // chunk size
     private int checksumSize; // checksum size
     private boolean corruptChecksumOk; // if need to verify checksum
     private boolean chunkOffsetOK; // if need to send chunk offset
 
+    private boolean blockReadFully; //set when the whole block is read
+    private boolean verifyChecksum; //if true, check is verified while reading
     private Throttler throttler;
     private DataOutputStream out;
 
     BlockSender(Block block, long startOffset, long length,
-        boolean corruptChecksumOk, boolean chunkOffsetOK) throws IOException {
+                boolean corruptChecksumOk, boolean chunkOffsetOK,
+                boolean verifyChecksum) throws IOException {
 
       try {
         this.block = block;
         this.chunkOffsetOK = chunkOffsetOK;
         this.corruptChecksumOk = corruptChecksumOk;
-
+        this.verifyChecksum = verifyChecksum;
+        this.blockLength = data.getLength(block);
 
         if ( !corruptChecksumOk || data.metaFileExists(block) ) {
           checksumIn = new DataInputStream(
@@ -1317,10 +1413,10 @@ public class DataNode implements FSConstants, Runnable {
         checksumSize = checksum.getChecksumSize();
 
         if (length < 0) {
-          length = data.getLength(block);
+          length = blockLength;
         }
 
-        endOffset = data.getLength(block);
+        endOffset = blockLength;
         if (startOffset < 0 || startOffset > endOffset
             || (length + startOffset) > endOffset) {
           String msg = " Offset " + startOffset + " and length " + length
@@ -1397,10 +1493,18 @@ public class DataNode implements FSConstants, Runnable {
       if (checksumSize > 0 && checksumIn != null) {
         try {
           checksumIn.readFully(buf, len, checksumSize);
+          
+          if (verifyChecksum) {
+            checksum.reset();
+            checksum.update(buf, 0, len);
+            if (!checksum.compare(buf, len)) {
+              throw new ChecksumException("Checksum failed at " + offset, len);
+            }
+          }
         } catch (IOException e) {
-          LOG.warn(" Could not read checksum for data at offset " + offset
-              + " for block " + block + " got : "
-              + StringUtils.stringifyException(e));
+          LOG.warn(" Could not read or failed to veirfy checksum for data" +
+                   " at offset " + offset + " for block " + block + " got : "
+                   + StringUtils.stringifyException(e));
           IOUtils.closeStream(checksumIn);
           checksumIn = null;
           if (corruptChecksumOk) {
@@ -1437,6 +1541,7 @@ public class DataNode implements FSConstants, Runnable {
       this.out = out;
       this.throttler = throttler;
 
+      long initialOffset = offset;
       long totalRead = 0;
       try {
         checksum.writeHeader(out);
@@ -1456,7 +1561,13 @@ public class DataNode implements FSConstants, Runnable {
         close();
       }
 
+      blockReadFully = (initialOffset == 0 && offset >= blockLength);
+
       return totalRead;
+    }
+    
+    boolean isBlockReadFully() {
+      return blockReadFully;
     }
   }
 
@@ -1684,7 +1795,7 @@ public class DataNode implements FSConstants, Runnable {
 
         out = new DataOutputStream(new BufferedOutputStream(
             sock.getOutputStream(), BUFFER_SIZE));
-        blockSender = new BlockSender(b, 0, -1, false, false);
+        blockSender = new BlockSender(b, 0, -1, false, false, false);
 
         //
         // Header info
@@ -1726,6 +1837,11 @@ public class DataNode implements FSConstants, Runnable {
    */
   public void run() {
     LOG.info(dnRegistration + "In DataNode.run, data = " + data);
+
+    // start block scanner
+    if (blockScannerThread != null) {
+      blockScannerThread.start();
+    }
 
     // start dataXceiveServer
     dataXceiveServer.start();

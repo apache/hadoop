@@ -147,4 +147,14 @@ public class IOUtils {
       }
     }
   }
+  
+  /** /dev/null of OutputStreams.
+   */
+  public static class NullOutputStream extends OutputStream {
+    public void write(byte[] b, int off, int len) throws IOException {
+    }
+
+    public void write(int b) throws IOException {
+    }
+  }  
 }

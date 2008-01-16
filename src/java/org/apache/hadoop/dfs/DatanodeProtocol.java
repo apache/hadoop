@@ -31,7 +31,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface DatanodeProtocol extends VersionedProtocol {
   /*
-   * 10: blockReceived also sends hints for deletion
+   * 11 : reportBadBlocks() is added.
    * 11 Block reports as long[]
    */
   public static final long versionID = 11L;
@@ -141,4 +141,9 @@ interface DatanodeProtocol extends VersionedProtocol {
    */
   public BlockCrcInfo blockCrcUpgradeGetBlockLocations(Block block)
                                                       throws IOException;  
+
+  /**
+   * same as {@link ClientProtocol#reportBadBlocks(LocatedBlock[] blocks)}
+   */
+  public void reportBadBlocks(LocatedBlock[] blocks) throws IOException;
 }

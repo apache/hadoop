@@ -23,6 +23,7 @@ import java.net.URI;
 import java.util.Random;
 import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -212,4 +213,11 @@ public class DFSTestUtil extends TestCase {
     fs.delete(root);
     files = null;
   }
+  
+  static Block getFirstBlock(FileSystem fs, Path path) throws IOException {
+    DFSDataInputStream in = 
+      (DFSDataInputStream) ((DistributedFileSystem)fs).open(path);
+    in.readByte();
+    return in.getCurrentBlock();
+  }  
 }

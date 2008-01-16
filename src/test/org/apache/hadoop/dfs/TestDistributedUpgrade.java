@@ -88,7 +88,8 @@ public class TestDistributedUpgrade extends TestCase {
     UpgradeObjectCollection.registerUpgrade(new UpgradeObject_Test_Datanode());
     UpgradeObjectCollection.registerUpgrade(new UpgradeObject_Test_Namenode());
 
-    conf = UpgradeUtilities.initializeStorageStateConf(numDirs);
+    conf = UpgradeUtilities.initializeStorageStateConf(numDirs, 
+                                                       new Configuration());
     String[] nameNodeDirs = conf.getStrings("dfs.name.dir");
     String[] dataNodeDirs = conf.getStrings("dfs.data.dir");
     DFSAdmin dfsAdmin = new DFSAdmin();

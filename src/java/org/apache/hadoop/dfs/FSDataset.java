@@ -317,6 +317,10 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       return usage.getMount();
     }
       
+    File getDir() {
+      return dataDir.dir;
+    }
+    
     File createTmpFile(Block b) throws IOException {
       File f = new File(tmpDir, b.getBlockName());
       try {

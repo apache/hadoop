@@ -114,13 +114,6 @@ public class TestDataTransferProtocol extends TestCase {
     in.readFully(arr);
   }
   
-  Block getFirstBlock(FileSystem fs, Path path) throws IOException {
-    DFSDataInputStream in = 
-      (DFSDataInputStream) ((DistributedFileSystem)fs).open(path);
-    in.readByte();
-    return in.getCurrentBlock();
-  }
-  
   public void testDataTransferProtocol() throws IOException {
     Random random = new Random();
     int oneMil = 1024*1024;
@@ -143,7 +136,7 @@ public class TestDataTransferProtocol extends TestCase {
     createFile(fileSys, file, fileLen);
 
     // get the first blockid for the file
-    Block firstBlock = getFirstBlock(fileSys, file);
+    Block firstBlock = DFSTestUtil.getFirstBlock(fileSys, file);
     long newBlockId = firstBlock.getBlockId() + 1;
 
     recvByteBuf.position(1);

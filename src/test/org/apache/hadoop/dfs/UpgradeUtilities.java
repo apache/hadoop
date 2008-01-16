@@ -139,7 +139,8 @@ public class UpgradeUtilities {
    * Initialize dfs.name.dir and dfs.data.dir with the specified number of
    * directory entries. Also initialize dfs.blockreport.intervalMsec.
    */
-  public static Configuration initializeStorageStateConf(int numDirs) {
+  public static Configuration initializeStorageStateConf(int numDirs,
+                                                         Configuration conf) {
     StringBuffer nameNodeDirs =
       new StringBuffer(new File(TEST_ROOT_DIR, "name1").toString());
     StringBuffer dataNodeDirs =
@@ -148,7 +149,9 @@ public class UpgradeUtilities {
       nameNodeDirs.append("," + new File(TEST_ROOT_DIR, "name"+i));
       dataNodeDirs.append("," + new File(TEST_ROOT_DIR, "data"+i));
     }
-    Configuration conf = new Configuration();
+    if (conf == null) {
+      conf = new Configuration();
+    }
     conf.set("dfs.name.dir", nameNodeDirs.toString());
     conf.set("dfs.data.dir", dataNodeDirs.toString());
     conf.setInt("dfs.blockreport.intervalMsec", 10000);

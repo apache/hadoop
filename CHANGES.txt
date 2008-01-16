@@ -53,6 +53,9 @@ Trunk (unreleased changes)
     "fs.trash.root" parameter is no longer used.  Full source paths
     are also no longer reproduced within the trash.
 
+    HADOOP-2012. Periodic data verification on Datanodes.
+    (Raghu Angadi via dhruba)
+
   NEW FEATURES
 
     HADOOP-1857.  Ability to run a script when a task fails to capture stack

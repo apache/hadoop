@@ -19,6 +19,8 @@
 package org.apache.hadoop.dfs;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
@@ -31,6 +33,7 @@ import org.apache.hadoop.dfs.FSConstants.StartupOption;
 import org.apache.hadoop.dfs.FSConstants.NodeType;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.fs.FileUtil.HardLink;
+import org.apache.hadoop.io.IOUtils;
 
 /** 
  * Data storage information file.
@@ -41,6 +44,7 @@ class DataStorage extends Storage {
   // Constants
   final static String BLOCK_SUBDIR_PREFIX = "subdir";
   final static String BLOCK_FILE_PREFIX = "blk_";
+  final static String COPY_FILE_PREFIX = "dncp_";
   
   private String storageID;
 
@@ -424,7 +428,12 @@ class DataStorage extends Storage {
   
   static void linkBlocks(File from, File to) throws IOException {
     if (!from.isDirectory()) {
-      HardLink.createHardLink(from, to);
+      if (from.getName().startsWith(COPY_FILE_PREFIX)) {
+        IOUtils.copyBytes(new FileInputStream(from), 
+                          new FileOutputStream(to), 16*1024, true);
+      } else {
+        HardLink.createHardLink(from, to);
+      }
       return;
     }
     // from is a directory
@@ -433,7 +442,8 @@ class DataStorage extends Storage {
     String[] blockNames = from.list(new java.io.FilenameFilter() {
         public boolean accept(File dir, String name) {
           return name.startsWith(BLOCK_SUBDIR_PREFIX) 
-            || name.startsWith(BLOCK_FILE_PREFIX);
+            || name.startsWith(BLOCK_FILE_PREFIX)
+            || name.startsWith(COPY_FILE_PREFIX);
         }
       });
     
