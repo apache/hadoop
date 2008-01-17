@@ -337,7 +337,7 @@ class DFSClient implements FSConstants {
    * Call
    * {@link #create(String,FsPermission,boolean,short,long,Progressable,int)}
    * with default permission.
-   * @see FsPermission#getDefault(Configuration)
+   * @see FsPermission#getDefault()
    */
   public OutputStream create(String src,
       boolean overwrite,
@@ -361,7 +361,7 @@ class DFSClient implements FSConstants {
    * @param replication block replication
    * @return output stream
    * @throws IOException
-   * @see {@link ClientProtocol#create(String, FsPermission, String, boolean, short, long)}
+   * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
    */
   public OutputStream create(String src, 
                              FsPermission permission,
@@ -399,8 +399,8 @@ class DFSClient implements FSConstants {
   }
 
   /**
-   * Make a direct connection to namenode and manipulate structures
-   * there.
+   * Rename file or directory.
+   * See {@link ClientProtocol#rename(String, String)}. 
    */
   public boolean rename(String src, String dst) throws IOException {
     checkOpen();
@@ -408,8 +408,8 @@ class DFSClient implements FSConstants {
   }
 
   /**
-   * Make a direct connection to namenode and manipulate structures
-   * there.
+   * Delete file or directory.
+   * See {@link ClientProtocol#delete(String)}. 
    */
   public boolean delete(String src) throws IOException {
     checkOpen();
@@ -528,7 +528,7 @@ class DFSClient implements FSConstants {
    * @param permission The permission of the directory being created.
    * If permission == null, use {@link FsPermission#getDefault()}.
    * @return True if the operation success.
-   * @see {@link ClientProtocol#mkdirs(String, FsPermission)}
+   * @see ClientProtocol#mkdirs(String, FsPermission)
    */
   public boolean mkdirs(String src, FsPermission permission)throws IOException{
     checkOpen();
@@ -1461,7 +1461,7 @@ class DFSClient implements FSConstants {
     private Progressable progress;
     /**
      * Create a new output stream to the given DataNode.
-     * @see {@link ClientProtocol#create(String, FsPermission, String, boolean, short, long)}
+     * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
      */
     public DFSOutputStream(String src, FsPermission masked,
                            boolean overwrite,

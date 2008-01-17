@@ -251,6 +251,9 @@ Trunk (unreleased changes)
     HADOOP-1989. Remove 'datanodecluster' command from bin/hadoop.
     (Sanjay Radia via shv)
 
+    HADOOP-1742. Improve JavaDoc documentation for ClientProtocol, DFSClient,
+    and FSNamesystem. (Konstantin Shvachko)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

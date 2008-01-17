@@ -23,7 +23,8 @@ import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
 import org.apache.hadoop.fs.permission.*;
 
 /**********************************************************************
- * ClientProtocol is used by a piece of DFS user code to communicate 
+ * ClientProtocol is used by user code via 
+ * {@link DistributedFileSystem} class to communicate 
  * with the NameNode.  User code can manipulate the directory namespace, 
  * as well as open/close file streams, etc.
  *
@@ -32,13 +33,8 @@ interface ClientProtocol extends VersionedProtocol {
 
   /**
    * Compared to the previous version the following changes have been introduced:
-   * 16 : removed deprecated obtainLock() and releaseLock(). 
-   * 17 : getBlockSize replaced by getPreferredBlockSize
-   * 18 : datanodereport returns dead, live or all nodes.
-   * 19 : rollEditLog() returns a token to uniquely identify the editfile.
-   * 20 : getContentLength returns the total size in bytes of a directory subtree
-   * 21 : add lease holder as a parameter in abandonBlock(...)
-   * 22 : Serialization of FileStatus has changed.
+   * (Only the latest change is reflected.
+   * The log of historical changes can be retrieved from the svn).
    * 23 : added setOwner(...) and setPermission(...); changed create(...) and mkdir(...)
    */
   public static final long versionID = 23L;
@@ -47,12 +43,14 @@ interface ClientProtocol extends VersionedProtocol {
   // File contents
   ///////////////////////////////////////
   /**
-   * Open an existing file and get block locations within the specified range. 
+   * Open an existing file for read and get block locations within 
+   * the specified range. 
+   * <p>
    * Return {@link LocatedBlocks} which contains
    * file length, blocks and their locations.
    * DataNode locations for each block are sorted by
    * the distance to the client's address.
-   * 
+   * <p>
    * The client will then have to contact
    * one of the indicated DataNodes to obtain the actual data.  There
    * is no need to call close() or any other function after
@@ -86,24 +84,33 @@ interface ClientProtocol extends VersionedProtocol {
                                           long length) throws IOException;
 
   /**
-   * Create a new file.  Get back block and datanode info,
-   * which describes where the first block should be written.
-   *
-   * Successfully calling this method prevents any other 
-   * client from creating a file under the given name, but
-   * the caller must invoke complete() for the file to be
-   * added to the filesystem.
-   *
+   * Create a new file entry in the namespace.
+   * <p>
+   * This will create an empty file specified by the source path.
+   * The path should reflect a full path originated at the root.
+   * The name-node does not have a notion of "current" directory for a client.
+   * <p>
+   * Once created, the file is visible and available for read to other clients.
+   * Although, other clients cannot {@link #delete(String)}, re-create or 
+   * {@link #rename(String, String)} it until the file is completed or 
+   * abandoned implicitely by {@link #abandonFileInProgress(String, String)}
+   * or explicitely as a result of lease expiration.
+   * <p>
    * Blocks have a maximum size.  Clients that intend to
-   * create multi-block files must also use reportWrittenBlock()
-   * and addBlock().
+   * create multi-block files must also use {@link #addBlock(String, String)}.
    *
-   * If permission denied,
-   * an {@link AccessControlException} will be thrown as an
-   * {@link org.apache.hadoop.ipc.RemoteException}.
-   *
-   * @param src The path of the directory being created
-   * @param masked The masked permission
+   * @param src path of the file being created.
+   * @param masked masked permission.
+   * @param clientName name of the current client.
+   * @param overwrite indicates whether the file should be 
+   * overwritten if it already exists.
+   * @param replication block replication factor.
+   * @param blockSize maximum block size.
+   * 
+   * @throws AccessControlException if permission to create file is 
+   * denied by the system. As usually on the client side the exception will 
+   * be wrapped into {@link org.apache.hadoop.ipc.RemoteException}.
+   * @throws IOException if other errors occur.
    */
   public void create(String src, 
                      FsPermission masked,
@@ -115,7 +122,7 @@ interface ClientProtocol extends VersionedProtocol {
 
   /**
    * Set replication for an existing file.
-   * 
+   * <p>
    * The NameNode sets replication to the new value and returns.
    * The actual block replication is not expected to be performed during  
    * this method call. The blocks will be populated or removed in the 
@@ -148,11 +155,10 @@ interface ClientProtocol extends VersionedProtocol {
       ) throws IOException;
 
   /**
-   * If the client has not yet called reportWrittenBlock(), it can
-   * give up on it by calling abandonBlock().  The client can then
+   * The client can give up on a blcok by calling abandonBlock().
+   * The client can then
    * either obtain a new block, or complete or abandon the file.
-   *
-   * Any partial writes to the block will be garbage-collected.
+   * Any partial writes to the block will be discarded.
    */
   public void abandonBlock(Block b, String src, String holder
       ) throws IOException;
@@ -162,11 +168,10 @@ interface ClientProtocol extends VersionedProtocol {
    * indicated filename (which must currently be open for writing)
    * should call addBlock().  
    *
-   * addBlock() returns block and datanode info, just like the initial
-   * call to create().  
-   *
-   * A null response means the NameNode could not allocate a block,
-   * and that the caller should try again.
+   * addBlock() allocates a new block and datanodes the block data
+   * should be replicated to.
+   * 
+   * @return LocatedBlock allocated block information.
    */
   public LocatedBlock addBlock(String src, String clientName) throws IOException;
 
@@ -174,7 +179,7 @@ interface ClientProtocol extends VersionedProtocol {
    * A client that wants to abandon writing to the current file
    * should call abandonFileInProgress().  After this call, any
    * client can call create() to obtain the filename.
-   *
+   * <p>
    * Any blocks that have been written for the file will be 
    * garbage-collected.
    * @param src The filename
@@ -208,17 +213,29 @@ interface ClientProtocol extends VersionedProtocol {
   // Namespace management
   ///////////////////////////////////////
   /**
-   * Rename an item in the fs namespace
+   * Rename an item in the file system namespace.
+   * 
+   * @param src existing file or directory name.
+   * @param dst new name.
+   * @return true if successful, or false if the old name does not exist
+   * or if the new name already belongs to the namespace.
+   * @throws IOException if the new name is invalid.
    */
   public boolean rename(String src, String dst) throws IOException;
 
   /**
-   * Remove the given filename from the filesystem
+   * Delete the given file or directory from the file system.
+   * <p>
+   * Any blocks belonging to the deleted files will be garbage-collected.
+   * 
+   * @param src existing name.
+   * @return true only if the existing file or directory was actually removed 
+   * from the file system. 
    */
   public boolean delete(String src) throws IOException;
 
   /**
-   * Check whether the given file exists
+   * Check whether the given file exists.
    */
   public boolean exists(String src) throws IOException;
 
@@ -231,13 +248,12 @@ interface ClientProtocol extends VersionedProtocol {
    * Create a directory (or hierarchy of directories) with the given
    * name and permission.
    *
-   * If permission denied,
-   * an {@link AccessControlException} will be thrown as an
-   * {@link org.apache.hadoop.ipc.RemoteException}.
-   *
    * @param src The path of the directory being created
    * @param masked The masked permission of the directory being created
    * @return True if the operation success.
+   * @throws {@link AccessControlException} if permission to create file is 
+   * denied by the system. As usually on the client side the exception will 
+   * be wraped into {@link org.apache.hadoop.ipc.RemoteException}.
    */
   public boolean mkdirs(String src, FsPermission masked) throws IOException;
 
@@ -258,7 +274,7 @@ interface ClientProtocol extends VersionedProtocol {
    * Clearly, it would be bad if a client held a bunch of locks
    * that it never gave up.  This can happen easily if the client
    * dies unexpectedly.
-   *
+   * <p>
    * So, the NameNode will revoke the locks and live file-creates
    * for clients that it thinks have died.  A client tells the
    * NameNode that it is still alive by periodically calling
@@ -270,11 +286,12 @@ interface ClientProtocol extends VersionedProtocol {
 
   /**
    * Get a set of statistics about the filesystem.
-   * Right now, only two values are returned.
-   * [0] contains the total storage capacity of the system,
-   *     in bytes.
-   * [1] contains the total used space of the system, in bytes.
-   * [2] contains the available storage of the system, in bytes.
+   * Right now, only three values are returned.
+   * <ul>
+   * <li> [0] contains the total storage capacity of the system, in bytes.</li>
+   * <li> [1] contains the total used space of the system, in bytes.</li>
+   * <li> [2] contains the available storage of the system, in bytes.</li>
+   * </ul>
    */
   public long[] getStats() throws IOException;
 
@@ -405,14 +422,16 @@ interface ClientProtocol extends VersionedProtocol {
    */
   public void metaSave(String filename) throws IOException;
 
-  /* Get the file info for a specific file or directory.
+  /**
+   * Get the file info for a specific file or directory.
    * @param src The string representation of the path to the file
    * @throws IOException if file does not exist
    * @return object containing information regarding the file
    */
   public DFSFileInfo getFileInfo(String src) throws IOException;
 
-  /* Get the total size of all files and directories rooted at
+  /**
+   * Get the total size of all files and directories rooted at
    * the specified directory.
    * @param src The string representation of the path
    * @return size of directory subtree in bytes

@@ -373,7 +373,8 @@ class FSNamesystem implements FSConstants {
                              getDistributedUpgradeVersion());
   }
 
-  /** Close down this filesystem manager.
+  /**
+   * Close down this file system manager.
    * Causes heartbeat and lease daemons to stop; waits briefly for
    * them to finish, but a short timeout returns control back to caller.
    */
@@ -645,7 +646,8 @@ class FSNamesystem implements FSConstants {
         results.toArray(new BlockWithLocations[results.size()]));
   }
   
-  /* Get all valid locations of the block & add the block to results
+  /**
+   * Get all valid locations of the block & add the block to results
    * return the length of the added block; 0 if the block is not added
    */
   private long addBlock(Block block, List<BlockWithLocations> results) {
@@ -879,6 +881,14 @@ class FSNamesystem implements FSConstants {
                             text + " is less than the required minimum " + minReplication);
   }
 
+  /**
+   * Create a new file entry in the namespace.
+   * 
+   * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
+   * 
+   * @throws IOException if file name is invalid
+   *         {@link FSDirectory#isValidToCreate(String)}.
+   */
   void startFile(String src, PermissionStatus permissions,
                  String holder, String clientMachine,
                  boolean overwrite, short replication, long blockSize
@@ -888,17 +898,6 @@ class FSNamesystem implements FSConstants {
     getEditLog().logSync();
   }
 
-  /**
-   * The client would like to create a new block for the indicated
-   * filename.  Return an array that consists of the block, plus a set 
-   * of machines.  The first on this list should be where the client 
-   * writes data.  Subsequent items in the list must be provided in
-   * the connection to the first datanode.
-   * Return an array that consists of the block, plus a set
-   * of machines
-   * @throws IOException if the filename is invalid
-   *         {@link FSDirectory#isValidToCreate(String)}.
-   */
   private synchronized void startFileInternal(String src,
                                               PermissionStatus permissions,
                                               String holder, 
@@ -2974,7 +2973,7 @@ class FSNamesystem implements FSConstants {
     }
   } 
 
-  /*
+  /**
    * Counts the number of nodes in the given list into active and
    * decommissioned counters.
    */
@@ -2993,13 +2992,17 @@ class FSNamesystem implements FSConstants {
     return new NumberReplicas(live, count);
   }
 
-  /** return the number of nodes that are live and decommissioned. */
+  /**
+   * Return the number of nodes that are live and decommissioned.
+   */
   private NumberReplicas countNodes(Block b) {
     return countNodes(blocksMap.nodeIterator(b));
   }
 
-  /** Returns a newly allocated list of all nodes. Returns a count of
-  * live and decommissioned nodes. */
+  /**
+   * Returns a newly allocated list of all nodes. Returns a count of
+   * live and decommissioned nodes.
+   */
   ArrayList<DatanodeDescriptor> containingNodeList(Block b, NumberReplicas[] numReplicas) {
     ArrayList<DatanodeDescriptor> nodeList = 
       new ArrayList<DatanodeDescriptor>();
@@ -3021,7 +3024,8 @@ class FSNamesystem implements FSConstants {
     }
     return nodeList;
   }
-  /*
+
+  /**
    * Return true if there are any blocks on this node that have not
    * yet reached their replication factor. Otherwise returns false.
    */
@@ -3212,7 +3216,9 @@ class FSNamesystem implements FSConstants {
     }
   }
   
-  // Keeps track of which datanodes are allowed to connect to the namenode.
+  /** 
+   * Keeps track of which datanodes are allowed to connect to the namenode.
+   */
   private boolean inHostsList(DatanodeID node) {
     Set<String> hostsList = hostsReader.getHosts();
     return (hostsList.isEmpty() || 
@@ -3801,7 +3807,7 @@ class FSNamesystem implements FSConstants {
     return getEditLog().getFsEditName();
   }
 
-  /*
+  /**
    * This is called just before a new checkpoint is uploaded to the
    * namenode.
    */
@@ -3823,7 +3829,7 @@ class FSNamesystem implements FSConstants {
     ckptState = CheckpointStates.UPLOAD_START;
   }
 
-  /*
+  /**
    * This is called when a checkpoint upload finishes successfully.
    */
   synchronized void checkpointUploadDone() {
@@ -3900,7 +3906,7 @@ class FSNamesystem implements FSConstants {
   /**
    * Check whether current user have permissions to access the path.
    * For more details of the parameters, see
-   * {@link PermissionChecker#checkPermission(INodeDirectory, boolean, FsAction, FsAction, FsAction)}.
+   * {@link PermissionChecker#checkPermission(String, INodeDirectory, boolean, FsAction, FsAction, FsAction, FsAction)}.
    */
   private PermissionChecker checkPermission(String path, boolean doCheckOwner,
       FsAction ancestorAccess, FsAction parentAccess, FsAction access,
@@ -3915,7 +3921,7 @@ class FSNamesystem implements FSConstants {
     return pc;
   }
 
-  /*
+  /**
    * Check to see if we have exceeded the limit on the number
    * of inodes.
    */
