@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.record.compiler;
 
-import java.util.Map;
-
-
 /**
  */
 public class JMap extends JCompType {
@@ -46,48 +43,31 @@ public class JMap extends JCompType {
     JavaMap(JType.JavaType key, JType.JavaType value) {
       super("java.util.TreeMap<"+key.getWrapperType()+","+value.getWrapperType()+">",
             "Map",
-            "java.util.TreeMap<"+key.getWrapperType()+","+value.getWrapperType()+">",
-            "TypeID.RIOType.MAP");
+            "java.util.TreeMap<"+key.getWrapperType()+","+value.getWrapperType()+">");
       this.key = key;
       this.value = value;
     }
     
-    String getTypeIDObjectString() {
-      return "new org.apache.hadoop.record.meta.MapTypeID(" + 
-        key.getTypeIDObjectString() + ", " + 
-        value.getTypeIDObjectString() + ")";
-    }
-
-    void genSetRTIFilter(CodeBuffer cb, Map<String, Integer> nestedStructMap) {
-      key.genSetRTIFilter(cb, nestedStructMap);
-      value.genSetRTIFilter(cb, nestedStructMap);
-    }
-
     void genCompareTo(CodeBuffer cb, String fname, String other) {
       String setType = "java.util.Set<"+key.getWrapperType()+"> ";
       String iterType = "java.util.Iterator<"+key.getWrapperType()+"> ";
       cb.append("{\n");
-      cb.append(setType+getId(Consts.RIO_PREFIX + "set1")+" = "+
-          fname+".keySet();\n");
-      cb.append(setType+getId(Consts.RIO_PREFIX + "set2")+" = "+
-          other+".keySet();\n");
-      cb.append(iterType+getId(Consts.RIO_PREFIX + "miter1")+" = "+
-                getId(Consts.RIO_PREFIX + "set1")+".iterator();\n");
-      cb.append(iterType+getId(Consts.RIO_PREFIX + "miter2")+" = "+
-                getId(Consts.RIO_PREFIX + "set2")+".iterator();\n");
-      cb.append("for(; "+getId(Consts.RIO_PREFIX + "miter1")+".hasNext() && "+
-                getId(Consts.RIO_PREFIX + "miter2")+".hasNext();) {\n");
-      cb.append(key.getType()+" "+getId(Consts.RIO_PREFIX + "k1")+
-                " = "+getId(Consts.RIO_PREFIX + "miter1")+".next();\n");
-      cb.append(key.getType()+" "+getId(Consts.RIO_PREFIX + "k2")+
-                " = "+getId(Consts.RIO_PREFIX + "miter2")+".next();\n");
-      key.genCompareTo(cb, getId(Consts.RIO_PREFIX + "k1"), 
-          getId(Consts.RIO_PREFIX + "k2"));
-      cb.append("if (" + Consts.RIO_PREFIX + "ret != 0) { return " + 
-          Consts.RIO_PREFIX + "ret; }\n");
+      cb.append(setType+getId("set1")+" = "+fname+".keySet();\n");
+      cb.append(setType+getId("set2")+" = "+other+".keySet();\n");
+      cb.append(iterType+getId("miter1")+" = "+
+                getId("set1")+".iterator();\n");
+      cb.append(iterType+getId("miter2")+" = "+
+                getId("set2")+".iterator();\n");
+      cb.append("for(; "+getId("miter1")+".hasNext() && "+
+                getId("miter2")+".hasNext();) {\n");
+      cb.append(key.getType()+" "+getId("k1")+
+                " = "+getId("miter1")+".next();\n");
+      cb.append(key.getType()+" "+getId("k2")+
+                " = "+getId("miter2")+".next();\n");
+      key.genCompareTo(cb, getId("k1"), getId("k2"));
+      cb.append("if (ret != 0) { return ret; }\n");
       cb.append("}\n");
-      cb.append(Consts.RIO_PREFIX + "ret = ("+getId(Consts.RIO_PREFIX + "set1")+
-          ".size() - "+getId(Consts.RIO_PREFIX + "set2")+".size());\n");
+      cb.append("ret = ("+getId("set1")+".size() - "+getId("set2")+".size());\n");
       cb.append("}\n");
     }
     
@@ -97,20 +77,14 @@ public class JMap extends JCompType {
       }
       cb.append("{\n");
       incrLevel();
-      cb.append("org.apache.hadoop.record.Index " + 
-          getId(Consts.RIO_PREFIX + "midx")+" = " + 
-          Consts.RECORD_INPUT + ".startMap(\""+tag+"\");\n");
+      cb.append("org.apache.hadoop.record.Index "+getId("midx")+" = a.startMap(\""+tag+"\");\n");
       cb.append(fname+"=new "+getType()+"();\n");
-      cb.append("for (; !"+getId(Consts.RIO_PREFIX + "midx")+".done(); "+
-          getId(Consts.RIO_PREFIX + "midx")+".incr()) {\n");
-      key.genReadMethod(cb, getId(Consts.RIO_PREFIX + "k"),
-          getId(Consts.RIO_PREFIX + "k"), true);
-      value.genReadMethod(cb, getId(Consts.RIO_PREFIX + "v"), 
-          getId(Consts.RIO_PREFIX + "v"), true);
-      cb.append(fname+".put("+getId(Consts.RIO_PREFIX + "k")+","+
-          getId(Consts.RIO_PREFIX + "v")+");\n");
+      cb.append("for (; !"+getId("midx")+".done(); "+getId("midx")+".incr()) {\n");
+      key.genReadMethod(cb, getId("k"),getId("k"), true);
+      value.genReadMethod(cb, getId("v"), getId("v"), true);
+      cb.append(fname+".put("+getId("k")+","+getId("v")+");\n");
       cb.append("}\n");
-      cb.append(Consts.RECORD_INPUT + ".endMap(\""+tag+"\");\n");
+      cb.append("a.endMap(\""+tag+"\");\n");
       decrLevel();
       cb.append("}\n");
     }
@@ -124,24 +98,16 @@ public class JMap extends JCompType {
         key.getWrapperType()+","+value.getWrapperType()+">> ";
       cb.append("{\n");
       incrLevel();
-      cb.append(Consts.RECORD_OUTPUT + ".startMap("+fname+",\""+tag+"\");\n");
-      cb.append(setType+getId(Consts.RIO_PREFIX + "es")+" = "+
-          fname+".entrySet();\n");
-      cb.append("for("+iterType+getId(Consts.RIO_PREFIX + "midx")+" = "+
-          getId(Consts.RIO_PREFIX + "es")+".iterator(); "+
-          getId(Consts.RIO_PREFIX + "midx")+".hasNext();) {\n");
-      cb.append(entryType+getId(Consts.RIO_PREFIX + "me")+" = "+
-          getId(Consts.RIO_PREFIX + "midx")+".next();\n");
-      cb.append(key.getType()+" "+getId(Consts.RIO_PREFIX + "k")+" = "+
-          getId(Consts.RIO_PREFIX + "me")+".getKey();\n");
-      cb.append(value.getType()+" "+getId(Consts.RIO_PREFIX + "v")+" = "+
-          getId(Consts.RIO_PREFIX + "me")+".getValue();\n");
-      key.genWriteMethod(cb, getId(Consts.RIO_PREFIX + "k"), 
-          getId(Consts.RIO_PREFIX + "k"));
-      value.genWriteMethod(cb, getId(Consts.RIO_PREFIX + "v"), 
-          getId(Consts.RIO_PREFIX + "v"));
+      cb.append("a.startMap("+fname+",\""+tag+"\");\n");
+      cb.append(setType+getId("es")+" = "+fname+".entrySet();\n");
+      cb.append("for("+iterType+getId("midx")+" = "+getId("es")+".iterator(); "+getId("midx")+".hasNext();) {\n");
+      cb.append(entryType+getId("me")+" = "+getId("midx")+".next();\n");
+      cb.append(key.getType()+" "+getId("k")+" = "+getId("me")+".getKey();\n");
+      cb.append(value.getType()+" "+getId("v")+" = "+getId("me")+".getValue();\n");
+      key.genWriteMethod(cb, getId("k"), getId("k"));
+      value.genWriteMethod(cb, getId("v"), getId("v"));
       cb.append("}\n");
-      cb.append(Consts.RECORD_OUTPUT + ".endMap("+fname+",\""+tag+"\");\n");
+      cb.append("a.endMap("+fname+",\""+tag+"\");\n");
       cb.append("}\n");
       decrLevel();
     }
@@ -190,34 +156,11 @@ public class JMap extends JCompType {
     }
   }
   
-  class CppMap extends CppCompType {
-    
-    JType.CppType key;
-    JType.CppType value;
-    
-    CppMap(JType.CppType key, JType.CppType value) {
-      super("::std::map< "+key.getType()+", "+ value.getType()+" >");
-      this.key = key;
-      this.value = value;
-    }
-    
-    String getTypeIDObjectString() {
-      return "new ::hadoop::MapTypeID(" + 
-        key.getTypeIDObjectString() + ", " + 
-        value.getTypeIDObjectString() + ")";
-    }
-
-    void genSetRTIFilter(CodeBuffer cb) {
-      key.genSetRTIFilter(cb);
-      value.genSetRTIFilter(cb);
-    }
-
-  }
-  
   /** Creates a new instance of JMap */
   public JMap(JType t1, JType t2) {
     setJavaType(new JavaMap(t1.getJavaType(), t2.getJavaType()));
-    setCppType(new CppMap(t1.getCppType(), t2.getCppType()));
+    setCppType(new CppCompType(" ::std::map<"+t1.getCppType().getType()+","+
+                               t2.getCppType().getType()+">"));
     setCType(new CType());
     keyType = t1;
     valueType = t2;
