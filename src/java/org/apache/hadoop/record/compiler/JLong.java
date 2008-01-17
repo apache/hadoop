@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.record.compiler;
 
-import org.apache.hadoop.record.compiler.JType.CType;
-import org.apache.hadoop.record.compiler.JType.CppType;
-
 /**
  * Code generator for "long" type
  */
@@ -29,11 +26,16 @@ public class JLong extends JType {
   class JavaLong extends JavaType {
     
     JavaLong() {
-      super("long", "Long", "Long");
+      super("long", "Long", "Long", "TypeID.RIOType.LONG");
     }
     
+    String getTypeIDObjectString() {
+      return "org.apache.hadoop.record.meta.TypeID.LongTypeID";
+    }
+
     void genHashCode(CodeBuffer cb, String fname) {
-      cb.append("ret = (int) ("+fname+"^("+fname+">>>32));\n");
+      cb.append(Consts.RIO_PREFIX + "ret = (int) ("+fname+"^("+
+          fname+">>>32));\n");
     }
     
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
@@ -57,10 +59,22 @@ public class JLong extends JType {
       cb.append("}\n");
     }
   }
+
+  class CppLong extends CppType {
+    
+    CppLong() {
+      super("int64_t");
+    }
+    
+    String getTypeIDObjectString() {
+      return "new ::hadoop::TypeID(::hadoop::RIOTYPE_LONG)";
+    }
+  }
+
   /** Creates a new instance of JLong */
   public JLong() {
     setJavaType(new JavaLong());
-    setCppType(new CppType("int64_t"));
+    setCppType(new CppLong());
     setCType(new CType());
   }
   

@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.record.compiler;
 
-import org.apache.hadoop.record.compiler.JType.CType;
-import org.apache.hadoop.record.compiler.JType.CppType;
 
 /**
  */
@@ -28,15 +26,20 @@ public class JBoolean extends JType {
   class JavaBoolean extends JType.JavaType {
     
     JavaBoolean() {
-      super("boolean", "Bool", "Boolean");
+      super("boolean", "Bool", "Boolean", "TypeID.RIOType.BOOL");
     }
     
     void genCompareTo(CodeBuffer cb, String fname, String other) {
-      cb.append("ret = ("+fname+" == "+other+")? 0 : ("+fname+"?1:-1);\n");
+      cb.append(Consts.RIO_PREFIX + "ret = ("+fname+" == "+other+")? 0 : ("+
+          fname+"?1:-1);\n");
     }
     
+    String getTypeIDObjectString() {
+      return "org.apache.hadoop.record.meta.TypeID.BoolTypeID";
+    }
+
     void genHashCode(CodeBuffer cb, String fname) {
-      cb.append("ret = ("+fname+")?0:1;\n");
+      cb.append(Consts.RIO_PREFIX + "ret = ("+fname+")?0:1;\n");
     }
     
     // In Binary format, boolean is written as byte. true = 1, false = 0
@@ -65,10 +68,21 @@ public class JBoolean extends JType {
     }
   }
   
+  class CppBoolean extends CppType {
+    
+    CppBoolean() {
+      super("bool");
+    }
+    
+    String getTypeIDObjectString() {
+      return "new ::hadoop::TypeID(::hadoop::RIOTYPE_BOOL)";
+    }
+  }
+
   /** Creates a new instance of JBoolean */
   public JBoolean() {
     setJavaType(new JavaBoolean());
-    setCppType(new CppType("bool"));
+    setCppType(new CppBoolean());
     setCType(new CType());
   }
   

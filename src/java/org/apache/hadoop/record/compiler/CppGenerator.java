@@ -48,11 +48,13 @@ class CppGenerator extends CodeGenerator {
     hh.write("#ifndef __"+fileName.toUpperCase().replace('.','_')+"__\n");
     hh.write("#define __"+fileName.toUpperCase().replace('.','_')+"__\n");
     hh.write("#include \"recordio.hh\"\n");
+    hh.write("#include \"recordTypeInfo.hh\"\n");
     for (Iterator<JFile> iter = ilist.iterator(); iter.hasNext();) {
       hh.write("#include \""+iter.next().getName()+".hh\"\n");
     }
     
     cc.write("#include \""+fileName+".hh\"\n");
+    cc.write("#include \"utils.hh\"\n");
     
     for (Iterator<JRecord> iter = rlist.iterator(); iter.hasNext();) {
       iter.next().genCppCode(hh, cc, options);

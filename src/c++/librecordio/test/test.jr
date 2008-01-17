@@ -17,11 +17,11 @@
  */
 
 module org.apache.hadoop.record.test {
-    class TestRecord0 {
+    class RecRecord0 {
         ustring     StringVal;
     }
 
-    class TestRecord1 {
+    class RecRecord1 {
         boolean         BoolVal;
         byte            ByteVal;
         int             IntVal;
@@ -33,5 +33,31 @@ module org.apache.hadoop.record.test {
         vector<ustring> VectorVal;
         map<ustring, ustring>   MapVal;
     }
+    
+  class RecRecordOld {
+  	ustring name;
+  	vector<long> ivec;
+  	vector<vector<RecRecord0>> svec;
+  	RecRecord0 inner;
+  	vector<vector<vector<ustring>>> strvec;
+  	float i1;
+  	map<byte, ustring> map1;
+  	vector<map<int, long>> mvec1;
+  	vector<map<int, long>> mvec2;
+  }
+  
+  /* RecRecordNew is a lot like RecRecordOld. Helps test for versioning. */
+  class RecRecordNew {
+  	ustring name2;
+  	RecRecord0 inner;
+  	vector<int> ivec;
+  	vector<vector<int>> svec;
+  	vector<vector<vector<ustring>>> strvec;
+		int i1;  	
+		map<long, ustring> map1;
+  	vector<map<int, long>> mvec2;	
+  }
+  
+    
 }
 
