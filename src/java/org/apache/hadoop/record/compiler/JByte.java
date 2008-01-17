@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.record.compiler;
 
-import org.apache.hadoop.record.compiler.JType.CType;
-import org.apache.hadoop.record.compiler.JType.CppType;
-
 /**
  * Code generator for "byte" type.
  */
@@ -29,9 +26,13 @@ public class JByte extends JType {
   class JavaByte extends JavaType {
     
     JavaByte() {
-      super("byte", "Byte", "Byte");
+      super("byte", "Byte", "Byte", "TypeID.RIOType.BYTE");
     }
     
+    String getTypeIDObjectString() {
+      return "org.apache.hadoop.record.meta.TypeID.ByteTypeID";
+    }
+
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
       cb.append("{\n");
       cb.append("if ("+l+"<1) {\n");
@@ -56,9 +57,20 @@ public class JByte extends JType {
     }
   }
   
+  class CppByte extends CppType {
+    
+    CppByte() {
+      super("int8_t");
+    }
+    
+    String getTypeIDObjectString() {
+      return "new ::hadoop::TypeID(::hadoop::RIOTYPE_BYTE)";
+    }
+  }
+
   public JByte() {
     setJavaType(new JavaByte());
-    setCppType(new CppType("int8_t"));
+    setCppType(new CppByte());
     setCType(new CType());
   }
   

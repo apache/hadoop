@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.record.compiler;
 
-import org.apache.hadoop.record.compiler.JType.CType;
-import org.apache.hadoop.record.compiler.JType.CppType;
 
 /**
  * Code generator for "int" type
@@ -29,9 +27,13 @@ public class JInt extends JType {
   class JavaInt extends JavaType {
     
     JavaInt() {
-      super("int", "Int", "Integer");
+      super("int", "Int", "Integer", "TypeID.RIOType.INT");
     }
     
+    String getTypeIDObjectString() {
+      return "org.apache.hadoop.record.meta.TypeID.IntTypeID";
+    }
+
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
       cb.append("{\n");
       cb.append("int i = org.apache.hadoop.record.Utils.readVInt("+b+", "+s+");\n");
@@ -53,10 +55,22 @@ public class JInt extends JType {
       cb.append("}\n");
     }
   }
+
+  class CppInt extends CppType {
+    
+    CppInt() {
+      super("int32_t");
+    }
+    
+    String getTypeIDObjectString() {
+      return "new ::hadoop::TypeID(::hadoop::RIOTYPE_INT)";
+    }
+  }
+
   /** Creates a new instance of JInt */
   public JInt() {
     setJavaType(new JavaInt());
-    setCppType(new CppType("int32_t"));
+    setCppType(new CppInt());
     setCType(new CType());
   }
   

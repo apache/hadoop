@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.record.compiler;
 
-import org.apache.hadoop.record.compiler.JCompType.CCompType;
 
 /**
  * Code generator for "buffer" type.
@@ -28,19 +27,24 @@ public class JBuffer extends JCompType {
   class JavaBuffer extends JavaCompType {
     
     JavaBuffer() {
-      super("org.apache.hadoop.record.Buffer", "Buffer", "org.apache.hadoop.record.Buffer");
+      super("org.apache.hadoop.record.Buffer", "Buffer", 
+          "org.apache.hadoop.record.Buffer", "TypeID.RIOType.BUFFER");
     }
     
+    String getTypeIDObjectString() {
+      return "org.apache.hadoop.record.meta.TypeID.BufferTypeID";
+    }
+
     void genCompareTo(CodeBuffer cb, String fname, String other) {
-      cb.append("ret = "+fname+".compareTo("+other+");\n");
+      cb.append(Consts.RIO_PREFIX + "ret = "+fname+".compareTo("+other+");\n");
     }
     
     void genEquals(CodeBuffer cb, String fname, String peer) {
-      cb.append("ret = "+fname+".equals("+peer+");\n");
+      cb.append(Consts.RIO_PREFIX + "ret = "+fname+".equals("+peer+");\n");
     }
     
     void genHashCode(CodeBuffer cb, String fname) {
-      cb.append("ret = "+fname+".hashCode();\n");
+      cb.append(Consts.RIO_PREFIX + "ret = "+fname+".hashCode();\n");
     }
     
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
@@ -80,6 +84,11 @@ public class JBuffer extends JCompType {
       cb.append("return "+fname+";\n");
       cb.append("}\n");
     }
+    
+    String getTypeIDObjectString() {
+      return "new ::hadoop::TypeID(::hadoop::RIOTYPE_BUFFER)";
+    }
+
   }
   /** Creates a new instance of JBuffer */
   public JBuffer() {

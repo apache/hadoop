@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.record.compiler;
 
+
 /**
  * Abstract base class for all the "compound" types such as ustring,
  * buffer, vector, map, and record.
@@ -26,28 +27,30 @@ abstract class JCompType extends JType {
   
   abstract class JavaCompType extends JavaType {
     
-    JavaCompType(String type, String suffix, String wrapper) {
-      super(type, suffix, wrapper);
+    JavaCompType(String type, String suffix, String wrapper, 
+        String typeIDByteString) { 
+      super(type, suffix, wrapper, typeIDByteString);
     }
     
     void genCompareTo(CodeBuffer cb, String fname, String other) {
-      cb.append("ret = "+fname+".compareTo("+other+");\n");
+      cb.append(Consts.RIO_PREFIX + "ret = "+fname+".compareTo("+other+");\n");
     }
     
     void genEquals(CodeBuffer cb, String fname, String peer) {
-      cb.append("ret = "+fname+".equals("+peer+");\n");
+      cb.append(Consts.RIO_PREFIX + "ret = "+fname+".equals("+peer+");\n");
     }
     
     void genHashCode(CodeBuffer cb, String fname) {
-      cb.append("ret = "+fname+".hashCode();\n");
+      cb.append(Consts.RIO_PREFIX + "ret = "+fname+".hashCode();\n");
     }
     
     void genClone(CodeBuffer cb, String fname) {
-      cb.append("other."+fname+" = ("+getType()+") this."+fname+".clone();\n");
+      cb.append(Consts.RIO_PREFIX + "other."+fname+" = ("+getType()+") this."+
+          fname+".clone();\n");
     }
   }
   
-  class CppCompType extends CppType {
+  abstract class CppCompType extends CppType {
     
     CppCompType(String type) {
       super(type);
