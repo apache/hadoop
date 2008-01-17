@@ -131,6 +131,20 @@
   </path>
 
   <!-- ====================================================== -->
+  <!-- Macro definitions                                      -->
+  <!-- ====================================================== -->
+  <macrodef name="macro_tar" description="Worker Macro for tar">
+    <attribute name="param.destfile"/>
+    <element name="param.listofitems"/>
+    <sequential>
+      <tar compression="gzip" longfile="gnu"
+      destfile="@{param.destfile}">
+      <param.listofitems/>
+      </tar>
+    </sequential>
+  </macrodef>
+
+  <!-- ====================================================== -->
   <!-- Stuff needed by all targets                            -->
   <!-- ====================================================== -->
   <target name="init">
@@ -752,23 +766,40 @@
   <!-- Make release tarball                                               -->
   <!-- ================================================================== -->
   <target name="tar" depends="package" description="Make release tarball">
-    <tar compression="gzip" longfile="gnu"
-      destfile="${build.dir}/${final.name}.tar.gz">
-      <tarfileset dir="${build.dir}" mode="664">
-        <exclude name="${final.name}/bin/*" />
-        <exclude name="${final.name}/src/contrib/ec2/bin/*" />
-        <exclude name="${final.name}/src/contrib/ec2/bin/image/*" />
-        <include name="${final.name}/**" />
-      </tarfileset>
-      <tarfileset dir="${build.dir}" mode="755">
-        <include name="${final.name}/bin/*" />
-        <include name="${final.name}/contrib/*/bin/*" />
-        <include name="${final.name}/src/contrib/ec2/bin/*" />
-        <include name="${final.name}/src/contrib/ec2/bin/image/*" />
-      </tarfileset>
-    </tar>
+    <macro_tar param.destfile="${build.dir}/${final.name}.tar.gz">
+      <param.listofitems>
+        <tarfileset dir="${build.dir}" mode="664">
+          <exclude name="${final.name}/bin/*" />
+          <exclude name="${final.name}/src/contrib/ec2/bin/*" />
+          <exclude name="${final.name}/src/contrib/ec2/bin/image/*" />
+          <include name="${final.name}/**" />
+        </tarfileset>
+        <tarfileset dir="${build.dir}" mode="755">
+          <include name="${final.name}/bin/*" />
+          <include name="${final.name}/contrib/*/bin/*" />
+          <include name="${final.name}/src/contrib/ec2/bin/*" />
+          <include name="${final.name}/src/contrib/ec2/bin/image/*" />
+        </tarfileset>
+      </param.listofitems>
+    </macro_tar>
   </target>
-	
+
+  <target name="binary" depends="package" description="Make tarball without source and documentation">
+    <macro_tar param.destfile="${build.dir}/${final.name}-bin.tar.gz">
+      <param.listofitems>
+        <tarfileset dir="${build.dir}" mode="664">
+          <exclude name="${final.name}/bin/*" />
+          <exclude name="${final.name}/src/**" />
+          <exclude name="${final.name}/docs/**" />
+          <include name="${final.name}/**" />
+        </tarfileset>
+        <tarfileset dir="${build.dir}" mode="755">
+          <include name="${final.name}/bin/*" />
+        </tarfileset>
+      </param.listofitems>
+    </macro_tar>
+  </target>
+
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->

@@ -260,6 +260,9 @@ Trunk (unreleased changes)
     HADOOP-1742. Improve JavaDoc documentation for ClientProtocol, DFSClient,
     and FSNamesystem. (Konstantin Shvachko)
 
+    HADOOP-2298. Add Ant target for a binary-only distribution.
+    (Hrishikesh via nigel)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
