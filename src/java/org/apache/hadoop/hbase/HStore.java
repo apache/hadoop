@@ -326,7 +326,7 @@ public class HStore implements HConstants {
       for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
         HStoreKey itKey = es.getKey();
         if (itKey.matchesRowCol(key)) {
-          if (!HLogEdit.isDeleted(es.getValue())) {
+          if (!HLogEdit.isDeleted(es.getValue())) { 
             result.add(tailMap.get(itKey));
           }
         }
@@ -657,7 +657,7 @@ public class HStore implements HConstants {
     this.fs = fs;
     this.conf = conf;
     
-    this.compactionDir = new Path(basedir, "compaction.dir");
+    this.compactionDir = HRegion.getCompactionDir(basedir);
     this.storeName =
       this.info.getEncodedName() + "/" + this.family.getFamilyName();
     
@@ -1192,15 +1192,7 @@ public class HStore implements HConstants {
           " files using " + compactionDir.toString() + " for " +
           this.storeName);
       }
-      if (this.fs.exists(compactionDir)) {
-        // Clean out its content in prep. for this new compaction.  Has either
-        // aborted previous compaction or it has content of a previous
-        // compaction.
-        Path [] toRemove = this.fs.listPaths(new Path [] {compactionDir});
-        for (int i = 0; i < toRemove.length; i++) {
-          this.fs.delete(toRemove[i]);
-        }
-      }
+
       // Storefiles are keyed by sequence id. The oldest file comes first.
       // We need to return out of here a List that has the newest file first.
       List<HStoreFile> filesToCompact =
@@ -1215,15 +1207,14 @@ public class HStore implements HConstants {
       }
 
       if (!fs.exists(compactionDir) && !fs.mkdirs(compactionDir)) {
-        LOG.warn("Mkdir on " + compactionDir.toString() + " for " +
-            this.storeName + " failed");
+        LOG.warn("Mkdir on " + compactionDir.toString() + " failed");
         return false;
       }
 
       // Step through them, writing to the brand-new MapFile
       HStoreFile compactedOutputFile = new HStoreFile(conf, fs, 
-          this.compactionDir, info.getEncodedName(), family.getFamilyName(),
-          -1L, null);
+        this.compactionDir, info.getEncodedName(), family.getFamilyName(),
+        -1L, null);
       MapFile.Writer compactedOut = compactedOutputFile.getWriter(this.fs,
         this.compression, this.bloomFilter);
       try {
