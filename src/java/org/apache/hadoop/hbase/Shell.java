@@ -115,9 +115,11 @@ public class Shell {
 
         long end = System.currentTimeMillis();
         if (rs != null && rs.getType() > -1)
-          System.out.println(rs.getMsg()
-              + executeTime((rs.getType() == 1), start, end));
-        queryStr = new StringBuilder();
+          System.out.println(rs.getMsg() + executeTime((rs.getType() == 1), start, end));
+        else if (rs.getType() == -9)           
+          System.out.println(rs.getMsg());
+        
+          queryStr = new StringBuilder();
       } else {
         queryStr.append(" " + extendedLine);
       }
