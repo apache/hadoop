@@ -245,6 +245,9 @@ Trunk (unreleased changes)
     Add support for accessing instrumentation statistics via JMX.
     (Sanjay radia via dhruba)
 
+    HADOOP-2449. A return of the non-MR version of NNBench.
+    (Sanjay Radia via shv)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
