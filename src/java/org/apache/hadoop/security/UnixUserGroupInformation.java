@@ -67,7 +67,7 @@ public class UnixUserGroupInformation implements UserGroupInformation {
    * @exception IllegalArgumentException if the array size is less than 2 
    *                                     or any element is null.
    */
-  UnixUserGroupInformation(String[] ugi) {
+  public UnixUserGroupInformation(String[] ugi) {
     if (ugi==null || ugi.length < 2) {
       throw new IllegalArgumentException( "Parameter does contain at least "+
           "one user name and one group name");

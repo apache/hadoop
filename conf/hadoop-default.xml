@@ -273,6 +273,14 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.web.ugi</name>
+  <value>webuser,webgroup</value>
+  <description>The user account used by the web interface.
+    Syntax: USERNAME,GROUP1,GROUP2, ...
+  </description>
+</property>
+
+<property>
   <name>dfs.permissions</name>
   <value>true</value>
   <description>

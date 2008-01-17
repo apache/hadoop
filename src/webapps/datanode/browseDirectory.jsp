@@ -101,36 +101,21 @@
           //Get the location of the first block of the file
           if (files[i].getPath().toString().endsWith(".crc")) continue;
           if (!files[i].isDir()) {
-            List<LocatedBlock> blocks = 
-              dfs.namenode.getBlockLocations(files[i].getPath().toString(), 0, 1).getLocatedBlocks();
-            DatanodeInfo [] locations = null;
-            if (blocks.size() != 0) {
-              locations = blocks.get(0).getLocations();
-            }
-            if (locations == null || locations.length == 0) {
-              cols[0] = files[i].getName();
-            } else {
-              String datanodeUrl = req.getRequestURL()+"?dir="+
-                URLEncoder.encode(files[i].getPath().toString(), "UTF-8") + 
-                "&namenodeInfoPort=" + namenodeInfoPort;
-		            
-              cols[0] = "<a href=\""+datanodeUrl+"\">"+files[i].getName()+"</a>";
-            }
             cols[1] = "file";
             cols[2] = FsShell.byteDesc(files[i].getLen());
             cols[3] = Short.toString(files[i].getReplication());
             cols[4] = FsShell.byteDesc(files[i].getBlockSize());
           }
           else {
-            String datanodeUrl = req.getRequestURL()+"?dir="+
-              URLEncoder.encode(files[i].getPath().toString(), "UTF-8") + 
-              "&namenodeInfoPort=" + namenodeInfoPort;
-            cols[0] = "<a href=\""+datanodeUrl+"\">"+files[i].getName()+"</a>";
             cols[1] = "dir";
             cols[2] = "";
             cols[3] = "";
             cols[4] = "";
           }
+          String datanodeUrl = req.getRequestURL()+"?dir="+
+              URLEncoder.encode(files[i].getPath().toString(), "UTF-8") + 
+              "&namenodeInfoPort=" + namenodeInfoPort;
+          cols[0] = "<a href=\""+datanodeUrl+"\">"+files[i].getName()+"</a>";
           cols[5] = FsShell.dateForm.format(new Date((files[i].getModificationTime())));
           cols[6] = files[i].getPermission().toString();
           cols[7] = files[i].getOwner();
@@ -164,7 +149,17 @@ body
 
 <body onload="document.goto.dir.focus()">
 <% 
-   generateDirectoryStructure(out,request,response);
+  try {
+    generateDirectoryStructure(out,request,response);
+  }
+  catch(IOException ioe) {
+    String msg = ioe.getLocalizedMessage();
+    int i = msg.indexOf("\n");
+    if (i >= 0) {
+      msg = msg.substring(0, i);
+    }
+    out.print("<h3>" + msg + "</h3>");
+  }
 %>
 <hr>
 

@@ -36,8 +36,11 @@ import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.*;
 
 public class JspHelper {
+  final static public String WEB_UGI_PROPERTY_NAME = "dfs.web.ugi";
+
   static FSNamesystem fsn = null;
   static InetSocketAddress nameNodeAddr;
   public static Configuration conf = new Configuration();
@@ -55,6 +58,10 @@ public class JspHelper {
       nameNodeAddr = new InetSocketAddress(fsn.getDFSNameNodeMachine(),
                                            fsn.getDFSNameNodePort()); 
     }      
+
+    UnixUserGroupInformation.saveToConf(conf,
+      UnixUserGroupInformation.UGI_PROPERTY_NAME,
+      new UnixUserGroupInformation(conf.getStrings(WEB_UGI_PROPERTY_NAME)));
   }
   public DatanodeInfo bestNode(LocatedBlock blk) throws IOException {
     TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
