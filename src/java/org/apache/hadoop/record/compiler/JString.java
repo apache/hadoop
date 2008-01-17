@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.record.compiler;
 
+import org.apache.hadoop.record.compiler.JCompType.CCompType;
+import org.apache.hadoop.record.compiler.JCompType.CppCompType;
 
 /**
  */
@@ -26,13 +28,9 @@ public class JString extends JCompType {
   class JavaString extends JavaCompType {
     
     JavaString() {
-      super("String", "String", "String", "TypeID.RIOType.STRING");
+      super("String", "String", "String");
     }
     
-    String getTypeIDObjectString() {
-      return "org.apache.hadoop.record.meta.TypeID.StringTypeID";
-    }
-
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
       cb.append("{\n");
       cb.append("int i = org.apache.hadoop.record.Utils.readVInt("+b+", "+s+");\n");
@@ -55,25 +53,13 @@ public class JString extends JCompType {
     }
     
     void genClone(CodeBuffer cb, String fname) {
-      cb.append(Consts.RIO_PREFIX + "other."+fname+" = this."+fname+";\n");
+      cb.append("other."+fname+" = this."+fname+";\n");
     }
   }
-
-  class CppString extends CppCompType {
-    
-    CppString() {
-      super("::std::string");
-    }
-    
-    String getTypeIDObjectString() {
-      return "new ::hadoop::TypeID(::hadoop::RIOTYPE_STRING)";
-    }
-  }
-  
   /** Creates a new instance of JString */
   public JString() {
     setJavaType(new JavaString());
-    setCppType(new CppString());
+    setCppType(new CppCompType(" ::std::string"));
     setCType(new CCompType());
   }
     
