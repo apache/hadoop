@@ -35,6 +35,7 @@ import org.apache.hadoop.mapred.StatusHttpServer;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.dfs.BlockCommand;
 import org.apache.hadoop.dfs.DatanodeProtocol;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.dfs.FSDatasetInterface.MetaDataInputStream;
 
 import java.io.*;
@@ -102,6 +103,7 @@ public class DataNode implements FSConstants, Runnable {
   final private static String EMPTY_DEL_HINT = "";
   int xmitsInProgress = 0;
   Daemon dataXceiveServer = null;
+  ThreadGroup threadGroup = null;
   long blockReportInterval;
   long lastBlockReport = 0;
   boolean resetBlockReportTime = true;
@@ -116,6 +118,7 @@ public class DataNode implements FSConstants, Runnable {
   private Thread dataNodeThread = null;
   String machineName;
   int defaultBytesPerChecksum = 512;
+  private int socketTimeout;
   
   private DataBlockScanner blockScanner;
   private Daemon blockScannerThread;
@@ -125,6 +128,10 @@ public class DataNode implements FSConstants, Runnable {
   private Semaphore balancingSem = new Semaphore(MAX_BALANCING_THREADS);
   long balanceBandwidth;
   private Throttler balancingThrottler;
+
+  // Record all sockets opend for data transfer
+  Map<Socket, Socket> childSockets = Collections.synchronizedMap(
+                                       new HashMap<Socket, Socket>());
   
   /**
    * Current system time.
@@ -258,7 +265,8 @@ public class DataNode implements FSConstants, Runnable {
     
     this.defaultBytesPerChecksum = 
        Math.max(conf.getInt("io.bytes.per.checksum", 512), 1); 
-    
+    this.socketTimeout =  conf.getInt("dfs.socket.timeout",
+                                      FSConstants.READ_TIMEOUT);
     String address = conf.get("dfs.datanode.bindAddress", "0.0.0.0:50010");
     InetSocketAddress socAddr = NetUtils.createSocketAddr(address);
     int tmpPort = socAddr.getPort();
@@ -303,12 +311,15 @@ public class DataNode implements FSConstants, Runnable {
       
     // find free port
     ServerSocket ss = new ServerSocket(tmpPort, 0, socAddr.getAddress());
+    ss.setReceiveBufferSize(DEFAULT_DATA_SOCKET_SIZE); 
     // adjust machine name with the actual port
     tmpPort = ss.getLocalPort();
     this.dnRegistration.setName(machineName + ":" + tmpPort);
     LOG.info("Opened server at " + tmpPort);
       
-    this.dataXceiveServer = new Daemon(new DataXceiveServer(ss));
+    this.threadGroup = new ThreadGroup("dataXceiveServer");
+    this.dataXceiveServer = new Daemon(threadGroup, new DataXceiveServer(ss));
+    this.threadGroup.setDaemon(true); // auto destroy when empty
 
     long blockReportIntervalBasis =
       conf.getLong("dfs.blockreport.intervalMsec", BLOCKREPORT_INTERVAL);
@@ -496,6 +507,16 @@ public class DataNode implements FSConstants, Runnable {
     }
   }
 
+  private void enumerateThreadGroup(ThreadGroup tg) {
+    int count = tg.activeCount();
+    Thread[] info = new Thread[count];
+    int num = tg.enumerate(info);
+    for (int i = 0; i < num; i++) {
+      System.out.print(info[i].getName() + " ");
+    }
+    System.out.println("");
+  }
+
   /**
    * Shut down this instance of the datanode.
    * Returns only after shutdown is complete.
@@ -511,6 +532,22 @@ public class DataNode implements FSConstants, Runnable {
     if (dataXceiveServer != null) {
       ((DataXceiveServer) this.dataXceiveServer.getRunnable()).kill();
       this.dataXceiveServer.interrupt();
+
+      // wait for all data receiver threads to exit
+      if (this.threadGroup != null) {
+        while (true) {
+          this.threadGroup.interrupt();
+          LOG.info("Waiting for threadgroup to exit, active threads is " +
+                   this.threadGroup.activeCount());
+          if (this.threadGroup.isDestroyed() ||
+              this.threadGroup.activeCount() == 0) {
+            break;
+          }
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException e) {}
+        }
+      }
     }
     if(upgradeManager != null)
       upgradeManager.shutdownUpgrade();
@@ -797,23 +834,25 @@ public class DataNode implements FSConstants, Runnable {
         break;
       }
       if (xferTargets[i].length > 0) {
-        LOG.info(dnRegistration + ":Starting thread to transfer block " + blocks[i] + " to " + xferTargets[i]);
+        LOG.info(dnRegistration + " Starting thread to transfer block " + blocks[i] + " to " + xferTargets[i][0].getName());
         new Daemon(new DataTransfer(xferTargets[i], blocks[i])).start();
       }
     }
   }
 
   /* utility function for receiving a response */
-  private static void receiveResponse(Socket s) throws IOException {
+  private static void receiveResponse(Socket s, int numTargets) throws IOException {
     // check the response
     DataInputStream reply = new DataInputStream(new BufferedInputStream(
         s.getInputStream(), BUFFER_SIZE));
     try {
-      short opStatus = reply.readShort();
-      if(opStatus != OP_STATUS_SUCCESS) {
-        throw new IOException("operation failed at "+
-            s.getInetAddress());
-      } 
+      for (int i = 0; i < numTargets; i++) {
+        short opStatus = reply.readShort();
+        if(opStatus != OP_STATUS_SUCCESS) {
+          throw new IOException("operation failed at "+
+              s.getInetAddress());
+        } 
+      }
     } finally {
       IOUtils.closeStream(reply);
     }
@@ -866,7 +905,8 @@ public class DataNode implements FSConstants, Runnable {
       try {
         while (shouldRun) {
           Socket s = ss.accept();
-          new Daemon(new DataXceiver(s)).start();
+          s.setTcpNoDelay(true);
+          new Daemon(threadGroup, new DataXceiver(s)).start();
         }
         ss.close();
       } catch (IOException ie) {
@@ -880,6 +920,18 @@ public class DataNode implements FSConstants, Runnable {
         this.ss.close();
       } catch (IOException iex) {
       }
+
+      // close all the sockets that were accepted earlier
+      synchronized (childSockets) {
+        for (Iterator it = childSockets.values().iterator();
+             it.hasNext();) {
+          Socket thissock = (Socket) it.next();
+          try {
+            thissock.close();
+          } catch (IOException e) {
+          }
+        }
+      }
     }
   }
 
@@ -890,6 +942,7 @@ public class DataNode implements FSConstants, Runnable {
     Socket s;
     public DataXceiver(Socket s) {
       this.s = s;
+      childSockets.put(s, s);
       LOG.debug("Number of active connections is: "+xceiverCount);
     }
 
@@ -925,14 +978,15 @@ public class DataNode implements FSConstants, Runnable {
           copyBlock(in);
           break;
         default:
-          throw new IOException("Unknown opcode " + op + "in data stream");
+          throw new IOException("Unknown opcode " + op + " in data stream");
         }
-       } catch (Throwable t) {
+      } catch (Throwable t) {
         LOG.error(dnRegistration + ":DataXceiver: " + StringUtils.stringifyException(t));
       } finally {
         LOG.debug(dnRegistration + ":Number of active connections is: "+xceiverCount);
         IOUtils.closeStream(in);
         IOUtils.closeSocket(s);
+        childSockets.remove(s);
       }
     }
 
@@ -981,7 +1035,7 @@ public class DataNode implements FSConstants, Runnable {
         
         myMetrics.readBytes((int) read);
         myMetrics.readBlocks(1);
-        LOG.info(dnRegistration + "Served block " + block + " to " + s.getInetAddress());
+        LOG.info(dnRegistration + " Served block " + block + " to " + s.getInetAddress());
       } catch ( SocketException ignored ) {
         // Its ok for remote side to close the connection anytime.
         myMetrics.readBlocks(1);
@@ -1008,10 +1062,16 @@ public class DataNode implements FSConstants, Runnable {
      */
     private void writeBlock(DataInputStream in) throws IOException {
       xceiverCount.incr();
+      LOG.debug("writeBlock receive buf size " + s.getReceiveBufferSize() +
+                " tcp no delay " + s.getTcpNoDelay());
       //
       // Read in the header
       //
       Block block = new Block(in.readLong(), 0);
+      LOG.info("Receiving block " + block + " from " + s.getInetAddress());
+      int pipelineSize = in.readInt(); // num of datanodes in entire pipeline
+      boolean isRecovery = in.readBoolean(); // is this part of recovery?
+      String client = Text.readString(in); // working on behalf of this client
       int numTargets = in.readInt();
       if (numTargets < 0) {
         throw new IOException("Mislabelled incoming datastream.");
@@ -1025,13 +1085,19 @@ public class DataNode implements FSConstants, Runnable {
 
       short opStatus = OP_STATUS_SUCCESS; // write operation status
       DataOutputStream mirrorOut = null;  // stream to next target
+      DataInputStream mirrorIn = null;    // reply from next target
+      DataOutputStream replyOut = null;   // stream to prev target
       Socket mirrorSock = null;           // socket to next target
       BlockReceiver blockReceiver = null; // responsible for data handling
       String mirrorNode = null;           // the name:port of next target
+      String firstBadLink = "";           // first datanode that failed in connection setup
       try {
         // open a block receiver and check if the block does not exist
         blockReceiver = new BlockReceiver(block, in, 
-            s.getInetAddress().toString());
+            s.getInetAddress().toString(), isRecovery, client);
+
+        // get a connection back to the previous target
+        replyOut = new DataOutputStream(s.getOutputStream());
 
         //
         // Open network conn to backup machine, if 
@@ -1044,68 +1110,84 @@ public class DataNode implements FSConstants, Runnable {
           mirrorTarget = NetUtils.createSocketAddr(mirrorNode);
           mirrorSock = new Socket();
           try {
-            mirrorSock.connect(mirrorTarget, READ_TIMEOUT);
-            mirrorSock.setSoTimeout(numTargets*READ_TIMEOUT);
-            mirrorOut = new DataOutputStream( 
-                        new BufferedOutputStream(mirrorSock.getOutputStream(),
-                                                 BUFFER_SIZE));
+            int timeoutValue = 3000 * numTargets + socketTimeout;
+            mirrorSock.connect(mirrorTarget, timeoutValue);
+            mirrorSock.setSoTimeout(timeoutValue);
+            mirrorSock.setSendBufferSize(DEFAULT_DATA_SOCKET_SIZE);
+            mirrorOut = new DataOutputStream(mirrorSock.getOutputStream());
+            mirrorIn = new DataInputStream(mirrorSock.getInputStream());
+
             // Write header: Copied from DFSClient.java!
             mirrorOut.writeShort( DATA_TRANFER_VERSION );
             mirrorOut.write( OP_WRITE_BLOCK );
             mirrorOut.writeLong( block.getBlockId() );
+            mirrorOut.writeInt( pipelineSize );
+            mirrorOut.writeBoolean( isRecovery );
+            Text.writeString( mirrorOut, client );
             mirrorOut.writeInt( targets.length - 1 );
             for ( int i = 1; i < targets.length; i++ ) {
               targets[i].write( mirrorOut );
             }
+
+            blockReceiver.writeChecksumHeader(mirrorOut);
+            mirrorOut.flush();
+
+            // read connect ack
+            firstBadLink = Text.readString(mirrorIn);
+            LOG.info("Datanode " + targets.length +
+                     " got response for connect ack " +
+                     " from downstream datanode with firstbadlink as " +
+                     firstBadLink);
+
           } catch (IOException e) {
+            Text.writeString(replyOut, mirrorNode);
+            replyOut.flush();
             IOUtils.closeStream(mirrorOut);
             mirrorOut = null;
+            IOUtils.closeStream(mirrorIn);
+            mirrorIn = null;
             IOUtils.closeSocket(mirrorSock);
             mirrorSock = null;
+            throw e;
           }
         }
 
+        // send connect ack back to source
+        LOG.info("Datanode " + targets.length +
+                 " forwarding connect ack to upstream firstbadlink is " +
+                 firstBadLink);
+        Text.writeString(replyOut, firstBadLink);
+        replyOut.flush();
+
         // receive the block and mirror to the next target
         String mirrorAddr = (mirrorSock == null) ? null : mirrorNode;
+        blockReceiver.receiveBlock(mirrorOut, mirrorIn, replyOut,
+                                   mirrorAddr, null, targets.length);
 
-        blockReceiver.receiveBlock(mirrorOut, mirrorAddr, null);
+        // if this write is for a replication request (and not
+        // from a client), then confirm block. For client-writes,
+        // the block is finalized in the PacketResponder.
+        if (client.length() == 0) {
+          notifyNamenodeReceivedBlock(block, EMPTY_DEL_HINT);
+          LOG.info("Received block " + block +
+                   " of size " + block.getNumBytes() +
+                   " from " + s.getInetAddress());
 
-        // notify name node
-        notifyNamenodeReceivedBlock(block, EMPTY_DEL_HINT);
+        }
 
         if (blockScanner != null) {
           blockScanner.addBlock(block);
         }
         
-        String msg = "Received block " + block + " from " +
-                     s.getInetAddress();
-
-        /* read response from next target in the pipeline. 
-         * ignore the response for now. Will fix it in HADOOP-1927
-         */
-        if( mirrorSock != null ) {
-          try {
-            receiveResponse(mirrorSock);
-          } catch (IOException ignored) {
-            msg += " and " +  ignored.getMessage();
-          } 
-        }
-
-        LOG.info(msg);
       } catch (IOException ioe) {
+        LOG.info("writeBlock " + block + " received exception " + ioe);
         opStatus = OP_STATUS_ERROR;
         throw ioe;
       } finally {
-        // send back reply
-        try {
-          sendResponse(s, opStatus);
-        } catch (IOException ioe) {
-          LOG.warn(dnRegistration +":Error writing reply of status " + opStatus +  " back to " + s.getInetAddress() +
-              " for writing block " + block +"\n" +
-              StringUtils.stringifyException(ioe));
-        }
         // close all opened streams
         IOUtils.closeStream(mirrorOut);
+        IOUtils.closeStream(mirrorIn);
+        IOUtils.closeStream(replyOut);
         IOUtils.closeSocket(mirrorSock);
         IOUtils.closeStream(blockReceiver);
         // decrement counter
@@ -1180,8 +1262,8 @@ public class DataNode implements FSConstants, Runnable {
         // get the output stream to the target
         InetSocketAddress targetAddr = NetUtils.createSocketAddr(target.getName());
         targetSock = new Socket();
-        targetSock.connect(targetAddr, READ_TIMEOUT);
-        targetSock.setSoTimeout(READ_TIMEOUT);
+        targetSock.connect(targetAddr, socketTimeout);
+        targetSock.setSoTimeout(socketTimeout);
 
         targetOut = new DataOutputStream(new BufferedOutputStream(
             targetSock.getOutputStream(), BUFFER_SIZE));
@@ -1200,7 +1282,7 @@ public class DataNode implements FSConstants, Runnable {
         myMetrics.readBlocks(1);
         
         // check the response from target
-        receiveResponse(targetSock);
+        receiveResponse(targetSock, 1);
 
         LOG.info("Copied block " + block + " to " + targetAddr);
       } catch (IOException ioe) {
@@ -1243,11 +1325,11 @@ public class DataNode implements FSConstants, Runnable {
       try {
         // open a block receiver and check if the block does not exist
          blockReceiver = new BlockReceiver(
-            block, in, s.getRemoteSocketAddress().toString());
+            block, in, s.getRemoteSocketAddress().toString(), false, "");
 
         // receive a block
-        blockReceiver.receiveBlock(null, null, balancingThrottler);
-        
+        blockReceiver.receiveBlock(null, null, null, null, balancingThrottler, -1);
+                      
         // notify name node
         notifyNamenodeReceivedBlock(block, sourceID);
 
@@ -1373,6 +1455,7 @@ public class DataNode implements FSConstants, Runnable {
     private int checksumSize; // checksum size
     private boolean corruptChecksumOk; // if need to verify checksum
     private boolean chunkOffsetOK; // if need to send chunk offset
+    private long seqno; // sequence number of packet
 
     private boolean blockReadFully; //set when the whole block is read
     private boolean verifyChecksum; //if true, check is verified while reading
@@ -1447,6 +1530,8 @@ public class DataNode implements FSConstants, Runnable {
             IOUtils.skipFully(checksumIn, checksumSkip);
           }
         }
+        seqno = 0;
+
         InputStream blockInStream = data.getBlockInputStream(block, offset); // seek to offset
         blockIn = new DataInputStream(new BufferedInputStream(blockInStream, BUFFER_SIZE));
       } catch (IOException ioe) {
@@ -1482,12 +1567,14 @@ public class DataNode implements FSConstants, Runnable {
         throw ioe;
       }
     }
+
     
     private int sendChunk()
         throws IOException {
       int len = (int) Math.min(endOffset - offset, bytesPerChecksum);
-      if (len == 0)
+      if (len == 0) {
         return 0;
+      }
       blockIn.readFully(buf, 0, len);
 
       if (checksumSize > 0 && checksumIn != null) {
@@ -1515,7 +1602,17 @@ public class DataNode implements FSConstants, Runnable {
           }
         }
       }
+      boolean lastPacketInBlock = false;
+      if (offset + len >= endOffset) {
+        lastPacketInBlock = true;
+      }
 
+      // write packet header
+      out.writeInt(len + checksumSize + 4);
+      out.writeLong(offset);
+      out.writeLong(seqno);
+      out.writeBoolean(lastPacketInBlock);
+      
       out.writeInt(len);
       out.write(buf, 0, len + checksumSize);
 
@@ -1554,6 +1651,7 @@ public class DataNode implements FSConstants, Runnable {
           long len = sendChunk();
           offset += len;
           totalRead += len + checksumSize;
+          seqno++;
         }
         out.writeInt(0); // mark the end of block
         out.flush();
@@ -1571,12 +1669,277 @@ public class DataNode implements FSConstants, Runnable {
     }
   }
 
+  // This information is cached by the Datanode in the ackQueue
+  static private class Packet {
+    long seqno;
+    boolean lastPacketInBlock;
+
+    Packet(long seqno, boolean lastPacketInBlock) {
+      this.seqno = seqno;
+      this.lastPacketInBlock = lastPacketInBlock;
+    }
+  }
+
+  /**
+   * Processed responses from downstream datanodes in the pipeline
+   * and sends back replies to the originator.
+   */
+  class PacketResponder implements Runnable {
+    private LinkedList<Packet> ackQueue = new LinkedList<Packet>(); // packet waiting for ack
+    private volatile boolean running = true;
+    private Block block;
+    DataInputStream mirrorIn;   // input from downstream datanode
+    DataOutputStream replyOut;  // output to upstream datanode
+    private int numTargets;     // number of downstream datanodes including myself
+    private String clientName;  // The name of the client (if any)
+    private BlockReceiver receiver; // The owner of this responder.
+
+    public String toString() {
+      return "PacketResponder " + numTargets + " for Block " + this.block;
+    }
+
+    PacketResponder(BlockReceiver receiver, Block b, DataInputStream in, 
+                    DataOutputStream out, int numTargets, String clientName) {
+      this.receiver = receiver;
+      this.block = b;
+      mirrorIn = in;
+      replyOut = out;
+      this.numTargets = numTargets;
+      this.clientName = clientName;
+    }
+
+    // enqueue the seqno that is still be to acked by the downstream datanode
+    synchronized void enqueue(long seqno, boolean lastPacketInBlock) {
+      if (running) {
+        LOG.debug("PacketResponder " + numTargets + " adding seqno " + seqno +
+                  " to ack queue.");
+        ackQueue.addLast(new Packet(seqno, lastPacketInBlock));
+        notifyAll();
+      }
+    }
+
+    // wait for all pending packets to be acked. Then shutdown thread.
+    synchronized void close() {
+      while (running && ackQueue.size() != 0 && shouldRun) {
+        try {
+          wait();
+        } catch (InterruptedException e) {
+          running = false;
+        }
+      }
+      LOG.debug("PacketResponder " + numTargets +
+               " for block " + block + " Closing down.");
+      running = false;
+      notifyAll();
+    }
+
+    private synchronized void lastDataNodeRun() {
+      long lastHeartbeat = System.currentTimeMillis();
+      boolean lastPacket = false;
+
+      while (running && shouldRun && !lastPacket) {
+        long now = System.currentTimeMillis();
+        try {
+
+            // wait for a packet to be sent to downstream datanode
+            while (running && shouldRun && ackQueue.size() == 0) {
+              long idle = now - lastHeartbeat;
+              long timeout = (socketTimeout/2) - idle;
+              if (timeout < 0) {
+                timeout = 1000;
+              }
+              try {
+                wait(timeout);
+              } catch (InterruptedException e) {
+                if (running) {
+                  LOG.info("PacketResponder " + numTargets +
+                           " for block " + block + " Interrupted.");
+                  running = false;
+                }
+                break;
+              }
+          
+              // send a heartbeat if it is time.
+              now = System.currentTimeMillis();
+              if (now - lastHeartbeat > socketTimeout/2) {
+                replyOut.writeLong(-1); // send heartbeat
+                replyOut.flush();
+                lastHeartbeat = now;
+              }
+            }
+
+            if (!running || !shouldRun) {
+              break;
+            }
+            Packet pkt = ackQueue.removeFirst();
+            long expected = pkt.seqno;
+            notifyAll();
+            LOG.debug("PacketResponder " + numTargets +
+                      " for block " + block + 
+                      " acking for packet " + expected);
+
+            // If this is the last packet in block, then close block
+            // file and finalize the block before responding success
+            if (pkt.lastPacketInBlock) {
+              receiver.close();
+              block.setNumBytes(receiver.offsetInBlock);
+              data.finalizeBlock(block);
+              myMetrics.wroteBlocks(1);
+              notifyNamenodeReceivedBlock(block, EMPTY_DEL_HINT);
+              LOG.info("Received block " + block + 
+                       " of size " + block.getNumBytes() + 
+                       " from " + receiver.inAddr);
+              lastPacket = true;
+            }
+
+            replyOut.writeLong(expected);
+            replyOut.writeShort(OP_STATUS_SUCCESS);
+            replyOut.flush();
+        } catch (Exception e) {
+          if (running) {
+            LOG.info("PacketResponder " + block + " " + numTargets + 
+                     " Exception " + StringUtils.stringifyException(e));
+            running = false;
+          }
+        }
+      }
+      LOG.info("PacketResponder " + numTargets + 
+               " for block " + block + " terminating");
+    }
+
+    // Thread to process incoming acks
+    public void run() {
+
+      // If this is the last datanode in pipeline, then handle differently
+      if (numTargets == 0) {
+        lastDataNodeRun();
+        return;
+      }
+
+      boolean lastPacketInBlock = false;
+      while (running && shouldRun && !lastPacketInBlock) {
+
+        try {
+            short op = OP_STATUS_SUCCESS;
+            boolean didRead = false;
+            long expected = -2;
+            try { 
+              // read seqno from downstream datanode
+              long seqno = mirrorIn.readLong();
+              didRead = true;
+              if (seqno == -1) {
+                replyOut.writeLong(-1); // send keepalive
+                replyOut.flush();
+                LOG.debug("PacketResponder " + numTargets + " got -1");
+                continue;
+              } else if (seqno == -2) {
+                LOG.debug("PacketResponder " + numTargets + " got -2");
+              } else {
+                LOG.debug("PacketResponder " + numTargets + " got seqno = " + seqno);
+                Packet pkt = null;
+                synchronized (this) {
+                  pkt = ackQueue.removeFirst();
+                  expected = pkt.seqno;
+                  notifyAll();
+                  LOG.debug("PacketResponder " + numTargets + " seqno = " + seqno);
+                  if (seqno != expected) {
+                    throw new IOException("PacketResponder " + numTargets +
+                                          " for block " + block +
+                                          " expected seqno:" + expected +
+                                          " received:" + seqno);
+                  }
+                  lastPacketInBlock = pkt.lastPacketInBlock;
+                }
+              }
+            } catch (Throwable e) {
+              if (running) {
+                LOG.info("PacketResponder " + block + " " + numTargets + 
+                         " Exception " + StringUtils.stringifyException(e));
+                running = false;
+                if (!didRead) {
+                  op = OP_STATUS_ERROR;
+                }
+              }
+            }
+
+            // If this is the last packet in block, then close block
+            // file and finalize the block before responding success
+            if (lastPacketInBlock) {
+              receiver.close();
+              block.setNumBytes(receiver.offsetInBlock);
+              data.finalizeBlock(block);
+              myMetrics.wroteBlocks(1);
+              notifyNamenodeReceivedBlock(block, EMPTY_DEL_HINT);
+              LOG.info("Received block " + block + 
+                       " of size " + block.getNumBytes() + 
+                       " from " + receiver.inAddr);
+            }
+
+            // send my status back to upstream datanode
+            replyOut.writeLong(expected); // send seqno upstream
+            replyOut.writeShort(OP_STATUS_SUCCESS);
+
+            LOG.debug("PacketResponder " + numTargets + 
+                      " for block " + block +
+                      " responded my status " +
+                      " for seqno " + expected);
+
+            // forward responses from downstream datanodes.
+            for (int i = 0; i < numTargets && shouldRun; i++) {
+              try {
+                if (op == OP_STATUS_SUCCESS) {
+                  op = mirrorIn.readShort();
+                  if (op != OP_STATUS_SUCCESS) {
+                    LOG.debug("PacketResponder for block " + block +
+                              ": error code received from downstream " +
+                              " datanode[" + i + "] " + op);
+                  }
+                }
+              } catch (Throwable e) {
+                op = OP_STATUS_ERROR;
+              }
+              replyOut.writeShort(op);
+            }
+            replyOut.flush();
+            LOG.debug("PacketResponder " + block + " " + numTargets + 
+                      " responded other status " + " for seqno " + expected);
+
+            // If we were unable to read the seqno from downstream, then stop.
+            if (expected == -2) {
+              running = false;
+            }
+            // If we forwarded an error response from a downstream datanode
+            // and we are acting on behalf of a client, then we quit. The 
+            // client will drive the recovery mechanism.
+            if (op == OP_STATUS_ERROR && clientName.length() > 0) {
+              running = false;
+            }
+        } catch (IOException e) {
+          if (running) {
+            LOG.info("PacketResponder " + block + " " + numTargets + 
+                     " Exception " + StringUtils.stringifyException(e));
+            running = false;
+          }
+        } catch (RuntimeException e) {
+          if (running) {
+            LOG.info("PacketResponder " + block + " " + numTargets + 
+                     " Exception " + StringUtils.stringifyException(e));
+            running = false;
+          }
+        }
+      }
+      LOG.info("PacketResponder " + numTargets + 
+               " for block " + block + " terminating");
+    }
+  }
+
   /* A class that receives a block and wites to its own disk, meanwhile
    * may copies it to another site. If a throttler is provided,
    * streaming throttling is also supported. 
    * */
   private class BlockReceiver implements java.io.Closeable {
     private Block block; // the block to receive
+    private boolean finalized;
     private DataInputStream in = null; // from where data are read
     private DataChecksum checksum; // from where chunks of a block can be read
     private DataOutputStream out = null; // to block file at local disk
@@ -1584,15 +1947,22 @@ public class DataNode implements FSConstants, Runnable {
     private int bytesPerChecksum;
     private int checksumSize;
     private byte buf[];
-    private long offset;
+    private long offsetInBlock;
     final private String inAddr;
     private String mirrorAddr;
     private DataOutputStream mirrorOut;
+    private Daemon responder = null;
     private Throttler throttler;
     private int lastLen = -1;
     private int curLen = -1;
+    private FSDataset.BlockWriteStreams streams;
+    private boolean isRecovery = false;
+    private String clientName;
+    private Object currentWriteLock;
+    volatile private boolean currentWrite;
 
-    BlockReceiver(Block block, DataInputStream in, String inAddr)
+    BlockReceiver(Block block, DataInputStream in, String inAddr,
+                  boolean isRecovery, String clientName)
         throws IOException {
       try{
         this.block = block;
@@ -1602,15 +1972,20 @@ public class DataNode implements FSConstants, Runnable {
         this.bytesPerChecksum = checksum.getBytesPerChecksum();
         this.checksumSize = checksum.getChecksumSize();
         this.buf = new byte[bytesPerChecksum + checksumSize];
-
+        this.isRecovery = isRecovery;
+        this.clientName = clientName;
+        this.offsetInBlock = 0;
+        this.currentWriteLock = new Object();
+        this.currentWrite = false;
         //
         // Open local disk out
         //
-        FSDataset.BlockWriteStreams streams = data.writeToBlock(block);
-        this.out = new DataOutputStream(new BufferedOutputStream(
-          streams.dataOut, BUFFER_SIZE));
-        this.checksumOut = new DataOutputStream(new BufferedOutputStream(
-          streams.checksumOut, BUFFER_SIZE));
+        streams = data.writeToBlock(block, isRecovery);
+		this.finalized = data.isValidBlock(block);
+        if (streams != null) {
+          this.out = new DataOutputStream(streams.dataOut);
+          this.checksumOut = new DataOutputStream(streams.checksumOut);
+        }
       } catch(IOException ioe) {
         IOUtils.closeStream(this);
         throw ioe;
@@ -1619,6 +1994,17 @@ public class DataNode implements FSConstants, Runnable {
 
     // close files
     public void close() throws IOException {
+
+      try {
+        while (currentWrite) {
+          LOG.info("BlockReceiver for block " + block +
+                   " waiting for last write to drain.");
+          synchronized (currentWriteLock) {
+              currentWriteLock.wait();
+          }
+        }
+      } catch (InterruptedException e) {
+      }
       IOException ioe = null;
       // close checksum file
       try {
@@ -1644,12 +2030,12 @@ public class DataNode implements FSConstants, Runnable {
         throw ioe;
       }
     }
-    
+
     /* receive a chunk: write it to disk & mirror it to another stream */
     private void receiveChunk( int len ) throws IOException {
       if (len <= 0 || len > bytesPerChecksum) {
         throw new IOException("Got wrong length during writeBlock(" + block
-            + ") from " + inAddr + " at offset " + offset + ": " + len
+            + ") from " + inAddr + " at offset " + offsetInBlock + ": " + len
             + " expected <= " + bytesPerChecksum);
       }
 
@@ -1678,31 +2064,58 @@ public class DataNode implements FSConstants, Runnable {
 
       checksum.reset();
 
+      // record the fact that the current write is still in progress
+      synchronized (currentWriteLock) {
+        currentWrite = true;
+      }
+      offsetInBlock += len;
+
       // First write to remote node before writing locally.
       if (mirrorOut != null) {
         try {
           mirrorOut.writeInt(len);
           mirrorOut.write(buf, 0, len + checksumSize);
         } catch (IOException ioe) {
-          LOG.info(dnRegistration + ":Exception writing to mirror " + mirrorAddr + "\n"
-              + StringUtils.stringifyException(ioe));
+          LOG.info(dnRegistration + ":Exception writing block " +
+                   block + " to mirror " + mirrorAddr + "\n" +
+                   StringUtils.stringifyException(ioe));
+          mirrorOut = null;
+          offsetInBlock -= len;
+          synchronized (currentWriteLock) {
+            currentWrite = false;
+            currentWriteLock.notifyAll();
+          }
           //
           // If stream-copy fails, continue
-          // writing to disk. We shouldn't
-          // interrupt client write.
+          // writing to disk for replication requests. For client
+          // writes, return error so that the client can do error
+          // recovery.
           //
-          mirrorOut = null;
+          if (clientName.length() > 0) {
+            synchronized (currentWriteLock) {
+              currentWrite = false;
+              currentWriteLock.notifyAll();
+            }
+            throw ioe;
+          }
         }
       }
 
       try {
-        out.write(buf, 0, len);
-        // Write checksum
-        checksumOut.write(buf, len, checksumSize);
-        myMetrics.wroteBytes(len);
+        if (!finalized) {
+          out.write(buf, 0, len);
+          // Write checksum
+          checksumOut.write(buf, len, checksumSize);
+          myMetrics.wroteBytes(len);
+        }
       } catch (IOException iex) {
         checkDiskError(iex);
         throw iex;
+      } finally {
+        synchronized (currentWriteLock) {
+          currentWrite = false;
+          currentWriteLock.notifyAll();
+        }
       }
 
       if (throttler != null) { // throttle I/O
@@ -1710,8 +2123,100 @@ public class DataNode implements FSConstants, Runnable {
       }
     }
 
-    public void receiveBlock(DataOutputStream mirrorOut,
-        String mirrorAddr, Throttler throttler) throws IOException {
+    /* 
+     * Receive and process a packet. It contains many chunks.
+     */
+    private void receivePacket(int packetSize) throws IOException {
+
+      offsetInBlock = in.readLong(); // get offset of packet in block
+      long seqno = in.readLong();    // get seqno
+      boolean lastPacketInBlock = in.readBoolean();
+      int curPacketSize = 0;         
+      LOG.debug("Receiving one packet for block " + block +
+                " of size " + packetSize +
+                " seqno " + seqno +
+                " offsetInBlock " + offsetInBlock +
+                " lastPacketInBlock " + lastPacketInBlock);
+      setBlockPosition(offsetInBlock);
+
+      int len = in.readInt();
+      curPacketSize += 4;            // read an integer in previous line
+
+      // send packet header to next datanode in pipeline
+      if (mirrorOut != null) {
+        try {
+          mirrorOut.writeInt(packetSize);
+          mirrorOut.writeLong(offsetInBlock);
+          mirrorOut.writeLong(seqno);
+          mirrorOut.writeBoolean(lastPacketInBlock);
+        } catch (IOException e) {
+          LOG.info("Exception writing to mirror " + mirrorAddr + "\n"
+              + StringUtils.stringifyException(e));
+          mirrorOut = null;
+
+          // If stream-copy fails, continue
+          // writing to disk for replication requests. For client
+          // writes, return error so that the client can do error
+          // recovery.
+          //
+          if (clientName.length() > 0) {
+            throw e;
+          }
+        }
+        // first enqueue the ack packet to avoid a race with the response coming
+        // from downstream datanode.
+        if (responder != null) {
+          ((PacketResponder)responder.getRunnable()).enqueue(seqno, 
+                                          lastPacketInBlock); 
+        }
+      }
+
+      if (len == 0) {
+        LOG.info("Receiving empty packet for block " + block);
+        if (mirrorOut != null) {
+          mirrorOut.writeInt(len);
+          mirrorOut.flush();
+        }
+      }
+
+      while (len != 0) {
+        LOG.debug("Receiving one chunk for block " + block +
+                  " of size " + len);
+        receiveChunk( len );
+        curPacketSize += (len + checksumSize);
+        if (curPacketSize > packetSize) {
+          throw new IOException("Packet size for block " + block +
+                                " too long " + curPacketSize +
+                                " was expecting " + packetSize);
+        } 
+        if (curPacketSize == packetSize) {
+          if (mirrorOut != null) {
+            mirrorOut.flush();
+          }
+          break;
+        }
+        len = in.readInt();
+        curPacketSize += 4;
+      }
+
+      // put in queue for pending acks
+      if (responder != null && mirrorOut == null) {
+        ((PacketResponder)responder.getRunnable()).enqueue(seqno,
+                                        lastPacketInBlock); 
+      }
+    }
+
+    public void writeChecksumHeader(DataOutputStream mirrorOut) throws IOException {
+      checksum.writeHeader(mirrorOut);
+    }
+   
+
+    public void receiveBlock(
+        DataOutputStream mirrorOut, // output to next datanode
+        DataInputStream mirrorIn,   // input from next datanode
+        DataOutputStream replyOut,  // output to previous datanode
+        String mirrorAddr, Throttler throttler,
+        int numTargets) throws IOException {
 
         this.mirrorOut = mirrorOut;
         this.mirrorAddr = mirrorAddr;
@@ -1728,35 +2233,109 @@ public class DataNode implements FSConstants, Runnable {
         // write data chunk header
         checksumOut.writeShort(FSDataset.METADATA_VERSION);
         checksum.writeHeader(checksumOut);
-        if (mirrorOut != null) {
-          checksum.writeHeader(mirrorOut);
-          this.mirrorAddr = mirrorAddr;
+        if (clientName.length() > 0) {
+          responder = new Daemon(threadGroup, 
+                                 new PacketResponder(this, block, mirrorIn, 
+                                                     replyOut, numTargets,
+                                                     clientName));
+          responder.start(); // start thread to processes reponses
         }
 
-        int len = in.readInt();
+        /* 
+         * Skim packet headers. A response is needed for every packet.
+         */
+        int len = in.readInt(); // get packet size
         while (len != 0) {
-          receiveChunk( len );
-          offset += len;
-          len = in.readInt();
+          receivePacket(len);
+          len = in.readInt(); // get packet size
         }
 
         // flush the mirror out
         if (mirrorOut != null) {
-          mirrorOut.writeInt(0); // mark the end of the stream
+          mirrorOut.writeInt(0); // mark the end of the block
           mirrorOut.flush();
         }
 
-        // close the block/crc files
-        close();
+        // wait for all outstanding packet responses. And then
+        // indicate responder to gracefully shutdown.
+        if (responder != null) {
+          ((PacketResponder)responder.getRunnable()).close();
+        }
 
-        // Finalize the block. Does this fsync()?
-        block.setNumBytes(offset);
-        data.finalizeBlock(block);
-        myMetrics.wroteBlocks(1);
+        // if this write is for a replication request (and not
+        // from a client), then finalize block. For client-writes, 
+        // the block is finalized in the PacketResponder.
+        if (clientName.length() == 0) {
+          // close the block/crc files
+          close();
+
+          // Finalize the block. Does this fsync()?
+          block.setNumBytes(offsetInBlock);
+          data.finalizeBlock(block);
+          myMetrics.wroteBlocks(1);
+        }
+
       } catch (IOException ioe) {
+        LOG.info("Exception in receiveBlock for block " + block + 
+                 " " + ioe);
         IOUtils.closeStream(this);
+        if (responder != null) {
+          responder.interrupt();
+        }
         throw ioe;
+      } finally {
+        if (responder != null) {
+          try {
+            responder.join();
+          } catch (InterruptedException e) {
+            throw new IOException("Interrupted receiveBlock");
+          }
+          responder = null;
+        }
       }
+    }
+
+    /**
+     * Sets the file pointer in the local block file to the specified value.
+     */
+    private void setBlockPosition(long offsetInBlock) throws IOException {
+      if (finalized) {
+        if (!isRecovery) {
+          throw new IOException("Write to offset " + offsetInBlock +
+                                " of block " + block +
+                                " that is already finalized.");
+        }
+        if (offsetInBlock > data.getLength(block)) {
+          throw new IOException("Write to offset " + offsetInBlock +
+                                " of block " + block +
+                                " that is already finalized and is of size " +
+                                data.getLength(block));
+        }
+      }
+      if (data.getChannelPosition(block, streams) == offsetInBlock) {
+        return;                   // nothing to do 
+      }
+      if (offsetInBlock % bytesPerChecksum != 0) {
+        throw new IOException("setBlockPosition trying to set position to " +
+                              offsetInBlock +
+                              " which is not a multiple of bytesPerChecksum " +
+                               bytesPerChecksum);
+      }
+      long offsetInChecksum = checksum.getChecksumHeaderSize() + 
+                              offsetInBlock / bytesPerChecksum * checksumSize;
+      if (out != null) {
+       out.flush();
+      }
+      if (checksumOut != null) {
+        checksumOut.flush();
+      }
+      LOG.info("Changing block file offset from " + 
+               data.getChannelPosition(block, streams) +
+               " to " + offsetInBlock +
+               " meta file offset to " + offsetInChecksum);
+
+      // set the position of the block file
+      data.setChannelPosition(block, streams, offsetInBlock, offsetInChecksum);
     }
   }
 
@@ -1790,8 +2369,8 @@ public class DataNode implements FSConstants, Runnable {
         InetSocketAddress curTarget = 
           NetUtils.createSocketAddr(targets[0].getName());
         sock = new Socket();  
-        sock.connect(curTarget, READ_TIMEOUT);
-        sock.setSoTimeout(targets.length*READ_TIMEOUT);
+        sock.connect(curTarget, socketTimeout);
+        sock.setSoTimeout(targets.length * socketTimeout);
 
         out = new DataOutputStream(new BufferedOutputStream(
             sock.getOutputStream(), BUFFER_SIZE));
@@ -1803,6 +2382,9 @@ public class DataNode implements FSConstants, Runnable {
         out.writeShort(DATA_TRANFER_VERSION);
         out.writeByte(OP_WRITE_BLOCK);
         out.writeLong(b.getBlockId());
+        out.writeInt(0);           // no pipelining
+        out.writeBoolean(false);   // not part of recovery
+        Text.writeString(out, ""); // client
         // write targets
         out.writeInt(targets.length - 1);
         for (int i = 1; i < targets.length; i++) {
@@ -1811,9 +2393,7 @@ public class DataNode implements FSConstants, Runnable {
         // send data & checksum
         blockSender.sendBlock(out, null);
 
-        
-        // check the response
-        receiveResponse(sock);
+        // no response necessary
         LOG.info(dnRegistration + ":Transmitted block " + b + " to " + curTarget);
 
       } catch (IOException ie) {

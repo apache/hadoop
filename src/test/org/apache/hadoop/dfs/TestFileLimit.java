@@ -39,8 +39,6 @@ import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 public class TestFileLimit extends TestCase {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
-  static final int numBlocks = 2;
-  static final int fileSize = numBlocks * blockSize;
   boolean simulatedStorage = false;
 
   // The test file is 2 times the blocksize plus one. This means that when the
@@ -59,6 +57,10 @@ public class TestFileLimit extends TestCase {
     FSDataOutputStream stm = fileSys.create(name, true,
                                             fileSys.getConf().getInt("io.file.buffer.size", 4096),
                                             (short)1, (long)blockSize);
+    byte[] buffer = new byte[1024];
+    Random rand = new Random(seed);
+    rand.nextBytes(buffer);
+    stm.write(buffer);
     stm.close();
   }
 

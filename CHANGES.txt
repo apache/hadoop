@@ -56,6 +56,10 @@ Trunk (unreleased changes)
     HADOOP-2012. Periodic data verification on Datanodes.
     (Raghu Angadi via dhruba)
 
+    HADOOP-1707. The DFSClient does not use a local disk file to cache
+    writes to a HDFS file. Changed Data Transfer Version from 7 to 8.
+    (dhruba)
+
   NEW FEATURES
 
     HADOOP-1857.  Ability to run a script when a task fails to capture stack

@@ -465,6 +465,19 @@ class FSDataset implements FSConstants, FSDatasetInterface {
   protected static File getMetaFile( File f ) {
     return new File( f.getAbsolutePath() + METADATA_EXTENSION );
   }
+
+  static class ActiveFile {
+    File file;
+    List<Thread> threads = new ArrayList<Thread>(2);
+
+    ActiveFile(File f, List<Thread> list) {
+      file = f;
+      if (list != null) {
+        threads.addAll(list);
+      }
+      threads.add(Thread.currentThread());
+    }
+  } 
   
   protected File getMetaFile(Block b) throws IOException {
     File blockFile = getBlockFile( b );
@@ -487,7 +500,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
   }
     
   FSVolumeSet volumes;
-  private HashMap<Block,File> ongoingCreates = new HashMap<Block,File>();
+  private HashMap<Block,ActiveFile> ongoingCreates = new HashMap<Block,ActiveFile>();
   private int maxBlocksPerDir = 0;
   private HashMap<Block,FSVolume> volumeMap = null;
   private HashMap<Block,File> blockMap = null;
@@ -570,20 +583,34 @@ class FSDataset implements FSConstants, FSDatasetInterface {
   }
     
   BlockWriteStreams createBlockWriteStreams( File f ) throws IOException {
-      return new BlockWriteStreams(new FileOutputStream(f),
-          new FileOutputStream( getMetaFile( f ) ));
+      return new BlockWriteStreams(new FileOutputStream(new RandomAccessFile( f , "rw" ).getFD()),
+          new FileOutputStream( new RandomAccessFile( getMetaFile( f ) , "rw" ).getFD() ));
 
   }
   
   /**
    * Start writing to a block file
+   * If isRecovery is true and the block pre-exists, then we kill all
+      volumeMap.put(b, v);
+      volumeMap.put(b, v);
+   * other threads that might be writing to this block, and then reopen the file.
    */
-  public BlockWriteStreams writeToBlock(Block b) throws IOException {
+  public BlockWriteStreams writeToBlock(Block b, boolean isRecovery) throws IOException {
     //
     // Make sure the block isn't a valid one - we're still creating it!
     //
     if (isValidBlock(b)) {
-      throw new IOException("Block " + b + " is valid, and cannot be written to.");
+      if (!isRecovery) {
+        throw new IOException("Block " + b + " is valid, and cannot be written to.");
+      }
+      // If the block was succesfully finalized because all packets
+      // were successfully processed at the Datanode but the ack for
+      // some of the packets were not received by the client. The client 
+      // re-opens the connection and retries sending those packets. The
+      // client will now fail because this datanode has no way of
+      // unfinalizing this block.
+      // 
+      throw new IOException("Reopen Block " + b + " is valid, and cannot be written to.");
     }
     long blockSize = b.getNumBytes();
 
@@ -591,33 +618,56 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     // Serialize access to /tmp, and check if file already there.
     //
     File f = null;
+    List<Thread> threads = null;
     synchronized (this) {
       //
       // Is it already in the create process?
       //
-      if (ongoingCreates.containsKey(b)) {
-        // check how old is the temp file - wait 1 hour
-        File tmp = ongoingCreates.get(b);
-        if ((System.currentTimeMillis() - tmp.lastModified()) < 
-            blockWriteTimeout) {
-          throw new IOException("Block " + b +
-                                " has already been started (though not completed), and thus cannot be created.");
-        } else {
-          // stale temp file - remove
-          if (!tmp.delete()) {
-            throw new IOException("Can't write the block - unable to remove stale temp file " + tmp);
+      ActiveFile activeFile = ongoingCreates.get(b);
+      if (activeFile != null) {
+        f = activeFile.file;
+        threads = activeFile.threads;
+        
+        if (!isRecovery) {
+          // check how old is the temp file - wait 1 hour
+          if ((System.currentTimeMillis() - f.lastModified()) < 
+              blockWriteTimeout) {
+            throw new IOException("Block " + b +
+                                  " has already been started (though not completed), and thus cannot be created.");
+          } else {
+            // stale temp file - remove
+            if (!f.delete()) {
+              throw new IOException("Can't write the block - unable to remove stale temp file " + f);
+            }
+            f = null;
           }
-          ongoingCreates.remove(b);
+        } else {
+          for (Thread thread:threads) {
+            thread.interrupt();
+          }
         }
+        ongoingCreates.remove(b);
       }
       FSVolume v = null;
-      synchronized (volumes) {
-        v = volumes.getNextVolume(blockSize);
-        // create temporary file to hold block in the designated volume
-        f = createTmpFile(v, b);
+      if (!isRecovery) {
+        synchronized (volumes) {
+          v = volumes.getNextVolume(blockSize);
+          // create temporary file to hold block in the designated volume
+          f = createTmpFile(v, b);
+        }
+        volumeMap.put(b, v);
       }
-      ongoingCreates.put(b, f);
-      volumeMap.put(b, v);
+      ongoingCreates.put(b, new ActiveFile(f, threads));
+    }
+
+    try {
+      if (threads != null) {
+        for (Thread thread:threads) {
+          thread.join();
+        }
+      }
+    } catch (InterruptedException e) {
+      throw new IOException("Recovery waiting for thread interrupted.");
     }
 
     //
@@ -626,6 +676,29 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     // block size, so clients can't go crazy
     //
     return createBlockWriteStreams( f );
+  }
+
+  /**
+   * Retrieves the offset in the block to which the
+   * the next write will write data to.
+   */
+  public long getChannelPosition(Block b, BlockWriteStreams streams) 
+                                 throws IOException {
+    FileOutputStream file = (FileOutputStream) streams.dataOut;
+    return file.getChannel().position();
+  }
+
+  /**
+   * Sets the offset in the block to which the
+   * the next write will write data to.
+   */
+  public void setChannelPosition(Block b, BlockWriteStreams streams, 
+                                 long dataOffset, long ckOffset) 
+                                 throws IOException {
+    FileOutputStream file = (FileOutputStream) streams.dataOut;
+    file.getChannel().position(dataOffset);
+    file = (FileOutputStream) streams.checksumOut;
+    file.getChannel().position(ckOffset);
   }
 
   File createTmpFile( FSVolume vol, Block blk ) throws IOException {
@@ -654,7 +727,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
    * Complete the block write!
    */
   public synchronized void finalizeBlock(Block b) throws IOException {
-    File f = ongoingCreates.get(b);
+    File f = ongoingCreates.get(b).file;
     if (f == null || !f.exists()) {
       throw new IOException("No temporary file " + f + " for block " + b);
     }
@@ -666,6 +739,15 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     }
     blockMap.put(b, dest);
     ongoingCreates.remove(b);
+  }
+
+  /**
+   * Remove the temporary block file (if any)
+   */
+  public synchronized void unfinalizeBlock(Block b) throws IOException {
+    ongoingCreates.remove(b);
+    volumeMap.remove(b);
+    DataNode.LOG.warn("Block " + b + " unfinalized and removed. " );
   }
 
   /**
@@ -773,6 +855,10 @@ class FSDataset implements FSConstants, FSDatasetInterface {
 
   public String toString() {
     return "FSDataset{dirpath='"+volumes+"'}";
+  }
+
+  public long getBlockSize(Block b) {
+    return blockMap.get(b).length();
   }
 
 }

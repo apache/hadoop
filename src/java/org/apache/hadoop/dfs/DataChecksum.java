@@ -205,6 +205,9 @@ public class DataChecksum implements Checksum {
   public int getNumBytesInSum() {
     return inSum;
   }
+  public int getChecksumHeaderSize() {
+    return 2 + 1 + 4; // version: short + type : byte + bytesPerChecksum : int
+  }
   //Checksum Interface. Just a wrapper around member summer.
   public long getValue() {
     return summer.getValue();

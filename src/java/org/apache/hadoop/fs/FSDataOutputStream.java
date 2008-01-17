@@ -23,6 +23,8 @@ import java.io.*;
  * buffers output through a {@link BufferedOutputStream} and creates a checksum
  * file. */
 public class FSDataOutputStream extends DataOutputStream {
+  private OutputStream wrappedStream;
+
   private static class PositionCache extends FilterOutputStream {
     long position;
 
@@ -53,6 +55,7 @@ public class FSDataOutputStream extends DataOutputStream {
   public FSDataOutputStream(OutputStream out)
     throws IOException {
     super(new PositionCache(out));
+    wrappedStream = out;
   }
   
   public long getPos() throws IOException {
@@ -62,5 +65,10 @@ public class FSDataOutputStream extends DataOutputStream {
   public void close() throws IOException {
     flush();
     out.close();
+  }
+
+  // Returns the underlying output stream. This is used by unit tests.
+  public OutputStream getWrappedStream() {
+    return wrappedStream;
   }
 }

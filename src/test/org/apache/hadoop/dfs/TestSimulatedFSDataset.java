@@ -60,7 +60,7 @@ public class TestSimulatedFSDataset extends TestCase {
     int bytesAdded = 0;
     for (int i = 1; i <= NUMBLOCKS; ++i) {
       Block b = new Block(i, 0); // we pass expected len as zero, - fsdataset should use the sizeof actual data written
-      OutputStream dataOut  = fsdataset.writeToBlock(b).dataOut;
+      OutputStream dataOut  = fsdataset.writeToBlock(b, false).dataOut;
       assertEquals(0, fsdataset.getLength(b));
       for (int j=1; j <= blockIdToLen(i); ++j) {
         dataOut.write(j);

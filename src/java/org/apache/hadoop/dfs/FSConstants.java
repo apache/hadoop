@@ -114,7 +114,7 @@ public interface FSConstants {
    *   OP_REPLACE_BLOCK BlockID(long) SourceID(UTF8) Block_Data_With_Crc
    *   return OP_STATUS_ERROR if any error occurs; OP_STATUS_SUCCESS otherwise
    */
-  public static final int DATA_TRANFER_VERSION = 7;
+  public static final int DATA_TRANFER_VERSION = 8;
 
   // Return codes for file create
   public static final int OPERATION_FAILED = 0;
@@ -142,6 +142,9 @@ public interface FSConstants {
   public static final int BUFFER_SIZE = new Configuration().getInt("io.file.buffer.size", 4096);
   //TODO mb@media-style.com: should be conf injected?
   public static final long DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
+  public static final int DEFAULT_DATA_SOCKET_SIZE = 1024 * 1024;
+
+  public static final int SIZE_OF_INTEGER = Integer.SIZE / Byte.SIZE;
 
   // SafeMode actions
   public enum SafeModeAction{ SAFEMODE_LEAVE, SAFEMODE_ENTER, SAFEMODE_GET; }

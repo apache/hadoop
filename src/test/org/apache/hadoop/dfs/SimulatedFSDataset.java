@@ -97,6 +97,14 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
         return theBlock.len;
       }
     }
+
+    synchronized void setlength(long length) {
+      if (!finalized) {
+         oStream.setLength(length);
+      } else {
+        theBlock.len = length;
+      }
+    }
     
     synchronized SimulatedInputStream getIStream() throws IOException {
       if (!finalized) {
@@ -144,6 +152,10 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     
     SimulatedInputStream getMetaIStream() {
       return new SimulatedInputStream(nullCrcFileData);  
+    }
+
+    synchronized boolean isFinalized() {
+      return finalized;
     }
   }
   
@@ -234,6 +246,10 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
   }
 
+  public synchronized void unfinalizeBlock(Block b) throws IOException {
+    blockMap.remove(b);
+  }
+
   public synchronized Block[] getBlockReport() {
     Block[] blockTable = new Block[blockMap.size()];
     int i = 0;
@@ -287,14 +303,20 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   }
 
   public synchronized boolean isValidBlock(Block b) {
-    return (blockMap.containsKey(b));
+    // return (blockMap.containsKey(b));
+    BInfo binfo = blockMap.get(b);
+    if (binfo == null) {
+      return false;
+    }
+    return binfo.isFinalized();
   }
 
   public String toString() {
     return "Simulated FSDataset";
   }
 
-  public synchronized BlockWriteStreams writeToBlock(Block b)
+  public synchronized BlockWriteStreams writeToBlock(Block b, 
+                                            boolean isRecovery)
                                             throws IOException {
     if (isValidBlock(b)) {
           throw new IOException("Block " + b + 
@@ -374,8 +396,27 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   public void checkDataDir() throws DiskErrorException {
     // nothing to check for simulated data set
   }
-  
-  
+
+  public synchronized long getChannelPosition(Block b, 
+                                              BlockWriteStreams stream)
+                                              throws IOException {
+    BInfo binfo = blockMap.get(b);
+    if (binfo == null) {
+      throw new IOException("No such Block " + b );
+    }
+    return binfo.getlength();
+  }
+
+  public synchronized void setChannelPosition(Block b, BlockWriteStreams stream, 
+                                              long dataOffset, long ckOffset)
+                                              throws IOException {
+    BInfo binfo = blockMap.get(b);
+    if (binfo == null) {
+      throw new IOException("No such Block " + b );
+    }
+    binfo.setlength(dataOffset);
+  }
+
   /** 
    * Simulated input and output streams
    *
@@ -470,10 +511,16 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     
     /**
      * 
-     * @return the lenght of the data created so far.
+     * @return the length of the data created so far.
      */
     long getLength() {
       return length;
+    }
+
+    /**
+     */
+    void setLength(long length) {
+      this.length = length;
     }
     
     @Override

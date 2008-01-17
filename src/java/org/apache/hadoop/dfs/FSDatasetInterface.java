@@ -147,11 +147,12 @@ public interface FSDatasetInterface {
   /**
    * Creates the block and returns output streams to write data and CRC
    * @param b
+   * @param isRecovery True if this is part of erro recovery, otherwise false
    * @return a BlockWriteStreams object to allow writing the block data
    *  and CRC
    * @throws IOException
    */
-  public BlockWriteStreams writeToBlock(Block b) throws IOException;
+  public BlockWriteStreams writeToBlock(Block b, boolean isRecovery) throws IOException;
 
   /**
    * Finalizes the block previously opened for writing using writeToBlock.
@@ -161,6 +162,14 @@ public interface FSDatasetInterface {
    * @throws IOException
    */
   public void finalizeBlock(Block b) throws IOException;
+
+  /**
+   * Unfinalizes the block previously opened for writing using writeToBlock.
+   * The temporary file associated with this block is deleted.
+   * @param b
+   * @throws IOException
+   */
+  public void unfinalizeBlock(Block b) throws IOException;
 
   /**
    * Returns the block report - the full list of blocks stored
@@ -192,5 +201,28 @@ public interface FSDatasetInterface {
      * Stringifies the name of the storage
      */
   public String toString();
+
+  /**
+   * Returns the current offset in the data stream.
+   * @param b
+   * @param stream The stream to the data file and checksum file
+   * @return the position of the file pointer in the data stream
+   * @throws IOException
+   */
+  public long getChannelPosition(Block b, BlockWriteStreams stream) throws IOException;
+
+  /**
+   * Sets the file pointer of the data stream and checksum stream to
+   * the specified values.
+   * @param b
+   * @param stream The stream for the data file and checksum file
+   * @param dataOffset The position to which the file pointre for the data stream
+   *        should be set
+   * @param ckOffset The position to which the file pointre for the checksum stream
+   *        should be set
+   * @throws IOException
+   */
+  public void setChannelPosition(Block b, BlockWriteStreams stream, long dataOffset,
+                                 long ckOffset) throws IOException;
 
 }

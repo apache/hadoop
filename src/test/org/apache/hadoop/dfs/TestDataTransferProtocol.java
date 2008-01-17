@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.dfs.DFSClient.DFSDataInputStream;
@@ -46,11 +47,13 @@ public class TestDataTransferProtocol extends TestCase {
   
   DatanodeID datanode;
   InetSocketAddress dnAddr;
-  byte[] sendBuf = new byte[128];
-  byte[] recvBuf = new byte[128];
-  ByteBuffer byteBuf = ByteBuffer.wrap(sendBuf);
-  ByteBuffer recvByteBuf = ByteBuffer.wrap(recvBuf);
-  
+  ByteArrayOutputStream sendBuf = new ByteArrayOutputStream(128);
+  DataOutputStream sendOut = new DataOutputStream(sendBuf);
+  // byte[] recvBuf = new byte[128];
+  // ByteBuffer recvByteBuf = ByteBuffer.wrap(recvBuf);
+  ByteArrayOutputStream recvBuf = new ByteArrayOutputStream(128);
+  DataOutputStream recvOut = new DataOutputStream(recvBuf);
+
   private void sendRecvData(String testDescription,
                             boolean eofExpected) throws IOException {
     /* Opens a socket to datanode
@@ -73,10 +76,10 @@ public class TestDataTransferProtocol extends TestCase {
       
       OutputStream out = sock.getOutputStream();
       // Should we excuse 
-      out.write(sendBuf, 0, byteBuf.position());
-      byte[] retBuf = new byte[recvByteBuf.position()];
+      byte[] retBuf = new byte[recvBuf.size()];
       
       DataInputStream in = new DataInputStream(sock.getInputStream());
+      out.write(sendBuf.toByteArray());
       try {
         in.readFully(retBuf);
       } catch (EOFException eof) {
@@ -86,6 +89,10 @@ public class TestDataTransferProtocol extends TestCase {
         }
         throw eof;
       }
+      for (int i=0; i<retBuf.length; i++) {
+        System.out.print(retBuf[i]);
+      }
+      System.out.println(":");
       
       if (eofExpected) {
         throw new IOException("Did not recieve IOException when an exception " +
@@ -93,8 +100,10 @@ public class TestDataTransferProtocol extends TestCase {
                               datanode.getName());
       }
       
+      byte[] needed = recvBuf.toByteArray();
       for (int i=0; i<retBuf.length; i++) {
-        assertEquals("checking byte[" + i + "]", recvBuf[i], retBuf[i]);
+        System.out.print(retBuf[i]);
+        assertEquals("checking byte[" + i + "]", needed[i], retBuf[i]);
       }
     } finally {
       IOUtils.closeSocket(sock);
@@ -139,91 +148,165 @@ public class TestDataTransferProtocol extends TestCase {
     Block firstBlock = DFSTestUtil.getFirstBlock(fileSys, file);
     long newBlockId = firstBlock.getBlockId() + 1;
 
-    recvByteBuf.position(1);
-    byteBuf.position(0);
+    recvBuf.reset();
+    sendBuf.reset();
     
-    int versionPos = 0;
-    byteBuf.putShort((short)(FSConstants.DATA_TRANFER_VERSION-1));
+    // bad version
+    recvOut.writeShort((short)(FSConstants.DATA_TRANFER_VERSION-1));
+    sendOut.writeShort((short)(FSConstants.DATA_TRANFER_VERSION-1));
     sendRecvData("Wrong Version", true);
-    // correct the version
-    byteBuf.putShort(versionPos, (short)FSConstants.DATA_TRANFER_VERSION);
-    
-    int opPos = byteBuf.position();
-    byteBuf.put((byte)(FSConstants.OP_WRITE_BLOCK-1));
+
+    // bad ops
+    sendBuf.reset();
+    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeByte((byte)(FSConstants.OP_WRITE_BLOCK-1));
     sendRecvData("Wrong Op Code", true);
     
     /* Test OP_WRITE_BLOCK */
+    sendBuf.reset();
+    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeByte((byte)FSConstants.OP_WRITE_BLOCK);
+    sendOut.writeLong(newBlockId); // block id
+    sendOut.writeInt(0);           // targets in pipeline 
+    sendOut.writeBoolean(false);   // recoveryFlag
+    Text.writeString(sendOut, "cl");// clientID
+    sendOut.writeInt(0);           // number of downstream targets
+    sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
     
-    byteBuf.position(opPos);
-    // Initially write correct values
-    byteBuf.put((byte)FSConstants.OP_WRITE_BLOCK);
-    int blockPos = byteBuf.position();
-    byteBuf.putLong(newBlockId);
-    int targetPos = byteBuf.position();
-    byteBuf.putInt(0);
-    int checksumPos = byteBuf.position();
-    byteBuf.put((byte)DataChecksum.CHECKSUM_CRC32);
+    // bad bytes per checksum
+    sendOut.writeInt(-1-random.nextInt(oneMil));
+    recvBuf.reset();
+    recvOut.writeShort((short)FSConstants.OP_STATUS_ERROR);
+    sendRecvData("wrong bytesPerChecksum while writing", true);
+
+    sendBuf.reset();
+    recvBuf.reset();
+    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeByte((byte)FSConstants.OP_WRITE_BLOCK);
+    sendOut.writeLong(newBlockId);
+    sendOut.writeInt(0);           // targets in pipeline 
+    sendOut.writeBoolean(false);   // recoveryFlag
+    Text.writeString(sendOut, "cl");// clientID
+
+    // bad number of targets
+    sendOut.writeInt(-1-random.nextInt(oneMil));
+    recvOut.writeShort((short)FSConstants.OP_STATUS_ERROR);
+    sendRecvData("bad targets len while writing block " + newBlockId, true);
+
+    sendBuf.reset();
+    recvBuf.reset();
+    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeByte((byte)FSConstants.OP_WRITE_BLOCK);
+    sendOut.writeLong(++newBlockId);
+    sendOut.writeInt(0);           // targets in pipeline 
+    sendOut.writeBoolean(false);   // recoveryFlag
+    Text.writeString(sendOut, "cl");// clientID
+    sendOut.writeInt(0);
+    sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
+    sendOut.writeInt((int)512);
+    sendOut.writeInt(20);          // size of packet
+    sendOut.writeLong(0);          // OffsetInBlock
+    sendOut.writeLong(100);        // sequencenumber
+    sendOut.writeBoolean(false);   // lastPacketInBlock
     
-    byteBuf.putInt(-1-random.nextInt(oneMil));
-    recvByteBuf.position(0);
-    recvByteBuf.putShort((short)FSConstants.OP_STATUS_ERROR);
-    sendRecvData("wrong bytesPerChecksum while writing", false);
-    byteBuf.putInt(checksumPos+1, 512);
-    
-    byteBuf.putInt(targetPos, -1-random.nextInt(oneMil));
-    sendRecvData("bad targets len while writing", true);
-    byteBuf.putInt(targetPos, 0);
-    
-    byteBuf.putLong(blockPos, ++newBlockId);
-    int dataChunkPos = byteBuf.position();
-    byteBuf.putInt(-1-random.nextInt(oneMil));
-    recvByteBuf.position(0);
-    recvByteBuf.putShort((short)FSConstants.OP_STATUS_ERROR);//err ret expected.
-    sendRecvData("negative DATA_CHUNK len while writing", false);
-    byteBuf.putInt(dataChunkPos, 0);
-    
-    byteBuf.putInt(0); // zero checksum
-    byteBuf.putLong(blockPos, ++newBlockId);    
+    // bad data chunk length
+    sendOut.writeInt(-1-random.nextInt(oneMil));
+    Text.writeString(recvOut, ""); // first bad node
+    recvOut.writeLong(100);        // sequencenumber
+    recvOut.writeShort((short)FSConstants.OP_STATUS_ERROR);
+    sendRecvData("negative DATA_CHUNK len while writing block " + newBlockId, 
+                 true);
+
+    // test for writing a valid zero size block
+    sendBuf.reset();
+    recvBuf.reset();
+    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeByte((byte)FSConstants.OP_WRITE_BLOCK);
+    sendOut.writeLong(++newBlockId);
+    sendOut.writeInt(0);           // targets in pipeline 
+    sendOut.writeBoolean(false);   // recoveryFlag
+    Text.writeString(sendOut, "cl");// clientID
+    sendOut.writeInt(0);
+    sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
+    sendOut.writeInt((int)512);    // checksum size
+    sendOut.writeInt(20);          // size of packet
+    sendOut.writeLong(0);          // OffsetInBlock
+    sendOut.writeLong(100);        // sequencenumber
+    sendOut.writeBoolean(true);    // lastPacketInBlock
+
+    sendOut.writeInt(0);           // chunk length
+    sendOut.writeInt(0);           // zero checksum
     //ok finally write a block with 0 len
-    recvByteBuf.putShort(0, (short)FSConstants.OP_STATUS_SUCCESS);
-    sendRecvData("Writing a zero len block", false);
-    
+    Text.writeString(recvOut, ""); // first bad node
+    recvOut.writeLong(100);        // sequencenumber
+    recvOut.writeShort((short)FSConstants.OP_STATUS_SUCCESS);
+    sendRecvData("Writing a zero len block blockid " + newBlockId, false);
     
     /* Test OP_READ_BLOCK */
-    
-    byteBuf.position(opPos);
-    byteBuf.put((byte)FSConstants.OP_READ_BLOCK);
-    blockPos = byteBuf.position();
+
+    // bad block id
+    sendBuf.reset();
+    recvBuf.reset();
+    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
     newBlockId = firstBlock.getBlockId()-1;
-    byteBuf.putLong(newBlockId);
-    int startOffsetPos = byteBuf.position();
-    byteBuf.putLong(0L);
-    int lenPos = byteBuf.position();
-    byteBuf.putLong(fileLen);
-    recvByteBuf.position(0);
-    recvByteBuf.putShort((short)FSConstants.OP_STATUS_ERROR);
-    sendRecvData("Wrong block ID for read", false); 
-    byteBuf.putLong(blockPos, firstBlock.getBlockId());
-    
-    byteBuf.putLong(startOffsetPos, -1-random.nextInt(oneMil));
-    sendRecvData("Negative start-offset for read", false);
-    
-    byteBuf.putLong(startOffsetPos, fileLen);
-    sendRecvData("Wrong start-offset for read", false);
-    byteBuf.putLong(startOffsetPos, 0);
+    sendOut.writeLong(newBlockId);
+    sendOut.writeLong(0L);
+    sendOut.writeLong(fileLen);
+    recvOut.writeShort((short)FSConstants.OP_STATUS_ERROR);
+    sendRecvData("Wrong block ID " + newBlockId + " for read", false); 
+
+    // negative block start offset
+    sendBuf.reset();
+    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
+    sendOut.writeLong(firstBlock.getBlockId());
+    sendOut.writeLong(-1L);
+    sendOut.writeLong(fileLen);
+    sendRecvData("Negative start-offset for read for block " + 
+                 firstBlock.getBlockId(), false);
+
+    // bad block start offset
+    sendBuf.reset();
+    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
+    sendOut.writeLong(firstBlock.getBlockId());
+    sendOut.writeLong(fileLen);
+    sendOut.writeLong(fileLen);
+    sendRecvData("Wrong start-offset for reading block " +
+                 firstBlock.getBlockId(), false);
     
     // negative length is ok. Datanode assumes we want to read the whole block.
-    recvByteBuf.putShort(0, (short)FSConstants.OP_STATUS_SUCCESS);    
-    byteBuf.putLong(lenPos, -1-random.nextInt(oneMil));
-    sendRecvData("Negative length for read", false);
+    recvBuf.reset();
+    recvOut.writeShort((short)FSConstants.OP_STATUS_SUCCESS);    
+    sendBuf.reset();
+    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
+    sendOut.writeLong(firstBlock.getBlockId());
+    sendOut.writeLong(0);
+    sendOut.writeLong(-1-random.nextInt(oneMil));
+    sendRecvData("Negative length for reading block " +
+                 firstBlock.getBlockId(), false);
     
-    recvByteBuf.putShort(0, (short)FSConstants.OP_STATUS_ERROR);
-    byteBuf.putLong(lenPos, fileLen+1);
-    sendRecvData("Wrong length for read", false);
-    byteBuf.putLong(lenPos, fileLen);
+    // length is more than size of block.
+    recvBuf.reset();
+    recvOut.writeShort((short)FSConstants.OP_STATUS_ERROR);    
+    sendBuf.reset();
+    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
+    sendOut.writeLong(firstBlock.getBlockId());
+    sendOut.writeLong(0);
+    sendOut.writeLong(fileLen + 1);
+    sendRecvData("Wrong length for reading block " +
+                 firstBlock.getBlockId(), false);
     
     //At the end of all this, read the file to make sure that succeeds finally.
+    sendBuf.reset();
+    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
+    sendOut.writeLong(firstBlock.getBlockId());
+    sendOut.writeLong(0);
+    sendOut.writeLong(fileLen);
     readFile(fileSys, file, fileLen);
   }
 }
-

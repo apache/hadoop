@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
@@ -37,9 +38,24 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class MiniDFSCluster {
 
+  private class DataNodeProperties {
+    DataNode datanode;
+    Configuration conf;
+    String[] dnArgs;
+
+    DataNodeProperties(DataNode node, Configuration conf, String[] args) {
+      this.datanode = node;
+      this.conf = conf;
+      this.dnArgs = args;
+    }
+  }
+
   private Configuration conf;
   private NameNode nameNode;
-  private ArrayList<DataNode> dataNodes = new ArrayList<DataNode>();
+  private int numDataNodes;
+  private int curDatanodesNum = 0;
+  private ArrayList<DataNodeProperties> dataNodes = 
+                         new ArrayList<DataNodeProperties>();
   private File base_dir;
   private File data_dir;
   
@@ -214,7 +230,7 @@ public class MiniDFSCluster {
    *
    * @throws IllegalStateException if NameNode has been shutdown
    */
-  public void startDataNodes(Configuration conf, int numDataNodes, 
+  public synchronized void startDataNodes(Configuration conf, int numDataNodes, 
                              boolean manageDfsDirs, StartupOption operation, 
                              String[] racks,
                              long[] simulatedCapacities) throws IOException {
@@ -255,7 +271,6 @@ public class MiniDFSCluster {
                     null : new String[] {"-"+operation.toString()};
     String [] dnArgs = (operation == StartupOption.UPGRADE) ? null : args;
     
-    int curDatanodesNum = dataNodes.size();
     for (int i = curDatanodesNum; i < curDatanodesNum+numDataNodes; i++) {
       Configuration dnConf = new Configuration(conf);
       if (manageDfsDirs) {
@@ -279,8 +294,13 @@ public class MiniDFSCluster {
       }
       System.out.println("Starting DataNode " + i + " with dfs.data.dir: " 
                          + dnConf.get("dfs.data.dir"));
-      dataNodes.add(DataNode.createDataNode(dnArgs, dnConf));
+      Configuration newconf = new Configuration(dnConf); // save config
+      dataNodes.add(new DataNodeProperties(
+                     DataNode.createDataNode(dnArgs, dnConf), 
+                     newconf, dnArgs));
     }
+    curDatanodesNum += numDataNodes;
+    this.numDataNodes += numDataNodes;
   }
   
   
@@ -334,7 +354,12 @@ public class MiniDFSCluster {
    * Gets a list of the started DataNodes.  May be empty.
    */
   public ArrayList<DataNode> getDataNodes() {
-    return dataNodes;
+    ArrayList<DataNode> list = new ArrayList<DataNode>();
+    for (int i = 0; i < dataNodes.size(); i++) {
+      DataNode node = dataNodes.get(i).datanode;
+      list.add(node);
+    }
+    return list;
   }
   
   /**
@@ -365,9 +390,67 @@ public class MiniDFSCluster {
   public void shutdownDataNodes() {
     for (int i = dataNodes.size()-1; i >= 0; i--) {
       System.out.println("Shutting down DataNode " + i);
-      DataNode dn = dataNodes.remove(i);
+      DataNode dn = dataNodes.remove(i).datanode;
       dn.shutdown();
+      numDataNodes--;
     }
+  }
+
+  /*
+   * Shutdown a particular datanode
+   */
+  boolean stopDataNode(int i) {
+    if (i < 0 || i >= dataNodes.size()) {
+      return false;
+    }
+    DataNode dn = dataNodes.remove(i).datanode;
+    System.out.println("MiniDFSCluster Stopping DataNode " + 
+                       dn.dnRegistration.getName() +
+                       " from a total of " + (dataNodes.size() + 1) + 
+                       " datanodes.");
+    dn.shutdown();
+    numDataNodes--;
+    return true;
+  }
+
+  /*
+   * Restart a particular datanode
+   */
+  synchronized boolean restartDataNode(int i) throws IOException {
+    if (i < 0 || i >= dataNodes.size()) {
+      return false;
+    }
+    DataNodeProperties dnprop = dataNodes.remove(i);
+    DataNode dn = dnprop.datanode;
+    Configuration conf = dnprop.conf;
+    String[] args = dnprop.dnArgs;
+    System.out.println("MiniDFSCluster Restart DataNode " + 
+                       dn.dnRegistration.getName() +
+                       " from a total of " + (dataNodes.size() + 1) + 
+                       " datanodes.");
+    dn.shutdown();
+
+    // recreate new datanode with the same configuration as the one
+    // that was stopped.
+    Configuration newconf = new Configuration(conf); // save cloned config
+    dataNodes.add(new DataNodeProperties(
+                     DataNode.createDataNode(args, conf), 
+                     newconf, args));
+    return true;
+  }
+
+  /*
+   * Shutdown a datanode by name.
+   */
+  synchronized boolean stopDataNode(String name) {
+    int i;
+    for (i = 0; i < dataNodes.size(); i++) {
+      DataNode dn = dataNodes.get(i).datanode;
+      if (dn.dnRegistration.getName().equals(name)) {
+        break;
+      }
+    }
+    return stopDataNode(i);
   }
   
   /**
@@ -423,7 +506,7 @@ public class MiniDFSCluster {
 
     // make sure all datanodes are alive
     while( client.datanodeReport(DatanodeReportType.LIVE).length
-        != dataNodes.size()) {
+        != numDataNodes) {
       try {
         Thread.sleep(500);
       } catch (Exception e) {
@@ -450,7 +533,7 @@ public class MiniDFSCluster {
     if (dataNodeIndex < 0 || dataNodeIndex > dataNodes.size()) {
       throw new IndexOutOfBoundsException();
     }
-    return dataNodes.get(dataNodeIndex).getFSDataset().getBlockReport();
+    return dataNodes.get(dataNodeIndex).datanode.getFSDataset().getBlockReport();
   }
   
   
@@ -482,13 +565,13 @@ public class MiniDFSCluster {
     if (dataNodeIndex < 0 || dataNodeIndex > dataNodes.size()) {
       throw new IndexOutOfBoundsException();
     }
-    FSDatasetInterface dataSet = dataNodes.get(dataNodeIndex).getFSDataset();
+    FSDatasetInterface dataSet = dataNodes.get(dataNodeIndex).datanode.getFSDataset();
     if (!(dataSet instanceof SimulatedFSDataset)) {
       throw new IOException("injectBlocks is valid only for SimilatedFSDataset");
     }
     SimulatedFSDataset sdataset = (SimulatedFSDataset) dataSet;
     sdataset.injectBlocks(blocksToInject);
-    dataNodes.get(dataNodeIndex).scheduleBlockReport(0);
+    dataNodes.get(dataNodeIndex).datanode.scheduleBlockReport(0);
   }
   
   /**

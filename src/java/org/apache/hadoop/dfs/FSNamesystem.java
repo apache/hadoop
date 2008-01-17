@@ -2430,12 +2430,13 @@ class FSNamesystem implements FSConstants {
       //
       if (!isInSafeMode()) {
         NameNode.stateChangeLog.info("BLOCK* NameSystem.addStoredBlock: "
-                                      +"blockMap updated: "+node.getName()+" is added to "+block.getBlockName());
+                                      +"blockMap updated: "+node.getName()+" is added to "+block.getBlockName()+" size "+block.getNumBytes());
       }
     } else {
       NameNode.stateChangeLog.warn("BLOCK* NameSystem.addStoredBlock: "
                                    + "Redundant addStoredBlock request received for " 
-                                   + block.getBlockName() + " on " + node.getName());
+                                   + block.getBlockName() + " on " + node.getName()
+                                   + " size " + block.getNumBytes());
     }
 
     //

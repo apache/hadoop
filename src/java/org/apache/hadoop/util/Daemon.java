@@ -38,6 +38,13 @@ public class Daemon extends Thread {
     this.setName(((Object)runnable).toString());
   }
 
+  /** Construct a daemon thread to be part of a specified thread group. */
+  public Daemon(ThreadGroup group, Runnable runnable) {
+    super(group, runnable);
+    this.runnable = runnable;
+    this.setName(((Object)runnable).toString());
+  }
+
   public Runnable getRunnable() {
     return runnable;
   }

@@ -39,6 +39,7 @@ import java.util.*;
 import java.util.zip.CRC32;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
+import java.nio.ByteBuffer;
 
 import javax.net.SocketFactory;
 import javax.security.auth.login.LoginException;
@@ -59,15 +60,15 @@ class DFSClient implements FSConstants {
   static final int MAX_BLOCK_ACQUIRE_FAILURES = 3;
   private static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
   ClientProtocol namenode;
-  boolean running = true;
+  volatile boolean clientRunning = true;
   Random r = new Random();
   String clientName;
   Daemon leaseChecker;
   private Configuration conf;
   private long defaultBlockSize;
   private short defaultReplication;
-  private LocalDirAllocator dirAllocator;
   private SocketFactory socketFactory;
+  private int socketTimeout;
     
   /**
    * A map from name -> DFSOutputStream of files that are currently being
@@ -136,6 +137,8 @@ class DFSClient implements FSConstants {
   public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf)
     throws IOException {
     this.conf = conf;
+    this.socketTimeout = conf.getInt("dfs.socket.timeout", 
+                                     FSConstants.READ_TIMEOUT);
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     this.namenode = createNamenode(nameNodeAddr, conf);
     String taskId = conf.get("mapred.task.id");
@@ -146,13 +149,12 @@ class DFSClient implements FSConstants {
     }
     defaultBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     defaultReplication = (short) conf.getInt("dfs.replication", 3);
-    dirAllocator = new LocalDirAllocator("dfs.client.buffer.dir");
     this.leaseChecker = new Daemon(new LeaseChecker());
     this.leaseChecker.start();
   }
 
   private void checkOpen() throws IOException {
-    if (!running) {
+    if (!clientRunning) {
       IOException result = new IOException("Filesystem closed");
       throw result;
     }
@@ -179,7 +181,7 @@ class DFSClient implements FSConstants {
         }
         pendingCreates.clear();
       }
-      this.running = false;
+      this.clientRunning = false;
       try {
         leaseChecker.join();
       } catch (InterruptedException ie) {
@@ -579,7 +581,7 @@ class DFSClient implements FSConstants {
      */
     public void run() {
       long lastRenewed = 0;
-      while (running) {
+      while (clientRunning) {
         if (System.currentTimeMillis() - lastRenewed > (LEASE_SOFTLIMIT_PERIOD / 2)) {
           try {
             if (pendingCreates.size() > 0)
@@ -727,7 +729,17 @@ class DFSClient implements FSConstants {
         throw new IOException("Mismatch in pos : " + pos + " + " + 
                               firstChunkOffset + " != " + chunkOffset);
       }
-      
+
+      // The chunk is transmitted as one packet. Read packet headers.
+      int packetLen = in.readInt();
+      long offsetInBlock = in.readLong();
+      long seqno = in.readLong();
+      boolean lastPacketInBlock = in.readBoolean();
+      LOG.debug("DFSClient readChunk got seqno " + seqno +
+                " offsetInBlock " + offsetInBlock +
+                " lastPacketInBlock " + lastPacketInBlock +
+                " packetLen " + packetLen);
+
       int chunkLen = in.readInt();
       
       // Sanity check the lengths
@@ -806,7 +818,9 @@ class DFSClient implements FSConstants {
                    new BufferedInputStream(sock.getInputStream(), bufferSize));
       
       if ( in.readShort() != OP_STATUS_SUCCESS ) {
-        throw new IOException("Got error in response to OP_READ_BLOCK");
+        throw new IOException("Got error in response to OP_READ_BLOCK " +
+                              "for file " + file + 
+                              " for block " + blockId);
       }
       DataChecksum checksum = DataChecksum.newDataChecksum( in );
       //Warning when we get CHECKSUM_NULL?
@@ -818,7 +832,7 @@ class DFSClient implements FSConstants {
           firstChunkOffset >= (startOffset + checksum.getBytesPerChecksum())) {
         throw new IOException("BlockReader: error in first chunk offset (" +
                               firstChunkOffset + ") startOffset is " + 
-                              startOffset + "for file XXX");
+                              startOffset + " for file " + file);
       }
 
       return new BlockReader( file, blockId, in, checksum,
@@ -1046,8 +1060,8 @@ class DFSClient implements FSConstants {
 
         try {
           s = socketFactory.createSocket();
-          s.connect(targetAddr, READ_TIMEOUT);
-          s.setSoTimeout(READ_TIMEOUT);
+          s.connect(targetAddr, socketTimeout);
+          s.setSoTimeout(socketTimeout);
           Block blk = targetBlock.getBlock();
           
           blockReader = BlockReader.newBlockReader(s, src, blk.getBlockId(), 
@@ -1227,8 +1241,8 @@ class DFSClient implements FSConstants {
             
         try {
           dn = socketFactory.createSocket();
-          dn.connect(targetAddr, READ_TIMEOUT);
-          dn.setSoTimeout(READ_TIMEOUT);
+          dn.connect(targetAddr, socketTimeout);
+          dn.setSoTimeout(socketTimeout);
               
           int len = (int) (end - start + 1);
               
@@ -1249,8 +1263,10 @@ class DFSClient implements FSConstants {
           reportChecksumFailure(src, block.getBlock(), chosenNode);
         } catch (IOException e) {
           ioe = e;
-          LOG.warn("Failed to connect to " + targetAddr + ":" 
-                    + StringUtils.stringifyException(e));
+          LOG.warn("Failed to connect to " + targetAddr + 
+                   " for file " + src + 
+                   " for block " + block.getBlock().getBlockId() + ":"  +
+                   StringUtils.stringifyException(e));
         } 
         // Put chosen node into dead list, continue
         addToDeadNodes(chosenNode);
@@ -1440,23 +1456,428 @@ class DFSClient implements FSConstants {
 
   /****************************************************************
    * DFSOutputStream creates files from a stream of bytes.
-   ****************************************************************/
+   *
+   * The client application writes data that is cached internally by
+   * this stream. Data is broken up into packets, each packet is
+   * typically 64K in size. A packet comprises of chunks. Each chunk
+   * is typically 512 bytes and has an associated checksum with it.
+   *
+   * When a client application fills up the currentPacket, it is
+   * enqueued into dataQueue.  The DataStreamer thread picks up
+   * packets from the dataQueue, sends it to the first datanode in
+   * the pipeline and moves it from the dataQueue to the ackQueue.
+   * The ResponseProcessor receives acks from the datanodes. When an
+   * successful ack for a packet is received from all datanodes, the
+   * ResponseProcessor removes the corresponding packet from the
+   * ackQueue.
+   *
+   * In case of error, all outstanding packets and moved from
+   * ackQueue. A new pipeline is setup by eliminating the bad
+   * datanode from the original pipeline. The DataStreamer now
+   * starts sending packets from the dataQueue.
+  ****************************************************************/
   class DFSOutputStream extends FSOutputSummer {
     private Socket s;
     boolean closed = false;
-
+  
     private String src;
-    private short replication;
     private DataOutputStream blockStream;
     private DataInputStream blockReplyStream;
-    private File backupFile;
-    private OutputStream backupStream;
     private Block block;
-    private long filePos = 0;
-    private long bytesWrittenToBlock = 0;
     private long blockSize;
     private int buffersize;
     private DataChecksum checksum;
+    private LinkedList<Packet> dataQueue = new LinkedList<Packet>();
+    private LinkedList<Packet> ackQueue = new LinkedList<Packet>();
+    private Packet currentPacket = null;
+    private int maxPackets = 80; // each packet 64K, total 5MB
+    // private int maxPackets = 1000; // each packet 64K, total 64MB
+    private DataStreamer streamer;
+    private ResponseProcessor response = null;
+    private long currentSeqno = 0;
+    private long bytesCurBlock = 0; // bytes writen in current block
+    private int packetSize = 0;
+    private int chunksPerPacket = 0;
+    private int chunksPerBlock = 0;
+    private int chunkSize = 0;
+    private DatanodeInfo[] nodes = null; // list of targets for current block
+    private volatile boolean hasError = false;
+    private volatile int errorIndex = 0;
+    private IOException lastException = new IOException("Stream closed.");
+    private long artificialSlowdown = 0;
+
+    private class Packet {
+      ByteBuffer buffer;
+      long    seqno;               // sequencenumber of buffer in block
+      long    offsetInBlock;       // offset in block
+      boolean lastPacketInBlock;   // is this the last packet in block?
+      int     numChunks;           // number of chunks currently in packet
+  
+      // create a new packet
+      Packet(int size, long offsetInBlock) {
+        buffer = ByteBuffer.allocate(size);
+        buffer.clear();
+        this.lastPacketInBlock = false;
+        this.numChunks = 0;
+        this.offsetInBlock = offsetInBlock;
+        this.seqno = currentSeqno;
+        currentSeqno++;
+      }
+  
+      // writes len bytes from offset off in inarray into
+      // this packet.
+      // 
+      void write(byte[] inarray, int off, int len) {
+        buffer.put(inarray, off, len);
+      }
+  
+      // writes an integer into this packet. 
+      //
+      void  writeInt(int value) {
+       buffer.putInt(value);
+      }
+    }
+  
+    //
+    // The DataStreamer class is responsible for sending data packets to the
+    // datanodes in the pipeline. It retrieves a new blockid and block locations
+    // from the namenode, and starts streaming packets to the pipeline of
+    // Datanodes. Every packet has a sequence number associated with
+    // it. When all the packets for a block are sent out and acks for each
+    // if them are received, the DataStreamer closes the current block.
+    //
+    private class DataStreamer extends Thread {
+
+      private volatile boolean closed = false;
+  
+      public void run() {
+
+        while (!closed && clientRunning) {
+
+          // if the Responder encountered an error, shutdown Responder
+          if (hasError && response != null) {
+            try {
+              response.close();
+              response.join();
+              response = null;
+            } catch (InterruptedException  e) {
+            }
+          }
+
+          Packet one = null;
+          synchronized (dataQueue) {
+
+            // process IO errors if any
+            processDatanodeError();
+
+            // wait for a packet to be sent.
+            while (!closed && !hasError && clientRunning 
+                   && dataQueue.size() == 0) {
+              try {
+                dataQueue.wait(1000);
+              } catch (InterruptedException  e) {
+              }
+            }
+            if (closed || hasError || dataQueue.size() == 0 || !clientRunning) {
+              continue;
+            }
+
+            try {
+              // get packet to be sent.
+              one = dataQueue.getFirst();
+              int len = one.buffer.limit();
+  
+              // get new block from namenode.
+              if (blockStream == null) {
+                LOG.info("Allocating new block");
+                nodes = nextBlockOutputStream(src); 
+                this.setName("DataStreamer for file " + src +
+                             " block " + block);
+                response = new ResponseProcessor(nodes);
+                response.start();
+              }
+
+              // user bytes from 'position' to 'limit'.
+              byte[] arr = one.buffer.array();
+              if (one.offsetInBlock >= blockSize) {
+                throw new IOException("BlockSize " + blockSize +
+                                      " is smaller than data size. " +
+                                      " Offset of packet in block " + 
+                                      one.offsetInBlock +
+                                      " Aborting file " + src);
+              }
+
+              // move packet from dataQueue to ackQueue
+              dataQueue.removeFirst();
+              dataQueue.notifyAll();
+              synchronized (ackQueue) {
+                ackQueue.addLast(one);
+                ackQueue.notifyAll();
+              } 
+  
+              // write out data to remote datanode
+              blockStream.writeInt(len); // size of this packet
+              blockStream.writeLong(one.offsetInBlock); // data offset in block
+              blockStream.writeLong(one.seqno); // sequence num of packet
+              blockStream.writeBoolean(one.lastPacketInBlock); 
+              blockStream.write(arr, 0, len);
+              if (one.lastPacketInBlock) {
+                blockStream.writeInt(0); // indicate end-of-block 
+              }
+              blockStream.flush();
+              LOG.debug("DataStreamer block " + block +
+                        " wrote packet seqno:" + one.seqno +
+                        " size:" + len + 
+                        " offsetInBlock:" + one.offsetInBlock + 
+                        " lastPacketInBlock:" + one.lastPacketInBlock);
+            } catch (IOException e) {
+              LOG.warn("DataStreamer Exception: " + e);
+			  hasError = true;
+		    }
+	      }
+
+          if (closed || hasError || !clientRunning) {
+            continue;
+          }
+
+          // Is this block full?
+          if (one.lastPacketInBlock) {
+            synchronized (ackQueue) {
+              while (!hasError && ackQueue.size() != 0 && clientRunning) {
+                try {
+                  ackQueue.wait();   // wait for acks to arrive from datanodes
+                } catch (InterruptedException  e) {
+                }
+              }
+            }
+            LOG.info("Closing old block " + block);
+            this.setName("DataStreamer for file " + src);
+
+            response.close();        // ignore all errors in Response
+            try {
+              response.join();
+              response = null;
+            } catch (InterruptedException  e) {
+            }
+
+            if (closed || hasError || !clientRunning) {
+              continue;
+            }
+
+            synchronized (dataQueue) {
+              try {
+                blockStream.close();
+                blockReplyStream.close();
+              } catch (IOException e) {
+              }
+              nodes = null;
+              response = null;
+              blockStream = null;
+              blockReplyStream = null;
+            }
+          }
+          if (progress != null) { progress.progress(); }
+
+          // This is used by unit test to trigger race conditions.
+          if (artificialSlowdown != 0 && clientRunning) {
+            try { 
+              Thread.sleep(artificialSlowdown); 
+            } catch (InterruptedException e) {}
+          }
+		}
+	  }
+
+      // shutdown thread
+      void close() {
+        closed = true;
+        synchronized (dataQueue) {
+          dataQueue.notifyAll();
+        }
+        synchronized (ackQueue) {
+          ackQueue.notifyAll();
+        }
+        this.interrupt();
+      }
+	}
+		  
+    //
+	// Processes reponses from the datanodes.  A packet is removed 
+	// from the ackQueue when its response arrives.
+	//
+    private class ResponseProcessor extends Thread {
+
+      private volatile boolean closed = false;
+      private DatanodeInfo[] targets = null;
+      private boolean lastPacketInBlock = false;
+
+      ResponseProcessor (DatanodeInfo[] targets) {
+        this.targets = targets;
+      }
+
+	  public void run() {
+
+        this.setName("ResponseProcessor for block " + block);
+  
+        while (!closed && clientRunning && !lastPacketInBlock) {
+		    // process responses from datanodes.
+		    try {
+			  // verify seqno from datanode
+              int numTargets = -1;
+			  long seqno = blockReplyStream.readLong();
+              LOG.debug("DFSClient received ack for seqno " + seqno);
+              if (seqno == -1) {
+                continue;
+              } else if (seqno == -2) {
+                // no nothing
+              } else {
+			    Packet one = null;
+			    synchronized (ackQueue) {
+			      one = ackQueue.getFirst();
+			    }
+			    if (one.seqno != seqno) {
+			      throw new IOException("Responseprocessor: Expecting seqno " + 
+                                        " for block " + block +
+			                            one.seqno + " but received " + seqno);
+			    }
+                lastPacketInBlock = one.lastPacketInBlock;
+              }
+
+              // processes response status from all datanodes.
+              for (int i = 0; i < targets.length && clientRunning; i++) {
+                short reply = blockReplyStream.readShort();
+                if (reply != OP_STATUS_SUCCESS) {
+                  errorIndex = i; // first bad datanode
+                  throw new IOException("Bad response " + reply +
+                                        " for block " + block +
+                                        " from datanode " + 
+                                        targets[i].getName());
+                }
+              }
+
+              synchronized (ackQueue) {
+                ackQueue.removeFirst();
+                ackQueue.notifyAll();
+              }
+            } catch (Exception e) {
+              if (!closed) {
+                hasError = true;
+                LOG.warn("DFSOutputStream ResponseProcessor exception " + 
+                         " for block " + block +
+                          StringUtils.stringifyException(e));
+                closed = true;
+              }
+            }
+
+            synchronized (dataQueue) {
+              dataQueue.notifyAll();
+            }
+            synchronized (ackQueue) {
+              ackQueue.notifyAll();
+            }
+          }
+        }
+
+        void close() {
+          closed = true;
+          this.interrupt();
+        }
+      }
+
+    // If this stream has encountered any errors so far, shutdown 
+    // threads and mark stream as closed.
+    //
+    private void processDatanodeError() {
+      if (!hasError) {
+        return;
+      }
+      if (response != null) {
+        LOG.info("Error Recovery for block " + block +
+                 " waiting for responder to exit. ");
+        return;
+      }
+      String msg = "Error Recovery for block " + block +
+                   " bad datanode[" + errorIndex + "]";
+      if (nodes != null) {
+        msg += " " + nodes[errorIndex].getName();
+      }
+      LOG.warn(msg);
+
+      if (blockStream != null) {
+        try {
+          blockStream.close();
+          blockReplyStream.close();
+        } catch (IOException e) {
+        }
+      }
+      blockStream = null;
+      blockReplyStream = null;
+
+      // move packets from ack queue to front of the data queue
+      synchronized (ackQueue) {
+        dataQueue.addAll(0, ackQueue);
+        ackQueue.clear();
+      }
+
+      boolean success = false;
+      while (!success && clientRunning) {
+        if (nodes == null) {
+          lastException = new IOException("Could not get block locations. " +
+                                          "Aborting...");
+          closed = true;
+          streamer.close();
+          return;
+        }
+        if (nodes.length <= 1) {
+          lastException = new IOException("All datanodes are bad. Aborting...");
+          closed = true;
+          streamer.close();
+          return;
+        }
+        LOG.warn("Error Recovery for block " + block +
+                 " bad datanode " + nodes[errorIndex].getName());
+
+        // remove bad datanode from list of datanodes.
+        //
+        DatanodeInfo[] newnodes =  new DatanodeInfo[nodes.length-1];
+        for (int i = 0; i < errorIndex; i++) {
+          newnodes[i] = nodes[i];
+        }
+        for (int i = errorIndex; i < (nodes.length-1); i++) {
+          newnodes[i] = nodes[i+1];
+        }
+        nodes = newnodes;
+
+        // setup new pipeline
+        success = createBlockOutputStream(nodes, src, true);
+        hasError = false;
+        errorIndex = 0;
+      }
+
+      response = new ResponseProcessor(nodes);
+      response.start();
+    }
+
+    private void isClosed() throws IOException {
+      if (closed) {
+        throw lastException;
+      }
+    }
+
+    //
+    // returns the list of targets, if any, that is being currently used.
+    //
+    DatanodeInfo[] getPipeline() {
+      synchronized (dataQueue) {
+        if (nodes == null) {
+          return null;
+        }
+        DatanodeInfo[] value = new DatanodeInfo[nodes.length];
+        for (int i = 0; i < nodes.length; i++) {
+          value[i] = nodes[i];
+        }
+        return value;
+      }
+    }
 
     private Progressable progress;
     /**
@@ -1471,7 +1892,6 @@ class DFSClient implements FSConstants {
                            ) throws IOException {
       super(new CRC32(), conf.getInt("io.bytes.per.checksum", 512), 4);
       this.src = src;
-      this.replication = replication;
       this.blockSize = blockSize;
       this.buffersize = buffersize;
       this.progress = progress;
@@ -1487,110 +1907,137 @@ class DFSClient implements FSConstants {
                               "multiple of io.bytes.per.checksum");
                               
       }
-      
       checksum = DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 
                                               bytesPerChecksum);
+      // A maximum of 128 chunks per packet, i.e. 64K packet size.
+      chunkSize = bytesPerChecksum + 2 * SIZE_OF_INTEGER; // user data & checksum
+      chunksPerBlock = (int)(blockSize / bytesPerChecksum);
+      chunksPerPacket = Math.min(chunksPerBlock, 128);
+      packetSize = chunkSize * chunksPerPacket;
+
       namenode.create(
           src, masked, clientName, overwrite, replication, blockSize);
+      streamer = new DataStreamer();
+      streamer.start();
     }
-
-    private void openBackupStream() throws IOException {
-      File tmpFile = newBackupFile();
-      backupStream = new BufferedOutputStream(new FileOutputStream(tmpFile),
-                                              buffersize);
-      backupFile = tmpFile;
-    }
-    
-    /* Wrapper for closing backupStream. This sets backupStream to null so
-     * that we do not attempt to write to backupStream that could be
-     * invalid in subsequent writes. Otherwise we might end trying to write
-     * filedescriptor that we don't own.
-     */
-    private void closeBackupStream() throws IOException {
-      if (backupStream != null) {
-        backupStream.flush();
-        OutputStream stream = backupStream;
-        backupStream = null;
-        stream.close();
-      }   
-    }
-    /* Similar to closeBackupStream(). Theoritically deleting a file
-     * twice could result in deleting a file that we should not.
-     */
-    private void deleteBackupFile() {
-      if (backupFile != null) {
-        File file = backupFile;
-        backupFile = null;
-        file.delete();
-      }
-    }
-        
-    private File newBackupFile() throws IOException {
-      String name = "tmp" + File.separator +
-                     "client-" + Math.abs(r.nextLong());
-      File result = dirAllocator.createTmpFileForWrite(name, 
-                                                       2 * blockSize, 
-                                                       conf);
-      return result;
-    }
-
+  
     /**
      * Open a DataOutputStream to a DataNode so that it can be written to.
      * This happens when a file is created and each time a new block is allocated.
      * Must get block ID and the IDs of the destinations from the namenode.
+     * Returns the list of target datanodes.
      */
-    private synchronized void nextBlockOutputStream() throws IOException {
+    private DatanodeInfo[] nextBlockOutputStream(String client) throws IOException {
+      LocatedBlock lb = null;
       boolean retry = false;
-      long startTime = System.currentTimeMillis();
+      DatanodeInfo[] nodes;
+      int count = conf.getInt("dfs.client.block.write.retries", 3);
+      boolean success;
       do {
+        hasError = false;
+        errorIndex = 0;
         retry = false;
+        nodes = null;
+        success = false;
                 
-        LocatedBlock lb = locateFollowingBlock(startTime);
+        long startTime = System.currentTimeMillis();
+        lb = locateFollowingBlock(startTime);
         block = lb.getBlock();
-        if (block.getNumBytes() < bytesWrittenToBlock) {
-          block.setNumBytes(bytesWrittenToBlock);
-        }
-        DatanodeInfo nodes[] = lb.getLocations();
+        nodes = lb.getLocations();
+  
+        //
+        // Connect to first DataNode in the list.
+        //
+        success = createBlockOutputStream(nodes, client, false);
 
-        //
-        // Connect to first DataNode in the list.  Abort if this fails.
-        //
-        InetSocketAddress target = NetUtils.createSocketAddr(nodes[0].getName());
-        try {
-          s = socketFactory.createSocket();
-          s.connect(target, READ_TIMEOUT);
-          s.setSoTimeout(replication * READ_TIMEOUT);
-        } catch (IOException ie) {
+        if (!success) {
+          LOG.info("Abandoning block " + block);
+          namenode.abandonBlock(block, src, clientName);
+
           // Connection failed.  Let's wait a little bit and retry
+          retry = true;
           try {
             if (System.currentTimeMillis() - startTime > 5000) {
-              LOG.info("Waiting to find target node: " + target);
+              LOG.info("Waiting to find target node: " + nodes[0].getName());
             }
             Thread.sleep(6000);
           } catch (InterruptedException iex) {
           }
-          namenode.abandonBlock(block, src, clientName);
-          retry = true;
-          continue;
         }
+      } while (retry && --count >= 0);
+
+      if (!success) {
+        throw new IOException("Unable to create new block.");
+      }
+      return nodes;
+    }
+
+    // connects to the first datanode in the pipeline
+    // Returns true if success, otherwise return failure.
+    //
+    private boolean createBlockOutputStream(DatanodeInfo[] nodes, String client,
+                    boolean recoveryFlag) {
+      String firstBadLink = "";
+      for (int i = 0; i < nodes.length; i++) {
+        LOG.info("pipeline = " + nodes[i].getName());
+      }
+      try {
+        LOG.info("Connecting to " + nodes[0].getName());
+        InetSocketAddress target = NetUtils.createSocketAddr(nodes[0].getName());
+        s = socketFactory.createSocket();
+        int timeoutValue = 3000 * nodes.length + socketTimeout;
+        s.connect(target, timeoutValue);
+        s.setSoTimeout(timeoutValue);
+        s.setSendBufferSize(DEFAULT_DATA_SOCKET_SIZE);
+        LOG.debug("Send buf size " + s.getSendBufferSize());
 
         //
         // Xmit header info to datanode
         //
         DataOutputStream out = new DataOutputStream(new BufferedOutputStream(s.getOutputStream(), buffersize));
+        blockReplyStream = new DataInputStream(s.getInputStream());
+
         out.writeShort( DATA_TRANFER_VERSION );
         out.write( OP_WRITE_BLOCK );
         out.writeLong( block.getBlockId() );
+        out.writeInt( nodes.length );
+        out.writeBoolean( recoveryFlag );       // recovery flag
+        Text.writeString( out, client );
         out.writeInt( nodes.length - 1 );
         for (int i = 1; i < nodes.length; i++) {
           nodes[i].write(out);
         }
         checksum.writeHeader( out );
-        blockStream = out;
-        blockReplyStream = new DataInputStream(s.getInputStream());
-      } while (retry);
-    }
+        out.flush();
 
+        // receive ack for connect
+        firstBadLink = Text.readString(blockReplyStream);
+        if (firstBadLink.length() != 0) {
+          throw new IOException("Bad connect ack with firstBadLink " + firstBadLink);
+        }
+
+        blockStream = out;
+        return true;     // success
+
+      } catch (IOException ie) {
+
+        LOG.info("Exception in createBlockOutputStream " + ie);
+
+        // find the datanode that matches
+        if (firstBadLink.length() != 0) {
+          for (int i = 0; i < nodes.length; i++) {
+            if (nodes[i].getName().equals(firstBadLink)) {
+              errorIndex = i;
+              break;
+            }
+          }
+        }
+        hasError = true;
+        blockReplyStream = null;
+        return false;  // error
+      }
+    }
+  
     private LocatedBlock locateFollowingBlock(long start
                                               ) throws IOException {     
       int retries = 5;
@@ -1601,7 +2048,7 @@ class DFSClient implements FSConstants {
           try {
             return namenode.addBlock(src.toString(), clientName);
           } catch (RemoteException e) {
-            if (--retries == 0 || 
+            if (--retries == 0 && 
                 !NotReplicatedYetException.class.getName().
                 equals(e.getClassName())) {
               throw e;
@@ -1624,144 +2071,134 @@ class DFSClient implements FSConstants {
         }
       } 
     }
-
+  
     // @see FSOutputSummer#writeChunk()
     @Override
     protected void writeChunk(byte[] b, int offset, int len, byte[] checksum) 
                                                           throws IOException {
       checkOpen();
+      isClosed();
+  
+      int cklen = checksum.length;
       int bytesPerChecksum = this.checksum.getBytesPerChecksum(); 
-      if (len > bytesPerChecksum || (len + bytesWrittenToBlock) > blockSize) {
-        // should never happen
-        throw new IOException("Mismatch in writeChunk() args");
+      if (len > bytesPerChecksum) {
+        throw new IOException("writeChunk() buffer size is " + len +
+                              " is larger than supported  bytesPerChecksum " +
+                              bytesPerChecksum);
       }
-      
-      if ( backupFile == null ) {
-        openBackupStream();
+      if (checksum.length != this.checksum.getChecksumSize()) {
+        throw new IOException("writeChunk() checksum size is supposed to be " +
+                              this.checksum.getChecksumSize() + 
+                              " but found to be " + checksum.length);
       }
-      
-      backupStream.write(b, offset, len);
-      backupStream.write(checksum);
-      
-      bytesWrittenToBlock += len;
-      filePos += len;
-      
-      if ( bytesWrittenToBlock >= blockSize ) {
-        endBlock();
+      if (len + cklen + SIZE_OF_INTEGER > chunkSize) {
+        throw new IOException("writeChunk() found data of size " +
+                              (len + cklen + 4) +
+                              " that cannot be larger than chukSize " + 
+                              chunkSize);
       }
 
-    }
-
-    /**
-     * We're done writing to the current block.
-     */
-    private synchronized void endBlock() throws IOException {
-      long sleeptime = 400;
-      //
-      // Done with local copy
-      //
-      closeBackupStream();
-
-      //
-      // Send it to datanode
-      //
-      boolean sentOk = false;
-      int remainingAttempts = 
-        conf.getInt("dfs.client.block.write.retries", 3);
-      int numSuccessfulWrites = 0;
-            
-      while (!sentOk) {
-        nextBlockOutputStream();
-
-        long bytesLeft = bytesWrittenToBlock;
-        int bytesPerChecksum = checksum.getBytesPerChecksum();
-        int checksumSize = checksum.getChecksumSize(); 
-        byte buf[] = new byte[ bytesPerChecksum + checksumSize ];
-
-        InputStream in = null;
-        if ( bytesLeft > 0 ) { 
-          in = new BufferedInputStream(new FileInputStream(backupFile),
-                                       buffersize);
-        }
-        
-        try {
-
-          while ( bytesLeft > 0 ) {
-            int len = (int) Math.min( bytesLeft, bytesPerChecksum );
-            IOUtils.readFully( in, buf, 0, len + checksumSize);
-
-            blockStream.writeInt( len );
-            blockStream.write( buf, 0, len + checksumSize );
-
-            bytesLeft -= len;
-
-            if (progress != null) { progress.progress(); }
-          }
-
-          // write 0 to mark the end of a block
-          blockStream.writeInt(0);
-          blockStream.flush();
-          
-          numSuccessfulWrites++;
-
-          //We should wait for response from the receiver.
-          int reply = blockReplyStream.readShort();
-          if ( reply == OP_STATUS_SUCCESS ||
-              ( reply == OP_STATUS_ERROR_EXISTS &&
-                  numSuccessfulWrites > 1 ) ) {
-            s.close();
-            s = null;
-            sentOk = true;
-          } else {
-            throw new IOException( "Got error reply " + reply +
-                                   " while writting the block " 
-                                   + block );
-          }
-
-        } catch (IOException ie) {
-          /*
-           * The error could be OP_STATUS_ERROR_EXISTS.
-           * We are not handling it properly here yet.
-           * We should try to read a byte from blockReplyStream
-           * wihtout blocking. 
-           */
-          handleSocketException(ie);
-          remainingAttempts -= 1;
-          if (remainingAttempts == 0) {
-            throw ie;
-          }
+      synchronized (dataQueue) {
+  
+        // If queue is full, then wait till we can create  enough space
+        while (!closed && dataQueue.size() + ackQueue.size()  > maxPackets) {
           try {
-            Thread.sleep(sleeptime);
-          } catch (InterruptedException e) {
+            dataQueue.wait();
+          } catch (InterruptedException  e) {
           }
-        } finally {
-          if (in != null) {
-            in.close();
+        }
+        isClosed();
+  
+        if (currentPacket == null) {
+          currentPacket = new Packet(packetSize, bytesCurBlock);
+        }
+
+        currentPacket.writeInt(len);
+        currentPacket.write(b, offset, len);
+        currentPacket.write(checksum, 0, cklen);
+        currentPacket.numChunks++;
+        bytesCurBlock += len;
+
+        // If packet is full, enqueue it for transmission
+        //
+        if (currentPacket.numChunks == chunksPerPacket ||
+            bytesCurBlock == chunksPerBlock * bytesPerChecksum) {
+          LOG.debug("DFSClient writeChunk packet full seqno " + currentPacket.seqno);
+          currentPacket.buffer.flip();
+          //
+          // if we allocated a new packet because we encountered a block
+          // boundary, reset bytesCurBlock.
+          //
+          if (bytesCurBlock == chunksPerBlock * bytesPerChecksum) {
+            currentPacket.lastPacketInBlock = true;
+            bytesCurBlock = 0;
+          }
+          dataQueue.addLast(currentPacket);
+          dataQueue.notifyAll();
+          currentPacket = null;
+        }
+      }
+      //LOG.debug("DFSClient writeChunk with length " + len +
+      //          " checksum length " + cklen);
+    }
+  
+    /**
+     * Waits till all existing data is flushed and
+     * confirmations received from datanodes.
+     */
+    @Override
+    public synchronized void flush() throws IOException {
+      checkOpen();
+      isClosed();
+  
+      while (!closed) {
+        synchronized (dataQueue) {
+          isClosed();
+          //
+          // if there is data in the current buffer, send it across
+          //
+          if (currentPacket != null) {
+            currentPacket.buffer.flip();
+            dataQueue.addLast(currentPacket);
+            dataQueue.notifyAll();
+            currentPacket = null;
+          }
+
+          // wait for all buffers to be flushed to datanodes
+          if (!closed && dataQueue.size() != 0) {
+            try {
+              dataQueue.wait();
+            } catch (InterruptedException e) {
+            }
+            continue;
+          }
+        }
+
+        // wait for all acks to be received back from datanodes
+        synchronized (ackQueue) {
+          if (!closed && ackQueue.size() != 0) {
+            try {
+              ackQueue.wait();
+            } catch (InterruptedException e) {
+            }
+            continue;
+          }
+        }
+
+        // acquire both the locks and verify that we are
+        // *really done*. In the case of error recovery, 
+        // packets might move back from ackQueue to dataQueue.
+        //
+        synchronized (dataQueue) {
+          synchronized (ackQueue) {
+            if (dataQueue.size() + ackQueue.size() == 0) {
+              break;       // we are done
+            }
           }
         }
       }
-
-      bytesWrittenToBlock = 0;
-      //
-      // Delete local backup.
-      //
-      deleteBackupFile();
     }
-
-    private void handleSocketException(IOException ie) throws IOException {
-      LOG.warn("Error while writing.", ie);
-      try {
-        if (s != null) {
-          s.close();
-          s = null;
-        }
-      } catch (IOException ie2) {
-        LOG.warn("Error closing socket.", ie2);
-      }
-      //XXX Why are we abondoning the block? There could be retries left.
-      namenode.abandonBlock(block, src, clientName);
-    }
-
+  
     private void internalClose() throws IOException {
       // Clean up any resources that might be held.
       closed = true;
@@ -1774,8 +2211,6 @@ class DFSClient implements FSConstants {
         s.close();
         s = null;
       }
-      
-      closeBackupStream();
     }
     
     /**
@@ -1785,26 +2220,55 @@ class DFSClient implements FSConstants {
     @Override
     public synchronized void close() throws IOException {
       checkOpen();
-      if (closed) {
-        throw new IOException("Stream closed");
-      }
-      
+      isClosed();
+
       try {
-        flushBuffer();
-        
-        if (filePos == 0 || bytesWrittenToBlock != 0) {
-          try {
-            endBlock();
-          } catch (IOException e) {
-            namenode.abandonFileInProgress(src.toString(), clientName);
-            throw e;
+        flushBuffer();       // flush from all upper layers
+      
+        // Mark that this packet is the last packet in block.
+        // If there are no outstanding packets and the last packet
+        // was not the last one in the current block, then create a
+        // packet with empty payload.
+        synchronized (dataQueue) {
+          if (currentPacket == null && bytesCurBlock != 0) {
+            currentPacket = new Packet(packetSize, bytesCurBlock);
+            currentPacket.writeInt(0); // one chunk with empty contents
+          }
+          if (currentPacket != null) { 
+            currentPacket.lastPacketInBlock = true;
           }
         }
 
-        if (s != null) {
-          s.close();
-          s = null;
+        flush();             // flush all data to Datanodes
+        closed = true;
+ 
+        // wait for threads to finish processing
+        streamer.close();
+
+        synchronized (dataQueue) {
+          if (response != null) {
+            response.close();
+          }
+          if (blockStream != null) {
+            blockStream.writeInt(0); // indicate end-of-block to datanode
+            blockStream.close();
+            blockReplyStream.close();
+          }
+          if (s != null) {
+            s.close();
+            s = null;
+          }
         }
+
+        // wait for threads to exit
+        if (response != null) {
+          response.join();
+        }
+        streamer.join();
+        streamer = null;
+        blockStream = null;
+        blockReplyStream = null;
+        response = null;
 
         long localstart = System.currentTimeMillis();
         boolean fileComplete = false;
@@ -1814,24 +2278,35 @@ class DFSClient implements FSConstants {
             try {
               Thread.sleep(400);
               if (System.currentTimeMillis() - localstart > 5000) {
-                LOG.info("Could not complete file, retrying...");
+                LOG.info("Could not complete file " + src + " retrying...");
               }
             } catch (InterruptedException ie) {
             }
           }
         }
+      } catch (InterruptedException e) {
+        throw new IOException("Failed to shutdown response thread");
       } finally {
         internalClose();
       }
     }
+
+    void setArtificialSlowdown(long period) {
+      artificialSlowdown = period;
+    }
+
+    void setChunksPerPacket(int value) {
+      chunksPerPacket = Math.min(chunksPerPacket, value);
+      packetSize = chunkSize * chunksPerPacket;
+    }
   }
-  
+
   void reportChecksumFailure(String file, Block blk, DatanodeInfo dn) {
     DatanodeInfo [] dnArr = { dn };
     LocatedBlock [] lblocks = { new LocatedBlock(blk, dnArr) };
     reportChecksumFailure(file, lblocks);
   }
-  
+    
   // just reports checksum failure and ignores any exception during the report.
   void reportChecksumFailure(String file, LocatedBlock lblocks[]) {
     try {
