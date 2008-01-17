@@ -94,7 +94,10 @@
   <property name="clover.db.dir" location="${build.dir}/test/clover/db"/>
   <property name="clover.report.dir" location="${build.dir}/test/clover/reports"/>
 
+  <property name="rat.reporting.classname" value="rat.Report"/>
+
   <available property="clover.present" classname="com.cenqua.clover.tasks.CloverReportTask" />
+
   <!-- check if clover reports should be generated -->
   <condition property="clover.enabled">
     <and>
@@ -129,6 +132,9 @@
     <pathelement location="${test.src.dir}"/>
     <pathelement location="${build.dir}"/>
   </path>
+
+  <!-- properties dependent on the items defined above. -->
+  <available classname="${rat.reporting.classname}" classpathref="classpath" property="rat.present" value="true"/>
 
   <!-- ====================================================== -->
   <!-- Macro definitions                                      -->
@@ -798,6 +804,17 @@
         </tarfileset>
       </param.listofitems>
     </macro_tar>
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Perform audit activities for the release                           -->
+  <!-- ================================================================== -->
+  <target name="releaseaudit" depends="package" description="Release Audit activities">
+    <fail unless="rat.present" message="Failed to load class [${rat.reporting.classname}]. Download the latest rat jar from [http://code.google.com/p/arat] and copy it to [${lib.dir}]. Typically the file name will be of format rat-x.y.z.jar"/>
+    <java classname="${rat.reporting.classname}" fork="true">
+      <classpath refid="classpath"/>
+      <arg value="${build.dir}/${final.name}"/>
+    </java>
   </target>
 
   <!-- ================================================================== -->

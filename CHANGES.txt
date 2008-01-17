@@ -263,6 +263,9 @@ Trunk (unreleased changes)
     HADOOP-2298. Add Ant target for a binary-only distribution.
     (Hrishikesh via nigel)
 
+    HADOOP-2509. Add Ant target for Rat report (Apache license header
+    reports).  (Hrishikesh via nigel)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
