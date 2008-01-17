@@ -192,6 +192,7 @@ Trunk (unreleased changes)
    HADOOP-2557 Shell count function (Edward Yoon via Stack)
    HADOOP-2589 Change an classes/package name from Shell to hql
                (Edward Yoon via Stack)
+   HADOOP-2545 hbase rest server should be started with hbase-daemon.sh
 
 Release 0.15.1
 Branch 0.15

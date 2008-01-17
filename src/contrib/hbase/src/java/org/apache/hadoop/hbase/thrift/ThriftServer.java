@@ -28,12 +28,6 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Map.Entry;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseAdmin;
@@ -45,8 +39,6 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.io.Text;
-
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
@@ -56,6 +48,7 @@ import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.NotFound;
 import org.apache.hadoop.hbase.thrift.generated.RegionDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.ScanEntry;
+import org.apache.hadoop.io.Text;
 
 import com.facebook.thrift.TException;
 import com.facebook.thrift.protocol.TBinaryProtocol;
@@ -571,54 +564,84 @@ public class ThriftServer {
     }
   }
   
-  public static void main(String[] args) {
-    Log LOG = LogFactory.getLog("ThriftServer");
-    
-    // Parse command-line
-    //
-    Options options = new Options();
-    options.addOption("h", "help", false, "print this message");
-    options.addOption("p", "port", true,
-        "server listening port (default: 9090)");
-    CommandLineParser parser = new GnuParser();
-    CommandLine line;
-    
-    try {
-      line = parser.parse(options, args);
-    } catch (ParseException e) {
-      System.out.println("ERROR: " + e.getMessage());
-      HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp("ThriftServer [options]", options);
-      return;
+  //
+  // Main program and support routines
+  //
+  
+  private static void printUsageAndExit() {
+    printUsageAndExit(null);
+  }
+  
+  private static void printUsageAndExit(final String message) {
+    if (message != null) {
+      System.err.println(message);
     }
-    
-    if (line.hasOption("h")) {
-      HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp("ThriftServer [options]", options);
-      return;
+    System.out.println("Usage: java org.apache.hadoop.hbase.thrift.ThriftServer " +
+      "--help | [--port=PORT] start");
+    System.out.println("Arguments:");
+    System.out.println(" start Start thrift server");
+    System.out.println(" stop  Stop thrift server");
+    System.out.println("Options:");
+    System.out.println(" port  Port to listen on. Default: 9090");
+    // System.out.println(" bind  Address to bind on. Default: 0.0.0.0.");
+    System.out.println(" help  Print this message and exit");
+    System.exit(0);
+  }
+
+  /*
+   * Start up the REST servlet in standalone mode.
+   * @param args
+   */
+  protected static void doMain(final String [] args) throws Exception {
+    if (args.length < 1) {
+      printUsageAndExit();
     }
-    
-    int port = Integer.parseInt(line.getOptionValue("p", "9090"));
-    
-    // Launch Thrift Server
-    //
-    try {
-      LOG
-          .info("starting HBase Thrift server on port "
-              + Integer.toString(port));
-      HBaseHandler handler = new HBaseHandler();
-      Hbase.Processor processor = new Hbase.Processor(handler);
-      TServerTransport serverTransport = new TServerSocket(port);
-      TProtocolFactory protFactory = new TBinaryProtocol.Factory(true, true);
-      TServer server = new TThreadPoolServer(processor, serverTransport,
+
+    int port = 9090;
+    // String bindAddress = "0.0.0.0";
+
+    // Process command-line args. TODO: Better cmd-line processing
+    // (but hopefully something not as painful as cli options).
+//    final String addressArgKey = "--bind=";
+    final String portArgKey = "--port=";
+    for (String cmd: args) {
+//      if (cmd.startsWith(addressArgKey)) {
+//        bindAddress = cmd.substring(addressArgKey.length());
+//        continue;
+//      } else 
+      if (cmd.startsWith(portArgKey)) {
+        port = Integer.parseInt(cmd.substring(portArgKey.length()));
+        continue;
+      } else if (cmd.equals("--help") || cmd.equals("-h")) {
+        printUsageAndExit();
+      } else if (cmd.equals("start")) {
+        Log LOG = LogFactory.getLog("ThriftServer");
+        LOG.info("starting HBase Thrift server on port " +
+          Integer.toString(port));
+        HBaseHandler handler = new HBaseHandler();
+        Hbase.Processor processor = new Hbase.Processor(handler);
+        TServerTransport serverTransport = new TServerSocket(port);
+        TProtocolFactory protFactory = new TBinaryProtocol.Factory(true, true);
+        TServer server = new TThreadPoolServer(processor, serverTransport,
           protFactory);
+        server.serve();
+        break;
+      } else if (cmd.equals("stop")) {
+        printUsageAndExit("To shutdown the thrift server run " +
+            "bin/hbase-daemon.sh stop thrift or send a kill signal to " +
+            "the thrift server pid");
+      }
       
-      LOG.info("Starting the server...");
-      server.serve();
-      
-    } catch (Exception x) {
-      x.printStackTrace();
+      // Print out usage if we get to here.
+      printUsageAndExit();
     }
-    LOG.info("done.");
+  }
+  
+  /**
+   * @param args
+   * @throws Exception 
+   */
+  public static void main(String [] args) throws Exception {
+    doMain(args);
   }
 }
