@@ -458,7 +458,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     public Flusher() {
       super();
       this.optionalFlushPeriod = conf.getLong(
-          "hbase.regionserver.optionalcacheflushinterval", 60L * 1000L);
+        "hbase.regionserver.optionalcacheflushinterval", 30 * 60 * 1000L);
 
     }
     
