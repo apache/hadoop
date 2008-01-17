@@ -137,6 +137,7 @@ Trunk (unreleased changes)
    HADOOP-2493 hbase will split on row when the start and end row is the
                same cause data loss (Bryan Duxbury via Stack)
    HADOOP-2629 Shell digests garbage without complaint
+   HADOOP-2619 Compaction errors after a region splits
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable

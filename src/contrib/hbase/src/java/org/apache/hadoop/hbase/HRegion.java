@@ -204,6 +204,7 @@ public class HRegion implements HConstants {
   final HBaseConfiguration conf;
   final HRegionInfo regionInfo;
   final Path regiondir;
+  private final Path regionCompactionDir;
 
   static class WriteState {
     // Set while a memcache flush is happening.
@@ -266,6 +267,9 @@ public class HRegion implements HConstants {
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.regiondir = new Path(basedir, this.regionInfo.getEncodedName());
     Path oldLogFile = new Path(regiondir, HREGION_OLDLOGFILE_NAME);
+
+    this.regionCompactionDir =
+      new Path(getCompactionDir(basedir), this.regionInfo.getEncodedName());
 
     // Move prefab HStore files into place (if any).  This picks up split files
     // and any merges from splits and merges dirs.
@@ -706,6 +710,33 @@ public class HRegion implements HConstants {
     return compactStores();
   }
   
+  /*
+   * @param dir
+   * @return compaction directory for the passed in <code>dir</code>
+   */
+  static Path getCompactionDir(final Path dir) {
+   return new Path(dir, "compaction.dir");
+  }
+
+  /*
+   * Do preparation for pending compaction.
+   * Clean out any vestiges of previous failed compactions.
+   * @throws IOException
+   */
+  private void doRegionCompactionPrep() throws IOException {
+    doRegionCompactionCleanup();
+  }
+  
+  /*
+   * Removes the compaction directory for this Store.
+   * @throws IOException
+   */
+  private void doRegionCompactionCleanup() throws IOException {
+    if (this.fs.exists(this.regionCompactionDir)) {
+      this.fs.delete(this.regionCompactionDir);
+    }
+  }
+  
   /**
    * Compact all the stores.  This should be called periodically to make sure 
    * the stores are kept manageable.  
@@ -743,11 +774,13 @@ public class HRegion implements HConstants {
       LOG.info("starting compaction on region " +
         this.regionInfo.getRegionName().toString());
       boolean status = true;
+      doRegionCompactionPrep();
       for (HStore store : stores.values()) {
         if(!store.compact()) {
           status = false;
         }
       }
+      doRegionCompactionCleanup();
       LOG.info("compaction completed on region " +
         this.regionInfo.getRegionName().toString() + ". Took " +
         StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
