@@ -19,23 +19,16 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import java.io.IOException;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.mortbay.http.SocketListener;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-
-import java.net.URL;
-import org.mortbay.http.HttpContext;
-
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.InfoServer;
+import org.mortbay.http.SocketListener;
 
 /**
  * Servlet implementation class for hbase REST interface.
@@ -166,53 +159,80 @@ implements javax.servlet.Servlet {
     return request.getRequestURI().substring(context_len).split("/");
   }
 
+  //
+  // Main program and support routines
+  //
+  
+  private static void printUsageAndExit() {
+    printUsageAndExit(null);
+  }
+  
+  private static void printUsageAndExit(final String message) {
+    if (message != null) {
+      System.err.println(message);
+    }
+    System.out.println("Usage: java org.apache.hadoop.hbase.rest.Dispatcher " +
+      "--help | [--port=PORT] [--bind=ADDR] start");
+    System.out.println("Arguments:");
+    System.out.println(" start Start REST server");
+    System.out.println(" stop  Stop REST server");
+    System.out.println("Options:");
+    System.out.println(" port  Port to listen on. Default: 60050.");
+    System.out.println(" bind  Address to bind on. Default: 0.0.0.0.");
+    System.out.println(" help  Print this message and exit.");
+    System.exit(0);
+  }
 
   /*
    * Start up the REST servlet in standalone mode.
+   * @param args
    */
-  public static void main(String[] args) throws Exception{
+  protected static void doMain(final String [] args) throws Exception {
+    if (args.length < 1) {
+      printUsageAndExit();
+    }
+
     int port = 60050;
     String bindAddress = "0.0.0.0";
-    
-    // grab the port and bind addresses from the command line if supplied
-    for(int i = 0; i < args.length; i++){
-      if(args[i].equals("--port")){
-        port = Integer.parseInt(args[++i]);
-      } else if(args[i].equals("--bind")){
-        bindAddress = args[++i];
-      } else if(args[i].equals("--help")){
-        printUsage();
-        return;
-      } else {
-        System.out.println("Unrecognized switch " + args[i]);
-        printUsage();
-        return;
-      }
-    }
-    
-    org.mortbay.jetty.Server webServer = new org.mortbay.jetty.Server();
 
-    SocketListener listener = new SocketListener();
-    listener.setPort(port);
-    listener.setHost(bindAddress);
-    webServer.addListener(listener);
+    // Process command-line args. TODO: Better cmd-line processing
+    // (but hopefully something not as painful as cli options).
+    final String addressArgKey = "--bind=";
+    final String portArgKey = "--port=";
+    for (String cmd: args) {
+      if (cmd.startsWith(addressArgKey)) {
+        bindAddress = cmd.substring(addressArgKey.length());
+        continue;
+      } else if (cmd.startsWith(portArgKey)) {
+        port = Integer.parseInt(cmd.substring(portArgKey.length()));
+        continue;
+      } else if (cmd.equals("--help") || cmd.equals("-h")) {
+        printUsageAndExit();
+      } else if (cmd.equals("start")) {
+        org.mortbay.jetty.Server webServer = new org.mortbay.jetty.Server();
+        SocketListener listener = new SocketListener();
+        listener.setPort(port);
+        listener.setHost(bindAddress);
+        webServer.addListener(listener);
+        webServer.addWebApplication("/api", InfoServer.getWebAppDir("rest"));
+        webServer.start();
+        break;
+      } else if (cmd.equals("stop")) {
+        printUsageAndExit("To shutdown the REST server run " +
+            "bin/hbase-daemon.sh stop rest or send a kill signal to " +
+            "the REST server pid");
+      }
+      
+      // Print out usage if we get to here.
+      printUsageAndExit();
+    }
+  }
   
-    webServer.addWebApplication("/api", InfoServer.getWebAppDir("rest"));
-    
-    webServer.start();
-  }  
-  
-  /*
-   * Print out the usage of this class from the command line.
-   */ 
-  private static void printUsage(){
-    System.out.println("Start up the HBase REST servlet.");
-    System.out.println("Options:");
-    System.out.println("--port [port]");
-    System.out.println("\tPort to listen on. Defaults to 60050.");
-    System.out.println("--bind [addr]");
-    System.out.println("\tAddress to bind on. Defaults to 0.0.0.0.");
-    System.out.println("--help");
-    System.out.println("\tPrint this message and exit.");
+  /**
+   * @param args
+   * @throws Exception 
+   */
+  public static void main(String [] args) throws Exception {
+    doMain(args);
   }
 }
