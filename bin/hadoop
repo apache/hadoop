@@ -36,7 +36,6 @@ if [ $# = 0 ]; then
   echo "  secondarynamenode    run the DFS secondary namenode"
   echo "  namenode             run the DFS namenode"
   echo "  datanode             run a DFS datanode"
-  echo "  datanodecluster      run a DFS datanode cluster"
   echo "  dfsadmin             run a DFS admin client"
   echo "  fsck                 run a DFS filesystem checking utility"
   echo "  fs                   run a generic filesystem user client"
