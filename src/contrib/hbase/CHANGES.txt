@@ -138,6 +138,8 @@ Trunk (unreleased changes)
                same cause data loss (Bryan Duxbury via Stack)
    HADOOP-2629 Shell digests garbage without complaint
    HADOOP-2619 Compaction errors after a region splits
+   HADOOP-2621 Memcache flush flushing every 60 secs with out considering
+               the max memcache size
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
