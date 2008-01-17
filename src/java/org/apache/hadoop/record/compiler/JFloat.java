@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.record.compiler;
 
+import org.apache.hadoop.record.compiler.JType.CType;
+import org.apache.hadoop.record.compiler.JType.CppType;
+
 /**
  */
 public class JFloat extends JType {
@@ -25,15 +28,11 @@ public class JFloat extends JType {
   class JavaFloat extends JavaType {
     
     JavaFloat() {
-      super("float", "Float", "Float", "TypeID.RIOType.FLOAT");
+      super("float", "Float", "Float");
     }
     
-    String getTypeIDObjectString() {
-      return "org.apache.hadoop.record.meta.TypeID.FloatTypeID";
-    }
-
     void genHashCode(CodeBuffer cb, String fname) {
-      cb.append(Consts.RIO_PREFIX + "ret = Float.floatToIntBits("+fname+");\n");
+      cb.append("ret = Float.floatToIntBits("+fname+");\n");
     }
     
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
@@ -61,22 +60,10 @@ public class JFloat extends JType {
       cb.append("}\n");
     }
   }
-
-  class CppFloat extends CppType {
-    
-    CppFloat() {
-      super("float");
-    }
-    
-    String getTypeIDObjectString() {
-      return "new ::hadoop::TypeID(::hadoop::RIOTYPE_FLOAT)";
-    }
-  }
-
   /** Creates a new instance of JFloat */
   public JFloat() {
     setJavaType(new JavaFloat());
-    setCppType(new CppFloat());
+    setCppType(new CppType("float"));
     setCType(new CType());
   }
   

@@ -91,8 +91,6 @@ Trunk (unreleased changes)
     HADOOP-2532.  Add to MapFile a getClosest method that returns the key
     that comes just before if the key is not present.  (stack via tomwhite)
 
-    HADOOP-1883.  Add versioning to Record I/O. (Vivek Ratan via ddas)
-
   IMPROVEMENTS
 
     HADOOP-2045.  Change committer list on website to a table, so that

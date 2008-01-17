@@ -70,7 +70,7 @@ private:
   OArchive* mpArchive;
 public:
   RecordWriter(OutStream& stream, RecFormat f);
-  virtual void write(const hadoop::Record& record);
+  virtual void write(hadoop::Record& record);
   virtual ~RecordWriter();
 };
 }; // end namspace hadoop

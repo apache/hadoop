@@ -68,7 +68,7 @@ hadoop::RecordWriter::~RecordWriter()
   delete mpArchive;
 }
 
-void hadoop::RecordWriter::write(const Record& record)
+void hadoop::RecordWriter::write(Record& record)
 {
   record.serialize(*mpArchive, (const char*) NULL);
 }
