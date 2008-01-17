@@ -20,8 +20,8 @@
 
 int main()
 {
-  org::apache::hadoop::record::test::TestRecord1 r1;
-  org::apache::hadoop::record::test::TestRecord1 r2;
+  org::apache::hadoop::record::test::RecRecord1 r1;
+  org::apache::hadoop::record::test::RecRecord1 r2;
   r1.setBoolVal(true);
   r1.setByteVal((int8_t)0x66);
   r1.setFloatVal(3.145);

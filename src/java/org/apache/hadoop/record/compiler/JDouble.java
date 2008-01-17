@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.record.compiler;
 
-import org.apache.hadoop.record.compiler.JType.CType;
-import org.apache.hadoop.record.compiler.JType.CppType;
 
 /**
  */
@@ -28,12 +26,16 @@ public class JDouble extends JType {
   class JavaDouble extends JavaType {
     
     JavaDouble() {
-      super("double", "Double", "Double");
+      super("double", "Double", "Double", "TypeID.RIOType.DOUBLE");
     }
     
+    String getTypeIDObjectString() {
+      return "org.apache.hadoop.record.meta.TypeID.DoubleTypeID";
+    }
+
     void genHashCode(CodeBuffer cb, String fname) {
       String tmp = "Double.doubleToLongBits("+fname+")";
-      cb.append("ret = (int)("+tmp+"^("+tmp+">>>32));\n");
+      cb.append(Consts.RIO_PREFIX + "ret = (int)("+tmp+"^("+tmp+">>>32));\n");
     }
     
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
@@ -61,10 +63,23 @@ public class JDouble extends JType {
       cb.append("}\n");
     }
   }
+
+  class CppDouble extends CppType {
+    
+    CppDouble() {
+      super("double");
+    }
+    
+    String getTypeIDObjectString() {
+      return "new ::hadoop::TypeID(::hadoop::RIOTYPE_DOUBLE)";
+    }
+  }
+
+  
   /** Creates a new instance of JDouble */
   public JDouble() {
     setJavaType(new JavaDouble());
-    setCppType(new CppType("double"));
+    setCppType(new CppDouble());
     setCType(new CType());
   }
   
