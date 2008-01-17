@@ -18,8 +18,7 @@
 
 package org.apache.hadoop.record.compiler;
 
-import org.apache.hadoop.record.compiler.JCompType.CCompType;
-import org.apache.hadoop.record.compiler.JCompType.CppCompType;
+import java.util.Map;
 
 /**
  */
@@ -43,27 +42,46 @@ public class JVector extends JCompType {
     
     JavaVector(JType.JavaType t) {
       super("java.util.ArrayList<"+t.getWrapperType()+">",
-            "Vector", "java.util.ArrayList<"+t.getWrapperType()+">");
+            "Vector", "java.util.ArrayList<"+t.getWrapperType()+">",
+            "TypeID.RIOType.VECTOR");
       element = t;
     }
     
+    String getTypeIDObjectString() {
+      return "new org.apache.hadoop.record.meta.VectorTypeID(" + 
+      element.getTypeIDObjectString() + ")";
+    }
+
+    void genSetRTIFilter(CodeBuffer cb, Map<String, Integer> nestedStructMap) {
+      element.genSetRTIFilter(cb, nestedStructMap);
+    }
+
     void genCompareTo(CodeBuffer cb, String fname, String other) {
       cb.append("{\n");
-      cb.append("int "+getId("len1")+" = "+fname+".size();\n");
-      cb.append("int "+getId("len2")+" = "+other+".size();\n");
-      cb.append("for(int "+getId("vidx")+" = 0; "+getId("vidx")+"<"+
-                getId("len1")+" && "+getId("vidx")+"<"+getId("len2")+"; "+
-                getId("vidx")+"++) {\n");
-      cb.append(element.getType()+" "+getId("e1")+
+      incrLevel();
+      cb.append("int "+getId(Consts.RIO_PREFIX + "len1")+" = "+fname+
+          ".size();\n");
+      cb.append("int "+getId(Consts.RIO_PREFIX + "len2")+" = "+other+
+          ".size();\n");
+      cb.append("for(int "+getId(Consts.RIO_PREFIX + "vidx")+" = 0; "+
+          getId(Consts.RIO_PREFIX + "vidx")+"<"+getId(Consts.RIO_PREFIX + "len1")+
+          " && "+getId(Consts.RIO_PREFIX + "vidx")+"<"+
+          getId(Consts.RIO_PREFIX + "len2")+"; "+
+          getId(Consts.RIO_PREFIX + "vidx")+"++) {\n");
+      cb.append(element.getType()+" "+getId(Consts.RIO_PREFIX + "e1")+
                 " = "+fname+
-                ".get("+getId("vidx")+");\n");
-      cb.append(element.getType()+" "+getId("e2")+
+                ".get("+getId(Consts.RIO_PREFIX + "vidx")+");\n");
+      cb.append(element.getType()+" "+getId(Consts.RIO_PREFIX + "e2")+
                 " = "+other+
-                ".get("+getId("vidx")+");\n");
-      element.genCompareTo(cb, getId("e1"), getId("e2"));
-      cb.append("if (ret != 0) { return ret; }\n");
+                ".get("+getId(Consts.RIO_PREFIX + "vidx")+");\n");
+      element.genCompareTo(cb, getId(Consts.RIO_PREFIX + "e1"), 
+          getId(Consts.RIO_PREFIX + "e2"));
+      cb.append("if (" + Consts.RIO_PREFIX + "ret != 0) { return " +
+          Consts.RIO_PREFIX + "ret; }\n");
       cb.append("}\n");
-      cb.append("ret = ("+getId("len1")+" - "+getId("len2")+");\n");
+      cb.append(Consts.RIO_PREFIX + "ret = ("+getId(Consts.RIO_PREFIX + "len1")+
+          " - "+getId(Consts.RIO_PREFIX + "len2")+");\n");
+      decrLevel();
       cb.append("}\n");
     }
     
@@ -73,13 +91,17 @@ public class JVector extends JCompType {
       }
       cb.append("{\n");
       incrLevel();
-      cb.append("org.apache.hadoop.record.Index "+getId("vidx")+" = a.startVector(\""+tag+"\");\n");
+      cb.append("org.apache.hadoop.record.Index "+
+          getId(Consts.RIO_PREFIX + "vidx")+" = " + 
+          Consts.RECORD_INPUT + ".startVector(\""+tag+"\");\n");
       cb.append(fname+"=new "+getType()+"();\n");
-      cb.append("for (; !"+getId("vidx")+".done(); "+getId("vidx")+".incr()) {\n");
-      element.genReadMethod(cb, getId("e"), getId("e"), true);
-      cb.append(fname+".add("+getId("e")+");\n");
+      cb.append("for (; !"+getId(Consts.RIO_PREFIX + "vidx")+".done(); " + 
+          getId(Consts.RIO_PREFIX + "vidx")+".incr()) {\n");
+      element.genReadMethod(cb, getId(Consts.RIO_PREFIX + "e"), 
+          getId(Consts.RIO_PREFIX + "e"), true);
+      cb.append(fname+".add("+getId(Consts.RIO_PREFIX + "e")+");\n");
       cb.append("}\n");
-      cb.append("a.endVector(\""+tag+"\");\n");
+      cb.append(Consts.RECORD_INPUT + ".endVector(\""+tag+"\");\n");
       decrLevel();
       cb.append("}\n");
     }
@@ -87,13 +109,17 @@ public class JVector extends JCompType {
     void genWriteMethod(CodeBuffer cb, String fname, String tag) {
       cb.append("{\n");
       incrLevel();
-      cb.append("a.startVector("+fname+",\""+tag+"\");\n");
-      cb.append("int "+getId("len")+" = "+fname+".size();\n");
-      cb.append("for(int "+getId("vidx")+" = 0; "+getId("vidx")+"<"+getId("len")+"; "+getId("vidx")+"++) {\n");
-      cb.append(element.getType()+" "+getId("e")+" = "+fname+".get("+getId("vidx")+");\n");
-      element.genWriteMethod(cb, getId("e"), getId("e"));
+      cb.append(Consts.RECORD_OUTPUT + ".startVector("+fname+",\""+tag+"\");\n");
+      cb.append("int "+getId(Consts.RIO_PREFIX + "len")+" = "+fname+".size();\n");
+      cb.append("for(int "+getId(Consts.RIO_PREFIX + "vidx")+" = 0; " + 
+          getId(Consts.RIO_PREFIX + "vidx")+"<"+getId(Consts.RIO_PREFIX + "len")+
+          "; "+getId(Consts.RIO_PREFIX + "vidx")+"++) {\n");
+      cb.append(element.getType()+" "+getId(Consts.RIO_PREFIX + "e")+" = "+
+          fname+".get("+getId(Consts.RIO_PREFIX + "vidx")+");\n");
+      element.genWriteMethod(cb, getId(Consts.RIO_PREFIX + "e"), 
+          getId(Consts.RIO_PREFIX + "e"));
       cb.append("}\n");
-      cb.append("a.endVector("+fname+",\""+tag+"\");\n");
+      cb.append(Consts.RECORD_OUTPUT + ".endVector("+fname+",\""+tag+"\");\n");
       cb.append("}\n");
       decrLevel();
     }
@@ -137,11 +163,31 @@ public class JVector extends JCompType {
     }
   }
   
+  class CppVector extends CppCompType {
+    
+    private JType.CppType element;
+    
+    CppVector(JType.CppType t) {
+      super("::std::vector< "+t.getType()+" >");
+      element = t;
+    }
+    
+    String getTypeIDObjectString() {
+      return "new ::hadoop::VectorTypeID(" +    
+      element.getTypeIDObjectString() + ")";
+    }
+
+    void genSetRTIFilter(CodeBuffer cb) {
+      element.genSetRTIFilter(cb);
+    }
+
+  }
+  
   /** Creates a new instance of JVector */
   public JVector(JType t) {
     type = t;
     setJavaType(new JavaVector(t.getJavaType()));
-    setCppType(new CppCompType(" ::std::vector<"+t.getCppType().getType()+">"));
+    setCppType(new CppVector(t.getCppType()));
     setCType(new CCompType());
   }
   

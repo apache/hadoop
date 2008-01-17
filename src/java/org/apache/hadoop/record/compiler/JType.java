@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.record.compiler;
 
+import java.util.Map;
+
+
 /**
  * Abstract Base class for all types supported by Hadoop Record I/O.
  */
@@ -39,19 +42,49 @@ abstract public class JType {
     private String name;
     private String methodSuffix;
     private String wrapper;
+    private String typeIDByteString; // points to TypeID.RIOType 
     
     JavaType(String javaname,
-             String suffix,
-             String wrapper) {
+        String suffix,
+        String wrapper, 
+        String typeIDByteString) { 
       this.name = javaname;
       this.methodSuffix = suffix;
       this.wrapper = wrapper;
+      this.typeIDByteString = typeIDByteString;
     }
-    
+
     void genDecl(CodeBuffer cb, String fname) {
       cb.append("private "+name+" "+fname+";\n");
     }
     
+    void genStaticTypeInfo(CodeBuffer cb, String fname) {
+      cb.append(Consts.RTI_VAR + ".addField(\"" + fname + "\", " +
+          getTypeIDObjectString() + ");\n");
+    }
+    
+    abstract String getTypeIDObjectString();
+    
+    void genSetRTIFilter(CodeBuffer cb, Map<String, Integer> nestedStructMap) {
+      // do nothing by default
+      return;
+    }
+
+    /*void genRtiFieldCondition(CodeBuffer cb, String fname, int ct) {
+      cb.append("if ((tInfo.fieldID.equals(\"" + fname + "\")) && (typeVal ==" +
+          " org.apache.hadoop.record.meta." + getTypeIDByteString() + ")) {\n");
+      cb.append("rtiFilterFields[i] = " + ct + ";\n");
+      cb.append("}\n");
+    }
+
+    void genRtiNestedFieldCondition(CodeBuffer cb, String varName, int ct) {
+      cb.append("if (" + varName + ".getElementTypeID().getTypeVal() == " +
+          "org.apache.hadoop.record.meta." + getTypeIDByteString() + 
+          ") {\n");
+      cb.append("rtiFilterFields[i] = " + ct + ";\n");
+      cb.append("}\n");  
+    }*/
+
     void genConstructorParam(CodeBuffer cb, String fname) {
       cb.append("final "+name+" "+fname);
     }
@@ -77,20 +110,26 @@ abstract public class JType {
       return methodSuffix;
     }
     
+    String getTypeIDByteString() {
+      return typeIDByteString;
+    }
+    
     void genWriteMethod(CodeBuffer cb, String fname, String tag) {
-      cb.append("a.write"+methodSuffix+"("+fname+",\""+tag+"\");\n");
+      cb.append(Consts.RECORD_OUTPUT + ".write"+methodSuffix + 
+          "("+fname+",\""+tag+"\");\n");
     }
     
     void genReadMethod(CodeBuffer cb, String fname, String tag, boolean decl) {
       if (decl) {
         cb.append(name+" "+fname+";\n");
       }
-      cb.append(fname+"=a.read"+methodSuffix+"(\""+tag+"\");\n");
+      cb.append(fname+"=" + Consts.RECORD_INPUT + ".read" + 
+          methodSuffix+"(\""+tag+"\");\n");
     }
     
     void genCompareTo(CodeBuffer cb, String fname, String other) {
-      cb.append("ret = ("+fname+" == "+other+")? 0 :(("+fname+"<"+other+
-                ")?-1:1);\n");
+      cb.append(Consts.RIO_PREFIX + "ret = ("+fname+" == "+other+")? 0 :(("+
+          fname+"<"+other+")?-1:1);\n");
     }
     
     abstract void genCompareBytes(CodeBuffer cb);
@@ -98,11 +137,11 @@ abstract public class JType {
     abstract void genSlurpBytes(CodeBuffer cb, String b, String s, String l);
     
     void genEquals(CodeBuffer cb, String fname, String peer) {
-      cb.append("ret = ("+fname+"=="+peer+");\n");
+      cb.append(Consts.RIO_PREFIX + "ret = ("+fname+"=="+peer+");\n");
     }
     
     void genHashCode(CodeBuffer cb, String fname) {
-      cb.append("ret = (int)"+fname+";\n");
+      cb.append(Consts.RIO_PREFIX + "ret = (int)"+fname+";\n");
     }
     
     void genConstructorSet(CodeBuffer cb, String fname) {
@@ -110,11 +149,11 @@ abstract public class JType {
     }
     
     void genClone(CodeBuffer cb, String fname) {
-      cb.append("other."+fname+" = this."+fname+";\n");
+      cb.append(Consts.RIO_PREFIX + "other."+fname+" = this."+fname+";\n");
     }
   }
   
-  class CppType {
+  abstract class CppType {
     private String name;
     
     CppType(String cppname) {
@@ -123,6 +162,11 @@ abstract public class JType {
     
     void genDecl(CodeBuffer cb, String fname) {
       cb.append(name+" "+fname+";\n");
+    }
+    
+    void genStaticTypeInfo(CodeBuffer cb, String fname) {
+      cb.append("p->addField(new ::std::string(\"" + 
+          fname + "\"), " + getTypeIDObjectString() + ");\n");
     }
     
     void genGetSet(CodeBuffer cb, String fname) {
@@ -134,6 +178,13 @@ abstract public class JType {
       cb.append("}\n");
     }
     
+    abstract String getTypeIDObjectString();
+
+    void genSetRTIFilter(CodeBuffer cb) {
+      // do nothing by default
+      return;
+    }
+
     String getType() {
       return name;
     }
