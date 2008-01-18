@@ -270,6 +270,9 @@ Trunk (unreleased changes)
     HADOOP-2509. Add Ant target for Rat report (Apache license header
     reports).  (Hrishikesh via nigel)
 
+    HADOOP-2469.  WritableUtils.clone should take a Configuration
+    instead of a JobConf. (stack via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

@@ -20,7 +20,7 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 
-import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import java.util.zip.GZIPInputStream;
@@ -224,7 +224,7 @@ public final class WritableUtils  {
    * @param orig The object to copy
    * @return The copied object
    */
-  public static Writable clone(Writable orig, JobConf conf) {
+  public static Writable clone(Writable orig, Configuration conf) {
     try {
       Writable newInst =
         (Writable)ReflectionUtils.newInstance(orig.getClass(), conf);
