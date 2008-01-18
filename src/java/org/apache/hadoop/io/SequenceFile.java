@@ -1294,6 +1294,8 @@ public class SequenceFile {
 
     private byte version;
 
+    private String keyClassName;
+    private String valClassName;
     private Class keyClass;
     private Class valClass;
 
@@ -1394,15 +1396,15 @@ public class SequenceFile {
 
       if (version < BLOCK_COMPRESS_VERSION) {
         UTF8 className = new UTF8();
-        
-        className.readFields(in);                   // read key class name
-        this.keyClass = WritableName.getClass(className.toString(), conf);
-        
-        className.readFields(in);                   // read val class name
-        this.valClass = WritableName.getClass(className.toString(), conf);
+
+        className.readFields(in);
+        keyClassName = className.toString(); // key class name
+
+        className.readFields(in);
+        valClassName = className.toString(); // val class name
       } else {
-        this.keyClass = WritableName.getClass(Text.readString(in), conf);
-        this.valClass = WritableName.getClass(Text.readString(in), conf);
+        keyClassName = Text.readString(in);
+        valClassName = Text.readString(in);
       }
 
       if (version > 2) {                          // if version > 2
@@ -1490,11 +1492,39 @@ public class SequenceFile {
       in.close();
     }
 
+    /** Returns the name of the key class. */
+    public String getKeyClassName() {
+      return keyClassName;
+    }
+
     /** Returns the class of keys in this file. */
-    public Class getKeyClass() { return keyClass; }
+    public synchronized Class getKeyClass() {
+      if (null == keyClass) {
+        try {
+          keyClass = WritableName.getClass(getKeyClassName(), conf);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+      return keyClass;
+    }
+
+    /** Returns the name of the value class. */
+    public String getValueClassName() {
+      return valClassName;
+    }
 
     /** Returns the class of values in this file. */
-    public Class getValueClass() { return valClass; }
+    public synchronized Class getValueClass() {
+      if (null == valClass) {
+        try {
+          valClass = WritableName.getClass(getValueClassName(), conf);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+      return valClass;
+    }
 
     /** Returns true if values are compressed. */
     public boolean isCompressed() { return decompress; }
@@ -1653,7 +1683,7 @@ public class SequenceFile {
     /** Read the next key in the file into <code>key</code>, skipping its
      * value.  True if another entry exists, and false at end of file. */
     public synchronized boolean next(Writable key) throws IOException {
-      if (key.getClass() != keyClass)
+      if (key.getClass() != getKeyClass())
         throw new IOException("wrong key class: "+key.getClass().getName()
                               +" is not "+keyClass);
 
@@ -1703,7 +1733,7 @@ public class SequenceFile {
      * end of file */
     public synchronized boolean next(Writable key, Writable val)
       throws IOException {
-      if (val.getClass() != valClass)
+      if (val.getClass() != getValueClass())
         throw new IOException("wrong value class: "+val+" is not "+valClass);
 
       boolean more = next(key);
@@ -2870,10 +2900,10 @@ public class SequenceFile {
           //sometimes we ignore syncs especially for temp merge files
           if (ignoreSync) reader.sync = null;
 
-          if (reader.keyClass != keyClass)
+          if (reader.getKeyClass() != keyClass)
             throw new IOException("wrong key class: " + reader.getKeyClass() +
                                   " is not " + keyClass);
-          if (reader.valClass != valClass)
+          if (reader.getValueClass() != valClass)
             throw new IOException("wrong value class: "+reader.getValueClass()+
                                   " is not " + valClass);
           this.in = reader;

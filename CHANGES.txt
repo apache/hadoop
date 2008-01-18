@@ -97,6 +97,10 @@ Trunk (unreleased changes)
    
     HADOOP-1883. Add versioning to Record I/O. (Vivek Ratan via ddas)
 
+    HADOOP-2603.  Add SeqeunceFileAsBinaryInputFormat, which reads
+    sequence files as BytesWritable/BytesWritable regardless of the
+    key and value types used to write the file. (cdouglas via omalley)
+
   IMPROVEMENTS
 
     HADOOP-2045.  Change committer list on website to a table, so that
