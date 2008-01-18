@@ -197,6 +197,10 @@ Trunk (unreleased changes)
    HADOOP-2589 Change an classes/package name from Shell to hql
                (Edward Yoon via Stack)
    HADOOP-2545 hbase rest server should be started with hbase-daemon.sh
+   HADOOP-2525 Same 2 lines repeated 11 million times in HMaster log upon
+               HMaster shutdown
+   HADOOP-2616 hbase not spliting when the total size of region reaches max
+               region size * 1.5
 
 Release 0.15.1
 Branch 0.15
