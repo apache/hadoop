@@ -833,8 +833,21 @@ public class DataNode implements FSConstants, Runnable {
                              errStr);
         break;
       }
-      if (xferTargets[i].length > 0) {
-        LOG.info(dnRegistration + " Starting thread to transfer block " + blocks[i] + " to " + xferTargets[i][0].getName());
+      int numTargets = xferTargets[i].length;
+      if (numTargets > 0) {
+        if (LOG.isInfoEnabled()) {
+          StringBuilder xfersBuilder = new StringBuilder();
+          for (int j = 0; j < numTargets; j++) {
+            DatanodeInfo nodeInfo = xferTargets[i][j];
+            xfersBuilder.append(nodeInfo.getName());
+            if (j < (numTargets - 1)) {
+              xfersBuilder.append(", ");
+            }
+          }
+          String xfersTo = xfersBuilder.toString();
+          LOG.info(dnRegistration + " Starting thread to transfer block " + 
+                   blocks[i] + " to " + xfersTo);                       
+        }
         new Daemon(new DataTransfer(xferTargets[i], blocks[i])).start();
       }
     }

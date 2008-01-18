@@ -503,6 +503,9 @@ Trunk (unreleased changes)
     upgrade from a pre-0.16 install of HDFS.
     (Hairong Kuang via dhruba)
 
+    HADOOP-290. A DataNode log message now prints the target of a replication
+    request correctly. (dhruba)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES
