@@ -140,6 +140,9 @@ public class TaskLogServlet extends HttpServlet {
       
       out.write("</body></html>\n".getBytes());
       out.close();
+    } else if (filter == null) {
+      response.sendError(HttpServletResponse.SC_BAD_REQUEST,
+          "You must supply a value for `filter' (STDOUT, STDERR, or SYSLOG) if you set plainText = true");
     } else {
       printTaskLog(response, out, taskId, start, end, plainText, filter);
     } 
