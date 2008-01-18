@@ -1036,7 +1036,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     startServiceThreads();
     /* Main processing loop */
     try {
-      for (RegionServerOperation op = null; !closed.get(); ) {
+      while (!closed.get()) {
+        RegionServerOperation op = null;
         if (shutdownRequested && serversToServerInfo.size() == 0) {
           startShutdown();
           break;
@@ -1951,7 +1952,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     private String deadServerName;
     private Path oldLogDir;
     private boolean logSplit;
-    private boolean rootChecked;
     private boolean rootRescanned;
 
     private class ToDoEntry {
@@ -1976,7 +1976,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       this.deadServer = serverInfo.getServerAddress();
       this.deadServerName = this.deadServer.toString();
       this.logSplit = false;
-      this.rootChecked = false;
       this.rootRescanned = false;
       StringBuilder dirName = new StringBuilder("log_");
       dirName.append(deadServer.getBindAddress());
@@ -2147,10 +2146,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     @Override
     protected boolean process() throws IOException {
       LOG.info("process shutdown of server " + deadServer + ": logSplit: " +
-          this.logSplit + ", rootChecked: " + this.rootChecked +
-          ", rootRescanned: " + this.rootRescanned + ", numberOfMetaRegions: " +
-          numberOfMetaRegions.get() + ", onlineMetaRegions.size(): " +
-          onlineMetaRegions.size());
+          this.logSplit + ", rootRescanned: " + this.rootRescanned +
+          ", numberOfMetaRegions: " + numberOfMetaRegions.get() +
+          ", onlineMetaRegions.size(): " + onlineMetaRegions.size());
 
       if (!logSplit) {
         // Process the old log file
@@ -2167,13 +2165,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         logSplit = true;
       }
 
-      if (!rootChecked) {
-        if (!rootAvailable()) {
-          // Return true so that worker does not put this request back on the
-          // toDoQueue.
-          // rootAvailable() has already put it on the delayedToDoQueue
-          return true;
-        }
+      if (!rootAvailable()) {
+        // Return true so that worker does not put this request back on the
+        // toDoQueue.
+        // rootAvailable() has already put it on the delayedToDoQueue
+        return true;
       }
 
       if (!rootRescanned) {
@@ -2184,15 +2180,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         for (int tries = 0; tries < numRetries; tries ++) {
           if (closed.get()) {
             return true;
-          }
-          if (rootRegionLocation.get() == null || !rootScanned) {
-            // We can't proceed until the root region is online and has been scanned
-            
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("process server shutdown scanning root region " +
-              "cancelled because rootRegionLocation is null");
-            }
-            return false;
           }
           server = connection.getHRegionConnection(rootRegionLocation.get());
           scannerId = -1L;
