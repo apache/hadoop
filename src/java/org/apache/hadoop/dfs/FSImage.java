@@ -712,7 +712,7 @@ class FSImage extends Storage {
             blockSize = Math.max(fsNamesys.getDefaultBlockSize(), first);
           }
         }
-        PermissionStatus permissions = PermissionChecker.ANONYMOUS;
+        PermissionStatus permissions = fsNamesys.getUpgradePermission();
         if (imgVersion <= -11) {
           permissions = PermissionStatus.read(in);
         }

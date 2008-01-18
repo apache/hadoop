@@ -29,10 +29,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 class PermissionChecker {
   static final Log LOG = LogFactory.getLog(UserGroupInformation.class);
 
-  /** Anonymous PermissionStatus. */
-  static final PermissionStatus ANONYMOUS = PermissionStatus.createImmutable(
-      "HadoopAnonymous", "HadoopAnonymous", new FsPermission((short)0777));
-
   final String user;
   private final Set<String> groups = new HashSet<String>();
   final boolean isSuper;

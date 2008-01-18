@@ -61,6 +61,7 @@ class FSNamesystem implements FSConstants {
   private boolean isPermissionEnabled;
   private UserGroupInformation fsOwner;
   private String supergroup;
+  private PermissionStatus defaultPermission;
 
   //
   // Stores the correct file name hierarchy
@@ -323,6 +324,10 @@ class FSNamesystem implements FSConstants {
     this.isPermissionEnabled = conf.getBoolean("dfs.permissions", true);
     LOG.info("supergroup=" + supergroup);
     LOG.info("isPermissionEnabled=" + isPermissionEnabled);
+    short filePermission = (short)conf.getInt("dfs.upgrade.permission", 0777);
+    this.defaultPermission = PermissionStatus.createImmutable(
+        fsOwner.getUserName(), supergroup, new FsPermission(filePermission));
+
 
     this.replicator = new ReplicationTargetChooser(
                          conf.getBoolean("dfs.replication.considerLoad", true),
@@ -360,6 +365,14 @@ class FSNamesystem implements FSConstants {
     this.maxFsObjects = conf.getLong("dfs.max.objects", 0);
   }
 
+  /**
+   * Return the default path permission when upgrading from releases with no
+   * permissions (<=0.15) to releases with permissions (>=0.16)
+   */
+  protected PermissionStatus getUpgradePermission() {
+    return defaultPermission;
+  }
+  
   /** Return the FSNamesystem object
    * 
    */
@@ -715,7 +728,9 @@ class FSNamesystem implements FSConstants {
    */
   LocatedBlocks getBlockLocations(String clientMachine, String src,
       long offset, long length) throws IOException {
-    checkPathAccess(src, FsAction.READ);
+    if (isPermissionEnabled) {
+      checkPathAccess(src, FsAction.READ);
+    }
     return getBlockLocationsInternal(clientMachine, src, offset, length);
   }
   LocatedBlocks getBlockLocationsInternal(String clientMachine,
@@ -828,7 +843,9 @@ class FSNamesystem implements FSConstants {
     if (isInSafeMode())
       throw new SafeModeException("Cannot set replication for " + src, safeMode);
     verifyReplication(src, replication, null);
-    checkPathAccess(src, FsAction.WRITE);
+    if (isPermissionEnabled) {
+      checkPathAccess(src, FsAction.WRITE);
+    }
 
     int[] oldReplication = new int[1];
     Block[] fileBlocks;
@@ -856,7 +873,9 @@ class FSNamesystem implements FSConstants {
   }
     
   long getPreferredBlockSize(String filename) throws IOException {
-    checkTraverse(filename);
+    if (isPermissionEnabled) {
+      checkTraverse(filename);
+    }
     return dir.getPreferredBlockSize(filename);
   }
     
@@ -913,11 +932,13 @@ class FSNamesystem implements FSConstants {
     if (!isValidName(src)) {
       throw new IOException("Invalid file name: " + src);      	  
     }
-    if (overwrite && exists(src)) {
-      checkPathAccess(src, FsAction.WRITE);
-    }
-    else {
-      checkAncestorAccess(src, FsAction.WRITE);
+    if (isPermissionEnabled) {
+      if (overwrite && exists(src)) {
+        checkPathAccess(src, FsAction.WRITE);
+      }
+      else {
+        checkAncestorAccess(src, FsAction.WRITE);
+      }
     }
 
     try {
@@ -1381,8 +1402,10 @@ class FSNamesystem implements FSConstants {
       throw new IOException("Invalid name: " + dst);
     }
 
-    checkParentAccess(src, FsAction.WRITE);
-    checkAncestorAccess(dst, FsAction.WRITE);
+    if (isPermissionEnabled) {
+      checkParentAccess(src, FsAction.WRITE);
+      checkAncestorAccess(dst, FsAction.WRITE);
+    }
 
     return dir.renameTo(src, dst);
   }
@@ -1414,7 +1437,7 @@ class FSNamesystem implements FSConstants {
     NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
     if (enforceSafeMode && isInSafeMode())
       throw new SafeModeException("Cannot delete " + src, safeMode);
-    if (enforcePermission) {
+    if (enforcePermission && isPermissionEnabled) {
       checkPermission(src, false, null, FsAction.WRITE, null, FsAction.ALL);
     }
 
@@ -1441,7 +1464,9 @@ class FSNamesystem implements FSConstants {
    * Return whether the given filename exists
    */
   public boolean exists(String src) throws AccessControlException {
-    checkTraverse(src);
+    if (isPermissionEnabled) {
+      checkTraverse(src);
+    }
     return dir.exists(src);
   }
 
@@ -1449,7 +1474,9 @@ class FSNamesystem implements FSConstants {
    * Whether the given name is a directory
    */
   public boolean isDir(String src) throws AccessControlException {
-    checkTraverse(src);
+    if (isPermissionEnabled) {
+      checkTraverse(src);
+    }
     return dir.isDir(src);
   }
 
@@ -1459,7 +1486,9 @@ class FSNamesystem implements FSConstants {
    * @return object containing information regarding the file
    */
   DFSFileInfo getFileInfo(String src) throws IOException {
-    checkTraverse(src);
+    if (isPermissionEnabled) {
+      checkTraverse(src);
+    }
     return dir.getFileInfo(src);
   }
 
@@ -1508,7 +1537,9 @@ class FSNamesystem implements FSConstants {
     if (!isValidName(src)) {
       throw new IOException("Invalid directory name: " + src);
     }
-    checkAncestorAccess(src, FsAction.WRITE);
+    if (isPermissionEnabled) {
+      checkAncestorAccess(src, FsAction.WRITE);
+    }
 
     // validate that we have enough inodes. This is, at best, a 
     // heuristic because the mkdirs() operation migth need to 
@@ -1527,7 +1558,9 @@ class FSNamesystem implements FSConstants {
    * @return size in bytes
    */
   long getContentLength(String src) throws IOException {
-    checkPermission(src, false, null, null, null, FsAction.READ_EXECUTE);
+    if (isPermissionEnabled) {
+      checkPermission(src, false, null, null, null, FsAction.READ_EXECUTE);
+    }
     return dir.getContentLength(src);
   }
 
@@ -1752,11 +1785,13 @@ class FSNamesystem implements FSConstants {
    * exists so we can return file attributes (soon to be implemented)
    */
   public DFSFileInfo[] getListing(String src) throws IOException {
-    if (dir.isDir(src)) {
-      checkPathAccess(src, FsAction.READ);
-    }
-    else {
-      checkTraverse(src);
+    if (isPermissionEnabled) {
+      if (dir.isDir(src)) {
+        checkPathAccess(src, FsAction.READ);
+      }
+      else {
+        checkTraverse(src);
+      }
     }
     return dir.getListing(src);
   }
@@ -3914,7 +3949,7 @@ class FSNamesystem implements FSConstants {
       FsAction subAccess) throws AccessControlException {
     PermissionChecker pc = new PermissionChecker(
         fsOwner.getUserName(), supergroup);
-    if (isPermissionEnabled && !pc.isSuper) {
+    if (!pc.isSuper) {
       dir.waitForReady();
       pc.checkPermission(path, dir.rootDir, doCheckOwner,
           ancestorAccess, parentAccess, access, subAccess);

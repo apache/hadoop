@@ -471,7 +471,7 @@ class FSEditLog {
                 blockSize = Math.max(fsNamesys.getDefaultBlockSize(), first);
               }
             }
-            PermissionStatus permissions = PermissionChecker.ANONYMOUS;
+            PermissionStatus permissions = fsNamesys.getUpgradePermission();
             if (logVersion <= -11) {
               permissions = PermissionStatus.read(in);
             }
@@ -540,7 +540,7 @@ class FSEditLog {
           }
           case OP_MKDIR: {
             UTF8 src = null;
-            PermissionStatus permissions = PermissionChecker.ANONYMOUS;
+            PermissionStatus permissions = fsNamesys.getUpgradePermission();
             if (logVersion >= -4) {
               src = new UTF8();
               src.readFields(in);
