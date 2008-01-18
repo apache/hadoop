@@ -430,7 +430,7 @@ public class HRegion implements HConstants {
         // outstanding row locks to come in before we close so we do not drop
         // outstanding updates.
         waitOnRowLocks();
-        LOG.debug("no more write locks outstanding on region " + regionName);
+        LOG.debug("no more row locks outstanding on region " + regionName);
         
         if (listener != null) {
           // If there is a listener, let them know that we have now
