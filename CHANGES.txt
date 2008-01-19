@@ -510,6 +510,10 @@ Trunk (unreleased changes)
     the filter parameter is not given in TaskLogServlet.  
     (Michael Bieniosek via enis)
 
+    HADOOP-2582. Prevent 'bin/hadoop fs -copyToLocal' from creating
+    zero-length files when the src does not exist.
+    (Lohit Vijayarenu via cdouglas)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES

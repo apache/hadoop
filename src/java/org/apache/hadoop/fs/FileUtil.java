@@ -208,6 +208,9 @@ public class FileUtil {
     } else if (src.isFile()) {
       InputStream in = new FileInputStream(src);
       IOUtils.copyBytes(in, dstFS.create(dst), conf);
+    } else {
+      throw new IOException(src.toString() + 
+                            ": No such file or directory");
     }
     if (deleteSource) {
       return FileUtil.fullyDelete(src);
@@ -232,6 +235,9 @@ public class FileUtil {
     } else if (srcFS.isFile(src)) {
       InputStream in = srcFS.open(src);
       IOUtils.copyBytes(in, new FileOutputStream(dst), conf);
+    } else {
+      throw new IOException(src.toString() + 
+                            ": No such file or directory");
     }
     if (deleteSource) {
       return srcFS.delete(src);

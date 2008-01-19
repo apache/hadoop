@@ -292,6 +292,19 @@ public class TestDFSShell extends TestCase {
         f5.delete();
         sub.delete();
       }
+      // Verify copying non existing sources do not create zero byte
+      // destination files
+      {
+        String[] args = {"-copyToLocal", "nosuchfile", TEST_ROOT_DIR};
+        try {   
+          assertEquals(-1, shell.run(args));
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                            e.getLocalizedMessage());
+        }                            
+        File f6 = new File(TEST_ROOT_DIR, "nosuchfile");
+        assertTrue(!f6.exists());
+      }
     } finally {
       try {
         dfs.close();
