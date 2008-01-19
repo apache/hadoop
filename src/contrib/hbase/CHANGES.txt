@@ -201,7 +201,8 @@ Trunk (unreleased changes)
                HMaster shutdown
    HADOOP-2616 hbase not spliting when the total size of region reaches max
                region size * 1.5
-
+   HADOOP-2643 Make migration tool smarter.
+   
 Release 0.15.1
 Branch 0.15
 
