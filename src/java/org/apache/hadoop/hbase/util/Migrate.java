@@ -136,7 +136,14 @@ public class Migrate extends Configured implements Tool {
     Path rootdir = fs.makeQualified(new Path(          // get path for instance
         conf.get(HConstants.HBASE_DIR, HConstants.DEFAULT_HBASE_DIR)));
 
-    // check for "extra" files
+    // See if there is a file system version file
+    
+    if (FSUtils.checkVersion(fs, rootdir)) {
+      LOG.info("file system is at current level, no upgrade necessary");
+      return 0;
+    }
+    
+    // check for "extra" files and for old upgradable regions
 
     extraFiles(fs, rootdir);
 
@@ -155,10 +162,14 @@ public class Migrate extends Configured implements Tool {
     // scan for left over regions
 
     extraRegions(fs, rootdir);
+    
+    // set file system version
+    
+    FSUtils.setVersion(fs, rootdir);
 
     return 0;
   }
-
+  
   private void extraFiles(FileSystem fs, Path rootdir) throws IOException {
     FileStatus[] stats = fs.listStatus(rootdir);
     if (stats == null || stats.length == 0) {
@@ -174,6 +185,15 @@ public class Migrate extends Configured implements Tool {
         } else {
           String message = "unrecognized file " + name;
           extraFile(otherFiles, message, fs, stats[i].getPath());
+        }
+      } else {
+        String regionName = name.substring(OLD_PREFIX.length());
+        try {
+          Integer.parseInt(regionName);
+          
+        } catch (NumberFormatException e) {
+          extraFile(otherFiles, "old region format can not be converted: " +
+              name, fs, stats[i].getPath());
         }
       }
     }

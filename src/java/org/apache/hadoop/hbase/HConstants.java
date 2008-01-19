@@ -26,6 +26,14 @@ import org.apache.hadoop.io.Text;
  */
 public interface HConstants {
   
+  // For migration
+
+  /** name of version file */
+  static final String VERSION_FILE_NAME = "hbase.version";
+  
+  /** version of file system */
+  static final String FILE_SYSTEM_VERSION = "0.1";
+  
   // Configuration parameters
   
   // TODO: URL for hbase master like hdfs URLs with host and port.

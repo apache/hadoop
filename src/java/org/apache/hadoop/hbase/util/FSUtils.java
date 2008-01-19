@@ -19,12 +19,16 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.DataInputStream;
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.dfs.DistributedFileSystem;
 
 /**
@@ -71,4 +75,40 @@ public class FSUtils {
     }
     return available;
   }
+  
+  /**
+   * Verifies current version of file system
+   * 
+   * @param fs
+   * @param rootdir
+   * @return true if the current file system is the correct version
+   * @throws IOException
+   */
+  public static boolean checkVersion(FileSystem fs, Path rootdir) throws IOException {
+    Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
+    boolean versionOk = false;
+    if (fs.exists(versionFile)) {
+      FSDataInputStream s =
+        fs.open(new Path(rootdir, HConstants.VERSION_FILE_NAME));
+      String version = DataInputStream.readUTF(s);
+      s.close();
+      versionOk = version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0;
+    }
+    return versionOk;
+  }
+  
+  /**
+   * Sets version of file system
+   * 
+   * @param fs
+   * @param rootdir
+   * @throws IOException
+   */
+  public static void setVersion(FileSystem fs, Path rootdir) throws IOException {
+    FSDataOutputStream s =
+      fs.create(new Path(rootdir, HConstants.VERSION_FILE_NAME));
+    s.writeUTF(HConstants.FILE_SYSTEM_VERSION);
+    s.close();
+  }
+
 }

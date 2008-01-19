@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
 
+import org.apache.hadoop.hbase.util.FSUtils;
+
 /**
  * This class creates a single process HBase cluster. One thread is created for
  * each server.
@@ -138,6 +140,7 @@ public class MiniHBaseCluster implements HConstants {
     try {
       this.parentdir = new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
       fs.mkdirs(parentdir);
+      FSUtils.setVersion(fs, parentdir);
       this.hbaseCluster = new LocalHBaseCluster(this.conf, nRegionNodes);
       this.hbaseCluster.startup();
     } catch(IOException e) {
