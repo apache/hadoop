@@ -201,6 +201,37 @@ public class TestConfiguration extends TestCase {
 
   BufferedWriter out;
 	
+  public void testIntegerRanges() {
+    Configuration conf = new Configuration();
+    conf.set("first", "-100");
+    conf.set("second", "4-6,9-10,27");
+    conf.set("third", "34-");
+    Configuration.IntegerRanges range = conf.getRange("first", null);
+    System.out.println("first = " + range);
+    assertEquals(true, range.isIncluded(0));
+    assertEquals(true, range.isIncluded(1));
+    assertEquals(true, range.isIncluded(100));
+    assertEquals(false, range.isIncluded(101));
+    range = conf.getRange("second", null);
+    System.out.println("second = " + range);
+    assertEquals(false, range.isIncluded(3));
+    assertEquals(true, range.isIncluded(4));
+    assertEquals(true, range.isIncluded(6));
+    assertEquals(false, range.isIncluded(7));
+    assertEquals(false, range.isIncluded(8));
+    assertEquals(true, range.isIncluded(9));
+    assertEquals(true, range.isIncluded(10));
+    assertEquals(false, range.isIncluded(11));
+    assertEquals(false, range.isIncluded(26));
+    assertEquals(true, range.isIncluded(27));
+    assertEquals(false, range.isIncluded(28));
+    range = conf.getRange("third", null);
+    System.out.println("third = " + range);
+    assertEquals(false, range.isIncluded(33));
+    assertEquals(true, range.isIncluded(34));
+    assertEquals(true, range.isIncluded(100000000));
+  }
+
   public static void main(String[] argv) throws Exception {
     junit.textui.TestRunner.main(new String[]{
       TestConfiguration.class.getName()

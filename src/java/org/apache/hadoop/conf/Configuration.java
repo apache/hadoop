@@ -32,10 +32,12 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -461,6 +463,103 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    */
   public void setBoolean(String name, boolean value) {
     set(name, Boolean.toString(value));
+  }
+
+  /**
+   * A class that represents a set of positive integer ranges. It parses 
+   * strings of the form: "2-3,5,7-" where ranges are separated by comma and 
+   * the lower/upper bounds are separated by dash. Either the lower or upper 
+   * bound may be omitted meaning all values up to or over. So the string 
+   * above means 2, 3, 5, and 7, 8, 9, ...
+   */
+  public static class IntegerRanges {
+    private static class Range {
+      int start;
+      int end;
+    }
+
+    List<Range> ranges = new ArrayList<Range>();
+    
+    public IntegerRanges() {
+    }
+    
+    public IntegerRanges(String newValue) {
+      StringTokenizer itr = new StringTokenizer(newValue, ",");
+      while (itr.hasMoreTokens()) {
+        String rng = itr.nextToken().trim();
+        String[] parts = rng.split("-", 3);
+        if (parts.length < 1 || parts.length > 2) {
+          throw new IllegalArgumentException("integer range badly formed: " + 
+                                             rng);
+        }
+        Range r = new Range();
+        r.start = convertToInt(parts[0], 0);
+        if (parts.length == 2) {
+          r.end = convertToInt(parts[1], Integer.MAX_VALUE);
+        } else {
+          r.end = r.start;
+        }
+        if (r.start > r.end) {
+          throw new IllegalArgumentException("IntegerRange from " + r.start + 
+                                             " to " + r.end + " is invalid");
+        }
+        ranges.add(r);
+      }
+    }
+
+    /**
+     * Convert a string to an int treating empty strings as the default value.
+     * @param value the string value
+     * @param defaultValue the value for if the string is empty
+     * @return the desired integer
+     */
+    private static int convertToInt(String value, int defaultValue) {
+      String trim = value.trim();
+      if (trim.length() == 0) {
+        return defaultValue;
+      }
+      return Integer.parseInt(trim);
+    }
+
+    /**
+     * Is the given value in the set of ranges
+     * @param value the value to check
+     * @return is the value in the ranges?
+     */
+    public boolean isIncluded(int value) {
+      for(Range r: ranges) {
+        if (r.start <= value && value <= r.end) {
+          return true;
+        }
+      }
+      return false;
+    }
+    
+    public String toString() {
+      StringBuffer result = new StringBuffer();
+      boolean first = true;
+      for(Range r: ranges) {
+        if (first) {
+          first = false;
+        } else {
+          result.append(',');
+        }
+        result.append(r.start);
+        result.append('-');
+        result.append(r.end);
+      }
+      return result.toString();
+    }
+  }
+
+  /**
+   * Parse the given attribute as a set of integer ranges
+   * @param name the attribute name
+   * @param defaultValue the default value if it is not set
+   * @return a new set of ranges from the configured value
+   */
+  public IntegerRanges getRange(String name, String defaultValue) {
+    return new IntegerRanges(get(name, defaultValue));
   }
 
   /** 

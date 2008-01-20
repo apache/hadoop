@@ -101,6 +101,11 @@ Trunk (unreleased changes)
     sequence files as BytesWritable/BytesWritable regardless of the
     key and value types used to write the file. (cdouglas via omalley)
 
+    HADOOP-2367. Add ability to profile a subset of map/reduce tasks and fetch
+    the result to the local filesystem of the submitting application. Also
+    includes a general IntegerRanges extension to Configuration for setting
+    positive, ranged parameters. (Owen O'Malley via cdouglas)
+
   IMPROVEMENTS
 
     HADOOP-2045.  Change committer list on website to a table, so that

@@ -1186,7 +1186,47 @@ public class JobConf extends Configuration {
     
     return JobPriority.valueOf(prio);
   }
-  
+
+  /**
+   * Get whether the task profiling is enabled.
+   * @return true if some tasks will be profiled
+   */
+  public boolean getProfileEnabled() {
+    return getBoolean("mapred.task.profile", false);
+  }
+
+  /**
+   * Set whether the system should collect profiler information for some of 
+   * the tasks in this job? The information is stored in the the user log 
+   * directory.
+   * @param newValue true means it should be gathered
+   */
+  public void setProfileEnabled(boolean newValue) {
+    setBoolean("mapred.task.profile", newValue);
+  }
+
+  /**
+   * Get the range of maps or reduces to profile.
+   * @param isMap is the task a map?
+   * @return the task ranges
+   */
+  public IntegerRanges getProfileTaskRange(boolean isMap) {
+    return getRange((isMap ? "mapred.task.profile.maps" : 
+                       "mapred.task.profile.reduces"), "0-2");
+  }
+
+  /**
+   * Set the ranges of maps or reduces to profile. setProfileEnabled(true) 
+   * must also be called.
+   * @param newValue a set of integer ranges of the map ids
+   */
+  public void setProfileTaskRange(boolean isMap, String newValue) {
+    // parse the value to make sure it is legal
+    new Configuration.IntegerRanges(newValue);
+    set((isMap ? "mapred.task.profile.maps" : "mapred.task.profile.reduces"), 
+        newValue);
+  }
+
   /**
    * Set the debug script to run when the map tasks fail.
    * 

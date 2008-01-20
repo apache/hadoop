@@ -22,7 +22,9 @@ import java.io.BufferedWriter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -50,6 +52,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
@@ -755,7 +758,17 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   public JobStatus[] jobsToComplete() throws IOException {
     return jobSubmitClient.jobsToComplete();
   }
-    
+
+  private static void downloadProfile(TaskCompletionEvent e
+                                      ) throws IOException  {
+    URLConnection connection = new URL(e.getTaskTrackerHttp() + 
+                                       "&plaintext=true&filter=profile"
+                                       ).openConnection();
+    InputStream in = connection.getInputStream();
+    OutputStream out = new FileOutputStream(e.getTaskId() + ".profile");
+    IOUtils.copyBytes(in, out, 64 * 1024, true);
+  }
+
   /** 
    * Get the jobs that are submitted.
    * 
@@ -792,7 +805,10 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       running = jc.submitJob(job);
       String jobId = running.getJobID();
       LOG.info("Running job: " + jobId);
-      int eventCounter = 0; 
+      int eventCounter = 0;
+      boolean profiling = job.getProfileEnabled();
+      Configuration.IntegerRanges mapRanges = job.getProfileTaskRange(true);
+      Configuration.IntegerRanges reduceRanges = job.getProfileTaskRange(false);
         
       while (true) {
         try {
@@ -812,48 +828,56 @@ public class JobClient extends Configured implements MRConstants, Tool  {
             lastReport = report;
           }
             
-          if (filter  != TaskStatusFilter.NONE){
-            TaskCompletionEvent[] events = 
-              running.getTaskCompletionEvents(eventCounter); 
-            eventCounter += events.length;
-            for(TaskCompletionEvent event : events){
-              switch(filter){
-              case SUCCEEDED:
-                if (event.getTaskStatus() == 
-                    TaskCompletionEvent.Status.SUCCEEDED){
-                  LOG.info(event.toString());
-                  displayTaskLogs(event.getTaskId(), event.getTaskTrackerHttp());
-                }
-                break; 
-              case FAILED:
-                if (event.getTaskStatus() == 
-                    TaskCompletionEvent.Status.FAILED){
-                  LOG.info(event.toString());
-                  // Displaying the task diagnostic information
-                  String taskId = event.getTaskId();
-                  String tipId = TaskInProgress.getTipId(taskId);
-                  String[] taskDiagnostics = 
-                	  jc.jobSubmitClient.getTaskDiagnostics(jobId, tipId, 
-                			                                taskId); 
-                  if (taskDiagnostics != null) {
-                    for(String diagnostics : taskDiagnostics){
-                   	  System.err.println(diagnostics);
-                    }
-                  }
-                  // Displaying the task logs
-                  displayTaskLogs(event.getTaskId(), event.getTaskTrackerHttp());
-                }
-                break; 
-              case KILLED:
-                if (event.getTaskStatus() == TaskCompletionEvent.Status.KILLED){
-                  LOG.info(event.toString());
-                }
-                break; 
-              case ALL:
+          TaskCompletionEvent[] events = 
+            running.getTaskCompletionEvents(eventCounter); 
+          eventCounter += events.length;
+          for(TaskCompletionEvent event : events){
+            TaskCompletionEvent.Status status = event.getTaskStatus();
+            if (profiling && 
+                (status == TaskCompletionEvent.Status.SUCCEEDED ||
+                 status == TaskCompletionEvent.Status.FAILED) &&
+                (event.isMap ? mapRanges : reduceRanges).
+                   isIncluded(event.idWithinJob())) {
+              downloadProfile(event);
+            }
+            switch(filter){
+            case NONE:
+              break;
+            case SUCCEEDED:
+              if (event.getTaskStatus() == 
+                TaskCompletionEvent.Status.SUCCEEDED){
                 LOG.info(event.toString());
                 displayTaskLogs(event.getTaskId(), event.getTaskTrackerHttp());
-                break;
               }
+              break; 
+            case FAILED:
+              if (event.getTaskStatus() == 
+                TaskCompletionEvent.Status.FAILED){
+                LOG.info(event.toString());
+                // Displaying the task diagnostic information
+                String taskId = event.getTaskId();
+                String tipId = TaskInProgress.getTipId(taskId);
+                String[] taskDiagnostics = 
+                  jc.jobSubmitClient.getTaskDiagnostics(jobId, tipId, 
+                                                        taskId); 
+                if (taskDiagnostics != null) {
+                  for(String diagnostics : taskDiagnostics){
+                    System.err.println(diagnostics);
+                  }
+                }
+                // Displaying the task logs
+                displayTaskLogs(event.getTaskId(), event.getTaskTrackerHttp());
+              }
+              break; 
+            case KILLED:
+              if (event.getTaskStatus() == TaskCompletionEvent.Status.KILLED){
+                LOG.info(event.toString());
+              }
+              break; 
+            case ALL:
+              LOG.info(event.toString());
+              displayTaskLogs(event.getTaskId(), event.getTaskTrackerHttp());
+              break;
             }
           }
           retries = MAX_RETRIES;

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapred;
 
+import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -30,14 +31,67 @@ import org.apache.hadoop.util.StringUtils;
  * A servlet that is run by the TaskTrackers to provide the task logs via http.
  */
 public class TaskLogServlet extends HttpServlet {
+  
+  private boolean haveTaskLog(String taskId, TaskLog.LogName type) {
+    File f = TaskLog.getTaskLogFile(taskId, type);
+    return f.canRead();
+  }
+
+  /**
+   * Find the next quotable character in the given array.
+   * @param data the bytes to look in
+   * @param offset the first index to look in
+   * @param end the index after the last one to look in
+   * @return the index of the quotable character or end if none was found
+   */
+  private static int findFirstQuotable(byte[] data, int offset, int end) {
+    while (offset < end) {
+      switch (data[offset]) {
+      case '<':
+      case '>':
+      case '&':
+        return offset;
+      default:
+        offset += 1;
+      }
+    }
+    return offset;
+  }
+
+  private static void quotedWrite(OutputStream out, byte[] data, int offset,
+                                  int length) throws IOException {
+    int end = offset + length;
+    while (offset < end) {
+      int next = findFirstQuotable(data, offset, end);
+      out.write(data, offset, next - offset);
+      offset = next;
+      if (offset < end) {
+        switch (data[offset]) {
+        case '<':
+          out.write("&lt;".getBytes());
+          break;
+        case '>':
+          out.write("&gt;".getBytes());
+          break;
+        case '&':
+          out.write("&amp;".getBytes());
+          break;
+        default:
+          out.write(data[offset]);
+          break;
+        }
+        offset += 1;
+      }
+    }
+  }
+
   private void printTaskLog(HttpServletResponse response,
                             OutputStream out, String taskId, 
                             long start, long end, boolean plainText, 
                             TaskLog.LogName filter) throws IOException {
     if (!plainText) {
       out.write(("<br><b><u>" + filter + " logs</u></b><br>\n" +
-                 "<table border=2 cellpadding=\"2\">\n" +
-                 "<tr><td><pre>\n").getBytes());
+                 "<pre>\n").getBytes());
     }
 
     try {
@@ -48,7 +102,11 @@ public class TaskLogServlet extends HttpServlet {
       while (true) {
         result = taskLogReader.read(b);
         if (result > 0) {
-          out.write(b, 0, result);
+          if (plainText) {
+            out.write(b, 0, result); 
+          } else {
+            quotedWrite(out, b, 0, result);
+          }
         } else {
           break;
         }
@@ -60,7 +118,7 @@ public class TaskLogServlet extends HttpServlet {
     } catch (IOException ioe) {
       if (filter == TaskLog.LogName.DEBUGOUT) {
         if (!plainText) {
-           out.write("</pre></td></tr></table><hr><br>\n".getBytes());
+           out.write("</pre><hr><br>\n".getBytes());
          }
         // do nothing
       }
@@ -132,8 +190,14 @@ public class TaskLogServlet extends HttpServlet {
                      TaskLog.LogName.STDERR);
         printTaskLog(response, out, taskId, start, end, plainText, 
                      TaskLog.LogName.SYSLOG);
-        printTaskLog(response, out, taskId, start, end, plainText, 
-                TaskLog.LogName.DEBUGOUT);
+        if (haveTaskLog(taskId, TaskLog.LogName.DEBUGOUT)) {
+          printTaskLog(response, out, taskId, start, end, plainText, 
+                       TaskLog.LogName.DEBUGOUT);
+        }
+        if (haveTaskLog(taskId, TaskLog.LogName.PROFILE)) {
+          printTaskLog(response, out, taskId, start, end, plainText, 
+                       TaskLog.LogName.PROFILE);
+        }
       } else {
         printTaskLog(response, out, taskId, start, end, plainText, filter);
       }

@@ -61,6 +61,9 @@ public class TaskLog {
     /** Log on the map-reduce system logs of the task. */
     SYSLOG ("syslog"),
     
+    /** The java profiler information. */
+    PROFILE ("profile.out"),
+    
     /** Log the debug script's stdout  */
     DEBUGOUT ("debugout");
         
