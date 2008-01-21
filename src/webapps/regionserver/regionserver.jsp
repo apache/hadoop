@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.*"
   import="org.apache.hadoop.io.Text"
+  import="org.apache.hadoop.util.VersionInfo"
   import="org.apache.hadoop.hbase.HRegionServer"
   import="org.apache.hadoop.hbase.HRegion"
   import="org.apache.hadoop.hbase.HConstants"
@@ -27,6 +28,8 @@
 <h2>Region Server Attributes</h2>
 <table>
 <tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
+<tr><td>Version</td><td><%= VersionInfo.getVersion() %>, r<%= VersionInfo.getRevision() %></td><td>Hbase version and svn revision</td></tr>
+<tr><td>Compiled</td><td><%= VersionInfo.getDate() %>, <%= VersionInfo.getUser() %></td><td>When this version was compiled and by whom</td></tr>
 <tr><td>Load</td><td><%= serverInfo.getLoad().toString() %></td><td>Requests/<em>hbase.regionserver.msginterval</em> + count of loaded regions</td></tr>
 </table>
 

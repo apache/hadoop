@@ -249,12 +249,10 @@ public class HConnectionManager implements HConstants {
       do {
         try{
           // turn the start row into a location
-          metaLocation = 
-            locateRegion(META_TABLE_NAME, startRow);
+          metaLocation = locateRegion(META_TABLE_NAME, startRow);
 
           // connect to the server hosting the .META. region
-          server = 
-            getHRegionConnection(metaLocation.getServerAddress());
+          server = getHRegionConnection(metaLocation.getServerAddress());
 
           // open a scanner over the meta region
           scannerId = server.openScanner(
@@ -289,8 +287,9 @@ public class HConnectionManager implements HConstants {
           // advance the startRow to the end key of the current region
           startRow = metaLocation.getRegionInfo().getEndKey();          
         } catch (IOException e) {
-          // need retry logic?
-          throw e;
+          // Retry once.
+          metaLocation = relocateRegion(META_TABLE_NAME, startRow);
+          continue;
         }
         finally {
           if (scannerId != -1L) {

@@ -140,6 +140,9 @@ Trunk (unreleased changes)
    HADOOP-2619 Compaction errors after a region splits
    HADOOP-2621 Memcache flush flushing every 60 secs with out considering
                the max memcache size
+   HADOOP-2584 Web UI displays an IOException instead of the Tables
+   HADOOP-2650 Remove Writables.clone and use WritableUtils.clone from
+               hadoop instead
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable

@@ -24,15 +24,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.util.ReflectionUtils;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
  * Utility class with methods for manipulating Writable objects
@@ -91,24 +87,6 @@ public class Writables {
       return w;
     } finally {
       in.close();
-    }
-  }
-
-  /**
-   * Make a copy of a writable object using serialization to a buffer.
-   * Copied from WritableUtils only <code>conf</code> type is Configurable
-   * rather than JobConf (Doesn't need to be JobConf -- HADOOP-2469).
-   * @param orig The object to copy
-   * @return The copied object
-   */
-  public static Writable clone(Writable orig, Configuration conf) {
-    try {
-      Writable newInst =
-        (Writable)ReflectionUtils.newInstance(orig.getClass(), conf);
-      WritableUtils.cloneInto(newInst, orig);
-      return newInst;
-    } catch (IOException e) {
-      throw new RuntimeException("Error writing/reading clone buffer", e);
     }
   }
 
