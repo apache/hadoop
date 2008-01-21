@@ -20,17 +20,15 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.AtomicReferenceArray;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,9 +36,9 @@ import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
@@ -105,13 +103,16 @@ public class HTable implements HConstants {
   }
 
   /**
-   * Find region location hosting passed row using cached info
+   * Find region location hosting passed row
    * @param row Row to find.
+   * @param reload If true do not use cache, otherwise bypass.
    * @return Location of row.
    */
   HRegionLocation getRegionLocation(Text row, boolean reload) throws IOException {
     checkClosed();
-    return this.connection.relocateRegion(this.tableName, row);
+    return reload?
+      this.connection.relocateRegion(this.tableName, row):
+      this.connection.locateRegion(tableName, row);
   }
 
 
@@ -454,7 +455,7 @@ public class HTable implements HConstants {
         if (LOG.isDebugEnabled()) {
           LOG.debug("reloading table servers because: " + e.getMessage());
         }
-        r = getRegionLocation(row, true);        
+        r = getRegionLocation(row, true);
       }
       try {
         Thread.sleep(this.pause);
@@ -832,7 +833,6 @@ public class HTable implements HConstants {
         if (LOG.isDebugEnabled()) {
           LOG.debug("reloading table servers because: " + e.getMessage());
         }
-/*        tableServers = connection.reloadTableServers(tableName);*/
         r = getRegionLocation(row, true);
       }
       try {

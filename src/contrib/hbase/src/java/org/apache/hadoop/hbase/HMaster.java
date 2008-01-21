@@ -3182,6 +3182,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
   }
 
+  /**
+   * @return Return configuration being used by this server.
+   */
+  public HBaseConfiguration getConfiguration() {
+    return this.conf;
+  }
+
   /*
    * Main program
    */

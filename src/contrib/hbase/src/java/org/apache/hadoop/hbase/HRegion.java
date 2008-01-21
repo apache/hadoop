@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -1460,15 +1461,15 @@ public class HRegion implements HConstants {
       this.log.append(regionInfo.getRegionName(),
           regionInfo.getTableDesc().getName(), updatesByColumn);
 
-      long memcacheSize = 0;
+      long size = 0;
       for (Map.Entry<HStoreKey, byte[]> e: updatesByColumn.entrySet()) {
         HStoreKey key = e.getKey();
         byte[] val = e.getValue();
-        memcacheSize = this.memcacheSize.addAndGet(key.getSize() +
+        size = this.memcacheSize.addAndGet(key.getSize() +
             (val == null ? 0 : val.length));
         stores.get(HStoreKey.extractFamily(key.getColumn())).add(key, val);
       }
-      if (this.flushListener != null && memcacheSize > this.memcacheFlushSize) {
+      if (this.flushListener != null && size > this.memcacheFlushSize) {
         // Request a cache flush
         this.flushListener.flushRequested(this);
       }
@@ -1626,7 +1627,7 @@ public class HRegion implements HConstants {
           // one shared across many rows. See HADOOP-2467.
           scanners[i] = stores[i].getScanner(timestamp, cols, firstRow,
             (i > 0 && filter != null)?
-              (RowFilterInterface)Writables.clone(filter, conf): filter);
+              (RowFilterInterface)WritableUtils.clone(filter, conf): filter);
         }
       } catch(IOException e) {
         for (int i = 0; i < this.scanners.length; i++) {
@@ -1758,14 +1759,14 @@ public class HRegion implements HConstants {
         }
       } finally {
         synchronized (activeScannerCount) {
-          int scanners = activeScannerCount.decrementAndGet();
-          if (scanners < 0) {
-            LOG.error("active scanner count less than zero: " + scanners +
+          int count = activeScannerCount.decrementAndGet();
+          if (count < 0) {
+            LOG.error("active scanner count less than zero: " + count +
                 " resetting to zero");
             activeScannerCount.set(0);
-            scanners = 0;
+            count = 0;
           }
-          if (scanners == 0) {
+          if (count == 0) {
             activeScannerCount.notifyAll();
           }
         }

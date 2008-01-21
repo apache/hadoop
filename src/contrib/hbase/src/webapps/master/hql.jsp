@@ -3,7 +3,7 @@
   import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.hql.TableFormatter"
   import="org.apache.hadoop.hbase.hql.ReturnMsg"
-  import="org.apache.hadoop.hbase.hql.generated.Parser"
+  import="org.apache.hadoop.hbase.hql.generated.HQLParser"
   import="org.apache.hadoop.hbase.hql.Command"
   import="org.apache.hadoop.hbase.hql.formatter.HtmlTableFormatter" 
 %><?xml version="1.0" encoding="UTF-8" ?>

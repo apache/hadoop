@@ -16,7 +16,7 @@
   import="org.apache.hadoop.hbase.hql.formatter.HtmlTableFormatter"
   import="org.apache.hadoop.hbase.HTableDescriptor" %><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
-  HBaseConfiguration conf = new HBaseConfiguration();
+  HBaseConfiguration conf = master.getConfiguration();
   TableFormatter formatter = new HtmlTableFormatter(out);
   ShowCommand show = new ShowCommand(out, formatter, "tables");
   HServerAddress rootLocation = master.getRootRegionLocation();
