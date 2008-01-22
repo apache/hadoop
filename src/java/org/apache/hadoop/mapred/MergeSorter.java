@@ -34,6 +34,8 @@ import org.apache.hadoop.io.SequenceFile.Sorter.RawKeyValueIterator;
  */
 class MergeSorter extends BasicTypeSorterBase 
 implements Comparator<IntWritable> {
+  private static int progressUpdateFrequency = 10000;
+  private int progressCalls = 0;
   
   /** The sort method derived from BasicTypeSorterBase and overridden here*/
   public RawKeyValueIterator sort() {
@@ -47,8 +49,7 @@ implements Comparator<IntWritable> {
     return new MRSortResultIterator(super.keyValBuffer, pointersCopy, 
                                     super.startOffsets, super.keyLengths, super.valueLengths);
   }
-  /** The implementation of the compare method from Comparator. This basically
-   * forwards the call to the super class's compare. Note that
+  /** The implementation of the compare method from Comparator. Note that
    * Comparator.compare takes objects as inputs and so the int values are
    * wrapped in (reusable) IntWritables from the class util.MergeSort
    * @param i
@@ -56,7 +57,17 @@ implements Comparator<IntWritable> {
    * @return int as per the specification of Comparator.compare
    */
   public int compare (IntWritable i, IntWritable j) {
-    return super.compare(i.get(), j.get());
+    // indicate we're making progress but do a batch update
+    if (progressCalls < progressUpdateFrequency) {
+      progressCalls++;
+    } else {
+      progressCalls = 0;
+      reporter.progress();
+    }  
+    return comparator.compare(keyValBuffer.getData(), startOffsets[i.get()],
+                              keyLengths[i.get()],
+                              keyValBuffer.getData(), startOffsets[j.get()], 
+                              keyLengths[j.get()]);
   }
   
   /** Add the extra memory that will be utilized by the sort method */

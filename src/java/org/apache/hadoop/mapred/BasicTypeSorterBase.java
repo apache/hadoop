@@ -60,7 +60,7 @@ abstract class BasicTypeSorterBase implements BufferSorter {
   private int maxValLength = 0;
 
   //Reference to the Progressable object for sending KeepAlive
-  private Progressable reporter;
+  protected Progressable reporter;
 
   //Implementation of methods of the SorterBase interface
   //
@@ -124,16 +124,6 @@ abstract class BasicTypeSorterBase implements BufferSorter {
     //release the large key-value buffer so that the GC, if necessary,
     //can collect it away
     keyValBuffer = null;
-  }
-  //A compare method that references the keyValBuffer through the indirect
-  //pointers
-  protected int compare(int i, int j) {
-    // indicate we're making progress
-    reporter.progress();
-    return comparator.compare(keyValBuffer.getData(), startOffsets[i],
-                              keyLengths[i],
-                              keyValBuffer.getData(), startOffsets[j], 
-                              keyLengths[j]);
   }
   
   private void grow() {

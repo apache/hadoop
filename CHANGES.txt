@@ -289,6 +289,9 @@ Trunk (unreleased changes)
     HADOOP-2208. Counter update frequency (from TaskTracker to JobTracker) is 
     capped at 1 minute.  (Amareshwari Sri Ramadasu via ddas)
 
+    HADOOP-2284. Reduce the number of progress updates during the sorting in 
+    the map task. (Amar Kamat via ddas)
+
   BUG FIXES
 
     HADOOP-2583.  Fixes a bug in the Eclipse plug-in UI to edit locations.
