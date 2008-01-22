@@ -343,6 +343,7 @@ abstract class Task implements Writable, Configurable {
           if (counters != null) {
             counters.incrCounter(key, amount);
           }
+          setProgressFlag();
         }
         public InputSplit getInputSplit() throws UnsupportedOperationException {
           return Task.this.getInputSplit();

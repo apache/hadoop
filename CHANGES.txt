@@ -519,6 +519,8 @@ Trunk (unreleased changes)
     zero-length files when the src does not exist.
     (Lohit Vijayarenu via cdouglas)
 
+    HADOOP-2189. Incrementing user counters should count as progress. (ddas)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES
