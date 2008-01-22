@@ -528,6 +528,9 @@ Trunk (unreleased changes)
     the datanodes. The periodicity of this computation is now configurable.
     (dhruba)
 
+    HADOOP-2549. Correct disk size computation so that data-nodes could switch 
+    to other local drives if current is full. (Hairong Kuang via shv)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES

@@ -272,8 +272,6 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     
     FSVolume(File currentDir, Configuration conf) throws IOException {
       this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
-      // add block size to the configured reserved space
-      this.reserved += conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
       this.usableDiskPct = conf.getFloat("dfs.datanode.du.pct",
                                          (float) USABLE_DISK_PCT_DEFAULT);
       File parent = currentDir.getParentFile();
@@ -309,8 +307,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       if (remaining>available) {
         remaining = available;
       }
-      remaining = (long)(remaining * usableDiskPct); 
-      return (remaining > 0) ? remaining : 0;
+      return (remaining > 0) ? (long)(remaining * usableDiskPct) : 0;
     }
       
     String getMount() throws IOException {
@@ -387,7 +384,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       while (true) {
         FSVolume volume = volumes[curVolume];
         curVolume = (curVolume + 1) % volumes.length;
-        if (volume.getAvailable() >= blockSize) { return volume; }
+        if (volume.getAvailable() > blockSize) { return volume; }
         if (curVolume == startVolume) {
           throw new DiskOutOfSpaceException("Insufficient space for an additional block");
         }

@@ -35,7 +35,6 @@ import org.apache.hadoop.mapred.StatusHttpServer;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.dfs.BlockCommand;
 import org.apache.hadoop.dfs.DatanodeProtocol;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.dfs.FSDatasetInterface.MetaDataInputStream;
 
 import java.io.*;
@@ -123,6 +122,16 @@ public class DataNode implements FSConstants, Runnable {
   private DataBlockScanner blockScanner;
   private Daemon blockScannerThread;
 
+  /**
+   * We need an estimate for block size to check if the disk partition has
+   * enough space. For now we set it to be the default block size set
+   * in the server side configuration, which is not ideal because the
+   * default block size should be a client-size configuration. 
+   * A better solution is to include in the header the estimated block size,
+   * i.e. either the actual block size or the default block size.
+   */
+  private long estimateBlockSize;
+  
   // The following three fields are to support balancing
   final static short MAX_BALANCING_THREADS = 5;
   private Semaphore balancingSem = new Semaphore(MAX_BALANCING_THREADS);
@@ -265,6 +274,7 @@ public class DataNode implements FSConstants, Runnable {
     
     this.defaultBytesPerChecksum = 
        Math.max(conf.getInt("io.bytes.per.checksum", 512), 1); 
+    this.estimateBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     this.socketTimeout =  conf.getInt("dfs.socket.timeout",
                                       FSConstants.READ_TIMEOUT);
     String address = conf.get("dfs.datanode.bindAddress", "0.0.0.0:50010");
@@ -1080,7 +1090,7 @@ public class DataNode implements FSConstants, Runnable {
       //
       // Read in the header
       //
-      Block block = new Block(in.readLong(), 0);
+      Block block = new Block(in.readLong(), estimateBlockSize);
       LOG.info("Receiving block " + block + " from " + s.getInetAddress());
       int pipelineSize = in.readInt(); // num of datanodes in entire pipeline
       boolean isRecovery = in.readBoolean(); // is this part of recovery?
@@ -1330,7 +1340,7 @@ public class DataNode implements FSConstants, Runnable {
       balancingSem.acquireUninterruptibly();
 
       /* read header */
-      Block block = new Block(in.readLong(), 0); // block id & len
+      Block block = new Block(in.readLong(), estimateBlockSize); // block id & len
       String sourceID = Text.readString(in);
 
       short opStatus = OP_STATUS_SUCCESS;

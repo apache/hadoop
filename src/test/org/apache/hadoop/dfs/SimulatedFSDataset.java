@@ -141,7 +141,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
           throw new IOException("Creating block, no free space available");
         }
       } else {
-        storage.free(extraLen);
+        storage.free(-extraLen);
       }
       theBlock.len = finalSize;  
 
