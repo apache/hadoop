@@ -358,9 +358,9 @@ class FSNamesystem implements FSConstants {
     this.heartbeatExpireInterval = 2 * heartbeatRecheckInterval +
       10 * heartbeatInterval;
     this.replicationRecheckInterval = 3 * 1000; //  3 second
-    this.decommissionRecheckInterval = conf.getInt(
-                                                   "dfs.namenode.decommission.interval",
-                                                   5 * 60 * 1000);    
+    this.replicationRecheckInterval = conf.getInt("dfs.replication.interval", 3) * 1000;
+    this.decommissionRecheckInterval = conf.getInt("dfs.namenode.decommission.interval",
+                                                   5 * 60) * 1000;
     this.defaultBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     this.maxFsObjects = conf.getLong("dfs.max.objects", 0);
   }

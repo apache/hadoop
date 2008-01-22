@@ -445,6 +445,18 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.namenode.decommission.interval</name>
+  <value>300</value>
+  <description>Namenode periodicity in seconds to check if decommission is complete.</description>
+</property>
+
+<property>
+  <name>dfs.replication.interval</name>
+  <value>3</value>
+  <description>The periodicity in seconds with which the namenode computes repliaction work for datanodes. </description>
+</property>
+
+<property>
   <name>fs.s3.block.size</name>
   <value>67108864</value>
   <description>Block size to use when writing files to S3.</description>

@@ -524,6 +524,10 @@ Trunk (unreleased changes)
 
     HADOOP-2189. Incrementing user counters should count as progress. (ddas)
 
+    HADOOP-2649. The NameNode periodically computes replication work for
+    the datanodes. The periodicity of this computation is now configurable.
+    (dhruba)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES
