@@ -891,8 +891,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         fs.mkdirs(rootdir);
         FSUtils.setVersion(fs, rootdir);
       } else if (!FSUtils.checkVersion(fs, rootdir)) {
-        throw new IOException(
-            "file system not correct version. Run hbase.util.Migrate");
+        throw new IOException("File system needs upgrade. Run " +
+          "the '${HBASE_HOME}/bin/hbase migrate' script");
       }
 
       if (!fs.exists(rootRegionDir)) {

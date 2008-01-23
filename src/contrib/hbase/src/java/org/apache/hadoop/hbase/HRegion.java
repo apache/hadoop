@@ -1871,7 +1871,7 @@ public class HRegion implements HConstants {
    * @param info HRegionInfo for the region
    * @return qualified path of region directory
    */
-  static Path getRegionDir(final Path rootdir, final HRegionInfo info) {
+  public static Path getRegionDir(final Path rootdir, final HRegionInfo info) {
     return new Path(
         HTableDescriptor.getTableDir(rootdir, info.getTableDesc().getName()),
         info.getEncodedName()

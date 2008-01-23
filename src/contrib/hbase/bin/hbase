@@ -63,6 +63,7 @@ if [ $# = 0 ]; then
   echo "  regionserver     run an Hbase HRegionServer node" 
   echo "  rest             run an Hbase REST server" 
   echo "  thrift           run an Hbase Thrift server" 
+  echo "  migrate          upgrade an hbase.rootdir"
   echo " or"
   echo "  CLASSNAME        run the class named CLASSNAME"
   echo "Most commands print help when invoked w/o parameters."
@@ -219,6 +220,8 @@ elif [ "$COMMAND" = "rest" ] ; then
   CLASS='org.apache.hadoop.hbase.rest.Dispatcher'
 elif [ "$COMMAND" = "thrift" ] ; then
   CLASS='org.apache.hadoop.hbase.thrift.ThriftServer'
+elif [ "$COMMAND" = "migrate" ] ; then
+  CLASS='org.apache.hadoop.hbase.util.Migrate'
 else
   CLASS=$COMMAND
 fi

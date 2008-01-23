@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
 import java.io.IOException;
 
@@ -32,13 +33,9 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.GnuParser;
-import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -76,8 +73,9 @@ public class Migrate extends Configured implements Tool {
 
   private final HBaseConfiguration conf;
 
-  /** Action to take when an extra file is found */
-  private static enum EXTRA_FILES  {
+  /** Action to take when an extra file or unrecoverd log file is found */
+  private static String ACTIONS = "abort|ignore|delete|prompt";
+  private static enum ACTION  {
     /** Stop conversion */
     ABORT,
     /** print a warning message, but otherwise ignore */
@@ -88,18 +86,21 @@ public class Migrate extends Configured implements Tool {
     PROMPT
   }
   
-  private static final Map<String, EXTRA_FILES> options =
-    new HashMap<String, EXTRA_FILES>();
+  private static final Map<String, ACTION> options =
+    new HashMap<String, ACTION>();
   
   static {
-   options.put("abort", EXTRA_FILES.ABORT);
-   options.put("ignore", EXTRA_FILES.IGNORE);
-   options.put("delete", EXTRA_FILES.DELETE);
-   options.put("prompt", EXTRA_FILES.PROMPT);
+   options.put("abort", ACTION.ABORT);
+   options.put("ignore", ACTION.IGNORE);
+   options.put("delete", ACTION.DELETE);
+   options.put("prompt", ACTION.PROMPT);
   }
-  
-  private EXTRA_FILES logFiles = EXTRA_FILES.ABORT;
-  private EXTRA_FILES otherFiles = EXTRA_FILES.IGNORE;
+
+  private boolean readOnly = false;
+  private boolean migrationNeeded = false;
+  private boolean newRootRegion = false;
+  private ACTION logFiles = ACTION.IGNORE;
+  private ACTION otherFiles = ACTION.IGNORE;
 
   private BufferedReader reader = null;
   
@@ -120,56 +121,101 @@ public class Migrate extends Configured implements Tool {
   }
   
   /** {@inheritDoc} */
-  public int run(String[] args) throws Exception {
-    parseArgs(args);
-    
+  public int run(String[] args) {
+    if (parseArgs(args) != 0) {
+      return -1;
+    }
+
     try {
-      HBaseAdmin admin = new HBaseAdmin(conf);
-      if (admin.isMasterRunning()) {
-        throw new IllegalStateException(
-        "HBase cluster must be off-line while being upgraded");
+      FileSystem fs = FileSystem.get(conf);               // get DFS handle
+
+      LOG.info("Verifying that file system is available...");
+      if (!FSUtils.isFileSystemAvailable(fs)) {
+        throw new IOException(
+            "Filesystem must be available for upgrade to run.");
       }
-    } catch (MasterNotRunningException e) {
-      // ignore
-    }
-    FileSystem fs = FileSystem.get(conf);               // get DFS handle
-    Path rootdir = fs.makeQualified(new Path(          // get path for instance
-        conf.get(HConstants.HBASE_DIR, HConstants.DEFAULT_HBASE_DIR)));
 
-    // See if there is a file system version file
-    
-    if (FSUtils.checkVersion(fs, rootdir)) {
-      LOG.info("file system is at current level, no upgrade necessary");
+      LOG.info("Verifying that HBase is not running...");
+      try {
+        HBaseAdmin admin = new HBaseAdmin(conf);
+        if (admin.isMasterRunning()) {
+          throw new IllegalStateException(
+            "HBase cluster must be off-line during upgrade.");
+        }
+      } catch (MasterNotRunningException e) {
+        // ignore
+      }
+
+      LOG.info("Starting upgrade" + (readOnly ? " check" : ""));
+
+      Path rootdir = fs.makeQualified(new Path(           // get HBase root dir
+          conf.get(HConstants.HBASE_DIR, HConstants.DEFAULT_HBASE_DIR)));
+
+      if (!fs.exists(rootdir)) {
+        throw new FileNotFoundException("HBase root directory " +
+            rootdir.toString() + " does not exist.");
+      }
+
+      // See if there is a file system version file
+
+      if (FSUtils.checkVersion(fs, rootdir)) {
+        LOG.info("No upgrade necessary.");
+        return 0;
+      }
+
+      // check to see if new root region dir exists
+
+      checkNewRootRegionDirExists(fs, rootdir);
+
+      // check for "extra" files and for old upgradable regions
+
+      extraFiles(fs, rootdir);
+
+      if (!newRootRegion) {
+        // find root region
+
+        Path rootRegion = new Path(rootdir, 
+            OLD_PREFIX + HRegionInfo.rootRegionInfo.getEncodedName());
+
+        if (!fs.exists(rootRegion)) {
+          throw new IOException("Cannot find root region " +
+              rootRegion.toString());
+        } else if (readOnly) {
+          migrationNeeded = true;
+        } else {
+          migrateRegionDir(fs, rootdir, HConstants.ROOT_TABLE_NAME, rootRegion);
+          scanRootRegion(fs, rootdir);
+
+          // scan for left over regions
+
+          extraRegions(fs, rootdir);
+        }
+      }
+
+      if (!readOnly) {
+        // set file system version
+        LOG.info("Setting file system version.");
+        FSUtils.setVersion(fs, rootdir);
+        LOG.info("Upgrade successful.");
+      } else if (migrationNeeded) {
+        LOG.info("Upgrade needed.");
+      }
       return 0;
+    } catch (Exception e) {
+      LOG.fatal("Upgrade" +  (readOnly ? " check" : "") + " failed", e);
+      return -1;
     }
-    
-    // check for "extra" files and for old upgradable regions
+  }
 
-    extraFiles(fs, rootdir);
-
-    // find root region
-
-    Path rootRegion = new Path(rootdir, 
-        OLD_PREFIX + HRegionInfo.rootRegionInfo.getEncodedName());
-
-    if (!fs.exists(rootRegion)) {
-      throw new IOException("cannot find root region " + rootRegion.toString());
-    }
-
-    processRegionDir(fs, rootdir, HConstants.ROOT_TABLE_NAME, rootRegion);
-    scanRootRegion(fs, rootdir);
-
-    // scan for left over regions
-
-    extraRegions(fs, rootdir);
-    
-    // set file system version
-    
-    FSUtils.setVersion(fs, rootdir);
-
-    return 0;
+  private void checkNewRootRegionDirExists(FileSystem fs, Path rootdir)
+  throws IOException {
+    Path rootRegionDir =
+      HRegion.getRegionDir(rootdir, HRegionInfo.rootRegionInfo);
+    newRootRegion = fs.exists(rootRegionDir);
+    migrationNeeded = !newRootRegion;
   }
   
+  // Check for files that should not be there or should be migrated
   private void extraFiles(FileSystem fs, Path rootdir) throws IOException {
     FileStatus[] stats = fs.listStatus(rootdir);
     if (stats == null || stats.length == 0) {
@@ -178,44 +224,52 @@ public class Migrate extends Configured implements Tool {
     }
     for (int i = 0; i < stats.length; i++) {
       String name = stats[i].getPath().getName();
-      if (!name.startsWith(OLD_PREFIX)) {
-        if (name.startsWith("log_")) {
-          String message = "unrecovered region server log file " + name; 
-          extraFile(logFiles, message, fs, stats[i].getPath());
+      if (name.startsWith(OLD_PREFIX)) {
+        if (!newRootRegion) {
+          // We need to migrate if the new root region directory doesn't exist
+          migrationNeeded = true;
+          String regionName = name.substring(OLD_PREFIX.length());
+          try {
+            Integer.parseInt(regionName);
+
+          } catch (NumberFormatException e) {
+            extraFile(otherFiles, "Old region format can not be upgraded: " +
+                name, fs, stats[i].getPath());
+          }
         } else {
-          String message = "unrecognized file " + name;
-          extraFile(otherFiles, message, fs, stats[i].getPath());
+          // Since the new root region directory exists, we assume that this
+          // directory is not necessary
+          extraFile(otherFiles, "Old region directory found: " + name, fs,
+              stats[i].getPath());
         }
       } else {
-        String regionName = name.substring(OLD_PREFIX.length());
-        try {
-          Integer.parseInt(regionName);
-          
-        } catch (NumberFormatException e) {
-          extraFile(otherFiles, "old region format can not be converted: " +
-              name, fs, stats[i].getPath());
+        // File name does not start with "hregion_"
+        if (name.startsWith("log_")) {
+          String message = "Unrecovered region server log file " + name +
+            " this file can be recovered by the master when it starts."; 
+          extraFile(logFiles, message, fs, stats[i].getPath());
+        } else if (!newRootRegion) {
+          // new root region directory does not exist. This is an extra file
+          String message = "Unrecognized file " + name;
+          extraFile(otherFiles, message, fs, stats[i].getPath());
         }
       }
     }
   }
 
-  private void extraFile(EXTRA_FILES action, String message, FileSystem fs,
+  private void extraFile(ACTION action, String message, FileSystem fs,
       Path p) throws IOException {
     
-    if (action == EXTRA_FILES.ABORT) {
+    if (action == ACTION.ABORT) {
       throw new IOException(message + " aborting");
-
-    } else if (action == EXTRA_FILES.IGNORE) {
+    } else if (action == ACTION.IGNORE) {
       LOG.info(message + " ignoring");
-
-    } else if (action == EXTRA_FILES.DELETE) {
+    } else if (action == ACTION.DELETE) {
       LOG.info(message + " deleting");
       fs.delete(p);
-
     } else {
-      // logFiles == EXTRA_FILES.PROMPT
+      // ACTION.PROMPT
       String response = prompt(message + " delete? [y/n]");
-
       if (response.startsWith("Y") || response.startsWith("y")) {
         LOG.info(message + " deleting");
         fs.delete(p);
@@ -223,7 +277,7 @@ public class Migrate extends Configured implements Tool {
     }
   }
   
-  private void processRegionDir(FileSystem fs, Path rootdir, Text tableName,
+  private void migrateRegionDir(FileSystem fs, Path rootdir, Text tableName,
       Path oldPath) throws IOException {
 
     // Create directory where table will live
@@ -300,7 +354,7 @@ public class Migrate extends Configured implements Tool {
             // First move the meta region to where it should be and rename
             // subdirectories as necessary
 
-            processRegionDir(fs, rootdir, HConstants.META_TABLE_NAME,
+            migrateRegionDir(fs, rootdir, HConstants.META_TABLE_NAME,
                 new Path(rootdir, OLD_PREFIX + info.getEncodedName()));
 
             // Now scan and process the meta table
@@ -348,7 +402,7 @@ public class Migrate extends Configured implements Tool {
           // Move the region to where it should be and rename
           // subdirectories as necessary
 
-          processRegionDir(fs, rootdir, region.getTableDesc().getName(),
+          migrateRegionDir(fs, rootdir, region.getTableDesc().getName(),
               new Path(rootdir, OLD_PREFIX + region.getEncodedName()));
 
           results.clear();
@@ -376,11 +430,11 @@ public class Migrate extends Configured implements Tool {
         String message;
         if (references.contains(encodedName)) {
           message =
-            "region not in meta table but other regions reference it " + name;
+            "Region not in meta table but other regions reference it " + name;
 
         } else {
           message = 
-            "region not in meta table and no other regions reference it " + name;
+            "Region not in meta table and no other regions reference it " + name;
         }
         extraFile(otherFiles, message, fs, stats[i].getPath());
       }
@@ -388,15 +442,15 @@ public class Migrate extends Configured implements Tool {
   }
   
   @SuppressWarnings("static-access")
-  private void parseArgs(String[] args) {
+  private int parseArgs(String[] args) {
     Options opts = new Options();
-    Option logFiles = OptionBuilder.withArgName("abort|ignore|delete|prompt")
+    Option logFiles = OptionBuilder.withArgName(ACTIONS)
     .hasArg()
     .withDescription(
         "disposition of unrecovered region server logs: {abort|ignore|delete|prompt}")
     .create("logfiles");
 
-    Option extraFiles = OptionBuilder.withArgName("abort|ignore|delete|prompt")
+    Option extraFiles = OptionBuilder.withArgName(ACTIONS)
     .hasArg()
     .withDescription("disposition of 'extra' files: {abort|ignore|delete|prompt}")
     .create("extrafiles");
@@ -404,21 +458,62 @@ public class Migrate extends Configured implements Tool {
     opts.addOption(logFiles);
     opts.addOption(extraFiles);
     
-    CommandLineParser parser = new GnuParser();
-    try {
-      CommandLine commandLine = parser.parse(opts, args, true);
-      if (commandLine.hasOption("log-files")) {
-        this.logFiles = options.get(commandLine.getOptionValue("log-files"));
-      }
-      if (commandLine.hasOption("extra-files")) {
-        this.otherFiles = options.get(commandLine.getOptionValue("extra-files"));
-      }
-    } catch (ParseException e) {
-      LOG.error("options parsing failed", e);
-      
-      HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp("options are: ", opts);
+    GenericOptionsParser parser =
+      new GenericOptionsParser(this.getConf(), opts, args);
+    
+    String[] remainingArgs = parser.getRemainingArgs();
+    if (remainingArgs.length != 1) {
+      usage();
+      return -1;
     }
+    if (remainingArgs[0].compareTo("check") == 0) {
+      this.readOnly = true;
+    } else if (remainingArgs[0].compareTo("upgrade") != 0) {
+      usage();
+      return -1;
+    }
+
+    if (readOnly) {
+      this.logFiles = ACTION.IGNORE;
+      this.otherFiles = ACTION.IGNORE;
+
+    } else {
+      CommandLine commandLine = parser.getCommandLine();
+
+      ACTION action = null;
+      if (commandLine.hasOption("logfiles")) {
+        action = options.get(commandLine.getOptionValue("logfiles"));
+        if (action == null) {
+          usage();
+          return -1;
+        }
+        this.logFiles = action;
+      }
+      if (commandLine.hasOption("extrafiles")) {
+        action = options.get(commandLine.getOptionValue("extrafiles"));
+        if (action == null) {
+          usage();
+          return -1;
+        }
+        this.otherFiles = action;
+      }
+    }
+    return 0;
+  }
+  
+  private void usage() {
+    System.err.println("Usage: bin/hbase migrate { check | upgrade } [options]\n");
+    System.err.println("  check                            perform upgrade checks only.");
+    System.err.println("  upgrade                          perform upgrade checks and modify hbase.\n");
+    System.err.println("  Options are:");
+    System.err.println("    -logfiles={abort|ignore|delete|prompt}");
+    System.err.println("                                   action to take when unrecovered region");
+    System.err.println("                                   server log files are found.\n");
+    System.err.println("    -extrafiles={abort|ignore|delete|prompt}");
+    System.err.println("                                   action to take if \"extra\" files are found.\n");
+    System.err.println("    -conf <configuration file>     specify an application configuration file");
+    System.err.println("    -D <property=value>            use value for given property");
+    System.err.println("    -fs <local|namenode:port>      specify a namenode");
   }
   
   private synchronized String prompt(String prompt) {
@@ -441,13 +536,9 @@ public class Migrate extends Configured implements Tool {
    * @param args command line arguments
    */
   public static void main(String[] args) {
-    Tool t = new Migrate();
-    GenericOptionsParser hadoopOpts =
-      new GenericOptionsParser(t.getConf(), args);
-
     int status = 0;
     try {
-      status = ToolRunner.run(t, hadoopOpts.getRemainingArgs());
+      status = ToolRunner.run(new Migrate(), args);
     } catch (Exception e) {
       LOG.error("exiting due to error", e);
       status = -1;
