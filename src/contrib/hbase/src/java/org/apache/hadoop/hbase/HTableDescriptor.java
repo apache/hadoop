@@ -132,6 +132,9 @@ public class HTableDescriptor implements WritableComparable {
    * @param family HColumnDescriptor of familyto add.
    */
   public void addFamily(HColumnDescriptor family) {
+    if (family.getName() == null || family.getName().getLength() <= 0) {
+      throw new NullPointerException("Family name cannot be null or empty");
+    }
     families.put(family.getName(), family);
   }
 
