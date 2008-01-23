@@ -423,6 +423,7 @@ class FSNamesystem implements FSConstants {
    * Dump all metadata into specified file
    */
   void metaSave(String filename) throws IOException {
+    checkSuperuserPrivilege();
     File file = new File(System.getProperty("hadoop.log.dir"), 
                          filename);
     PrintWriter out = new PrintWriter(new BufferedWriter(
@@ -2740,6 +2741,13 @@ class FSNamesystem implements FSConstants {
     pendingReplications.remove(block);
   }
 
+  long[] getStats() throws IOException {
+    checkSuperuserPrivilege();
+    synchronized(heartbeats) {
+      return new long[]{totalCapacity(), totalDfsUsed(), totalRemaining()};
+    }
+  }
+
   /**
    * Total raw bytes including non-dfs used space.
    */
@@ -2829,7 +2837,9 @@ class FSNamesystem implements FSConstants {
     return nodes;
   }
 
-  public synchronized DatanodeInfo[] datanodeReport( DatanodeReportType type ) {
+  public synchronized DatanodeInfo[] datanodeReport( DatanodeReportType type
+      ) throws AccessControlException {
+    checkSuperuserPrivilege();
 
     ArrayList<DatanodeDescriptor> results = getDatanodeListForReport(type);
     DatanodeInfo[] arr = new DatanodeInfo[results.size()];
@@ -3282,6 +3292,7 @@ class FSNamesystem implements FSConstants {
    * 4. Removed from exclude --> stop decommission.
    */
   void refreshNodes() throws IOException {
+    checkSuperuserPrivilege();
     hostsReader.refresh();
     synchronized (this) {
       for (Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator();
@@ -3308,6 +3319,10 @@ class FSNamesystem implements FSConstants {
       
   }
     
+  void finalizeUpgrade() throws IOException {
+    checkSuperuserPrivilege();
+    getFSImage().finalizeUpgrade();
+  }
 
   /**
    * Checks if the node is not on the hosts list.  If it is not, then
@@ -3731,6 +3746,20 @@ class FSNamesystem implements FSConstants {
     return System.currentTimeMillis();
   }
     
+  boolean setSafeMode(SafeModeAction action) throws IOException {
+    checkSuperuserPrivilege();
+    switch(action) {
+    case SAFEMODE_LEAVE: // leave safe mode
+      leaveSafeMode(false);
+      break;
+    case SAFEMODE_ENTER: // enter safe mode
+      enterSafeMode();
+      break;
+    case SAFEMODE_GET: // get safe mode
+    }
+    return isInSafeMode();
+  }
+
   /**
    * Check whether the name node is in safe mode.
    * @return true if safe mode is ON, false otherwise
@@ -3937,6 +3966,16 @@ class FSNamesystem implements FSConstants {
   private PermissionChecker checkTraverse(String path
       ) throws AccessControlException {
     return checkPermission(path, false, null, null, null, null);
+  }
+
+  private void checkSuperuserPrivilege() throws AccessControlException {
+    if (isPermissionEnabled) {
+      PermissionChecker pc = new PermissionChecker(
+          fsOwner.getUserName(), supergroup);
+      if (!pc.isSuper) {
+        throw new AccessControlException("Superuser privilege is required");
+      }
+    }
   }
 
   /**

@@ -278,6 +278,9 @@ Trunk (unreleased changes)
     HADOOP-2469.  WritableUtils.clone should take a Configuration
     instead of a JobConf. (stack via omalley)
 
+    HADOOP-2659. Introduce superuser permissions for admin operations.
+    (Tsz Wo (Nicholas), SZE via shv)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

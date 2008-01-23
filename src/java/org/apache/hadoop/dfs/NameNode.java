@@ -430,7 +430,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     return files;
   }
 
-  /* Get the file info for a specific file.
+  /**
+   * Get the file info for a specific file.
    * @param src The string representation of the path to the file
    * @throws IOException if file does not exist
    * @return object containing information regarding the file
@@ -439,14 +440,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     return namesystem.getFileInfo(src);
   }
 
-  /**
-   */
+  /** @inheritDoc */
   public long[] getStats() throws IOException {
-    long results[] = new long[3];
-    results[0] = namesystem.totalCapacity();
-    results[1] = namesystem.totalDfsUsed();
-    results[2] = namesystem.totalRemaining();
-    return results;
+    return namesystem.getStats();
   }
 
   /**
@@ -464,16 +460,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * @inheritDoc
    */
   public boolean setSafeMode(SafeModeAction action) throws IOException {
-    switch(action) {
-    case SAFEMODE_LEAVE: // leave safe mode
-      namesystem.leaveSafeMode(false);
-      break;
-    case SAFEMODE_ENTER: // enter safe mode
-      namesystem.enterSafeMode();
-      break;
-    case SAFEMODE_GET: // get safe mode
-    }
-    return namesystem.isInSafeMode();
+    return namesystem.setSafeMode(action);
   }
 
   /**
@@ -513,7 +500,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
     
   public void finalizeUpgrade() throws IOException {
-    getFSImage().finalizeUpgrade();
+    namesystem.finalizeUpgrade();
   }
 
   public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action
