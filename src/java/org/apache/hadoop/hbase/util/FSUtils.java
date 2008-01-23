@@ -65,7 +65,7 @@ public class FSUtils {
     
     try {
       if (!available) {
-        LOG.info("Failed file system available test. Thread: " +
+        LOG.fatal("File system is not available.. Thread: " +
             Thread.currentThread().getName() + ": " + exception);
         fs.close();
       }
