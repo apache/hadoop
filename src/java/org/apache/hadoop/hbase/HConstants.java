@@ -149,6 +149,12 @@ public interface HConstants {
   
   /** the upper half of a split region */
   static final Text COL_SPLITB = new Text(COLUMN_FAMILY_STR + "splitB");
+  
+  /** All the columns in the catalog -ROOT- and .META. tables.
+   */
+  static final Text[] ALL_META_COLUMNS = {COL_REGIONINFO, COL_SERVER,
+    COL_STARTCODE, COL_SPLITA, COL_SPLITB};
+
   // Other constants
 
   /**

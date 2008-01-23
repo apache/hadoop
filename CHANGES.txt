@@ -145,6 +145,7 @@ Trunk (unreleased changes)
                hadoop instead
    HADOOP-2668 Documentation and improved logging so fact that hbase now
                requires migration comes as less of a surprise
+   HADOOP-2686 Removed tables stick around in .META.
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable

@@ -332,19 +332,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       
       if (!hasReferencesA && !hasReferencesB) {
         LOG.info("Deleting region " + parent.getRegionName() +
-        " because daughter splits no longer hold references");
+          " because daughter splits no longer hold references");
         if (!HRegion.deleteRegion(fs, rootdir, parent)) {
           LOG.warn("Deletion of " + parent.getRegionName() + " failed");
         }
         
-        BatchUpdate b = new BatchUpdate(rand.nextLong());
-        long lockid = b.startUpdate(parent.getRegionName());
-        b.delete(lockid, COL_REGIONINFO);
-        b.delete(lockid, COL_SERVER);
-        b.delete(lockid, COL_STARTCODE);
-        b.delete(lockid, COL_SPLITA);
-        b.delete(lockid, COL_SPLITB);
-        srvr.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
+        HRegion.removeRegionFromMETA(srvr, metaRegionName,
+          parent.getRegionName());
         result = true;
       } else if (LOG.isDebugEnabled()) {
         // If debug, note we checked and current state of daughters.
@@ -2069,7 +2063,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             break;
           }
           LOG.info(info.getRegionName() + " was on shutdown server <" +
-              serverName + "> (or server is null). Marking unassigned if " +
+              serverName + "> (or server is null). Marking unassigned in " +
           "meta and clearing pendingRegions");
 
           if (info.isMetaTable()) {
@@ -2126,19 +2120,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         }
       }
 
-      // Remove server from root/meta entries
+      // Update server in root/meta entries
       for (ToDoEntry e: toDoList) {
-        BatchUpdate b = new BatchUpdate(rand.nextLong());
-        long lockid = b.startUpdate(e.row);
         if (e.deleteRegion) {
-          b.delete(lockid, COL_REGIONINFO);
-        } else if (e.regionOffline) {
-          e.info.setOffline(true);
-          b.put(lockid, COL_REGIONINFO, Writables.getBytes(e.info));
+          HRegion.removeRegionFromMETA(server, regionName, e.row);
+        } else {
+          HRegion.offlineRegionInMETA(server, regionName, e.info);
         }
-        b.delete(lockid, COL_SERVER);
-        b.delete(lockid, COL_STARTCODE);
-        server.batchUpdate(regionName, System.currentTimeMillis(), b);
       }
 
       // Get regions reassigned
@@ -2384,22 +2372,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           return true;
         }
 
-        HRegionInterface server = getMetaServer();
         try {
-          BatchUpdate b = new BatchUpdate(rand.nextLong());
-          long lockid = b.startUpdate(regionInfo.getRegionName());
-
           if (deleteRegion) {
-            b.delete(lockid, COL_REGIONINFO);
-
-          } else if (!reassignRegion ) {
-            regionInfo.setOffline(true);
-            b.put(lockid, COL_REGIONINFO, Writables.getBytes(regionInfo));
+            HRegion.removeRegionFromMETA(getMetaServer(), metaRegionName,
+              regionInfo.getRegionName());
+          } else {
+            HRegion.offlineRegionInMETA(getMetaServer(), metaRegionName,
+              regionInfo);
           }
-          b.delete(lockid, COL_SERVER);
-          b.delete(lockid, COL_STARTCODE);
-          server.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
-
           break;
 
         } catch (IOException e) {
@@ -3012,9 +2992,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
     @Override
     protected void updateRegionInfo(BatchUpdate b,
-        @SuppressWarnings("unused") HRegionInfo i) {
-      
-      b.delete(lockid, COL_REGIONINFO);
+        @SuppressWarnings("unused") HRegionInfo info) {
+      for (int i = 0; i < ALL_META_COLUMNS.length; i++) {
+        // Be sure to clean all columns
+        b.delete(lockid, ALL_META_COLUMNS[i]);
+      }
     }
   }
 

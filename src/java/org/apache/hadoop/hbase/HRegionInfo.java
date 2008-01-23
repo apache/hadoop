@@ -252,7 +252,7 @@ public class HRegionInfo implements WritableComparable {
   public String toString() {
     return "regionname: " + this.regionName.toString() + ", startKey: <" +
       this.startKey.toString() + ">, endKey: <" + this.endKey.toString() + 
-      ">, encodedName(" + getEncodedName() + ")" +
+      ">, encodedName: " + getEncodedName() + "," +
       (isOffline()? " offline: true,": "") + (isSplit()? " split: true,": "") +
       " tableDesc: {" + this.tableDesc.toString() + "}";
   }

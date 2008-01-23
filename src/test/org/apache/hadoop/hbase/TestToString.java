@@ -55,7 +55,7 @@ public class TestToString extends TestCase {
     HRegionInfo hri = HRegionInfo.rootRegionInfo;
     System.out.println(hri.toString());
     assertEquals("HRegionInfo", 
-      "regionname: -ROOT-,,0, startKey: <>, endKey: <>, encodedName(70236052) tableDesc: " +
+      "regionname: -ROOT-,,0, startKey: <>, endKey: <>, encodedName: 70236052, tableDesc: " +
       "{name: -ROOT-, families: {info:={name: info, max versions: 1, " +
       "compression: NONE, in memory: false, max length: 2147483647, bloom " +
       "filter: none}}}", hri.toString());

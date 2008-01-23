@@ -1816,6 +1816,7 @@ public class HRegion implements HConstants {
    * @param r HRegion to add to <code>meta</code>
    *
    * @throws IOException
+   * @see {@link #removeRegionFromMETA(HRegion, HRegion)}
    */
   static void addRegionToMETA(HRegion meta, HRegion r) throws IOException {
     meta.checkResources();
@@ -1833,7 +1834,52 @@ public class HRegion implements HConstants {
       meta.releaseRowLock(row);
     }
   }
-  
+
+  /**
+   * Delete a region's meta information from the passed
+   * <code>meta</code> region.
+   * 
+   * @param srvr META server to be updated
+   * @param metaRegionName Meta region name
+   * @param regionNmae HRegion to remove from <code>meta</code>
+   *
+   * @throws IOException
+   * @see {@link #addRegionToMETA(HRegion, HRegion)}
+   */
+  static void removeRegionFromMETA(final HRegionInterface srvr,
+      final Text metaRegionName, final Text regionName)
+  throws IOException {
+    BatchUpdate b = new BatchUpdate(rand.nextLong());
+    long lockid = b.startUpdate(regionName);
+    for (int i = 0; i < ALL_META_COLUMNS.length; i++) {
+      b.delete(lockid, ALL_META_COLUMNS[i]);
+    }
+    srvr.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
+  }
+
+  /**
+   * Utility method used by HMaster marking regions offlined.
+   * @param srvr META server to be updated
+   * @param metaRegionName Meta region name
+   * @param info HRegion to update in <code>meta</code>
+   *
+   * @throws IOException
+   * @see {@link #addRegionToMETA(HRegion, HRegion)}
+   */
+  static void offlineRegionInMETA(final HRegionInterface srvr,
+      final Text metaRegionName, final HRegionInfo info)
+  throws IOException {
+    BatchUpdate b = new BatchUpdate(rand.nextLong());
+    long lockid = b.startUpdate(info.getRegionName());
+    info.setOffline(true);
+    b.put(lockid, COL_REGIONINFO, Writables.getBytes(info));
+    b.delete(lockid, COL_SERVER);
+    b.delete(lockid, COL_STARTCODE);
+    // If carrying splits, they'll be in place when we show up on new
+    // server.
+    srvr.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
+  }
+
   /**
    * Deletes all the files for a HRegion
    * 
