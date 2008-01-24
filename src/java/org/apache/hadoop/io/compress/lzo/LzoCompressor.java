@@ -44,6 +44,9 @@ public class LzoCompressor implements Compressor {
   private Buffer compressedDirectBuf = null;
   private boolean finish, finished;
   
+  private long bytesread = 0L;
+  private long byteswritten = 0L;
+
   private CompressionStrategy strategy; // The lzo compression algorithm.
   private long lzoCompressor = 0;       // The actual lzo compression function.
   private int workingMemoryBufLen = 0;  // The length of 'working memory' buf.
@@ -200,26 +203,34 @@ public class LzoCompressor implements Compressor {
     if (off < 0 || len < 0 || off > b.length - len) {
       throw new ArrayIndexOutOfBoundsException();
     }
+    finished = false;
 
-    this.userBuf = b;
-    this.userBufOff = off;
-    this.userBufLen = len;
-
-    // Reinitialize lzo's output direct-buffer 
-    compressedDirectBuf.limit(directBufferSize);
-    compressedDirectBuf.position(directBufferSize);
+    if (len > uncompressedDirectBuf.remaining()) {
+      // save data; now !needsInput
+      this.userBuf = b;
+      this.userBufOff = off;
+      this.userBufLen = len;
+    } else {
+      ((ByteBuffer)uncompressedDirectBuf).put(b, off, len);
+      uncompressedDirectBufLen = uncompressedDirectBuf.position();
+    }
+    bytesread += len;
   }
 
+  /**
+   * If a write would exceed the capacity of the direct buffers, it is set
+   * aside to be loaded by this function while the compressed data are
+   * consumed.
+   */
   synchronized void setInputFromSavedData() {
-    uncompressedDirectBufLen = userBufLen;
-    if (uncompressedDirectBufLen > directBufferSize) {
-      uncompressedDirectBufLen = directBufferSize;
+    if (0 >= userBufLen) {
+      return;
     }
+    finished = false;
 
-    // Reinitialize lzo's input direct buffer
-    uncompressedDirectBuf.rewind();
-    ((ByteBuffer)uncompressedDirectBuf).put(userBuf, userBufOff,  
-                                            uncompressedDirectBufLen);
+    uncompressedDirectBufLen = Math.min(userBufLen, directBufferSize);
+    ((ByteBuffer)uncompressedDirectBuf).put(userBuf, userBufOff,
+      uncompressedDirectBufLen);
 
     // Note how much data is being fed to lzo
     userBufOff += uncompressedDirectBufLen;
@@ -230,25 +241,13 @@ public class LzoCompressor implements Compressor {
     // nop
   }
 
+  /** {@inheritDoc} */
   public boolean needsInput() {
-    // Consume remaining compressed data?
-    if (compressedDirectBuf.remaining() > 0) {
-      return false;
-    }
-
-    // Check if lzo has consumed all input
-    if (uncompressedDirectBufLen <= 0) {
-      // Check if we have consumed all user-input
-      if (userBufLen <= 0) {
-        return true;
-      } else {
-        setInputFromSavedData();
-      }
-    }
-    
-    return false;
+    return !(compressedDirectBuf.remaining() > 0
+        || uncompressedDirectBuf.remaining() == 0
+        || userBufLen > 0);
   }
-  
+
   public synchronized void finish() {
     finish = true;
   }
@@ -267,32 +266,42 @@ public class LzoCompressor implements Compressor {
     if (off < 0 || len < 0 || off > b.length - len) {
       throw new ArrayIndexOutOfBoundsException();
     }
-    
-    int n = 0;
-    
+
     // Check if there is compressed data
-    n = compressedDirectBuf.remaining();
+    int n = compressedDirectBuf.remaining();
     if (n > 0) {
       n = Math.min(n, len);
       ((ByteBuffer)compressedDirectBuf).get(b, off, n);
+      byteswritten += n;
       return n;
     }
 
     // Re-initialize the lzo's output direct-buffer
-    compressedDirectBuf.rewind();
-    compressedDirectBuf.limit(directBufferSize);
+    compressedDirectBuf.clear();
+    compressedDirectBuf.limit(0);
+    if (0 == uncompressedDirectBuf.position()) {
+      // No compressed data, so we should have !needsInput or !finished
+      setInputFromSavedData();
+      if (0 == uncompressedDirectBuf.position()) {
+        // Called without data; write nothing
+        finished = true;
+        return 0;
+      }
+    }
 
     // Compress data
     n = compressBytesDirect(strategy.getCompressor());
     compressedDirectBuf.limit(n);
-    
+    uncompressedDirectBuf.clear(); // lzo consumes all buffer input
+
     // Set 'finished' if lzo has consumed all user-data
-    if (userBufLen <= 0) {
+    if (0 == userBufLen) {
       finished = true;
     }
-    
+
     // Get atmost 'len' bytes
     n = Math.min(n, len);
+    byteswritten += n;
     ((ByteBuffer)compressedDirectBuf).get(b, off, n);
 
     return n;
@@ -301,13 +310,31 @@ public class LzoCompressor implements Compressor {
   public synchronized void reset() {
     finish = false;
     finished = false;
-    uncompressedDirectBuf.rewind();
+    uncompressedDirectBuf.clear();
     uncompressedDirectBufLen = 0;
-    compressedDirectBuf.limit(directBufferSize);
-    compressedDirectBuf.position(directBufferSize);
+    compressedDirectBuf.clear();
+    compressedDirectBuf.limit(0);
     userBufOff = userBufLen = 0;
+    bytesread = byteswritten = 0L;
   }
-  
+
+  /**
+   * Return number of bytes given to this compressor since last reset.
+   */
+  public synchronized long getBytesRead() {
+    return bytesread;
+  }
+
+  /**
+   * Return number of bytes consumed by callers of compress since last reset.
+   */
+  public synchronized long getBytesWritten() {
+    return byteswritten;
+  }
+
+  /**
+   * Noop.
+   */
   public synchronized void end() {
     // nop
   }

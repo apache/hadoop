@@ -56,7 +56,16 @@ public interface Compressor {
    * @param len Length
    */
   public void setDictionary(byte[] b, int off, int len);
-  
+
+  /**
+   * Return number of uncompressed bytes input so far.
+   */
+  public long getBytesRead();
+
+  /**
+   * Return number of compressed bytes output so far.
+   */
+  public long getBytesWritten();
 
   /**
    * When called, indicates that compression should end

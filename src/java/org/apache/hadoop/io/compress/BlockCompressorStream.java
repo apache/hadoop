@@ -25,7 +25,11 @@ import java.io.OutputStream;
  * A {@link org.apache.hadoop.io.compress.CompressorStream} which works
  * with 'block-based' based compression algorithms, as opposed to 
  * 'stream-based' compression algorithms.
- *  
+ *
+ * It should be noted that this wrapper does not guarantee that blocks will
+ * be sized for the compressor. If the
+ * {@link org.apache.hadoop.io.compress.Compressor} requires buffering to
+ * effect meaningful compression, it is responsible for it.
  */
 class BlockCompressorStream extends CompressorStream {
 
@@ -61,6 +65,14 @@ class BlockCompressorStream extends CompressorStream {
     this(out, compressor, 512, 18);
   }
 
+  /**
+   * Write the data provided to the compression codec, compressing no more
+   * than the buffer size less the compression overhead as specified during
+   * construction for each block.
+   *
+   * Each block contains the uncompressed length for the block, followed by
+   * one or more length-prefixed blocks of compressed data.
+   */
   public void write(byte[] b, int off, int len) throws IOException {
     // Sanity checks
     if (compressor.finished()) {
@@ -75,22 +87,53 @@ class BlockCompressorStream extends CompressorStream {
       return;
     }
 
-    // Write out the length of the original data
-    rawWriteInt(len);
-    
-    // Compress data
-    if (!compressor.finished()) {
+    long limlen = compressor.getBytesRead();
+    if (len + limlen > MAX_INPUT_SIZE && limlen > 0) {
+      // Adding this segment would exceed the maximum size.
+      // Flush data if we have it.
+      finish();
+      compressor.reset();
+    }
+
+    if (len > MAX_INPUT_SIZE) {
+      // The data we're given exceeds the maximum size. Any data
+      // we had have been flushed, so we write out this chunk in segments
+      // not exceeding the maximum size until it is exhausted.
+      rawWriteInt(len);
       do {
-        // Compress atmost 'maxInputSize' chunks at a time
         int bufLen = Math.min(len, MAX_INPUT_SIZE);
         
         compressor.setInput(b, off, bufLen);
-        while (!compressor.needsInput()) {
+        compressor.finish();
+        while (!compressor.finished()) {
           compress();
         }
+        compressor.reset();
         off += bufLen;
         len -= bufLen;
       } while (len > 0);
+      return;
+    }
+
+    // Give data to the compressor
+    compressor.setInput(b, off, len);
+    if (!compressor.needsInput()) {
+      // compressor buffer size might be smaller than the maximum
+      // size, so we permit it to flush if required.
+      rawWriteInt((int)compressor.getBytesRead());
+      do {
+        compress();
+      } while (!compressor.needsInput());
+    }
+  }
+
+  public void finish() throws IOException {
+    if (!compressor.finished()) {
+      rawWriteInt((int)compressor.getBytesRead());
+      compressor.finish();
+      while (!compressor.finished()) {
+        compress();
+      }
     }
   }
 

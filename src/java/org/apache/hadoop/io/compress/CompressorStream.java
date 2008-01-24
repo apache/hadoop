@@ -65,12 +65,10 @@ class CompressorStream extends CompressionOutputStream {
     } else if (len == 0) {
       return;
     }
-    
-    if (!compressor.finished()) {
-      compressor.setInput(b, off, len);
-      while (!compressor.needsInput()) {
-        compress();
-      }
+
+    compressor.setInput(b, off, len);
+    while (!compressor.needsInput()) {
+      compress();
     }
   }
 

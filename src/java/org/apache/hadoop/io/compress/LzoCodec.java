@@ -76,9 +76,14 @@ public class LzoCodec implements Configurable, CompressionCodec {
   public static boolean isNativeLzoLoaded(Configuration conf) {
     return nativeLzoLoaded && conf.getBoolean("hadoop.native.lib", true);
   }
-  
+
   public CompressionOutputStream createOutputStream(OutputStream out) 
     throws IOException {
+    return createOutputStream(out, createCompressor());
+  }
+  
+  public CompressionOutputStream createOutputStream(OutputStream out, 
+      Compressor compressor) throws IOException {
     // Ensure native-lzo library is loaded & initialized
     if (!isNativeLzoLoaded(conf)) {
       throw new RuntimeException("native-lzo library not available");
@@ -107,49 +112,16 @@ public class LzoCodec implements Configurable, CompressionCodec {
     // Create the lzo output-stream
     LzoCompressor.CompressionStrategy strategy = 
       LzoCompressor.CompressionStrategy.valueOf(
-                                                conf.get("io.compression.codec.lzo.compressor",
-                                                         LzoCompressor.CompressionStrategy.LZO1X_1.name()
-                                                         )
-                                                ); 
-    int bufferSize = conf.getInt("io.compression.codec.lzo.buffersize", 
-                                 64*1024);
-    int compressionOverhead = 0;
-    if (strategy.name().contains("LZO1")) {
-      compressionOverhead = (int)(((bufferSize - (64 + 3)) * 16.0) / 17.0);  
-    } else {
-      compressionOverhead = (int)(((bufferSize - (128 + 3)) * 8.0) / 9.0);
-    }
-    
-    return new BlockCompressorStream(out, 
-                                     new LzoCompressor(strategy, bufferSize), 
-                                     bufferSize, compressionOverhead);
-  }
-  
-  public CompressionOutputStream createOutputStream(OutputStream out, 
-                                                    Compressor compressor) 
-  throws IOException {
-    // Ensure native-lzo library is loaded & initialized
-    if (!isNativeLzoLoaded(conf)) {
-      throw new RuntimeException("native-lzo library not available");
-    }
-    
-    LzoCompressor.CompressionStrategy strategy = 
-      LzoCompressor.CompressionStrategy.valueOf(
-                                                conf.get("io.compression.codec.lzo.compressor",
-                                                         LzoCompressor.CompressionStrategy.LZO1X_1.name()
-                                                         )
-                                                ); 
-    int bufferSize = conf.getInt("io.compression.codec.lzo.buffersize", 
-                                 64*1024);
-    int compressionOverhead = 0;
-    if (strategy.name().contains("LZO1")) {
-      compressionOverhead = (int)(((bufferSize - (64 + 3)) * 16.0) / 17.0);  
-    } else {
-      compressionOverhead = (int)(((bufferSize - (128 + 3)) * 8.0) / 9.0);
-    }
-    
-    return new BlockCompressorStream(out, compressor, bufferSize, 
-                                     compressionOverhead); 
+          conf.get("io.compression.codec.lzo.compressor",
+            LzoCompressor.CompressionStrategy.LZO1X_1.name()));
+    int bufferSize =
+      conf.getInt("io.compression.codec.lzo.buffersize", 64*1024);
+    int compressionOverhead = strategy.name().contains("LZO1")
+      ? (bufferSize >> 4) + 64 + 3
+      : (bufferSize >> 3) + 128 + 3;
+
+    return new BlockCompressorStream(out, compressor, bufferSize,
+                                     compressionOverhead);
   }
 
   public Class getCompressorType() {
@@ -157,7 +129,6 @@ public class LzoCodec implements Configurable, CompressionCodec {
     if (!isNativeLzoLoaded(conf)) {
       throw new RuntimeException("native-lzo library not available");
     }
-    
     return LzoCompressor.class;
   }
 
@@ -169,36 +140,17 @@ public class LzoCodec implements Configurable, CompressionCodec {
     
     LzoCompressor.CompressionStrategy strategy = 
       LzoCompressor.CompressionStrategy.valueOf(
-                                                conf.get("io.compression.codec.lzo.compressor",
-                                                         LzoCompressor.CompressionStrategy.LZO1X_1.name()
-                                                         )
-                                                ); 
-    int bufferSize = conf.getInt("io.compression.codec.lzo.buffersize", 
-                                 64*1024);
-    
-    return new LzoCompressor(strategy, bufferSize); 
+          conf.get("io.compression.codec.lzo.compressor",
+            LzoCompressor.CompressionStrategy.LZO1X_1.name()));
+    int bufferSize =
+      conf.getInt("io.compression.codec.lzo.buffersize", 64*1024);
+
+    return new LzoCompressor(strategy, bufferSize);
   }
 
-  public CompressionInputStream createInputStream(InputStream in) 
-    throws IOException {
-    // Ensure native-lzo library is loaded & initialized
-    if (!isNativeLzoLoaded(conf)) {
-      throw new IOException("native-lzo library not available");
-    }
-    
-    // Create the lzo input-stream
-    LzoDecompressor.CompressionStrategy strategy = 
-      LzoDecompressor.CompressionStrategy.valueOf(
-                                                  conf.get("io.compression.codec.lzo.decompressor",
-                                                           LzoDecompressor.CompressionStrategy.LZO1X.name()
-                                                           )
-                                                  ); 
-    int bufferSize = conf.getInt("io.compression.codec.lzo.buffersize", 
-                                 64*1024);
-
-    return new BlockDecompressorStream(in, 
-                                       new LzoDecompressor(strategy, bufferSize), 
-                                       bufferSize);
+  public CompressionInputStream createInputStream(InputStream in)
+      throws IOException {
+    return createInputStream(in, createDecompressor());
   }
 
   public CompressionInputStream createInputStream(InputStream in, 
@@ -208,10 +160,8 @@ public class LzoCodec implements Configurable, CompressionCodec {
     if (!isNativeLzoLoaded(conf)) {
       throw new RuntimeException("native-lzo library not available");
     }
-    
     return new BlockDecompressorStream(in, decompressor, 
-                                       conf.getInt("io.compression.codec.lzo.buffersize", 
-                                                   64*1024));
+        conf.getInt("io.compression.codec.lzo.buffersize", 64*1024));
   }
 
   public Class getDecompressorType() {
@@ -219,7 +169,6 @@ public class LzoCodec implements Configurable, CompressionCodec {
     if (!isNativeLzoLoaded(conf)) {
       throw new RuntimeException("native-lzo library not available");
     }
-    
     return LzoDecompressor.class;
   }
 
@@ -231,12 +180,10 @@ public class LzoCodec implements Configurable, CompressionCodec {
     
     LzoDecompressor.CompressionStrategy strategy = 
       LzoDecompressor.CompressionStrategy.valueOf(
-                                                  conf.get("io.compression.codec.lzo.decompressor",
-                                                           LzoDecompressor.CompressionStrategy.LZO1X.name()
-                                                           )
-                                                  ); 
-    int bufferSize = conf.getInt("io.compression.codec.lzo.buffersize", 
-                                 64*1024);
+          conf.get("io.compression.codec.lzo.decompressor",
+            LzoDecompressor.CompressionStrategy.LZO1X.name()));
+    int bufferSize =
+      conf.getInt("io.compression.codec.lzo.buffersize", 64*1024);
 
     return new LzoDecompressor(strategy, bufferSize); 
   }
