@@ -54,8 +54,7 @@ public class UnixUserGroupInformation implements UserGroupInformation {
    * @param groupNames groups list, first of which is the default group
    * @exception IllegalArgumentException if any argument is null
    */
-  UnixUserGroupInformation(String userName, String[] groupNames)
-  throws IOException {
+  public UnixUserGroupInformation(String userName, String[] groupNames) {
     setUserGroupNames(userName, groupNames);
   }
 

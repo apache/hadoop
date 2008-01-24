@@ -28,7 +28,9 @@ import org.apache.hadoop.dfs.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.*;
+import org.apache.hadoop.fs.permission.AccessControlException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ipc.RemoteException;
 
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
@@ -517,6 +519,10 @@ public abstract class FileSystem extends Configured {
     try {
       return getFileStatus(f).isDir();
     } catch (IOException e) {
+      if (e instanceof RemoteException && AccessControlException.class
+          .getName().equals(((RemoteException)e).getClassName())) {
+        throw e;
+      }
       return false;               // f does not exist
     }
   }

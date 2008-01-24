@@ -285,6 +285,8 @@ Trunk (unreleased changes)
     to specify the blocksize, replication factor and the buffersize to be
     used for the underlying HDFS file. (Alejandro Abdelnur via acmurthy) 
 
+    HADOOP-2431. Test HDFS File Permissions. (Hairong Kuang via shv)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

@@ -1787,7 +1787,7 @@ class FSNamesystem implements FSConstants {
   public DFSFileInfo[] getListing(String src) throws IOException {
     if (isPermissionEnabled) {
       if (dir.isDir(src)) {
-        checkPathAccess(src, FsAction.READ);
+        checkPathAccess(src, FsAction.READ_EXECUTE);
       }
       else {
         checkTraverse(src);
