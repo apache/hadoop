@@ -223,24 +223,19 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
         int numberOfRegionsFound = 0;
         while (true) {
-          SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
           HbaseMapWritable values = regionServer.next(scannerId);
           if (values == null || values.size() == 0) {
             break;
           }
-          for (Map.Entry<Writable, Writable> e: values.entrySet()) {
-            HStoreKey key = (HStoreKey) e.getKey();
-            results.put(key.getColumn(),
-                ((ImmutableBytesWritable) e.getValue()).get());
-          }
-          byte [] bytes = results.get(COL_REGIONINFO);
-          if (bytes == null) {
-            LOG.warn(COL_REGIONINFO.toString() + " is empty; has keys: " +
-              values.keySet().toString());
+
+          // TODO: Why does this have to be a sorted map?
+          SortedMap<Text, byte[]> results = toRowMap(values).getMap();
+          
+          HRegionInfo info = getHRegionInfo(results);
+          if (info == null) {
             continue;
           }
-          HRegionInfo info = (HRegionInfo) Writables.getWritable(bytes,
-            new HRegionInfo());
+
           String serverName = Writables.bytesToString(results.get(COL_SERVER));
           long startCode = Writables.bytesToLong(results.get(COL_STARTCODE));
           if (LOG.isDebugEnabled()) {
@@ -2007,28 +2002,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
               RemoteExceptionHandler.checkIOException(e));
             break;
           }
-
           if (values == null || values.size() == 0) {
             break;
           }
-
-          SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-          Text row = null;
-          for (Map.Entry<Writable, Writable> e: values.entrySet()) {
-            HStoreKey key = (HStoreKey) e.getKey();
-            Text thisRow = key.getRow();
-            if (row == null) {
-              row = thisRow;
-            } else {
-              if (!row.equals(thisRow)) {
-                LOG.error("Multiple rows in same scanner result set. firstRow="
-                    + row + ", currentRow=" + thisRow);
-              }
-            }
-            results.put(key.getColumn(),
-                ((ImmutableBytesWritable) e.getValue()).get());
-          }
-
+          // TODO: Why does this have to be a sorted map?
+          RowMap rm = toRowMap(values);
+          Text row = rm.getRow();
+          SortedMap<Text, byte[]> map = rm.getMap();
           if (LOG.isDebugEnabled() && row != null) {
             LOG.debug("shutdown scanner looking at " + row.toString());
           }
@@ -2038,8 +2018,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           // missed edits in hlog because hdfs does not do write-append).
           String serverName;
           try {
-            serverName = Writables.bytesToString(results.get(COL_SERVER));
-          } catch(UnsupportedEncodingException e) {
+            serverName = Writables.bytesToString(map.get(COL_SERVER));
+          } catch (UnsupportedEncodingException e) {
             LOG.error("Server name", e);
             break;
           }
@@ -2054,13 +2034,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           }
 
           // Bingo! Found it.
-          HRegionInfo info = null;
-          try {
-            info = (HRegionInfo) Writables.getWritable(
-                results.get(COL_REGIONINFO), new HRegionInfo());
-          } catch (IOException e) {
-            LOG.error("Read fields", e);
-            break;
+          HRegionInfo info = getHRegionInfo(map);
+          if (info == null) {
+            continue;
           }
           LOG.info(info.getRegionName() + " was on shutdown server <" +
               serverName + "> (or server is null). Marking unassigned in " +
@@ -2720,52 +2696,21 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
               try {
                 while (true) {
-                  HRegionInfo info = new HRegionInfo();
-                  String serverName = null;
-                  long startCode = -1L;
-
                   HbaseMapWritable values = server.next(scannerId);
                   if(values == null || values.size() == 0) {
                     break;
                   }
-                  boolean haveRegionInfo = false;
-                  for (Map.Entry<Writable, Writable> e: values.entrySet()) {
-
-                    byte[] value = ((ImmutableBytesWritable) e.getValue()).get();
-                    if (value == null || value.length == 0) {
-                      break;
-                    }
-                    HStoreKey key = (HStoreKey) e.getKey();
-                    Text column = key.getColumn();
-                    if (column.equals(COL_REGIONINFO)) {
-                      haveRegionInfo = true;
-                      info = (HRegionInfo) Writables.getWritable(value, info);
-                    
-                    } else if (column.equals(COL_SERVER)) {
-                      try {
-                        serverName =
-                          Writables.bytesToString(value);
-                    
-                      } catch (UnsupportedEncodingException ex) {
-                        assert(false);
-                      }
-                    
-                    } else if (column.equals(COL_STARTCODE)) {
-                      try {
-                        startCode = Writables.bytesToLong(value);
-                      
-                      } catch (UnsupportedEncodingException ex) {
-                        assert(false);
-                      }
-                    }
+                  RowMap rm = toRowMap(values);
+                  SortedMap<Text, byte[]> map = rm.getMap();
+                  HRegionInfo info = getHRegionInfo(map);
+                  if (info == null) {
+                    throw new IOException(COL_REGIONINFO + " not found on " +
+                      rm.getRow());
                   }
-
-                  if (!haveRegionInfo) {
-                    throw new IOException(COL_REGIONINFO + " not found");
-                  }
-
+                  String serverName = Writables.bytesToString(map.get(COL_SERVER));
+                  long startCode = Writables.bytesToLong(map.get(COL_STARTCODE));
                   if (info.getTableDesc().getName().compareTo(tableName) > 0) {
-                    break;               // Beyond any more entries for this table
+                    break; // Beyond any more entries for this table
                   }
 
                   tableExists = true;
@@ -2773,9 +2718,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
                     unservedRegions.add(info);
                   }
                   processScanItem(serverName, startCode, info);
-
                 } // while(true)
-
               } finally {
                 if (scannerId != -1L) {
                   try {
@@ -2994,7 +2937,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     protected void updateRegionInfo(BatchUpdate b,
         @SuppressWarnings("unused") HRegionInfo info) {
       for (int i = 0; i < ALL_META_COLUMNS.length; i++) {
-        // Be sure to clean all columns
+        // Be sure to clean all cells
         b.delete(lockid, ALL_META_COLUMNS[i]);
       }
     }
@@ -3169,6 +3112,75 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   public HBaseConfiguration getConfiguration() {
     return this.conf;
+  }
+  
+  /*
+   * Data structure used to return results out of the toRowMap method.
+   */
+  private class RowMap {
+    final Text row;
+    final SortedMap<Text, byte[]> map;
+    
+    private RowMap(final Text r, final SortedMap<Text, byte[]> m) {
+      this.row = r;
+      this.map = m;
+    }
+
+    private Text getRow() {
+      return this.row;
+    }
+
+    private SortedMap<Text, byte[]> getMap() {
+      return this.map;
+    }
+  }
+  
+  /*
+   * Convert an HbaseMapWritable to a Map keyed by column.
+   * Utility method used scanning meta regions
+   * @param mw The MapWritable to convert.  Cannot be null.
+   * @return Returns a SortedMap currently.  TODO: This looks like it could
+   * be a plain Map.
+   */
+  protected RowMap toRowMap(final HbaseMapWritable mw) {
+    if (mw == null) {
+      throw new IllegalArgumentException("Passed MapWritable cannot be null");
+    }
+    SortedMap<Text, byte[]> m = new TreeMap<Text, byte[]>();
+    Text row = null;
+    for (Map.Entry<Writable, Writable> e: mw.entrySet()) {
+      HStoreKey key = (HStoreKey) e.getKey();
+      Text thisRow = key.getRow();
+      if (row == null) {
+        row = thisRow;
+      } else {
+        if (!row.equals(thisRow)) {
+          LOG.error("Multiple rows in same scanner result set. firstRow=" +
+            row + ", currentRow=" + thisRow);
+        }
+      }
+      m.put(key.getColumn(), ((ImmutableBytesWritable) e.getValue()).get());
+    }
+    return new RowMap(row, m);
+  }
+  
+  /*
+   * Get HRegionInfo from passed META map of row values.
+   * Returns null if none found (and logs fact that expected COL_REGIONINFO
+   * was missing).  Utility method used by scanners of META tables.
+   * @param map Map to do lookup in.
+   * @return Null or found HRegionInfo.
+   * @throws IOException
+   */
+  protected HRegionInfo getHRegionInfo(final Map<Text, byte[]> map)
+  throws IOException {
+    byte [] bytes = map.get(COL_REGIONINFO);
+    if (bytes == null) {
+      LOG.warn(COL_REGIONINFO.toString() + " is empty; has keys: " +
+        map.keySet().toString());
+      return null;
+    }
+    return (HRegionInfo)Writables.getWritable(bytes, new HRegionInfo());
   }
 
   /*
