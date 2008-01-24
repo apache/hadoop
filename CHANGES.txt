@@ -538,6 +538,9 @@ Trunk (unreleased changes)
     HADOOP-2549. Correct disk size computation so that data-nodes could switch 
     to other local drives if current is full. (Hairong Kuang via shv)
 
+    HADOOP-2633. Fsck should call name-node methods directly rather than 
+    through rpc. (Tsz Wo (Nicholas), SZE via shv)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES

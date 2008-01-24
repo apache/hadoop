@@ -724,46 +724,45 @@ class FSNamesystem implements FSConstants {
   /**
    * Get block locations within the specified range.
    * 
-   * @see ClientProtocol#open(String, long, long)
-   * @see ClientProtocol#getBlockLocations(String, long, long)
+   * @see #getBlockLocations(String, long, long)
    */
   LocatedBlocks getBlockLocations(String clientMachine, String src,
       long offset, long length) throws IOException {
     if (isPermissionEnabled) {
       checkPathAccess(src, FsAction.READ);
     }
-    return getBlockLocationsInternal(clientMachine, src, offset, length);
+
+    LocatedBlocks blocks = getBlockLocations(src, offset, length);
+    if (blocks != null) {
+      //sort the blocks
+      DatanodeDescriptor client = host2DataNodeMap.getDatanodeByHost(
+          clientMachine);
+      for (LocatedBlock b : blocks.getLocatedBlocks()) {
+        clusterMap.pseudoSortByDistance(client, b.getLocations());
+      }
+    }
+    return blocks;
   }
-  LocatedBlocks getBlockLocationsInternal(String clientMachine,
-                                  String src, 
-                                  long offset, 
-                                  long length
-                                  ) throws IOException {
+
+  /**
+   * Get block locations within the specified range.
+   * 
+   * @see ClientProtocol#open(String, long, long)
+   * @see ClientProtocol#getBlockLocations(String, long, long)
+   */
+  LocatedBlocks getBlockLocations(String src, long offset, long length
+      ) throws IOException {
     if (offset < 0) {
       throw new IOException("Negative offset is not supported. File: " + src );
     }
     if (length < 0) {
       throw new IOException("Negative length is not supported. File: " + src );
     }
-
-    DatanodeDescriptor client = null;
-    LocatedBlocks blocks =  getBlockLocationInternal(dir.getFileINode(src),
-                                              offset, length, 
-                                              Integer.MAX_VALUE);
-    if (blocks == null) {
-      return null;
-    }
-    client = host2DataNodeMap.getDatanodeByHost(clientMachine);
-    for (Iterator<LocatedBlock> it = blocks.getLocatedBlocks().iterator();
-         it.hasNext();) {
-      LocatedBlock block = it.next();
-      clusterMap.pseudoSortByDistance(client, 
-                                (DatanodeDescriptor[])(block.getLocations()));
-    }
-    return blocks;
+    return getBlockLocationsInternal(dir.getFileINode(src), offset, length,
+        Integer.MAX_VALUE);  
   }
-  
-  private synchronized LocatedBlocks getBlockLocationInternal(INodeFile inode,
+
+  private synchronized LocatedBlocks getBlockLocationsInternal(INodeFile inode,
                                                        long offset, 
                                                        long length,
                                                        int nrBlocksToReturn) {
@@ -1433,7 +1432,7 @@ class FSNamesystem implements FSConstants {
    * Remove the indicated filename from the namespace.  This may
    * invalidate some blocks that make up the file.
    */
-  private synchronized boolean deleteInternal(String src, 
+  synchronized boolean deleteInternal(String src, 
       boolean enforceSafeMode, boolean enforcePermission) throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
     if (enforceSafeMode && isInSafeMode())

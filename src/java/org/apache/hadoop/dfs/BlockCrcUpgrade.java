@@ -2083,7 +2083,7 @@ class BlockCrcUpgradeObjectNamenode extends UpgradeObjectNamenode {
         // Get the all the blocks.
         LocatedBlocks blockLoc = null;
         try {
-          blockLoc = getFSNamesystem().getBlockLocationsInternal(null,
+          blockLoc = getFSNamesystem().getBlockLocations(
               file.getPath().toString(), 0, file.getLen());
           int numBlocks = blockLoc.locatedBlockCount();
           for (int i=0; i<numBlocks; i++) {

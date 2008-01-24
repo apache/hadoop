@@ -31,29 +31,15 @@ import org.apache.hadoop.util.ToolRunner;
  * A JUnit test for doing fsck
  */
 public class TestFsck extends TestCase {
- 
-  public TestFsck(String testName) {
-    super(testName);
-  }
-
-  
-  
-  @Override
-  protected void setUp() throws Exception {
-  }
-
-  @Override
-  protected void tearDown() throws Exception {
-  }
-  
   /** do fsck */
   public void testFsck() throws Exception {
     DFSTestUtil util = new DFSTestUtil("TestFsck", 20, 3, 8*1024);
     MiniDFSCluster cluster = null;
+    FileSystem fs = null;
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(conf, 4, true, null);
-      FileSystem fs = cluster.getFileSystem();
+      fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
       PrintStream oldOut = System.out;
       ByteArrayOutputStream bStream = new ByteArrayOutputStream();
@@ -64,6 +50,7 @@ public class TestFsck extends TestCase {
       String outStr = bStream.toString();
       assertTrue(-1 != outStr.indexOf("HEALTHY"));
       System.out.println(outStr);
+      if (fs != null) {try{fs.close();} catch(Exception e){}}
       cluster.shutdown();
       
       // restart the cluster; bring up namenode but not the data nodes
@@ -82,20 +69,22 @@ public class TestFsck extends TestCase {
       // bring up data nodes & cleanup cluster
       cluster.startDataNodes(conf, 4, true, null, null);
       cluster.waitActive();
-      util.cleanup(cluster.getFileSystem(), "/srcdat");
+      fs = cluster.getFileSystem();
+      util.cleanup(fs, "/srcdat");
     } finally {
+      if (fs != null) {try{fs.close();} catch(Exception e){}}
       if (cluster != null) { cluster.shutdown(); }
     }
   }
-  
-  /** do fsck on non-existent path*/
+
   public void testFsckNonExistent() throws Exception {
     DFSTestUtil util = new DFSTestUtil("TestFsck", 20, 3, 8*1024);
     MiniDFSCluster cluster = null;
+    FileSystem fs = null;
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(conf, 4, true, null);
-      FileSystem fs = cluster.getFileSystem();
+      fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
       PrintStream oldOut = System.out;
       ByteArrayOutputStream bStream = new ByteArrayOutputStream();
@@ -108,6 +97,7 @@ public class TestFsck extends TestCase {
       System.out.println(outStr);
       util.cleanup(fs, "/srcdat");
     } finally {
+      if (fs != null) {try{fs.close();} catch(Exception e){}}
       if (cluster != null) { cluster.shutdown(); }
     }
   }

@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
+import org.apache.hadoop.fs.permission.PermissionStatus;
 
 /**
  * This class provides rudimentary checking of DFS volumes for errors and
@@ -68,7 +69,6 @@ public class NamenodeFsck {
   public static final int FIXING_DELETE = 2;
   
   private NameNode nn;
-  private ClientProtocol namenodeproxy;
   private String lostFound = null;
   private boolean lfInited = false;
   private boolean lfInitedOk = false;
@@ -96,7 +96,6 @@ public class NamenodeFsck {
                       HttpServletResponse response) throws IOException {
     this.conf = conf;
     this.nn = nn;
-    this.namenodeproxy =DFSClient.createNamenode(nn.getNameNodeAddress(),conf);
     this.out = response.getWriter();
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
       String key = it.next();
@@ -116,7 +115,7 @@ public class NamenodeFsck {
    */
   public void fsck() throws IOException {
     try {
-      DFSFileInfo[] files = namenodeproxy.getListing(path);
+      DFSFileInfo[] files = nn.namesystem.dir.getListing(path);
       FsckResult res = new FsckResult();
       res.setReplication((short) conf.getInt("dfs.replication", 3));
       if (files != null) {
@@ -141,12 +140,14 @@ public class NamenodeFsck {
     res.totalRacks = nn.getNetworkTopology().getNumOfRacks();
     res.totalDatanodes = nn.getDatanodeReport(DatanodeReportType.LIVE).length;
     int minReplication = FSNamesystem.getFSNamesystem().getMinReplication();
+    String path = file.getPath().toString();
+
     if (file.isDir()) {
       if (showFiles) {
-        out.println(file.getPath().toString() + " <dir>");
+        out.println(path + " <dir>");
       }
       res.totalDirs++;
-      DFSFileInfo[] files =namenodeproxy.getListing(file.getPath().toString());
+      DFSFileInfo[] files = nn.namesystem.dir.getListing(path);
       for (int i = 0; i < files.length; i++) {
         check(files[i], res);
       }
@@ -155,11 +156,10 @@ public class NamenodeFsck {
     res.totalFiles++;
     long fileLen = file.getLen();
     res.totalSize += fileLen;
-    LocatedBlocks blocks = namenodeproxy.getBlockLocations(
-        file.getPath().toString(), 0, fileLen);
+    LocatedBlocks blocks = nn.namesystem.getBlockLocations(path, 0, fileLen);
     res.totalBlocks += blocks.locatedBlockCount();
     if (showFiles) {
-      out.print(file.getPath().toString() + " " + fileLen + " bytes, " +
+      out.print(path + " " + fileLen + " bytes, " +
           blocks.locatedBlockCount() + " block(s): ");
     }  else {
       out.print('.');
@@ -189,7 +189,7 @@ public class NamenodeFsck {
         res.numUnderReplicatedBlocks += 1;
         underReplicatedPerFile++;
         if (!showFiles) {
-          out.print("\n" + file.getPath().toString() + ": ");
+          out.print("\n" + path + ": ");
         }
         out.println(" Under replicated " + block.getBlockName() +
                     ". Target Replicas is " +
@@ -205,7 +205,7 @@ public class NamenodeFsck {
         if (!showFiles) {
           if(underReplicatedPerFile == 0)
             out.println();
-          out.print(file.getPath().toString() + ": ");
+          out.print(path + ": ");
         }
         out.println(" Replica placement policy is violated for " + 
                     block.getBlockName() +
@@ -238,9 +238,8 @@ public class NamenodeFsck {
     }
     if (missing > 0) {
       if (!showFiles) {
-        out.println("\n" + file.getPath().toString() + ": " +
-                    "MISSING " + missing + " blocks of total size " + 
-                    missize + " B.");
+        out.println("\n" + path + ": MISSING " + missing
+            + " blocks of total size " + missize + " B.");
       }
       res.corruptFiles++;
       switch(fixing) {
@@ -250,7 +249,7 @@ public class NamenodeFsck {
         lostFoundMove(file, blocks);
         break;
       case FIXING_DELETE:
-        namenodeproxy.delete(file.getPath().toString());
+        nn.namesystem.deleteInternal(path, true, false);
       }
     }
     if (showFiles) {
@@ -278,7 +277,9 @@ public class NamenodeFsck {
     String target = lostFound + file.getPath();
     String errmsg = "Failed to move " + file.getPath() + " to /lost+found";
     try {
-      if (!namenodeproxy.mkdirs(target, file.getPermission())) {
+      PermissionStatus ps = new PermissionStatus(
+          file.getOwner(), file.getGroup(), file.getPermission()); 
+      if (!nn.namesystem.dir.mkdirs(target, ps, false, FSNamesystem.now())) {
         LOG.warn(errmsg);
         return;
       }
