@@ -1589,7 +1589,7 @@ class DFSClient implements FSConstants {
   
               // get new block from namenode.
               if (blockStream == null) {
-                LOG.info("Allocating new block");
+                LOG.debug("Allocating new block");
                 nodes = nextBlockOutputStream(src); 
                 this.setName("DataStreamer for file " + src +
                              " block " + block);
@@ -1650,7 +1650,7 @@ class DFSClient implements FSConstants {
                 }
               }
             }
-            LOG.info("Closing old block " + block);
+            LOG.debug("Closing old block " + block);
             this.setName("DataStreamer for file " + src);
 
             response.close();        // ignore all errors in Response
@@ -1827,14 +1827,24 @@ class DFSClient implements FSConstants {
           streamer.close();
           return;
         }
+        StringBuilder pipelineMsg = new StringBuilder();
+        for (int j = 0; j < nodes.length; j++) {
+          pipelineMsg.append(nodes[j].getName());
+          if (j < nodes.length - 1) {
+            pipelineMsg.append(", ");
+          }
+        }
+        String pipeline = pipelineMsg.toString();
         if (nodes.length <= 1) {
-          lastException = new IOException("All datanodes are bad. Aborting...");
+          lastException = new IOException("All datanodes " +
+                                          pipeline + " are bad. Aborting...");
           closed = true;
           streamer.close();
           return;
         }
         LOG.warn("Error Recovery for block " + block +
-                 " bad datanode " + nodes[errorIndex].getName());
+                 " in pipeline " + pipeline + 
+                 ": bad datanode " + nodes[errorIndex].getName());
 
         // remove bad datanode from list of datanodes.
         //
@@ -1978,11 +1988,13 @@ class DFSClient implements FSConstants {
     private boolean createBlockOutputStream(DatanodeInfo[] nodes, String client,
                     boolean recoveryFlag) {
       String firstBadLink = "";
-      for (int i = 0; i < nodes.length; i++) {
-        LOG.info("pipeline = " + nodes[i].getName());
+      if (LOG.isDebugEnabled()) {
+        for (int i = 0; i < nodes.length; i++) {
+          LOG.debug("pipeline = " + nodes[i].getName());
+        }
       }
       try {
-        LOG.info("Connecting to " + nodes[0].getName());
+        LOG.debug("Connecting to " + nodes[0].getName());
         InetSocketAddress target = NetUtils.createSocketAddr(nodes[0].getName());
         s = socketFactory.createSocket();
         int timeoutValue = 3000 * nodes.length + socketTimeout;
