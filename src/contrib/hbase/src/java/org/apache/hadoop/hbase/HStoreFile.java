@@ -413,15 +413,13 @@ public class HStoreFile implements HConstants {
    * @return MapFile.Reader
    * @throws IOException
    */
-  public synchronized MapFile.Reader getReader(final FileSystem fs,
-      final Filter bloomFilter) throws IOException {
-    
-    if (isReference()) {
-      return new HStoreFile.HalfMapFileReader(fs,
-          getMapFilePath(reference).toString(), conf, 
-          reference.getFileRegion(), reference.getMidkey(), bloomFilter);
-    }
-    return new BloomFilterMapFile.Reader(fs, getMapFilePath().toString(),
+  public MapFile.Reader getReader(final FileSystem fs,
+    final Filter bloomFilter)
+  throws IOException {
+    return isReference()?
+      new HStoreFile.HalfMapFileReader(fs, getMapFilePath(reference).toString(),
+        conf, reference.getFileRegion(), reference.getMidkey(), bloomFilter):
+      new BloomFilterMapFile.Reader(fs, getMapFilePath().toString(),
         conf, bloomFilter);
   }
 
