@@ -92,4 +92,14 @@ public class TestLocalFileSystem extends TestCase {
       fileSys.delete(subdir);
     }
   }
+
+  public void testHomeDirectory() throws IOException {
+    Configuration conf = new Configuration();
+    FileSystem fileSys = FileSystem.getLocal(conf);
+    Path home = new Path(System.getProperty("user.home"))
+      .makeQualified(fileSys);
+    Path fsHome = fileSys.getHomeDirectory();
+    assertEquals(home, fsHome);
+  }
+
 }

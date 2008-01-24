@@ -73,6 +73,13 @@ public class TestLocalDFS extends TestCase {
       readFile(fileSys, file1);
       cleanupFile(fileSys, new Path(new Path(subdir1, subdir2.toString()),
                                     file1.toString()));
+
+      // test home directory
+      Path home = new Path("/user/"+System.getProperty("user.name"))
+        .makeQualified(fileSys);
+      Path fsHome = fileSys.getHomeDirectory();
+      assertEquals(home, fsHome);
+
     } finally {
       fileSys.close();
       cluster.shutdown();
