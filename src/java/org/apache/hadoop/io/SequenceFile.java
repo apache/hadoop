@@ -267,19 +267,10 @@ public class SequenceFile {
     createWriter(FileSystem fs, Configuration conf, Path name, 
                  Class keyClass, Class valClass, CompressionType compressionType) 
     throws IOException {
-    Writer writer = null;
-    
-    if (compressionType == CompressionType.NONE) {
-      writer = new Writer(fs, conf, name, keyClass, valClass, null, new Metadata());
-    } else if (compressionType == CompressionType.RECORD) {
-      writer = new RecordCompressWriter(fs, conf, name, keyClass, valClass, 
-                                        new DefaultCodec());
-    } else if (compressionType == CompressionType.BLOCK){
-      writer = new BlockCompressWriter(fs, conf, name, keyClass, valClass, 
-                                       new DefaultCodec());
-    }
-    
-    return writer;
+    return createWriter(fs, conf, name, keyClass, valClass,
+            fs.getConf().getInt("io.file.buffer.size", 4096),
+            fs.getDefaultReplication(), fs.getDefaultBlockSize(),
+            compressionType, new DefaultCodec(), null, new Metadata());
   }
   
   /**
@@ -298,19 +289,10 @@ public class SequenceFile {
     createWriter(FileSystem fs, Configuration conf, Path name, 
                  Class keyClass, Class valClass, CompressionType compressionType,
                  Progressable progress) throws IOException {
-    Writer writer = null;
-    
-    if (compressionType == CompressionType.NONE) {
-      writer = new Writer(fs, conf, name, keyClass, valClass, progress, new Metadata()); 
-    } else if (compressionType == CompressionType.RECORD) {
-      writer = new RecordCompressWriter(fs, conf, name, 
-                                        keyClass, valClass, new DefaultCodec(), progress, new Metadata());
-    } else if (compressionType == CompressionType.BLOCK){
-      writer = new BlockCompressWriter(fs, conf, name, 
-                                       keyClass, valClass, new DefaultCodec(), progress, new Metadata());
-    }
-    
-    return writer;
+    return createWriter(fs, conf, name, keyClass, valClass,
+            fs.getConf().getInt("io.file.buffer.size", 4096),
+            fs.getDefaultReplication(), fs.getDefaultBlockSize(),
+            compressionType, new DefaultCodec(), progress, new Metadata());
   }
 
   /**
@@ -330,26 +312,10 @@ public class SequenceFile {
                  Class keyClass, Class valClass, 
                  CompressionType compressionType, CompressionCodec codec) 
     throws IOException {
-    if ((codec instanceof GzipCodec) && 
-        !NativeCodeLoader.isNativeCodeLoaded() && 
-        !ZlibFactory.isNativeZlibLoaded(conf)) {
-      throw new IllegalArgumentException("SequenceFile doesn't work with " +
-                                         "GzipCodec without native-hadoop code!");
-    }
-    
-    Writer writer = null;
-    
-    if (compressionType == CompressionType.NONE) {
-      writer = new Writer(fs, conf, name, keyClass, valClass); 
-    } else if (compressionType == CompressionType.RECORD) {
-      writer = new RecordCompressWriter(fs, conf, name, keyClass, valClass, 
-                                        codec);
-    } else if (compressionType == CompressionType.BLOCK){
-      writer = new BlockCompressWriter(fs, conf, name, keyClass, valClass, 
-                                       codec);
-    }
-    
-    return writer;
+    return createWriter(fs, conf, name, keyClass, valClass,
+            fs.getConf().getInt("io.file.buffer.size", 4096),
+            fs.getDefaultReplication(), fs.getDefaultBlockSize(),
+            compressionType, codec, null, new Metadata());
   }
   
   /**
@@ -371,28 +337,61 @@ public class SequenceFile {
                  Class keyClass, Class valClass, 
                  CompressionType compressionType, CompressionCodec codec,
                  Progressable progress, Metadata metadata) throws IOException {
-    if ((codec instanceof GzipCodec) && 
-        !NativeCodeLoader.isNativeCodeLoaded() && 
+    return createWriter(fs, conf, name, keyClass, valClass,
+            fs.getConf().getInt("io.file.buffer.size", 4096),
+            fs.getDefaultReplication(), fs.getDefaultBlockSize(),
+            compressionType, codec, progress, metadata);
+  }
+
+  /**
+   * Construct the preferred type of SequenceFile Writer.
+   * @param fs The configured filesystem.
+   * @param conf The configuration.
+   * @param name The name of the file.
+   * @param keyClass The 'key' type.
+   * @param valClass The 'value' type.
+   * @param bufferSize buffer size for the underlaying outputstream.
+   * @param replication replication factor for the file.
+   * @param blockSize block size for the file.
+   * @param compressionType The compression type.
+   * @param codec The compression codec.
+   * @param progress The Progressable object to track progress.
+   * @param metadata The metadata of the file.
+   * @return Returns the handle to the constructed SequenceFile Writer.
+   * @throws IOException
+   */
+  public static Writer
+    createWriter(FileSystem fs, Configuration conf, Path name,
+                 Class keyClass, Class valClass, int bufferSize,
+                 short replication, long blockSize,
+                 CompressionType compressionType, CompressionCodec codec,
+                 Progressable progress, Metadata metadata) throws IOException {
+    if ((codec instanceof GzipCodec) &&
+        !NativeCodeLoader.isNativeCodeLoaded() &&
         !ZlibFactory.isNativeZlibLoaded(conf)) {
       throw new IllegalArgumentException("SequenceFile doesn't work with " +
                                          "GzipCodec without native-hadoop code!");
     }
-    
+
     Writer writer = null;
-    
+
     if (compressionType == CompressionType.NONE) {
-      writer = new Writer(fs, conf, name, keyClass, valClass, progress, metadata);
+      writer = new Writer(fs, conf, name, keyClass, valClass,
+                          bufferSize, replication, blockSize,
+                          progress, metadata);
     } else if (compressionType == CompressionType.RECORD) {
-      writer = new RecordCompressWriter(fs, conf, name, 
-                                        keyClass, valClass, codec, progress, metadata);
+      writer = new RecordCompressWriter(fs, conf, name, keyClass, valClass,
+                                        bufferSize, replication, blockSize,
+                                        codec, progress, metadata);
     } else if (compressionType == CompressionType.BLOCK){
-      writer = new BlockCompressWriter(fs, conf, name, 
-                                       keyClass, valClass, codec, progress, metadata);
+      writer = new BlockCompressWriter(fs, conf, name, keyClass, valClass,
+                                       bufferSize, replication, blockSize,
+                                       codec, progress, metadata);
     }
-    
+
     return writer;
   }
-  
+
   /**
    * Construct the preferred type of SequenceFile Writer.
    * @param fs The configured filesystem. 
@@ -810,14 +809,29 @@ public class SequenceFile {
     
     /** Create the named file with write-progress reporter. */
     public Writer(FileSystem fs, Configuration conf, Path name, 
-                  Class keyClass, Class valClass, Progressable progress, Metadata metadata)
+                  Class keyClass, Class valClass,
+                  Progressable progress, Metadata metadata)
       throws IOException {
-      init(name, conf, fs.create(name, progress), keyClass, valClass, false, null, metadata);
+      this(fs, conf, name, keyClass, valClass,
+           fs.getConf().getInt("io.file.buffer.size", 4096),
+           fs.getDefaultReplication(), fs.getDefaultBlockSize(),
+           progress, metadata);
+    }
+    
+    /** Create the named file with write-progress reporter. */
+    public Writer(FileSystem fs, Configuration conf, Path name,
+                  Class keyClass, Class valClass,
+                  int bufferSize, short replication, long blockSize,
+                  Progressable progress, Metadata metadata)
+      throws IOException {
+      init(name, conf,
+           fs.create(name, true, bufferSize, replication, blockSize, progress),
+              keyClass, valClass, false, null, metadata);
       initializeFileHeader();
       writeFileHeader();
       finalizeFileHeader();
     }
-    
+
     /** Write to an arbitrary stream using a specified buffer size. */
     private Writer(Configuration conf, FSDataOutputStream out, 
                    Class keyClass, Class valClass, Metadata metadata)
@@ -1002,11 +1016,7 @@ public class SequenceFile {
     public RecordCompressWriter(FileSystem fs, Configuration conf, Path name, 
                                 Class keyClass, Class valClass, CompressionCodec codec) 
       throws IOException {
-      super.init(name, conf, fs.create(name), keyClass, valClass, true, codec, new Metadata());
-      
-      initializeFileHeader();
-      writeFileHeader();
-      finalizeFileHeader();
+      this(conf, fs.create(name), keyClass, valClass, codec, new Metadata());
     }
     
     /** Create the named file with write-progress reporter. */
@@ -1014,14 +1024,28 @@ public class SequenceFile {
                                 Class keyClass, Class valClass, CompressionCodec codec,
                                 Progressable progress, Metadata metadata)
       throws IOException {
-      super.init(name, conf, fs.create(name, progress), 
+      this(fs, conf, name, keyClass, valClass,
+           fs.getConf().getInt("io.file.buffer.size", 4096),
+           fs.getDefaultReplication(), fs.getDefaultBlockSize(), codec,
+           progress, metadata);
+    }
+
+    /** Create the named file with write-progress reporter. */
+    public RecordCompressWriter(FileSystem fs, Configuration conf, Path name,
+                                Class keyClass, Class valClass,
+                                int bufferSize, short replication, long blockSize,
+                                CompressionCodec codec,
+                                Progressable progress, Metadata metadata)
+      throws IOException {
+      super.init(name, conf,
+                 fs.create(name, true, bufferSize, replication, blockSize, progress),
                  keyClass, valClass, true, codec, metadata);
-      
+
       initializeFileHeader();
       writeFileHeader();
       finalizeFileHeader();
     }
-    
+
     /** Create the named file with write-progress reporter. */
     public RecordCompressWriter(FileSystem fs, Configuration conf, Path name, 
                                 Class keyClass, Class valClass, CompressionCodec codec,
@@ -1115,12 +1139,10 @@ public class SequenceFile {
     public BlockCompressWriter(FileSystem fs, Configuration conf, Path name, 
                                Class keyClass, Class valClass, CompressionCodec codec) 
       throws IOException {
-      super.init(name, conf, fs.create(name), keyClass, valClass, true, codec, new Metadata());
-      init(conf.getInt("io.seqfile.compress.blocksize", 1000000));
-      
-      initializeFileHeader();
-      writeFileHeader();
-      finalizeFileHeader();
+      this(fs, conf, name, keyClass, valClass,
+           fs.getConf().getInt("io.file.buffer.size", 4096),
+           fs.getDefaultReplication(), fs.getDefaultBlockSize(), codec,
+           null, new Metadata());
     }
     
     /** Create the named file with write-progress reporter. */
@@ -1128,15 +1150,29 @@ public class SequenceFile {
                                Class keyClass, Class valClass, CompressionCodec codec,
                                Progressable progress, Metadata metadata)
       throws IOException {
-      super.init(name, conf, fs.create(name, progress), keyClass, valClass, 
-                 true, codec, metadata);
+      this(fs, conf, name, keyClass, valClass,
+           fs.getConf().getInt("io.file.buffer.size", 4096),
+           fs.getDefaultReplication(), fs.getDefaultBlockSize(), codec,
+           progress, metadata);
+    }
+
+    /** Create the named file with write-progress reporter. */
+    public BlockCompressWriter(FileSystem fs, Configuration conf, Path name,
+                               Class keyClass, Class valClass,
+                               int bufferSize, short replication, long blockSize,
+                               CompressionCodec codec,
+                               Progressable progress, Metadata metadata)
+      throws IOException {
+      super.init(name, conf,
+                 fs.create(name, true, bufferSize, replication, blockSize, progress),
+                 keyClass, valClass, true, codec, metadata);
       init(conf.getInt("io.seqfile.compress.blocksize", 1000000));
-      
+
       initializeFileHeader();
       writeFileHeader();
       finalizeFileHeader();
     }
-    
+
     /** Create the named file with write-progress reporter. */
     public BlockCompressWriter(FileSystem fs, Configuration conf, Path name, 
                                Class keyClass, Class valClass, CompressionCodec codec,

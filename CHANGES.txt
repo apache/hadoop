@@ -281,6 +281,10 @@ Trunk (unreleased changes)
     HADOOP-2659. Introduce superuser permissions for admin operations.
     (Tsz Wo (Nicholas), SZE via shv)
 
+    HADOOP-2596. Added a SequenceFile.createWriter api which allows the user
+    to specify the blocksize, replication factor and the buffersize to be
+    used for the underlying HDFS file. (Alejandro Abdelnur via acmurthy) 
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
