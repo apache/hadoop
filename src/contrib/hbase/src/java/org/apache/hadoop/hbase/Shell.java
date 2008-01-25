@@ -114,12 +114,14 @@ public class Shell {
         ReturnMsg rs = hql.executeQuery(queryStr.toString());
 
         long end = System.currentTimeMillis();
-        if (rs != null && rs.getType() > -1)
-          System.out.println(rs.getMsg() + executeTime((rs.getType() == 1), start, end));
-        else if (rs.getType() == -9)           
-          System.out.println(rs.getMsg());
-        
-          queryStr = new StringBuilder();
+        if (rs != null) {
+          if (rs != null && rs.getType() > -1)
+            System.out.println(rs.getMsg() +
+              executeTime((rs.getType() == 1), start, end));
+          else if (rs.getType() == -9)           
+            System.out.println(rs.getMsg());
+        }
+        queryStr = new StringBuilder();
       } else {
         queryStr.append(" " + extendedLine);
       }

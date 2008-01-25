@@ -148,6 +148,7 @@ Trunk (unreleased changes)
    HADOOP-2686 Removed tables stick around in .META.
    HADOOP-2688 IllegalArgumentException processing a shutdown stops
                server going down and results in millions of lines of output
+   HADOOP-2706 HBase Shell crash
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
