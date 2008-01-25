@@ -1365,13 +1365,19 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if (isInSafeMode()) {
       throw new SafeModeException("Cannot invalidate block " + blk.getBlockName(), safeMode);
     }
+    DatanodeDescriptor node = getDatanode(dn);
+    if (node == null) {
+      throw new IOException("Cannot invalidate block " + blk.getBlockName() +
+                            " because datanode " + dn.getName() +
+                            " does not exist.");
+    }
 
     // Check how many copies we have of the block.  If we have at least one
     // copy on a live node, then we can delete it. 
     int count = countNodes(blk).liveReplicas();
     if (count > 1) {
       addToInvalidates(blk, dn);
-      removeStoredBlock(blk, getDatanode(dn));
+      removeStoredBlock(blk, node);
       NameNode.stateChangeLog.debug("BLOCK* NameSystem.invalidateBlocks: "
                                    + blk.getBlockName() + " on " 
                                    + dn.getName() + " listed for deletion.");
@@ -1974,8 +1980,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
             (now() - heartbeatExpireInterval));
   }
     
-  void setDatanodeDead(DatanodeID nodeID) throws IOException {
-    DatanodeDescriptor node = getDatanode(nodeID);
+  private void setDatanodeDead(DatanodeDescriptor node) throws IOException {
     node.setLastUpdate(0);
   }
 
@@ -3346,6 +3351,10 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
     if (inExcludedHostsList(nodeReg)) {
       DatanodeDescriptor node = getDatanode(nodeReg);
+      if (node == null) {
+        throw new IOException("verifyNodeRegistration: unknown datanode " +
+                              nodeReg.getName());
+      }
       if (!checkDecommissionStateInternal(node)) {
         startDecommission(node);
       }

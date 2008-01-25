@@ -561,6 +561,9 @@ Trunk (unreleased changes)
     to erroneously remove a good datanode from a pipeline that actually
     had another datanode that was bad. (dhruba)
 
+    HADOOP-1195. All code in FSNamesystem checks the return value
+    of getDataNode for null before using it. (dhruba)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES
