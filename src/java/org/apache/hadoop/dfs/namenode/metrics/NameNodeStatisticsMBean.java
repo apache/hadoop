@@ -20,7 +20,8 @@ package org.apache.hadoop.dfs.namenode.metrics;
 
 /**
  * 
- * This is the JMX management interface for the name node.
+ * This is the JMX management interface for getting runtime statistics of
+ * the name node.
  * Many of the statistics are sampled and averaged on an interval 
  * which can be specified in the config file.
  * <p>
@@ -31,20 +32,18 @@ package org.apache.hadoop.dfs.namenode.metrics;
  * of sampled metrics by  specifying the following two lines
  *  in the hadoop-meterics.properties file:
  *  <pre>
- *        rpc.class=org.apache.hadoop.metrics.spi.NullContextWithUpdateThread
- *        rpc.period=10
+ *        dfs.class=org.apache.hadoop.metrics.spi.NullContextWithUpdateThread
+ *        dfs.period=10
  *  </pre>
  *<p>
  * Note that the metrics are collected regardless of the context used.
- * The context with the update thread is used to average the data periodically
+ * The context with the update thread is used to average the data periodically.
+ * <p>
+ * Name Node Status info is report in another MBean
+ * @see org.apache.hadoop.dfs.namenode.metrics.FSNamesystemMBean
  *
  */
-public interface NameNodeMgtMBean {
-  /**
-   * The state of the name node: Safemode or Operational
-   * @return the state
-   */
-  String getNameNodeState();
+public interface NameNodeStatisticsMBean {
   
   /**
    * The time spent in the Safemode at startup

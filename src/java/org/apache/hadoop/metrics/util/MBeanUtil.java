@@ -19,6 +19,7 @@ package org.apache.hadoop.metrics.util;
 
 import java.lang.management.ManagementFactory;
 
+import javax.management.InstanceNotFoundException;
 import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
@@ -40,17 +41,33 @@ public class MBeanUtil {
    * @param serviceName
    * @param nameName
    * @param theMbean - the MBean to register
+   * @return the named used to register the MBean
    */	
-  static public void registerMBean(final String serviceName, 
+  static public ObjectName registerMBean(final String serviceName, 
 		  							final String nameName,
 		  							final Object theMbean) {
     final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
     ObjectName name = getMBeanName(serviceName, nameName);
     try {
       mbs.registerMBean(theMbean, name);
+      return name;
     } catch (Exception e) {
       e.printStackTrace();
     }
+    return null;
+  }
+  
+  static public void unregisterMBean(ObjectName mbeanName) {
+    final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    if (mbeanName == null) 
+        return;
+    try {
+      mbs.unregisterMBean(mbeanName);
+    } catch (InstanceNotFoundException e ) {
+      // ignore
+    } catch (Exception e) {
+      e.printStackTrace();
+    } 
   }
   
   static private ObjectName getMBeanName(final String serviceName,

@@ -550,6 +550,10 @@ Trunk (unreleased changes)
     sending it down to the compressor so that each write call doesn't
     compress. (Chris Douglas via acmurthy) 
 
+    HADOOP-2645. The Metrics initialization code does not throw
+    exceptions when servers are restarted by MiniDFSCluster.
+    (Sanjay Radia via dhruba)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES

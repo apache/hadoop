@@ -21,10 +21,12 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.dfs.BlocksWithLocations.BlockWithLocations;
+import org.apache.hadoop.dfs.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.mapred.StatusHttpServer;
+import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.fs.Path;
@@ -41,6 +43,9 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.text.SimpleDateFormat;
 
+import javax.management.NotCompliantMBeanException;
+import javax.management.ObjectName;
+import javax.management.StandardMBean;
 import javax.security.auth.login.LoginException;
 
 /***************************************************
@@ -55,7 +60,7 @@ import javax.security.auth.login.LoginException;
  * 4)  machine --> blocklist (inverted #2)
  * 5)  LRU cache of updated-heartbeat machines
  ***************************************************/
-class FSNamesystem implements FSConstants {
+class FSNamesystem implements FSConstants, FSNamesystemMBean {
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.FSNamesystem");
 
   private boolean isPermissionEnabled;
@@ -259,6 +264,8 @@ class FSNamesystem implements FSConstants {
     hbthread.start();
     lmthread.start();
     replthread.start();
+    
+    this.registerMBean(); // register the MBean for the FSNamesystemStutus
 
 
     this.hostsReader = new HostsFileReader(conf.get("dfs.hosts",""),
@@ -2743,14 +2750,15 @@ class FSNamesystem implements FSConstants {
   long[] getStats() throws IOException {
     checkSuperuserPrivilege();
     synchronized(heartbeats) {
-      return new long[]{totalCapacity(), totalDfsUsed(), totalRemaining()};
+      return new long[]
+            {getCapacityTotal(), getCapacityUsed(), getCapacityRemaining()};
     }
   }
 
   /**
    * Total raw bytes including non-dfs used space.
    */
-  public long totalCapacity() {
+  public long getCapacityTotal() {
     synchronized (heartbeats) {
       return totalCapacity;
     }
@@ -2759,7 +2767,7 @@ class FSNamesystem implements FSConstants {
   /**
    * Total used space by data nodes
    */
-  public long totalDfsUsed() {
+  public long getCapacityUsed() {
     synchronized(heartbeats){
       return totalUsed;
     }
@@ -2767,7 +2775,7 @@ class FSNamesystem implements FSConstants {
   /**
    * Total non-used raw bytes.
    */
-  public long totalRemaining() {
+  public long getCapacityRemaining() {
     synchronized (heartbeats) {
       return totalRemaining;
     }
@@ -3800,7 +3808,7 @@ class FSNamesystem implements FSConstants {
   /**
    * Get the total number of blocks in the system. 
    */
-  long getBlockTotal() {
+  public long getBlocksTotal() {
     return blocksMap.size();
   }
 
@@ -4001,7 +4009,7 @@ class FSNamesystem implements FSConstants {
    */
   void checkFsObjectLimit() throws IOException {
     if (maxFsObjects != 0 &&
-        maxFsObjects <= dir.totalInodes() + getBlockTotal()) {
+        maxFsObjects <= dir.totalInodes() + getBlocksTotal()) {
       throw new IOException("Exceeded the configured number of objects " +
                              maxFsObjects + " in the filesystem.");
     }
@@ -4021,5 +4029,79 @@ class FSNamesystem implements FSConstants {
     this.softLimit = softLimit;
     this.hardLimit = hardLimit; 
     this.lmthread.interrupt();
+  }
+
+
+  public long getFilesTotal() {
+    return this.dir.totalInodes();
+  }
+
+  public String getFSState() {
+    return isInSafeMode() ? "safeMode" : "Operational";
+  }
+  
+  private ObjectName mbeanName;
+  /**
+   * Register the FSNamesystem MBean
+   */
+  void registerMBean() {
+    // We wrap to bypass standard mbean naming convetion.
+    // This wraping can be removed in java 6 as it is more flexible in 
+    // package naming for mbeans and their impl.
+    StandardMBean bean;
+    try {
+      bean = new StandardMBean(this,FSNamesystemMBean.class);
+      mbeanName = MBeanUtil.registerMBean("NameNode", "FSNamesystemStatus", bean);
+    } catch (NotCompliantMBeanException e) {
+      e.printStackTrace();
+    }
+
+    LOG.info("Registered FSNamesystemStatusMBean");
+  }
+  
+  /**
+   * shutdown FSNamesystem
+   */
+  public void shutdown() {
+    if (mbeanName != null)
+      MBeanUtil.unregisterMBean(mbeanName);
+  }
+  
+
+  /**
+   * Number of live data nodes
+   * @returns Number of live data nodes
+   */
+  public int numLiveDataNodes() {
+    int numLive = 0;
+    synchronized (datanodeMap) {   
+      for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); 
+                                                               it.hasNext();) {
+        DatanodeDescriptor dn = it.next();
+        if (!isDatanodeDead(dn) ) {
+          numLive++;
+        }
+      }
+    }
+    return numLive;
+  }
+  
+
+  /**
+   * Number of dead data nodes
+   * @returns Number of dead data nodes
+   */
+  public int numDeadDataNodes() {
+    int numDead = 0;
+    synchronized (datanodeMap) {   
+      for(Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator(); 
+                                                               it.hasNext();) {
+        DatanodeDescriptor dn = it.next();
+        if (isDatanodeDead(dn) ) {
+          numDead++;
+        }
+      }
+    }
+    return numDead;
   }
 }

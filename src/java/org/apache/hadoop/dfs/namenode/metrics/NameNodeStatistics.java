@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.dfs.namenode.metrics;
 
-import org.apache.hadoop.dfs.NameNode;
+import javax.management.ObjectName;
+
 import org.apache.hadoop.dfs.NameNodeMetrics;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 
@@ -26,14 +27,26 @@ import org.apache.hadoop.metrics.util.MBeanUtil;
  * This is the implementation of the Name Node JMX MBean
  *
  */
-public class NameNodeMgt implements NameNodeMgtMBean {
+public class NameNodeStatistics implements NameNodeStatisticsMBean {
   private NameNodeMetrics myMetrics;
-  private NameNode myNameNode;
+  private ObjectName mbeanName;
 
-  public NameNodeMgt(String sessionId, NameNodeMetrics nameNodeMetrics, NameNode nameNode) {
+  /**
+   * This constructs and registers the NameNodeStatisticsMBean
+   * @param nameNodeMetrics - the metrics from which the mbean gets its info
+   */
+  public NameNodeStatistics(NameNodeMetrics nameNodeMetrics) {
     myMetrics = nameNodeMetrics;
-    myNameNode = nameNode;
-    MBeanUtil.registerMBean("NameNode", "NameNodeStatistics", this);
+    mbeanName = MBeanUtil.registerMBean("NameNode", "NameNodeStatistics", this);
+  }
+  
+  /**
+   * Shuts down the statistics
+   *   - unregisters the mbean
+   */
+  public void shutdown() {
+    if (mbeanName != null)
+      MBeanUtil.unregisterMBean(mbeanName);
   }
 
   /**
@@ -121,12 +134,6 @@ public class NameNodeMgt implements NameNodeMgtMBean {
     return myMetrics.syncs.getPreviousIntervalNumOps();
   }
 
-  /**
-   * @inheritDoc
-   */
-  public String getNameNodeState() {
-    return myNameNode.isInSafeMode() ? "safeMode" : "Operational";
-  }
  
   /**
    * @inheritDoc
@@ -146,9 +153,7 @@ public class NameNodeMgt implements NameNodeMgtMBean {
    * @inheritDoc
    */
   public void resetAllMinMax() {
-    myMetrics.syncs.resetMinMax();
-    myMetrics.transactions.resetMinMax();
-    myMetrics.blockReport.resetMinMax();
+    myMetrics.resetAllMinMax();
   }
   
   /**

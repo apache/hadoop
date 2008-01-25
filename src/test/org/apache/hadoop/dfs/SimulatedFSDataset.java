@@ -21,8 +21,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
+import java.util.Random;
+
+import javax.management.NotCompliantMBeanException;
+import javax.management.ObjectName;
+import javax.management.StandardMBean;
+
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.datanode.metrics.FSDatasetMBean;
+import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 /**
@@ -196,6 +204,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   
   private HashMap<Block, BInfo> blockMap = null;
   private SimulatedStorage storage = null;
+  private String storageId;
   
   public SimulatedFSDataset(Configuration conf) throws IOException {
     setConf(conf);
@@ -203,12 +212,16 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   
   private SimulatedFSDataset() { // real construction when setConf called.. Uggg
   }
+  
   public Configuration getConf() {
     return conf;
   }
 
   public void setConf(Configuration iconf)  {
     conf = iconf;
+    storageId = conf.get("StorageId", "unknownStorageId" +
+                                        new Random().nextInt());
+    registerMBean(storageId);
     storage = new SimulatedStorage(
         conf.getLong(CONFIG_PROPERTY_CAPACITY, DEFAULT_CAPACITY));
     //DataNode.LOG.info("Starting Simulated storage; Capacity = " + getCapacity() + 
@@ -312,7 +325,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   }
 
   public String toString() {
-    return "Simulated FSDataset";
+    return getStorageInfo();
   }
 
   public synchronized BlockWriteStreams writeToBlock(Block b, 
@@ -540,6 +553,38 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       length += len;
     }
   }
+  
+  private ObjectName mbeanName;
+  /**
+   * Register the FSDataset MBean
+   * @param storageId 
+   * 
+   * We use storage id for MBean name since a minicluster within a single
+   * Java VM may have multiple Simulated Datanodes.
+   */
+  void registerMBean(String storageId) {
+    // We wrap to bypass standard mbean naming convention.
+    // This wrapping can be removed in java 6 as Java6 is more flexible in 
+    // package naming for mbeans and their impl.
+    StandardMBean bean;
+    try {
+      bean = new StandardMBean(this,FSDatasetMBean.class);
+      mbeanName = MBeanUtil.registerMBean("DataNode-"+ storageId,
+                                          "FSDatasetStatus", bean);
+    } catch (NotCompliantMBeanException e) {
+      e.printStackTrace();
+    }
 
+    DataNode.LOG.info("Registered FSDatasetStatusMBean");
+  }
+
+  public void shutdown() {
+    if (mbeanName != null)
+      MBeanUtil.unregisterMBean(mbeanName);
+  }
+
+  public String getStorageInfo() {
+    return "Simulated FSDataset-" + storageId;
+  }
 
 }

@@ -147,14 +147,14 @@
     
     out.print( "<div id=\"dfstable\"> <table>\n" +
 	       rowTxt() + colTxt() + "Capacity" + colTxt() + ":" + colTxt() +
-	       FsShell.byteDesc( fsn.totalCapacity() ) +
+	       FsShell.byteDesc( fsn.getCapacityTotal() ) +
 	       rowTxt() + colTxt() + "DFS Remaining" + colTxt() + ":" + colTxt() +
-	       FsShell.byteDesc( fsn.totalRemaining() ) +
+	       FsShell.byteDesc( fsn.getCapacityRemaining() ) +
 	       rowTxt() + colTxt() + "DFS Used" + colTxt() + ":" + colTxt() +
-	       FsShell.byteDesc( fsn.totalDfsUsed() ) +
+	       FsShell.byteDesc( fsn.getCapacityUsed() ) +
 	       rowTxt() + colTxt() + "DFS Used%" + colTxt() + ":" + colTxt() +
-	       FsShell.limitDecimalTo2((fsn.totalDfsUsed())*100.0/
-				       (fsn.totalCapacity() + 1e-10)) + " %" +
+	       FsShell.limitDecimalTo2((fsn.getCapacityUsed())*100.0/
+				       (fsn.getCapacityTotal() + 1e-10)) + " %" +
 	       rowTxt() + colTxt() +
                "<a href=\"#LiveNodes\">Live Nodes</a> " +
                colTxt() + ":" + colTxt() + live.size() +

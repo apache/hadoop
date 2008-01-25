@@ -20,7 +20,7 @@ package org.apache.hadoop.dfs;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.dfs.namenode.metrics.NameNodeMgt;
+import org.apache.hadoop.dfs.namenode.metrics.NameNodeStatistics;
 import org.apache.hadoop.metrics.*;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
@@ -43,6 +43,8 @@ public class NameNodeMetrics implements Updater {
     private static Log log = LogFactory.getLog(NameNodeMetrics.class);
     private final MetricsRecord metricsRecord;
     
+    private NameNodeStatistics namenodeStats;
+    
     public MetricsTimeVaryingInt numFilesCreated = new MetricsTimeVaryingInt("FilesCreated");
     public MetricsTimeVaryingInt numFilesOpened = new MetricsTimeVaryingInt("FilesOpened");
     public MetricsTimeVaryingInt numFilesRenamed = new MetricsTimeVaryingInt("FilesRenamed");
@@ -63,8 +65,8 @@ public class NameNodeMetrics implements Updater {
       JvmMetrics.init("NameNode", sessionId);
 
       
-      // Now the Mbean for the name node
-      new NameNodeMgt(sessionId, this, nameNode);
+      // Now the Mbean for the name node - this alos registers the MBean
+      namenodeStats = new NameNodeStatistics(this);
       
       // Create a record for NameNode metrics
       MetricsContext metricsContext = MetricsUtil.getContext("dfs");
@@ -73,6 +75,13 @@ public class NameNodeMetrics implements Updater {
       metricsContext.registerUpdater(this);
       log.info("Initializing NameNodeMeterics using context object:" +
                 metricsContext.getClass().getName());
+    }
+    
+
+    
+    public void shutdown() {
+      if (namenodeStats != null) 
+        namenodeStats.shutdown();
     }
       
     /**
@@ -95,28 +104,11 @@ public class NameNodeMetrics implements Updater {
       }
       metricsRecord.update();
     }
-      
-    void createFile() {
-      numFilesCreated.inc();
-    }
-      
-    void openFile() {
-      numFilesOpened.inc();
-    }
-      
-    void renameFile() {
-      numFilesRenamed.inc();
-    }
-      
-    void listFile(int nfiles) {
-      numFilesListed.inc(nfiles);
+
+    public void resetAllMinMax() {
+      transactions.resetMinMax();
+      syncs.resetMinMax();
+      blockReport.resetMinMax();
     }
 
-    void incrNumTransactions(int count, int time) {
-      transactions.inc(count, time);
-    }
-
-    void incrSyncs(int count, int time) {
-      syncs.inc(count, time);
-    }
 }

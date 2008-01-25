@@ -966,11 +966,13 @@ public abstract class Server {
     this.maxIdleTime = conf.getInt("ipc.client.maxidletime", 120000);
     this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);
     this.thresholdIdleConnections = conf.getInt("ipc.client.idlethreshold", 4000);
-    this.rpcMetrics = new RpcMetrics(serverName, Integer.toString(port), this);
     
     // Start the listener here and let it bind to the port
     listener = new Listener();
     this.port = listener.getAddress().getPort();    
+    this.rpcMetrics = new RpcMetrics(serverName,
+                          Integer.toString(this.port), this);
+
 
     // Create the responder here
     responder = new Responder();
@@ -1009,6 +1011,9 @@ public abstract class Server {
     listener.doStop();
     responder.interrupt();
     notifyAll();
+    if (this.rpcMetrics != null) {
+      this.rpcMetrics.shutdown();
+    }
   }
 
   /** Wait for the server to be stopped.

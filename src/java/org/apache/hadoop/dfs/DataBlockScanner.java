@@ -412,13 +412,13 @@ public class DataBlockScanner implements Runnable {
                  StringUtils.stringifyException(e));
         
         if (second) {
-          datanode.getMetrics().verificationFailures(1);
+          datanode.getMetrics().blockVerificationFailures.inc(); 
           handleScanFailure(block);
           return;
         } 
       } finally {
         IOUtils.closeStream(blockSender);
-        datanode.getMetrics().verifiedBlocks(1);
+        datanode.getMetrics().blocksVerified.inc();
         totalScans++;
         totalVerifications++;
       }

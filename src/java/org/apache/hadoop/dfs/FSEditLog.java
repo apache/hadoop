@@ -671,7 +671,7 @@ class FSEditLog {
     long end = FSNamesystem.now();
     numTransactions++;
     totalTimeTransactions += (end-start);
-    metrics.incrNumTransactions(1, (int)(end-start));
+    metrics.transactions.inc((end-start));
   }
 
   //
@@ -742,7 +742,7 @@ class FSEditLog {
        this.notifyAll();
     }
 
-    metrics.incrSyncs(1, (int)elapsed);
+    metrics.syncs.inc(elapsed);
   }
 
   //

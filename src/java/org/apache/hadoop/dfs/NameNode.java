@@ -106,6 +106,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   public static NameNodeMetrics getNameNodeMetrics() {
     return myMetrics;
   }
+  
     
   /**
    * Initialize the server
@@ -199,6 +200,12 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     if(namesystem != null) namesystem.close();
     if(emptier != null) emptier.interrupt();
     if(server != null) server.stop();
+    if (myMetrics != null) {
+      myMetrics.shutdown();
+    }
+    if (namesystem != null) {
+      namesystem.shutdown();
+    }
   }
   
   /////////////////////////////////////////////////////
@@ -234,7 +241,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     if (result == null) {
       throw new IOException("Cannot open filename " + src);
     }
-    myMetrics.openFile();
+    myMetrics.numFilesOpened.inc();
     return result;
   }
 
@@ -273,7 +280,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     namesystem.startFile(src,
         new PermissionStatus(Server.getUserInfo().getUserName(), null, masked),
         clientName, clientMachine, overwrite, replication, blockSize);
-    myMetrics.createFile();
+    myMetrics.numFilesCreated.inc();
   }
 
   public boolean setReplication(String src, 
@@ -367,7 +374,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     }
     boolean ret = namesystem.renameTo(src, dst);
     if (ret) {
-      myMetrics.renameFile();
+      myMetrics.numFilesRenamed.inc();
     }
     return ret;
   }
@@ -425,7 +432,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   public DFSFileInfo[] getListing(String src) throws IOException {
     DFSFileInfo[] files = namesystem.getListing(src);
     if (files != null) {
-      myMetrics.listFile(files.length);
+      myMetrics.numFilesListed.inc(files.length);
     }
     return files;
   }

@@ -20,11 +20,17 @@ package org.apache.hadoop.dfs;
 import java.io.*;
 import java.util.*;
 
+import javax.management.NotCompliantMBeanException;
+import javax.management.ObjectName;
+import javax.management.StandardMBean;
+
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.dfs.datanode.metrics.FSDatasetMBean;
 
 /**************************************************
  * FSDataset manages a set of data blocks.  Each block
@@ -521,6 +527,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     volumes.getBlockMap(blockMap);
     blockWriteTimeout = Math.max(
          conf.getInt("dfs.datanode.block.write.timeout.sec", 3600), 1) * 1000;
+    registerMBean(storage.getStorageID());
   }
 
   /**
@@ -854,8 +861,42 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     return "FSDataset{dirpath='"+volumes+"'}";
   }
 
+  private ObjectName mbeanName;
+  private Random rand = new Random();
+  /**
+   * Register the FSDataset MBean
+   */
+  void registerMBean(final String storageId) {
+    // We wrap to bypass standard mbean naming convetion.
+    // This wraping can be removed in java 6 as it is more flexible in 
+    // package naming for mbeans and their impl.
+    StandardMBean bean;
+    String serverName;
+    if (storageId.equals("")) {// Temp fix for the uninitialized storage
+      serverName = "DataNode-UndefinedStorageId" + rand.nextInt();
+    } else {
+      serverName = "DataNode-" + storageId;
+    }
+    try {
+      bean = new StandardMBean(this,FSDatasetMBean.class);
+      mbeanName = MBeanUtil.registerMBean(serverName, "FSDatasetStatus", bean);
+    } catch (NotCompliantMBeanException e) {
+      e.printStackTrace();
+    }
+ 
+    DataNode.LOG.info("Registered FSDatasetStatusMBean");
+  }
+
+  public void shutdown() {
+    if (mbeanName != null)
+      MBeanUtil.unregisterMBean(mbeanName);
+  }
+
+  public String getStorageInfo() {
+    return toString();
+  }
+  
   public long getBlockSize(Block b) {
     return blockMap.get(b).length();
   }
-
 }

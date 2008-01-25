@@ -46,15 +46,15 @@ public class MetricsTimeVaryingInt {
   }
   
   /**
-   * Inc metrics for numOps operations
-   * @param numOps - number of operations
+   * Inc metrics for incr vlaue
+   * @param incr - number of operations
    */
-  public synchronized void inc(final int numOps) {
-    currentValue += numOps;
+  public synchronized void inc(final int incr) {
+    currentValue += incr;
   }
   
   /**
-   * Inc metrics for one operation
+   * Inc metrics by one
    */
   public synchronized void inc() {
     currentValue++;
@@ -76,7 +76,7 @@ public class MetricsTimeVaryingInt {
    */
   public synchronized void pushMetric(final MetricsRecord mr) {
     intervalHeartBeat();
-    mr.incrMetric(name + "_num_ops", getPreviousIntervalValue());
+    mr.incrMetric(name, getPreviousIntervalValue());
   }
   
   

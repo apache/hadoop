@@ -68,7 +68,7 @@ public class TestFileLimit extends TestCase {
   {
     // wait for number of blocks to decrease
     while (true) {
-      long total = namesys.getBlockTotal() + namesys.dir.totalInodes();
+      long total = namesys.getBlocksTotal() + namesys.dir.totalInodes();
       System.out.println("Comparing current nodes " + total +
                          " to become " + num);
       if (total == num) {

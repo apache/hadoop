@@ -26,6 +26,7 @@ import java.io.OutputStream;
 
 
 
+import org.apache.hadoop.dfs.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 /**
@@ -35,7 +36,7 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
  * SimulatedFSDataset (which simulates data).
  *
  */
-public interface FSDatasetInterface {
+public interface FSDatasetInterface extends FSDatasetMBean {
   
   
   /**
@@ -79,27 +80,7 @@ public interface FSDatasetInterface {
    * @throws IOException
    */
   public boolean metaFileExists(Block b) throws IOException;
-    
-  /**
-   * Returns the total space (in bytes) used by dfs datanode
-   * @return  the total space used by dfs datanode
-   * @throws IOException
-   */  
-  public long getDfsUsed() throws IOException;
-    
-  /**
-   * Returns total capacity (in bytes) of storage (used and unused)
-   * @return  total capacity of storage (used and unused)
-   * @throws IOException
-   */
-  public long getCapacity() throws IOException;
 
-  /**
-   * Returns the amount of free storage space (in bytes)
-   * @return The amount of free storage space
-   * @throws IOException
-   */
-  public long getRemaining() throws IOException;
 
   /**
    * Returns the specified block's on-disk length (excluding metadata)
@@ -201,6 +182,11 @@ public interface FSDatasetInterface {
      * Stringifies the name of the storage
      */
   public String toString();
+  
+  /**
+   * Shutdown the FSDataset
+   */
+  public void shutdown();
 
   /**
    * Returns the current offset in the data stream.

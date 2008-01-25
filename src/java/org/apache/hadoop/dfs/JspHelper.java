@@ -183,7 +183,7 @@ public class JspHelper {
 
   public String getInodeLimitText() {
     long inodes = fsn.dir.totalInodes();
-    long blocks = fsn.getBlockTotal();
+    long blocks = fsn.getBlocksTotal();
     long maxobjects = fsn.getMaxObjects();
     long totalMemory = Runtime.getRuntime().totalMemory();   
     long maxMemory = Runtime.getRuntime().maxMemory();   

@@ -18,6 +18,8 @@
 package org.apache.hadoop.ipc.metrics;
 
 
+import javax.management.ObjectName;
+
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 
@@ -29,14 +31,21 @@ import org.apache.hadoop.metrics.util.MBeanUtil;
 class RpcMgt implements RpcMgtMBean {
   private RpcMetrics myMetrics;
   private Server myServer;
+  private ObjectName mbeanName;
   
   RpcMgt(final String serviceName, final String port,
                 final RpcMetrics metrics, Server server) {
     myMetrics = metrics;
     myServer = server;
-    MBeanUtil.registerMBean(serviceName, "RpcStatistics", this);
+    mbeanName = MBeanUtil.registerMBean(serviceName,
+                    "RpcStatisticsForPort" + port, this);
   }
 
+  public void shutdown() {
+    if (mbeanName != null)
+      MBeanUtil.unregisterMBean(mbeanName);
+  }
+  
   /**
    * @inheritDoc
    */
