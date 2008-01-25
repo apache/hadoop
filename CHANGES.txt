@@ -570,6 +570,8 @@ Trunk (unreleased changes)
     HADOOP-2626. Fix paths with special characters to work correctly
     with the local filesystem.  (Thomas Friol via cutting)
 
+    HADOOP-2646. Fix SortValidator to work with fully-qualified 
+    working directories.  (Arun C Murthy via nigel)
 
 Release 0.15.3 - 2008-01-18
 

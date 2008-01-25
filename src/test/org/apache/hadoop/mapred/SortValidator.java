@@ -20,10 +20,10 @@ package org.apache.hadoop.mapred;
 
 import java.io.*;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
@@ -33,6 +33,8 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.lib.HashPartitioner;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.fs.*;
 
 /**
@@ -49,7 +51,7 @@ import org.apache.hadoop.fs.*;
  *            [-m <i>maps</i>] [-r <i>reduces</i>] [-deep] 
  *            -sortInput <i>sort-in-dir</i> -sortOutput <i>sort-out-dir</i> 
  */
-public class SortValidator {
+public class SortValidator extends Configured implements Tool {
 
   static private final IntWritable sortInput = new IntWritable(1); 
   static private final IntWritable sortOutput = new IntWritable(2); 
@@ -62,17 +64,11 @@ public class SortValidator {
 
   static private IntWritable deduceInputFile(JobConf job) {
     Path[] inputPaths = job.getInputPaths();
-    String inputFile = null; 
-    try {
-      inputFile = new URI(job.get("map.input.file")).getPath();
-    } catch (URISyntaxException urise) {
-      System.err.println("Caught: " + urise);
-      System.exit(-1);
-    }
-    
+    Path inputFile = new Path(job.get("map.input.file"));
+
     // value == one for sort-input; value == two for sort-output
-    return (inputFile.startsWith(inputPaths[0].toString()+"/")) ? 
-      sortInput : sortOutput;
+    return (inputFile.getParent().equals(inputPaths[0])) ? 
+        sortInput : sortOutput;
   }
   
   static private byte[] pair(BytesWritable a, BytesWritable b) {
@@ -149,7 +145,6 @@ public class SortValidator {
     }
     
     private static Raw createRaw(Class rawClass) {
-      System.err.println("rawClass: " + rawClass);
       if (rawClass == Text.class) {
         return new RawText();
       } else if (rawClass == BytesWritable.class) {
@@ -511,13 +506,13 @@ public class SortValidator {
 
   
   /**
-   * The main driver for sort program.
+   * The main driver for sort-validator program.
    * Invoke this method to submit the map/reduce job.
    * @throws IOException When there is communication problems with the 
    *                     job tracker.
    */
-  public static void main(String[] args) throws IOException {
-    Configuration defaults = new Configuration();
+  public int run(String[] args) throws Exception {
+    Configuration defaults = getConf();
     
     int noMaps = -1, noReduces = -1;
     Path sortInput = null, sortOutput = null;
@@ -536,20 +531,24 @@ public class SortValidator {
           deepTest = true;
         } else {
           printUsage();
+          return -1;
         }
       } catch (NumberFormatException except) {
         System.err.println("ERROR: Integer expected instead of " + args[i]);
         printUsage();
+        return -1;
       } catch (ArrayIndexOutOfBoundsException except) {
         System.err.println("ERROR: Required parameter missing from " +
                            args[i-1]);
-        printUsage(); // exits
+        printUsage();
+        return -1;
       }
     }
     
     // Sanity check
     if (sortInput == null || sortOutput == null) {
       printUsage();
+      return -2;
     }
 
     // Check if the records are consistent and sorted correctly
@@ -563,6 +562,12 @@ public class SortValidator {
     
     System.out.println("\nSUCCESS! Validated the MapReduce framework's 'sort'" +
                        " successfully.");
+    
+    return 0;
   }
-  
+
+  public static void main(String[] args) throws Exception {
+    int res = ToolRunner.run(new Configuration(), new SortValidator(), args);
+    System.exit(res);
+  }
 }
