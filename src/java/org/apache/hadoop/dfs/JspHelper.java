@@ -44,6 +44,9 @@ public class JspHelper {
   static FSNamesystem fsn = null;
   static InetSocketAddress nameNodeAddr;
   public static Configuration conf = new Configuration();
+  public static final UnixUserGroupInformation webUGI
+  = UnixUserGroupInformation.createImmutable(
+      conf.getStrings(WEB_UGI_PROPERTY_NAME));
 
   static int defaultChunkSizeToView = 
     conf.getInt("dfs.default.chunk.view.size", 32 * 1024);
@@ -60,8 +63,7 @@ public class JspHelper {
     }      
 
     UnixUserGroupInformation.saveToConf(conf,
-      UnixUserGroupInformation.UGI_PROPERTY_NAME,
-      new UnixUserGroupInformation(conf.getStrings(WEB_UGI_PROPERTY_NAME)));
+        UnixUserGroupInformation.UGI_PROPERTY_NAME, webUGI);
   }
   public DatanodeInfo bestNode(LocatedBlock blk) throws IOException {
     TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();

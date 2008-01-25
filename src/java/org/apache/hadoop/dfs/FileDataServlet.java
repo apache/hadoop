@@ -25,21 +25,20 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import org.apache.hadoop.security.UnixUserGroupInformation;
 
 /** Redirect queries about the hosted filesystem to an appropriate datanode.
  * @see org.apache.hadoop.dfs.HftpFileSystem
  */
-public class FileDataServlet extends HttpServlet {
-
-  static URI getUri(DFSFileInfo i, NameNode nn)
-      throws IOException, URISyntaxException {
-    final DatanodeInfo host = pickSrcDatanode(i, nn);
+public class FileDataServlet extends DfsServlet {
+  private static URI createUri(DFSFileInfo i, UnixUserGroupInformation ugi,
+      ClientProtocol nnproxy) throws IOException, URISyntaxException {
+    final DatanodeInfo host = pickSrcDatanode(i, nnproxy);
     return new URI("http", null, host.getHostName(), host.getInfoPort(),
-          "/streamFile", "filename=" + i.getPath(), null);
+          "/streamFile", "filename=" + i.getPath() + "&ugi=" + ugi, null);
   }
 
   private final static int BLOCK_SAMPLE = 5;
@@ -48,14 +47,14 @@ public class FileDataServlet extends HttpServlet {
    * Currently, this looks at no more than the first five blocks of a file,
    * selecting a datanode randomly from the most represented.
    */
-  protected static DatanodeInfo pickSrcDatanode(DFSFileInfo i, NameNode nn)
-      throws IOException {
+  private static DatanodeInfo pickSrcDatanode(DFSFileInfo i,
+      ClientProtocol nnproxy) throws IOException {
     long sample;
     if (i.getLen() == 0) sample = 1;
     else sample = i.getLen() / i.getBlockSize() > BLOCK_SAMPLE
         ? i.getBlockSize() * BLOCK_SAMPLE - 1
         : i.getLen();
-    final LocatedBlocks blks = nn.getBlockLocations(
+    final LocatedBlocks blks = nnproxy.getBlockLocations(
         i.getPath().toUri().getPath(), 0, sample);
     HashMap<DatanodeInfo, Integer> count = new HashMap<DatanodeInfo, Integer>();
     for (LocatedBlock b : blks.getLocatedBlocks()) {
@@ -89,15 +88,16 @@ public class FileDataServlet extends HttpServlet {
    * }
    */
   public void doGet(HttpServletRequest request, HttpServletResponse response)
-    throws ServletException, IOException {
+    throws IOException {
+    final UnixUserGroupInformation ugi = getUGI(request);
+    final ClientProtocol nnproxy = createNameNodeProxy(ugi);
 
     try {
       final String path = request.getPathInfo() != null
         ? request.getPathInfo() : "/";
-      final NameNode nn = (NameNode)getServletContext().getAttribute("name.node");
-      DFSFileInfo info = nn.getFileInfo(path);
+      DFSFileInfo info = nnproxy.getFileInfo(path);
       if (!info.isDir()) {
-        response.sendRedirect(getUri(info, nn).toURL().toString());
+        response.sendRedirect(createUri(info, ugi, nnproxy).toURL().toString());
       } else {
         response.sendError(400, "cat: " + path + ": is a directory");
       }

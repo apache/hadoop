@@ -20,17 +20,15 @@ package org.apache.hadoop.dfs;
 import javax.servlet.*;
 import javax.servlet.http.*;
 import java.io.*;
-import java.util.*;
 import java.net.*;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.conf.*;
 
-public class StreamFile extends HttpServlet {
-
+public class StreamFile extends DfsServlet {
   static InetSocketAddress nameNodeAddr;
   static DataNode datanode = null;
-  static Configuration conf = new Configuration();
-  Random rand = new Random();
+  private static final Configuration masterConf = new Configuration();
   static {
     if ((datanode = DataNode.getDataNode()) != null) {
       nameNodeAddr = datanode.getNameNodeAddr();
@@ -38,6 +36,10 @@ public class StreamFile extends HttpServlet {
   }
   public void doGet(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
+    Configuration conf = new Configuration(masterConf);
+    UnixUserGroupInformation.saveToConf(conf,
+        UnixUserGroupInformation.UGI_PROPERTY_NAME, getUGI(request));
+
     String filename = request.getParameter("filename");
     if (filename == null || filename.length() == 0) {
       response.setContentType("text/plain");

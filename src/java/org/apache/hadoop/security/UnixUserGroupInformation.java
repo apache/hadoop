@@ -39,6 +39,15 @@ public class UnixUserGroupInformation implements UserGroupInformation {
   final static private HashMap<String, UnixUserGroupInformation> user2UGIMap =
     new HashMap<String, UnixUserGroupInformation>();
 
+  /** Create an immutable {@link UnixUserGroupInformation} object. */
+  public static UnixUserGroupInformation createImmutable(String[] ugi) {
+    return new UnixUserGroupInformation(ugi) {
+      public void readFields(DataInput in) throws IOException {
+        throw new UnsupportedOperationException();
+      }
+    };
+  }
+
   private String userName;
   private String[] groupNames;
 

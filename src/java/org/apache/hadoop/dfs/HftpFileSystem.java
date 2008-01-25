@@ -30,6 +30,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 import java.util.ArrayList;
+import javax.security.auth.login.LoginException;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
@@ -47,7 +48,9 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.*;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.StringUtils;
 
 /** An implementation of a protocol for accessing filesystems over HTTP.
  * The following implementation provides a limited, read-only interface
@@ -63,10 +66,17 @@ public class HftpFileSystem extends FileSystem {
   private String fshostname = "";
   private int fsport = -1;
   protected static final SimpleDateFormat df = ListPathsServlet.df;
+  private UserGroupInformation ugi; 
 
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
     setConf(conf);
+    try {
+      this.ugi = UnixUserGroupInformation.login(conf);
+    } catch (LoginException le) {
+      throw new IOException(StringUtils.stringifyException(le));
+    } 
+
     this.fshostname = name.getHost();
     this.fsport = name.getPort();
     if(fsport >= 0)
@@ -89,7 +99,7 @@ public class HftpFileSystem extends FileSystem {
     HttpURLConnection connection = null;
     try {
       final URL url = new URI("http", null, fshostname, fsport,
-          "/data" + f.toUri().getPath(), null, null).toURL();
+          "/data" + f.toUri().getPath(), "ugi=" + ugi, null).toURL();
       connection = (HttpURLConnection)url.openConnection();
       connection.setRequestMethod("GET");
       connection.connect();
@@ -160,7 +170,8 @@ public class HftpFileSystem extends FileSystem {
         XMLReader xr = XMLReaderFactory.createXMLReader();
         xr.setContentHandler(this);
         final URL url = new URI("http", null, fshostname, fsport,
-            "/listPaths" + path, recur ? "recursive=yes" : null , null).toURL();
+            "/listPaths" + path, "ugi=" + ugi + (recur? "&recursive=yes" : ""),
+            null).toURL();
         HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         connection.setRequestMethod("GET");
         connection.connect();

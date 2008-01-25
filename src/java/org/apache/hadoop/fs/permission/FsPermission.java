@@ -179,7 +179,10 @@ public class FsPermission implements Writable {
    * @param unixSymbolicPermission e.g. "-rw-rw-rw-"
    */
   public static FsPermission valueOf(String unixSymbolicPermission) {
-    if (unixSymbolicPermission.length() != 10) {
+    if (unixSymbolicPermission == null) {
+      return null;
+    }
+    else if (unixSymbolicPermission.length() != 10) {
       throw new IllegalArgumentException("length != 10(unixSymbolicPermission="
           + unixSymbolicPermission + ")");
     }

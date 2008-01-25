@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.dfs;
 
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.VersionInfo;
 
 import org.znerd.xmlenc.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -33,7 +34,6 @@ import java.util.TimeZone;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -41,8 +41,7 @@ import javax.servlet.http.HttpServletResponse;
  * Obtain meta-information about a filesystem.
  * @see org.apache.hadoop.dfs.HftpFileSystem
  */
-public class ListPathsServlet extends HttpServlet {
-
+public class ListPathsServlet extends DfsServlet {
   static final SimpleDateFormat df =
     new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
   static {
@@ -51,11 +50,10 @@ public class ListPathsServlet extends HttpServlet {
 
   /**
    * Write a node to output.
-   * Dir: path, modification
-   * File: path, size, replication, blocksize, and modification
+   * Node information includes path, modification, permission, owner and group.
+   * For files, it also includes size, replication and block-size. 
    */
-  protected void writeItem(DFSFileInfo i, XMLOutputter doc, NameNode nn)
-      throws IOException, URISyntaxException {
+  static void writeInfo(DFSFileInfo i, XMLOutputter doc) throws IOException {
     doc.startTag(i.isDir() ? "directory" : "file");
     doc.attribute("path", i.getPath().toUri().getPath());
     doc.attribute("modified", df.format(new Date(i.getModificationTime())));
@@ -64,7 +62,7 @@ public class ListPathsServlet extends HttpServlet {
       doc.attribute("replication", String.valueOf(i.getReplication()));
       doc.attribute("blocksize", String.valueOf(i.getBlockSize()));
     }
-    doc.attribute("permission", i.getPermission().toString());
+    doc.attribute("permission", (i.isDir()? "d": "-") + i.getPermission());
     doc.attribute("owner", i.getOwner());
     doc.attribute("group", i.getGroup());
     doc.endTag();
@@ -118,7 +116,7 @@ public class ListPathsServlet extends HttpServlet {
    */
   public void doGet(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
-
+    final UnixUserGroupInformation ugi = getUGI(request);
     final PrintWriter out = response.getWriter();
     final XMLOutputter doc = new XMLOutputter(out, "UTF-8");
     try {
@@ -127,35 +125,37 @@ public class ListPathsServlet extends HttpServlet {
       final boolean recur = "yes".equals(root.get("recursive"));
       final Pattern filter = Pattern.compile(root.get("filter"));
       final Pattern exclude = Pattern.compile(root.get("exclude"));
-      final NameNode nn = (NameNode)getServletContext().getAttribute("name.node");
+      ClientProtocol nnproxy = createNameNodeProxy(ugi);
+
       doc.declaration();
       doc.startTag("listing");
       for (Map.Entry<String,String> m : root.entrySet()) {
         doc.attribute(m.getKey(), m.getValue());
       }
 
-      DFSFileInfo base = nn.getFileInfo(path);
+      DFSFileInfo base = nnproxy.getFileInfo(path);
       if (base.isDir()) {
-        writeItem(base, doc, nn);
+        writeInfo(base, doc);
       }
 
       Stack<String> pathstack = new Stack<String>();
       pathstack.push(path);
       while (!pathstack.empty()) {
-        for (DFSFileInfo i : nn.getListing(pathstack.pop())) {
-          if (exclude.matcher(i.getName()).matches()
-              || !filter.matcher(i.getName()).matches()) {
-            continue;
+        String p = pathstack.pop();
+        try {
+          for (DFSFileInfo i : nnproxy.getListing(p)) {
+            if (exclude.matcher(i.getName()).matches()
+                || !filter.matcher(i.getName()).matches()) {
+              continue;
+            }
+            if (recur && i.isDir()) {
+              pathstack.push(i.getPath().toUri().getPath());
+            }
+            writeInfo(i, doc);
           }
-          if (recur && i.isDir()) {
-            pathstack.push(i.getPath().toUri().getPath());
-          }
-          writeItem(i, doc, nn);
         }
+        catch(RemoteException re) {writeRemoteException(p, re, doc);}
       }
-
-    } catch (URISyntaxException e) {
-      out.println(e.toString());
     } catch (PatternSyntaxException e) {
       out.println(e.toString());
     } finally {

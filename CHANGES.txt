@@ -60,6 +60,11 @@ Trunk (unreleased changes)
     writes to a HDFS file. Changed Data Transfer Version from 7 to 8.
     (dhruba)
 
+    HADOOP-2652. Fix permission issues for HftpFileSystem. This is an 
+    incompatible change since distcp may not be able to copy files 
+    from cluster A (compiled with this patch) to cluster B (compiled 
+    with previous versions). (Tsz Wo (Nicholas), SZE via dhruba)
+
   NEW FEATURES
 
     HADOOP-1857.  Ability to run a script when a task fails to capture stack
