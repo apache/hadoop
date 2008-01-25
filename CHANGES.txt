@@ -299,6 +299,9 @@ Trunk (unreleased changes)
     HADOOP-2232. Add an option to disable Nagle's algorithm in the IPC stack.
     (Clint Morgan via cdouglas)
 
+    HADOOP-2342. Created a micro-benchmark for measuring 
+    local-file versus hdfs reads. (Owen O'Malley via nigel)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

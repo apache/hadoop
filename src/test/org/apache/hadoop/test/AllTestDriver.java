@@ -26,6 +26,7 @@ import org.apache.hadoop.mapred.SortValidator;
 import org.apache.hadoop.mapred.TestMapRed;
 import org.apache.hadoop.mapred.TestSequenceFileInputFormat;
 import org.apache.hadoop.mapred.TestTextInputFormat;
+import org.apache.hadoop.dfs.BenchmarkThroughput;
 import org.apache.hadoop.dfs.ClusterTestDFS;
 import org.apache.hadoop.dfs.NNBench;
 import org.apache.hadoop.fs.DistributedFSCheck;
@@ -73,6 +74,8 @@ public class AllTestDriver {
                    "non-splittable file and does identity map/reduce");
       pgd.addClass("loadgen", GenericMRLoadGenerator.class, "Generic map/reduce load generator");
       pgd.addClass("filebench", FileBench.class, "Benchmark SequenceFile(Input|Output)Format (block,record compressed and uncompressed), Text(Input|Output)Format (compressed and uncompressed)");
+      pgd.addClass("dfsthroughput", BenchmarkThroughput.class, 
+                   "measure hdfs throughput");
       pgd.driver(argv);
     } catch(Throwable e) {
       e.printStackTrace();
