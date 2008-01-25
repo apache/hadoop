@@ -1858,9 +1858,9 @@ class DFSClient implements FSConstants {
         nodes = newnodes;
 
         // setup new pipeline
-        success = createBlockOutputStream(nodes, src, true);
         hasError = false;
         errorIndex = 0;
+        success = createBlockOutputStream(nodes, src, true);
       }
 
       response = new ResponseProcessor(nodes);

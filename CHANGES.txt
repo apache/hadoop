@@ -557,6 +557,10 @@ Trunk (unreleased changes)
     exceptions when servers are restarted by MiniDFSCluster.
     (Sanjay Radia via dhruba)
 
+    HADOOP-2691. Fix a race condition that was causing the DFSClient
+    to erroneously remove a good datanode from a pipeline that actually
+    had another datanode that was bad. (dhruba)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES

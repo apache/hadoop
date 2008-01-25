@@ -1745,14 +1745,16 @@ public class DataNode implements FSConstants, Runnable {
             // If this is the last packet in block, then close block
             // file and finalize the block before responding success
             if (pkt.lastPacketInBlock) {
-              receiver.close();
-              block.setNumBytes(receiver.offsetInBlock);
-              data.finalizeBlock(block);
-              myMetrics.blocksWritten.inc();
-              notifyNamenodeReceivedBlock(block, EMPTY_DEL_HINT);
-              LOG.info("Received block " + block + 
-                       " of size " + block.getNumBytes() + 
-                       " from " + receiver.inAddr);
+              if (!receiver.finalized) {
+                receiver.close();
+                block.setNumBytes(receiver.offsetInBlock);
+                data.finalizeBlock(block);
+                myMetrics.blocksWritten.inc();
+                notifyNamenodeReceivedBlock(block, EMPTY_DEL_HINT);
+                LOG.info("Received block " + block + 
+                         " of size " + block.getNumBytes() + 
+                         " from " + receiver.inAddr);
+              }
               lastPacket = true;
             }
 
@@ -1828,7 +1830,7 @@ public class DataNode implements FSConstants, Runnable {
 
             // If this is the last packet in block, then close block
             // file and finalize the block before responding success
-            if (lastPacketInBlock) {
+            if (lastPacketInBlock && !receiver.finalized) {
               receiver.close();
               block.setNumBytes(receiver.offsetInBlock);
               data.finalizeBlock(block);
@@ -1959,15 +1961,17 @@ public class DataNode implements FSConstants, Runnable {
     // close files
     public void close() throws IOException {
 
-      try {
+      synchronized (currentWriteLock) {
         while (currentWrite) {
-          LOG.info("BlockReceiver for block " + block +
-                   " waiting for last write to drain.");
-          synchronized (currentWriteLock) {
-              currentWriteLock.wait();
+          try {
+            LOG.info("BlockReceiver for block " + block +
+                     " waiting for last write to drain.");
+            currentWriteLock.wait();
+          } catch (InterruptedException e) {
+            throw new IOException("BlockReceiver for block " + block +
+                                  " interrupted drain of last io.");
           }
         }
-      } catch (InterruptedException e) {
       }
       IOException ioe = null;
       // close checksum file
@@ -2044,11 +2048,6 @@ public class DataNode implements FSConstants, Runnable {
                    block + " to mirror " + mirrorAddr + "\n" +
                    StringUtils.stringifyException(ioe));
           mirrorOut = null;
-          offsetInBlock -= len;
-          synchronized (currentWriteLock) {
-            currentWrite = false;
-            currentWriteLock.notifyAll();
-          }
           //
           // If stream-copy fails, continue
           // writing to disk for replication requests. For client
@@ -2195,8 +2194,10 @@ public class DataNode implements FSConstants, Runnable {
 
       try {
         // write data chunk header
-        checksumOut.writeShort(FSDataset.METADATA_VERSION);
-        checksum.writeHeader(checksumOut);
+        if (!finalized) {
+          checksumOut.writeShort(FSDataset.METADATA_VERSION);
+          checksum.writeHeader(checksumOut);
+        }
         if (clientName.length() > 0) {
           responder = new Daemon(threadGroup, 
                                  new PacketResponder(this, block, mirrorIn, 
@@ -2275,6 +2276,7 @@ public class DataNode implements FSConstants, Runnable {
                                 " that is already finalized and is of size " +
                                 data.getLength(block));
         }
+        return;
       }
       if (data.getChannelPosition(block, streams) == offsetInBlock) {
         return;                   // nothing to do 

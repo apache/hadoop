@@ -610,11 +610,10 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       // If the block was succesfully finalized because all packets
       // were successfully processed at the Datanode but the ack for
       // some of the packets were not received by the client. The client 
-      // re-opens the connection and retries sending those packets. The
-      // client will now fail because this datanode has no way of
-      // unfinalizing this block.
+      // re-opens the connection and retries sending those packets.
       // 
-      throw new IOException("Reopen Block " + b + " is valid, and cannot be written to.");
+      DataNode.LOG.info("Reopen Block " + b);
+      return null;
     }
     long blockSize = b.getNumBytes();
 
