@@ -23,6 +23,7 @@ import java.net.*;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
@@ -321,15 +322,26 @@ public class DistributedFileSystem extends FileSystem {
 
   /**
    * Returns the stat information about the file.
+   * @throws FileNotFoundException if the file does not exist.
    */
   public FileStatus getFileStatus(Path f) throws IOException {
     if (f instanceof DfsPath) {
       DfsPath p = (DfsPath) f;
       return p.info;
     }
-    else {
+    
+    try {
       DFSFileInfo p = dfs.getFileInfo(getPathName(f));
       return p;
+    } catch (RemoteException e) {
+      if (IOException.class.getName().equals(e.getClassName()) &&
+          e.getMessage().startsWith(
+              "java.io.IOException: File does not exist: ")) {
+        // non-existent path
+        throw new FileNotFoundException("File " + f + " does not exist.");
+      } else {
+        throw e;      // unexpected exception
+      }
     }
   }
 

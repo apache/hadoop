@@ -359,8 +359,13 @@ public class RawLocalFileSystem extends FileSystem {
     return "LocalFS";
   }
   
-  public FileStatus getFileStatus(Path f) {
-    return new RawLocalFileStatus(pathToFile(f), getDefaultBlockSize(), this);
+  public FileStatus getFileStatus(Path f) throws IOException {
+    File path = pathToFile(f);
+    if (path.exists()) {
+      return new RawLocalFileStatus(pathToFile(f), getDefaultBlockSize(), this);
+    } else {
+      throw new FileNotFoundException( "File " + f + " does not exist.");
+    }
   }
 
   static class RawLocalFileStatus extends FileStatus {

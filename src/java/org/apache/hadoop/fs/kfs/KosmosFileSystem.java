@@ -196,7 +196,9 @@ public class KosmosFileSystem extends FileSystem {
     public FileStatus getFileStatus(Path path) throws IOException {
 	Path absolute = makeAbsolute(path);
         String srep = absolute.toUri().getPath();
-        
+        if (!kfsImpl.exists(srep)) {
+          throw new FileNotFoundException("File " + path + " does not exist.");
+        }
         if (kfsImpl.isDirectory(srep)) {
             // System.out.println("Status of path: " + path + " is dir");
             return new FileStatus(0, true, 1, 0, 0, path);

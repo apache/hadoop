@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -298,7 +299,7 @@ public class S3FileSystem extends FileSystem {
   public FileStatus getFileStatus(Path f)  throws IOException {
     INode inode = store.retrieveINode(makeAbsolute(f));
     if (inode == null) {
-      throw new IOException(f.toString() + ": No such file or directory.");
+      throw new FileNotFoundException(f + ": No such file or directory.");
     }
     return new S3FileStatus(f, inode);
   }

@@ -288,7 +288,11 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
   
     public FileStatus getFileStatus(Path f) throws IOException {
       synchronized (this) {
-        return new InMemoryFileStatus(f, pathToFileAttribs.get(getPath(f)));
+        FileAttributes attr = pathToFileAttribs.get(getPath(f));
+        if (attr==null) {
+          throw new FileNotFoundException("File " + f + " does not exist.");
+        }
+        return new InMemoryFileStatus(f, attr);
       }
     }
   

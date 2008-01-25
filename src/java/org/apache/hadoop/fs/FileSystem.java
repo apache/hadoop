@@ -518,21 +518,17 @@ public abstract class FileSystem extends Configured {
   public boolean isDirectory(Path f) throws IOException {
     try {
       return getFileStatus(f).isDir();
-    } catch (IOException e) {
-      if (e instanceof RemoteException && AccessControlException.class
-          .getName().equals(((RemoteException)e).getClassName())) {
-        throw e;
-      }
+    } catch (FileNotFoundException e) {
       return false;               // f does not exist
     }
   }
 
   /** True iff the named path is a regular file. */
   public boolean isFile(Path f) throws IOException {
-    if (exists(f) && !isDirectory(f)) {
-      return true;
-    } else {
-      return false;
+    try {
+      return !getFileStatus(f).isDir();
+    } catch (FileNotFoundException e) {
+      return false;               // f does not exist
     }
   }
     
@@ -579,37 +575,88 @@ public abstract class FileSystem extends Configured {
     return ret;
   }
 
-  /** */
+  /**
+   * List the statuses of the files/directories in the given path if the path is
+   * a directory.
+   * 
+   * @param f
+   *          given path
+   * @return the statuses of the files/directories in the given patch
+   * @throws IOException
+   */
   public abstract FileStatus[] listStatus(Path f) throws IOException;
     
+  /*
+   * Filter files/directories in the given path using the user-supplied path
+   * filter. Results are added to the given array <code>results</code>.
+   */
+  private void listStatus(ArrayList<FileStatus> results, Path f,
+      PathFilter filter) throws IOException {
+    FileStatus listing[] = listStatus(f);
+    if (listing != null) {
+      for (int i = 0; i < listing.length; i++) {
+        if (filter.accept(listing[i].getPath())) {
+          results.add(listing[i]);
+        }
+      }
+    }
+  }
+
+  /**
+   * Filter files/directories in the given path using the user-supplied path
+   * filter.
+   * 
+   * @param f
+   *          a path name
+   * @param filter
+   *          the user-supplied path filter
+   * @return an array of FileStatus objects for the files under the given path
+   *         after applying the filter
+   * @throws IOException
+   *           if encounter any problem while fetching the status
+   */
+  public FileStatus[] listStatus(Path f, PathFilter filter) throws IOException {
+    ArrayList<FileStatus> results = new ArrayList<FileStatus>();
+    listStatus(results, f, filter);
+    return results.toArray(new FileStatus[results.size()]);
+  }
+
+  /**
+   * Filter files/directories in the given list of paths using user-supplied
+   * path filter.
+   * 
+   * @param files
+   *          a list of paths
+   * @param filter
+   *          the user-supplied path filter
+   * @return a list of statuses for the files under the given paths after
+   *         applying the filter
+   * @exception IOException
+   */
+  private FileStatus[] listStatus(Path[] files, PathFilter filter)
+      throws IOException {
+    ArrayList<FileStatus> results = new ArrayList<FileStatus>();
+    for (int i = 0; i < files.length; i++) {
+      listStatus(results, files[i], filter);
+    }
+    return results.toArray(new FileStatus[results.size()]);
+  }
+
   /** 
    * Filter files in the given pathes using the default checksum filter. 
    * @param files a list of paths
    * @return a list of files under the source paths
    * @exception IOException
    */
+  @Deprecated
   public Path[] listPaths(Path[] files) throws IOException {
     return listPaths(files, DEFAULT_FILTER);
   }
 
   /** Filter files in a directory. */
-  private void listPaths(ArrayList<Path> results, Path f, PathFilter filter)
-    throws IOException {
-    Path listing[] = listPaths(f);
-    if (listing != null) {
-      for (int i = 0; i < listing.length; i++) {
-        if (filter.accept(listing[i])) {
-          results.add(listing[i]);
-        }
-      }
-    }      
-  }
-    
-  /** Filter files in a directory. */
+  @Deprecated
   public Path[] listPaths(Path f, PathFilter filter) throws IOException {
-    ArrayList<Path> results = new ArrayList<Path>();
-    listPaths(results, f, filter);
-    return results.toArray(new Path[results.size()]);
+    return FileUtil.stat2Paths(listStatus(f, filter));
   }
     
   /** 
@@ -618,13 +665,10 @@ public abstract class FileSystem extends Configured {
    * @return a list of files under the source paths
    * @exception IOException
    */
+  @Deprecated
   public Path[] listPaths(Path[] files, PathFilter filter)
     throws IOException {
-    ArrayList<Path> results = new ArrayList<Path>();
-    for(int i=0; i<files.length; i++) {
-      listPaths(results, files[i], filter);
-    }
-    return results.toArray(new Path[results.size()]);
+    return FileUtil.stat2Paths(listStatus(files, filter));
   }
     
   /**
@@ -679,66 +723,138 @@ public abstract class FileSystem extends Configured {
    *  </dd>
    * </dl>
    *
-   * @param filePattern a regular expression specifying file pattern
+   * @param pathPattern a regular expression specifying a pth pattern
 
-   * @return an array of paths that match the file pattern
+   * @return an array of paths that match the path pattern
    * @throws IOException
    */
-  public Path[] globPaths(Path filePattern) throws IOException {
-    return globPaths(filePattern, DEFAULT_FILTER);
+  public FileStatus[] globStatus(Path pathPattern) throws IOException {
+    return globStatus(pathPattern, DEFAULT_FILTER);
   }
-    
-  /** glob all the file names that matches filePattern
-   * and is accepted by filter.
+
+  /**
+   * Return an array of FileStatus objects whose path names match pathPattern
+   * and is accepted by the user-supplied path filter. Results are sorted by
+   * their path names.
+   * Return null if pathPattern has no glob and the path does not exist.
+   * Return an empty array if pathPattern has a glob and no path matches it. 
+   * 
+   * @param pathPattern
+   *          a regular expression specifying the path pattern
+   * @param filter
+   *          a user-supplied path filter
+   * @return an array of FileStatus objects
+   * @throws IOException if any I/O error occurs when fetching file status
    */
-  public Path[] globPaths(Path filePattern, PathFilter filter) 
-    throws IOException {
-    Path [] parents = new Path[1];
+  public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
+      throws IOException {
+    Path[] parents = new Path[1];
     int level = 0;
-    String filename = filePattern.toUri().getPath();
+    String filename = pathPattern.toUri().getPath();
+    
+    // path has only zero component
     if ("".equals(filename) || Path.SEPARATOR.equals(filename)) {
-      parents[0] = filePattern;
-      return parents;
+      return getFileStatus(new Path[]{pathPattern});
     }
-      
-    String [] components = filename.split(Path.SEPARATOR);
-    if (filePattern.isAbsolute()) {
+
+    // path has at least one component
+    String[] components = filename.split(Path.SEPARATOR);
+    // get the first component
+    if (pathPattern.isAbsolute()) {
       parents[0] = new Path(Path.SEPARATOR);
       level = 1;
     } else {
       parents[0] = new Path(Path.CUR_DIR);
     }
-      
-    Path[] results = globPathsLevel(parents, components, level, filter, false);
-    Arrays.sort(results);
-    return results;
-  }
-    
-  private Path[] globPathsLevel(Path[] parents, String [] filePattern, 
-            int level, PathFilter filter, boolean hasGlob) throws IOException {
-    if (level == filePattern.length)
-      return parents;
-    GlobFilter fp = new GlobFilter(filePattern[level], filter);
-    if (fp.hasPattern()) {
-      parents = listPaths(parents, fp);
-       hasGlob = true;
+
+    // glob the paths that match the parent path, i.e., [0, components.length-1]
+    boolean[] hasGlob = new boolean[]{false};
+    Path[] parentPaths =
+      globPathsLevel(parents, components, level, filter, hasGlob);
+    FileStatus[] results;
+    if (parentPaths == null || parentPaths.length == 0) {
+      results = null;
     } else {
-      int goodPathCount = 0;
-      for(int i=0; i<parents.length; i++) {
-        Path tmpPath = new Path(parents[i], filePattern[level]);
-        if (!hasGlob || exists(tmpPath)) {
-          parents[goodPathCount++] = tmpPath;
+      // Now work on the last component of the path
+      GlobFilter fp = new GlobFilter(components[components.length - 1], filter);
+      if (fp.hasPattern()) { // last component has a pattern
+        // list parent directories and then glob the results
+        results = listStatus(parentPaths, fp);
+        hasGlob[0] = true;
+      } else { // last component does not have a pattern
+        // get all the path names
+        for (int i = 0; i < parentPaths.length; i++) {
+          parentPaths[i] = new Path(parentPaths[i],
+              components[components.length - 1]);
         }
-      }
-      if (goodPathCount != parents.length) {
-        Path [] goodParents = new Path[goodPathCount];
-        System.arraycopy(parents, 0, goodParents, 0, goodPathCount);
-        parents = goodParents;
+        // get all their statuses
+        results = getFileStatus(parentPaths);
       }
     }
-    return globPathsLevel(parents, filePattern, level+1, filter, hasGlob);
+
+    // Decide if the pathPattern contains a glob or not
+    if (results == null) {
+      if (hasGlob[0]) {
+        results = new FileStatus[0];
+      }
+    } else {
+      if (results.length == 0 ) {
+        if (!hasGlob[0]) {
+          results = null;
+        }
+      } else {
+        Arrays.sort(results);
+      }
+    }
+    return results;
   }
- 
+
+  /**
+   * glob all the path names that match filePattern using the default filter
+   */
+  @Deprecated
+  public Path[] globPaths(Path filePattern) throws IOException {
+    return globPaths(filePattern, DEFAULT_FILTER);
+  }
+
+  /**
+   * glob all the path names that match filePattern and is accepted by filter.
+   */
+  @Deprecated
+  public Path[] globPaths(Path filePattern, PathFilter filter)
+      throws IOException {
+    FileStatus[] stats = globStatus(filePattern, filter);
+    if (stats == null) {
+      return new Path[]{filePattern};
+    } else {
+      return FileUtil.stat2Paths(stats);
+    }
+  }
+
+  /*
+   * For a path of N components, return a list of paths that match the
+   * components [<code>level</code>, <code>N-1</code>].
+   */
+  private Path[] globPathsLevel(Path[] parents, String[] filePattern,
+      int level, PathFilter filter, boolean[] hasGlob) throws IOException {
+    if (level == filePattern.length - 1)
+      return parents;
+    if (parents == null || parents.length == 0) {
+      return null;
+    }
+    GlobFilter fp = new GlobFilter(filePattern[level], filter);
+    if (fp.hasPattern()) {
+      parents = FileUtil.stat2Paths(listStatus(parents, fp));
+      hasGlob[0] = true;
+    } else {
+      for (int i = 0; i < parents.length; i++) {
+        parents[i] = new Path(parents[i], filePattern[level]);
+      }
+    }
+    return globPathsLevel(parents, filePattern, level + 1, filter, hasGlob);
+  }
+
+  /* A class that could decide if a string matches the glob or not */
   private static class GlobFilter implements PathFilter {
     private PathFilter userFilter = DEFAULT_FILTER;
     private Pattern regex;
@@ -1052,13 +1168,37 @@ public abstract class FileSystem extends Configured {
   public short getDefaultReplication() { return 1; }
 
   /**
-   * Return a file status object that represents the
-   * file.
-   * @param f The path to the file we want information from
-   * @return filestatus object
-   * @throws IOException see specific implementation
+   * Return a file status object that represents the path.
+   * @param f The path we want information from
+   * @return a FileStatus object
+   * @throws FileNotFoundException when the path does not exist;
+   *         IOException see specific implementation
    */
   public abstract FileStatus getFileStatus(Path f) throws IOException;
+
+  /**
+   * Return a list of file status objects that corresponds to the list of paths
+   * excluding those non-existent paths.
+   * 
+   * @param paths
+   *          the list of paths we want information from
+   * @return a list of FileStatus objects
+   * @throws IOException
+   *           see specific implementation
+   */
+  private FileStatus[] getFileStatus(Path[] paths) throws IOException {
+    if (paths == null) {
+      return null;
+    }
+    ArrayList<FileStatus> results = new ArrayList<FileStatus>(paths.length);
+    for (int i = 0; i < paths.length; i++) {
+      try {
+        results.add(getFileStatus(paths[i]));
+      } catch (FileNotFoundException e) { // do nothing
+      }
+    }
+    return results.toArray(new FileStatus[results.size()]);
+  }
 
   /**
    * Set permission of a path.

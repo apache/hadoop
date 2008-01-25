@@ -782,6 +782,9 @@ Release 0.15.0 - 2007-11-2
     HADOOP-1968. FileSystem supports wildcard input syntax "{ }".
     (Hairong Kuang via dhruba)
 
+    HADOOP-2566. Add globStatus method to the FileSystem interface
+    and deprecate globPath and listPath. (Hairong Kuang via hairong)
+
   OPTIMIZATIONS
 
     HADOOP-1910.  Reduce the number of RPCs that DistributedFileSystem.create()

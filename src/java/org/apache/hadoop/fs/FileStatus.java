@@ -27,7 +27,7 @@ import org.apache.hadoop.io.Writable;
 
 /** Interface that represents the client side information for a file.
  */
-public class FileStatus implements Writable {
+public class FileStatus implements Writable, Comparable {
 
   private Path path;
   private long length;
@@ -195,4 +195,46 @@ public class FileStatus implements Writable {
     group = Text.readString(in);
   }
 
+  /**
+   * Compare this object to another object
+   * 
+   * @param   o the object to be compared.
+   * @return  a negative integer, zero, or a positive integer as this object
+   *   is less than, equal to, or greater than the specified object.
+   * 
+   * @throws ClassCastException if the specified object's is not of 
+   *         type FileStatus
+   */
+  public int compareTo(Object o) {
+    FileStatus other = (FileStatus)o;
+    return this.getPath().compareTo(other.getPath());
+  }
+  
+  /** Compare if this object is equal to another object
+   * @param   o the object to be compared.
+   * @return  true if two file status has the same path name; false if not.
+   */
+  public boolean equals(Object o) {
+    if (o == null) {
+      return false;
+    }
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof FileStatus)) {
+      return false;
+    }
+    FileStatus other = (FileStatus)o;
+    return this.getPath().equals(other.getPath());
+  }
+  
+  /**
+   * Returns a hash code value for the object, which is defined as
+   * the hash code of the path name.
+   *
+   * @return  a hash code value for the path name.
+   */
+  public int hashCode() {
+    return getPath().hashCode();
+  }
 }

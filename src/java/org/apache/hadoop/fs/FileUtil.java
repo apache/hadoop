@@ -31,7 +31,23 @@ import org.apache.hadoop.util.Shell;
  * A collection of file-processing util methods
  */
 public class FileUtil {
-  
+  /**
+   * convert an array of FileStatus to an array of Path
+   * 
+   * @param stats
+   *          an array of FileStatus objects
+   * @return an array of paths corresponding to the input
+   */
+  public static Path[] stat2Paths(FileStatus[] stats) {
+    if (stats == null)
+      return null;
+    Path[] ret = new Path[stats.length];
+    for (int i = 0; i < stats.length; ++i) {
+      ret[i] = stats[i].getPath();
+    }
+    return ret;
+  }
+
   /**
    * Delete a directory and all its contents.  If
    * we return false, the directory may be partially-deleted.
