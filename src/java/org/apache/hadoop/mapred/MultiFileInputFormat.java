@@ -55,7 +55,7 @@ public abstract class MultiFileInputFormat<K extends WritableComparable,
         lengths[i] = fs.getContentLength(paths[i]);
         totLength += lengths[i];
       }
-      float avgLengthPerSplit = ((float)totLength) / numSplits;
+      double avgLengthPerSplit = ((double)totLength) / numSplits;
       long cumulativeLength = 0;
 
       int startIndex = 0;
@@ -80,14 +80,14 @@ public abstract class MultiFileInputFormat<K extends WritableComparable,
     return splits.toArray(new MultiFileSplit[splits.size()]);    
   }
 
-  private int findSize(int splitIndex, float avgLengthPerSplit
+  private int findSize(int splitIndex, double avgLengthPerSplit
       , long cumulativeLength , int startIndex, long[] lengths) {
     
     if(splitIndex == lengths.length - 1)
       return lengths.length - startIndex;
     
     long goalLength = (long)((splitIndex + 1) * avgLengthPerSplit);
-    int partialLength = 0;
+    long partialLength = 0;
     // accumulate till just above the goal length;
     for(int i = startIndex; i < lengths.length; i++) {
       partialLength += lengths[i];
@@ -98,6 +98,7 @@ public abstract class MultiFileInputFormat<K extends WritableComparable,
     return lengths.length - startIndex;
   }
   
+  @Override
   public abstract RecordReader<K, V> getRecordReader(InputSplit split,
       JobConf job, Reporter reporter)
       throws IOException;
