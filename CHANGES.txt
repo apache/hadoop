@@ -567,6 +567,10 @@ Trunk (unreleased changes)
     HADOOP-2640. Fix a bug in MultiFileSplitInputFormat that was always
     returning 1 split in some circumstances. (Enis Soztutar via nigel)
 
+    HADOOP-2626. Fix paths with special characters to work correctly
+    with the local filesystem.  (Thomas Friol via cutting)
+
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES

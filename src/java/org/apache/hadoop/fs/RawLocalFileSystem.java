@@ -232,7 +232,7 @@ public class RawLocalFileSystem extends FileSystem {
     }
     if (localf.isFile()) {
       return new FileStatus[] {
-          new RawLocalFileStatus(localf, getDefaultBlockSize()) };
+          new RawLocalFileStatus(localf, getDefaultBlockSize(), this) };
     }
 
     String[] names = localf.list();
@@ -360,7 +360,7 @@ public class RawLocalFileSystem extends FileSystem {
   }
   
   public FileStatus getFileStatus(Path f) {
-    return new RawLocalFileStatus(pathToFile(f), getDefaultBlockSize());
+    return new RawLocalFileStatus(pathToFile(f), getDefaultBlockSize(), this);
   }
 
   static class RawLocalFileStatus extends FileStatus {
@@ -372,9 +372,9 @@ public class RawLocalFileSystem extends FileSystem {
       return !super.getOwner().equals(""); 
     }
     
-    RawLocalFileStatus(File f, long defaultBlockSize) {
+    RawLocalFileStatus(File f, long defaultBlockSize, FileSystem fs) {
       super(f.length(), f.isDirectory(), 1, defaultBlockSize,
-            f.lastModified(), new Path(f.toURI().toString()));
+            f.lastModified(), new Path(f.getPath()).makeQualified(fs));
     }
     
     @Override

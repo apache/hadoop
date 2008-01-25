@@ -25,6 +25,9 @@ import junit.framework.*;
  * This class tests the local file system via the FileSystem abstraction.
  */
 public class TestLocalFileSystem extends TestCase {
+  private static String TEST_ROOT_DIR
+    = System.getProperty("test.build.data","build/test/data/work-dir/localfs");
+
 
   private void writeFile(FileSystem fs, Path name) throws IOException {
     FSDataOutputStream stm = fs.create(name);
@@ -45,7 +48,7 @@ public class TestLocalFileSystem extends TestCase {
     Configuration conf = new Configuration();
     FileSystem fileSys = FileSystem.getLocal(conf);
     Path origDir = fileSys.getWorkingDirectory();
-    Path subdir = new Path("build/test/data/work-dir/new subdir");
+    Path subdir = new Path(TEST_ROOT_DIR, "new");
     try {
       // make sure it doesn't already exist
       assertTrue(!fileSys.exists(subdir));
@@ -100,6 +103,16 @@ public class TestLocalFileSystem extends TestCase {
       .makeQualified(fileSys);
     Path fsHome = fileSys.getHomeDirectory();
     assertEquals(home, fsHome);
+  }
+
+  public void testPathEscapes() throws IOException {
+    Configuration conf = new Configuration();
+    FileSystem fs = FileSystem.getLocal(conf);
+    Path path = new Path(TEST_ROOT_DIR, "foo%bar");
+    writeFile(fs, path);
+    FileStatus status = fs.getFileStatus(path);
+    assertEquals(path.makeQualified(fs), status.getPath());
+    cleanupFile(fs, path);
   }
 
 }
