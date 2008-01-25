@@ -1709,7 +1709,7 @@ public class DataNode implements FSConstants, Runnable {
             while (running && shouldRun && ackQueue.size() == 0) {
               long idle = now - lastHeartbeat;
               long timeout = (socketTimeout/2) - idle;
-              if (timeout < 0) {
+              if (timeout <= 0) {
                 timeout = 1000;
               }
               try {
