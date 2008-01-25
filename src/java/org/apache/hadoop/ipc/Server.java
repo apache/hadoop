@@ -161,6 +161,7 @@ public abstract class Server {
   private long maxCallStartAge;
   private int maxQueueSize;
   private int socketSendBufferSize;
+  private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
 
   volatile private boolean running = true;         // true while server runs
   private LinkedList<Call> callQueue = new LinkedList<Call>(); // queued calls
@@ -391,6 +392,7 @@ public abstract class Server {
       ServerSocketChannel server = (ServerSocketChannel) key.channel();
       SocketChannel channel = server.accept();
       channel.configureBlocking(false);
+      channel.socket().setTcpNoDelay(tcpNoDelay);
       SelectionKey readKey = channel.register(selector, SelectionKey.OP_READ);
       c = new Connection(readKey, channel, System.currentTimeMillis());
       readKey.attach(c);

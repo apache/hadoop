@@ -71,6 +71,7 @@ public class Client {
   private int maxIdleTime; //connections will be culled if it was idle for 
                            //maxIdleTime msecs
   private int maxRetries; //the max. no. of retries for socket connections
+  private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
   private Thread connectionCullerThread;
   private SocketFactory socketFactory;           // how to create sockets
   private boolean simulateError = false;         // unit tests
@@ -156,6 +157,7 @@ public class Client {
       while (true) {
         try {
           this.socket = socketFactory.createSocket();
+          this.socket.setTcpNoDelay(tcpNoDelay);
           this.socket.connect(remoteId.getAddress(), FSConstants.READ_TIMEOUT);
           break;
         } catch (IOException ie) { //SocketTimeoutException is also caught 
@@ -451,6 +453,7 @@ public class Client {
     this.timeout = conf.getInt("ipc.client.timeout", 10000);
     this.maxIdleTime = conf.getInt("ipc.client.connection.maxidletime", 1000);
     this.maxRetries = conf.getInt("ipc.client.connect.max.retries", 10);
+    this.tcpNoDelay = conf.getBoolean("ipc.client.tcpnodelay", false);
     this.conf = conf;
     this.socketFactory = factory;
     this.connectionCullerThread = new ConnectionCuller();

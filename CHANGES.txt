@@ -287,6 +287,9 @@ Trunk (unreleased changes)
 
     HADOOP-2431. Test HDFS File Permissions. (Hairong Kuang via shv)
 
+    HADOOP-2232. Add an option to disable Nagle's algorithm in the IPC stack.
+    (Clint Morgan via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
