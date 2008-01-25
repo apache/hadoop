@@ -62,7 +62,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>io.file.buffer.size</name>
-  <value>32768</value>
+  <value>4096</value>
   <description>The size of buffer for use in sequence files.
   The size of this buffer should probably be a multiple of hardware
   page size (4096 on Intel x86), and it determines how much data is

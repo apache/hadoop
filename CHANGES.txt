@@ -65,10 +65,6 @@ Trunk (unreleased changes)
     from cluster A (compiled with this patch) to cluster B (compiled 
     with previous versions). (Tsz Wo (Nicholas), SZE via dhruba)
 
-    HADOOP 2705. Increase default io.file.buffer.size from 4Kb to 32Kb.
-    Deployments that are short on RAM might want to use the prior value.
-    (Chris Douglas via nigel)
-
   NEW FEATURES
 
     HADOOP-1857.  Ability to run a script when a task fails to capture stack
