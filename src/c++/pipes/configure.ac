@@ -29,6 +29,7 @@ AC_CONFIG_FILES([Makefile])
 AC_PREFIX_DEFAULT(`pwd`/../install)
 
 USE_HADOOP_UTILS
+HADOOP_PIPES_SETUP
 CHECK_INSTALL_CFLAG
 
 # Checks for programs.

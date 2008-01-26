@@ -581,6 +581,10 @@ Trunk (unreleased changes)
     HADOOP-2646. Fix SortValidator to work with fully-qualified 
     working directories.  (Arun C Murthy via nigel)
 
+    HADOOP-2092. Added a ping mechanism to the pipes' task to periodically
+    check if the parent Java task is running, and exit if the parent isn't
+    alive and responding. (Amareshwari Sri Ramadasu via acmurthy) 
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES

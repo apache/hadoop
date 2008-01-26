@@ -46,9 +46,17 @@ AC_ARG_WITH([hadoop-utils],
 AC_SUBST(HADOOP_UTILS_PREFIX)
 ])
 
+AC_DEFUN([HADOOP_PIPES_SETUP],[
+AC_CHECK_HEADERS([pthread.h], [], 
+  AC_MSG_ERROR(Please check if you have installed the pthread library)) 
+AC_CHECK_LIB([pthread], [pthread_create], [], 
+  AC_MSG_ERROR(Cannot find libpthread.so, please check))
+])
+
 # define a macro for using hadoop pipes
 AC_DEFUN([USE_HADOOP_PIPES],[
 AC_REQUIRE([USE_HADOOP_UTILS])
+AC_REQUIRE([HADOOP_PIPES_SETUP])
 AC_ARG_WITH([hadoop-pipes],
             AS_HELP_STRING([--with-hadoop-pipes=<dir>],
                            [directory to get hadoop pipes from]),
