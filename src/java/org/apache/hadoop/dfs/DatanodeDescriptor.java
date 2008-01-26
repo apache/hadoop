@@ -46,7 +46,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   //
   List<Block> replicateBlocks;
   List<DatanodeDescriptor[]> replicateTargetSets;
-  List<Block> invalidateBlocks;
+  Set<Block> invalidateBlocks;
   
   /** Default constructor */
   public DatanodeDescriptor() {
@@ -128,7 +128,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private void initWorkLists() {
     replicateBlocks = new ArrayList<Block>();
     replicateTargetSets = new ArrayList<DatanodeDescriptor[]>();
-    invalidateBlocks = new ArrayList<Block>();
+    invalidateBlocks = new TreeSet<Block>();
   }
 
   /**
@@ -308,9 +308,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
       }
       int outnum = Math.min(maxblocks, invalidateBlocks.size());
       Block[] blocklist = new Block[outnum];
+      Iterator<Block> iter = invalidateBlocks.iterator();
       for (int i = 0; i < outnum; i++) {
-        blocklist[i] = invalidateBlocks.get(0);
-        invalidateBlocks.remove(0);
+        blocklist[i] = iter.next();
+        iter.remove();
       }
       assert(blocklist.length > 0);
       xferResults[0] = blocklist;

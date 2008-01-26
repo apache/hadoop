@@ -588,6 +588,9 @@ Trunk (unreleased changes)
     HADOOP-2714. TestDecommission failed on windows because the replication
     request was timing out. (dhruba)
 
+    HADOOP-2576. Namenode performance degradation over time triggered by
+    large heartbeat interval. (Raghu Angadi)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES

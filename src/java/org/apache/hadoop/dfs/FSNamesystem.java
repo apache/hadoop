@@ -224,6 +224,9 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private long softLimit = LEASE_SOFTLIMIT_PERIOD;
   private long hardLimit = LEASE_HARDLIMIT_PERIOD;
 
+  // Ask Datanode only up to this many blocks to delete.
+  private int blockInvalidateLimit = FSConstants.BLOCK_INVALIDATE_CHUNK;
+
   /**
    * FSNamesystem constructor.
    */
@@ -370,6 +373,8 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                                    5 * 60) * 1000;
     this.defaultBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     this.maxFsObjects = conf.getLong("dfs.max.objects", 0);
+    this.blockInvalidateLimit = Math.max(this.blockInvalidateLimit, 
+                                         20*(int)(heartbeatInterval/1000));
   }
 
   /**
@@ -1319,7 +1324,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private void addToInvalidates(Block b, DatanodeInfo n) {
     Collection<Block> invalidateSet = recentInvalidateSets.get(n.getStorageID());
     if (invalidateSet == null) {
-      invalidateSet = new ArrayList<Block>();
+      invalidateSet = new HashSet<Block>();
       recentInvalidateSets.put(n.getStorageID(), invalidateSet);
     }
     invalidateSet.add(b);
@@ -2035,8 +2040,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
           nodeinfo.getReplicationSets(this.maxReplicationStreams - 
                                       xmitsInProgress, xferResults); 
           if (xferResults[0] == null) {
-            nodeinfo.getInvalidateBlocks(FSConstants.BLOCK_INVALIDATE_CHUNK,
-                                         deleteList);
+            nodeinfo.getInvalidateBlocks(blockInvalidateLimit, deleteList);
           }
           return false;
         }
@@ -2420,7 +2424,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       // thorugh succeeding heartbeat responses.
       //
       if (!isValidBlock(b)) {
-        if (obsolete.size() > FSConstants.BLOCK_INVALIDATE_CHUNK) {
+        if (obsolete.size() > blockInvalidateLimit) {
           addToInvalidates(b, node);
         } else {
           obsolete.add(b);
@@ -2969,15 +2973,13 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     Iterator<Block> it = null;
     int sendNum = invalidateSet.size();
-    int origSize = sendNum;
     ArrayList<Block> sendBlock = new ArrayList<Block>(sendNum);
 
     //
     // calculate the number of blocks that we send in one message
     //
-    if (sendNum > FSConstants.BLOCK_INVALIDATE_CHUNK) {
-      sendNum =  FSConstants.BLOCK_INVALIDATE_CHUNK;
-    }
+    sendNum = Math.min(sendNum, blockInvalidateLimit);
+    
     //
     // Copy the first chunk into sendBlock
     //
@@ -2992,7 +2994,6 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     // into the collection.
     //
     if (it.hasNext()) {
-      assert(origSize > FSConstants.BLOCK_INVALIDATE_CHUNK);
       recentInvalidateSets.put(nodeID.getStorageID(), invalidateSet);
     }
         
