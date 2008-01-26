@@ -207,14 +207,19 @@ public class HRegion implements HConstants {
   final Path regiondir;
   private final Path regionCompactionDir;
 
+  /*
+   * Data structure of write state flags used coordinating flushes,
+   * compactions and closes.
+   */
   static class WriteState {
     // Set while a memcache flush is happening.
     volatile boolean flushing = false;
     // Set while a compaction is running.
     volatile boolean compacting = false;
-    // Gets set by last flush before close.  If set, cannot compact or flush
-    // again.
+    // Gets set in close. If set, cannot compact or flush again.
     volatile boolean writesEnabled = true;
+    // Gets set in close to prevent new compaction starting
+    volatile boolean disableCompactions = false;
   }
 
   volatile WriteState writestate = new WriteState();
@@ -385,6 +390,11 @@ public class HRegion implements HConstants {
     }
     synchronized (splitLock) {
       synchronized (writestate) {
+        // Can be a compaction running and it can take a long time to
+        // complete -- minutes.  Meantime, we want flushes to keep happening
+        // if we are taking on lots of updates.  But we don't want another
+        // compaction to start so set disableCompactions flag.
+        this.writestate.disableCompactions = true;
         while (writestate.compacting || writestate.flushing) {
           LOG.debug("waiting for" +
               (writestate.compacting ? " compaction" : "") +
@@ -403,7 +413,7 @@ public class HRegion implements HConstants {
         // region.
         writestate.writesEnabled = false;
         LOG.debug("compactions and cache flushes disabled for region " +
-            regionName);
+          regionName);
       }
       lock.writeLock().lock();
       LOG.debug("new updates and scanners for region " + regionName +
@@ -412,7 +422,6 @@ public class HRegion implements HConstants {
       try {
         // Wait for active scanners to finish. The write lock we hold will prevent
         // new scanners from being created.
-
         synchronized (activeScannerCount) {
           while (activeScannerCount.get() != 0) {
             LOG.debug("waiting for " + activeScannerCount.get() +
@@ -566,7 +575,6 @@ public class HRegion implements HConstants {
    */
   HRegion[] splitRegion(final RegionUnavailableListener listener)
     throws IOException {
-
     synchronized (splitLock) {
       Text midKey = new Text();
       if (closed.get() || !needsSplit(midKey)) {
@@ -760,14 +768,15 @@ public class HRegion implements HConstants {
     }
     try {
       synchronized (writestate) {
-        if (!writestate.compacting && writestate.writesEnabled) {
+        if (!writestate.compacting && writestate.writesEnabled &&
+            !this.writestate.disableCompactions) {
           writestate.compacting = true;
-
         } else {
           LOG.info("NOT compacting region " +
               this.regionInfo.getRegionName().toString() + ": compacting=" +
               writestate.compacting + ", writesEnabled=" +
-              writestate.writesEnabled);
+              writestate.writesEnabled + ", writestate.disableCompactions=" +
+              this.writestate.disableCompactions);
             return false;
         }
       }
@@ -820,9 +829,8 @@ public class HRegion implements HConstants {
       return false;
     }
     synchronized (writestate) {
-      if ((!writestate.flushing) && writestate.writesEnabled) {
+      if (!writestate.flushing && writestate.writesEnabled) {
         writestate.flushing = true;
-
       } else {
         if(LOG.isDebugEnabled()) {
           LOG.debug("NOT flushing memcache for region " +
