@@ -271,6 +271,9 @@ public class TestDecommission extends TestCase {
     hostsFile = new Path(dir, "hosts");
     excludeFile = new Path(dir, "exclude");
     conf.set("dfs.hosts.exclude", excludeFile.toUri().getPath());
+    conf.setInt("heartbeat.recheck.interval", 2000);
+    conf.setInt("dfs.heartbeat.interval", 1);
+    conf.setInt("dfs.replication.pending.timeout.sec", 4);
     writeConfigFile(localFileSys, excludeFile, null);
 
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);

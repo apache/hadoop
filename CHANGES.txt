@@ -585,6 +585,9 @@ Trunk (unreleased changes)
     check if the parent Java task is running, and exit if the parent isn't
     alive and responding. (Amareshwari Sri Ramadasu via acmurthy) 
 
+    HADOOP-2714. TestDecommission failed on windows because the replication
+    request was timing out. (dhruba)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES
