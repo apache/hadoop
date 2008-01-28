@@ -2273,10 +2273,10 @@ class DFSClient implements FSConstants {
         }
 
         // wait for threads to exit
+        streamer.join();
         if (response != null) {
           response.join();
         }
-        streamer.join();
         streamer = null;
         blockStream = null;
         blockReplyStream = null;

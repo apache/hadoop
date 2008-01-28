@@ -594,6 +594,9 @@ Trunk (unreleased changes)
     HADOOP-2720. Jumbo bug fix patch to HOD.  Final sync of Apache SVN with
     internal Yahoo SVN.  (Hemanth Yamijala via nigel)
 
+    HADOOP-2713. TestDatanodeDeath failed on windows because the replication
+    request was timing out. (dhruba)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES
