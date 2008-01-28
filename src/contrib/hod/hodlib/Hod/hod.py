@@ -15,7 +15,7 @@
 #limitations under the License.
 # -*- python -*-
 
-import sys, os, getpass, pprint, re, cPickle, random, shutil
+import sys, os, getpass, pprint, re, cPickle, random, shutil, time
 
 import hodlib.Common.logger
 
@@ -23,6 +23,9 @@ from hodlib.ServiceRegistry.serviceRegistry import svcrgy
 from hodlib.Common.xmlrpc import hodXRClient
 from hodlib.Common.util import to_http_url, get_exception_string
 from hodlib.Common.util import get_exception_error_string
+from hodlib.Common.util import hodInterrupt, HodInterruptException
+from hodlib.Common.util import HOD_INTERRUPTED_CODE
+
 from hodlib.Common.nodepoolutil import NodePoolUtil
 from hodlib.Hod.hadoop import hadoopCluster, hadoopScript
 
@@ -115,6 +118,9 @@ class hodRunner:
                                    level=self.__cfg['hod']['debug'], 
                                    addToLoggerNames=(self.__user ,))
 
+  def get_logger(self):
+    return self.__log
+
   def __setup_cluster_logger(self, directory):
     self.__baseLogger.add_file(logDirectory=directory, level=4, 
                                addToLoggerNames=(self.__user ,))
@@ -124,6 +130,8 @@ class hodRunner:
 
   def __norm_cluster_dir(self, directory):
     directory = os.path.expanduser(directory)
+    if not os.path.isabs(directory):
+      directory = os.path.join(self.__cfg['hod']['original-dir'], directory)
     directory = os.path.abspath(directory)
     
     return directory
@@ -202,7 +210,18 @@ class hodRunner:
             self.__opCode = self.__cluster.check_cluster(clusterInfo)
             if self.__opCode == 0 or self.__opCode == 15:
               self.__setup_service_registry()   
-              allocateStatus = self.__cluster.allocate(clusterDir, min, max)    
+              if hodInterrupt.isSet(): 
+                self.__cleanup()
+                raise HodInterruptException()
+              self.__log.info("Service Registry Started.")
+              try:
+                allocateStatus = self.__cluster.allocate(clusterDir, min, max)    
+              except HodInterruptException, h:
+                self.__cleanup()
+                raise h
+              # Allocation has gone through.
+              # Don't care about interrupts any more
+
               if allocateStatus == 0:
                 self.__set_cluster_state_info(os.environ, 
                                               self.__cluster.hdfsInfo, 
@@ -213,6 +232,8 @@ class hodRunner:
                 self.__setup_cluster_state(clusterDir)
                 self.__clusterState.write(self.__cluster.jobId, 
                                           self.__clusterStateInfo)
+                #  Do we need to check for interrupts here ??
+
                 self.__set_user_state_info( 
                   { clusterDir : self.__cluster.jobId, } )
               self.__opCode = allocateStatus
@@ -239,7 +260,15 @@ class hodRunner:
       self.__log.critical("%s operation requires two arguments. "  % operation
                         + "A cluster path and n nodes, or min-max nodes.")
       self.__opCode = 3
-  
+ 
+  def _is_cluster_allocated(self, clusterDir):
+    if os.path.isdir(clusterDir):
+      self.__setup_cluster_state(clusterDir)
+      clusterInfo = self.__clusterState.read()
+      if clusterInfo != {}:
+        return True
+    return False
+
   def _op_deallocate(self, args):
     operation = "deallocate"
     argLength = len(args)
@@ -293,25 +322,19 @@ class hodRunner:
         clusterStatus = self.__cluster.check_cluster(clusterInfo)
         if clusterStatus == 12:
           self.__log.info(clusterDir)
-          keys = clusterInfo.keys()
-          keys.sort()
-          for key in keys:
-            if key != 'env':
-              self.__log.info("%s\t%s" % (key, clusterInfo[key]))  
-            
-          if self.__cfg['hod']['debug'] == 4:
-            for var in clusterInfo['env'].keys():
-              self.__log.debug("%s = %s" % (var, clusterInfo['env'][var]))
+          self.__print_cluster_info(clusterInfo)
         elif clusterStatus == 10:
           self.__log.critical("%s cluster is dead" % clusterDir)
         elif clusterStatus == 13:
           self.__log.warn("%s cluster hdfs is dead" % clusterDir)
         elif clusterStatus == 14:
           self.__log.warn("%s cluster mapred is dead" % clusterDir)
-        
+
         if clusterStatus != 12:
           if clusterStatus == 15:
             self.__log.critical("Cluster %s not allocated." % clusterDir)
+          else:
+            self.__print_cluster_info(clusterInfo)
             
           self.__opCode = clusterStatus
       else:
@@ -321,7 +344,19 @@ class hodRunner:
       self.__log.critical("%s operation requires one argument. "  % operation
                         + "A cluster path.")
       self.__opCode = 3      
-  
+ 
+  def __print_cluster_info(self, clusterInfo):
+    keys = clusterInfo.keys()
+    keys.sort()
+    for key in keys:
+      if key != 'env':
+        self.__log.info("%s\t%s" % (key, clusterInfo[key]))  
+            
+    if self.__cfg['hod']['debug'] == 4:
+      for var in clusterInfo['env'].keys():
+        self.__log.debug("%s = %s" % (var, clusterInfo['env'][var]))
+
+ 
   def _op_help(self, args):  
     print "hod operations:\n"
     print " allocate <directory> <nodes> - Allocates a cluster of n nodes using the specified cluster"
@@ -342,6 +377,10 @@ class hodRunner:
       opList = self.__check_operation(operation)
       if self.__opCode == 0:
         getattr(self, "_op_%s" % opList[0])(opList)
+    except HodInterruptException, h:
+      self.__log.critical("op: %s failed because of an process interrupt." \
+                                                                % operation)
+      self.__opCode = HOD_INTERRUPTED_CODE
     except:
       self.__log.critical("op: %s failed: %s" % (operation,
                           get_exception_error_string()))
@@ -356,16 +395,41 @@ class hodRunner:
   def script(self):
     script = self.__cfg['hod']['script']
     nodes = self.__cfg['hod']['min-nodes']
+    isExecutable = os.access(script, os.X_OK)
+    if not isExecutable:
+      self.__log.critical('Script %s is not an executable.' % script)
+      return 1
+
     clusterDir = "/tmp/%s.%s" % (self.__cfg['hod']['userid'], 
                                  random.randint(0, 20000))
     os.mkdir(clusterDir)
+    ret = 0
     try:
       self._op_allocate(('allocate', clusterDir, str(nodes)))
-      scriptRunner = hadoopScript(clusterDir, 
+      if self.__opCode == 0:
+        if self.__cfg['hod'].has_key('script-wait-time'):
+          time.sleep(self.__cfg['hod']['script-wait-time'])
+          self.__log.debug('Slept for %d time. Now going to run the script' % self.__cfg['hod']['script-wait-time'])
+        if hodInterrupt.isSet():
+          self.__log.debug('Interrupt set - not executing script')
+        else:
+          scriptRunner = hadoopScript(clusterDir, 
                                   self.__cfg['hod']['original-dir'])
-      self.__opCode = scriptRunner.run(script)
-      self._op_deallocate(('deallocate', clusterDir))
+          self.__opCode = scriptRunner.run(script)
+          ret = self.__opCode
+          self.__log.debug("Exit code from running the script: %d" % self.__opCode)
+      else:
+        self.__log.critical("Error %d in allocating the cluster. Cannot run the script." % self.__opCode)
+
+      if hodInterrupt.isSet():
+        # Got interrupt while executing script. Unsetting it for deallocating
+        hodInterrupt.setFlag(False)
+      if self._is_cluster_allocated(clusterDir):
+        self._op_deallocate(('deallocate', clusterDir))
       shutil.rmtree(clusterDir, True)
+    except HodInterruptException, h:
+      self.__log.critical("Script failed because of an process interrupt.")
+      self.__opCode = HOD_INTERRUPTED_CODE
     except:
       self.__log.critical("script: %s failed: %s" % (script,
                           get_exception_error_string()))
@@ -373,4 +437,8 @@ class hodRunner:
     
     self.__cleanup()      
     
+    # We want to give importance to a failed script's exit code.
+    if ret != 0:
+      self.__opCode = ret
+
     return self.__opCode

@@ -188,6 +188,102 @@ if __name__ == '__main__':
     service = HodRing(hodRingOptions)
     service.start()
     service.wait()
+   
+    if service.log:
+      log = service.log
+    else: 
+      log = getLogger(hodRingOptions)
+
+    list = []
+    
+    runningHadoops = service.getRunningValues()
+      
+    for cmd in runningHadoops:
+      log.debug("addding %s to cleanup list..." % cmd)
+      cmd.addCleanup(list)
+    
+    list.append(service.getTempDir())
+    log.debug(list)
+       
+    # archive_logs now
+    cmdString = os.path.join(rootDirectory, "bin", "hodcleanup") # same python
+
+    if (len(runningHadoops) == 0):
+      log.info("len(runningHadoops) == 0, No running cluster?")
+      log.info("Skipping __copy_archive_to_dfs")
+      hadoopString = ""
+    else: hadoopString=runningHadoops[0].path
+
+    #construct the arguments
+    if hodRingOptions['hodring'].has_key('log-destination-uri'):
+      cmdString = cmdString + " --log-destination-uri " \
+                    + hodRingOptions['hodring']['log-destination-uri']
+
+    hadoopLogDirs = service.getHadoopLogDirs()
+    if hadoopLogDirs:
+      cmdString = cmdString \
+                    + " --hadoop-log-dirs " \
+                    + ",".join(hadoopLogDirs)
+
+    cmdString = cmdString \
+                  + " --temp-dir " \
+                  + service._cfg['temp-dir'] \
+                  + " --hadoop-command-string " \
+                  + hadoopString \
+                  + " --user-id " \
+                  + service._cfg['userid'] \
+                  + " --service-id " \
+                  + service._cfg['service-id'] \
+                  + " --hodring-debug " \
+                  + str(hodRingOptions['hodring']['debug']) \
+                  + " --hodring-log-dir " \
+                  + hodRingOptions['hodring']['log-dir'] \
+                  + " --hodring-cleanup-list " \
+                  + ",".join(list)
+
+    if hodRingOptions['hodring'].has_key('syslog-address'):
+      cmdString = cmdString + " --hodring-syslog-address " \
+                + hodRingOptions['hodring']['syslog-address']
+    if service._cfg.has_key('pkgs'):
+      cmdString = cmdString + " --pkgs " + service._cfg['pkgs']
+
+    log.info("cleanup commandstring : ")
+    log.info(cmdString)
+
+    # clean up
+    cmd = ['/bin/sh', '-c', cmdString]
+
+    mswindows = (sys.platform == "win32")
+    originalcwd = os.getcwd()
+
+    if not mswindows:
+      try: 
+        pid = os.fork() 
+        if pid > 0:
+          # exit first parent
+          log.info("child(pid: %s) is now doing cleanup" % pid)
+          sys.exit(0) 
+      except OSError, e: 
+        log.error("fork failed: %d (%s)" % (e.errno, e.strerror)) 
+        sys.exit(1)
+
+      # decouple from parent environment
+      os.chdir("/") 
+      os.setsid() 
+      os.umask(0) 
+ 
+    MAXFD = 128 # more than enough file descriptors to close. Just in case.
+    for i in xrange(0, MAXFD):
+      try:
+        os.close(i)
+      except OSError:
+        pass
+  
+    try:
+      os.execvp(cmd[0], cmd)
+    finally:
+      log.critical("exec failed")
+      os._exit(1)
 
   except Exception:
     if service:
@@ -195,4 +291,4 @@ if __name__ == '__main__':
         log = service.log
     else:
       log = getLogger(hodRingOptions)
-    log.error("bin/hodring failed to start. %s. \nStack trace:\n%s" %(get_exception_error_string(),get_exception_string()))
+    log.error("Error in bin/hodring %s. \nStack trace:\n%s" %(get_exception_error_string(),get_exception_string()))

@@ -122,7 +122,7 @@ defList = { 'ringmaster' : (
               False, None, False, True),    
 
              ('pbs-account', 'string', 'User Account jobs are submitted under.',
-              False, None, True, False),
+              False, None, False, False),
 
              ('queue', 'string', 'Queue of the batch scheduler to query.',
               False, None, False, False),
@@ -317,14 +317,19 @@ if __name__ == '__main__':
   confDef.add_defs(defList, defOrder)
   ringMasterOptions = options(confDef, "./%s [OPTIONS]" % myName, VERSION)
   ensureLogDir(ringMasterOptions['ringmaster']['log-dir'])
-  log = getLogger(ringMasterOptions['ringmaster'])
+  log = None
 
   try:
+    log = getLogger(ringMasterOptions['ringmaster'])
     (status, statusMsgs) = ringMasterOptions.verify()
     if not status:
       raise Exception("%s" % statusMsgs)
+    ringMasterOptions.replace_escape_seqs()
     ringMasterOptions['ringmaster']['base-dir'] = rootDirectory 
-    main(ringMasterOptions,log)
-    sys.exit(0)
+    ret = main(ringMasterOptions,log)
+    sys.exit(ret)
   except Exception, e:
-    log.error("bin/ringmaster failed to start.%s. Stack trace follows:\n%s" % (get_exception_error_string(),get_exception_string()))
+    if log:
+      log.error("bin/ringmaster failed to start.%s. Stack trace follows:\n%s" % (get_exception_error_string(),get_exception_string()))
+    # Ringmaster failing to start is a ringmaster error. Exit with the appropriate exit code.
+    sys.exit(6)

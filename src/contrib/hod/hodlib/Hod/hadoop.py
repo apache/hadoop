@@ -57,8 +57,8 @@ class hadoopConfig:
     
     return prop
 
-  def gen_site_conf(self, confDir, numNodes, hdfsAddr, mapredAddr=None,\
-             clientParams=None, serverParams=None,\
+  def gen_site_conf(self, confDir, tempDir, numNodes, hdfsAddr,\
+             mapredAddr=None, clientParams=None, serverParams=None,\
              finalServerParams=None, clusterFactor=None):
     if not mapredAddr:
       mapredAddr = "dummy:8181"
@@ -69,51 +69,58 @@ class hadoopConfig:
       "This is an auto generated hadoop-site.xml, do not modify")
     topElement = doc.documentElement
     topElement.appendChild(comment)
-    prop = self.__create_xml_element(doc, 'mapred.job.tracker', 
-                                     mapredAddr, "description")
-    topElement.appendChild(prop)
-    prop = self.__create_xml_element(doc, 'fs.default.name', hdfsAddr, 
-                                   "description")
-    topElement.appendChild(prop)
+
+    description = {}
+    paramsDict = {  'mapred.job.tracker'    : mapredAddr , \
+                    'fs.default.name'       : hdfsAddr, \
+                    'hadoop.tmp.dir'        : confDir, \
+                    'dfs.client.buffer.dir' : tempDir, }
+
     mapredAddrSplit = mapredAddr.split(":")
     mapredsystem = os.path.join('/mapredsystem', mapredAddrSplit[0])
-    prop = self.__create_xml_element(doc, 'mapred.system.dir', mapredsystem, 
-                                   "description", True )
-    topElement.appendChild(prop)
-    prop = self.__create_xml_element(doc, 'hadoop.tmp.dir', confDir, 
-                                   "description")
-    topElement.appendChild(prop)
-    prop = self.__create_xml_element(doc, 'dfs.client.buffer.dir', 
-                                     confDir, "description")
-    topElement.appendChild(prop)
-
-    # clientParams aer enabled now
-    if clientParams:
-      for k, v in clientParams.iteritems():
-        prop = self.__create_xml_element(doc, k, v[0], "client param")
-        topElement.appendChild(prop)
-
+    paramsDict['mapred.system.dir'] = mapredsystem 
+    
+    # mapred-default.xml is no longer used now.
+    numred = int(math.floor(clusterFactor * (int(numNodes) - 1)))
+    paramsDict['mapred.reduce.tasks'] = str(numred)
     # end
 
-    # servelParams
-    if serverParams:
-      for k, v in serverParams.iteritems():
-        prop = self.__create_xml_element(doc, k, v[0], "server param")
-        topElement.appendChild(prop)
+    # for all the above vars generated, set the description
+    for k, v in paramsDict.iteritems():
+      description[k] = 'Hod generated parameter'
 
     # finalservelParams
     if finalServerParams:
       for k, v in finalServerParams.iteritems():
-        prop = self.__create_xml_element(doc, k, v[0], "server param", True)
-        topElement.appendChild(prop)
+        if not description.has_key(k):
+          description[k] = "final server parameter"
+          paramsDict[k] = v
 
-   
-    # mapred-default.xml is no longer used now.
-    numred = int(math.floor(clusterFactor * (int(numNodes) - 1)))
-    prop = self.__create_xml_element(doc, "mapred.reduce.tasks", str(numred), 
-                                 "description")
-    topElement.appendChild(prop)
-    # end
+    # servelParams
+    if serverParams:
+      for k, v in serverParams.iteritems():
+        if not description.has_key(k):
+          # if no final value for same param is mentioned
+          description[k] = "server parameter"
+          paramsDict[k] = v
+
+    # clientParams
+    if clientParams:
+      for k, v in clientParams.iteritems():
+        if not description.has_key(k) or description[k] == "server parameter":
+          # Just add, if no final value for same param is mentioned.
+          # Replace even if server param is mentioned for same config variable
+          description[k] = "client-side parameter"
+          paramsDict[k] = v
+    
+    # generate the xml elements
+    for k,v in paramsDict.iteritems():
+      if ( description[k] == "final server parameter" or \
+                             description[k] == "Hod generated parameter" ): 
+         final = True
+      else: final = False
+      prop = self.__create_xml_element(doc, k, v, description[k], final)
+      topElement.appendChild(prop)
 
     siteName = os.path.join(confDir, "hadoop-site.xml")
     sitefile = file(siteName, 'w')
@@ -174,44 +181,15 @@ class hadoopCluster:
     
     return serviceData
   
-  def __check_allocation_manager(self):
-    userValid = True
-    try:
-      self.serviceProxyClient = hodXRClient(
-        to_http_url(self.__cfg['hod']['proxy-xrs-address']), None, None, 0,
-        0, 1, False, 15)
-      
-      userValid = self.serviceProxyClient.isProjectUserValid(
-        self.__setup.cfg['hod']['userid'], 
-        self.__setup.cfg['resource_manager']['pbs-account'],True)
-      
-      if userValid:
-        self.__log.debug("Validated that user %s is part of project %s." %
-          (self.__cfg['hod']['userid'], 
-           self.__cfg['resource_manager']['pbs-account']))
-      else:
-        self.__log.debug("User %s is not part of project: %s." % (
-          self.__cfg['hod']['userid'], 
-          self.__cfg['resource_manager']['pbs-account']))
-        self.__log.error("Please specify a valid project in "
-                      + "resource_manager.pbs-account. If you still have "
-                      + "issues, please contact operations")
-        userValidd = False
-        # ignore invalid project for now - TODO
-    except Exception:
-      # ignore failures - non critical for now
-      self.__log.debug(
-        "Unable to contact Allocation Manager Proxy - ignoring...")
-      #userValid = False
-        
-    return userValid
-
   def __check_job_status(self):
     initWaitCount = 20
     count = 0
     status = False
     state = 'Q'
     while state == 'Q':
+      if hodInterrupt.isSet():
+        raise HodInterruptException()
+
       state = self.__nodePool.getJobState()
       if (state==False) or (state!='Q'):
         break
@@ -241,6 +219,9 @@ class hadoopCluster:
       waitTime = self.__cfg['hod']['allocate-wait-time']
   
       while count < waitTime:
+        if hodInterrupt.isSet():
+          raise HodInterruptException()
+
         ringList = self.__svcrgyClient.getServiceInfo(
           self.__cfg['ringmaster']['userid'], self.__nodePool.getServiceId(), 
           'ringmaster', 
@@ -267,8 +248,11 @@ class hadoopCluster:
     serviceAddress = None
     serviceInfo = None
  
-    for i in range(0, 250):
+    for i in range(0, 250): 
       try:
+        if hodInterrupt.isSet():
+            raise HodInterruptException()
+
         serviceAddress = xmlrpcClient.getServiceAddr(serviceName)
         if serviceAddress:
           if serviceAddress == 'not found':
@@ -280,6 +264,8 @@ class hadoopCluster:
           else:
             serviceInfo = xmlrpcClient.getURLs(serviceName)           
             break 
+      except HodInterruptException,h :
+        raise h
       except:
         self.__log.critical("'%s': ringmaster xmlrpc error." % serviceName)
         self.__log.debug(get_exception_string())
@@ -296,6 +282,8 @@ class hadoopCluster:
                                             self.jobId, self.__hostname, 
                                             serviceName, 'grid', serviceInfo)
         
+      except HodInterruptException, h:
+        raise h
       except:
         self.__log.critical("'%s': registry xmlrpc error." % serviceName)    
         self.__log.debug(get_exception_string())
@@ -326,6 +314,8 @@ class hadoopCluster:
          link):
 
          for i in range(1,5):
+           if hodInterrupt.isSet():
+             raise HodInterruptException()
            try:
              input = urllib.urlopen(link)
              break
@@ -385,6 +375,8 @@ class hadoopCluster:
                
              self.__log.debug("Finished grabbing: %s" % link)
            except AlarmException:
+             if hodInterrupt.isSet():
+               raise HodInterruptException()
              if out: out.close()
              if input: input.close()
              
@@ -403,31 +395,12 @@ class hadoopCluster:
     if 'mapred' in clusterInfo:
       mapredAddress = clusterInfo['mapred'][7:]
       hdfsAddress = clusterInfo['hdfs'][7:]
-  
-      mapredSocket = tcpSocket(mapredAddress)
-        
-      try:
-        mapredSocket.open()
-        mapredSocket.close()
-      except tcpError:
-        status = 14
-  
-      hdfsSocket = tcpSocket(hdfsAddress)
-        
-      try:
-        hdfsSocket.open()
-        hdfsSocket.close()
-      except tcpError:
-        if status > 0:
-          status = 10
-        else:
-          status = 13
-      
+      status = get_cluster_status(hdfsAddress, mapredAddress)
       if status == 0:
         status = 12
     else:
       status = 15
-      
+
     return status
   
   def cleanup(self):
@@ -455,37 +428,67 @@ class hadoopCluster:
       self.__log.critical("Minimum nodes must be greater than 2.")
       status = 2
     else:
-      if self.__check_allocation_manager():
-        nodeSet = self.__nodePool.newNodeSet(min)
-        self.jobId, exitCode = self.__nodePool.submitNodeSet(nodeSet)
-        if self.jobId:                 
-          if self.__check_job_status():
+      nodeSet = self.__nodePool.newNodeSet(min)
+      walltime = None
+      if self.__cfg['hod'].has_key('walltime'):
+        walltime = self.__cfg['hod']['walltime']
+      self.jobId, exitCode = self.__nodePool.submitNodeSet(nodeSet, walltime)
+      if self.jobId:
+        try:
+          jobStatus = self.__check_job_status()
+        except HodInterruptException, h:
+          self.__log.info(HOD_INTERRUPTED_MESG)
+          self.delete_job(self.jobId)
+          self.__log.info("Job %s qdelled." % self.jobId)
+          raise h
+
+        if jobStatus:
+          self.__log.info("Hod Job successfully submitted. JobId : %s." \
+                                                              % self.jobId)
+          try:
             self.ringmasterXRS = self.__get_ringmaster_client()
+            
+            self.__log.info("Ringmaster at : %s." % self.ringmasterXRS )
+            ringClient = None
             if self.ringmasterXRS:
               ringClient =  hodXRClient(self.ringmasterXRS)
-              
+                
               hdfsStatus, hdfsAddr, self.hdfsInfo = \
                 self.__init_hadoop_service('hdfs', ringClient)
-              
+                
               if hdfsStatus:
+                self.__log.info("HDFS UI on http://%s" % self.hdfsInfo)
+  
                 mapredStatus, mapredAddr, self.mapredInfo = \
                   self.__init_hadoop_service('mapred', ringClient)
-                  
+  
                 if mapredStatus:
-                  self.__log.info("HDFS UI on http://%s" % self.hdfsInfo)
                   self.__log.info("Mapred UI on http://%s" % self.mapredInfo)
- 
+  
+                  if self.__cfg['hod'].has_key('update-worker-info') \
+                    and self.__cfg['hod']['update-worker-info']:
+                    workerInfoMap = {}
+                    workerInfoMap['HDFS UI'] = 'http://%s' % self.hdfsInfo
+                    workerInfoMap['Mapred UI'] = 'http://%s' % self.mapredInfo
+                    ret = self.__nodePool.updateWorkerInfo(workerInfoMap, self.jobId)
+                    if ret != 0:
+                      self.__log.warn('Could not update HDFS and Mapred information.' \
+                                      'User Portal may not show relevant information.' \
+                                      'Error code=%s' % ret)
+  
+                  self.__cfg.replace_escape_seqs()
+                    
                   # Go generate the client side hadoop-site.xml now
                   # adding final-params as well, just so that conf on 
                   # client-side and server-side are (almost) the same
                   clientParams = None
                   serverParams = {}
                   finalServerParams = {}
-
+  
                   # client-params
                   if self.__cfg['hod'].has_key('client-params'):
                     clientParams = self.__cfg['hod']['client-params']
-
+  
                   # server-params
                   if self.__cfg['gridservice-mapred'].has_key('server-params'):
                     serverParams.update(\
@@ -494,8 +497,8 @@ class hadoopCluster:
                     # note that if there are params in both mapred and hdfs
                     # sections, the ones in hdfs overwirte the ones in mapred
                     serverParams.update(\
-                        self.__cfg['gridservice-mapred']['server-params'])
-                  
+                        self.__cfg['gridservice-hdfs']['server-params'])
+                    
                   # final-server-params
                   if self.__cfg['gridservice-mapred'].has_key(\
                                                     'final-server-params'):
@@ -505,9 +508,14 @@ class hadoopCluster:
                                                     'final-server-params'):
                     finalServerParams.update(\
                         self.__cfg['gridservice-hdfs']['final-server-params'])
-
+  
                   clusterFactor = self.__cfg['hod']['cluster-factor']
-                  self.__hadoopCfg.gen_site_conf(clusterDir, min,
+                  tempDir = self.__cfg['hod']['temp-dir']
+                  if not os.path.exists(tempDir):
+                    os.makedirs(tempDir)
+                  tempDir = os.path.join( tempDir, self.__cfg['hod']['userid']\
+                                  + "." + self.jobId )
+                  self.__hadoopCfg.gen_site_conf(clusterDir, tempDir, min,\
                             hdfsAddr, mapredAddr, clientParams,\
                             serverParams, finalServerParams,\
                             clusterFactor)
@@ -520,24 +528,51 @@ class hadoopCluster:
               status = 6
             if status != 0:
               self.__log.info("Cleaning up job id %s, as cluster could not be allocated." % self.jobId)
+              if ringClient is None:
+                self.delete_job(self.jobId)
+              else:
+                self.__log.debug("Calling rm.stop()")
+                ringClient.stopRM()
+                self.__log.debug("Returning from rm.stop()")
+          except HodInterruptException, h:
+            self.__log.info(HOD_INTERRUPTED_MESG)
+            if self.ringmasterXRS:
+              if ringClient is None:
+                ringClient =  hodXRClient(self.ringmasterXRS)
+              self.__log.debug("Calling rm.stop()")
+              ringClient.stopRM()
+              self.__log.debug("Returning from rm.stop()")
+              self.__log.info("Job Shutdown by informing ringmaster.")
+            else:
               self.delete_job(self.jobId)
-          else:
-            self.__log.critical("No job found, ringmaster failed to run.")
-            status = 5 
- 
-        elif self.jobId == False:
-          if exitCode == 188:
-            self.__log.critical("Request execeeded maximum resource allocation.")
-          else:
-            self.__log.critical("Insufficient resources available.")
-          status = 4
-        else:    
-          self.__log.critical("Scheduler failure, allocation failed.\n\n")        
-          status = 4
-      else:
-        status = 9
+              self.__log.info("Job %s qdelled directly." % self.jobId)
+            raise h
+        else:
+          self.__log.critical("No job found, ringmaster failed to run.")
+          status = 5 
+
+      elif self.jobId == False:
+        if exitCode == 188:
+          self.__log.critical("Request execeeded maximum resource allocation.")
+        else:
+          self.__log.critical("Insufficient resources available.")
+        status = 4
+      else:    
+        self.__log.critical("Scheduler failure, allocation failed.\n\n")        
+        status = 4
     
     return status
+
+  def __isRingMasterAlive(self, rmAddr):
+    ret = True
+    rmSocket = tcpSocket(rmAddr)
+    try:
+      rmSocket.open()
+      rmSocket.close()
+    except tcpError:
+      ret = False
+
+    return ret
 
   def deallocate(self, clusterDir, clusterInfo):
     status = 0 
@@ -546,6 +581,7 @@ class hadoopCluster:
                                          id=clusterInfo['jobid'])
     self.mapredInfo = clusterInfo['mapred']
     self.hdfsInfo = clusterInfo['hdfs']
+
     try:
       if self.__cfg['hod'].has_key('hadoop-ui-log-dir'):
         clusterStatus = self.check_cluster(clusterInfo)
@@ -554,9 +590,35 @@ class hadoopCluster:
           self.__collect_jobtracker_ui(self.__cfg['hod']['hadoop-ui-log-dir'])
       else:
         self.__log.debug('hadoop-ui-log-dir not specified. Skipping Hadoop UI log collection.')
+    except HodInterruptException, h:
+      # got an interrupt. just pass and proceed to qdel
+      pass 
     except:
       self.__log.info("Exception in collecting Job tracker logs. Ignoring.")
-    status = self.__nodePool.finalize()
+    
+    rmAddr = None
+    if clusterInfo.has_key('ring'):
+      # format is http://host:port/ We need host:port
+      rmAddr = clusterInfo['ring'][7:]
+      if rmAddr.endswith('/'):
+        rmAddr = rmAddr[:-1]
+
+    if (rmAddr is None) or (not self.__isRingMasterAlive(rmAddr)):
+      # Cluster is already dead, don't try to contact ringmaster.
+      self.__nodePool.finalize()
+      status = 10 # As cluster is dead, we just set the status to 'cluster dead'.
+    else:
+      xrsAddr = clusterInfo['ring']
+      rmClient = hodXRClient(xrsAddr)
+      self.__log.debug('calling rm.stop')
+      rmClient.stopRM()
+      self.__log.debug('completed rm.stop')
+
+    # cleanup hod temp dirs
+    tempDir = os.path.join( self.__cfg['hod']['temp-dir'], \
+                    self.__cfg['hod']['userid'] + "." + clusterInfo['jobid'] )
+    if os.path.exists(tempDir):
+      shutil.rmtree(tempDir)
    
     return status
   

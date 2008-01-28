@@ -14,6 +14,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 import xmlrpclib, time, random, signal
+from hodlib.Common.util import hodInterrupt
 
 class hodXRClient(xmlrpclib.ServerProxy):
     def __init__(self, uri, transport=None, encoding=None, verbose=0,
@@ -42,6 +43,8 @@ class hodXRClient(xmlrpclib.ServerProxy):
                 break
             except Exception:
                 if self.__retryRequests:
+                  if hodInterrupt.isSet():
+                    raise HodInterruptException()
                   time.sleep(retryWaitTime)
                 else:
                   raise Exception("hodXRClientTimeout")

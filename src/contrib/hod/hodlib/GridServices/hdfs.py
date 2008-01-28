@@ -22,15 +22,16 @@ import os
 from service import *
 from hodlib.Hod.nodePool import *
 from hodlib.Common.desc import CommandDesc
-from hodlib.Common.util import get_exception_string
+from hodlib.Common.util import get_exception_string, parseEquals
 
 class HdfsExternal(MasterSlave):
   """dummy proxy to external HDFS instance"""
 
-  def __init__(self, serviceDesc, workDirs):
+  def __init__(self, serviceDesc, workDirs, version):
     MasterSlave.__init__(self, serviceDesc, workDirs,None)
     self.launchedMaster = True
     self.masterInitialized = True
+    self.version = version
     
   def getMasterRequest(self):
     return None
@@ -49,21 +50,33 @@ class HdfsExternal(MasterSlave):
     addr = attrs['fs.default.name']
     return [addr]
   
-  def setMasterParams(self, list):
-    raise NotImplementedError
+  def setMasterParams(self, dict):
+   self.serviceDesc.dict['final-attrs']['fs.default.name'] = "%s:%s" % \
+     (dict['host'], dict['fs_port'])
+
+   if self.version < 16:
+    self.serviceDesc.dict['final-attrs']['dfs.info.port'] = \
+                                    str(self.serviceDesc.dict['info_port'])
+   else:
+     # After Hadoop-2185
+     self.serviceDesc.dict['final-attrs']['dfs.http.bindAddress'] = "%s:%s" % \
+       (dict['host'], dict['info_port'])
 
   def getInfoAddrs(self):
     attrs = self.serviceDesc.getfinalAttrs()
-    addr = attrs['fs.default.name']
-    k,v = addr.split( ":")
-    # infoaddr = k + ':' + attrs['dfs.info.port']
-    # After Hadoop-2185
-    infoaddr = attrs['dfs.http.bindAddress']
+    if self.version < 16:
+      addr = attrs['fs.default.name']
+      k,v = addr.split( ":")
+      infoaddr = k + ':' + attrs['dfs.info.port']
+    else:
+      # After Hadoop-2185
+      infoaddr = attrs['dfs.http.bindAddress']
     return [infoaddr]
 
 class Hdfs(MasterSlave):
 
-  def __init__(self, serviceDesc, nodePool, required_node, format=True, upgrade=False):
+  def __init__(self, serviceDesc, nodePool, required_node, version, \
+                                        format=True, upgrade=False):
     MasterSlave.__init__(self, serviceDesc, nodePool, required_node)
     self.masterNode = None
     self.masterAddr = None
@@ -73,6 +86,7 @@ class Hdfs(MasterSlave):
     self.format = format
     self.upgrade = upgrade
     self.workers = []
+    self.version = version
 
   def getMasterRequest(self):
     req = NodeRequest(1, [], False)
@@ -124,16 +138,14 @@ class Hdfs(MasterSlave):
     self.masterAddr = dict['fs.default.name']
     k,v = self.masterAddr.split( ":")
     self.masterNode = k
-    # self.infoAddr = self.masterNode + ':' + dict['dfs.info.port']
-    # After Hadoop-2185
-    self.infoAddr = dict['dfs.http.bindAddress']
+    if self.version < 16:
+      self.infoAddr = self.masterNode + ':' + dict['dfs.info.port']
+    else:
+      # After Hadoop-2185
+      self.infoAddr = dict['dfs.http.bindAddress']
    
   def _parseEquals(self, list):
-    dict = {}
-    for elems in list:
-      splits = elems.split('=')
-      dict[splits[0]] = splits[1]
-    return dict
+    return parseEquals(list)
   
   def _getNameNodePort(self):
     sd = self.serviceDesc
@@ -152,16 +164,25 @@ class Hdfs(MasterSlave):
   def _getNameNodeInfoPort(self):
     sd = self.serviceDesc
     attrs = sd.getfinalAttrs()
-    if 'dfs.http.bindAddress' not in attrs:
-      return ServiceUtil.getUniqPort()
+    if self.version < 16:
+      if 'dfs.info.bindAddress' not in attrs:
+        return ServiceUtil.getUniqPort()
+    else:
+      if 'dfs.http.bindAddress' not in attrs:
+        return ServiceUtil.getUniqPort()
 
-    # p = attrs['dfs.info.port'] 
-    p = attrs['dfs.http.bindAddress'].split(':')[1]
+    if self.version < 16:
+      p = attrs['dfs.info.port']
+    else:
+      p = attrs['dfs.http.bindAddress'].split(':')[1]
     try:
       return int(p)
     except:
       print get_exception_string()
-      raise ValueError, "Can't find port from attr dfs.info.port: %s" % (p)
+      if self.version < 16:
+        raise ValueError, "Can't find port from attr dfs.info.port: %s" % (p)
+      else:
+        raise ValueError, "Can't find port from attr dfs.http.bindAddress: %s" % (p)
 
   def _setWorkDirs(self, workDirs, envs, attrs, parentDirs, subDir):
     namedir = None
@@ -183,7 +204,7 @@ class Hdfs(MasterSlave):
     attrs['dfs.name.dir'] = namedir
     attrs['dfs.data.dir'] = ','.join(datadir)
     # FIXME -- change dfs.client.buffer.dir
-    envs['HADOOP_ROOT_LOGGER'] = ["INFO,DRFA",]
+    envs['HADOOP_ROOT_LOGGER'] = "INFO,DRFA"
 
 
   def _getNameNodeCommand(self, format=False, upgrade=False):
@@ -199,13 +220,14 @@ class Hdfs(MasterSlave):
       attrs['fs.default.name'] = 'fillinhostport'
     #self.infoPort = port = self._getNameNodeInfoPort()
  
-    # if 'dfs.info.port' not in attrs:
-    #  attrs['dfs.info.port'] = 'fillinport'
-   
-    # Addressing Hadoop-2815, added the following. Earlier version don't
-    # care about this
-    if 'dfs.http.bindAddress' not in attrs:
-      attrs['dfs.http.bindAddress'] = 'fillinhostport'
+    if self.version < 16:
+     if 'dfs.info.port' not in attrs:
+      attrs['dfs.info.port'] = 'fillinport'
+    else:
+      # Addressing Hadoop-2815, added the following. Earlier versions don't
+      # care about this
+      if 'dfs.http.bindAddress' not in attrs:
+        attrs['dfs.http.bindAddress'] = 'fillinhostport'
 
     self._setWorkDirs(workDirs, envs, attrs, parentDirs, 'hdfs-nn')
 
@@ -277,11 +299,18 @@ class Hdfs(MasterSlave):
 
     attrs['fs.default.name'] = nn
 
-    # Adding the following. Hadoop-2815
-    if 'dfs.datanode.bindAddress' not in attrs:
-      attrs['dfs.datanode.bindAddress'] = 'fillinhostport'
-    if 'dfs.datanode.http.bindAddress' not in attrs:
-      attrs['dfs.datanode.http.bindAddress'] = 'fillinhostport'
+    if self.version < 16:
+      if 'dfs.datanode.port' not in attrs:
+        attrs['dfs.datanode.port'] = 'fillinport'
+      if 'dfs.datanode.info.port' not in attrs:
+        attrs['dfs.datanode.info.port'] = 'fillinport'
+    else:
+      # Adding the following. Hadoop-2815
+      if 'dfs.datanode.bindAddress' not in attrs:
+        attrs['dfs.datanode.bindAddress'] = 'fillinhostport'
+      if 'dfs.datanode.http.bindAddress' not in attrs:
+        attrs['dfs.datanode.http.bindAddress'] = 'fillinhostport'
+    
     self._setWorkDirs(workDirs, envs, attrs, parentDirs, 'hdfs-dn')
 
     dict = { 'name' : 'datanode' }

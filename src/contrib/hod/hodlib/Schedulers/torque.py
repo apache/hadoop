@@ -28,6 +28,7 @@ class torqueInterface:
     self.__qstat = os.path.join(torqueDir, 'bin', 'qstat')
     self.__pbsNodes = os.path.join(torqueDir, 'bin', 'pbsnodes')
     self.__pbsdsh = os.path.join(torqueDir, 'bin', 'pbsdsh')
+    self.__qalter = os.path.join(torqueDir, 'bin', 'qalter')
     self.__env = environment
     
     self.__log = log
@@ -48,11 +49,23 @@ class torqueInterface:
     while qsubProcess.stdin == None:
       time.sleep(.2)
 
-    for line in stdinList:
-      self.__log.debug("qsub stdin: %s" % line)
-      print >>qsubProcess.stdin, line
+    try:
+      for line in stdinList:
+        self.__log.debug("qsub stdin: %s" % line)
+        print >>qsubProcess.stdin, line
+      qsubProcess.stdin.close()
+    except IOError, i:
+      # If torque's qsub is given invalid params, it fails & returns immediately
+      # Check for such errors here
+      # Wait for command execution to finish
+      qsubProcess.wait()
+      qsubProcess.join()
+      output = qsubProcess.output()
+      if output!=[]:
+        self.__log.critical("qsub Failure : %s " % output[0].strip())
+        self.__log.critical("qsub Command : %s" % qsubCommand)
+      return None, qsubProcess.exit_code()
 
-    qsubProcess.stdin.close()
     qsubProcess.wait()
     qsubProcess.join()
     
@@ -145,3 +158,18 @@ class torqueInterface:
     if not status: status = 0
       
     return status  
+
+  def qalter(self, fieldName, fieldValue, jobId):
+    """Update the job field with fieldName with the fieldValue.
+       The fieldValue must be modifiable after the job is submitted."""
+
+    # E.g. to alter comment: qalter -W notes='value` jobId
+    qalterCmd = '%s -W %s=\"%s\" %s' % (self.__qalter, fieldName, fieldValue, jobId) 
+    self.__log.debug("qalter command: %s" % qalterCmd)
+    qalterProcess = simpleCommand('qalter', qalterCmd, env=self.__env)
+    qalterProcess.start()
+    qalterProcess.wait()
+    qalterProcess.join()
+    exitCode = qalterProcess.exit_code()
+
+    return exitCode

@@ -108,6 +108,10 @@ class NodePool:
     """Delete a job, given it's id"""
     raise NotImplementedError
 
+  def updateWorkerInfo(self, workerInfoMap):
+    """Update information about the workers started by this NodePool."""
+    raise NotImplementedError
+
   def getNextNodeSetId(self):
     id = self.nextNodeSetId
     self.nextNodeSetId += 1

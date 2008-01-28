@@ -19,13 +19,14 @@
 """
 # -*- python -*-
 import os, sys, time, shutil, getpass, xml.dom.minidom, xml.dom.pulldom
-import socket, sets, urllib, csv, signal, pprint, random, re
+import socket, sets, urllib, csv, signal, pprint, random, re, httplib
 
 from xml.dom import getDOMImplementation
 from pprint import pformat
 from optparse import OptionParser
 from urlparse import urlparse
-from hodlib.Common.util import local_fqdn
+from hodlib.Common.util import local_fqdn, parseEquals
+from hodlib.Common.tcp import tcpSocket, tcpError 
 
 binfile = sys.path[0]
 libdir = os.path.dirname(binfile)
@@ -53,6 +54,7 @@ class CommandDesc:
     self.log.debug("In command desc")
     self.log.debug("Done in command desc")
     dict.setdefault('argv', [])
+    dict.setdefault('version', None)
     dict.setdefault('envs', {})
     dict.setdefault('java-opts', [])
     dict.setdefault('workdirs', [])
@@ -82,6 +84,9 @@ class CommandDesc:
 
   def getArgv(self):
     return self.dict['argv']
+
+  def getVersion(self):
+    return self.dict['version']
 
   def getEnvs(self):
     return self.dict['envs']
@@ -243,9 +248,13 @@ class HadoopCommand:
     topElement = doc.documentElement
     topElement.appendChild(comment)
     
-    attr = self.desc.getfinalAttrs()
-    self.createXML(doc, attr, topElement, True)
-    attr = self.desc.getAttrs()
+    finalAttr = self.desc.getfinalAttrs()
+    self.createXML(doc, finalAttr, topElement, True)
+    attr = {}
+    attr1 = self.desc.getAttrs()
+    for k,v in attr1.iteritems():
+      if not finalAttr.has_key(k):
+        attr[k] = v
     self.createXML(doc, attr, topElement, False)
               
     
@@ -306,7 +315,7 @@ class HadoopCommand:
     fenvs = os.environ
     
     for k, v in envs.iteritems():
-      fenvs[k] = v[0]
+      fenvs[k] = v
     
     self.log.debug(javaOpts)
     fenvs['HADOOP_OPTS'] = ''
@@ -440,6 +449,15 @@ class HodRing(hodBaseService):
     self.log.debug("tarball name : %s hadoop package name : %s" %(name,hadoopPackage))
     return hadoopPackage
 
+  def getRunningValues(self):
+    return self.__running.values()
+
+  def getTempDir(self):
+    return self.__tempDir
+
+  def getHadoopLogDirs(self):
+    return self.__hadoopLogDirs
+ 
   def __download_package(self, ringClient):
     self.log.debug("Found download address: %s" % 
                    self._cfg['download-addr'])
@@ -523,6 +541,75 @@ class HodRing(hodBaseService):
         continue
       self.__running[id-1] = cmd
 
+      # ok.. now command is running. If this HodRing got jobtracker, 
+      # Check if it is ready for accepting jobs, and then only return
+      self.__check_jobtracker(desc, id-1)
+      
+  def __check_jobtracker(self, desc, id):
+    # Check jobtracker status. Return properly if it is ready to accept jobs.
+    # Currently Checks for Jetty to come up, the last thing that can be checked
+    # before JT completes initialisation. To be perfectly reliable, we need 
+    # hadoop support
+    name = desc.getName()
+    if name == 'jobtracker':
+      # Yes I am the Jobtracker
+      self.log.debug("Waiting for jobtracker to initialise")
+      version = desc.getVersion()
+      self.log.debug("jobtracker version : %s" % version)
+      attrs = self.getRunningValues()[id].getFilledInKeyValues()
+      attrs = parseEquals(attrs)
+      jobTrackerAddr = attrs['mapred.job.tracker']
+      self.log.debug("jobtracker rpc server : %s" % jobTrackerAddr)
+      if version < 16:
+        jettyAddr = jobTrackerAddr.split(':')[0] + ':' + \
+                              attrs['mapred.job.tracker.info.port']
+      else:
+        jettyAddr = attrs['mapred.job.tracker.http.bindAddress']
+      self.log.debug("Jobtracker jetty : %s" % jettyAddr)
+
+      # Check for Jetty to come up
+      # For this do a http head, and then look at the status
+      defaultTimeout = socket.getdefaulttimeout()
+      # socket timeout isn`t exposed at httplib level. Setting explicitly.
+      socket.setdefaulttimeout(1)
+      sleepTime = 0.5
+      jettyStatus = False
+      jettyStatusmsg = ""
+      while sleepTime <= 32:
+        try:
+          jettyConn = httplib.HTTPConnection(jettyAddr)
+          jettyConn.request("HEAD", "/jobtracker.jsp")
+          # httplib inherently retries the following till socket timeout
+          resp = jettyConn.getresponse()
+          if resp.status != 200:
+            # Some problem?
+            jettyStatus = False
+            jettyStatusmsg = "Jetty gave a non-200 response to a HTTP-HEAD" +\
+                             " request. HTTP Status (Code, Msg): (%s, %s)" % \
+                             ( resp.status, resp.reason )
+            break
+          else:
+            self.log.info("Jetty returned a 200 status (%s)" % resp.reason)
+            self.log.info("JobTracker successfully initialised")
+            return
+        except socket.error:
+          self.log.debug("Jetty gave a socket error. Sleeping for %s" \
+                                                                  % sleepTime)
+          time.sleep(sleepTime)
+          sleepTime = sleepTime * 2
+        except Exception, e:
+          jettyStatus = False
+          jettyStatusmsg = ("Process(possibly other than jetty) running on" + \
+                  " port assigned to jetty is returning invalid http response")
+          break
+      socket.setdefaulttimeout(defaultTimeout)
+      if not jettyStatus:
+        self.log.critical("Jobtracker failed to initialise.")
+        if jettyStatusmsg:
+          self.log.critical( "Reason: %s" % jettyStatusmsg )
+        else: self.log.critical( "Reason: Jetty failed to give response")
+        raise Exception("JobTracker failed to initialise")
+
   def stop(self):
     self.log.debug("Entered hodring stop.")
     if self._http: 
@@ -532,153 +619,12 @@ class HodRing(hodBaseService):
     self.log.debug("call hodsvcrgy stop...")
     hodBaseService.stop(self)
     
-    self.clean_up()
-    
-  def clean_up(self):
-    os.chdir(originalcwd)
-    if not mswindows:
-      # do the UNIX double-fork magic, see Stevens' "Advanced 
-      # Programming in the UNIX Environment" for details (ISBN 0201563177)
-      try: 
-        pid = os.fork() 
-        if pid > 0:
-          # exit first parent
-          sys.exit(0) 
-      except OSError, e: 
-        self.log.error("fork #1 failed: %d (%s)" % (e.errno, e.strerror)) 
-        sys.exit(1)
-
-      # decouple from parent environment
-      os.chdir("/") 
-      os.setsid() 
-      os.umask(0) 
-
-      # do second fork
-      try: 
-        pid = os.fork() 
-        if pid > 0:
-          # exit from second parent, print eventual PID before
-          sys.exit(0) 
-      except OSError, e: 
-        self.log.error("fork #2 failed: %d (%s)" % (e.errno, e.strerror))
-        sys.exit(1) 
-
-    try:
-#      for cmd in self.__running.values():
-#        self.log.debug("killing %s..." % cmd)
-#        cmd.kill()
-  
-      list = []
-      
-      for cmd in self.__running.values():
-        self.log.debug("addding %s to cleanup list..." % cmd)
-        cmd.addCleanup(list)
-      
-      list.append(self.__tempDir)
-         
-      self.__archive_logs()   
-          
-      for dir in list:
-        if os.path.exists(dir):
-          self.log.debug('removing %s' % (dir))
-          shutil.rmtree(dir, True)
-    except:
-      self.log.error(get_exception_string())
-    sys.exit(0)
-
   def _xr_method_clusterStart(self, initialize=True):
     return self.clusterStart(initialize)
 
   def _xr_method_clusterStop(self):
     return self.clusterStop()
  
-  def __copy_archive_to_dfs(self, archiveFile):        
-    hdfsURIMatch = reHdfsURI.match(self._cfg['log-destination-uri'])
-    
-    # FIXME this is a complete and utter hack. Currently hadoop is broken
-    # and does not understand hdfs:// syntax on the command line :(
-    
-    pid = os.getpid()
-    tempConfDir = '/tmp/%s' % pid
-    os.mkdir(tempConfDir)
-    tempConfFileName = '%s/hadoop-site.xml' % tempConfDir
-    tempHadoopConfig = open(tempConfFileName, 'w')
-    print >>tempHadoopConfig, "<configuration>"
-    print >>tempHadoopConfig, "  <property>"
-    print >>tempHadoopConfig, "    <name>fs.default.name</name>"
-    print >>tempHadoopConfig, "    <value>%s</value>" % hdfsURIMatch.group(1)
-    print >>tempHadoopConfig, "    <description>No description</description>"
-    print >>tempHadoopConfig, "  </property>"
-    print >>tempHadoopConfig, "</configuration>"
-    tempHadoopConfig.close()
-    
-    # END LAME HACK
-    
-    (head, tail) = os.path.split(archiveFile)
-    destFile = os.path.join(hdfsURIMatch.group(2), self._cfg['userid'], 
-                            self._cfg['service-id'], tail)
-    
-    self.log.info("copying archive %s to DFS %s ..." % (archiveFile, destFile))
-    
-    runningHadoops = self.__running.values()
-    if (len(runningHadoops) == 0):
-      self.log.info("len(runningHadoops) == 0, No running cluster?")
-      self.log.info("Skipping __copy_archive_to_dfs")
-      return
- 
-    run = runningHadoops[0]
-    hadoopCmd = run.path
-    if self._cfg.has_key('pkgs'):
-      hadoopCmd = os.path.join(self._cfg['pkgs'], 'bin', 'hadoop')
-
-    # LAME HACK AGAIN, using config generated above :( 
-    copyCommand = "%s --config %s dfs -copyFromLocal %s %s" % (hadoopCmd, 
-      tempConfDir, archiveFile, destFile)
-    
-    self.log.debug(copyCommand)
-    
-    copyThread = simpleCommand('hadoop', copyCommand)
-    copyThread.start()
-    copyThread.wait()
-    copyThread.join()
-    self.log.debug(pprint.pformat(copyThread.output()))
-    
-    # LAME HACK AGAIN, deleting config generated above :( 
-    os.unlink(tempConfFileName)
-    os.rmdir(tempConfDir)
-    os.unlink(archiveFile)
-  
-  def __archive_logs(self):
-    status = True
-    if self._cfg.has_key("log-destination-uri"):
-      try:
-        if self.__hadoopLogDirs:
-          date = time.localtime()
-          for logDir in self.__hadoopLogDirs:
-            (head, tail) = os.path.split(logDir)
-            (head, logType) = os.path.split(head)
-            tarBallFile = "%s-%s-%04d%02d%02d%02d%02d%02d-%s.tar.gz" % (
-              logType, local_fqdn(), date[0], date[1], date[2], date[3], 
-              date[4], date[5], random.randint(0,1000))
-            
-            if self._cfg["log-destination-uri"].startswith('file://'):
-              tarBallFile = os.path.join(self._cfg["log-destination-uri"][7:], 
-                                         tarBallFile)
-            else:
-              tarBallFile = os.path.join(self._cfg['temp-dir'], tarBallFile)
-            
-            self.log.info('archiving log files to: %s' % tarBallFile)
-            status = tar(tarBallFile, logDir, ['*',])
-            self.log.info('archive %s status: %s' % (tarBallFile, status))
-            if status and \
-              self._cfg["log-destination-uri"].startswith('hdfs://'):
-              self.__copy_archive_to_dfs(tarBallFile)
-          dict = {} 
-      except:
-        self.log.error(get_exception_string())
-      
-    return status
-      
   def start(self):
     """Run and maintain hodring commands"""
     

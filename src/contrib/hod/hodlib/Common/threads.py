@@ -132,13 +132,16 @@ class simpleCommand(baseThread):
                 output = cmd.fromchild.readline()
 
         elif self.__wait == False:
-            for output in cmd.fromchild.readlines():
+            output = cmd.fromchild.readline()
+            while output != '':
                 while not self.running.isSet():
                     if self.stopFlag.isSet():
                         break
                     time.sleep(1)
-                
                 print output,
+                if self.stopFlag.isSet():
+                    break
+                output = cmd.fromchild.readline()
         else:
             self.stdout = cmd.fromchild
 

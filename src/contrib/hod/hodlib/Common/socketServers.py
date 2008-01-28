@@ -15,7 +15,6 @@
 #limitations under the License.
 # Various socket server and helper classes.
 #
-# Christopher Zimmerman - zim@yahoo-inc.com - 03/07/2007
 #
 import os, sys, socket, threading, pprint, re, xmlrpclib, time
   

@@ -125,38 +125,9 @@ class ServiceDesc:
     self.dict.setdefault('pkgs', '')
     self.dict.setdefault('final-attrs', {})
     self._checkRequired()
-    self.__dict_update()
-
-  def __dict_update(self):
-    getattr(self, "_%s" % self.dict['id'])()
-
-  def _mapred(self):
-    if self.isExternal():
-      self.dict['final-attrs']['mapred.job.tracker'] = "%s:%s" % (self.dict['host'], 
-        self.dict['tracker_port'])
-      
-      # self.dict['final-attrs']['mapred.job.tracker.info.port'] = \
-      #   str(self.dict['info_port'])
-      # After Hadoop-2185
-      self.dict['final-attrs']['mapred.job.tracker.http.bindAddress'] = \
-        "%s:%s" %(self.dict['host'], self.dict['info_port'])
-      
     if self.dict.has_key('hadoop-tar-ball'):
       self.dict['tar'] = self.dict['hadoop-tar-ball']  
-  
-  def _hdfs(self):
-    if self.isExternal():
-      self.dict['final-attrs']['fs.default.name'] = "%s:%s" % (self.dict['host'], 
-        self.dict['fs_port'])
-      
-      # self.dict['final-attrs']['dfs.info.port'] = str(self.dict['info_port'])
-      # After Hadoop-2185
-      self.dict['final-attrs']['dfs.http.bindAddress'] = "%s:%s" % \
-        (self.dict['host'], self.dict['info_port'])
-      
-    if self.dict.has_key('hadoop-tar-ball'):
-      self.dict['tar'] = self.dict['hadoop-tar-ball']
-  
+
   def _checkRequired(self):
 
     if not 'id' in self.dict:

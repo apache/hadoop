@@ -16,7 +16,20 @@
 import os, re, time
 from hodlib.Common.threads import loop, func
 from hodlib.Common.threads import simpleCommand
-from hodlib.Common.util import get_exception_string
+from hodlib.Common.util import get_exception_string, hadoopVersion
+
+class HadoopJobStatus:
+  """This class represents the status of a single Hadoop job"""
+  
+  def __init__(self, jobId, status):
+    self.__jobId = jobId
+    self.__status = status
+
+  def getJobId(self):
+    return self.__jobId
+
+  def getStatus(self):
+    return self.__status
 
 class JobTrackerMonitor:
   """This class monitors the JobTracker of an allocated cluster
@@ -39,9 +52,11 @@ class JobTrackerMonitor:
     # The service info provider will be polled until we get the URL.
     self.__serviceInfoProvider = servInfoProvider
     self.__jobCountRegExp = re.compile("([0-9]+) jobs currently running.*")
+    self.__jobStatusRegExp = re.compile("(\S+)\s+(\d)\s+\d+\s+\S+$")
     self.__firstIdleTime = 0
+    self.__hadoop15Version = { 'major' : '0', 'minor' : '15' }
     #Assumption: we are not going to support versions older than 0.15 for Idle Job tracker.
-    if not self.__isCompatibleHadoopVersion():
+    if not self.__isCompatibleHadoopVersion(self.__hadoop15Version):
       raise Exception('Incompatible Hadoop Version: Cannot check status')
     self.__stopFlag = False
     self.__jtURLFinderThread = func(name='JTURLFinderThread', functionRef=self.getJobTrackerURL)
@@ -87,6 +102,36 @@ class JobTrackerMonitor:
     except:
       self.__log.debug('Exception while monitoring job tracker. %s' % get_exception_string())
 
+  def getJobsStatus(self):
+    """This method should return the status of all jobs that are run on the HOD allocated
+       hadoop cluster"""
+    jobStatusList = []
+    try:
+      hadoop16Version = { 'major' : '0', 'minor' : '16' }
+      if self.__isCompatibleHadoopVersion(hadoop16Version):
+        jtStatusCommand = self.__initStatusCommand(option='-list all')
+        jtStatusCommand.start()
+        jtStatusCommand.wait()
+        jtStatusCommand.join()
+        if jtStatusCommand.exit_code() == 0:
+          for line in jtStatusCommand.output():
+            jobStatus = self.__extractJobStatus(line)
+            if jobStatus is not None:
+              jobStatusList.append(jobStatus)
+    except:
+      self.__log.debug('Exception while getting job statuses. %s' % get_exception_string())
+    return jobStatusList
+
+  def __extractJobStatus(self, line):
+    """This method parses an output line from the job status command and creates
+       the JobStatus object if there is a match"""
+    jobStatus = None
+    line = line.strip()
+    jsMatch = self.__jobStatusRegExp.match(line)
+    if jsMatch:
+      jobStatus = HadoopJobStatus(jsMatch.group(1), int(jsMatch.group(2)))
+    return jobStatus
+
   def __isIdle(self):
     """This method checks if the JobTracker is idle beyond a certain limit."""
     if self.__getJobCount() == 0:
@@ -121,47 +166,25 @@ class JobTrackerMonitor:
           jobs = int(match.group(1))
     return jobs
 
-  def __findHadoopVersion(self):
-    """This method determines the version of hadoop being used by executing the 
-       hadoop version command"""
-    verMap = { 'major' : None, 'minor' : None }
-    hadoopPath = os.path.join(self.__hadoopDir, 'bin', 'hadoop')
-    cmd = "%s version" % hadoopPath
-    self.__log.debug('Executing command %s to find hadoop version' % cmd)
-    env = os.environ
-    env['JAVA_HOME'] = self.__javaHome
-    hadoopVerCmd = simpleCommand('HadoopVersion', cmd, env)
-    hadoopVerCmd.start()
-    hadoopVerCmd.wait()
-    hadoopVerCmd.join()
-    if hadoopVerCmd.exit_code() == 0:
-      verLine = hadoopVerCmd.output()[0]
-      self.__log.debug('Version from hadoop command: %s' % verLine)
-      hadoopVerRegExp = re.compile("Hadoop ([0-9]+)\.([0-9]+).*")
-      verMatch = hadoopVerRegExp.match(verLine)
-      if verMatch != None:
-        verMap['major'] = verMatch.group(1)
-        verMap['minor'] = verMatch.group(2)
-
-    return verMap
-
-  def __isCompatibleHadoopVersion(self):
+  def __isCompatibleHadoopVersion(self, expectedVersion):
     """This method determines whether the version of hadoop being used is one that 
-       provides the hadoop job -list command or not"""
-    ver = self.__findHadoopVersion()
+       is higher than the expectedVersion.
+       This can be used for checking if a particular feature is available or not"""
+    ver = hadoopVersion(self.__hadoopDir, self.__javaHome, self.__log)
     ret = False
   
-    if (ver['major']!=None) and (int(ver['major']) >= 0) \
-      and (ver['minor']!=None) and (int(ver['minor']) >= 15):
+    if (ver['major']!=None) and (int(ver['major']) >= int(expectedVersion['major'])) \
+      and (ver['minor']!=None) and (int(ver['minor']) >= int(expectedVersion['minor'])):
       ret = True
-
     return ret
 
-  def __initStatusCommand(self):
+  def __initStatusCommand(self, option="-list"):
     """This method initializes the command to run to check the JT status"""
     cmd = None
     hadoopPath = os.path.join(self.__hadoopDir, 'bin', 'hadoop')
-    cmdStr = "%s job -jt %s -list" % (hadoopPath, self.__jobTrackerURL)
+    cmdStr = "%s job -jt %s" % (hadoopPath, self.__jobTrackerURL)
+    cmdStr = "%s %s" % (cmdStr, option)
+    self.__log.debug('cmd str %s' % cmdStr)
     env = os.environ
     env['JAVA_HOME'] = self.__javaHome
     cmd = simpleCommand('HadoopStatus', cmdStr, env)

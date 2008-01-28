@@ -144,7 +144,7 @@
               <em>Twisted Python:</em> This can be used for improving the scalability of HOD. Twisted Python is available <a href="http://twistedmatrix.com/trac/">here</a>.
             </li>
             <li>
-            <em>Hadoop:</em> HOD can automatically distribute Hadoop to all nodes in the cluster. However, it can also use a pre-installed version of Hadoop, if it is available on all nodes in the cluster. HOD currently supports only Hadoop 0.16, which is under development.
+            <em>Hadoop:</em> HOD can automatically distribute Hadoop to all nodes in the cluster. However, it can also use a pre-installed version of Hadoop, if it is available on all nodes in the cluster. HOD currently supports Hadoop 0.15 and above.
             </li>
           </ul>
           <p>

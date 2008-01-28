@@ -6,6 +6,7 @@ cluster-factor                  = 1.8
 xrs-port-range                  = 32768-65536
 debug                           = 3
 allocate-wait-time              = 3600
+temp-dir                        = /tmp/hod
 
 [ringmaster]
 register                        = True

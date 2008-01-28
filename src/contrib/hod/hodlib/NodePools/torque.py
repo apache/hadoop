@@ -150,7 +150,8 @@ class TorquePool(NodePool):
         break
       
       argList.extend(process_qsub_attributes())
-      argList.extend(('-N', 'HOD'))
+
+      argList.extend(('-N', '"' + self._cfg['hod']['title'] + '"'))
       argList.extend(('-r','n'))
 
       if 'pbs-user' in self._cfg['resource_manager']:
@@ -161,9 +162,11 @@ class TorquePool(NodePool):
         queue = self._cfg['resource_manager']['queue']
         argList.extend(('-q',queue))
   
-      # accounting should recognize userid:pbs-account as being "charged"
-      argList.extend(('-A', (self._cfg['hod']['userid'] + ':' + 
-                   self._cfg['resource_manager']['pbs-account'])))
+      # In HOD 0.4, we pass in an account string only if it is mentioned.
+      # Also, we don't append userid to the account string, as HOD jobs run as the 
+      # user running them, not as 'HOD' user.
+      if self._cfg['resource_manager'].has_key('pbs-account'):
+        argList.extend(('-A', (self._cfg['resource_manager']['pbs-account'])))
     
       if 'env-vars' in self._cfg['resource_manager']:
         qsub_envs = self._cfg['resource_manager']['env-vars']
@@ -177,7 +180,7 @@ class TorquePool(NodePool):
   def __keyValToString(self, keyValList):
     ret = ""
     for key in keyValList:
-      ret = "%s%s=%s," % (ret, key, keyValList[key][0])
+      ret = "%s%s=%s," % (ret, key, keyValList[key])
     return ret[:-1]
   
   def newNodeSet(self, numNodes, preferred=[], isPreemptee=True, id=None):
@@ -288,5 +291,10 @@ class TorquePool(NodePool):
   def runWorkers(self, args):
     return self.__torque.pbsdsh(args)
 
-
+  def updateWorkerInfo(self, workerInfoMap, jobId):
+    workerInfoStr = ''
+    for key in workerInfoMap.keys():
+      workerInfoStr = '%s,%s:%s' % (workerInfoStr, key, workerInfoMap[key])
+    exitCode = self.__torque.qalter("notes", workerInfoStr[1:], jobId)
+    return exitCode
 

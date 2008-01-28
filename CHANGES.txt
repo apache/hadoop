@@ -591,6 +591,9 @@ Trunk (unreleased changes)
     HADOOP-2576. Namenode performance degradation over time triggered by
     large heartbeat interval. (Raghu Angadi)
 
+    HADOOP-2720. Jumbo bug fix patch to HOD.  Final sync of Apache SVN with
+    internal Yahoo SVN.  (Hemanth Yamijala via nigel)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES

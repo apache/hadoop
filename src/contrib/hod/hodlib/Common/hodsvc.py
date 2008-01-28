@@ -15,7 +15,6 @@
 #limitations under the License.
 # $Id:setup.py 5158 2007-04-09 00:14:35Z zim $
 #
-# Christopher Zimmerman - zim@yahoo-inc.com - 04/13/2007
 #------------------------------------------------------------------------------
 import os, time, shutil, xmlrpclib, socket, pprint
 
@@ -51,7 +50,7 @@ class hodBaseService:
     
     self._init_logging()
         
-    self._init_signals()
+    if name != 'serviceRegistry': self._init_signals()
     self._init_xrc_server()
     
   def __set_logging_level(self, level):

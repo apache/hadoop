@@ -16,7 +16,6 @@
 # $Id:setup.py 5158 2007-04-09 00:14:35Z zim $
 # $Id:setup.py 5158 2007-04-09 00:14:35Z zim $
 #
-# Christopher Zimmerman - zim@yahoo-inc.com - 04/07/2007
 #------------------------------------------------------------------------------
 
 """'setup' provides for reading and verifing configuration files based on
@@ -26,7 +25,7 @@ import sys, os, re, pprint
 
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser, IndentedHelpFormatter, OptionGroup
-from util import get_perms
+from util import get_perms, replace_escapes
 from types import typeValidator, is_valid_type, typeToString
 
 reEmailAddress = re.compile("^.*@.*$")
@@ -37,6 +36,8 @@ reCommentHack = re.compile("^.*?\s+#|;.*", flags=re.S)
 reCommentNewline = re.compile("\W$")
 reKeyVal = r"(?<!\\)="
 reKeyVal = re.compile(reKeyVal)
+reKeyValList = r"(?<!\\),"
+reKeyValList = re.compile(reKeyValList)
 
 errorPrefix = 'error'
 requiredPerms = '0660'
@@ -485,7 +486,7 @@ class config(SafeConfigParser, baseConfig):
                            # Append to the current list of values in self._dict
                            if not self._dict[section].has_key(option):
                              self._dict[section][option] = ""
-                           dictOpts = self._dict[section][option].split(",")
+                           dictOpts = reKeyValList.split(self._dict[section][option])
                            dictOptsKeyVals = {}
                            for opt in dictOpts:
                               if opt != '':
@@ -495,13 +496,16 @@ class config(SafeConfigParser, baseConfig):
                                   # we only consider the first '=' for splitting
                                   # we do this to support passing params like
                                   # mapred.child.java.opts=-Djava.library.path=some_dir
+                                  # Even in case of an invalid error like unescaped '=',
+                                  # we don't want to fail here itself. We leave such errors 
+                                  # to be caught during validation which happens after this
                                   dictOptsKeyVals[key] = val
                                 else: 
                                   # this means an invalid option. Leaving it
                                   #for config.verify to catch
                                   dictOptsKeyVals[opt] = None
                                 
-                           cmdLineOpts = self._options[section][option].split(",")
+                           cmdLineOpts = reKeyValList.split(self._options[section][option])
 
                            for opt in cmdLineOpts:
                               if reKeyVal.search(opt):
@@ -572,6 +576,10 @@ class config(SafeConfigParser, baseConfig):
                 (self.configFile, perms, requiredPerms)
             raise Exception( error)
             sys.exit(1)
+
+    def replace_escape_seqs(self):
+      """ replace any escaped characters """
+      replace_escapes(self)
 
 class formatter(IndentedHelpFormatter):
     def format_option_strings(self, option):
@@ -667,11 +675,21 @@ class options(OptionParser, baseConfig):
             self.config = self.__parsedOptions.config
             if not self.config:
                 self.error("configuration file must be specified")
+            if not os.path.isabs(self.config):
+                # A relative path. Append the original directory which would be the
+                # current directory at the time of launch
+                try:  
+                    origDir = getattr(self.__parsedOptions, 'hod.original-dir')
+                    if origDir is not None:
+                        self.config = os.path.join(origDir, self.config)
+                        self.__parsedOptions.config = self.config
+                except AttributeError, e:
+                    self.error("hod.original-dir is not defined.\
+                                   Cannot get current directory")
             if not os.path.exists(self.config):
                 if self.__defaultLoc and not re.search("/", self.config):
                     self.__parsedOptions.config = os.path.join(
                         self.__defaultLoc, self.config)
-    
         self.__build_dict()   
 
     
@@ -910,3 +928,6 @@ class options(OptionParser, baseConfig):
                         
     def verify(self):
         return baseConfig.verify(self)
+
+    def replace_escape_seqs(self):
+      replace_escapes(self)

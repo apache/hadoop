@@ -15,7 +15,6 @@
 #limitations under the License.
 # $Id:tcp.py 6172 2007-05-22 20:26:54Z zim $
 #
-# Christopher Zimmerman - zim@yahoo-inc.com - 04/07/2007
 #------------------------------------------------------------------------------
 
 """ TCP related classes. """

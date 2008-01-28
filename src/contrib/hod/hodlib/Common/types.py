@@ -15,7 +15,6 @@
 #limitations under the License.
 # $Id:types.py 6172 2007-05-22 20:26:54Z zim $
 #
-# Christopher Zimmerman - zim@yahoo-inc.com - 04/07/2007
 #------------------------------------------------------------------------------
 
 """ Higher level data types and type related classes.
@@ -325,12 +324,17 @@ class typeToString:
         return value
 
     def __tostring_keyval(self, value):
-        string = ''
+        string = '"' # to protect from shell escapes
         for key in value:
-            for item in value[key]:
-                string = "%s%s=%s," % (string, key, item)
-                
-        return string[:-1]  
+          # for item in value[key]:
+          #      string = "%s%s=%s," % (string, key, item)
+          # Quotes still cannot protect Double-slashes.
+          # Dealing with them separately
+          val = re.sub(r"\\\\",r"\\\\\\\\",value[key])
+
+          string = "%s%s=%s," % (string, key, val)
+
+        return string[:-1] + '"'
 
     def __tostring_list(self, value):
         string = ''
@@ -678,13 +682,11 @@ class typeValidator:
         list = self.__norm_list(value)
         keyValue = {}
         for item in list:
-            # we only consider the first '=' for splitting
-            # we do this to support passing params like 
-            # mapred.child.java.opts=-Djava.library.path=some_dir
-            (key, value) = reKeyVal.split(item,1)
-            if not keyValue.has_key(key):
-                keyValue[key] = []
-            keyValue[key].append(value)
+            (key, value) = reKeyVal.split(item)
+            #if not keyValue.has_key(key):
+            #    keyValue[key] = []
+            #keyValue[key].append(value)
+            keyValue[key] = value
         return keyValue     
 
     def __verify_list(self, type, value):

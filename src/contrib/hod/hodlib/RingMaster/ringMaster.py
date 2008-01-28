@@ -28,7 +28,7 @@ libdir = os.path.dirname(binfile)
 sys.path.append(libdir)
 
 import hodlib.Common.logger
-from hodlib.RingMaster.idleJobTracker import JobTrackerMonitor
+from hodlib.RingMaster.idleJobTracker import JobTrackerMonitor, HadoopJobStatus
 
 from hodlib.Common.threads import func 
 
@@ -484,7 +484,20 @@ class _LogMasterSources:
     
     return addr
 
-  
+  def stopRM(self):
+    """An XMLRPC call which will spawn a thread to stop the Ringmaster program."""
+    # We spawn a thread here because we want the XMLRPC call to return. Calling
+    # stop directly from here will also stop the XMLRPC server.
+    try:
+      self.log.debug("inside xml-rpc call to stop ringmaster")
+      rmStopperThread = func('RMStopper', self.rm.stop)
+      rmStopperThread.start()
+      self.log.debug("returning from xml-rpc call to stop ringmaster")
+      return True
+    except:
+      self.log.debug("Exception in stop: %s" % get_exception_string())
+      return False
+
 class RingMaster:
   def __init__(self, cfg, log, **kwds):
     """starts nodepool and services"""
@@ -499,6 +512,8 @@ class RingMaster:
     self.__jtMonitor = None
     self.__idlenessDetected = False
     self.__stopInProgress = False
+    self.__isStopped = False # to let main exit
+    self.__exitCode = 0 # exit code with which the ringmaster main method should return
 
     self.__initialize_signal_handlers()
     
@@ -544,23 +559,33 @@ class RingMaster:
 
       hdfsDesc = sdl['hdfs']
       hdfs = None
+ 
+      # Determine hadoop Version
+      hadoopVers = hadoopVersion(self.__getHadoopDir(), \
+                                self.cfg['hodring']['java-home'], self.log)
+      
       if hdfsDesc.isExternal():
-        hdfs = HdfsExternal(hdfsDesc, workDirs)
+        hdfs = HdfsExternal(hdfsDesc, workDirs, version=int(hadoopVers['minor']))
+        hdfs.setMasterParams( self.cfg['gridservice-hdfs'] )
       else:
-        hdfs = Hdfs(hdfsDesc, workDirs, 0)
+        hdfs = Hdfs(hdfsDesc, workDirs, 0, version=int(hadoopVers['minor']))
 
       self.serviceDict[hdfs.getName()] = hdfs
       
       mrDesc = sdl['mapred']
       mr = None
       if mrDesc.isExternal():
-        mr = MapReduceExternal(mrDesc, workDirs)
+        mr = MapReduceExternal(mrDesc, workDirs, version=int(hadoopVers['minor']))
+        mr.setMasterParams( self.cfg['gridservice-mapred'] )
       else:
-        mr = MapReduce(mrDesc, workDirs,1)
+        mr = MapReduce(mrDesc, workDirs,1, version=int(hadoopVers['minor']))
 
       self.serviceDict[mr.getName()] = mr
     except:
-      self.log.debug(get_exception_string)
+      self.log.critical("Exception in creating Hdfs and Map/Reduce descriptor objects: \
+                            %s." % get_exception_error_string())
+      self.log.debug(get_exception_string())
+      raise
 
     # should not be starting these in a constructor
     ringMasterServer.startService(self.serviceDict, cfg, self.np, log, self)
@@ -860,23 +885,74 @@ class RingMaster:
     
     self._finalize()
 
+  def __findExitCode(self):
+    """Determine the exit code based on the status of the cluster or jobs run on them"""
+    xmlrpcServer = ringMasterServer.instance.logMasterSources
+    if xmlrpcServer.getServiceAddr('hdfs') == 'not found':
+      self.__exitCode = 7
+    elif xmlrpcServer.getServiceAddr('mapred') == 'not found':
+      self.__exitCode = 8
+    else:
+      clusterStatus = get_cluster_status(xmlrpcServer.getServiceAddr('hdfs'),
+                                          xmlrpcServer.getServiceAddr('mapred'))
+      if clusterStatus != 0:
+        self.__exitCode = clusterStatus
+      else:
+        self.__exitCode = self.__findHadoopJobsExitCode()
+    self.log.debug('exit code %s' % self.__exitCode)
+
+  def __findHadoopJobsExitCode(self):
+    """Determine the consolidate exit code of hadoop jobs run on this cluster, provided
+       this information is available. Return 0 otherwise"""
+    ret = 0
+    failureStatus = 3
+    failureCount = 0
+    if self.__jtMonitor:
+      jobStatusList = self.__jtMonitor.getJobsStatus()
+      try:
+        if len(jobStatusList) > 0:
+          for jobStatus in jobStatusList:
+            self.log.debug('job status for %s: %s' % (jobStatus.getJobId(), 
+                                                      jobStatus.getStatus()))
+            if jobStatus.getStatus() == failureStatus:
+              failureCount = failureCount+1
+        if failureCount > 0:
+          if failureCount == len(jobStatusList): # all jobs failed
+            ret = 16
+          else:
+            ret = 17
+      except:
+        self.log.debug('exception in finding hadoop jobs exit code' % get_exception_string())
+    return ret
+
   def stop(self):
     self.log.debug("RingMaster stop method invoked.")
-    if self.__stopInProgress:
+    if self.__stopInProgress or self.__isStopped:
       return
     self.__stopInProgress = True
-    if self.__jtMonitor is not None:
-      self.__jtMonitor.stop()
     if ringMasterServer.instance is not None:
+      self.log.debug('finding exit code')
+      self.__findExitCode()
       self.log.debug('stopping ringmaster instance')
       ringMasterServer.stopService()
+    else:
+      self.__exitCode = 6
+    if self.__jtMonitor is not None:
+      self.__jtMonitor.stop()
     if self.httpServer:
       self.httpServer.stop()
       
     self.__clean_up()
+    self.__isStopped = True
 
-  def isClusterIdle(self):
-    return self.__idlenessDetected
+  def shouldStop(self):
+    """Indicates whether the main loop should exit, either due to idleness condition, 
+    or a stop signal was received"""
+    return self.__idlenessDetected or self.__isStopped
+
+  def getExitCode(self):
+    """return the exit code of the program"""
+    return self.__exitCode
 
 def main(cfg,log):
   try:
@@ -885,10 +961,11 @@ def main(cfg,log):
     cfg = dGen.initializeDesc()
     rm = RingMaster(cfg, log)
     rm.start()
-    while not rm.isClusterIdle():
+    while not rm.shouldStop():
       time.sleep(1)
     rm.stop()
     log.debug('returning from main')
+    return rm.getExitCode()
   except Exception, e:
     if log:
       log.critical(get_exception_string())

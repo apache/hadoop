@@ -45,7 +45,9 @@ sys.path.append(libDirectory)
 from hodlib.Hod.hod import hodRunner
 from hodlib.Common.setup import *
 from hodlib.Common.descGenerator import *
-from hodlib.Common.util import local_fqdn, need_to_allocate, filter_warnings, get_exception_error_string
+from hodlib.Common.util import local_fqdn, need_to_allocate, filter_warnings,\
+    get_exception_error_string, hodInterrupt, \
+    HOD_INTERRUPTED_MESG, HOD_INTERRUPTED_CODE
 from hodlib.Common.tcp import tcpError, tcpSocket
 
 filter_warnings()
@@ -91,7 +93,8 @@ defList = { 'hod' : (
               False, True, False, True, 's'),
 
              ('min-nodes', 'pos_int', 
-              'Minimum number of nodes to allocate at startup.',
+              'Minimum number of nodes to allocate at startup. ' + \
+              'Used with hod.script option',
               True, None, False, True, 'm'),
 
              ('script', 'file', 'Hadoop script to execute.',
@@ -124,10 +127,25 @@ defList = { 'hod' : (
               False, None, True, True),
 
              ('client-params', 'keyval', 'Hadoop client xml key/value list',
-              False, None, False, True, 'C'), 
+              True, None, False, True, 'C'), 
 
              ('hadoop-ui-log-dir', 'directory', 'Directory to store Web UI Logs of Hadoop',
-              False, None, False, True)),
+              True, None, False, True),
+
+             ('temp-dir', 'directory', 'HOD temporary directories.',
+              False, None, True, False),
+
+             ('update-worker-info', 'bool', 'Specifies whether to update Worker Info after allocation',
+              False, False, False, True),
+
+             ('title', 'string', 'Title for the current HOD allocation.',
+               True, "HOD", False, True, 'N'),
+
+             ('walltime', 'pos_int', 'Walltime in seconds for the current HOD allocation',
+              True, None, False, True),
+
+             ('script-wait-time', 'pos_int', 'Specifies the time to wait before running the script. Used with the hod.script option.',
+              True, 10, False, True, 'W')),
 
             'resource_manager' : (
              ('id', 'string', 'Batch scheduler ID: torque|condor.',
@@ -137,7 +155,7 @@ defList = { 'hod' : (
               False, None, False, True),
               
              ('pbs-account', 'string', 'User Account jobs are submitted under.',
-              True, pwd.getpwuid(os.getuid())[0], False, False, 'A'),
+              True, None, False, False, 'A'),
               
              ('queue', 'string', 'Queue of the batch scheduler to query.',
               True, 'batch', False, True, 'Q'),
@@ -215,7 +233,7 @@ defList = { 'hod' : (
               False, None, False, False),
 
              ('server-params', 'keyval', 'Hadoop xml key/value list',
-              False, None, False, True, 'M'),
+              True, None, False, True, 'M'),
                
              ('envs', 'keyval', 'environment to run this package in',
               False, None, False, False),
@@ -344,140 +362,151 @@ def op_requires_pkgs(config):
     return config['hod'].has_key('script')
 
 if __name__ == '__main__':  
-  confDef = definition()
-  confDef.add_defs(defList, defOrder)
-  hodOptions = options(confDef, "./%s -c <CONFIG_FILE> [OPTIONS]" % myName,
-                       VERSION, withConfig=True, defaultConfig=DEFAULT_CONFIG)
-
-  # hodConfig is a dict like object, hodConfig[section][name]
   try:
-    hodConfig = config(hodOptions['config'], configDef=confDef, 
-                     originalDir=hodOptions['hod']['original-dir'],
-                     options=hodOptions) 
-  except IOError, e:
-    print >>sys.stderr,"error: %s not found. Specify the path to the HOD configuration file, or define the environment variable %s under which a file named hodrc can be found." % (hodOptions['config'], 'HOD_CONF_DIR')
-    sys.exit(1)
-
-  status = True
-  statusMsgs = []
-
-  (status,statusMsgs) = hodConfig.verify()
-  if not status:
-    print >>sys.stderr,"error: bin/hod failed to start."
-    for msg in statusMsgs:
-      print >>sys.stderr,"%s" % (msg)
-    sys.exit(1)
-
-  ## TODO : should move the dependency verification to hodConfig.verify
-  if hodConfig['hod'].has_key('script') \
-    and not hodConfig['hod'].has_key('min-nodes'):
-    printErrors(hodConfig.var_error('hod', 'min-nodes',
-        "hod.min-nodes must be specified when using hod.script option."))
-    sys.exit(1)
-
-  if hodConfig['hod'].has_key('min-nodes'):
-    if hodConfig['hod']['min-nodes'] < 3:
+    confDef = definition()
+    confDef.add_defs(defList, defOrder)
+    hodOptions = options(confDef, "./%s -c <CONFIG_FILE> [OPTIONS]" % myName,
+                         VERSION, withConfig=True, defaultConfig=DEFAULT_CONFIG)
+  
+    # hodConfig is a dict like object, hodConfig[section][name]
+    try:
+      hodConfig = config(hodOptions['config'], configDef=confDef, 
+                       originalDir=hodOptions['hod']['original-dir'],
+                       options=hodOptions) 
+    except IOError, e:
+      print >>sys.stderr,"error: %s not found. Specify the path to the HOD configuration file, or define the environment variable %s under which a file named hodrc can be found." % (hodOptions['config'], 'HOD_CONF_DIR')
+      sys.exit(1)
+  
+    status = True
+    statusMsgs = []
+  
+    (status,statusMsgs) = hodConfig.verify()
+    if not status:
+      print >>sys.stderr,"error: bin/hod failed to start."
+      for msg in statusMsgs:
+        print >>sys.stderr,"%s" % (msg)
+      sys.exit(1)
+  
+    ## TODO : should move the dependency verification to hodConfig.verify
+    if hodConfig['hod'].has_key('script') \
+      and not hodConfig['hod'].has_key('min-nodes'):
       printErrors(hodConfig.var_error('hod', 'min-nodes',
-        "hod.min-nodes must be >= 3 nodes: %s." % 
-        hodConfig['hod']['min-nodes']))
+          "hod.min-nodes must be specified when using hod.script option."))
       sys.exit(1)
   
-  if hodConfig['hod'].has_key('operation') and \
-    hodConfig['hod'].has_key('script'):
-    print "Script execution and hod operations are mutually exclusive."
-    hodOptions.print_help(sys.stderr)
-    sys.exit(1)
-  
-  if 'operation' not in hodConfig['hod'] and 'script' not in hodConfig['hod']:
-    print "HOD requires at least a script or operation be specified."
-    hodOptions.print_help(sys.stderr)
-    sys.exit(1)    
-  
-  if hodConfig['gridservice-hdfs']['external']:
-    hdfsAddress = "%s:%s" % (hodConfig['gridservice-hdfs']['host'], 
-                             hodConfig['gridservice-hdfs']['fs_port'])
-
-    hdfsSocket = tcpSocket(hdfsAddress)
-      
-    try:
-      hdfsSocket.open()
-      hdfsSocket.close()
-    except tcpError:
-      printErrors(hodConfig.var_error('hod', 'gridservice-hdfs', 
-        "Failed to open a connection to external hdfs address: %s." % 
-        hdfsAddress))
+    if hodConfig['hod'].has_key('min-nodes'):
+      if hodConfig['hod']['min-nodes'] < 3:
+        printErrors(hodConfig.var_error('hod', 'min-nodes',
+          "hod.min-nodes must be >= 3 nodes: %s." % 
+          hodConfig['hod']['min-nodes']))
+        sys.exit(1)
+    
+    if hodConfig['hod'].has_key('operation') and \
+      hodConfig['hod'].has_key('script'):
+      print "Script execution and hod operations are mutually exclusive."
+      hodOptions.print_help(sys.stderr)
       sys.exit(1)
-  else:
-    hodConfig['gridservice-hdfs']['host'] = 'localhost'
-
-  if hodConfig['gridservice-mapred']['external']:
-    mapredAddress = "%s:%s" % (hodConfig['gridservice-mapred']['host'], 
-                               hodConfig['gridservice-mapred']['tracker_port'])
-
-    mapredSocket = tcpSocket(mapredAddress)
-      
-    try:
-      mapredSocket.open()
-      mapredSocket.close()
-    except tcpError:
-      printErrors(hodConfig.var_error('hod', 'gridservice-mapred', 
-        "Failed to open a connection to external mapred address: %s." % 
-        mapredAddress))
-      sys.exit(1)
-  else:
-    hodConfig['gridservice-mapred']['host'] = 'localhost'
-
-  if not hodConfig['ringmaster'].has_key('hadoop-tar-ball') and \
-    not hodConfig['gridservice-hdfs'].has_key('pkgs') and \
-    op_requires_pkgs(hodConfig):
-    printErrors(hodConfig.var_error('gridservice-hdfs', 'pkgs', 
-      "gridservice-hdfs.pkgs must be defined if ringmaster.hadoop-tar-ball "
-      + "is not defined."))
-    sys.exit(1)
-
-  if not hodConfig['ringmaster'].has_key('hadoop-tar-ball') and \
-    not hodConfig['gridservice-mapred'].has_key('pkgs') and \
-    op_requires_pkgs(hodConfig):
-    printErrors(hodConfig.var_error('gridservice-mapred', 'pkgs', 
-      "gridservice-mapred.pkgs must be defined if ringmaster.hadoop-tar-ball "
-      + "is not defined."))
-    sys.exit(1)
-
-  if hodConfig['hodring'].has_key('log-destination-uri'):
-    if hodConfig['hodring']['log-destination-uri'].startswith('file://'):
-      pass
-    elif hodConfig['hodring']['log-destination-uri'].startswith('hdfs://'):
-      hostPort = hodConfig['hodring']['log-destination-uri'][7:].split("/")
-      hostPort = hostPort[0]
-      socket = tcpSocket(hostPort)
+    
+    if 'operation' not in hodConfig['hod'] and 'script' not in hodConfig['hod']:
+      print "HOD requires at least a script or operation be specified."
+      hodOptions.print_help(sys.stderr)
+      sys.exit(1)    
+    
+    if hodConfig['gridservice-hdfs']['external']:
+      hdfsAddress = "%s:%s" % (hodConfig['gridservice-hdfs']['host'], 
+                               hodConfig['gridservice-hdfs']['fs_port'])
+  
+      hdfsSocket = tcpSocket(hdfsAddress)
+        
       try:
-        socket.open()
-        socket.close()
-      except:
-        printErrors(hodConfig.var_error('hodring', 'log-destination-uri', 
-        "Unable to contact host/port specified in log destination uri: %s" % 
-        hodConfig['hodring']['log-destination-uri']))
+        hdfsSocket.open()
+        hdfsSocket.close()
+      except tcpError:
+        printErrors(hodConfig.var_error('hod', 'gridservice-hdfs', 
+          "Failed to open a connection to external hdfs address: %s." % 
+          hdfsAddress))
         sys.exit(1)
     else:
-      printErrors(hodConfig.var_error('hodring', 'log-destination-uri', 
-        "The log destiniation uri must be of type local:// or hdfs://."))
+      hodConfig['gridservice-hdfs']['host'] = 'localhost'
+  
+    if hodConfig['gridservice-mapred']['external']:
+      mapredAddress = "%s:%s" % (hodConfig['gridservice-mapred']['host'], 
+                                 hodConfig['gridservice-mapred']['tracker_port'])
+  
+      mapredSocket = tcpSocket(mapredAddress)
+        
+      try:
+        mapredSocket.open()
+        mapredSocket.close()
+      except tcpError:
+        printErrors(hodConfig.var_error('hod', 'gridservice-mapred', 
+          "Failed to open a connection to external mapred address: %s." % 
+          mapredAddress))
+        sys.exit(1)
+    else:
+      hodConfig['gridservice-mapred']['host'] = 'localhost'
+  
+    if not hodConfig['ringmaster'].has_key('hadoop-tar-ball') and \
+      not hodConfig['gridservice-hdfs'].has_key('pkgs') and \
+      op_requires_pkgs(hodConfig):
+      printErrors(hodConfig.var_error('gridservice-hdfs', 'pkgs', 
+        "gridservice-hdfs.pkgs must be defined if ringmaster.hadoop-tar-ball "
+        + "is not defined."))
       sys.exit(1)
-  ## TODO : end of should move the dependency verification to hodConfig.verif
+  
+    if not hodConfig['ringmaster'].has_key('hadoop-tar-ball') and \
+      not hodConfig['gridservice-mapred'].has_key('pkgs') and \
+      op_requires_pkgs(hodConfig):
+      printErrors(hodConfig.var_error('gridservice-mapred', 'pkgs', 
+        "gridservice-mapred.pkgs must be defined if ringmaster.hadoop-tar-ball "
+        + "is not defined."))
+      sys.exit(1)
+  
+    if hodConfig['hodring'].has_key('log-destination-uri'):
+      if hodConfig['hodring']['log-destination-uri'].startswith('file://'):
+        pass
+      elif hodConfig['hodring']['log-destination-uri'].startswith('hdfs://'):
+        hostPort = hodConfig['hodring']['log-destination-uri'][7:].split("/")
+        hostPort = hostPort[0]
+        socket = tcpSocket(hostPort)
+        try:
+          socket.open()
+          socket.close()
+        except:
+          printErrors(hodConfig.var_error('hodring', 'log-destination-uri', 
+          "Unable to contact host/port specified in log destination uri: %s" % 
+          hodConfig['hodring']['log-destination-uri']))
+          sys.exit(1)
+      else:
+        printErrors(hodConfig.var_error('hodring', 'log-destination-uri', 
+          "The log destiniation uri must be of type local:// or hdfs://."))
+        sys.exit(1)
+  
+    ## TODO : end of should move the dependency verification to hodConfig.verif
+      
+    hodConfig['hod']['base-dir'] = rootDirectory
+    hodConfig['hod']['user_state'] = DEFAULT_HOD_DIR
+  
+    dGen = DescGenerator(hodConfig)
+    hodConfig = dGen.initializeDesc()
     
-  hodConfig['hod']['base-dir'] = rootDirectory
-  hodConfig['hod']['user_state'] = DEFAULT_HOD_DIR
-
-  dGen = DescGenerator(hodConfig)
-  hodConfig = dGen.initializeDesc()
+    os.environ['JAVA_HOME'] = hodConfig['hod']['java-home']
+    
+    if hodConfig['hod']['debug'] == 4:
+      print ""
+      print "Using Python: %s" % sys.version
+      print ""
+   
+    hod = hodRunner(hodConfig)
   
-  os.environ['JAVA_HOME'] = hodConfig['hod']['java-home']
+    # Initiate signal handling
+    hodInterrupt.set_log(hod.get_logger())
+    hodInterrupt.init_signals()
+    # Interrupts set up. Now on we handle signals only when we wish to.
+  except KeyboardInterrupt:
+    print HOD_INTERRUPTED_MESG
+    sys.exit(HOD_INTERRUPTED_CODE)
   
-  if hodConfig['hod']['debug'] == 4:
-    print ""
-    print "Using Python: %s" % sys.version
-    print ""
-  
-  hod = hodRunner(hodConfig)
   if hodConfig['hod'].has_key('script'):
     sys.exit(hod.script())
   else:  
