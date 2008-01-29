@@ -155,6 +155,8 @@ Trunk (unreleased changes)
    HADOOP-2718 Copy Constructor HBaseConfiguration(Configuration) will override
                hbase configurations if argumant is not an instance of
                HBaseConfiguration.
+   HADOOP-2631 2443 breaks HTable.getStartKeys when there is more than one
+               table or table you are enumerating isn't the first table
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable

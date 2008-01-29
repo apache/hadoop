@@ -197,7 +197,8 @@ public class HTable implements HConstants {
 
     Text startRow = new Text(tableName.toString() + ",,999999999999999");
     HRegionLocation metaLocation = null;
-
+    HRegionInterface server;
+    
     // scan over the each meta region
     do {
       try{
@@ -206,13 +207,13 @@ public class HTable implements HConstants {
           connection.locateRegion(META_TABLE_NAME, startRow);
 
         // connect to the server hosting the .META. region
-        HRegionInterface server = 
+        server = 
           connection.getHRegionConnection(metaLocation.getServerAddress());
 
         // open a scanner over the meta region
         scannerId = server.openScanner(
           metaLocation.getRegionInfo().getRegionName(),
-          COLUMN_FAMILY_ARRAY, EMPTY_START_ROW, LATEST_TIMESTAMP,
+          COLUMN_FAMILY_ARRAY, tableName, LATEST_TIMESTAMP,
           null);
         
         // iterate through the scanner, accumulating unique table names
@@ -233,19 +234,20 @@ public class HTable implements HConstants {
               }
 
               if (info.isOffline()) {
-                LOG.debug("Region " + info + " was offline!");
-                break;
+                continue SCANNER_LOOP;
               }
 
               if (info.isSplit()) {
-                LOG.debug("Region " + info + " was split!");
-                break;
+                continue SCANNER_LOOP;
               }
 
               keyList.add(info.getStartKey());
             }
           }
         }
+        
+        // close that remote scanner
+        server.close(scannerId);
           
         // advance the startRow to the end key of the current region
         startRow = metaLocation.getRegionInfo().getEndKey();          

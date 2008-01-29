@@ -311,7 +311,7 @@ public class MultiRegionTable extends HBaseTestCase {
    * @param r
    * @throws IOException
    */
-  private static void compact(final MiniHBaseCluster cluster,
+  protected static void compact(final MiniHBaseCluster cluster,
       final HRegionInfo r)
   throws IOException {
     if (r == null) {
