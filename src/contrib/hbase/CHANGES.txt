@@ -152,6 +152,9 @@ Trunk (unreleased changes)
    HADOOP-2712 under load, regions won't split
    HADOOP-2675 Options not passed to rest/thrift
    HADOOP-2722 Prevent unintentional thread exit in region server and master
+   HADOOP-2718 Copy Constructor HBaseConfiguration(Configuration) will override
+               hbase configurations if argumant is not an instance of
+               HBaseConfiguration.
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
