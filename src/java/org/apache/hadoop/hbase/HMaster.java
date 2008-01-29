@@ -1094,11 +1094,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           } catch (InterruptedException e) {
             throw new RuntimeException(
                 "Putting into toDoQueue was interrupted.", e);
+          } catch (Exception e) {
+            LOG.error("main processing loop: " + op.toString(), e);
           }
         }
       }
     } catch (Throwable t) {
-      LOG.fatal("Unhandled exception", t);
+      LOG.fatal("Unhandled exception. Starting shutdown.", t);
+      this.closed.set(true);
     }
     // The region servers won't all exit until we stop scanning the meta regions
     stopScanners();
