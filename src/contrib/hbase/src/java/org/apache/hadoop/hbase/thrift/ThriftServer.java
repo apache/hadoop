@@ -615,26 +615,26 @@ public class ThriftServer {
       } else if (cmd.equals("--help") || cmd.equals("-h")) {
         printUsageAndExit();
       } else if (cmd.equals("start")) {
-        Log LOG = LogFactory.getLog("ThriftServer");
-        LOG.info("starting HBase Thrift server on port " +
-          Integer.toString(port));
-        HBaseHandler handler = new HBaseHandler();
-        Hbase.Processor processor = new Hbase.Processor(handler);
-        TServerTransport serverTransport = new TServerSocket(port);
-        TProtocolFactory protFactory = new TBinaryProtocol.Factory(true, true);
-        TServer server = new TThreadPoolServer(processor, serverTransport,
-          protFactory);
-        server.serve();
-        break;
+        continue;
       } else if (cmd.equals("stop")) {
         printUsageAndExit("To shutdown the thrift server run " +
-            "bin/hbase-daemon.sh stop thrift or send a kill signal to " +
-            "the thrift server pid");
+          "bin/hbase-daemon.sh stop thrift or send a kill signal to " +
+          "the thrift server pid");
       }
       
       // Print out usage if we get to here.
       printUsageAndExit();
     }
+    Log LOG = LogFactory.getLog("ThriftServer");
+    LOG.info("starting HBase Thrift server on port " +
+      Integer.toString(port));
+    HBaseHandler handler = new HBaseHandler();
+    Hbase.Processor processor = new Hbase.Processor(handler);
+    TServerTransport serverTransport = new TServerSocket(port);
+    TProtocolFactory protFactory = new TBinaryProtocol.Factory(true, true);
+    TServer server = new TThreadPoolServer(processor, serverTransport,
+      protFactory);
+    server.serve();
   }
   
   /**
