@@ -209,23 +209,24 @@ implements javax.servlet.Servlet {
       } else if (cmd.equals("--help") || cmd.equals("-h")) {
         printUsageAndExit();
       } else if (cmd.equals("start")) {
-        org.mortbay.jetty.Server webServer = new org.mortbay.jetty.Server();
-        SocketListener listener = new SocketListener();
-        listener.setPort(port);
-        listener.setHost(bindAddress);
-        webServer.addListener(listener);
-        webServer.addWebApplication("/api", InfoServer.getWebAppDir("rest"));
-        webServer.start();
-        break;
+        continue;
       } else if (cmd.equals("stop")) {
         printUsageAndExit("To shutdown the REST server run " +
-            "bin/hbase-daemon.sh stop rest or send a kill signal to " +
-            "the REST server pid");
+          "bin/hbase-daemon.sh stop rest or send a kill signal to " +
+          "the REST server pid");
       }
       
       // Print out usage if we get to here.
       printUsageAndExit();
     }
+
+    org.mortbay.jetty.Server webServer = new org.mortbay.jetty.Server();
+    SocketListener listener = new SocketListener();
+    listener.setPort(port);
+    listener.setHost(bindAddress);
+    webServer.addListener(listener);
+    webServer.addWebApplication("/api", InfoServer.getWebAppDir("rest"));
+    webServer.start();
   }
   
   /**
