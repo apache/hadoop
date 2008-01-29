@@ -933,6 +933,31 @@ creations/deletions), or "all".</description>
     </description>
   </property>
 
+  <property>
+    <name>mapred.task.profile</name>
+    <value>false</value>
+    <description>To set whether the system should collect profiler
+     information for some of the tasks in this job? The information is stored
+     in the the user log directory. The value is "true" if task profiling
+     is enabled.</description>
+  </property>
+
+  <property>
+    <name>mapred.task.profile.maps</name>
+    <value>0-2</value>
+    <description> To set the ranges of map tasks to profile.
+    mapred.task.profile has to be set to true for the value to be accounted.
+    </description>
+  </property>
+
+  <property>
+    <name>mapred.task.profile.reduces</name>
+    <value>0-2</value>
+    <description> To set the ranges of reduce tasks to profile.
+    mapred.task.profile has to be set to true for the value to be accounted.
+    </description>
+  </property>
+
 <!-- ipc properties -->
 
 <property>

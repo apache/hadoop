@@ -601,6 +601,9 @@ Trunk (unreleased changes)
     for runningMapTasks/runningReduceTasks. (Amar Kamat and Arun Murthy 
     via ddas)
 
+    HADOOP-2723. Fixed the check for checking whether to do user task
+    profiling. (Amareshwari Sri Ramadasu via omalley)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES
