@@ -597,6 +597,10 @@ Trunk (unreleased changes)
     HADOOP-2713. TestDatanodeDeath failed on windows because the replication
     request was timing out. (dhruba)
 
+    HADOOP-2639. Fixes a problem to do with incorrect maintenance of values 
+    for runningMapTasks/runningReduceTasks. (Amar Kamat and Arun Murthy 
+    via ddas)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES

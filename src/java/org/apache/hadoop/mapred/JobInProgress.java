@@ -57,6 +57,8 @@ class JobInProgress {
   TaskInProgress reduces[] = new TaskInProgress[0];
   int numMapTasks = 0;
   int numReduceTasks = 0;
+  
+  // Counters to track currently running/finished/failed Map/Reduce task-attempts
   int runningMapTasks = 0;
   int runningReduceTasks = 0;
   int finishedMapTasks = 0;
@@ -563,16 +565,19 @@ class JobInProgress {
       return null;
     }
     
-    boolean wasRunning = maps[target].isRunning();
     Task result = maps[target].getTaskToRun(tts.getTrackerName());
-    if (!wasRunning) {
+    if (result != null) {
       runningMapTasks += 1;
-      JobHistory.Task.logStarted(profile.getJobId(), 
-                                 maps[target].getTIPId(), Values.MAP.name(),
-                                 System.currentTimeMillis());
-    }
 
-    jobCounters.incrCounter(Counter.TOTAL_LAUNCHED_MAPS, 1);
+      boolean wasRunning = maps[target].isRunning();
+      if (!wasRunning) {
+        JobHistory.Task.logStarted(profile.getJobId(), 
+                                   maps[target].getTIPId(), Values.MAP.name(),
+                                   System.currentTimeMillis());
+      }
+
+      jobCounters.incrCounter(Counter.TOTAL_LAUNCHED_MAPS, 1);
+    }
 
     return result;
   }    
@@ -596,16 +601,19 @@ class JobInProgress {
       return null;
     }
     
-    boolean wasRunning = reduces[target].isRunning();
     Task result = reduces[target].getTaskToRun(tts.getTrackerName());
-    if (!wasRunning) {
+    if (result != null) {
       runningReduceTasks += 1;
-      JobHistory.Task.logStarted(profile.getJobId(), 
-                                 reduces[target].getTIPId(), Values.REDUCE.name(),
-                                 System.currentTimeMillis());
+
+      boolean wasRunning = reduces[target].isRunning();
+      if (!wasRunning) {
+        JobHistory.Task.logStarted(profile.getJobId(), 
+                                   reduces[target].getTIPId(), Values.REDUCE.name(),
+                                   System.currentTimeMillis());
+      }
+
+      jobCounters.incrCounter(Counter.TOTAL_LAUNCHED_REDUCES, 1);
     }
-    
-    jobCounters.incrCounter(Counter.TOTAL_LAUNCHED_REDUCES, 1);
 
     return result;
   }
@@ -788,6 +796,11 @@ class JobInProgress {
     String taskid = status.getTaskId();
         
     // Sanity check: is the TIP already complete? 
+    // It _is_ safe to not decrement running{Map|Reduce}Tasks and
+    // finished{Map|Reduce}Tasks variables here because one and only
+    // one task-attempt of a TIP gets to completedTask. This is because
+    // the TaskCommitThread in the JobTracker marks other, completed, 
+    // speculative tasks as _complete_.
     if (tip.isComplete()) {
       // Mark this task as KILLED
       tip.alreadyCompletedTask(taskid);
