@@ -184,34 +184,34 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.secondary.http.bindAddress</name>
+  <name>dfs.secondary.http.address</name>
   <value>0.0.0.0:50090</value>
   <description>
-    The secondary namenode http server bind address and port.
+    The secondary namenode http server address and port.
     If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
 <property>
-  <name>dfs.datanode.bindAddress</name>
+  <name>dfs.datanode.address</name>
   <value>0.0.0.0:50010</value>
   <description>
-    The address where the datanode will listen to.
+    The address where the datanode server will listen to.
     If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
 <property>
-  <name>dfs.datanode.http.bindAddress</name>
+  <name>dfs.datanode.http.address</name>
   <value>0.0.0.0:50075</value>
   <description>
-    The datanode http server bind address and port.
+    The datanode http server address and port.
     If the port is 0 then the server will start on a free port.
   </description>
 </property>
 
 <property>
-  <name>dfs.http.bindAddress</name>
+  <name>dfs.http.address</name>
   <value>0.0.0.0:50070</value>
   <description>
     The address and the base port where the dfs namenode web ui will listen on.
@@ -498,10 +498,10 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>mapred.job.tracker.http.bindAddress</name>
+  <name>mapred.job.tracker.http.address</name>
   <value>0.0.0.0:50030</value>
   <description>
-    The job tracker http server bind address and port.
+    The job tracker http server address and port the server will listen on.
     If the port is 0 then the server will start on a free port.
   </description>
 </property>
@@ -516,10 +516,12 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>mapred.task.tracker.report.bindAddress</name>
+  <name>mapred.task.tracker.report.address</name>
   <value>127.0.0.1:0</value>
-  <description>The interface that task processes use to communicate
-  with their parent tasktracker process.</description>
+  <description>The interface and port that task tracker server listens on. 
+  Since it is only connected to by the tasks, it uses the local interface.
+  EXPERT ONLY. Should only be changed if your host does not have the loopback 
+  interface.</description>
 </property>
 
 <property>
@@ -747,10 +749,10 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>mapred.task.tracker.http.bindAddress</name>
+  <name>mapred.task.tracker.http.address</name>
   <value>0.0.0.0:50060</value>
   <description>
-    The task tracker http server bind address and port.
+    The task tracker http server address and port.
     If the port is 0 then the server will start on a free port.
   </description>
 </property>

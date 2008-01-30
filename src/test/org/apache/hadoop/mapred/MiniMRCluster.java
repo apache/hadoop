@@ -109,8 +109,8 @@ public class MiniMRCluster {
       this.numDir = numDir;
       localDirs = new String[numDir];
       conf = createJobConf();
-      conf.set("mapred.task.tracker.http.bindAddress", "0.0.0.0:0");
-      conf.set("mapred.task.tracker.report.bindAddress", 
+      conf.set("mapred.task.tracker.http.address", "0.0.0.0:0");
+      conf.set("mapred.task.tracker.report.address", 
                 "127.0.0.1:" + taskTrackerPort);
       File localDirBase = 
         new File(conf.get("mapred.local.dir")).getAbsoluteFile();
@@ -225,7 +225,7 @@ public class MiniMRCluster {
     JobConf result = new JobConf();
     result.set("fs.default.name", namenode);
     result.set("mapred.job.tracker", "localhost:"+jobTrackerPort);
-    result.set("mapred.job.tracker.http.bindAddress", 
+    result.set("mapred.job.tracker.http.address", 
                         "0.0.0.0:" + jobTrackerInfoPort);
     // for debugging have all task output sent to the test output
     JobClient.setTaskOutputFilter(result, JobClient.TaskStatusFilter.ALL);

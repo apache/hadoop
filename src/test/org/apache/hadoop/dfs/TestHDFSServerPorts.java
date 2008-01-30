@@ -54,7 +54,7 @@ public class TestHDFSServerPorts extends TestCase {
     config = new Configuration();
     config.set("dfs.name.dir", new File(hdfsDir, "name1").getPath());
     config.set("fs.default.name", NAME_NODE_HOST + "0");
-    config.set("dfs.http.bindAddress", NAME_NODE_HTTP_HOST + "0");
+    config.set("dfs.http.address", NAME_NODE_HTTP_HOST + "0");
     NameNode.format(config);
 
     String[] args = new String[] {};
@@ -144,7 +144,7 @@ public class TestHDFSServerPorts extends TestCase {
       // reset conf2 since NameNode modifies it
       conf2.set("fs.default.name", NAME_NODE_HOST + "0");
       // different http port
-      conf2.set("dfs.http.bindAddress", NAME_NODE_HTTP_HOST + "0");
+      conf2.set("dfs.http.address", NAME_NODE_HTTP_HOST + "0");
       started = canStartNameNode(conf2);
       assertTrue(started); // should start now
     } finally {
@@ -163,20 +163,21 @@ public class TestHDFSServerPorts extends TestCase {
       // start data-node on the same port as name-node
       Configuration conf2 = new Configuration(config);
       conf2.set("dfs.data.dir", new File(hdfsDir, "data").getPath());
-      conf2.set("dfs.datanode.bindAddress", config.get("fs.default.name"));
-      conf2.set("dfs.datanode.http.bindAddress", NAME_NODE_HTTP_HOST + "0");
+      conf2.set("dfs.datanode.address", config.get("fs.default.name"));
+      conf2.set("dfs.datanode.http.address", NAME_NODE_HTTP_HOST + "0");
       boolean started = canStartDataNode(conf2);
       assertFalse(started); // should fail
 
       // bind http server to the same port as name-node
-      conf2.set("dfs.datanode.bindAddress", NAME_NODE_HOST + "0");
-      conf2.set("dfs.datanode.http.bindAddress", config.get("dfs.http.bindAddress"));
+      conf2.set("dfs.datanode.address", NAME_NODE_HOST + "0");
+      conf2.set("dfs.datanode.http.address", 
+                config.get("dfs.http.address"));
       started = canStartDataNode(conf2);
       assertFalse(started); // should fail
     
       // both ports are different from the name-node ones
-      conf2.set("dfs.datanode.bindAddress", NAME_NODE_HOST + "0");
-      conf2.set("dfs.datanode.http.bindAddress", NAME_NODE_HTTP_HOST + "0");
+      conf2.set("dfs.datanode.address", NAME_NODE_HOST + "0");
+      conf2.set("dfs.datanode.http.address", NAME_NODE_HTTP_HOST + "0");
       started = canStartDataNode(conf2);
       assertTrue(started); // should start now
     } finally {
@@ -194,14 +195,17 @@ public class TestHDFSServerPorts extends TestCase {
 
       // bind http server to the same port as name-node
       Configuration conf2 = new Configuration(config);
-      conf2.set("dfs.secondary.http.bindAddress", config.get("dfs.http.bindAddress"));
-      SecondaryNameNode.LOG.info("= Starting 1 on: " + conf2.get("dfs.secondary.http.bindAddress"));
+      conf2.set("dfs.secondary.http.address", 
+                config.get("dfs.http.address"));
+      SecondaryNameNode.LOG.info("= Starting 1 on: " + 
+                                 conf2.get("dfs.secondary.http.address"));
       boolean started = canStartSecondaryNode(conf2);
       assertFalse(started); // should fail
 
       // bind http server to a different port
-      conf2.set("dfs.secondary.http.bindAddress", NAME_NODE_HTTP_HOST + "0");
-      SecondaryNameNode.LOG.info("= Starting 2 on: " + conf2.get("dfs.secondary.http.bindAddress"));
+      conf2.set("dfs.secondary.http.address", NAME_NODE_HTTP_HOST + "0");
+      SecondaryNameNode.LOG.info("= Starting 2 on: " + 
+                                 conf2.get("dfs.secondary.http.address"));
       started = canStartSecondaryNode(conf2);
       assertTrue(started); // should start now
     } finally {

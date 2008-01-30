@@ -276,7 +276,9 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.dnthread = new Daemon(new DecommissionedMonitor());
     dnthread.start();
 
-    String infoAddr = conf.get("dfs.http.bindAddress", "0.0.0.0:50070");
+    String infoAddr = 
+      NetUtils.getServerAddress(conf, "dfs.info.bindAddress", 
+                                "dfs.info.port", "dfs.http.address");
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     String infoHost = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
@@ -293,8 +295,8 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     // The web-server port can be ephemeral... ensure we have the correct info
     this.infoPort = this.infoServer.getPort();
-    conf.set("dfs.http.bindAddress", infoHost + ":" + infoPort); 
-    LOG.info("Web-server up at: " + conf.get("dfs.http.bindAddress"));
+    conf.set("dfs.http.address", infoHost + ":" + infoPort);
+    LOG.info("Web-server up at: " + infoHost + ":" + infoPort);
   }
 
   static Collection<File> getNamespaceDirs(Configuration conf) {

@@ -647,8 +647,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       }
     }
 
-    String infoAddr = conf.get("mapred.job.tracker.http.bindAddress",
-                                "0.0.0.0:50030");
+    String infoAddr = 
+      NetUtils.getServerAddress(conf, "mapred.job.tracker.info.bindAddress",
+                                "mapred.job.tracker.info.port",
+                                "mapred.job.tracker.http.address");
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     String infoBindAddress = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();

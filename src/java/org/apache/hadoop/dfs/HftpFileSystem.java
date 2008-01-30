@@ -82,7 +82,11 @@ public class HftpFileSystem extends FileSystem {
     this.fsport = name.getPort();
     if(fsport >= 0)
       return;
-    String infoAddr = conf.get("dfs.http.bindAddress", "0.0.0.0:50070");
+    String infoAddr = 
+      NetUtils.getServerAddress(conf, 
+                                "dfs.info.bindAddress", 
+                                "dfs.info.port", 
+                                "dfs.http.address");
     this.fsport = NetUtils.createSocketAddr(infoAddr).getPort();
   }
 

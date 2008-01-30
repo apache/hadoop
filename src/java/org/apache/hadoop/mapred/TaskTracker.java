@@ -416,7 +416,10 @@ public class TaskTracker
     
     // bind address
     String address = 
-      this.fConf.get("mapred.task.tracker.report.bindAddress", "127.0.0.1:0");
+      NetUtils.getServerAddress(fConf,
+                                "mapred.task.tracker.report.bindAddress", 
+                                "mapred.task.tracker.report.port", 
+                                "mapred.task.tracker.report.address");
     InetSocketAddress socAddr = NetUtils.createSocketAddr(address);
     String bindAddress = socAddr.getHostName();
     int tmpPort = socAddr.getPort();
@@ -803,8 +806,11 @@ public class TaskTracker
     this.jobTrackAddr = JobTracker.getAddress(conf);
     this.mapOutputFile = new MapOutputFile();
     this.mapOutputFile.setConf(conf);
-    String infoAddr = conf.get("mapred.task.tracker.http.bindAddress", 
-                                "0.0.0.0:50060");
+    String infoAddr = 
+      NetUtils.getServerAddress(conf,
+                                "tasktracker.http.bindAddress", 
+                                "tasktracker.http.port",
+                                "mapred.task.tracker.http.address");
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     String httpBindAddress = infoSocAddr.getHostName();
     int httpPort = infoSocAddr.getPort();

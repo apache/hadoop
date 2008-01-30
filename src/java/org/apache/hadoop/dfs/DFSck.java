@@ -26,6 +26,7 @@ import java.net.URLEncoder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -66,7 +67,8 @@ public class DFSck extends Configured implements Tool {
   }
   
   private String getInfoServer() throws IOException {
-    return getConf().get("dfs.http.bindAddress", "0.0.0.0:50070");
+    return NetUtils.getServerAddress(getConf(), "dfs.info.bindAddress", 
+                                     "dfs.info.port", "dfs.http.address");
   }
   
   /**
