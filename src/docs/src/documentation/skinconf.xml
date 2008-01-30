@@ -30,7 +30,7 @@ which will be used to configure the chosen Forrest skin.
     In other words google will search the @domain for the query string.
 
   -->
-  <search name="Lucene" domain="lucene.apache.org" provider="google"/>
+  <search name="Lucene" domain="hadoop.apache.org" provider="google"/>
 
   <!-- Disable the print link? If enabled, invalid HTML 4.0.1 -->
   <disable-print-link>true</disable-print-link>  
@@ -66,14 +66,14 @@ which will be used to configure the chosen Forrest skin.
   <!-- project logo -->
   <project-name>Hadoop</project-name>
   <project-description>Scalable Computing Platform</project-description>
-  <project-url>http://lucene.apache.org/hadoop/</project-url>
-  <project-logo>images/hadoop-logo.jpg</project-logo>
+  <project-url>http://hadoop.apache.org/core/</project-url>
+  <project-logo>images/core-logo.jpg</project-logo>
 
   <!-- group logo -->
-  <group-name>Lucene</group-name>
-  <group-description>Apache Lucene</group-description>
-  <group-url>http://lucene.apache.org/</group-url>
-  <group-logo>images/lucene_green_150.gif</group-logo>
+  <group-name>Hadoop</group-name>
+  <group-description>Apache Hadoop</group-description>
+  <group-url>http://hadoop.apache.org/</group-url>
+  <group-logo>images/hadoop-logo.jpg</group-logo>
 
   <!-- optional host logo (e.g. sourceforge logo)
        default skin: renders it at the bottom-left corner -->
@@ -97,8 +97,8 @@ which will be used to configure the chosen Forrest skin.
   -->
   <trail>
     <link1 name="Apache" href="http://www.apache.org/"/>
-    <link2 name="Lucene" href="http://lucene.apache.org/"/>
-    <link3 name="Hadoop" href="http://lucene.apache.org/hadoop/"/>
+    <link2 name="Hadoop" href="http://hadoop.apache.org/"/>
+    <link3 name="Core" href="http://hadoop.apache.org/core/"/>
   </trail>
 
   <!-- Configure the TOC, i.e. the Table of Contents.

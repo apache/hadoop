@@ -200,7 +200,7 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 The -jobconf mapred.reduce.tasks=2 in the above example specifies to use two reducers for the job.
 </p>
 <p>
-For more details on the jobconf parameters see: <a href="http://wiki.apache.org/lucene-hadoop/JobConfFile">http://wiki.apache.org/lucene-hadoop/JobConfFile</a></p>
+For more details on the jobconf parameters see: <a href="http://wiki.apache.org/hadoop/JobConfFile">http://wiki.apache.org/hadoop/JobConfFile</a></p>
 </section>
 
 <section>
@@ -242,7 +242,7 @@ To specify additional local temp directories use:
    -jobconf mapred.temp.dir=/tmp/temp
 </source>
 <p>
-For more details on jobconf parameters see: <a href="http://wiki.apache.org/lucene-hadoop/JobConfFile">http://wiki.apache.org/lucene-hadoop/JobConfFile</a>
+For more details on jobconf parameters see: <a href="http://wiki.apache.org/hadoop/JobConfFile">http://wiki.apache.org/hadoop/JobConfFile</a>
 </p><p>
 To set an environment variable in a streaming command use:
 </p>
@@ -340,7 +340,7 @@ Sorting within each partition for the reducer(all 4 fields used for sorting)</p>
 <section>
 <title>Working with the Hadoop Aggregate Package (the -reduce aggregate option) </title>
 <p>
-Hadoop has a library package called "Aggregate" (<a href="https://svn.apache.org/repos/asf/lucene/hadoop/trunk/src/java/org/apache/hadoop/mapred/lib/aggregate">https://svn.apache.org/repos/asf/lucene/hadoop/trunk/src/java/org/apache/hadoop/mapred/lib/aggregate</a>).  Aggregate provides a special reducer class and a special combiner class, and a list of simple aggregators that perform aggregations such as "sum", "max", "min" and so on  over a sequence of values. Aggregate allows you to define a mapper plugin class that is expected to generate "aggregatable items" for each input key/value pair of the mappers. The combiner/reducer will aggregate those aggregatable items by invoking the appropriate aggregators.
+Hadoop has a library package called "Aggregate" (<a href="https://svn.apache.org/repos/asf/hadoop/core/trunk/src/java/org/apache/hadoop/mapred/lib/aggregate">https://svn.apache.org/repos/asf/hadoop/core/trunk/src/java/org/apache/hadoop/mapred/lib/aggregate</a>).  Aggregate provides a special reducer class and a special combiner class, and a list of simple aggregators that perform aggregations such as "sum", "max", "min" and so on  over a sequence of values. Aggregate allows you to define a mapper plugin class that is expected to generate "aggregatable items" for each input key/value pair of the mappers. The combiner/reducer will aggregate those aggregatable items by invoking the appropriate aggregators.
 </p><p>
 To use Aggregate, simply specify "-reducer aggregate":
 </p>
@@ -452,7 +452,7 @@ As an example, consider the problem of zipping (compressing) a set of files acro
 <section>
 <title>How many reducers should I use? </title>
 <p>
-See the Hadoop Wiki for details: <a href="http://wiki.apache.org/lucene-hadoop/HowManyMapsAndReduces">http://wiki.apache.org/lucene-hadoop/HowManyMapsAndReduces</a>
+See the Hadoop Wiki for details: <a href="http://wiki.apache.org/hadoop/HowManyMapsAndReduces">http://wiki.apache.org/hadoop/HowManyMapsAndReduces</a>
 </p>
 </section>
 

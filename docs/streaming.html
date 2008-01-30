@@ -23,7 +23,7 @@
     |breadtrail
     +-->
 <div class="breadtrail">
-<a href="http://www.apache.org/">Apache</a> &gt; <a href="http://lucene.apache.org/">Lucene</a> &gt; <a href="http://lucene.apache.org/hadoop/">Hadoop</a><script src="skin/breadcrumbs.js" language="JavaScript" type="text/javascript"></script>
+<a href="http://www.apache.org/">Apache</a> &gt; <a href="http://hadoop.apache.org/">Hadoop</a> &gt; <a href="http://hadoop.apache.org/core/">Core</a><script src="skin/breadcrumbs.js" language="JavaScript" type="text/javascript"></script>
 </div>
 <!--+
     |header
@@ -33,7 +33,7 @@
     |start group logo
     +-->
 <div class="grouplogo">
-<a href="http://lucene.apache.org/"><img class="logoImage" alt="Lucene" src="images/lucene_green_150.gif" title="Apache Lucene"></a>
+<a href="http://hadoop.apache.org/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Apache Hadoop"></a>
 </div>
 <!--+
     |end group logo
@@ -42,7 +42,7 @@
     |start Project Logo
     +-->
 <div class="projectlogo">
-<a href="http://lucene.apache.org/hadoop/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
+<a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/core-logo.jpg" title="Scalable Computing Platform"></a>
 </div>
 <!--+
     |end Project Logo
@@ -52,7 +52,7 @@
     +-->
 <div class="searchbox">
 <form action="http://www.google.com/search" method="get" class="roundtopsmall">
-<input value="lucene.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp; 
+<input value="hadoop.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp; 
                     <input name="Search" value="Search" type="submit">
 </form>
 </div>
@@ -64,10 +64,10 @@
     +-->
 <ul id="tabs">
 <li>
-<a class="unselected" href="http://lucene.apache.org/hadoop/">Project</a>
+<a class="unselected" href="http://hadoop.apache.org/core/">Project</a>
 </li>
 <li>
-<a class="unselected" href="http://wiki.apache.org/lucene-hadoop">Wiki</a>
+<a class="unselected" href="http://wiki.apache.org/hadoop">Wiki</a>
 </li>
 <li class="current">
 <a class="selected" href="index.html">Hadoop 0.16 Documentation</a>
@@ -120,6 +120,9 @@ document.write("Last Published: " + document.lastModified);
 <a href="hdfs_design.html">HDFS Architecture</a>
 </div>
 <div class="menuitem">
+<a href="hdfs_user_guide.html">HDFS User Guide</a>
+</div>
+<div class="menuitem">
 <a href="mapred_tutorial.html">Map-Reduce Tutorial</a>
 </div>
 <div class="menuitem">
@@ -135,13 +138,13 @@ document.write("Last Published: " + document.lastModified);
 <a href="api/index.html">API Docs</a>
 </div>
 <div class="menuitem">
-<a href="http://wiki.apache.org/lucene-hadoop/">Wiki</a>
+<a href="http://wiki.apache.org/hadoop/">Wiki</a>
 </div>
 <div class="menuitem">
-<a href="http://wiki.apache.org/lucene-hadoop/FAQ">FAQ</a>
+<a href="http://wiki.apache.org/hadoop/FAQ">FAQ</a>
 </div>
 <div class="menuitem">
-<a href="http://lucene.apache.org/hadoop/mailing_lists.html">Mailing Lists</a>
+<a href="http://hadoop.apache.org/core/mailing_lists.html">Mailing Lists</a>
 </div>
 </div>
 <div id="credit"></div>
@@ -441,7 +444,7 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 The -jobconf mapred.reduce.tasks=2 in the above example specifies to use two reducers for the job.
 </p>
 <p>
-For more details on the jobconf parameters see: <a href="http://wiki.apache.org/lucene-hadoop/JobConfFile">http://wiki.apache.org/lucene-hadoop/JobConfFile</a>
+For more details on the jobconf parameters see: <a href="http://wiki.apache.org/hadoop/JobConfFile">http://wiki.apache.org/hadoop/JobConfFile</a>
 </p>
 <a name="N100CB"></a><a name="Other+Supported+Options"></a>
 <h3 class="h4">Other Supported Options </h3>
@@ -513,7 +516,7 @@ To specify additional local temp directories use:
    -jobconf mapred.temp.dir=/tmp/temp
 </pre>
 <p>
-For more details on jobconf parameters see: <a href="http://wiki.apache.org/lucene-hadoop/JobConfFile">http://wiki.apache.org/lucene-hadoop/JobConfFile</a>
+For more details on jobconf parameters see: <a href="http://wiki.apache.org/hadoop/JobConfFile">http://wiki.apache.org/hadoop/JobConfFile</a>
 
 </p>
 <p>
@@ -614,7 +617,7 @@ Sorting within each partition for the reducer(all 4 fields used for sorting)</p>
 <a name="N101D5"></a><a name="Working+with+the+Hadoop+Aggregate+Package+%28the+-reduce+aggregate+option%29"></a>
 <h3 class="h4">Working with the Hadoop Aggregate Package (the -reduce aggregate option) </h3>
 <p>
-Hadoop has a library package called "Aggregate" (<a href="https://svn.apache.org/repos/asf/lucene/hadoop/trunk/src/java/org/apache/hadoop/mapred/lib/aggregate">https://svn.apache.org/repos/asf/lucene/hadoop/trunk/src/java/org/apache/hadoop/mapred/lib/aggregate</a>).  Aggregate provides a special reducer class and a special combiner class, and a list of simple aggregators that perform aggregations such as "sum", "max", "min" and so on  over a sequence of values. Aggregate allows you to define a mapper plugin class that is expected to generate "aggregatable items" for each input key/value pair of the mappers. The combiner/reducer will aggregate those aggregatable items by invoking the appropriate aggregators.
+Hadoop has a library package called "Aggregate" (<a href="https://svn.apache.org/repos/asf/hadoop/core/trunk/src/java/org/apache/hadoop/mapred/lib/aggregate">https://svn.apache.org/repos/asf/hadoop/core/trunk/src/java/org/apache/hadoop/mapred/lib/aggregate</a>).  Aggregate provides a special reducer class and a special combiner class, and a list of simple aggregators that perform aggregations such as "sum", "max", "min" and so on  over a sequence of values. Aggregate allows you to define a mapper plugin class that is expected to generate "aggregatable items" for each input key/value pair of the mappers. The combiner/reducer will aggregate those aggregatable items by invoking the appropriate aggregators.
 </p>
 <p>
 To use Aggregate, simply specify "-reducer aggregate":
@@ -736,7 +739,7 @@ As an example, consider the problem of zipping (compressing) a set of files acro
 <a name="N1023F"></a><a name="How+many+reducers+should+I+use%3F"></a>
 <h3 class="h4">How many reducers should I use? </h3>
 <p>
-See the Hadoop Wiki for details: <a href="http://wiki.apache.org/lucene-hadoop/HowManyMapsAndReduces">http://wiki.apache.org/lucene-hadoop/HowManyMapsAndReduces</a>
+See the Hadoop Wiki for details: <a href="http://wiki.apache.org/hadoop/HowManyMapsAndReduces">http://wiki.apache.org/hadoop/HowManyMapsAndReduces</a>
 
 </p>
 <a name="N1024D"></a><a name="If+I+set+up+an+alias+in+my+shell+script%2C+will+that+work+after+-mapper%2C+i.e.+say+I+do%3A+alias+c1%3D%27cut+-f1%27.+Will+-mapper+%22c1%22+work%3F"></a>

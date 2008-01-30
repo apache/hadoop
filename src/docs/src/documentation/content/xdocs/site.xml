@@ -33,17 +33,15 @@ See http://forrest.apache.org/docs/linking.html for more info.
   </docs>
 
   <external-refs>
-    <site      href="http://lucene.apache.org/hadoop/"/>
-    <lists     href="http://lucene.apache.org/hadoop/mailing_lists.html"/>
-    <releases  href="http://lucene.apache.org/hadoop/releases.html">
+    <site      href="http://hadoop.apache.org/core/"/>
+    <lists     href="http://hadoop.apache.org/core/mailing_lists.html"/>
+    <releases  href="http://hadoop.apache.org/core/releases.html">
       <download href="#Download" />
     </releases>
-    <jira      href="http://lucene.apache.org/hadoop/issue_tracking.html"/>
-    <wiki      href="http://wiki.apache.org/lucene-hadoop/" />
-    <faq       href="http://wiki.apache.org/lucene-hadoop/FAQ" />
-    <lucene    href="http://lucene.apache.org/" />
-    <nutch     href="http://lucene.apache.org/nutch/" />
-    <hadoop-default href="http://lucene.apache.org/hadoop/hadoop-default.html" />
+    <jira      href="http://hadoop.apache.org/core/issue_tracking.html"/>
+    <wiki      href="http://wiki.apache.org/hadoop/" />
+    <faq       href="http://wiki.apache.org/hadoop/FAQ" />
+    <hadoop-default href="http://hadoop.apache.org/core/docs/current/hadoop-default.html" />
     <zlib      href="http://www.zlib.net/" />
     <lzo       href="http://www.oberhumer.com/opensource/lzo/" />
     <gzip      href="http://www.gzip.org/" />

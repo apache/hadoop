@@ -22,7 +22,7 @@
     |breadtrail
     +-->
 <div class="breadtrail">
-<a href="http://www.apache.org/">Apache</a> &gt; <a href="http://lucene.apache.org/">Lucene</a> &gt; <a href="http://lucene.apache.org/hadoop/">Hadoop</a><script src="skin/breadcrumbs.js" language="JavaScript" type="text/javascript"></script>
+<a href="http://www.apache.org/">Apache</a> &gt; <a href="http://hadoop.apache.org/">Hadoop</a> &gt; <a href="http://hadoop.apache.org/core/">Core</a><script src="skin/breadcrumbs.js" language="JavaScript" type="text/javascript"></script>
 </div>
 <!--+
     |header
@@ -32,7 +32,7 @@
     |start group logo
     +-->
 <div class="grouplogo">
-<a href="http://lucene.apache.org/"><img class="logoImage" alt="Lucene" src="images/lucene_green_150.gif" title="Apache Lucene"></a>
+<a href="http://hadoop.apache.org/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Apache Hadoop"></a>
 </div>
 <!--+
     |end group logo
@@ -41,7 +41,7 @@
     |start Project Logo
     +-->
 <div class="projectlogo">
-<a href="http://lucene.apache.org/hadoop/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
+<a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/core-logo.jpg" title="Scalable Computing Platform"></a>
 </div>
 <!--+
     |end Project Logo
@@ -51,7 +51,7 @@
     +-->
 <div class="searchbox">
 <form action="http://www.google.com/search" method="get" class="roundtopsmall">
-<input value="lucene.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp; 
+<input value="hadoop.apache.org" name="sitesearch" type="hidden"><input onFocus="getBlank (this, 'Search the site with google');" size="25" name="q" id="query" type="text" value="Search the site with google">&nbsp; 
                     <input name="Search" value="Search" type="submit">
 </form>
 </div>
@@ -63,10 +63,10 @@
     +-->
 <ul id="tabs">
 <li>
-<a class="unselected" href="http://lucene.apache.org/hadoop/">Project</a>
+<a class="unselected" href="http://hadoop.apache.org/core/">Project</a>
 </li>
 <li>
-<a class="unselected" href="http://wiki.apache.org/lucene-hadoop">Wiki</a>
+<a class="unselected" href="http://wiki.apache.org/hadoop">Wiki</a>
 </li>
 <li class="current">
 <a class="selected" href="index.html">Hadoop 0.16 Documentation</a>
@@ -119,6 +119,9 @@ document.write("Last Published: " + document.lastModified);
 <div class="menupagetitle">HDFS Architecture</div>
 </div>
 <div class="menuitem">
+<a href="hdfs_user_guide.html">HDFS User Guide</a>
+</div>
+<div class="menuitem">
 <a href="mapred_tutorial.html">Map-Reduce Tutorial</a>
 </div>
 <div class="menuitem">
@@ -134,13 +137,13 @@ document.write("Last Published: " + document.lastModified);
 <a href="api/index.html">API Docs</a>
 </div>
 <div class="menuitem">
-<a href="http://wiki.apache.org/lucene-hadoop/">Wiki</a>
+<a href="http://wiki.apache.org/hadoop/">Wiki</a>
 </div>
 <div class="menuitem">
-<a href="http://wiki.apache.org/lucene-hadoop/FAQ">FAQ</a>
+<a href="http://wiki.apache.org/hadoop/FAQ">FAQ</a>
 </div>
 <div class="menuitem">
-<a href="http://lucene.apache.org/hadoop/mailing_lists.html">Mailing Lists</a>
+<a href="http://hadoop.apache.org/core/mailing_lists.html">Mailing Lists</a>
 </div>
 </div>
 <div id="credit"></div>
@@ -288,7 +291,7 @@ document.write("Last Published: " + document.lastModified);
 <h2 class="h3"> Introduction </h2>
 <div class="section">
 <p>
-      The Hadoop Distributed File System (<acronym title="Hadoop Distributed File System">HDFS</acronym>) is a distributed file system designed to run on commodity hardware. It has many similarities with existing distributed file systems. However, the differences from other distributed file systems are significant. HDFS is highly fault-tolerant and is designed to be deployed on low-cost hardware. HDFS provides high throughput access to application data and is suitable for applications that have large data sets. HDFS relaxes a few POSIX requirements to enable streaming access to file system data.  HDFS was originally built as infrastructure for the Apache Nutch web search engine project. HDFS is part of the Apache Hadoop project, which is part of the Apache Lucene project. The project URL is <a href="http://projects.apache.org/projects/hadoop.html">http://projects.apache.org/projects/hadoop.html</a>.
+      The Hadoop Distributed File System (<acronym title="Hadoop Distributed File System">HDFS</acronym>) is a distributed file system designed to run on commodity hardware. It has many similarities with existing distributed file systems. However, the differences from other distributed file systems are significant. HDFS is highly fault-tolerant and is designed to be deployed on low-cost hardware. HDFS provides high throughput access to application data and is suitable for applications that have large data sets. HDFS relaxes a few POSIX requirements to enable streaming access to file system data.  HDFS was originally built as infrastructure for the Apache Nutch web search engine project. HDFS is part of the Apache Hadoop Core project. The project URL is <a href="http://hadoop.apache.org/core/">http://hadoop.apache.org/core/</a>.
       </p>
 </div>
 
@@ -497,7 +500,7 @@ document.write("Last Published: " + document.lastModified);
 <h2 class="h3"> Accessibility </h2>
 <div class="section">
 <p>
-      HDFS can be accessed from applications in many different ways. Natively, HDFS provides a <a href="http://lucene.apache.org/hadoop/api/">Java API</a> for applications to use. A C language wrapper for this Java API is also available. In addition, an HTTP browser can also be used to browse the files of an HDFS instance. Work is in progress to expose HDFS through the <acronym title="Web-based Distributed Authoring and Versioning">WebDAV</acronym> protocol. 
+      HDFS can be accessed from applications in many different ways. Natively, HDFS provides a <a href="http://hadoop.apache.org/core/docs/current/api/">Java API</a> for applications to use. A C language wrapper for this Java API is also available. In addition, an HTTP browser can also be used to browse the files of an HDFS instance. Work is in progress to expose HDFS through the <acronym title="Web-based Distributed Authoring and Versioning">WebDAV</acronym> protocol. 
       </p>
 <a name="N101AE"></a><a name="DFSShell"></a>
 <h3 class="h4"> DFSShell </h3>
@@ -599,15 +602,15 @@ document.write("Last Published: " + document.lastModified);
 <div class="section">
 <p>
       HDFS Java API: 
-      <a href="http://lucene.apache.org/hadoop/api/"> 
-        http://lucene.apache.org/hadoop/api/
+      <a href="http://hadoop.apache.org/core/docs/current/api/"> 
+        http://hadoop.apache.org/core/docs/current/api/
       </a>
       
 </p>
 <p>
       HDFS source code: 
-      <a href="http://lucene.apache.org/hadoop/version_control.html"> 
-        http://lucene.apache.org/hadoop/version_control.html
+      <a href="http://hadoop.apache.org/core/version_control.html"> 
+        http://hadoop.apache.org/core/version_control.html
       </a>
       
 </p>

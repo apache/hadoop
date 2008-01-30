@@ -606,6 +606,9 @@ Trunk (unreleased changes)
     HADOOP-2723. Fixed the check for checking whether to do user task
     profiling. (Amareshwari Sri Ramadasu via omalley)
 
+    HADOOP-2734. Link forrest docs to new http://hadoop.apache.org
+    (Doug Cutting via nigel)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES

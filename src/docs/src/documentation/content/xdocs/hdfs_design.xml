@@ -19,7 +19,7 @@
     <section>
       <title> Introduction </title>
       <p>
-      The Hadoop Distributed File System (<acronym title="Hadoop Distributed File System">HDFS</acronym>) is a distributed file system designed to run on commodity hardware. It has many similarities with existing distributed file systems. However, the differences from other distributed file systems are significant. HDFS is highly fault-tolerant and is designed to be deployed on low-cost hardware. HDFS provides high throughput access to application data and is suitable for applications that have large data sets. HDFS relaxes a few POSIX requirements to enable streaming access to file system data.  HDFS was originally built as infrastructure for the Apache Nutch web search engine project. HDFS is part of the Apache Hadoop project, which is part of the Apache Lucene project. The project URL is <a href="http://projects.apache.org/projects/hadoop.html">http://projects.apache.org/projects/hadoop.html</a>.
+      The Hadoop Distributed File System (<acronym title="Hadoop Distributed File System">HDFS</acronym>) is a distributed file system designed to run on commodity hardware. It has many similarities with existing distributed file systems. However, the differences from other distributed file systems are significant. HDFS is highly fault-tolerant and is designed to be deployed on low-cost hardware. HDFS provides high throughput access to application data and is suitable for applications that have large data sets. HDFS relaxes a few POSIX requirements to enable streaming access to file system data.  HDFS was originally built as infrastructure for the Apache Nutch web search engine project. HDFS is part of the Apache Hadoop Core project. The project URL is <a href="http://hadoop.apache.org/core/">http://hadoop.apache.org/core/</a>.
       </p>
     </section>
 
@@ -255,7 +255,7 @@
       <title> Accessibility </title>
       <!-- XXX Make an API section ? (HTTP is "web service" API?) -->
       <p>
-      HDFS can be accessed from applications in many different ways. Natively, HDFS provides a <a href="http://lucene.apache.org/hadoop/api/">Java API</a> for applications to use. A C language wrapper for this Java API is also available. In addition, an HTTP browser can also be used to browse the files of an HDFS instance. Work is in progress to expose HDFS through the <acronym title="Web-based Distributed Authoring and Versioning">WebDAV</acronym> protocol. 
+      HDFS can be accessed from applications in many different ways. Natively, HDFS provides a <a href="http://hadoop.apache.org/core/docs/current/api/">Java API</a> for applications to use. A C language wrapper for this Java API is also available. In addition, an HTTP browser can also be used to browse the files of an HDFS instance. Work is in progress to expose HDFS through the <acronym title="Web-based Distributed Authoring and Versioning">WebDAV</acronym> protocol. 
       </p>
 
       <section>
@@ -338,14 +338,14 @@
       <title> References </title>
       <p>
       HDFS Java API: 
-      <a href="http://lucene.apache.org/hadoop/api/"> 
-        http://lucene.apache.org/hadoop/api/
+      <a href="http://hadoop.apache.org/core/docs/current/api/"> 
+        http://hadoop.apache.org/core/docs/current/api/
       </a>
       </p>
       <p>
       HDFS source code: 
-      <a href= "http://lucene.apache.org/hadoop/version_control.html"> 
-        http://lucene.apache.org/hadoop/version_control.html
+      <a href= "http://hadoop.apache.org/core/version_control.html"> 
+        http://hadoop.apache.org/core/version_control.html
       </a>
       </p>
     </section> 
