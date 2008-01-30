@@ -1,16 +1,5 @@
 Hadoop Change Log
 
-
-Trunk (unreleased changes)
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
 Release 0.16.0 - 2008-02-04
 
   INCOMPATIBLE CHANGES
