@@ -192,7 +192,11 @@ public class DataNode implements FSConstants, Runnable {
     this.estimateBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     this.socketTimeout =  conf.getInt("dfs.socket.timeout",
                                       FSConstants.READ_TIMEOUT);
-    String address = conf.get("dfs.datanode.bindAddress", "0.0.0.0:50010");
+    String address = 
+      NetUtils.getServerAddress(conf,
+                                "dfs.datanode.bindAddress", 
+                                "dfs.datanode.port",
+                                "dfs.datanode.address");
     InetSocketAddress socAddr = NetUtils.createSocketAddr(address);
     int tmpPort = socAddr.getPort();
     storage = new DataStorage();
@@ -284,7 +288,11 @@ public class DataNode implements FSConstants, Runnable {
     }
     
     //create a servlet to serve full-file content
-    String infoAddr = conf.get("dfs.datanode.http.bindAddress", "0.0.0.0:50075");
+    String infoAddr = 
+      NetUtils.getServerAddress(conf, 
+                              "dfs.datanode.info.bindAddress", 
+                              "dfs.datanode.info.port",
+                              "dfs.datanode.http.address");
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
     String infoHost = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();

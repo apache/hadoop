@@ -168,7 +168,7 @@ public class MiniDFSCluster {
     
     // Setup the NameNode configuration
     conf.set("fs.default.name", "localhost:"+ Integer.toString(nameNodePort));
-    conf.set("dfs.http.bindAddress", "0.0.0.0:0");  
+    conf.set("dfs.http.address", "0.0.0.0:0");  
     if (manageDfsDirs) {
       conf.set("dfs.name.dir", new File(base_dir, "name1").getPath()+","+
                new File(base_dir, "name2").getPath());
@@ -262,8 +262,8 @@ public class MiniDFSCluster {
     }
 
     // Set up the right ports for the datanodes
-    conf.set("dfs.datanode.bindAddress", "0.0.0.0:0");
-    conf.set("dfs.datanode.http.bindAddress", "0.0.0.0:0");
+    conf.set("dfs.datanode.address", "0.0.0.0:0");
+    conf.set("dfs.datanode.http.address", "0.0.0.0:0");
     
     String[] args = (operation == null ||
                      operation == StartupOption.FORMAT ||
