@@ -59,7 +59,7 @@ class HdfsExternal(MasterSlave):
                                     str(self.serviceDesc.dict['info_port'])
    else:
      # After Hadoop-2185
-     self.serviceDesc.dict['final-attrs']['dfs.http.bindAddress'] = "%s:%s" % \
+     self.serviceDesc.dict['final-attrs']['dfs.http.address'] = "%s:%s" % \
        (dict['host'], dict['info_port'])
 
   def getInfoAddrs(self):
@@ -70,7 +70,7 @@ class HdfsExternal(MasterSlave):
       infoaddr = k + ':' + attrs['dfs.info.port']
     else:
       # After Hadoop-2185
-      infoaddr = attrs['dfs.http.bindAddress']
+      infoaddr = attrs['dfs.http.address']
     return [infoaddr]
 
 class Hdfs(MasterSlave):
@@ -142,7 +142,7 @@ class Hdfs(MasterSlave):
       self.infoAddr = self.masterNode + ':' + dict['dfs.info.port']
     else:
       # After Hadoop-2185
-      self.infoAddr = dict['dfs.http.bindAddress']
+      self.infoAddr = dict['dfs.http.address']
    
   def _parseEquals(self, list):
     return parseEquals(list)
@@ -168,13 +168,13 @@ class Hdfs(MasterSlave):
       if 'dfs.info.bindAddress' not in attrs:
         return ServiceUtil.getUniqPort()
     else:
-      if 'dfs.http.bindAddress' not in attrs:
+      if 'dfs.http.address' not in attrs:
         return ServiceUtil.getUniqPort()
 
     if self.version < 16:
       p = attrs['dfs.info.port']
     else:
-      p = attrs['dfs.http.bindAddress'].split(':')[1]
+      p = attrs['dfs.http.address'].split(':')[1]
     try:
       return int(p)
     except:
@@ -182,7 +182,7 @@ class Hdfs(MasterSlave):
       if self.version < 16:
         raise ValueError, "Can't find port from attr dfs.info.port: %s" % (p)
       else:
-        raise ValueError, "Can't find port from attr dfs.http.bindAddress: %s" % (p)
+        raise ValueError, "Can't find port from attr dfs.http.address: %s" % (p)
 
   def _setWorkDirs(self, workDirs, envs, attrs, parentDirs, subDir):
     namedir = None
@@ -224,10 +224,10 @@ class Hdfs(MasterSlave):
      if 'dfs.info.port' not in attrs:
       attrs['dfs.info.port'] = 'fillinport'
     else:
-      # Addressing Hadoop-2815, added the following. Earlier versions don't
+      # Addressing Hadoop-2185, added the following. Earlier versions don't
       # care about this
-      if 'dfs.http.bindAddress' not in attrs:
-        attrs['dfs.http.bindAddress'] = 'fillinhostport'
+      if 'dfs.http.address' not in attrs:
+        attrs['dfs.http.address'] = 'fillinhostport'
 
     self._setWorkDirs(workDirs, envs, attrs, parentDirs, 'hdfs-nn')
 
@@ -305,11 +305,11 @@ class Hdfs(MasterSlave):
       if 'dfs.datanode.info.port' not in attrs:
         attrs['dfs.datanode.info.port'] = 'fillinport'
     else:
-      # Adding the following. Hadoop-2815
-      if 'dfs.datanode.bindAddress' not in attrs:
-        attrs['dfs.datanode.bindAddress'] = 'fillinhostport'
-      if 'dfs.datanode.http.bindAddress' not in attrs:
-        attrs['dfs.datanode.http.bindAddress'] = 'fillinhostport'
+      # Adding the following. Hadoop-2185
+      if 'dfs.datanode.address' not in attrs:
+        attrs['dfs.datanode.address'] = 'fillinhostport'
+      if 'dfs.datanode.http.address' not in attrs:
+        attrs['dfs.datanode.http.address'] = 'fillinhostport'
     
     self._setWorkDirs(workDirs, envs, attrs, parentDirs, 'hdfs-dn')
 

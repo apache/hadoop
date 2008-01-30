@@ -652,6 +652,9 @@ Release 0.16.0 - 2008-02-04
 
     HADOOP-2404. Fix backwards compatability with hadoop-0.15 configuration
     files that was broken by HADOOP-2185. (omalley)
+
+    HADOOP-2740. Fix HOD to work with the configuration variables changed in
+    HADOOP-2404. (Hemanth Yamijala via omalley)
     
 Release 0.15.3 - 2008-01-18
 
