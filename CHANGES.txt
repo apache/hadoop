@@ -157,6 +157,8 @@ Trunk (unreleased changes)
                HBaseConfiguration.
    HADOOP-2631 2443 breaks HTable.getStartKeys when there is more than one
                table or table you are enumerating isn't the first table
+   Delete empty file: src/contrib/hbase/src/java/org/apache/hadoop/hbase/mapred/
+               TableOutputCollector.java per Nigel Daley
    
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
