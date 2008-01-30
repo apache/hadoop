@@ -298,6 +298,8 @@ Trunk (unreleased changes)
     HADOOP-2342. Created a micro-benchmark for measuring 
     local-file versus hdfs reads. (Owen O'Malley via nigel)
 
+    HADOOP-2529. First version of HDFS User Guide. (Raghu Angadi)
+    
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack

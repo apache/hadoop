@@ -1,0 +1,404 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
+          "http://forrest.apache.org/dtd/document-v20.dtd">
+
+
+<document>
+
+  <header>
+    <title>
+      Hadoop DFS User Guide
+    </title>
+  </header>
+
+  <body>
+    <section> <title>Purpose</title>
+      <p>
+ This document aims to be the starting point for users working with
+ Hadoop Distributed File System (HDFS) either as a part of a
+ <a href="http://hadoop.apache.org/">Hadoop</a>
+ cluster or as a stand-alone general purpose distributed file system.
+ While HDFS is designed to "just-work" in many environments, a working
+ knowledge of HDFS helps greatly with configuration improvements and
+ diagnostics on a specific cluster.
+      </p>
+    </section>
+
+    <section> <title> Overview </title>
+      <p>
+ HDFS is the primary distributed storage used by Hadoop applications. A
+ HDFS cluster primarily consists of a <em>NameNode</em> that manages the
+ filesystem metadata and Datanodes that store the actual data. The
+ architecture of HDFS is described in detail
+ <a href="hdfs_design.html">here</a>. This user guide primarily deals with 
+ interaction of users and administrators with HDFS clusters. 
+ The <a href="images/hdfsarchitecture.gif">diagram</a> from 
+ <a href="hdfs_design.html">HDFS architecture</a> depicts 
+ basic interactions among Namenode, Datanodes, and the clients. Eseentially,
+ clients contact Namenode for file metadata or file modifications and perform 
+ actual file I/O directly with the datanodes.
+      </p>
+      <p>
+ The following are some of the salient features that could be of
+ interest to many users. The terms in <em>italics</em>
+ are described in later sections.
+      </p> 
+    <ul>
+    <li>
+    	Hadoop, including HDFS, is well suited for distributed storage
+    	and distributed processing using commodity hardware. It is fault
+    	tolerant, scalable, and extremely simple to expand.
+    	<a href="mapred_tutorial.html">Map-Reduce</a>,
+    	well known for its simplicity and applicability for large set of
+    	distributed applications, is an integral part of Hadoop.
+    </li>
+    <li>
+    	HDFS is highly configurable with a default configuration well
+    	suited for many installations. Most of the time, configuration
+    	needs to be tuned only for very large clusters.
+    </li>
+    <li>
+    	It is written in Java and is supported on all major platforms.
+    </li>
+    <li>
+    	Supports <em>shell like commands</em> to interact with HDFS directly.
+    </li>
+    <li>
+    	Namenode and Datanodes have built in web servers that makes it
+    	easy to check current status of the cluster.
+    </li>
+    <li>
+    	New features and improvements are regularly implemented in HDFS.
+    	The following is a subset of useful features in HDFS:
+      <ul>
+    	<li>
+    		<em>File permissions and authentication.</em>
+    	</li>
+    	<li>
+    		<em>Rack awareness</em> : to take a node's physical location into
+    		account while scheduling tasks and allocating storage.
+    	</li>
+    	<li>
+    		<em>Safemode</em> : an administrative mode for maintanance.
+    	</li>
+    	<li>
+    		<em>fsck</em> : an utility to diagnose health of the filesystem, to
+    		find missing files or blocks.
+    	</li>
+    	<li>
+    		<em>Rebalancer</em> : tool to balance the cluster when the data is
+    		unevenly distributed among datanodes.
+    	</li>
+    	<li>
+    		<em>Upgrade and Rollback</em> : after a software upgrade, 
+            it is possible to
+    		rollback to HDFS' state before the upgrade in case of unexpected
+    		problems.
+    	</li>
+    	<li>
+    		<em>Secondary Namenode</em> : helps keep the size of file
+    		containing log of HDFS modification with in certain limit at
+    		the Namenode.
+    	</li>
+      </ul>
+    </li>
+    </ul>
+    
+    </section> <section> <title> Pre-requisites </title>
+    <p>
+ 	The following documents describe installation and set up of a
+ 	Hadoop cluster : 
+    </p>
+ 	<ul>
+ 	<li>
+ 		<a href="quickstart.html">Hadoop Quickstart</a>
+ 		for first-time users.
+ 	</li>
+ 	<li>
+ 		<a href="cluster_setup.html">Hadoop Cluster Setup</a>
+ 		for large, distributed clusters.
+ 	</li>
+    </ul>
+    <p>
+ 	The rest of document assumes the user is able to set up and run a
+ 	HDFS with at least one Datanode. For the purpose of this document,
+ 	both Namenode and Datanode could be running on the same physical
+ 	machine.	
+    </p>
+     
+    </section> <section> <title> Web Interface </title>
+ <p>
+ 	Namenode and Datanode each run an internal web server in order to
+ 	display basic information about the current status of the cluster.
+ 	With the default configuration, namenode front page is at
+ 	<code>http://namenode:50070/</code> .
+ 	It lists the datanodes in the cluster and basic stats of the
+ 	cluster. The web interface can also be used to browse the file
+ 	system (using "Browse the file system" link on the Namenode front
+ 	page).
+ </p> 
+ 	
+    </section> <section> <title>Shell Commands</title>
+ 	<p>
+      Hadoop includes various "shell-like" commands that directly
+      interact with HDFS and other file systems that Hadoop supports.
+      The command
+      <code>bin/hadoop fs -help</code>
+      lists the commands supported by Hadoop
+      shell. Further,
+      <code>bin/hadoop fs -help command</code>
+      displays more detailed help on a command. The commands support
+      most of the normal filesystem operations like copying files,
+      changing file permissions, etc. It also supports a few HDFS
+      specific operations like changing replication of files.
+     </p>
+
+   <section> <title> DFSAdmin Command </title>
+   <p>
+   	<code>'bin/hadoop dfsadmin'</code>
+   	command supports a few HDFS administration related operations.
+   	<code>bin/hadoop dfsadmin -help</code>
+   	lists all the commands currently supported. For e.g.:
+   </p>  
+   	<ul>
+   	<li>
+   	    <code>-report</code>
+   	    : reports basic stats of HDFS. Some of this information is
+   	    also available on the Namenode front page.
+   	</li>
+   	<li>
+   		<code>-safemode</code>
+   		: though usually not required, an administrator can manually enter
+   		or leave <em>safemode</em>.
+   	</li>
+   	<li>
+   		<code>-finalizeUpgrade</code>
+   		: removes previous backup of the cluster made during last upgrade.
+   	</li>
+   	</ul>
+   </section>
+   
+   </section> <section> <title> Secondary Namenode </title>
+   <p>
+     Namenode stores modifications to the filesystem as a log
+     appended to a native filesystem file (<code>edits</code>). 
+   	When a Namenode starts up, it reads HDFS state from an image
+   	file (<code>fsimage</code>) and then applies <em>edits</em> from 
+    edits log file. It then writes new HDFS state to (<code>fsimage</code>)
+    and starts normal
+   	operation with an empty edits file. Since namenode merges
+   	<code>fsimage</code> and <code>edits</code> files only during start up, 
+    edits file could get very large over time on a large cluster. 
+    Another side effect of larger edits file is that next 
+    restart of Namenade takes longer.
+   </p>
+   <p>
+     The secondary namenode merges fsimage and edits log periodically
+     and keeps edits log size with in a limit. It is usually run on a
+     different machine than the primary Namenode since its memory requirements
+     are on the same order as the primary namemode. The secondary
+     namenode is started by <code>bin/start-dfs.sh</code> on the nodes 
+     specified in <code>conf/masters</code> file.
+   </p>
+   
+   </section> <section> <title> Rebalancer </title>
+    <p>
+      HDFS data might not always be be placed uniformly across the
+      datanode. One common reason is addition of new datanodes to an
+      existing cluster. While placing new <em>blocks</em> (data for a file is
+      stored as a series of blocks), Namenode considers various
+      parameters before choosing the datanodes to receive these blocks.
+      Some of the considerations are : 
+    </p>
+      <ul>
+      <li>
+        Policy to keep one of the replicas of a block on the same node
+        as the node that is writing the block.
+      </li>
+      <li>
+        Need to spread different replicas of a block across the racks so
+        that cluster can survive loss of whole rack.
+      </li>
+      <li>
+        One of the replicas is usually placed on the same rack as the
+        node writing to the file so that cross-rack network I/O is
+        reduced.
+      </li>
+      <li>
+        Spread HDFS data uniformly across the datanodes in the cluster.
+      </li>
+      </ul>
+    <p>
+      Due to multiple competing considerations, data might not be
+      uniformly placed across the datanodes.
+      HDFS provides a tool for administrators that analyzes block
+      placement and relanaces data across the datnodes. A brief
+      adminstrator's guide for rebalancer as a
+      <a href="http://issues.apache.org/jira/secure/attachment/12368261/RebalanceDesign6.pdf">PDF</a>
+      is attached to
+      <a href="http://issues.apache.org/jira/browse/HADOOP-1652">HADOOP-1652</a>.
+    </p>
+    
+   </section> <section> <title> Rack Awareness </title>
+    <p>
+      Typically large Hadoop clusters are arranged in <em>racks</em> and
+      network traffic between different nodes with in the same rack is
+      much more desirable than network traffic across the racks. In
+      addition Namenode tries to place replicas of block on
+      multiple racks for improved fault tolerance. Hadoop lets the
+      cluster administrators decide which <em>rack</em> a node belongs to
+      through configuration variable <code>dfs.network.script</code>. When this
+      script is configured, each node runs the script to determine its
+      <em>rackid</em>. A default installation assumes all the nodes belong to
+      the same rack. This feature and configuration is further described
+      in <a href="http://issues.apache.org/jira/secure/attachment/12345251/Rack_aware_HDFS_proposal.pdf">PDF</a>
+      attached to 
+      <a href="http://issues.apache.org/jira/browse/HADOOP-692">HADOOP-692</a>.
+    </p>
+
+   </section> <section> <title> Safemode </title>
+    <p>
+      During start up Namenode loads the filesystem state from
+      <em>fsimage</em> and <em>edits</em> log file. It then waits for datanodes
+      to report their blocks so that it does not prematurely start
+      replicating the blocks though enough replicas already exist in the
+      cluster. During this time Namenode stays in <em>safemode</em>. A 
+      <em>Safemode</em>
+      for Namenode is essentially a read-only mode for the HDFS cluster,
+      where it does not allow any modifications to filesystem or blocks.
+      Normally Namenode gets out of safemode automatically at
+      the beginning. If required, HDFS could be placed in safemode explicitly
+      using <code>'bin/hadoop dfsadmin -safemode'</code> command. Namenode front
+      page shows whether safemode is on or off. A more detailed
+      description and configuration is maintained as JavaDoc for
+      <a href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/dfs/NameNode.html#setSafeMode(org.apache.hadoop.dfs.FSConstants.SafeModeAction)"><code>setSafeMode()</code></a>.
+    </p>
+    
+   </section> <section> <title> Fsck </title>
+     <p>    
+      HDFS supports <code>fsck</code> command to check for various 
+      inconsistencies.
+      It it is designed for reporting problems with various
+      files, for e.g. missing blocks for a file or under replicated
+      blocks. Unlike a traditional fsck utility for native filesystems,
+      this command does not correct the errors it detects. Normally Namenode
+      automatically corrects most of the recoverable failures.
+      HDFS' fsck is not a
+      Hadoop shell command. It can be run as '<code>bin/hadoop fsck</code>'.
+      Fsck can be run on the whole filesystem or on a subset of files.
+     </p>
+     
+   </section> <section> <title> Upgrade and Rollback </title>
+     <p>
+      When Hadoop is upgraded on an existing cluster, as with any
+      software upgrade, it is possible there are new bugs or
+      incompatible changes that affect existing applications and were
+      not discovered earlier. In any non-trivial HDFS installation, it
+      is not an option to loose any data, let alone to restart HDFS from
+      scratch. HDFS allows administrators to go back to earlier version
+      of Hadoop and <em>roll back</em> the cluster to the state it was in 
+      before
+      the upgrade. HDFS upgrade is described in more detail in 
+      <a href="http://wiki.apache.org/hadoop/Hadoop%20Upgrade">upgrade wiki</a>.
+      HDFS can have one such backup at a time. Before upgrading,
+      administrators need to remove existing backup using <code>bin/hadoop
+      dfsadmin -finalizeUpgrade</code> command. The following
+      briefly describes typical upgrade procedure : 
+     </p>
+      <ul>
+      <li>
+        Before upgrading Hadoop software,
+        <em>finalize</em> if there an existing backup.
+        <code>dfsadmin -upgradeProgress status</code>
+        can tell if the cluster needs to be <em>finalized</em>.
+      </li>
+      <li>Stop the cluster and distribute new version of Hadoop.</li>
+      <li>
+        Run the new version with <code>-upgrade</code> option 
+        (<code>bin/start-dfs.sh -upgrade</code>).
+      </li>
+      <li>
+        Most of the time, cluster works just fine. Once the new HDFS is
+        considered working well (may be after a few days of operation),
+        finalize the upgrade. Note that until the cluster is finalized,
+        deleting the files that existed before the upgrade does not free
+        up real disk space on the datanodes.
+      </li>
+      <li>
+        If there is a need to move back to the old version,
+        <ul>
+          <li> stop the cluster and distribute earlier version of Hadoop. </li>
+          <li> start the cluster with rollback option. 
+            (<code>bin/start-dfs.h -rollback</code>). 
+          </li>
+        </ul>
+      </li>
+      </ul>
+    
+   </section> <section> <title> File Permissions and Security </title>
+     <p>           
+      The file permissions are designed to be similar to file permissions on
+      other familiar platforms like Linux. Currently, security is limited
+      to simple file permissions. The user that starts Namenode is
+      treated as the <em>super user</em> for HDFS. Future versions of HDFS will
+      support network authentication protocols like Kerberos for user
+      authentication and encryption of data transfers.
+     </p>
+     
+   </section> <section> <title> Scalability </title>
+     <p>
+      Hadoop currently runs on clusters with thousands of nodes.
+      <a href="http://wiki.apache.org/hadoop/PoweredBy">PoweredBy Hadoop</a>
+      lists some of the organizations that deploy Hadoop on large
+      clusters. HDFS has one Namenode for each cluster. Currently
+      the total memory available on Namenode is the primary scalability
+      limitation. On very large clusters, increasing average size of
+      files stored in HDFS helps with increasing cluster size without
+      increasing memory requirements on Namenode.
+   
+      The default configuration may not suite very large clustes.
+      <a href="http://wiki.apache.org/hadoop/FAQ">Hadoop FAQ</a> page lists
+      suggested configuration improvements for large Hadoop clusters.
+     </p>
+     
+   </section> <section> <title> Related Documentation </title>          
+      <p>
+      This user guide is intended to be a good starting point for
+      working with HDFS. While it continues to improve,
+      there is a large wealth of documentation about Hadoop and HDFS.
+      The following lists starting points for further exploration :
+      </p>
+      <ul>
+      <li>
+        <a href="http://hadoop.apache.org/">Hadoop Home Page</a>
+        : the start page for everything Hadoop.
+      </li>
+      <li>
+        <a href="http://wiki.apache.org/hadoop/FrontPage">Hadoop Wiki</a>
+        : Front page for Hadoop Wiki documentation. Unlike this
+        guide which is part of Hadoop source tree, Hadoop Wiki is
+        regularly edited by Hadoop Community.
+      </li>
+      <li> <a href="http://wiki.apache.org/hadoop/FAQ">FAQ</a> from Hadoop Wiki.
+      </li>
+      <li>
+        Hadoop <a href="http://hadoop.apache.org/core/docs/current/api/">
+          JavaDoc API</a>.
+      </li>
+      <li>
+        Hadoop User Mailing List : 
+        <a href="mailto:core-user@hadoop.apache.org">core-user[at]hadoop.apache.org</a>.
+      </li>
+      <li>
+         Explore <code>conf/hadoop-default.xml</code>. 
+         It includes brief 
+         description of most of the configuration variables available.
+      </li>
+      </ul>
+     </section>
+     
+  </body>
+</document>
+ 	
+
