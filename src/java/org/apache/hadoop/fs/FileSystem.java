@@ -888,7 +888,6 @@ public abstract class FileSystem extends Configured {
       int setOpen;
       int curlyOpen;
       boolean setRange;
-      boolean expectGroup;
 
       StringBuilder fileRegex = new StringBuilder();
 
@@ -900,7 +899,6 @@ public abstract class FileSystem extends Configured {
       setOpen = 0;
       setRange = false;
       curlyOpen = 0;
-      expectGroup = false;
 
       for (int i = 0; i < len; i++) {
         char pCh;
@@ -929,11 +927,8 @@ public abstract class FileSystem extends Configured {
         } else if (pCh == ',' && curlyOpen > 0) {
           fileRegex.append(")|");
           pCh = '(';
-          expectGroup = true;
         } else if (pCh == '}' && curlyOpen > 0) {
           // End of a group
-          if (expectGroup)
-            error("Unexpected end of a group", filePattern, i);
           curlyOpen--;
           fileRegex.append(")");
           pCh = ')';
@@ -956,8 +951,6 @@ public abstract class FileSystem extends Configured {
           // Normal character, or the end of a character set range
           setOpen++;
           setRange = false;
-        } else if (curlyOpen > 0) {
-          expectGroup = false;
         }
         fileRegex.append(pCh);
       }

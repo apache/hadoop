@@ -268,7 +268,7 @@ public class TestGlobPaths extends TestCase {
     }
     try {
       // test standalone }
-      files = new String[] {USER_DIR+"/}bc"};
+      files = new String[] {USER_DIR+"/}bc", USER_DIR+"/}c"};
       matchedPath = prepareTesting(USER_DIR+"/}{a,b}c", files);
       assertEquals(matchedPath.length, 1);
       assertEquals(matchedPath[0], path[0]);
@@ -281,16 +281,30 @@ public class TestGlobPaths extends TestCase {
       assertEquals(matchedPath.length, 1);
       assertEquals(matchedPath[0], path[0]);
 
+      // test {,}
+      matchedPath = prepareTesting(USER_DIR+"/}{,}bc", files);
+      assertEquals(matchedPath.length, 1);
+      assertEquals(matchedPath[0], path[0]);
+
+      // test {b,}
+      matchedPath = prepareTesting(USER_DIR+"/}{b,}c", files);
+      assertEquals(matchedPath.length, 2);
+      assertEquals(matchedPath[0], path[0]);
+      assertEquals(matchedPath[1], path[1]);
+
+      // test {,b}
+      matchedPath = prepareTesting(USER_DIR+"/}{,b}c", files);
+      assertEquals(matchedPath.length, 2);
+      assertEquals(matchedPath[0], path[0]);
+      assertEquals(matchedPath[1], path[1]);
+
+      // test a combination of {} and ?
+      matchedPath = prepareTesting(USER_DIR+"/}{ac,?}", files);
+      assertEquals(matchedPath.length, 1);
+      assertEquals(matchedPath[0], path[1]);
+      
       // test ill-formed curly
       boolean hasException = false;
-      try {
-        prepareTesting(USER_DIR+"}{b,}c", files);
-      } catch (IOException e) {
-        assertTrue(e.getMessage().startsWith("Illegal file pattern:") );
-        hasException = true;
-      }
-      assertTrue(hasException);
-      hasException = false;
       try {
         prepareTesting(USER_DIR+"}{bc", files);
       } catch (IOException e) {

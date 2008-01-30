@@ -611,6 +611,8 @@ Trunk (unreleased changes)
 
     HADOOP-2641. Added Apache license headers to 95 files. (nigel)
 
+    HADOOP-2732. Fix bug in path globbing.  (Hairong Kuang via nigel)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES
