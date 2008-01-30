@@ -294,7 +294,7 @@ document.write("Last Published: " + document.lastModified);
 </ul>
 </div>
     
-<a name="N1000C"></a><a name="Introduction"></a>
+<a name="N1000D"></a><a name="Introduction"></a>
 <h2 class="h3"> Introduction </h2>
 <div class="section">
 <p>
@@ -303,30 +303,30 @@ document.write("Last Published: " + document.lastModified);
 </div>
 
     
-<a name="N1001E"></a><a name="Feature+List"></a>
+<a name="N1001F"></a><a name="Feature+List"></a>
 <h2 class="h3"> Feature List </h2>
 <div class="section">
-<a name="N10024"></a><a name="Simplified+Interface+for+Provisioning+Hadoop+Clusters"></a>
+<a name="N10025"></a><a name="Simplified+Interface+for+Provisioning+Hadoop+Clusters"></a>
 <h3 class="h4"> Simplified Interface for Provisioning Hadoop Clusters </h3>
 <p>
         By far, the biggest advantage of HOD is to quickly setup a Hadoop cluster. The user interacts with the cluster through a simple command line interface, the HOD client. HOD brings up a virtual MapReduce cluster with the required number of nodes, which the user can use for running Hadoop jobs. When done, HOD will automatically clean up the resources and make the nodes available again.
         </p>
-<a name="N1002E"></a><a name="Automatic+installation+of+Hadoop"></a>
+<a name="N1002F"></a><a name="Automatic+installation+of+Hadoop"></a>
 <h3 class="h4"> Automatic installation of Hadoop </h3>
 <p>
         With HOD, Hadoop does not need to be even installed on the cluster. The user can provide a Hadoop tarball that HOD will automatically distribute to all the nodes in the cluster.
         </p>
-<a name="N10038"></a><a name="Configuring+Hadoop"></a>
+<a name="N10039"></a><a name="Configuring+Hadoop"></a>
 <h3 class="h4"> Configuring Hadoop </h3>
 <p>
         Dynamic parameters of Hadoop configuration, such as the NameNode and JobTracker addresses and ports, and file system temporary directories are generated and distributed by HOD automatically to all nodes in the cluster. In addition, HOD allows the user to configure Hadoop parameters at both the server (for e.g. JobTracker) and client (for e.g. JobClient) level, including 'final' parameters, that were introduced with Hadoop 0.15.
         </p>
-<a name="N10042"></a><a name="Auto-cleanup+of+Unused+Clusters"></a>
+<a name="N10043"></a><a name="Auto-cleanup+of+Unused+Clusters"></a>
 <h3 class="h4"> Auto-cleanup of Unused Clusters </h3>
 <p>
         HOD has an automatic timeout so that users cannot misuse resources they aren't using. The timeout applies only when there is no MapReduce job running. 
         </p>
-<a name="N1004C"></a><a name="Log+Services"></a>
+<a name="N1004D"></a><a name="Log+Services"></a>
 <h3 class="h4"> Log Services </h3>
 <p>
         HOD can be used to collect all MapReduce logs to a central location for archiving and inspection after the job is completed.
@@ -334,13 +334,13 @@ document.write("Last Published: " + document.lastModified);
 </div>
 
     
-<a name="N10057"></a><a name="HOD+Components"></a>
+<a name="N10058"></a><a name="HOD+Components"></a>
 <h2 class="h3"> HOD Components </h2>
 <div class="section">
 <p>
       This is a brief overview of the various components of HOD and how they interact to provision Hadoop.
       </p>
-<a name="N10060"></a><a name="HOD+Client"></a>
+<a name="N10061"></a><a name="HOD+Client"></a>
 <h3 class="h4"> HOD Client </h3>
 <p>
         The HOD client is a Unix command that users use to allocate Hadoop MapReduce clusters. The command provides other options to list allocated clusters and deallocate them. The HOD client generates the <em>hadoop-site.xml</em> in a user specified directory. The user can point to this configuration file while running Map/Reduce jobs on the allocated cluster.
@@ -348,7 +348,7 @@ document.write("Last Published: " + document.lastModified);
 <p>
         The nodes from where the HOD Client is run are called <em>submit nodes</em> because jobs are submitted to the resource manager system for allocating and running clusters from these nodes.
         </p>
-<a name="N10073"></a><a name="RingMaster"></a>
+<a name="N10074"></a><a name="RingMaster"></a>
 <h3 class="h4"> RingMaster </h3>
 <p>
         The RingMaster is a HOD process that is started on one node per every allocated cluster. It is submitted as a 'job' to the resource manager by the HOD client. It controls which Hadoop daemons start on which nodes. It provides this information to other HOD processes, such as the HOD client, so users can also determine this information. The RingMaster is responsible for hosting and distributing the Hadoop tarball to all nodes in the cluster. It also automatically cleans up unused clusters.
@@ -356,17 +356,17 @@ document.write("Last Published: " + document.lastModified);
 <p>
         
 </p>
-<a name="N10080"></a><a name="HodRing"></a>
+<a name="N10081"></a><a name="HodRing"></a>
 <h3 class="h4"> HodRing </h3>
 <p>
         The HodRing is a HOD process that runs on every allocated node in the cluster. These processes are run by the RingMaster through the resource manager, using a facility of parallel execution. The HodRings are responsible for launching Hadoop commands on the nodes to bring up the Hadoop daemons. They get the command to launch from the RingMaster.
         </p>
-<a name="N1008A"></a><a name="Hodrc+%2F+HOD+configuration+file"></a>
+<a name="N1008B"></a><a name="Hodrc+%2F+HOD+configuration+file"></a>
 <h3 class="h4"> Hodrc / HOD configuration file </h3>
 <p>
         An INI style configuration file where the users configure various options for the HOD system, including install locations of different software, resource manager parameters, log and temp file directories, parameters for their MapReduce jobs, etc.
         </p>
-<a name="N10094"></a><a name="Submit+Nodes+and+Compute+Nodes"></a>
+<a name="N10095"></a><a name="Submit+Nodes+and+Compute+Nodes"></a>
 <h3 class="h4"> Submit Nodes and Compute Nodes </h3>
 <p>
         The nodes from where the <em>HOD Client</em> is run are referred as <em>submit nodes</em> because jobs are submitted to the resource manager system for allocating and running clusters from these nodes.
@@ -377,17 +377,17 @@ document.write("Last Published: " + document.lastModified);
 </div>
 
     
-<a name="N100AE"></a><a name="Getting+Started+with+HOD"></a>
+<a name="N100AF"></a><a name="Getting+Started+with+HOD"></a>
 <h2 class="h3"> Getting Started with HOD </h2>
 <div class="section">
-<a name="N100B4"></a><a name="Pre-Requisites"></a>
+<a name="N100B5"></a><a name="Pre-Requisites"></a>
 <h3 class="h4"> Pre-Requisites </h3>
-<a name="N100BA"></a><a name="Hardware"></a>
+<a name="N100BB"></a><a name="Hardware"></a>
 <h4> Hardware </h4>
 <p>
           HOD requires a minimum of 3 nodes configured through a resource manager.
           </p>
-<a name="N100C4"></a><a name="Software"></a>
+<a name="N100C5"></a><a name="Software"></a>
 <h4> Software </h4>
 <p>
           The following components are assumed to be installed before using HOD:
@@ -424,7 +424,7 @@ document.write("Last Published: " + document.lastModified);
 <p>
           HOD configuration requires the location of installs of these components to be the same on all nodes in the cluster. It will also make the configuration simpler to have the same location on the submit nodes.
           </p>
-<a name="N100FE"></a><a name="Resource+Manager+Configuration+Pre-requisites"></a>
+<a name="N100FF"></a><a name="Resource+Manager+Configuration+Pre-requisites"></a>
 <h4>Resource Manager Configuration Pre-requisites</h4>
 <p>
           For using HOD with Torque:
@@ -456,7 +456,7 @@ document.write("Last Published: " + document.lastModified);
           More information about setting up Torque can be found by referring to the documentation <a href="http://www.clusterresources.com/pages/products/torque-resource-manager.php">here.</a>
           
 </p>
-<a name="N10125"></a><a name="Setting+up+HOD"></a>
+<a name="N10126"></a><a name="Setting+up+HOD"></a>
 <h3 class="h4">Setting up HOD</h3>
 <ul>
           
@@ -550,15 +550,15 @@ document.write("Last Published: " + document.lastModified);
 </div>
 
     
-<a name="N101B3"></a><a name="Running+HOD"></a>
+<a name="N101B4"></a><a name="Running+HOD"></a>
 <h2 class="h3">Running HOD</h2>
 <div class="section">
-<a name="N101B9"></a><a name="Overview"></a>
+<a name="N101BA"></a><a name="Overview"></a>
 <h3 class="h4">Overview</h3>
 <p>
         A typical session of HOD will involve atleast three steps: allocate, run hadoop jobs, deallocate.
         </p>
-<a name="N101C2"></a><a name="Operation+allocate"></a>
+<a name="N101C3"></a><a name="Operation+allocate"></a>
 <h4>Operation allocate</h4>
 <p>
           The allocate operation is used to allocate a set of nodes and install and provision Hadoop on them. It has the following syntax:
@@ -605,7 +605,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
           
 </table>
-<a name="N10202"></a><a name="Running+Hadoop+jobs+using+the+allocated+cluster"></a>
+<a name="N10203"></a><a name="Running+Hadoop+jobs+using+the+allocated+cluster"></a>
 <h4>Running Hadoop jobs using the allocated cluster</h4>
 <p>
           Now, one can run Hadoop jobs using the allocated cluster in the usual manner:
@@ -631,7 +631,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
           
 </table>
-<a name="N10225"></a><a name="Operation+deallocate"></a>
+<a name="N10226"></a><a name="Operation+deallocate"></a>
 <h4>Operation deallocate</h4>
 <p>
           The deallocate operation is used to release an allocated cluster. When finished with a cluster, deallocate must be run so that the nodes become free for others to use. The deallocate operation has the following syntax:
@@ -657,7 +657,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
           
 </table>
-<a name="N10249"></a><a name="Command+Line+Options"></a>
+<a name="N1024A"></a><a name="Command+Line+Options"></a>
 <h3 class="h4">Command Line Options</h3>
 <p>
         This section covers the major command line options available via the hod command:
@@ -768,10 +768,10 @@ document.write("Last Published: " + document.lastModified);
         </p>
 </div>
     
-<a name="N102C9"></a><a name="HOD+Configuration"></a>
+<a name="N102CA"></a><a name="HOD+Configuration"></a>
 <h2 class="h3"> HOD Configuration </h2>
 <div class="section">
-<a name="N102CF"></a><a name="Introduction+to+HOD+Configuration"></a>
+<a name="N102D0"></a><a name="Introduction+to+HOD+Configuration"></a>
 <h3 class="h4"> Introduction to HOD Configuration </h3>
 <p>
         Configuration options for HOD are organized as sections and options within them. They can be specified in two ways: a configuration file in the INI format, and as command line options to the HOD shell, specified in the format --section.option[=value]. If the same option is specified in both places, the value specified on the command line overrides the value in the configuration file.
@@ -783,7 +783,7 @@ document.write("Last Published: " + document.lastModified);
 <p>
         This section explains some of the most important or commonly used configuration options in some more detail.
         </p>
-<a name="N102E2"></a><a name="Categories+%2F+Sections+in+HOD+Configuration"></a>
+<a name="N102E3"></a><a name="Categories+%2F+Sections+in+HOD+Configuration"></a>
 <h3 class="h4"> Categories / Sections in HOD Configuration </h3>
 <p>
         The following are the various sections in the HOD configuration:
@@ -840,9 +840,9 @@ document.write("Last Published: " + document.lastModified);
 </tr>
         
 </table>
-<a name="N1034A"></a><a name="Important+and+Commonly+Used+Configuration+Options"></a>
+<a name="N1034B"></a><a name="Important+and+Commonly+Used+Configuration+Options"></a>
 <h3 class="h4"> Important and Commonly Used Configuration Options </h3>
-<a name="N10350"></a><a name="Common+configuration+options"></a>
+<a name="N10351"></a><a name="Common+configuration+options"></a>
 <h4> Common configuration options </h4>
 <p>
           Certain configuration options are defined in most of the sections of the HOD configuration. Options defined in a section, are used by the process for which that section applies. These options have the same meaning, but can have different values in each section.
@@ -892,7 +892,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
           
 </table>
-<a name="N103AE"></a><a name="hod+options"></a>
+<a name="N103AF"></a><a name="hod+options"></a>
 <h4> hod options </h4>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
             
@@ -918,7 +918,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
           
 </table>
-<a name="N103DF"></a><a name="resource_manager+options"></a>
+<a name="N103E0"></a><a name="resource_manager+options"></a>
 <h4> resource_manager options </h4>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
             
@@ -951,7 +951,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
           
 </table>
-<a name="N1041D"></a><a name="ringmaster+options"></a>
+<a name="N1041E"></a><a name="ringmaster+options"></a>
 <h4> ringmaster options </h4>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
             
@@ -970,7 +970,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
           
 </table>
-<a name="N10441"></a><a name="gridservice-hdfs+options"></a>
+<a name="N10442"></a><a name="gridservice-hdfs+options"></a>
 <h4> gridservice-hdfs options </h4>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
             
@@ -1037,7 +1037,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
           
 </table>
-<a name="N104B9"></a><a name="gridservice-mapred+options"></a>
+<a name="N104BA"></a><a name="gridservice-mapred+options"></a>
 <h4> gridservice-mapred options </h4>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
             

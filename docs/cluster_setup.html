@@ -210,7 +210,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
   
     
-<a name="N1000C"></a><a name="Purpose"></a>
+<a name="N1000D"></a><a name="Purpose"></a>
 <h2 class="h3">Purpose</h2>
 <div class="section">
 <p>This document describes how to install, configure and manage non-trivial
@@ -222,7 +222,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N1001D"></a><a name="Pre-requisites"></a>
+<a name="N1001E"></a><a name="Pre-requisites"></a>
 <h2 class="h3">Pre-requisites</h2>
 <div class="section">
 <ol>
@@ -241,7 +241,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N10035"></a><a name="Installation"></a>
+<a name="N10036"></a><a name="Installation"></a>
 <h2 class="h3">Installation</h2>
 <div class="section">
 <p>Installing a Hadoop cluster typically involves unpacking the software 
@@ -257,11 +257,11 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N10060"></a><a name="Configuration"></a>
+<a name="N10061"></a><a name="Configuration"></a>
 <h2 class="h3">Configuration</h2>
 <div class="section">
 <p>The following sections describe how to configure a Hadoop cluster.</p>
-<a name="N10069"></a><a name="Configuration+Files"></a>
+<a name="N1006A"></a><a name="Configuration+Files"></a>
 <h3 class="h4">Configuration Files</h3>
 <p>Hadoop configuration is driven by two important configuration files
         found in the <span class="codefrag">conf/</span> directory of the distribution:</p>
@@ -285,14 +285,14 @@ document.write("Last Published: " + document.lastModified);
 <p>Additionally, you can control the Hadoop scripts found in the 
         <span class="codefrag">bin/</span> directory of the distribution, by setting site-specific 
         values via the <span class="codefrag">conf/hadoop-env.sh</span>.</p>
-<a name="N10096"></a><a name="Site+Configuration"></a>
+<a name="N10097"></a><a name="Site+Configuration"></a>
 <h3 class="h4">Site Configuration</h3>
 <p>To configure the the Hadoop cluster you will need to configure the
         <em>environment</em> in which the Hadoop daemons execute as well as
         the <em>configuration parameters</em> for the Hadoop daemons.</p>
 <p>The Hadoop daemons are <span class="codefrag">NameNode</span>/<span class="codefrag">DataNode</span> 
         and <span class="codefrag">JobTracker</span>/<span class="codefrag">TaskTracker</span>.</p>
-<a name="N100B4"></a><a name="Configuring+the+Environment+of+the+Hadoop+Daemons"></a>
+<a name="N100B5"></a><a name="Configuring+the+Environment+of+the+Hadoop+Daemons"></a>
 <h4>Configuring the Environment of the Hadoop Daemons</h4>
 <p>Administrators should use the <span class="codefrag">conf/hadoop-env.sh</span> script
           to do site-specific customization of the Hadoop daemons' process 
@@ -318,7 +318,7 @@ document.write("Last Published: " + document.lastModified);
             </li>
           
 </ul>
-<a name="N100DC"></a><a name="Configuring+the+Hadoop+Daemons"></a>
+<a name="N100DD"></a><a name="Configuring+the+Hadoop+Daemons"></a>
 <h4>Configuring the Hadoop Daemons</h4>
 <p>This section deals with important parameters to be specified in the
           <span class="codefrag">conf/hadoop-site.xml</span> for the Hadoop cluster.</p>
@@ -442,7 +442,7 @@ document.write("Last Published: " + document.lastModified);
           <a href="api/org/apache/hadoop/conf/Configuration.html#FinalParams">
           final</a> to ensure that they cannot be overriden by user-applications.
           </p>
-<a name="N101BC"></a><a name="Real-World+Cluster+Configurations"></a>
+<a name="N101BD"></a><a name="Real-World+Cluster+Configurations"></a>
 <h5>Real-World Cluster Configurations</h5>
 <p>This section lists some non-default configuration parameters which 
             have been used to run the <em>sort</em> benchmark on very large 
@@ -603,7 +603,7 @@ document.write("Last Published: " + document.lastModified);
 </li>
             
 </ul>
-<a name="N102D9"></a><a name="Slaves"></a>
+<a name="N102DA"></a><a name="Slaves"></a>
 <h4>Slaves</h4>
 <p>Typically you choose one machine in the cluster to act as the 
           <span class="codefrag">NameNode</span> and one machine as to act as the 
@@ -612,7 +612,7 @@ document.write("Last Published: " + document.lastModified);
           referred to as <em>slaves</em>.</p>
 <p>List all slave hostnames or IP addresses in your 
           <span class="codefrag">conf/slaves</span> file, one per line.</p>
-<a name="N102F8"></a><a name="Logging"></a>
+<a name="N102F9"></a><a name="Logging"></a>
 <h4>Logging</h4>
 <p>Hadoop uses the <a href="http://logging.apache.org/log4j/">Apache 
           log4j</a> via the <a href="http://commons.apache.org/logging/">Apache 
@@ -625,7 +625,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N10318"></a><a name="Hadoop+Startup"></a>
+<a name="N10319"></a><a name="Hadoop+Startup"></a>
 <h2 class="h3">Hadoop Startup</h2>
 <div class="section">
 <p>To start a Hadoop cluster you will need to start both the HDFS and 
@@ -660,7 +660,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N1035E"></a><a name="Hadoop+Shutdown"></a>
+<a name="N1035F"></a><a name="Hadoop+Shutdown"></a>
 <h2 class="h3">Hadoop Shutdown</h2>
 <div class="section">
 <p>

@@ -287,7 +287,7 @@ document.write("Last Published: " + document.lastModified);
 </ul>
 </div>
     
-<a name="N10013"></a><a name="Introduction"></a>
+<a name="N10014"></a><a name="Introduction"></a>
 <h2 class="h3"> Introduction </h2>
 <div class="section">
 <p>
@@ -296,35 +296,35 @@ document.write("Last Published: " + document.lastModified);
 </div>
 
     
-<a name="N10025"></a><a name="Assumptions+and+Goals"></a>
+<a name="N10026"></a><a name="Assumptions+and+Goals"></a>
 <h2 class="h3"> Assumptions and Goals </h2>
 <div class="section">
-<a name="N1002B"></a><a name="Hardware+Failure"></a>
+<a name="N1002C"></a><a name="Hardware+Failure"></a>
 <h3 class="h4"> Hardware Failure </h3>
 <p>
         Hardware failure is the norm rather than the exception. An HDFS instance may consist of hundreds or thousands of server machines, each storing part of the file system&rsquo;s data. The fact that there are a huge number of components and that each component has a non-trivial probability of failure means that some component of HDFS is always non-functional. Therefore, detection of faults and quick, automatic recovery from them is a core architectural goal of HDFS.
        </p>
-<a name="N10035"></a><a name="Streaming+Data+Access"></a>
+<a name="N10036"></a><a name="Streaming+Data+Access"></a>
 <h3 class="h4"> Streaming Data Access </h3>
 <p>
         Applications that run on HDFS need streaming access to their data sets. They are not general purpose applications that typically run on general purpose file systems. HDFS is designed more for batch processing rather than interactive use by users. The emphasis is on high throughput of data access rather than low latency of data access. POSIX imposes many hard requirements that are not needed for applications that are targeted for HDFS. POSIX semantics in a few key areas has been traded to increase data throughput rates. 
         </p>
-<a name="N1003F"></a><a name="Large+Data+Sets"></a>
+<a name="N10040"></a><a name="Large+Data+Sets"></a>
 <h3 class="h4"> Large Data Sets </h3>
 <p>
         Applications that run on HDFS have large data sets. A typical file in HDFS is gigabytes to terabytes in size. Thus, HDFS is tuned to support large files. It should provide high aggregate data bandwidth and scale to hundreds of nodes in a single cluster. It should support tens of millions of files in a single instance.
         </p>
-<a name="N10049"></a><a name="Simple+Coherency+Model"></a>
+<a name="N1004A"></a><a name="Simple+Coherency+Model"></a>
 <h3 class="h4"> Simple Coherency Model </h3>
 <p>
         HDFS applications need a write-once-read-many access model for files. A file once created, written, and closed need not be changed. This assumption simplifies data coherency issues and enables high throughput data access. A MapReduce application or a web crawler application fits perfectly with this model. There is a plan to support appending-writes to files in the future. 
         </p>
-<a name="N10053"></a><a name="%E2%80%9CMoving+Computation+is+Cheaper+than+Moving+Data%E2%80%9D"></a>
+<a name="N10054"></a><a name="%E2%80%9CMoving+Computation+is+Cheaper+than+Moving+Data%E2%80%9D"></a>
 <h3 class="h4"> &ldquo;Moving Computation is Cheaper than Moving Data&rdquo; </h3>
 <p>
         A computation requested by an application is much more efficient if it is executed near the data it operates on. This is especially true when the size of the data set is huge. This minimizes network congestion and increases the overall throughput of the system. The assumption is that it is often better to migrate the computation closer to where the data is located rather than moving the data to where the application is running. HDFS provides interfaces for applications to move themselves closer to where the data is located. 
         </p>
-<a name="N1005D"></a><a name="Portability+Across+Heterogeneous+Hardware+and+Software+Platforms"></a>
+<a name="N1005E"></a><a name="Portability+Across+Heterogeneous+Hardware+and+Software+Platforms"></a>
 <h3 class="h4"> Portability Across Heterogeneous Hardware and Software Platforms </h3>
 <p>
         HDFS has been designed to be easily portable from one platform to another. This facilitates widespread adoption of HDFS as a platform of choice for a large set of applications. 
@@ -333,7 +333,7 @@ document.write("Last Published: " + document.lastModified);
 
  
     
-<a name="N10068"></a><a name="Namenode+and+Datanodes"></a>
+<a name="N10069"></a><a name="Namenode+and+Datanodes"></a>
 <h2 class="h3"> Namenode and Datanodes </h2>
 <div class="section">
 <p>
@@ -352,7 +352,7 @@ document.write("Last Published: " + document.lastModified);
  
 
     
-<a name="N10089"></a><a name="The+File+System+Namespace"></a>
+<a name="N1008A"></a><a name="The+File+System+Namespace"></a>
 <h2 class="h3"> The File System Namespace </h2>
 <div class="section">
 <p>
@@ -366,7 +366,7 @@ document.write("Last Published: " + document.lastModified);
  
 
     
-<a name="N10096"></a><a name="Data+Replication"></a>
+<a name="N10097"></a><a name="Data+Replication"></a>
 <h2 class="h3"> Data Replication </h2>
 <div class="section">
 <p>
@@ -377,7 +377,7 @@ document.write("Last Published: " + document.lastModified);
     </p>
 <div id="" style="text-align: center;">
 <img id="" class="figure" alt="HDFS Datanodes" src="images/hdfsdatanodes.gif"></div>
-<a name="N100AC"></a><a name="Replica+Placement%3A+The+First+Baby+Steps"></a>
+<a name="N100AD"></a><a name="Replica+Placement%3A+The+First+Baby+Steps"></a>
 <h3 class="h4"> Replica Placement: The First Baby Steps </h3>
 <p>
         The placement of replicas is critical to HDFS reliability and performance. Optimizing replica placement distinguishes HDFS from most other distributed file systems. This is a feature that needs lots of tuning and experience. The purpose of a rack-aware replica placement policy is to improve data reliability, availability, and network bandwidth utilization. The current implementation for the replica placement policy is a first effort in this direction. The short-term goals of implementing this policy are to validate it on production systems, learn more about its behavior, and build a foundation to test and research more sophisticated policies. 
@@ -394,12 +394,12 @@ document.write("Last Published: " + document.lastModified);
 <p>
         The current, default replica placement policy described here is a work in progress.
         </p>
-<a name="N100C6"></a><a name="Replica+Selection"></a>
+<a name="N100C7"></a><a name="Replica+Selection"></a>
 <h3 class="h4"> Replica Selection </h3>
 <p>
         To minimize global bandwidth consumption and read latency, HDFS tries to satisfy a read request from a replica that is closest to the reader. If there exists a replica on the same rack as the reader node, then that replica is preferred to satisfy the read request. If angg/ HDFS cluster spans multiple data centers, then a replica that is resident in the local data center is preferred over any remote replica.
         </p>
-<a name="N100D0"></a><a name="SafeMode"></a>
+<a name="N100D1"></a><a name="SafeMode"></a>
 <h3 class="h4"> SafeMode </h3>
 <p>
         On startup, the Namenode enters a special state called <em>Safemode</em>. Replication of data blocks does not occur when the Namenode is in the Safemode state. The Namenode receives Heartbeat and Blockreport messages from the Datanodes. A Blockreport contains the list of data blocks that a Datanode is hosting. Each block has a specified minimum number of replicas. A block is considered <em>safely replicated</em> when the minimum number of replicas of that data block has checked in with the Namenode. After a configurable percentage of safely replicated data blocks checks in with the Namenode (plus an additional 30 seconds), the Namenode exits the Safemode state. It then determines the list of data blocks (if any) that still have fewer than the specified number of replicas. The Namenode then replicates these blocks to other Datanodes.
@@ -407,7 +407,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
 
     
-<a name="N100E1"></a><a name="The+Persistence+of+File+System+Metadata"></a>
+<a name="N100E2"></a><a name="The+Persistence+of+File+System+Metadata"></a>
 <h2 class="h3"> The Persistence of File System Metadata </h2>
 <div class="section">
 <p>
@@ -423,7 +423,7 @@ document.write("Last Published: " + document.lastModified);
 
 
     
-<a name="N10103"></a><a name="The+Communication+Protocols"></a>
+<a name="N10104"></a><a name="The+Communication+Protocols"></a>
 <h2 class="h3"> The Communication Protocols </h2>
 <div class="section">
 <p>
@@ -433,29 +433,29 @@ document.write("Last Published: " + document.lastModified);
  
 
     
-<a name="N1011B"></a><a name="Robustness"></a>
+<a name="N1011C"></a><a name="Robustness"></a>
 <h2 class="h3"> Robustness </h2>
 <div class="section">
 <p>
       The primary objective of HDFS is to store data reliably even in the presence of failures. The three common types of failures are Namenode failures, Datanode failures and network partitions.
       </p>
-<a name="N10124"></a><a name="Data+Disk+Failure%2C+Heartbeats+and+Re-Replication"></a>
+<a name="N10125"></a><a name="Data+Disk+Failure%2C+Heartbeats+and+Re-Replication"></a>
 <h3 class="h4"> Data Disk Failure, Heartbeats and Re-Replication </h3>
 <p>
         Each Datanode sends a Heartbeat message to the Namenode periodically. A network partition can cause a subset of Datanodes to lose connectivity with the Namenode. The Namenode detects this condition by the absence of a Heartbeat message. The Namenode marks Datanodes without recent Heartbeats as dead and does not forward any new <acronym title="Input/Output">IO</acronym> requests to them. Any data that was registered to a dead Datanode is not available to HDFS any more. Datanode death may cause the replication factor of some blocks to fall below their specified value. The Namenode constantly tracks which blocks need to be replicated and initiates replication whenever necessary. The necessity for re-replication may arise due to many reasons: a Datanode may become unavailable, a replica may become corrupted, a hard disk on a Datanode may fail, or the replication factor of a file may be increased. 
         </p>
-<a name="N10132"></a><a name="Cluster+Rebalancing"></a>
+<a name="N10133"></a><a name="Cluster+Rebalancing"></a>
 <h3 class="h4"> Cluster Rebalancing </h3>
 <p>
         The HDFS architecture is compatible with <em>data rebalancing schemes</em>. A scheme might automatically move data from one Datanode to another if the free space on a Datanode falls below a certain threshold. In the event of a sudden high demand for a particular file, a scheme might dynamically create additional replicas and rebalance other data in the cluster. These types of data rebalancing schemes are not yet implemented. 
         </p>
-<a name="N1013F"></a><a name="Data+Integrity"></a>
+<a name="N10140"></a><a name="Data+Integrity"></a>
 <h3 class="h4"> Data Integrity </h3>
 <p>
         <!-- XXX "checksum checking" sounds funny -->
         It is possible that a block of data fetched from a Datanode arrives corrupted. This corruption can occur because of faults in a storage device, network faults, or buggy software. The HDFS client software implements checksum checking on the contents of HDFS files. When a client creates an HDFS file, it computes a checksum of each block of the file and stores these checksums in a separate hidden file in the same HDFS namespace. When a client retrieves file contents it verifies that the data it received from each Datanode matches the checksum stored in the associated checksum file. If not, then the client can opt to retrieve that block from another Datanode that has a replica of that block.
         </p>
-<a name="N1014B"></a><a name="Metadata+Disk+Failure"></a>
+<a name="N1014C"></a><a name="Metadata+Disk+Failure"></a>
 <h3 class="h4"> Metadata Disk Failure </h3>
 <p>
         The FsImage and the EditLog are central data structures of HDFS. A corruption of these files can cause the HDFS instance to be non-functional. For this reason, the Namenode can be configured to support maintaining multiple copies of the FsImage and EditLog. Any update to either the FsImage or EditLog causes each of the FsImages and EditLogs to get updated synchronously. This synchronous updating of multiple copies of the FsImage and EditLog may degrade the rate of namespace transactions per second that a Namenode can support. However, this degradation is acceptable because even though HDFS applications are very <em>data</em> intensive in nature, they are not <em>metadata</em> intensive. When a Namenode restarts, it selects the latest consistent FsImage and EditLog to use.
@@ -463,7 +463,7 @@ document.write("Last Published: " + document.lastModified);
 <p> 
         The Namenode machine is a single point of failure for an HDFS cluster. If the Namenode machine fails, manual intervention is necessary. Currently, automatic restart and failover of the Namenode software to another machine is not supported.
         </p>
-<a name="N1015E"></a><a name="Snapshots"></a>
+<a name="N1015F"></a><a name="Snapshots"></a>
 <h3 class="h4"> Snapshots </h3>
 <p>
         Snapshots support storing a copy of data at a particular instant of time. One usage of the snapshot feature may be to roll back a corrupted HDFS instance to a previously known good point in time. HDFS does not currently support snapshots but will in a future release.
@@ -472,15 +472,15 @@ document.write("Last Published: " + document.lastModified);
  
 
     
-<a name="N10169"></a><a name="Data+Organization"></a>
+<a name="N1016A"></a><a name="Data+Organization"></a>
 <h2 class="h3"> Data Organization </h2>
 <div class="section">
-<a name="N10171"></a><a name="Data+Blocks"></a>
+<a name="N10172"></a><a name="Data+Blocks"></a>
 <h3 class="h4"> Data Blocks </h3>
 <p>
         HDFS is designed to support very large files. Applications that are compatible with HDFS are those that deal with large data sets. These applications write their data only once but they read it one or more times and require these reads to be satisfied at streaming speeds. HDFS supports write-once-read-many semantics on files. A typical block size used by HDFS is 64 MB. Thus, an HDFS file is chopped up into 64 MB chunks, and if possible, each chunk will reside on a different Datanode.
         </p>
-<a name="N1017B"></a><a name="Staging"></a>
+<a name="N1017C"></a><a name="Staging"></a>
 <h3 class="h4"> Staging </h3>
 <p>
         A client request to create a file does not reach the Namenode immediately. In fact, initially the HDFS client caches the file data into a temporary local file. Application writes are transparently redirected to this temporary local file. When the local file accumulates data worth over one HDFS block size, the client contacts the Namenode. The Namenode inserts the file name into the file system hierarchy and allocates a data block for it. The Namenode responds to the client request with the identity of the Datanode and the destination data block. Then the client flushes the block of data from the local temporary file to the specified Datanode. When a file is closed, the remaining un-flushed data in the temporary local file is transferred to the Datanode. The client then tells the Namenode that the file is closed. At this point, the Namenode commits the file creation operation into a persistent store. If the Namenode dies before the file is closed, the file is lost. 
@@ -488,7 +488,7 @@ document.write("Last Published: " + document.lastModified);
 <p>
         The above approach has been adopted after careful consideration of target applications that run on HDFS. These applications need streaming writes to files. If a client writes to a remote file directly without any client side buffering, the network speed and the congestion in the network impacts throughput considerably. This approach is not without precedent. Earlier distributed file systems, e.g. <acronym title="Andrew File System">AFS</acronym>, have used client side caching to improve performance. A POSIX requirement has been relaxed to achieve higher performance of data uploads. 
         </p>
-<a name="N1018E"></a><a name="Replication+Pipelining"></a>
+<a name="N1018F"></a><a name="Replication+Pipelining"></a>
 <h3 class="h4"> Replication Pipelining </h3>
 <p>
         When a client is writing data to an HDFS file, its data is first written to a local file as explained in the previous section. Suppose the HDFS file has a replication factor of three. When the local file accumulates a full block of user data, the client retrieves a list of Datanodes from the Namenode. This list contains the Datanodes that will host a replica of that block. The client then flushes the data block to the first Datanode. The first Datanode starts receiving the data in small portions (4 KB), writes each portion to its local repository and transfers that portion to the second Datanode in the list. The second Datanode, in turn starts receiving each portion of the data block, writes that portion to its repository and then flushes that portion to the third Datanode. Finally, the third Datanode writes the data to its local repository. Thus, a Datanode can be receiving data from the previous one in the pipeline and at the same time forwarding data to the next one in the pipeline. Thus, the data is pipelined from one Datanode to the next.
@@ -496,13 +496,13 @@ document.write("Last Published: " + document.lastModified);
 </div>
 
     
-<a name="N10199"></a><a name="Accessibility"></a>
+<a name="N1019A"></a><a name="Accessibility"></a>
 <h2 class="h3"> Accessibility </h2>
 <div class="section">
 <p>
       HDFS can be accessed from applications in many different ways. Natively, HDFS provides a <a href="http://hadoop.apache.org/core/docs/current/api/">Java API</a> for applications to use. A C language wrapper for this Java API is also available. In addition, an HTTP browser can also be used to browse the files of an HDFS instance. Work is in progress to expose HDFS through the <acronym title="Web-based Distributed Authoring and Versioning">WebDAV</acronym> protocol. 
       </p>
-<a name="N101AE"></a><a name="DFSShell"></a>
+<a name="N101AF"></a><a name="DFSShell"></a>
 <h3 class="h4"> DFSShell </h3>
 <p>
         HDFS allows user data to be organized in the form of files and directories. It provides a commandline interface called <em>DFSShell</em> that lets a user interact with the data in HDFS. The syntax of this command set is similar to other shells (e.g. bash, csh) that users are already familiar with. Here are some sample action/command pairs:
@@ -537,7 +537,7 @@ document.write("Last Published: " + document.lastModified);
 <p>
         DFSShell is targeted for applications that need a scripting language to interact with the stored data.
         </p>
-<a name="N10206"></a><a name="DFSAdmin"></a>
+<a name="N10207"></a><a name="DFSAdmin"></a>
 <h3 class="h4"> DFSAdmin </h3>
 <p>
         The <em>DFSAdmin</em> command set is used for administering an HDFS cluster. These are commands that are used only by an HDFS administrator. Here are some sample action/command pairs:
@@ -569,7 +569,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
         
 </table>
-<a name="N10254"></a><a name="Browser+Interface"></a>
+<a name="N10255"></a><a name="Browser+Interface"></a>
 <h3 class="h4"> Browser Interface </h3>
 <p>
         A typical HDFS install configures a web server to expose the HDFS namespace through a configurable TCP port. This allows a user to navigate the HDFS namespace and view the contents of its files using a web browser.
@@ -577,10 +577,10 @@ document.write("Last Published: " + document.lastModified);
 </div> 
 
     
-<a name="N1025F"></a><a name="Space+Reclamation"></a>
+<a name="N10260"></a><a name="Space+Reclamation"></a>
 <h2 class="h3"> Space Reclamation </h2>
 <div class="section">
-<a name="N10265"></a><a name="File+Deletes+and+Undeletes"></a>
+<a name="N10266"></a><a name="File+Deletes+and+Undeletes"></a>
 <h3 class="h4"> File Deletes and Undeletes </h3>
 <p>
         When a file is deleted by a user or an application, it is not immediately removed from HDFS.  Instead, HDFS first renames it to a file in the <span class="codefrag">/trash</span> directory. The file can be restored quickly as long as it remains in <span class="codefrag">/trash</span>. A file remains in <span class="codefrag">/trash</span> for a configurable amount of time. After the expiry of its life in <span class="codefrag">/trash</span>, the Namenode deletes the file from the HDFS namespace. The deletion of a file causes the blocks associated with the file to be freed. Note that there could be an appreciable time delay between the time a file is deleted by a user and the time of the corresponding increase in free space in HDFS.
@@ -588,7 +588,7 @@ document.write("Last Published: " + document.lastModified);
 <p>
         A user can Undelete a file after deleting it as long as it remains in the <span class="codefrag">/trash</span> directory. If a user wants to undelete a file that he/she has deleted, he/she can navigate the <span class="codefrag">/trash</span> directory and retrieve the file. The <span class="codefrag">/trash</span> directory contains only the latest copy of the file that was deleted. The <span class="codefrag">/trash</span> directory is just like any other directory with one special feature: HDFS applies specified policies to automatically delete files from this directory. The current default policy is to delete files from <span class="codefrag">/trash</span> that are more than 6 hours old. In the future, this policy will be configurable through a well defined interface.
         </p>
-<a name="N1028D"></a><a name="Decrease+Replication+Factor"></a>
+<a name="N1028E"></a><a name="Decrease+Replication+Factor"></a>
 <h3 class="h4"> Decrease Replication Factor </h3>
 <p>
         When the replication factor of a file is reduced, the Namenode selects excess replicas that can be deleted. The next Heartbeat transfers this information to the Datanode. The Datanode then removes the corresponding blocks and the corresponding free space appears in the cluster. Once again, there might be a time delay between the completion of the <span class="codefrag">setReplication</span> API call and the appearance of free space in the cluster.
@@ -597,7 +597,7 @@ document.write("Last Published: " + document.lastModified);
 
 
     
-<a name="N1029B"></a><a name="References"></a>
+<a name="N1029C"></a><a name="References"></a>
 <h2 class="h3"> References </h2>
 <div class="section">
 <p>

@@ -5,6 +5,16 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+  NEW FEATURES
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.16.0 - 2008-02-04
+
+  INCOMPATIBLE CHANGES
+
     HADOOP-1245.  Use the mapred.tasktracker.tasks.maximum value
     configured on each tasktracker when allocating tasks, instead of
     the value configured on the jobtracker. InterTrackerProtocol

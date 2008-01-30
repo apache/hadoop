@@ -18,8 +18,8 @@
 <!DOCTYPE tabs PUBLIC "-//APACHE//DTD Cocoon Documentation Tab V1.0//EN" 
           "http://forrest.apache.org/dtd/tab-cocoon-v10.dtd">
 
-<tabs software="Nutch"
-      title="Nutch"
+<tabs software="Hadoop"
+      title="Hadoop"
       copyright="The Apache Software Foundation"
       xmlns:xlink="http://www.w3.org/1999/xlink">
 
