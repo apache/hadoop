@@ -564,7 +564,7 @@ class HodRing(hodBaseService):
         jettyAddr = jobTrackerAddr.split(':')[0] + ':' + \
                               attrs['mapred.job.tracker.info.port']
       else:
-        jettyAddr = attrs['mapred.job.tracker.http.bindAddress']
+        jettyAddr = attrs['mapred.job.tracker.http.address']
       self.log.debug("Jobtracker jetty : %s" % jettyAddr)
 
       # Check for Jetty to come up

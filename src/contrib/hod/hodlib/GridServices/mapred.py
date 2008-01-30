@@ -65,7 +65,7 @@ class MapReduceExternal(MasterSlave):
                                       str(self.serviceDesc.dict['info_port'])
     else:
       # After Hadoop-2185
-      self.serviceDesc['final-attrs']['mapred.job.tracker.http.bindAddress'] = \
+      self.serviceDesc['final-attrs']['mapred.job.tracker.http.address'] = \
         "%s:%s" %(dict['host'], dict['info_port'])
 
   def getInfoAddrs(self):
@@ -76,8 +76,8 @@ class MapReduceExternal(MasterSlave):
       infoaddr = k + ':' + attrs['mapred.job.tracker.info.port']
     else:
       # After Hadoop-2185
-      # Note: earlier,we never respected mapred.job.tracker.http.bindAddress
-      infoaddr = attrs['mapred.job.tracker.http.bindAddress']
+      # Note: earlier,we never respected mapred.job.tracker.http.address
+      infoaddr = attrs['mapred.job.tracker.http.address']
     return [infoaddr]
   
 class MapReduce(MasterSlave):
@@ -144,7 +144,7 @@ class MapReduce(MasterSlave):
       self.infoAddr = self.masterNode + ':' + dict['mapred.job.tracker.info.port']
     else:
       # After Hadoop-2185
-      self.infoAddr = dict['mapred.job.tracker.http.bindAddress']
+      self.infoAddr = dict['mapred.job.tracker.http.address']
   
   def _parseEquals(self, list):
     return parseEquals(list)
@@ -171,13 +171,13 @@ class MapReduce(MasterSlave):
       if not 'mapred.job.tracker.info.port' in attrs:
         return ServiceUtil.getUniqPort()
     else:
-      if 'mapred.job.tracker.http.bindAddress' not in attrs:
+      if 'mapred.job.tracker.http.address' not in attrs:
         return ServiceUtil.getUniqPort()
 
     if self.version < 16:
       p = attrs['mapred.job.tracker.info.port']
     else:
-      p = attrs['mapred.job.tracker.http.bindAddress'].split(':')[1]
+      p = attrs['mapred.job.tracker.http.address'].split(':')[1]
     try:
       return int(p)
     except:
@@ -185,7 +185,7 @@ class MapReduce(MasterSlave):
       if self.version < 16:
         raise ValueError, "Can't find port from attr mapred.job.tracker.info.port: %s" % (p)
       else:
-        raise ValueError, "Can't find port from attr mapred.job.tracker.http.bindAddress: %s" % (p)
+        raise ValueError, "Can't find port from attr mapred.job.tracker.http.address: %s" % (p)
 
   def _setWorkDirs(self, workDirs, envs, attrs, parentDirs, subDir):
     local = []
@@ -232,9 +232,9 @@ class MapReduce(MasterSlave):
       if 'mapred.job.tracker.info.port' not in attrs:
         attrs['mapred.job.tracker.info.port'] = 'fillinport'
     else:
-      # Addressing Hadoop-2815,
-      if 'mapred.job.tracker.http.bindAddress' not in attrs:
-        attrs['mapred.job.tracker.http.bindAddress'] = 'fillinhostport'
+      # Addressing Hadoop-2185,
+      if 'mapred.job.tracker.http.address' not in attrs:
+        attrs['mapred.job.tracker.http.address'] = 'fillinhostport'
 
     attrs['fs.default.name'] = hdfs.getMasterAddrs()[0]
 
@@ -274,11 +274,11 @@ class MapReduce(MasterSlave):
       # earlier to 16, tasktrackers always took ephemeral port 0 for
       # tasktracker.report.bindAddress
     else:
-      # Adding the following. Hadoop-2815
-      if 'mapred.task.tracker.report.bindAddress' not in attrs:
-        attrs['mapred.task.tracker.report.bindAddress'] = 'fillinhostport'
-      if 'mapred.task.tracker.http.bindAddress' not in attrs:
-        attrs['mapred.task.tracker.http.bindAddress'] = 'fillinhostport'
+      # Adding the following. Hadoop-2185
+      if 'mapred.task.tracker.report.address' not in attrs:
+        attrs['mapred.task.tracker.report.address'] = 'fillinhostport'
+      if 'mapred.task.tracker.http.address' not in attrs:
+        attrs['mapred.task.tracker.http.address'] = 'fillinhostport'
 
     self._setWorkDirs(workDirs, envs, attrs, parentDirs, 'mapred-tt')
 
