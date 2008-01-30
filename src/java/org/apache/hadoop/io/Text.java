@@ -178,7 +178,7 @@ public class Text implements WritableComparable {
   
   /** copy a text. */
   public void set(Text other) {
-    set(other.bytes, 0, other.length);
+    set(other.getBytes(), 0, other.getLength());
   }
 
   /**
@@ -275,8 +275,9 @@ public class Text implements WritableComparable {
     if (this == that)
       return 0;
     else
-      return WritableComparator.compareBytes(bytes, 0, length,
-                                             that.bytes, 0, that.length);
+      return
+        WritableComparator.compareBytes(bytes, 0, length,
+                                        that.getBytes(), 0, that.getLength());
   }
 
   /** Returns true iff <code>o</code> is a Text with the same contents.  */
@@ -289,8 +290,7 @@ public class Text implements WritableComparable {
     else if (this.length != that.length)
       return false;
     else
-      return WritableComparator.compareBytes(bytes, 0, length,
-                                             that.bytes, 0, that.length) == 0;
+      return compareTo(o) == 0;
   }
 
   /** hash function */

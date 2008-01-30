@@ -11,6 +11,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-2738 Text is not subclassable because set(Text) and compareTo(Object)
+    access the other instance's private members directly.
+
 Release 0.16.0 - 2008-02-04
 
   INCOMPATIBLE CHANGES
