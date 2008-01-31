@@ -4,6 +4,8 @@ HBase Change Log
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
+   HADOOP-2750 Deprecated methods startBatchUpdate, commitBatch, abortBatch, 
+               and renewLease have been removed from HTable
 
   NEW FEATURES
 
