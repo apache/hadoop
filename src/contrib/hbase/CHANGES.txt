@@ -5,7 +5,8 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
    HADOOP-2750 Deprecated methods startBatchUpdate, commitBatch, abortBatch, 
-               and renewLease have been removed from HTable
+               and renewLease have been removed from HTable (Bryan Duxbury via
+               Jim Kellerman)
 
   NEW FEATURES
 
