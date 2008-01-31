@@ -13,7 +13,8 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
-               repetition of retry-on-failure logic
+               repetition of retry-on-failure logic (thanks to Peter Dolan and
+               Bryan Duxbury)
 
 Release 0.16.0
 
