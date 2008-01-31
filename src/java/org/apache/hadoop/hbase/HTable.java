@@ -609,66 +609,6 @@ public class HTable implements HConstants {
   }
 
   /** 
-   * Start a batch of row insertions/updates.
-   * 
-   * No changes are committed until the call to commitBatchUpdate returns.
-   * A call to abortBatchUpdate will abandon the entire batch.
-   *
-   * @param row name of row to be updated
-   * @return lockid to be used in subsequent put, delete and commit calls
-   * 
-   * @deprecated Batch operations are now the default. startBatchUpdate is now
-   * implemented by @see {@link #startUpdate(Text)} 
-   */
-  @Deprecated
-  public synchronized long startBatchUpdate(final Text row) {
-    return startUpdate(row);
-  }
-  
-  /** 
-   * Abort a batch mutation
-   * @param lockid lock id returned by startBatchUpdate
-   * 
-   * @deprecated Batch operations are now the default. abortBatch is now 
-   * implemented by @see {@link #abort(long)}
-   */
-  @Deprecated
-  public synchronized void abortBatch(final long lockid) {
-    abort(lockid);
-  }
-  
-  /** 
-   * Finalize a batch mutation
-   *
-   * @param lockid lock id returned by startBatchUpdate
-   * @throws IOException
-   * 
-   * @deprecated Batch operations are now the default. commitBatch(long) is now
-   * implemented by @see {@link #commit(long)}
-   */
-  @Deprecated
-  public void commitBatch(final long lockid) throws IOException {
-    commit(lockid, System.currentTimeMillis());
-  }
-
-  /** 
-   * Finalize a batch mutation
-   *
-   * @param lockid lock id returned by startBatchUpdate
-   * @param timestamp time to associate with all the changes
-   * @throws IOException
-   * 
-   * @deprecated Batch operations are now the default. commitBatch(long, long)
-   * is now implemented by @see {@link #commit(long, long)}
-   */
-  @Deprecated
-  public synchronized void commitBatch(final long lockid, final long timestamp)
-  throws IOException {
-
-    commit(lockid, timestamp);
-  }
-  
-  /** 
    * Start an atomic row insertion/update.  No changes are committed until the 
    * call to commit() returns. A call to abort() will abandon any updates in
    * progress.
@@ -993,19 +933,6 @@ public class HTable implements HConstants {
     }
   }
   
-  /**
-   * Renew lease on update
-   * 
-   * @param lockid              - lock id returned from startUpdate
-   * 
-   * @deprecated Batch updates are now the default. Consequently this method
-   * does nothing.
-   */
-  @Deprecated
-  public synchronized void renewLease(@SuppressWarnings("unused") long lockid) {
-    // noop
-  }
-
   /**
    * Implements the scanner interface for the HBase client.
    * If there are multiple regions in a table, this scanner will iterate
