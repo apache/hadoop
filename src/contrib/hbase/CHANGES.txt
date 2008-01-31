@@ -4,6 +4,20 @@ HBase Change Log
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+  IMPROVEMENTS
+   HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
+               repetition of retry-on-failure logic
+
+Release 0.16.0
+
+  INCOMPATIBLE CHANGES
    HADOOP-2056 A table with row keys containing colon fails to split regions
    HADOOP-2079 Fix generated HLog, HRegion names
    HADOOP-2495 Minor performance improvements: Slim-down BatchOperation, etc. 

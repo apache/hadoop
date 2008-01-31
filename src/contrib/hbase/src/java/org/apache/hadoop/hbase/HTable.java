@@ -188,7 +188,9 @@ public class HTable implements HConstants {
   /**
    * Gets the starting row key for every region in the currently open table
    * @return Array of region starting row keys
+   * @throws IOException
    */
+  @SuppressWarnings("null")
   public Text[] getStartKeys() throws IOException {
     checkClosed();
     List<Text> keyList = new ArrayList<Text>();
@@ -813,9 +815,9 @@ public class HTable implements HConstants {
    *
    * @param row Key of the row you want to completely delete.
    * @param ts Timestamp of cells to delete
+   * @throws IOException
    */
-  public void deleteAll(final Text row, long ts)
-  throws IOException {
+  public void deleteAll(final Text row, long ts) throws IOException {
     checkClosed();
     for(int tries = 0; tries < numRetries; tries++) {
       HRegionLocation r = getRegionLocation(row);
@@ -849,9 +851,9 @@ public class HTable implements HConstants {
    * Completely delete the row's cells.
    *
    * @param row Key of the row you want to completely delete.
+   * @throws IOException
    */
-  public void deleteAll(final Text row)
-  throws IOException {
+  public void deleteAll(final Text row) throws IOException {
     deleteAll(row, HConstants.LATEST_TIMESTAMP);
   }
   
@@ -862,6 +864,7 @@ public class HTable implements HConstants {
    * @param row The row to operate on
    * @param family The column family to match
    * @param timestamp Timestamp to match
+   * @throws IOException
    */
   public void deleteFamily(final Text row, final Text family, long timestamp)
   throws IOException {
@@ -899,9 +902,9 @@ public class HTable implements HConstants {
    *
    * @param row The row to operate on
    * @param family The column family to match
+   * @throws IOException
    */  
-  public void deleteFamily(final Text row, final Text family)
-  throws IOException{
+  public void deleteFamily(final Text row, final Text family) throws IOException{
     deleteFamily(row, family, HConstants.LATEST_TIMESTAMP);
   }
   
@@ -1128,6 +1131,7 @@ public class HTable implements HConstants {
       return true;
     }
 
+    /** {@inheritDoc} */
     public boolean next(HStoreKey key, SortedMap<Text, byte[]> results)
     throws IOException {
       checkClosed();
