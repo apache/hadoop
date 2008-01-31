@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.util.Map.Entry;
-
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -38,9 +36,9 @@ public class HBaseConfiguration extends Configuration {
    * @param c Configuration to clone.
    */
   public HBaseConfiguration(final Configuration c) {
-    super();
-    for (Entry<String, String>e: c) {
-      set(e.getKey(), e.getValue());
+    super(c);
+    if (!(c instanceof HBaseConfiguration)) {
+      addHbaseResources();
     }
   }
   
