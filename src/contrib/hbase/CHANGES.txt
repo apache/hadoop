@@ -157,6 +157,9 @@ Trunk (unreleased changes)
                HBaseConfiguration.
    HADOOP-2753 Back out 2718; programmatic config works but hbase*xml conf
                is overridden
+   HADOOP-2718 Copy Constructor HBaseConfiguration(Configuration) will override
+               hbase configurations if argumant is not an instance of
+               HBaseConfiguration (Put it back again).
    HADOOP-2631 2443 breaks HTable.getStartKeys when there is more than one
                table or table you are enumerating isn't the first table
    Delete empty file: src/contrib/hbase/src/java/org/apache/hadoop/hbase/mapred/
