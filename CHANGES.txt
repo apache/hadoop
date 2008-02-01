@@ -656,6 +656,9 @@ Release 0.16.0 - 2008-02-04
     HADOOP-2740. Fix HOD to work with the configuration variables changed in
     HADOOP-2404. (Hemanth Yamijala via omalley)
     
+    HADOOP-2755. Fix fsck performance degradation because of permissions 
+    issue.  (Tsz Wo (Nicholas), SZE via dhruba)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES

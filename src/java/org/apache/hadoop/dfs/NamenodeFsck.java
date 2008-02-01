@@ -117,6 +117,9 @@ public class NamenodeFsck {
     try {
       DFSFileInfo[] files = nn.namesystem.dir.getListing(path);
       FsckResult res = new FsckResult();
+      res.totalRacks = nn.getNetworkTopology().getNumOfRacks();
+      res.totalDatanodes = nn.namesystem.getNumberOfDatanodes(
+          DatanodeReportType.LIVE);
       res.setReplication((short) conf.getInt("dfs.replication", 3));
       if (files != null) {
         for (int i = 0; i < files.length; i++) {
@@ -137,9 +140,7 @@ public class NamenodeFsck {
   }
   
   private void check(DFSFileInfo file, FsckResult res) throws IOException {
-    res.totalRacks = nn.getNetworkTopology().getNumOfRacks();
-    res.totalDatanodes = nn.getDatanodeReport(DatanodeReportType.LIVE).length;
-    int minReplication = FSNamesystem.getFSNamesystem().getMinReplication();
+    int minReplication = nn.namesystem.getMinReplication();
     String path = file.getPath().toString();
 
     if (file.isDir()) {

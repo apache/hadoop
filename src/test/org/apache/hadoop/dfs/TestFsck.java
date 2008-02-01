@@ -23,6 +23,8 @@ import java.io.PrintStream;
 
 import junit.framework.TestCase;
 
+import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.log4j.Level;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.util.ToolRunner;
@@ -31,6 +33,18 @@ import org.apache.hadoop.util.ToolRunner;
  * A JUnit test for doing fsck
  */
 public class TestFsck extends TestCase {
+  static String runFsck(Configuration conf, String path) throws Exception {
+    PrintStream oldOut = System.out;
+    ByteArrayOutputStream bStream = new ByteArrayOutputStream();
+    PrintStream newOut = new PrintStream(bStream, true);
+    System.setOut(newOut);
+    ((Log4JLogger)PermissionChecker.LOG).getLogger().setLevel(Level.ALL);
+    assertEquals(0, ToolRunner.run(new DFSck(conf), new String[] {path}));
+    ((Log4JLogger)PermissionChecker.LOG).getLogger().setLevel(Level.INFO);
+    System.setOut(oldOut);
+    return bStream.toString();
+  }
+
   /** do fsck */
   public void testFsck() throws Exception {
     DFSTestUtil util = new DFSTestUtil("TestFsck", 20, 3, 8*1024);
@@ -41,13 +55,7 @@ public class TestFsck extends TestCase {
       cluster = new MiniDFSCluster(conf, 4, true, null);
       fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
-      PrintStream oldOut = System.out;
-      ByteArrayOutputStream bStream = new ByteArrayOutputStream();
-      PrintStream newOut = new PrintStream(bStream, true);
-      System.setOut(newOut);
-      assertEquals(0, ToolRunner.run(new DFSck(conf), new String[] {"/"}));
-      System.setOut(oldOut);
-      String outStr = bStream.toString();
+      String outStr = runFsck(conf, "/");
       assertTrue(-1 != outStr.indexOf("HEALTHY"));
       System.out.println(outStr);
       if (fs != null) {try{fs.close();} catch(Exception e){}}
@@ -55,13 +63,7 @@ public class TestFsck extends TestCase {
       
       // restart the cluster; bring up namenode but not the data nodes
       cluster = new MiniDFSCluster(conf, 0, false, null);
-      oldOut = System.out;
-      bStream = new ByteArrayOutputStream();
-      newOut = new PrintStream(bStream, true);
-      System.setOut(newOut);
-      assertEquals(0, ToolRunner.run(new DFSck(conf), new String[] {"/"}));
-      System.setOut(oldOut);
-      outStr = bStream.toString();
+      outStr = runFsck(conf, "/");
       // expect the result is corrupt
       assertTrue(outStr.contains("CORRUPT"));
       System.out.println(outStr);
@@ -86,13 +88,7 @@ public class TestFsck extends TestCase {
       cluster = new MiniDFSCluster(conf, 4, true, null);
       fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
-      PrintStream oldOut = System.out;
-      ByteArrayOutputStream bStream = new ByteArrayOutputStream();
-      PrintStream newOut = new PrintStream(bStream, true);
-      System.setOut(newOut);
-      assertEquals(0, ToolRunner.run(new DFSck(conf), new String[] {"/non-existent"}));
-      System.setOut(oldOut);
-      String outStr = bStream.toString();
+      String outStr = runFsck(conf, "/non-existent");
       assertEquals(-1, outStr.indexOf("HEALTHY"));
       System.out.println(outStr);
       util.cleanup(fs, "/srcdat");
