@@ -2801,6 +2801,10 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
   }
 
+  int getNumberOfDatanodes(DatanodeReportType type) {
+    return getDatanodeListForReport(type).size(); 
+  }
+
   private synchronized ArrayList<DatanodeDescriptor> getDatanodeListForReport(
                                                       DatanodeReportType type) {                  
     
