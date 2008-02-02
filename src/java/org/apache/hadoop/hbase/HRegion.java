@@ -218,8 +218,6 @@ public class HRegion implements HConstants {
     volatile boolean compacting = false;
     // Gets set in close. If set, cannot compact or flush again.
     volatile boolean writesEnabled = true;
-    // Gets set in close to prevent new compaction starting
-    volatile boolean disableCompactions = false;
   }
 
   volatile WriteState writestate = new WriteState();
@@ -319,7 +317,7 @@ public class HRegion implements HConstants {
       1024*1024*64);
     this.flushListener = listener;
     this.blockingMemcacheSize = this.memcacheFlushSize *
-      conf.getInt("hbase.hregion.memcache.block.multiplier", 2);
+      conf.getInt("hbase.hregion.memcache.block.multiplier", 1);
 
     // By default we split region if a file > DEFAULT_MAX_FILE_SIZE.
     this.desiredMaxFileSize =
@@ -390,11 +388,11 @@ public class HRegion implements HConstants {
     }
     synchronized (splitLock) {
       synchronized (writestate) {
-        // Can be a compaction running and it can take a long time to
-        // complete -- minutes.  Meantime, we want flushes to keep happening
-        // if we are taking on lots of updates.  But we don't want another
-        // compaction to start so set disableCompactions flag.
-        this.writestate.disableCompactions = true;
+        // Disable compacting and flushing by background threads for this
+        // region.
+        writestate.writesEnabled = false;
+        LOG.debug("compactions and cache flushes disabled for region " +
+          regionName);
         while (writestate.compacting || writestate.flushing) {
           LOG.debug("waiting for" +
               (writestate.compacting ? " compaction" : "") +
@@ -409,11 +407,6 @@ public class HRegion implements HConstants {
             // continue
           }
         }
-        // Disable compacting and flushing by background threads for this
-        // region.
-        writestate.writesEnabled = false;
-        LOG.debug("compactions and cache flushes disabled for region " +
-          regionName);
       }
       lock.writeLock().lock();
       LOG.debug("new updates and scanners for region " + regionName +
@@ -671,8 +664,7 @@ public class HRegion implements HConstants {
       (midKey.equals(getStartKey()) && midKey.equals(getEndKey())) ) {
       return false;
     }
-    long triggerSize = this.desiredMaxFileSize + (this.desiredMaxFileSize / 2);
-    boolean split = (biggest.getAggregate() >= triggerSize);
+    boolean split = (biggest.getAggregate() >= this.desiredMaxFileSize);
     if (split) {
       if (!biggest.isSplitable()) {
         LOG.warn("Region " + getRegionName().toString() +
@@ -710,10 +702,6 @@ public class HRegion implements HConstants {
       }
     }
     if (!needsCompaction) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("region " + regionInfo.getRegionName() +
-        " does not need compaction");
-      }
       return false;
     }
     return compactStores();
@@ -768,15 +756,13 @@ public class HRegion implements HConstants {
     }
     try {
       synchronized (writestate) {
-        if (!writestate.compacting && writestate.writesEnabled &&
-            !this.writestate.disableCompactions) {
+        if (!writestate.compacting && writestate.writesEnabled) {
           writestate.compacting = true;
         } else {
           LOG.info("NOT compacting region " +
               this.regionInfo.getRegionName().toString() + ": compacting=" +
               writestate.compacting + ", writesEnabled=" +
-              writestate.writesEnabled + ", writestate.disableCompactions=" +
-              this.writestate.disableCompactions);
+              writestate.writesEnabled);
             return false;
         }
       }

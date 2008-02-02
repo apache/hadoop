@@ -48,6 +48,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.MultiSearcher;
@@ -83,16 +85,16 @@ public class TestTableIndex extends MultiRegionTable {
   /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
+    // Enable DEBUG-level MR logging.
+    Logger.getLogger("org.apache.hadoop.mapred").setLevel(Level.DEBUG);
+    
     // Make sure the cache gets flushed so we trigger a compaction(s) and
     // hence splits.
     conf.setInt("hbase.hregion.memcache.flush.size", 1024 * 1024);
-
-    // Always compact if there is more than one store file.
-    conf.setInt("hbase.hstore.compactionThreshold", 2);
     
     // This size should make it so we always split using the addContent
     // below. After adding all data, the first region is 1.3M
-    conf.setLong("hbase.hregion.max.filesize", 128 * 1024);
+    conf.setLong("hbase.hregion.max.filesize", 1024 * 1024);
 
     desc = new HTableDescriptor(TABLE_NAME);
     desc.addFamily(new HColumnDescriptor(INPUT_COLUMN));
