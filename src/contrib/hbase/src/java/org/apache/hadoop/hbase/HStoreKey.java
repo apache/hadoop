@@ -68,13 +68,13 @@ public class HStoreKey implements WritableComparable {
   
   /**
    * Create an HStoreKey specifying the row and column names
-   * The timestamp defaults to Long.MAX_VALUE
+   * The timestamp defaults to LATEST_TIMESTAMP
    * 
    * @param row row key
    * @param column column key
    */
   public HStoreKey(Text row, Text column) {
-    this(row, column, Long.MAX_VALUE);
+    this(row, column, HConstants.LATEST_TIMESTAMP);
   }
   
   /**

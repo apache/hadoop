@@ -1155,15 +1155,22 @@ public class HStore implements HConstants {
    * @return True if this store needs compaction.
    */
   boolean needsCompaction() {
-    boolean compactionNeeded = false;
+    return this.storefiles != null &&
+      (this.storefiles.size() >= this.compactionThreshold || hasReferences());
+  }
+  
+  /*
+   * @return True if this store has references.
+   */
+  private boolean hasReferences() {
     if (this.storefiles != null) {
-      compactionNeeded = this.storefiles.size() >= this.compactionThreshold;
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("compaction for HStore " + storeName +
-            (compactionNeeded ? " " : " not ") + "needed.");
+      for (HStoreFile hsf: this.storefiles.values()) {
+        if (hsf.isReference()) {
+          return true;
+        }
       }
     }
-    return compactionNeeded;
+    return false;
   }
 
   /**
