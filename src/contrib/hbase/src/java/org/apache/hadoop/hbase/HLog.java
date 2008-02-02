@@ -262,9 +262,12 @@ public class HLog implements HConstants {
                   break;
                 }
               }
-              LOG.debug("Found " + sequenceNumbers.size() + " logs to remove " +
+              if (LOG.isDebugEnabled() && sequenceNumbers.size() > 0) {
+                LOG.debug("Found " + sequenceNumbers.size() +
+                  " logs to remove " +
                   "using oldest outstanding seqnum of " +
                   oldestOutstandingSeqNum + " from region " + oldestRegion);
+              }
             }
             if (sequenceNumbers.size() > 0) {
               for (Long seq : sequenceNumbers) {

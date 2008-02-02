@@ -13,6 +13,8 @@ Trunk (unreleased changes)
   OPTIMIZATIONS
 
   BUG FIXES
+   HADOOP-2731 Under load, regions become extremely large and eventually cause
+               region servers to become unresponsive
 
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
