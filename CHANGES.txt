@@ -18,6 +18,8 @@ Trunk (unreleased changes)
    HADOOP-2693 NPE in getClosestRowBefore (Bryan Duxbury & Stack)
    HADOOP-2599 Some minor improvements to changes in HADOOP-2443
                (Bryan Duxbury & Stack)
+   HADOOP-2773 Master marks region offline when it is recovering from a region
+               server death
 
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
