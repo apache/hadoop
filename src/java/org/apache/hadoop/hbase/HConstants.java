@@ -167,6 +167,12 @@ public interface HConstants {
    */
   static final Text EMPTY_START_ROW = EMPTY_TEXT;
 
+  /** 
+    * Used by scanners and others when they're trying to detect the end of a 
+    * table 
+    */
+  static final Text LAST_ROW = EMPTY_TEXT;
+  
   /** When we encode strings, we always specify UTF8 encoding */
   static final String UTF8_ENCODING = "UTF-8";
 

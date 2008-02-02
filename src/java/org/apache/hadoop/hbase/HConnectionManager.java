@@ -257,7 +257,7 @@ public class HConnectionManager implements HConstants {
           // open a scanner over the meta region
           scannerId = server.openScanner(
             metaLocation.getRegionInfo().getRegionName(),
-            COLUMN_FAMILY_ARRAY, EMPTY_START_ROW, LATEST_TIMESTAMP,
+            COLUMN_FAMILY_ARRAY, startRow, LATEST_TIMESTAMP,
             null);
           
           // iterate through the scanner, accumulating unique table names
@@ -296,7 +296,7 @@ public class HConnectionManager implements HConstants {
             server.close(scannerId);
           }
         }
-      } while (startRow.compareTo(EMPTY_START_ROW) != 0);
+      } while (startRow.compareTo(LAST_ROW) != 0);
       
       return uniqueTables.toArray(new HTableDescriptor[uniqueTables.size()]);
     }
