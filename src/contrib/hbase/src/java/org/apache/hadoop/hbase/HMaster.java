@@ -2103,7 +2103,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       for (ToDoEntry e: toDoList) {
         if (e.deleteRegion) {
           HRegion.removeRegionFromMETA(server, regionName, e.row);
-        } else {
+        } else if (e.regionOffline) {
           HRegion.offlineRegionInMETA(server, regionName, e.info);
         }
       }

@@ -165,7 +165,9 @@ Release 0.16.0 - 2008-02-04
                TableOutputCollector.java per Nigel Daley
    HADOOP-2731 Under load, regions become extremely large and eventually cause
                region servers to become unresponsive
-   
+   HADOOP-2773 Master marks region offline when it is recovering from a region
+               server death
+
   IMPROVEMENTS
    HADOOP-2401 Add convenience put method that takes writable
                (Johan Oskarsson via Stack)
