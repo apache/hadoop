@@ -1830,20 +1830,13 @@ public class HStore implements HConstants {
       for(int i = maparray.length - 1; i >= 0; i--) {
         Text row_from_mapfile = 
           rowAtOrBeforeFromMapFile(maparray[i], row, timestamp);
-
-        // for when we have MapFile.Reader#getClosest before functionality
-/*        Text row_from_mapfile = null;
-        WritableComparable value = null; 
         
-        HStoreKey hskResult = 
-          (HStoreKey)maparray[i].getClosest(rowKey, value, true);
-        
-        if (hskResult != null) {
-          row_from_mapfile = hskResult.getRow();
-        }*/
-                
-/*        LOG.debug("Best from this mapfile was " + row_from_mapfile);*/
-        
+        // if the result from the mapfile is null, then we know that
+        // the mapfile was empty and can move on to the next one.
+        if (row_from_mapfile == null) {
+          continue;
+        }
+      
         // short circuit on an exact match
         if (row.equals(row_from_mapfile)) {
           return row;
@@ -1855,7 +1848,6 @@ public class HStore implements HConstants {
         }
       }
       
-/*      LOG.debug("Went searching for " + row + ", found " + bestSoFar);*/
       return bestSoFar;
     } finally {
       this.lock.readLock().unlock();

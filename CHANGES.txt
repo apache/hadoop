@@ -15,6 +15,7 @@ Trunk (unreleased changes)
   BUG FIXES
    HADOOP-2731 Under load, regions become extremely large and eventually cause
                region servers to become unresponsive
+   HADOOP-2693 NPE in getClosestRowBefore (Bryan Duxbury & Stack)
 
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
