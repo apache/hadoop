@@ -274,6 +274,9 @@ public class LocalHBaseCluster implements HConstants {
     }
     // Need to rewrite address in Configuration if not done already.
     String address = c.get(MASTER_ADDRESS);
+    if (address == null) {
+      throw new NullPointerException("Address is null for " + MASTER_ADDRESS);
+    }
     String port = address.startsWith(LOCAL_COLON)?
       address.substring(LOCAL_COLON.length()):
       Integer.toString(DEFAULT_MASTER_PORT);

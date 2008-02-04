@@ -28,6 +28,9 @@
   <property name="src.examples" location="${basedir}/src/examples"/>
   <property name="src.webapps" location="${basedir}/src/webapps"/>
 
+  <property name="lib.dir" value="${basedir}/lib"/>
+  <property name="conf.dir" value="${basedir}/conf"/>
+
   <property name="test.output" value="no"/>
   <property name="test.timeout" value="900000"/>
 
@@ -43,6 +46,7 @@
   <property name="test.build.dir" value="${build.dir}/test"/>
   <property name="test.log.dir" value="${test.build.dir}/logs"/>
   <property name="test.junit.output.format" value="plain"/>
+
 
   <!-- all jars together -->
   <property name="javac.deprecation" value="off"/>
@@ -61,7 +65,8 @@
     <fileset refid="lib.jars"/>
       <fileset dir="${basedir}/lib/jetty-ext/">
         <include name="*jar" />
-      </fileset>
+    </fileset>
+    <pathelement location="${conf.dir}"/>
   </path>
 
   <target name="init">
@@ -195,7 +200,7 @@
        debug="${javac.debug}"> 
     <classpath refid="test.classpath"/> 
     </javac>
-    <jar jarfile="${build.dir}/hadoop-${version}-${name}-test.jar" >
+    <jar jarfile="${build.dir}/hbase-${version}-test.jar" >
       <fileset dir="${build.test}" includes="org/**" />
       <fileset dir="${build.classes}" />
       <fileset dir="${src.test}" includes="**/*.properties" />
