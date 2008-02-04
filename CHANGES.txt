@@ -16,6 +16,9 @@ Trunk (unreleased changes)
     HADOOP-2738 Text is not subclassable because set(Text) and compareTo(Object)
     access the other instance's private members directly.
 
+    HADOOP-2754 Filter out .crc files from local file system listing.
+    (Hairong Kuang via shv)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES
