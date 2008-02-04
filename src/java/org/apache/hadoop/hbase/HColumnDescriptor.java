@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.io.TextSequence;
 public class HColumnDescriptor implements WritableComparable {
   
   // For future backward compatibility
-  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)1;
+  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)2;
   
   /** Legal family names can only contain 'word characters' and end in a colon. */
   public static final Pattern LEGAL_FAMILY_NAME = Pattern.compile("\\w+:");
@@ -77,6 +77,11 @@ public class HColumnDescriptor implements WritableComparable {
   public static final boolean DEFAULT_IN_MEMORY = false;
   
   /**
+   * Default setting for whether to use a block cache or not.
+   */
+  public static final boolean DEFAULT_BLOCK_CACHE_ENABLED = false;
+  
+  /**
    * Default maximum length of cell contents.
    */
   public static final int DEFAULT_MAX_VALUE_LENGTH = Integer.MAX_VALUE;
@@ -95,6 +100,8 @@ public class HColumnDescriptor implements WritableComparable {
   private CompressionType compressionType;
   // Serve reads from in-memory cache
   private boolean inMemory;
+  // Serve reads from in-memory block cache
+  private boolean blockCacheEnabled;
   // Maximum value size
   private int maxValueLength;
   // True if bloom filter was specified
@@ -123,6 +130,7 @@ public class HColumnDescriptor implements WritableComparable {
     this(columnName == null || columnName.length() <= 0?
       new Text(): new Text(columnName),
       DEFAULT_N_VERSIONS, DEFAULT_COMPRESSION_TYPE, DEFAULT_IN_MEMORY,
+      DEFAULT_BLOCK_CACHE_ENABLED, 
       Integer.MAX_VALUE, DEFAULT_BLOOM_FILTER_DESCRIPTOR);
   }
   
@@ -134,6 +142,7 @@ public class HColumnDescriptor implements WritableComparable {
    * @param compression Compression type
    * @param inMemory If true, column data should be kept in an HRegionServer's
    * cache
+   * @param blockCacheEnabled If true, MapFile blocks should be cached
    * @param maxValueLength Restrict values to &lt;= this value
    * @param bloomFilter Enable the specified bloom filter for this column
    * 
@@ -144,6 +153,7 @@ public class HColumnDescriptor implements WritableComparable {
    */
   public HColumnDescriptor(final Text name, final int maxVersions,
       final CompressionType compression, final boolean inMemory,
+      final boolean blockCacheEnabled,
       final int maxValueLength, final BloomFilterDescriptor bloomFilter) {
     String familyStr = name.toString();
     // Test name if not null (It can be null when deserializing after
@@ -165,6 +175,7 @@ public class HColumnDescriptor implements WritableComparable {
     }
     this.maxVersions = maxVersions;
     this.inMemory = inMemory;
+    this.blockCacheEnabled = blockCacheEnabled;
     this.maxValueLength = maxValueLength;
     this.bloomFilter = bloomFilter;
     this.bloomFilterSpecified = this.bloomFilter == null ? false : true;
@@ -211,6 +222,13 @@ public class HColumnDescriptor implements WritableComparable {
   public boolean isInMemory() {
     return this.inMemory;
   }
+  
+  /**
+   * @return True if MapFile blocks should be cached.
+   */
+  public boolean isBlockCacheEnabled() {
+    return blockCacheEnabled;
+  }
 
   /**
    * @return Maximum value length.
@@ -234,6 +252,7 @@ public class HColumnDescriptor implements WritableComparable {
     return "{name: " + tmp.substring(0, tmp.length() - 1) +
       ", max versions: " + maxVersions +
       ", compression: " + this.compressionType + ", in memory: " + inMemory +
+      ", block cache enabled: " + blockCacheEnabled +
       ", max length: " + maxValueLength + ", bloom filter: " +
       (bloomFilterSpecified ? bloomFilter.toString() : "none") + "}";
   }
@@ -251,6 +270,7 @@ public class HColumnDescriptor implements WritableComparable {
     result ^= Integer.valueOf(this.maxVersions).hashCode();
     result ^= this.compressionType.hashCode();
     result ^= Boolean.valueOf(this.inMemory).hashCode();
+    result ^= Boolean.valueOf(this.blockCacheEnabled).hashCode();
     result ^= Integer.valueOf(this.maxValueLength).hashCode();
     result ^= Boolean.valueOf(this.bloomFilterSpecified).hashCode();
     result ^= Byte.valueOf(this.versionNumber).hashCode();
@@ -277,6 +297,10 @@ public class HColumnDescriptor implements WritableComparable {
       bloomFilter = new BloomFilterDescriptor();
       bloomFilter.readFields(in);
     }
+    
+    if (this.versionNumber > 1) {
+      this.blockCacheEnabled = in.readBoolean();
+    }
   }
 
   /** {@inheritDoc} */
@@ -292,6 +316,8 @@ public class HColumnDescriptor implements WritableComparable {
     if(bloomFilterSpecified) {
       bloomFilter.write(out);
     }
+
+    out.writeBoolean(this.blockCacheEnabled);
   }
 
   // Comparable
@@ -320,6 +346,18 @@ public class HColumnDescriptor implements WritableComparable {
         result = 0;
         
       } else if(this.inMemory) {
+        result = -1;
+        
+      } else {
+        result = 1;
+      }
+    }
+    
+    if(result == 0) {
+      if(this.blockCacheEnabled == other.blockCacheEnabled) {
+        result = 0;
+        
+      } else if(this.blockCacheEnabled) {
         result = -1;
         
       } else {
