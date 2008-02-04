@@ -44,9 +44,8 @@ public class TestToString extends TestCase {
     HTableDescriptor htd = HTableDescriptor.rootTableDesc;
     System. out.println(htd.toString());
     assertEquals("Table descriptor", "name: -ROOT-, families: {info:={name: " +
-        "info, max versions: 1, compression: NONE, in memory: false, " +
-        "block cache enabled: false, max length: 2147483647, " +
-        "bloom filter: none}}", htd.toString());
+      "info, max versions: 1, compression: NONE, in memory: false, max " +
+      "length: 2147483647, bloom filter: none}}", htd.toString());
   }
   
   /**

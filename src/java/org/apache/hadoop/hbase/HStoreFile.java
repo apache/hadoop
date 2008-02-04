@@ -31,11 +31,9 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.io.BlockFSInputStream;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.MapFile;
@@ -415,37 +413,17 @@ public class HStoreFile implements HConstants {
    * @return MapFile.Reader
    * @throws IOException
    */
-  public MapFile.Reader getReader(final FileSystem fs,
-    final Filter bloomFilter)
-  throws IOException {
-    return isReference()?
-      new HStoreFile.HalfMapFileReader(fs, getMapFilePath(reference).toString(),
-        conf, reference.getFileRegion(), reference.getMidkey(), bloomFilter):
-      new BloomFilterMapFile.Reader(fs, getMapFilePath().toString(),
-        conf, bloomFilter);
-  }
-  
-  /**
-   * Get reader for the store file map file.
-   * Client is responsible for closing file when done.
-   * @param fs
-   * @param bloomFilter If null, no filtering is done.
-   * @param blockCacheEnabled If true, MapFile blocks should be cached.
-   * @return MapFile.Reader
-   * @throws IOException
-   */
   public synchronized MapFile.Reader getReader(final FileSystem fs,
-      final Filter bloomFilter, final boolean blockCacheEnabled)
+      final Filter bloomFilter)
   throws IOException {
     
     if (isReference()) {
       return new HStoreFile.HalfMapFileReader(fs,
           getMapFilePath(reference).toString(), conf, 
-          reference.getFileRegion(), reference.getMidkey(), bloomFilter,
-          blockCacheEnabled);
+          reference.getFileRegion(), reference.getMidkey(), bloomFilter);
     }
     return new BloomFilterMapFile.Reader(fs, getMapFilePath().toString(),
-        conf, bloomFilter, blockCacheEnabled);
+        conf, bloomFilter);
   }
 
   /**
@@ -606,12 +584,7 @@ public class HStoreFile implements HConstants {
    */
   static class HbaseMapFile extends MapFile {
 
-    /**
-     * A reader capable of reading and caching blocks of the data file.
-     */
     static class HbaseReader extends MapFile.Reader {
-      
-      private final boolean blockCacheEnabled;
       
       /**
        * @param fs
@@ -621,23 +594,7 @@ public class HStoreFile implements HConstants {
        */
       public HbaseReader(FileSystem fs, String dirName, Configuration conf)
       throws IOException {
-        this(fs, dirName, conf, false);
-      }
-      
-      /**
-       * @param fs
-       * @param dirName
-       * @param conf
-       * @param blockCacheEnabled
-       * @throws IOException
-       */
-      public HbaseReader(FileSystem fs, String dirName, Configuration conf,
-          boolean blockCacheEnabled)
-      throws IOException {
-        super(fs, dirName, null, conf, false); // defer opening streams
-        this.blockCacheEnabled = blockCacheEnabled;
-        open(fs, dirName, null, conf);
-        
+        super(fs, dirName, conf);
         // Force reading of the mapfile index by calling midKey.
         // Reading the index will bring the index into memory over
         // here on the client and then close the index file freeing
@@ -647,28 +604,6 @@ public class HStoreFile implements HConstants {
         // access may not happen for some time; meantime we're
         // using up datanode resources.  See HADOOP-2341.
         midKey();
-      }
-
-      @Override
-      protected org.apache.hadoop.io.SequenceFile.Reader createDataFileReader(
-          FileSystem fs, Path dataFile, Configuration conf)
-      throws IOException {
-        if (!blockCacheEnabled) {
-          return super.createDataFileReader(fs, dataFile, conf);
-        }
-        LOG.info("Block Cache enabled");
-        final int blockSize = conf.getInt("hbase.hstore.blockCache.blockSize",
-            64 * 1024);
-        return new SequenceFile.Reader(fs, dataFile,  conf) {
-          @Override
-          protected FSDataInputStream openFile(FileSystem fs, Path file,
-              int bufferSize, long length) throws IOException {
-            
-            return new FSDataInputStream(new BlockFSInputStream(
-                    super.openFile(fs, file, bufferSize, length), length,
-                    blockSize));
-          }
-        };
       }
     }
     
@@ -718,13 +653,6 @@ public class HStoreFile implements HConstants {
         bloomFilter = filter;
       }
 
-      public Reader(FileSystem fs, String dirName, Configuration conf,
-          final Filter filter, final boolean blockCacheEnabled)
-      throws IOException {
-        super(fs, dirName, conf, blockCacheEnabled);
-        bloomFilter = filter;
-      }
-      
       /** {@inheritDoc} */
       @Override
       public Writable get(WritableComparable key, Writable val)
@@ -817,7 +745,7 @@ public class HStoreFile implements HConstants {
         final Configuration conf, final Range r,
         final WritableComparable midKey)
     throws IOException {
-      this(fs, dirName, conf, r, midKey, null, false);
+      this(fs, dirName, conf, r, midKey, null);
     }
     
     HalfMapFileReader(final FileSystem fs, final String dirName, 
@@ -825,16 +753,6 @@ public class HStoreFile implements HConstants {
         final WritableComparable midKey, final Filter filter)
     throws IOException {
       super(fs, dirName, conf, filter);
-      top = isTopFileRegion(r);
-      midkey = midKey;
-    }
-    
-    HalfMapFileReader(final FileSystem fs, final String dirName, 
-        final Configuration conf, final Range r,
-        final WritableComparable midKey, final Filter filter,
-        final boolean blockCacheEnabled)
-    throws IOException {
-      super(fs, dirName, conf, filter, blockCacheEnabled);
       top = isTopFileRegion(r);
       midkey = midKey;
     }

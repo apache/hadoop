@@ -741,19 +741,9 @@ public class HStore implements HConstants {
     
     // Finally, start up all the map readers! (There could be more than one
     // since we haven't compacted yet.)
-    boolean first = true;
     for(Map.Entry<Long, HStoreFile> e: this.storefiles.entrySet()) {
-      if (first) {
-        // Use a block cache (if configured) for the first reader only
-        // so as to control memory usage.
-        this.readers.put(e.getKey(),
-            e.getValue().getReader(this.fs, this.bloomFilter,
-                family.isBlockCacheEnabled()));
-        first = false;
-      } else {
-        this.readers.put(e.getKey(),
-          e.getValue().getReader(this.fs, this.bloomFilter));
-      }
+      this.readers.put(e.getKey(),
+        e.getValue().getReader(this.fs, this.bloomFilter));
     }
   }
   
@@ -1570,10 +1560,7 @@ public class HStore implements HConstants {
           // 6. Loading the new TreeMap.
           Long orderVal = Long.valueOf(finalCompactedFile.loadInfo(fs));
           this.readers.put(orderVal,
-            // Use a block cache (if configured) for this reader since
-            // it is the only one.
-            finalCompactedFile.getReader(this.fs, this.bloomFilter,
-                family.isBlockCacheEnabled()));
+            finalCompactedFile.getReader(this.fs, this.bloomFilter));
           this.storefiles.put(orderVal, finalCompactedFile);
         } catch (IOException e) {
           e = RemoteExceptionHandler.checkIOException(e);

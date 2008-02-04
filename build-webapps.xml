@@ -41,20 +41,16 @@ the generated java classes and the web.xml.  To run, do following:
 -->
 <project name="build.hbase.jsp" default="jspc">
   <property name="lib.dir" value="${basedir}/lib" />
-  <property name="hadoop.root" location="${basedir}/../../../"/>
   <property name="src.webapps" value="${basedir}/src/webapps" />
   <property name="generated.webapps.src"
     value="${basedir}/src/java"/>
    
   <target name="jspc" >
     <path id="jspc.classpath">
-      <fileset dir="${lib.dir}">
-        <include name="commons-el*jar" />
-      </fileset>
-      <fileset dir="${hadoop.root}/lib/jetty-ext/">
+      <fileset dir="${basedir}/lib/jetty-ext/">
         <include name="*jar" />
       </fileset>
-      <fileset dir="${hadoop.root}/lib/">
+      <fileset dir="${basedir}/lib/">
         <include name="servlet-api*jar" />
         <include name="commons-logging*jar" />
       </fileset>
