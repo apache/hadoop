@@ -19,6 +19,8 @@ Trunk (unreleased changes)
     HADOOP-2754 Filter out .crc files from local file system listing.
     (Hairong Kuang via shv)
 
+    HADOOP-2779.  Remove the references to HBase in the build.xml. (omalley)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES
