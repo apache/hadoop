@@ -176,18 +176,24 @@
     </chmod>
   </target>
 
+  <!-- ================================================================== -->
+  <!-- Run unit tests                                                     -->
+  <!-- ================================================================== -->
+  <path id="test.classpath">
+    <pathelement location="${build.test}" />
+    <pathelement location="${src.test}"/>
+    <pathelement location="${conf.dir}"/>
+    <pathelement location="${build.dir}"/>
+    <path refid="classpath"/>
+  </path>
 
-  <!-- Override compile-test  target so can generate a hbase 
-       test jar that has test and hbase classes. 
-   --> 
   <target name="compile-test" depends="compile" > 
-    <javac 
-     encoding="${build.encoding}" 
-     srcdir="${src.test}" 
-     includes="**/*.java" 
-     destdir="${build.test}" 
-     debug="${javac.debug}"> 
-      <classpath refid="test.classpath"/> 
+    <javac encoding="${build.encoding}" 
+       srcdir="${src.test}" 
+       includes="**/*.java" 
+       destdir="${build.test}" 
+       debug="${javac.debug}"> 
+    <classpath refid="test.classpath"/> 
     </javac>
     <jar jarfile="${build.dir}/hadoop-${version}-${name}-test.jar" >
       <fileset dir="${build.test}" includes="org/**" />
@@ -200,20 +206,6 @@
     </jar>
   </target>
 
-  <!-- the unit test classpath
-    Copied from ../build-contrib.xml so can add to it.
-   -->
-  <path id="test.classpath">
-    <pathelement location="${build.test}" />
-    <pathelement location="${src.test}"/>
-    <pathelement location="${conf.dir}"/>
-    <pathelement location="${build.dir}"/>
-    <path refid="classpath"/>
-  </path>
-
-  <!-- ================================================================== -->
-  <!-- Run unit tests                                                     -->
-  <!-- ================================================================== -->
   <target name="test" depends="compile-test, compile" >
     <delete dir="${test.log.dir}"/>
     <mkdir dir="${test.log.dir}"/>
@@ -247,7 +239,6 @@
       </batchtest>
     </junit>
     <fail if="tests.failed">Tests failed!</fail>
-
   </target>
 
   <!-- ================================================================== -->
