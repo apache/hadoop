@@ -16,7 +16,7 @@ Trunk (unreleased changes)
     HADOOP-2738 Text is not subclassable because set(Text) and compareTo(Object)
     access the other instance's private members directly.
 
-Release 0.16.0 - 2008-02-04
+Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES
 
@@ -660,6 +660,9 @@ Release 0.16.0 - 2008-02-04
     
     HADOOP-2755. Fix fsck performance degradation because of permissions 
     issue.  (Tsz Wo (Nicholas), SZE via dhruba)
+
+    HADOOP-2768. Fix performance regression caused by HADOOP-1707.
+    (dhruba borthakur via nigel)
 
 Release 0.15.3 - 2008-01-18
 
