@@ -221,6 +221,12 @@
     such as hlog.
     </description>
   </property>
+  <property>
+    <name>hbase.hstore.blockCache.blockSize</name>
+    <value>65536</value>
+    <description>The size of each block in any block caches.
+    </description>
+  </property>
 
   <!-- HbaseShell Configurations -->
   <property>

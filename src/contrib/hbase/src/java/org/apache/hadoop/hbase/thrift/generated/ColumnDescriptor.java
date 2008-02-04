@@ -46,6 +46,7 @@ public class ColumnDescriptor implements TBase, java.io.Serializable {
   public String bloomFilterType;
   public int bloomFilterVectorSize;
   public int bloomFilterNbHashes;
+  public boolean blockCacheEnabled;
 
   public final Isset __isset = new Isset();
   public static final class Isset {
@@ -57,6 +58,7 @@ public class ColumnDescriptor implements TBase, java.io.Serializable {
     public boolean bloomFilterType = false;
     public boolean bloomFilterVectorSize = false;
     public boolean bloomFilterNbHashes = false;
+    public boolean blockCacheEnabled = false;
   }
 
   public ColumnDescriptor() {
@@ -74,6 +76,8 @@ public class ColumnDescriptor implements TBase, java.io.Serializable {
 
     this.bloomFilterNbHashes = 0;
 
+    this.blockCacheEnabled = false;
+
   }
 
   public ColumnDescriptor(
@@ -84,7 +88,8 @@ public class ColumnDescriptor implements TBase, java.io.Serializable {
     int maxValueLength,
     String bloomFilterType,
     int bloomFilterVectorSize,
-    int bloomFilterNbHashes)
+    int bloomFilterNbHashes,
+    boolean blockCacheEnabled)
   {
     this();
     this.name = name;
@@ -103,6 +108,8 @@ public class ColumnDescriptor implements TBase, java.io.Serializable {
     this.__isset.bloomFilterVectorSize = true;
     this.bloomFilterNbHashes = bloomFilterNbHashes;
     this.__isset.bloomFilterNbHashes = true;
+    this.blockCacheEnabled = blockCacheEnabled;
+    this.__isset.blockCacheEnabled = true;
   }
 
   public void read(TProtocol iprot) throws TException {
@@ -180,6 +187,14 @@ public class ColumnDescriptor implements TBase, java.io.Serializable {
             TProtocolUtil.skip(iprot, field.type);
           }
           break;
+        case 9:
+          if (field.type == TType.BOOL) {
+            this.blockCacheEnabled = iprot.readBool();
+            this.__isset.blockCacheEnabled = true;
+          } else { 
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
         default:
           TProtocolUtil.skip(iprot, field.type);
           break;
@@ -247,6 +262,12 @@ public class ColumnDescriptor implements TBase, java.io.Serializable {
     oprot.writeFieldBegin(field);
     oprot.writeI32(this.bloomFilterNbHashes);
     oprot.writeFieldEnd();
+    field.name = "blockCacheEnabled";
+    field.type = TType.BOOL;
+    field.id = 9;
+    oprot.writeFieldBegin(field);
+    oprot.writeBool(this.blockCacheEnabled);
+    oprot.writeFieldEnd();
     oprot.writeFieldStop();
     oprot.writeStructEnd();
   }
@@ -269,6 +290,8 @@ public class ColumnDescriptor implements TBase, java.io.Serializable {
     sb.append(this.bloomFilterVectorSize);
     sb.append(",bloomFilterNbHashes:");
     sb.append(this.bloomFilterNbHashes);
+    sb.append(",blockCacheEnabled:");
+    sb.append(this.blockCacheEnabled);
     sb.append(")");
     return sb.toString();
   }

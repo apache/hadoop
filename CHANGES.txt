@@ -7,6 +7,8 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES

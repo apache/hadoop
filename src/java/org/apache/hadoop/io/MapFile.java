@@ -246,12 +246,31 @@ public class MapFile {
     /** Construct a map reader for the named map using the named comparator.*/
     public Reader(FileSystem fs, String dirName, WritableComparator comparator, Configuration conf)
       throws IOException {
+      this(fs, dirName, comparator, conf, true);
+    }
+    
+    /**
+     * Hook to allow subclasses to defer opening streams until further
+     * initialization is complete.
+     * @see #createDataFileReader(FileSystem, Path, Configuration)
+     */
+    protected Reader(FileSystem fs, String dirName,
+        WritableComparator comparator, Configuration conf, boolean open)
+      throws IOException {
+      
+      if (open) {
+        open(fs, dirName, comparator, conf);
+      }
+    }
+    
+    protected synchronized void open(FileSystem fs, String dirName,
+        WritableComparator comparator, Configuration conf) throws IOException {
       Path dir = new Path(dirName);
       Path dataFile = new Path(dir, DATA_FILE_NAME);
       Path indexFile = new Path(dir, INDEX_FILE_NAME);
 
       // open the data
-      this.data = new SequenceFile.Reader(fs, dataFile,  conf);
+      this.data = createDataFileReader(fs, dataFile, conf);
       this.firstPosition = data.getPosition();
 
       if (comparator == null)
@@ -261,6 +280,15 @@ public class MapFile {
 
       // open the index
       this.index = new SequenceFile.Reader(fs, indexFile, conf);
+    }
+
+    /**
+     * Override this method to specialize the type of
+     * {@link SequenceFile.Reader} returned.
+     */
+    protected SequenceFile.Reader createDataFileReader(FileSystem fs,
+        Path dataFile, Configuration conf) throws IOException {
+      return new SequenceFile.Reader(fs, dataFile,  conf);
     }
 
     private void readIndex() throws IOException {

@@ -118,6 +118,7 @@ TOKEN: /** for HQL statements */
    | <BLOCK: "block">
    | <RECORD: "record">
    | <IN_MEMORY: "in_memory">
+   | <BLOCK_CACHE_ENABLED: "block_cache_enabled">
    | <BLOOMFILTER: "bloomfilter">
    | <COUNTING_BLOOMFILTER: "counting_bloomfilter">
    | <RETOUCHED_BLOOMFILTER: "retouched_bloomfilter">
@@ -352,6 +353,11 @@ Map<String, Object> ColumnSpec() :
     <IN_MEMORY> 
     { 
       columnSpec.put("IN_MEMORY", true); 
+    } 
+   |  
+    <BLOCK_CACHE_ENABLED> 
+    { 
+      columnSpec.put("BLOCK_CACHE_ENABLED", true); 
     } 
    |  
     <BLOOMFILTER>

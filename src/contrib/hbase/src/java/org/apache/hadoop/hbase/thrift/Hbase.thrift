@@ -64,7 +64,8 @@ struct ColumnDescriptor {
   5:i32 maxValueLength = 2147483647,
   6:string bloomFilterType = "NONE",
   7:i32 bloomFilterVectorSize = 0,
-  8:i32 bloomFilterNbHashes = 0
+  8:i32 bloomFilterNbHashes = 0,
+  9:bool blockCacheEnabled = 0
 }
 
 /**

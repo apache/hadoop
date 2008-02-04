@@ -1391,11 +1391,20 @@ public class SequenceFile {
                    long length, Configuration conf, boolean tempReader) 
     throws IOException {
       this.file = file;
-      this.in = fs.open(file, bufferSize);
+      this.in = openFile(fs, file, bufferSize, length);
       this.conf = conf;
       seek(start);
       this.end = in.getPos() + length;
       init(tempReader);
+    }
+
+    /**
+     * Override this method to specialize the type of
+     * {@link FSDataInputStream} returned.
+     */
+    protected FSDataInputStream openFile(FileSystem fs, Path file,
+        int bufferSize, long length) throws IOException {
+      return fs.open(file, bufferSize);
     }
     
     private Decompressor getPooledOrNewDecompressor() {

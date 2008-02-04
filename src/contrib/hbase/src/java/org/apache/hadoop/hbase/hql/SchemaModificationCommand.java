@@ -37,6 +37,7 @@ public abstract class SchemaModificationCommand extends BasicCommand {
   protected int maxLength;
   protected HColumnDescriptor.CompressionType compression;
   protected boolean inMemory;
+  protected boolean blockCacheEnabled;
   protected BloomFilterDescriptor bloomFilterDesc;
   protected BloomFilterType bloomFilterType;
   protected int vectorSize;
@@ -52,6 +53,7 @@ public abstract class SchemaModificationCommand extends BasicCommand {
     maxLength = HColumnDescriptor.DEFAULT_MAX_VALUE_LENGTH;
     compression = HColumnDescriptor.DEFAULT_COMPRESSION_TYPE;
     inMemory = HColumnDescriptor.DEFAULT_IN_MEMORY;
+    blockCacheEnabled = HColumnDescriptor.DEFAULT_BLOCK_CACHE_ENABLED;
     bloomFilterDesc = HColumnDescriptor.DEFAULT_BLOOM_FILTER_DESCRIPTOR;
   }
 
@@ -76,6 +78,8 @@ public abstract class SchemaModificationCommand extends BasicCommand {
             .valueOf(((String) columnSpec.get(spec)).toUpperCase());
       } else if (spec.equals("IN_MEMORY")) {
         inMemory = (Boolean) columnSpec.get(spec);
+      } else if (spec.equals("BLOCK_CACHE_ENABLED")) {
+        blockCacheEnabled = (Boolean) columnSpec.get(spec);
       } else if (spec.equals("BLOOMFILTER")) {
         bloomFilterType = BloomFilterType.valueOf(((String) columnSpec.get(spec))
             .toUpperCase());
@@ -103,7 +107,8 @@ public abstract class SchemaModificationCommand extends BasicCommand {
     column = appendDelimiter(column);
 
     HColumnDescriptor columnDesc = new HColumnDescriptor(new Text(column),
-        maxVersions, compression, inMemory, maxLength, bloomFilterDesc);
+        maxVersions, compression, inMemory, blockCacheEnabled,
+        maxLength, bloomFilterDesc);
 
     return columnDesc;
   }

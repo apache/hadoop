@@ -58,7 +58,8 @@ public class ThriftUtilities {
       throw new IllegalArgument("column name is empty");
     }
     HColumnDescriptor col = new HColumnDescriptor(new Text(in.name),
-        in.maxVersions, comp, in.inMemory, in.maxValueLength, bloom);
+        in.maxVersions, comp, in.inMemory, in.blockCacheEnabled,
+        in.maxValueLength, bloom);
     return col;
   }
   
@@ -76,6 +77,7 @@ public class ThriftUtilities {
     col.maxVersions = in.getMaxVersions();
     col.compression = in.getCompression().toString();
     col.inMemory = in.isInMemory();
+    col.blockCacheEnabled = in.isBlockCacheEnabled();
     col.maxValueLength = in.getMaxValueLength();
     BloomFilterDescriptor bloom = in.getBloomFilter();
     if (bloom != null) {
