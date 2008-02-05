@@ -7,6 +7,8 @@ Trunk (unreleased changes)
    HADOOP-2750 Deprecated methods startBatchUpdate, commitBatch, abortBatch, 
                and renewLease have been removed from HTable (Bryan Duxbury via
                Jim Kellerman)
+   HADOOP-2786 Move hbase out of hadoop core
+   HBASE-403   Fix build after move of hbase in svn
 
   NEW FEATURES
 
