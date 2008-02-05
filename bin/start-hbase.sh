@@ -32,7 +32,7 @@ bin=`cd "$bin"; pwd`
 . "$bin"/hbase-config.sh
 
 # start hbase daemons
-"${HADOOP_HOME}"/bin/hadoop dfsadmin -safemode wait
+# TODO: PUT BACK !!! "${HADOOP_HOME}"/bin/hadoop dfsadmin -safemode wait
 errCode=$?
 if [ $errCode -ne 0 ]
 then

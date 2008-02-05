@@ -36,11 +36,11 @@
 #
 #   HBASE_CONF_DIR   Alternate conf dir. Default is ${HBASE_HOME}/conf.
 #
+#   HBASE_ROOT_LOGGER The root appender. Default is INFO,console
+#
 #   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
 #
 #   HADOOP_HOME      Hadoop home directory.
-#
-#   HADOOP_ROOT_LOGGER The root appender. Default is INFO,console
 #
 
 bin=`dirname "$0"`
@@ -74,10 +74,9 @@ fi
 COMMAND=$1
 shift
 
-# Source the hadoop-env.sh.  Will have JAVA_HOME defined. There is no
-# hbase-env.sh as yet.
-if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
-  . "${HADOOP_CONF_DIR}/hadoop-env.sh"
+# Source the hbase-env.sh.  Will have JAVA_HOME defined.
+if [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
+  . "${HBASE_CONF_DIR}/hbase-env.sh"
 fi
 
 # some Java parameters
@@ -109,68 +108,47 @@ fi
 CLASSPATH="${CLASSPATH}:${HBASE_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
-# for developers, add hbase and hadoop classes to CLASSPATH
-if [ -d "$HADOOP_HOME/build/contrib/hbase/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/contrib/hbase/classes
+# for developers, add hbase classes to CLASSPATH
+if [ -d "$HBASE_HOME/build/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HBASE_HOME/build/classes
 fi
-if [ -d "$HADOOP_HOME/build/contrib/hbase/test" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/contrib/hbase/test
+if [ -d "$HBASE_HOME/build/test" ]; then
+  CLASSPATH=${CLASSPATH}:$HBASE_HOME/hbase/test
 fi
-if [ -d "$HADOOP_HOME/build/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/classes
-fi
-if [ -d "$HADOOP_HOME/build/contrib/hbase/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/contrib/hbase/
-fi
-if [ -d "$HADOOP_HOME/build/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build
-fi
-if [ -d "$HADOOP_HOME/build/test/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HOME/build/test/classes
+if [ -d "$HBASE_HOME/build/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$HBASE_HOME/build/webapps
 fi
 
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
 
-# for releases, add core hbase, hadoop jar & webapps to CLASSPATH
-# Look in two places for our hbase jar.
-for f in $HBASE_HOME/hadoop-*-hbase*.jar; do
+# for releases, add hbase, hadoop & webapps to CLASSPATH
+for f in $HBASE_HOME/hbase*.jar; do
   if [ -f $f ]; then
     CLASSPATH=${CLASSPATH}:$f;
   fi
 done
-for f in $HADOOP_HOME/contrib/hadoop-*-hbase*.jar; do
-  if [ -f $f ]; then
-    CLASSPATH=${CLASSPATH}:$f;
-  fi
-done
-if [ -d "$HADOOP_HOME/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_HOME
+if [ -d "$HBASE_HOME/webapps" ]; then
+  CLASSPATH=${CLASSPATH}:$HBASE_HOME
 fi
-for f in $HADOOP_HOME/hadoop-*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
 
-# add hbase and hadoop libs to CLASSPATH
+# add libs to CLASSPATH
 for f in $HBASE_HOME/lib/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
-for f in $HADOOP_HOME/lib/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
 
-for f in $HADOOP_HOME/lib/jetty-ext/*.jar; do
+for f in $HBASE_HOME/lib/jetty-ext/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
 
 # default log directory & file
 # TODO: Should we log to hadoop or under hbase?
-if [ "$HADOOP_LOG_DIR" = "" ]; then
-  HADOOP_LOG_DIR="$HADOOP_HOME/logs"
+if [ "$HBASE_LOG_DIR" = "" ]; then
+  HBASE_LOG_DIR="$HBASE_HOME/logs"
 fi
-if [ "$HADOOP_LOGFILE" = "" ]; then
-  HADOOP_LOGFILE='hbase.log'
+if [ "$HBASE_LOGFILE" = "" ]; then
+  HBASE_LOGFILE='hbase.log'
 fi
 
 # cygwin path translation
@@ -179,26 +157,6 @@ if $cygwin; then
   HADOOP_HOME=`cygpath -d "$HADOOP_HOME"`
   HBASE_HOME=`cygpath -d "$HBASE_HOME"`
   HADOOP_LOG_DIR=`cygpath -d "$HADOOP_LOG_DIR"`
-fi
-
-# TODO: Can this be put into separate script so don't have to duplicate
-# hadoop command script code?
-# setup 'java.library.path' for native-hadoop code if necessary
-JAVA_LIBRARY_PATH=''
-if [ -d "${HADOOP_HOME}/build/native" -o -d "${HADOOP_HOME}/lib/native" ]; then
-  JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
-  
-  if [ -d "$HADOOP_HOME/build/native" ]; then
-    JAVA_LIBRARY_PATH=${HADOOP_HOME}/build/native/${JAVA_PLATFORM}/lib
-  fi
-  
-  if [ -d "${HADOOP_HOME}/lib/native" ]; then
-    if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
-      JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_HOME}/lib/native/${JAVA_PLATFORM}
-    else
-      JAVA_LIBRARY_PATH=${HADOOP_HOME}/lib/native/${JAVA_PLATFORM}
-    fi
-  fi
 fi
 
 # cygwin path translation
@@ -235,7 +193,7 @@ HBASE_OPTS="$HBASE_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
 HBASE_OPTS="$HBASE_OPTS -Dhadoop.log.file=$HADOOP_LOGFILE"
 HBASE_OPTS="$HBASE_OPTS -Dhadoop.home.dir=$HADOOP_HOME"
 HBASE_OPTS="$HBASE_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
-HBASE_OPTS="$HBASE_OPTS -Dhadoop.root.logger=${HADOOP_ROOT_LOGGER:-INFO,console}"
+HBASE_OPTS="$HBASE_OPTS -Dhbase.root.logger=${HBASE_ROOT_LOGGER:-INFO,console}"
 HBASE_OPTS="$HBASE_OPTS -Dhbase.home.dir=$HBASE_HOME"
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
   HBASE_OPTS="$HBASE_OPTS -Djava.library.path=$JAVA_LIBRARY_PATH"
