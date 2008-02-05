@@ -19,7 +19,9 @@
 
 <project name="hbase" default="jar">
   <property name="version" value="0.1.0-dev"/>
-  <property name="final.name" value="${name}-${version}"/>
+  <property name="Name" value="HBase"/>
+  <property name="final.name" value="hbase-${version}"/>
+  <property name="year" value="2008"/>
  
   <!-- Load all the default properties, and any the user wants    -->
   <!-- to contribute (without having to type -D or edit this file -->
@@ -33,6 +35,7 @@
 
   <property name="lib.dir" value="${basedir}/lib"/>
   <property name="conf.dir" value="${basedir}/conf"/>
+  <property name="docs.dir" value="${basedir}/docs"/>
 
   <property name="test.output" value="no"/>
   <property name="test.timeout" value="900000"/>
@@ -45,18 +48,23 @@
   <property name="build.classes" location="${build.dir}/classes"/>
   <property name="build.test" location="${build.dir}/test"/>
   <property name="build.examples" location="${build.dir}/examples"/>
+  <property name="build.docs" value="${build.dir}/docs"/>
+  <property name="build.javadoc" value="${build.docs}/api"/>
+  <property name="build.encoding" value="ISO-8859-1"/>
 
   <property name="test.build.dir" value="${build.dir}/test"/>
   <property name="test.log.dir" value="${test.build.dir}/logs"/>
   <property name="test.junit.output.format" value="plain"/>
 
+  <property name="dist.dir" value="${build.dir}/${final.name}"/>
+
   <property name="javac.deprecation" value="off"/>
   <property name="javac.debug" value="on"/>
 
-  <property name="javadoc.link"
-    value="http://java.sun.com/j2se/1.5.0/docs/api/"/>
+  <property name="javadoc.link.java"
+    value="http://java.sun.com/j2se/1.5/docs/api/"/>
+  <property name="javadoc.packages" value="org.apache.hadoop.hbase.*"/>
 
-  <property name="build.encoding" value="ISO-8859-1"/>
 
   <!--We need to have the hadoop jars ride in front of the hbase classes or we
     get the below exceptions:
@@ -139,49 +147,130 @@
 	
   <!-- Override jar target to specify main class -->
   <target name="jar" depends="compile">
-    <jar jarfile="${build.dir}/hbase-${version}.jar"
+    <jar jarfile="${build.dir}/${final.name}.jar"
         basedir="${build.classes}" >
       <fileset file="${basedir}/conf/hbase-default.xml"/>
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
     </jar>
   </target>
 
-  <!--Manage our own packaging... install our dependencies,
-  bin, etc.-->
-  <target name="package" depends="jar" unless="skip.contrib"> 
-  <!--TODO!!!-->
-    <condition property="dist.dir" value="distribution">
-      <not>
-        <isset property="dist.dir" />
-      </not>
-    </condition>
-    <property name="hbase.dist.dir" value="${dist.dir}/contrib/${name}"/>
-    <mkdir dir="${hbase.dist.dir}"/>
-    <copy todir="${hbase.dist.dir}" includeEmptyDirs="false" flatten="true">
+  <!-- ================================================================== -->
+  <!-- Package                                                            -->
+  <!-- ================================================================== -->
+  <target name="package" depends="jar,javadoc,compile-test" 
+      description="Build distribution"> 
+    <mkdir dir="${dist.dir}"/>
+    <copy todir="${dist.dir}" includeEmptyDirs="false" flatten="true">
       <fileset dir="${build.dir}">
-        <include name="hbase-${version}.jar" />
+        <include name="${final.name}.jar" />
+        <include name="${final.name}-test.jar" />
       </fileset>
     </copy>
-    <mkdir dir="${hbase.dist.dir}/webapps"/>
-    <copy todir="${hbase.dist.dir}/webapps">
+    <mkdir dir="${dist.dir}/webapps"/>
+    <copy todir="${dist.dir}/webapps">
       <fileset dir="${build.webapps}" />
     </copy>
-    <mkdir dir="${hbase.dist.dir}/lib"/>
-    <copy todir="${hbase.dist.dir}/lib">
+    <mkdir dir="${dist.dir}/lib"/>
+    <copy todir="${dist.dir}/lib">
       <fileset dir="${build.lib}" />
     </copy>
-    <mkdir dir="${hbase.dist.dir}/conf" />
-    <copy todir="${hbase.dist.dir}/conf">
+    <mkdir dir="${dist.dir}/conf" />
+    <copy todir="${dist.dir}/conf">
       <fileset dir="${build.conf}" />
     </copy>
-    <mkdir dir="${hbase.dist.dir}/bin" />
-    <copy todir="${hbase.dist.dir}/bin">
+    <mkdir dir="${dist.dir}/bin" />
+    <copy todir="${dist.dir}/bin">
       <fileset dir="${build.bin}" />
     </copy>
     <chmod perm="ugo+x" type="file">
-      <fileset dir="${hbase.dist.dir}/bin" />
+      <fileset dir="${dist.dir}/bin" />
     </chmod>
+    <!--Uncomment when we have a docs dir
+    <mkdir dir="${dist.dir}/docs" />
+    <copy todir="${dist.dir}/docs">
+      <fileset dir="${docs.dir}" />
+      <fileset dir="${build.docs}"/>
+    </copy>
+    -->
+    <copy todir="${dist.dir}">
+      <fileset dir=".">
+        <include name="*.txt" />
+      </fileset>
+    </copy>
+    <mkdir dir="${dist.dir}/src" />
+    <copy todir="${dist.dir}/src" includeEmptyDirs="true">
+      <fileset dir="src" excludes="**/*.template **/docs/build/**/*"/>
+    </copy>
   </target>
+
+  <!-- ================================================================== -->
+  <!-- Make release tarball                                               -->
+  <!-- ================================================================== -->
+  <macrodef name="macro_tar" description="Worker Macro for tar">
+    <attribute name="param.destfile"/>
+    <element name="param.listofitems"/>
+    <sequential>
+      <tar compression="gzip" longfile="gnu"
+      destfile="@{param.destfile}">
+      <param.listofitems/>
+      </tar>
+    </sequential>
+  </macrodef>
+  <target name="tar" depends="package" description="Make release tarball">
+    <macro_tar param.destfile="${build.dir}/${final.name}.tar.gz">
+      <param.listofitems>
+        <tarfileset dir="${build.dir}" mode="664">
+          <exclude name="${final.name}/bin/*" />
+          <include name="${final.name}/**" />
+        </tarfileset>
+        <tarfileset dir="${build.dir}" mode="755">
+          <include name="${final.name}/bin/*" />
+        </tarfileset>
+      </param.listofitems>
+    </macro_tar>
+  </target>
+
+  <target name="binary" depends="package" description="Make tarball without source and documentation">
+    <macro_tar param.destfile="${build.dir}/${final.name}-bin.tar.gz">
+      <param.listofitems>
+        <tarfileset dir="${build.dir}" mode="664">
+          <exclude name="${final.name}/bin/*" />
+          <exclude name="${final.name}/src/**" />
+          <exclude name="${final.name}/docs/**" />
+          <include name="${final.name}/**" />
+        </tarfileset>
+        <tarfileset dir="${build.dir}" mode="755">
+          <include name="${final.name}/bin/*" />
+        </tarfileset>
+      </param.listofitems>
+    </macro_tar>
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Javadoc                                                            -->
+  <!-- ================================================================== -->
+  <target name="javadoc" description="Generate javadoc">
+    <mkdir dir="${build.javadoc}"/>
+    <javadoc
+      overview="${src.dir}/overview.html"
+      packagenames="org.apache.hadoop.hbase.*"
+      destdir="${build.javadoc}"
+      author="true"
+      version="true"
+      use="true"
+      windowtitle="${Name} ${version} API"
+      doctitle="${Name} ${version} API"
+      bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
+      >
+    	<packageset dir="${src.dir}"/>
+        <link href="${javadoc.link.java}"/>
+        <classpath >
+          <path refid="classpath" />
+          <pathelement path="${java.class.path}"/>
+        </classpath>
+    	<group title="${Name}" packages="org.apache.hadoop.hbase.*"/>
+    </javadoc>
+  </target>	
 
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     -->
@@ -203,7 +292,7 @@
        debug="${javac.debug}"> 
     <classpath refid="test.classpath"/> 
     </javac>
-    <jar jarfile="${build.dir}/hbase-${version}-test.jar" >
+    <jar jarfile="${build.dir}/${final.name}-test.jar" >
       <fileset dir="${build.test}" includes="org/**" />
       <fileset dir="${build.classes}" />
       <fileset dir="${src.test}" includes="**/*.properties" />
