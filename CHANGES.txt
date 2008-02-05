@@ -28,6 +28,15 @@ Trunk (unreleased changes)
 
 Release 0.16.0
 
+  2008/02/04   HBase is now a subproject of Hadoop. The first HBase release as
+               a subproject will be release 0.1.0 which will be equivalent to
+               the version of HBase included in Hadoop 0.16.0. In order to
+               accomplish this, the HBase portion of HBASE-288 (formerly 
+               HADOOP-1398) has been backed out. Once 0.1.0 is frozen (depending
+               mostly on changes to infrastructure due to becoming a sub project
+               instead of a contrib project), this patch will re-appear on HBase
+               trunk.
+
   INCOMPATIBLE CHANGES
    HADOOP-2056 A table with row keys containing colon fails to split regions
    HADOOP-2079 Fix generated HLog, HRegion names
