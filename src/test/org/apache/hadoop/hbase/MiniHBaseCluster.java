@@ -233,7 +233,9 @@ public class MiniHBaseCluster implements HConstants {
    * Shut down the mini HBase cluster
    */
   public void shutdown() {
-    this.hbaseCluster.shutdown();
+    if (this.hbaseCluster != null) {
+      this.hbaseCluster.shutdown();
+    }
     if (shutdownDFS) {
       StaticTestEnvironment.shutdownDfs(cluster);
     }

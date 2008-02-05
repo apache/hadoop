@@ -178,7 +178,7 @@ public class InfoServer {
   private static String getWebAppsPath(final String path) throws IOException {
     URL url = InfoServer.class.getClassLoader().getResource(path);
     if (url == null) 
-      throw new IOException("webapps not found in CLASSPATH"); 
+      throw new IOException("webapps not found in CLASSPATH: " + path); 
     return url.toString();
   }
   

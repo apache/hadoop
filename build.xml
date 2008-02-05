@@ -18,6 +18,9 @@
 -->
 
 <project name="hbase" default="jar">
+  <property name="version" value="0.1.0-dev"/>
+  <property name="final.name" value="${name}-${version}"/>
+ 
   <!-- Load all the default properties, and any the user wants    -->
   <!-- to contribute (without having to type -D or edit this file -->
   <property file="${user.home}/${name}.build.properties" />
@@ -37,7 +40,7 @@
   <property name="build.dir" location="${basedir}/build"/>
   <property name="build.bin" location="${build.dir}/bin"/>
   <property name="build.conf" location="${build.dir}/conf"/>
-  <property name="build.webapps" location="${build.dir}/webpps"/>
+  <property name="build.webapps" location="${build.dir}/webapps"/>
   <property name="build.lib" location="${build.dir}/lib"/>
   <property name="build.classes" location="${build.dir}/classes"/>
   <property name="build.test" location="${build.dir}/test"/>
@@ -47,8 +50,6 @@
   <property name="test.log.dir" value="${test.build.dir}/logs"/>
   <property name="test.junit.output.format" value="plain"/>
 
-
-  <!-- all jars together -->
   <property name="javac.deprecation" value="off"/>
   <property name="javac.debug" value="on"/>
 
@@ -57,15 +58,20 @@
 
   <property name="build.encoding" value="ISO-8859-1"/>
 
-  <!-- the normal classpath -->
-  <fileset id="lib.jars" dir="${basedir}" includes="lib/*.jar"/>
+  <!--We need to have the hadoop jars ride in front of the hbase classes or we
+    get the below exceptions:
 
+     [junit] java.io.FileNotFoundException: file:/Users/stack/Documents/checkouts/hbase/trunk/build/webapps/dfs
+
+    When we move off 0.16.0 hadoop, fix HttpStatusServer
+   -->
+  <fileset id="lib.jars" dir="${basedir}" includes="lib/*.jar"/>
   <path id="classpath">
-    <pathelement location="${build.classes}"/>
     <fileset refid="lib.jars"/>
-      <fileset dir="${basedir}/lib/jetty-ext/">
-        <include name="*jar" />
+    <fileset dir="${lib.dir}/jetty-ext/">
+      <include name="*jar" />
     </fileset>
+    <pathelement location="${build.classes}"/>
     <pathelement location="${conf.dir}"/>
   </path>
 
@@ -75,12 +81,6 @@
     <mkdir dir="${build.test}"/>
     <mkdir dir="${build.examples}"/>
 
-    <!--Version is set only if called from hadoop build.xml. Set a default-->
-    <condition property="version" value="0.1.0-dev">
-      <not>
-        <isset property="version" />
-      </not>
-    </condition>
     <!--Copy webapps over to build dir. Exclude jsp and generated-src java
       classes -->
     <mkdir dir="${build.webapps}"/>
@@ -94,7 +94,7 @@
     <!--Copy bin, lib, and conf. too-->
     <mkdir dir="${build.lib}"/>
     <copy todir="${build.lib}">
-      <fileset dir="${basedir}/lib" />
+      <fileset dir="${lib.dir}" />
     </copy>
     <mkdir dir="${build.conf}"/>
     <copy todir="${build.conf}">
@@ -107,6 +107,9 @@
     <chmod perm="ugo+x" type="file">
       <fileset dir="${build.bin}" />
     </chmod>
+    <exec executable="sh">
+       <arg line="src/saveVersion.sh ${version}"/>
+    </exec>
   </target>
 
   <target name="javacc" if="javacc.home">
@@ -131,7 +134,6 @@
     debug="${javac.debug}"
     deprecation="${javac.deprecation}">
      <classpath refid="classpath"/>
-     <classpath path="path"/>
    </javac>
   </target>
 	
@@ -185,11 +187,12 @@
   <!-- Run unit tests                                                     -->
   <!-- ================================================================== -->
   <path id="test.classpath">
+    <path refid="classpath"/>
     <pathelement location="${build.test}" />
     <pathelement location="${src.test}"/>
     <pathelement location="${conf.dir}"/>
     <pathelement location="${build.dir}"/>
-    <path refid="classpath"/>
+    <pathelement location="${build.webapps}"/>
   </path>
 
   <target name="compile-test" depends="compile" > 
