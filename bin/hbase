@@ -38,15 +38,10 @@
 #
 #   HBASE_ROOT_LOGGER The root appender. Default is INFO,console
 #
-#   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
-#
-#   HADOOP_HOME      Hadoop home directory.
-#
-
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-# This will set HBASE_HOME, HADOOP_HOME, etc.
+# This will set HBASE_HOME, etc.
 . "$bin"/hbase-config.sh
 
 cygwin=false
@@ -56,7 +51,7 @@ esac
 
 # if no args specified, show usage
 if [ $# = 0 ]; then
-  echo "Usage: hbase [--hadoop=hadoopdir] <command>"
+  echo "Usage: hbase <command>"
   echo "where <command> is one of:"
   echo "  shell            run the Hbase shell"
   echo "  master           run an Hbase HMaster node" 
@@ -101,10 +96,6 @@ if [ "$HBASE_HEAPSIZE" != "" ]; then
 fi
 
 # CLASSPATH initially contains $HBASE_CONF_DIR
-# Add HADOOP_CONF_DIR if its been defined.
-if [ ! "$HADOOP_CONF_DIR" = "" ]; then
-    CLASSPATH="${CLASSPATH}:${HADOOP_CONF_DIR}"
-fi
 CLASSPATH="${CLASSPATH}:${HBASE_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
@@ -143,7 +134,6 @@ done
 
 
 # default log directory & file
-# TODO: Should we log to hadoop or under hbase?
 if [ "$HBASE_LOG_DIR" = "" ]; then
   HBASE_LOG_DIR="$HBASE_HOME/logs"
 fi
@@ -154,9 +144,8 @@ fi
 # cygwin path translation
 if $cygwin; then
   CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-  HADOOP_HOME=`cygpath -d "$HADOOP_HOME"`
   HBASE_HOME=`cygpath -d "$HBASE_HOME"`
-  HADOOP_LOG_DIR=`cygpath -d "$HADOOP_LOG_DIR"`
+  HBASE_LOG_DIR=`cygpath -d "$HBASE_LOG_DIR"`
 fi
 
 # cygwin path translation
@@ -189,10 +178,10 @@ fi
 # 'cost' to have this flag enabled. Its a 1.6 flag only. See:
 # http://blogs.sun.com/alanb/entry/outofmemoryerror_looks_a_bit_better 
 HBASE_OPTS="$HBASE_OPTS -XX:+HeapDumpOnOutOfMemoryError"
-HBASE_OPTS="$HBASE_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
-HBASE_OPTS="$HBASE_OPTS -Dhadoop.log.file=$HADOOP_LOGFILE"
-HBASE_OPTS="$HBASE_OPTS -Dhadoop.home.dir=$HADOOP_HOME"
-HBASE_OPTS="$HBASE_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
+HBASE_OPTS="$HBASE_OPTS -Dhbase.log.dir=$HBASE_LOG_DIR"
+HBASE_OPTS="$HBASE_OPTS -Dhbase.log.file=$HBASE_LOGFILE"
+HBASE_OPTS="$HBASE_OPTS -Dhbase.home.dir=$HBASE_HOME"
+HBASE_OPTS="$HBASE_OPTS -Dhbase.id.str=$HBASE_IDENT_STRING"
 HBASE_OPTS="$HBASE_OPTS -Dhbase.root.logger=${HBASE_ROOT_LOGGER:-INFO,console}"
 HBASE_OPTS="$HBASE_OPTS -Dhbase.home.dir=$HBASE_HOME"
 if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then

@@ -20,13 +20,11 @@
 # * limitations under the License.
 # */
 # 
-# Run a Hadoop hbase command on all slave hosts.
+# Run a hbase command on all slave hosts.
 # Modelled after $HADOOP_HOME/bin/hadoop-daemons.sh
 
-usage="Usage: hbase-daemons.sh [--hadoop <hadoop-home>]
- [--config <hadoop-confdir>] [--hbase <hbase-home>]\
- [--hbaseconfig <hbase-confdir>] [--hosts regionserversfile]\
- [start|stop] command args..."
+usage="Usage: hbase-daemons.sh [--config <hbase-confdir>] \
+ [--hosts regionserversfile] [start|stop] command args..."
 
 # if no args specified, show usage
 if [ $# -le 1 ]; then
@@ -39,8 +37,6 @@ bin=`cd "$bin"; pwd`
 
 . $bin/hbase-config.sh
 
-exec "$bin/regionservers.sh" --config "${HADOOP_CONF_DIR}" \
- --hbaseconfig "${HBASE_CONF_DIR}" --hadoop "${HADOOP_HOME}" \
+exec "$bin/regionservers.sh" --config "${HBASE_CONF_DIR}" \
  cd "${HBASE_HOME}" \; \
- "$bin/hbase-daemon.sh" --config "${HADOOP_CONF_DIR}" \
- --hbaseconfig "${HBASE_CONF_DIR}" --hadoop "${HADOOP_HOME}" "$@"
+ "$bin/hbase-daemon.sh" --config "${HBASE_CONF_DIR}" "$@"

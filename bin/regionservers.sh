@@ -33,8 +33,7 @@
 #
 # Modelled after $HADOOP_HOME/bin/slaves.sh.
 
-usage="Usage: regionservers [--config <hadoop-confdir>]\
- [--hbaseconfig <hbase-confdir>] command..."
+usage="Usage: regionservers [--config <hbase-confdir>] command..."
 
 # if no args specified, show usage
 if [ $# -le 0 ]; then
@@ -52,9 +51,6 @@ bin=`cd "$bin"; pwd`
 # hbase-env.sh. Save it here.
 HOSTLIST=$HBASE_REGIONSERVERS
 
-if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
-  . "${HADOOP_CONF_DIR}/hadoop-env.sh"
-fi
 if [ -f "${HBASE_CONF_DIR}/hbase-env.sh" ]; then
   . "${HBASE_CONF_DIR}/hbase-env.sh"
 fi
@@ -68,10 +64,10 @@ if [ "$HOSTLIST" = "" ]; then
 fi
 
 for regionserver in `cat "$HOSTLIST"`; do
- ssh $HADOOP_SSH_OPTS $regionserver $"${@// /\\ }" \
+ ssh $HBASE_SSH_OPTS $regionserver $"${@// /\\ }" \
    2>&1 | sed "s/^/$regionserver: /" &
- if [ "$HADOOP_SLAVE_SLEEP" != "" ]; then
-   sleep $HADOOP_SLAVE_SLEEP
+ if [ "$HBASE_SLAVE_SLEEP" != "" ]; then
+   sleep $HBASE_SLAVE_SLEEP
  fi
 done
 

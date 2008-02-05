@@ -29,5 +29,4 @@ bin=`cd "$bin"; pwd`
 
 . "$bin"/hbase-config.sh
 
-"$bin"/hbase-daemon.sh --config "${HADOOP_CONF_DIR}" \
-    --hbaseconfig "${HBASE_CONF_DIR}" stop master
+"$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" stop master

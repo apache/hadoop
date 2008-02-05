@@ -38,8 +38,6 @@ if [ $errCode -ne 0 ]
 then
   exit $errCode
 fi
-"$bin"/hbase-daemon.sh --config "${HADOOP_CONF_DIR}" \
-    --hbaseconfig "${HBASE_CONF_DIR}" start master 
-"$bin"/hbase-daemons.sh --config "${HADOOP_CONF_DIR}" \
-    --hbaseconfig "${HBASE_CONF_DIR}" --hadoop "${HADOOP_HOME}" \
-    --hosts "${HBASE_REGIONSERVERS}" start regionserver
+"$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" start master 
+"$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
+  --hosts "${HBASE_REGIONSERVERS}" start regionserver

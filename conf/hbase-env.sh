@@ -35,3 +35,23 @@
 
 # File naming hosts on which HRegionServers will run.  $HBASE_HOME/conf/regionservers by default.
 # export HBASE_REGIONSERVERS=${HBASE_HOME}/conf/regionservers
+
+# Extra ssh options.  Empty by default.
+# export HBASE_SSH_OPTS="-o ConnectTimeout=1 -o SendEnv=HBASE_CONF_DIR"
+
+# Where log files are stored.  $HBASE_HOME/logs by default.
+# export HBASE_LOG_DIR=${HBASE_HOME}/logs
+
+# A string representing this instance of hbase. $USER by default.
+# export HBASE_IDENT_STRING=$USER
+
+# The scheduling priority for daemon processes.  See 'man nice'.
+# export HBASE_NICENESS=10
+
+# The directory where pid files are stored. /tmp by default.
+# export HBASE_PID_DIR=/var/hadoop/pids
+
+# Seconds to sleep between slave commands.  Unset by default.  This
+# can be useful in large clusters, where, e.g., slave rsyncs can
+# otherwise arrive faster than the master can service them.
+# export HBASE_SLAVE_SLEEP=0.1
