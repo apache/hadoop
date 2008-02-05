@@ -107,7 +107,7 @@ if [ -d "$HBASE_HOME/build/test" ]; then
   CLASSPATH=${CLASSPATH}:$HBASE_HOME/hbase/test
 fi
 if [ -d "$HBASE_HOME/build/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HBASE_HOME/build/webapps
+  CLASSPATH=${CLASSPATH}:$HBASE_HOME/build
 fi
 
 # so that filenames w/ spaces are handled correctly in loops below
