@@ -103,6 +103,7 @@ fi
 case $startStop in
 
   (start)
+    mkdir -p "$HBASE_PID_DIR"
     if [ -f $pid ]; then
       if kill -0 `cat $pid` > /dev/null 2>&1; then
         echo $command running as process `cat $pid`.  Stop it first.
