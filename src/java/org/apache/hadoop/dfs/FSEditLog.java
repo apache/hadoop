@@ -21,7 +21,6 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
@@ -33,7 +32,6 @@ import java.nio.channels.FileChannel;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.permission.*;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * FSEditLog maintains a log of the namespace modifications.
@@ -252,7 +250,7 @@ class FSEditLog {
         editStreams.add(eStream);
       } catch (IOException e) {
         FSNamesystem.LOG.warn("Unable to open edit log file " + eFile);
-        processIOError(idx); 
+        fsimage.processIOError(idx);
         idx--; 
       }
     }
@@ -306,13 +304,14 @@ class FSEditLog {
 
   /**
    * If there is an IO Error on any log operations, remove that
-   * directory from the list of directories. If no more directories
-   * remain, then raise an exception that will possibly cause the
-   * server to exit
+   * directory from the list of directories.
+   * If no more directories remain, then exit.
    */
-  synchronized void processIOError(int index) throws IOException {
+  synchronized void processIOError(int index) {
     if (editStreams == null || editStreams.size() <= 1) {
-      throw new IOException("Checkpoint directories inaccessible.");
+      FSNamesystem.LOG.fatal(
+      "Fatal Error : All storage directories are inaccessible."); 
+      Runtime.getRuntime().exit(-1);
     }
     assert(index < getNumStorageDirs());
     assert(getNumStorageDirs() == editStreams.size());
@@ -346,13 +345,13 @@ class FSEditLog {
                                  "Fatal Error.");
           Runtime.getRuntime().exit(-1);
       }
-      try {
-        processIOError(j);         
-      } catch (IOException e) {
-        FSNamesystem.LOG.error("Unable to sync edit log. Fatal Error : " + 
-                               StringUtils.stringifyException(e));
-        Runtime.getRuntime().exit(-1);
-      }
+      processIOError(j);
+    }
+    int failedStreamIdx = 0;
+    while(failedStreamIdx >= 0) {
+      failedStreamIdx = fsimage.incrementCheckpointTime();
+      if(failedStreamIdx >= 0)
+        processIOError(failedStreamIdx);
     }
   }
 
@@ -649,13 +648,7 @@ class FSEditLog {
           w.write(od);
         }
       } catch (IOException ie) {
-        try {
-          processIOError(idx);         
-        } catch (IOException e) {
-          FSNamesystem.LOG.error("Unable to append to edit log. " +
-                                 "Fatal Error.");
-          Runtime.getRuntime().exit(-1);
-        }
+        processIOError(idx);         
       }
     }
     // get a new transactionId

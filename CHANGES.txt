@@ -1,5 +1,8 @@
 Hadoop Change Log
 
+    HADOOP-1188. fstime file is updated when a storage directory containing
+    namespace image becomes inaccessible. (shv)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES
