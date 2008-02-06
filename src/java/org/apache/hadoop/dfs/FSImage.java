@@ -442,16 +442,31 @@ class FSImage extends Storage {
   }
 
   /**
-   * If there is an IO Error on any log operations, remove that
-   * directory from the list of directories. If no more directories
-   * remain, then raise an exception that will possibly cause the
-   * server to exit
+   * Record new checkpoint time in order to
+   * distinguish healthy directories from the removed ones.
+   * 
+   * @return -1 if successful, or the index of the failed storage directory.
    */
-  void processIOError(int index) throws IOException {
-    int nrDirs = getNumStorageDirs();
-    assert(index >= 0 && index < nrDirs);
-    if (nrDirs <= 1)
-      throw new IOException("Checkpoint directories inaccessible.");
+  int incrementCheckpointTime() {
+    this.checkpointTime++;
+    // Write new checkpoint time.
+    for(int idx = 0; idx < getNumStorageDirs(); idx++) {
+      try {
+        StorageDirectory sd = getStorageDir(idx);
+        writeCheckpointTime(sd);
+      } catch(IOException e) { 
+        return idx;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * If there is an IO Error on any log operations, remove that
+   * directory from the list of directories.
+   */
+  void processIOError(int index) {
+    assert(index >= 0 && index < getNumStorageDirs());
     storageDirs.remove(index);
   }
 

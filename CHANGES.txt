@@ -23,6 +23,9 @@ Trunk (unreleased changes)
 
     HADOOP-2779.  Remove the references to HBase in the build.xml. (omalley)
 
+    HADOOP-1188. fstime file is updated when a storage directory containing
+    namespace image becomes inaccessible. (shv)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES
