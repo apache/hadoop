@@ -23,14 +23,23 @@ Trunk (unreleased changes)
 
     HADOOP-2779.  Remove the references to HBase in the build.xml. (omalley)
 
-    HADOOP-1188. fstime file is updated when a storage directory containing
-    namespace image becomes inaccessible. (shv)
-
     HADOOP-2194. dfs cat on a non-existent file throws FileNotFoundException.
     (Mahadev Konar via dhruba)
 
     HADOOP-2767. Fix for NetworkTopology erroneously skipping the last leaf 
     node on a rack. (Hairong Kuang and Mark Butler via dhruba)
+
+Release 0.16.1 - Unrelease
+
+  BUG FIXES
+
+    HADOOP-1188. fstime file is updated when a storage directory containing
+    namespace image becomes inaccessible. (shv)
+
+    HADOOP-2787. An application can set a configuration variable named
+    dfs.umask to set the umask that is used by DFS.
+    (Tsz Wo (Nicholas), SZE via dhruba)
+
 
 Release 0.16.0 - 2008-02-07
 
