@@ -1,7 +1,18 @@
 HBase Change Log
 
+  INCOMPATIBLE CHANGES
+   HBASE-288 Add in-memory caching of data. Required update of hadoop to 
+            0.17.0-dev.2008-02-07_12-01-58. (Tom White via Stack) 
 
-Trunk (unreleased changes)
+  NEW FEATURES
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+  IMPROVEMENTS
+
+Branch 0.1
 
   INCOMPATIBLE CHANGES
    HADOOP-2750 Deprecated methods startBatchUpdate, commitBatch, abortBatch, 

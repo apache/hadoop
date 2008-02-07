@@ -202,6 +202,8 @@ public class AlterCommand extends SchemaModificationCommand {
             .get(spec)).toUpperCase());
       } else if (spec.equals("IN_MEMORY")) {
         inMemory = (Boolean) columnSpec.get(spec);
+      } else if (spec.equals("BLOCK_CACHE_ENABLED")) {
+        blockCacheEnabled = (Boolean) columnSpec.get(spec);
       } else if (spec.equals("BLOOMFILTER")) {
         bloomFilterType = BloomFilterType.valueOf(((String) columnSpec.get(spec))
             .toUpperCase());
@@ -229,7 +231,8 @@ public class AlterCommand extends SchemaModificationCommand {
     column = appendDelimiter(column);
 
     HColumnDescriptor columnDesc = new HColumnDescriptor(new Text(column),
-        maxVersions, compression, inMemory, maxLength, bloomFilterDesc);
+        maxVersions, compression, inMemory, blockCacheEnabled,
+        maxLength, bloomFilterDesc);
 
     return columnDesc;
   }
@@ -243,6 +246,7 @@ public class AlterCommand extends SchemaModificationCommand {
     maxLength = original.getMaxValueLength();
     compression = original.getCompression();
     inMemory = original.isInMemory();
+    blockCacheEnabled = original.isBlockCacheEnabled();
     bloomFilterDesc = original.getBloomFilter();
   }
 }

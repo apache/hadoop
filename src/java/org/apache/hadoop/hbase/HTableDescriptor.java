@@ -43,15 +43,15 @@ public class HTableDescriptor implements WritableComparable {
   public static final HTableDescriptor rootTableDesc =
     new HTableDescriptor(HConstants.ROOT_TABLE_NAME,
         new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
-            HColumnDescriptor.CompressionType.NONE, false, Integer.MAX_VALUE,
-            null));
+            HColumnDescriptor.CompressionType.NONE, false, false,
+            Integer.MAX_VALUE, null));
   
   /** table descriptor for meta table */
   public static final HTableDescriptor metaTableDesc =
     new HTableDescriptor(HConstants.META_TABLE_NAME,
         new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
-            HColumnDescriptor.CompressionType.NONE, false, Integer.MAX_VALUE,
-            null));
+            HColumnDescriptor.CompressionType.NONE, false, false,
+            Integer.MAX_VALUE, null));
   
   private boolean rootregion;
   private boolean metaregion;

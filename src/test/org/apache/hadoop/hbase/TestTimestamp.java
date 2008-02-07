@@ -337,7 +337,7 @@ public class TestTimestamp extends HBaseTestCase {
   private HRegion createRegion() throws IOException {
     HTableDescriptor htd = createTableDescriptor(getName());
     htd.addFamily(new HColumnDescriptor(COLUMN, VERSIONS,
-      CompressionType.NONE, false, Integer.MAX_VALUE, null));
+      CompressionType.NONE, false, false, Integer.MAX_VALUE, null));
     return createNewHRegion(htd, null, null);
   }
 }

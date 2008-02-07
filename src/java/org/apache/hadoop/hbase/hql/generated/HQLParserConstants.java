@@ -52,21 +52,22 @@ public interface HQLParserConstants {
   int BLOCK = 50;
   int RECORD = 51;
   int IN_MEMORY = 52;
-  int BLOOMFILTER = 53;
-  int COUNTING_BLOOMFILTER = 54;
-  int RETOUCHED_BLOOMFILTER = 55;
-  int VECTOR_SIZE = 56;
-  int NUM_HASH = 57;
-  int NUM_ENTRIES = 58;
-  int ADD = 59;
-  int CHANGE = 60;
-  int COUNT = 61;
-  int ID = 62;
-  int INTEGER_LITERAL = 63;
-  int FLOATING_POINT_LITERAL = 64;
-  int EXPONENT = 65;
-  int QUOTED_IDENTIFIER = 66;
-  int STRING_LITERAL = 67;
+  int BLOCK_CACHE_ENABLED = 53;
+  int BLOOMFILTER = 54;
+  int COUNTING_BLOOMFILTER = 55;
+  int RETOUCHED_BLOOMFILTER = 56;
+  int VECTOR_SIZE = 57;
+  int NUM_HASH = 58;
+  int NUM_ENTRIES = 59;
+  int ADD = 60;
+  int CHANGE = 61;
+  int COUNT = 62;
+  int ID = 63;
+  int INTEGER_LITERAL = 64;
+  int FLOATING_POINT_LITERAL = 65;
+  int EXPONENT = 66;
+  int QUOTED_IDENTIFIER = 67;
+  int STRING_LITERAL = 68;
 
   int DEFAULT = 0;
 
@@ -124,6 +125,7 @@ public interface HQLParserConstants {
     "\"block\"",
     "\"record\"",
     "\"in_memory\"",
+    "\"block_cache_enabled\"",
     "\"bloomfilter\"",
     "\"counting_bloomfilter\"",
     "\"retouched_bloomfilter\"",
