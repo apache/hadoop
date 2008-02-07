@@ -119,7 +119,8 @@ public class HLog implements HConstants {
   volatile long logSeqNum = 0;
 
   volatile long filenum = 0;
-
+  volatile long old_filenum = -1;
+  
   volatile int numEntries = 0;
 
   // This lock prevents starting a log roll during a cache flush.
@@ -215,7 +216,7 @@ public class HLog implements HConstants {
         if (this.writer != null) {
           // Close the current writer, get a new one.
           this.writer.close();
-          Path p = computeFilename(filenum - 1);
+          Path p = computeFilename(old_filenum);
           if (LOG.isDebugEnabled()) {
             LOG.debug("Closing current log writer " + p.toString() +
             " to get a new one");
@@ -226,7 +227,9 @@ public class HLog implements HConstants {
             }
           }
         }
-        Path newPath = computeFilename(filenum++);
+        old_filenum = filenum;
+        filenum = System.currentTimeMillis();
+        Path newPath = computeFilename(filenum);
         this.writer = SequenceFile.createWriter(this.fs, this.conf, newPath,
             HLogKey.class, HLogEdit.class, getCompressionType(this.conf));
         LOG.info("new log writer created at " + newPath);
@@ -294,8 +297,7 @@ public class HLog implements HConstants {
    * file-number.
    */
   Path computeFilename(final long fn) {
-    return new Path(dir,
-      HLOG_DATFILE + String.format("%1$03d", Long.valueOf(fn)));
+    return new Path(dir, HLOG_DATFILE + new Long(fn).toString());
   }
 
   /**
