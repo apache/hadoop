@@ -9,6 +9,8 @@ HBase Change Log
   OPTIMIZATIONS
 
   BUG FIXES
+   HBASE-19    CountingBloomFilter can overflow its storage
+               (Stu Hood and Bryan Duxbury via Stack)
 
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling

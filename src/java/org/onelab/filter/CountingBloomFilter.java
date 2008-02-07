@@ -50,6 +50,7 @@ package org.onelab.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * Implements a <i>counting Bloom filter</i>, as defined by Fan et al. in a ToN
@@ -61,15 +62,18 @@ import java.io.IOException;
  * 
  * contract <a href="http://www.one-lab.org">European Commission One-Lab Project 034819</a>.
  *
- * @version 1.0 - 5 Feb. 07
+ * @version 1.1 - 19 Jan. 08
  * 
  * @see org.onelab.filter.Filter The general behavior of a filter
  * 
  * @see <a href="http://portal.acm.org/citation.cfm?id=343571.343572">Summary cache: a scalable wide-area web cache sharing protocol</a>
  */
 public final class CountingBloomFilter extends Filter {
-  /** Counter vector. */
-  private byte[] vector;
+  /** Storage for the counting buckets */
+  private long[] buckets;
+
+  /** We are using 4bit buckets, so each bucket can count to 15 */
+  private final static long BUCKET_MAX_VALUE = 15;
 
   /** Default constructor - use with readFields */
   public CountingBloomFilter() {}
@@ -81,8 +85,14 @@ public final class CountingBloomFilter extends Filter {
    */
   public CountingBloomFilter(int vectorSize, int nbHash){
     super(vectorSize, nbHash);
-    vector = new byte[vectorSize];
+    buckets = new long[buckets2words(vectorSize)];
   }//end constructor
+
+  /** returns the number of 64 bit words it would take to hold vectorSize buckets */
+  private static int buckets2words(int vectorSize) {
+   return ((vectorSize - 1) >>> 4) + 1;
+  }
+
 
   /** {@inheritDoc} */
   @Override
@@ -95,7 +105,18 @@ public final class CountingBloomFilter extends Filter {
     hash.clear();
 
     for(int i = 0; i < nbHash; i++) {
-      vector[h[i]]++;
+      // find the bucket
+      int wordNum = h[i] >> 4;          // div 16
+      int bucketShift = (h[i] & 0x0f) << 2;  // (mod 16) * 4
+      
+      long bucketMask = 15L << bucketShift;
+      long bucketValue = (buckets[wordNum] & bucketMask) >>> bucketShift;
+      
+      // only increment if the count in the bucket is less than BUCKET_MAX_VALUE
+      if(bucketValue < BUCKET_MAX_VALUE) {
+        // increment by 1
+        buckets[wordNum] = (buckets[wordNum] & ~bucketMask) | ((bucketValue + 1) << bucketShift);
+      }
     }
   }//end add()
 
@@ -117,8 +138,17 @@ public final class CountingBloomFilter extends Filter {
     hash.clear();
 
     for(int i = 0; i < nbHash; i++) {
-      if(vector[h[i]] >= 1) {
-        vector[h[i]]--;
+      // find the bucket
+      int wordNum = h[i] >> 4;          // div 16
+      int bucketShift = (h[i] & 0x0f) << 2;  // (mod 16) * 4
+      
+      long bucketMask = 15L << bucketShift;
+      long bucketValue = (buckets[wordNum] & bucketMask) >>> bucketShift;
+      
+      // only decrement if the count in the bucket is between 0 and BUCKET_MAX_VALUE
+      if(bucketValue >= 1 && bucketValue < BUCKET_MAX_VALUE) {
+        // decrement by 1
+        buckets[wordNum] = (buckets[wordNum] & ~bucketMask) | ((bucketValue - 1) << bucketShift);
       }
     }
   }//end delete
@@ -133,9 +163,10 @@ public final class CountingBloomFilter extends Filter {
       throw new IllegalArgumentException("filters cannot be and-ed");
     }
     CountingBloomFilter cbf = (CountingBloomFilter)filter;
-
-    for(int i = 0; i < vectorSize; i++) {
-      this.vector[i] &= cbf.vector[i];
+    
+    int sizeInWords = buckets2words(vectorSize);
+    for(int i = 0; i < sizeInWords; i++) {
+      this.buckets[i] &= cbf.buckets[i];
     }
   }//end and()
 
@@ -150,7 +181,13 @@ public final class CountingBloomFilter extends Filter {
     hash.clear();
 
     for(int i = 0; i < nbHash; i++) {
-      if(vector[h[i]] == 0) {
+      // find the bucket
+      int wordNum = h[i] >> 4;          // div 16
+      int bucketShift = (h[i] & 0x0f) << 2;  // (mod 16) * 4
+
+      long bucketMask = 15L << bucketShift;
+
+      if((buckets[wordNum] & bucketMask) == 0) {
         return false;
       }
     }
@@ -177,8 +214,9 @@ public final class CountingBloomFilter extends Filter {
 
     CountingBloomFilter cbf = (CountingBloomFilter)filter;
 
-    for(int i = 0; i < vectorSize; i++) {
-      this.vector[i] |= cbf.vector[i];
+    int sizeInWords = buckets2words(vectorSize);
+    for(int i = 0; i < sizeInWords; i++) {
+      this.buckets[i] |= cbf.buckets[i];
     }
   }//end or()
 
@@ -199,7 +237,14 @@ public final class CountingBloomFilter extends Filter {
       if(i > 0) {
         res.append(" ");
       }
-      res.append(vector[i]&0xff);
+      
+      int wordNum = i >> 4;          // div 16
+      int bucketShift = (i & 0x0f) << 2;  // (mod 16) * 4
+      
+      long bucketMask = 15L << bucketShift;
+      long bucketValue = (buckets[wordNum] & bucketMask) >>> bucketShift;
+      
+      res.append(bucketValue);
     }
 
     return res.toString();
@@ -209,7 +254,7 @@ public final class CountingBloomFilter extends Filter {
   @Override
   public Object clone(){
     CountingBloomFilter cbf = new CountingBloomFilter(vectorSize, nbHash);
-    cbf.or(this);
+    cbf.buckets = this.buckets.clone();
     return cbf;
   }//end clone()
 
@@ -219,8 +264,9 @@ public final class CountingBloomFilter extends Filter {
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
-    for(int i = 0; i < vector.length; i++) {
-      out.writeByte(vector[i]);
+    int sizeInWords = buckets2words(vectorSize);
+    for(int i = 0; i < sizeInWords; i++) {
+      out.writeLong(buckets[i]);
     }
   }
 
@@ -228,9 +274,10 @@ public final class CountingBloomFilter extends Filter {
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
-    vector = new byte[vectorSize];
-    for(int i = 0; i < vector.length; i++) {
-      vector[i] = in.readByte();
+    int sizeInWords = buckets2words(vectorSize);
+    buckets = new long[sizeInWords];
+    for(int i = 0; i < sizeInWords; i++) {
+      buckets[i] = in.readLong();
     }
   }
 }//end class

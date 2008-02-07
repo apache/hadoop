@@ -94,6 +94,27 @@ public class TestFilter extends TestCase {
     assertTrue(bf.membershipTest(new StringKey("graknyl")));
     assertFalse(bf.membershipTest(new StringKey("xyzzy")));
     assertFalse(bf.membershipTest(new StringKey("abcd")));
+
+    // delete 'key', and check that it is no longer a member
+    ((CountingBloomFilter)bf).delete(key);
+    assertFalse(bf.membershipTest(key));
+    
+    // OR 'key' back into the filter
+    Filter bf2 = new CountingBloomFilter(8, 2);
+    bf2.add(key);
+    bf.or(bf2);
+    assertTrue(bf.membershipTest(key));
+    assertTrue(bf.membershipTest(new StringKey("graknyl")));
+    assertFalse(bf.membershipTest(new StringKey("xyzzy")));
+    assertFalse(bf.membershipTest(new StringKey("abcd")));
+    
+    // to test for overflows, add 'key' enough times to overflow an 8bit bucket,
+    // while asserting that it stays a member
+    for(int i = 0; i < 257; i++){
+      bf.add(key);
+      assertTrue(bf.membershipTest(key));
+    }
+    
   }
   
   /** Test a DynamicBloomFilter
