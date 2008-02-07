@@ -20,8 +20,9 @@ HBase Change Log
    HBASE-409   Add build path to svn:ignore list (Edward Yoon via Stack)
    HBASE-408   Add .classpath and .project to svn:ignore list
                (Edward Yoon via Stack)
-   HBASE-410   Speed up the test suite (make test timeout 5 minutes instead of
-               15.
+   HBASE-410   Speed up the test suite (make test timeout 5 instead of 15 mins).
+   HBASE-281   Shell should allow deletions in .META. and -ROOT- tables
+               (Edward Yoon & Bryan Duxbury via Stack)
 
 Branch 0.1
 
