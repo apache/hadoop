@@ -1,4 +1,4 @@
-HBase Change Log
+Hbase Change Log
 
   INCOMPATIBLE CHANGES
    HBASE-288 Add in-memory caching of data. Required update of hadoop to 
@@ -26,6 +26,8 @@ HBase Change Log
    HBASE-281   Shell should allow deletions in .META. and -ROOT- tables
                (Edward Yoon & Bryan Duxbury via Stack)
    HBASE-56    Unnecessary HQLClient Object creation in a shell loop
+               (Edward Yoon via Stack)
+
 
 Branch 0.1
 
@@ -48,6 +50,7 @@ Branch 0.1
                (Bryan Duxbury & Stack)
    HADOOP-2773 Master marks region offline when it is recovering from a region
                server death
+   HBASE-425   Fix doc. so it accomodates new hbase untethered context
 
   IMPROVEMENTS
    HADOOP-2555 Refactor the HTable#get and HTable#getRow methods to avoid
