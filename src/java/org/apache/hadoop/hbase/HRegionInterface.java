@@ -140,7 +140,6 @@ public interface HRegionInterface extends VersionedProtocol {
    * Applies a batch of updates via one RPC
    * 
    * @param regionName name of the region to update
-   * @param timestamp the time to be associated with the changes
    * @param b BatchUpdate
    * @throws IOException
    */

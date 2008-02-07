@@ -1205,7 +1205,6 @@ public class HRegion implements HConstants {
   //////////////////////////////////////////////////////////////////////////////
   
   /**
-   * @param timestamp
    * @param b
    * @throws IOException
    */
