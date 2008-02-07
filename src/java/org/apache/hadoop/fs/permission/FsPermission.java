@@ -153,7 +153,7 @@ public class FsPermission implements Writable {
   }
 
   /** umask property label */
-  public static final String UMASK_LABEL = "hadoop.dfs.umask";
+  public static final String UMASK_LABEL = "dfs.umask";
   public static final int DEFAULT_UMASK = 0022;
 
   /** Get the user file creation mask (umask) */

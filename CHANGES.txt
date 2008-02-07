@@ -1,7 +1,16 @@
 Hadoop Change Log
 
+Release 0.16.1 - Unrelease
+
+  BUG FIXES
+
     HADOOP-1188. fstime file is updated when a storage directory containing
     namespace image becomes inaccessible. (shv)
+
+    HADOOP-2787. An application can set a configuration variable named
+    dfs.umask to set the umask that is used by DFS.
+    (Tsz Wo (Nicholas), SZE via dhruba)
+
 
 Release 0.16.0 - 2008-02-07
 
