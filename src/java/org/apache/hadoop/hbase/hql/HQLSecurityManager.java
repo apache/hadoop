@@ -43,7 +43,7 @@ public class HQLSecurityManager extends SecurityManager {
    */
   @SuppressWarnings("static-access")
   public void checkExit(int status) {
-    if (status != Shell.EXIT_FLAG) {
+    if (status != Constants.FLAG_EXIT) {
       // throw new ExitException(status);
 
       // I didn't figure out How can catch the ExitException in shell main.
@@ -51,11 +51,11 @@ public class HQLSecurityManager extends SecurityManager {
       Shell shell = new Shell();
 
       List<String> argList = new ArrayList<String>();
-      argList.add(String.valueOf(Shell.RELAUNCH_FLAG));
+      argList.add(String.valueOf(Constants.FLAG_RELAUNCH));
       if(Shell.HTML_OPTION != null)
         argList.add(Shell.HTML_OPTION);
-      if(Shell.MASTER_ADDRESS != null)
-        argList.add(Shell.MASTER_ADDRESS);
+      if(Shell.IP != null && Shell.PORT != -1)
+        argList.add("--master:" + Shell.IP + ":" + Shell.PORT);
 
       try {
         shell.main(argList.toArray(new String[] {}));

@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.util.VersionInfo;
 
 public class HelpCommand extends BasicCommand {
   private String argument;
@@ -34,10 +35,7 @@ public class HelpCommand extends BasicCommand {
       "Description", "Example" };
 
   /** application name */
-  public static final String APP_NAME = "Hbase Shell";
-
-  /** version of the code */
-  public static final String APP_VERSION = "0.0.2";
+  public static final String APP_NAME = "HQL";
 
   /** help contents map */
   public final Map<String, String[]> help = new HashMap<String, String[]>();
@@ -135,8 +133,8 @@ public class HelpCommand extends BasicCommand {
    * @throws IOException
    */
   public void printVersion() throws IOException {
-    println(APP_NAME + ", " + APP_VERSION + " version.\n"
-        + "Copyright (c) 2007 by udanax, "
+    println(APP_NAME + ", " + VersionInfo.getVersion() + " version.\n"
+        + "Copyright (c) 2008 by udanax, "
         + "licensed to Apache Software Foundation.\n"
         + "Type 'help;' for usage.\n");
   }

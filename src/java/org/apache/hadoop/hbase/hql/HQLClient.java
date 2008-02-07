@@ -26,37 +26,55 @@ import org.apache.hadoop.hbase.hql.generated.HQLParser;
 import org.apache.hadoop.hbase.hql.generated.ParseException;
 import org.apache.hadoop.hbase.hql.generated.TokenMgrError;
 
+/**
+ * HQL query language service client interfaces.
+ */
 public class HQLClient {
-  public static String MASTER_ADDRESS = null;
   static HBaseConfiguration conf;
-  static TableFormatter tableFormater;
-  static Writer out;
+  static TableFormatter tableFormatter = null;
+  static Writer out = null;
 
-  public HQLClient(HBaseConfiguration config, String master, Writer output,
+  /**
+   * Constructor
+   *  
+   * @param config HBaseConfiguration
+   * @param ip IP Address
+   * @param port port number
+   * @param writer writer
+   * @param formatter table formatter
+   */
+  public HQLClient(HBaseConfiguration config, String ip, int port, Writer writer,
       TableFormatter formatter) {
     conf = config;
-    out = output;
-    tableFormater = formatter;
-    MASTER_ADDRESS = master;
+    if (ip != null && port != -1)
+      conf.set("hbase.master", ip + ":" + port);
+    out = writer;
+    tableFormatter = formatter;
   }
 
+  /**
+   * Executes query.
+   * 
+   * @param query
+   * @return ReturnMsg object
+   */
   public ReturnMsg executeQuery(String query) {
-    HQLParser parser = new HQLParser(query, out, tableFormater);
-    ReturnMsg rs = null;
+    HQLParser parser = new HQLParser(query, out, tableFormatter);
+    ReturnMsg msg = null;
 
     try {
       Command cmd = parser.terminatedCommand();
       if (cmd != null) {
-        rs = cmd.execute(conf);
+        msg = cmd.execute(conf);
       }
     } catch (ParseException pe) {
-      String[] msg = pe.getMessage().split("[\n]");
-      rs = new ReturnMsg(-9, "Syntax error : Type 'help;' for usage.\nMessage : " + msg[0]);
+      msg = new ReturnMsg(Constants.ERROR_CODE,
+          "Syntax error : Type 'help;' for usage.");
     } catch (TokenMgrError te) {
-      String[] msg = te.getMessage().split("[\n]");
-      rs = new ReturnMsg(-9, "Lexical error : Type 'help;' for usage.\nMessage : " + msg[0]);
+      msg = new ReturnMsg(Constants.ERROR_CODE,
+          "Lexical error : Type 'help;' for usage.");
     }
 
-    return rs;
+    return msg;
   }
 }

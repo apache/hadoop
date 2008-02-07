@@ -25,6 +25,7 @@ HBase Change Log
    HBASE-410   Speed up the test suite (make test timeout 5 instead of 15 mins).
    HBASE-281   Shell should allow deletions in .META. and -ROOT- tables
                (Edward Yoon & Bryan Duxbury via Stack)
+   HBASE-56    Unnecessary HQLClient Object creation in a shell loop
 
 Branch 0.1
 

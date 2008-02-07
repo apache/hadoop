@@ -19,26 +19,12 @@
  */
 package org.apache.hadoop.hbase.hql;
 
-import java.io.Writer;
-
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.Shell;
-
-public class ExitCommand extends BasicCommand {
-  public ExitCommand(Writer o) {
-    super(o);
-  }
-
-  public ReturnMsg execute(@SuppressWarnings("unused")
-  HBaseConfiguration conf) {
-    // TOD: Is this the best way to exit? Would be a problem if shell is run
-    // inside another program -- St.Ack 09/11/2007
-    System.exit(Constants.FLAG_EXIT);
-    return null;
-  }
-
-  @Override
-  public CommandType getCommandType() {
-    return CommandType.SHELL;
-  }
+/**
+ * Some constants used in the hql. 
+ */
+public class Constants {
+  public static final int FLAG_RELAUNCH = 7;
+  public static final int FLAG_EXIT = 9999;
+  
+  public static final int ERROR_CODE = -1;
 }

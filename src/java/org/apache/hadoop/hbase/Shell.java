@@ -25,10 +25,11 @@ import java.io.Writer;
 
 import jline.ConsoleReader;
 
+import org.apache.hadoop.hbase.hql.Constants;
 import org.apache.hadoop.hbase.hql.HQLClient;
+import org.apache.hadoop.hbase.hql.HQLSecurityManager;
 import org.apache.hadoop.hbase.hql.HelpCommand;
 import org.apache.hadoop.hbase.hql.ReturnMsg;
-import org.apache.hadoop.hbase.hql.HQLSecurityManager;
 import org.apache.hadoop.hbase.hql.TableFormatter;
 import org.apache.hadoop.hbase.hql.TableFormatterFactory;
 import org.apache.hadoop.hbase.hql.formatter.HtmlTableFormatter;
@@ -42,10 +43,9 @@ import org.apache.hadoop.hbase.hql.formatter.HtmlTableFormatter;
 public class Shell {
   /** audible keyboard bells */
   public static final boolean DEFAULT_BELL_ENABLED = true;
-  public static String MASTER_ADDRESS = null;
+  public static String IP = null;
+  public static int PORT = -1;
   public static String HTML_OPTION = null;
-  public static int RELAUNCH_FLAG = 7;
-  public static int EXIT_FLAG = 9999;
 
   /** Return the boolean value indicating whether end of command or not */
   static boolean isEndOfCommand(String line) {
@@ -84,33 +84,33 @@ public class Shell {
         System.exit(1);
       }
     }
-    
+
     HBaseConfiguration conf = new HBaseConfiguration();
     ConsoleReader reader = new ConsoleReader();
     System.setSecurityManager(new HQLSecurityManager());
     reader.setBellEnabled(conf.getBoolean("hbaseshell.jline.bell.enabled",
         DEFAULT_BELL_ENABLED));
     Writer out = new OutputStreamWriter(System.out, "UTF-8");
-    TableFormatter tableFormater = new TableFormatterFactory(out, conf).get();
-    if (MASTER_ADDRESS != null) {
-      conf.set("hbase.master", MASTER_ADDRESS.substring(9, MASTER_ADDRESS.length()));
-    }
+    TableFormatter tableFormatter = new TableFormatterFactory(out, conf).get();
+
     if (HTML_OPTION != null) {
-      tableFormater = new HtmlTableFormatter(out);
+      tableFormatter = new HtmlTableFormatter(out);
     }
 
-    HelpCommand help = new HelpCommand(out, tableFormater);
-    if (args.length == 0 || !args[0].equals(String.valueOf(Shell.RELAUNCH_FLAG))) {
+    HelpCommand help = new HelpCommand(out, tableFormatter);
+    if (args.length == 0 || !args[0].equals(String.valueOf(Constants.FLAG_RELAUNCH))) {
       help.printVersion();
     }
+
     StringBuilder queryStr = new StringBuilder();
     String extendedLine;
+    HQLClient hql = new HQLClient(conf, IP, PORT, out, tableFormatter);
+
     while ((extendedLine = reader.readLine(getPrompt(queryStr))) != null) {
       if (isEndOfCommand(extendedLine)) {
         queryStr.append(" " + extendedLine);
         long start = System.currentTimeMillis();
 
-        HQLClient hql = new HQLClient(conf, MASTER_ADDRESS, out, tableFormater);
         ReturnMsg rs = hql.executeQuery(queryStr.toString());
 
         long end = System.currentTimeMillis();
@@ -132,7 +132,9 @@ public class Shell {
   private static void argumentParsing(String[] args) {
     for (int i = 0; i < args.length; i++) {
       if (args[i].toLowerCase().startsWith("--master:")) {
-        MASTER_ADDRESS = args[i];
+        String[] address = args[i].substring(9, args[i].length()).split(":");
+        IP = address[0];
+        PORT = Integer.valueOf(address[1]);
       } else if (args[i].toLowerCase().startsWith("--html")) {
         HTML_OPTION = args[i];
       }
