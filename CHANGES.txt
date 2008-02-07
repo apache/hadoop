@@ -26,6 +26,9 @@ Trunk (unreleased changes)
     HADOOP-1188. fstime file is updated when a storage directory containing
     namespace image becomes inaccessible. (shv)
 
+    HADOOP-2194. dfs cat on a non-existent file throws FileNotFoundException.
+    (Mahadev Konar via dhruba)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES

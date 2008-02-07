@@ -174,6 +174,37 @@ public class TestDFSShell extends TestCase {
     }
   }
 
+
+  /** check if we have any exceptions in cat command output */
+  public void testCatException() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    PrintStream bak = null;
+    try {
+      cluster = new MiniDFSCluster(conf, 2, true, null);
+      Path root = new Path("/nonexistentfile");
+      bak = System.err;
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      PrintStream tmp = new PrintStream(out);
+      System.setErr(tmp);
+      String[] argv = new String[2];
+      argv[0] = "-cat";
+      argv[1] = root.toUri().getPath();
+      int ret = ToolRunner.run(new FsShell(), argv);
+      assertTrue(" -cat returned -1 ", 0>=ret);
+      String returned = out.toString();
+      assertTrue("cat does not print exceptions ",
+          (returned.lastIndexOf("Exception") == -1));
+    } finally {
+      if (bak != null) {
+        System.setErr(bak);
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+  
   public void testText() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;

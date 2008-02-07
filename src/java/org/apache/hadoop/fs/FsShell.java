@@ -300,7 +300,7 @@ public class FsShell extends Configured implements Tool {
     new DelayedExceptionThrowing() {
       @Override
       void process(Path p) throws IOException {
-        if (fs.isDirectory(p)) {
+        if (fs.getFileStatus(p).isDir()) {
           throw new IOException("Source must be a file.");
         }
         printToStdout(fs.open(p));
