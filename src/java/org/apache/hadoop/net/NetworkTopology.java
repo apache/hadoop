@@ -90,7 +90,7 @@ public class NetworkTopology {
         
     /** Judge if this node is an ancestor of node <i>n</i>
      * 
-     * @param n: a node
+     * @param n a node
      * @return true if this node is an ancestor of <i>n</i>
      */
     boolean isAncestor(Node n) {
@@ -101,7 +101,7 @@ public class NetworkTopology {
         
     /** Judge if this node is the parent of node <i>n</i>
      * 
-     * @param n: a node
+     * @param n a node
      * @return true if this node is the parent of <i>n</i>
      */
     boolean isParent(Node n) {
@@ -173,7 +173,7 @@ public class NetworkTopology {
     }
         
     /** Remove node <i>n</i> from the subtree of this node
-     * @parameter n node to be deleted 
+     * @param n node to be deleted 
      * @return true if the node is deleted; false otherwise
      */
     boolean remove(Node n) {
@@ -241,30 +241,29 @@ public class NetworkTopology {
       }
     }
         
-    /** get <i>leaveIndex</i> leaf of this subtree 
+    /** get <i>leafIndex</i> leaf of this subtree 
      * if it is not in the <i>excludedNode</i>*/
-    private Node getLeaf(int leaveIndex, Node excludedNode) {
+    private Node getLeaf(int leafIndex, Node excludedNode) {
       int count=0;
-      int numOfExcludedLeaves = 1;
-      if (excludedNode instanceof InnerNode) {
-        numOfExcludedLeaves = ((InnerNode)excludedNode).getNumOfLeaves();
-      }
+      // check if the excluded node a leaf
+      boolean isLeaf =
+        excludedNode == null || !(excludedNode instanceof InnerNode);
+      // calculate the total number of excluded leaf nodes
+      int numOfExcludedLeaves =
+        isLeaf ? 1 : ((InnerNode)excludedNode).getNumOfLeaves();
       if (isRack()) { // children are leaves
-        // range check
-        if (leaveIndex<0 || leaveIndex>=this.getNumOfChildren()) {
-          return null;
-        }
-        Node child = children.get(leaveIndex);
-        if (excludedNode == null || excludedNode != child) {
-          // child is not the excludedNode
-          return child;
-        } else { // child is the excludedNode so return the next child
-          if (leaveIndex+1>=this.getNumOfChildren()) {
-            return null;
-          } else {
-            return children.get(leaveIndex+1);
+        if (isLeaf) { // excluded node is a leaf node
+          int excludedIndex = children.indexOf(excludedNode);
+          if (excludedIndex != -1 && leafIndex >= 0) {
+            // excluded node is one of the children so adjust the leaf index
+            leafIndex = leafIndex>=excludedIndex ? leafIndex+1 : leafIndex;
           }
         }
+        // range check
+        if (leafIndex<0 || leafIndex>=this.getNumOfChildren()) {
+          return null;
+        }
+        return children.get(leafIndex);
       } else {
         for(int i=0; i<children.size(); i++) {
           InnerNode child = (InnerNode)children.get(i);
@@ -274,9 +273,9 @@ public class NetworkTopology {
             if (excludedNode != null && child.isAncestor(excludedNode)) {
               numOfLeaves -= numOfExcludedLeaves;
             }
-            if (count+numOfLeaves > leaveIndex) {
+            if (count+numOfLeaves > leafIndex) {
               // the leaf is in the child subtree
-              return child.getLeaf(leaveIndex-count, excludedNode);
+              return child.getLeaf(leafIndex-count, excludedNode);
             } else {
               // go to the next child
               count = count+numOfLeaves;

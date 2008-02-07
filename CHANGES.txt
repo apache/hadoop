@@ -29,6 +29,9 @@ Trunk (unreleased changes)
     HADOOP-2194. dfs cat on a non-existent file throws FileNotFoundException.
     (Mahadev Konar via dhruba)
 
+    HADOOP-2767. Fix for NetworkTopology erroneously skipping the last leaf 
+    node on a rack. (Hairong Kuang and Mark Butler via dhruba)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES

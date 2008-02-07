@@ -19,9 +19,13 @@
 package org.apache.hadoop.net;
 
 
+import java.util.HashMap;
+import java.util.Map;
+
+import junit.framework.TestCase;
+
 import org.apache.hadoop.dfs.DatanodeDescriptor;
 import org.apache.hadoop.dfs.DatanodeID;
-import junit.framework.TestCase;
 
 public class TestNetworkTopology extends TestCase {
   private final static NetworkTopology cluster = new NetworkTopology();
@@ -112,6 +116,56 @@ public class TestNetworkTopology extends TestCase {
     assertEquals(0, cluster.getNumOfLeaves());
     for(int i=0; i<dataNodes.length; i++) {
       cluster.add(dataNodes[i]);
+    }
+  }
+  
+  /**
+   * This picks a large number of nodes at random in order to ensure coverage
+   * 
+   * @param numNodes the number of nodes
+   * @param excludedScope the excluded scope
+   * @return the frequency that nodes were chosen
+   */
+  private Map<Node, Integer> pickNodesAtRandom(int numNodes,
+      String excludedScope) {
+    Map<Node, Integer> frequency = new HashMap<Node, Integer>();
+    for (DatanodeDescriptor dnd : dataNodes) {
+      frequency.put(dnd, 0);
+    }
+
+    for (int j = 0; j < numNodes; j++) {
+      Node random = cluster.chooseRandom(excludedScope);
+      frequency.put(random, frequency.get(random) + 1);
+    }
+    return frequency;
+  }
+
+  /**
+   * This test checks that chooseRandom works for an excluded node.
+   */
+  public void testChooseRandomExcludedNode() {
+    String scope = "~" + NodeBase.getPath(dataNodes[0]);
+    Map<Node, Integer> frequency = pickNodesAtRandom(100, scope);
+
+    for (Node key : dataNodes) {
+      // all nodes except the first should be more than zero
+      assertTrue(frequency.get(key) > 0 || key == dataNodes[0]);
+    }
+  }
+
+  /**
+   * This test checks that chooseRandom works for an excluded rack.
+   */
+  public void testChooseRandomExcludedRack() {
+    Map<Node, Integer> frequency = pickNodesAtRandom(100, "~" + "/d2");
+    // all the nodes on the second rack should be zero
+    for (int j = 0; j < dataNodes.length; j++) {
+      int freq = frequency.get(dataNodes[j]);
+      if (dataNodes[j].getNetworkLocation().startsWith("/d2")) {
+        assertEquals(0, freq);
+      } else {
+        assertTrue(freq > 0);
+      }
     }
   }
 }
