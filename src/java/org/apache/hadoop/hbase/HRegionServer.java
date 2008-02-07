@@ -1395,7 +1395,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       if (s == null) {
         throw new UnknownScannerException("Name: " + scannerName);
       }
-      this.leases.renewLease(scannerId, scannerId);
+      this.leases.renewLease(scannerName);
 
       // Collect values to be returned here
       HbaseMapWritable values = new HbaseMapWritable();
@@ -1458,7 +1458,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         scanners.put(scannerName, s);
       }
       this.leases.
-        createLease(scannerId, scannerId, new ScannerListener(scannerName));
+        createLease(scannerName, new ScannerListener(scannerName));
       return scannerId;
     } catch (IOException e) {
       LOG.error("Error opening scanner (fsOk: " + this.fsOk + ")",
@@ -1482,7 +1482,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         throw new UnknownScannerException(scannerName);
       }
       s.close();
-      this.leases.cancelLease(scannerId, scannerId);
+      this.leases.cancelLease(scannerName);
     } catch (IOException e) {
       checkFileSystem();
       throw e;

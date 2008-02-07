@@ -46,6 +46,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
@@ -372,10 +373,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         Path p = HStoreFile.getMapDir(tabledir, split.getEncodedName(),
             family.getFamilyName());
 
-        // Look for reference files.  Call listPaths with an anonymous
+        // Look for reference files.  Call listStatus with an anonymous
         // instance of PathFilter.
 
-        Path [] ps = fs.listPaths(p,
+        FileStatus [] ps = fs.listStatus(p,
             new PathFilter () {
               public boolean accept(Path path) {
                 return HStore.isReference(path);
@@ -1306,8 +1307,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     loadToServers.put(load, servers);
 
     if (!closed.get()) {
-      long serverLabel = getServerLabel(s);
-      serverLeases.createLease(serverLabel, serverLabel, new ServerExpirer(s));
+      serverLeases.createLease(s, new ServerExpirer(s));
     }
     
     return createConfigurationSubset();
@@ -1327,15 +1327,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return mw;
   }
 
-  private long getServerLabel(final String s) {
-    return s.hashCode();
-  }
-
   /** {@inheritDoc} */
   public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg msgs[])
   throws IOException {
     String serverName = serverInfo.getServerAddress().toString().trim();
-    long serverLabel = getServerLabel(serverName);
     if (msgs.length > 0) {
       if (msgs[0].getMsg() == HMsg.MSG_REPORT_EXITING) {
         synchronized (serversToServerInfo) {
@@ -1348,7 +1343,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
               ": MSG_REPORT_EXITING -- cancelling lease");
             }
 
-            if (cancelLease(serverName, serverLabel)) {
+            if (cancelLease(serverName)) {
               // Only process the exit message if the server still has a lease.
               // Otherwise we could end up processing the server exit twice.
               LOG.info("Region server " + serverName +
@@ -1428,7 +1423,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       }
 
       synchronized (serversToServerInfo) {
-        cancelLease(serverName, serverLabel);
+        cancelLease(serverName);
         serversToServerInfo.notifyAll();
       }
       return new HMsg[]{new HMsg(HMsg.MSG_REGIONSERVER_STOP)};
@@ -1439,7 +1434,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       // This will always succeed; otherwise, the fetch of serversToServerInfo
       // would have failed above.
 
-      serverLeases.renewLease(serverLabel, serverLabel);
+      serverLeases.renewLease(serverName);
 
       // Refresh the info object and the load information
 
@@ -1476,7 +1471,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   }
 
   /** Cancel a server's lease and update its load information */
-  private boolean cancelLease(final String serverName, final long serverLabel) {
+  private boolean cancelLease(final String serverName) {
     boolean leaseCancelled = false;
     HServerInfo info = serversToServerInfo.remove(serverName);
     if (info != null) {
@@ -1487,7 +1482,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         unassignRootRegion();
       }
       LOG.info("Cancelling lease for " + serverName);
-      serverLeases.cancelLease(serverLabel, serverLabel);
+      serverLeases.cancelLease(serverName);
       leaseCancelled = true;
 
       // update load information
@@ -3120,20 +3115,20 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /*
    * Data structure used to return results out of the toRowMap method.
    */
-  private class RowMap {
+  class RowMap {
     final Text row;
     final SortedMap<Text, byte[]> map;
     
-    private RowMap(final Text r, final SortedMap<Text, byte[]> m) {
+    RowMap(final Text r, final SortedMap<Text, byte[]> m) {
       this.row = r;
       this.map = m;
     }
 
-    private Text getRow() {
+    Text getRow() {
       return this.row;
     }
 
-    private SortedMap<Text, byte[]> getMap() {
+    SortedMap<Text, byte[]> getMap() {
       return this.map;
     }
   }
