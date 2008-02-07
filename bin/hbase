@@ -104,7 +104,7 @@ if [ -d "$HBASE_HOME/build/classes" ]; then
   CLASSPATH=${CLASSPATH}:$HBASE_HOME/build/classes
 fi
 if [ -d "$HBASE_HOME/build/test" ]; then
-  CLASSPATH=${CLASSPATH}:$HBASE_HOME/hbase/test
+  CLASSPATH=${CLASSPATH}:$HBASE_HOME/build/test
 fi
 if [ -d "$HBASE_HOME/build/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HBASE_HOME/build
