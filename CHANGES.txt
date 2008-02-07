@@ -13,6 +13,9 @@ HBase Change Log
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling
    HBASE-35    Make BatchUpdate public in the API
+   HBASE-409   Add build path to svn:ignore list (Edward Yoon via Stack)
+   HBASE-408   Add .classpath and .project to svn:ignore list
+               (Edward Yoon via Stack)
 
 Branch 0.1
 
