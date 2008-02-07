@@ -276,7 +276,7 @@ public class ThriftServer {
     }
     
     public void put(byte[] tableName, byte[] row, byte[] column, byte[] value)
-        throws IOError {
+      throws IOError, IllegalArgument {
       if (LOG.isDebugEnabled()) {
         LOG.debug("put: table=" + new String(tableName) + ", row="
             + new String(row) + ", col=" + new String(column)
@@ -289,6 +289,8 @@ public class ThriftServer {
         table.commit(lockid);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
+      } catch (IllegalArgumentException e) {
+        throw new IllegalArgument(e.getMessage());
       }
     }
     
@@ -373,12 +375,12 @@ public class ThriftServer {
     }
     
     public void mutateRow(byte[] tableName, byte[] row,
-        ArrayList<Mutation> mutations) throws IOError {
+        ArrayList<Mutation> mutations) throws IOError, IllegalArgument {
       mutateRowTs(tableName, row, mutations, HConstants.LATEST_TIMESTAMP);
     }
     
     public void mutateRowTs(byte[] tableName, byte[] row,
-        ArrayList<Mutation> mutations, long timestamp) throws IOError {
+        ArrayList<Mutation> mutations, long timestamp) throws IOError, IllegalArgument {
       if (LOG.isDebugEnabled()) {
         LOG.debug("mutateRowTs: table=" + new String(tableName) + ", row="
             + new String(row) + ", ts=" + timestamp + " mutations="
@@ -412,6 +414,11 @@ public class ThriftServer {
           table.abort(lockid);
         }
         throw new IOError(e.getMessage());
+      } catch (IllegalArgumentException e) {
+        if (lockid != null) {
+          table.abort(lockid);
+        }
+        throw new IllegalArgument(e.getMessage());
       }
     }
     

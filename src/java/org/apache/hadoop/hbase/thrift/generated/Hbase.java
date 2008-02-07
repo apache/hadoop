@@ -145,7 +145,7 @@ public class Hbase {
      * @param row row key
      * @param column column name
      */
-    public void put(byte[] tableName, byte[] row, byte[] column, byte[] value) throws IOError, TException;
+    public void put(byte[] tableName, byte[] row, byte[] column, byte[] value) throws IOError, IllegalArgument, TException;
 
     /**
      * Apply a series of mutations (updates/deletes) to a row in a
@@ -157,7 +157,7 @@ public class Hbase {
      * @param row row key
      * @param mutations list of mutation commands
      */
-    public void mutateRow(byte[] tableName, byte[] row, ArrayList<Mutation> mutations) throws IOError, TException;
+    public void mutateRow(byte[] tableName, byte[] row, ArrayList<Mutation> mutations) throws IOError, IllegalArgument, TException;
 
     /**
      * Apply a series of mutations (updates/deletes) to a row in a
@@ -170,7 +170,7 @@ public class Hbase {
      * @param mutations list of mutation commands
      * @param timestamp timestamp
      */
-    public void mutateRowTs(byte[] tableName, byte[] row, ArrayList<Mutation> mutations, long timestamp) throws IOError, TException;
+    public void mutateRowTs(byte[] tableName, byte[] row, ArrayList<Mutation> mutations, long timestamp) throws IOError, IllegalArgument, TException;
 
     /**
      * Delete all cells that match the passed row and column.
@@ -704,7 +704,7 @@ public class Hbase {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getRowTs failed: unknown result");
     }
 
-    public void put(byte[] tableName, byte[] row, byte[] column, byte[] value) throws IOError, TException
+    public void put(byte[] tableName, byte[] row, byte[] column, byte[] value) throws IOError, IllegalArgument, TException
     {
       send_put(tableName, row, column, value);
       recv_put();
@@ -723,7 +723,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public void recv_put() throws IOError, TException
+    public void recv_put() throws IOError, IllegalArgument, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -737,10 +737,13 @@ public class Hbase {
       if (result.__isset.io) {
         throw result.io;
       }
+      if (result.__isset.ia) {
+        throw result.ia;
+      }
       return;
     }
 
-    public void mutateRow(byte[] tableName, byte[] row, ArrayList<Mutation> mutations) throws IOError, TException
+    public void mutateRow(byte[] tableName, byte[] row, ArrayList<Mutation> mutations) throws IOError, IllegalArgument, TException
     {
       send_mutateRow(tableName, row, mutations);
       recv_mutateRow();
@@ -758,7 +761,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public void recv_mutateRow() throws IOError, TException
+    public void recv_mutateRow() throws IOError, IllegalArgument, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -772,10 +775,13 @@ public class Hbase {
       if (result.__isset.io) {
         throw result.io;
       }
+      if (result.__isset.ia) {
+        throw result.ia;
+      }
       return;
     }
 
-    public void mutateRowTs(byte[] tableName, byte[] row, ArrayList<Mutation> mutations, long timestamp) throws IOError, TException
+    public void mutateRowTs(byte[] tableName, byte[] row, ArrayList<Mutation> mutations, long timestamp) throws IOError, IllegalArgument, TException
     {
       send_mutateRowTs(tableName, row, mutations, timestamp);
       recv_mutateRowTs();
@@ -794,7 +800,7 @@ public class Hbase {
       oprot_.getTransport().flush();
     }
 
-    public void recv_mutateRowTs() throws IOError, TException
+    public void recv_mutateRowTs() throws IOError, IllegalArgument, TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -807,6 +813,9 @@ public class Hbase {
       iprot_.readMessageEnd();
       if (result.__isset.io) {
         throw result.io;
+      }
+      if (result.__isset.ia) {
+        throw result.ia;
       }
       return;
     }
@@ -1488,6 +1497,9 @@ public class Hbase {
         } catch (IOError io) {
           result.io = io;
           result.__isset.io = true;
+        } catch (IllegalArgument ia) {
+          result.ia = ia;
+          result.__isset.ia = true;
         }
         oprot.writeMessageBegin(new TMessage("put", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -1509,6 +1521,9 @@ public class Hbase {
         } catch (IOError io) {
           result.io = io;
           result.__isset.io = true;
+        } catch (IllegalArgument ia) {
+          result.ia = ia;
+          result.__isset.ia = true;
         }
         oprot.writeMessageBegin(new TMessage("mutateRow", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -1530,6 +1545,9 @@ public class Hbase {
         } catch (IOError io) {
           result.io = io;
           result.__isset.io = true;
+        } catch (IllegalArgument ia) {
+          result.ia = ia;
+          result.__isset.ia = true;
         }
         oprot.writeMessageBegin(new TMessage("mutateRowTs", TMessageType.REPLY, seqid));
         result.write(oprot);
@@ -4148,21 +4166,26 @@ public class Hbase {
 
   public static class put_result implements TBase, java.io.Serializable   {
     public IOError io;
+    public IllegalArgument ia;
 
     public final Isset __isset = new Isset();
     public static final class Isset {
       public boolean io = false;
+      public boolean ia = false;
     }
 
     public put_result() {
     }
 
     public put_result(
-      IOError io)
+      IOError io,
+      IllegalArgument ia)
     {
       this();
       this.io = io;
       this.__isset.io = true;
+      this.ia = ia;
+      this.__isset.ia = true;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -4181,6 +4204,15 @@ public class Hbase {
               this.io = new IOError();
               this.io.read(iprot);
               this.__isset.io = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 2:
+            if (field.type == TType.STRUCT) {
+              this.ia = new IllegalArgument();
+              this.ia.read(iprot);
+              this.__isset.ia = true;
             } else { 
               TProtocolUtil.skip(iprot, field.type);
             }
@@ -4208,6 +4240,15 @@ public class Hbase {
           this.io.write(oprot);
           oprot.writeFieldEnd();
         }
+      } else if (this.__isset.ia) {
+        if (this.ia != null) {
+          field.name = "ia";
+          field.type = TType.STRUCT;
+          field.id = 2;
+          oprot.writeFieldBegin(field);
+          this.ia.write(oprot);
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -4217,6 +4258,8 @@ public class Hbase {
       StringBuilder sb = new StringBuilder("put_result(");
       sb.append("io:");
       sb.append(this.io.toString());
+      sb.append(",ia:");
+      sb.append(this.ia.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -4361,21 +4404,26 @@ public class Hbase {
 
   public static class mutateRow_result implements TBase, java.io.Serializable   {
     public IOError io;
+    public IllegalArgument ia;
 
     public final Isset __isset = new Isset();
     public static final class Isset {
       public boolean io = false;
+      public boolean ia = false;
     }
 
     public mutateRow_result() {
     }
 
     public mutateRow_result(
-      IOError io)
+      IOError io,
+      IllegalArgument ia)
     {
       this();
       this.io = io;
       this.__isset.io = true;
+      this.ia = ia;
+      this.__isset.ia = true;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -4394,6 +4442,15 @@ public class Hbase {
               this.io = new IOError();
               this.io.read(iprot);
               this.__isset.io = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 2:
+            if (field.type == TType.STRUCT) {
+              this.ia = new IllegalArgument();
+              this.ia.read(iprot);
+              this.__isset.ia = true;
             } else { 
               TProtocolUtil.skip(iprot, field.type);
             }
@@ -4421,6 +4478,15 @@ public class Hbase {
           this.io.write(oprot);
           oprot.writeFieldEnd();
         }
+      } else if (this.__isset.ia) {
+        if (this.ia != null) {
+          field.name = "ia";
+          field.type = TType.STRUCT;
+          field.id = 2;
+          oprot.writeFieldBegin(field);
+          this.ia.write(oprot);
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -4430,6 +4496,8 @@ public class Hbase {
       StringBuilder sb = new StringBuilder("mutateRow_result(");
       sb.append("io:");
       sb.append(this.io.toString());
+      sb.append(",ia:");
+      sb.append(this.ia.toString());
       sb.append(")");
       return sb.toString();
     }
@@ -4595,21 +4663,26 @@ public class Hbase {
 
   public static class mutateRowTs_result implements TBase, java.io.Serializable   {
     public IOError io;
+    public IllegalArgument ia;
 
     public final Isset __isset = new Isset();
     public static final class Isset {
       public boolean io = false;
+      public boolean ia = false;
     }
 
     public mutateRowTs_result() {
     }
 
     public mutateRowTs_result(
-      IOError io)
+      IOError io,
+      IllegalArgument ia)
     {
       this();
       this.io = io;
       this.__isset.io = true;
+      this.ia = ia;
+      this.__isset.ia = true;
     }
 
     public void read(TProtocol iprot) throws TException {
@@ -4628,6 +4701,15 @@ public class Hbase {
               this.io = new IOError();
               this.io.read(iprot);
               this.__isset.io = true;
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          case 2:
+            if (field.type == TType.STRUCT) {
+              this.ia = new IllegalArgument();
+              this.ia.read(iprot);
+              this.__isset.ia = true;
             } else { 
               TProtocolUtil.skip(iprot, field.type);
             }
@@ -4655,6 +4737,15 @@ public class Hbase {
           this.io.write(oprot);
           oprot.writeFieldEnd();
         }
+      } else if (this.__isset.ia) {
+        if (this.ia != null) {
+          field.name = "ia";
+          field.type = TType.STRUCT;
+          field.id = 2;
+          oprot.writeFieldBegin(field);
+          this.ia.write(oprot);
+          oprot.writeFieldEnd();
+        }
       }
       oprot.writeFieldStop();
       oprot.writeStructEnd();
@@ -4664,6 +4755,8 @@ public class Hbase {
       StringBuilder sb = new StringBuilder("mutateRowTs_result(");
       sb.append("io:");
       sb.append(this.io.toString());
+      sb.append(",ia:");
+      sb.append(this.ia.toString());
       sb.append(")");
       return sb.toString();
     }

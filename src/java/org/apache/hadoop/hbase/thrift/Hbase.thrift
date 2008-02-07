@@ -256,7 +256,7 @@ service Hbase {
    * @param column column name
    */
   void put(1:Text tableName, 2:Text row, 3:Text column, 4:Bytes value)
-    throws (1:IOError io)
+    throws (1:IOError io, 2:IllegalArgument ia)
 
   /** 
    * Apply a series of mutations (updates/deletes) to a row in a
@@ -269,7 +269,7 @@ service Hbase {
    * @param mutations list of mutation commands
    */
   void mutateRow(1:Text tableName, 2:Text row, 3:list<Mutation> mutations)
-    throws (1:IOError io)
+    throws (1:IOError io, 2:IllegalArgument ia)
 
   /** 
    * Apply a series of mutations (updates/deletes) to a row in a
@@ -283,7 +283,7 @@ service Hbase {
    * @param timestamp timestamp
    */
   void mutateRowTs(1:Text tableName, 2:Text row, 3:list<Mutation> mutations, 4:i64 timestamp)
-    throws (1:IOError io)
+    throws (1:IOError io, 2:IllegalArgument ia)
 
   /** 
    * Delete all cells that match the passed row and column.

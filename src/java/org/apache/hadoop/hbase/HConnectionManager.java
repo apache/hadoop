@@ -222,6 +222,9 @@ public class HConnectionManager implements HConstants {
       if (tableName == null) {
         throw new IllegalArgumentException("Table name cannot be null");
       }
+      if (tableName.equals(ROOT_TABLE_NAME) || tableName.equals(META_TABLE_NAME)) {
+        return true;
+      }
       boolean exists = false;
       try {
         HTableDescriptor[] tables = listTables();

@@ -11,6 +11,8 @@ HBase Change Log
   BUG FIXES
    HBASE-19    CountingBloomFilter can overflow its storage
                (Stu Hood and Bryan Duxbury via Stack)
+   HBASE-28    thrift put/mutateRow methods need to throw IllegalArgument exceptions
+               (Dave Simpson via Bryan Duxbury via Stack)
 
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling
