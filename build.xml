@@ -492,13 +492,6 @@
      basedir="${test.build.testjar}">
     </jar>
                                                               
-    <jar jarfile="${build.dir}/${final.name}-test.jar"
-         basedir="${test.build.classes}">
-         <manifest>
-           <attribute name="Main-Class"
-                      value="org/apache/hadoop/test/AllTestDriver"/>
-         </manifest>
-    </jar>
     <delete dir="${test.cache.data}"/>
     <mkdir dir="${test.cache.data}"/>
     <delete dir="${test.debug.data}"/>
@@ -512,9 +505,29 @@
   </target>
 
   <!-- ================================================================== -->
+  <!-- Make hadoop-test.jar                                               -->
+  <!-- ================================================================== -->
+  <!--                                                                    -->
+  <!-- ================================================================== -->
+  <target name="jar-test" depends="compile-core-test" description="Make hadoop-test.jar">
+    <jar jarfile="${build.dir}/${final.name}-test.jar"
+         basedir="${test.build.classes}">
+         <manifest>
+           <attribute name="Main-Class"
+                      value="org/apache/hadoop/test/AllTestDriver"/>
+          <section name="org/apache/hadoop">
+            <attribute name="Implementation-Title" value="Hadoop"/>
+            <attribute name="Implementation-Version" value="${version}"/>
+            <attribute name="Implementation-Vendor" value="Apache"/>
+          </section>
+         </manifest>
+    </jar>
+  </target>
+
+  <!-- ================================================================== -->
   <!-- Run unit tests                                                     --> 
   <!-- ================================================================== -->
-  <target name="test-core" depends="compile-core-test" description="Run core unit tests">
+  <target name="test-core" depends="jar-test" description="Run core unit tests">
 
     <delete dir="${test.build.data}"/>
     <mkdir dir="${test.build.data}"/>
@@ -702,7 +715,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="jar, javadoc, examples, compile-core-test, ant-tasks" description="Build distribution">
+  <target name="package" depends="jar, javadoc, examples, jar-test, ant-tasks" description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
     <mkdir dir="${dist.dir}/contrib"/>

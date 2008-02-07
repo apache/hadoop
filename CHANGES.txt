@@ -363,7 +363,10 @@ Release 0.16.0 - 2008-02-07
     local-file versus hdfs reads. (Owen O'Malley via nigel)
 
     HADOOP-2529. First version of HDFS User Guide. (Raghu Angadi)
-    
+
+    HADOOP-2690. Add jar-test target to build.xml, separating compilation
+    and packaging of the test classes. (Enis Soztutar via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-1898.  Release the lock protecting the last time of the last stack
