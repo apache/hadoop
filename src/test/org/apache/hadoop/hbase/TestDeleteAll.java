@@ -86,7 +86,7 @@ public class TestDeleteAll extends HBaseTestCase {
     Text colB = new Text(COLUMNS[0].toString() + "b");
     Text colC = new Text(COLUMNS[0].toString() + "c");
     Text colD = new Text(COLUMNS[0].toString());
-          
+    
     long lock = region_incommon.startUpdate(row);
     region_incommon.put(lock, colA, cellData(0, flush).getBytes());
     region_incommon.put(lock, colB, cellData(0, flush).getBytes());

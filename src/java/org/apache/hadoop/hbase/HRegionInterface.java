@@ -144,7 +144,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param b BatchUpdate
    * @throws IOException
    */
-  public void batchUpdate(Text regionName, long timestamp, BatchUpdate b)
+  public void batchUpdate(Text regionName, BatchUpdate b)
   throws IOException;
   
   /**

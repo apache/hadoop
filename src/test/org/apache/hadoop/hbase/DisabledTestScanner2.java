@@ -100,7 +100,7 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
         // flipping the switch in StopRowFilter stopping us returning all
         // of the rest of the other store content.
         if (i == 0) {
-          long id = inc.startBatchUpdate(new Text("bbb"));
+          long id = inc.startUpdate(new Text("bbb"));
           inc.put(id, families[0], "bbb".getBytes());
           inc.commit(id);
         }

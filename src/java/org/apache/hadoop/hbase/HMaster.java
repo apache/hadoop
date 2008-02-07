@@ -399,10 +399,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
             +" no longer has references to " + parent.toString());
       }
       
-      BatchUpdate b = new BatchUpdate(rand.nextLong());
-      long lockid = b.startUpdate(parent);
-      b.delete(lockid, splitColumn);
-      srvr.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
+      BatchUpdate b = new BatchUpdate(parent);
+      b.delete(splitColumn);
+      srvr.batchUpdate(metaRegionName, b);
         
       return result;
     }
@@ -2434,12 +2433,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           Writables.bytesToLong(this.startCode) + " and server "+
           serverAddress.toString());
         try {
-          BatchUpdate b = new BatchUpdate(rand.nextLong());
-          long lockid = b.startUpdate(regionInfo.getRegionName());
-          b.put(lockid, COL_SERVER,
-            Writables.stringToBytes(serverAddress.toString()));
-          b.put(lockid, COL_STARTCODE, startCode);
-          server.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
+          BatchUpdate b = new BatchUpdate(regionInfo.getRegionName());
+          b.put(COL_SERVER, Writables.stringToBytes(serverAddress.toString()));
+          b.put(COL_STARTCODE, startCode);
+          server.batchUpdate(metaRegionName, b);
           if (isMetaTable) {
             // It's a meta region.
             MetaRegion m = new MetaRegion(this.serverAddress,
@@ -2574,10 +2571,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           
       HRegionInfo info = region.getRegionInfo();
       Text regionName = region.getRegionName();
-      BatchUpdate b = new BatchUpdate(rand.nextLong());
-      long lockid = b.startUpdate(regionName);
-      b.put(lockid, COL_REGIONINFO, Writables.getBytes(info));
-      server.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
+      BatchUpdate b = new BatchUpdate(regionName);
+      b.put(COL_REGIONINFO, Writables.getBytes(info));
+      server.batchUpdate(metaRegionName, b);
 
       // 4. Close the new region to flush it to disk.  Close its log file too.
       
@@ -2823,12 +2819,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           LOG.debug("updating columns in row: " + i.getRegionName());
         }
 
-        BatchUpdate b = new BatchUpdate(rand.nextLong());
-        lockid = b.startUpdate(i.getRegionName());
+        BatchUpdate b = new BatchUpdate(i.getRegionName());
         updateRegionInfo(b, i);
-        b.delete(lockid, COL_SERVER);
-        b.delete(lockid, COL_STARTCODE);
-        server.batchUpdate(m.getRegionName(), System.currentTimeMillis(), b);
+        b.delete(COL_SERVER);
+        b.delete(COL_STARTCODE);
+        server.batchUpdate(m.getRegionName(), b);
         if (LOG.isDebugEnabled()) {
           LOG.debug("updated columns in row: " + i.getRegionName());
         }
@@ -2888,7 +2883,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       throws IOException {
       
       i.setOffline(!online);
-      b.put(lockid, COL_REGIONINFO, Writables.getBytes(i));
+      b.put(COL_REGIONINFO, Writables.getBytes(i));
     }
   }
 
@@ -2936,7 +2931,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         @SuppressWarnings("unused") HRegionInfo info) {
       for (int i = 0; i < ALL_META_COLUMNS.length; i++) {
         // Be sure to clean all cells
-        b.delete(lockid, ALL_META_COLUMNS[i]);
+        b.delete(ALL_META_COLUMNS[i]);
       }
     }
   }
@@ -2961,10 +2956,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     protected void updateRegionInfo(HRegionInterface server, Text regionName,
         HRegionInfo i) throws IOException {
 
-      BatchUpdate b = new BatchUpdate(rand.nextLong());
-      long lockid = b.startUpdate(i.getRegionName());
-      b.put(lockid, COL_REGIONINFO, Writables.getBytes(i));
-      server.batchUpdate(regionName, System.currentTimeMillis(), b);
+      BatchUpdate b = new BatchUpdate(i.getRegionName());
+      b.put(COL_REGIONINFO, Writables.getBytes(i));
+      server.batchUpdate(regionName, b);
       if (LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: " + i.getRegionName());
       }

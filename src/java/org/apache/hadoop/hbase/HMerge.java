@@ -257,53 +257,30 @@ class HMerge implements HConstants {
     }
 
     @Override
-    protected void updateMeta(Text oldRegion1, Text oldRegion2,
-        HRegion newRegion) throws IOException {
-      Text[] regionsToDelete = {
-          oldRegion1,
-          oldRegion2
-      };
+    protected void updateMeta(Text oldRegion1, Text oldRegion2, 
+      HRegion newRegion)
+    throws IOException {
+      Text[] regionsToDelete = {oldRegion1, oldRegion2};
       for(int r = 0; r < regionsToDelete.length; r++) {
         if(regionsToDelete[r].equals(latestRegion.getRegionName())) {
           latestRegion = null;
         }
-        long lockid = -1L;
-        try {
-          lockid = table.startUpdate(regionsToDelete[r]);
-          table.delete(lockid, COL_REGIONINFO);
-          table.delete(lockid, COL_SERVER);
-          table.delete(lockid, COL_STARTCODE);
-          table.delete(lockid, COL_SPLITA);
-          table.delete(lockid, COL_SPLITB);
-          table.commit(lockid);
-          lockid = -1L;
+        table.deleteAll(regionsToDelete[r]);
 
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("updated columns in row: " + regionsToDelete[r]);
-          }
-        } finally {
-          if(lockid != -1L) {
-            table.abort(lockid);
-          }
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("updated columns in row: " + regionsToDelete[r]);
         }
       }
       newRegion.getRegionInfo().setOffline(true);
-      long lockid = -1L;
-      try {
-        lockid = table.startUpdate(newRegion.getRegionName());
-        table.put(lockid, COL_REGIONINFO,
-            Writables.getBytes(newRegion.getRegionInfo()));
-        table.commit(lockid);
-        lockid = -1L;
 
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("updated columns in row: "
-              + newRegion.getRegionName());
-        }
-      } finally {
-        if(lockid != -1L) {
-          table.abort(lockid);
-        }
+      BatchUpdate update = new BatchUpdate(newRegion.getRegionName());
+      update.put(COL_REGIONINFO,
+        Writables.getBytes(newRegion.getRegionInfo()));
+      table.commit(update);
+
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("updated columns in row: "
+            + newRegion.getRegionName());
       }
     }
   }
@@ -372,15 +349,13 @@ class HMerge implements HConstants {
       };
       for(int r = 0; r < regionsToDelete.length; r++) {
         long lockid = Math.abs(rand.nextLong());
-        BatchUpdate b = new BatchUpdate(lockid);
-        lockid = b.startUpdate(regionsToDelete[r]);
-        b.delete(lockid, COL_REGIONINFO);
-        b.delete(lockid, COL_SERVER);
-        b.delete(lockid, COL_STARTCODE);
-        b.delete(lockid, COL_SPLITA);
-        b.delete(lockid, COL_SPLITB);
-        root.batchUpdate(System.currentTimeMillis(), b);
-        lockid = -1L;
+        BatchUpdate b = new BatchUpdate(regionsToDelete[r]);
+        b.delete(COL_REGIONINFO);
+        b.delete(COL_SERVER);
+        b.delete(COL_STARTCODE);
+        b.delete(COL_SPLITA);
+        b.delete(COL_SPLITB);
+        root.batchUpdate(b);
 
         if(LOG.isDebugEnabled()) {
           LOG.debug("updated columns in row: " + regionsToDelete[r]);
@@ -388,11 +363,9 @@ class HMerge implements HConstants {
       }
       HRegionInfo newInfo = newRegion.getRegionInfo();
       newInfo.setOffline(true);
-      long lockid = Math.abs(rand.nextLong());
-      BatchUpdate b = new BatchUpdate(lockid);
-      lockid = b.startUpdate(newRegion.getRegionName());
-      b.put(lockid, COL_REGIONINFO, Writables.getBytes(newInfo));
-      root.batchUpdate(System.currentTimeMillis(), b);
+      BatchUpdate b = new BatchUpdate(newRegion.getRegionName());
+      b.put(COL_REGIONINFO, Writables.getBytes(newInfo));
+      root.batchUpdate(b);
       if(LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: " + newRegion.getRegionName());
       }

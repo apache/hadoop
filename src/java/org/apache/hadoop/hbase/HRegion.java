@@ -1209,7 +1209,7 @@ public class HRegion implements HConstants {
    * @param b
    * @throws IOException
    */
-  public void batchUpdate(long timestamp, BatchUpdate b)
+  public void batchUpdate(BatchUpdate b)
     throws IOException {
     // Do a rough check that we have resources to accept a write.  The check is
     // 'rough' in that between the resource check and the call to obtain a 
@@ -1226,7 +1226,7 @@ public class HRegion implements HConstants {
     long lockid = obtainRowLock(row);
 
     long commitTime =
-      (timestamp == LATEST_TIMESTAMP) ? System.currentTimeMillis() : timestamp;
+      (b.getTimestamp() == LATEST_TIMESTAMP) ? System.currentTimeMillis() : b.getTimestamp();
       
     try {
       List<Text> deletes = null;
@@ -1239,7 +1239,7 @@ public class HRegion implements HConstants {
             throw new IOException("Cannot insert value: " + val);
           }
         } else {
-          if (timestamp == LATEST_TIMESTAMP) {
+          if (b.getTimestamp() == LATEST_TIMESTAMP) {
             // Save off these deletes
             if (deletes == null) {
               deletes = new ArrayList<Text>();
@@ -1841,14 +1841,9 @@ public class HRegion implements HConstants {
    * @see {@link #addRegionToMETA(HRegion, HRegion)}
    */
   static void removeRegionFromMETA(final HRegionInterface srvr,
-      final Text metaRegionName, final Text regionName)
+    final Text metaRegionName, final Text regionName)
   throws IOException {
-    BatchUpdate b = new BatchUpdate(rand.nextLong());
-    long lockid = b.startUpdate(regionName);
-    for (int i = 0; i < ALL_META_COLUMNS.length; i++) {
-      b.delete(lockid, ALL_META_COLUMNS[i]);
-    }
-    srvr.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
+    srvr.deleteAll(metaRegionName, regionName, HConstants.LATEST_TIMESTAMP);
   }
 
   /**
@@ -1861,17 +1856,16 @@ public class HRegion implements HConstants {
    * @see {@link #addRegionToMETA(HRegion, HRegion)}
    */
   static void offlineRegionInMETA(final HRegionInterface srvr,
-      final Text metaRegionName, final HRegionInfo info)
+    final Text metaRegionName, final HRegionInfo info)
   throws IOException {
-    BatchUpdate b = new BatchUpdate(rand.nextLong());
-    long lockid = b.startUpdate(info.getRegionName());
+    BatchUpdate b = new BatchUpdate(info.getRegionName());
     info.setOffline(true);
-    b.put(lockid, COL_REGIONINFO, Writables.getBytes(info));
-    b.delete(lockid, COL_SERVER);
-    b.delete(lockid, COL_STARTCODE);
+    b.put(COL_REGIONINFO, Writables.getBytes(info));
+    b.delete(COL_SERVER);
+    b.delete(COL_STARTCODE);
     // If carrying splits, they'll be in place when we show up on new
     // server.
-    srvr.batchUpdate(metaRegionName, System.currentTimeMillis(), b);
+    srvr.batchUpdate(metaRegionName, b);
   }
 
   /**

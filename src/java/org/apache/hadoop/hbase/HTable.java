@@ -564,11 +564,12 @@ public class HTable implements HConstants {
    * @see #commit(long, long)
    * @see #abort(long)
    */
+  @Deprecated
   public synchronized long startUpdate(final Text row) {
     checkClosed();
     updateInProgress(false);
-    batch.set(new BatchUpdate(rand.nextLong()));
-    return batch.get().startUpdate(row);
+    batch.set(new BatchUpdate(row));
+    return 1;
   }
   
   /** 
@@ -579,13 +580,17 @@ public class HTable implements HConstants {
    * @param column column whose value is being set
    * @param val new value for column.  Cannot be null.
    */
+  @Deprecated
   public void put(long lockid, Text column, byte val[]) {
     checkClosed();
+    if (lockid != 1) {
+      throw new IllegalArgumentException("Invalid lock id!");
+    }
     if (val == null) {
       throw new IllegalArgumentException("value cannot be null");
     }
     updateInProgress(true);
-    batch.get().put(lockid, column, val);
+    batch.get().put(column, val);
   }
   
   /** 
@@ -598,6 +603,7 @@ public class HTable implements HConstants {
    * @throws IOException throws this if the writable can't be
    * converted into a byte array 
    */
+  @Deprecated
   public void put(long lockid, Text column, Writable val) throws IOException {    
     put(lockid, column, Writables.getBytes(val));
   }
@@ -609,10 +615,14 @@ public class HTable implements HConstants {
    * @param lockid lock id returned from startUpdate
    * @param column name of column whose value is to be deleted
    */
+  @Deprecated
   public void delete(long lockid, Text column) {
     checkClosed();
+    if (lockid != 1) {
+      throw new IllegalArgumentException("Invalid lock id!");
+    }
     updateInProgress(true);
-    batch.get().delete(lockid, column);
+    batch.get().delete(column);
   }
   
   /** 
@@ -718,10 +728,11 @@ public class HTable implements HConstants {
    *
    * @param lockid lock id returned from startUpdate
    */
+  @Deprecated
   public synchronized void abort(long lockid) {
     checkClosed();
-    if (batch.get() != null && batch.get().getLockid() != lockid) {
-      throw new IllegalArgumentException("invalid lock id " + lockid);
+    if (lockid != 1) {
+      throw new IllegalArgumentException("Invalid lock id!");
     }
     batch.set(null);
   }
@@ -740,6 +751,7 @@ public class HTable implements HConstants {
    * @param lockid lock id returned from startUpdate
    * @throws IOException
    */
+  @Deprecated
   public void commit(long lockid) throws IOException {
     commit(lockid, LATEST_TIMESTAMP);
   }
@@ -751,27 +763,36 @@ public class HTable implements HConstants {
    * @param timestamp time to associate with the change
    * @throws IOException
    */
-  public synchronized void commit(long lockid, final long timestamp)
+  @Deprecated
+  public void commit(long lockid, final long timestamp)
   throws IOException {
-    checkClosed();
     updateInProgress(true);
-    if (batch.get().getLockid() != lockid) {
-      throw new IllegalArgumentException("invalid lock id " + lockid);
+    if (lockid != 1) {
+      throw new IllegalArgumentException("Invalid lock id!");
     }
-    
     try {
-      getRegionServerWithRetries(
-        new ServerCallable<Boolean>(batch.get().getRow()){
-          public Boolean call() throws IOException {
-            server.batchUpdate(location.getRegionInfo().getRegionName(), 
-              timestamp, batch.get());
-            return null;
-          }
-        }
-      );
+      batch.get().setTimestamp(timestamp);
+      commit(batch.get());
     } finally {
       batch.set(null);
     }
+  }
+  
+  /**
+   * Commit a BatchUpdate to the table.
+   */ 
+  public synchronized void commit(final BatchUpdate batchUpdate) 
+  throws IOException {
+    checkClosed();
+    getRegionServerWithRetries(
+      new ServerCallable<Boolean>(batchUpdate.getRow()){
+        public Boolean call() throws IOException {
+          server.batchUpdate(location.getRegionInfo().getRegionName(), 
+            batchUpdate);
+          return null;
+        }
+      }
+    );  
   }
   
   /**

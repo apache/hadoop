@@ -111,11 +111,11 @@ public class TestGet2 extends HBaseTestCase {
       long one_second_ago = right_now - 1000;
       
       Text t = new Text("test_row");
-      long lockid = region_incommon.startBatchUpdate(t);
+      long lockid = region_incommon.startUpdate(t);
       region_incommon.put(lockid, COLUMNS[0], "old text".getBytes());
       region_incommon.commit(lockid, one_second_ago);
  
-      lockid = region_incommon.startBatchUpdate(t);
+      lockid = region_incommon.startUpdate(t);
       region_incommon.put(lockid, COLUMNS[0], "new text".getBytes());
       region_incommon.commit(lockid, right_now);
 
@@ -158,19 +158,19 @@ public class TestGet2 extends HBaseTestCase {
       Text t30 = new Text("030");
       Text t40 = new Text("040");
       
-      long lockid = region_incommon.startBatchUpdate(t10);
+      long lockid = region_incommon.startUpdate(t10);
       region_incommon.put(lockid, COLUMNS[0], "t10 bytes".getBytes());
       region_incommon.commit(lockid);
       
-      lockid = region_incommon.startBatchUpdate(t20);
+      lockid = region_incommon.startUpdate(t20);
       region_incommon.put(lockid, COLUMNS[0], "t20 bytes".getBytes());
       region_incommon.commit(lockid);
       
-      lockid = region_incommon.startBatchUpdate(t30);
+      lockid = region_incommon.startUpdate(t30);
       region_incommon.put(lockid, COLUMNS[0], "t30 bytes".getBytes());
       region_incommon.commit(lockid);
       
-      lockid = region_incommon.startBatchUpdate(t40);
+      lockid = region_incommon.startUpdate(t40);
       region_incommon.put(lockid, COLUMNS[0], "t40 bytes".getBytes());
       region_incommon.commit(lockid);
       

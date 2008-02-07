@@ -298,7 +298,7 @@ public class TestTimestamp extends HBaseTestCase {
   private void put(final Incommon loader, final byte [] bytes,
     final long ts)
   throws IOException {
-    long lockid = loader.startBatchUpdate(ROW);
+    long lockid = loader.startUpdate(ROW);
     loader.put(lockid, COLUMN, bytes);
     if (ts == HConstants.LATEST_TIMESTAMP) {
       loader.commit(lockid);
@@ -312,7 +312,7 @@ public class TestTimestamp extends HBaseTestCase {
   }
 
   private void delete(final Incommon loader, final long ts) throws IOException {
-    long lockid = loader.startBatchUpdate(ROW);
+    long lockid = loader.startUpdate(ROW);
     loader.delete(lockid, COLUMN);
     if (ts == HConstants.LATEST_TIMESTAMP) {
       loader.commit(lockid);

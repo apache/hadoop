@@ -318,22 +318,25 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
       // Mark old region as offline and split in META.
       // NOTE: there is no need for retry logic here. HTable does it for us.
-      long lockid = t.startUpdate(oldRegionInfo.getRegionName());
       oldRegionInfo.setOffline(true);
       oldRegionInfo.setSplit(true);
-      t.put(lockid, COL_REGIONINFO, Writables.getBytes(oldRegionInfo));
-      t.put(lockid, COL_SPLITA, Writables.getBytes(
-        newRegions[0].getRegionInfo()));
-      t.put(lockid, COL_SPLITB, Writables.getBytes(
-        newRegions[1].getRegionInfo()));
-      t.commit(lockid);
+      BatchUpdate update = new BatchUpdate(oldRegionInfo.getRegionName());
+      update.put(COL_REGIONINFO, Writables.getBytes(oldRegionInfo));
+      update.put(COL_SPLITA, Writables.getBytes(newRegions[0].getRegionInfo()));
+      update.put(COL_SPLITB, Writables.getBytes(newRegions[1].getRegionInfo()));
+      t.commit(update);
       
       // Add new regions to META
       for (int i = 0; i < newRegions.length; i++) {
-        lockid = t.startUpdate(newRegions[i].getRegionName());
+        update = new BatchUpdate(newRegions[i].getRegionName());
+        update.put(COL_REGIONINFO, Writables.getBytes(
+          newRegions[i].getRegionInfo()));
+        t.commit(update);
+        
+/*        long lockid = t.startUpdate(newRegions[i].getRegionName());
         t.put(lockid, COL_REGIONINFO, Writables.getBytes(
           newRegions[i].getRegionInfo()));
-        t.commit(lockid);
+        t.commit(lockid);*/
       }
           
       // Now tell the master about the new regions
@@ -1424,13 +1427,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public void batchUpdate(Text regionName, long timestamp, BatchUpdate b)
+  public void batchUpdate(Text regionName, BatchUpdate b)
     throws IOException {
     checkOpen();
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
     try {
-      region.batchUpdate(timestamp, b);
+      region.batchUpdate(b);
     } catch (IOException e) {
       checkFileSystem();
       throw e;

@@ -27,6 +27,7 @@ import java.util.Iterator;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.hbase.HConstants;
 
 /**
  * A Writable object that contains a series of BatchOperations
@@ -39,73 +40,65 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
   
   // the row being updated
   private Text row;
-  
-  // the lockid - not used on server side
-  private transient long lockid;
-  
+    
   // the batched operations
   private ArrayList<BatchOperation> operations;
   
+  private long timestamp;
+  
   /** Default constructor - used by Writable. */
   public BatchUpdate() {
-    this.row = new Text();
-    this.lockid = -1L;
-    this.operations = new ArrayList<BatchOperation>();
+    this(new Text());
   }
   
   /**
-   * Client side constructor. Clients need to provide the lockid by some means
-   * such as Random.nextLong()
+   * Initialize a BatchUpdate operation on a row. Timestamp is assumed to be
+   * now.
    * 
-   * @param lockid
+   * @param row
    */
-  public BatchUpdate(long lockid) {
-    this.row = new Text();
-    this.lockid = Math.abs(lockid);
+  public BatchUpdate(Text row) {
+    this(row, HConstants.LATEST_TIMESTAMP);
+  }
+  
+  /**
+   * Initialize a BatchUpdate operation on a row with a specific timestamp.
+   * 
+   * @param row
+   */
+  public BatchUpdate(Text row, long timestamp){
+    this.row = row;
+    this.timestamp = timestamp;
     this.operations = new ArrayList<BatchOperation>();
   }
 
-  /** @return the lock id */
-  public long getLockid() {
-    return lockid;
-  }
   
   /** @return the row */
   public Text getRow() {
     return row;
   }
-  
-  /** 
-   * Start a batch row insertion/update.
-   * 
-   * No changes are committed until the client commits the batch operation via
-   * HClient.batchCommit().
-   * 
-   * The entire batch update can be abandoned by calling HClient.batchAbort();
-   *
-   * Callers to this method are given a handle that corresponds to the row being
-   * changed. The handle must be supplied on subsequent put or delete calls.
-   * 
-   * @param row Name of row to start update against.
-   * @return Row lockid.
+
+  /**
+   * Return the timestamp this BatchUpdate will be committed with.
    */
-  public synchronized long startUpdate(final Text row) {
-    this.row = row;
-    return this.lockid;
+  public long getTimestamp() {
+    return timestamp;
+  }
+  
+  /**
+   * Set this BatchUpdate's timestamp.
+   */  
+  public void setTimestamp(long timestamp) {
+    this.timestamp = timestamp;
   }
   
   /** 
    * Change a value for the specified column
    *
-   * @param lid lock id returned from startUpdate
    * @param column column whose value is being set
    * @param val new value for column.  Cannot be null (can be empty).
    */
-  public synchronized void put(final long lid, final Text column,
-      final byte val[]) {
-    if(this.lockid != lid) {
-      throw new IllegalArgumentException("invalid lockid " + lid);
-    }
+  public synchronized void put(final Text column, final byte val[]) {
     if (val == null) {
       // If null, the PUT becomes a DELETE operation.
       throw new IllegalArgumentException("Passed value cannot be null");
@@ -117,13 +110,9 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    * Delete the value for a column
    * Deletes the cell whose row/column/commit-timestamp match those of the
    * delete.
-   * @param lid lock id returned from startUpdate
    * @param column name of column whose value is to be deleted
    */
-  public synchronized void delete(final long lid, final Text column) {
-    if(this.lockid != lid) {
-      throw new IllegalArgumentException("invalid lockid " + lid);
-    }
+  public synchronized void delete(final Text column) {
     operations.add(new BatchOperation(column));
   }
 
@@ -144,6 +133,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
 
   public void readFields(final DataInput in) throws IOException {
     row.readFields(in);
+    timestamp = in.readLong();
     int nOps = in.readInt();
     for (int i = 0; i < nOps; i++) {
       BatchOperation op = new BatchOperation();
@@ -154,6 +144,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
 
   public void write(final DataOutput out) throws IOException {
     row.write(out);
+    out.writeLong(timestamp);
     out.writeInt(operations.size());
     for (BatchOperation op: operations) {
       op.write(out);
