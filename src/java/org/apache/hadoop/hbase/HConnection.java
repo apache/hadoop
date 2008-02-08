@@ -86,10 +86,4 @@ public interface HConnection {
    */
   public HRegionInterface getHRegionConnection(HServerAddress regionServer)
   throws IOException;
-  
-  /**
-   * Discard all the information about this table
-   * @param tableName the name of the table to close
-   */
-  public void close(Text tableName);
 }

@@ -61,17 +61,6 @@ public class HTable implements HConstants {
   
   // For row mutation operations
   
-  protected volatile boolean closed;
-
-  protected void checkClosed() {
-    if (tableDoesNotExist) {
-      throw new IllegalStateException("table does not exist: " + tableName);
-    }
-    if (closed) {
-      throw new IllegalStateException("table is closed");
-    }
-  }
-  
   /**
    * Creates an object to access a HBase table
    * 
@@ -80,8 +69,6 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public HTable(HBaseConfiguration conf, Text tableName) throws IOException {
-    closed = true;
-    tableDoesNotExist = true;
     this.connection = HConnectionManager.getConnection(conf);
     this.tableName = tableName;
     this.pause = conf.getLong("hbase.client.pause", 10 * 1000);
@@ -89,8 +76,6 @@ public class HTable implements HConstants {
     this.rand = new Random();
     this.batch = new AtomicReference<BatchUpdate>();
     this.connection.locateRegion(tableName, EMPTY_START_ROW);
-    tableDoesNotExist = false;
-    closed = false;
   }
 
   /**
@@ -99,7 +84,6 @@ public class HTable implements HConstants {
    * @return Location of row.
    */
   HRegionLocation getRegionLocation(Text row) throws IOException {
-    checkClosed();
     return this.connection.locateRegion(this.tableName, row);
   }
 
@@ -110,7 +94,6 @@ public class HTable implements HConstants {
    * @return Location of row.
    */
   HRegionLocation getRegionLocation(Text row, boolean reload) throws IOException {
-    checkClosed();
     return reload?
       this.connection.relocateRegion(this.tableName, row):
       this.connection.locateRegion(tableName, row);
@@ -119,20 +102,7 @@ public class HTable implements HConstants {
 
   /** @return the connection */
   public HConnection getConnection() {
-    checkClosed();
     return connection;
-  }
-
-  /**
-   * Releases resources associated with this table. After calling close(), all
-   * other methods will throw an IllegalStateException
-   */
-  public synchronized void close() {
-    if (!closed) {
-      closed = true;
-      batch.set(null);
-      connection.close(tableName);
-    }
   }
   
   /**
@@ -193,7 +163,6 @@ public class HTable implements HConstants {
    */
   @SuppressWarnings("null")
   public Text[] getStartKeys() throws IOException {
-    checkClosed();
     List<Text> keyList = new ArrayList<Text>();
 
     long scannerId = -1L;
@@ -277,8 +246,6 @@ public class HTable implements HConstants {
    * @throws IOException
    */
    public byte[] get(Text row, final Text column) throws IOException {
-     checkClosed();
-     
      return getRegionServerWithRetries(new ServerCallable<byte[]>(row){
        public byte[] call() throws IOException {
          return server.get(location.getRegionInfo().getRegionName(), row, column);
@@ -297,7 +264,6 @@ public class HTable implements HConstants {
    */
   public byte[][] get(final Text row, final Text column, final int numVersions) 
   throws IOException {
-    checkClosed();
     byte [][] values = null;
 
     values = getRegionServerWithRetries(new ServerCallable<byte[][]>(row) {
@@ -331,7 +297,6 @@ public class HTable implements HConstants {
   public byte[][] get(final Text row, final Text column, final long timestamp, 
     final int numVersions)
   throws IOException {
-    checkClosed();
     byte [][] values = null;
 
     values = getRegionServerWithRetries(new ServerCallable<byte[][]>(row) {
@@ -372,7 +337,6 @@ public class HTable implements HConstants {
    */
   public SortedMap<Text, byte[]> getRow(final Text row, final long ts) 
   throws IOException {
-    checkClosed();
     HbaseMapWritable value = null;
          
     value = getRegionServerWithRetries(new ServerCallable<HbaseMapWritable>(row) {
@@ -426,7 +390,7 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public HScannerInterface obtainScanner(Text[] columns, Text startRow,
-      long timestamp)
+    long timestamp)
   throws IOException {
     return obtainScanner(columns, startRow, timestamp, null);
   }
@@ -446,7 +410,7 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public HScannerInterface obtainScanner(Text[] columns, Text startRow,
-      RowFilterInterface filter)
+    RowFilterInterface filter)
   throws IOException { 
     return obtainScanner(columns, startRow, HConstants.LATEST_TIMESTAMP, filter);
   }
@@ -469,7 +433,7 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public HScannerInterface obtainScanner(final Text[] columns,
-      final Text startRow, final Text stopRow)
+    final Text startRow, final Text stopRow)
   throws IOException {
     return obtainScanner(columns, startRow, stopRow,
       HConstants.LATEST_TIMESTAMP);
@@ -494,7 +458,7 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public HScannerInterface obtainScanner(final Text[] columns,
-      final Text startRow, final Text stopRow, final long timestamp)
+    final Text startRow, final Text stopRow, final long timestamp)
   throws IOException {
     return obtainScanner(columns, startRow, timestamp,
       new WhileMatchRowFilter(new StopRowFilter(stopRow)));
@@ -516,9 +480,8 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public HScannerInterface obtainScanner(Text[] columns,
-      Text startRow, long timestamp, RowFilterInterface filter)
+    Text startRow, long timestamp, RowFilterInterface filter)
   throws IOException {
-    checkClosed();
     return new ClientScanner(columns, startRow, timestamp, filter);
   }
 
@@ -566,7 +529,6 @@ public class HTable implements HConstants {
    */
   @Deprecated
   public synchronized long startUpdate(final Text row) {
-    checkClosed();
     updateInProgress(false);
     batch.set(new BatchUpdate(row));
     return 1;
@@ -582,7 +544,6 @@ public class HTable implements HConstants {
    */
   @Deprecated
   public void put(long lockid, Text column, byte val[]) {
-    checkClosed();
     if (lockid != 1) {
       throw new IllegalArgumentException("Invalid lock id!");
     }
@@ -617,7 +578,6 @@ public class HTable implements HConstants {
    */
   @Deprecated
   public void delete(long lockid, Text column) {
-    checkClosed();
     if (lockid != 1) {
       throw new IllegalArgumentException("Invalid lock id!");
     }
@@ -645,8 +605,6 @@ public class HTable implements HConstants {
    */
   public void deleteAll(final Text row, final Text column, final long ts)
   throws IOException {
-    checkClosed();
-          
     getRegionServerWithRetries(new ServerCallable<Boolean>(row) {
       public Boolean call() throws IOException {
         server.deleteAll(location.getRegionInfo().getRegionName(), row, 
@@ -664,8 +622,6 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   public void deleteAll(final Text row, final long ts) throws IOException {
-    checkClosed();
-    
     getRegionServerWithRetries(new ServerCallable<Boolean>(row){
       public Boolean call() throws IOException {
         server.deleteAll(location.getRegionInfo().getRegionName(), row, ts);
@@ -696,8 +652,6 @@ public class HTable implements HConstants {
   public void deleteFamily(final Text row, final Text family, 
     final long timestamp)
   throws IOException {
-    checkClosed();
-    
     getRegionServerWithRetries(new ServerCallable<Boolean>(row){
       public Boolean call() throws IOException {
         server.deleteFamily(location.getRegionInfo().getRegionName(), row, 
@@ -730,7 +684,6 @@ public class HTable implements HConstants {
    */
   @Deprecated
   public synchronized void abort(long lockid) {
-    checkClosed();
     if (lockid != 1) {
       throw new IllegalArgumentException("Invalid lock id!");
     }
@@ -783,7 +736,6 @@ public class HTable implements HConstants {
    */ 
   public synchronized void commit(final BatchUpdate batchUpdate) 
   throws IOException {
-    checkClosed();
     getRegionServerWithRetries(
       new ServerCallable<Boolean>(batchUpdate.getRow()){
         public Boolean call() throws IOException {
@@ -843,8 +795,6 @@ public class HTable implements HConstants {
      * Returns false if there are no more scanners.
      */
     private boolean nextScanner() throws IOException {
-      checkClosed();
-      
       // close the previous scanner if it's open
       if (this.scannerId != -1L) {
         this.server.close(this.scannerId);
@@ -923,7 +873,6 @@ public class HTable implements HConstants {
     /** {@inheritDoc} */
     public boolean next(HStoreKey key, SortedMap<Text, byte[]> results)
     throws IOException {
-      checkClosed();
       if (this.closed) {
         return false;
       }
@@ -942,7 +891,7 @@ public class HTable implements HConstants {
           key.setVersion(k.getTimestamp());
           key.setColumn(EMPTY_COLUMN);
           results.put(k.getColumn(),
-              ((ImmutableBytesWritable) e.getValue()).get());
+            ((ImmutableBytesWritable) e.getValue()).get());
         }
       }
       return values == null ? false : values.size() != 0;
@@ -952,7 +901,6 @@ public class HTable implements HConstants {
      * {@inheritDoc}
      */
     public void close() throws IOException {
-      checkClosed();
       if (scannerId != -1L) {
         try {
           server.close(scannerId);
@@ -1063,5 +1011,10 @@ public class HTable implements HConstants {
       }
     }
     return null;    
+  }
+  
+  @Deprecated
+  public void close() {
+    // do nothing...
   }
 }

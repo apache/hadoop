@@ -32,6 +32,8 @@ Hbase Change Log
                (Bryan Duxbury via Stack)
    HBASE-416   Add apache-style logging to REST server and add setting log
                level, etc.
+   HBASE-406   Remove HTable and HConnection close methods
+               (Bryan Duxbury via Stack)
 
 
 Branch 0.1

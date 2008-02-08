@@ -218,53 +218,49 @@ public class TestTableMapReduce extends MultiRegionTable {
     // insert some data into the test table
     HTable table = new HTable(conf, new Text(SINGLE_REGION_TABLE_NAME));
 
-    try {
-      for(int i = 0; i < values.length; i++) {
-        long lockid = table.startUpdate(new Text("row_"
-            + String.format("%1$05d", i)));
-
-        try {
-          table.put(lockid, TEXT_INPUT_COLUMN, values[i]);
-          table.commit(lockid, System.currentTimeMillis());
-          lockid = -1;
-        } finally {
-          if (lockid != -1)
-            table.abort(lockid);
-        }
-      }
-
-      LOG.info("Print table contents before map/reduce for " +
-        SINGLE_REGION_TABLE_NAME);
-      scanTable(SINGLE_REGION_TABLE_NAME, true);
-
-      @SuppressWarnings("deprecation")
-      MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
+    for(int i = 0; i < values.length; i++) {
+      long lockid = table.startUpdate(new Text("row_"
+          + String.format("%1$05d", i)));
 
       try {
-        JobConf jobConf = new JobConf(conf, TestTableMapReduce.class);
-        jobConf.setJobName("process column contents");
-        jobConf.setNumMapTasks(1);
-        jobConf.setNumReduceTasks(1);
-
-        TableMap.initJob(SINGLE_REGION_TABLE_NAME, INPUT_COLUMN, 
-            ProcessContentsMapper.class, jobConf);
-
-        TableReduce.initJob(SINGLE_REGION_TABLE_NAME,
-            IdentityTableReduce.class, jobConf);
-        LOG.info("Started " + SINGLE_REGION_TABLE_NAME);
-        JobClient.runJob(jobConf);
-
-        LOG.info("Print table contents after map/reduce for " +
-          SINGLE_REGION_TABLE_NAME);
-      scanTable(SINGLE_REGION_TABLE_NAME, true);
-
-      // verify map-reduce results
-      verify(SINGLE_REGION_TABLE_NAME);
+        table.put(lockid, TEXT_INPUT_COLUMN, values[i]);
+        table.commit(lockid, System.currentTimeMillis());
+        lockid = -1;
       } finally {
-        mrCluster.shutdown();
+        if (lockid != -1)
+          table.abort(lockid);
       }
+    }
+
+    LOG.info("Print table contents before map/reduce for " +
+      SINGLE_REGION_TABLE_NAME);
+    scanTable(SINGLE_REGION_TABLE_NAME, true);
+
+    @SuppressWarnings("deprecation")
+    MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
+
+    try {
+      JobConf jobConf = new JobConf(conf, TestTableMapReduce.class);
+      jobConf.setJobName("process column contents");
+      jobConf.setNumMapTasks(1);
+      jobConf.setNumReduceTasks(1);
+
+      TableMap.initJob(SINGLE_REGION_TABLE_NAME, INPUT_COLUMN, 
+          ProcessContentsMapper.class, jobConf);
+
+      TableReduce.initJob(SINGLE_REGION_TABLE_NAME,
+          IdentityTableReduce.class, jobConf);
+      LOG.info("Started " + SINGLE_REGION_TABLE_NAME);
+      JobClient.runJob(jobConf);
+
+      LOG.info("Print table contents after map/reduce for " +
+        SINGLE_REGION_TABLE_NAME);
+    scanTable(SINGLE_REGION_TABLE_NAME, true);
+
+    // verify map-reduce results
+    verify(SINGLE_REGION_TABLE_NAME);
     } finally {
-      table.close();
+      mrCluster.shutdown();
     }
   }
   
@@ -287,34 +283,31 @@ public class TestTableMapReduce extends MultiRegionTable {
     
     // Verify table indeed has multiple regions
     HTable table = new HTable(conf, new Text(MULTI_REGION_TABLE_NAME));
+
+    Text[] startKeys = table.getStartKeys();
+    assertTrue(startKeys.length > 1);
+
+    @SuppressWarnings("deprecation")
+    MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
+
     try {
-      Text[] startKeys = table.getStartKeys();
-      assertTrue(startKeys.length > 1);
+      JobConf jobConf = new JobConf(conf, TestTableMapReduce.class);
+      jobConf.setJobName("process column contents");
+      jobConf.setNumMapTasks(2);
+      jobConf.setNumReduceTasks(1);
 
-      @SuppressWarnings("deprecation")
-      MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
+      TableMap.initJob(MULTI_REGION_TABLE_NAME, INPUT_COLUMN, 
+          ProcessContentsMapper.class, jobConf);
 
-      try {
-        JobConf jobConf = new JobConf(conf, TestTableMapReduce.class);
-        jobConf.setJobName("process column contents");
-        jobConf.setNumMapTasks(2);
-        jobConf.setNumReduceTasks(1);
+      TableReduce.initJob(MULTI_REGION_TABLE_NAME,
+          IdentityTableReduce.class, jobConf);
+      LOG.info("Started " + MULTI_REGION_TABLE_NAME);
+      JobClient.runJob(jobConf);
 
-        TableMap.initJob(MULTI_REGION_TABLE_NAME, INPUT_COLUMN, 
-            ProcessContentsMapper.class, jobConf);
-
-        TableReduce.initJob(MULTI_REGION_TABLE_NAME,
-            IdentityTableReduce.class, jobConf);
-        LOG.info("Started " + MULTI_REGION_TABLE_NAME);
-        JobClient.runJob(jobConf);
-
-        // verify map-reduce results
-        verify(MULTI_REGION_TABLE_NAME);
-      } finally {
-        mrCluster.shutdown();
-      }
+      // verify map-reduce results
+      verify(MULTI_REGION_TABLE_NAME);
     } finally {
-      table.close();
+      mrCluster.shutdown();
     }
   }
 

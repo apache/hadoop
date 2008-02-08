@@ -89,9 +89,6 @@ public class HConnectionManager implements HConstants {
     synchronized (HBASE_INSTANCES) {
       TableServers instance =
         HBASE_INSTANCES.remove(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
-      if (instance != null) {
-        instance.closeAll();
-      }
     }    
   }
   
@@ -112,9 +109,6 @@ public class HConnectionManager implements HConstants {
     private final Integer userRegionLock = new Integer(0);
         
     private volatile HBaseConfiguration conf;
-
-    // Set of closed tables
-    private Set<Text> closedTables;
     
     // Known region HServerAddress.toString() -> HRegionInterface 
     private Map<String, HRegionInterface> servers;
@@ -153,7 +147,6 @@ public class HConnectionManager implements HConstants {
 
       this.cachedRegionLocations = 
         new ConcurrentHashMap<Text, SortedMap<Text, HRegionLocation>>();
-      this.closedTables = Collections.synchronizedSet(new HashSet<Text>());
       this.servers = new ConcurrentHashMap<String, HRegionInterface>();
     }
     
@@ -658,43 +651,6 @@ public class HConnectionManager implements HConstants {
       return server;
     }
 
-    /** {@inheritDoc} */
-    public void close(Text tableName) {
-      if (tableName == null || tableName.getLength() == 0) {
-        throw new IllegalArgumentException(
-            "table name cannot be null or zero length");
-      }
-            
-      if (closedTables.contains(tableName)) {
-        // Table already closed. Ignore it.
-        return;
-      }
-
-      closedTables.add(tableName);
-
-      if (cachedRegionLocations.containsKey(tableName)) {
-        SortedMap<Text, HRegionLocation> tableServers = 
-          cachedRegionLocations.remove(tableName);
-
-        // Shut down connections to the HRegionServers
-        synchronized (this.servers) {
-          for (HRegionLocation r: tableServers.values()) {
-            this.servers.remove(r.getServerAddress().toString());
-          }
-        }
-      }
-    }
-    
-    /** Convenience method for closing all open tables.*/
-    void closeAll() {
-      this.closed = true;
-      ArrayList<Text> tables = 
-        new ArrayList<Text>(cachedRegionLocations.keySet());
-      for (Text tableName: tables) {
-        close(tableName);
-      }
-    }
-    
     /*
      * Repeatedly try to find the root region by asking the master for where it is
      * @return HRegionLocation for root region if found

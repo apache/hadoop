@@ -131,37 +131,28 @@ public class TestLogRolling extends HBaseTestCase {
     // When the META table can be opened, the region servers are running
     HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
     
-    try {
+    // Create the test table and open it
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    admin.createTable(desc);
+    HTable table = new HTable(conf, new Text(tableName));
 
-      // Create the test table and open it
-      HTableDescriptor desc = new HTableDescriptor(tableName);
-      desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
-      HBaseAdmin admin = new HBaseAdmin(conf);
-      admin.createTable(desc);
-      HTable table = new HTable(conf, new Text(tableName));
+    for (int i = 1; i <= 2048; i++) {    // 2048 writes should cause 8 log rolls
+      long lockid =
+        table.startUpdate(new Text("row" + String.format("%1$04d", i)));
+      table.put(lockid, HConstants.COLUMN_FAMILY, value);
+      table.commit(lockid);
 
-      try {
-        for (int i = 1; i <= 2048; i++) {    // 2048 writes should cause 8 log rolls
-          long lockid =
-            table.startUpdate(new Text("row" + String.format("%1$04d", i)));
-          table.put(lockid, HConstants.COLUMN_FAMILY, value);
-          table.commit(lockid);
+      if (i % 256 == 0) {
+        // After every 256 writes sleep to let the log roller run
 
-          if (i % 256 == 0) {
-            // After every 256 writes sleep to let the log roller run
-
-            try {
-              Thread.sleep(2000);
-            } catch (InterruptedException e) {
-              // continue
-            }
-          }
+        try {
+          Thread.sleep(2000);
+        } catch (InterruptedException e) {
+          // continue
         }
-      } finally {
-        table.close();
       }
-    } finally {
-      meta.close();
     }
   }
   

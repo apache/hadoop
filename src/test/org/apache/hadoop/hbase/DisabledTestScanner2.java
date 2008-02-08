@@ -117,7 +117,6 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
       assertEquals(count, 3);
     } finally {
       scanner.close();
-      table.close();
     }
   }
 
@@ -128,20 +127,16 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     Text tableName = new Text(getName());
     createTable(new HBaseAdmin(this.conf), tableName);
     HTable table = new HTable(this.conf, tableName);
-    try {
-      final String lastKey = "aac";
-      addContent(new HTableIncommon(table), FIRST_COLKEY + ":");
-      HScannerInterface scanner =
-        table.obtainScanner(new Text [] {new Text(FIRST_COLKEY + ":")},
-            HConstants.EMPTY_START_ROW, new Text(lastKey));
-      for (Map.Entry<HStoreKey, SortedMap<Text, byte []>> e: scanner) {
-        if(e.getKey().getRow().toString().compareTo(lastKey) >= 0) {
-          LOG.info(e.getKey());
-          fail();
-        }
+    final String lastKey = "aac";
+    addContent(new HTableIncommon(table), FIRST_COLKEY + ":");
+    HScannerInterface scanner =
+      table.obtainScanner(new Text [] {new Text(FIRST_COLKEY + ":")},
+          HConstants.EMPTY_START_ROW, new Text(lastKey));
+    for (Map.Entry<HStoreKey, SortedMap<Text, byte []>> e: scanner) {
+      if(e.getKey().getRow().toString().compareTo(lastKey) >= 0) {
+        LOG.info(e.getKey());
+        fail();
       }
-    } finally {
-      table.close();
     }
   }
   
@@ -150,16 +145,12 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
    */
   public void testIterator() throws Exception {
     HTable table = new HTable(this.conf, HConstants.ROOT_TABLE_NAME);
-    try {
-      HScannerInterface scanner =
-        table.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY,
-            HConstants.EMPTY_START_ROW);
-      for (Map.Entry<HStoreKey, SortedMap<Text, byte []>> e: scanner) {
-        assertNotNull(e.getKey());
-        assertNotNull(e.getValue());
-      }
-    } finally {
-      table.close();
+    HScannerInterface scanner =
+      table.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY,
+          HConstants.EMPTY_START_ROW);
+    for (Map.Entry<HStoreKey, SortedMap<Text, byte []>> e: scanner) {
+      assertNotNull(e.getKey());
+      assertNotNull(e.getValue());
     }
   }
 
@@ -174,22 +165,18 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     Text tableName = new Text(getName());
     createTable(admin, tableName);
     HTable table = new HTable(this.conf, tableName);
-    try {
-      // Add a row to columns without qualifiers and then two with.  Make one
-      // numbers only so easy to find w/ a regex.
-      long id = table.startUpdate(new Text(getName()));
-      final String firstColkeyFamily = Character.toString(FIRST_COLKEY) + ":";
-      table.put(id, new Text(firstColkeyFamily + getName()), GOOD_BYTES);
-      table.put(id, new Text(firstColkeyFamily + "22222"), GOOD_BYTES);
-      table.put(id, new Text(firstColkeyFamily), GOOD_BYTES);
-      table.commit(id);
-      // Now do a scan using a regex for a column name.
-      checkRegexingScanner(table, firstColkeyFamily + "\\d+");
-      // Do a new scan that only matches on column family.
-      checkRegexingScanner(table, firstColkeyFamily + "$");
-    } finally {
-      table.close();
-    }
+    // Add a row to columns without qualifiers and then two with.  Make one
+    // numbers only so easy to find w/ a regex.
+    long id = table.startUpdate(new Text(getName()));
+    final String firstColkeyFamily = Character.toString(FIRST_COLKEY) + ":";
+    table.put(id, new Text(firstColkeyFamily + getName()), GOOD_BYTES);
+    table.put(id, new Text(firstColkeyFamily + "22222"), GOOD_BYTES);
+    table.put(id, new Text(firstColkeyFamily), GOOD_BYTES);
+    table.commit(id);
+    // Now do a scan using a regex for a column name.
+    checkRegexingScanner(table, firstColkeyFamily + "\\d+");
+    // Do a new scan that only matches on column family.
+    checkRegexingScanner(table, firstColkeyFamily + "$");
   }
   
   /*
@@ -199,8 +186,9 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
    * @param regexColumnname
    * @throws IOException
    */
-  private void checkRegexingScanner(final HTable table,
-      final String regexColumnname) throws IOException {
+  private void checkRegexingScanner(final HTable table, 
+    final String regexColumnname) 
+  throws IOException {
     Text [] regexCol = new Text [] {new Text(regexColumnname)};
     HScannerInterface scanner =
       table.obtainScanner(regexCol, HConstants.EMPTY_START_ROW);
@@ -234,22 +222,18 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     
     // Enter data
     HTable table = new HTable(conf, tableName);
-    try {
-      for (char i = FIRST_ROWKEY; i <= LAST_ROWKEY; i++) {
-        Text rowKey = new Text(new String(new char[] { i }));
-        long lockID = table.startUpdate(rowKey);
-        for (char j = 0; j < colKeys.length; j++) {
-          table.put(lockID, colKeys[j], (i >= FIRST_BAD_RANGE_ROWKEY && 
-              i <= LAST_BAD_RANGE_ROWKEY)? BAD_BYTES : GOOD_BYTES);
-        }
-        table.commit(lockID);
+    for (char i = FIRST_ROWKEY; i <= LAST_ROWKEY; i++) {
+      Text rowKey = new Text(new String(new char[] { i }));
+      long lockID = table.startUpdate(rowKey);
+      for (char j = 0; j < colKeys.length; j++) {
+        table.put(lockID, colKeys[j], (i >= FIRST_BAD_RANGE_ROWKEY && 
+            i <= LAST_BAD_RANGE_ROWKEY)? BAD_BYTES : GOOD_BYTES);
       }
-
-      regExpFilterTest(table, colKeys);
-      rowFilterSetTest(table, colKeys);
-    } finally {
-      table.close();
+      table.commit(lockID);
     }
+
+    regExpFilterTest(table, colKeys);
+    rowFilterSetTest(table, colKeys);
   }
   
   /**
@@ -292,7 +276,7 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
   }
   
   private void rowFilterSetTest(HTable table, Text[] colKeys) 
-    throws Exception {
+  throws Exception {
     // Get the filter.  The RegExpRowFilter used should filter out vowels and 
     // the WhileMatchRowFilter(StopRowFilter) should filter out all rows 
     // greater than or equal to 'r'.
@@ -312,21 +296,21 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
   
   private void iterateOnScanner(HScannerInterface scanner, String regexToMatch)
   throws Exception {
-      // A pattern that will only match rows that should not have been filtered.
-      Pattern p = Pattern.compile(regexToMatch);
-      
-      try {
-        // Use the scanner to ensure all results match the above pattern.
-        HStoreKey rowKey = new HStoreKey();
-        TreeMap<Text, byte[]> columns = new TreeMap<Text, byte[]>();
-        while (scanner.next(rowKey, columns)) {
-          String key = rowKey.getRow().toString();
-          assertTrue("Shouldn't have extracted '" + key + "'", 
-            p.matcher(key).matches());
-        }
-      } finally {
-        scanner.close();
+    // A pattern that will only match rows that should not have been filtered.
+    Pattern p = Pattern.compile(regexToMatch);
+    
+    try {
+      // Use the scanner to ensure all results match the above pattern.
+      HStoreKey rowKey = new HStoreKey();
+      TreeMap<Text, byte[]> columns = new TreeMap<Text, byte[]>();
+      while (scanner.next(rowKey, columns)) {
+        String key = rowKey.getRow().toString();
+        assertTrue("Shouldn't have extracted '" + key + "'", 
+          p.matcher(key).matches());
       }
+    } finally {
+      scanner.close();
+    }
   }
   
   /**
@@ -337,43 +321,39 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
    */
   public void testSplitDeleteOneAddTwoRegions() throws IOException {
     HTable metaTable = new HTable(conf, HConstants.META_TABLE_NAME);
+    // First add a new table.  Its intial region will be added to META region.
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    Text tableName = new Text(getName());
+    admin.createTable(new HTableDescriptor(tableName.toString()));
+    List<HRegionInfo> regions = scan(metaTable);
+    assertEquals("Expected one region", 1, regions.size());
+    HRegionInfo region = regions.get(0);
+    assertTrue("Expected region named for test",
+        region.getRegionName().toString().startsWith(getName()));
+    // Now do what happens at split time; remove old region and then add two
+    // new ones in its place.
+    removeRegionFromMETA(metaTable, region.getRegionName());
+    HTableDescriptor desc = region.getTableDesc();
+    Path homedir = new Path(getName());
+    List<HRegion> newRegions = new ArrayList<HRegion>(2);
+    newRegions.add(HRegion.createHRegion(
+        new HRegionInfo(desc, null, new Text("midway")),
+        homedir, this.conf));
+    newRegions.add(HRegion.createHRegion(
+        new HRegionInfo(desc, new Text("midway"), null),
+        homedir, this.conf));
     try {
-      // First add a new table.  Its intial region will be added to META region.
-      HBaseAdmin admin = new HBaseAdmin(conf);
-      Text tableName = new Text(getName());
-      admin.createTable(new HTableDescriptor(tableName.toString()));
-      List<HRegionInfo> regions = scan(metaTable);
-      assertEquals("Expected one region", 1, regions.size());
-      HRegionInfo region = regions.get(0);
-      assertTrue("Expected region named for test",
-          region.getRegionName().toString().startsWith(getName()));
-      // Now do what happens at split time; remove old region and then add two
-      // new ones in its place.
-      removeRegionFromMETA(metaTable, region.getRegionName());
-      HTableDescriptor desc = region.getTableDesc();
-      Path homedir = new Path(getName());
-      List<HRegion> newRegions = new ArrayList<HRegion>(2);
-      newRegions.add(HRegion.createHRegion(
-          new HRegionInfo(desc, null, new Text("midway")),
-          homedir, this.conf));
-      newRegions.add(HRegion.createHRegion(
-          new HRegionInfo(desc, new Text("midway"), null),
-          homedir, this.conf));
-      try {
-        for (HRegion r : newRegions) {
-          addRegionToMETA(metaTable, r, this.cluster.getHMasterAddress(),
-              -1L);
-        }
-        regions = scan(metaTable);
-        assertEquals("Should be two regions only", 2, regions.size());
-      } finally {
-        for (HRegion r : newRegions) {
-          r.close();
-          r.getLog().closeAndDelete();
-        }
+      for (HRegion r : newRegions) {
+        addRegionToMETA(metaTable, r, this.cluster.getHMasterAddress(),
+            -1L);
       }
+      regions = scan(metaTable);
+      assertEquals("Should be two regions only", 2, regions.size());
     } finally {
-      metaTable.close();
+      for (HRegion r : newRegions) {
+        r.close();
+        r.getLog().closeAndDelete();
+      }
     }
   }
   

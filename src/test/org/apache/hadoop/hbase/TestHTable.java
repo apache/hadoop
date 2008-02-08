@@ -110,20 +110,6 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
       s.close();
     }
     
-    // Close table A and note how A becomes inaccessable
-    
-    a.close();
-    
-    try {
-      a.get(row, COLUMN_FAMILY);
-      fail();
-    } catch (IllegalStateException e) {
-      // expected
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail();
-    }
-    
     // Opening a new connection to A will cause the tables to be reloaded
 
     try {
