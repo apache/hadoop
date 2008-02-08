@@ -224,7 +224,7 @@ public class DataBlockScanner implements Runnable {
      * the scan period. Otherwise something sooner.
      */
     long period = Math.min(scanPeriod, 
-                           Math.max(blockMap.size(),1) * 60 * 1000L);
+                           Math.max(blockMap.size(),1) * 600 * 1000L);
     return System.currentTimeMillis() - scanPeriod + 
            random.nextInt((int)period);    
   }
