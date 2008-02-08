@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -64,6 +64,33 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.Leases;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HConnection;
+import org.apache.hadoop.hbase.HConnectionManager;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.HRegionInterface;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.HRegion;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.LocalHBaseCluster;
+import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.HStoreFile;
+import org.apache.hadoop.hbase.HStore;
+import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.LeaseListener;
+import org.apache.hadoop.hbase.HLog;
 
 /**
  * HMaster is the "master server" for a HBase.
@@ -132,6 +159,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   
   /** Name of master server */
   public static final String MASTER = "master";
+
+  public InfoServer getInfoServer() {
+    return infoServer;
+  }
 
   /**
    * Base HRegion scanner class. Holds utilty common to <code>ROOT</code> and
@@ -2574,7 +2605,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       BatchUpdate b = new BatchUpdate(regionName);
       b.put(COL_REGIONINFO, Writables.getBytes(info));
       server.batchUpdate(metaRegionName, b);
-
+      
       // 4. Close the new region to flush it to disk.  Close its log file too.
       
       region.close();
