@@ -34,6 +34,8 @@ Hbase Change Log
                level, etc.
    HBASE-406   Remove HTable and HConnection close methods
                (Bryan Duxbury via Stack)
+   HBASE-418   Move HMaster and related classes into master package
+               (Bryan Duxbury via Stack)
 
 
 Branch 0.1
