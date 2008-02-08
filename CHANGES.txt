@@ -33,6 +33,8 @@ Release 0.16.1 - Unrelease
 
   BUG FIXES
 
+    HADOOP-2788. minor. Fix help message for chgrp shell command (Raghu Angadi).
+    
     HADOOP-1188. fstime file is updated when a storage directory containing
     namespace image becomes inaccessible. (shv)
 

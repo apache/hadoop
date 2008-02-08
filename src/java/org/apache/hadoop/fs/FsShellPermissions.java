@@ -197,7 +197,7 @@ class FsShellPermissions {
          Pattern.compile("^\\s*(\\p{Alnum}+)\\s*$");
   
   static String CHOWN_USAGE = "-chown [-R] [OWNER][:[GROUP]] PATH...";
-  static String CHGRP_USAGE = "-chown [-R] GROUP PATH...";  
+  static String CHGRP_USAGE = "-chgrp [-R] GROUP PATH...";  
 
   private static class ChownHandler extends CmdHandler {
     protected String owner = null;
