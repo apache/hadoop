@@ -28,6 +28,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 
+import org.apache.hadoop.hbase.io.BatchUpdate;
+
 /**
  * Tests region server failover when a region server exits both cleanly and
  * when it aborts.
@@ -95,10 +97,10 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
     // put some values in the table
     this.table = new HTable(conf, new Text(tableName));
     final Text row = new Text("row1");
-    long lockid = table.startUpdate(row);
-    table.put(lockid, HConstants.COLUMN_FAMILY,
+    BatchUpdate b = new BatchUpdate(row);
+    b.put(HConstants.COLUMN_FAMILY,
         tableName.getBytes(HConstants.UTF8_ENCODING));
-    table.commit(lockid);
+    table.commit(b);
     return row;
   }
 
@@ -179,8 +181,9 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
                 HConstants.UTF8_ENCODING)));
           }
           LOG.info("Success!");
-        } catch (IOException e) {
+        } catch (Exception e) {
           e.printStackTrace();
+          fail();
         } finally {
           if (scanner != null) {
             LOG.info("Closing scanner " + scanner);

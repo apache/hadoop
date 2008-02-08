@@ -38,7 +38,7 @@
   <property name="docs.dir" value="${basedir}/docs"/>
 
   <property name="test.output" value="no"/>
-  <property name="test.timeout" value="300000"/>
+  <property name="test.timeout" value="360000"/>
 
   <property name="build.dir" location="${basedir}/build"/>
   <property name="build.bin" location="${build.dir}/bin"/>
@@ -277,9 +277,13 @@
   <!-- Run unit tests                                                     -->
   <!-- ================================================================== -->
   <path id="test.classpath">
-    <path refid="classpath"/>
     <pathelement location="${build.test}" />
     <pathelement location="${src.test}"/>
+    <!-- ============  *  *  *  *  *  N O T E  *  *  *  *  * ============
+           ${src.test} *must* come before rest of class path. Otherwise
+                    the test hbase-site.xml will not be found.
+         ============  *  *  *  *  *  N O T E  *  *  *  *  * ============ -->
+    <path refid="classpath"/>
     <pathelement location="${conf.dir}"/>
     <pathelement location="${build.dir}"/>
     <pathelement location="${build.webapps}"/>
@@ -309,7 +313,7 @@
     <mkdir dir="${test.log.dir}"/>
     <junit
       printsummary="yes" showoutput="${test.output}" 
-      haltonfailure="no" fork="yes" maxmemory="256m"
+      haltonfailure="no" fork="yes" maxmemory="512m"
       errorProperty="tests.failed" failureProperty="tests.failed"
       timeout="${test.timeout}">
       

@@ -15,6 +15,7 @@ Hbase Change Log
                (Dave Simpson via Bryan Duxbury via Stack)
    HBASE-2     hlog numbers should wrap around when they reach 999
                (Bryan Duxbury via Stack)
+   HBASE-421   TestRegionServerExit broken
 
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling
