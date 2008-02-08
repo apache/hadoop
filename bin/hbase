@@ -160,7 +160,7 @@ unset IFS
 if [ "$COMMAND" = "shell" ] ; then
   CLASS='org.apache.hadoop.hbase.Shell'
 elif [ "$COMMAND" = "master" ] ; then
-  CLASS='org.apache.hadoop.hbase.HMaster'
+  CLASS='org.apache.hadoop.hbase.master.HMaster'
 elif [ "$COMMAND" = "regionserver" ] ; then
   CLASS='org.apache.hadoop.hbase.HRegionServer'
 elif [ "$COMMAND" = "rest" ] ; then

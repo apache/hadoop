@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.SortedMap;
 
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.master.HMasterInterface;
 
 /**
  * 

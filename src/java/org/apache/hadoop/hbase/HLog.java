@@ -494,7 +494,7 @@ public class HLog implements HConstants {
    * @param conf HBaseConfiguration
    * @throws IOException
    */
-  static void splitLog(Path rootDir, Path srcDir, FileSystem fs,
+  public static void splitLog(Path rootDir, Path srcDir, FileSystem fs,
     Configuration conf) throws IOException {
     Path logfiles[] = fs.listPaths(new Path[] { srcDir });
     LOG.info("splitting " + logfiles.length + " log(s) in " +

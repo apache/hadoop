@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
 
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.master.HMaster;
 
 /**
  * This class creates a single process HBase cluster. One thread is created for

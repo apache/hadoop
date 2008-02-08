@@ -1788,7 +1788,7 @@ public class HRegion implements HConstants {
    * 
    * @throws IOException
    */
-  static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
+  public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
       final HBaseConfiguration conf) throws IOException {
     Path tableDir =
       HTableDescriptor.getTableDir(rootDir, info.getTableDesc().getName());
@@ -1811,7 +1811,8 @@ public class HRegion implements HConstants {
    * @throws IOException
    * @see {@link #removeRegionFromMETA(HRegion, HRegion)}
    */
-  static void addRegionToMETA(HRegion meta, HRegion r) throws IOException {
+  public static void addRegionToMETA(HRegion meta, HRegion r) 
+  throws IOException {
     meta.checkResources();
     // The row key is the region name
     Text row = r.getRegionName();
@@ -1839,7 +1840,7 @@ public class HRegion implements HConstants {
    * @throws IOException
    * @see {@link #addRegionToMETA(HRegion, HRegion)}
    */
-  static void removeRegionFromMETA(final HRegionInterface srvr,
+  public static void removeRegionFromMETA(final HRegionInterface srvr,
     final Text metaRegionName, final Text regionName)
   throws IOException {
     srvr.deleteAll(metaRegionName, regionName, HConstants.LATEST_TIMESTAMP);
@@ -1854,7 +1855,7 @@ public class HRegion implements HConstants {
    * @throws IOException
    * @see {@link #addRegionToMETA(HRegion, HRegion)}
    */
-  static void offlineRegionInMETA(final HRegionInterface srvr,
+  public static void offlineRegionInMETA(final HRegionInterface srvr,
     final Text metaRegionName, final HRegionInfo info)
   throws IOException {
     BatchUpdate b = new BatchUpdate(info.getRegionName());
@@ -1876,7 +1877,8 @@ public class HRegion implements HConstants {
    * @throws IOException
    * @return True if deleted.
    */
-  static boolean deleteRegion(FileSystem fs, Path rootdir, HRegionInfo info)
+  public static boolean deleteRegion(FileSystem fs, Path rootdir, 
+    HRegionInfo info)
   throws IOException {
     Path p = HRegion.getRegionDir(rootdir, info);
     if (LOG.isDebugEnabled()) {

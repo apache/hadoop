@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.hbase.master.HMasterInterface;
 
 /**
  * A non-instantiable class that manages connections to multiple tables in

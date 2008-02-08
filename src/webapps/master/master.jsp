@@ -2,9 +2,9 @@
   import="java.util.*"
   import="org.apache.hadoop.io.Text"
   import="org.apache.hadoop.util.VersionInfo"
-  import="org.apache.hadoop.hbase.HMaster"
-    import="org.apache.hadoop.hbase.HConstants"
-  import="org.apache.hadoop.hbase.HMaster.MetaRegion"
+  import="org.apache.hadoop.hbase.master.HMaster"
+  import="org.apache.hadoop.hbase.HConstants"
+  import="org.apache.hadoop.hbase.master.HMaster.MetaRegion"
   import="org.apache.hadoop.hbase.HBaseAdmin"
   import="org.apache.hadoop.hbase.HServerInfo"
   import="org.apache.hadoop.hbase.HServerAddress"
@@ -12,7 +12,7 @@
   import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.hql.ShowCommand"
   import="org.apache.hadoop.hbase.hql.TableFormatter"
-    import="org.apache.hadoop.hbase.hql.ReturnMsg"
+  import="org.apache.hadoop.hbase.hql.ReturnMsg"
   import="org.apache.hadoop.hbase.hql.formatter.HtmlTableFormatter"
   import="org.apache.hadoop.hbase.HTableDescriptor" %><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);

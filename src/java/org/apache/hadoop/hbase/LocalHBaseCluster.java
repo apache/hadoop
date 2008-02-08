@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.hbase.master.HMaster;
 
 /**
  * This class creates a single process HBase cluster. One thread is created for
@@ -268,7 +269,7 @@ public class LocalHBaseCluster implements HConstants {
    * @return The passed <code>c</code> configuration modified if hbase.master
    * value was 'local' otherwise, unaltered.
    */
-  static HBaseConfiguration doLocal(final HBaseConfiguration c) {
+  public static HBaseConfiguration doLocal(final HBaseConfiguration c) {
     if (!isLocal(c)) {
       return c;
     }

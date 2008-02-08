@@ -31,6 +31,13 @@
     </description>
   </property>
   <property>
+    <name>hbase.rootdir</name>
+    <value>file:///${hadoop.tmp.dir}/hbase</value>
+    <description>The directory shared by region servers.
+    Should be fully-qualified to include the filesystem.
+    </description>
+  </property>
+  <property>
     <name>hbase.master.info.port</name>
     <value>60010</value>
     <description>The port for the hbase master web UI
@@ -67,12 +74,6 @@
     <value>org.apache.hadoop.hbase.HRegionInterface</value>
     <description>An interface that is assignable to HRegionInterface.  Used in HClient for
     opening proxy to remote region server.
-    </description>
-  </property>
-  <property>
-    <name>hbase.rootdir</name>
-    <value>${hadoop.tmp.dir}/hbase</value>
-    <description>The directory shared by region servers.
     </description>
   </property>
   <property>

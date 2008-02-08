@@ -521,19 +521,19 @@ public class HStoreFile implements HConstants {
       ((encodedRegionName != null) ? "." + encodedRegionName : "");
   }
   
-  static Path getMapDir(Path dir, String encodedRegionName, Text colFamily) {
+  public static Path getMapDir(Path dir, String encodedRegionName, Text colFamily) {
     return new Path(dir, new Path(encodedRegionName, 
         new Path(colFamily.toString(), HSTORE_DATFILE_DIR)));
   }
 
   /** @return the info directory path */
-  static Path getInfoDir(Path dir, String encodedRegionName, Text colFamily) {
+  public static Path getInfoDir(Path dir, String encodedRegionName, Text colFamily) {
     return new Path(dir, new Path(encodedRegionName, 
         new Path(colFamily.toString(), HSTORE_INFO_DIR)));
   }
 
   /** @return the bloom filter directory path */
-  static Path getFilterDir(Path dir, String encodedRegionName, Text colFamily) {
+  public static Path getFilterDir(Path dir, String encodedRegionName, Text colFamily) {
     return new Path(dir, new Path(encodedRegionName,
         new Path(colFamily.toString(), HSTORE_FILTER_DIR)));
   }
