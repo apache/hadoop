@@ -22,13 +22,19 @@ package org.apache.hadoop.hbase.rest;
 import java.io.IOException;
 
 import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.InfoServer;
+import org.apache.hadoop.mapred.StatusHttpServer;
+import org.mortbay.http.NCSARequestLog;
 import org.mortbay.http.SocketListener;
+import org.mortbay.jetty.servlet.WebApplicationContext;
 
 /**
  * Servlet implementation class for hbase REST interface.
@@ -54,6 +60,7 @@ import org.mortbay.http.SocketListener;
  */
 public class Dispatcher extends javax.servlet.http.HttpServlet
 implements javax.servlet.Servlet {
+  private static final Log LOG = LogFactory.getLog(Dispatcher.class.getName());
   private MetaHandler metaHandler;
   private TableHandler tableHandler;
   private ScannerHandler scannerHandler;
@@ -179,7 +186,9 @@ implements javax.servlet.Servlet {
     System.out.println("Options:");
     System.out.println(" port  Port to listen on. Default: 60050.");
     System.out.println(" bind  Address to bind on. Default: 0.0.0.0.");
+    System.out.println(" max-num-threads  The maximum number of threads for Jetty to run. Defaults to 256.");
     System.out.println(" help  Print this message and exit.");
+
     System.exit(0);
   }
 
@@ -194,11 +203,13 @@ implements javax.servlet.Servlet {
 
     int port = 60050;
     String bindAddress = "0.0.0.0";
+    int numThreads = 256;
 
     // Process command-line args. TODO: Better cmd-line processing
     // (but hopefully something not as painful as cli options).
     final String addressArgKey = "--bind=";
     final String portArgKey = "--port=";
+    final String numThreadsKey = "--max-num-threads=";
     for (String cmd: args) {
       if (cmd.startsWith(addressArgKey)) {
         bindAddress = cmd.substring(addressArgKey.length());
@@ -214,18 +225,29 @@ implements javax.servlet.Servlet {
         printUsageAndExit("To shutdown the REST server run " +
           "bin/hbase-daemon.sh stop rest or send a kill signal to " +
           "the REST server pid");
+      } else if (cmd.startsWith(numThreadsKey)) { 
+        numThreads = Integer.parseInt(cmd.substring(numThreadsKey.length()));
+        continue;
       }
       
       // Print out usage if we get to here.
       printUsageAndExit();
     }
-
     org.mortbay.jetty.Server webServer = new org.mortbay.jetty.Server();
     SocketListener listener = new SocketListener();
     listener.setPort(port);
     listener.setHost(bindAddress);
+    listener.setMaxThreads(numThreads);
     webServer.addListener(listener);
-    webServer.addWebApplication("/api", InfoServer.getWebAppDir("rest"));
+    NCSARequestLog ncsa = new NCSARequestLog();
+    ncsa.setLogLatency(true);
+    webServer.setRequestLog(ncsa);
+    WebApplicationContext context =
+      webServer.addWebApplication("/api", InfoServer.getWebAppDir("rest"));
+    context.addServlet("stacks", "/stacks",
+      StatusHttpServer.StackServlet.class.getName());
+    context.addServlet("logLevel", "/logLevel",
+      org.apache.hadoop.log.LogLevel.Servlet.class.getName());
     webServer.start();
   }
   

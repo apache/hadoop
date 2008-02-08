@@ -27,6 +27,10 @@ Hbase Change Log
                (Edward Yoon & Bryan Duxbury via Stack)
    HBASE-56    Unnecessary HQLClient Object creation in a shell loop
                (Edward Yoon via Stack)
+   HBASE-3     rest server: configure number of threads for jetty
+               (Bryan Duxbury via Stack)
+   HBASE-416   Add apache-style logging to REST server and add setting log
+               level, etc.
 
 
 Branch 0.1

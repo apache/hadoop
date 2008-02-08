@@ -381,7 +381,7 @@ public class HConnectionManager implements HConstants {
         if (location != null) {
           return location;
         }
-      } else{
+      } else {
         deleteCachedLocation(tableName, row);
       }
 
@@ -509,7 +509,14 @@ public class HConnectionManager implements HConstants {
       // if there's something in the cache for this table.
       if (!tableLocations.isEmpty()) {
         if (tableLocations.containsKey(row)) {
-          return tableLocations.get(row);
+          HRegionLocation rl = tableLocations.get(row);
+          if (rl != null && LOG.isDebugEnabled()) {
+            LOG.debug("Cache hit in table locations for row <" +
+              row + "> and tableName " + tableName +
+              ": location server " + rl.getServerAddress() +
+              ", location region name " + rl.getRegionInfo().getRegionName());
+          }
+          return rl;
         }
         
         // cut the cache so that we only get the part that could contain
@@ -532,6 +539,10 @@ public class HConnectionManager implements HConstants {
           // signifying that the region we're checking is actually the last 
           // region in the table.
           if (endKey.equals(EMPTY_TEXT) || endKey.compareTo(row) > 0) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Found possible location for " + row + ", " +
+                possibleRegion);
+            }
             return possibleRegion;
           }
         }
@@ -540,7 +551,6 @@ public class HConnectionManager implements HConstants {
       // passed all the way through, so we got nothin - complete cache miss
       return null;
     }
-
 
     /**
       * Delete a cached location, if it satisfies the table name and row
@@ -578,12 +588,16 @@ public class HConnectionManager implements HConstants {
           // otherwise it wouldn't be in the headMap. 
           if (endKey.compareTo(row) <= 0) {
             // delete any matching entry
-            tableLocations.remove(matchingRegions.lastKey());
+            HRegionLocation rl = 
+              tableLocations.remove(matchingRegions.lastKey());
+            if (rl != null && LOG.isDebugEnabled()) {
+              LOG.debug("Removed " + rl.getRegionInfo().getRegionName() +
+                " from cache because of " + row);
+            }
           }
         }
-      }      
+      }
     }
-
 
     /**
       * Put a newly discovered HRegionLocation into the cache.
@@ -729,6 +743,9 @@ public class HConnectionManager implements HConstants {
           // if this works, then we're good, and we have an acceptable address,
           // so we can stop doing retries and return the result.
           server.getRegionInfo(HRegionInfo.rootRegionInfo.getRegionName());
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Found ROOT " + HRegionInfo.rootRegionInfo);
+          }
           break;
         } catch (IOException e) {
           if (tries == numRetries - 1) {
@@ -757,7 +774,7 @@ public class HConnectionManager implements HConstants {
         rootRegionAddress = null;
       }
       
-      // if the adress is null by this point, then the retries have failed,
+      // if the address is null by this point, then the retries have failed,
       // and we're sort of sunk
       if (rootRegionAddress == null) {
         throw new NoServerForRegionException(
