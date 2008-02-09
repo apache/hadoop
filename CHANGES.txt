@@ -45,9 +45,6 @@ Release 0.16.1 - Unrelease
     dfs.umask to set the umask that is used by DFS.
     (Tsz Wo (Nicholas), SZE via dhruba)
 
-    HADOOP-2725. Fix distcp to avoid leaving truncated files, particularly
-    in the default case. (Tsz Wo (Nicholas), SZE via cdouglas)
-
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES

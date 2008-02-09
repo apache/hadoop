@@ -388,25 +388,4 @@ public class TestCopyFiles extends TestCase {
     }
   }
 
-  public void testCopyDuplication() throws Exception {
-    try {    
-      MyFile[] files = createFiles("local", TEST_ROOT_DIR+"/srcdat");
-      ToolRunner.run(new CopyFiles(new Configuration()),
-          new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
-                        "file:///"+TEST_ROOT_DIR+"/src2/srcdat"});
-      assertTrue("Source and destination directories do not match.",
-                 checkFiles("local", TEST_ROOT_DIR+"/src2/srcdat", files));
-  
-      assertEquals(CopyFiles.DuplicationException.ERROR_CODE,
-          ToolRunner.run(new CopyFiles(new Configuration()),
-          new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
-                        "file:///"+TEST_ROOT_DIR+"/src2/srcdat",
-                        "file:///"+TEST_ROOT_DIR+"/destdst",}));
-    }
-    finally {
-      deldir("local", TEST_ROOT_DIR+"/destdat");
-      deldir("local", TEST_ROOT_DIR+"/srcdat");
-      deldir("local", TEST_ROOT_DIR+"/src2");
-    }
-  }
 }
