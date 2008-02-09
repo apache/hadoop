@@ -23,6 +23,13 @@
 -->
 <configuration>
   <property>
+    <name>fs.default.name</name>
+    <value></value>
+    <description>Use hdfs as file system by default. Modify this to run on
+    local file system.
+    </description>
+  </property>
+  <property>
     <name>hbase.regionserver.msginterval</name>
     <value>1000</value>
     <description>Interval between messages from the RegionServer to HMaster
@@ -99,9 +106,8 @@
   </property>
   <property>
   	<name>hbase.rootdir</name>
-  	<value>hdfs://localhost:42273/hbase</value>
-  	<description>Location of HBase test hbase instance (42273 is hbase
-    on a telephone pad)</description>
+  	<value>/hbase</value>
+  	<description>location of HBase instance in dfs</description>
   </property>
   <property>
     <name>hbase.hregion.max.filesize</name>
