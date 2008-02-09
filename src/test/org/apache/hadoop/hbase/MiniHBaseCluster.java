@@ -139,8 +139,9 @@ public class MiniHBaseCluster implements HConstants {
 
   private void init(final int nRegionNodes) throws IOException {
     try {
-      this.parentdir = new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
-      fs.mkdirs(parentdir);
+      this.parentdir = this.fs.getHomeDirectory();
+      this.conf.set(HConstants.HBASE_DIR, this.parentdir.toString());
+      this.fs.mkdirs(parentdir);
       FSUtils.setVersion(fs, parentdir);
       this.hbaseCluster = new LocalHBaseCluster(this.conf, nRegionNodes);
       this.hbaseCluster.startup();

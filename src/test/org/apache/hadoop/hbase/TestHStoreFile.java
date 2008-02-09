@@ -45,6 +45,9 @@ public class TestHStoreFile extends HBaseTestCase {
   public void setUp() throws Exception {
     try {
       this.cluster = new MiniDFSCluster(this.conf, 2, true, (String[])null);
+      // Set the hbase.rootdir to be the home directory in mini dfs.
+      this.conf.set(HConstants.HBASE_DIR,
+        this.cluster.getFileSystem().getHomeDirectory().toString());
       this.dir = new Path(DIR, getName());
     } catch (IOException e) {
       StaticTestEnvironment.shutdownDfs(cluster);

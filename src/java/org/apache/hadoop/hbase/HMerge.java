@@ -99,7 +99,7 @@ class HMerge implements HConstants {
         conf.getLong("hbase.hregion.max.filesize", DEFAULT_MAX_FILE_SIZE);
 
       this.tabledir = new Path(
-          fs.makeQualified(new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR))),
+          fs.makeQualified(new Path(conf.get(HBASE_DIR))),
           tableName.toString()
       );
       Path logdir = new Path(tabledir, "merge_" + System.currentTimeMillis() +
@@ -296,7 +296,7 @@ class HMerge implements HConstants {
       super(conf, fs, META_TABLE_NAME);
 
       Path rootTableDir = HTableDescriptor.getTableDir(
-          fs.makeQualified(new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR))),
+          fs.makeQualified(new Path(conf.get(HBASE_DIR))),
           ROOT_TABLE_NAME);
 
       // Scan root region to find all the meta regions

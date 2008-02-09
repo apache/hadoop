@@ -95,6 +95,9 @@ public class TestLogRolling extends HBaseTestCase {
     try {
       super.setUp();
       dfs = new MiniDFSCluster(conf, 2, true, (String[]) null);
+      // Set the hbase.rootdir to be the home directory in mini dfs.
+      this.conf.set(HConstants.HBASE_DIR,
+        this.dfs.getFileSystem().getHomeDirectory().toString());
     } catch (Exception e) {
       StaticTestEnvironment.shutdownDfs(dfs);
       LOG.fatal("error during setUp: ", e);

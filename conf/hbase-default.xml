@@ -32,9 +32,10 @@
   </property>
   <property>
     <name>hbase.rootdir</name>
-    <value>file:///${hadoop.tmp.dir}/hbase</value>
+    <value>file:///tmp/hbase-${user.home}/hbase</value>
     <description>The directory shared by region servers.
-    Should be fully-qualified to include the filesystem.
+    Should be fully-qualified to include the filesystem to use.
+    E.g: hdfs://NAMENODE_SERVER:PORT/HBASE_ROOTDIR
     </description>
   </property>
   <property>

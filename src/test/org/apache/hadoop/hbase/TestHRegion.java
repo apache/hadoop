@@ -96,6 +96,9 @@ implements RegionUnavailableListener {
   private void setup() throws IOException {
 
     cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+    // Set the hbase.rootdir to be the home directory in mini dfs.
+    this.conf.set(HConstants.HBASE_DIR,
+      this.cluster.getFileSystem().getHomeDirectory().toString());
 
     desc = new HTableDescriptor("test");
     desc.addFamily(new HColumnDescriptor("contents:"));

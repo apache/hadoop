@@ -37,6 +37,9 @@ public class TestHLog extends HBaseTestCase implements HConstants {
   @Override
   public void setUp() throws Exception {
     cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+    // Set the hbase.rootdir to be the home directory in mini dfs.
+    this.conf.set(HConstants.HBASE_DIR,
+      this.cluster.getFileSystem().getHomeDirectory().toString());
     super.setUp();
     this.dir = new Path("/hbase", getName());
     if (fs.exists(dir)) {

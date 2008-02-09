@@ -879,28 +879,28 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * @throws IOException
    */
   public HMaster(HBaseConfiguration conf) throws IOException {
-    this(new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR)),
+    this(new Path(conf.get(HBASE_DIR)),
         new HServerAddress(conf.get(MASTER_ADDRESS, DEFAULT_MASTER_ADDRESS)),
         conf);
   }
 
   /** 
    * Build the HMaster
-   * @param rootdir base directory of this HBase instance
+   * @param rd base directory of this HBase instance.  Must be fully
+   * qualified so includes filesystem to use.
    * @param address server address and port number
    * @param conf configuration
    * 
    * @throws IOException
    */
-  public HMaster(Path rootdir, HServerAddress address, HBaseConfiguration conf)
-    throws IOException {
+  public HMaster(Path rd, HServerAddress address, HBaseConfiguration conf)
+  throws IOException {
     
     this.conf = conf;
     this.fs = FileSystem.get(conf);
-    this.rootdir = fs.makeQualified(rootdir);
+    this.rootdir = this.fs.makeQualified(rd);
     this.conf.set(HConstants.HBASE_DIR, this.rootdir.toString());
     this.rand = new Random();
-    
     Path rootRegionDir =
       HRegion.getRegionDir(rootdir, HRegionInfo.rootRegionInfo);
     LOG.info("Root region dir: " + rootRegionDir.toString());

@@ -16,6 +16,7 @@ Hbase Change Log
    HBASE-2     hlog numbers should wrap around when they reach 999
                (Bryan Duxbury via Stack)
    HBASE-421   TestRegionServerExit broken
+   HBASE-426   hbase can't find remote filesystem
 
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling

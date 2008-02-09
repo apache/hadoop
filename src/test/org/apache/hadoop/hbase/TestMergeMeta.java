@@ -39,4 +39,4 @@ public class TestMergeMeta extends AbstractMergeTestBase {
     assertNotNull(dfsCluster);
     HMerge.merge(conf, dfsCluster.getFileSystem(), HConstants.META_TABLE_NAME);
   }
-}  
+}

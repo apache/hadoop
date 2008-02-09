@@ -38,6 +38,9 @@ public class TestDeleteFamily extends HBaseTestCase {
   protected void setUp() throws Exception {
     super.setUp();
     this.miniHdfs = new MiniDFSCluster(this.conf, 1, true, null);
+    // Set the hbase.rootdir to be the home directory in mini dfs.
+    this.conf.set(HConstants.HBASE_DIR,
+      this.miniHdfs.getFileSystem().getHomeDirectory().toString());
   }
   
   /**

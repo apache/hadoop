@@ -75,9 +75,11 @@ public class TestMigrate extends HBaseTestCase {
     MiniDFSCluster dfsCluster = null;
     try {
       dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+      // Set the hbase.rootdir to be the home directory in mini dfs.
+      this.conf.set(HConstants.HBASE_DIR,
+        dfsCluster.getFileSystem().getHomeDirectory().toString());
       FileSystem dfs = dfsCluster.getFileSystem();
-      Path root = dfs.makeQualified(new Path(
-          conf.get(HConstants.HBASE_DIR, HConstants.DEFAULT_HBASE_DIR)));
+      Path root = dfs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
       dfs.mkdirs(root);
 
       /*

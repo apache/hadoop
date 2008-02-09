@@ -70,7 +70,7 @@ public class HConnectionManager implements HConstants {
   public static HConnection getConnection(HBaseConfiguration conf) {
     TableServers connection;
     synchronized (HBASE_INSTANCES) {
-      String instanceName = conf.get(HBASE_DIR, DEFAULT_HBASE_DIR);
+      String instanceName = conf.get(HBASE_DIR);
 
       connection = HBASE_INSTANCES.get(instanceName);
 
@@ -88,9 +88,8 @@ public class HConnectionManager implements HConstants {
    */
   public static void deleteConnection(HBaseConfiguration conf) {
     synchronized (HBASE_INSTANCES) {
-      TableServers instance =
-        HBASE_INSTANCES.remove(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
-    }    
+      HBASE_INSTANCES.remove(conf.get(HBASE_DIR));
+    }
   }
   
   /* Encapsulates finding the servers for an HBase instance */

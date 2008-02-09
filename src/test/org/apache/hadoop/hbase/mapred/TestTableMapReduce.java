@@ -115,6 +115,9 @@ public class TestTableMapReduce extends MultiRegionTable {
   @Override
   public void setUp() throws Exception {
     dfsCluster = new MiniDFSCluster(conf, 1, true, (String[])null);
+    // Set the hbase.rootdir to be the home directory in mini dfs.
+    this.conf.set(HConstants.HBASE_DIR,
+      this.dfsCluster.getFileSystem().getHomeDirectory().toString());
 
     // Must call super.setup() after starting mini dfs cluster. Otherwise
     // we get a local file system instead of hdfs

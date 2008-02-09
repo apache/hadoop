@@ -68,6 +68,9 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
   public void setUp() throws Exception {
     conf.setLong("hbase.hregion.max.filesize", 64L * 1024L * 1024L);
     dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+    // Set the hbase.rootdir to be the home directory in mini dfs.
+    this.conf.set(HConstants.HBASE_DIR,
+      this.dfsCluster.getFileSystem().getHomeDirectory().toString());
     
     // Note: we must call super.setUp after starting the mini cluster or
     // we will end up with a local file system

@@ -101,6 +101,9 @@ public class TestTableIndex extends MultiRegionTable {
     desc.addFamily(new HColumnDescriptor(OUTPUT_COLUMN));
 
     dfsCluster = new MiniDFSCluster(conf, 1, true, (String[]) null);
+    // Set the hbase.rootdir to be the home directory in mini dfs.
+    this.conf.set(HConstants.HBASE_DIR,
+      this.dfsCluster.getFileSystem().getHomeDirectory().toString());
 
     // Must call super.setUp after mini dfs cluster is started or else
     // filesystem ends up being local

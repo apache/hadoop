@@ -598,7 +598,7 @@ public class HLog implements HConstants {
     }
     Configuration conf = new HBaseConfiguration();
     FileSystem fs = FileSystem.get(conf);
-    Path baseDir = new Path(conf.get(HBASE_DIR, DEFAULT_HBASE_DIR));
+    Path baseDir = new Path(conf.get(HBASE_DIR));
 
     for (int i = 1; i < args.length; i++) {
       Path logPath = new Path(args[i]);

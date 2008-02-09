@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
-import java.util.Random;
 
 import junit.framework.TestCase;
 
@@ -113,9 +112,8 @@ public abstract class HBaseTestCase extends TestCase {
           fs.delete(testDir);
         }
       } else {
-        this.testDir = fs.makeQualified(
-            new Path(conf.get(HConstants.HBASE_DIR, HConstants.DEFAULT_HBASE_DIR))
-        );
+        this.testDir =
+          this.fs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
       }
     } catch (Exception e) {
       LOG.fatal("error during setup", e);
@@ -147,10 +145,10 @@ public abstract class HBaseTestCase extends TestCase {
   protected HRegion createNewHRegion(HTableDescriptor desc, Text startKey,
       Text endKey) throws IOException {
     
-    FileSystem fs = FileSystem.get(conf);
-    Path rootdir = fs.makeQualified(
-        new Path(conf.get(HConstants.HBASE_DIR, HConstants.DEFAULT_HBASE_DIR)));
-    fs.mkdirs(rootdir);
+    FileSystem filesystem = FileSystem.get(conf);
+    Path rootdir = filesystem.makeQualified(
+        new Path(conf.get(HConstants.HBASE_DIR)));
+    filesystem.mkdirs(rootdir);
     
     return HRegion.createHRegion(new HRegionInfo(desc, startKey, endKey),
         rootdir, conf);
@@ -409,7 +407,6 @@ public abstract class HBaseTestCase extends TestCase {
    */
   public static class HRegionIncommon implements Incommon, FlushCache {
     final HRegion region;
-    private final Random rand = new Random();
     private BatchUpdate batch;
     
     private void checkBatch() {
@@ -445,12 +442,13 @@ public abstract class HBaseTestCase extends TestCase {
       }
     }
     /** {@inheritDoc} */
-    public void put(long lockid, Text column, byte[] val) {
+    public void put(@SuppressWarnings("unused") long lockid, Text column,
+        byte[] val) {
       checkBatch();
       this.batch.put(column, val);
     }
     /** {@inheritDoc} */
-    public void delete(long lockid, Text column) {
+    public void delete(@SuppressWarnings("unused") long lockid, Text column) {
       checkBatch();
       this.batch.delete(column);
     }

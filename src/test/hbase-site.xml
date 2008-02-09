@@ -23,13 +23,6 @@
 -->
 <configuration>
   <property>
-    <name>fs.default.name</name>
-    <value></value>
-    <description>Use hdfs as file system by default. Modify this to run on
-    local file system.
-    </description>
-  </property>
-  <property>
     <name>hbase.regionserver.msginterval</name>
     <value>1000</value>
     <description>Interval between messages from the RegionServer to HMaster
@@ -103,11 +96,6 @@
     Amount of time to wait since the last time a region was flushed before
     invoking an optional cache flush. Default 60,000.
     </description>
-  </property>
-  <property>
-  	<name>hbase.rootdir</name>
-  	<value>/hbase</value>
-  	<description>location of HBase instance in dfs</description>
   </property>
   <property>
     <name>hbase.hregion.max.filesize</name>

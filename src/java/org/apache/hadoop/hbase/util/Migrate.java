@@ -148,8 +148,8 @@ public class Migrate extends Configured implements Tool {
 
       LOG.info("Starting upgrade" + (readOnly ? " check" : ""));
 
-      Path rootdir = fs.makeQualified(new Path(           // get HBase root dir
-          conf.get(HConstants.HBASE_DIR, HConstants.DEFAULT_HBASE_DIR)));
+      Path rootdir =
+        fs.makeQualified(new Path(this.conf.get(HConstants.HBASE_DIR)));
 
       if (!fs.exists(rootdir)) {
         throw new FileNotFoundException("HBase root directory " +

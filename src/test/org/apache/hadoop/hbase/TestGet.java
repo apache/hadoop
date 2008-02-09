@@ -78,6 +78,9 @@ public class TestGet extends HBaseTestCase {
       // Initialization
       
       cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+      // Set the hbase.rootdir to be the home directory in mini dfs.
+      this.conf.set(HConstants.HBASE_DIR,
+        cluster.getFileSystem().getHomeDirectory().toString());
       
       HTableDescriptor desc = new HTableDescriptor("test");
       desc.addFamily(new HColumnDescriptor(CONTENTS.toString()));
