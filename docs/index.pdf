@@ -1,0 +1,144 @@
+%PDF-1.3
+%клмн
+4 0 obj
+<< /Type /Info
+/Producer (FOP 0.20.5) >>
+endobj
+5 0 obj
+<< /Length 740 /Filter [ /ASCII85Decode /FlateDecode ]
+ >>
+stream
+Gat=)a`?,Y(r#;b3$pF574_W&G$DH?WG+3<6dpZ;@7_,83$?n<[kC2YG`g%1n\P3Ts''p\//.L$M?$<n!m0.`LTeohT^[>ZoZ%4,@4\&WOrshJ#5l%/^.]9V#9Rq&l)D9J,3q/"C"'L'brth0Orp-V!?_'+7mnm:@=W#ePa$oW*@C4*U9;JLC'm%e&'W0+D5Glb\PnfN-KA<S8_W5qlSG,VOuj'*12SVs=*8@Wam6&tDkaS2i(fPP;q^_hLjL*rTTG0G4*?e/Zjp:;YauFWe"%.m,G]ru40B(,<Zbq2Za=`+TjHO<I'EN+nQroc2>HhRGU,[2Aq>,$+P,s>J0M[,31<<OJ7-;^YQmt\UUNq:C0?(d!LC^h_'Z:!dtN^sV_VH.8(WI@-r(++"_Nk[?aCHA@9`"6Xt/$4DV^LAEAWb<CPB.Or?oQjnWRidq]N5Ng2R:o,N@#h&K8G=)X*eJAi#G<;)G@D-F8b#8-keVc8*"eo"s7CI%fel;.'6KQkM[re+*WIQTq6).F8cf_Do7r0j1&>*OGS`;AXY+G*apM+M5>%"N+mYL`QE=mLj8t)=?>396HG,XOH$DfT48d3uK+/3t5umBJdA*4<@-3Sh]Hp,9/I(bo[rlb^eb^4fVmQ5JA`^%OlJiq2E-L?m+$)')!NA`V*#,7G6B2jr#u4,)f?/dI;n_@'NE^(I*b!]2,7ZZ4^H,S!OICAc3"`"/Dt<bS?I+SjOIq5A!$B[f~>
+endstream
+endobj
+6 0 obj
+<< /Type /Page
+/Parent 1 0 R
+/MediaBox [ 0 0 612 792 ]
+/Resources 3 0 R
+/Contents 5 0 R
+/Annots 7 0 R
+>>
+endobj
+7 0 obj
+[
+8 0 R
+9 0 R
+10 0 R
+11 0 R
+]
+endobj
+8 0 obj
+<< /Type /Annot
+/Subtype /Link
+/Rect [ 370.956 572.6 425.304 560.6 ]
+/C [ 0 0 0 ]
+/Border [ 0 0 0 ]
+/A << /URI (http://hadoop.apache.org/hbase/mailing_lists.html)
+/S /URI >>
+/H /I
+>>
+endobj
+9 0 obj
+<< /Type /Annot
+/Subtype /Link
+/Rect [ 108.0 555.4 154.992 543.4 ]
+/C [ 0 0 0 ]
+/Border [ 0 0 0 ]
+/A << /URI (api/index.html)
+/S /URI >>
+/H /I
+>>
+endobj
+10 0 obj
+<< /Type /Annot
+/Subtype /Link
+/Rect [ 108.0 542.2 132.0 530.2 ]
+/C [ 0 0 0 ]
+/Border [ 0 0 0 ]
+/A << /URI (http://wiki.apache.org/hadoop/Hbase)
+/S /URI >>
+/H /I
+>>
+endobj
+11 0 obj
+<< /Type /Annot
+/Subtype /Link
+/Rect [ 108.0 529.0 132.0 517.0 ]
+/C [ 0 0 0 ]
+/Border [ 0 0 0 ]
+/A << /URI (http://wiki.apache.org/hadoop/Hbase/FAQ)
+/S /URI >>
+/H /I
+>>
+endobj
+12 0 obj
+<< /Type /Font
+/Subtype /Type1
+/Name /F3
+/BaseFont /Helvetica-Bold
+/Encoding /WinAnsiEncoding >>
+endobj
+13 0 obj
+<< /Type /Font
+/Subtype /Type1
+/Name /F5
+/BaseFont /Times-Roman
+/Encoding /WinAnsiEncoding >>
+endobj
+14 0 obj
+<< /Type /Font
+/Subtype /Type1
+/Name /F1
+/BaseFont /Helvetica
+/Encoding /WinAnsiEncoding >>
+endobj
+15 0 obj
+<< /Type /Font
+/Subtype /Type1
+/Name /F2
+/BaseFont /Helvetica-Oblique
+/Encoding /WinAnsiEncoding >>
+endobj
+1 0 obj
+<< /Type /Pages
+/Count 1
+/Kids [6 0 R ] >>
+endobj
+2 0 obj
+<< /Type /Catalog
+/Pages 1 0 R
+ >>
+endobj
+3 0 obj
+<< 
+/Font << /F3 12 0 R /F5 13 0 R /F1 14 0 R /F2 15 0 R >> 
+/ProcSet [ /PDF /ImageC /Text ] >> 
+endobj
+xref
+0 16
+0000000000 65535 f 
+0000002239 00000 n 
+0000002297 00000 n 
+0000002347 00000 n 
+0000000015 00000 n 
+0000000071 00000 n 
+0000000902 00000 n 
+0000001022 00000 n 
+0000001067 00000 n 
+0000001265 00000 n 
+0000001426 00000 n 
+0000001607 00000 n 
+0000001792 00000 n 
+0000001905 00000 n 
+0000002015 00000 n 
+0000002123 00000 n 
+trailer
+<<
+/Size 16
+/Root 2 0 R
+/Info 4 0 R
+>>
+startxref
+2459
+%%EOF
