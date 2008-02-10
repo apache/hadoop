@@ -37,6 +37,9 @@ Hbase Change Log
                (Bryan Duxbury via Stack)
    HBASE-418   Move HMaster and related classes into master package
                (Bryan Duxbury via Stack)
+   HBASE-410   Speed up the test suite - Apparently test timeout was too
+               aggressive for Hudson. TestLogRolling timed out even though it
+               was operating properly. Change test timeout to 10 minutes.
 
 
 Branch 0.1

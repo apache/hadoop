@@ -38,7 +38,7 @@
   <property name="docs.dir" value="${basedir}/docs"/>
 
   <property name="test.output" value="no"/>
-  <property name="test.timeout" value="360000"/>
+  <property name="test.timeout" value="600000"/>
 
   <property name="build.dir" location="${basedir}/build"/>
   <property name="build.bin" location="${build.dir}/bin"/>
