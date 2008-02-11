@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UnixUserGroupInformation;
 
 import junit.framework.TestCase;
 /**
@@ -37,7 +38,7 @@ import junit.framework.TestCase;
  */
 public class TestGetBlocks extends TestCase {
   /** test getBlocks */
-  public void testGetBlocks() throws IOException {
+  public void testGetBlocks() throws Exception {
     final Configuration CONF = new Configuration();
 
     final short REPLICATION_FACTOR = (short)2;
@@ -93,7 +94,9 @@ public class TestGetBlocks extends TestCase {
       InetSocketAddress addr = new InetSocketAddress("localhost",
           cluster.getNameNodePort());
       NamenodeProtocol namenode = (NamenodeProtocol) RPC.getProxy(
-          NamenodeProtocol.class, NamenodeProtocol.versionID, addr, CONF);
+          NamenodeProtocol.class, NamenodeProtocol.versionID, addr,
+          UnixUserGroupInformation.login(CONF), CONF,
+          NetUtils.getDefaultSocketFactory(CONF));
 
       // get blocks of size fileLen from dataNodes[0]
       BlockWithLocations[] locs;

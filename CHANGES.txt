@@ -48,6 +48,9 @@ Release 0.16.1 - Unrelease
     HADOOP-2780. The default socket buffer size for DataNodes is 128K.
     (dhruba)
 
+		HADOOP-2716. Superuser privileges for the Balancer.
+		(Tsz Wo (Nicholas), SZE via shv)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES
