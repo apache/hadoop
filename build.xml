@@ -36,6 +36,7 @@
   <property name="lib.dir" value="${basedir}/lib"/>
   <property name="conf.dir" value="${basedir}/conf"/>
   <property name="docs.dir" value="${basedir}/docs"/>
+  <property name="docs.src" value="${basedir}/src/docs"/>
 
   <property name="test.output" value="no"/>
   <property name="test.timeout" value="600000"/>
@@ -186,13 +187,11 @@
     <chmod perm="ugo+x" type="file">
       <fileset dir="${dist.dir}/bin" />
     </chmod>
-    <!--Uncomment when we have a docs dir
     <mkdir dir="${dist.dir}/docs" />
     <copy todir="${dist.dir}/docs">
       <fileset dir="${docs.dir}" />
       <fileset dir="${build.docs}"/>
     </copy>
-    -->
     <copy todir="${dist.dir}">
       <fileset dir=".">
         <include name="*.txt" />
@@ -248,8 +247,22 @@
   </target>
 
   <!-- ================================================================== -->
-  <!-- Javadoc                                                            -->
+  <!-- Doc                                                                -->
   <!-- ================================================================== -->
+  <target name="docs" depends="forrest.check" description="Generate forrest-based documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." if="forrest.home">
+    <exec dir="${docs.src}" executable="${forrest.home}/bin/forrest" failonerror="true" />
+    <copy todir="${docs.dir}">
+      <fileset dir="${docs.src}/build/site/" />
+    </copy>
+    <style basedir="${conf.dir}" destdir="${docs.dir}"
+           includes="hadoop-default.xml" style="conf/configuration.xsl"/>
+  </target>
+
+  <target name="forrest.check" unless="forrest.home">
+    <fail message="'forrest.home' is not defined. Please pass -Dforrest.home=&lt;base of Apache Forrest installation&gt; to Ant on the command-line." />
+  </target>
+
+  <!-- Javadoc -->
   <target name="javadoc" description="Generate javadoc">
     <mkdir dir="${build.javadoc}"/>
     <javadoc

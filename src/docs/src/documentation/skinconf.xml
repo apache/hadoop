@@ -30,7 +30,7 @@ which will be used to configure the chosen Forrest skin.
     In other words google will search the @domain for the query string.
 
   -->
-  <search name="Lucene" domain="hadoop.apache.org" provider="google"/>
+  <search name="HBase" domain="hadoop.apache.org" provider="google"/>
 
   <!-- Disable the print link? If enabled, invalid HTML 4.0.1 -->
   <disable-print-link>true</disable-print-link>  
@@ -65,7 +65,7 @@ which will be used to configure the chosen Forrest skin.
 
   <!-- project logo -->
   <project-name>HBase</project-name>
-  <project-description>A distributed storage system for structured data built on top of Hadoop</project-description>
+  <project-description>The Hadoop database</project-description>
   <project-url>http://hadoop.apache.org/hbase/</project-url>
   <project-logo>images/hbase_logo_med.gif</project-logo>
 
