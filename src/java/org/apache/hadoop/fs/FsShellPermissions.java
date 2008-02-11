@@ -166,7 +166,7 @@ class FsShellPermissions {
     }
 
     @Override
-    public void run(FileStatus file) throws IOException {
+    public void run(FileStatus file, FileSystem srcFs) throws IOException {
       FsPermission perms = file.getPermission();
       int existing = perms.toShort();
       boolean exeOk = file.isDir() || (existing & 0111) != 0;
@@ -178,7 +178,7 @@ class FsShellPermissions {
 
       if (existing != newperms) {
         try {
-          getFS().setPermission(file.getPath(), 
+          srcFs.setPermission(file.getPath(), 
                                 new FsPermission((short)newperms));
         } catch (IOException e) {
           System.err.println(getName() + ": changing permissions of '" + 
@@ -226,7 +226,7 @@ class FsShellPermissions {
     }
 
     @Override
-    public void run(FileStatus file) throws IOException {
+    public void run(FileStatus file, FileSystem srcFs) throws IOException {
       //Should we do case insensitive match?  
       String newOwner = (owner == null || owner.equals(file.getOwner())) ?
                         null : owner;
@@ -235,7 +235,7 @@ class FsShellPermissions {
 
       if (newOwner != null || newGroup != null) {
         try {
-          fs.setOwner(file.getPath(), newOwner, newGroup);
+          srcFs.setOwner(file.getPath(), newOwner, newGroup);
         } catch (IOException e) {
           System.err.println(getName() + ": changing ownership of '" + 
                              file.getPath() + "':" + e.getMessage());
@@ -261,7 +261,7 @@ class FsShellPermissions {
   }
 
   static void changePermissions(FileSystem fs, String cmd, 
-                                String argv[], int startIndex)
+                                String argv[], int startIndex, FsShell shell)
                                 throws IOException {
     CmdHandler handler = null;
     boolean recursive = false;
@@ -284,6 +284,6 @@ class FsShellPermissions {
       handler = new ChgrpHandler(fs, argv[startIndex++]);
     }
 
-    FsShell.runCmdHandler(handler, argv, startIndex, recursive);
+    shell.runCmdHandler(handler, argv, startIndex, recursive);
   } 
 }

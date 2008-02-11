@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
@@ -76,7 +77,7 @@ public class FsShell extends Configured implements Tool {
   protected void init() throws IOException {
     getConf().setQuietMode(true);
     if (this.fs == null) {
-      this.fs = FileSystem.get(getConf());
+     this.fs = FileSystem.get(getConf());
     }
     if (this.trash == null) {
       this.trash = new Trash(getConf());
@@ -87,14 +88,14 @@ public class FsShell extends Configured implements Tool {
   /**
    * Copies from stdin to the indicated file.
    */
-  private void copyFromStdin(Path dst) throws IOException {
-    if (fs.isDirectory(dst)) {
+  private void copyFromStdin(Path dst, FileSystem dstFs) throws IOException {
+    if (dstFs.isDirectory(dst)) {
       throw new IOException("When source is stdin, destination must be a file.");
     }
-    if (fs.exists(dst)) {
+    if (dstFs.exists(dst)) {
       throw new IOException("Target " + dst.toString() + " already exists.");
     }
-    FSDataOutputStream out = fs.create(dst); 
+    FSDataOutputStream out = dstFs.create(dst); 
     try {
       IOUtils.copyBytes(System.in, out, getConf(), false);
     } 
@@ -118,10 +119,12 @@ public class FsShell extends Configured implements Tool {
    * Add a local file to the indicated FileSystem name. src is kept.
    */
   void copyFromLocal(Path src, String dstf) throws IOException {
+    Path dstPath = new Path(dstf);
+    FileSystem dstFs = dstPath.getFileSystem(getConf());
     if (src.toString().equals("-")) {
-      copyFromStdin(new Path(dstf));
+      copyFromStdin(dstPath, dstFs);
     } else {
-      fs.copyFromLocalFile(false, false, src, new Path(dstf));
+      dstFs.copyFromLocalFile(false, false, src, new Path(dstf));
     }
   }
 
@@ -129,7 +132,9 @@ public class FsShell extends Configured implements Tool {
    * Add a local file to the indicated FileSystem name. src is removed.
    */
   void moveFromLocal(Path src, String dstf) throws IOException {
-    fs.moveFromLocalFile(src, new Path(dstf));
+    Path dstPath = new Path(dstf);
+    FileSystem dstFs = dstPath.getFileSystem(getConf());
+    dstFs.moveFromLocalFile(src, dstPath);
   }
 
   /**
@@ -162,7 +167,8 @@ public class FsShell extends Configured implements Tool {
     } else {
       File dst = new File(dstf);      
       Path src = new Path(srcf);
-      Path [] srcs = fs.globPaths(src);
+      FileSystem srcFs = src.getFileSystem(getConf());      
+      Path [] srcs = srcFs.globPaths(src);
       boolean dstIsDir = dst.isDirectory(); 
       if (srcs.length > 1 && !dstIsDir) {
         throw new IOException("When copying multiple files, "
@@ -170,7 +176,7 @@ public class FsShell extends Configured implements Tool {
       }
       for (Path srcPath : srcs) {
         File dstFile = (dstIsDir ? new File(dst, srcPath.getName()) : dst);
-        copyToLocal(fs, srcPath, dstFile, copyCrc);
+        copyToLocal(srcFs, srcPath, dstFile, copyCrc);
       }
     }
   }
@@ -261,13 +267,15 @@ public class FsShell extends Configured implements Tool {
    * @see org.apache.hadoop.fs.FileSystem.globPaths 
    */
   void copyMergeToLocal(String srcf, Path dst, boolean endline) throws IOException {
-    Path [] srcs = fs.globPaths(new Path(srcf));
+    Path srcPath = new Path(srcf);
+    FileSystem srcFs = srcPath.getFileSystem(getConf());
+    Path [] srcs = srcFs.globPaths(new Path(srcf));
     for(int i=0; i<srcs.length; i++) {
       if (endline) {
-        FileUtil.copyMerge(fs, srcs[i], 
+        FileUtil.copyMerge(srcFs, srcs[i], 
                            FileSystem.getLocal(getConf()), dst, false, getConf(), "\n");
       } else {
-        FileUtil.copyMerge(fs, srcs[i], 
+        FileUtil.copyMerge(srcFs, srcs[i], 
                            FileSystem.getLocal(getConf()), dst, false, getConf(), null);
       }
     }
@@ -299,11 +307,11 @@ public class FsShell extends Configured implements Tool {
 
     new DelayedExceptionThrowing() {
       @Override
-      void process(Path p) throws IOException {
-        if (fs.getFileStatus(p).isDir()) {
+      void process(Path p, FileSystem srcFs) throws IOException {
+        if (srcFs.getFileStatus(p).isDir()) {
           throw new IOException("Source must be a file.");
         }
-        printToStdout(fs.open(p));
+        printToStdout(srcFs.open(p));
       }
     }.process(srcf);
   }
@@ -346,8 +354,8 @@ public class FsShell extends Configured implements Tool {
     }
   }
 
-  private InputStream forMagic(Path p) throws IOException {
-    FSDataInputStream i = fs.open(p);
+  private InputStream forMagic(Path p, FileSystem srcFs) throws IOException {
+    FSDataInputStream i = srcFs.open(p);
     switch(i.readShort()) {
       case 0x1f8b: // RFC 1952
         i.seek(0);
@@ -355,7 +363,7 @@ public class FsShell extends Configured implements Tool {
       case 0x5345: // 'S' 'E'
         if (i.readByte() == 'Q') {
           i.close();
-          return new TextRecordInputStream(fs.getFileStatus(p));
+          return new TextRecordInputStream(srcFs.getFileStatus(p));
         }
         break;
     }
@@ -366,11 +374,11 @@ public class FsShell extends Configured implements Tool {
   void text(String srcf) throws IOException {
     new DelayedExceptionThrowing() {
       @Override
-      void process(Path p) throws IOException {
-        if (fs.isDirectory(p)) {
+      void process(Path p, FileSystem srcFs) throws IOException {
+        if (srcFs.isDirectory(p)) {
           throw new IOException("Source must be a file.");
         }
-        printToStdout(forMagic(p));
+        printToStdout(forMagic(p, srcFs));
       }
     }.process(srcf);
   }
@@ -497,30 +505,33 @@ public class FsShell extends Configured implements Tool {
   void setReplication(short newRep, String srcf, boolean recursive,
                       List<Path> waitingList)
     throws IOException {
-    Path[] srcs = fs.globPaths(new Path(srcf));
+    Path srcPath = new Path(srcf);
+    FileSystem srcFs = srcPath.getFileSystem(getConf());
+    Path[] srcs = srcFs.globPaths(new Path(srcf));
     for(int i=0; i<srcs.length; i++) {
-      setReplication(newRep, srcs[i], recursive, waitingList);
+      setReplication(newRep, srcFs, srcs[i], recursive, waitingList);
     }
   }
 
-  private void setReplication(short newRep, Path src, boolean recursive,
+  private void setReplication(short newRep, FileSystem srcFs, 
+                              Path src, boolean recursive,
                               List<Path> waitingList)
     throws IOException {
-    if (!fs.getFileStatus(src).isDir()) {
-      setFileReplication(src, newRep, waitingList);
+    if (!srcFs.getFileStatus(src).isDir()) {
+      setFileReplication(src, srcFs, newRep, waitingList);
       return;
     }
-    Path items[] = fs.listPaths(src);
+    Path items[] = srcFs.listPaths(src);
     if (items == null) {
       throw new IOException("Could not get listing for " + src);
     } else {
 
       for (int i = 0; i < items.length; i++) {
         Path cur = items[i];
-        if (!fs.getFileStatus(cur).isDir()) {
-          setFileReplication(cur, newRep, waitingList);
+        if (!srcFs.getFileStatus(cur).isDir()) {
+          setFileReplication(cur, srcFs, newRep, waitingList);
         } else if (recursive) {
-          setReplication(newRep, cur, recursive, waitingList);
+          setReplication(newRep, srcFs, cur, recursive, waitingList);
         }
       }
     }
@@ -533,9 +544,9 @@ public class FsShell extends Configured implements Tool {
    * @param newRep: new replication factor
    * @throws IOException
    */
-  private void setFileReplication(Path file, short newRep, List<Path> waitList)
+  private void setFileReplication(Path file, FileSystem srcFs, short newRep, List<Path> waitList)
     throws IOException {
-    if (fs.setReplication(file, newRep)) {
+    if (srcFs.setReplication(file, newRep)) {
       if (waitList != null) {
         waitList.add(file);
       }
@@ -554,18 +565,20 @@ public class FsShell extends Configured implements Tool {
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
   void ls(String srcf, boolean recursive) throws IOException {
-    Path[] srcs = fs.globPaths(new Path(srcf));
+    Path srcPath = new Path(srcf);
+    FileSystem srcFs = srcPath.getFileSystem(this.getConf());
+    Path[] srcs = srcFs.globPaths(srcPath);
     boolean printHeader = (srcs.length == 1) ? true: false;
     for(int i=0; i<srcs.length; i++) {
-      ls(srcs[i], recursive, printHeader);
+      ls(srcs[i], srcFs, recursive, printHeader);
     }
   }
 
   /* list all files under the directory <i>src</i>
    * ideally we should provide "-l" option, that lists like "ls -l".
    */
-  private void ls(Path src, boolean recursive, boolean printHeader) throws IOException {
-    FileStatus items[] = fs.listStatus(src);
+  private void ls(Path src, FileSystem srcFs, boolean recursive, boolean printHeader) throws IOException {
+    FileStatus items[] = srcFs.listStatus(src);
     if (items == null) {
       throw new IOException("Could not get listing for " + src);
     } else {
@@ -586,7 +599,7 @@ public class FsShell extends Configured implements Tool {
                            + "\t" + stat.getOwner() 
                            + "\t" + stat.getGroup());
         if (recursive && stat.isDir()) {
-          ls(cur, recursive, printHeader);
+          ls(cur,srcFs, recursive, printHeader);
         }
       }
     }
@@ -599,14 +612,16 @@ public class FsShell extends Configured implements Tool {
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
   void du(String src) throws IOException {
-    Path items[] = fs.listPaths(fs.globPaths(new Path(src)));
+    Path srcPath = new Path(src);
+    FileSystem srcFs = srcPath.getFileSystem(getConf());
+    Path items[] = srcFs.listPaths(srcFs.globPaths(srcPath));
     if (items == null) {
       throw new IOException("Could not get listing for " + src);
     } else {
       System.out.println("Found " + items.length + " items");
       for (int i = 0; i < items.length; i++) {
         Path cur = items[i];
-        System.out.println(cur + "\t" + fs.getContentLength(cur));
+        System.out.println(cur + "\t" + srcFs.getContentLength(cur));
       }
     }
   }
@@ -619,16 +634,18 @@ public class FsShell extends Configured implements Tool {
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
   void dus(String src) throws IOException {
-    Path paths[] = fs.globPaths(new Path(src));
+    Path srcPath = new Path(src);
+    FileSystem srcFs = srcPath.getFileSystem(getConf());
+    Path paths[] = srcFs.globPaths(new Path(src));
     if (paths==null || paths.length==0) {
       throw new IOException("dus: No match: " + src);
     }
     for(int i=0; i<paths.length; i++) {
-      Path items[] = fs.listPaths(paths[i]);
+      Path items[] = srcFs.listPaths(paths[i]);
       if (items != null) {
         long totalSize=0;
         for(int j=0; j<items.length; j++) {
-          totalSize += fs.getContentLength(items[j]);
+          totalSize += srcFs.getContentLength(items[j]);
         }
         String pathStr = paths[i].toString();
         System.out.println(
@@ -642,7 +659,8 @@ public class FsShell extends Configured implements Tool {
    */
   void mkdir(String src) throws IOException {
     Path f = new Path(src);
-    if (!fs.mkdirs(f)) {
+    FileSystem srcFs = f.getFileSystem(getConf());
+    if (!srcFs.mkdirs(f)) {
       throw new IOException("Mkdirs failed to create " + src);
     }
   }
@@ -654,16 +672,17 @@ public class FsShell extends Configured implements Tool {
    */
   void touchz(String src) throws IOException {
     Path f = new Path(src);
+    FileSystem srcFs = f.getFileSystem(getConf());
     FileStatus st;
-    if (fs.exists(f)) {
-      st = fs.getFileStatus(f);
+    if (srcFs.exists(f)) {
+      st = srcFs.getFileStatus(f);
       if (st.isDir()) {
         // TODO: handle this
         throw new IOException(src + " is a directory");
       } else if (st.getLen() != 0)
         throw new IOException(src + " must be a zero-length file");
     }
-    FSDataOutputStream out = fs.create(f);
+    FSDataOutputStream out = srcFs.create(f);
     out.close();
   }
 
@@ -675,13 +694,14 @@ public class FsShell extends Configured implements Tool {
       throw new IOException("Not a flag: " + argv[i]);
     char flag = argv[i].toCharArray()[1];
     Path f = new Path(argv[++i]);
+    FileSystem srcFs = f.getFileSystem(getConf());
     switch(flag) {
       case 'e':
-        return fs.exists(f) ? 1 : 0;
+        return srcFs.exists(f) ? 1 : 0;
       case 'z':
-        return fs.getFileStatus(f).getLen() == 0 ? 1 : 0;
+        return srcFs.getFileStatus(f).getLen() == 0 ? 1 : 0;
       case 'd':
-        return fs.getFileStatus(f).isDir() ? 1 : 0;
+        return srcFs.getFileStatus(f).isDir() ? 1 : 0;
       default:
         throw new IOException("Unknown flag: " + flag);
     }
@@ -698,11 +718,13 @@ public class FsShell extends Configured implements Tool {
    *   %Y: Milliseconds since January 1, 1970 UTC
    */
   void stat(char[] fmt, String src) throws IOException {
-    Path glob[] = fs.globPaths(new Path(src));
+    Path srcPath = new Path(src);
+    FileSystem srcFs = srcPath.getFileSystem(getConf());
+    Path glob[] = srcFs.globPaths(srcPath);
     if (null == glob)
       throw new IOException("cannot stat `" + src + "': No such file or directory");
     for (Path f : glob) {
-      FileStatus st = fs.getFileStatus(f);
+      FileStatus st = srcFs.getFileStatus(f);
       StringBuilder buf = new StringBuilder();
       for (int i = 0; i < fmt.length; ++i) {
         if (fmt[i] != '%') {
@@ -752,14 +774,23 @@ public class FsShell extends Configured implements Tool {
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
   void rename(String srcf, String dstf) throws IOException {
-    Path [] srcs = fs.globPaths(new Path(srcf));
+    Path srcPath = new Path(srcf);
+    Path dstPath = new Path(dstf);
+    FileSystem srcFs = srcPath.getFileSystem(getConf());
+    FileSystem dstFs = dstPath.getFileSystem(getConf());
+    URI srcURI = srcFs.getUri();
+    URI dstURI = dstFs.getUri();
+    if (srcURI.compareTo(dstURI) != 0) {
+      throw new IOException("src and destination filesystems do not match.");
+    }
+    Path [] srcs = srcFs.globPaths(new Path(srcf));
     Path dst = new Path(dstf);
-    if (srcs.length > 1 && !fs.isDirectory(dst)) {
+    if (srcs.length > 1 && !srcFs.isDirectory(dst)) {
       throw new IOException("When moving multiple files, " 
                             + "destination should be a directory.");
     }
     for(int i=0; i<srcs.length; i++) {
-      if (fs.rename(srcs[i], dst)) {
+      if (srcFs.rename(srcs[i], dst)) {
         System.out.println("Renamed " + srcs[i] + " to " + dstf);
       } else {
         throw new IOException("Rename failed " + srcs[i]);
@@ -786,7 +817,8 @@ public class FsShell extends Configured implements Tool {
     //
     if (argv.length > 3) {
       Path dst = new Path(dest);
-      if (!fs.isDirectory(dst)) {
+      FileSystem dstFs = dst.getFileSystem(getConf());
+      if (!dstFs.isDirectory(dst)) {
         throw new IOException("When moving multiple files, " 
                               + "destination " + dest + " should be a directory.");
       }
@@ -838,14 +870,17 @@ public class FsShell extends Configured implements Tool {
    * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
    */
   void copy(String srcf, String dstf, Configuration conf) throws IOException {
-    Path [] srcs = fs.globPaths(new Path(srcf));
-    Path dst = new Path(dstf);
-    if (srcs.length > 1 && !fs.isDirectory(dst)) {
+    Path srcPath = new Path(srcf);
+    FileSystem srcFs = srcPath.getFileSystem(getConf());
+    Path dstPath = new Path(dstf);
+    FileSystem dstFs = dstPath.getFileSystem(getConf());
+    Path [] srcs = srcFs.globPaths(srcPath);
+    if (srcs.length > 1 && !dstFs.isDirectory(dstPath)) {
       throw new IOException("When copying multiple files, " 
                             + "destination should be a directory.");
     }
     for(int i=0; i<srcs.length; i++) {
-      FileUtil.copy(fs, srcs[i], fs, dst, false, conf);
+      FileUtil.copy(srcFs, srcs[i], dstFs, dstPath, false, conf);
     }
   }
 
@@ -868,6 +903,7 @@ public class FsShell extends Configured implements Tool {
     //
     if (argv.length > 3) {
       Path dst = new Path(dest);
+      FileSystem dstFs = dst.getFileSystem(getConf());
       if (!fs.isDirectory(dst)) {
         throw new IOException("When copying multiple files, " 
                               + "destination " + dest + " should be a directory.");
@@ -925,24 +961,24 @@ public class FsShell extends Configured implements Tool {
 
     new DelayedExceptionThrowing() {
       @Override
-      void process(Path p) throws IOException {
-        delete(p, recursive);
+      void process(Path p, FileSystem srcFs) throws IOException {
+        delete(p, srcFs, recursive);
       }
     }.process(srcf);
   }
     
   /* delete a file */
-  private void delete(Path src, boolean recursive) throws IOException {
-    if (fs.isDirectory(src) && !recursive) {
+  private void delete(Path src, FileSystem srcFs, boolean recursive) throws IOException {
+    if (srcFs.isDirectory(src) && !recursive) {
       throw new IOException("Cannot remove directory \"" + src +
                             "\", use -rmr instead");
     }
-
-    if (trash.moveToTrash(src)) {
+    Trash trashTmp = new Trash(srcFs.getConf());
+    if (trashTmp.moveToTrash(src)) {
       System.out.println("Moved to trash: " + src);
       return;
     }
-    if (fs.delete(src)) {
+    if (srcFs.delete(src)) {
       System.out.println("Deleted " + src);
     } else {
       throw new IOException("Delete failed " + src);
@@ -982,16 +1018,16 @@ public class FsShell extends Configured implements Tool {
     }
     boolean foption = c.options.get("f") ? true: false;
     path = new Path(src);
-
-    if (fs.isDirectory(path)) {
+    FileSystem srcFs = path.getFileSystem(getConf());
+    if (srcFs.isDirectory(path)) {
       throw new IOException("Source must be a file.");
     }
 
-    long fileSize = fs.getFileStatus(path).getLen();
+    long fileSize = srcFs.getFileStatus(path).getLen();
     long offset = (fileSize > 1024) ? fileSize - 1024: 0;
 
     while (true) {
-      FSDataInputStream in = fs.open(path);
+      FSDataInputStream in = srcFs.open(path);
       in.seek(offset);
       IOUtils.copyBytes(in, System.out, 1024, false);
       offset = in.getPos();
@@ -999,7 +1035,7 @@ public class FsShell extends Configured implements Tool {
       if (!foption) {
         break;
       }
-      fileSize = fs.getFileStatus(path).getLen();
+      fileSize = srcFs.getFileStatus(path).getLen();
       offset = (fileSize > offset) ? offset: fileSize;
       try {
         Thread.sleep(5000);
@@ -1017,27 +1053,25 @@ public class FsShell extends Configured implements Tool {
     
     protected int errorCode = 0;
     protected boolean okToContinue = true;
-    protected FileSystem fs;
     protected String cmdName;
     
     int getErrorCode() { return errorCode; }
     boolean okToContinue() { return okToContinue; }
-    FileSystem getFS() { return fs; }
     String getName() { return cmdName; }
     
     protected CmdHandler(String cmdName, FileSystem fs) {
-      this.fs = fs;
       this.cmdName = cmdName;
     }
     
-    public abstract void run(FileStatus file) throws IOException;
+    public abstract void run(FileStatus file, FileSystem fs) throws IOException;
   }
   
   ///helper for runCmdHandler*() returns listPaths()
   private static FileStatus[] cmdHandlerListStatus(CmdHandler handler, 
+                                                   FileSystem srcFs,
                                                    Path path) {
     try {
-      FileStatus[] files = handler.getFS().listStatus(path);
+      FileStatus[] files = srcFs.listStatus(path);
       if ( files == null ) {
         System.err.println(handler.getName() + 
                            ": could not get listing for '" + path + "'");
@@ -1057,38 +1091,42 @@ public class FsShell extends Configured implements Tool {
    * If recursive is set, command is run recursively.
    */                                       
   private static int runCmdHandler(CmdHandler handler, FileStatus stat, 
+                                   FileSystem srcFs, 
                                    boolean recursive) throws IOException {
     int errors = 0;
-    handler.run(stat);
+    handler.run(stat, srcFs);
     if (recursive && stat.isDir() && handler.okToContinue()) {
-      FileStatus[] files = cmdHandlerListStatus(handler, stat.getPath());
+      FileStatus[] files = cmdHandlerListStatus(handler, srcFs, 
+                                                stat.getPath());
       if (files == null) {
         return 1;
       }
       for(FileStatus file : files ) {
-        errors += runCmdHandler(handler, file, recursive);
+        errors += runCmdHandler(handler, file, srcFs, recursive);
       }
     }
     return errors;
   }
 
   ///top level runCmdHandler
-  static int runCmdHandler(CmdHandler handler, String[] args,
+  int runCmdHandler(CmdHandler handler, String[] args,
                                    int startIndex, boolean recursive) 
                                    throws IOException {
     int errors = 0;
     
     for (int i=startIndex; i<args.length; i++) {
-      Path[] paths = handler.getFS().globPaths(new Path(args[i]));
+      Path srcPath = new Path(args[i]);
+      FileSystem srcFs = srcPath.getFileSystem(getConf());
+      Path[] paths = srcFs.globPaths(new Path(args[i]));
       for(Path path : paths) {
         try {
-          FileStatus file = handler.getFS().getFileStatus(path);
+          FileStatus file = srcFs.getFileStatus(path);
           if (file == null) {
             System.err.println(handler.getName() + 
                                ": could not get status for '" + path + "'");
             errors++;
           } else {
-            errors += runCmdHandler(handler, file, recursive);
+            errors += runCmdHandler(handler, file, srcFs, recursive);
           }
         } catch (IOException e) {
           System.err.println(handler.getName() + 
@@ -1598,7 +1636,7 @@ public class FsShell extends Configured implements Tool {
       } else if ("-chmod".equals(cmd) || 
                  "-chown".equals(cmd) ||
                  "-chgrp".equals(cmd)) {
-        FsShellPermissions.changePermissions(fs, cmd, argv, i);
+        FsShellPermissions.changePermissions(fs, cmd, argv, i, this);
       } else if ("-ls".equals(cmd)) {
         if (i < argv.length) {
           exitCode = doall(cmd, argv, getConf(), i);
@@ -1712,13 +1750,14 @@ public class FsShell extends Configured implements Tool {
    * Accumulate exceptions if there is any.  Throw them at last.
    */
   private abstract class DelayedExceptionThrowing {
-    abstract void process(Path p) throws IOException;
+    abstract void process(Path p, FileSystem srcFs) throws IOException;
 
     void process(String srcf) throws IOException {
       List<IOException> exceptions = new ArrayList<IOException>();
-
-      for(Path p : fs.globPaths(new Path(srcf)))
-        try { process(p); } 
+      Path srcPath = new Path(srcf);
+      FileSystem srcFs = srcPath.getFileSystem(getConf());
+      for(Path p : srcFs.globPaths(new Path(srcf)))
+        try { process(p, srcFs); } 
         catch(IOException ioe) { exceptions.add(ioe); }
     
       if (!exceptions.isEmpty())

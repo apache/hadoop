@@ -205,6 +205,86 @@ public class TestDFSShell extends TestCase {
     }
   }
   
+
+  public void testURIPaths() throws Exception {
+    Configuration srcConf = new Configuration();
+    Configuration dstConf = new Configuration();
+    MiniDFSCluster srcCluster =  null;
+    MiniDFSCluster dstCluster = null;
+    String bak = System.getProperty("test.build.data");
+    try{
+      srcCluster = new MiniDFSCluster(srcConf, 2, true, null);
+      File nameDir = new File(new File(bak), "dfs_tmp_uri/");
+      nameDir.mkdirs();
+      System.setProperty("test.build.data", nameDir.toString());
+      dstCluster = new MiniDFSCluster(dstConf, 2, true, null);
+      FileSystem srcFs = srcCluster.getFileSystem();
+      FileSystem dstFs = dstCluster.getFileSystem();
+      FsShell shell = new FsShell();
+      shell.setConf(srcConf);
+      //check for ls
+      String[] argv = new String[2];
+      argv[0] = "-ls";
+      argv[1] = dstFs.getUri().toString() + "/";
+      int ret = ToolRunner.run(shell, argv);
+      assertTrue("ls works on remote uri ", (ret==0));
+      //check for rm -r 
+      dstFs.mkdirs(new Path("/hadoopdir"));
+      argv = new String[2];
+      argv[0] = "-rmr";
+      argv[1] = dstFs.getUri().toString() + "/hadoopdir";
+      ret = ToolRunner.run(shell, argv);
+      assertTrue("-rmr works on remote uri " + argv[1], (ret==0));
+      //check du 
+      argv[0] = "-du";
+      argv[1] = dstFs.getUri().toString() + "/";
+      ret = ToolRunner.run(shell, argv);
+      assertTrue("du works on remote uri ", (ret ==0));
+      //check put
+      File furi = new File(TEST_ROOT_DIR, "furi");
+      createLocalFile(furi);
+      argv = new String[3];
+      argv[0] = "-put";
+      argv[1] = furi.toString();
+      argv[2] = dstFs.getUri().toString() + "/furi";
+      ret = ToolRunner.run(shell, argv);
+      assertTrue(" put is working ", (ret==0));
+      //check cp 
+      argv[0] = "-cp";
+      argv[1] = dstFs.getUri().toString() + "/furi";
+      argv[2] = srcFs.getUri().toString() + "/furi";
+      ret = ToolRunner.run(shell, argv);
+      assertTrue(" cp is working ", (ret==0));
+      assertTrue(srcFs.exists(new Path("/furi")));
+      //check cat 
+      argv = new String[2];
+      argv[0] = "-cat";
+      argv[1] = dstFs.getUri().toString() + "/furi";
+      ret = ToolRunner.run(shell, argv);
+      assertTrue(" cat is working ", (ret == 0));
+      //check chown
+      dstFs.delete(new Path("/furi"));
+      dstFs.delete(new Path("/hadoopdir"));
+      String file = "/tmp/chownTest";
+      Path path = new Path(file);
+      Path parent = new Path("/tmp");
+      Path root = new Path("/");
+      TestDFSShell.writeFile(dstFs, path);
+      runCmd(shell, "-chgrp", "-R", "herbivores", dstFs.getUri().toString() +"/*");
+      confirmOwner(null, "herbivores", dstFs, parent, path);
+      runCmd(shell, "-chown", "-R", ":reptiles", dstFs.getUri().toString() + "/");
+      confirmOwner(null, "reptiles", dstFs, root, parent, path);
+    } finally {
+      System.setProperty("test.build.data", bak);
+      if (null != srcCluster) {
+        srcCluster.shutdown();
+      }
+      if (null != dstCluster) {
+        dstCluster.shutdown();
+      }
+    }
+  }
+
   public void testText() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;

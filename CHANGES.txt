@@ -29,6 +29,9 @@ Trunk (unreleased changes)
     HADOOP-2767. Fix for NetworkTopology erroneously skipping the last leaf 
     node on a rack. (Hairong Kuang and Mark Butler via dhruba)
 
+    HADOOP-1593. FsShell works with paths in non-default FileSystem.
+    (Mahadev Konar via dhruba)
+
 Release 0.16.1 - Unrelease
 
   BUG FIXES
