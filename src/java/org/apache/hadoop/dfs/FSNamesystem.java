@@ -639,6 +639,8 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   synchronized BlocksWithLocations getBlocks(DatanodeID datanode, long size)
       throws IOException {
+    checkSuperuserPrivilege();
+
     DatanodeDescriptor node = getDatanode(datanode);
     if (node == null) {
       NameNode.stateChangeLog.warn("BLOCK* NameSystem.getBlocks: "

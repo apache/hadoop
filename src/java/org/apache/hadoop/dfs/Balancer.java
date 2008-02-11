@@ -60,7 +60,10 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -858,12 +861,21 @@ public class Balancer implements Tool {
         new HashMap<String, RetryPolicy>();
     methodNameToPolicyMap.put("getBlocks", methodPolicy);
 
+    UserGroupInformation ugi;
+    try {
+      ugi = UnixUserGroupInformation.login(conf);
+    } catch (javax.security.auth.login.LoginException e) {
+      throw new IOException(StringUtils.stringifyException(e));
+    }
+
     return (NamenodeProtocol) RetryProxy.create(
         NamenodeProtocol.class,
         RPC.getProxy(NamenodeProtocol.class,
-                         NamenodeProtocol.versionID,
-                         nameNodeAddr, 
-                         conf),
+            NamenodeProtocol.versionID,
+            nameNodeAddr,
+            ugi,
+            conf,
+            NetUtils.getDefaultSocketFactory(conf)),
         methodNameToPolicyMap);
   }
   
