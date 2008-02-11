@@ -142,7 +142,7 @@ public interface FSConstants {
   public static final int BUFFER_SIZE = new Configuration().getInt("io.file.buffer.size", 4096);
   //TODO mb@media-style.com: should be conf injected?
   public static final long DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
-  public static final int DEFAULT_DATA_SOCKET_SIZE = 1024 * 1024;
+  public static final int DEFAULT_DATA_SOCKET_SIZE = 128 * 1024;
 
   public static final int SIZE_OF_INTEGER = Integer.SIZE / Byte.SIZE;
 

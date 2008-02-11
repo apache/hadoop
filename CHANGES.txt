@@ -45,6 +45,9 @@ Release 0.16.1 - Unrelease
     dfs.umask to set the umask that is used by DFS.
     (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-2780. The default socket buffer size for DataNodes is 128K.
+    (dhruba)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES
