@@ -51,11 +51,7 @@ public class ClearCommand extends BasicCommand {
         }
       }
     } else {
-      try {
-        print("\033c");
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+        System.out.print("\033c");
     }
   }
 
