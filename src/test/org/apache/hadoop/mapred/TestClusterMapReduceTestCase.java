@@ -17,51 +17,14 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 import java.io.*;
-import java.util.Iterator;
 import java.util.Properties;
 
 public class TestClusterMapReduceTestCase extends ClusterMapReduceTestCase {
-
-  public static class EchoMap implements Mapper {
-
-    public void configure(JobConf conf) {
-    }
-
-    public void close() {
-    }
-
-    public void map(WritableComparable key, Writable value,
-                    OutputCollector collector, Reporter reporter) throws IOException {
-      collector.collect(key, value);
-    }
-  }
-
-  public static class EchoReduce implements Reducer {
-
-    public void configure(JobConf conf) {
-    }
-
-    public void close() {
-    }
-
-    public void reduce(WritableComparable key, Iterator values,
-                       OutputCollector collector, Reporter reporter) throws IOException {
-      while (values.hasNext()) {
-        Writable value = (Writable) values.next();
-        collector.collect(key, value);
-      }
-    }
-
-  }
-
   public void _testMapReduce(boolean restart) throws Exception {
     OutputStream os = getFileSystem().create(new Path(getInputDir(), "text.txt"));
     Writer wr = new OutputStreamWriter(os);
@@ -88,8 +51,8 @@ public class TestClusterMapReduceTestCase extends ClusterMapReduceTestCase {
     conf.setOutputKeyClass(LongWritable.class);
     conf.setOutputValueClass(Text.class);
 
-    conf.setMapperClass(TestClusterMapReduceTestCase.EchoMap.class);
-    conf.setReducerClass(TestClusterMapReduceTestCase.EchoReduce.class);
+    conf.setMapperClass(org.apache.hadoop.mapred.lib.IdentityMapper.class);
+    conf.setReducerClass(org.apache.hadoop.mapred.lib.IdentityReducer.class);
 
     conf.setInputPath(getInputDir());
 
