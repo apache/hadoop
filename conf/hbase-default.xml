@@ -156,6 +156,16 @@
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.optionallogrollinterval</name>
+    <value>1800000</value>
+    <description>
+    Amount of time to wait since the last time a the region server's log was
+    rolled before invoking an optional log roll (An optional log roll is a
+    one in which the log does not contain hbase.regionserver.maxlogentries).
+    Default: 30 minutes (in miliseconds)
+    </description>
+  </property>
+  <property>
     <name>hbase.hregion.memcache.flush.size</name>
     <value>67108864</value>
     <description>

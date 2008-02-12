@@ -44,6 +44,8 @@ Hbase Change Log
    HBASE-436   website: http://hadoop.apache.org/hbase
    HBASE-417   Factor TableOperation and subclasses into separate files from
                HMaster (Bryan Duxbury via Stack)
+   HBASE-440   Add optional log roll interval so that log files are garbage
+               collected
 
 
 Branch 0.1

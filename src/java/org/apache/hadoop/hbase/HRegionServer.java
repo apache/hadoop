@@ -508,12 +508,17 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** Runs periodically to determine if the HLog should be rolled */
   class LogRoller extends Thread implements LogRollListener {
     private final Integer rollLock = new Integer(0);
+    private final long optionalLogRollInterval;
+    private long lastLogRollTime;
     private volatile boolean rollLog;
     
     /** constructor */
     public LogRoller() {
       super();
+      this.optionalLogRollInterval = conf.getLong(
+          "hbase.regionserver.optionallogrollinterval", 30L * 60L * 1000L);
       this.rollLog = false;
+      lastLogRollTime = System.currentTimeMillis();
     }
  
     /** {@inheritDoc} */
@@ -521,12 +526,18 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     public void run() {
       while (!stopRequested.get()) {
         while (!rollLog && !stopRequested.get()) {
-          synchronized (rollLock) {
-            try {
-              rollLock.wait(threadWakeFrequency);
+          long now = System.currentTimeMillis();
+          if (this.lastLogRollTime + this.optionalLogRollInterval <= now) {
+            rollLog = true;
+            this.lastLogRollTime = now;
+          } else {
+            synchronized (rollLock) {
+              try {
+                rollLock.wait(threadWakeFrequency);
 
-            } catch (InterruptedException e) {
-              continue;
+              } catch (InterruptedException e) {
+                continue;
+              }
             }
           }
         }
