@@ -25,6 +25,9 @@ Release 0.16.1 - Unrelease
 		HADOOP-2716. Superuser privileges for the Balancer.
 		(Tsz Wo (Nicholas), SZE via shv)
 
+    HADOOP-2754. Filter out .crc files from local file system listing.
+    (Hairong Kuang via cdouglas)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES

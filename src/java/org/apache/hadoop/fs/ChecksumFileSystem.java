@@ -425,18 +425,32 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   }
 
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
-      public boolean accept(Path file) {
-        return !isChecksumFile(file);
-      }
-    };
+    public boolean accept(Path file) {
+      return !isChecksumFile(file);
+    }
+  };
 
+  /**
+   * List the statuses of the files/directories in the given path if the path is
+   * a directory.
+   * 
+   * @param f
+   *          given path
+   * @return the statuses of the files/directories in the given patch
+   * @throws IOException
+   */
+  @Override
+  public FileStatus[] listStatus(Path f) throws IOException {
+    return fs.listStatus(f, DEFAULT_FILTER);
+  }
+  
   /** 
    * Filter raw files in the given pathes using the default checksum filter. 
    * @param files a list of paths
    * @return a list of files under the source paths
    * @exception IOException
    */
-  @Override
+  @Deprecated
   public Path[] listPaths(Path[] files) throws IOException {
     return fs.listPaths(files, DEFAULT_FILTER);
   }
@@ -447,6 +461,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    * @return a list of files under the source path
    * @exception IOException
    */
+  @Deprecated
   public Path[] listPaths(Path f) throws IOException {
     return fs.listPaths(f, DEFAULT_FILTER);
   }
