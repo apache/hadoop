@@ -757,7 +757,7 @@ public class SequenceFile {
   }
   
   /** Write key/value pairs to a sequence-format file. */
-  public static class Writer {
+  public static class Writer implements java.io.Closeable {
     /**
      * A global compressor pool used to save the expensive 
      * construction/destruction of (possibly native) compression codecs.
@@ -1316,7 +1316,7 @@ public class SequenceFile {
   } // BlockCompressionWriter
   
   /** Reads key/value pairs from a sequence-format file. */
-  public static class Reader {
+  public static class Reader implements java.io.Closeable {
     /**
      * A global decompressor pool used to save the expensive 
      * construction/destruction of (possibly native) decompression codecs.

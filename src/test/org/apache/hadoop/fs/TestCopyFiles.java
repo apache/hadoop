@@ -35,6 +35,8 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class TestCopyFiles extends TestCase {
   
+  static final URI LOCAL_FS = URI.create("file:///");
+  
   private static final int NFILES = 20;
   private static String TEST_ROOT_DIR =
     new Path(System.getProperty("test.build.data","/tmp"))
@@ -84,51 +86,31 @@ public class TestCopyFiles extends TestCase {
     long getSeed() { return seed; }
   }
 
-  public TestCopyFiles(String testName) {
-    super(testName);
-  }
-
-  
-  
-  @Override
-  protected void setUp() throws Exception {
-  }
-
-  @Override
-  protected void tearDown() throws Exception {
-  }
-  
   /** create NFILES with random names and directory hierarchies
    * with random (but reproducible) data in them.
    */
-  private static MyFile[] createFiles(String fsname, String topdir)
+  private static MyFile[] createFiles(URI fsname, String topdir)
     throws IOException {
-    MyFile[] files = new MyFile[NFILES];
-    
-    for (int idx = 0; idx < NFILES; idx++) {
-      files[idx] = new MyFile();
-    }
-    
-    Configuration conf = new Configuration();
-    FileSystem fs = FileSystem.getNamed(fsname, conf);
+    FileSystem fs = FileSystem.get(fsname, new Configuration());
     Path root = new Path(topdir);
-    
-    for (int idx = 0; idx < NFILES; idx++) {
-      Path fPath = new Path(root, files[idx].getName());
-      if (!fs.mkdirs(fPath.getParent())) {
-        throw new IOException("Mkdirs failed to create " + 
-                              fPath.getParent().toString());
-      }
-      FSDataOutputStream out = fs.create(fPath);
-      byte[] toWrite = new byte[files[idx].getSize()];
-      Random rb = new Random(files[idx].getSeed());
-      rb.nextBytes(toWrite);
-      out.write(toWrite);
-      out.close();
-      toWrite = null;
+
+    MyFile[] files = new MyFile[NFILES];
+    for (int i = 0; i < NFILES; i++) {
+      files[i] = createFile(root, fs);
     }
-    
     return files;
+  }
+
+  static MyFile createFile(Path root, FileSystem fs) throws IOException {
+    MyFile f = new MyFile();
+    Path p = new Path(root, f.getName());
+    FSDataOutputStream out = fs.create(p);
+    byte[] toWrite = new byte[f.getSize()];
+    new Random(f.getSeed()).nextBytes(toWrite);
+    out.write(toWrite);
+    out.close();
+    FileSystem.LOG.info("created: " + p + ", size=" + f.getSize());
+    return f;
   }
 
   /** check if the files have been copied correctly. */
@@ -139,7 +121,7 @@ public class TestCopyFiles extends TestCase {
     FileSystem fs = FileSystem.getNamed(fsname, conf);
     Path root = new Path(topdir);
     
-    for (int idx = 0; idx < NFILES; idx++) {
+    for (int idx = 0; idx < files.length; idx++) {
       Path fPath = new Path(root, files[idx].getName());
       FSDataInputStream in = fs.open(fPath);
       byte[] toRead = new byte[files[idx].getSize()];
@@ -231,7 +213,7 @@ public class TestCopyFiles extends TestCase {
   
   /** copy files from local file system to local file system */
   public void testCopyFromLocalToLocal() throws Exception {
-    MyFile[] files = createFiles("local", TEST_ROOT_DIR+"/srcdat");
+    MyFile[] files = createFiles(LOCAL_FS, TEST_ROOT_DIR+"/srcdat");
     ToolRunner.run(new CopyFiles(new Configuration()),
                            new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
                                          "file:///"+TEST_ROOT_DIR+"/destdat"});
@@ -250,7 +232,7 @@ public class TestCopyFiles extends TestCase {
       cluster = new MiniDFSCluster(conf, 2, true, null);
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
-        MyFile[] files = createFiles(namenode, "/srcdat");
+        MyFile[] files = createFiles(URI.create("hdfs://"+namenode), "/srcdat");
         ToolRunner.run(new CopyFiles(conf), new String[] {
                                          "-log",
                                          "hdfs://"+namenode+"/logs",
@@ -279,7 +261,7 @@ public class TestCopyFiles extends TestCase {
       cluster = new MiniDFSCluster(conf, 1, true, null);
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
-        MyFile[] files = createFiles("local", TEST_ROOT_DIR+"/srcdat");
+        MyFile[] files = createFiles(LOCAL_FS, TEST_ROOT_DIR+"/srcdat");
         ToolRunner.run(new CopyFiles(conf), new String[] {
                                          "-log",
                                          "hdfs://"+namenode+"/logs",
@@ -308,7 +290,7 @@ public class TestCopyFiles extends TestCase {
       cluster = new MiniDFSCluster(conf, 1, true, null);
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
-        MyFile[] files = createFiles(namenode, "/srcdat");
+        MyFile[] files = createFiles(URI.create("hdfs://"+namenode), "/srcdat");
         ToolRunner.run(new CopyFiles(conf), new String[] {
                                          "-log",
                                          "/logs",
@@ -336,7 +318,7 @@ public class TestCopyFiles extends TestCase {
       cluster = new MiniDFSCluster(conf, 2, true, null);
       namenode = conf.get("fs.default.name", "local");
       if (!"local".equals(namenode)) {
-        MyFile[] files = createFiles(namenode, "/srcdat");
+        MyFile[] files = createFiles(URI.create("hdfs://"+namenode), "/srcdat");
         ToolRunner.run(new CopyFiles(conf), new String[] {
                                          "-p",
                                          "-log",
@@ -388,4 +370,54 @@ public class TestCopyFiles extends TestCase {
     }
   }
 
+  public void testCopyDuplication() throws Exception {
+    try {    
+      MyFile[] files = createFiles(LOCAL_FS, TEST_ROOT_DIR+"/srcdat");
+      ToolRunner.run(new CopyFiles(new Configuration()),
+          new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
+                        "file:///"+TEST_ROOT_DIR+"/src2/srcdat"});
+      assertTrue("Source and destination directories do not match.",
+                 checkFiles("local", TEST_ROOT_DIR+"/src2/srcdat", files));
+  
+      assertEquals(CopyFiles.DuplicationException.ERROR_CODE,
+          ToolRunner.run(new CopyFiles(new Configuration()),
+          new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
+                        "file:///"+TEST_ROOT_DIR+"/src2/srcdat",
+                        "file:///"+TEST_ROOT_DIR+"/destdat",}));
+    }
+    finally {
+      deldir("local", TEST_ROOT_DIR+"/destdat");
+      deldir("local", TEST_ROOT_DIR+"/srcdat");
+      deldir("local", TEST_ROOT_DIR+"/src2");
+    }
+  }
+
+  public void testCopySingleFile() throws Exception {
+    FileSystem fs = FileSystem.get(LOCAL_FS, new Configuration());
+    Path root = new Path(TEST_ROOT_DIR+"/srcdat");
+    try {    
+      MyFile[] files = {createFile(root, fs)};
+      //copy a dir with a single file
+      ToolRunner.run(new CopyFiles(new Configuration()),
+          new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
+                        "file:///"+TEST_ROOT_DIR+"/destdat"});
+      assertTrue("Source and destination directories do not match.",
+                 checkFiles("local", TEST_ROOT_DIR+"/destdat", files));
+      
+      //copy a single file
+      String fname = files[0].getName();
+      Path p = new Path(root, fname);
+      FileSystem.LOG.info("fname=" + fname + ", exists? " + fs.exists(p));
+      ToolRunner.run(new CopyFiles(new Configuration()),
+          new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat/"+fname,
+                        "file:///"+TEST_ROOT_DIR+"/dest2/"+fname});
+      assertTrue("Source and destination directories do not match.",
+          checkFiles("local", TEST_ROOT_DIR+"/dest2", files));     
+    }
+    finally {
+      deldir("local", TEST_ROOT_DIR+"/destdat");
+      deldir("local", TEST_ROOT_DIR+"/dest2");
+      deldir("local", TEST_ROOT_DIR+"/srcdat");
+    }
+  }
 }
