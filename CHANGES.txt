@@ -15,6 +15,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-2193. 'fs -rm' and 'fs -rmr' show error message when the target
+    file does not exist. (Mahadev Konar via rangadi)
+            
     HADOOP-2738 Text is not subclassable because set(Text) and compareTo(Object)
     access the other instance's private members directly.
 

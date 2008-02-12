@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -981,6 +982,10 @@ public class FsShell extends Configured implements Tool {
     if (srcFs.delete(src)) {
       System.out.println("Deleted " + src);
     } else {
+      if (!srcFs.exists(src)) {
+        throw new FileNotFoundException("cannot remove "
+            + src + ": No such file or directory.");
+        }
       throw new IOException("Delete failed " + src);
     }
   }

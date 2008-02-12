@@ -176,7 +176,7 @@ public class TestDFSShell extends TestCase {
 
 
   /** check if we have any exceptions in cat command output */
-  public void testCatException() throws Exception {
+  public void testErrOutPut() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
     PrintStream bak = null;
@@ -195,6 +195,24 @@ public class TestDFSShell extends TestCase {
       String returned = out.toString();
       assertTrue("cat does not print exceptions ",
           (returned.lastIndexOf("Exception") == -1));
+      out.reset();
+      argv[0] = "-rm";
+      argv[1] = root.toString();
+      FsShell shell = new FsShell();
+      shell.setConf(conf);
+      ret = ToolRunner.run(shell, argv);
+      assertTrue(" -rm returned -1 ", 0>=ret);
+      returned = out.toString();
+      out.reset();
+      assertTrue("rm prints reasonable error ",
+          (returned.lastIndexOf("No such file or directory") != -1));
+      argv[0] = "-rmr";
+      argv[1] = root.toString();
+      ret = ToolRunner.run(shell, argv);
+      assertTrue(" -rmr returned -1", 0>=ret);
+      returned = out.toString();
+      assertTrue("rmr prints reasonable error ",
+    		  (returned.lastIndexOf("No such file or directory") != -1));
     } finally {
       if (bak != null) {
         System.setErr(bak);
