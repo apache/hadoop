@@ -18,9 +18,6 @@ Trunk (unreleased changes)
     HADOOP-2738 Text is not subclassable because set(Text) and compareTo(Object)
     access the other instance's private members directly.
 
-    HADOOP-2754 Filter out .crc files from local file system listing.
-    (Hairong Kuang via shv)
-
     HADOOP-2779.  Remove the references to HBase in the build.xml. (omalley)
 
     HADOOP-2194. dfs cat on a non-existent file throws FileNotFoundException.
@@ -56,6 +53,9 @@ Release 0.16.1 - Unrelease
 
 		HADOOP-2716. Superuser privileges for the Balancer.
 		(Tsz Wo (Nicholas), SZE via shv)
+
+    HADOOP-2754. Filter out .crc files from local file system listing.
+    (Hairong Kuang via shv)
 
 Release 0.16.0 - 2008-02-07
 
