@@ -67,7 +67,7 @@ which will be used to configure the chosen Forrest skin.
   <project-name>HBase</project-name>
   <project-description>The Hadoop database</project-description>
   <project-url>http://hadoop.apache.org/hbase/</project-url>
-  <project-logo>images/hbase_logo_med.gif</project-logo>
+  <project-logo>images/hbase_small.gif</project-logo>
 
   <!-- group logo -->
   <group-name>Hadoop</group-name>
