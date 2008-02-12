@@ -4,11 +4,10 @@
   import="org.apache.hadoop.util.VersionInfo"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.HConstants"
-  import="org.apache.hadoop.hbase.master.HMaster.MetaRegion"
+  import="org.apache.hadoop.hbase.master.MetaRegion"
   import="org.apache.hadoop.hbase.HBaseAdmin"
   import="org.apache.hadoop.hbase.HServerInfo"
   import="org.apache.hadoop.hbase.HServerAddress"
-  import="org.apache.hadoop.hbase.HRegionInfo"
   import="org.apache.hadoop.hbase.HBaseConfiguration"
   import="org.apache.hadoop.hbase.hql.ShowCommand"
   import="org.apache.hadoop.hbase.hql.TableFormatter"
@@ -56,7 +55,7 @@
 <tr><td><%= HConstants.ROOT_TABLE_NAME.toString() %></td><td><%= rootLocation.toString() %></td></tr>
 <%
   if (onlineRegions != null && onlineRegions.size() > 0) { %>
-  <% for (Map.Entry<Text, HMaster.MetaRegion> e: onlineRegions.entrySet()) {
+  <% for (Map.Entry<Text, MetaRegion> e: onlineRegions.entrySet()) {
     MetaRegion meta = e.getValue();
   %>
   <tr><td><%= meta.getRegionName().toString() %></td><td><%= meta.getServer().toString() %></td></tr>

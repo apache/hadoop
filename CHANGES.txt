@@ -42,6 +42,8 @@ Hbase Change Log
                aggressive for Hudson. TestLogRolling timed out even though it
                was operating properly. Change test timeout to 10 minutes.
    HBASE-436   website: http://hadoop.apache.org/hbase
+   HBASE-417   Factor TableOperation and subclasses into separate files from
+               HMaster (Bryan Duxbury via Stack)
 
 
 Branch 0.1

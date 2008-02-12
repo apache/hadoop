@@ -8,7 +8,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.master.HMaster.MetaRegion;
+import org.apache.hadoop.hbase.master.MetaRegion;
 import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -97,7 +97,7 @@ public final class master_jsp extends org.apache.jasper.runtime.HttpJspBase
       out.write('\n');
       out.write(' ');
       out.write(' ');
- for (Map.Entry<Text, HMaster.MetaRegion> e: onlineRegions.entrySet()) {
+ for (Map.Entry<Text, MetaRegion> e: onlineRegions.entrySet()) {
     MetaRegion meta = e.getValue();
   
       out.write("\n  <tr><td>");

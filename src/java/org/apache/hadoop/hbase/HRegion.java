@@ -1809,7 +1809,6 @@ public class HRegion implements HConstants {
    * @param r HRegion to add to <code>meta</code>
    *
    * @throws IOException
-   * @see {@link #removeRegionFromMETA(HRegion, HRegion)}
    */
   public static void addRegionToMETA(HRegion meta, HRegion r) 
   throws IOException {
@@ -1835,10 +1834,9 @@ public class HRegion implements HConstants {
    * 
    * @param srvr META server to be updated
    * @param metaRegionName Meta region name
-   * @param regionNmae HRegion to remove from <code>meta</code>
+   * @param regionName HRegion to remove from <code>meta</code>
    *
    * @throws IOException
-   * @see {@link #addRegionToMETA(HRegion, HRegion)}
    */
   public static void removeRegionFromMETA(final HRegionInterface srvr,
     final Text metaRegionName, final Text regionName)
@@ -1853,7 +1851,6 @@ public class HRegion implements HConstants {
    * @param info HRegion to update in <code>meta</code>
    *
    * @throws IOException
-   * @see {@link #addRegionToMETA(HRegion, HRegion)}
    */
   public static void offlineRegionInMETA(final HRegionInterface srvr,
     final Text metaRegionName, final HRegionInfo info)

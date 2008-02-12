@@ -26,6 +26,8 @@ import org.apache.hadoop.io.Text;
  */
 public interface HConstants {
   
+  static final Long ZERO_L = Long.valueOf(0L);
+  
   // For migration
 
   /** name of version file */
