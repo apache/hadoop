@@ -213,6 +213,21 @@ public class TestDFSShell extends TestCase {
       returned = out.toString();
       assertTrue("rmr prints reasonable error ",
     		  (returned.lastIndexOf("No such file or directory") != -1));
+      out.reset();
+      argv[0] = "-du";
+      argv[1] = "/nonexistentfile";
+      ret = ToolRunner.run(shell, argv);
+      returned = out.toString();
+      assertTrue(" -du prints reasonable error ",
+          (returned.lastIndexOf("No such file or directory") != -1));
+      out.reset();
+      argv[0] = "-dus";
+      argv[1] = "/nonexistentfile";
+      ret = ToolRunner.run(shell, argv);
+      returned = out.toString();
+      assertTrue(" -dus prints reasonable error",
+          (returned.lastIndexOf("No such file or directory") != -1));
+      out.reset();
     } finally {
       if (bak != null) {
         System.setErr(bak);

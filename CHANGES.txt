@@ -32,6 +32,9 @@ Trunk (unreleased changes)
     HADOOP-1593. FsShell works with paths in non-default FileSystem.
     (Mahadev Konar via dhruba)
 
+    HADOOP-2191. du and dus command on non-existent directory gives 
+    appropriate error message.  (Mahadev Konar via dhruba)
+
 Release 0.16.1 - Unrelease
 
   BUG FIXES

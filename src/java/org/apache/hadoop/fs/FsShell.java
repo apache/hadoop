@@ -616,8 +616,10 @@ public class FsShell extends Configured implements Tool {
     Path srcPath = new Path(src);
     FileSystem srcFs = srcPath.getFileSystem(getConf());
     Path items[] = srcFs.listPaths(srcFs.globPaths(srcPath));
-    if (items == null) {
-      throw new IOException("Could not get listing for " + src);
+    if ((items == null) || ((items.length == 0) && 
+        (!srcFs.exists(srcPath)))){
+      throw new FileNotFoundException("Cannot access " + src
+            + ": No such file or directory.");
     } else {
       System.out.println("Found " + items.length + " items");
       for (int i = 0; i < items.length; i++) {
@@ -637,18 +639,20 @@ public class FsShell extends Configured implements Tool {
   void dus(String src) throws IOException {
     Path srcPath = new Path(src);
     FileSystem srcFs = srcPath.getFileSystem(getConf());
-    Path paths[] = srcFs.globPaths(new Path(src));
-    if (paths==null || paths.length==0) {
-      throw new IOException("dus: No match: " + src);
+    FileStatus status[] = srcFs.globStatus(new Path(src));
+    if (status==null || status.length==0) {
+      throw new FileNotFoundException("Cannot access " + src + 
+          ": No such file or directory.");
     }
-    for(int i=0; i<paths.length; i++) {
-      Path items[] = srcFs.listPaths(paths[i]);
+    for(int i=0; i<status.length; i++) {
+      FileStatus items[] = srcFs.listStatus(status[i].getPath());
       if (items != null) {
         long totalSize=0;
         for(int j=0; j<items.length; j++) {
-          totalSize += srcFs.getContentLength(items[j]);
+          totalSize += srcFs.getContentLength(
+              items[j].getPath());
         }
-        String pathStr = paths[i].toString();
+        String pathStr = status[i].getPath().toString();
         System.out.println(
                            ("".equals(pathStr)?".":pathStr) + "\t" + totalSize);
       }
