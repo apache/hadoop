@@ -421,15 +421,15 @@ public class HConnectionManager implements HConstants {
           HRegionInfo regionInfo = (HRegionInfo) Writables.getWritable(
               results.get(COL_REGIONINFO), new HRegionInfo());
 
-          if (regionInfo.isOffline()) {
-            throw new IllegalStateException("region offline: " + 
-              regionInfo.getRegionName());
-          }
-
           // possible we got a region of a different table...
           if (!regionInfo.getTableDesc().getName().equals(tableName)) {
             throw new TableNotFoundException(
               "Table '" + tableName + "' was not found.");
+          }
+
+          if (regionInfo.isOffline()) {
+            throw new IllegalStateException("region offline: " + 
+              regionInfo.getRegionName());
           }
 
           String serverAddress = 
@@ -457,6 +457,11 @@ public class HConnectionManager implements HConstants {
           } else {
             throw e;
           }
+        } catch (TableNotFoundException e) {
+          // if we got this error, probably means the table just plain doesn't
+          // exist. rethrow the error immediately. this should always be coming
+          // from the HTable constructor.
+          throw e;
         } catch (IOException e) {
           if (e instanceof RemoteException) {
             e = RemoteExceptionHandler.decodeRemoteException(

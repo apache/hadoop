@@ -50,7 +50,8 @@ Hbase Change Log
                collected
    HBASE-407   Keep HRegionLocation information in LRU structure 
                (Bryan Duxbury)
-
+   HBASE-444   hbase is very slow at determining table is not present
+               (Bryan Duxbury)
 
 Branch 0.1
 
