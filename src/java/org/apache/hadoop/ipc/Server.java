@@ -550,21 +550,21 @@ public abstract class Server {
         Iterator<Call> iter = responseQueue.listIterator(0);
         while (iter.hasNext()) {
           call = iter.next();
-          if (call.response.position() > 0) {
-            /* We should probably use a different a different start time 
-             * than receivedTime. receivedTime starts when the RPC
-             * was first read.
-             * We have written a partial response. will close the
-             * connection for now.
-             */
-            close = true;
-            break;
-          }
           if (now > call.receivedTime + maxCallStartAge) {
             LOG.info(getName() + ", call " + call +
                      ": response discarded for being too old (" +
                      (now - call.receivedTime) + ")");
             iter.remove();
+            if (call.response.position() > 0) {
+              /* We should probably use a different start time 
+               * than receivedTime. receivedTime starts when the RPC
+               * was first read.
+               * We have written a partial response. will close the
+               * connection for now.
+               */
+              close = true;
+              break;
+            }            
           }
         }
       }
