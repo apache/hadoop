@@ -88,11 +88,17 @@ public class MultiRegionTable extends HBaseTestCase {
     // with EMPTY_START_ROW will be one of the unsplittable daughters.
     HRegionInfo hri = null;
     HRegion r = null;
+    HRegionServer server = cluster.getRegionThreads().get(0).getRegionServer(); 
     for (int i = 0; i < 30; i++) {
-      hri = t.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
+      try {
+        hri = t.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
+      } catch (IOException e) {
+        e = RemoteExceptionHandler.checkIOException(e);
+        e.printStackTrace();
+        continue;
+      }
       LOG.info("Region location: " + hri);
-      r = cluster.getRegionThreads().get(0).getRegionServer().
-        onlineRegions.get(hri.getRegionName());
+      r = server.onlineRegions.get(hri.getRegionName());
       if (r != null) {
         break;
       }
@@ -102,10 +108,10 @@ public class MultiRegionTable extends HBaseTestCase {
         LOG.warn("Waiting on region to come online", e);
       }
     }
+    assertNotNull(r);
 
     // Flush the cache
-    cluster.getRegionThreads().get(0).getRegionServer().getCacheFlushListener().
-      flushRequested(r);
+    server.getCacheFlushListener().flushRequested(r);
 
     // Now, wait until split makes it into the meta table.
     int oldCount = count;
@@ -158,7 +164,8 @@ public class MultiRegionTable extends HBaseTestCase {
         // still has references.
         while (true) {
           data = getSplitParentInfo(meta, parent);
-          if (data == null || data.size() == 3) {
+          if (data != null && data.size() == 3) {
+            LOG.info("Waiting for splitA to release reference to parent");
             try {
               Thread.sleep(waitTime);
             } catch (InterruptedException e) {
@@ -168,7 +175,9 @@ public class MultiRegionTable extends HBaseTestCase {
           }
           break;
         }
-        LOG.info("Parent split info returned " + data.keySet().toString());
+        if (data != null) {
+          LOG.info("Parent split info returned " + data.keySet().toString());
+        }
       }
 
       if (splitB == null) {
@@ -199,8 +208,10 @@ public class MultiRegionTable extends HBaseTestCase {
     
     for (int i = 0; i < retries; i++) {
       if (!fs.exists(parentDir)) {
+        LOG.info("Parent directory was deleted. tries=" + i);
         break;
       }
+      LOG.info("Waiting for parent directory to be deleted. tries=" + i);
       try {
         Thread.sleep(waitTime);
       } catch (InterruptedException e) {
@@ -260,8 +271,7 @@ public class MultiRegionTable extends HBaseTestCase {
           continue;
         }
         // Make sure I get the parent.
-        if (hri.getRegionName().toString().
-            equals(parent.getRegionName().toString()) &&
+        if (hri.getRegionName().equals(parent.getRegionName()) &&
               hri.getRegionId() == parent.getRegionId()) {
           return curVals;
         }
@@ -316,8 +326,7 @@ public class MultiRegionTable extends HBaseTestCase {
    * @throws IOException
    */
   protected static void compact(final MiniHBaseCluster cluster,
-      final HRegionInfo r)
-  throws IOException {
+      final HRegionInfo r) throws IOException {
     if (r == null) {
       LOG.debug("Passed region is null");
       return;
@@ -332,8 +341,7 @@ public class MultiRegionTable extends HBaseTestCase {
       for (int i = 0; i < 10; i++) {
         try {
           for (HRegion online: regions.values()) {
-            if (online.getRegionName().toString().
-                equals(r.getRegionName().toString())) {
+            if (online.getRegionName().equals(r.getRegionName())) {
               online.compactStores();
             }
           }

@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MultiRegionTable;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
@@ -99,7 +100,7 @@ public class TestTableMapReduce extends MultiRegionTable {
 
     // This size should make it so we always split using the addContent
     // below. After adding all data, the first region is 1.3M
-    conf.setLong("hbase.hregion.max.filesize", 256 * 1024);
+    conf.setLong("hbase.hregion.max.filesize", 1024 * 1024);
 
     // Make lease timeout longer, lease checks less frequent
     conf.setInt("hbase.master.lease.period", 10 * 1000);
@@ -156,7 +157,7 @@ public class TestTableMapReduce extends MultiRegionTable {
     /**
      * Pass the key, and reversed value to reduce
      *
-     * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.io.MapWritable, org.apache.hadoop.hbase.mapred.TableOutputCollector, org.apache.hadoop.mapred.Reporter)
+     * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.io.MapWritable, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
      */
     @SuppressWarnings("unchecked")
     @Override
@@ -222,17 +223,11 @@ public class TestTableMapReduce extends MultiRegionTable {
     HTable table = new HTable(conf, new Text(SINGLE_REGION_TABLE_NAME));
 
     for(int i = 0; i < values.length; i++) {
-      long lockid = table.startUpdate(new Text("row_"
-          + String.format("%1$05d", i)));
+      BatchUpdate b = new BatchUpdate(new Text("row_" +
+          String.format("%1$05d", i)));
 
-      try {
-        table.put(lockid, TEXT_INPUT_COLUMN, values[i]);
-        table.commit(lockid, System.currentTimeMillis());
-        lockid = -1;
-      } finally {
-        if (lockid != -1)
-          table.abort(lockid);
-      }
+      b.put(TEXT_INPUT_COLUMN, values[i]);
+      table.commit(b);
     }
 
     LOG.info("Print table contents before map/reduce for " +

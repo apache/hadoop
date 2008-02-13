@@ -18,6 +18,7 @@ Hbase Change Log
    HBASE-421   TestRegionServerExit broken
    HBASE-426   hbase can't find remote filesystem
    HBASE-437   Clear Command should use system.out (Edward Yoon via Stack)
+   HBASE-43[45] TestTableIndex and TestTableMapReduce failed in Hudson builds
 
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling

@@ -31,6 +31,7 @@ import junit.textui.TestRunner;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseAdmin;
@@ -96,6 +97,9 @@ public class TestTableIndex extends MultiRegionTable {
     // below. After adding all data, the first region is 1.3M
     conf.setLong("hbase.hregion.max.filesize", 1024 * 1024);
 
+    // Always compact if there is more than one store file.
+    conf.setInt("hbase.hstore.compactionThreshold", 2);
+
     desc = new HTableDescriptor(TABLE_NAME);
     desc.addFamily(new HColumnDescriptor(INPUT_COLUMN));
     desc.addFamily(new HColumnDescriptor(OUTPUT_COLUMN));
@@ -160,7 +164,6 @@ public class TestTableIndex extends MultiRegionTable {
     }
     scanTable(printResults);
 
-    @SuppressWarnings("deprecation")
     MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
 
     // set configuration parameter for index build
@@ -267,17 +270,17 @@ public class TestTableIndex extends MultiRegionTable {
       Integer.toString(new Random().nextInt()));
     this.fs.copyToLocalFile(new Path(INDEX_DIR), localDir);
     FileSystem localfs = FileSystem.getLocal(conf);
-    Path [] indexDirs = localfs.listPaths(new Path [] {localDir});
+    FileStatus [] indexDirs = localfs.listStatus(localDir);
     Searcher searcher = null;
     HScannerInterface scanner = null;
     try {
       if (indexDirs.length == 1) {
-        searcher = new IndexSearcher((new File(indexDirs[0].
+        searcher = new IndexSearcher((new File(indexDirs[0].getPath().
           toUri())).getAbsolutePath());
       } else if (indexDirs.length > 1) {
         Searchable[] searchers = new Searchable[indexDirs.length];
         for (int i = 0; i < indexDirs.length; i++) {
-          searchers[i] = new IndexSearcher((new File(indexDirs[i].
+          searchers[i] = new IndexSearcher((new File(indexDirs[i].getPath().
             toUri()).getAbsolutePath()));
         }
         searcher = new MultiSearcher(searchers);
@@ -301,7 +304,6 @@ public class TestTableIndex extends MultiRegionTable {
       int count = 0;
       while (scanner.next(key, results)) {
         String value = key.getRow().toString();
-        LOG.debug("Scanned over " + key.getRow());
         Term term = new Term(rowkeyName, value);
         int hitCount = searcher.search(new TermQuery(term)).length();
         assertEquals("check row " + value, 1, hitCount);
