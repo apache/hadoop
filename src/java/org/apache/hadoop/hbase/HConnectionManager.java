@@ -20,15 +20,12 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
@@ -41,6 +38,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.master.HMasterInterface;
+import org.apache.hadoop.hbase.util.SoftSortedMap;
 
 /**
  * A non-instantiable class that manages connections to multiple tables in
@@ -115,7 +113,9 @@ public class HConnectionManager implements HConstants {
 
     private HRegionLocation rootRegionLocation; 
     
-    private Map<Text, SortedMap<Text, HRegionLocation>> cachedRegionLocations;
+    private Map<Text, SoftSortedMap<Text, HRegionLocation>> 
+      cachedRegionLocations = new ConcurrentHashMap<Text, 
+        SoftSortedMap<Text, HRegionLocation>>();;
     
     /** 
      * constructor
@@ -144,9 +144,6 @@ public class HConnectionManager implements HConstants {
       
       this.master = null;
       this.masterChecked = false;
-
-      this.cachedRegionLocations = 
-        new ConcurrentHashMap<Text, SortedMap<Text, HRegionLocation>>();
       this.servers = new ConcurrentHashMap<String, HRegionInterface>();
     }
     
@@ -489,12 +486,12 @@ public class HConnectionManager implements HConstants {
       */
     private HRegionLocation getCachedLocation(Text tableName, Text row) {
       // find the map of cached locations for this table
-      SortedMap<Text, HRegionLocation> tableLocations = 
+      SoftSortedMap<Text, HRegionLocation> tableLocations = 
         cachedRegionLocations.get(tableName);
 
       // if tableLocations for this table isn't built yet, make one
       if (tableLocations == null) {
-        tableLocations = new TreeMap<Text, HRegionLocation>();
+        tableLocations = new SoftSortedMap<Text, HRegionLocation>();
         cachedRegionLocations.put(tableName, tableLocations);
       }
 
@@ -514,7 +511,7 @@ public class HConnectionManager implements HConstants {
         
         // cut the cache so that we only get the part that could contain
         // regions that match our key
-        SortedMap<Text, HRegionLocation> matchingRegions =
+        SoftSortedMap<Text, HRegionLocation> matchingRegions =
           tableLocations.headMap(row);
 
         // if that portion of the map is empty, then we're done. otherwise,
@@ -523,7 +520,7 @@ public class HConnectionManager implements HConstants {
         if (!matchingRegions.isEmpty()) {
           HRegionLocation possibleRegion = 
             matchingRegions.get(matchingRegions.lastKey());
-          
+                  
           Text endKey = possibleRegion.getRegionInfo().getEndKey();
           
           // make sure that the end key is greater than the row we're looking 
@@ -551,12 +548,12 @@ public class HConnectionManager implements HConstants {
       */
     private void deleteCachedLocation(Text tableName, Text row){
       // find the map of cached locations for this table
-      SortedMap<Text, HRegionLocation> tableLocations = 
+      SoftSortedMap<Text, HRegionLocation> tableLocations = 
         cachedRegionLocations.get(tableName);
 
       // if tableLocations for this table isn't built yet, make one
       if (tableLocations == null) {
-        tableLocations = new TreeMap<Text, HRegionLocation>();
+        tableLocations = new SoftSortedMap<Text, HRegionLocation>();
         cachedRegionLocations.put(tableName, tableLocations);
       }
 
@@ -565,7 +562,7 @@ public class HConnectionManager implements HConstants {
       if (!tableLocations.isEmpty()) {
         // cut the cache so that we only get the part that could contain
         // regions that match our key
-        SortedMap<Text, HRegionLocation> matchingRegions =
+        SoftSortedMap<Text, HRegionLocation> matchingRegions =
           tableLocations.headMap(row);
 
         // if that portion of the map is empty, then we're done. otherwise,
@@ -599,12 +596,12 @@ public class HConnectionManager implements HConstants {
       Text startKey = location.getRegionInfo().getStartKey();
       
       // find the map of cached locations for this table
-      SortedMap<Text, HRegionLocation> tableLocations = 
+      SoftSortedMap<Text, HRegionLocation> tableLocations = 
         cachedRegionLocations.get(tableName);
 
       // if tableLocations for this table isn't built yet, make one
       if (tableLocations == null) {
-        tableLocations = new TreeMap<Text, HRegionLocation>();
+        tableLocations = new SoftSortedMap<Text, HRegionLocation>();
         cachedRegionLocations.put(tableName, tableLocations);
       }
       
