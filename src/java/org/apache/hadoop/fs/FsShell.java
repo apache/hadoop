@@ -568,10 +568,15 @@ public class FsShell extends Configured implements Tool {
   void ls(String srcf, boolean recursive) throws IOException {
     Path srcPath = new Path(srcf);
     FileSystem srcFs = srcPath.getFileSystem(this.getConf());
-    Path[] srcs = srcFs.globPaths(srcPath);
+    FileStatus[] srcs = srcFs.globStatus(srcPath);
+    if (srcs==null || srcs.length==0) {
+      throw new FileNotFoundException("Cannot access " + srcf + 
+          ": No such file or directory.");
+    }
+ 
     boolean printHeader = (srcs.length == 1) ? true: false;
     for(int i=0; i<srcs.length; i++) {
-      ls(srcs[i], srcFs, recursive, printHeader);
+      ls(srcs[i].getPath(), srcFs, recursive, printHeader);
     }
   }
 
@@ -580,11 +585,14 @@ public class FsShell extends Configured implements Tool {
    */
   private void ls(Path src, FileSystem srcFs, boolean recursive, boolean printHeader) throws IOException {
     FileStatus items[] = srcFs.listStatus(src);
-    if (items == null) {
-      throw new IOException("Could not get listing for " + src);
+    if ((items == null) || ((items.length == 0) 
+        && (!srcFs.exists(src)))) {
+      throw new FileNotFoundException(src + ": No such file or directory.");
     } else {
       if (!recursive && printHeader) {
-        System.out.println("Found " + items.length + " items");
+        if (items.length != 0) {
+          System.out.println("Found " + items.length + " items");
+        }
       }
       for (int i = 0; i < items.length; i++) {
         FileStatus stat = items[i];

@@ -15,6 +15,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-2190. bring behaviour '-ls' and '-du' closer to Linux shell 
+                 commands in case of errors. (Mahadev Konar via rangadi)
+    
     HADOOP-2193. 'fs -rm' and 'fs -rmr' show error message when the target
     file does not exist. (Mahadev Konar via rangadi)
             

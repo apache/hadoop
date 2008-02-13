@@ -182,6 +182,7 @@ public class TestDFSShell extends TestCase {
     PrintStream bak = null;
     try {
       cluster = new MiniDFSCluster(conf, 2, true, null);
+      FileSystem srcFs = cluster.getFileSystem();
       Path root = new Path("/nonexistentfile");
       bak = System.err;
       ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -228,6 +229,32 @@ public class TestDFSShell extends TestCase {
       assertTrue(" -dus prints reasonable error",
           (returned.lastIndexOf("No such file or directory") != -1));
       out.reset();
+      argv[0] = "-ls";
+      argv[1] = "/nonexistenfile";
+      ret = ToolRunner.run(shell, argv);
+      returned = out.toString();
+      assertTrue(" -ls does not return Found 0 items",
+          (returned.lastIndexOf("Found 0") == -1));
+      out.reset();
+      argv[0] = "-ls";
+      argv[1] = "/nonexistentfile";
+      ret = ToolRunner.run(shell, argv);
+      assertTrue(" -lsr should fail ",
+          (ret < 0));
+      out.reset();
+      srcFs.mkdirs(new Path("/testdir"));
+      argv[0] = "-ls";
+      argv[1] = "/testdir";
+      ret = ToolRunner.run(shell, argv);
+      returned = out.toString();
+      assertTrue(" -ls does not print out anything ",
+          (returned.lastIndexOf("Found 0") == -1));
+      out.reset();
+      argv[0] = "-ls";
+      argv[1] = "/user/nonxistant/*";
+      ret = ToolRunner.run(shell, argv);
+      assertTrue(" -ls on nonexistent glob returns -1",
+          (ret < 0));
     } finally {
       if (bak != null) {
         System.setErr(bak);
