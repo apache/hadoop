@@ -114,12 +114,15 @@ public class HtmlTableFormatter implements TableFormatter {
    * no header, no footer, etc.
    * @throws IOException 
    */
+  @SuppressWarnings("static-access")
   public void header(String[] titles) throws IOException {
     if (titles == null) {
       // print nothing.
       setNoFormatting(true);
       return;
     }
+    
+    this.outputter.setState(this.outputter.BEFORE_XML_DECLARATION, null);
     // Can't add a 'border=1' attribute because its included on the end in
     
     this.outputter.startTag("table");
