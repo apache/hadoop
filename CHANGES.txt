@@ -39,8 +39,8 @@ Release 0.16.1 - Unrelease
 
   BUG FIXES
 
-    HADOO-2789. Race condition in IPC Server Responder that could close
-                connections early. (Raghu Angadi)
+    HADOOP-2789. Race condition in IPC Server Responder that could close
+                 connections early. (Raghu Angadi)
     
     HADOOP-2785. minor. Fix a typo in Datanode block verification 
                  (Raghu Angadi)
