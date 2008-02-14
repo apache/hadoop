@@ -18,6 +18,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-2195. '-mkdir' behaviour is now closer to Linux shell in case of
+                 errors. (Mahadev Konar via rangadi)
+    
     HADOOP-2190. bring behaviour '-ls' and '-du' closer to Linux shell 
                  commands in case of errors. (Mahadev Konar via rangadi)
     

@@ -673,8 +673,21 @@ public class FsShell extends Configured implements Tool {
   void mkdir(String src) throws IOException {
     Path f = new Path(src);
     FileSystem srcFs = f.getFileSystem(getConf());
-    if (!srcFs.mkdirs(f)) {
-      throw new IOException("Mkdirs failed to create " + src);
+    FileStatus fstatus = null;
+    try {
+      fstatus = srcFs.getFileStatus(f);
+      if (fstatus.isDir()) {
+        throw new IOException("cannot create directory " 
+            + src + ": File exists");
+      }
+      else {
+        throw new IOException(src + " exists but " +
+            "is not a directory");
+      }
+    } catch(FileNotFoundException e) {
+        if (!srcFs.mkdirs(f)) {
+          throw new IOException("failed to create " + src);
+        }
     }
   }
 

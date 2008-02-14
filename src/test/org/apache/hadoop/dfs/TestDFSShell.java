@@ -255,6 +255,27 @@ public class TestDFSShell extends TestCase {
       ret = ToolRunner.run(shell, argv);
       assertTrue(" -ls on nonexistent glob returns -1",
           (ret < 0));
+      out.reset();
+      argv[0] = "-mkdir";
+      argv[1] = "/testdir";
+      ret = ToolRunner.run(shell, argv);
+      returned = out.toString();
+      assertTrue(" -mkdir returned -1 ", (ret < 0));
+      assertTrue(" -mkdir returned File exists", 
+          (returned.lastIndexOf("File exists") != -1));
+      Path testFile = new Path("/testfile");
+      OutputStream outtmp = srcFs.create(testFile);
+      outtmp.write(testFile.toString().getBytes());
+      outtmp.close();
+      out.reset();
+      argv[0] = "-mkdir";
+      argv[1] = "/testfile";
+      ret = ToolRunner.run(shell, argv);
+      returned = out.toString();
+      assertTrue(" -mkdir returned -1", (ret < 0));
+      assertTrue(" -mkdir returned this is a file ",
+          (returned.lastIndexOf("not a directory") != -1));
+      out.reset();
     } finally {
       if (bak != null) {
         System.setErr(bak);
