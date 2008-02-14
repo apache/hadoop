@@ -41,6 +41,9 @@ Trunk (unreleased changes)
     HADOOP-2191. du and dus command on non-existent directory gives 
     appropriate error message.  (Mahadev Konar via dhruba)
 
+    HADOOP-2832. Remove tabs from code of DFSClient for better
+    indentation. (dhruba)
+
 Release 0.16.1 - Unrelease
 
   BUG FIXES

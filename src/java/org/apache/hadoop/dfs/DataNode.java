@@ -171,7 +171,7 @@ public class DataNode implements FSConstants, Runnable {
    * This method starts the data node with the specified conf.
    * 
    * @param conf - the configuration
-   * 		if conf's CONFIG_PROPERTY_SIMULATED property is set
+   *  if conf's CONFIG_PROPERTY_SIMULATED property is set
    *  then a simulated storage based data node is created.
    * 
    * @param dataDirs - only for a non-simulated storage data node
@@ -262,7 +262,7 @@ public class DataNode implements FSConstants, Runnable {
     if (this.initialBlockReportDelay >= blockReportIntervalBasis) {
       this.initialBlockReportDelay = 0;
       LOG.info("dfs.blockreport.initialDelay is greater than " +
-      	"dfs.blockreport.intervalMsec." + " Setting initial delay to 0 msec:");
+        "dfs.blockreport.intervalMsec." + " Setting initial delay to 0 msec:");
     }
     this.heartBeatInterval = conf.getLong("dfs.heartbeat.interval", HEARTBEAT_INTERVAL) * 1000L;
     DataNode.nameNodeAddr = nameNodeAddr;
@@ -1981,7 +1981,7 @@ public class DataNode implements FSConstants, Runnable {
         // Open local disk out
         //
         streams = data.writeToBlock(block, isRecovery);
-		this.finalized = data.isValidBlock(block);
+        this.finalized = data.isValidBlock(block);
         if (streams != null) {
           this.bufStream = new DFSBufferedOutputStream(
                                           streams.dataOut, BUFFER_SIZE);
@@ -2644,7 +2644,7 @@ public class DataNode implements FSConstants, Runnable {
   public void scheduleBlockReport(long delay) {
     if (delay > 0) { // send BR after random delay
       lastBlockReport = System.currentTimeMillis()
-  							- ( blockReportInterval - new Random().nextInt((int)(delay)));
+                            - ( blockReportInterval - new Random().nextInt((int)(delay)));
     } else { // send at next heartbeat
       lastBlockReport = lastHeartbeat - blockReportInterval;
     }
