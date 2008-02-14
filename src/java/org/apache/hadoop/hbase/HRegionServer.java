@@ -872,6 +872,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         }
         this.conf.set(key, value);
       }
+      // Master sent us hbase.rootdir to use. Should be fully qualified
+      // path with file system specification included.  Set 'fs.default.name'
+      // to match the filesystem on hbase.rootdir else underlying hadoop hdfs
+      // accessors will be going against wrong filesystem (unless all is set
+      // to defaults).
+      this.conf.set("fs.default.name", this.conf.get("hbase.rootdir"));
       this.fs = FileSystem.get(this.conf);
       this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
       this.log = setupHLog();

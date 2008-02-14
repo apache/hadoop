@@ -19,6 +19,7 @@ Hbase Change Log
    HBASE-426   hbase can't find remote filesystem
    HBASE-437   Clear Command should use system.out (Edward Yoon via Stack)
    HBASE-434, HBASE-435 TestTableIndex and TestTableMapReduce failed in Hudson builds
+   HBASE-446   Fully qualified hbase.rootdir doesn't work
 
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling

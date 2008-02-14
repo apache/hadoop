@@ -255,10 +255,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   public HMaster(Path rd, HServerAddress address, HBaseConfiguration conf)
   throws IOException {
-    
     this.conf = conf;
+    this.rootdir = rd;
+    // The filesystem hbase wants to use is probably not what is set into
+    // fs.default.name; its value is probably the default.
+    this.conf.set("fs.default.name", this.rootdir.toString());
     this.fs = FileSystem.get(conf);
-    this.rootdir = this.fs.makeQualified(rd);
     this.conf.set(HConstants.HBASE_DIR, this.rootdir.toString());
     this.rand = new Random();
     Path rootRegionDir =
