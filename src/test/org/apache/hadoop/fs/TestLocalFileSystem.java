@@ -96,6 +96,31 @@ public class TestLocalFileSystem extends TestCase {
     }
   }
 
+  public void testCopy() throws IOException {
+    Configuration conf = new Configuration();
+    LocalFileSystem fs = FileSystem.getLocal(conf);
+    Path src = new Path(TEST_ROOT_DIR, "dingo");
+    Path dst = new Path(TEST_ROOT_DIR, "yak");
+    writeFile(fs, src);
+    assertTrue(FileUtil.copy(fs, src, fs, dst, true, false, conf));
+    assertTrue(!fs.exists(src) && fs.exists(dst));
+    assertTrue(FileUtil.copy(fs, dst, fs, src, false, false, conf));
+    assertTrue(fs.exists(src) && fs.exists(dst));
+    assertTrue(FileUtil.copy(fs, src, fs, dst, true, true, conf));
+    assertTrue(!fs.exists(src) && fs.exists(dst));
+    fs.mkdirs(src);
+    assertTrue(FileUtil.copy(fs, dst, fs, src, false, false, conf));
+    Path tmp = new Path(src, dst.getName());
+    assertTrue(fs.exists(tmp) && fs.exists(dst));
+    assertTrue(FileUtil.copy(fs, dst, fs, src, false, true, conf));
+    assertTrue(fs.delete(tmp));
+    fs.mkdirs(tmp);
+    try {
+      FileUtil.copy(fs, dst, fs, src, true, true, conf);
+      fail("Failed to detect existing dir");
+    } catch (IOException e) { }
+  }
+
   public void testHomeDirectory() throws IOException {
     Configuration conf = new Configuration();
     FileSystem fileSys = FileSystem.getLocal(conf);

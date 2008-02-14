@@ -139,7 +139,7 @@ public class FileUtil {
                              boolean deleteSource,
                              boolean overwrite,
                              Configuration conf) throws IOException {
-    dst = checkDest(src.getName(), dstFS, dst);
+    dst = checkDest(src.getName(), dstFS, dst, overwrite);
 
     if (srcFS.isDirectory(src)) {
       checkDependencies(srcFS, src, dstFS, dst);
@@ -171,7 +171,7 @@ public class FileUtil {
                                   FileSystem dstFS, Path dstFile, 
                                   boolean deleteSource,
                                   Configuration conf, String addString) throws IOException {
-    dstFile = checkDest(srcDir.getName(), dstFS, dstFile);
+    dstFile = checkDest(srcDir.getName(), dstFS, dstFile, false);
 
     if (!srcFS.isDirectory(srcDir))
       return false;
@@ -210,7 +210,7 @@ public class FileUtil {
                              FileSystem dstFS, Path dst,
                              boolean deleteSource,
                              Configuration conf) throws IOException {
-    dst = checkDest(src.getName(), dstFS, dst);
+    dst = checkDest(src.getName(), dstFS, dst, false);
 
     if (src.isDirectory()) {
       if (!dstFS.mkdirs(dst)) {
@@ -262,16 +262,17 @@ public class FileUtil {
     }
   }
 
-  private static Path checkDest(String srcName, FileSystem dstFS, Path dst)
-    throws IOException {
+  private static Path checkDest(String srcName, FileSystem dstFS, Path dst,
+      boolean overwrite) throws IOException {
     if (dstFS.exists(dst)) {
-      if (!dstFS.isDirectory(dst)) {
-        throw new IOException("Target " + dst + " already exists");
-      } else {
-        dst = new Path(dst, srcName);
-        if (dstFS.exists(dst)) {
-          throw new IOException("Target " + dst + " already exists");
+      FileStatus sdst = dstFS.getFileStatus(dst);
+      if (sdst.isDir()) {
+        if (null == srcName) {
+          throw new IOException("Target " + dst + " is a directory");
         }
+        return checkDest(null, dstFS, new Path(dst, srcName), overwrite);
+      } else if (!overwrite) {
+        throw new IOException("Target " + dst + " already exists");
       }
     }
     return dst;

@@ -79,6 +79,9 @@ Release 0.16.1 - Unrelease
     HADOOP-2391. Cleanup job output directory before declaring a job as
     SUCCESSFUL. (Amareshwari Sri Ramadasu via ddas)
 
+    HADOOP-2808. Minor fix to FileUtil::copy to mind the overwrite
+    formal. (cdouglas)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES
