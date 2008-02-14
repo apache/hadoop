@@ -190,7 +190,8 @@ abstract class Task implements Writable, Configurable {
   public String toString() { return taskId; }
 
   private Path getTaskOutputPath(JobConf conf) {
-    Path p = new Path(conf.getOutputPath(), ("_" + taskId));
+    Path p = new Path(conf.getOutputPath(), ("_temporary" 
+                      + Path.SEPARATOR + "_" + taskId));
     try {
       FileSystem fs = p.getFileSystem(conf);
       return p.makeQualified(fs);
@@ -420,7 +421,7 @@ abstract class Task implements Writable, Configurable {
     if (taskOutputPath != null) {
       FileSystem fs = taskOutputPath.getFileSystem(conf);
       if (fs.exists(taskOutputPath)) {
-        Path jobOutputPath = taskOutputPath.getParent();
+        Path jobOutputPath = taskOutputPath.getParent().getParent();
 
         // Move the task outputs to their final place
         moveTaskOutputs(fs, jobOutputPath, taskOutputPath);

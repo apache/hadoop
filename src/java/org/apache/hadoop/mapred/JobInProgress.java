@@ -30,6 +30,7 @@ import java.util.Vector;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobHistory.Values;
@@ -273,6 +274,18 @@ class JobInProgress {
       reduces[i] = new TaskInProgress(jobId, jobFile, 
                                       numMapTasks, i, 
                                       jobtracker, conf, this);
+    }
+
+    // create job specific temporary directory in output path
+    Path outputPath = conf.getOutputPath();
+    if (outputPath != null) {
+      Path tmpDir = new Path(outputPath, "_temporary");
+      FileSystem fileSys = tmpDir.getFileSystem(conf);
+      if (!fileSys.mkdirs(tmpDir)) {
+        LOG.error("Mkdirs failed to create " + tmpDir.toString());
+      }
+    } else {
+      LOG.error("Null Output path");
     }
 
     this.status = new JobStatus(status.getJobId(), 0.0f, 0.0f, JobStatus.RUNNING);
@@ -1129,6 +1142,15 @@ class JobInProgress {
       Path tempDir = new Path(conf.getSystemDir(), jobId); 
       fs.delete(tempDir); 
 
+      // delete the temporary directory in output directory
+      Path outputPath = conf.getOutputPath();
+      if (outputPath != null) {
+        Path tmpDir = new Path(outputPath, "_temporary");
+        FileSystem fileSys = tmpDir.getFileSystem(conf);
+        if (fileSys.exists(tmpDir)) {
+          FileUtil.fullyDelete(fileSys, tmpDir);
+        }
+      }
     } catch (IOException e) {
       LOG.warn("Error cleaning up "+profile.getJobId()+": "+e);
     }

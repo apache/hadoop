@@ -76,6 +76,9 @@ Release 0.16.1 - Unrelease
     the destination after encountering an error. (Tsz Wo (Nicholas), SZE
     via cdouglas)
 
+    HADOOP-2391. Cleanup job output directory before declaring a job as
+    SUCCESSFUL. (Amareshwari Sri Ramadasu via ddas)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES

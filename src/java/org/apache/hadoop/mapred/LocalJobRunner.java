@@ -27,6 +27,7 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -112,6 +113,13 @@ class LocalJobRunner implements JobSubmissionProtocol {
           numReduceTasks = 1;
           job.setNumReduceTasks(1);
         }
+        // create job specific temp directory in output path
+        Path tmpDir = new Path(job.getOutputPath(), "_temporary");
+        FileSystem fileSys = tmpDir.getFileSystem(job);
+        if (!fileSys.mkdirs(tmpDir)) {
+          LOG.error("Mkdirs failed to create " + tmpDir.toString());
+        }
+
         DataOutputBuffer buffer = new DataOutputBuffer();
         for (int i = 0; i < splits.length; i++) {
           String mapId = jobId + "_map_" + idFormat.format(i);
@@ -125,6 +133,16 @@ class LocalJobRunner implements JobSubmissionProtocol {
                                     splits[i].getClass().getName(),
                                     split);
           JobConf localConf = new JobConf(job);
+          if (fileSys.exists(tmpDir)) {
+            Path taskTmpDir = new Path(tmpDir, "_" + mapId);
+            if (!fileSys.mkdirs(taskTmpDir)) {
+              throw new IOException("Mkdirs failed to create " 
+                                     + taskTmpDir.toString());
+            }
+          } else {
+            throw new IOException("The directory " + tmpDir.toString()
+                                   + " doesnt exist " );
+          }
           map.localizeConfiguration(localConf);
           map.setConf(localConf);
           map_tasks += 1;
@@ -157,6 +175,16 @@ class LocalJobRunner implements JobSubmissionProtocol {
                                                  "tip_r_0001",
                                                  reduceId, 0, mapIds.size());
               JobConf localConf = new JobConf(job);
+              if (fileSys.exists(tmpDir)) {
+                Path taskTmpDir = new Path(tmpDir, "_" + reduceId);
+                if (!fileSys.mkdirs(taskTmpDir)) {
+                  throw new IOException("Mkdirs failed to create " 
+                                         + taskTmpDir.toString());
+                }
+              } else {
+                throw new IOException("The directory " + tmpDir.toString()
+                                       + " doesnt exist "); 
+              }
               reduce.localizeConfiguration(localConf);
               reduce.setConf(localConf);
               reduce_tasks += 1;
@@ -177,6 +205,15 @@ class LocalJobRunner implements JobSubmissionProtocol {
             this.mapoutputFile.removeAll(reduceId);
           }
         }
+        // delete the temporary directory in output directory
+        try {
+          if (fileSys.exists(tmpDir)) {
+            FileUtil.fullyDelete(fileSys, tmpDir);
+          }
+        } catch (IOException e) {
+          LOG.error("Exception in deleting " + tmpDir.toString());
+        }
+
         this.status.setRunState(JobStatus.SUCCEEDED);
 
         JobEndNotifier.localRunnerNotification(job, status);
