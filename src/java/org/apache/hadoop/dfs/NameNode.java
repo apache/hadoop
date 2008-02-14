@@ -531,6 +531,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     return namesystem.getContentLength(src);
   }
 
+  /** {@inheritDoc} */
+  public void fsync(String src, String clientName) throws IOException {
+    namesystem.fsync(src, clientName);
+  }
+
   ////////////////////////////////////////////////////////////////
   // DatanodeProtocol
   ////////////////////////////////////////////////////////////////

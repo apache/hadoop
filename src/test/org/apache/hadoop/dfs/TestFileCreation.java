@@ -331,6 +331,64 @@ public class TestFileCreation extends TestCase {
     }
   }
 
+  /**
+   * Test that file leases are persisted across namenode restarts.
+   */
+  public void testFileCreationNamenodeRestart() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setInt("heartbeat.recheck.interval", 1000);
+    conf.setInt("dfs.heartbeat.interval", 1);
+    if (simulatedStorage) {
+      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+    }
+    // create cluster
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    FileSystem fs = cluster.getFileSystem();
+    cluster.waitActive();
+    int nnport = cluster.getNameNodePort();
+    InetSocketAddress addr = new InetSocketAddress("localhost", nnport);
+
+    try {
+
+      // create a new file.
+      //
+      Path file1 = new Path("/filestatus.dat");
+      FSDataOutputStream stm = createFile(fs, file1, 1);
+      System.out.println("testFileCreationNamenodeRestart: "
+                         + "Created file filestatus.dat with one "
+                         + " replicas.");
+
+      // restart cluster with the same namenode port as before.
+      cluster.shutdown();
+      try {
+        Thread.sleep(5000);
+      } catch (InterruptedException e) {
+      }
+      cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
+                                   null, null, null);
+      cluster.waitActive();
+
+      // write 1 byte to file.  This should succeed because the 
+      // namenode should have persisted leases.
+      byte[] buffer = new byte[1];
+      Random rand = new Random(seed);
+      rand.nextBytes(buffer);
+      stm.write(buffer);
+      stm.close();
+
+      // verify that new block is associated with this file
+      DFSClient client = new DFSClient(addr, conf);
+      LocatedBlocks locations = client.namenode.getBlockLocations(
+                                  file1.toString(), 0, Long.MAX_VALUE);
+      System.out.println("locations = " + locations.locatedBlockCount());
+      assertTrue("Error blocks were not cleaned up",
+                 locations.locatedBlockCount() == 1);
+    } finally {
+      fs.close();
+      cluster.shutdown();
+    }
+  }
+
 /**
  * Test that file data becomes available before file is closed.
  */

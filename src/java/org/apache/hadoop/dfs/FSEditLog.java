@@ -39,15 +39,17 @@ import org.apache.hadoop.fs.permission.*;
  */
 class FSEditLog {
   private static final byte OP_ADD = 0;
-  private static final byte OP_RENAME = 1;
-  private static final byte OP_DELETE = 2;
-  private static final byte OP_MKDIR = 3;
-  private static final byte OP_SET_REPLICATION = 4;
-  //the following two are used only for backword compatibility :
+  private static final byte OP_RENAME = 1;  // rename
+  private static final byte OP_DELETE = 2;  // delete
+  private static final byte OP_MKDIR = 3;   // create directory
+  private static final byte OP_SET_REPLICATION = 4; // set replication
+  //the following two are used only for backward compatibility :
   @Deprecated private static final byte OP_DATANODE_ADD = 5;
   @Deprecated private static final byte OP_DATANODE_REMOVE = 6;
   private static final byte OP_SET_PERMISSIONS = 7;
   private static final byte OP_SET_OWNER = 8;
+  private static final byte OP_CLOSE = 9;    // close after write
+  private static final byte OP_SET_GENSTAMP = 10;    // store genstamp
   private static int sizeFlushBuffer = 512*1024;
 
   private ArrayList<EditLogOutputStream> editStreams = null;
@@ -377,6 +379,10 @@ class FSEditLog {
     FSDirectory fsDir = fsNamesys.dir;
     int numEdits = 0;
     int logVersion = 0;
+    INode old = null;
+    String clientName = null;
+    String clientMachine = null;
+	DatanodeDescriptor lastLocations[] = null;
     
     if (edits != null) {
       DataInputStream in = new DataInputStream(
@@ -420,8 +426,10 @@ class FSEditLog {
           }
           numEdits++;
           switch (opcode) {
-          case OP_ADD: {
+          case OP_ADD:
+          case OP_CLOSE: {
             UTF8 name = new UTF8();
+            String path = null;
             ArrayWritable aw = null;
             Writable writables[];
             // version 0 does not support per file replication
@@ -441,6 +449,7 @@ class FSEditLog {
                                         writables.length + ". ");
               }
               name = (UTF8) writables[0];
+              path = name.toString();
               replication = Short.parseShort(
                                              ((UTF8)writables[1]).toString());
               replication = adjustReplication(replication);
@@ -470,16 +479,77 @@ class FSEditLog {
                 blockSize = Math.max(fsNamesys.getDefaultBlockSize(), first);
               }
             }
+             
             PermissionStatus permissions = fsNamesys.getUpgradePermission();
             if (logVersion <= -11) {
               permissions = PermissionStatus.read(in);
             }
 
+            // clientname, clientMachine and block locations of last block.
+            clientName = null;
+            clientMachine = null;
+            if (opcode == OP_ADD && logVersion <= -12) {
+              UTF8 uu = new UTF8();
+              UTF8 cl = new UTF8();
+              aw = new ArrayWritable(DatanodeDescriptor.class);
+              uu.readFields(in);
+              cl.readFields(in);
+              aw.readFields(in);
+              clientName = uu.toString();
+              clientMachine = cl.toString();
+              writables = aw.get();
+              lastLocations = new DatanodeDescriptor[writables.length];
+              System.arraycopy(writables, 0, lastLocations, 0, writables.length);
+            }
+  
+            // The open lease transaction re-creates a file if necessary.
+            // Delete the file if it already exists.
+            if (FSNamesystem.LOG.isDebugEnabled()) {
+              FSNamesystem.LOG.debug(opcode + ": " + name.toString() + 
+                                     " numblocks : " + blocks.length +
+                                     " clientHolder " +  
+                                     ((clientName != null) ? clientName : "") +
+                                     " clientMachine " +
+                                     ((clientMachine != null) ? clientMachine : ""));
+            }
+
+            old = fsDir.unprotectedDelete(path, mtime, null);
+
             // add to the file tree
-            fsDir.unprotectedAddFile(name.toString(), permissions,
-                blocks, replication, mtime, blockSize);
+            INodeFile node = (INodeFile)fsDir.unprotectedAddFile(
+                                                      path, permissions,
+                                                      blocks, replication, 
+                                                      mtime, blockSize);
+            if (opcode == OP_ADD) {
+              //
+              // Replace current node with a INodeUnderConstruction.
+              // Recreate in-memory lease record.
+              //
+              INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
+                                        INode.string2Bytes(node.getLocalName()),
+                                        node.getReplication(), 
+                                        node.getModificationTime(),
+                                        node.getPreferredBlockSize(),
+                                        node.getBlocks(),
+                                        node.getPermissionStatus(),
+                                        clientName, 
+                                        clientMachine, 
+                                        null, 
+                                        lastLocations);
+              fsDir.replaceNode(path, node, cons);
+              fsNamesys.addLease(path, clientName);
+            } else if (opcode == OP_CLOSE) {
+              //
+              // Remove lease if it exists.
+              //
+              if (old.isUnderConstruction()) {
+                INodeFileUnderConstruction cons = (INodeFileUnderConstruction)
+                                                     old;
+                fsNamesys.removeLease(path, cons.getClientName());
+              }
+            }
             break;
-          }
+          } 
           case OP_SET_REPLICATION: {
             UTF8 src = new UTF8();
             UTF8 repl = new UTF8();
@@ -534,7 +604,11 @@ class FSEditLog {
               src = (UTF8) writables[0];
               timestamp = Long.parseLong(((UTF8)writables[1]).toString());
             }
-            fsDir.unprotectedDelete(src.toString(), timestamp);
+            old = fsDir.unprotectedDelete(src.toString(), timestamp, null);
+            if (old != null && old.isUnderConstruction()) {
+              INodeFileUnderConstruction cons = (INodeFileUnderConstruction)old;
+              fsNamesys.removeLease(src.toString(), cons.getClientName());
+            }
             break;
           }
           case OP_MKDIR: {
@@ -563,6 +637,12 @@ class FSEditLog {
             fsDir.unprotectedMkdir(src.toString(),permissions,false,timestamp);
             break;
           }
+          case OP_SET_GENSTAMP: {
+            LongWritable aw = new LongWritable();
+            aw.readFields(in);
+            fsDir.namesystem.setGenerationStamp(aw.get());
+            break;
+          } 
           case OP_DATANODE_ADD: {
             if (logVersion > -3)
               throw new IOException("Unexpected opcode " + opcode 
@@ -657,7 +737,7 @@ class FSEditLog {
     //
     // record the transactionId when new data was written to the edits log
     //
-    TransactionId id = (TransactionId)myTransactionId.get();
+    TransactionId id = myTransactionId.get();
     id.txid = txid;
 
     // update statistics
@@ -675,7 +755,7 @@ class FSEditLog {
     long syncStart = 0;
 
     // Fetch the transactionId of this thread. 
-    TransactionId id = (TransactionId)myTransactionId.get();
+    TransactionId id = myTransactionId.get();
     long mytxid = id.txid;
 
     synchronized (this) {
@@ -766,9 +846,14 @@ class FSEditLog {
   }
 
   /** 
-   * Add create file record to edit log
+   * Add open lease record to edit log. 
+   * Records the block locations of the last block.
    */
-  void logCreateFile(String path, INodeFile newNode) {
+  void logOpenFile(String path, INodeFileUnderConstruction newNode) 
+                   throws IOException {
+
+    DatanodeDescriptor[] locations = newNode.getLastBlockLocations();
+
     UTF8 nameReplicationPair[] = new UTF8[] { 
       new UTF8(path), 
       FSEditLog.toLogReplication(newNode.getReplication()),
@@ -776,6 +861,24 @@ class FSEditLog {
       FSEditLog.toLogLong(newNode.getPreferredBlockSize())};
     logEdit(OP_ADD,
             new ArrayWritable(UTF8.class, nameReplicationPair), 
+            new ArrayWritable(Block.class, newNode.getBlocks()),
+            newNode.getPermissionStatus(),
+            new UTF8(newNode.getClientName()),
+            new UTF8(newNode.getClientMachine()),
+            new ArrayWritable(DatanodeDescriptor.class, locations));
+  }
+
+  /** 
+   * Add close lease record to edit log.
+   */
+  void logCloseFile(String path, INodeFile newNode) {
+    UTF8 nameReplicationPair[] = new UTF8[] {
+      new UTF8(path),
+      FSEditLog.toLogReplication(newNode.getReplication()),
+      FSEditLog.toLogLong(newNode.getModificationTime()),
+      FSEditLog.toLogLong(newNode.getPreferredBlockSize())};
+    logEdit(OP_CLOSE,
+            new ArrayWritable(UTF8.class, nameReplicationPair),
             new ArrayWritable(Block.class, newNode.getBlocks()),
             newNode.getPermissionStatus());
   }
@@ -833,6 +936,13 @@ class FSEditLog {
       new UTF8(src),
       FSEditLog.toLogLong(timestamp)};
     logEdit(OP_DELETE, new ArrayWritable(UTF8.class, info));
+  }
+
+  /** 
+   * Add generation stamp record to edit log
+   */
+  void logGenerationStamp(long genstamp) {
+    logEdit(OP_SET_GENSTAMP, new LongWritable(genstamp));
   }
   
   static UTF8 toLogReplication(short replication) {

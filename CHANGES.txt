@@ -7,6 +7,9 @@ Trunk (unreleased changes)
 
     HADOOP-2786.  Move hbase out of hadoop core
 
+    HADOOP-2345.  New HDFS transactions to support appending 
+    to files.  Disk layout version changed from -11 to -12. (dhruba)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)

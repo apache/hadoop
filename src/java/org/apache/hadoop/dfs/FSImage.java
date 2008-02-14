@@ -41,6 +41,7 @@ import org.apache.hadoop.dfs.FSConstants.StartupOption;
 import org.apache.hadoop.dfs.FSConstants.NodeType;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.dfs.BlocksMap.BlockInfo;
 
 /**
  * FSImage handles checkpointing and logging of the namespace edits.
@@ -668,8 +669,9 @@ class FSImage extends Storage {
       // read image version: first appeared in version -1
       int imgVersion = in.readInt();
       // read namespaceID: first appeared in version -2
-      if (imgVersion <= -2)
+      if (imgVersion <= -2) {
         this.namespaceID = in.readInt();
+      }
       // read number of files
       int numFiles = 0;
       // version 0 does not store version #
@@ -681,6 +683,11 @@ class FSImage extends Storage {
         numFiles = in.readInt();
       }
       this.layoutVersion = imgVersion;
+      // read in the last generation stamp.
+      if (imgVersion <= -12) {
+        long genstamp = in.readLong();
+        fsNamesys.setGenerationStamp(genstamp); 
+      }
 
       needToSave = (imgVersion != FSConstants.LAYOUT_VERSION);
 
@@ -737,6 +744,9 @@ class FSImage extends Storage {
       
       // load datanode info
       this.loadDatanodes(imgVersion, in);
+
+      // load Files Under Construction
+      this.loadFilesUnderConstruction(imgVersion, in, fsNamesys);
     } finally {
       in.close();
     }
@@ -776,8 +786,9 @@ class FSImage extends Storage {
       out.writeInt(FSConstants.LAYOUT_VERSION);
       out.writeInt(namespaceID);
       out.writeInt(fsDir.rootDir.numItemsInTree() - 1);
+      out.writeLong(fsNamesys.getGenerationStamp());
       saveImage("", fsDir.rootDir, out);
-      saveDatanodes(out);
+      fsNamesys.saveFilesUnderConstruction(out);
     } finally {
       out.close();
     }
@@ -882,26 +893,115 @@ class FSImage extends Storage {
     }
   }
 
-  /**
-   * Earlier version used to store all the known datanodes.
-   * DFS don't store datanodes anymore.
-   * 
-   * @param out output stream
-   * @throws IOException
-   */
-  void saveDatanodes(DataOutputStream out) throws IOException {
-    // we don't store datanodes anymore.
-    out.writeInt(0);    
-  }
-
   void loadDatanodes(int version, DataInputStream in) throws IOException {
     if (version > -3) // pre datanode image version
       return;
+    if (version <= -12) {
+      return; // new versions do not store the datanodes any more.
+    }
     int size = in.readInt();
     for(int i = 0; i < size; i++) {
       DatanodeImage nodeImage = new DatanodeImage();
       nodeImage.readFields(in);
       // We don't need to add these descriptors any more.
+    }
+  }
+
+  private void loadFilesUnderConstruction(int version, DataInputStream in, 
+                                  FSNamesystem fs) throws IOException {
+
+    FSDirectory fsDir = fs.dir;
+    if (version > -12) // pre lease image version
+      return;
+    int size = in.readInt();
+
+    for (int i = 0; i < size; i++) {
+      INodeFileUnderConstruction cons = readINodeUnderConstruction(in);
+
+      // verify that file exists in namespace
+      String path = cons.getLocalName();
+      INode old = fsDir.getFileINode(path);
+      if (old == null) {
+        throw new IOException("Found lease for non-existent file " + path);
+      }
+      if (old.isDirectory()) {
+        throw new IOException("Found lease for directory " + path);
+      }
+      INodeFile oldnode = (INodeFile) old;
+      fsDir.replaceNode(path, oldnode, cons);
+      fs.addLease(path, cons.getClientName()); 
+    }
+    if (fs.countLease() != size) {
+      throw new IOException("Created " + size + " leases but found " +
+                            fs.countLease());
+    }
+  }
+
+  // Helper function that reads in an INodeUnderConstruction
+  // from the input stream
+  //
+  static INodeFileUnderConstruction readINodeUnderConstruction(
+                            DataInputStream in) throws IOException {
+    UTF8 src = new UTF8();
+    src.readFields(in);
+    byte[] name = src.getBytes();
+    short blockReplication = in.readShort();
+    long modificationTime = in.readLong();
+    long preferredBlockSize = in.readLong();
+    int numBlocks = in.readInt();
+    BlockInfo[] blocks = new BlockInfo[numBlocks];
+    for (int i = 0; i < numBlocks; i++) {
+      blocks[i].readFields(in);
+    }
+
+    PermissionStatus perm = PermissionStatus.read(in);
+    UTF8 clientName = new UTF8();
+    clientName.readFields(in);
+    UTF8 clientMachine = new UTF8();
+    clientMachine.readFields(in);
+
+    int numLocs = in.readInt();
+    DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocs];
+    for (int i = 0; i < numLocs; i++) {
+      locations[i].readFields(in);
+    }
+
+    return new INodeFileUnderConstruction(name, 
+                                          blockReplication, 
+                                          modificationTime,
+                                          preferredBlockSize,
+                                          blocks,
+                                          perm,
+                                          clientName.toString(),
+                                          clientMachine.toString(),
+                                          null,
+                                          locations);
+
+  }
+
+  // Helper function that writes an INodeUnderConstruction
+  // into the input stream
+  //
+  static void writeINodeUnderConstruction(DataOutputStream out,
+                                           INodeFileUnderConstruction cons) 
+                                           throws IOException {
+    new UTF8(cons.getAbsoluteName()).write(out);
+    out.writeShort(cons.getReplication());
+    out.writeLong(cons.getModificationTime());
+    out.writeLong(cons.getPreferredBlockSize());
+    int nrBlocks = cons.getBlocks().length;
+    out.writeInt(nrBlocks);
+    for (int i = 0; i < nrBlocks; i++) {
+      cons.getBlocks()[i].write(out);
+    }
+    cons.getPermissionStatus().write(out);
+    new UTF8(cons.getClientName()).write(out);
+    new UTF8(cons.getClientMachine()).write(out);
+
+    int numLocs = cons.getLastBlockLocations().length;
+    out.writeInt(numLocs);
+    for (int i = 0; i < numLocs; i++) {
+      cons.getLastBlockLocations()[i].write(out);
     }
   }
 
@@ -1118,4 +1218,5 @@ class FSImage extends Storage {
         + um.getUpgradeVersion() + " to current LV " 
         + FSConstants.LAYOUT_VERSION + " is initialized.");
   }
+
 }

@@ -35,9 +35,9 @@ interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 23 : added setOwner(...) and setPermission(...); changed create(...) and mkdir(...)
+   * 24 : added fsync
    */
-  public static final long versionID = 23L;
+  public static final long versionID = 24L;
   
   ///////////////////////////////////////
   // File contents
@@ -437,4 +437,12 @@ interface ClientProtocol extends VersionedProtocol {
    * @return size of directory subtree in bytes
    */
   public long getContentLength(String src) throws IOException;
+
+  /**
+   * Write all metadata for this file into persistent storage.
+   * The file must be currently open for writing.
+   * @param src The string representation of the path
+   * @param clientName The string representation of the client
+   */
+  public void fsync(String src, String client) throws IOException;
 }

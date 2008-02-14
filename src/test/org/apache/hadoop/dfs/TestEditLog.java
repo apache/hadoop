@@ -38,8 +38,8 @@ public class TestEditLog extends TestCase {
   static final int numDatanodes = 1;
 
   // This test creates numThreads threads and each thread does
-  // numberTransactions Transactions concurrently.
-  int numberTransactions = 1000;
+  // 2 * numberTransactions Transactions concurrently.
+  int numberTransactions = 100;
   int numThreads = 100;
 
   //
@@ -62,9 +62,16 @@ public class TestEditLog extends TestCase {
           ).createFsOwnerPermissions(new FsPermission((short)0777));
 
       for (int i = 0; i < numTransactions; i++) {
-        INodeFile inode = new INodeFile(p, 0, replication, 0, blockSize);
-        editLog.logCreateFile("/filename" + i, inode);
-        editLog.logSync();
+        try {
+          INodeFileUnderConstruction inode = new INodeFileUnderConstruction(
+                              p, replication, blockSize, 0, "", "", null);
+          editLog.logOpenFile("/filename" + i, inode);
+          editLog.logCloseFile("/filename" + i, inode);
+          editLog.logSync();
+        } catch (IOException e) {
+          System.out.println("Transaction " + i + " encountered exception " +
+                             e);
+        }
       }
     }
   }
@@ -132,10 +139,16 @@ public class TestEditLog extends TestCase {
       File editFile = fsimage.getEditFile(i);
       System.out.println("Verifying file: " + editFile);
       int numEdits = editLog.loadFSEdits(editFile);
+      System.out.println("Number of outstanding leases " +
+                         FSNamesystem.getFSNamesystem().countLease());
+
+      assertTrue("Found " + FSNamesystem.getFSNamesystem().countLease() +
+                 " leases but expected 0",
+                 FSNamesystem.getFSNamesystem().countLease() == 0);
       assertTrue("Verification for " + editFile + " failed. " +
-                 "Expected " + (numThreads * numberTransactions) + " transactions. "+
+                 "Expected " + (numThreads * 2 * numberTransactions) + " transactions. "+
                  "Found " + numEdits + " transactions.",
-                 numEdits == numThreads * numberTransactions);
+                 numEdits == numThreads * 2 * numberTransactions);
 
     }
   }

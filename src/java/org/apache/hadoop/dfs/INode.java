@@ -24,10 +24,15 @@ import java.util.Collections;
 import java.util.Arrays;
 import java.util.List;
 import java.io.IOException;
+import java.io.DataOutput;
+import java.io.DataInput;
+import java.io.DataOutputStream;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.dfs.BlocksMap.BlockInfo;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.UTF8;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
@@ -67,9 +72,10 @@ abstract class INode implements Comparable<byte[]> {
     }
   }
 
-  protected INode(String name, PermissionStatus permissions) {
-    this(permissions, 0L);
-    setLocalName(name);
+  protected INode() {
+    name = null;
+    parent = null;
+    modificationTime = 0;
   }
 
   INode(PermissionStatus permissions, long mTime) {
@@ -77,6 +83,11 @@ abstract class INode implements Comparable<byte[]> {
     this.parent = null;
     this.modificationTime = mTime;
     setPermissionStatus(permissions);
+  }
+
+  protected INode(String name, PermissionStatus permissions) {
+    this(permissions, 0L);
+    setLocalName(name);
   }
 
   /** Set the {@link PermissionStatus} */
@@ -143,6 +154,13 @@ abstract class INode implements Comparable<byte[]> {
    */
   void setLocalName(String name) {
     this.name = string2Bytes(name);
+  }
+
+  /**
+   * Set local file name
+   */
+  void setLocalName(byte[] name) {
+    this.name = name;
   }
 
   /** {@inheritDoc} */
@@ -570,7 +588,7 @@ class INodeDirectory extends INode {
 class INodeFile extends INode {
   static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
 
-  private BlockInfo blocks[] = null;
+  protected BlockInfo blocks[] = null;
   protected short blockReplication;
   protected long preferredBlockSize;
 
@@ -579,6 +597,12 @@ class INodeFile extends INode {
             long preferredBlockSize) {
     this(permissions, new BlockInfo[nrBlocks], replication,
         modificationTime, preferredBlockSize);
+  }
+
+  protected INodeFile() {
+    blocks = null;
+    blockReplication = 0;
+    preferredBlockSize = 0;
   }
 
   protected INodeFile(PermissionStatus permissions, BlockInfo[] blklist,
@@ -711,6 +735,14 @@ class INodeFileUnderConstruction extends INodeFile {
   protected StringBytesWritable clientName;         // lease holder
   protected StringBytesWritable clientMachine;
   protected DatanodeDescriptor clientNode; // if client is a cluster node too.
+  protected DatanodeDescriptor[] targets;  // locations for last block
+
+  INodeFileUnderConstruction() {
+    clientName = null;
+    clientMachine = null;
+    clientNode = null;
+    clientNode = null;
+  }
 
   INodeFileUnderConstruction(PermissionStatus permissions,
                              short replication,
@@ -725,6 +757,27 @@ class INodeFileUnderConstruction extends INodeFile {
     this.clientName = new StringBytesWritable(clientName);
     this.clientMachine = new StringBytesWritable(clientMachine);
     this.clientNode = clientNode;
+    this.targets = new DatanodeDescriptor[0];
+  }
+
+  INodeFileUnderConstruction(byte[] name,
+                             short blockReplication,
+                             long modificationTime,
+                             long preferredBlockSize,
+                             BlockInfo[] blocks,
+                             PermissionStatus perm,
+                             String clientName,
+                             String clientMachine,
+                             DatanodeDescriptor clientNode,
+                             DatanodeDescriptor[] targets) 
+                             throws IOException {
+    super(perm, blocks, blockReplication, modificationTime, 
+          preferredBlockSize);
+    setLocalName(name);
+    this.clientName = new StringBytesWritable(clientName);
+    this.clientMachine = new StringBytesWritable(clientMachine);
+    this.clientNode = clientNode;
+    this.targets = targets;
   }
 
   String getClientName() throws IOException {
@@ -737,6 +790,14 @@ class INodeFileUnderConstruction extends INodeFile {
 
   DatanodeDescriptor getClientNode() {
     return clientNode;
+  }
+
+  void setLastBlockLocations(DatanodeDescriptor[] targets) {
+    this.targets = targets;
+  }
+
+  DatanodeDescriptor[] getLastBlockLocations() {
+    return this.targets;
   }
 
   /**

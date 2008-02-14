@@ -183,7 +183,7 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -11;
+  public static final int LAYOUT_VERSION = -12;
   // Current version: 
-  // Added permission information to INode.
+  // Introduce OPEN, CLOSE and GENSTAMP transactions for supporting appends
 }

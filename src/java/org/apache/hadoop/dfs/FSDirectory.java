@@ -124,7 +124,8 @@ class FSDirectory implements FSConstants {
                 long preferredBlockSize,
                 String clientName,
                 String clientMachine,
-                DatanodeDescriptor clientNode) 
+                DatanodeDescriptor clientNode,
+                long generationStamp) 
                 throws IOException {
     waitForReady();
 
@@ -134,7 +135,8 @@ class FSDirectory implements FSConstants {
         modTime)) {
       return null;
     }
-    INodeFile newNode = new INodeFileUnderConstruction(permissions,replication,
+    INodeFileUnderConstruction newNode = new INodeFileUnderConstruction(
+                                 permissions,replication,
                                  preferredBlockSize, modTime, clientName, 
                                  clientMachine, clientNode);
     synchronized (rootDir) {
@@ -153,8 +155,10 @@ class FSDirectory implements FSConstants {
                                    +" to the file system");
       return null;
     }
-    // add create file record to log
-    fsImage.getEditLog().logCreateFile(path, newNode);
+    // add create file record to log, record new generation stamp
+    fsImage.getEditLog().logOpenFile(path, newNode);
+    fsImage.getEditLog().logGenerationStamp(generationStamp);
+
     NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
                                   +path+" is added to the file system");
     return newNode;
@@ -171,9 +175,9 @@ class FSDirectory implements FSConstants {
     INode newNode;
     if (blocks == null)
       newNode = new INodeDirectory(permissions, modificationTime);
-    else
+    else 
       newNode = new INodeFile(permissions, blocks.length, replication,
-          modificationTime, preferredBlockSize);
+                              modificationTime, preferredBlockSize);
     synchronized (rootDir) {
       try {
         newNode = rootDir.addNode(path, newNode);
@@ -220,20 +224,30 @@ class FSDirectory implements FSConstants {
   /**
    * Persist the block list for the inode.
    */
-  void persistBlocks(String path, INode file) throws IOException {
+  void persistBlocks(String path, INodeFileUnderConstruction file) 
+                     throws IOException {
+    waitForReady();
+
+    synchronized (rootDir) {
+      fsImage.getEditLog().logOpenFile(path, file);
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.persistBlocks: "
+                                    +path+" with "+ file.getBlocks().length 
+                                    +" blocks is persisted to the file system");
+    }
+  }
+
+  /**
+   * Close file.
+   */
+  void closeFile(String path, INode file) throws IOException {
     waitForReady();
 
     synchronized (rootDir) {
       INodeFile fileNode = (INodeFile) file;
 
-      // create two transactions. The first one deletes the empty
-      // file and the second transaction recreates the same file
-      // with the appropriate set of blocks.
-      fsImage.getEditLog().logDelete(path, fileNode.getModificationTime());
-
-      // re-add create file record to log
-      fsImage.getEditLog().logCreateFile(path, fileNode);
-      NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
+      // file is closed
+      fsImage.getEditLog().logCloseFile(path, fileNode);
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
                                     +path+" with "+ fileNode.getBlocks().length 
                                     +" blocks is persisted to the file system");
     }
@@ -242,26 +256,20 @@ class FSDirectory implements FSConstants {
   /**
    * Remove a block to the file.
    */
-  boolean removeBlock(String path, INode file, Block block) throws IOException {
+  boolean removeBlock(String path, INodeFileUnderConstruction fileNode, 
+                      Block block) throws IOException {
     waitForReady();
 
     synchronized (rootDir) {
-      INodeFile fileNode = (INodeFile) file;
-      if (fileNode == null) {
-        throw new IOException("Unknown file: " + path);
-      }
-
       // modify file-> block and blocksMap
       fileNode.removeBlock(block);
       namesystem.blocksMap.removeINode(block);
 
-      // create two transactions. The first one deletes the empty
-      // file and the second transaction recreates the same file
-      // with the appropriate set of blocks.
-      fsImage.getEditLog().logDelete(path, fileNode.getModificationTime());
+      // Remove the block locations for the last block.
+      fileNode.setLastBlockLocations(new DatanodeDescriptor[0]);
 
-      // re-add create file record to log
-      fsImage.getEditLog().logCreateFile(path, fileNode);
+      // write modified block locations to log
+      fsImage.getEditLog().logOpenFile(path, fileNode);
       NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
                                     +path+" with "+block
                                     +" block is added to the file system");
@@ -433,20 +441,22 @@ class FSDirectory implements FSConstants {
   /**
    * Remove the file from management, return blocks
    */
-  public Block[] delete(String src) {
+  public INode delete(String src, Collection<Block> deletedBlocks) {
     NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: "
                                   +src);
     waitForReady();
     long now = FSNamesystem.now();
-    Block[] blocks = unprotectedDelete(src, now); 
-    if (blocks != null)
+    INode deletedNode = unprotectedDelete(src, now, deletedBlocks); 
+    if (deletedNode != null) {
       fsImage.getEditLog().logDelete(src, now);
-    return blocks;
+    }
+    return deletedNode;
   }
 
   /**
    */
-  Block[] unprotectedDelete(String src, long modificationTime) {
+  INode unprotectedDelete(String src, long modificationTime, 
+                          Collection<Block> deletedBlocks) {
     synchronized (rootDir) {
       INode targetNode = rootDir.getNode(src);
       if (targetNode == null) {
@@ -472,8 +482,11 @@ class FSDirectory implements FSConstants {
           totalInodes -= filesRemoved;
           for (Block b : v) {
             namesystem.blocksMap.removeINode(b);
+            if (deletedBlocks != null) {
+              deletedBlocks.add(b);
+            }
           }
-          return v.toArray(new Block[v.size()]);
+          return targetNode;
         }
       }
     }
@@ -567,7 +580,6 @@ class FSDirectory implements FSConstants {
    * Get {@link INode} associated with the file.
    */
   INodeFile getFileINode(String src) {
-    waitForReady();
     synchronized (rootDir) {
       INode inode = rootDir.getNode(src);
       if (inode == null || inode.isDirectory())
