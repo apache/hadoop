@@ -42,7 +42,12 @@ public class MapFileOutputFormat extends OutputFormatBase {
                                       String name, Progressable progress)
     throws IOException {
 
-    Path file = new Path(job.getOutputPath(), name);
+    Path outputPath = job.getOutputPath();
+    FileSystem fs = outputPath.getFileSystem(job);
+    if (!fs.exists(outputPath)) {
+      throw new IOException("Output directory doesnt exist");
+    }
+    Path file = new Path(outputPath, name);
     
     CompressionCodec codec = null;
     CompressionType compressionType = CompressionType.NONE;
@@ -58,7 +63,7 @@ public class MapFileOutputFormat extends OutputFormatBase {
     
     // ignore the progress parameter, since MapFile is local
     final MapFile.Writer out =
-      new MapFile.Writer(job, file.getFileSystem(job), file.toString(),
+      new MapFile.Writer(job, fs, file.toString(),
                          job.getOutputKeyClass(),
                          job.getOutputValueClass(),
                          compressionType, codec,

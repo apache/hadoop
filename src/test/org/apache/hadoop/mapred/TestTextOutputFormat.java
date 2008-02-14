@@ -44,6 +44,10 @@ public class TestTextOutputFormat extends TestCase {
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
     job.setOutputPath(workDir);
+    FileSystem fs = workDir.getFileSystem(job);
+    if (!fs.mkdirs(workDir)) {
+      fail("Failed to create output directory");
+    }
     String file = "test.txt";
     
     // A reporter that does nothing

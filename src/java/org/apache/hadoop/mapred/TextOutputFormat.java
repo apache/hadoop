@@ -108,6 +108,9 @@ public class TextOutputFormat<K extends WritableComparable,
 
     Path dir = job.getOutputPath();
     FileSystem fs = dir.getFileSystem(job);
+    if (!fs.exists(dir)) {
+      throw new IOException("Output directory doesnt exist");
+    }
     boolean isCompressed = getCompressOutput(job);
     if (!isCompressed) {
       FSDataOutputStream fileOut = fs.create(new Path(dir, name), progress);

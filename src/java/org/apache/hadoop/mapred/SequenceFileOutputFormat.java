@@ -40,8 +40,12 @@ public class SequenceFileOutputFormat extends OutputFormatBase {
                                       String name, Progressable progress)
     throws IOException {
 
-    Path file = new Path(job.getOutputPath(), name);
-    FileSystem fs = file.getFileSystem(job);
+    Path outputPath = job.getOutputPath();
+    FileSystem fs = outputPath.getFileSystem(job);
+    if (!fs.exists(outputPath)) {
+      throw new IOException("Output directory doesnt exist");
+    }
+    Path file = new Path(outputPath, name);
     CompressionCodec codec = null;
     CompressionType compressionType = CompressionType.NONE;
     if (getCompressOutput(job)) {
