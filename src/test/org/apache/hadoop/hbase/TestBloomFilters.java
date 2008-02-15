@@ -23,6 +23,8 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 
 /** Tests per-column bloom filters */
 public class TestBloomFilters extends HBaseClusterTestCase {

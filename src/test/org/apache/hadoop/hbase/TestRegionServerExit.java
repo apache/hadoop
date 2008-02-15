@@ -29,6 +29,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 
 /**
  * Tests region server failover when a region server exits both cleanly and

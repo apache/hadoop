@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 
 /**
  * Test ability of HBase to handle DFS failure

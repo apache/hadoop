@@ -23,10 +23,8 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
 
-import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConnection;
-import org.apache.hadoop.hbase.HConnectionManager;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -46,11 +44,10 @@ public class DropCommand extends BasicCommand {
 
     try {
       HBaseAdmin admin = new HBaseAdmin(conf);
-      HConnection conn = HConnectionManager.getConnection(conf);
 
       int count = 0;
       for (String table : tableList) {
-        if (!conn.tableExists(new Text(table))) {
+        if (!admin.tableExists(new Text(table))) {
           println("'" + table + "' table not found.");
         } else {
           println("Dropping " + table + "... Please wait.");

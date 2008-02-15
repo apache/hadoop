@@ -34,7 +34,9 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.io.BatchUpdate;
-
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 /** 
  * A non-instantiable class that has a static method capable of compacting
  * a table by merging adjacent regions that have grown too small.

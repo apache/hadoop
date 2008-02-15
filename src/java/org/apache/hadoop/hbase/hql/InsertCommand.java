@@ -24,10 +24,10 @@ import java.io.Writer;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConnection;
-import org.apache.hadoop.hbase.HConnectionManager;
-import org.apache.hadoop.hbase.HTable;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 
 /**
  * Inserts values into tables.
@@ -46,38 +46,42 @@ public class InsertCommand extends BasicCommand {
   public ReturnMsg execute(HBaseConfiguration conf) {
     if (tableName == null || values == null || rowKey == null)
       return new ReturnMsg(0, "Syntax error : Please check 'Insert' syntax.");
-
-    HConnection conn = HConnectionManager.getConnection(conf);
-    if (!conn.tableExists(tableName)) {
-      return new ReturnMsg(0, "'" + tableName + "'" + TABLE_NOT_FOUND);
-    }
-
-    if (columnfamilies.size() != values.size())
-      return new ReturnMsg(0,
-          "Mismatch between values list and columnfamilies list.");
-
+    
     try {
-      HTable table = new HTable(conf, tableName);
-      long lockId = table.startUpdate(getRow());
-
-      for (int i = 0; i < values.size(); i++) {
-        Text column = null;
-        if (getColumn(i).toString().contains(":"))
-          column = getColumn(i);
-        else
-          column = new Text(getColumn(i) + ":");
-        table.put(lockId, column, getValue(i));
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      if (!admin.tableExists(tableName)) {
+        return new ReturnMsg(0, "'" + tableName + "'" + TABLE_NOT_FOUND);
       }
       
-      if(timestamp != null) 
-        table.commit(lockId, Long.parseLong(timestamp));
-      else
-        table.commit(lockId);
+      if (columnfamilies.size() != values.size())
+        return new ReturnMsg(0,
+            "Mismatch between values list and columnfamilies list.");
 
-      return new ReturnMsg(1, "1 row inserted successfully.");
-    } catch (IOException e) {
-      String[] msg = e.getMessage().split("[\n]");
-      return new ReturnMsg(0, msg[0]);
+      try {
+        HTable table = new HTable(conf, tableName);
+        long lockId = table.startUpdate(getRow());
+
+        for (int i = 0; i < values.size(); i++) {
+          Text column = null;
+          if (getColumn(i).toString().contains(":"))
+            column = getColumn(i);
+          else
+            column = new Text(getColumn(i) + ":");
+          table.put(lockId, column, getValue(i));
+        }
+
+        if(timestamp != null) 
+          table.commit(lockId, Long.parseLong(timestamp));
+        else
+          table.commit(lockId);
+
+        return new ReturnMsg(1, "1 row inserted successfully.");
+      } catch (IOException e) {
+        String[] msg = e.getMessage().split("[\n]");
+        return new ReturnMsg(0, msg[0]);
+      } 
+    } catch (MasterNotRunningException e) {
+      return new ReturnMsg(0, "Master is not running!");
     }
   }
 

@@ -67,6 +67,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.hbase.master.HMasterRegionInterface;
+import org.apache.hadoop.hbase.client.HTable;
 
 /**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with

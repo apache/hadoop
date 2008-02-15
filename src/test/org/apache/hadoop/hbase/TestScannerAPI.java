@@ -28,6 +28,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
 
 /** test the scanner API at all levels */
 public class TestScannerAPI extends HBaseClusterTestCase {

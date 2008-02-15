@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.hql;
 import java.io.IOException;
 import java.io.Writer;
 
-import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 

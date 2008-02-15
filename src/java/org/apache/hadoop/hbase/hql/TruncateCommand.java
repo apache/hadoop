@@ -22,11 +22,9 @@ package org.apache.hadoop.hbase.hql;
 import java.io.IOException;
 import java.io.Writer;
 
-import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConnection;
-import org.apache.hadoop.hbase.HConnectionManager;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.io.Text;
 
@@ -45,14 +43,12 @@ public class TruncateCommand extends BasicCommand {
       return new ReturnMsg(0, "Syntax error : Please check 'Truncate' syntax.");
 
     try {
-      HConnection conn = HConnectionManager.getConnection(conf);
       HBaseAdmin admin = new HBaseAdmin(conf);
-
-      if (!conn.tableExists(tableName)) {
+      if (!admin.tableExists(tableName)) {
         return new ReturnMsg(0, "Table not found.");
       }
 
-      HTableDescriptor[] tables = conn.listTables();
+      HTableDescriptor[] tables = admin.listTables();
       HColumnDescriptor[] columns = null;
       for (int i = 0; i < tables.length; i++) {
         if (tables[i].getName().equals(tableName)) {

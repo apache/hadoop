@@ -24,11 +24,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConnection;
-import org.apache.hadoop.hbase.HConnectionManager;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.io.Text;
 
@@ -45,12 +45,11 @@ public class CreateCommand extends SchemaModificationCommand {
 
   public ReturnMsg execute(HBaseConfiguration conf) {
     try {
-      HConnection conn = HConnectionManager.getConnection(conf);
-      if (conn.tableExists(tableName)) {
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      if (admin.tableExists(tableName)) {
         return new ReturnMsg(0, "'" + tableName + "' table already exist.");
       }
 
-      HBaseAdmin admin = new HBaseAdmin(conf);
       HTableDescriptor tableDesc = new HTableDescriptor(tableName.toString());
       HColumnDescriptor columnDesc = null;
       Set<String> columns = columnSpecMap.keySet();

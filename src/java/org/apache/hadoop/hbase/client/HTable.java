@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -43,6 +43,18 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HScannerInterface;
+import org.apache.hadoop.hbase.HRegionInterface;
+import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.HRegionInterface;
+import org.apache.hadoop.hbase.HStoreKey;
 
 /**
  * Used to communicate with a single HBase table
@@ -83,7 +95,7 @@ public class HTable implements HConstants {
    * @param row Row to find.
    * @return Location of row.
    */
-  HRegionLocation getRegionLocation(Text row) throws IOException {
+  public HRegionLocation getRegionLocation(Text row) throws IOException {
     return this.connection.locateRegion(this.tableName, row);
   }
 

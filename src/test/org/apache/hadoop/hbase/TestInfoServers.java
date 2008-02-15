@@ -26,6 +26,7 @@ import java.net.URL;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 
 /**
  * Testing, info servers are disabled.  This test enables then and checks that

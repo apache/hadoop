@@ -33,13 +33,14 @@ import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.client.HTable;
+
 import org.mortbay.servlet.MultiPartResponse;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;

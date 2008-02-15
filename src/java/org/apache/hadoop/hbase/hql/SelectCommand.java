@@ -28,14 +28,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.hadoop.hbase.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConnection;
-import org.apache.hadoop.hbase.HConnectionManager;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Shell;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
@@ -44,6 +40,8 @@ import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.hql.generated.HQLParser;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 
 /**
  * Selects values from tables.
@@ -82,13 +80,12 @@ public class SelectCommand extends BasicCommand {
       return new ReturnMsg(0, "Syntax error : Please check 'Select' syntax.");
     }
     try {
-      HConnection conn = HConnectionManager.getConnection(conf);
-      if (!conn.tableExists(tableName) && !isMetaTable()) {
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      if (!admin.tableExists(tableName) && !isMetaTable()) {
         return new ReturnMsg(0, "'" + tableName + "'" + TABLE_NOT_FOUND);
       }
 
       HTable table = new HTable(conf, tableName);
-      HBaseAdmin admin = new HBaseAdmin(conf);
       int count = 0;
       if (whereClause) {
         if (countFunction) {

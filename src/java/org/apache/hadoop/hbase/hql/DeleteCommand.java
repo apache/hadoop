@@ -24,12 +24,10 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConnection;
-import org.apache.hadoop.hbase.HConnectionManager;
-import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.client.HTable;
 
 /**
  * Deletes values from tables.
@@ -48,12 +46,12 @@ public class DeleteCommand extends BasicCommand {
       throw new IllegalArgumentException("Column list is null");
     }
     try {
-      HConnection conn = HConnectionManager.getConnection(conf);
-      if (!conn.tableExists(tableName)) {
+      HBaseAdmin admin = new HBaseAdmin(conf);
+
+      if (!admin.tableExists(tableName)) {
         return new ReturnMsg(0, "'" + tableName + "'" + TABLE_NOT_FOUND);
       }
 
-      HBaseAdmin admin = new HBaseAdmin(conf);
       HTable hTable = new HTable(conf, tableName);
 
       if (rowKey != null) {

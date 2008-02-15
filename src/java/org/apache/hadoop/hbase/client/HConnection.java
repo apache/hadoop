@@ -17,14 +17,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.SortedMap;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.master.HMasterInterface;
-
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HRegionInterface;
 /**
  * 
  */

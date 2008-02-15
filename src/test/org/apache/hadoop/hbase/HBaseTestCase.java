@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.client.HTable;
 
 /**
  * Abstract base class for test cases. Performs all static initialization

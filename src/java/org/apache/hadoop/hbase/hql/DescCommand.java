@@ -24,8 +24,7 @@ import java.io.Writer;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConnection;
-import org.apache.hadoop.hbase.HConnectionManager;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.io.Text;
 
@@ -52,11 +51,11 @@ public class DescCommand extends BasicCommand {
     if (tableName == null)
       return new ReturnMsg(0, "Syntax error : Please check 'Describe' syntax.");
     try {
-      HConnection conn = HConnectionManager.getConnection(conf);
-      if (!conn.tableExists(tableName)) {
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      if (!admin.tableExists(tableName)) {
         return new ReturnMsg(0, "Table not found.");
       }
-      HTableDescriptor[] tables = conn.listTables();
+      HTableDescriptor[] tables = admin.listTables();
       HColumnDescriptor[] columns = null;
       for (int i = 0; i < tables.length; i++) {
         if (tables[i].getName().equals(tableName)) {

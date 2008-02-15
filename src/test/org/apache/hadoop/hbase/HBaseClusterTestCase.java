@@ -24,6 +24,7 @@ import java.io.PrintWriter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 
 /**
  * Abstract base class for HBase cluster junit tests.  Spins up an hbase

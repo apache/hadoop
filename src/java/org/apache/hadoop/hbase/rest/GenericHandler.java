@@ -29,16 +29,15 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTable;
 import org.apache.hadoop.io.Text;
 import org.mortbay.servlet.MultiPartResponse;
 import org.znerd.xmlenc.LineBreak;
 import org.znerd.xmlenc.XMLOutputter;
 
-
+import org.apache.hadoop.hbase.client.HTable;
 /**
  * GenericHandler contains some basic common stuff that all the individual
  * REST handler types take advantage of.
