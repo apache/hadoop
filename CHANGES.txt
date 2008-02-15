@@ -88,8 +88,11 @@ Release 0.16.1 - Unrelease
     HADOOP-2808. Minor fix to FileUtil::copy to mind the overwrite
     formal. (cdouglas)
 
-		HADOOP-2683. Moving UGI out of the RPC Server.
-		(Tsz Wo (Nicholas), SZE via shv)
+    HADOOP-2683. Moving UGI out of the RPC Server.
+    (Tsz Wo (Nicholas), SZE via shv)
+
+    HADOOP-2814. Fix for NPE in datanode in unit test TestDataTransferProtocol.
+    (Raghu Angadi via dhruba)
 
 Release 0.16.0 - 2008-02-07
 

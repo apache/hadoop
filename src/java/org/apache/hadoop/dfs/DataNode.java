@@ -1968,15 +1968,15 @@ public class DataNode implements FSConstants, Runnable {
         this.block = block;
         this.in = in;
         this.inAddr = inAddr;
-        this.checksum = DataChecksum.newDataChecksum(in);
-        this.bytesPerChecksum = checksum.getBytesPerChecksum();
-        this.checksumSize = checksum.getChecksumSize();
-        this.buf = new byte[bytesPerChecksum + checksumSize];
         this.isRecovery = isRecovery;
         this.clientName = clientName;
         this.offsetInBlock = 0;
         this.currentWriteLock = new Object();
         this.currentWrite = false;
+        this.checksum = DataChecksum.newDataChecksum(in);
+        this.bytesPerChecksum = checksum.getBytesPerChecksum();
+        this.checksumSize = checksum.getChecksumSize();
+        this.buf = new byte[bytesPerChecksum + checksumSize];
         //
         // Open local disk out
         //
