@@ -46,8 +46,6 @@ import java.util.List;
 import java.util.Iterator;
 import java.util.Random;
 
-import javax.security.auth.login.LoginException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -58,7 +56,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -126,19 +123,11 @@ public abstract class Server {
 
   /** Returns {@link UserGroupInformation} associated with current RPC.
    *  returns null if user information is not available.
+   *  @deprecated should use {@link UserGroupInformation#getCurrentUGI()}
    */
+  @Deprecated
   public static UserGroupInformation getUserInfo() {
-    Call call = CurCall.get();
-    if (call != null)
-      return call.connection.ticket;
-    // This is to support local calls (as opposed to rpc ones) to the name-node.
-    // Currently it is name-node specific and should be placed somewhere else.
-    try {
-      return UnixUserGroupInformation.login();
-    } catch(LoginException le) {
-      LOG.info(StringUtils.stringifyException(le));
-      return null;
-    }
+    return UserGroupInformation.getCurrentUGI();
   }
   
   private String bindAddress; 
@@ -904,6 +893,8 @@ public abstract class Server {
           Writable value = null;
           
           CurCall.set(call);
+          UserGroupInformation previous = UserGroupInformation.getCurrentUGI();
+          UserGroupInformation.setCurrentUGI(call.connection.ticket);
           try {
             value = call(call.param, call.receivedTime);             // make the call
           } catch (Throwable e) {
@@ -911,6 +902,7 @@ public abstract class Server {
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
           }
+          UserGroupInformation.setCurrentUGI(previous);
           CurCall.set(null);
 
           buf.reset();

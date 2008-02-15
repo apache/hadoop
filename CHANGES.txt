@@ -88,6 +88,9 @@ Release 0.16.1 - Unrelease
     HADOOP-2808. Minor fix to FileUtil::copy to mind the overwrite
     formal. (cdouglas)
 
+		HADOOP-2683. Moving UGI out of the RPC Server.
+		(Tsz Wo (Nicholas), SZE via shv)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES

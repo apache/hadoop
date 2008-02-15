@@ -35,8 +35,10 @@ class PermissionChecker {
 
   PermissionChecker(String fsOwner, String supergroup
       ) throws AccessControlException{
-    UserGroupInformation ugi = Server.getUserInfo();
-    LOG.debug("ugi=" + ugi);
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("ugi=" + ugi);
+    }
 
     if (ugi != null) {
       user = ugi.getUserName();

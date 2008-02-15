@@ -22,6 +22,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.ArrayList;
 
+import javax.security.auth.login.LoginException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -30,6 +32,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.security.*;
 import org.apache.log4j.Level;
 
 /**
@@ -64,8 +67,13 @@ public class NNThroughputBenchmark {
   static Configuration config;
   static NameNode nameNode;
 
-  NNThroughputBenchmark(Configuration conf) throws IOException {
+  private final UserGroupInformation ugi;
+
+  NNThroughputBenchmark(Configuration conf) throws IOException, LoginException {
     config = conf;
+    ugi = UnixUserGroupInformation.login(config);
+    UserGroupInformation.setCurrentUGI(ugi);
+
     // We do not need many handlers, since each thread simulates a handler
     // by calling name-node methods directly
     config.setInt("dfs.namenode.handler.count", 1);
@@ -273,7 +281,7 @@ public class NNThroughputBenchmark {
   /**
    * One of the threads that perform stats operations.
    */
-  private static class StatsDaemon extends Thread {
+  private class StatsDaemon extends Thread {
     private int daemonId;
     private int opsPerThread;
     private String arg1;      // argument passed to executeOp()
@@ -290,6 +298,7 @@ public class NNThroughputBenchmark {
     }
 
     public void run() {
+      UserGroupInformation.setCurrentUGI(ugi);
       localNumOpsExecuted = 0;
       localCumulativeTime = 0;
       arg1 = statsOp.getExecutionArgument(daemonId);
