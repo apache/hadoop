@@ -34,7 +34,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 
 /** An implementation of UserGroupInformation in the Unix system */
-public class UnixUserGroupInformation implements UserGroupInformation {
+public class UnixUserGroupInformation extends UserGroupInformation {
   final static public String UGI_PROPERTY_NAME = "hadoop.job.ugi";
   final static private HashMap<String, UnixUserGroupInformation> user2UGIMap =
     new HashMap<String, UnixUserGroupInformation>();

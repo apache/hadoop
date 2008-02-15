@@ -22,13 +22,15 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Random;
+
+import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.security.*;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
@@ -163,6 +165,13 @@ public class MiniDFSCluster {
                         String[] racks,
                         long[] simulatedCapacities) throws IOException {
     this.conf = conf;
+    try {
+      UserGroupInformation.setCurrentUGI(UnixUserGroupInformation.login(conf));
+    } catch (LoginException e) {
+      IOException ioe = new IOException();
+      ioe.initCause(e);
+      throw ioe;
+    }
     base_dir = new File(System.getProperty("test.build.data"), "dfs/");
     data_dir = new File(base_dir, "data");
     

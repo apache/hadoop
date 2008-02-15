@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import java.io.*;
 import java.net.*;
@@ -278,7 +279,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
     namesystem.startFile(src,
-        new PermissionStatus(Server.getUserInfo().getUserName(), null, masked),
+        new PermissionStatus(UserGroupInformation.getCurrentUGI().getUserName(),
+            null, masked),
         clientName, clientMachine, overwrite, replication, blockSize);
     myMetrics.numFilesCreated.inc();
   }
@@ -418,7 +420,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
     return namesystem.mkdirs(src,
-        new PermissionStatus(Server.getUserInfo().getUserName(), null, masked));
+        new PermissionStatus(UserGroupInformation.getCurrentUGI().getUserName(),
+            null, masked));
   }
 
   /**

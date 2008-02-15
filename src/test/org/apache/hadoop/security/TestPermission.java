@@ -22,17 +22,23 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.log4j.Level;
 
 import junit.framework.TestCase;
 
 /** Unit tests for permission */
 public class TestPermission extends TestCase {
   public static final Log LOG = LogFactory.getLog(TestPermission.class);
+
+  {
+    ((Log4JLogger)UserGroupInformation.LOG).getLogger().setLevel(Level.ALL);
+  }
 
   final private static Path ROOT_PATH = new Path("/data");
   final private static Path CHILD_DIR1 = new Path(ROOT_PATH, "web1");
