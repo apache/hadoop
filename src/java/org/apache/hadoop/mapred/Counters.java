@@ -519,8 +519,8 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    */
   public synchronized String makeCompactString() {
     StringBuffer buffer = new StringBuffer();
-    for(Group group: this){
-      boolean first = true;
+    boolean first = true;
+    for(Group group: this){   
       for(Counter counter: group) {
         if (first) {
           first = false;

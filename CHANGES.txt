@@ -94,6 +94,9 @@ Release 0.16.1 - Unrelease
     HADOOP-2814. Fix for NPE in datanode in unit test TestDataTransferProtocol.
     (Raghu Angadi via dhruba)
 
+    HADOOP-2811. Dump of counters in job history does not add comma between
+    groups. (runping via omalley)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES
