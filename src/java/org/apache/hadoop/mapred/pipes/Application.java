@@ -69,6 +69,8 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
               ) throws IOException, InterruptedException {
     serverSocket = new ServerSocket(0);
     Map<String, String> env = new HashMap<String,String>();
+    // add TMPDIR environment variable with the value of java.io.tmpdir
+    env.put("TMPDIR", System.getProperty("java.io.tmpdir"));
     env.put("hadoop.pipes.command.port", 
             Integer.toString(serverSocket.getLocalPort()));
     List<String> cmd = new ArrayList<String>();
