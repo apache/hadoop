@@ -161,6 +161,8 @@ public abstract class PipeMapRed {
       Environment childEnv = (Environment) StreamUtil.env().clone();
       addJobConfToEnvironment(job_, childEnv);
       addEnvironment(childEnv, job_.get("stream.addenvironment"));
+      // add TMPDIR environment variable with the value of java.io.tmpdir
+      envPut(childEnv, "TMPDIR", System.getProperty("java.io.tmpdir"));
       sim = Runtime.getRuntime().exec(argvSplit, childEnv.toArray());
 
       /* // This way required jdk1.5

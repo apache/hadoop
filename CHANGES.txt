@@ -97,6 +97,9 @@ Release 0.16.1 - Unrelease
     HADOOP-2811. Dump of counters in job history does not add comma between
     groups. (runping via omalley)
 
+    HADOOP-2735. Enables setting TMPDIR for tasks. 
+    (Amareshwari Sri Ramadasu via ddas)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES

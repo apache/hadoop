@@ -323,6 +323,21 @@ abstract class TaskRunner extends Thread {
         vargs.add(javaOptsSplit[i]);
       }
 
+      // add java.io.tmpdir given by mapred.child.tmp
+      String tmp = conf.get("mapred.child.tmp", "./tmp");
+      Path tmpDir = new Path(tmp);
+      
+      // if temp directory path is not absolute 
+      // prepend it with workDir.
+      if (!tmpDir.isAbsolute()) {
+        tmpDir = new Path(workDir.toString(), tmp);
+      }
+      FileSystem localFs = FileSystem.getLocal(conf);
+      if (!localFs.mkdirs(tmpDir) && !localFs.getFileStatus(tmpDir).isDir()) {
+        throw new IOException("Mkdirs failed to create " + tmpDir.toString());
+      }
+      vargs.add("-Djava.io.tmpdir=" + tmpDir.toString());
+
       // Add classpath.
       vargs.add("-classpath");
       vargs.add(classPath.toString());

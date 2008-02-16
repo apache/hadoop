@@ -682,6 +682,18 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>mapred.child.tmp</name>
+  <value>./tmp</value>
+  <description> To set the value of tmp directory for map and reduce tasks.
+  If the value is an absolute path, it is directly assigned. Otherwise, it is
+  prepended with task's working directory. The java tasks are executed with
+  option -Djava.io.tmpdir='the absolute path of the tmp dir'. Pipes and
+  streaming are set with environment variable,
+   TMPDIR='the absolute path of the tmp dir'
+  </description>
+</property>
+
+<property>
   <name>mapred.inmem.merge.threshold</name>
   <value>1000</value>
   <description>The threshold, in terms of the number of files 
