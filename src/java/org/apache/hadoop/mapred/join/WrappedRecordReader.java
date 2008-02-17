@@ -32,7 +32,7 @@ import org.apache.hadoop.mapred.RecordReader;
  * provided RecordReader and keeps a store of values matching a key when
  * this source is participating in a join.
  */
-class WrappedRecordReader<K extends WritableComparable,
+public class WrappedRecordReader<K extends WritableComparable,
                           U extends Writable>
     implements ComposableRecordReader<K,U> {
 
