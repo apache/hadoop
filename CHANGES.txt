@@ -20,6 +20,7 @@ Hbase Change Log
    HBASE-437   Clear Command should use system.out (Edward Yoon via Stack)
    HBASE-434, HBASE-435 TestTableIndex and TestTableMapReduce failed in Hudson builds
    HBASE-446   Fully qualified hbase.rootdir doesn't work
+   HBASE-438   XMLOutputter state should be initialized. (Edward Yoon via Stack)
 
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling
@@ -225,7 +226,7 @@ Release 0.16.0
                to have
    HADOOP-2493 hbase will split on row when the start and end row is the
                same cause data loss (Bryan Duxbury via Stack)
-   HADOOP-2629 Shell digests garbage without complaint
+   HADOOP-2629 Shell digests garbage without complaint (Edward Yoon via Stack)
    HADOOP-2619 Compaction errors after a region splits
    HADOOP-2621 Memcache flush flushing every 60 secs with out considering
                the max memcache size
