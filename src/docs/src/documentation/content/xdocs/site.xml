@@ -37,6 +37,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <setup     label="Cluster Setup"      href="cluster_setup.html" />
     <hdfs      label="HDFS Architecture"  href="hdfs_design.html" />
     <hdfs      label="HDFS User Guide"    href="hdfs_user_guide.html" />
+    <hdfs      label="HDFS Permissions Guide"    href="hdfs_permissions_guide.html" />
     <mapred    label="Map-Reduce Tutorial" href="mapred_tutorial.html" />
     <mapred    label="Native Hadoop Libraries" href="native_libraries.html" />
     <streaming label="Streaming"          href="streaming.html" />
