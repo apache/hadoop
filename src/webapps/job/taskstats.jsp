@@ -9,7 +9,6 @@
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
   import="java.text.SimpleDateFormat"  
-  import="org.apache.hadoop.util.*"
 %>
 <%
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
@@ -78,6 +77,6 @@
 <hr>
 <a href="jobdetails.jsp?jobid=<%=jobid%>">Go back to the job</a><br>
 <a href="jobtracker.jsp">Go back to JobTracker</a><br>
-<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2007.<br>
-</body>
-</html>
+<%
+out.println(ServletUtil.htmlFooter());
+%>

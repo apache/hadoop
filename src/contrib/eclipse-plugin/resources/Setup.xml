@@ -5,7 +5,7 @@
   </intro>  
   <item title="Open Browser">
      <description>
-     				Go to http://lucene.apache.org/hadoop/, and follow
+     				Go to http://hadoop.apache.org/core/, and follow
 					links to download the latest stable distribution of
 					Hadoop.
 
@@ -13,6 +13,6 @@
      Use the following embedded command to launch the Hadoop Web site 
         in a browser</description>
      <command serialization=
-        "org.eclipse.ui.browser.openBrowser(url=http://lucene.apache.org/hadoop)"/>
+        "org.eclipse.ui.browser.openBrowser(url=http://hadoop.apache.org/core)"/>
   </item>
 </cheatsheet>

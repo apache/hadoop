@@ -18,6 +18,8 @@
 package org.apache.hadoop.util;
 
 import java.io.*;
+import java.util.Calendar;
+
 import javax.servlet.*;
 
 public class ServletUtil {
@@ -50,6 +52,15 @@ public class ServletUtil {
   }
 
   public static final String HTML_TAIL = "<hr />\n"
-    + "<a href='http://lucene.apache.org/hadoop'>Hadoop</a>, 2007.\n"
+    + "<a href='http://hadoop.apache.org/core'>Hadoop</a>, " 
+    + Calendar.getInstance().get(Calendar.YEAR) + ".\n"
     + "</body></html>";
+  
+  /**
+   * HTML footer to be added in the jsps.
+   * @return the HTML footer.
+   */
+  public static String htmlFooter() {
+    return HTML_TAIL;
+  }
 }

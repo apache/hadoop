@@ -10,4 +10,4 @@ To get help, type the following in a shell:
 
 For full instructions, please visit the Hadoop wiki at:
 
-  http://wiki.apache.org/lucene-hadoop/AmazonEC2#AutomatedScripts
+  http://wiki.apache.org/hadoop/AmazonEC2#AutomatedScripts

@@ -25,7 +25,7 @@ functionality from HOD:
 * Hadoop: HOD can automatically distribute Hadoop to all nodes in the 
   cluster. However, it can also use a pre-installed version of Hadoop,
   if it is available on all nodes in the cluster.
-  (http://lucene.apache.org/hadoop)
+  (http://hadoop.apache.org/core)
   HOD currently supports Hadoop 0.15 and above.
 
 NOTE: HOD configuration requires the location of installs of these 

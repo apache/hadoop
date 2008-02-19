@@ -10,6 +10,7 @@
   import="org.apache.hadoop.io.*"
   import="org.apache.hadoop.conf.*"
   import="org.apache.hadoop.net.DNS"
+  import="org.apache.hadoop.util.*"
   import="java.text.DateFormat"
 %>
 <%!
@@ -166,7 +167,6 @@ body
 <h2>Local logs</h2>
 <a href="/logs/">Log</a> directory
 
-<hr>
-<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2007.<br>
-</body>
-</html>
+<%
+out.println(ServletUtil.htmlFooter());
+%>

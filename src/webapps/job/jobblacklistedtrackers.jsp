@@ -56,6 +56,6 @@ Black-listed task-trackers</h1>
 
 <hr>
 <a href="jobdetails.jsp?jobid=><%=jobId%>">Go back to <%=jobId%></a><br>
-<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2007.<br>
-</body>
-</html>
+<%
+out.println(ServletUtil.htmlFooter());
+%>

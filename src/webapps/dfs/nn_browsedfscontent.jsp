@@ -5,6 +5,7 @@
   import="java.io.*"
   import="java.util.*"
   import="org.apache.hadoop.dfs.*"
+  import="org.apache.hadoop.util.*"
   import="java.text.DateFormat"
   import="java.net.InetAddress"
   import="java.net.URLEncoder"
@@ -46,7 +47,6 @@
 <h2>Local logs</h2>
 <a href="/logs/">Log</a> directory
 
-<hr>
-<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2007.<br>
-</body>
-</html>
+<%
+out.println(ServletUtil.htmlFooter());
+%>

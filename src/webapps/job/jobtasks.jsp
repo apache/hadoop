@@ -134,6 +134,6 @@
 
 <hr>
 <a href="jobtracker.jsp">Go back to JobTracker</a><br>
-<a href="http://lucene.apache.org/hadoop">Hadoop</a>, 2007.<br>
-</body>
-</html>
+<%
+out.println(ServletUtil.htmlFooter());
+%>

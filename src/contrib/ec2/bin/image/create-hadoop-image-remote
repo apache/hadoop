@@ -37,7 +37,7 @@ yum install rsync
 
 # Install Hadoop
 cd /usr/local
-wget -nv http://www.apache.org/dist/lucene/hadoop/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz
+wget -nv http://www.apache.org/dist/hadoop/core/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz
 tar xzf hadoop-$HADOOP_VERSION.tar.gz
 rm -f hadoop-$HADOOP_VERSION.tar.gz
 
