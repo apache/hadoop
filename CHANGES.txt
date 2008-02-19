@@ -1,5 +1,10 @@
 Hadoop Change Log
 
+Release 0.15.4 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-2647. Handle errors while writing to DFS better. (Raghu Angadi)
 
 Release 0.15.3 - 2008-01-18
 
