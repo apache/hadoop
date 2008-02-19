@@ -61,10 +61,10 @@ Release 0.16.1 - Unrelease
   BUG FIXES
 
     HADOOP-2789. Race condition in IPC Server Responder that could close
-                 connections early. (Raghu Angadi)
+    connections early. (Raghu Angadi)
     
     HADOOP-2785. minor. Fix a typo in Datanode block verification 
-                 (Raghu Angadi)
+    (Raghu Angadi)
     
     HADOOP-2788. minor. Fix help message for chgrp shell command (Raghu Angadi).
     
@@ -78,8 +78,8 @@ Release 0.16.1 - Unrelease
     HADOOP-2780. The default socket buffer size for DataNodes is 128K.
     (dhruba)
 
-		HADOOP-2716. Superuser privileges for the Balancer.
-		(Tsz Wo (Nicholas), SZE via shv)
+    HADOOP-2716. Superuser privileges for the Balancer.
+    (Tsz Wo (Nicholas), SZE via shv)
 
     HADOOP-2754. Filter out .crc files from local file system listing.
     (Hairong Kuang via shv)
