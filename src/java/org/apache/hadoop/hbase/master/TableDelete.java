@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.HashSet;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegion;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionInterface;
@@ -62,6 +63,9 @@ class TableDelete extends ChangeTableState {
       }
     }
     super.postProcessMeta(m, server);
+    
+    // delete the table's folder from fs.
+    master.fs.delete(new Path(master.rootdir, tableName.toString()));
   }
 
   @Override
