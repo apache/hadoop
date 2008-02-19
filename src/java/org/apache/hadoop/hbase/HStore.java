@@ -243,12 +243,11 @@ public class HStore implements HConstants {
           if ( (key_memcache != null && key_memcache.equals(row)) 
             || (key_snapshot != null && key_snapshot.equals(row)) ) {
             return row;
-          } else {
-            // no precise matches, so return the one that is closer to the search
-            // key (greatest)
-            return key_memcache.compareTo(key_snapshot) > 0 ? 
-              key_memcache : key_snapshot;
-          }          
+          }
+          // no precise matches, so return the one that is closer to the search
+          // key (greatest)
+          return key_memcache.compareTo(key_snapshot) > 0 ? 
+            key_memcache : key_snapshot;
         }
       } finally {
         this.lock.readLock().unlock();
@@ -293,13 +292,7 @@ public class HStore implements HConstants {
       // the tail didn't contain the key we're searching for, so we should
       // use the last key in the headmap as the closest before
       SortedMap<HStoreKey, byte []> headMap = map.headMap(search_key);
-      if (headMap.isEmpty()) {
-/*        LOG.debug("Went searching for " + key + ", found nothing!");*/
-        return null;
-      } else {
-/*        LOG.debug("Went searching for " + key + ", found " + headMap.lastKey().getRow());*/
-        return headMap.lastKey().getRow();
-      }
+      return headMap.isEmpty()? null: headMap.lastKey().getRow();
     }
     
     /**
@@ -1836,9 +1829,7 @@ public class HStore implements HConstants {
       MapFile.Reader[] maparray = getReaders();
       
       Text bestSoFar = null;
-      
-      HStoreKey rowKey = new HStoreKey(row, timestamp);
-      
+
       // process each store file
       for(int i = maparray.length - 1; i >= 0; i--) {
         Text row_from_mapfile = 
@@ -2025,7 +2016,7 @@ public class HStore implements HConstants {
     try {
       Long mapIndex = Long.valueOf(0L);
       // Iterate through all the MapFiles
-      for(Map.Entry<Long, HStoreFile> e: storefiles.entrySet()) {
+      for (Map.Entry<Long, HStoreFile> e: storefiles.entrySet()) {
         HStoreFile curHSF = e.getValue();
         long size = curHSF.length();
         aggregateSize += size;
@@ -2038,29 +2029,28 @@ public class HStore implements HConstants {
           splitable = !curHSF.isReference();
         }
       }
-      MapFile.Reader r = this.readers.get(mapIndex);
-      
-      // seek back to the beginning of mapfile
-      r.reset();
-      
-      // get the first and last keys
-      HStoreKey firstKey = new HStoreKey();
-      HStoreKey lastKey = new HStoreKey();
-      Writable value = new ImmutableBytesWritable();
-      r.next((WritableComparable)firstKey, value);
-      r.finalKey((WritableComparable)lastKey);
-      
-      // get the midkey
-      HStoreKey midkey = (HStoreKey)r.midKey();
-
-      if (midkey != null) {
-        midKey.set(((HStoreKey)midkey).getRow());
-        // if the midkey is the same as the first and last keys, then we cannot
-        // (ever) split this region. 
-        if (midkey.getRow().equals(firstKey.getRow()) && 
-          midkey.getRow().equals(lastKey.getRow())) {
-          return new HStoreSize(aggregateSize, maxSize, false);
-        } 
+      if (splitable) {
+        MapFile.Reader r = this.readers.get(mapIndex);
+        // seek back to the beginning of mapfile
+        r.reset();
+        // get the first and last keys
+        HStoreKey firstKey = new HStoreKey();
+        HStoreKey lastKey = new HStoreKey();
+        Writable value = new ImmutableBytesWritable();
+        r.next(firstKey, value);
+        r.finalKey(lastKey);
+        // get the midkey
+        HStoreKey mk = (HStoreKey)r.midKey();
+        if (mk != null) {
+          // if the midkey is the same as the first and last keys, then we cannot
+          // (ever) split this region. 
+          if (mk.getRow().equals(firstKey.getRow()) && 
+              mk.getRow().equals(lastKey.getRow())) {
+            return new HStoreSize(aggregateSize, maxSize, false);
+          }
+          // Otherwise, set midKey
+          midKey.set(mk.getRow());
+        }
       }
     } catch(IOException e) {
       LOG.warn("Failed getting store size for " + this.storeName, e);

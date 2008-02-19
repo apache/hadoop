@@ -861,12 +861,10 @@ public class HStoreFile implements HConstants {
     public synchronized void finalKey(WritableComparable key)
     throws IOException {
       if (top) {
-        checkKey(key);
         super.finalKey(key); 
       } else {
         reset();
         Writable value = new ImmutableBytesWritable();
-        
         key = super.getClosest(midkey, value, true);
       }
     }

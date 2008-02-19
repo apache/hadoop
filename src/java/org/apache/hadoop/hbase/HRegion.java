@@ -536,7 +536,7 @@ public class HRegion implements HConstants {
   HStore.HStoreSize largestHStore(Text midkey) {
     HStore.HStoreSize biggest = null;
     boolean splitable = true;
-    for(HStore h: stores.values()) {
+    for (HStore h: stores.values()) {
       HStore.HStoreSize size = h.size(midkey);
       // If we came across a reference down in the store, then propagate
       // fact that region is not splitable.
@@ -577,14 +577,25 @@ public class HRegion implements HConstants {
       if(!this.fs.exists(splits)) {
         this.fs.mkdirs(splits);
       }
+      // Make copies just in case and add start/end key checking: hbase-428.
+      Text startKey = new Text(this.regionInfo.getStartKey());
+      Text endKey = new Text(this.regionInfo.getEndKey());
+      if (startKey.equals(midKey)) {
+        LOG.debug("Startkey and midkey are same, not splitting");
+        return null;
+      }
+      if (midKey.equals(endKey)) {
+        LOG.debug("Endkey and midkey are same, not splitting");
+        return null;
+      }
       HRegionInfo regionAInfo = new HRegionInfo(this.regionInfo.getTableDesc(),
-          this.regionInfo.getStartKey(), midKey);
+        startKey, midKey);
       Path dirA = new Path(splits, regionAInfo.getEncodedName());
       if(fs.exists(dirA)) {
         throw new IOException("Cannot split; target file collision at " + dirA);
       }
       HRegionInfo regionBInfo = new HRegionInfo(this.regionInfo.getTableDesc(),
-          midKey, this.regionInfo.getEndKey());
+        midKey, endKey);
       Path dirB = new Path(splits, regionBInfo.getEncodedName());
       if(this.fs.exists(dirB)) {
         throw new IOException("Cannot split; target file collision at " + dirB);
