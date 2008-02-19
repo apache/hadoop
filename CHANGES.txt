@@ -57,6 +57,8 @@ Hbase Change Log
    HBASE-444   hbase is very slow at determining table is not present
    HBASE-438   XMLOutputter state should be initialized.
    HBASE-414   Move client classes into client package
+   HBASE-79    When HBase needs to be migrated, it should display a message on
+               stdout, not just in the logs
    
 Branch 0.1
 

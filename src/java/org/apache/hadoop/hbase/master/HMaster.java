@@ -273,8 +273,13 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         fs.mkdirs(rootdir);
         FSUtils.setVersion(fs, rootdir);
       } else if (!FSUtils.checkVersion(fs, rootdir)) {
-        throw new IOException("File system needs upgrade. Run " +
-          "the '${HBASE_HOME}/bin/hbase migrate' script");
+        // Output on stdout so user sees it in terminal.
+        String message = "The HBase data files stored on the FileSystem are " +
+          "from an earlier version of HBase. You need to run " +
+          "'${HBASE_HOME}/bin/hbase migrate' to bring your installation  +
+          "up-to-date.";
+        System.out.println("WARNING! " + message + " Master shutting down...");
+        throw new IOException(message);
       }
 
       if (!fs.exists(rootRegionDir)) {
