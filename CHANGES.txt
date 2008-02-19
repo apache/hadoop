@@ -19,16 +19,16 @@ Trunk (unreleased changes)
   BUG FIXES
 
     HADOOP-2195. '-mkdir' behaviour is now closer to Linux shell in case of
-                 errors. (Mahadev Konar via rangadi)
+    errors. (Mahadev Konar via rangadi)
     
     HADOOP-2190. bring behaviour '-ls' and '-du' closer to Linux shell 
-                 commands in case of errors. (Mahadev Konar via rangadi)
+    commands in case of errors. (Mahadev Konar via rangadi)
     
     HADOOP-2193. 'fs -rm' and 'fs -rmr' show error message when the target
     file does not exist. (Mahadev Konar via rangadi)
             
     HADOOP-2738 Text is not subclassable because set(Text) and compareTo(Object)
-    access the other instance's private members directly.
+    access the other instance's private members directly. (jimk)
 
     HADOOP-2779.  Remove the references to HBase in the build.xml. (omalley)
 
