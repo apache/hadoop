@@ -50,6 +50,9 @@ Trunk (unreleased changes)
     HADOOP-2844. distcp closes file handles for sequence files.
     (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-2813. TestDU unit test uses its own directory to run its 
+    sequence of tests.  (Mahadev Konar via dhruba)
+
 Release 0.16.1 - Unrelease
 
   BUG FIXES
