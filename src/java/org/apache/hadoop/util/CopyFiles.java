@@ -183,18 +183,24 @@ public class CopyFiles implements Tool {
       long last = 0L;
       long acc = 0L;
       long cbrem = srcst.getLen();
-      for (SequenceFile.Reader sl = new SequenceFile.Reader(fs, src, job);
-           sl.next(key, value); last = sl.getPosition()) {
-        // if adding this split would put this split past the target size,
-        // cut the last split and put this next file in the next split.
-        if (acc + key.get() > targetsize && acc != 0) {
-          long splitsize = last - pos;
-          splits.add(new FileSplit(src, pos, splitsize, job));
-          cbrem -= splitsize;
-          pos = last;
-          acc = 0L;
+      SequenceFile.Reader sl = null;
+      try {
+        sl = new SequenceFile.Reader(fs, src, job);
+        for (; sl.next(key, value); last = sl.getPosition()) {
+          // if adding this split would put this split past the target size,
+          // cut the last split and put this next file in the next split.
+          if (acc + key.get() > targetsize && acc != 0) {
+            long splitsize = last - pos;
+            splits.add(new FileSplit(src, pos, splitsize, job));
+            cbrem -= splitsize;
+            pos = last;
+            acc = 0L;
+          }
+          acc += key.get();
         }
-        acc += key.get();
+      }
+      finally {
+        checkAndClose(sl);
       }
       if (cbrem != 0) {
         splits.add(new FileSplit(src, pos, cbrem, job));
@@ -439,19 +445,16 @@ public class CopyFiles implements Tool {
       throws IOException {
     List<Path> result = new ArrayList<Path>();
     FileSystem fs = srcList.getFileSystem(conf);
-    DataInputStream raw = fs.open(srcList);
     BufferedReader input = null;
     try {
-      input = new BufferedReader(new InputStreamReader(raw));
+      input = new BufferedReader(new InputStreamReader(fs.open(srcList)));
       String line = input.readLine();
       while (line != null) {
         result.add(new Path(line));
         line = input.readLine();
       }
     } finally {
-      if (input != null) {
-        input.close();
-      }
+      checkAndClose(input);
     }
     return result;
   }

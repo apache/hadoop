@@ -47,6 +47,9 @@ Trunk (unreleased changes)
     HADOOP-2832. Remove tabs from code of DFSClient for better
     indentation. (dhruba)
 
+    HADOOP-2844. distcp closes file handles for sequence files.
+    (Tsz Wo (Nicholas), SZE via dhruba)
+
 Release 0.16.1 - Unrelease
 
   BUG FIXES
