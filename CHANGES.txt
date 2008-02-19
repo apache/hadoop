@@ -58,6 +58,11 @@ Trunk (unreleased changes)
 
 Release 0.16.1 - Unrelease
 
+  IMPROVEMENTS
+
+    HADOOP-2371. User guide for file permissions in HDFS.
+    (Robert Chansler via rangadi)
+    
   BUG FIXES
 
     HADOOP-2789. Race condition in IPC Server Responder that could close

@@ -358,7 +358,8 @@
       to simple file permissions. The user that starts Namenode is
       treated as the <em>super user</em> for HDFS. Future versions of HDFS will
       support network authentication protocols like Kerberos for user
-      authentication and encryption of data transfers.
+      authentication and encryption of data transfers. The details are discussed in the 
+      <a href="hdfs_permissions_guide.html"><em>Permissions User and Administrator Guide</em></a>.
      </p>
      
    </section> <section> <title> Scalability </title>
