@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 0.16.1 - Unrelease
+Release 0.16.1 - Unreleased
 
   IMPROVEMENTS
 
@@ -69,6 +69,9 @@ Release 0.16.1 - Unrelease
 
     HADOOP-2766. Enables setting of HADOOP_OPTS env variable for the hadoop
     daemons through HOD. (Vinod Kumar Vavilapalli via ddas)
+
+    HADOOP-2769.  TestNNThroughputBnechmark should not use a fixed port for
+    the namenode http port. (omalley)
 
 Release 0.16.0 - 2008-02-07
 
