@@ -39,6 +39,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -816,10 +817,26 @@ public class FsShell extends Configured implements Tool {
                             + "destination should be a directory.");
     }
     for(int i=0; i<srcs.length; i++) {
-      if (srcFs.rename(srcs[i], dst)) {
-        System.out.println("Renamed " + srcs[i] + " to " + dstf);
-      } else {
-        throw new IOException("Rename failed " + srcs[i]);
+      if (!srcFs.rename(srcs[i], dst)) {
+        FileStatus srcFstatus = null;
+        FileStatus dstFstatus = null;
+        try {
+          srcFstatus = srcFs.getFileStatus(srcs[i]);
+        } catch(FileNotFoundException e) {
+          throw new FileNotFoundException(srcs[i] + 
+          ": No such file or directory");
+        }
+        try {
+          dstFstatus = dstFs.getFileStatus(dst);
+        } catch(IOException e) {
+          //hide this
+        }
+        if((srcFstatus!= null) && (dstFstatus!= null)) {
+          if (srcFstatus.isDir()  && !dstFstatus.isDir()) {
+            throw new IOException("cannot overwrite non directory "
+                + dst + " with directory " + srcs[i]);
+          }
+        }
       }
     }
   }

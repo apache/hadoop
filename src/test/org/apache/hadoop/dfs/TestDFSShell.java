@@ -175,7 +175,7 @@ public class TestDFSShell extends TestCase {
   }
 
 
-  /** check if we have any exceptions in cat command output */
+  /** check command error outputs and exit statuses. */
   public void testErrOutPut() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
@@ -276,6 +276,22 @@ public class TestDFSShell extends TestCase {
       assertTrue(" -mkdir returned this is a file ",
           (returned.lastIndexOf("not a directory") != -1));
       out.reset();
+      argv = new String[3];
+      argv[0] = "-mv";
+      argv[1] = "/testfile";
+      argv[2] = "/testfiletest";
+      ret = ToolRunner.run(shell, argv);
+      returned = out.toString();
+      assertTrue("no output from rename", 
+          (returned.lastIndexOf("Renamed") == -1));
+      out.reset();
+      argv[0] = "-mv";
+      argv[1] = "/testfile";
+      argv[2] = "/testfiletmp";
+      ret = ToolRunner.run(shell, argv);
+      returned = out.toString();
+      assertTrue(" unix like output",
+          (returned.lastIndexOf("No such file or") != -1));
     } finally {
       if (bak != null) {
         System.setErr(bak);

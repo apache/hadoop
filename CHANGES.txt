@@ -10,6 +10,9 @@ Trunk (unreleased changes)
     HADOOP-2345.  New HDFS transactions to support appending 
     to files.  Disk layout version changed from -11 to -12. (dhruba)
 
+    HADOOP-2192. Error messages from "dfs mv" command improved.
+    (Mahadev Konar via dhruba)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)
