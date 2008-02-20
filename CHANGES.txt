@@ -62,6 +62,9 @@ Release 0.16.1 - Unrelease
 
     HADOOP-2371. User guide for file permissions in HDFS.
     (Robert Chansler via rangadi)
+
+    HADOOP-2730. HOD documentation update.
+    (Vinod Kumar Vavilapalli via ddas)
     
   BUG FIXES
 
