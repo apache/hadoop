@@ -163,9 +163,6 @@ defList = { 'ringmaster' : (
              ('envs', 'keyval', 'environment to run this package in',
               False, None, False, False),
               
-             ('java-opts', 'keyval', 'java jvm options',
-              False, None, False, False),
-               
              ('pkgs', 'directory', "directory where the package is installed",
               False, None, False, True)), 
                
@@ -195,9 +192,6 @@ defList = { 'ringmaster' : (
              ('envs', 'keyval', 'Environment in which to run this package.',
               False, None, False, False),
 
-             ('java-opts', 'list', 'java jvm options',
-              False, None, False, False),
-            
              ('pkgs', 'directory', "directory where the package is installed",
               False, None, False, True)),          
              

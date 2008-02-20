@@ -238,14 +238,11 @@ defList = { 'hod' : (
               True, None, False, True, 'M'),
                
              ('envs', 'keyval', 'environment to run this package in',
-              False, None, False, False),
+              False, None, False, True),
 
              ('final-server-params', 'keyval', 'Hadoop final xml key/val list',
               False, None, False, True, 'F'),
 
-             ('java-opts', 'list', 'java jvm options',
-              False, None, False, False),
-               
              ('pkgs', 'directory', "directory where the package is installed",
               False, None, False, False)), 
                
@@ -273,11 +270,8 @@ defList = { 'hod' : (
               False, None, False, True, 'S'),
            
              ('envs', 'keyval', 'Environment in which to run this package.',
-              False, None, False, False),
+              False, None, False, True),
 
-             ('java-opts', 'list', 'java jvm options',
-              False, None, False, False),
-            
              ('pkgs', 'directory', "directory where the package is installed",
               False, None, False, False)),           
              
