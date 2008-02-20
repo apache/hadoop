@@ -24,6 +24,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
@@ -76,7 +77,8 @@ public class TestMiniMRClasspath extends TestCase {
     StringBuffer result = new StringBuffer();
     {
       Path[] parents = fs.listPaths(outDir.getParent());
-      Path[] fileList = fs.listPaths(outDir);
+      Path[] fileList = FileUtil.stat2Paths(fs.listStatus(outDir,
+              new OutputLogFilter()));
       for(int i=0; i < fileList.length; ++i) {
         BufferedReader file = 
           new BufferedReader(new InputStreamReader(fs.open(fileList[i])));
@@ -130,8 +132,8 @@ public class TestMiniMRClasspath extends TestCase {
     conf.setJar("build/test/testjar/testjob.jar");
     JobClient.runJob(conf);
     StringBuffer result = new StringBuffer();
-
-    Path[] fileList = fs.listPaths(outDir);
+    Path[] fileList = FileUtil.stat2Paths(fs.listStatus(outDir,
+                                 new OutputLogFilter()));
     for (int i = 0; i < fileList.length; ++i) {
       BufferedReader file = new BufferedReader(new InputStreamReader(
                                                                      fs.open(fileList[i])));

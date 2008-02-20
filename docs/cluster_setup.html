@@ -622,13 +622,41 @@ document.write("Last Published: " + document.lastModified);
           Commons Logging</a> framework for logging. Edit the 
           <span class="codefrag">conf/log4j.properties</span> file to customize the Hadoop 
           daemons' logging configuration (log-formats and so on).</p>
+<a name="N1030D"></a><a name="History+Logging"></a>
+<h5>History Logging</h5>
+<p> The job history files are stored in central location 
+            <span class="codefrag"> hadoop.job.history.location </span> which can be on DFS also,
+            whose default value is <span class="codefrag">${HADOOP_LOG_DIR}/history</span>. 
+            Job history server is started on job tracker. The history 
+            web UI is accessible from job tracker web UI.</p>
+<p> The history files are also logged to user specified directory
+            <span class="codefrag">hadoop.job.history.user.location</span> 
+            which defaults to job output directory. The files are stored in
+            "_logs/history/" in the specified directory. Hence, by default 
+            they will be in "mapred.output.dir/_logs/history/". User can stop
+            logging by giving the value <span class="codefrag">none</span> for 
+            <span class="codefrag">hadoop.job.history.user.location</span> 
+</p>
+<p> User can view logs in specified directory using 
+            the following command <br>
+            
+<span class="codefrag">$ bin/hadoop job -history output-dir</span>
+<br>
+            This will start a stand alone jetty on the client and 
+            load history jsp's. 
+            It will display the port where the server is up at. The server will
+            be up for 30 minutes. User has to use 
+            <span class="codefrag"> http://hostname:port </span> to view the history. User can 
+            also provide http bind address using 
+            <span class="codefrag">mapred.job.history.http.bindAddress</span>
+</p>
 <p>Once all the necessary configuration is complete, distribute the files
       to the <span class="codefrag">HADOOP_CONF_DIR</span> directory on all the machines, 
       typically <span class="codefrag">${HADOOP_HOME}/conf</span>.</p>
 </div>
     
     
-<a name="N10319"></a><a name="Hadoop+Startup"></a>
+<a name="N10343"></a><a name="Hadoop+Startup"></a>
 <h2 class="h3">Hadoop Startup</h2>
 <div class="section">
 <p>To start a Hadoop cluster you will need to start both the HDFS and 
@@ -663,7 +691,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N1035F"></a><a name="Hadoop+Shutdown"></a>
+<a name="N10389"></a><a name="Hadoop+Shutdown"></a>
 <h2 class="h3">Hadoop Shutdown</h2>
 <div class="section">
 <p>

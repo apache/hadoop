@@ -36,6 +36,25 @@
 </property>
 
 <property>
+  <name>hadoop.job.history.location</name>
+  <value>file://${hadoop.log.dir}/history</value>
+  <description> If job tracker is static the history files are stored 
+  in this single well known place. By default, it is in the local 
+  file system at ${hadoop.log.dir}/history.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.job.history.user.location</name>
+  <value></value>
+  <description> User can specify a location to store the history files of 
+  a particular job. If nothing is specified, the logs are stored in 
+  output directory. The files are stored in "_logs/history/" in the directory.
+  User can stop logging by giving the value "none". 
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.logging.level</name>
   <value>info</value>
   <description>The logging level for dfs namenode. Other values are "dir"(trac
@@ -502,6 +521,15 @@ creations/deletions), or "all".</description>
   <value>0.0.0.0:50030</value>
   <description>
     The job tracker http server address and port the server will listen on.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>mapred.job.history.http.bindAddress</name>
+  <value>0.0.0.0:0</value>
+  <description>
+    The job history http server bind address and port.
     If the port is 0 then the server will start on a free port.
   </description>
 </property>

@@ -593,6 +593,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
   // Used to provide an HTML view on Job, Task, and TaskTracker structures
   StatusHttpServer infoServer;
+  StatusHttpServer historyServer;
   int infoPort;
 
   Server interTrackerServer;
@@ -701,6 +702,26 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       Thread.sleep(SYSTEM_DIR_CLEANUP_RETRY_PERIOD);
     }
 
+    // start history viewing server.
+    JobHistory.init(conf, this.localMachine); 
+    String histAddr = conf.get("mapred.job.history.http.bindAddress",
+                                  "0.0.0.0:0");
+    InetSocketAddress historySocAddr = NetUtils.createSocketAddr(histAddr);
+    String historyBindAddress = historySocAddr.getHostName();
+    int tmpHistoryPort = historySocAddr.getPort();
+    historyServer = new StatusHttpServer("history", historyBindAddress, 
+                       tmpHistoryPort, tmpHistoryPort == 0);
+    String historyLogDir = conf.get("hadoop.job.history.location");
+    historyServer.setAttribute("historyLogDir", historyLogDir);
+    FileSystem fileSys = new Path(historyLogDir).getFileSystem(conf);
+    historyServer.setAttribute("fileSys", fileSys);
+    historyServer.start();
+    this.conf.set("mapred.job.history.http.bindAddress", 
+                (this.localMachine + ":" + historyServer.getPort()));
+    LOG.info("JobHistory webserver on JobTracker up at: " +
+              historyServer.getPort());
+
+
     // Same with 'localDir' except it's always on the local disk.
     jobConf.deleteLocalFiles(SUBDIR);
     synchronized (this) {
@@ -719,6 +740,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     return NetUtils.createSocketAddr(jobTrackerStr);
   }
 
+  public String getHistoryAddress() {
+    return conf.get("mapred.job.history.http.bindAddress");
+  }
 
   /**
    * Run forever
@@ -750,6 +774,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       LOG.info("Stopping infoServer");
       try {
         this.infoServer.stop();
+      } catch (InterruptedException ex) {
+        ex.printStackTrace();
+      }
+    }
+    if (this.historyServer != null) {
+      LOG.info("Stopping historyServer");
+      try {
+        this.historyServer.stop();
       } catch (InterruptedException ex) {
         ex.printStackTrace();
       }

@@ -20,6 +20,8 @@ package org.apache.hadoop.mapred;
 
 import java.util.*;
 import java.io.*;
+
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.JobHistory.Keys; 
 import org.apache.hadoop.mapred.JobHistory.Values;
 
@@ -36,39 +38,19 @@ public class DefaultJobHistoryParser {
   // possible if it is a non-generic class.
 
   /**
-   * Contents of a job history file. Maps: 
-   * <xmp>jobTrackerId -> <jobId, JobHistory.JobInfo>*</xmp>
-   */
-  public static class MasterIndex 
-    extends TreeMap<String, Map<String, JobHistory.JobInfo>> {
-    
-  }
-
-  /**
-   * Parses a master index file and returns a {@link MasterIndex}.
-   * @param historyFile master index history file. 
-   * @return a {@link MasterIndex}.  
-   * @throws IOException
-   */
-  public static MasterIndex parseMasterIndex(File historyFile)
-    throws IOException {
-    MasterIndexParseListener parser = new MasterIndexParseListener();
-    JobHistory.parseHistory(historyFile, parser);
-
-    return parser.getValues();
-  }
-
-  /**
    * Populates a JobInfo object from the job's history log file. 
    * @param jobHistoryFile history file for this job. 
    * @param job a precreated JobInfo object, should be non-null. 
+   * @param fs FileSystem where historyFile is present. 
    * @throws IOException
    */
-  public static void parseJobTasks(File jobHistoryFile, JobHistory.JobInfo job)
+  public static void parseJobTasks(String jobHistoryFile, 
+                       JobHistory.JobInfo job, FileSystem fs)
     throws IOException {
-    JobHistory.parseHistory(jobHistoryFile, 
-                            new JobTasksParseListener(job));
+    JobHistory.parseHistoryFromFS(jobHistoryFile, 
+                            new JobTasksParseListener(job), fs);
   }
+  
   /**
    * Listener for Job's history log file, it populates JobHistory.JobInfo 
    * object with data from log file. 
@@ -144,48 +126,6 @@ public class DefaultJobHistoryParser {
     }
   }
 
-  /**
-   * Parses and returns a map of values in master index. 
-   * 
-   */
-  static class MasterIndexParseListener
-    implements JobHistory.Listener {
-    MasterIndex jobTrackerToJobs = new MasterIndex();
-
-    Map<String, JobHistory.JobInfo> activeJobs = null;
-    String currentTracker; 
-    
-    // Implement JobHistory.Listener
-
-    public void handle(JobHistory.RecordTypes recType, Map<Keys, String> values)
-      throws IOException {
- 
-      if (recType.equals(JobHistory.RecordTypes.Jobtracker)) {
-        activeJobs = new TreeMap<String, JobHistory.JobInfo>();
-        currentTracker = values.get(Keys.START_TIME);
-        jobTrackerToJobs.put(currentTracker, activeJobs);
-      } else if (recType.equals(JobHistory.RecordTypes.Job)) {
-        String jobId = values.get(Keys.JOBID);
-        JobHistory.JobInfo job = activeJobs.get(jobId);
-        if (null == job) {
-          job = new JobHistory.JobInfo(jobId);
-          job.set(Keys.JOBTRACKERID, currentTracker);
-          activeJobs.put(jobId, job);
-        }
-        job.handle(values);
-      }
-    }
-
-    /**
-     * Return map of parsed values. 
-     * @return
-     */ 
-    MasterIndex getValues() {
-      return jobTrackerToJobs;
-    }
-  }
-  
-  
   // call this only for jobs that succeeded for better results. 
   static class FailedOnNodesFilter implements JobHistory.Listener {
     private Map<String, Set<String>> badNodesToNumFailedTasks =

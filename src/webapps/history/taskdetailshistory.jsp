@@ -16,7 +16,7 @@
 
 <%	
 	String jobid = request.getParameter("jobid");
-	String jobTrackerId = request.getParameter("jobTrackerId");
+	String logFile = request.getParameter("logFile");
 	String taskid = request.getParameter("taskid"); 
 
 	JobHistory.JobInfo job = (JobHistory.JobInfo)request.getSession().getAttribute("job");
@@ -24,7 +24,7 @@
 %>
 <html>
 <body>
-<h2><%=taskid %> attempts for <a href="jobdetailshistory.jsp?jobid=<%=jobid%>&&jobTrackerId=<%=jobTrackerId %>"> <%=jobid %> </a></h2>
+<h2><%=taskid %> attempts for <a href="jobdetailshistory.jsp?jobid=<%=jobid%>&&logFile=<%=logFile %>"> <%=jobid %> </a></h2>
 <center>
 <table border="2" cellpadding="5" cellspacing="2">
 <tr><td>Task Id</td><td>Start Time</td>

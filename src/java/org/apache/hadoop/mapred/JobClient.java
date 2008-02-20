@@ -1009,6 +1009,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     System.out.printf("\t-status\t<job-id>\n");
     System.out.printf("\t-kill\t<job-id>\n");
     System.out.printf("\t-events\t<job-id> <from-event-#> <#-of-events>\n");
+    System.out.printf("\t-history\t<jobOutputDir>\n");
     System.out.printf("\t-list\n");
     System.out.printf("\t-list\tall\n");
     System.out.printf("\t-kill-task <task-id>\n");
@@ -1022,11 +1023,13 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     String submitJobFile = null;
     String jobid = null;
     String taskid = null;
+    String outputDir = null;
     int fromEvent = 0;
     int nEvents = 0;
     boolean getStatus = false;
     boolean killJob = false;
     boolean listEvents = false;
+    boolean viewHistory = false;
     boolean listJobs = false;
     boolean listAllJobs = false;
     boolean killTask = false;
@@ -1056,6 +1059,11 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       fromEvent = Integer.parseInt(argv[2]);
       nEvents = Integer.parseInt(argv[3]);
       listEvents = true;
+    } else if ("-history".equals(argv[0])) {
+      if (argv.length != 2)
+        displayUsage();
+        outputDir = argv[1];
+        viewHistory = true;
     } else if ("-list".equals(argv[0])) {
       if (argv.length != 1 && !(argv.length == 2 && "all".equals(argv[1])))
         displayUsage();
@@ -1112,6 +1120,10 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           System.out.println("Killed job " + jobid);
           exitCode = 0;
         }
+      } else if (viewHistory) {
+    	// start http server
+        viewHistory(outputDir);
+        exitCode = 0;
       } else if (listEvents) {
         listEvents(jobid, fromEvent, nEvents);
         exitCode = 0;
@@ -1144,6 +1156,45 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     return exitCode;
   }
 
+  private void viewHistory(String outputDir) 
+    throws IOException {
+
+    Path output = new Path(outputDir);
+    FileSystem fs = output.getFileSystem(getConf());
+
+    // start http server used to provide an HTML view on Job history
+    StatusHttpServer infoServer;
+    String infoAddr = new JobConf(getConf()).get(
+             "mapred.job.history.http.bindAddress", "0.0.0.0:0");
+    InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
+    String infoBindAddress = infoSocAddr.getHostName();
+    int tmpInfoPort = infoSocAddr.getPort();
+    infoServer = new StatusHttpServer("history", infoBindAddress, tmpInfoPort,
+                                       tmpInfoPort == 0);
+    infoServer.setAttribute("fileSys", fs);
+    infoServer.setAttribute("historyLogDir", outputDir + "/_logs/history");
+    infoServer.start();
+    int infoPort = infoServer.getPort();
+    getConf().set("mapred.job.history.http.bindAddress", 
+        infoBindAddress + ":" + infoPort);
+    LOG.info("JobHistory webserver up at: " + infoPort);
+
+    // let the server be up for 30 minutes.
+    try {
+      Thread.sleep(30 * 60 * 1000);
+    } catch (InterruptedException ie) {}
+      
+    // stop infoServer
+    if (infoServer != null) {
+      LOG.info("Stopping infoServer");
+      try {
+        infoServer.stop();
+      } catch (InterruptedException ex) {
+        ex.printStackTrace();
+      }
+    } 
+  }
+  
   /**
    * List the events for the given job
    * @param jobId the job id for the job's events to list

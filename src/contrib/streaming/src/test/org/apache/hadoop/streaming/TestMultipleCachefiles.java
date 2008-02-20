@@ -23,6 +23,7 @@ import java.io.*;
 import java.util.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.dfs.MiniDFSCluster;
@@ -100,7 +101,9 @@ public class TestMultipleCachefiles extends TestCase
         job.go();
         String line = null;
         String line2 = null;
-        Path[] fileList = fileSys.listPaths(new Path(OUTPUT_DIR));
+        Path[] fileList = FileUtil.stat2Paths(fileSys.listStatus(
+                                     new Path(OUTPUT_DIR),
+                                     new OutputLogFilter()));
         for (int i = 0; i < fileList.length; i++){
           System.out.println(fileList[i].toString());
           BufferedReader bread =

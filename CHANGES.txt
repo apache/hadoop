@@ -14,6 +14,8 @@ Trunk (unreleased changes)
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)
 
+    HADOOP-2178.  Job History on DFS. (Amareshwari Sri Ramadasu via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES

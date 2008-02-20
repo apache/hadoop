@@ -178,6 +178,7 @@
     <mkdir dir="${build.webapps}/job/WEB-INF"/>
     <mkdir dir="${build.webapps}/dfs/WEB-INF"/>
     <mkdir dir="${build.webapps}/datanode/WEB-INF"/>
+    <mkdir dir="${build.webapps}/history/WEB-INF"/>
     <mkdir dir="${build.examples}"/>
     <mkdir dir="${build.anttasks}"/>
     <mkdir dir="${build.dir}/c++"/>
@@ -270,6 +271,13 @@
      outputdir="${build.src}"
      package="org.apache.hadoop.dfs"
      webxml="${build.webapps}/dfs/WEB-INF/web.xml">
+    </jsp-compile>
+
+    <jsp-compile
+     uriroot="${src.webapps}/history"
+     outputdir="${build.src}"
+     package="org.apache.hadoop.mapred"
+     webxml="${build.webapps}/history/WEB-INF/web.xml">
     </jsp-compile>
 
     <jsp-compile

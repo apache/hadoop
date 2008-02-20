@@ -134,7 +134,7 @@
 <hr>
 
 <h2>Local logs</h2>
-<a href="logs/">Log</a> directory, <a href="jobhistory.jsp?historyFile=JobHistory.log&reload=true">
+<a href="logs/">Log</a> directory, <a href="http://<%=tracker.getHistoryAddress()%>">
 Job Tracker History</a>
 
 <%

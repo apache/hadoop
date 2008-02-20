@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.mapred.OutputLogFilter;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.TestMiniMRWithDFS;
 import org.apache.hadoop.util.StringUtils;
@@ -144,7 +145,8 @@ public class TestPipes extends TestCase {
     RunningJob result = Submitter.submitJob(job);
     assertTrue("pipes job failed", result.isSuccessful());
     List<String> results = new ArrayList<String>();
-    for (Path p:fs.listPaths(outputPath)) {
+    for (Path p:FileUtil.stat2Paths(fs.listStatus(outputPath,
+    		                        new OutputLogFilter()))) {
       results.add(TestMiniMRWithDFS.readOutput(p, job));
     }
     assertEquals("number of reduces is wrong", 

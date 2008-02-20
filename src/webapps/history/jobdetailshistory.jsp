@@ -3,6 +3,7 @@
   import="javax.servlet.http.*"
   import="java.io.*"
   import="java.util.*"
+  import="org.apache.hadoop.fs.*"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
   import="java.text.SimpleDateFormat"
@@ -10,26 +11,31 @@
 %>
 <jsp:include page="loadhistory.jsp">
 	<jsp:param name="jobid" value="<%=request.getParameter("jobid") %>"/>
-	<jsp:param name="jobTrackerId" value="<%=request.getParameter("jobTrackerId") %>"/>
+	<jsp:param name="logFile" value="<%=request.getParameter("logFile") %>"/>
 </jsp:include>
 <%! static SimpleDateFormat dateFormat = new SimpleDateFormat("d-MMM-yyyy HH:mm:ss") ; %>
 <%
 	String jobid = request.getParameter("jobid");
-	String jobTrackerId = request.getParameter("jobTrackerId");
+	String logFile = request.getParameter("logFile");
+	
+	Path jobFile = new Path(logFile);
+	String[] jobDetails = jobFile.getName().split("_");
+    String jobUniqueString = jobDetails[0] + "_" +jobDetails[1] + "_" + jobid ;
 	
 	JobInfo job = (JobInfo)request.getSession().getAttribute("job");
+	FileSystem fs = (FileSystem)request.getSession().getAttribute("fs");
 %>
 <html><body>
-<h2>Hadoop Job <%=jobid %> </h2>
+<h2>Hadoop Job <%=jobid %> on <a href="jobhistory.jsp">History Viewer</a></h2>
 
 <b>User: </b> <%=job.get(Keys.USER) %><br/> 
 <b>JobName: </b> <%=job.get(Keys.JOBNAME) %><br/> 
-<b>JobConf: </b> <a href="jobconf.jsp?jobid=<%=jobid %>"> 
+<b>JobConf: </b> <a href="jobconf_history.jsp?jobid=<%=jobid%>&jobLogDir=<%=new Path(logFile).getParent().toString()%>&jobUniqueString=<%=jobUniqueString%>"> 
                  <%=job.get(Keys.JOBCONF) %></a><br/> 
 <b>Submitted At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.SUBMIT_TIME), 0 )  %><br/> 
 <b>Launched At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.LAUNCH_TIME), job.getLong(Keys.SUBMIT_TIME)) %><br/>
 <b>Finished At: </b>  <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.FINISH_TIME), job.getLong(Keys.LAUNCH_TIME)) %><br/>
-<b>Status: </b> <%= ((job.get(Keys.JOB_STATUS) == null)?"Incomplete" :job.get(Keys.JOB_STATUS)) %><br/> 
+<b>Status: </b> <%= ((job.get(Keys.JOB_STATUS) == "")?"Incomplete" :job.get(Keys.JOB_STATUS)) %><br/> 
 <%
 	Map<String, JobHistory.Task> tasks = job.getAllTasks();
 	int totalMaps = 0 ; 
@@ -51,7 +57,7 @@
 	  long startTime = task.getLong(Keys.START_TIME) ; 
 	  long finishTime = task.getLong(Keys.FINISH_TIME) ; 
 	  
-          allHosts.put(task.get(Keys.HOSTNAME), null);
+          allHosts.put(task.get(Keys.HOSTNAME), "");
 
 	  if( Values.MAP.name().equals(task.get(Keys.TASK_TYPE)) ){
 	    if( mapStarted==0 || mapStarted > startTime ){
@@ -91,8 +97,7 @@
 	  }
 	}
 %>
-<b>Number of nodes used: </b> <%=allHosts.size() %><br/>
-<b><a href="analysejobhistory.jsp?jobid=<%=jobid %>&jobTrackerId=<%=jobTrackerId %>">Analyse This Job</a></b> 
+<b><a href="analysejobhistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile %>">Analyse This Job</a></b> 
 <hr/>
 <center>
 <table border="2" cellpadding="5" cellspacing="2">
@@ -101,26 +106,26 @@
 </tr>
 <tr>
 <td>Map</td>
-	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&jobTrackerId=<%=jobTrackerId %>&taskType=<%=Values.MAP.name() %>&status=all">
+	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile %>&taskType=<%=Values.MAP.name() %>&status=all">
 	  <%=totalMaps %></a></td>
-	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&jobTrackerId=<%=jobTrackerId %>&taskType=<%=Values.MAP.name() %>&status=<%=Values.SUCCESS %>">
+	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile %>&taskType=<%=Values.MAP.name() %>&status=<%=Values.SUCCESS %>">
 	  <%=job.getInt(Keys.FINISHED_MAPS) %></a></td>
-	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&jobTrackerId=<%=jobTrackerId %>&taskType=<%=Values.MAP.name() %>&status=<%=Values.FAILED %>">
+	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile %>&taskType=<%=Values.MAP.name() %>&status=<%=Values.FAILED %>">
 	  <%=failedMaps %></a></td>
-	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&jobTrackerId=<%=jobTrackerId %>&taskType=<%=Values.MAP.name() %>&status=<%=Values.KILLED %>">
+	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile %>&taskType=<%=Values.MAP.name() %>&status=<%=Values.KILLED %>">
 	  <%=killedMaps %></a></td>
 	<td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, mapStarted, 0) %></td>
 	<td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, mapFinished, mapStarted) %></td>
 </tr>
 <tr>
 <td>Reduce</td>
-	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&jobTrackerId=<%=jobTrackerId %>&taskType=<%=Values.REDUCE.name() %>&status=all">
+	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile %>&taskType=<%=Values.REDUCE.name() %>&status=all">
 	  <%=totalReduces%></a></td>
-	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&jobTrackerId=<%=jobTrackerId %>&taskType=<%=Values.REDUCE.name() %>&status=<%=Values.SUCCESS %>">
+	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile %>&taskType=<%=Values.REDUCE.name() %>&status=<%=Values.SUCCESS %>">
 	  <%=job.getInt(Keys.FINISHED_REDUCES)%></a></td>
-	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&jobTrackerId=<%=jobTrackerId %>&taskType=<%=Values.REDUCE.name() %>&status=<%=Values.FAILED %>">
+	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile %>&taskType=<%=Values.REDUCE.name() %>&status=<%=Values.FAILED %>">
 	  <%=failedReduces%></a></td>
-	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&jobTrackerId=<%=jobTrackerId %>&taskType=<%=Values.REDUCE.name() %>&status=<%=Values.KILLED %>">
+	<td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=logFile %>&taskType=<%=Values.REDUCE.name() %>&status=<%=Values.KILLED %>">
 	  <%=killedReduces%></a></td>  
 	<td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, reduceStarted, 0) %></td>
 	<td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, reduceFinished, reduceStarted) %></td>
@@ -130,9 +135,7 @@
 <br/>
  <%
 	DefaultJobHistoryParser.FailedOnNodesFilter filter = new DefaultJobHistoryParser.FailedOnNodesFilter();
-	String dir = System.getProperty("hadoop.log.dir") + File.separator + "history" ; 
- 
-	JobHistory.parseHistory(new File(dir, jobTrackerId+"_" + jobid), filter); 
+	JobHistory.parseHistoryFromFS(logFile, filter, fs); 
 	Map<String, Set<String>> badNodes = filter.getValues(); 
 	if( badNodes.size() > 0 ) {
  %>
@@ -150,7 +153,7 @@
 <%
 		for( String t : failedTasks ) {
 %>
-		 <a href="taskdetailshistory.jsp?jobid=<%=jobid%>&jobTrackerId=<%=jobTrackerId %>&taskid=<%=t %>"><%=t %></a>,&nbsp;
+		 <a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=logFile %>&taskid=<%=t %>"><%=t %></a>,&nbsp;
 <%		  
 		}
 %>	
@@ -164,9 +167,7 @@
 <br/>
  <%
 	DefaultJobHistoryParser.KilledOnNodesFilter killedFilter = new DefaultJobHistoryParser.KilledOnNodesFilter();
-	dir = System.getProperty("hadoop.log.dir") + File.separator + "history" ; 
- 
-	JobHistory.parseHistory(new File(dir, jobTrackerId+"_" + jobid), filter); 
+	JobHistory.parseHistoryFromFS(logFile, filter, fs); 
 	badNodes = killedFilter.getValues(); 
 	if( badNodes.size() > 0 ) {
  %>
@@ -184,7 +185,7 @@
 <%
 		for( String t : killedTasks ) {
 %>
-		 <a href="taskdetailshistory.jsp?jobid=<%=jobid%>&jobTrackerId=<%=jobTrackerId %>&taskid=<%=t %>"><%=t %></a>,&nbsp;
+		 <a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=logFile %>&taskid=<%=t %>"><%=t %></a>,&nbsp;
 <%		  
 		}
 %>	
