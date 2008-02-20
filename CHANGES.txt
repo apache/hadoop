@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 0.15.4 - Unreleased
+Release 0.15.4 - 2008-02-25
 
   BUG FIXES
 
