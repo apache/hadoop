@@ -117,7 +117,6 @@ class ServiceDesc:
 
     self.dict.setdefault('external', False)
     self.dict.setdefault('attrs', {})
-    self.dict.setdefault('java-opts', [])
     self.dict.setdefault('envs', {})
     self.dict.setdefault('host',None)
     self.dict.setdefault('port',None)
@@ -157,9 +156,6 @@ class ServiceDesc:
   def getfinalAttrs(self):
     return self.dict['final-attrs']
   
-  def getJavaOpts(self):
-    return self.dict['java-opts']
-  
   def getEnvs(self):
     return self.dict['envs']
 
@@ -185,9 +181,6 @@ class ServiceDesc:
     schema[s.getName()] = s
     
     s = Schema('envs', Schema.MAP)
-    schema[s.getName()] = s
-
-    s = Schema('java-opts', Schema.MAP)
     schema[s.getName()] = s
 
     return schema
@@ -219,9 +212,6 @@ class CommandDesc:
     """return the environment in which the command is to be run"""
     return self.dict['envs']
   
-  def _getJavaOpts(self):
-    return self.dict['java-opts']
-
   def _getPkgDirs(self):
     """return the packages for this command"""
     return self.dict['pkgdirs']

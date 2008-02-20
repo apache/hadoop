@@ -120,6 +120,9 @@ Release 0.16.1 - Unrelease
     HADOOP-2840. Fix gridmix scripts to correctly invoke the java sort through
     the proper jar. (Mukund Madhugiri via cdouglas)
 
+    HADOOP-2766. Enables setting of HADOOP_OPTS env variable for the hadoop
+    daemons through HOD. (Vinod Kumar Vavilapalli via ddas)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES

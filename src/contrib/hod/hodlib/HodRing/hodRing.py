@@ -56,7 +56,6 @@ class CommandDesc:
     dict.setdefault('argv', [])
     dict.setdefault('version', None)
     dict.setdefault('envs', {})
-    dict.setdefault('java-opts', [])
     dict.setdefault('workdirs', [])
     dict.setdefault('attrs', {})
     dict.setdefault('final-attrs', {})
@@ -90,9 +89,6 @@ class CommandDesc:
 
   def getEnvs(self):
     return self.dict['envs']
-
-  def getJavaOpts(self):
-    return self.dict['java-opts']
 
   def getPkgDirs(self):
     return self.dict['pkgdirs']
@@ -311,16 +307,14 @@ class HadoopCommand:
     args.append(self.path)
     args.extend(desc.getArgv())
     envs = desc.getEnvs()
-    javaOpts = desc.getJavaOpts()
     fenvs = os.environ
     
     for k, v in envs.iteritems():
       fenvs[k] = v
     
-    self.log.debug(javaOpts)
-    fenvs['HADOOP_OPTS'] = ''
-    for option in javaOpts:
-      fenvs['HADOOP_OPTS'] = "%s%s " % (fenvs['HADOOP_OPTS'], option)
+    if envs.has_key('HADOOP_OPTS'):
+      fenvs['HADOOP_OPTS'] = envs['HADOOP_OPTS']
+      self.log.debug("HADOOP_OPTS : %s" % fenvs['HADOOP_OPTS'])
     
     fenvs['JAVA_HOME'] = self.javahome
     fenvs['HADOOP_CONF_DIR'] = self.confdir
