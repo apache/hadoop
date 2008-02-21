@@ -61,7 +61,7 @@ public class StaticTestEnvironment {
     
     if (System.getProperty(TEST_DIRECTORY_KEY) == null) {
       System.setProperty(TEST_DIRECTORY_KEY, new File(
-          "build/contrib/hbase/test").getAbsolutePath());
+          "build/hbase/test").getAbsolutePath());
     }
     
     value = System.getenv("DEBUGGING");

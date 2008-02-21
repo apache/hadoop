@@ -290,15 +290,13 @@
   <!-- Run unit tests                                                     -->
   <!-- ================================================================== -->
   <path id="test.classpath">
-    <pathelement location="${build.test}" />
-    <pathelement location="${src.test}"/>
     <!-- ============  *  *  *  *  *  N O T E  *  *  *  *  * ============
            ${src.test} *must* come before rest of class path. Otherwise
                     the test hbase-site.xml will not be found.
          ============  *  *  *  *  *  N O T E  *  *  *  *  * ============ -->
+    <pathelement location="${src.test}"/>
+    <pathelement location="${build.test}" />
     <path refid="classpath"/>
-    <pathelement location="${conf.dir}"/>
-    <pathelement location="${build.dir}"/>
     <pathelement location="${build.webapps}"/>
   </path>
 
@@ -334,12 +332,7 @@
       <sysproperty key="build.test" value="${build.test}"/>
       <sysproperty key="contrib.name" value="${name}"/>
       
-      <!-- requires fork=yes for: 
-        relative File paths to use the specified user.dir 
-        classpath to use build/contrib/*.jar
-      -->
       <sysproperty key="user.dir" value="${build.test}/data"/>
-      
       <sysproperty key="fs.default.name" value="${fs.default.name}"/>
       <sysproperty key="hadoop.test.localoutputfile" value="${hadoop.test.localoutputfile}"/>
       <sysproperty key="test.log.dir" value="${hadoop.log.dir}"/> 
