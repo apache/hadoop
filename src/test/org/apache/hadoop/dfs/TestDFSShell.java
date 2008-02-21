@@ -292,6 +292,16 @@ public class TestDFSShell extends TestCase {
       returned = out.toString();
       assertTrue(" unix like output",
           (returned.lastIndexOf("No such file or") != -1));
+      out.reset();
+      argv = new String[1];
+      argv[0] = "-du";
+      srcFs.mkdirs(new Path("/user/"+ 
+          System.getProperty("user.name")));
+      ret = ToolRunner.run(shell, argv);
+      returned = out.toString();
+      assertTrue(" no error ", (ret == 0));
+      assertTrue("empty path specified",
+          (returned.lastIndexOf("empty string") == -1));
     } finally {
       if (bak != null) {
         System.setErr(bak);

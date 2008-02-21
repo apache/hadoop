@@ -1710,13 +1710,13 @@ public class FsShell extends Configured implements Tool {
         if (i < argv.length) {
           exitCode = doall(cmd, argv, getConf(), i);
         } else {
-          du("");
+          du(".");
         }
       } else if ("-dus".equals(cmd)) {
         if (i < argv.length) {
           exitCode = doall(cmd, argv, getConf(), i);
         } else {
-          dus("");
+          dus(".");
         }         
       } else if ("-mkdir".equals(cmd)) {
         exitCode = doall(cmd, argv, getConf(), i);
