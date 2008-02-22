@@ -137,6 +137,9 @@ Release 0.16.1 - Unreleased
     HADOOP-2769.  TestNNThroughputBnechmark should not use a fixed port for
     the namenode http port. (omalley)
 
+    HADOOP-2852. Update gridmix benchmark to avoid an artifically long tail.
+    (cdouglas)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES
