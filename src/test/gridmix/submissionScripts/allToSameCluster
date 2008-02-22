@@ -4,6 +4,8 @@ GRID_DIR=`dirname "$0"`
 GRID_DIR=`cd "$GRID_DIR"; pwd`
 source $GRID_DIR/../gridmix-env
 
+$GRID_MIX_HOME/submissionScripts/maxentToSameCluster 2>&1 > maxentToSameCluster.out &
+sleep 20
 $GRID_MIX_HOME/submissionScripts/textSortToSameCluster 2>&1 > textSortToSameCluster.out  &
 sleep 20
 $GRID_MIX_HOME/submissionScripts/monsterQueriesToSameCluster 2>&1 > monsterQueriesToSameCluster.out &
@@ -11,6 +13,4 @@ sleep 20
 $GRID_MIX_HOME/submissionScripts/webdataScanToSameCluster 2>&1 > webdataScanToSameCluster.out &
 sleep 20
 $GRID_MIX_HOME/submissionScripts/webdataSortToSameCluster  2>&1 > webdataSortToSameCluster.out &
-sleep 20
-$GRID_MIX_HOME/submissionScripts/maxentToSameCluster 2>&1 > maxentToSameCluster.out &
 

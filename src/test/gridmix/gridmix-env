@@ -30,6 +30,7 @@ export VARINFLTEXT=${GRID_MIX_DATA}/SortUncompressed
 export FIXCOMPTEXT=${GRID_MIX_DATA}/EntropySimulationCompressed
 
 ## Job sizing
+export NUM_OF_LARGE_JOBS_FOR_ENTROPY_CLASS=5
 export NUM_OF_LARGE_JOBS_PER_CLASS=3
 export NUM_OF_MEDIUM_JOBS_PER_CLASS=20
 export NUM_OF_SMALL_JOBS_PER_CLASS=40
@@ -44,7 +45,7 @@ export INTERVAL_BETWEEN_SUBMITION=20
 ## Hod
 #export HOD_OPTIONS="--ringmaster.hadoop-tar-ball=/path/to/hadoop-0.15.0-dev.tar.gz"
 #export HOD_CONFIG=
-#export ALL_HOD_OPTIONS="$HOD_OPTIONS -c ${HOD_CONFIG}"
+#export ALL_HOD_OPTIONS="-c ${HOD_CONFIG} ${HOD_OPTIONS}"
 #export SMALL_JOB_HOD_OPTIONS="$ALL_HOD_OPTIONS -m 5"
 #export MEDIUM_JOB_HOD_OPTIONS="$ALL_HOD_OPTIONS -m 50"
 #export LARGE_JOB_HOD_OPTIONS="$ALL_HOD_OPTIONS -m 100"
