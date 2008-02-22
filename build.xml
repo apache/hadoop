@@ -297,7 +297,7 @@
     <pathelement location="${src.test}"/>
     <pathelement location="${build.test}" />
     <path refid="classpath"/>
-    <pathelement location="${build.webapps}"/>
+    <pathelement location="${build.dir}"/>
   </path>
 
   <target name="compile-test" depends="compile" > 
