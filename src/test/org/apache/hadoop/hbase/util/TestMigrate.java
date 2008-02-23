@@ -86,7 +86,7 @@ public class TestMigrate extends HBaseTestCase {
        * First load files from an old style HBase file structure
        */
       
-      // Current directory is .../workspace/project/build/contrib/hbase/test/data
+      // Current directory is .../project/build/test/data
       
       FileSystem localfs = FileSystem.getLocal(conf);
       
@@ -96,11 +96,11 @@ public class TestMigrate extends HBaseTestCase {
           
           // this path is for running test with ant
           
-          "../../../../../src/contrib/hbase/src/testdata/HADOOP-2478-testdata.zip")
+          "../../../src/testdata/HADOOP-2478-testdata.zip")
       
           // and this path is for when you want to run inside eclipse
       
-          /*"src/contrib/hbase/src/testdata/HADOOP-2478-testdata.zip")*/
+          /*"src/testdata/HADOOP-2478-testdata.zip")*/
       );
       
       ZipInputStream zip = new ZipInputStream(hs);

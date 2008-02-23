@@ -24,7 +24,7 @@ Hbase Change Log
    HBASE-8     Delete table does not remove the table directory in the FS
    HBASE-428   Under continuous upload of rows, WrongRegionExceptions are thrown
                that reach the client even after retries
-   
+   HBASE-460   TestMigrate broken when HBase moved to subproject   
    
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling
