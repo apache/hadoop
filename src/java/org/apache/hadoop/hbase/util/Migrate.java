@@ -25,6 +25,8 @@ import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
 import java.io.IOException;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -64,7 +66,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 
 /**
  * Perform a file system upgrade to convert older file layouts to that
- * supported by HADOOP-2478
+ * supported by HADOOP-2478, and then to the form supported by HBASE-69
  */
 public class Migrate extends Configured implements Tool {
   static final Log LOG = LogFactory.getLog(Migrate.class);
@@ -96,10 +98,11 @@ public class Migrate extends Configured implements Tool {
    options.put("prompt", ACTION.PROMPT);
   }
 
+  private FileSystem fs = null;
+  private Path rootdir = null;
   private boolean readOnly = false;
   private boolean migrationNeeded = false;
   private boolean newRootRegion = false;
-  private ACTION logFiles = ACTION.IGNORE;
   private ACTION otherFiles = ACTION.IGNORE;
 
   private BufferedReader reader = null;
@@ -127,7 +130,7 @@ public class Migrate extends Configured implements Tool {
     }
 
     try {
-      FileSystem fs = FileSystem.get(conf);               // get DFS handle
+      fs = FileSystem.get(conf);                        // get DFS handle
 
       LOG.info("Verifying that file system is available...");
       if (!FSUtils.isFileSystemAvailable(fs)) {
@@ -148,8 +151,7 @@ public class Migrate extends Configured implements Tool {
 
       LOG.info("Starting upgrade" + (readOnly ? " check" : ""));
 
-      Path rootdir =
-        fs.makeQualified(new Path(this.conf.get(HConstants.HBASE_DIR)));
+      rootdir = fs.makeQualified(new Path(this.conf.get(HConstants.HBASE_DIR)));
 
       if (!fs.exists(rootdir)) {
         throw new FileNotFoundException("HBase root directory " +
@@ -158,40 +160,28 @@ public class Migrate extends Configured implements Tool {
 
       // See if there is a file system version file
 
-      if (FSUtils.checkVersion(fs, rootdir)) {
+      String version = FSUtils.checkVersion(fs, rootdir);
+      if (version != null && 
+          version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0) {
         LOG.info("No upgrade necessary.");
         return 0;
       }
 
-      // check to see if new root region dir exists
+      // Get contents of root directory
+      
+      FileStatus[] rootFiles = getRootDirFiles();
 
-      checkNewRootRegionDirExists(fs, rootdir);
-
-      // check for "extra" files and for old upgradable regions
-
-      extraFiles(fs, rootdir);
-
-      if (!newRootRegion) {
-        // find root region
-
-        Path rootRegion = new Path(rootdir, 
-            OLD_PREFIX + HRegionInfo.rootRegionInfo.getEncodedName());
-
-        if (!fs.exists(rootRegion)) {
-          throw new IOException("Cannot find root region " +
-              rootRegion.toString());
-        } else if (readOnly) {
-          migrationNeeded = true;
-        } else {
-          migrateRegionDir(fs, rootdir, HConstants.ROOT_TABLE_NAME, rootRegion);
-          scanRootRegion(fs, rootdir);
-
-          // scan for left over regions
-
-          extraRegions(fs, rootdir);
-        }
+      if (version == null) {
+        migrateFromNoVersion(rootFiles);
+        migrateToV2(rootFiles);
+      } else if (version.compareTo("0.1") == 0) {
+        migrateToV2(rootFiles);
+      } else if (version.compareTo("2") == 0) {
+        // Nothing to do (yet)
+      } else {
+        throw new IOException("Unrecognized version: " + version);
       }
-
+      
       if (!readOnly) {
         // set file system version
         LOG.info("Setting file system version.");
@@ -207,21 +197,85 @@ public class Migrate extends Configured implements Tool {
     }
   }
 
-  private void checkNewRootRegionDirExists(FileSystem fs, Path rootdir)
-  throws IOException {
-    Path rootRegionDir =
-      HRegion.getRegionDir(rootdir, HRegionInfo.rootRegionInfo);
-    newRootRegion = fs.exists(rootRegionDir);
-    migrationNeeded = !newRootRegion;
+  private void migrateFromNoVersion(FileStatus[] rootFiles) throws IOException {
+    LOG.info("No file system version found. Checking to see if file system " +
+        "is at revision 0.1");
+    
+    // check to see if new root region dir exists
+
+    checkNewRootRegionDirExists();
+    
+    // check for unrecovered region server log files
+
+    checkForUnrecoveredLogFiles(rootFiles);
+
+    // check for "extra" files and for old upgradable regions
+
+    extraFiles(rootFiles);
+
+    if (!newRootRegion) {
+      // find root region
+
+      Path rootRegion = new Path(rootdir, 
+          OLD_PREFIX + HRegionInfo.rootRegionInfo.getEncodedName());
+
+      if (!fs.exists(rootRegion)) {
+        throw new IOException("Cannot find root region " +
+            rootRegion.toString());
+      } else if (readOnly) {
+        migrationNeeded = true;
+      } else {
+        migrateRegionDir(HConstants.ROOT_TABLE_NAME, rootRegion);
+        scanRootRegion();
+
+        // scan for left over regions
+
+        extraRegions();
+      }
+    }
   }
   
-  // Check for files that should not be there or should be migrated
-  private void extraFiles(FileSystem fs, Path rootdir) throws IOException {
+  private void migrateToV2(FileStatus[] rootFiles) throws IOException {
+    LOG.info("Checking to see if file system is at revision 2.");
+    checkForUnrecoveredLogFiles(rootFiles);
+  }
+
+  private FileStatus[] getRootDirFiles() throws IOException {
     FileStatus[] stats = fs.listStatus(rootdir);
     if (stats == null || stats.length == 0) {
       throw new IOException("No files found under root directory " +
           rootdir.toString());
     }
+    return stats;
+  }
+  
+  private void checkNewRootRegionDirExists() throws IOException {
+    Path rootRegionDir =
+      HRegion.getRegionDir(rootdir, HRegionInfo.rootRegionInfo);
+    newRootRegion = fs.exists(rootRegionDir);
+    migrationNeeded = !newRootRegion;
+  }
+
+  private void checkForUnrecoveredLogFiles(FileStatus[] rootFiles)
+  throws IOException {
+    List<String> unrecoveredLogs = new ArrayList<String>();
+    for (int i = 0; i < rootFiles.length; i++) {
+      String name = rootFiles[i].getPath().getName();
+      if (name.startsWith("log_")) {
+        unrecoveredLogs.add(name);
+      }
+    }
+    if (unrecoveredLogs.size() != 0) {
+      throw new IOException("There are " + unrecoveredLogs.size() +
+          " unrecovered region server logs. Please uninstall this version of " +
+          "HBase, re-install the previous version, start your cluster and " +
+          "shut it down cleanly, so that all region server logs are recovered" +
+          " and deleted.");
+    }
+  }
+  
+  // Check for files that should not be there or should be migrated
+  private void extraFiles(FileStatus[] stats) throws IOException {
     for (int i = 0; i < stats.length; i++) {
       String name = stats[i].getPath().getName();
       if (name.startsWith(OLD_PREFIX)) {
@@ -234,31 +288,27 @@ public class Migrate extends Configured implements Tool {
 
           } catch (NumberFormatException e) {
             extraFile(otherFiles, "Old region format can not be upgraded: " +
-                name, fs, stats[i].getPath());
+                name, stats[i].getPath());
           }
         } else {
           // Since the new root region directory exists, we assume that this
           // directory is not necessary
-          extraFile(otherFiles, "Old region directory found: " + name, fs,
+          extraFile(otherFiles, "Old region directory found: " + name,
               stats[i].getPath());
         }
       } else {
         // File name does not start with "hregion_"
-        if (name.startsWith("log_")) {
-          String message = "Unrecovered region server log file " + name +
-            " this file can be recovered by the master when it starts."; 
-          extraFile(logFiles, message, fs, stats[i].getPath());
-        } else if (!newRootRegion) {
+        if (!newRootRegion) {
           // new root region directory does not exist. This is an extra file
           String message = "Unrecognized file " + name;
-          extraFile(otherFiles, message, fs, stats[i].getPath());
+          extraFile(otherFiles, message, stats[i].getPath());
         }
       }
     }
   }
 
-  private void extraFile(ACTION action, String message, FileSystem fs,
-      Path p) throws IOException {
+  private void extraFile(ACTION action, String message, Path p)
+  throws IOException {
     
     if (action == ACTION.ABORT) {
       throw new IOException(message + " aborting");
@@ -277,8 +327,8 @@ public class Migrate extends Configured implements Tool {
     }
   }
   
-  private void migrateRegionDir(FileSystem fs, Path rootdir, Text tableName,
-      Path oldPath) throws IOException {
+  private void migrateRegionDir(Text tableName, Path oldPath)
+  throws IOException {
 
     // Create directory where table will live
 
@@ -323,7 +373,7 @@ public class Migrate extends Configured implements Tool {
     }
   }
   
-  private void scanRootRegion(FileSystem fs, Path rootdir) throws IOException {
+  private void scanRootRegion() throws IOException {
     HLog log = new HLog(fs, new Path(rootdir, HConstants.HREGION_LOGDIR_NAME),
         conf, null);
 
@@ -354,12 +404,12 @@ public class Migrate extends Configured implements Tool {
             // First move the meta region to where it should be and rename
             // subdirectories as necessary
 
-            migrateRegionDir(fs, rootdir, HConstants.META_TABLE_NAME,
+            migrateRegionDir(HConstants.META_TABLE_NAME,
                 new Path(rootdir, OLD_PREFIX + info.getEncodedName()));
 
             // Now scan and process the meta table
 
-            scanMetaRegion(fs, rootdir, log, info);
+            scanMetaRegion(log, info);
           }
 
         } finally {
@@ -375,8 +425,7 @@ public class Migrate extends Configured implements Tool {
     }
   }
   
-  private void scanMetaRegion(FileSystem fs, Path rootdir, HLog log,
-      HRegionInfo info) throws IOException {
+  private void scanMetaRegion(HLog log, HRegionInfo info) throws IOException {
 
     HRegion metaRegion = new HRegion(
         new Path(rootdir, info.getTableDesc().getName().toString()), log, fs,
@@ -402,7 +451,7 @@ public class Migrate extends Configured implements Tool {
           // Move the region to where it should be and rename
           // subdirectories as necessary
 
-          migrateRegionDir(fs, rootdir, region.getTableDesc().getName(),
+          migrateRegionDir(region.getTableDesc().getName(),
               new Path(rootdir, OLD_PREFIX + region.getEncodedName()));
 
           results.clear();
@@ -417,7 +466,7 @@ public class Migrate extends Configured implements Tool {
     }
   }
   
-  private void extraRegions(FileSystem fs, Path rootdir) throws IOException {
+  private void extraRegions() throws IOException {
     FileStatus[] stats = fs.listStatus(rootdir);
     if (stats == null || stats.length == 0) {
       throw new IOException("No files found under root directory " +
@@ -436,7 +485,7 @@ public class Migrate extends Configured implements Tool {
           message = 
             "Region not in meta table and no other regions reference it " + name;
         }
-        extraFile(otherFiles, message, fs, stats[i].getPath());
+        extraFile(otherFiles, message, stats[i].getPath());
       }
     }
   }
@@ -444,18 +493,11 @@ public class Migrate extends Configured implements Tool {
   @SuppressWarnings("static-access")
   private int parseArgs(String[] args) {
     Options opts = new Options();
-    Option logFiles = OptionBuilder.withArgName(ACTIONS)
-    .hasArg()
-    .withDescription(
-        "disposition of unrecovered region server logs: {abort|ignore|delete|prompt}")
-    .create("logfiles");
-
     Option extraFiles = OptionBuilder.withArgName(ACTIONS)
     .hasArg()
     .withDescription("disposition of 'extra' files: {abort|ignore|delete|prompt}")
     .create("extrafiles");
     
-    opts.addOption(logFiles);
     opts.addOption(extraFiles);
     
     GenericOptionsParser parser =
@@ -474,21 +516,12 @@ public class Migrate extends Configured implements Tool {
     }
 
     if (readOnly) {
-      this.logFiles = ACTION.IGNORE;
       this.otherFiles = ACTION.IGNORE;
 
     } else {
       CommandLine commandLine = parser.getCommandLine();
 
       ACTION action = null;
-      if (commandLine.hasOption("logfiles")) {
-        action = options.get(commandLine.getOptionValue("logfiles"));
-        if (action == null) {
-          usage();
-          return -1;
-        }
-        this.logFiles = action;
-      }
       if (commandLine.hasOption("extrafiles")) {
         action = options.get(commandLine.getOptionValue("extrafiles"));
         if (action == null) {
@@ -506,9 +539,6 @@ public class Migrate extends Configured implements Tool {
     System.err.println("  check                            perform upgrade checks only.");
     System.err.println("  upgrade                          perform upgrade checks and modify hbase.\n");
     System.err.println("  Options are:");
-    System.err.println("    -logfiles={abort|ignore|delete|prompt}");
-    System.err.println("                                   action to take when unrecovered region");
-    System.err.println("                                   server log files are found.\n");
     System.err.println("    -extrafiles={abort|ignore|delete|prompt}");
     System.err.println("                                   action to take if \"extra\" files are found.\n");
     System.err.println("    -conf <configuration file>     specify an application configuration file");

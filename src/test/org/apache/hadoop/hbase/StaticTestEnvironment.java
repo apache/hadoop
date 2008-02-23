@@ -114,9 +114,10 @@ public class StaticTestEnvironment {
     LOG.setLevel(logLevel);
 
     if (!debugging) {
-      // Turn off all the filter logging unless debug is set.
+      // Turn off all the and connection logging unless debug is set.
       // It is way too noisy.
       Logger.getLogger("org.apache.hadoop.hbase.filter").setLevel(Level.INFO);
+      Logger.getLogger("org.apache.hadoop.hbase.client").setLevel(Level.INFO);
     }
     // Enable mapreduce loggging for the mapreduce jobs.
     Logger.getLogger("org.apache.hadoop.mapred").setLevel(Level.DEBUG);

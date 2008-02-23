@@ -25,7 +25,8 @@ import org.apache.hadoop.io.Text;
  * HConstants holds a bunch of HBase-related constants
  */
 public interface HConstants {
-  
+
+  /** long constant for zero */
   static final Long ZERO_L = Long.valueOf(0L);
   
   // For migration
@@ -34,7 +35,7 @@ public interface HConstants {
   static final String VERSION_FILE_NAME = "hbase.version";
   
   /** version of file system */
-  static final String FILE_SYSTEM_VERSION = "0.1";
+  static final String FILE_SYSTEM_VERSION = "2";
   
   // Configuration parameters
   

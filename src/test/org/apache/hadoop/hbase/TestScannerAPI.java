@@ -30,6 +30,7 @@ import java.util.TreeMap;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /** test the scanner API at all levels */
 public class TestScannerAPI extends HBaseClusterTestCase {
@@ -80,16 +81,16 @@ public class TestScannerAPI extends HBaseClusterTestCase {
     HTable table = new HTable(conf, new Text(getName()));
 
     for (Map.Entry<Text, SortedMap<Text, byte[]>> row: values.entrySet()) {
-      long lockid = table.startUpdate(row.getKey());
+      BatchUpdate b = new BatchUpdate(row.getKey());
       for (Map.Entry<Text, byte[]> val: row.getValue().entrySet()) {
-        table.put(lockid, val.getKey(), val.getValue());
+        b.put(val.getKey(), val.getValue());
       }
-      table.commit(lockid);
+      table.commit(b);
     }
 
     HRegion region = null;
     try {
-      SortedMap<Text, HRegion> regions =
+      Map<Text, HRegion> regions =
         cluster.getRegionThreads().get(0).getRegionServer().getOnlineRegions();
       for (Map.Entry<Text, HRegion> e: regions.entrySet()) {
         if (!e.getValue().getRegionInfo().isMetaRegion()) {

@@ -39,11 +39,12 @@ public class IdentityTableReduce extends TableReduce<Text, MapWritable> {
    */
   @Override
   public void reduce(Text key, Iterator<MapWritable> values,
-      OutputCollector<Text, MapWritable> output, Reporter reporter)
+      OutputCollector<Text, MapWritable> output,
+      @SuppressWarnings("unused") Reporter reporter)
       throws IOException {
     
     while(values.hasNext()) {
-      MapWritable r = (MapWritable)values.next();
+      MapWritable r = values.next();
       output.collect(key, r);
     }
   }

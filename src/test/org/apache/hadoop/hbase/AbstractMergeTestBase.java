@@ -146,7 +146,6 @@ public abstract class AbstractMergeTestBase extends HBaseTestCase {
         r.flushcache();
       }
     }
-    region.compactIfNeeded();
     region.close();
     region.getLog().closeAndDelete();
     region.getRegionInfo().setOffline(true);

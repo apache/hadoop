@@ -25,6 +25,7 @@ Hbase Change Log
    HBASE-428   Under continuous upload of rows, WrongRegionExceptions are thrown
                that reach the client even after retries
    HBASE-460   TestMigrate broken when HBase moved to subproject   
+   HBASE-462   Update migration tool
    
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling

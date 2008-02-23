@@ -26,6 +26,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 
+import org.apache.hadoop.hbase.io.BatchUpdate;
+
 /** Tests per-column bloom filters */
 public class TestBloomFilters extends HBaseClusterTestCase {
   static final Log LOG = LogFactory.getLog(TestBloomFilters.class);
@@ -145,8 +147,6 @@ public class TestBloomFilters extends HBaseClusterTestCase {
   /** constructor */
   public TestBloomFilters() {
     super();
-    conf.set("hbase.hregion.memcache.flush.size", "100");// flush cache every 100 bytes
-    conf.set("hbase.regionserver.maxlogentries", "90"); // and roll log too
   }
   
   /**
@@ -191,9 +191,9 @@ public class TestBloomFilters extends HBaseClusterTestCase {
     for(int i = 0; i < 100; i++) {
       Text row = rows[i];
       String value = row.toString();
-      long lockid = table.startUpdate(rows[i]);
-      table.put(lockid, CONTENTS, value.getBytes(HConstants.UTF8_ENCODING));
-      table.commit(lockid);
+      BatchUpdate b = new BatchUpdate(row);
+      b.put(CONTENTS, value.getBytes(HConstants.UTF8_ENCODING));
+      table.commit(b);
     }
     try {
       // Give cache flusher and log roller a chance to run
@@ -257,9 +257,9 @@ public class TestBloomFilters extends HBaseClusterTestCase {
     for(int i = 0; i < 100; i++) {
       Text row = rows[i];
       String value = row.toString();
-      long lockid = table.startUpdate(rows[i]);
-      table.put(lockid, CONTENTS, value.getBytes(HConstants.UTF8_ENCODING));
-      table.commit(lockid);
+      BatchUpdate b = new BatchUpdate(row);
+      b.put(CONTENTS, value.getBytes(HConstants.UTF8_ENCODING));
+      table.commit(b);
     }
     try {
       // Give cache flusher and log roller a chance to run

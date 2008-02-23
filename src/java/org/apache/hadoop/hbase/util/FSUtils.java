@@ -81,20 +81,19 @@ public class FSUtils {
    * 
    * @param fs
    * @param rootdir
-   * @return true if the current file system is the correct version
+   * @return null if no version file exists, version string otherwise.
    * @throws IOException
    */
-  public static boolean checkVersion(FileSystem fs, Path rootdir) throws IOException {
+  public static String checkVersion(FileSystem fs, Path rootdir) throws IOException {
     Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
-    boolean versionOk = false;
+    String version = null;
     if (fs.exists(versionFile)) {
       FSDataInputStream s =
         fs.open(new Path(rootdir, HConstants.VERSION_FILE_NAME));
-      String version = DataInputStream.readUTF(s);
+      version = DataInputStream.readUTF(s);
       s.close();
-      versionOk = version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0;
     }
-    return versionOk;
+    return version;
   }
   
   /**

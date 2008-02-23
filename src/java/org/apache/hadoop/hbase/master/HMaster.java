@@ -148,6 +148,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /** Name of master server */
   public static final String MASTER = "master";
 
+  /** @return InfoServer object */
   public InfoServer getInfoServer() {
     return infoServer;
   }
@@ -270,16 +271,21 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     try {
       // Make sure the root directory exists!
       if(! fs.exists(rootdir)) {
-        fs.mkdirs(rootdir);
+        fs.mkdirs(rootdir); 
         FSUtils.setVersion(fs, rootdir);
-      } else if (!FSUtils.checkVersion(fs, rootdir)) {
-        // Output on stdout so user sees it in terminal.
-        String message = "The HBase data files stored on the FileSystem are " +
-          "from an earlier version of HBase. You need to run " +
-          "'${HBASE_HOME}/bin/hbase migrate' to bring your installation"  +
+      } else {
+        String fsversion = FSUtils.checkVersion(fs, rootdir);
+        if (fsversion == null ||
+            fsversion.compareTo(FILE_SYSTEM_VERSION) != 0) {
+          // Output on stdout so user sees it in terminal.
+          String message = "The HBase data files stored on the FileSystem " +
+          "are from an earlier version of HBase. You need to run " +
+          "'${HBASE_HOME}/bin/hbase migrate' to bring your installation " +
           "up-to-date.";
-        System.out.println("WARNING! " + message + " Master shutting down...");
-        throw new IOException(message);
+          // Output on stdout so user sees it in terminal.
+          System.out.println("WARNING! " + message + " Master shutting down...");
+          throw new IOException(message);
+        }
       }
 
       if (!fs.exists(rootRegionDir)) {
