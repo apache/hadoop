@@ -62,7 +62,7 @@ abstract class RegionServerOperation implements Delayed, HConstants {
   
   protected boolean rootAvailable() {
     boolean available = true;
-    if (master.rootRegionLocation.get() == null) {
+    if (master.getRootRegionLocation() == null) {
       available = false;
       requeue();
     }
@@ -72,10 +72,13 @@ abstract class RegionServerOperation implements Delayed, HConstants {
   protected boolean metaTableAvailable() {
     boolean available = true;
     if (LOG.isDebugEnabled()) {
-      LOG.debug("numberOfMetaRegions: " + master.numberOfMetaRegions.get() +
-          ", onlineMetaRegions.size(): " + master.onlineMetaRegions.size());
+      LOG.debug("numberOfMetaRegions: " + 
+        master.regionManager.numMetaRegions() +
+        ", onlineMetaRegions.size(): " + 
+        master.regionManager.numOnlineMetaRegions());
     }
-    if (master.numberOfMetaRegions.get() != master.onlineMetaRegions.size()) {
+    if (master.regionManager.numMetaRegions() != 
+      master.regionManager.numOnlineMetaRegions()) {
       // We can't proceed because not all of the meta regions are online.
       // We can't block either because that would prevent the meta region
       // online message from being processed. In order to prevent spinning

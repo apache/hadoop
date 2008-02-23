@@ -47,7 +47,7 @@ class TableDelete extends ChangeTableState {
     // For regions that are being served, mark them for deletion          
     for (HashSet<HRegionInfo> s: servedRegions.values()) {
       for (HRegionInfo i: s) {
-        this.master.regionsToDelete.add(i.getRegionName());
+        master.regionManager.markRegionForDeletion(i.getRegionName());
       }
     }
 

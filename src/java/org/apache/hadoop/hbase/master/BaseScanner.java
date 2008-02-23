@@ -101,15 +101,28 @@ abstract class BaseScanner extends Chore implements HConstants {
     
   protected final boolean rootRegion;
   protected final HMaster master;
+  protected final RegionManager regionManager;
+  
+  protected boolean initialScanComplete;
   
   protected abstract boolean initialScan();
   protected abstract void maintenanceScan();
   
-  BaseScanner(final HMaster master, final boolean rootRegion, final int period,
-    final AtomicBoolean stop) {
+  // will use this variable to synchronize and make sure we aren't interrupted 
+  // mid-scan
+  final Integer scannerLock = new Integer(0);
+  
+  BaseScanner(final HMaster master, final RegionManager regionManager, 
+    final boolean rootRegion, final int period, final AtomicBoolean stop) {
     super(period, stop);
     this.rootRegion = rootRegion;
     this.master = master;
+    this.regionManager = regionManager;
+    this.initialScanComplete = false;
+  }
+  
+  public boolean isInitialScanComplete() {
+    return initialScanComplete;
   }
   
   @Override
@@ -173,8 +186,8 @@ abstract class BaseScanner extends Chore implements HConstants {
         }
         numberOfRegionsFound += 1;
       }
-      if (this.rootRegion) {
-        master.numberOfMetaRegions.set(numberOfRegionsFound);
+      if (rootRegion) {
+        regionManager.setNumMetaRegions(numberOfRegionsFound);
       }
     } catch (IOException e) {
       if (e instanceof RemoteException) {
@@ -328,34 +341,32 @@ abstract class BaseScanner extends Chore implements HConstants {
   }
 
   protected void checkAssigned(final HRegionInfo info,
-    final String serverName, final long startCode) throws IOException {
+    final String serverName, final long startCode) 
+  throws IOException {
     
     // Skip region - if ...
     if(info.isOffline()                                 // offline
-        || master.killedRegions.contains(info.getRegionName()) // queued for offline
-        || master.regionsToDelete.contains(info.getRegionName())) { // queued for delete
+      || regionManager.isClosing(info.getRegionName()) // queued for offline
+      || regionManager.isMarkedForDeletion(info.getRegionName())) { // queued for delete
 
-      master.unassignedRegions.remove(info);
+      regionManager.noLongerUnassigned(info);
       return;
     }
     HServerInfo storedInfo = null;
     boolean deadServer = false;
     if (serverName.length() != 0) {
-      synchronized (master.killList) {
-        Map<Text, HRegionInfo> regionsToKill = master.killList.get(serverName);
-        if (regionsToKill != null &&
-            regionsToKill.containsKey(info.getRegionName())) {
-
-          // Skip if region is on kill list
-          if(LOG.isDebugEnabled()) {
-            LOG.debug("not assigning region (on kill list): " +
-                info.getRegionName());
-          }
-          return;
+      
+      if (regionManager.isMarkedClosedNoReopen(serverName, info.getRegionName())) {
+        // Skip if region is on kill list
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("not assigning region (on kill list): " +
+            info.getRegionName());
         }
+        return;
       }
-      storedInfo = master.serversToServerInfo.get(serverName);
-      deadServer = master.deadServers.contains(serverName);
+      
+      storedInfo = master.serverManager.getServerInfo(serverName);
+      deadServer = master.serverManager.isDead(serverName);
     }
 
     /*
@@ -366,13 +377,13 @@ abstract class BaseScanner extends Chore implements HConstants {
      * then:
      */ 
     if (!deadServer &&
-        ((storedInfo != null && storedInfo.getStartCode() != startCode) ||
-            (storedInfo == null &&
-                !master.unassignedRegions.containsKey(info) &&
-                !master.pendingRegions.contains(info.getRegionName())
-            )
+      ((storedInfo != null && storedInfo.getStartCode() != startCode) ||
+        (storedInfo == null &&
+          !regionManager.isUnassigned(info) &&
+          !regionManager.isPending(info.getRegionName())
         )
-      ) {
+      )
+    ) {
 
       // The current assignment is invalid
       if (LOG.isDebugEnabled()) {
@@ -380,25 +391,26 @@ abstract class BaseScanner extends Chore implements HConstants {
           " is not valid: storedInfo: " + storedInfo + ", startCode: " +
           startCode + ", storedInfo.startCode: " +
           ((storedInfo != null)? storedInfo.getStartCode(): -1) +
-          ", unassignedRegions: " + master.unassignedRegions.containsKey(info) +
+          ", unassignedRegions: " + 
+          regionManager.isUnassigned(info) +
           ", pendingRegions: " +
-          master.pendingRegions.contains(info.getRegionName()));
+          regionManager.isPending(info.getRegionName()));
       }
       // Recover the region server's log if there is one.
       // This is only done from here if we are restarting and there is stale
       // data in the meta region. Once we are on-line, dead server log
       // recovery is handled by lease expiration and ProcessServerShutdown
-      if (!master.initialMetaScanComplete && serverName.length() != 0) {
+      if (!regionManager.isInitialMetaScanComplete() && serverName.length() != 0) {
         StringBuilder dirName = new StringBuilder("log_");
         dirName.append(serverName.replace(":", "_"));
         Path logDir = new Path(master.rootdir, dirName.toString());
         try {
           if (master.fs.exists(logDir)) {
-            master.splitLogLock.lock();
+            regionManager.splitLogLock.lock();
             try {
               HLog.splitLog(master.rootdir, logDir, master.fs, master.conf);
             } finally {
-              master.splitLogLock.unlock();
+              regionManager.splitLogLock.unlock();
             }
           }
           if (LOG.isDebugEnabled()) {
@@ -410,7 +422,18 @@ abstract class BaseScanner extends Chore implements HConstants {
         }
       }
       // Now get the region assigned
-      master.unassignedRegions.put(info, ZERO_L);
+      regionManager.setUnassigned(info);
+    }
+  }
+  
+  /**
+   * Notify the thread to die at the end of its next run
+   */
+  public void interruptIfAlive() {
+    synchronized(scannerLock){
+      if (isAlive()) {
+        super.interrupt();
+      }
     }
   }
 }

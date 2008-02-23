@@ -147,7 +147,7 @@ public class MultiRegionTable extends HBaseTestCase {
         Writables.getHRegionInfoOrNull(data.get(HConstants.COL_SPLITA));
       HRegionInfo splitB =
         Writables.getHRegionInfoOrNull(data.get(HConstants.COL_SPLITB));
-      assertTrue(fs.exists(parentDir));
+      assertTrue("parentDir should exist", fs.exists(parentDir));
       LOG.info("Split happened. Parent is " + parent.getRegionName());
 
       // Recalibrate will cause us to wait on new regions' deployment

@@ -27,8 +27,8 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 /** Scanner for the <code>ROOT</code> HRegion. */
 class RootScanner extends BaseScanner {
   /** Constructor */
-  public RootScanner(HMaster master) {
-    super(master, true, master.metaRescanInterval, master.closed);
+  public RootScanner(HMaster master, RegionManager regionManager) {
+    super(master, regionManager, true, master.metaRescanInterval, master.closed);
   }
 
   private boolean scanRoot() {
@@ -36,27 +36,16 @@ class RootScanner extends BaseScanner {
     // caused by the server going away. Wait until next rescan interval when
     // things should be back to normal
     boolean scanSuccessful = false;
-    synchronized (master.rootRegionLocation) {
-      while(!master.closed.get() && master.rootRegionLocation.get() == null) {
-        // rootRegionLocation will be filled in when we get an 'open region'
-        // regionServerReport message from the HRegionServer that has been
-        // allocated the ROOT region below.
-        try {
-          master.rootRegionLocation.wait();
-        } catch (InterruptedException e) {
-          // continue
-        }
-      }
-    }
+    master.waitForRootRegionLocation();
     if (master.closed.get()) {
       return scanSuccessful;
     }
 
     try {
       // Don't interrupt us while we're working
-      synchronized(master.rootScannerLock) {
-        scanRegion(new MetaRegion(master.rootRegionLocation.get(),
-            HRegionInfo.rootRegionInfo.getRegionName(), null));
+      synchronized(scannerLock) {
+        scanRegion(new MetaRegion(master.getRootRegionLocation(),
+          HRegionInfo.rootRegionInfo.getRegionName(), null));
       }
       scanSuccessful = true;
     } catch (IOException e) {
@@ -74,8 +63,8 @@ class RootScanner extends BaseScanner {
 
   @Override
   protected boolean initialScan() {
-    master.rootScanned = scanRoot();
-    return master.rootScanned;
+    initialScanComplete = scanRoot();
+    return initialScanComplete;
   }
 
   @Override

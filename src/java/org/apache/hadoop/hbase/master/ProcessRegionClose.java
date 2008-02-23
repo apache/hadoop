@@ -90,9 +90,7 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
 
     if (reassignRegion) {
       LOG.info("reassign region: " + regionInfo.getRegionName());
-
-      master.unassignedRegions.put(regionInfo, ZERO_L);
-
+      master.regionManager.setUnassigned(regionInfo);
     } else if (deleteRegion) {
       try {
         HRegion.deleteRegion(master.fs, master.rootdir, regionInfo);

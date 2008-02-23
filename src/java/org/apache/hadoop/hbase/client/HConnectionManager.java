@@ -541,20 +541,24 @@ public class HConnectionManager implements HConstants {
         if (!matchingRegions.isEmpty()) {
           HRegionLocation possibleRegion = 
             matchingRegions.get(matchingRegions.lastKey());
-                  
-          Text endKey = possibleRegion.getRegionInfo().getEndKey();
           
-          // make sure that the end key is greater than the row we're looking 
-          // for, otherwise the row actually belongs in the next region, not 
-          // this one. the exception case is when the endkey is EMPTY_START_ROW,
-          // signifying that the region we're checking is actually the last 
-          // region in the table.
-          if (endKey.equals(EMPTY_TEXT) || endKey.compareTo(row) > 0) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Found possible location for " + row + ", " +
-                possibleRegion);
+          // there is a possibility that the reference was garbage collected 
+          // in the instant since we checked isEmpty().
+          if (possibleRegion != null) {
+            Text endKey = possibleRegion.getRegionInfo().getEndKey();
+          
+            // make sure that the end key is greater than the row we're looking 
+            // for, otherwise the row actually belongs in the next region, not 
+            // this one. the exception case is when the endkey is EMPTY_START_ROW,
+            // signifying that the region we're checking is actually the last 
+            // region in the table.
+            if (endKey.equals(EMPTY_TEXT) || endKey.compareTo(row) > 0) {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Found possible location for " + row + ", " +
+                  possibleRegion);
+              }
+              return possibleRegion;
             }
-            return possibleRegion;
           }
         }
       }

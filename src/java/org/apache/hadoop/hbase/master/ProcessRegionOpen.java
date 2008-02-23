@@ -90,23 +90,23 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
           // It's a meta region.
           MetaRegion m = new MetaRegion(this.serverAddress,
             this.regionInfo.getRegionName(), this.regionInfo.getStartKey());
-          if (!master.initialMetaScanComplete) {
+          if (!master.regionManager.isInitialMetaScanComplete()) {
             // Put it on the queue to be scanned for the first time.
             try {
               LOG.debug("Adding " + m.toString() + " to regions to scan");
-              master.metaRegionsToScan.put(m);
+              master.regionManager.addMetaRegionToScan(m);
             } catch (InterruptedException e) {
               throw new RuntimeException(
-                  "Putting into metaRegionsToScan was interrupted.", e);
+                "Putting into metaRegionsToScan was interrupted.", e);
             }
           } else {
             // Add it to the online meta regions
             LOG.debug("Adding to onlineMetaRegions: " + m.toString());
-            master.onlineMetaRegions.put(this.regionInfo.getStartKey(), m);
+            master.regionManager.putMetaRegionOnline(m);
           }
         }
         // If updated successfully, remove from pending list.
-        master.pendingRegions.remove(regionInfo.getRegionName());
+        master.regionManager.noLongerPending(regionInfo.getRegionName());
         break;
       } catch (IOException e) {
         if (tries == numRetries - 1) {

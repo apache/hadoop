@@ -36,6 +36,11 @@ import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 
+/**
+ * Abstract base class for operations that need to examine all HRegionInfo 
+ * objects that make up a table. (For a table, operate on each of its rows
+ * in .META.) To gain the 
+ */
 abstract class TableOperation implements HConstants {
   static final Long ZERO_L = Long.valueOf(0L);
   
@@ -58,31 +63,18 @@ abstract class TableOperation implements HConstants {
       throw new MasterNotRunningException();
     }
 
-    this.metaRegions = new HashSet<MetaRegion>();
     this.tableName = tableName;
     this.unservedRegions = new HashSet<HRegionInfo>();
 
     // We can not access any meta region if they have not already been
     // assigned and scanned.
 
-    if (this.master.metaScannerThread.waitForMetaRegionsOrClose()) {
-      throw new MasterNotRunningException(); // We're shutting down. Forget it.
+    if (master.regionManager.metaScannerThread.waitForMetaRegionsOrClose()) {
+      // We're shutting down. Forget it.
+      throw new MasterNotRunningException(); 
     }
 
-    Text firstMetaRegion = null;
-    synchronized (this.master.onlineMetaRegions) {
-      if (this.master.onlineMetaRegions.size() == 1) {
-        firstMetaRegion = this.master.onlineMetaRegions.firstKey();
-
-      } else if (this.master.onlineMetaRegions.containsKey(tableName)) {
-        firstMetaRegion = tableName;
-
-      } else {
-        firstMetaRegion = this.master.onlineMetaRegions.headMap(tableName).lastKey();
-      }
-      this.metaRegions.addAll(this.master.onlineMetaRegions.tailMap(
-          firstMetaRegion).values());
-    }
+    this.metaRegions = master.regionManager.getMetaRegionsForTable(tableName);
   }
 
   void process() throws IOException {
@@ -90,19 +82,16 @@ abstract class TableOperation implements HConstants {
       boolean tableExists = false;
       try {
         // Prevent meta scanner from running
-        synchronized(this.master.metaScannerLock) {
+        synchronized(master.regionManager.metaScannerThread.scannerLock) {
           for (MetaRegion m: metaRegions) {
-
             // Get a connection to a meta server
-
             HRegionInterface server =
-              this.master.connection.getHRegionConnection(m.getServer());
+              master.connection.getHRegionConnection(m.getServer());
 
             // Open a scanner on the meta region
-
             long scannerId =
               server.openScanner(m.getRegionName(), COLUMN_FAMILY_ARRAY,
-                  tableName, System.currentTimeMillis(), null);
+              tableName, System.currentTimeMillis(), null);
 
             try {
               while (true) {
@@ -166,7 +155,7 @@ abstract class TableOperation implements HConstants {
   protected boolean isBeingServed(String serverName, long startCode) {
     boolean result = false;
     if (serverName != null && serverName.length() > 0 && startCode != -1L) {
-      HServerInfo s = this.master.serversToServerInfo.get(serverName);
+      HServerInfo s = master.serverManager.getServerInfo(serverName);
       result = s != null && s.getStartCode() == startCode;
     }
     return result;

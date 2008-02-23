@@ -56,7 +56,7 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
         available = false;
       }
     } else {
-      if (!master.rootScanned || !metaTableAvailable()) {
+      if (!master.regionManager.isInitialRootScanComplete() || !metaTableAvailable()) {
         // The root region has not been scanned or the meta table is not
         // available so we can't proceed.
         // Put the operation on the delayedToDoQueue
@@ -68,26 +68,18 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
   }
   
   protected HRegionInterface getMetaServer() throws IOException {
-    if (this.isMetaTable) {
-      this.metaRegionName = HRegionInfo.rootRegionInfo.getRegionName();
+    if (isMetaTable) {
+      metaRegionName = HRegionInfo.rootRegionInfo.getRegionName();
     } else {
-      if (this.metaRegion == null) {
-        synchronized (master.onlineMetaRegions) {
-          metaRegion = master.onlineMetaRegions.size() == 1 ? 
-              master.onlineMetaRegions.get(master.onlineMetaRegions.firstKey()) :
-                master.onlineMetaRegions.containsKey(regionInfo.getRegionName()) ?
-                    master.onlineMetaRegions.get(regionInfo.getRegionName()) :
-                      master.onlineMetaRegions.get(master.onlineMetaRegions.headMap(
-                          regionInfo.getRegionName()).lastKey());
-        }
-        this.metaRegionName = metaRegion.getRegionName();
+      if (metaRegion == null) {
+        metaRegion = master.regionManager.getFirstMetaRegionForRegion(regionInfo);
+        metaRegionName = metaRegion.getRegionName();
       }
     }
 
     HServerAddress server = null;
     if (isMetaTable) {
-      server = master.rootRegionLocation.get();
-      
+      server = master.getRootRegionLocation();      
     } else {
       server = metaRegion.getServer();
     }

@@ -68,7 +68,17 @@ public class SoftSortedMap<K,V> implements SortedMap<K,V> {
   public V get(Object key) {
     checkReferences();
     SoftValue<K,V> value = internalMap.get(key);
-    return value == null ? null : value.get();
+    
+    if (value == null) {
+      return null;
+    } else {
+      if (value.get() == null) {
+        internalMap.remove(key);
+        return null;
+      } else {
+        return value.get();
+      }
+    }
   }
 
   public V remove(Object key) {
@@ -83,8 +93,9 @@ public class SoftSortedMap<K,V> implements SortedMap<K,V> {
   }
   
   public boolean containsValue(Object value) {
-    checkReferences();
-    return internalMap.containsValue(value);
+/*    checkReferences();
+    return internalMap.containsValue(value);*/
+    throw new UnsupportedOperationException("Don't support containsValue!");
   }
 
   public K firstKey() {

@@ -92,13 +92,14 @@ class ChangeTableState extends TableOperation {
         LOG.debug("updated columns in row: " + i.getRegionName());
       }
 
-      if (online) {                         // Bring offline regions on-line
-        if (!this.master.unassignedRegions.containsKey(i)) {
-          this.master.unassignedRegions.put(i, ZERO_L);
+      if (online) {
+        // Bring offline regions on-line
+        if (!master.regionManager.isUnassigned(i)) {
+          master.regionManager.setUnassigned(i);
         }
-
-      } else {                              // Prevent region from getting assigned.
-        this.master.unassignedRegions.remove(i);
+      } else {
+        // Prevent region from getting assigned.
+        master.regionManager.noLongerUnassigned(i);
       }
     }
 
@@ -118,18 +119,17 @@ class ChangeTableState extends TableOperation {
 
       HashMap<Text, HRegionInfo> localKillList =
         new HashMap<Text, HRegionInfo>();
-      
-      synchronized (this.master.killList) {
-        HashMap<Text, HRegionInfo> killedRegions = 
-          this.master.killList.get(serverName);
-        if (killedRegions != null) {
-          localKillList.putAll(killedRegions);
-        }
+        
+      Map<Text, HRegionInfo> killedRegions = 
+        master.regionManager.getMarkedClosedNoReopen(serverName);
+      if (killedRegions != null) {
+        localKillList.putAll(killedRegions);
       }
+      
       for (HRegionInfo i: e.getValue()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("adding region " + i.getRegionName() +
-              " to local kill list");
+              " to kill list");
         }
         localKillList.put(i.getRegionName(), i);
       }
@@ -138,7 +138,7 @@ class ChangeTableState extends TableOperation {
           LOG.debug("inserted local kill list into kill list for server " +
               serverName);
         }
-        this.master.killList.put(serverName, localKillList);
+        master.regionManager.markClosedNoReopenBulk(serverName, localKillList);
       }
     }
     servedRegions.clear();

@@ -35,20 +35,20 @@ public class Threads {
    * @return Returns the passed Thread <code>t</code>.
    */
   public static Thread setDaemonThreadRunning(final Thread t,
-      final String name) {
+    final String name) {
     return setDaemonThreadRunning(t, name, null);
   }
     
-    /**
-     * Utility method that sets name, daemon status and starts passed thread.
-     * @param t
-     * @param name
-     * @param handler A handler to set on the thread.  Pass null if want to
-     * use default handler.
-     * @return Returns the passed Thread <code>t</code>.
-     */
-    public static Thread setDaemonThreadRunning(final Thread t,
-        final String name, final UncaughtExceptionHandler handler) {
+  /**
+   * Utility method that sets name, daemon status and starts passed thread.
+   * @param t
+   * @param name
+   * @param handler A handler to set on the thread.  Pass null if want to
+   * use default handler.
+   * @return Returns the passed Thread <code>t</code>.
+   */
+  public static Thread setDaemonThreadRunning(final Thread t,
+    final String name, final UncaughtExceptionHandler handler) {
     t.setName(name);
     if (handler != null) {
       t.setUncaughtExceptionHandler(handler);

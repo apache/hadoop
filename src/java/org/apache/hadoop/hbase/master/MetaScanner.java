@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
@@ -36,12 +38,16 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
  * action would prevent other work from getting done.
  */
 class MetaScanner extends BaseScanner {
+  /** Work for the meta scanner is queued up here */
+  private volatile BlockingQueue<MetaRegion> metaRegionsToScan =
+    new LinkedBlockingQueue<MetaRegion>();
+    
   private final List<MetaRegion> metaRegionsToRescan =
     new ArrayList<MetaRegion>();
-  
+    
   /** Constructor */
-  public MetaScanner(HMaster master) {
-    super(master, false, master.metaRescanInterval, master.closed);
+  public MetaScanner(HMaster master, RegionManager regionManager) {
+    super(master, regionManager, false, master.metaRescanInterval, master.closed);
   }
 
   private boolean scanOneMetaRegion(MetaRegion region) {
@@ -49,8 +55,8 @@ class MetaScanner extends BaseScanner {
     // caused by the server going away. Wait until next rescan interval when
     // things should be back to normal
     boolean scanSuccessful = false;
-    while (!master.closed.get() && !master.rootScanned &&
-      master.rootRegionLocation.get() == null) {
+    while (!master.closed.get() && !regionManager.isInitialRootScanComplete() &&
+      regionManager.getRootRegionLocation() == null) {
       master.sleeper.sleep();
     }
     if (master.closed.get()) {
@@ -59,9 +65,9 @@ class MetaScanner extends BaseScanner {
 
     try {
       // Don't interrupt us while we're working
-      synchronized (master.metaScannerLock) {
+      synchronized (scannerLock) {
         scanRegion(region);
-        master.onlineMetaRegions.put(region.getStartKey(), region);
+        regionManager.putMetaRegionOnline(region);
       }
       scanSuccessful = true;
     } catch (IOException e) {
@@ -71,7 +77,7 @@ class MetaScanner extends BaseScanner {
       // so, either it won't be in the onlineMetaRegions list or its host
       // address has changed and the containsValue will fail. If not
       // found, best thing to do here is probably return.
-      if (!master.onlineMetaRegions.containsValue(region.getStartKey())) {
+      if (!regionManager.isMetaRegionOnline(region.getStartKey())) {
         LOG.debug("Scanned region is no longer in map of online " +
         "regions or its value has changed");
         return scanSuccessful;
@@ -91,7 +97,7 @@ class MetaScanner extends BaseScanner {
     MetaRegion region = null;
     while (!master.closed.get() && region == null && !metaRegionsScanned()) {
       try {
-        region = master.metaRegionsToScan.poll(master.threadWakeFrequency, 
+        region = metaRegionsToScan.poll(master.threadWakeFrequency, 
           TimeUnit.MILLISECONDS);
       } catch (InterruptedException e) {
         // continue
@@ -105,16 +111,13 @@ class MetaScanner extends BaseScanner {
         }
       }
     }
-    master.initialMetaScanComplete = true;
+    initialScanComplete = true;
     return true;
   }
 
   @Override
   protected void maintenanceScan() {
-    ArrayList<MetaRegion> regions = new ArrayList<MetaRegion>();
-    synchronized (master.onlineMetaRegions) {
-      regions.addAll(master.onlineMetaRegions.values());
-    }
+    List<MetaRegion> regions = regionManager.getListOfOnlineMetaRegions();
     for (MetaRegion r: regions) {
       scanOneMetaRegion(r);
     }
@@ -126,8 +129,8 @@ class MetaScanner extends BaseScanner {
    * regions. This wakes up any threads that were waiting for this to happen.
    */
   private synchronized boolean metaRegionsScanned() {
-    if (!master.rootScanned ||
-        master.numberOfMetaRegions.get() != master.onlineMetaRegions.size()) {
+    if (!regionManager.isInitialRootScanComplete() ||
+      regionManager.numMetaRegions() != regionManager.numOnlineMetaRegions()) {
       return false;
     }
     LOG.info("all meta regions scanned");
@@ -141,8 +144,8 @@ class MetaScanner extends BaseScanner {
    */
   synchronized boolean waitForMetaRegionsOrClose() {
     while (!master.closed.get()) {
-      if (master.rootScanned &&
-          master.numberOfMetaRegions.get() == master.onlineMetaRegions.size()) {
+      if (regionManager.isInitialRootScanComplete() && 
+        regionManager.numMetaRegions() == regionManager.numOnlineMetaRegions()) {
         break;
       }
 
@@ -153,5 +156,12 @@ class MetaScanner extends BaseScanner {
       }
     }
     return master.closed.get();
+  }
+  
+  /**
+   * Add another meta region to scan to the queue.
+   */ 
+  void addMetaRegionToScan(MetaRegion m) throws InterruptedException {
+    metaRegionsToScan.add(m);
   }
 }
