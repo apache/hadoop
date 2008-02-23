@@ -50,8 +50,6 @@ public class Leases extends Thread {
   private volatile DelayQueue<Lease> leaseQueue = new DelayQueue<Lease>();
 
   protected final Map<String, Lease> leases = new HashMap<String, Lease>();
-  protected final Map<String, LeaseListener> listeners =
-    new HashMap<String, LeaseListener>();
   private volatile boolean stopRequested = false;
 
   /**
@@ -84,17 +82,14 @@ public class Leases extends Thread {
         continue;
       }
       // A lease expired
-      LeaseListener listener = null;
       synchronized (leaseQueue) {
-        String leaseName = lease.getLeaseName();
-        leases.remove(leaseName);
-        listener = listeners.remove(leaseName);
-        if (listener == null) {
-          LOG.error("lease listener is null for lease " + leaseName);
+        leases.remove(lease.getLeaseName());
+        if (lease.getListener() == null) {
+          LOG.error("lease listener is null for lease " + lease.getLeaseName());
           continue;
         }
       }
-      listener.leaseExpired();
+      lease.getListener().leaseExpired();
     }
     close();
   }
@@ -120,7 +115,6 @@ public class Leases extends Thread {
     synchronized (leaseQueue) {
       leaseQueue.clear();
       leases.clear();
-      listeners.clear();
       leaseQueue.notifyAll();
     }
     LOG.info(Thread.currentThread().getName() + " closed leases");
@@ -136,14 +130,14 @@ public class Leases extends Thread {
     if (stopRequested) {
       return;
     }
-    Lease lease = new Lease(leaseName, System.currentTimeMillis() + leasePeriod);
+    Lease lease = new Lease(leaseName, listener,
+        System.currentTimeMillis() + leasePeriod);
     synchronized (leaseQueue) {
       if (leases.containsKey(leaseName)) {
         throw new IllegalStateException("lease '" + leaseName +
             "' already exists");
       }
       leases.put(leaseName, lease);
-      listeners.put(leaseName, listener);
       leaseQueue.add(lease);
     }
   }
@@ -179,23 +173,29 @@ public class Leases extends Thread {
             "' does not exist");
       }
       leaseQueue.remove(lease);
-      listeners.remove(leaseName);
     }
   }
 
   /** This class tracks a single Lease. */
   private static class Lease implements Delayed {
     private final String leaseName;
+    private final LeaseListener listener;
     private long expirationTime;
 
-    Lease(final String leaseName, long expirationTime) {
+    Lease(final String leaseName, LeaseListener listener, long expirationTime) {
       this.leaseName = leaseName;
+      this.listener = listener;
       this.expirationTime = expirationTime;
     }
 
     /** @return the lease name */
     public String getLeaseName() {
       return leaseName;
+    }
+    
+    /** @return listener */
+    public LeaseListener getListener() {
+      return this.listener;
     }
 
     /** {@inheritDoc} */
@@ -219,16 +219,9 @@ public class Leases extends Thread {
     /** {@inheritDoc} */
     public int compareTo(Delayed o) {
       long delta = this.getDelay(TimeUnit.MILLISECONDS) -
-      o.getDelay(TimeUnit.MILLISECONDS);
+        o.getDelay(TimeUnit.MILLISECONDS);
 
-      int value = 0;
-      if (delta > 0) {
-        value = 1;
-
-      } else if (delta < 0) {
-        value = -1;
-      }
-      return value;
+      return this.equals(o) ? 0 : (delta > 0 ? 1 : -1);
     }
 
     /** @param expirationTime the expirationTime to set */

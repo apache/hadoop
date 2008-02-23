@@ -59,7 +59,8 @@ Hbase Change Log
    HBASE-414   Move client classes into client package
    HBASE-79    When HBase needs to be migrated, it should display a message on
                stdout, not just in the logs
-   
+   HBASE-461   Simplify leases.
+
 Branch 0.1
 
   INCOMPATIBLE CHANGES
