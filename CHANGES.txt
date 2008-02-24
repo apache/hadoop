@@ -61,6 +61,9 @@ Hbase Change Log
    HBASE-79    When HBase needs to be migrated, it should display a message on
                stdout, not just in the logs
    HBASE-461   Simplify leases.
+   HBASE-419   Move RegionServer and related classes into regionserver package
+   HBASE-457   Factor Master into Master, RegionManager, and ServerManager
+   HBASE-464   HBASE-419 introduced javadoc errors
 
 Branch 0.1
 

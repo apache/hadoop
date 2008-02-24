@@ -200,7 +200,7 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
    * @return true if a match was found
    * @throws IOException
    * 
-   * @see org.apache.hadoop.hbase.HScannerInterface#next(org.apache.hadoop.hbase.HStoreKey, java.util.SortedMap)
+   * @see org.apache.hadoop.hbase.HScannerInterface#next(org.apache.hadoop.hbase.regionserver.HStoreKey, java.util.SortedMap)
    */
   public boolean next(HStoreKey key, SortedMap<Text, byte []> results)
   throws IOException {

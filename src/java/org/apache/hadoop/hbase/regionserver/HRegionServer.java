@@ -987,7 +987,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /**
    * Sets a flag that will cause all the HRegionServer threads to shut down
-   * in an orderly fashion.  Used by unit tests and called by {@link Flusher}
+   * in an orderly fashion.  Used by unit tests and called by Flusher
    * if it judges server needs to be restarted.
    */
   public synchronized void stop() {

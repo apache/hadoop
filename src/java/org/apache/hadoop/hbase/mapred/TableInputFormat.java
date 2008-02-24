@@ -53,7 +53,7 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
 
   /**
    * space delimited list of columns 
-   * @see org.apache.hadoop.hbase.HAbstractScanner for column name wildcards
+   * @see org.apache.hadoop.hbase.regionserver.HAbstractScanner for column name wildcards
    */
   public static final String COLUMN_LIST = "hbase.mapred.tablecolumns";
   

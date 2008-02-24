@@ -41,7 +41,7 @@ public class IdentityTableMap extends TableMap<Text, MapWritable> {
   /**
    * Pass the key, value to reduce
    *
-   * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.io.MapWritable, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
+   * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.regionserver.HStoreKey, org.apache.hadoop.io.MapWritable, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
    */
   @Override
   public void map(HStoreKey key, MapWritable value,

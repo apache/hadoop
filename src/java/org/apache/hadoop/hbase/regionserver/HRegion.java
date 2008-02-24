@@ -707,7 +707,7 @@ public class HRegion implements HConstants {
   /**
    * Only do a compaction if it is necessary
    * 
-   * @return
+   * @return whether or not there was a compaction
    * @throws IOException
    */
   public boolean compactIfNeeded() throws IOException {
