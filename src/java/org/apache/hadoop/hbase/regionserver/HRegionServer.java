@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -66,8 +66,27 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.hbase.master.HMasterRegionInterface;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.Leases;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.RegionServerRunningException;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.HScannerInterface;
+import org.apache.hadoop.hbase.LeaseListener;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.DroppedSnapshotException;
+import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.LocalHBaseCluster;
+
 import org.apache.hadoop.hbase.client.HTable;
+
+import org.apache.hadoop.hbase.master.HMasterRegionInterface;
 
 /**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
@@ -971,7 +990,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * in an orderly fashion.  Used by unit tests and called by {@link Flusher}
    * if it judges server needs to be restarted.
    */
-  synchronized void stop() {
+  public synchronized void stop() {
     this.stopRequested.set(true);
     notifyAll();                        // Wakes run() if it is sleeping
   }
@@ -982,7 +1001,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Used unit testing and on catastrophic events such as HDFS is yanked out
    * from under hbase or we OOME.
    */
-  synchronized void abort() {
+  public synchronized void abort() {
     this.abortRequested = true;
     stop();
   }
@@ -1569,6 +1588,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   public HServerInfo getServerInfo() {
     return this.serverInfo;
+  }
+  
+  public InfoServer getInfoServer() {
+    return infoServer;
   }
 
   /**

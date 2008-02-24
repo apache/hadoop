@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.regionserver.HRegionInterface;
 
 /**
  * HConstants holds a bunch of HBase-related constants

@@ -17,37 +17,45 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
+import org.apache.commons.logging.*;
+import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.StaticTestEnvironment;
 
 /**
- * Test the functionality of deleteFamily.
+ * Test the functionality of deleteAll.
  */
-public class TestDeleteFamily extends HBaseTestCase {
-  static final Log LOG = LogFactory.getLog(TestDeleteFamily.class);
+public class TestDeleteAll extends HBaseTestCase {
+  static final Log LOG = LogFactory.getLog(TestDeleteAll.class);
   private MiniDFSCluster miniHdfs;
-
+  
   @Override
   protected void setUp() throws Exception {
     super.setUp();
-    this.miniHdfs = new MiniDFSCluster(this.conf, 1, true, null);
-    // Set the hbase.rootdir to be the home directory in mini dfs.
-    this.conf.set(HConstants.HBASE_DIR,
-      this.miniHdfs.getFileSystem().getHomeDirectory().toString());
+    try {
+      this.miniHdfs = new MiniDFSCluster(this.conf, 1, true, null);
+      // Set the hbase.rootdir to be the home directory in mini dfs.
+      this.conf.set(HConstants.HBASE_DIR,
+        this.miniHdfs.getFileSystem().getHomeDirectory().toString());
+    } catch (Exception e) {
+      LOG.fatal("error starting MiniDFSCluster", e);
+      throw e;
+    }
   }
   
   /**
-   * Tests for HADOOP-2384.
+   * Tests for HADOOP-1550.
    * @throws Exception
    */
-  public void testDeleteFamily() throws Exception {
+  public void testDeleteAll() throws Exception {
     HRegion region = null;
     HRegionIncommon region_incommon = null;
     try {
@@ -83,56 +91,51 @@ public class TestDeleteFamily extends HBaseTestCase {
 
     Text colA = new Text(COLUMNS[0].toString() + "a");
     Text colB = new Text(COLUMNS[0].toString() + "b");
-    Text colC = new Text(COLUMNS[1].toString() + "c");
-          
+    Text colC = new Text(COLUMNS[0].toString() + "c");
+    Text colD = new Text(COLUMNS[0].toString());
+    
     long lock = region_incommon.startUpdate(row);
     region_incommon.put(lock, colA, cellData(0, flush).getBytes());
     region_incommon.put(lock, colB, cellData(0, flush).getBytes());
     region_incommon.put(lock, colC, cellData(0, flush).getBytes());      
+    region_incommon.put(lock, colD, cellData(0, flush).getBytes());      
     region_incommon.commit(lock, t0);
 
     lock = region_incommon.startUpdate(row);
     region_incommon.put(lock, colA, cellData(1, flush).getBytes());
     region_incommon.put(lock, colB, cellData(1, flush).getBytes());
     region_incommon.put(lock, colC, cellData(1, flush).getBytes());      
+    region_incommon.put(lock, colD, cellData(1, flush).getBytes());      
     region_incommon.commit(lock, t1);
     
     lock = region_incommon.startUpdate(row);
     region_incommon.put(lock, colA, cellData(2, flush).getBytes());
     region_incommon.put(lock, colB, cellData(2, flush).getBytes());
     region_incommon.put(lock, colC, cellData(2, flush).getBytes());      
+    region_incommon.put(lock, colD, cellData(2, flush).getBytes());      
     region_incommon.commit(lock, t2);
 
     if (flush) {region_incommon.flushcache();}
 
-    // call delete family at a timestamp, make sure only the most recent stuff
-    // for column c is left behind
-    region.deleteFamily(row, COLUMNS[0], t1);
-    if (flush) {region_incommon.flushcache();}
-    // most recent for A,B,C should be fine
-    // A,B at older timestamps should be gone
-    // C should be fine for older timestamps
+    // call delete all at a timestamp, make sure only the most recent stuff is left behind
+    region.deleteAll(row, t1);
+    if (flush) {region_incommon.flushcache();}    
     assertCellValueEquals(region, row, colA, t0, cellData(0, flush));
-    assertCellValueEquals(region, row, colA, t1, null);    
+    assertCellValueEquals(region, row, colA, t1, null);
     assertCellValueEquals(region, row, colA, t2, null);
-    assertCellValueEquals(region, row, colB, t0, cellData(0, flush));
-    assertCellValueEquals(region, row, colB, t1, null);
-    assertCellValueEquals(region, row, colB, t2, null);    
-    assertCellValueEquals(region, row, colC, t0, cellData(0, flush));
-    assertCellValueEquals(region, row, colC, t1, cellData(1, flush));
-    assertCellValueEquals(region, row, colC, t2, cellData(2, flush));        
+    assertCellValueEquals(region, row, colD, t0, cellData(0, flush));
+    assertCellValueEquals(region, row, colD, t1, null);
+    assertCellValueEquals(region, row, colD, t2, null);
 
-    // call delete family w/o a timestamp, make sure nothing is left except for
-    // column C.
-    region.deleteFamily(row, COLUMNS[0], HConstants.LATEST_TIMESTAMP);
-    if (flush) {region_incommon.flushcache();}
-    // A,B for latest timestamp should be gone
-    // C should still be fine
+    // call delete all w/o a timestamp, make sure nothing is left.
+    region.deleteAll(row, HConstants.LATEST_TIMESTAMP);
+    if (flush) {region_incommon.flushcache();}    
     assertCellValueEquals(region, row, colA, t0, null);
-    assertCellValueEquals(region, row, colB, t0, null);
-    assertCellValueEquals(region, row, colC, t0, cellData(0, flush));
-    assertCellValueEquals(region, row, colC, t1, cellData(1, flush));
-    assertCellValueEquals(region, row, colC, t2, cellData(2, flush));        
+    assertCellValueEquals(region, row, colA, t1, null);
+    assertCellValueEquals(region, row, colA, t2, null);
+    assertCellValueEquals(region, row, colD, t0, null);
+    assertCellValueEquals(region, row, colD, t1, null);
+    assertCellValueEquals(region, row, colD, t2, null);
     
   }
   
@@ -160,7 +163,7 @@ public class TestDeleteFamily extends HBaseTestCase {
   @Override
   protected void tearDown() throws Exception {
     if (this.miniHdfs != null) {
-      this.miniHdfs.shutdown();
+      StaticTestEnvironment.shutdownDfs(this.miniHdfs);
     }
     super.tearDown();
   }

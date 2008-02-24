@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
 
+import org.apache.hadoop.hbase.regionserver.HRegion;
+
 /**
  * Abstract base class for test cases. Performs all static initialization
  */
@@ -157,7 +159,7 @@ public abstract class HBaseTestCase extends TestCase {
   
   protected HRegion openClosedRegion(final HRegion closedRegion)
   throws IOException {
-    return new HRegion(closedRegion.basedir, closedRegion.getLog(),
+    return new HRegion(closedRegion.getBaseDir(), closedRegion.getLog(),
       closedRegion.getFilesystem(), closedRegion.getConf(),
       closedRegion.getRegionInfo(), null, null);
   }

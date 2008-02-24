@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -50,10 +50,18 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.hbase.BloomFilterDescriptor;
 import org.onelab.filter.BloomFilter;
 import org.onelab.filter.CountingBloomFilter;
 import org.onelab.filter.Filter;
 import org.onelab.filter.RetouchedBloomFilter;
+
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
+
 
 /**
  * HStore maintains a bunch of data files.  It is responsible for maintaining 
@@ -932,7 +940,7 @@ public class HStore implements HConstants {
       }
       
       BloomFilterDescriptor.BloomFilterType type =
-        family.getBloomFilter().filterType;
+        family.getBloomFilter().getType();
 
       switch(type) {
       
@@ -964,25 +972,25 @@ public class HStore implements HConstants {
       }
 
       BloomFilterDescriptor.BloomFilterType type =
-        family.getBloomFilter().filterType;
+        family.getBloomFilter().getType();
 
       switch(type) {
       
       case BLOOMFILTER:
-        bloomFilter = new BloomFilter(family.getBloomFilter().vectorSize,
-            family.getBloomFilter().nbHash);
+        bloomFilter = new BloomFilter(family.getBloomFilter().getVectorSize(),
+            family.getBloomFilter().getNbHash());
         break;
         
       case COUNTING_BLOOMFILTER:
         bloomFilter =
-          new CountingBloomFilter(family.getBloomFilter().vectorSize,
-            family.getBloomFilter().nbHash);
+          new CountingBloomFilter(family.getBloomFilter().getVectorSize(),
+            family.getBloomFilter().getNbHash());
         break;
         
       case RETOUCHED_BLOOMFILTER:
         bloomFilter =
-          new RetouchedBloomFilter(family.getBloomFilter().vectorSize,
-            family.getBloomFilter().nbHash);
+          new RetouchedBloomFilter(family.getBloomFilter().getVectorSize(),
+            family.getBloomFilter().getNbHash());
       }
     }
     return bloomFilter;
@@ -1961,37 +1969,6 @@ public class HStore implements HConstants {
     }
     // otherwise, we want to match on row and column
     return target.matchesRowCol(origin);
-  }
-  
-  /*
-   * Data structure to hold result of a look at store file sizes.
-   */
-  static class HStoreSize {
-    final long aggregate;
-    final long largest;
-    boolean splitable;
-    
-    HStoreSize(final long a, final long l, final boolean s) {
-      this.aggregate = a;
-      this.largest = l;
-      this.splitable = s;
-    }
-    
-    long getAggregate() {
-      return this.aggregate;
-    }
-    
-    long getLargest() {
-      return this.largest;
-    }
-    
-    boolean isSplitable() {
-      return this.splitable;
-    }
-    
-    void setSplitable(final boolean s) {
-      this.splitable = s;
-    }
   }
   
   /**

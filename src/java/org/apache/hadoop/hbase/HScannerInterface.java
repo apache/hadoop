@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.SortedMap;
 
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.regionserver.HStoreKey;
 
 /**
  * HScannerInterface iterates through a set of rows.  It's implemented by

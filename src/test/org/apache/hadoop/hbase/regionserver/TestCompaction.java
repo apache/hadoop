@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
@@ -26,8 +26,13 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.Text;
+
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.StaticTestEnvironment;
 
 /**
  * Test compactions

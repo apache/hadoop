@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
@@ -30,7 +30,10 @@ import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.hbase.HBaseTestCase;
 
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.StaticTestEnvironment;
 /**
  * Test HStoreFile
  */

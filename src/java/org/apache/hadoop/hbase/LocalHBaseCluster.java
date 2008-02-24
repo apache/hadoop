@@ -32,6 +32,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+
 /**
  * This class creates a single process HBase cluster. One thread is created for
  * a master and one per region server.
@@ -159,7 +161,7 @@ public class LocalHBaseCluster implements HConstants {
     while (regionServerThread.isAlive()) {
       try {
         LOG.info("Waiting on " +
-            regionServerThread.getRegionServer().serverInfo.toString());
+          regionServerThread.getRegionServer().getServerInfo().toString());
         regionServerThread.join();
       } catch (InterruptedException e) {
         e.printStackTrace();

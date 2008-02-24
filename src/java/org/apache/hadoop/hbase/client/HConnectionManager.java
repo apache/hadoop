@@ -42,19 +42,18 @@ import org.apache.hadoop.hbase.util.SoftSortedMap;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInterface;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
-import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.HRegionInterface;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.NoServerForRegionException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+
+import org.apache.hadoop.hbase.regionserver.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.HStoreKey;
 
 /**
  * A non-instantiable class that manages connections to multiple tables in

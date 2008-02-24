@@ -63,7 +63,7 @@ public class TestInfoServers extends HBaseTestCase {
       assertHasExpectedContent(new URL("http://localhost:" + port +
         "/index.html"), "Master");
       port = miniHbase.getRegionThreads().get(0).getRegionServer().
-        infoServer.getPort();
+        getInfoServer().getPort();
       assertHasExpectedContent(new URL("http://localhost:" + port +
         "/index.html"), "Region Server");
     } finally {

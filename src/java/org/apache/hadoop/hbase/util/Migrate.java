@@ -56,13 +56,14 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HLog;
-import org.apache.hadoop.hbase.HRegion;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HScannerInterface;
-import org.apache.hadoop.hbase.HStore;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+
+import org.apache.hadoop.hbase.regionserver.HLog;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreKey;
 
 /**
  * Perform a file system upgrade to convert older file layouts to that

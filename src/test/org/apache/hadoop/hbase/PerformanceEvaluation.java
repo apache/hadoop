@@ -49,6 +49,8 @@ import org.apache.log4j.Logger;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 
+import org.apache.hadoop.hbase.regionserver.HStoreKey;
+
 /**
  * Script used evaluating HBase performance and scalability.  Runs a HBase
  * client that steps through one of a set of hardcoded tests or 'experiments'

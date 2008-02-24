@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -27,8 +27,17 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.HBaseTestCase;
 
 import org.apache.hadoop.hbase.util.Writables;
+
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.StaticTestEnvironment;
+
 
 /** Test case for get */
 public class TestGet extends HBaseTestCase {

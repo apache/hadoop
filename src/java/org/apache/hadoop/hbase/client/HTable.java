@@ -47,14 +47,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HScannerInterface;
-import org.apache.hadoop.hbase.HRegionInterface;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.HRegionInterface;
-import org.apache.hadoop.hbase.HStoreKey;
+
+import org.apache.hadoop.hbase.regionserver.HStoreKey;
+import org.apache.hadoop.hbase.regionserver.HRegionInterface;
 
 /**
  * Used to communicate with a single HBase table

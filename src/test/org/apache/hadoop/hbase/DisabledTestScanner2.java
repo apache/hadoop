@@ -46,6 +46,10 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStoreKey;
+import org.apache.hadoop.hbase.regionserver.HRegionInterface;
+
 /**
  * Additional scanner tests.
  * {@link TestScanner} does a custom setup/takedown not conducive

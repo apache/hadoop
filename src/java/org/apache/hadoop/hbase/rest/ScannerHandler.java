@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HScannerInterface;
-import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.regionserver.HStoreKey;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.io.Text;
 import org.mortbay.servlet.MultiPartResponse;

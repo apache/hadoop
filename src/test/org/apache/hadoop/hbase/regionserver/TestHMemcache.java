@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -27,6 +27,8 @@ import java.util.TreeMap;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.io.Text;
+
+import org.apache.hadoop.hbase.HConstants;
 
 /** memcache test case */
 public class TestHMemcache extends TestCase {

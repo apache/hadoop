@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -46,6 +46,15 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.StringUtils;
+
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HScannerInterface;
+import org.apache.hadoop.hbase.DroppedSnapshotException;
+import org.apache.hadoop.hbase.WrongRegionException;
 
 /**
  * HRegion stores data for a certain region of a table.  It stores all columns
@@ -96,7 +105,7 @@ public class HRegion implements HConstants {
    * HRegionServer. Returns a brand-new active HRegion, also
    * running on the current HRegionServer.
    */
-  static HRegion closeAndMerge(final HRegion srcA, final HRegion srcB)
+  public static HRegion closeAndMerge(final HRegion srcA, final HRegion srcB)
   throws IOException {
 
     HRegion a = srcA;
@@ -482,7 +491,7 @@ public class HRegion implements HConstants {
   }
 
   /** @return region id */
-  long getRegionId() {
+  public long getRegionId() {
     return this.regionInfo.getRegionId();
   }
 
@@ -492,7 +501,7 @@ public class HRegion implements HConstants {
   }
 
   /** @return HTableDescriptor for this region */
-  HTableDescriptor getTableDesc() {
+  public HTableDescriptor getTableDesc() {
     return this.regionInfo.getTableDesc();
   }
 
@@ -502,17 +511,17 @@ public class HRegion implements HConstants {
   }
 
   /** @return Configuration object */
-  HBaseConfiguration getConf() {
+  public HBaseConfiguration getConf() {
     return this.conf;
   }
 
   /** @return region directory Path */
-  Path getRegionDir() {
+  public Path getRegionDir() {
     return this.regiondir;
   }
 
   /** @return FileSystem being used by this region */
-  FileSystem getFilesystem() {
+  public FileSystem getFilesystem() {
     return this.fs;
   }
 
@@ -533,11 +542,11 @@ public class HRegion implements HConstants {
    * splitable or not (Its not splitable if region has a store that has a
    * reference store file).
    */
-  HStore.HStoreSize largestHStore(Text midkey) {
-    HStore.HStoreSize biggest = null;
+  public HStoreSize largestHStore(Text midkey) {
+    HStoreSize biggest = null;
     boolean splitable = true;
     for (HStore h: stores.values()) {
-      HStore.HStoreSize size = h.size(midkey);
+      HStoreSize size = h.size(midkey);
       // If we came across a reference down in the store, then propagate
       // fact that region is not splitable.
       if (splitable) {
@@ -670,7 +679,7 @@ public class HRegion implements HConstants {
    * Check it for a midKey value on return.
    */
   boolean needsSplit(Text midKey) {
-    HStore.HStoreSize biggest = largestHStore(midKey);
+    HStoreSize biggest = largestHStore(midKey);
     if (biggest == null || midKey.getLength() == 0 || 
       (midKey.equals(getStartKey()) && midKey.equals(getEndKey())) ) {
       return false;
@@ -701,7 +710,7 @@ public class HRegion implements HConstants {
    * @return
    * @throws IOException
    */
-  boolean compactIfNeeded() throws IOException {
+  public boolean compactIfNeeded() throws IOException {
     boolean needsCompaction = false;
     for (HStore store: stores.values()) {
       if (store.needsCompaction()) {
@@ -761,7 +770,7 @@ public class HRegion implements HConstants {
    * conflicts with a region split, and that cannot happen because the region
    * server does them sequentially and not in parallel.
    */
-  boolean compactStores() throws IOException {
+  public boolean compactStores() throws IOException {
     if (this.closed.get()) {
       return false;
     }
@@ -821,7 +830,7 @@ public class HRegion implements HConstants {
    * @throws DroppedSnapshotException Thrown when replay of hlog is required
    * because a Snapshot was not properly persisted.
    */
-  boolean flushcache() throws IOException {
+  public boolean flushcache() throws IOException {
     if (this.closed.get()) {
       return false;
     }
@@ -1603,7 +1612,7 @@ public class HRegion implements HConstants {
     return regionInfo.getRegionName().toString();
   }
   
-  private Path getBaseDir() {
+  public Path getBaseDir() {
     return this.basedir;
   }
 
@@ -1903,7 +1912,7 @@ public class HRegion implements HConstants {
    * @return Path of HRegion directory
    * @see HRegionInfo#encodeRegionName(Text)
    */
-  static Path getRegionDir(final Path tabledir, final String name) {
+  public static Path getRegionDir(final Path tabledir, final String name) {
     return new Path(tabledir, name);
   }
   

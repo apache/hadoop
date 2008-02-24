@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 

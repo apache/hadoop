@@ -23,12 +23,13 @@ import java.io.IOException;
 import java.util.HashSet;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HRegion;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionInterface;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.io.Text;
+
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionInterface;
 
 /** 
  * Instantiated to delete a table

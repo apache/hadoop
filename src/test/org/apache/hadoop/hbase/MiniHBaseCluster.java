@@ -30,6 +30,8 @@ import org.apache.log4j.Logger;
 
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 
 /**
  * This class creates a single process HBase cluster. One thread is created for
@@ -196,7 +198,7 @@ public class MiniHBaseCluster implements HConstants {
   public void abortRegionServer(int serverNumber) {
     HRegionServer server =
       this.hbaseCluster.getRegionServers().get(serverNumber).getRegionServer();
-    LOG.info("Aborting " + server.serverInfo.toString());
+    LOG.info("Aborting " + server.getServerInfo().toString());
     server.abort();
   }
 
@@ -262,10 +264,10 @@ public class MiniHBaseCluster implements HConstants {
    * Call flushCache on all regions on all participating regionservers.
    * @throws IOException
    */
-  void flushcache() throws IOException {
+  public void flushcache() throws IOException {
     for (LocalHBaseCluster.RegionServerThread t:
         this.hbaseCluster.getRegionServers()) {
-      for(HRegion r: t.getRegionServer().onlineRegions.values() ) {
+      for(HRegion r: t.getRegionServer().getOnlineRegions().values() ) {
         r.flushcache();
       }
     }

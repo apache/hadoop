@@ -28,6 +28,8 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Logger;
 
+import org.apache.hadoop.hbase.regionserver.HRegion;
+
 /** Abstract base class for merge tests */
 public abstract class AbstractMergeTestBase extends HBaseTestCase {
   static final Logger LOG =

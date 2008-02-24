@@ -31,13 +31,14 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionInterface;
-import org.apache.hadoop.hbase.HRegion;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.HLog;
+
+import org.apache.hadoop.hbase.regionserver.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HLog;
 
 /** 
  * Instantiated when a server's lease has expired, meaning it has crashed.

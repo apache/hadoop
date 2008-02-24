@@ -23,9 +23,9 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionInterface;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.HRegionInterface;
 
 /** Instantiated to remove a column family from a table */
 class DeleteColumn extends ColumnOperation {

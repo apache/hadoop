@@ -27,6 +27,7 @@ import java.util.TreeMap;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.regionserver.HStoreKey;
 
 /**
  * Test HBase Master and Region servers, client API 

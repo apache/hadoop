@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -27,6 +27,13 @@ import java.util.TreeMap;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HRegionInfo;
+
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HScannerInterface;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.StaticTestEnvironment;
 
 /**
  * Test of a long-lived scanner validating as we go.

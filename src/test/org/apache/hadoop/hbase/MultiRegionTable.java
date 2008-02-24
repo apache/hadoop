@@ -33,6 +33,10 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
 
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.HStoreKey;
+
 /**
  * Utility class to build a table of multiple regions.
  */
@@ -99,7 +103,7 @@ public class MultiRegionTable extends HBaseTestCase {
         continue;
       }
       LOG.info("Region location: " + hri);
-      r = server.onlineRegions.get(hri.getRegionName());
+      r = server.getOnlineRegions().get(hri.getRegionName());
       if (r != null) {
         break;
       }
@@ -335,7 +339,7 @@ public class MultiRegionTable extends HBaseTestCase {
     LOG.info("Starting compaction");
     for (LocalHBaseCluster.RegionServerThread thread:
         cluster.getRegionThreads()) {
-      SortedMap<Text, HRegion> regions = thread.getRegionServer().onlineRegions;
+      SortedMap<Text, HRegion> regions = thread.getRegionServer().getOnlineRegions();
       
       // Retry if ConcurrentModification... alternative of sync'ing is not
       // worth it for sake of unit test.

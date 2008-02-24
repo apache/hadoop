@@ -32,8 +32,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.HRegion;
-import org.apache.hadoop.hbase.HRegionInterface;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.io.Text;
@@ -44,10 +42,14 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HStoreFile;
-import org.apache.hadoop.hbase.HStore;
-import org.apache.hadoop.hbase.HLog;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HLog;
+import org.apache.hadoop.hbase.regionserver.HRegionInterface;
+
 
 /**
  * Base HRegion scanner class. Holds utilty common to <code>ROOT</code> and

@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.HRegionInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.util.Writables;

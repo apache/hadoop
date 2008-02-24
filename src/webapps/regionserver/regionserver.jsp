@@ -2,8 +2,8 @@
   import="java.util.*"
   import="org.apache.hadoop.io.Text"
   import="org.apache.hadoop.util.VersionInfo"
-  import="org.apache.hadoop.hbase.HRegionServer"
-  import="org.apache.hadoop.hbase.HRegion"
+  import="org.apache.hadoop.hbase.regionserver.HRegionServer"
+  import="org.apache.hadoop.hbase.regionserver.HRegion"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HServerInfo"
   import="org.apache.hadoop.hbase.HRegionInfo" %><%

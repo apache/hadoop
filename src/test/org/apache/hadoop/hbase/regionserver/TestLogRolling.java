@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +28,13 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.StaticTestEnvironment;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 
 /**
  * Test log deletion as logs are rolled.

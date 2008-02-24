@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -46,6 +46,8 @@ import org.apache.hadoop.io.WritableComparable;
 import org.onelab.filter.Filter;
 import org.onelab.filter.Key;
 
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 
 /**
  * A HStore data file.  HStores usually have one or more of these files.  They
