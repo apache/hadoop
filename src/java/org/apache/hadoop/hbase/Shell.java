@@ -115,10 +115,10 @@ public class Shell {
 
         long end = System.currentTimeMillis();
         if (rs != null) {
-          if (rs != null && rs.getType() > -1)
+          if (rs != null && rs.getType() > Constants.ERROR_CODE)
             System.out.println(rs.getMsg() +
               executeTime((rs.getType() == 1), start, end));
-          else if (rs.getType() == -9)           
+          else if (rs.getType() == Constants.ERROR_CODE)           
             System.out.println(rs.getMsg());
         }
         queryStr = new StringBuilder();
