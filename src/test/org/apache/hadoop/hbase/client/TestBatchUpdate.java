@@ -25,10 +25,10 @@ import java.util.Map;
 import java.util.TreeMap;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HScannerInterface;
-import org.apache.hadoop.hbase.regionserver.HStoreKey;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 
 /**

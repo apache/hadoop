@@ -47,12 +47,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HScannerInterface;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.NotServingRegionException;
 
-import org.apache.hadoop.hbase.regionserver.HStoreKey;
 import org.apache.hadoop.hbase.regionserver.HRegionInterface;
 
 /**
@@ -93,6 +93,7 @@ public class HTable implements HConstants {
    * Find region location hosting passed row using cached info
    * @param row Row to find.
    * @return Location of row.
+   * @throws IOException
    */
   public HRegionLocation getRegionLocation(Text row) throws IOException {
     return this.connection.locateRegion(this.tableName, row);
@@ -744,6 +745,8 @@ public class HTable implements HConstants {
   
   /**
    * Commit a BatchUpdate to the table.
+   * @param batchUpdate
+   * @throws IOException
    */ 
   public synchronized void commit(final BatchUpdate batchUpdate) 
   throws IOException {
@@ -1024,6 +1027,9 @@ public class HTable implements HConstants {
     return null;    
   }
   
+  /**
+   * Does nothing anymore
+   */
   @Deprecated
   public void close() {
     // do nothing...

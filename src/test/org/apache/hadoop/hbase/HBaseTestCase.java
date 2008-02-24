@@ -330,6 +330,7 @@ public abstract class HBaseTestCase extends TestCase {
   public static interface Incommon {
     /**
      * @param row
+     * @return update id
      * @throws IOException
      */
     public long startUpdate(Text row) throws IOException;    

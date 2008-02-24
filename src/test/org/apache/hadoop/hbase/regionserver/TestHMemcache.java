@@ -29,6 +29,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HStoreKey;
 
 /** memcache test case */
 public class TestHMemcache extends TestCase {

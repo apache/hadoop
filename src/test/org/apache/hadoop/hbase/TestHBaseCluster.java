@@ -27,7 +27,7 @@ import java.util.TreeMap;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.regionserver.HStoreKey;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
  * Test HBase Master and Region servers, client API 
@@ -97,12 +97,12 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     // Write out a bunch of values
 
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
-      long writeid = table.startUpdate(new Text("row_" + k));
-      table.put(writeid, CONTENTS_BASIC,
+      BatchUpdate b = new BatchUpdate(new Text("row_" + k));
+      b.put(CONTENTS_BASIC,
           (CONTENTSTR + k).getBytes(HConstants.UTF8_ENCODING));
-      table.put(writeid, new Text(ANCHORNUM + k),
+      b.put(new Text(ANCHORNUM + k),
           (ANCHORSTR + k).getBytes(HConstants.UTF8_ENCODING));
-      table.commit(writeid);
+      table.commit(b);
     }
     System.out.println("Write " + NUM_VALS + " rows. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));

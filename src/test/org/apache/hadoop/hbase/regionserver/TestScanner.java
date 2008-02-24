@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
 
 /**

@@ -30,8 +30,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HScannerInterface;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
 
 
 /**
@@ -148,7 +148,10 @@ public class TestGet2 extends HBaseTestCase {
     }
   }
   
-  /** For HADOOP-2443 */
+  /**
+   * For HADOOP-2443
+   * @throws IOException
+   */
   public void testGetClosestRowBefore() throws IOException{
 
     HRegion region = null;
@@ -156,7 +159,6 @@ public class TestGet2 extends HBaseTestCase {
 
     try {
       HTableDescriptor htd = createTableDescriptor(getName());
-      HRegionInfo hri = new HRegionInfo(htd, null, null);
       region = createNewHRegion(htd, null, null);
       region_incommon = new HRegionIncommon(region);
      

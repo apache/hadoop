@@ -64,6 +64,7 @@ Hbase Change Log
    HBASE-419   Move RegionServer and related classes into regionserver package
    HBASE-457   Factor Master into Master, RegionManager, and ServerManager
    HBASE-464   HBASE-419 introduced javadoc errors
+   HBASE-468   Move HStoreKey back to o.a.h.h
 
 Branch 0.1
 

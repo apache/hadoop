@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.RegionServerRunningException;
@@ -1589,7 +1590,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   public HServerInfo getServerInfo() {
     return this.serverInfo;
   }
-  
+
+  /** @return the info server */
   public InfoServer getInfoServer() {
     return infoServer;
   }

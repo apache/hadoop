@@ -33,6 +33,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.hbase.HBaseTestCase;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
 /**
  * Test HStoreFile

@@ -31,6 +31,7 @@ import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
 

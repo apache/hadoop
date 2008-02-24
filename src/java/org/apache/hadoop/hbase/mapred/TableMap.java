@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.regionserver.HStoreKey;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -37,6 +37,8 @@ import org.apache.hadoop.mapred.Reporter;
  * Scan an HBase table to sort by a specified sort column.
  * If the column does not exist, the record is not passed to Reduce.
  *
+ * @param <K> WritableComparable key class
+ * @param <V> Writable value class
  */
 @SuppressWarnings("unchecked")
 public abstract class TableMap<K extends WritableComparable, V extends Writable>

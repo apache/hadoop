@@ -50,6 +50,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HScannerInterface;
@@ -104,6 +105,11 @@ public class HRegion implements HConstants {
    * Merge two HRegions.  They must be available on the current
    * HRegionServer. Returns a brand-new active HRegion, also
    * running on the current HRegionServer.
+   * 
+   * @param srcA
+   * @param srcB
+   * @return new merged HRegion
+   * @throws IOException
    */
   public static HRegion closeAndMerge(final HRegion srcA, final HRegion srcB)
   throws IOException {
@@ -538,6 +544,7 @@ public class HRegion implements HConstants {
   //////////////////////////////////////////////////////////////////////////////
 
   /**
+   * @param midkey
    * @return returns size of largest HStore.  Also returns whether store is
    * splitable or not (Its not splitable if region has a store that has a
    * reference store file).
@@ -769,6 +776,8 @@ public class HRegion implements HConstants {
    * Note that no locking is necessary at this level because compaction only
    * conflicts with a region split, and that cannot happen because the region
    * server does them sequentially and not in parallel.
+   * 
+   * @throws IOException
    */
   public boolean compactStores() throws IOException {
     if (this.closed.get()) {
@@ -1611,7 +1620,8 @@ public class HRegion implements HConstants {
   public String toString() {
     return regionInfo.getRegionName().toString();
   }
-  
+
+  /** @return Path of region base directory */
   public Path getBaseDir() {
     return this.basedir;
   }

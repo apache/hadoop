@@ -28,6 +28,7 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.MultiRegionTable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;

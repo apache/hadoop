@@ -27,9 +27,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.hbase.regionserver.HStoreKey;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 
 /*

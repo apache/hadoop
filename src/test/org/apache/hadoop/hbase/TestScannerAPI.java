@@ -31,7 +31,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HStoreKey;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /** test the scanner API at all levels */

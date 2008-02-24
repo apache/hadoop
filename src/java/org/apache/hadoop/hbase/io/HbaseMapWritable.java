@@ -34,7 +34,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import org.apache.hadoop.hbase.regionserver.HStoreKey;
+import org.apache.hadoop.hbase.HStoreKey;
 
 /**
  * A Writable Map.
@@ -167,6 +167,7 @@ public class HbaseMapWritable implements Map<Writable, Writable>, Writable,
     return b;
   }
 
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     // Write out the number of entries in the map
     out.writeInt(instance.size());
@@ -180,6 +181,7 @@ public class HbaseMapWritable implements Map<Writable, Writable>, Writable,
     }
   }
 
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     // First clear the map.  Otherwise we will just accumulate
     // entries every time this method is called.

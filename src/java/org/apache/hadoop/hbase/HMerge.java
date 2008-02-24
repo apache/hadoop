@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HStoreKey;
 
 /** 
  * A non-instantiable class that has a static method capable of compacting
@@ -355,7 +354,6 @@ class HMerge implements HConstants {
           oldRegion2
       };
       for(int r = 0; r < regionsToDelete.length; r++) {
-        long lockid = Math.abs(rand.nextLong());
         BatchUpdate b = new BatchUpdate(regionsToDelete[r]);
         b.delete(COL_REGIONINFO);
         b.delete(COL_SERVER);

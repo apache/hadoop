@@ -39,6 +39,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
@@ -60,6 +61,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
 
@@ -221,11 +223,12 @@ public class HStore implements HConstants {
     }
 
     /**
-     * Find the key that matches <i>row</i> exactly, or the one that immediately
-     * preceeds it.
+     * @param row
+     * @param timestamp
+     * @return the key that matches <i>row</i> exactly, or the one that
+     * immediately preceeds it.
      */
-    public Text getRowKeyAtOrBefore(final Text row, long timestamp)
-    throws IOException{
+    public Text getRowKeyAtOrBefore(final Text row, long timestamp) {
       this.lock.readLock().lock();
       
       Text key_memcache = null;
@@ -246,17 +249,17 @@ public class HStore implements HConstants {
           return key_snapshot;
         } else if (key_memcache != null && key_snapshot == null) {
           return key_memcache;
-        } else {
-          // if either is a precise match, return the original row.
-          if ( (key_memcache != null && key_memcache.equals(row)) 
+        } else if ( (key_memcache != null && key_memcache.equals(row)) 
             || (key_snapshot != null && key_snapshot.equals(row)) ) {
-            return row;
-          }
+          // if either is a precise match, return the original row.
+          return row;
+        } else if (key_memcache != null) {
           // no precise matches, so return the one that is closer to the search
           // key (greatest)
           return key_memcache.compareTo(key_snapshot) > 0 ? 
-            key_memcache : key_snapshot;
+              key_memcache : key_snapshot;
         }
+        return null;
       } finally {
         this.lock.readLock().unlock();
       }
@@ -869,10 +872,11 @@ public class HStore implements HConstants {
     }
     // Look first at info files.  If a reference, these contain info we need
     // to create the HStoreFile.
-    Path infofiles[] = fs.listPaths(new Path[] {infodir});
+    FileStatus infofiles[] = fs.listStatus(infodir);
     ArrayList<HStoreFile> results = new ArrayList<HStoreFile>(infofiles.length);
     ArrayList<Path> mapfiles = new ArrayList<Path>(infofiles.length);
-    for (Path p: infofiles) {
+    for (int i = 0; i < infofiles.length; i++) {
+      Path p = infofiles[i].getPath();
       Matcher m = REF_NAME_PARSER.matcher(p.getName());
       /*
        *  *  *  *  *  N O T E  *  *  *  *  *
@@ -912,11 +916,12 @@ public class HStore implements HConstants {
     
     // List paths by experience returns fully qualified names -- at least when
     // running on a mini hdfs cluster.
-    Path datfiles[] = fs.listPaths(new Path[] {mapdir});
+    FileStatus datfiles[] = fs.listStatus(mapdir);
     for (int i = 0; i < datfiles.length; i++) {
+      Path p = datfiles[i].getPath();
       // If does not have sympathetic info file, delete.
-      if (!mapfiles.contains(fs.makeQualified(datfiles[i]))) {
-        fs.delete(datfiles[i]);
+      if (!mapfiles.contains(fs.makeQualified(p))) {
+        fs.delete(p);
       }
     }
     return results;
@@ -1817,8 +1822,11 @@ public class HStore implements HConstants {
   }
   
   /**
-   * Find the key that matches <i>row</i> exactly, or the one that immediately
+   * @return the key that matches <i>row</i> exactly, or the one that immediately
    * preceeds it.
+   * @param row
+   * @param timestamp
+   * @throws IOException
    */
   public Text getRowKeyAtOrBefore(final Text row, final long timestamp)
   throws IOException{

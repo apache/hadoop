@@ -60,6 +60,7 @@ import org.apache.hadoop.ipc.Server;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -80,7 +81,6 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 
 import org.apache.hadoop.hbase.regionserver.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HStoreKey;
 
 /**
  * HMaster is the "master server" for a HBase.

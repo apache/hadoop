@@ -38,7 +38,7 @@ import org.apache.hadoop.mapred.Reporter;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HScannerInterface;
-import org.apache.hadoop.hbase.regionserver.HStoreKey;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.client.HTable;
 
@@ -84,6 +84,7 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
       }
     }
 
+    /** {@inheritDoc} */
     public void close() throws IOException {
       this.m_scanner.close();
     }
@@ -147,6 +148,7 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
 
   }
 
+  /** {@inheritDoc} */
   public RecordReader<HStoreKey, MapWritable> getRecordReader(
       InputSplit split,
       @SuppressWarnings("unused") JobConf job,
@@ -178,6 +180,7 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
     return splits;
   }
 
+  /** {@inheritDoc} */
   public void configure(JobConf job) {
     Path[] tableNames = job.getInputPaths();
     m_tableName = new Text(tableNames[0].getName());
@@ -194,6 +197,7 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
     }
   }
 
+  /** {@inheritDoc} */
   public void validateInput(JobConf job) throws IOException {
     // expecting exactly one path
     Path[] tableNames = job.getInputPaths();

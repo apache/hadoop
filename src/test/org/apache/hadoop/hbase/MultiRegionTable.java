@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.client.HTable;
 
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.HStoreKey;
 
 /**
  * Utility class to build a table of multiple regions.

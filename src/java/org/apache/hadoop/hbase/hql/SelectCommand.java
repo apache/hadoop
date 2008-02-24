@@ -31,7 +31,7 @@ import java.util.TreeMap;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HScannerInterface;
-import org.apache.hadoop.hbase.regionserver.HStoreKey;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Shell;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;

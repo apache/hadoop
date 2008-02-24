@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase;
 import org.apache.hadoop.io.Text;
 
 import junit.framework.TestCase;
-import org.apache.hadoop.hbase.regionserver.HStoreKey;
 
 /**
  * Test comparing HBase objects.

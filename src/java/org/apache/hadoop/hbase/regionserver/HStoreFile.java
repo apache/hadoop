@@ -48,6 +48,7 @@ import org.onelab.filter.Key;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HStoreKey;
 
 /**
  * A HStore data file.  HStores usually have one or more of these files.  They
@@ -523,18 +524,34 @@ public class HStoreFile implements HConstants {
       ((encodedRegionName != null) ? "." + encodedRegionName : "");
   }
   
+  /**
+   * @param dir
+   * @param encodedRegionName
+   * @param colFamily
+   * @return path for map file directory
+   */
   public static Path getMapDir(Path dir, String encodedRegionName, Text colFamily) {
     return new Path(dir, new Path(encodedRegionName, 
         new Path(colFamily.toString(), HSTORE_DATFILE_DIR)));
   }
 
-  /** @return the info directory path */
+  /**
+   * @param dir
+   * @param encodedRegionName
+   * @param colFamily
+   * @return the info directory path
+   */
   public static Path getInfoDir(Path dir, String encodedRegionName, Text colFamily) {
     return new Path(dir, new Path(encodedRegionName, 
         new Path(colFamily.toString(), HSTORE_INFO_DIR)));
   }
 
-  /** @return the bloom filter directory path */
+  /**
+   * @param dir
+   * @param encodedRegionName
+   * @param colFamily
+   * @return the bloom filter directory path
+   */
   public static Path getFilterDir(Path dir, String encodedRegionName, Text colFamily) {
     return new Path(dir, new Path(encodedRegionName,
         new Path(colFamily.toString(), HSTORE_FILTER_DIR)));
@@ -723,6 +740,14 @@ public class HStoreFile implements HConstants {
         bloomFilter = filter;
       }
 
+      /**
+       * @param fs
+       * @param dirName
+       * @param conf
+       * @param filter
+       * @param blockCacheEnabled
+       * @throws IOException
+       */
       public Reader(FileSystem fs, String dirName, Configuration conf,
           final Filter filter, final boolean blockCacheEnabled)
       throws IOException {

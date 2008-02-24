@@ -17,12 +17,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.hbase.io.TextSequence;
-import org.apache.hadoop.hbase.InvalidColumnNameException;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.hbase.HConstants;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -227,6 +225,7 @@ public class HStoreKey implements WritableComparable {
 
   // Comparable
 
+  /** {@inheritDoc} */
   public int compareTo(Object o) {
     HStoreKey other = (HStoreKey)o;
     int result = this.row.compareTo(other.row);
@@ -286,6 +285,7 @@ public class HStoreKey implements WritableComparable {
    * Extracts the column family name from a column
    * For example, returns 'info' if the specified column was 'info:server'
    * @param col name of column
+   * @param withColon set to true if colon separator should be returned
    * @return column famile as a TextSequence based on the passed
    * <code>col</code>.  If <code>col</code> is reused, make a new Text of
    * the result by calling {@link TextSequence#toText()}.

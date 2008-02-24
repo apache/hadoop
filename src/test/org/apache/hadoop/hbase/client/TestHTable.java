@@ -30,10 +30,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.HScannerInterface;
-import org.apache.hadoop.hbase.regionserver.HStoreKey;
 
 /**
  * Tests HTable

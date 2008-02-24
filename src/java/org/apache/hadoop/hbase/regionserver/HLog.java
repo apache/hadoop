@@ -35,6 +35,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -44,6 +45,7 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Reader;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -501,7 +503,7 @@ public class HLog implements HConstants {
    */
   public static void splitLog(Path rootDir, Path srcDir, FileSystem fs,
     Configuration conf) throws IOException {
-    Path logfiles[] = fs.listPaths(new Path[] { srcDir });
+    FileStatus logfiles[] = fs.listStatus(srcDir);
     LOG.info("splitting " + logfiles.length + " log(s) in " +
       srcDir.toString());
     Map<Text, SequenceFile.Writer> logWriters =
@@ -513,14 +515,15 @@ public class HLog implements HConstants {
             logfiles[i]);
         }
         // Check for empty file.
-        if (fs.getFileStatus(logfiles[i]).getLen() <= 0) {
+        if (logfiles[i].getLen() <= 0) {
           LOG.info("Skipping " + logfiles[i].toString() +
             " because zero length");
           continue;
         }
         HLogKey key = new HLogKey();
         HLogEdit val = new HLogEdit();
-        SequenceFile.Reader in = new SequenceFile.Reader(fs, logfiles[i], conf);
+        SequenceFile.Reader in =
+          new SequenceFile.Reader(fs, logfiles[i].getPath(), conf);
         try {
           int count = 0;
           for (; in.next(key, val); count++) {

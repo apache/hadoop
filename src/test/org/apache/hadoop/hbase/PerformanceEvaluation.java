@@ -48,8 +48,8 @@ import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.log4j.Logger;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
-import org.apache.hadoop.hbase.regionserver.HStoreKey;
 
 /**
  * Script used evaluating HBase performance and scalability.  Runs a HBase
@@ -386,9 +386,9 @@ public class PerformanceEvaluation implements HConstants {
     @Override
     void testRow(@SuppressWarnings("unused") final int i) throws IOException {
       Text row = getRandomRow(this.rand, this.totalRows);
-      long lockid = table.startUpdate(row);
-      table.put(lockid, COLUMN_NAME, generateValue(this.rand));
-      table.commit(lockid);
+      BatchUpdate b = new BatchUpdate(row);
+      b.put(COLUMN_NAME, generateValue(this.rand));
+      table.commit(b);
     }
 
     @Override
@@ -460,9 +460,9 @@ public class PerformanceEvaluation implements HConstants {
     
     @Override
     void testRow(final int i) throws IOException {
-      long lockid = table.startUpdate(format(i));
-      table.put(lockid, COLUMN_NAME, generateValue(this.rand));
-      table.commit(lockid);
+      BatchUpdate b = new BatchUpdate(format(i));
+      b.put(COLUMN_NAME, generateValue(this.rand));
+      table.commit(b);
     }
 
     @Override
@@ -535,7 +535,7 @@ public class PerformanceEvaluation implements HConstants {
     return totalElapsedTime;
   }
   
-  private void runNIsOne(final String cmd) throws IOException {
+  private void runNIsOne(final String cmd) {
     Status status = new Status() {
       @SuppressWarnings("unused")
       public void setStatus(String msg) throws IOException {
