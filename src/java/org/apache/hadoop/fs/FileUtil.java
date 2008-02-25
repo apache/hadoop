@@ -405,31 +405,44 @@ public class FileUtil {
   public static class HardLink { 
     enum OSType {
       OS_TYPE_UNIX, 
-      OS_TYPE_WINXP; 
+      OS_TYPE_WINXP,
+      OS_TYPE_SOLARIS; 
     }
   
     private static String[] hardLinkCommand;
+    private static String[] getLinkCountCommand;
+    private static String osName = System.getProperty("os.name");
     
     static {
       switch(getOSType()) {
       case OS_TYPE_WINXP:
         hardLinkCommand = new String[] {"fsutil","hardlink","create", null, null};
+        getLinkCountCommand = new String[] {"stat","-c%h"};
+        break;
+      case OS_TYPE_SOLARIS:
+        hardLinkCommand = new String[] {"ln", null, null};
+        getLinkCountCommand = new String[] {"ls","-l"};
         break;
       case OS_TYPE_UNIX:
       default:
         hardLinkCommand = new String[] {"ln", null, null};
+        getLinkCountCommand = new String[] {"stat","-c%h"};
       }
     }
 
-    static OSType getOSType() {
-      String osName = System.getProperty("os.name");
+    static private OSType getOSType() {
       if (osName.indexOf("Windows") >= 0 && 
           (osName.indexOf("XpP") >= 0 || osName.indexOf("2003") >= 0))
         return OSType.OS_TYPE_WINXP;
+      else if (osName.indexOf("SunOS") >= 0)
+         return OSType.OS_TYPE_SOLARIS;
       else
         return OSType.OS_TYPE_UNIX;
     }
     
+    /**
+     * Creates a hardlink 
+     */
     public static void createHardLink(File target, 
                                       File linkName) throws IOException {
       int len = hardLinkCommand.length;
@@ -451,6 +464,55 @@ public class FileUtil {
         throw new IOException(StringUtils.stringifyException(e));
       } finally {
         process.destroy();
+      }
+    }
+
+    /**
+     * Retrieves the number of links to the specified file.
+     */
+    public static int getLinkCount(File fileName) throws IOException {
+      int len = getLinkCountCommand.length;
+      String[] cmd = new String[len + 1];
+      for (int i = 0; i < len; i++) {
+        cmd[i] = getLinkCountCommand[i];
+      }
+      cmd[len] = fileName.toString();
+      String inpMsg = "";
+      String errMsg = "";
+      int exitValue = -1;
+      BufferedReader in = null;
+      BufferedReader err = null;
+
+      // execute shell command
+      Process process = Runtime.getRuntime().exec(cmd);
+      try {
+        exitValue = process.waitFor();
+        in = new BufferedReader(new InputStreamReader(
+                                    process.getInputStream()));
+        inpMsg = in.readLine();
+        if (inpMsg == null)  inpMsg = "";
+        
+        err = new BufferedReader(new InputStreamReader(
+                                     process.getErrorStream()));
+        errMsg = err.readLine();
+        if (errMsg == null)  errMsg = "";
+        if (exitValue != 0) {
+          throw new IOException(inpMsg + errMsg);
+        }
+        if (getOSType() == OSType.OS_TYPE_SOLARIS) {
+          String[] result = inpMsg.split("\\s+");
+          return Integer.parseInt(result[1]);
+        } else {
+          return Integer.parseInt(inpMsg);
+        }
+      } catch (NumberFormatException e) {
+        throw new IOException(StringUtils.stringifyException(e) + inpMsg + errMsg);
+      } catch (InterruptedException e) {
+        throw new IOException(StringUtils.stringifyException(e) + inpMsg + errMsg);
+      } finally {
+        process.destroy();
+        if (in != null) in.close();
+        if (err != null) err.close();
       }
     }
   }
@@ -509,5 +571,33 @@ public class FileUtil {
       tmp.deleteOnExit();
     }
     return tmp;
+  }
+
+  /**
+   * Move the src file to the name specified by target.
+   * @param src the source file
+   * @param target the target file
+   * @exception IOException If this operation fails
+   */
+  public static void replaceFile(File src, File target) throws IOException {
+    /* renameTo() has two limitations on Windows platform.
+     * src.renameTo(target) fails if
+     * 1) If target already exists OR
+     * 2) If target is already open for reading/writing.
+     */
+    if (!src.renameTo(target)) {
+      int retries = 5;
+      while (target.exists() && !target.delete() && retries-- >= 0) {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          throw new IOException("replaceFile interrupted.");
+        }
+      }
+      if (!src.renameTo(target)) {
+        throw new IOException("Unable to rename " + src +
+                              " to " + target);
+      }
+    }
   }
 }

@@ -26,6 +26,12 @@ Trunk (unreleased changes)
 
     HADOOP-2178.  Job History on DFS. (Amareshwari Sri Ramadasu via ddas)
 
+  IMPROVEMENTS
+
+    HADOOP-2655. Copy on write for data and metadata files in the 
+    presence of snapshots. Needed for supporting appends to HDFS
+    files. (dhruba) 
+
   OPTIMIZATIONS
 
   BUG FIXES

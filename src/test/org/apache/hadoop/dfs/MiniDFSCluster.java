@@ -607,4 +607,15 @@ public class MiniDFSCluster {
   void setLeasePeriod(long soft, long hard) {
     nameNode.namesystem.setLeasePeriod(soft, hard);
   }
+
+  /**
+   * Returns the current set of datanodes
+   */
+  DataNode[] listDataNodes() {
+    DataNode[] list = new DataNode[dataNodes.size()];
+    for (int i = 0; i < dataNodes.size(); i++) {
+      list[i] = dataNodes.get(i).datanode;
+    }
+    return list;
+  }
 }

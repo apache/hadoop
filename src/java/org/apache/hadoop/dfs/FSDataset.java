@@ -159,7 +159,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     }
 
 
-    void getVolumeMap(HashMap<Block, FSVolume> volumeMap, FSVolume volume) {
+    void getVolumeMap(HashMap<Block, DatanodeBlockInfo> volumeMap, FSVolume volume) {
       if (children != null) {
         for (int i = 0; i < children.length; i++) {
           children[i].getVolumeMap(volumeMap, volume);
@@ -170,25 +170,12 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       for (int i = 0; i < blockFiles.length; i++) {
         //We are not enforcing presense of metadata file
         if (Block.isBlockFilename(blockFiles[i])) {
-          volumeMap.put(new Block(blockFiles[i], blockFiles[i].length()), volume);
+          volumeMap.put(new Block(blockFiles[i], blockFiles[i].length()), 
+                        new DatanodeBlockInfo(volume, blockFiles[i]));
         }
       }
     }
         
-    void getBlockMap(HashMap<Block, File> blockMap) {
-      if (children != null) {
-        for (int i = 0; i < children.length; i++) {
-          children[i].getBlockMap(blockMap);
-        }
-      }
-
-      File blockFiles[] = dir.listFiles();
-      for (int i = 0; i < blockFiles.length; i++) {
-        if (Block.isBlockFilename(blockFiles[i])) {
-          blockMap.put(new Block(blockFiles[i], blockFiles[i].length()), blockFiles[i]);
-        }
-      }
-    }
     /**
      * check if a data diretory is healthy
      * @throws DiskErrorException
@@ -270,6 +257,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
 
     private FSDir dataDir;
     private File tmpDir;
+    private File detachDir; // copy on write for blocks in snapshot
     private DF usage;
     private DU dfsUsage;
     private long reserved;
@@ -281,6 +269,11 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       this.usableDiskPct = conf.getFloat("dfs.datanode.du.pct",
                                          (float) USABLE_DISK_PCT_DEFAULT);
       File parent = currentDir.getParentFile();
+
+      this.detachDir = new File(parent, "detach");
+      if (detachDir.exists()) {
+        recoverDetachedBlocks(currentDir, detachDir);
+      }
       this.dataDir = new FSDir(currentDir);
       this.tmpDir = new File(parent, "tmp");
       if (tmpDir.exists()) {
@@ -289,6 +282,11 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       if (!tmpDir.mkdirs()) {
         if (!tmpDir.isDirectory()) {
           throw new IOException("Mkdirs failed to create " + tmpDir.toString());
+        }
+      }
+      if (!detachDir.mkdirs()) {
+        if (!detachDir.isDirectory()) {
+          throw new IOException("Mkdirs failed to create " + detachDir.toString());
         }
       }
       this.usage = new DF(parent, conf);
@@ -324,22 +322,33 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       return dataDir.dir;
     }
     
+    /**
+     * Temporary files. They get deleted when the datanode restarts
+     */
     File createTmpFile(Block b) throws IOException {
       File f = new File(tmpDir, b.getBlockName());
-      try {
-        if (f.exists()) {
-          throw new IOException("Unexpected problem in creating temporary file for "+
-                                b + ".  File " + f + " should not be present, but is.");
-        }
-        // Create the zero-length temp file
-        //
-        if (!f.createNewFile()) {
-          throw new IOException("Unexpected problem in creating temporary file for "+
-                                b + ".  File " + f + " should be creatable, but is already present.");
-        }
-      } catch (IOException ie) {
-        System.out.println("Exception! " + ie);
-        throw ie;
+      return createTmpFile(b, f);
+    }
+
+    /**
+     * Files used for copy-on-write. They need recovery when datanode
+     * restarts.
+     */
+    File createDetachFile(Block b, String filename) throws IOException {
+      File f = new File(detachDir, filename);
+      return createTmpFile(b, f);
+    }
+
+    private File createTmpFile(Block b, File f) throws IOException {
+      if (f.exists()) {
+        throw new IOException("Unexpected problem in creating temporary file for "+
+                              b + ".  File " + f + " should not be present, but is.");
+      }
+      // Create the zero-length temp file
+      //
+      if (!f.createNewFile()) {
+        throw new IOException("Unexpected problem in creating temporary file for "+
+                              b + ".  File " + f + " should be creatable, but is already present.");
       }
       return f;
     }
@@ -360,12 +369,8 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       dataDir.getBlockInfo(blockSet);
     }
       
-    void getVolumeMap(HashMap<Block, FSVolume> volumeMap) {
+    void getVolumeMap(HashMap<Block, DatanodeBlockInfo> volumeMap) {
       dataDir.getVolumeMap(volumeMap, this);
-    }
-      
-    void getBlockMap(HashMap<Block, File> blockMap) {
-      dataDir.getBlockMap(blockMap);
     }
       
     void clearPath(File f) {
@@ -374,6 +379,42 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       
     public String toString() {
       return dataDir.dir.getAbsolutePath();
+    }
+
+    /**
+     * Recover detached files on datanode restart. If a detached block
+     * does not exist in the original directory, then it is moved to the
+     * original directory.
+     */
+    private void recoverDetachedBlocks(File dataDir, File dir) 
+                                           throws IOException {
+      File contents[] = dir.listFiles();
+      if (contents == null) {
+        return;
+      }
+      for (int i = 0; i < contents.length; i++) {
+        if (!contents[i].isFile()) {
+          throw new IOException ("Found " + contents[i] + " in " + dir +
+                                 " but it is not a file.");
+        }
+
+        //
+        // If the original block file still exists, then no recovery
+        // is needed.
+        //
+        File blk = new File(dataDir, contents[i].getName());
+        if (!blk.exists()) {
+          if (!contents[i].renameTo(blk)) {
+            throw new IOException("Unable to recover detached file " +
+                                  contents[i]);
+          }
+          continue;
+        }
+        if (!contents[i].delete()) {
+            throw new IOException("Unable to cleanup detached file " +
+                                  contents[i]);
+        }
+      }
     }
   }
     
@@ -427,15 +468,9 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       }
     }
       
-    synchronized void getVolumeMap(HashMap<Block, FSVolume> volumeMap) {
+    synchronized void getVolumeMap(HashMap<Block, DatanodeBlockInfo> volumeMap) {
       for (int idx = 0; idx < volumes.length; idx++) {
         volumes[idx].getVolumeMap(volumeMap);
-      }
-    }
-      
-    synchronized void getBlockMap(HashMap<Block, File> blockMap) {
-      for (int idx = 0; idx < volumes.length; idx++) {
-        volumes[idx].getBlockMap(blockMap);
       }
     }
       
@@ -465,7 +500,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
   public static final String METADATA_EXTENSION = ".meta";
   public static final short METADATA_VERSION = 1;
     
-  protected static File getMetaFile( File f ) {
+  static File getMetaFile( File f ) {
     return new File( f.getAbsolutePath() + METADATA_EXTENSION );
   }
 
@@ -505,8 +540,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
   FSVolumeSet volumes;
   private HashMap<Block,ActiveFile> ongoingCreates = new HashMap<Block,ActiveFile>();
   private int maxBlocksPerDir = 0;
-  private HashMap<Block,FSVolume> volumeMap = null;
-  private HashMap<Block,File> blockMap = null;
+  private HashMap<Block,DatanodeBlockInfo> volumeMap = null;
   static  Random random = new Random();
   
   long blockWriteTimeout = 3600 * 1000;
@@ -521,10 +555,8 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       volArray[idx] = new FSVolume(storage.getStorageDir(idx).getCurrentDir(), conf);
     }
     volumes = new FSVolumeSet(volArray);
-    volumeMap = new HashMap<Block,FSVolume>();
+    volumeMap = new HashMap<Block, DatanodeBlockInfo>();
     volumes.getVolumeMap(volumeMap);
-    blockMap = new HashMap<Block,File>();
-    volumes.getBlockMap(blockMap);
     blockWriteTimeout = Math.max(
          conf.getInt("dfs.datanode.block.write.timeout.sec", 3600), 1) * 1000;
     registerMBean(storage.getStorageID());
@@ -591,7 +623,25 @@ class FSDataset implements FSConstants, FSDatasetInterface {
           new FileOutputStream( new RandomAccessFile( getMetaFile( f ) , "rw" ).getFD() ));
 
   }
-  
+
+  /**
+   * Make a copy of the block if this block is linked to an existing
+   * snapshot. This ensures that modifying this block does not modify
+   * data in any existing snapshots.
+   * @param b Block
+   * @param numLinks Detach if the number of links exceed this value
+   * @throws IOException
+   * @return - true if the specified block was detached
+   */
+  boolean detachBlock(Block block, int numLinks) throws IOException {
+    DatanodeBlockInfo info = null;
+
+    synchronized (this) {
+      info = volumeMap.get(block);
+    }
+    return info.detachBlock(block, numLinks);
+  }
+
   /**
    * Start writing to a block file
    * If isRecovery is true and the block pre-exists, then we kill all
@@ -653,12 +703,11 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       }
       FSVolume v = null;
       if (!isRecovery) {
-        synchronized (volumes) {
-          v = volumes.getNextVolume(blockSize);
-          // create temporary file to hold block in the designated volume
-          f = createTmpFile(v, b);
-        }
-        volumeMap.put(b, v);
+        v = volumes.getNextVolume(blockSize);
+        // create temporary file to hold block in the designated volume
+        // Do not insert temporary file into volume map.
+        f = createTmpFile(v, b);
+        volumeMap.put(b, new DatanodeBlockInfo(v));
       }
       ongoingCreates.put(b, new ActiveFile(f, threads));
     }
@@ -704,18 +753,14 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     file.getChannel().position(ckOffset);
   }
 
-  File createTmpFile( FSVolume vol, Block blk ) throws IOException {
+  synchronized File createTmpFile( FSVolume vol, Block blk ) throws IOException {
     if ( vol == null ) {
-      synchronized ( this ) {
-        vol = volumeMap.get( blk );
-        if ( vol == null ) {
-          throw new IOException("Could not find volume for block " + blk);
-        }
+      vol = volumeMap.get( blk ).getVolume();
+      if ( vol == null ) {
+        throw new IOException("Could not find volume for block " + blk);
       }
     }
-    synchronized ( volumes ) {
-      return vol.createTmpFile(blk);
-    }
+    return vol.createTmpFile(blk);
   }
   
   //
@@ -734,13 +779,15 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     if (f == null || !f.exists()) {
       throw new IOException("No temporary file " + f + " for block " + b);
     }
-    FSVolume v = volumeMap.get(b);
+    FSVolume v = volumeMap.get(b).getVolume();
+    if (v == null) {
+      throw new IOException("No volume for temporary file " + f + 
+                            " for block " + b);
+    }
         
     File dest = null;
-    synchronized (volumes) {
-      dest = v.addBlock(b, f);
-    }
-    blockMap.put(b, dest);
+    dest = v.addBlock(b, f);
+    volumeMap.put(b, new DatanodeBlockInfo(v, dest));
     ongoingCreates.remove(b);
   }
 
@@ -788,7 +835,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       FSVolume v;
       synchronized (this) {
         f = getFile(invalidBlks[i]);
-        v = volumeMap.get(invalidBlks[i]);
+        v = volumeMap.get(invalidBlks[i]).getVolume();
         if (f == null) {
           DataNode.LOG.warn("Unexpected error trying to delete block "
                             + invalidBlks[i] + 
@@ -814,7 +861,6 @@ class FSDataset implements FSConstants, FSDatasetInterface {
           continue;
         }
         v.clearPath(parent);
-        blockMap.remove(invalidBlks[i]);
         volumeMap.remove(invalidBlks[i]);
       }
       File metaFile = getMetaFile( f );
@@ -844,7 +890,11 @@ class FSDataset implements FSConstants, FSDatasetInterface {
    * Turn the block identifier into a filename.
    */
   synchronized File getFile(Block b) {
-    return blockMap.get(b);
+    DatanodeBlockInfo info = volumeMap.get(b);
+    if (info != null) {
+      return info.getFile();
+    }
+    return null;
   }
 
   /**
@@ -896,6 +946,6 @@ class FSDataset implements FSConstants, FSDatasetInterface {
   }
   
   public long getBlockSize(Block b) {
-    return blockMap.get(b).length();
+    return getFile(b).length();
   }
 }
