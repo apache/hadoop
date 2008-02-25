@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.WrongRegionException;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
 /**
  * HRegion stores data for a certain region of a table.  It stores all columns

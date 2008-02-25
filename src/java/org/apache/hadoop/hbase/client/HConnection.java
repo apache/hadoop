@@ -23,12 +23,12 @@ import java.io.IOException;
 import java.util.SortedMap;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hbase.master.HMasterInterface;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.regionserver.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
 /**
  * 

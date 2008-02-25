@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Writables;
 
-import org.apache.hadoop.hbase.regionserver.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HLog;
 

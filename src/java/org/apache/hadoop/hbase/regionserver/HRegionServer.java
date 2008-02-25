@@ -84,10 +84,9 @@ import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
-
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.client.HTable;
-
-import org.apache.hadoop.hbase.master.HMasterRegionInterface;
+import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 
 /**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with

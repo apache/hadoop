@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.hbase.master.HMasterInterface;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HStoreKey;
@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.HRegionInfo;
 
-import org.apache.hadoop.hbase.regionserver.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
 /**
  * Provides administrative functions for HBase

@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
 /** 
  * Instantiated to delete a table

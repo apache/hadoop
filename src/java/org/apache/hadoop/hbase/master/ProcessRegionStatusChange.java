@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.regionserver.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.io.Text;
 
