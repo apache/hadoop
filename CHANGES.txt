@@ -65,7 +65,8 @@ Hbase Change Log
    HBASE-457   Factor Master into Master, RegionManager, and ServerManager
    HBASE-464   HBASE-419 introduced javadoc errors
    HBASE-468   Move HStoreKey back to o.a.h.h
-
+   HBASE-442   Move internal classes out of HRegionServer
+   
 Branch 0.1
 
   INCOMPATIBLE CHANGES
