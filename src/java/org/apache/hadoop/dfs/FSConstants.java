@@ -183,7 +183,7 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -12;
+  public static final int LAYOUT_VERSION = -13;
   // Current version: 
-  // Introduce OPEN, CLOSE and GENSTAMP transactions for supporting appends
+  // Fix bug introduced by OPEN, CLOSE and GENSTAMP transactions for supporting appends
 }

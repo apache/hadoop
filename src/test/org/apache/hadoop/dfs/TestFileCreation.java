@@ -358,7 +358,27 @@ public class TestFileCreation extends TestCase {
                          + "Created file filestatus.dat with one "
                          + " replicas.");
 
+      // create another new file.
+      //
+      Path file2 = new Path("/filestatus2.dat");
+      FSDataOutputStream stm2 = createFile(fs, file2, 1);
+      System.out.println("testFileCreationNamenodeRestart: "
+                         + "Created file filestatus2.dat with one "
+                         + " replicas.");
+
       // restart cluster with the same namenode port as before.
+      // This ensures that leases are persisted in fsimage.
+      cluster.shutdown();
+      try {
+        Thread.sleep(5000);
+      } catch (InterruptedException e) {
+      }
+      cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
+                                   null, null, null);
+      cluster.waitActive();
+
+      // restart cluster yet again. This triggers the code to read in
+      // persistent leases from fsimage.
       cluster.shutdown();
       try {
         Thread.sleep(5000);
@@ -375,13 +395,22 @@ public class TestFileCreation extends TestCase {
       rand.nextBytes(buffer);
       stm.write(buffer);
       stm.close();
+      stm2.write(buffer);
+      stm2.close();
 
       // verify that new block is associated with this file
       DFSClient client = new DFSClient(addr, conf);
       LocatedBlocks locations = client.namenode.getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
       System.out.println("locations = " + locations.locatedBlockCount());
-      assertTrue("Error blocks were not cleaned up",
+      assertTrue("Error blocks were not cleaned up for file " + file1,
+                 locations.locatedBlockCount() == 1);
+
+      // verify filestatus2.dat
+      locations = client.namenode.getBlockLocations(
+                                  file2.toString(), 0, Long.MAX_VALUE);
+      System.out.println("locations = " + locations.locatedBlockCount());
+      assertTrue("Error blocks were not cleaned up for file " + file2,
                  locations.locatedBlockCount() == 1);
     } finally {
       fs.close();

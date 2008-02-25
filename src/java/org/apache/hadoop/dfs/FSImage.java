@@ -911,7 +911,7 @@ class FSImage extends Storage {
                                   FSNamesystem fs) throws IOException {
 
     FSDirectory fsDir = fs.dir;
-    if (version > -12) // pre lease image version
+    if (version > -13) // pre lease image version
       return;
     int size = in.readInt();
 
@@ -930,10 +930,6 @@ class FSImage extends Storage {
       INodeFile oldnode = (INodeFile) old;
       fsDir.replaceNode(path, oldnode, cons);
       fs.addLease(path, cons.getClientName()); 
-    }
-    if (fs.countLease() != size) {
-      throw new IOException("Created " + size + " leases but found " +
-                            fs.countLease());
     }
   }
 

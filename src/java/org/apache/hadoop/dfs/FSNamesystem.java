@@ -4202,9 +4202,12 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   void saveFilesUnderConstruction(DataOutputStream out) throws IOException {
     synchronized (sortedLeases) {
-      out.writeInt(sortedLeases.size()); // write the size
-      for (Iterator<Lease> it = sortedLeases.iterator(); it.hasNext();) {
-        Lease lease = it.next();        
+      int count = 0;
+      for (Lease lease : sortedLeases) {
+        count += lease.getPaths().size();
+      }
+      out.writeInt(count); // write the size
+      for (Lease lease : sortedLeases) {
         Collection<StringBytesWritable> files = lease.getPaths();
         for (Iterator<StringBytesWritable> i = files.iterator(); i.hasNext();){
           String path = i.next().getString();
