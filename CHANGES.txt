@@ -17,7 +17,8 @@ Trunk (unreleased changes)
     current working directory.  (Mahadev Konar via dhruba)
 
     HADOOP-2873.  Fixed bad disk format introduced by HADOOP-2345.
-    Disk layout version changed from -12 to -13. (dhruba)
+    Disk layout version changed from -12 to -13. See changelist 630992
+    (dhruba)
 
   NEW FEATURES
 
