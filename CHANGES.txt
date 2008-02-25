@@ -16,7 +16,7 @@ Trunk (unreleased changes)
     HADOOP-1902. "dfs du" command without any arguments operates on the
     current working directory.  (Mahadev Konar via dhruba)
 
-    HADOOP-2345.  Fixed bad disk format introduced by HADOOP-2345.
+    HADOOP-2873.  Fixed bad disk format introduced by HADOOP-2345.
     Disk layout version changed from -12 to -13. (dhruba)
 
   NEW FEATURES
