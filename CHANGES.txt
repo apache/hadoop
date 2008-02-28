@@ -74,6 +74,9 @@ Trunk (unreleased changes)
     HADOOP-2727. Fix links in Web UI of the hadoop daemons and some docs
     (Amareshwari Sri Ramadasu via ddas)
 
+    HADOOP-2727. Fixes a problem to do with file: URI in the JobHistory init.
+    (Amareshwari Sri Ramadasu via ddas)
+
 Release 0.16.1 - Unreleased
 
   IMPROVEMENTS

@@ -116,7 +116,9 @@ public class JobHistory {
   public static void init(JobConf conf, String hostname){
     if (!disableHistory){
       try{
-        LOG_DIR = conf.get("hadoop.job.history.location");
+        LOG_DIR = conf.get("hadoop.job.history.location" ,
+          "file:///" + new File(System.getProperty(
+          "hadoop.log.dir")).getAbsolutePath() + File.separator + "history");
         JOBTRACKER_UNIQUE_STRING = hostname + "_" + 
                                    JOBTRACKER_START_TIME + "_";
         Path logDir = new Path(LOG_DIR);
@@ -126,6 +128,7 @@ public class JobHistory {
             throw new IOException("Mkdirs failed to create " + logDir.toString());
           }
         }
+        conf.set("hadoop.job.history.location", LOG_DIR);
       }catch(IOException e){
         LOG.error("Failed to initialize JobHistory log file", e); 
         disableHistory = true; 
