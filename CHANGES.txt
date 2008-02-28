@@ -26,6 +26,9 @@ Trunk (unreleased changes)
 
     HADOOP-2178.  Job History on DFS. (Amareshwari Sri Ramadasu via ddas)
 
+    HADOOP-2063. A new parameter to dfs -get command to fetch a file 
+    even if it is corrupted.  (Tsz Wo (Nicholas), SZE via dhruba)
+
   IMPROVEMENTS
 
     HADOOP-2655. Copy on write for data and metadata files in the 

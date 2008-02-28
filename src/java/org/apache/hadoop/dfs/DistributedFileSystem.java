@@ -40,6 +40,7 @@ public class DistributedFileSystem extends FileSystem {
   private URI uri;
 
   DFSClient dfs;
+  private boolean verifyChecksum = true;
 
   public DistributedFileSystem() {
   }
@@ -111,9 +112,14 @@ public class DistributedFileSystem extends FileSystem {
     return dfs.getHints(getPathName(f), start, len);
   }
 
+  public void setVerifyChecksum(boolean verifyChecksum) {
+    this.verifyChecksum = verifyChecksum;
+  }
+
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     try {
-      return new DFSClient.DFSDataInputStream(dfs.open(getPathName(f),bufferSize));
+      return new DFSClient.DFSDataInputStream(
+          dfs.open(getPathName(f), bufferSize, verifyChecksum));
     } catch(RemoteException e) {
       if (IOException.class.getName().equals(e.getClassName()) &&
           e.getMessage().startsWith(

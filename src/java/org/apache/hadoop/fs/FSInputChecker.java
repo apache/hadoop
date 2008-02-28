@@ -37,6 +37,7 @@ abstract public class FSInputChecker extends FSInputStream {
   /** The file name from which data is read from */
   protected Path file;
   private Checksum sum;
+  private boolean verifyChecksum;
   private byte[] buf;
   private byte[] checksum;
   private int pos;
@@ -66,8 +67,9 @@ abstract public class FSInputChecker extends FSInputStream {
    * @param checksumSize the number byte of each checksum
    */
   protected FSInputChecker( Path file, int numOfRetries, 
-      Checksum sum, int chunkSize, int checksumSize ) {
+      boolean verifyChecksum, Checksum sum, int chunkSize, int checksumSize ) {
     this(file, numOfRetries);
+    this.verifyChecksum = verifyChecksum;
     set(sum, chunkSize, checksumSize);
   }
   
@@ -93,7 +95,7 @@ abstract public class FSInputChecker extends FSInputStream {
 
   /** Return true if there is a need for checksum verification */
   protected synchronized boolean needChecksum() {
-    return sum != null;
+    return verifyChecksum && sum != null;
   }
   
   /**
@@ -163,7 +165,7 @@ abstract public class FSInputChecker extends FSInputStream {
     }
   }
   
-  /*
+  /**
    * Fills the buffer with a chunk data. 
    * No mark is supported.
    * This method assumes that all data in the buffer has already been read in,

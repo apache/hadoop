@@ -252,7 +252,7 @@ class DFSClient implements FSConstants {
   }
 
   public DFSInputStream open(String src) throws IOException {
-    return open(src, conf.getInt("io.file.buffer.size", 4096));
+    return open(src, conf.getInt("io.file.buffer.size", 4096), true);
   }
   /**
    * Create an input stream that obtains a nodelist from the
@@ -260,10 +260,11 @@ class DFSClient implements FSConstants {
    * inner subclass of InputStream that does the right out-of-band
    * work.
    */
-  public DFSInputStream open(String src, int buffersize) throws IOException {
+  DFSInputStream open(String src, int buffersize, boolean verifyChecksum
+      ) throws IOException {
     checkOpen();
     //    Get block info from namenode
-    return new DFSInputStream(src, buffersize);
+    return new DFSInputStream(src, buffersize, verifyChecksum);
   }
 
   /**
@@ -773,10 +774,11 @@ class DFSClient implements FSConstants {
     }
     
     private BlockReader( String file, long blockId, DataInputStream in, 
-                         DataChecksum checksum, long startOffset,
-                         long firstChunkOffset ) {
+                         DataChecksum checksum, boolean verifyChecksum,
+                         long startOffset, long firstChunkOffset ) {
       super(new Path("/blk_" + blockId + ":of:" + file)/*too non path-like?*/,
-            1, (checksum.getChecksumSize() > 0) ? checksum : null, 
+            1, verifyChecksum,
+            checksum.getChecksumSize() > 0? checksum : null, 
             checksum.getBytesPerChecksum(),
             checksum.getChecksumSize());
       
@@ -792,12 +794,17 @@ class DFSClient implements FSConstants {
       checksumSize = this.checksum.getChecksumSize();
     }
 
+    static BlockReader newBlockReader(Socket sock, String file, long blockId, 
+        long startOffset, long len, int bufferSize) throws IOException {
+      return newBlockReader(sock, file, blockId, startOffset, len, bufferSize,
+          true);
+    }
+
     /** Java Doc required */
     static BlockReader newBlockReader( Socket sock, String file, long blockId, 
                                        long startOffset, long len,
-                                       int bufferSize)
+                                       int bufferSize, boolean verifyChecksum)
                                        throws IOException {
-      
       // in and out will be closed when sock is closed (by the caller)
       DataOutputStream out = new DataOutputStream(
                        new BufferedOutputStream(sock.getOutputStream()));
@@ -835,7 +842,7 @@ class DFSClient implements FSConstants {
                               startOffset + " for file " + file);
       }
 
-      return new BlockReader( file, blockId, in, checksum,
+      return new BlockReader( file, blockId, in, checksum, verifyChecksum,
                               startOffset, firstChunkOffset );
     }
 
@@ -882,7 +889,8 @@ class DFSClient implements FSConstants {
 
     private String src;
     private long prefetchSize = 10 * defaultBlockSize;
-    private BlockReader blockReader;
+    private BlockReader blockReader = null;
+    private boolean verifyChecksum;
     private LocatedBlocks locatedBlocks = null;
     private DatanodeInfo currentNode = null;
     private Block currentBlock = null;
@@ -900,14 +908,13 @@ class DFSClient implements FSConstants {
       deadNodes.put(dnInfo, dnInfo);
     }
     
-    /**
-     */
-    public DFSInputStream(String src, int buffersize) throws IOException {
+    DFSInputStream(String src, int buffersize, boolean verifyChecksum
+        ) throws IOException {
+      this.verifyChecksum = verifyChecksum;
       this.buffersize = buffersize;
       this.src = src;
       prefetchSize = conf.getLong("dfs.read.prefetch.size", prefetchSize);
       openInfo();
-      blockReader = null;
     }
 
     /**
@@ -1065,10 +1072,8 @@ class DFSClient implements FSConstants {
           Block blk = targetBlock.getBlock();
           
           blockReader = BlockReader.newBlockReader(s, src, blk.getBlockId(), 
-                                                   offsetIntoBlock,
-                                                   (blk.getNumBytes() - 
-                                                    offsetIntoBlock),
-                                                   buffersize);
+              offsetIntoBlock, blk.getNumBytes() - offsetIntoBlock,
+              buffersize, verifyChecksum);
           return chosenNode;
         } catch (IOException ex) {
           // Put chosen node into dead list, continue
@@ -1248,7 +1253,7 @@ class DFSClient implements FSConstants {
               
           BlockReader reader = 
             BlockReader.newBlockReader(dn, src, block.getBlock().getBlockId(),
-                                       start, len, buffersize);
+                                       start, len, buffersize, verifyChecksum);
           int nread = reader.readAll(buf, offset, len);
           if (nread != len) {
             throw new IOException("truncated return from reader.read(): " +

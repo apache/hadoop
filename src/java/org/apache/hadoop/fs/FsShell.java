@@ -39,9 +39,9 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.dfs.DistributedFileSystem;
 
 /** Provide command line access to a FileSystem. */
 public class FsShell extends Configured implements Tool {
@@ -56,6 +56,9 @@ public class FsShell extends Configured implements Tool {
     modifFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
   }
   static final String SETREP_SHORT_USAGE="-setrep [-R] [-w] <rep> <path/file>";
+  static final String GET_SHORT_USAGE = "-get [-ignoreCrc] [-crc] <src> <localdst>";
+  static final String COPYTOLOCAL_SHORT_USAGE = GET_SHORT_USAGE.replace(
+      "-get", "-copyToLocal");
   static final String TAIL_USAGE="-tail [-f] <file>";
   private static final DecimalFormat decimalFormat;
   static {
@@ -142,7 +145,7 @@ public class FsShell extends Configured implements Tool {
   /**
    * Obtain the indicated files that match the file pattern <i>srcf</i>
    * and copy them to the local name. srcf is kept.
-   * When copying mutiple files, the destination must be a directory. 
+   * When copying multiple files, the destination must be a directory. 
    * Otherwise, IOException is thrown.
    * @param argv: arguments
    * @param pos: Ignore everything before argv[pos]  
@@ -150,37 +153,56 @@ public class FsShell extends Configured implements Tool {
    * @see org.apache.hadoop.fs.FileSystem.globPaths 
    */
   void copyToLocal(String[]argv, int pos) throws IOException {
-    if (argv.length-pos<2 || (argv.length-pos==2 && argv[pos].equalsIgnoreCase("-crc"))) {
-      System.err.println("Usage: -get [-crc] <src> <dst>");
-      throw new RuntimeException("Usage: -get [-crc] <src> <dst>");
+    CommandFormat cf = new CommandFormat("copyToLocal", 2,2,"crc","ignoreCrc");
+    
+    String srcstr = null;
+    String dststr = null;
+    try {
+      List<String> parameters = cf.parse(argv, pos);
+      srcstr = parameters.get(0);
+      dststr = parameters.get(1);
     }
-    boolean copyCrc = false;
-    if ("-crc".equalsIgnoreCase(argv[pos])) {
-      pos++;
-      copyCrc = true;
+    catch(IllegalArgumentException iae) {
+      System.err.println("Usage: java FsShell " + GET_SHORT_USAGE);
+      throw iae;
     }
-    String srcf = argv[pos++];
-    String dstf = argv[pos++];
-    if (dstf.equals("-")) {
+    final boolean copyCrc = cf.options.get("crc");
+    final boolean verifyChecksum = !cf.options.get("ignoreCrc");
+
+    if (dststr.equals("-")) {
       if (copyCrc) {
         System.err.println("-crc option is not valid when destination is stdout.");
       }
-      cat(srcf);
+      cat(srcstr, verifyChecksum);
     } else {
-      File dst = new File(dstf);      
-      Path src = new Path(srcf);
-      FileSystem srcFs = src.getFileSystem(getConf());      
-      Path [] srcs = srcFs.globPaths(src);
+      File dst = new File(dststr);      
+      Path srcpath = new Path(srcstr);
+      FileSystem srcFS = getSrcFileSystem(srcpath, verifyChecksum);
+      FileStatus[] srcs = srcFS.globStatus(srcpath);
       boolean dstIsDir = dst.isDirectory(); 
       if (srcs.length > 1 && !dstIsDir) {
         throw new IOException("When copying multiple files, "
                               + "destination should be a directory.");
       }
-      for (Path srcPath : srcs) {
-        File dstFile = (dstIsDir ? new File(dst, srcPath.getName()) : dst);
-        copyToLocal(srcFs, srcPath, dstFile, copyCrc);
+      for (FileStatus status : srcs) {
+        Path p = status.getPath();
+        File f = dstIsDir? new File(dst, p.getName()): dst;
+        copyToLocal(srcFS, p, f, copyCrc);
       }
     }
+  }
+
+  /**
+   * Return the {@link FileSystem} specified by src and the conf.
+   * It the {@link FileSystem} supports checksum, set verifyChecksum.
+   */
+  private FileSystem getSrcFileSystem(Path src, boolean verifyChecksum
+      ) throws IOException { 
+    FileSystem srcFs = src.getFileSystem(getConf());
+    if (srcFs instanceof DistributedFileSystem) {
+      ((DistributedFileSystem)srcFs).setVerifyChecksum(verifyChecksum);
+    }
+    return srcFs;
   }
 
   /**
@@ -207,7 +229,7 @@ public class FsShell extends Configured implements Tool {
      * copyCrc and useTmpFile (may be useTmpFile need not be an option).
      */
     
-    if (!srcFS.isDirectory(src)) {
+    if (!srcFS.getFileStatus(src).isDir()) {
       if (dst.exists()) {
         // match the error message in FileUtil.checkDest():
         throw new IOException("Target " + dst + " already exists");
@@ -298,7 +320,7 @@ public class FsShell extends Configured implements Tool {
    * @exception: IOException
    * @see org.apache.hadoop.fs.FileSystem.globPaths 
    */
-  void cat(String srcf) throws IOException {
+  void cat(String src, boolean verifyChecksum) throws IOException {
     //cat behavior in Linux
     //  [~/1207]$ ls ?.txt
     //  x.txt  z.txt
@@ -307,6 +329,7 @@ public class FsShell extends Configured implements Tool {
     //  cat: y.txt: No such file or directory
     //  zzz
 
+    Path srcPattern = new Path(src);
     new DelayedExceptionThrowing() {
       @Override
       void process(Path p, FileSystem srcFs) throws IOException {
@@ -315,7 +338,7 @@ public class FsShell extends Configured implements Tool {
         }
         printToStdout(srcFs.open(p));
       }
-    }.process(srcf);
+    }.process(srcPattern, getSrcFileSystem(srcPattern, verifyChecksum));
   }
 
   private class TextRecordInputStream extends InputStream {
@@ -374,6 +397,7 @@ public class FsShell extends Configured implements Tool {
   }
 
   void text(String srcf) throws IOException {
+    Path srcPattern = new Path(srcf);
     new DelayedExceptionThrowing() {
       @Override
       void process(Path p, FileSystem srcFs) throws IOException {
@@ -382,7 +406,7 @@ public class FsShell extends Configured implements Tool {
         }
         printToStdout(forMagic(p, srcFs));
       }
-    }.process(srcf);
+    }.process(srcPattern, srcPattern.getFileSystem(getConf()));
   }
 
   /**
@@ -1002,12 +1026,13 @@ public class FsShell extends Configured implements Tool {
     //  [~/1207]$ rm x.txt y.txt z.txt 
     //  rm: cannot remove `y.txt': No such file or directory
 
+    Path srcPattern = new Path(srcf);
     new DelayedExceptionThrowing() {
       @Override
       void process(Path p, FileSystem srcFs) throws IOException {
         delete(p, srcFs, recursive);
       }
-    }.process(srcf);
+    }.process(srcPattern, srcPattern.getFileSystem(getConf()));
   }
     
   /* delete a file */
@@ -1222,9 +1247,9 @@ public class FsShell extends Configured implements Tool {
       "[-D <property=value>] [-ls <path>] [-lsr <path>] [-du <path>]\n\t" + 
       "[-dus <path>] [-mv <src> <dst>] [-cp <src> <dst>] [-rm <src>]\n\t" + 
       "[-rmr <src>] [-put <localsrc> <dst>] [-copyFromLocal <localsrc> <dst>]\n\t" +
-      "[-moveFromLocal <localsrc> <dst>] [-get <src> <localdst>]\n\t" +
+      "[-moveFromLocal <localsrc> <dst>] [" + GET_SHORT_USAGE + "\n\t" +
       "[-getmerge <src> <localdst> [addnl]] [-cat <src>]\n\t" +
-      "[-copyToLocal <src><localdst>] [-moveToLocal <src> <localdst>]\n\t" +
+      "[" + COPYTOLOCAL_SHORT_USAGE + "] [-moveToLocal <src> <localdst>]\n\t" +
       "[-mkdir <path>] [-report] [" + SETREP_SHORT_USAGE + "]\n\t" +
       "[-touchz <path>] [-test -[ezd] <path>] [-stat [format] <path>]\n\t" +
       "[-tail [-f] <path>] [-text <path>]\n\t" +
@@ -1298,7 +1323,8 @@ public class FsShell extends Configured implements Tool {
     String moveFromLocal = "-moveFromLocal <localsrc> <dst>:  Same as -put, except that the source is\n" +
       "\t\tdeleted after it's copied.\n"; 
 
-    String get = "-get <src> <localdst>:  Copy files that match the file pattern <src> \n" +
+    String get = GET_SHORT_USAGE
+      + ":  Copy files that match the file pattern <src> \n" +
       "\t\tto the local name.  <src> is kept.  When copying mutiple, \n" +
       "\t\tfiles, the destination must be a directory. \n";
 
@@ -1313,7 +1339,8 @@ public class FsShell extends Configured implements Tool {
       "\t\tmatch a magic number associated with a known format\n" +
       "\t\t(gzip, SequenceFile)\n";
         
-    String copyToLocal = "-copyToLocal <src> <localdst>:  Identical to the -get command.\n";
+    String copyToLocal = COPYTOLOCAL_SHORT_USAGE
+                         + ":  Identical to the -get command.\n";
 
     String moveToLocal = "-moveToLocal <src> <localdst>:  Not implemented yet \n";
         
@@ -1473,7 +1500,7 @@ public class FsShell extends Configured implements Tool {
         // issue the command to the fs
         //
         if ("-cat".equals(cmd)) {
-          cat(argv[i]);
+          cat(argv[i], true);
         } else if ("-mkdir".equals(cmd)) {
           mkdir(argv[i]);
         } else if ("-rm".equals(cmd)) {
@@ -1496,7 +1523,7 @@ public class FsShell extends Configured implements Tool {
       } catch (RemoteException e) {
         //
         // This is a error returned by hadoop server. Print
-        // out the first line of the error mesage.
+        // out the first line of the error message.
         //
         exitCode = -1;
         try {
@@ -1548,16 +1575,16 @@ public class FsShell extends Configured implements Tool {
                "-moveFromLocal".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " <localsrc> <dst>]");
-    } else if ("-get".equals(cmd) || "-copyToLocal".equals(cmd) ||
-               "-moveToLocal".equals(cmd)) {
+    } else if ("-get".equals(cmd)) {
+      System.err.println("Usage: java FsShell [" + GET_SHORT_USAGE + "]"); 
+    } else if ("-copyToLocal".equals(cmd)) {
+      System.err.println("Usage: java FsShell [" + COPYTOLOCAL_SHORT_USAGE+ "]"); 
+    } else if ("-moveToLocal".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " [-crc] <src> <localdst>]");
     } else if ("-cat".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " <src>]");
-    } else if ("-get".equals(cmd)) {
-      System.err.println("Usage: java FsShell" + 
-                         " [" + cmd + " <src> <localdst> [addnl]]");
     } else if ("-setrep".equals(cmd)) {
       System.err.println("Usage: java FsShell [" + SETREP_SHORT_USAGE + "]");
     } else if ("-test".equals(cmd)) {
@@ -1582,11 +1609,11 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [-put <localsrc> <dst>]");
       System.err.println("           [-copyFromLocal <localsrc> <dst>]");
       System.err.println("           [-moveFromLocal <localsrc> <dst>]");
-      System.err.println("           [-get [-crc] <src> <localdst>]");
+      System.err.println("           [" + GET_SHORT_USAGE + "]");
       System.err.println("           [-getmerge <src> <localdst> [addnl]]");
       System.err.println("           [-cat <src>]");
       System.err.println("           [-text <src>]");
-      System.err.println("           [-copyToLocal [-crc] <src> <localdst>]");
+      System.err.println("           [" + COPYTOLOCAL_SHORT_USAGE + "]");
       System.err.println("           [-moveToLocal [-crc] <src> <localdst>]");
       System.err.println("           [-mkdir <path>]");
       System.err.println("           [" + SETREP_SHORT_USAGE + "]");
@@ -1793,17 +1820,16 @@ public class FsShell extends Configured implements Tool {
     System.exit(res);
   }
 
-  /*
+  /**
    * Accumulate exceptions if there is any.  Throw them at last.
    */
   private abstract class DelayedExceptionThrowing {
     abstract void process(Path p, FileSystem srcFs) throws IOException;
 
-    void process(String srcf) throws IOException {
+    final void processSrc(Path srcPattern, FileSystem srcFs
+        ) throws IOException {
       List<IOException> exceptions = new ArrayList<IOException>();
-      Path srcPath = new Path(srcf);
-      FileSystem srcFs = srcPath.getFileSystem(getConf());
-      for(Path p : srcFs.globPaths(new Path(srcf)))
+      for(Path p : srcFs.globPaths(srcPattern))
         try { process(p, srcFs); } 
         catch(IOException ioe) { exceptions.add(ioe); }
     

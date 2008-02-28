@@ -53,8 +53,9 @@ public class TestDFSShell extends TestCase {
 
   static File createLocalFile(File f) throws IOException {
     assertTrue(!f.exists());
-    PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(f)));
-    out.println(f.getAbsolutePath());
+    PrintWriter out = new PrintWriter(f);
+    out.print("createLocalFile: " + f.getAbsolutePath());
+    out.flush();
     out.close();
     assertTrue(f.exists());
     assertTrue(f.isFile());
@@ -863,6 +864,94 @@ public class TestDFSShell extends TestCase {
         fileSys.close();
       } catch (Exception e) {
       }
+      cluster.shutdown();
+    }
+  }
+
+  static List<File> getBlockFiles(MiniDFSCluster cluster) throws IOException {
+    List<File> files = new ArrayList<File>();
+    List<DataNode> datanodes = cluster.getDataNodes();
+    Block[][] blocks = cluster.getAllBlockReports();
+    for(int i = 0; i < blocks.length; i++) {
+      FSDataset ds = (FSDataset)datanodes.get(i).getFSDataset();
+      for(Block b : blocks[i]) {
+        files.add(ds.getBlockFile(b));
+      }        
+    }
+    return files;
+  }
+
+  static void corrupt(List<File> files) throws IOException {
+    for(File f : files) {
+      StringBuilder content = new StringBuilder(DFSTestUtil.readFile(f));
+      char c = content.charAt(0);
+      content.setCharAt(0, ++c);
+      PrintWriter out = new PrintWriter(f);
+      out.print(content);
+      out.flush();
+      out.close();      
+    }
+  }
+
+  static interface TestGetRunner {
+    String run(int exitcode, String... options) throws IOException;
+  }
+
+  public void testGet() throws IOException {
+    DFSTestUtil.setLogLevel2All(FSInputChecker.LOG);
+    final Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+
+    try {
+      final String fname = "testGet.txt";
+      final File localf = createLocalFile(new File(TEST_ROOT_DIR, fname));
+      final String localfcontent = DFSTestUtil.readFile(localf);
+      final Path root = mkdir(dfs, new Path("/test/get"));
+      final Path remotef = new Path(root, fname);
+      dfs.copyFromLocalFile(false, false, new Path(localf.getPath()), remotef);
+
+      final FsShell shell = new FsShell();
+      shell.setConf(conf);
+      TestGetRunner runner = new TestGetRunner() {
+        private int count = 0;
+
+        public String run(int exitcode, String... options) throws IOException {
+          String dst = TEST_ROOT_DIR + "/" + fname+ ++count;
+          String[] args = new String[options.length + 3];
+          args[0] = "-get"; 
+          args[args.length - 2] = remotef.toString();
+          args[args.length - 1] = dst;
+          for(int i = 0; i < options.length; i++) {
+            args[i + 1] = options[i];
+          }
+          show("args=" + Arrays.asList(args));
+          
+          try {
+            assertEquals(exitcode, shell.run(args));
+          } catch (Exception e) {
+            assertTrue(StringUtils.stringifyException(e), false); 
+          }
+          return exitcode == 0? DFSTestUtil.readFile(new File(dst)): null; 
+        }
+      };
+
+      assertEquals(localfcontent, runner.run(0));
+      assertEquals(localfcontent, runner.run(0, "-ignoreCrc"));
+
+      //find and modify the block files
+      List<File> files = getBlockFiles(cluster);
+      show("files=" + files);
+      corrupt(files);
+
+      assertEquals(null, runner.run(-1));
+      String corruptedcontent = runner.run(0, "-ignoreCrc");
+      assertEquals(localfcontent.substring(1), corruptedcontent.substring(1));
+      assertEquals(localfcontent.charAt(0)+1, corruptedcontent.charAt(0));
+
+      localf.delete();
+    } finally {
+      try {dfs.close();} catch (Exception e) {}
       cluster.shutdown();
     }
   }

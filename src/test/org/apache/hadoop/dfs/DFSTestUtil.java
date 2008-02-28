@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.dfs;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
-import java.net.URI;
 import java.util.Random;
 import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
@@ -37,7 +39,6 @@ public class DFSTestUtil extends TestCase {
   private static String[] dirNames = {
     "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"
   };
-  private static Configuration conf = new Configuration();
   
   private int maxLevels;// = 3;
   private int maxSize;// = 8*1024;
@@ -220,4 +221,17 @@ public class DFSTestUtil extends TestCase {
     in.readByte();
     return in.getCurrentBlock();
   }  
+
+  static void setLogLevel2All(org.apache.commons.logging.Log log) {
+    ((org.apache.commons.logging.impl.Log4JLogger)log
+        ).getLogger().setLevel(org.apache.log4j.Level.ALL);
+  }
+
+  static String readFile(File f) throws IOException {
+    StringBuilder b = new StringBuilder();
+    BufferedReader in = new BufferedReader(new FileReader(f));
+    for(int c; (c = in.read()) != -1; b.append((char)c));
+    in.close();      
+    return b.toString();
+  }
 }
