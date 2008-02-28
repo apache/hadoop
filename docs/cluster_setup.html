@@ -204,6 +204,9 @@ document.write("Last Published: " + document.lastModified);
 </ul>
 </li>
 <li>
+<a href="#Hadoop+Rack+Awareness">Hadoop Rack Awareness</a>
+</li>
+<li>
 <a href="#Hadoop+Startup">Hadoop Startup</a>
 </li>
 <li>
@@ -656,7 +659,30 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N10343"></a><a name="Hadoop+Startup"></a>
+<a name="N10343"></a><a name="Hadoop+Rack+Awareness"></a>
+<h2 class="h3">Hadoop Rack Awareness</h2>
+<div class="section">
+<p>The HDFS and the Map-Reduce components are rack-aware.</p>
+<p>The <span class="codefrag">NameNode</span> and the <span class="codefrag">JobTracker</span> obtains the
+      <span class="codefrag">rack id</span> of the slaves in the cluster by invoking an API 
+      <a href="api/org/apache/hadoop/net/DNSToSwitchMapping.html#resolve(java.util.List)">resolve</a> in an administrator configured
+      module. The API resolves the slave's DNS name (also IP address) to a 
+      rack id. What module to use can be configured using the configuration
+      item <span class="codefrag">topology.node.switch.mapping.impl</span>. The default 
+      implementation of the same runs a script/command configured using 
+      <span class="codefrag">topology.script.file.name</span>. If topology.script.file.name is
+      not set, the rack id <span class="codefrag">/default-rack</span> is returned for any 
+      passed IP address. The additional configuration in the Map-Reduce
+      part is <span class="codefrag">mapred.cache.task.levels</span> which determines the number
+      of levels (in the network topology) of caches. So, for example, if it is
+      the default value of 2, two levels of caches will be constructed - 
+      one for hosts (host -&gt; task mapping) and another for racks 
+      (rack -&gt; task mapping).
+      </p>
+</div>
+    
+    
+<a name="N10369"></a><a name="Hadoop+Startup"></a>
 <h2 class="h3">Hadoop Startup</h2>
 <div class="section">
 <p>To start a Hadoop cluster you will need to start both the HDFS and 
@@ -691,7 +717,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N10389"></a><a name="Hadoop+Shutdown"></a>
+<a name="N103AF"></a><a name="Hadoop+Shutdown"></a>
 <h2 class="h3">Hadoop Shutdown</h2>
 <div class="section">
 <p>

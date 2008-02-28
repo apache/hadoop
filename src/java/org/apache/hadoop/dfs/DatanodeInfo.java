@@ -44,7 +44,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   protected long remaining;
   protected long lastUpdate;
   protected int xceiverCount;
-  private String location = NetworkTopology.DEFAULT_RACK;
+  private String location = NetworkTopology.UNRESOLVED;
 
   /** HostName as suplied by the datanode during registration as its 
    * name. Namenode uses datanode IP address as the name.
@@ -125,10 +125,10 @@ public class DatanodeInfo extends DatanodeID implements Node {
   }
 
   /** rack name **/
-  public String getNetworkLocation() {return location;}
+  public synchronized String getNetworkLocation() {return location;}
     
   /** Sets the rack name */
-  void setNetworkLocation(String location) {
+  public synchronized void setNetworkLocation(String location) {
     this.location = NodeBase.normalize(location);
   }
   
@@ -147,7 +147,8 @@ public class DatanodeInfo extends DatanodeID implements Node {
     long r = getRemaining();
     long u = getDfsUsed();
     buffer.append("Name: "+name+"\n");
-    if (!NetworkTopology.DEFAULT_RACK.equals(location)) {
+    if (!NetworkTopology.UNRESOLVED.equals(location) && 
+        !NetworkTopology.DEFAULT_RACK.equals(location)) {
       buffer.append("Rack: "+location+"\n");
     }
     if (isDecommissioned()) {
@@ -172,7 +173,8 @@ public class DatanodeInfo extends DatanodeID implements Node {
     long r = getRemaining();
     long u = getDfsUsed();
     buffer.append(name);
-    if (!NetworkTopology.DEFAULT_RACK.equals(location)) {
+    if (!NetworkTopology.UNRESOLVED.equals(location) &&
+        !NetworkTopology.DEFAULT_RACK.equals(location)) {
       buffer.append(" "+location);
     }
     if (isDecommissioned()) {

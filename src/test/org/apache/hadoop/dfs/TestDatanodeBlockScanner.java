@@ -65,7 +65,7 @@ public class TestDatanodeBlockScanner extends TestCase {
    */
   private static long waitForVerification(DatanodeInfo dn, FileSystem fs, 
                                           Path file) throws IOException {
-    URL url = new URL("http://" + dn.getHostName() + ":" + dn.getInfoPort() +
+    URL url = new URL("http://localhost:" + dn.getInfoPort() +
                       "/blockScannerReport?listblocks");
     long lastWarnTime = System.currentTimeMillis();
     long verificationTime = 0;

@@ -60,7 +60,7 @@ import org.apache.log4j.Level;
  * Then the benchmark executes the specified number of operations using 
  * the specified number of threads and outputs the resulting stats.
  */
-public class NNThroughputBenchmark {
+public class NNThroughputBenchmark implements FSConstants {
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.NNThroughputBenchmark");
   private static final int BLOCK_SIZE = 16;
 
@@ -568,10 +568,8 @@ public class NNThroughputBenchmark {
       NamespaceInfo nsInfo = nameNode.versionRequest();
       dnRegistration.setStorageInfo(new DataStorage(nsInfo, ""));
       DataNode.setNewStorageID(dnRegistration);
-      // get network location
-      String networkLoc = NetworkTopology.DEFAULT_RACK;
       // register datanode
-      dnRegistration = nameNode.register(dnRegistration, networkLoc);
+      dnRegistration = nameNode.register(dnRegistration);
     }
 
     void sendHeartbeat() throws IOException {
@@ -677,6 +675,24 @@ public class NNThroughputBenchmark {
         datanodes[idx].sendHeartbeat();
         prevDNName = datanodes[idx].dnRegistration.getName();
       }
+      int numResolved = 0;
+      DatanodeInfo[] dnInfos = nameNode.getDatanodeReport(DatanodeReportType.ALL);
+      do {
+        numResolved = 0;
+        for (DatanodeInfo info : dnInfos) {
+          if (!info.getNetworkLocation().equals(NetworkTopology.UNRESOLVED)) {
+            numResolved++;
+          } else {
+            try {
+              Thread.sleep(2);
+            } catch (Exception e) {
+            }
+            dnInfos = nameNode.getDatanodeReport(DatanodeReportType.LIVE);
+            break;
+          }
+        }
+      } while (numResolved != nrDatanodes);
+
       // create files 
       FileGenerator nameGenerator;
       nameGenerator = new FileGenerator(getBaseDir(), 100);

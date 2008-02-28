@@ -20,7 +20,7 @@ package org.apache.hadoop.mapred;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +38,7 @@ import org.apache.hadoop.mapred.JobTracker.JobTrackerMetrics;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
+import org.apache.hadoop.net.*;
 
 /*************************************************************
  * JobInProgress maintains all the info for keeping
@@ -74,8 +75,12 @@ class JobInProgress {
 
   JobPriority priority = JobPriority.NORMAL;
   JobTracker jobtracker = null;
-  Map<String,List<TaskInProgress>> hostToMaps =
-    new HashMap<String,List<TaskInProgress>>();
+
+  // NetworkTopology Node to the set of TIPs
+  Map<Node, List<TaskInProgress>> nodesToMaps;
+  
+  private int maxLevel;
+  
   private int taskCompletionEventTracker = 0; 
   List<TaskCompletionEvent> taskCompletionEvents;
     
@@ -110,7 +115,8 @@ class JobInProgress {
     NUM_FAILED_REDUCES,
     TOTAL_LAUNCHED_MAPS,
     TOTAL_LAUNCHED_REDUCES,
-    DATA_LOCAL_MAPS
+    DATA_LOCAL_MAPS,
+    RACK_LOCAL_MAPS
   }
   private Counters jobCounters = new Counters();
   
@@ -204,8 +210,61 @@ class JobInProgress {
     jobMetrics.removeTag("counter");
     jobMetrics.remove();
   }
-  
     
+  private Node getParentNode(Node node, int level) {
+    for (int i = 0; node != null && i < level; i++) {
+      node = node.getParent();
+    }
+    return node;
+  }
+  private void printCache (Map<Node, List<TaskInProgress>> cache) {
+    LOG.info("The taskcache info:");
+    for (Map.Entry<Node, List<TaskInProgress>> n : cache.entrySet()) {
+      List <TaskInProgress> tips = n.getValue();
+      LOG.info("Cached TIPs on node: " + n.getKey());
+      for (TaskInProgress tip : tips) {
+        LOG.info("tip : " + tip.getTIPId());
+      }
+    }
+  }
+  
+  private Map<Node, List<TaskInProgress>> createCache(
+                         JobClient.RawSplit[] splits, int maxLevel) {
+    Map<Node, List<TaskInProgress>> cache = 
+      new IdentityHashMap<Node, List<TaskInProgress>>(maxLevel);
+    
+    for (int i = 0; i < splits.length; i++) {
+      for(String host: splits[i].getLocations()) {
+        Node node = jobtracker.resolveAndAddToTopology(host);
+        if (node == null) {
+          continue;
+        }
+        if (node.getLevel() < maxLevel) {
+          LOG.warn("Got a host whose level is: " + node.getLevel() +
+              ". Should get at least a level of value: " + maxLevel);
+          return null;
+        }
+        for (int j = 0; j < maxLevel; j++) {
+          node = getParentNode(node, j);
+          List<TaskInProgress> hostMaps = cache.get(node);
+          if (hostMaps == null) {
+            hostMaps = new ArrayList<TaskInProgress>();
+            cache.put(node, hostMaps);
+            hostMaps.add(maps[i]);
+          }
+          //check whether the hostMaps already contains an entry for a TIP
+          //This will be true for nodes that are racks and multiple nodes in
+          //the rack contain the input for a tip. Note that if it already
+          //exists in the hostMaps, it must be the last element there since
+          //we process one TIP at a time sequentially in the split-size order
+          if (hostMaps.get(hostMaps.size() - 1) != maps[i]) {
+            hostMaps.add(maps[i]);
+          }
+        }
+      }
+    }
+    return cache;
+  }
   /**
    * Construct the splits, etc.  This is invoked from an async
    * thread so that split-computation doesn't block anyone.
@@ -233,17 +292,11 @@ class JobInProgress {
     maps = new TaskInProgress[numMapTasks];
     for(int i=0; i < numMapTasks; ++i) {
       maps[i] = new TaskInProgress(jobId, jobFile, 
-                                   splits[i].getClassName(),
-                                   splits[i].getBytes(), 
+                                   splits[i], 
                                    jobtracker, conf, this, i);
-      for(String host: splits[i].getLocations()) {
-        List<TaskInProgress> hostMaps = hostToMaps.get(host);
-        if (hostMaps == null) {
-          hostMaps = new ArrayList<TaskInProgress>();
-          hostToMaps.put(host, hostMaps);
-        }
-        hostMaps.add(maps[i]);              
-      }
+    }
+    if (numMapTasks > 0) { 
+      nodesToMaps = createCache(splits, (maxLevel = jobtracker.getNumTaskCacheLevels()));
     }
         
     // if no split is returned, job is considered completed and successful
@@ -410,7 +463,13 @@ class JobInProgress {
       }
 
       if (null != ttStatus){
-        httpTaskLogLocation = "http://" + ttStatus.getHost() + ":" + 
+        String host;
+        if (NetUtils.getStaticResolution(ttStatus.getHost()) != null) {
+          host = NetUtils.getStaticResolution(ttStatus.getHost());
+        } else {
+          host = ttStatus.getHost();
+        }
+        httpTaskLogLocation = "http://" + host + ":" + 
           ttStatus.getHttpPort() + "/tasklog?plaintext=true&taskid=" +
           status.getTaskId();
       }
@@ -571,9 +630,9 @@ class JobInProgress {
       return null;
     }
     
-    ArrayList mapCache = (ArrayList)hostToMaps.get(tts.getHost());
+    
     int target = findNewTask(tts, clusterSize, status.mapProgress(), 
-                             maps, mapCache);
+                             maps, nodesToMaps);
     if (target == -1) {
       return null;
     }
@@ -695,6 +754,13 @@ class JobInProgress {
     return trackerErrors;
   }
     
+  private boolean shouldRunSpeculativeTask(TaskInProgress task, 
+                                          double avgProgress,
+                                          String taskTracker) {
+    return task.hasSpeculativeTask(avgProgress) && 
+           !task.hasRunOnMachine(taskTracker);
+  }
+  
   /**
    * Find a new task to run.
    * @param tts The task tracker that is asking for a task
@@ -709,14 +775,16 @@ class JobInProgress {
                           int clusterSize,
                           double avgProgress,
                           TaskInProgress[] tasks,
-                          List cachedTasks) {
+                          Map<Node,List<TaskInProgress>> cachedTasks) {
     String taskTracker = tts.getTrackerName();
+    int specTarget = -1;
 
     //
     // Update the last-known clusterSize
     //
     this.clusterSize = clusterSize;
 
+    Node node = jobtracker.getNode(tts.getHost());
     //
     // Check if too many tasks of this job have failed on this
     // tasktracker prior to assigning it a new one.
@@ -734,22 +802,56 @@ class JobInProgress {
         
     //
     // See if there is a split over a block that is stored on
-    // the TaskTracker checking in.  That means the block
-    // doesn't have to be transmitted from another node.
+    // the TaskTracker checking in or the rack it belongs to and so on till
+    // maxLevel.  That means the block
+    // doesn't have to be transmitted from another node/rack/and so on.
+    // The way the cache is updated is such that in every lookup, the TIPs
+    // which are complete is removed. Running/Failed TIPs are not removed
+    // since we want to have locality optimizations even for FAILED/SPECULATIVE
+    // tasks.
     //
-    if (cachedTasks != null) {
-      Iterator i = cachedTasks.iterator();
-      while (i.hasNext()) {
-        TaskInProgress tip = (TaskInProgress)i.next();
-        i.remove();
-        if (tip.isRunnable() && 
-            !tip.isRunning() &&
-            !tip.hasFailedOnMachine(taskTracker)) {
-          LOG.info("Choosing cached task " + tip.getTIPId());
-          int cacheTarget = tip.getIdWithinJob();
-          jobCounters.incrCounter(Counter.DATA_LOCAL_MAPS, 1);
-          return cacheTarget;
+    if (cachedTasks != null && node != null) {
+      Node key = node;
+      for (int level = 0; level < maxLevel && key != null; level++) {
+        List <TaskInProgress> cacheForLevel = cachedTasks.get(key);
+        if (cacheForLevel != null) {
+          Iterator<TaskInProgress> i = cacheForLevel.iterator();
+          while (i.hasNext()) {
+            TaskInProgress tip = i.next();
+            // we remove only those TIPs that are data-local (the host having
+            // the data is running the task). We don't remove TIPs that are 
+            // rack-local for example since that would negatively impact
+            // the performance of speculative and failed tasks (imagine a case
+            // where we schedule one TIP rack-local and after sometime another
+            // tasktracker from the same rack is asking for a task, and the TIP
+            // in question has either failed or could be a speculative task
+            // candidate)
+            if (tip.isComplete() || level == 0) {
+              i.remove();
+            }
+            if (tip.isRunnable() && 
+                !tip.isRunning() &&
+                !tip.hasFailedOnMachine(taskTracker)) {
+              int cacheTarget = tip.getIdWithinJob();
+              if (level == 0) {
+                LOG.info("Choosing data-local task " + tip.getTIPId());
+                jobCounters.incrCounter(Counter.DATA_LOCAL_MAPS, 1);
+              } else if (level == 1){
+                LOG.info("Choosing rack-local task " + tip.getTIPId());
+                jobCounters.incrCounter(Counter.RACK_LOCAL_MAPS, 1);
+              } else {
+                LOG.info("Choosing cached task at level " + level + " " + 
+                          tip.getTIPId());
+              }
+              return cacheTarget;
+            }
+            if (specTarget == -1 &&
+                shouldRunSpeculativeTask(tip, avgProgress, taskTracker)) {
+              specTarget = tip.getIdWithinJob();
+            }
+          }
         }
+        key = key.getParent();
       }
     }
 
@@ -759,7 +861,6 @@ class JobInProgress {
     // a std. task to run.
     //
     int failedTarget = -1;
-    int specTarget = -1;
     for (int i = 0; i < tasks.length; i++) {
       TaskInProgress task = tasks[i];
       if (task.isRunnable()) {
@@ -781,8 +882,7 @@ class JobInProgress {
             LOG.info("Choosing normal task " + tasks[i].getTIPId());
             return i;
           } else if (specTarget == -1 &&
-                     task.hasSpeculativeTask(avgProgress) && 
-                     !task.hasRunOnMachine(taskTracker)) {
+                     shouldRunSpeculativeTask(task, avgProgress, taskTracker)) {
             specTarget = i;
           }
         }
@@ -989,7 +1089,28 @@ class JobInProgress {
         
     // the case when the map was complete but the task tracker went down.
     if (wasComplete && !isComplete) {
-      if (tip.isMapTask()){
+      if (tip.isMapTask()) {
+        // Put the task back in the cache. This will help locality for cases
+        // where we have a different TaskTracker from the same rack/switch
+        // asking for a task. Note that we don't add the TIP to the host's cache
+        // again since we don't execute a failed TIP on the same TT again, 
+        // and also we bother about only those TIPs that were successful
+        // earlier (wasComplete and !isComplete) 
+        // (since they might have been removed from the cache of other 
+        // racks/switches, if the input split blocks were present there too)
+        for (String host : tip.getSplitLocations()) {
+          Node node = jobtracker.getNode(host);
+          for (int level = 1; (node != null && level < maxLevel); level++) {
+            node = getParentNode(node, level);
+            if (node == null) {
+              break;
+            }
+            List<TaskInProgress> list = nodesToMaps.get(node);
+            if (list != null) {
+              list.add(tip);
+            }
+          }
+        }
         finishedMapTasks -= 1;
       }
     }

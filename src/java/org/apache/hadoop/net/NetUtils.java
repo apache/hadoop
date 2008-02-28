@@ -19,6 +19,9 @@ package org.apache.hadoop.net;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.Map.Entry;
+import java.util.*;
+
 import javax.net.SocketFactory;
 
 import org.apache.commons.logging.Log;
@@ -30,6 +33,9 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 public class NetUtils {
   private static final Log LOG = LogFactory.getLog(NetUtils.class);
+  
+  private static Map<String, String> hostToResolved = 
+                                     new HashMap<String, String>();
 
   /**
    * Get the socket factory for the given class according to its
@@ -122,6 +128,9 @@ public class NetUtils {
       port = addr.getPort();
     }
   
+    if (getStaticResolution(hostname) != null) {
+      hostname = getStaticResolution(hostname);
+    }
     return new InetSocketAddress(hostname, port);
   }
 
@@ -163,5 +172,56 @@ public class NetUtils {
                " is deprecated. Use " + newBindAddressName + " instead.");      
     }
     return oldAddr + ":" + oldPort;
+  }
+  
+  /**
+   * Adds a static resolution for host. This can be used for setting up
+   * hostnames with names that are fake to point to a well known host. For e.g.
+   * in some testcases we require to have daemons with different hostnames
+   * running on the same machine. In order to create connections to these
+   * daemons, one can set up mappings from those hostnames to "localhost".
+   * {@link NetUtils#getStaticResolution(String)} can be used to query for
+   * the actual hostname. 
+   * @param host
+   * @param resolvedName
+   */
+  public static void addStaticResolution(String host, String resolvedName) {
+    synchronized (hostToResolved) {
+      hostToResolved.put(host, resolvedName);
+    }
+  }
+  
+  /**
+   * Retrieves the resolved name for the passed host. The resolved name must
+   * have been set earlier using 
+   * {@link NetUtils#addStaticResolution(String, String)}
+   * @param host
+   * @return the resolution
+   */
+  public static String getStaticResolution(String host) {
+    synchronized (hostToResolved) {
+      return hostToResolved.get(host);
+    }
+  }
+  
+  /**
+   * This is used to get all the resolutions that were added using
+   * {@link NetUtils#addStaticResolution(String, String)}. The return
+   * value is a List each element of which contains an array of String 
+   * of the form String[0]=hostname, String[1]=resolved-hostname
+   * @return the list of resolutions
+   */
+  public static List <String[]> getAllStaticResolutions() {
+    synchronized (hostToResolved) {
+      Set <Entry <String, String>>entries = hostToResolved.entrySet();
+      if (entries.size() == 0) {
+        return null;
+      }
+      List <String[]> l = new ArrayList<String[]>(entries.size());
+      for (Entry<String, String> e : entries) {
+        l.add(new String[] {e.getKey(), e.getValue()});
+      }
+    return l;
+    }
   }
 }

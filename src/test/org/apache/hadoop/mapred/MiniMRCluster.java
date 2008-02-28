@@ -22,6 +22,9 @@ import java.util.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.StaticMapping;
+import org.apache.hadoop.net.NetUtils;
 
 /**
  * This class creates a single-process Map-Reduce cluster for junit testing.
@@ -48,7 +51,7 @@ public class MiniMRCluster {
    */
   class JobTrackerRunner implements Runnable {
     private JobTracker tracker = null;
-
+    
     JobConf jc = null;
         
     public boolean isUp() {
@@ -70,6 +73,8 @@ public class MiniMRCluster {
       try {
         jc = createJobConf();
         jc.set("mapred.local.dir","build/test/mapred/local");
+        jc.setClass("topology.node.switch.mapping.impl", 
+            StaticMapping.class, DNSToSwitchMapping.class);
         tracker = JobTracker.startTracker(jc);
         tracker.offerService();
       } catch (Throwable e) {
@@ -104,11 +109,15 @@ public class MiniMRCluster {
     volatile boolean isDead = false;
     int numDir;
 
-    TaskTrackerRunner(int trackerId, int numDir) throws IOException {
+    TaskTrackerRunner(int trackerId, int numDir, String hostname) 
+    throws IOException {
       this.trackerId = trackerId;
       this.numDir = numDir;
       localDirs = new String[numDir];
       conf = createJobConf();
+      if (hostname != null) {
+        conf.set("slave.host.name", hostname);
+      }
       conf.set("mapred.task.tracker.http.address", "0.0.0.0:0");
       conf.set("mapred.task.tracker.report.address", 
                 "127.0.0.1:" + taskTrackerPort);
@@ -132,6 +141,14 @@ public class MiniMRCluster {
       }
       conf.set("mapred.local.dir", localPath.toString());
       LOG.info("mapred.local.dir is " +  localPath);
+      try {
+        tt = new TaskTracker(conf);
+        isInitialized = true;
+      } catch (Throwable e) {
+        isDead = true;
+        tt = null;
+        LOG.error("task tracker " + trackerId + " crashed", e);
+      }
     }
         
     /**
@@ -139,9 +156,9 @@ public class MiniMRCluster {
      */
     public void run() {
       try {
-        tt = new TaskTracker(conf);
-        isInitialized = true;
-        tt.run();
+        if (tt != null) {
+          tt.run();
+        }
       } catch (Throwable e) {
         isDead = true;
         tt = null;
@@ -162,6 +179,11 @@ public class MiniMRCluster {
     public String[] getLocalDirs(){
       return localDirs;
     } 
+    
+    public TaskTracker getTaskTracker() {
+      return tt;
+    }
+    
     /**
      * Shut down the server and wait for it to finish.
      */
@@ -226,12 +248,24 @@ public class MiniMRCluster {
     result.set("fs.default.name", namenode);
     result.set("mapred.job.tracker", "localhost:"+jobTrackerPort);
     result.set("mapred.job.tracker.http.address", 
-                        "0.0.0.0:" + jobTrackerInfoPort);
+                        "127.0.0.1:" + jobTrackerInfoPort);
     // for debugging have all task output sent to the test output
     JobClient.setTaskOutputFilter(result, JobClient.TaskStatusFilter.ALL);
     return result;
   }
 
+  /**
+   * Create the config and the cluster.
+   * @param numTaskTrackers no. of tasktrackers in the cluster
+   * @param namenode the namenode
+   * @param numDir no. of directories
+   * @throws IOException
+   */
+  public MiniMRCluster(int numTaskTrackers, String namenode, int numDir, 
+      String[] racks, String[] hosts) throws IOException {
+    this(0, 0, numTaskTrackers, namenode, false, numDir, racks, hosts);
+  }
+  
   /**
    * Create the config and the cluster.
    * @param numTaskTrackers no. of tasktrackers in the cluster
@@ -260,11 +294,49 @@ public class MiniMRCluster {
   } 
 
   public MiniMRCluster(int jobTrackerPort,
+      int taskTrackerPort,
+      int numTaskTrackers,
+      String namenode,
+      boolean taskTrackerFirst, int numDir)
+  throws IOException {
+    this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode, 
+        taskTrackerFirst, 1, null);
+  }
+  
+  public MiniMRCluster(int jobTrackerPort,
+      int taskTrackerPort,
+      int numTaskTrackers,
+      String namenode,
+      boolean taskTrackerFirst, int numDir,
+      String[] racks) throws IOException {
+    this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode, 
+        taskTrackerFirst, numDir, racks, null);
+  }
+  
+  public MiniMRCluster(int jobTrackerPort,
                        int taskTrackerPort,
                        int numTaskTrackers,
                        String namenode,
-                       boolean taskTrackerFirst, int numDir) throws IOException {
+                       boolean taskTrackerFirst, int numDir,
+                       String[] racks, String[] hosts) throws IOException {
 
+    if (racks != null && racks.length < numTaskTrackers) {
+      LOG.error("Invalid number of racks specified. It should be at least " +
+          "equal to the number of tasktrackers");
+      shutdown();
+    }
+    if (hosts != null && numTaskTrackers > hosts.length ) {
+      throw new IllegalArgumentException( "The length of hosts [" + hosts.length
+          + "] is less than the number of tasktrackers [" + numTaskTrackers + "].");
+    }
+    //Generate some hostnames if required
+    if (racks != null && hosts == null) {
+      System.out.println("Generating host names for tasktrackers");
+      hosts = new String[numTaskTrackers];
+      for (int i = 0; i < numTaskTrackers; i++) {
+        hosts[i] = "host" + i + ".foo.com";
+      }
+    }
     this.jobTrackerPort = jobTrackerPort;
     this.taskTrackerPort = taskTrackerPort;
     this.jobTrackerInfoPort = 0;
@@ -290,7 +362,16 @@ public class MiniMRCluster {
 
     // Create the TaskTrackers
     for (int idx = 0; idx < numTaskTrackers; idx++) {
-      TaskTrackerRunner taskTracker = new TaskTrackerRunner(idx, numDir);
+      if (racks != null) {
+        StaticMapping.addNodeToRack(hosts[idx],racks[idx]);
+      }
+      if (hosts != null) {
+        NetUtils.addStaticResolution(hosts[idx], "localhost");
+      }
+      TaskTrackerRunner taskTracker;
+      taskTracker = new TaskTrackerRunner(idx, numDir, 
+          hosts == null ? null : hosts[idx]);
+      
       Thread taskTrackerThread = new Thread(taskTracker);
       taskTrackerList.add(taskTracker);
       taskTrackerThreadList.add(taskTrackerThread);
@@ -311,6 +392,12 @@ public class MiniMRCluster {
     }
 
     // Wait till the MR cluster stabilizes
+    while(jobTracker.tracker.getNumResolvedTaskTrackers() != numTaskTrackers) {
+      try {
+        Thread.sleep(20);
+      } catch (InterruptedException ie) {
+      }
+    }
     waitUntilIdle();
   }
     

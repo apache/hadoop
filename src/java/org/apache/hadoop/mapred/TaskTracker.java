@@ -389,10 +389,15 @@ public class TaskTracker
   synchronized void initialize() throws IOException {
     // use configured nameserver & interface to get local hostname
     this.fConf = new JobConf(originalConf);
-    this.localHostname =
+    if (fConf.get("slave.host.name") != null) {
+      this.localHostname = fConf.get("slave.host.name");
+    }
+    if (localHostname == null) {
+      this.localHostname =
       DNS.getDefaultHost
       (fConf.get("mapred.tasktracker.dns.interface","default"),
        fConf.get("mapred.tasktracker.dns.nameserver","default"));
+    }
  
     //check local disk
     checkLocalDirs(this.fConf.getLocalDirs());
@@ -1444,6 +1449,19 @@ public class TaskTracker
       }
       task.localizeConfiguration(localJobConf);
       
+      List<String[]> staticResolutions = NetUtils.getAllStaticResolutions();
+      if (staticResolutions != null && staticResolutions.size() > 0) {
+        StringBuffer str = new StringBuffer();
+
+        for (int i = 0; i < staticResolutions.size(); i++) {
+          String[] hostToResolved = staticResolutions.get(i);
+          str.append(hostToResolved[0]+"="+hostToResolved[1]);
+          if (i != staticResolutions.size() - 1) {
+            str.append(',');
+          }
+        }
+        localJobConf.set("hadoop.net.static.resolutions", str.toString());
+      }
       OutputStream out = localFs.create(localTaskFile);
       try {
         localJobConf.write(out);

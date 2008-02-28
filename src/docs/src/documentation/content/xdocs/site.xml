@@ -193,6 +193,11 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <package-summary href="package-summary.html" />
               </pipes>
             </mapred>
+            <net href="net/">
+              <dnstoswitchmapping href="DNSToSwitchMapping.html">
+              <resolve href="#resolve(java.util.List)" />
+              </dnstoswitchmapping>
+            </net>
             <streaming href="streaming/">
               <package-summary href="package-summary.html" />
             </streaming>

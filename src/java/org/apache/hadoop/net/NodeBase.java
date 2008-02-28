@@ -84,6 +84,9 @@ public class NodeBase implements Node {
   /** Return this node's network location */
   public String getNetworkLocation() { return location; }
   
+  /** Set this node's network location */
+  public void setNetworkLocation(String location) { this.location = location; }
+  
   /** Return this node's path */
   public static String getPath(Node node) {
     return node.getNetworkLocation()+PATH_SEPARATOR_STR+node.getName();

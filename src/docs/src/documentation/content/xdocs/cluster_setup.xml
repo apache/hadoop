@@ -403,6 +403,28 @@
     </section>
     
     <section>
+      <title>Hadoop Rack Awareness</title>
+      <p>The HDFS and the Map-Reduce components are rack-aware.</p>
+      <p>The <code>NameNode</code> and the <code>JobTracker</code> obtains the
+      <code>rack id</code> of the slaves in the cluster by invoking an API 
+      <a href="ext:api/org/apache/hadoop/net/dnstoswitchmapping/resolve
+      ">resolve</a> in an administrator configured
+      module. The API resolves the slave's DNS name (also IP address) to a 
+      rack id. What module to use can be configured using the configuration
+      item <code>topology.node.switch.mapping.impl</code>. The default 
+      implementation of the same runs a script/command configured using 
+      <code>topology.script.file.name</code>. If topology.script.file.name is
+      not set, the rack id <code>/default-rack</code> is returned for any 
+      passed IP address. The additional configuration in the Map-Reduce
+      part is <code>mapred.cache.task.levels</code> which determines the number
+      of levels (in the network topology) of caches. So, for example, if it is
+      the default value of 2, two levels of caches will be constructed - 
+      one for hosts (host -> task mapping) and another for racks 
+      (rack -> task mapping).
+      </p>
+    </section>
+    
+    <section>
       <title>Hadoop Startup</title>
       
       <p>To start a Hadoop cluster you will need to start both the HDFS and 

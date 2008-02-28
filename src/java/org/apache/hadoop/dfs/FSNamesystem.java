@@ -27,8 +27,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.mapred.StatusHttpServer;
 import org.apache.hadoop.metrics.util.MBeanUtil;
+import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.ipc.Server;
@@ -42,6 +44,7 @@ import java.io.DataOutputStream;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.text.SimpleDateFormat;
 
 import javax.management.NotCompliantMBeanException;
@@ -175,6 +178,8 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   Daemon lmthread = null;   // LeaseMonitor thread
   Daemon smmthread = null;  // SafeModeMonitor thread
   Daemon replthread = null;  // Replication thread
+  Daemon resthread = null; //ResolutionMonitor thread
+  
   volatile boolean fsRunning = true;
   long systemStart = 0;
 
@@ -208,6 +213,10 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     
   // datanode networktoplogy
   NetworkTopology clusterMap = new NetworkTopology();
+  private DNSToSwitchMapping dnsToSwitchMapping;
+  private LinkedBlockingQueue<DatanodeDescriptor> resolutionQueue = 
+    new LinkedBlockingQueue <DatanodeDescriptor>();
+  
   // for block replicas placement
   ReplicationTargetChooser replicator;
 
@@ -271,9 +280,11 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.hbthread = new Daemon(new HeartbeatMonitor());
     this.lmthread = new Daemon(new LeaseMonitor());
     this.replthread = new Daemon(new ReplicationMonitor());
+    this.resthread = new Daemon(new ResolutionMonitor());
     hbthread.start();
     lmthread.start();
     replthread.start();
+    resthread.start();
     
     this.registerMBean(); // register the MBean for the FSNamesystemStutus
 
@@ -282,6 +293,10 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                            conf.get("dfs.hosts.exclude",""));
     this.dnthread = new Daemon(new DecommissionedMonitor());
     dnthread.start();
+
+    this.dnsToSwitchMapping = (DNSToSwitchMapping)ReflectionUtils.newInstance(
+        conf.getClass("topology.node.switch.mapping.impl", ScriptBasedMapping.class,
+            DNSToSwitchMapping.class), conf);
 
     String infoAddr = 
       NetUtils.getServerAddress(conf, "dfs.info.bindAddress", 
@@ -419,6 +434,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       if (infoServer != null) infoServer.stop();
       if (hbthread != null) hbthread.interrupt();
       if (replthread != null) replthread.interrupt();
+      if (resthread != null) resthread.interrupt();
       if (dnthread != null) dnthread.interrupt();
       if (smmthread != null) smmthread.interrupt();
     } catch (InterruptedException ie) {
@@ -1835,6 +1851,72 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return dir.getListing(src);
   }
 
+  public void addToResolutionQueue(DatanodeDescriptor d) {
+    while (!resolutionQueue.add(d)) {
+      LOG.warn("Couldn't add to the Resolution queue now. Will " +
+               "try again");
+      try {
+        Thread.sleep(2000);
+      } catch (InterruptedException ie) {}
+    }
+  }
+  
+  private class ResolutionMonitor implements Runnable {
+    public void run() {
+      try {
+        while (fsRunning) {
+          int size;
+          if((size = resolutionQueue.size()) == 0) {
+            Thread.sleep(2000);
+            continue;
+          }
+          List <DatanodeDescriptor> datanodes = 
+            new ArrayList<DatanodeDescriptor>(size);
+          resolutionQueue.drainTo(datanodes);
+          List<String> dnHosts = new ArrayList<String>(size);
+          for (DatanodeDescriptor d : datanodes) {
+            dnHosts.add(d.getName());
+          }
+          List<String> rName = dnsToSwitchMapping.resolve(dnHosts);
+          if (rName == null) {
+            continue;
+          }
+          int i = 0;
+          for (String m : rName) {
+            DatanodeDescriptor d = datanodes.get(i++); 
+            d.setNetworkLocation(m);
+            clusterMap.add(d);
+          }
+        }
+      } catch (Exception e) {
+        FSNamesystem.LOG.error(StringUtils.stringifyException(e));
+      }
+    }
+  }
+  
+  /**
+   * Has the block report of the datanode represented by nodeReg been processed
+   * yet.
+   * @param nodeReg
+   * @return true or false
+   */
+  public synchronized boolean blockReportProcessed(DatanodeRegistration nodeReg)
+  throws IOException {
+    return getDatanode(nodeReg).getBlockReportProcessed();
+  }
+  
+  /**
+   * Has the datanode been resolved to a switch/rack
+   */
+  public synchronized boolean isResolved(DatanodeRegistration dnReg) {
+    try {
+      return !getDatanode(dnReg).getNetworkLocation()
+            .equals(NetworkTopology.UNRESOLVED);
+    } catch (IOException ie) {
+      return false;
+    }
+  }
+    
   /////////////////////////////////////////////////////////
   //
   // These methods are called by datanodes
@@ -1863,8 +1945,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * 
    * @see DataNode#register()
    */
-  public synchronized void registerDatanode(DatanodeRegistration nodeReg,
-                                            String networkLocation
+  public synchronized void registerDatanode(DatanodeRegistration nodeReg
                                             ) throws IOException {
 
     if (!verifyNodeRegistration(nodeReg)) {
@@ -1931,9 +2012,9 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       // update cluster map
       clusterMap.remove(nodeS);
       nodeS.updateRegInfo(nodeReg);
-      nodeS.setNetworkLocation(networkLocation);
-      clusterMap.add(nodeS);
       nodeS.setHostName(hostName);
+      nodeS.setNetworkLocation(NetworkTopology.UNRESOLVED);
+      addToResolutionQueue(nodeS);
         
       // also treat the registration message as a heartbeat
       synchronized(heartbeats) {
@@ -1958,9 +2039,9 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
     // register new datanode
     DatanodeDescriptor nodeDescr 
-      = new DatanodeDescriptor(nodeReg, networkLocation, hostName);
+      = new DatanodeDescriptor(nodeReg, NetworkTopology.UNRESOLVED, hostName);
     unprotectedAddDatanode(nodeDescr);
-    clusterMap.add(nodeDescr);
+    addToResolutionQueue(nodeDescr);
       
     // also treat the registration message as a heartbeat
     synchronized(heartbeats) {
@@ -2406,6 +2487,10 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       setDatanodeDead(node);
       throw new DisallowedDatanodeException(node);
     }
+    
+    if (node.getNetworkLocation().equals(NetworkTopology.UNRESOLVED)) {
+      return null; //drop the block report if the dn hasn't been resolved
+    }
 
     //
     // Modify the (block-->datanode) map, according to the difference
@@ -2455,6 +2540,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
     }
     NameNode.getNameNodeMetrics().blockReport.inc((int) (now() - startTime));
+    node.setBlockReportProcessed(true);
     return obsolete.toArray(new Block[obsolete.size()]);
   }
 

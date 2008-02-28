@@ -39,6 +39,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.net.*;
 
 /** Base class for tasks. */
 abstract class Task implements Writable, Configurable {
@@ -405,6 +406,17 @@ abstract class Task implements Writable, Configurable {
     }
     this.mapOutputFile.setConf(this.conf);
     this.lDirAlloc = new LocalDirAllocator("mapred.local.dir");
+    // add the static resolutions (this is required for the junit to
+    // work on testcases that simulate multiple nodes on a single physical
+    // node.
+    String hostToResolved[] = conf.getStrings("hadoop.net.static.resolutions");
+    if (hostToResolved != null) {
+      for (String str : hostToResolved) {
+        String name = str.substring(0, str.indexOf('='));
+        String resolvedName = str.substring(str.indexOf('=') + 1);
+        NetUtils.addStaticResolution(name, resolvedName);
+      }
+    }
   }
 
   public Configuration getConf() {

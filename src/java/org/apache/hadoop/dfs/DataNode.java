@@ -26,12 +26,10 @@ import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.mapred.StatusHttpServer;
-import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.dfs.BlockCommand;
 import org.apache.hadoop.dfs.DatanodeProtocol;
 import org.apache.hadoop.dfs.FSDatasetInterface.MetaDataInputStream;
@@ -90,7 +88,7 @@ public class DataNode implements FSConstants, Runnable {
   DatanodeProtocol namenode = null;
   FSDatasetInterface data = null;
   DatanodeRegistration dnRegistration = null;
-  private String networkLoc;
+
   volatile boolean shouldRun = true;
   private LinkedList<Block> receivedBlockList = new LinkedList<Block>();
   private LinkedList<String> delHints = new LinkedList<String>();
@@ -102,15 +100,18 @@ public class DataNode implements FSConstants, Runnable {
   long lastBlockReport = 0;
   boolean resetBlockReportTime = true;
   long initialBlockReportDelay = BLOCKREPORT_INITIAL_DELAY * 1000L;
+  boolean mustReportBlocks = false;
   long lastHeartbeat = 0;
   long heartBeatInterval;
   private DataStorage storage = null;
   private StatusHttpServer infoServer = null;
   private DataNodeMetrics myMetrics;
   private static InetSocketAddress nameNodeAddr;
+  private InetSocketAddress selfAddr;
   private static DataNode datanodeObject = null;
   private Thread dataNodeThread = null;
   String machineName;
+  private static String dnThreadName;
   int defaultBytesPerChecksum = 512;
   private int socketTimeout;
   
@@ -181,9 +182,14 @@ public class DataNode implements FSConstants, Runnable {
                      AbstractList<File> dataDirs
                      ) throws IOException {
     // use configured nameserver & interface to get local hostname
-    machineName = DNS.getDefaultHost(
+    if (conf.get("slave.host.name") != null) {
+      machineName = conf.get("slave.host.name");   
+    }
+    if (machineName == null) {
+      machineName = DNS.getDefaultHost(
                                      conf.get("dfs.datanode.dns.interface","default"),
                                      conf.get("dfs.datanode.dns.nameserver","default"));
+    }
     InetSocketAddress nameNodeAddr = NetUtils.createSocketAddr(
                                      conf.get("fs.default.name", "local"));
     
@@ -246,6 +252,8 @@ public class DataNode implements FSConstants, Runnable {
     ss.setReceiveBufferSize(DEFAULT_DATA_SOCKET_SIZE); 
     // adjust machine name with the actual port
     tmpPort = ss.getLocalPort();
+    selfAddr = new InetSocketAddress(ss.getInetAddress().getHostAddress(),
+                                     tmpPort);
     this.dnRegistration.setName(machineName + ":" + tmpPort);
     LOG.info("Opened server at " + tmpPort);
       
@@ -304,12 +312,6 @@ public class DataNode implements FSConstants, Runnable {
     this.infoServer.start();
     // adjust info port
     this.dnRegistration.setInfoPort(this.infoServer.getPort());
-    // get network location
-    this.networkLoc = conf.get("dfs.datanode.rack");
-    if (networkLoc == null)  // exec network script or set the default rack
-      networkLoc = getNetworkLoc(conf);
-    // register datanode
-    register();
     myMetrics = new DataNodeMetrics(conf, dnRegistration.getStorageID());
   }
 
@@ -355,6 +357,10 @@ public class DataNode implements FSConstants, Runnable {
 
   public InetSocketAddress getNameNodeAddr() {
     return nameNodeAddr;
+  }
+  
+  public InetSocketAddress getSelfAddr() {
+    return selfAddr;
   }
     
   DataNodeMetrics getMetrics() {
@@ -418,7 +424,7 @@ public class DataNode implements FSConstants, Runnable {
       try {
         // reset name to machineName. Mainly for web interface.
         dnRegistration.name = machineName + ":" + dnRegistration.getPort();
-        dnRegistration = namenode.register(dnRegistration, networkLoc);
+        dnRegistration = namenode.register(dnRegistration);
         break;
       } catch(SocketTimeoutException e) {  // namenode is busy
         LOG.info("Problem connecting to server: " + getNameNodeAddr());
@@ -632,12 +638,14 @@ public class DataNode implements FSConstants, Runnable {
         }
 
         // send block report
-        if (startTime - lastBlockReport > blockReportInterval) {
+        if (mustReportBlocks || 
+            startTime - lastBlockReport > blockReportInterval) {
           //
           // Send latest blockinfo report if timer has expired.
           // Get back a list of local block(s) that are obsolete
           // and can be safely GC'ed.
           //
+          mustReportBlocks = false;
           long brStartTime = now();
           Block[] bReport = data.getBlockReport();
           DatanodeCommand cmd = namenode.blockReport(dnRegistration,
@@ -739,6 +747,16 @@ public class DataNode implements FSConstants, Runnable {
       // start distributed upgrade here
       processDistributedUpgradeCommand((UpgradeCommand)cmd);
       break;
+    case DatanodeProtocol.DNA_BLOCKREPORT:
+      try {
+        if (initialBlockReportDelay != 0) {
+          //sleep for a random time upto the heartbeat interval 
+          //before sending the block report
+          Thread.sleep((long)(new Random().nextDouble() * heartBeatInterval));
+        }
+        mustReportBlocks = true;
+      } catch (InterruptedException ie) {}
+      return false;
     default:
       LOG.warn("Unknown DatanodeCommand action: " + cmd.getAction());
     }
@@ -2447,32 +2465,49 @@ public class DataNode implements FSConstants, Runnable {
     LOG.info(dnRegistration + ":Finishing DataNode in: "+data);
   }
     
-  /** Start datanode daemon.
-   */
-  public static DataNode run(Configuration conf) throws IOException {
-    String[] dataDirs = conf.getStrings("dfs.data.dir");
-    DataNode dn = makeInstance(dataDirs, conf);
-    if (dn != null) {
-      dn.dataNodeThread = new Thread(dn, "DataNode: [" +
-                                  StringUtils.arrayToString(dataDirs) + "]");
-      dn.dataNodeThread.setDaemon(true); // needed for JUnit testing
-      dn.dataNodeThread.start();
-    }
-    return dn;
-  }
-
   /** Start a single datanode daemon and wait for it to finish.
    *  If this thread is specifically interrupted, it will stop waiting.
    */
-  static DataNode createDataNode(String args[],
-                                 Configuration conf) throws IOException {
+  static void runDatanodeDaemon(DataNode dn) throws IOException {
+    if (dn != null) {
+      //register datanode
+      dn.register();
+      dn.dataNodeThread = new Thread(dn, dnThreadName);
+      dn.dataNodeThread.setDaemon(true); // needed for JUnit testing
+      dn.dataNodeThread.start();
+    }
+  }
+
+  /** Instantiate a single datanode object. This must be run by invoking
+   *  {@link DataNode#runDatanodeDaemon(DataNode)} subsequently. 
+   */
+  static DataNode instantiateDataNode(String args[],
+                                      Configuration conf) throws IOException {
     if (conf == null)
       conf = new Configuration();
     if (!parseArguments(args, conf)) {
       printUsage();
       return null;
     }
-    return run(conf);
+    if (conf.get("dfs.network.script") != null) {
+      LOG.error("This configuration for rack identification is not supported" +
+          " anymore. RackID resolution is handled by the NameNode.");
+      System.exit(-1);
+    }
+    String[] dataDirs = conf.getStrings("dfs.data.dir");
+    dnThreadName = "DataNode: [" +
+                        StringUtils.arrayToString(dataDirs) + "]";
+    return makeInstance(dataDirs, conf);
+  }
+
+  /** Instantiate & Start a single datanode daemon and wait for it to finish.
+   *  If this thread is specifically interrupted, it will stop waiting.
+   */
+  static DataNode createDataNode(String args[],
+                                 Configuration conf) throws IOException {
+    DataNode dn = instantiateDataNode(args, conf);
+    runDatanodeDaemon(dn);
+    return dn;
   }
 
   void join() {
@@ -2524,7 +2559,6 @@ public class DataNode implements FSConstants, Runnable {
   
   private static void printUsage() {
     System.err.println("Usage: java DataNode");
-    System.err.println("           [-r, --rack <network location>] |");
     System.err.println("           [-rollback]");
   }
 
@@ -2537,15 +2571,12 @@ public class DataNode implements FSConstants, Runnable {
                                         Configuration conf) {
     int argsLen = (args == null) ? 0 : args.length;
     StartupOption startOpt = StartupOption.REGULAR;
-    String networkLoc = null;
     for(int i=0; i < argsLen; i++) {
       String cmd = args[i];
       if ("-r".equalsIgnoreCase(cmd) || "--rack".equalsIgnoreCase(cmd)) {
-        if (i==args.length-1)
-          return false;
-        networkLoc = args[++i];
-        if (networkLoc.startsWith("-"))
-          return false;
+        LOG.error("-r, --rack arguments are not supported anymore. RackID " +
+            "resolution is handled by the NameNode.");
+        System.exit(-1);
       } else if ("-rollback".equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.ROLLBACK;
       } else if ("-regular".equalsIgnoreCase(cmd)) {
@@ -2553,8 +2584,6 @@ public class DataNode implements FSConstants, Runnable {
       } else
         return false;
     }
-    if (networkLoc != null)
-      conf.set("dfs.datanode.rack", NodeBase.normalize(networkLoc));
     setStartupOption(conf, startOpt);
     return true;
   }
@@ -2568,76 +2597,6 @@ public class DataNode implements FSConstants, Runnable {
                                           StartupOption.REGULAR.toString()));
   }
 
-  /* Get the network location by running a script configured in conf */
-  private static String getNetworkLoc(Configuration conf) 
-    throws IOException {
-    String locScript = conf.get("dfs.network.script");
-    if (locScript == null) 
-      return NetworkTopology.DEFAULT_RACK;
-
-    LOG.info("Starting to run script to get datanode network location");
-    Process p = Runtime.getRuntime().exec(locScript);
-    StringBuffer networkLoc = new StringBuffer();
-    final BufferedReader inR = new BufferedReader(
-                                                  new InputStreamReader(p.getInputStream()));
-    final BufferedReader errR = new BufferedReader(
-                                                   new InputStreamReader(p.getErrorStream()));
-
-    // read & log any error messages from the running script
-    Thread errThread = new Thread() {
-        @Override
-        public void start() {
-          try {
-            String errLine = errR.readLine();
-            while(errLine != null) {
-              LOG.warn("Network script error: "+errLine);
-              errLine = errR.readLine();
-            }
-          } catch(IOException e) {
-                    
-          }
-        }
-      };
-    try {
-      errThread.start();
-            
-      // fetch output from the process
-      String line = inR.readLine();
-      while(line != null) {
-        networkLoc.append(line);
-        line = inR.readLine();
-      }
-      try {
-        // wait for the process to finish
-        int returnVal = p.waitFor();
-        // check the exit code
-        if (returnVal != 0) {
-          throw new IOException("Process exits with nonzero status: "+locScript);
-        }
-      } catch (InterruptedException e) {
-        throw new IOException(e.getMessage());
-      } finally {
-        try {
-          // make sure that the error thread exits
-          errThread.join();
-        } catch (InterruptedException je) {
-          LOG.warn(StringUtils.stringifyException(je));
-        }
-      }
-    } finally {
-      // close in & error streams
-      try {
-        inR.close();
-      } catch (IOException ine) {
-        throw ine;
-      } finally {
-        errR.close();
-      }
-    }
-
-    return networkLoc.toString();
-  }
-  
   /**
    * This methods  arranges for the data node to send the block report at the next heartbeat.
    */

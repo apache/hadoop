@@ -30,6 +30,8 @@ package org.apache.hadoop.net;
 public interface Node {
   /** Return the string representation of this node's network location */
   public String getNetworkLocation();
+  /** Set the node's network location */
+  public void setNetworkLocation(String location);
   /** Return this node's name */
   public String getName();
   /** Return this node's parent */

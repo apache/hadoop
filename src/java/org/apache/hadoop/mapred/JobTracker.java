@@ -57,8 +57,14 @@ import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.util.HostsFileReader;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
 /*******************************************************
@@ -77,6 +83,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   State state = State.INITIALIZING;
   private static final int SYSTEM_DIR_CLEANUP_RETRY_PERIOD = 10000;
 
+  private DNSToSwitchMapping dnsToSwitchMapping;
+  private NetworkTopology clusterMap = new NetworkTopology();
+  private ResolutionThread resThread = new ResolutionThread();
+  private int numTaskCacheLevels; // the max level of a host in the network topology
+  
   /**
    * A client tried to submit a job before the Job Tracker was ready.
    */
@@ -544,6 +555,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   // (trackerID --> last sent HeartBeatResponse)
   Map<String, HeartbeatResponse> trackerToHeartbeatResponseMap = 
     new TreeMap<String, HeartbeatResponse>();
+
+  // (trackerHostName --> Node (NetworkTopology))
+  Map<String, Node> trackerNameToNodeMap = 
+    Collections.synchronizedMap(new TreeMap<String, Node>());
+  
+  // Number of resolved entries
+  int numResolved;
     
   //
   // Watch and expire TaskTracker objects using these structures.
@@ -724,6 +742,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
     // Same with 'localDir' except it's always on the local disk.
     jobConf.deleteLocalFiles(SUBDIR);
+    this.dnsToSwitchMapping = (DNSToSwitchMapping)ReflectionUtils.newInstance(
+        conf.getClass("topology.node.switch.mapping.impl", ScriptBasedMapping.class,
+            DNSToSwitchMapping.class), conf);
+    this.numTaskCacheLevels = conf.getInt("mapred.task.cache.levels", 
+        NetworkTopology.DEFAULT_HOST_LEVEL);
     synchronized (this) {
       state = State.RUNNING;
     }
@@ -751,6 +774,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     this.expireTrackersThread = new Thread(this.expireTrackers,
                                           "expireTrackers");
     this.expireTrackersThread.start();
+    this.resThread.start();
     this.retireJobsThread = new Thread(this.retireJobs, "retireJobs");
     this.retireJobsThread.start();
     this.initJobsThread = new Thread(this.initJobs, "initJobs");
@@ -831,6 +855,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       this.taskCommitThread.interrupt();
       try {
         this.taskCommitThread.join();
+      } catch (InterruptedException ex) {
+        ex.printStackTrace();
+      }
+    }
+    if (this.resThread != null) {
+      LOG.info("Stopping DNSToSwitchMapping Resolution thread");
+      this.resThread.interrupt();
+      try {
+        this.resThread.join();
       } catch (InterruptedException ex) {
         ex.printStackTrace();
       }
@@ -1147,6 +1180,31 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
   }
 
+  public Node resolveAndAddToTopology(String name) {
+    List <String> tmpList = new ArrayList<String>(1);
+    tmpList.add(name);
+    List <String> rNameList = dnsToSwitchMapping.resolve(tmpList);
+    if (rNameList == null || rNameList.size() == 0) {
+      return null;
+    }
+    String rName = rNameList.get(0);
+    String networkLoc = NodeBase.normalize(rName);
+    Node node = null;
+    if ((node = clusterMap.getNode(networkLoc+"/"+name)) == null) {
+      node = new NodeBase(name, networkLoc);
+      clusterMap.add(node);
+    }
+    return node;
+  }
+  public Node getNode(String name) {
+    return trackerNameToNodeMap.get(name);
+  }
+  public int getNumTaskCacheLevels() {
+    return numTaskCacheLevels;
+  }
+  public int getNumResolvedTaskTrackers() {
+    return numResolved;
+  }
   ////////////////////////////////////////////////////
   // InterTrackerProtocol
   ////////////////////////////////////////////////////
@@ -1172,8 +1230,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       throw new DisallowedTaskTrackerException(status);
     }
 
-    // First check if the last heartbeat response got through 
+    // First check if the last heartbeat response got through
     String trackerName = status.getTrackerName();
+    
     HeartbeatResponse prevHeartbeatResponse =
       trackerToHeartbeatResponseMap.get(trackerName);
 
@@ -1346,15 +1405,76 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
         if (initialContact) {
           trackerExpiryQueue.add(trackerStatus);
+          resThread.addToResolutionQueue(trackerStatus);
         }
       }
     }
 
     updateTaskStatuses(trackerStatus);
-
+    
     return true;
   }
 
+  private class ResolutionThread extends Thread {
+    private LinkedBlockingQueue<TaskTrackerStatus> queue = 
+      new LinkedBlockingQueue <TaskTrackerStatus>();
+    public ResolutionThread() {
+      setName("DNSToSwitchMapping reolution Thread");
+      setDaemon(true);
+    }
+    public void addToResolutionQueue(TaskTrackerStatus t) {
+      while (!queue.add(t)) {
+        LOG.warn("Couldn't add to the Resolution queue now. Will " +
+                 "try again");
+        try {
+          Thread.sleep(2000);
+        } catch (InterruptedException ie) {}
+      }
+    }
+    public void run() {
+      while (!isInterrupted()) {
+        try {
+          int size;
+          if((size = queue.size()) == 0) {
+            Thread.sleep(1000);
+            continue;
+          }
+          List <TaskTrackerStatus> statuses = 
+            new ArrayList<TaskTrackerStatus>(size);
+          queue.drainTo(statuses);
+          List<String> dnHosts = new ArrayList<String>(size);
+          for (TaskTrackerStatus t : statuses) {
+            dnHosts.add(t.getHost());
+          }
+          List<String> rName = dnsToSwitchMapping.resolve(dnHosts);
+          if (rName == null) {
+            continue;
+          }
+          int i = 0;
+          for (String m : rName) {
+            String host = statuses.get(i++).getHost();
+            String networkLoc = NodeBase.normalize(m);
+            Node node = null;
+            if (clusterMap.getNode(networkLoc+"/"+host) == null) {
+              node = new NodeBase(host, networkLoc);
+              clusterMap.add(node);
+              trackerNameToNodeMap.put(host, node);
+            }
+            numResolved++;
+          }
+        } catch (InterruptedException ie) {
+          LOG.warn(getName() + " exiting, got interrupted: " + 
+                   StringUtils.stringifyException(ie));
+          return;
+        } catch (Throwable t) {
+          LOG.error(getName() + " got an exception: " +
+              StringUtils.stringifyException(t));
+        }
+      }
+      LOG.warn(getName() + " exiting...");
+    }
+  }
+  
   /**
    * Returns a task we'd like the TaskTracker to execute right now.
    *

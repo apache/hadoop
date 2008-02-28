@@ -20,6 +20,9 @@ Trunk (unreleased changes)
     Disk layout version changed from -12 to -13. See changelist 630992
     (dhruba)
 
+    HADOOP-1985.  This addresses rack-awareness for Map tasks and for 
+    HDFS in a uniform way. (ddas)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)

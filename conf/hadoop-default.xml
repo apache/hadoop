@@ -418,15 +418,6 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.network.script</name>
-  <value></value>
-  <description>
-        Specifies a script name that print the network location path
-        of the current machine.
-  </description>
-</property>
-
-<property>
   <name>dfs.balance.bandwidthPerSec</name>
   <value>1048576</value>
   <description>
@@ -1146,6 +1137,45 @@ creations/deletions), or "all".</description>
   <value></value>
   <description> Address (host:port) of the SOCKS server to be used by the
     SocksSocketFactory.
+  </description>
+</property>
+
+<!-- Rack Configuration -->
+
+<property>
+  <name>topology.node.switch.mapping.impl</name>
+  <value>org.apache.hadoop.net.ScriptBasedMapping</value>
+  <description> The default implementation of the DNSToSwitchMapping. It
+    invokes a script specified in topology.script.file.name to resolve
+    node names. If the value for topology.script.file.name is not set, the
+    default value of DEFAULT_RACK is returned for all node names.
+  </description>
+</property>
+
+<property>
+  <name>topology.script.file.name</name>
+  <value></value>
+  <description> The script name that should be invoked to resolve DNS names to
+    NetworkTopology names. Example: the script would take host.foo.bar as an
+    argument, and return /rack1 as the output.
+  </description>
+</property>
+
+<property>
+  <name>topology.script.number.args</name>
+  <value>20</value>
+  <description> The max number of args that the script configured with 
+    topology.script.file.name should be run with. Each arg is an
+    IP address.
+  </description>
+</property>
+
+<property>
+  <name>mapred.task.cache.levels</name>
+  <value>2</value>
+  <description> This is the max level of the task cache. For example, if
+    the level is 2, the tasks cached are at the host level and at the rack
+    level.
   </description>
 </property>
 

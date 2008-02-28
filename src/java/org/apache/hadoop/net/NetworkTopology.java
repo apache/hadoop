@@ -38,6 +38,8 @@ import org.apache.commons.logging.LogFactory;
  */
 public class NetworkTopology {
   public final static String DEFAULT_RACK = "/default-rack";
+  public final static String UNRESOLVED = "";
+  public final static int DEFAULT_HOST_LEVEL = 2;
   public static final Log LOG = 
     LogFactory.getLog("org.apache.hadoop.net.NetworkTopology");
     
@@ -389,11 +391,16 @@ public class NetworkTopology {
    *          a path-like string representation of a node
    * @return a reference to the node; null if the node is not in the tree
    */
-  private Node getNode(String loc) {
-    loc = NodeBase.normalize(loc);
-    if (!NodeBase.ROOT.equals(loc))
-      loc = loc.substring(1);
-    return clusterMap.getLoc(loc);
+  public Node getNode(String loc) {
+    netlock.readLock().lock();
+    try {
+      loc = NodeBase.normalize(loc);
+      if (!NodeBase.ROOT.equals(loc))
+        loc = loc.substring(1);
+      return clusterMap.getLoc(loc);
+    } finally {
+      netlock.readLock().unlock();
+    }
   }
     
   /** Return the total number of racks */

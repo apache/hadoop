@@ -544,11 +544,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   ////////////////////////////////////////////////////////////////
   /** 
    */
-  public DatanodeRegistration register(DatanodeRegistration nodeReg,
-                                       String networkLocation
+  public DatanodeRegistration register(DatanodeRegistration nodeReg
                                        ) throws IOException {
     verifyVersion(nodeReg.getVersion());
-    namesystem.registerDatanode(nodeReg, networkLocation);
+    namesystem.registerDatanode(nodeReg);
       
     return nodeReg;
   }
@@ -578,6 +577,18 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       // request block report from the datanode
       assert(xferResults[0] == null && deleteList[0] == null);
       return new DatanodeCommand(DatanodeProtocol.DNA_REGISTER);
+    }
+    //
+    // If the datanode has (just) been resolved and we haven't ever processed 
+    // a block report from it yet, ask for one now.
+    //
+    if (!namesystem.blockReportProcessed(nodeReg)) {
+      // If we never processed a block report from this datanode, we shouldn't
+      // have any work for that as well
+      assert(xferResults[0] == null && deleteList[0] == null);
+      if (namesystem.isResolved(nodeReg)) {
+        return new DatanodeCommand(DatanodeProtocol.DNA_BLOCKREPORT);
+      }
     }
         
     //

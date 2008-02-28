@@ -47,6 +47,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   List<Block> replicateBlocks;
   List<DatanodeDescriptor[]> replicateTargetSets;
   Set<Block> invalidateBlocks;
+  boolean processedBlockReport = false;
   
   /** Default constructor */
   public DatanodeDescriptor() {
@@ -258,6 +259,21 @@ public class DatanodeDescriptor extends DatanodeInfo {
     synchronized (invalidateBlocks) {
       return invalidateBlocks.size();
     }
+  }
+  
+  /**
+   * Set the bit signifying that the first block report from this datanode has been 
+   * processed
+   */
+  void setBlockReportProcessed(boolean val) {
+    processedBlockReport = val;
+  }
+  
+  /**
+   * Have we processed any block report from this datanode yet
+   */
+  boolean getBlockReportProcessed() {
+    return processedBlockReport;
   }
 
   /**

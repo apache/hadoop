@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.mapred.JobClient.RawSplit;
 
 
 /*************************************************************
@@ -62,8 +63,7 @@ class TaskInProgress {
 
   // Defines the TIP
   private String jobFile = null;
-  private String splitClass = null;
-  private BytesWritable split = null;
+  private RawSplit rawSplit;
   private int numMaps;
   private int partition;
   private JobTracker jobtracker;
@@ -115,17 +115,17 @@ class TaskInProgress {
   private TreeMap<String, Boolean> tasksToKill = new TreeMap<String, Boolean>();
   
   private Counters counters = new Counters();
+  
 
   /**
    * Constructor for MapTask
    */
   public TaskInProgress(String jobid, String jobFile, 
-                        String splitClass, BytesWritable split, 
+                        RawSplit rawSplit, 
                         JobTracker jobtracker, JobConf conf, 
                         JobInProgress job, int partition) {
     this.jobFile = jobFile;
-    this.splitClass = splitClass;
-    this.split = split;
+    this.rawSplit = rawSplit;
     this.jobtracker = jobtracker;
     this.job = job;
     this.conf = conf;
@@ -233,7 +233,7 @@ class TaskInProgress {
    * Whether this is a map task
    */
   public boolean isMapTask() {
-    return split != null;
+    return rawSplit != null;
   }
     
   /**
@@ -570,6 +570,13 @@ class TaskInProgress {
   }
 
   /**
+   * Get the split locations 
+   */
+  public String[] getSplitLocations() {
+    return rawSplit.getLocations();
+  }
+  
+  /**
    * Get the Status of the tasks managed by this TIP
    */
   public TaskStatus[] getTaskStatuses() {
@@ -726,7 +733,7 @@ class TaskInProgress {
 
     if (isMapTask()) {
       t = new MapTask(jobId, jobFile, this.id, taskid, partition, 
-                      splitClass, split);
+                      rawSplit.getClassName(), rawSplit.getBytes());
     } else {
       t = new ReduceTask(jobId, jobFile, this.id, taskid, partition, numMaps);
     }

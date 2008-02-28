@@ -31,10 +31,12 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface DatanodeProtocol extends VersionedProtocol {
   /*
+   * 12: removed the rack ID from registration;
+   * 12: added DNA_BLOCKREPORT
    * 11 : reportBadBlocks() is added.
    * 11 Block reports as long[]
    */
-  public static final long versionID = 11L;
+  public static final long versionID = 12L;
   
   // error code
   final static int NOTIFY = 0;
@@ -51,19 +53,19 @@ interface DatanodeProtocol extends VersionedProtocol {
   final static int DNA_SHUTDOWN = 3;   // shutdown node
   final static int DNA_REGISTER = 4;   // re-register
   final static int DNA_FINALIZE = 5;   // finalize previous upgrade
+  final static int DNA_BLOCKREPORT = 6;   // request a block report
 
   /** 
    * Register Datanode.
    *
    * @see org.apache.hadoop.dfs.DataNode#register()
-   * @see org.apache.hadoop.dfs.FSNamesystem#registerDatanode(DatanodeRegistration, String)
+   * @see org.apache.hadoop.dfs.FSNamesystem#registerDatanode(DatanodeRegistration)
    * 
    * @return updated {@link org.apache.hadoop.dfs.DatanodeRegistration}, which contains 
    * new storageID if the datanode did not have one and
    * registration ID for further communication.
    */
-  public DatanodeRegistration register(DatanodeRegistration registration,
-                                       String networkLocation
+  public DatanodeRegistration register(DatanodeRegistration registration
                                        ) throws IOException;
   /**
    * sendHeartbeat() tells the NameNode that the DataNode is still

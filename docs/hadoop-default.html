@@ -17,9 +17,9 @@
 <td><a name="hadoop.logfile.count">hadoop.logfile.count</a></td><td>10</td><td>The max number of log files</td>
 </tr>
 <tr>
-<td><a name="hadoop.job.history.location">hadoop.job.history.location</a></td><td>file://${hadoop.log.dir}/history</td><td> If job tracker is static the history files are stored 
-  in this single well known place. By default, it is in the local 
-  file system at ${hadoop.log.dir}/history.
+<td><a name="hadoop.job.history.location">hadoop.job.history.location</a></td><td></td><td> If job tracker is static the history files are stored 
+  in this single well known place. If No value is set here, by default,
+  it is in the local file system at ${hadoop.log.dir}/history.
   </td>
 </tr>
 <tr>
@@ -248,12 +248,6 @@ creations/deletions), or "all".</td>
   	Determines extension of safe mode in milliseconds 
   	after the threshold level is reached.
  	</td>
-</tr>
-<tr>
-<td><a name="dfs.network.script">dfs.network.script</a></td><td></td><td>
-        Specifies a script name that print the network location path
-        of the current machine.
-  </td>
 </tr>
 <tr>
 <td><a name="dfs.balance.bandwidthPerSec">dfs.balance.bandwidthPerSec</a></td><td>1048576</td><td>
@@ -694,6 +688,31 @@ creations/deletions), or "all".</td>
 <tr>
 <td><a name="hadoop.socks.server">hadoop.socks.server</a></td><td></td><td> Address (host:port) of the SOCKS server to be used by the
     SocksSocketFactory.
+  </td>
+</tr>
+<tr>
+<td><a name="topology.node.switch.mapping.impl">topology.node.switch.mapping.impl</a></td><td>org.apache.hadoop.net.ScriptBasedMapping</td><td> The default implementation of the DNSToSwitchMapping. It
+    invokes a script specified in topology.script.file.name to resolve
+    node names. If the value for topology.script.file.name is not set, the
+    default value of DEFAULT_RACK is returned for all node names.
+  </td>
+</tr>
+<tr>
+<td><a name="topology.script.file.name">topology.script.file.name</a></td><td></td><td> The script name that should be invoked to resolve DNS names to
+    NetworkTopology names. Example: the script would take host.foo.bar as an
+    argument, and return /rack1 as the output.
+  </td>
+</tr>
+<tr>
+<td><a name="topology.script.number.args">topology.script.number.args</a></td><td>20</td><td> The max number of args that the script configured with 
+    topology.script.file.name should be run with. Each arg is an
+    IP address.
+  </td>
+</tr>
+<tr>
+<td><a name="mapred.task.cache.levels">mapred.task.cache.levels</a></td><td>2</td><td> This is the max level of the task cache. For example, if
+    the level is 2, the tasks cached are at the host level and at the rack
+    level.
   </td>
 </tr>
 </table>
