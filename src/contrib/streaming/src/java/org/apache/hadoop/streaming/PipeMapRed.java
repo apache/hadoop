@@ -497,11 +497,11 @@ public abstract class PipeMapRed {
   }
 
   /**
-   * Write a writable value to the output stream using UTF-8 encoding
+   * Write a value to the output stream using UTF-8 encoding
    * @param value output value
    * @throws IOException
    */
-  void write(Writable value) throws IOException {
+  void write(Object value) throws IOException {
     byte[] bval;
     int valSize;
     if (value instanceof BytesWritable) {

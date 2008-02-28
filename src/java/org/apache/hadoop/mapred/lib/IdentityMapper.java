@@ -25,11 +25,8 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.MapReduceBase;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 /** Implements the identity function, mapping inputs directly to outputs. */
-public class IdentityMapper<K extends WritableComparable, V extends Writable>
+public class IdentityMapper<K, V>
     extends MapReduceBase implements Mapper<K, V, K, V> {
 
   /** The identify function.  Input key/value pair is written directly to

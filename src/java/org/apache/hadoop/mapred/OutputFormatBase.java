@@ -22,15 +22,11 @@ import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.util.Progressable;
 
 /** A base class for {@link OutputFormat}. */
-public abstract class OutputFormatBase<K extends WritableComparable,
-                                       V extends Writable>
-  implements OutputFormat<K, V> {
+public abstract class OutputFormatBase<K, V> implements OutputFormat<K, V> {
 
   /**
    * Set whether the output of the job is compressed.

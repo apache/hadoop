@@ -16,27 +16,31 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.lib;
+package org.apache.hadoop.io.serializer;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.OutputFormat;
-import org.apache.hadoop.mapred.RecordWriter;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.util.Progressable;
+import java.io.IOException;
+import java.io.Serializable;
+
+import org.apache.hadoop.io.RawComparator;
 
 /**
- * Consume all outputs and put them in /dev/null. 
+ * <p>
+ * A {@link RawComparator} that uses a {@link JavaSerialization}
+ * {@link Deserializer} to deserialize objects that are then compared via
+ * their {@link Comparable} interfaces.
+ * </p>
+ * @param <T>
+ * @see JavaSerialization
  */
-public class NullOutputFormat<K, V> implements OutputFormat<K, V> {
-  
-  public RecordWriter<K, V> getRecordWriter(FileSystem ignored, JobConf job, 
-                                      String name, Progressable progress) {
-    return new RecordWriter<K, V>(){
-        public void write(K key, V value) { }
-        public void close(Reporter reporter) { }
-      };
+public class JavaSerializationComparator<T extends Serializable&Comparable<T>>
+  extends DeserializerComparator<T> {
+
+  public JavaSerializationComparator() throws IOException {
+    super(new JavaSerialization.JavaSerializationDeserializer<T>());
   }
-  
-  public void checkOutputSpecs(FileSystem ignored, JobConf job) { }
+
+  public int compare(T o1, T o2) {
+    return o1.compareTo(o2);
+  }
+
 }

@@ -32,6 +32,8 @@ import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
+import org.apache.hadoop.io.serializer.SerializationFactory;
+import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Progress;
@@ -780,6 +782,10 @@ public class SequenceFile {
     Metadata metadata = null;
     Compressor compressor = null;
     
+    private Serializer keySerializer;
+    private Serializer uncompressedValSerializer;
+    private Serializer compressedValSerializer;
+    
     // Insert a globally unique 16-byte value every few entries, so that one
     // can seek into the middle of a file and then synchronize with record
     // starts and ends by scanning for this value.
@@ -876,6 +882,7 @@ public class SequenceFile {
     }
     
     /** Initialize. */
+    @SuppressWarnings("unchecked")
     void init(Path name, Configuration conf, FSDataOutputStream out,
               Class keyClass, Class valClass,
               boolean compress, CompressionCodec codec, Metadata metadata) 
@@ -887,6 +894,11 @@ public class SequenceFile {
       this.compress = compress;
       this.codec = codec;
       this.metadata = metadata;
+      SerializationFactory serializationFactory = new SerializationFactory(conf);
+      this.keySerializer = serializationFactory.getSerializer(keyClass);
+      this.keySerializer.open(buffer);
+      this.uncompressedValSerializer = serializationFactory.getSerializer(valClass);
+      this.uncompressedValSerializer.open(buffer);
       if (this.codec != null) {
         ReflectionUtils.setConf(this.codec, this.conf);
         compressor = compressorPool.getCodec(this.codec.getCompressorType());
@@ -896,6 +908,8 @@ public class SequenceFile {
         this.deflateFilter = this.codec.createOutputStream(buffer, compressor);
         this.deflateOut = 
           new DataOutputStream(new BufferedOutputStream(deflateFilter));
+        this.compressedValSerializer = serializationFactory.getSerializer(valClass);
+        this.compressedValSerializer.open(deflateOut);
       }
     }
     
@@ -923,6 +937,12 @@ public class SequenceFile {
     /** Close the file. */
     public synchronized void close() throws IOException {
       compressorPool.returnCodec(compressor);
+      
+      keySerializer.close();
+      uncompressedValSerializer.close();
+      if (compressedValSerializer != null) {
+        compressedValSerializer.close();
+      }
 
       if (out != null) {
         out.flush();
@@ -945,6 +965,13 @@ public class SequenceFile {
     /** Append a key/value pair. */
     public synchronized void append(Writable key, Writable val)
       throws IOException {
+      append((Object) key, (Object) val);
+    }
+
+    /** Append a key/value pair. */
+    @SuppressWarnings("unchecked")
+    public synchronized void append(Object key, Object val)
+      throws IOException {
       if (key.getClass() != keyClass)
         throw new IOException("wrong key class: "+key.getClass().getName()
                               +" is not "+keyClass);
@@ -955,7 +982,7 @@ public class SequenceFile {
       buffer.reset();
 
       // Append the 'key'
-      key.write(buffer);
+      keySerializer.serialize(key);
       int keyLength = buffer.getLength();
       if (keyLength == 0)
         throw new IOException("zero length keys not allowed: " + key);
@@ -963,11 +990,11 @@ public class SequenceFile {
       // Append the 'value'
       if (compress) {
         deflateFilter.resetState();
-        val.write(deflateOut);
+        compressedValSerializer.serialize(val);
         deflateOut.flush();
         deflateFilter.finish();
       } else {
-        val.write(buffer);
+        uncompressedValSerializer.serialize(val);
       }
 
       // Write the record out
@@ -2107,7 +2134,7 @@ public class SequenceFile {
    */
   public static class Sorter {
 
-    private WritableComparator comparator;
+    private RawComparator comparator;
 
     private MergeSort mergeSort; //the implementation of merge sort
     
@@ -2129,15 +2156,15 @@ public class SequenceFile {
 
     /** Sort and merge files containing the named classes. */
     public Sorter(FileSystem fs, Class keyClass, Class valClass, Configuration conf)  {
-      this(fs, new WritableComparator(keyClass), valClass, conf);
+      this(fs, new WritableComparator(keyClass), keyClass, valClass, conf);
     }
 
-    /** Sort and merge using an arbitrary {@link WritableComparator}. */
-    public Sorter(FileSystem fs, WritableComparator comparator, Class valClass, 
-                  Configuration conf) {
+    /** Sort and merge using an arbitrary {@link RawComparator}. */
+    public Sorter(FileSystem fs, RawComparator comparator, Class keyClass, 
+                  Class valClass, Configuration conf) {
       this.fs = fs;
       this.comparator = comparator;
-      this.keyClass = comparator.getKeyClass();
+      this.keyClass = keyClass;
       this.valClass = valClass;
       this.memory = conf.getInt("io.sort.mb", 100) * 1024 * 1024;
       this.factor = conf.getInt("io.sort.factor", 100);

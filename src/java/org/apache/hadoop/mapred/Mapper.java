@@ -23,8 +23,6 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Closeable;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.compress.CompressionCodec;
 
 /** 
@@ -43,7 +41,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
  * de-initialization.</p>
  * 
  * <p>The framework then calls 
- * {@link #map(WritableComparable, Writable, OutputCollector, Reporter)} 
+ * {@link #map(Object, Object, OutputCollector, Reporter)} 
  * for each key/value pair in the <code>InputSplit</code> for that task.</p>
  * 
  * <p>All intermediate values associated with a given output key are 
@@ -130,9 +128,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
  * @see MapRunnable
  * @see SequenceFile
  */
-public interface Mapper<K1 extends WritableComparable, V1 extends Writable,
-                        K2 extends WritableComparable, V2 extends Writable>
-  extends JobConfigurable, Closeable {
+public interface Mapper<K1, V1, K2, V2> extends JobConfigurable, Closeable {
   
   /** 
    * Maps a single input key/value pair into an intermediate key/value pair.
@@ -140,7 +136,7 @@ public interface Mapper<K1 extends WritableComparable, V1 extends Writable,
    * <p>Output pairs need not be of the same types as input pairs.  A given 
    * input pair may map to zero or many output pairs.  Output pairs are 
    * collected with calls to 
-   * {@link OutputCollector#collect(WritableComparable,Writable)}.</p>
+   * {@link OutputCollector#collect(Object,Object)}.</p>
    *
    * <p>Applications can use the {@link Reporter} provided to report progress 
    * or just indicate that they are alive. In scenarios where the application 

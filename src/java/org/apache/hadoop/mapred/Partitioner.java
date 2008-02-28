@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 /** 
  * Partitions the key space.
  * 
@@ -33,9 +30,7 @@ import org.apache.hadoop.io.WritableComparable;
  * 
  * @see Reducer
  */
-public interface Partitioner<K2 extends WritableComparable,
-                             V2 extends Writable>
-  extends JobConfigurable {
+public interface Partitioner<K2, V2> extends JobConfigurable {
   
   /** 
    * Get the paritition number for a given key (hence record) given the total 

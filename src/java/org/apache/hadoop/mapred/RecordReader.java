@@ -21,9 +21,6 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.io.DataInput;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 /**
  * <code>RecordReader</code> reads &lt;key, value&gt; pairs from an 
  * {@link InputSplit}.
@@ -37,16 +34,13 @@ import org.apache.hadoop.io.WritableComparable;
  * @see InputSplit
  * @see InputFormat
  */
-public interface RecordReader<K extends WritableComparable,
-                              V extends Writable> {
+public interface RecordReader<K, V> {
   /** 
    * Reads the next key/value pair from the input for processing.
    *
    * @param key the key to read data into
    * @param value the value to read data into
    * @return true iff a key/value was read, false if at EOF
-   *
-   * @see Writable#readFields(DataInput)
    */      
   boolean next(K key, V value) throws IOException;
   

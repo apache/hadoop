@@ -35,11 +35,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.InputBuffer;
+import org.apache.hadoop.io.OutputBuffer;
+import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Sorter;
 import org.apache.hadoop.io.SequenceFile.Writer;
@@ -47,6 +47,9 @@ import org.apache.hadoop.io.SequenceFile.Sorter.RawKeyValueIterator;
 import org.apache.hadoop.io.SequenceFile.Sorter.SegmentDescriptor;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
+import org.apache.hadoop.io.serializer.Deserializer;
+import org.apache.hadoop.io.serializer.SerializationFactory;
+import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapred.ReduceTask.ValuesIterator;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -119,7 +122,7 @@ class MapTask extends Task {
    * @param <K>
    * @param <V>
    */
-  class TrackedRecordReader<K extends WritableComparable, V extends Writable> 
+  class TrackedRecordReader<K, V> 
       implements RecordReader<K,V> {
     private RecordReader<K,V> rawIn;
     private Counters.Counter inputByteCounter;
@@ -215,8 +218,7 @@ class MapTask extends Task {
     done(umbilical);
   }
 
-  interface MapOutputCollector<K extends WritableComparable,
-                               V extends Writable>
+  interface MapOutputCollector<K, V>
     extends OutputCollector<K, V> {
 
     public void close() throws IOException;
@@ -225,8 +227,7 @@ class MapTask extends Task {
         
   }
 
-  class DirectMapOutputCollector<K extends WritableComparable,
-                                 V extends Writable>
+  class DirectMapOutputCollector<K, V>
     implements MapOutputCollector<K, V> {
  
     private RecordWriter<K, V> out = null;
@@ -268,11 +269,11 @@ class MapTask extends Task {
     private JobConf job;
     private Reporter reporter;
 
-    private DataOutputBuffer keyValBuffer; //the buffer where key/val will
-                                           //be stored before they are 
-                                           //passed on to the pending buffer
-    private DataOutputBuffer pendingKeyvalBuffer; // the key value buffer used
-                                                  // while spilling
+    private OutputBuffer keyValBuffer; //the buffer where key/val will
+                                       //be stored before they are 
+                                       //passed on to the pending buffer
+    private OutputBuffer pendingKeyvalBuffer; // the key value buffer used
+                                              // while spilling
     // a lock used for sync sort-spill with collect
     private final Object pendingKeyvalBufferLock = new Object();
     // since sort-spill and collect are done concurrently, exceptions are 
@@ -287,7 +288,14 @@ class MapTask extends Task {
     private CompressionType compressionType;
     private Class keyClass;
     private Class valClass;
-    private WritableComparator comparator;
+    private RawComparator comparator;
+    private SerializationFactory serializationFactory;
+    private Serializer keySerializer;
+    private Serializer valSerializer;
+    private InputBuffer keyIn = new InputBuffer();
+    private InputBuffer valIn = new InputBuffer();
+    private Deserializer keyDeserializer;
+    private Deserializer valDeserializer;    
     private BufferSorter []sortImpl;
     private BufferSorter []pendingSortImpl; // sort impl for the pending buffer
     private SequenceFile.Writer writer;
@@ -299,6 +307,7 @@ class MapTask extends Task {
     private Counters.Counter combineInputCounter;
     private Counters.Counter combineOutputCounter;
     
+    @SuppressWarnings("unchecked")
     public MapOutputBuffer(TaskUmbilicalProtocol umbilical, JobConf job, 
                            Reporter reporter) throws IOException {
       this.partitions = job.getNumReduceTasks();
@@ -306,13 +315,22 @@ class MapTask extends Task {
                                                                   job.getPartitionerClass(), job);
       maxBufferSize = job.getInt("io.sort.mb", 100) * 1024 * 1024 / 2;
       this.sortSpillException = null;
-      keyValBuffer = new DataOutputBuffer();
+      keyValBuffer = new OutputBuffer();
 
       this.job = job;
       this.reporter = reporter;
       this.comparator = job.getOutputKeyComparator();
       this.keyClass = job.getMapOutputKeyClass();
       this.valClass = job.getMapOutputValueClass();
+      this.serializationFactory = new SerializationFactory(conf);
+      this.keySerializer = serializationFactory.getSerializer(keyClass);
+      this.keySerializer.open(keyValBuffer);
+      this.valSerializer = serializationFactory.getSerializer(valClass);
+      this.valSerializer.open(keyValBuffer);
+      this.keyDeserializer = serializationFactory.getDeserializer(keyClass);
+      this.keyDeserializer.open(keyIn);
+      this.valDeserializer = serializationFactory.getDeserializer(valClass);
+      this.valDeserializer.open(valIn);
       this.localFs = FileSystem.getLocal(job);
       this.codec = null;
       this.compressionType = CompressionType.NONE;
@@ -357,8 +375,8 @@ class MapTask extends Task {
     }
     
     @SuppressWarnings("unchecked")
-    public synchronized void collect(WritableComparable key,
-                                     Writable value) throws IOException {
+    public synchronized void collect(Object key,
+                                     Object value) throws IOException {
       
       if (key.getClass() != keyClass) {
         throw new IOException("Type mismatch in key from map: expected "
@@ -377,7 +395,9 @@ class MapTask extends Task {
       }
       
       if (keyValBuffer == null) {
-        keyValBuffer = new DataOutputBuffer();
+        keyValBuffer = new OutputBuffer();
+        keySerializer.open(keyValBuffer);
+        valSerializer.open(keyValBuffer);
         sortImpl = new BufferSorter[partitions];
         for (int i = 0; i < partitions; i++)
           sortImpl[i] = (BufferSorter)ReflectionUtils.newInstance(
@@ -387,9 +407,9 @@ class MapTask extends Task {
       
       //dump the key/value to buffer
       int keyOffset = keyValBuffer.getLength(); 
-      key.write(keyValBuffer);
+      keySerializer.serialize(key);
       int keyLength = keyValBuffer.getLength() - keyOffset;
-      value.write(keyValBuffer);
+      valSerializer.serialize(value);
       int valLength = keyValBuffer.getLength() - (keyOffset + keyLength);
       int partNumber = partitioner.getPartition(key, value, partitions);
       sortImpl[partNumber].addKeyValue(keyOffset, keyLength, valLength);
@@ -420,6 +440,8 @@ class MapTask extends Task {
           // prepare for spilling
           pendingKeyvalBuffer = keyValBuffer;
           pendingSortImpl = sortImpl;
+          keySerializer.close();
+          valSerializer.close();
           keyValBuffer = null;
           sortImpl = null;
         }
@@ -483,7 +505,7 @@ class MapTask extends Task {
                                                                       job.getCombinerClass(), job);
               // make collector
               OutputCollector combineCollector = new OutputCollector() {
-                  public void collect(WritableComparable key, Writable value)
+                  public void collect(Object key, Object value)
                     throws IOException {
                     synchronized (this) {
                       writer.append(key, value);
@@ -527,31 +549,27 @@ class MapTask extends Task {
       }
     }
     
+    @SuppressWarnings("unchecked")
     private void spill(RawKeyValueIterator resultIter) throws IOException {
-      Writable key = null;
-      Writable value = null;
-
       try {
         // indicate progress, since constructor may take a while (because of 
         // user code) 
         reporter.progress();
-        key = (WritableComparable)ReflectionUtils.newInstance(keyClass, job);
-        value = (Writable)ReflectionUtils.newInstance(valClass, job);
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
 
-      DataInputBuffer keyIn = new DataInputBuffer();
-      DataInputBuffer valIn = new DataInputBuffer();
+      Object key = null;
+      Object value = null;
       DataOutputBuffer valOut = new DataOutputBuffer();
       while (resultIter.next()) {
         keyIn.reset(resultIter.getKey().getData(), 
                     resultIter.getKey().getLength());
-        key.readFields(keyIn);
+        key = keyDeserializer.deserialize(key);
         valOut.reset();
         (resultIter.getValue()).writeUncompressedBytes(valOut);
         valIn.reset(valOut.getData(), valOut.getLength());
-        value.readFields(valIn);
+        value = valDeserializer.deserialize(value);
         writer.append(key, value);
         reporter.progress();
       }
@@ -613,7 +631,8 @@ class MapTask extends Task {
       {
         //create a sorter object as we need access to the SegmentDescriptor
         //class and merge methods
-        Sorter sorter = new Sorter(localFs, job.getOutputKeyComparator(), valClass, job);
+        Sorter sorter = new Sorter(localFs, job.getOutputKeyComparator(),
+                                   keyClass, valClass, job);
         sorter.setProgressable(reporter);
         
         for (int parts = 0; parts < partitions; parts++){
@@ -665,7 +684,7 @@ class MapTask extends Task {
     private class CombineValuesIterator extends ValuesIterator {
         
       public CombineValuesIterator(SequenceFile.Sorter.RawKeyValueIterator in, 
-                                   WritableComparator comparator, Class keyClass,
+                                   RawComparator comparator, Class keyClass,
                                    Class valClass, Configuration conf, Reporter reporter) 
         throws IOException {
         super(in, comparator, keyClass, valClass, conf, reporter);

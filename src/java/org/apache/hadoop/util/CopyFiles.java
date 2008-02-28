@@ -818,7 +818,7 @@ public class CopyFiles implements Tool {
     SequenceFile.Reader in = null;
     try {
       SequenceFile.Sorter sorter = new SequenceFile.Sorter(fs,
-        new Text.Comparator(), Text.class, conf);
+        new Text.Comparator(), Text.class, Text.class, conf);
       sorter.sort(file, sorted);
       in = new SequenceFile.Reader(fs, sorted, conf);
 

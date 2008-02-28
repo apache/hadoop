@@ -24,8 +24,6 @@ import java.util.List;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
  * An abstract {@link InputFormat} that returns {@link MultiFileSplit}'s
@@ -36,8 +34,7 @@ import org.apache.hadoop.io.WritableComparable;
  * to construct <code>RecordReader</code>'s for <code>MultiFileSplit</code>'s.
  * @see MultiFileSplit
  */
-public abstract class MultiFileInputFormat<K extends WritableComparable,
-                                           V extends Writable>
+public abstract class MultiFileInputFormat<K, V>
   extends FileInputFormat<K, V> {
 
   @Override

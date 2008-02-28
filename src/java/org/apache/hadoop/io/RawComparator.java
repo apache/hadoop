@@ -16,27 +16,22 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.lib;
+package org.apache.hadoop.io;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.OutputFormat;
-import org.apache.hadoop.mapred.RecordWriter;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.util.Progressable;
+import java.util.Comparator;
+
+import org.apache.hadoop.io.serializer.DeserializerComparator;
 
 /**
- * Consume all outputs and put them in /dev/null. 
+ * <p>
+ * A {@link Comparator} that operates directly on byte representations of
+ * objects.
+ * </p>
+ * @param <T>
+ * @see DeserializerComparator
  */
-public class NullOutputFormat<K, V> implements OutputFormat<K, V> {
-  
-  public RecordWriter<K, V> getRecordWriter(FileSystem ignored, JobConf job, 
-                                      String name, Progressable progress) {
-    return new RecordWriter<K, V>(){
-        public void write(K key, V value) { }
-        public void close(Reporter reporter) { }
-      };
-  }
-  
-  public void checkOutputSpecs(FileSystem ignored, JobConf job) { }
+public interface RawComparator<T> extends Comparator<T> {
+
+  public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2);
+
 }

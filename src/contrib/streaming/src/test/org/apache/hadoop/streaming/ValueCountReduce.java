@@ -41,7 +41,7 @@ public class ValueCountReduce implements Reducer {
 
   }
 
-  public void reduce(WritableComparable arg0, Iterator arg1, OutputCollector arg2, Reporter arg3) throws IOException {
+  public void reduce(Object arg0, Iterator arg1, OutputCollector arg2, Reporter arg3) throws IOException {
     int count = 0;
     while (arg1.hasNext()) {
       count += 1;

@@ -29,7 +29,6 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.util.StringUtils;
 
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
 
 /** A generic Reducer bridge.
@@ -56,7 +55,7 @@ public class PipeReducer extends PipeMapRed implements Reducer {
     return (argv != null) && !StreamJob.REDUCE_NONE.equals(argv);
   }
 
-  public void reduce(WritableComparable key, Iterator values, OutputCollector output,
+  public void reduce(Object key, Iterator values, OutputCollector output,
                      Reporter reporter) throws IOException {
 
     // init

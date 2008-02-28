@@ -16,27 +16,29 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.lib;
-
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.OutputFormat;
-import org.apache.hadoop.mapred.RecordWriter;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.util.Progressable;
+package org.apache.hadoop.io.serializer;
 
 /**
- * Consume all outputs and put them in /dev/null. 
+ * <p>
+ * Encapsulates a {@link Serializer}/{@link Deserializer} pair.
+ * </p>
+ * @param <T>
  */
-public class NullOutputFormat<K, V> implements OutputFormat<K, V> {
+public interface Serialization<T> {
   
-  public RecordWriter<K, V> getRecordWriter(FileSystem ignored, JobConf job, 
-                                      String name, Progressable progress) {
-    return new RecordWriter<K, V>(){
-        public void write(K key, V value) { }
-        public void close(Reporter reporter) { }
-      };
-  }
+  /**
+   * Allows clients to test whether this {@link Serialization}
+   * supports the given class.
+   */
+  boolean accept(Class<?> c);
   
-  public void checkOutputSpecs(FileSystem ignored, JobConf job) { }
+  /**
+   * @return a {@link Serializer} for the given class.
+   */
+  Serializer<T> getSerializer(Class<T> c);
+
+  /**
+   * @return a {@link Deserializer} for the given class.
+   */
+  Deserializer<T> getDeserializer(Class<T> c);
 }

@@ -28,10 +28,6 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.util.StringUtils;
 
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.Writable;
-
 /** A generic Mapper bridge.
  *  It delegates operations to an external program via stdin and stdout.
  */
@@ -66,7 +62,7 @@ public class PipeMapper extends PipeMapRed implements Mapper {
   // Do NOT declare default constructor
   // (MapRed creates it reflectively)
 
-  public void map(WritableComparable key, Writable value, OutputCollector output, Reporter reporter) throws IOException {
+  public void map(Object key, Object value, OutputCollector output, Reporter reporter) throws IOException {
     // init
     if (outThread_ == null) {
       startOutputThreads(output, reporter);

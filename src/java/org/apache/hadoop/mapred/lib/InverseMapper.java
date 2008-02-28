@@ -20,16 +20,13 @@ package org.apache.hadoop.mapred.lib;
 
 import java.io.IOException;
 
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 
-
 /** A {@link Mapper} that swaps keys and values. */
-public class InverseMapper<K extends WritableComparable,
-                           V extends WritableComparable>
+public class InverseMapper<K, V>
     extends MapReduceBase implements Mapper<K, V, V, K> {
 
   /** The inverse function.  Input keys and values are swapped.*/

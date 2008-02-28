@@ -23,6 +23,9 @@ Trunk (unreleased changes)
     HADOOP-1985.  This addresses rack-awareness for Map tasks and for 
     HDFS in a uniform way. (ddas)
 
+    HADOOP-1986.  Add support for a general serialization mechanism for
+    Map Reduce. (tomwhite)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.OutputBuffer;
 import org.apache.hadoop.io.SequenceFile.Sorter.RawKeyValueIterator;
 import org.apache.hadoop.util.Progressable;
 
@@ -56,7 +56,7 @@ interface BufferSorter extends JobConfigurable {
    * buffer).
    * @param buffer the map output buffer
    */
-  public void setInputBuffer(DataOutputBuffer buffer);
+  public void setInputBuffer(OutputBuffer buffer);
   
   /** The framework invokes this method to get the memory consumed so far
    * by an implementation of this interface.

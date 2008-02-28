@@ -69,7 +69,7 @@ public class MapFileOutputFormat extends OutputFormatBase {
                          compressionType, codec,
                          progress);
 
-    return new RecordWriter() {
+    return new RecordWriter<WritableComparable, Writable>() {
 
         public void write(WritableComparable key, Writable value)
           throws IOException {

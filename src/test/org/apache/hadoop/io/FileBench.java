@@ -142,8 +142,8 @@ public class FileBench extends Configured implements Tool {
     RecordReader rr = inf.getRecordReader(
         new FileSplit(pin, 0, in.getLen(), conf), conf, Reporter.NULL);
     try {
-      WritableComparable key = rr.createKey();
-      Writable val = rr.createValue();
+      Object key = rr.createKey();
+      Object val = rr.createValue();
       Date start = new Date();
       while (rr.next(key, val));
       Date end = new Date();

@@ -20,10 +20,6 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
-
 /**
  * Collects the <code>&lt;key, value&gt;</code> pairs output by {@link Mapper}s
  * and {@link Reducer}s.
@@ -33,8 +29,7 @@ import org.apache.hadoop.io.WritableComparable;
  * <code>Mapper</code> or the <code>Reducer</code> i.e. intermediate outputs 
  * or the output of the job.</p>  
  */
-public interface OutputCollector<K extends WritableComparable,
-                                 V extends Writable> {
+public interface OutputCollector<K, V> {
   
   /** Adds a key/value pair to the output.
    *

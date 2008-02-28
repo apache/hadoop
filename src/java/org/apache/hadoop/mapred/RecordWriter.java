@@ -19,11 +19,8 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.io.DataOutput;
 
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.Writable;
 
 /**
  * <code>RecordWriter</code> writes the output &lt;key, value&gt; pairs 
@@ -34,15 +31,13 @@ import org.apache.hadoop.io.Writable;
  * 
  * @see OutputFormat
  */
-public interface RecordWriter<K extends WritableComparable,
-                              V extends Writable> {
+public interface RecordWriter<K, V> {
   /** 
    * Writes a key/value pair.
    *
    * @param key the key to write.
    * @param value the value to write.
    * @throws IOException
-   * @see Writable#write(DataOutput)
    */      
   void write(K key, V value) throws IOException;
 

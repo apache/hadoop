@@ -28,8 +28,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /** 
  * A base class for file-based {@link InputFormat}.
@@ -41,9 +39,7 @@ import org.apache.hadoop.io.WritableComparable;
  * {@link #isSplitable(FileSystem, Path)} method to ensure input-files are
  * not split-up and are processed as a whole by {@link Mapper}s.
  */
-public abstract class FileInputFormat<K extends WritableComparable,
-                                      V extends Writable>
-  implements InputFormat<K, V> {
+public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
 
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.mapred.FileInputFormat");

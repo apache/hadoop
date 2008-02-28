@@ -21,8 +21,6 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
 
 /** 
@@ -45,8 +43,7 @@ import org.apache.hadoop.util.Progressable;
  * @see RecordWriter
  * @see JobConf
  */
-public interface OutputFormat<K extends WritableComparable,
-                              V extends Writable> {
+public interface OutputFormat<K, V> {
 
   /** 
    * Get the {@link RecordWriter} for the given job.

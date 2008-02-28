@@ -16,27 +16,37 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred.lib;
+package org.apache.hadoop.io.serializer;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.OutputFormat;
-import org.apache.hadoop.mapred.RecordWriter;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.util.Progressable;
+import java.io.IOException;
+import java.io.OutputStream;
 
 /**
- * Consume all outputs and put them in /dev/null. 
+ * <p>
+ * Provides a facility for serializing objects of type <T> to an
+ * {@link OutputStream}.
+ * </p>
+ * 
+ * <p>
+ * Serializers are stateful, but must not buffer the output since
+ * other producers may write to the output between calls to
+ * {@link #serialize(Object)}.
+ * </p>
+ * @param <T>
  */
-public class NullOutputFormat<K, V> implements OutputFormat<K, V> {
+public interface Serializer<T> {
+  /**
+   * <p>Prepare the serializer for writing.</p>
+   */
+  void open(OutputStream out) throws IOException;
   
-  public RecordWriter<K, V> getRecordWriter(FileSystem ignored, JobConf job, 
-                                      String name, Progressable progress) {
-    return new RecordWriter<K, V>(){
-        public void write(K key, V value) { }
-        public void close(Reporter reporter) { }
-      };
-  }
+  /**
+   * <p>Serialize <code>t</code> to the underlying output stream.</p>
+   */
+  void serialize(T t) throws IOException;
   
-  public void checkOutputSpecs(FileSystem ignored, JobConf job) { }
+  /**
+   * <p>Close the underlying output stream and clear up any resources.</p>
+   */  
+  void close() throws IOException;
 }

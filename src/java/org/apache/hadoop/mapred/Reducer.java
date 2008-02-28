@@ -24,8 +24,6 @@ import java.util.Iterator;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Closeable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /** 
  * Reduces a set of intermediate values which share a key to a smaller set of
@@ -89,12 +87,12 @@ import org.apache.hadoop.io.WritableComparable;
  *   <h4 id="Reduce">Reduce</h4>
  *   
  *   <p>In this phase the 
- *   {@link #reduce(WritableComparable, Iterator, OutputCollector, Reporter)}
+ *   {@link #reduce(Object, Iterator, OutputCollector, Reporter)}
  *   method is called for each <code>&lt;key, (list of values)></code> pair in
  *   the grouped inputs.</p>
  *   <p>The output of the reduce task is typically written to the 
  *   {@link FileSystem} via 
- *   {@link OutputCollector#collect(WritableComparable, Writable)}.</p>
+ *   {@link OutputCollector#collect(Object, Object)}.</p>
  *   </li>
  * </ol>
  * 
@@ -163,9 +161,7 @@ import org.apache.hadoop.io.WritableComparable;
  * @see Reporter
  * @see MapReduceBase
  */
-public interface Reducer<K2 extends WritableComparable, V2 extends Writable,
-                         K3 extends WritableComparable, V3 extends Writable>
-    extends JobConfigurable, Closeable {
+public interface Reducer<K2, V2, K3, V3> extends JobConfigurable, Closeable {
   
   /** 
    * <i>Reduces</i> values for a given key.  
@@ -177,7 +173,7 @@ public interface Reducer<K2 extends WritableComparable, V2 extends Writable,
    * </p>
    *   
    * <p>Output pairs are collected with calls to  
-   * {@link OutputCollector#collect(WritableComparable,Writable)}.</p>
+   * {@link OutputCollector#collect(Object,Object)}.</p>
    *
    * <p>Applications can use the {@link Reporter} provided to report progress 
    * or just indicate that they are alive. In scenarios where the application 

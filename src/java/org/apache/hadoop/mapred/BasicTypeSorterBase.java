@@ -21,8 +21,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.OutputBuffer;
+import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.SequenceFile.ValueBytes;
-import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.io.SequenceFile.Sorter.RawKeyValueIterator;
@@ -33,7 +34,7 @@ import org.apache.hadoop.util.Progressable;
  */
 abstract class BasicTypeSorterBase implements BufferSorter {
   
-  protected DataOutputBuffer keyValBuffer; //the buffer used for storing
+  protected OutputBuffer keyValBuffer; //the buffer used for storing
                                            //key/values
   protected int[] startOffsets; //the array used to store the start offsets of
                                 //keys in keyValBuffer
@@ -43,7 +44,7 @@ abstract class BasicTypeSorterBase implements BufferSorter {
   protected int[] pointers; //the array of startOffsets's indices. This will
                             //be sorted at the end to contain a sorted array of
                             //indices to offsets
-  protected WritableComparator comparator; //the comparator for the map output
+  protected RawComparator comparator; //the comparator for the map output
   protected int count; //the number of key/values
   //the overhead of the arrays in memory 
   //12 => 4 for keyoffsets, 4 for keylengths, 4 for valueLengths, and
@@ -90,7 +91,7 @@ abstract class BasicTypeSorterBase implements BufferSorter {
     count++;
   }
 
-  public void setInputBuffer(DataOutputBuffer buffer) {
+  public void setInputBuffer(OutputBuffer buffer) {
     //store a reference to the keyValBuffer that we need to read during sort
     this.keyValBuffer = buffer;
   }
@@ -159,11 +160,11 @@ class MRSortResultIterator implements RawKeyValueIterator {
   private int[] valLengths;
   private int currStartOffsetIndex;
   private int currIndexInPointers;
-  private DataOutputBuffer keyValBuffer;
+  private OutputBuffer keyValBuffer;
   private DataOutputBuffer key = new DataOutputBuffer();
   private InMemUncompressedBytes value = new InMemUncompressedBytes();
   
-  public MRSortResultIterator(DataOutputBuffer keyValBuffer, 
+  public MRSortResultIterator(OutputBuffer keyValBuffer, 
                               int []pointers, int []startOffsets,
                               int []keyLengths, int []valLengths) {
     this.count = pointers.length;
@@ -214,7 +215,7 @@ class MRSortResultIterator implements RawKeyValueIterator {
     private byte[] data;
     int start;
     int dataSize;
-    private void reset(DataOutputBuffer d, int start, int length) 
+    private void reset(OutputBuffer d, int start, int length) 
       throws IOException {
       data = d.getData();
       this.start = start;

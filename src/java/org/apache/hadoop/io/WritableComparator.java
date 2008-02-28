@@ -30,7 +30,7 @@ import java.util.*;
  * {@link #compare(byte[],int,int,byte[],int,int)}.  Static utility methods are
  * provided to assist in optimized implementations of this method.
  */
-public class WritableComparator implements Comparator {
+public class WritableComparator implements RawComparator {
 
   private static HashMap<Class, WritableComparator> comparators =
     new HashMap<Class, WritableComparator>(); // registry

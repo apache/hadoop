@@ -50,10 +50,7 @@ import java.util.concurrent.TimeUnit;
  * <b>mapred.map.multithreadedrunner.threads</b> property).
  * <p>
  */
-public class MultithreadedMapRunner<K1 extends WritableComparable,
-                                    V1 extends Writable,
-                                    K2 extends WritableComparable,
-                                    V2 extends Writable>
+public class MultithreadedMapRunner<K1, V1, K2, V2>
     implements MapRunnable<K1, V1, K2, V2> {
 
   private static final Log LOG =

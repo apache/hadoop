@@ -319,7 +319,9 @@ public class TestFileSystem extends TestCase {
   }
 
 
-  public static class SeekMapper extends Configured implements Mapper {
+  public static class SeekMapper<K> extends Configured
+    implements Mapper<WritableComparable, LongWritable, K, LongWritable> {
+    
     private Random random = new Random();
     private byte[] check  = new byte[BUFFER_SIZE];
     private FileSystem fs;
@@ -342,11 +344,12 @@ public class TestFileSystem extends TestCase {
       fastCheck = job.getBoolean("fs.test.fastCheck", false);
     }
 
-    public void map(WritableComparable key, Writable value,
-                    OutputCollector collector, Reporter reporter)
+    public void map(WritableComparable key, LongWritable value,
+                    OutputCollector<K, LongWritable> collector,
+                    Reporter reporter)
       throws IOException {
-      String name = ((UTF8)key).toString();
-      long size = ((LongWritable)value).get();
+      String name = key.toString();
+      long size = value.get();
       long seed = Long.parseLong(name);
 
       if (size == 0) return;

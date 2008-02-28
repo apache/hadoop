@@ -255,15 +255,14 @@ public class TestMiniMRLocalFS extends TestCase {
   }
 
   static class MyOutputFormat implements OutputFormat {
-    static class MyRecordWriter implements RecordWriter {
+    static class MyRecordWriter implements RecordWriter<Object, Object> {
       private DataOutputStream out;
       
       public MyRecordWriter(Path outputFile, JobConf job) throws IOException {
         out = outputFile.getFileSystem(job).create(outputFile);
       }
       
-      public void write(WritableComparable key, 
-                        Writable value) throws IOException {
+      public void write(Object key, Object value) throws IOException {
         out.writeBytes(key.toString() + "\t" + value.toString() + "\n");
       }
 

@@ -26,12 +26,10 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.MapReduceBase;
 
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.LongWritable;
 
 /** A {@link Reducer} that sums long values. */
-public class LongSumReducer<K extends WritableComparable>
-    extends MapReduceBase
+public class LongSumReducer<K> extends MapReduceBase
     implements Reducer<K, LongWritable, K, LongWritable> {
 
   public void reduce(K key, Iterator<LongWritable> values,

@@ -18,14 +18,10 @@
 
 package org.apache.hadoop.mapred.lib;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Partitioner;
 
-public class KeyFieldBasedPartitioner<K2 extends WritableComparable,
-                                      V2 extends Writable>
-    implements Partitioner<K2, V2> {
+public class KeyFieldBasedPartitioner<K2, V2> implements Partitioner<K2, V2> {
 
   private int numOfPartitionFields;
 

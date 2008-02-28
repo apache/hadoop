@@ -24,8 +24,6 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
@@ -90,7 +88,7 @@ public abstract class DataJoinReducerBase extends JobBase {
    * @param arg1
    * @return
    */
-  private SortedMap<Object, ResetableIterator> regroup(Writable key,
+  private SortedMap<Object, ResetableIterator> regroup(Object key,
                                                        Iterator arg1, Reporter reporter) throws IOException {
     this.numOfValues = 0;
     SortedMap<Object, ResetableIterator> retv = new TreeMap<Object, ResetableIterator>();
@@ -121,7 +119,7 @@ public abstract class DataJoinReducerBase extends JobBase {
     return retv;
   }
 
-  public void reduce(WritableComparable key, Iterator values,
+  public void reduce(Object key, Iterator values,
                      OutputCollector output, Reporter reporter) throws IOException {
     if (this.reporter == null) {
       this.reporter = reporter;
@@ -150,7 +148,7 @@ public abstract class DataJoinReducerBase extends JobBase {
    * @param reporter
    * @throws IOException
    */
-  protected void collect(WritableComparable key, TaggedMapOutput aRecord,
+  protected void collect(Object key, TaggedMapOutput aRecord,
                          OutputCollector output, Reporter reporter) throws IOException {
     this.collected += 1;
     addLongValue("collectedCount", 1);
@@ -173,7 +171,7 @@ public abstract class DataJoinReducerBase extends JobBase {
    * @throws IOException
    */
   private void joinAndCollect(Object[] tags, ResetableIterator[] values,
-                              WritableComparable key, OutputCollector output, Reporter reporter)
+                              Object key, OutputCollector output, Reporter reporter)
     throws IOException {
     if (values.length < 1) {
       return;
@@ -198,7 +196,7 @@ public abstract class DataJoinReducerBase extends JobBase {
    * @throws IOException
    */
   private void joinAndCollect(Object[] tags, ResetableIterator[] values,
-                              int pos, Object[] partialList, WritableComparable key,
+                              int pos, Object[] partialList, Object key,
                               OutputCollector output, Reporter reporter) throws IOException {
 
     if (values.length == pos) {
@@ -230,7 +228,7 @@ public abstract class DataJoinReducerBase extends JobBase {
    */
   protected abstract TaggedMapOutput combine(Object[] tags, Object[] values);
 
-  public void map(WritableComparable arg0, Writable arg1, OutputCollector arg2,
+  public void map(Object arg0, Object arg1, OutputCollector arg2,
                   Reporter arg3) throws IOException {
     // TODO Auto-generated method stub
 

@@ -20,9 +20,6 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 /**
  * Expert: Generic interface for {@link Mapper}s.
  * 
@@ -31,8 +28,7 @@ import org.apache.hadoop.io.WritableComparable;
  * 
  * @see Mapper
  */
-public interface MapRunnable<K1 extends WritableComparable, V1 extends Writable,
-                             K2 extends WritableComparable, V2 extends Writable>
+public interface MapRunnable<K1, V1, K2, V2>
     extends JobConfigurable {
   
   /** 

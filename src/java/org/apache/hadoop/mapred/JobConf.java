@@ -562,9 +562,8 @@ public class JobConf extends Configuration {
    *  
    * @return the map output key class.
    */
-  public Class<? extends WritableComparable> getMapOutputKeyClass() {
-    Class<? extends WritableComparable> retv = getClass("mapred.mapoutput.key.class", null,
-			  WritableComparable.class);
+  public Class<?> getMapOutputKeyClass() {
+    Class<?> retv = getClass("mapred.mapoutput.key.class", null, Object.class);
     if (retv == null) {
       retv = getOutputKeyClass();
     }
@@ -578,9 +577,8 @@ public class JobConf extends Configuration {
    * 
    * @param theClass the map output key class.
    */
-  public void setMapOutputKeyClass(Class<? extends WritableComparable> theClass) {
-    setClass("mapred.mapoutput.key.class", theClass,
-             WritableComparable.class);
+  public void setMapOutputKeyClass(Class<?> theClass) {
+    setClass("mapred.mapoutput.key.class", theClass, Object.class);
   }
   
   /**
@@ -590,9 +588,9 @@ public class JobConf extends Configuration {
    *  
    * @return the map output value class.
    */
-  public Class<? extends Writable> getMapOutputValueClass() {
-    Class<? extends Writable> retv = getClass("mapred.mapoutput.value.class", null,
-			  Writable.class);
+  public Class<?> getMapOutputValueClass() {
+    Class<?> retv = getClass("mapred.mapoutput.value.class", null,
+        Object.class);
     if (retv == null) {
       retv = getOutputValueClass();
     }
@@ -606,8 +604,8 @@ public class JobConf extends Configuration {
    * 
    * @param theClass the map output value class.
    */
-  public void setMapOutputValueClass(Class<? extends Writable> theClass) {
-    setClass("mapred.mapoutput.value.class", theClass, Writable.class);
+  public void setMapOutputValueClass(Class<?> theClass) {
+    setClass("mapred.mapoutput.value.class", theClass, Object.class);
   }
   
   /**
@@ -615,9 +613,9 @@ public class JobConf extends Configuration {
    * 
    * @return the key class for the job output data.
    */
-  public Class<? extends WritableComparable> getOutputKeyClass() {
+  public Class<?> getOutputKeyClass() {
     return getClass("mapred.output.key.class",
-                    LongWritable.class, WritableComparable.class);
+                    LongWritable.class, Object.class);
   }
   
   /**
@@ -625,33 +623,33 @@ public class JobConf extends Configuration {
    * 
    * @param theClass the key class for the job output data.
    */
-  public void setOutputKeyClass(Class<? extends WritableComparable> theClass) {
-    setClass("mapred.output.key.class", theClass, WritableComparable.class);
+  public void setOutputKeyClass(Class<?> theClass) {
+    setClass("mapred.output.key.class", theClass, Object.class);
   }
 
   /**
-   * Get the {@link WritableComparable} comparator used to compare keys.
+   * Get the {@link RawComparator} comparator used to compare keys.
    * 
-   * @return the {@link WritableComparable} comparator used to compare keys.
+   * @return the {@link RawComparator} comparator used to compare keys.
    */
-  public WritableComparator getOutputKeyComparator() {
+  public RawComparator getOutputKeyComparator() {
     Class theClass = getClass("mapred.output.key.comparator.class", null,
-                              WritableComparator.class);
+    		RawComparator.class);
     if (theClass != null)
-      return (WritableComparator)ReflectionUtils.newInstance(theClass, this);
+      return (RawComparator)ReflectionUtils.newInstance(theClass, this);
     return WritableComparator.get(getMapOutputKeyClass());
   }
 
   /**
-   * Set the {@link WritableComparable} comparator used to compare keys.
+   * Set the {@link RawComparator} comparator used to compare keys.
    * 
-   * @param theClass the {@link WritableComparable} comparator used to 
+   * @param theClass the {@link RawComparator} comparator used to 
    *                 compare keys.
    * @see #setOutputValueGroupingComparator(Class)                 
    */
-  public void setOutputKeyComparatorClass(Class<? extends WritableComparator> theClass) {
+  public void setOutputKeyComparatorClass(Class<? extends RawComparator> theClass) {
     setClass("mapred.output.key.comparator.class",
-             theClass, WritableComparator.class);
+             theClass, RawComparator.class);
   }
 
   /** 
@@ -661,24 +659,24 @@ public class JobConf extends Configuration {
    * @return comparator set by the user for grouping values.
    * @see #setOutputValueGroupingComparator(Class) for details.  
    */
-  public WritableComparator getOutputValueGroupingComparator() {
+  public RawComparator getOutputValueGroupingComparator() {
     Class theClass = getClass("mapred.output.value.groupfn.class", null,
-                              WritableComparator.class);
+        RawComparator.class);
     if (theClass == null) {
       return getOutputKeyComparator();
     }
     
-    return (WritableComparator)ReflectionUtils.newInstance(theClass, this);
+    return (RawComparator)ReflectionUtils.newInstance(theClass, this);
   }
 
   /** 
-   * Set the user defined {@link WritableComparable} comparator for 
+   * Set the user defined {@link RawComparator} comparator for 
    * grouping keys in the input to the reduce.
    * 
    * <p>This comparator should be provided if the equivalence rules for keys
    * for sorting the intermediates are different from those for grouping keys
    * before each call to 
-   * {@link Reducer#reduce(WritableComparable, java.util.Iterator, OutputCollector, Reporter)}.</p>
+   * {@link Reducer#reduce(Object, java.util.Iterator, OutputCollector, Reporter)}.</p>
    *  
    * <p>For key-value pairs (K1,V1) and (K2,V2), the values (V1, V2) are passed
    * in a single call to the reduce function if K1 and K2 compare as equal.</p>
@@ -693,12 +691,13 @@ public class JobConf extends Configuration {
    * that much sense.)</p>
    * 
    * @param theClass the comparator class to be used for grouping keys. 
-   *                 It should extend <code>WritableComparator</code>.
+   *                 It should implement <code>RawComparator</code>.
    * @see #setOutputKeyComparatorClass(Class)                 
    */
-  public void setOutputValueGroupingComparator(Class theClass) {
+  public void setOutputValueGroupingComparator(
+		  Class<? extends RawComparator> theClass) {
     setClass("mapred.output.value.groupfn.class",
-             theClass, WritableComparator.class);
+             theClass, RawComparator.class);
   }
 
   /**
@@ -706,8 +705,8 @@ public class JobConf extends Configuration {
    * 
    * @return the value class for job outputs.
    */
-  public Class<? extends Writable> getOutputValueClass() {
-    return getClass("mapred.output.value.class", Text.class, Writable.class);
+  public Class<?> getOutputValueClass() {
+    return getClass("mapred.output.value.class", Text.class, Object.class);
   }
   
   /**
@@ -715,8 +714,8 @@ public class JobConf extends Configuration {
    * 
    * @param theClass the value class for job outputs.
    */
-  public void setOutputValueClass(Class<? extends Writable> theClass) {
-    setClass("mapred.output.value.class", theClass, Writable.class);
+  public void setOutputValueClass(Class<?> theClass) {
+    setClass("mapred.output.value.class", theClass, Object.class);
   }
 
   /**

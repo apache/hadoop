@@ -28,19 +28,14 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.*;
 
 /** An {@link OutputFormat} that writes plain text files. */
-public class TextOutputFormat<K extends WritableComparable,
-                              V extends Writable>
-  extends OutputFormatBase<K, V> {
+public class TextOutputFormat<K, V> extends OutputFormatBase<K, V> {
 
-  protected static class LineRecordWriter<K extends WritableComparable,
-                                          V extends Writable>
+  protected static class LineRecordWriter<K, V>
     implements RecordWriter<K, V> {
     private static final String utf8 = "UTF-8";
     private static final byte[] tab;

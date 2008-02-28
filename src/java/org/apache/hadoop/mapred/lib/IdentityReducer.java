@@ -27,11 +27,8 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.MapReduceBase;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 /** Performs no reduction, writing all input values directly to the output. */
-public class IdentityReducer<K extends WritableComparable, V extends Writable>
+public class IdentityReducer<K, V>
     extends MapReduceBase implements Reducer<K, V, K, V> {
 
   /** Writes all keys and values directly to output. */

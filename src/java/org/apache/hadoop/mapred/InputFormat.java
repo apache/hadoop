@@ -21,8 +21,6 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /** 
  * <code>InputFormat</code> describes the input-specification for a 
@@ -64,8 +62,7 @@ import org.apache.hadoop.io.WritableComparable;
  * @see JobClient
  * @see FileInputFormat
  */
-public interface InputFormat<K extends WritableComparable,
-                             V extends Writable> {
+public interface InputFormat<K, V> {
 
   /**
    * Check for validity of the input-specification for the job. 

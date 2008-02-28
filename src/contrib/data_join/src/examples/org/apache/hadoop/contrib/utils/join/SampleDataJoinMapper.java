@@ -19,7 +19,6 @@
 package org.apache.hadoop.contrib.utils.join;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 
 import org.apache.hadoop.contrib.utils.join.DataJoinMapperBase;
 import org.apache.hadoop.contrib.utils.join.TaggedMapOutput;
@@ -47,7 +46,7 @@ public class SampleDataJoinMapper extends DataJoinMapperBase {
     return new Text(groupKey);
   }
 
-  protected TaggedMapOutput generateTaggedMapOutput(Writable value) {
+  protected TaggedMapOutput generateTaggedMapOutput(Object value) {
     TaggedMapOutput retv = new SampleTaggedMapOutput((Text) value);
     retv.setTag(new Text(this.inputTag));
     return retv;

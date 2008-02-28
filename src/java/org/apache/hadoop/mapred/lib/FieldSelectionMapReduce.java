@@ -25,8 +25,6 @@ import java.util.Iterator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
@@ -63,8 +61,7 @@ import org.apache.hadoop.mapred.TextInputFormat;
  * the key is never ignored.
  * 
  */
-public class FieldSelectionMapReduce<K extends WritableComparable,
-                                     V extends Writable>
+public class FieldSelectionMapReduce<K, V>
     implements Mapper<K, V, Text, Text>, Reducer<Text, Text, Text, Text> {
 
   private String mapOutputKeyValueSpec;

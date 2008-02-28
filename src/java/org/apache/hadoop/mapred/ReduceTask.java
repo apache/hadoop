@@ -49,13 +49,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.InputBuffer;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
+import org.apache.hadoop.io.serializer.Deserializer;
+import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -140,30 +142,32 @@ class ReduceTask extends Task {
   /** Iterates values while keys match in sorted input. */
   static class ValuesIterator implements Iterator {
     private SequenceFile.Sorter.RawKeyValueIterator in; //input iterator
-    private WritableComparable key;               // current key
-    private Writable value;                       // current value
+    private Object key;               // current key
+    private Object value;                       // current value
     private boolean hasNext;                      // more w/ this key
     private boolean more;                         // more in file
-    private WritableComparator comparator;
-    private Class keyClass;
-    private Class valClass;
-    private Configuration conf;
+    private RawComparator comparator;
     private DataOutputBuffer valOut = new DataOutputBuffer();
-    private DataInputBuffer valIn = new DataInputBuffer();
-    private DataInputBuffer keyIn = new DataInputBuffer();
+    private InputBuffer valIn = new InputBuffer();
+    private InputBuffer keyIn = new InputBuffer();
     protected Reporter reporter;
+    private Deserializer keyDeserializer;
+    private Deserializer valDeserializer;
 
+    @SuppressWarnings("unchecked")
     public ValuesIterator (SequenceFile.Sorter.RawKeyValueIterator in, 
-                           WritableComparator comparator, Class keyClass,
+                           RawComparator comparator, Class keyClass,
                            Class valClass, Configuration conf, 
                            Reporter reporter)
       throws IOException {
       this.in = in;
-      this.conf = conf;
       this.comparator = comparator;
-      this.keyClass = keyClass;
-      this.valClass = valClass;
       this.reporter = reporter;
+      SerializationFactory serializationFactory = new SerializationFactory(conf);
+      this.keyDeserializer = serializationFactory.getDeserializer(keyClass);
+      this.keyDeserializer.open(keyIn);
+      this.valDeserializer = serializationFactory.getDeserializer(valClass);
+      this.valDeserializer.open(valIn);
       getNext();
     }
 
@@ -196,25 +200,20 @@ class ReduceTask extends Task {
     public boolean more() { return more; }
 
     /** The current key. */
-    public WritableComparable getKey() { return key; }
+    public Object getKey() { return key; }
 
+    @SuppressWarnings("unchecked")
     private void getNext() throws IOException {
-      Writable lastKey = key;                     // save previous key
-      try {
-        key = (WritableComparable)ReflectionUtils.newInstance(keyClass, this.conf);
-        value = (Writable)ReflectionUtils.newInstance(valClass, this.conf);
-      } catch (Exception e) {
-        throw new RuntimeException(e);
-      }
+      Object lastKey = key;                     // save previous key
       more = in.next();
       if (more) {
         //de-serialize the raw key/value
         keyIn.reset(in.getKey().getData(), in.getKey().getLength());
-        key.readFields(keyIn);
+        key = keyDeserializer.deserialize(null); // force new object
         valOut.reset();
         (in.getValue()).writeUncompressedBytes(valOut);
         valIn.reset(valOut.getData(), valOut.getLength());
-        value.readFields(valIn);
+        value = valDeserializer.deserialize(null); // force new object
 
         if (lastKey == null) {
           hasNext = true;
@@ -228,7 +227,7 @@ class ReduceTask extends Task {
   }
   private class ReduceValuesIterator extends ValuesIterator {
     public ReduceValuesIterator (SequenceFile.Sorter.RawKeyValueIterator in,
-                                 WritableComparator comparator, Class keyClass,
+                                 RawComparator comparator, Class keyClass,
                                  Class valClass,
                                  Configuration conf, Reporter reporter)
       throws IOException {
@@ -293,7 +292,8 @@ class ReduceTask extends Task {
     
     // sort the input file
     SequenceFile.Sorter sorter = new SequenceFile.Sorter(lfs, 
-        job.getOutputKeyComparator(), job.getMapOutputValueClass(), job);
+        job.getOutputKeyComparator(), job.getMapOutputKeyClass(),
+        job.getMapOutputValueClass(), job);
     sorter.setProgressable(reporter);
     rIter = sorter.merge(mapFiles, tempDir, 
         !conf.getKeepFailedTaskFiles()); // sort
@@ -310,7 +310,7 @@ class ReduceTask extends Task {
     
     OutputCollector collector = new OutputCollector() {
         @SuppressWarnings("unchecked")
-        public void collect(WritableComparable key, Writable value)
+        public void collect(Object key, Object value)
           throws IOException {
           out.write(key, value);
           reduceOutputCounter.increment(1);
@@ -887,7 +887,7 @@ class ReduceTask extends Task {
       //create an instance of the sorter
       sorter =
         new SequenceFile.Sorter(inMemFileSys, conf.getOutputKeyComparator(), 
-                                conf.getMapOutputValueClass(), conf);
+            conf.getMapOutputKeyClass(), conf.getMapOutputValueClass(), conf);
       sorter.setProgressable(getReporter(umbilical));
       
       // hosts -> next contact time
