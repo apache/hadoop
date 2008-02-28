@@ -83,6 +83,9 @@ Trunk (unreleased changes)
     HADOOP-2871. Fixes a problem to do with file: URI in the JobHistory init.
     (Amareshwari Sri Ramadasu via ddas)
 
+    HADOOP-2800.  Deprecate SetFile.Writer constructor not the whole class.
+    (Johan Oskarsson via tomwhite)
+
 Release 0.16.1 - Unreleased
 
   IMPROVEMENTS

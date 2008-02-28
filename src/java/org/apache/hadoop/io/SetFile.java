@@ -29,12 +29,14 @@ public class SetFile extends MapFile {
 
   protected SetFile() {}                            // no public ctor
 
-  /** Write a new set file.
-   * @deprecated pass a Configuration too
+  /** 
+   * Write a new set file.
    */
   public static class Writer extends MapFile.Writer {
 
-    /** Create the named set for keys of the named class. */
+    /** Create the named set for keys of the named class. 
+     *  @deprecated pass a Configuration too
+     */
     public Writer(FileSystem fs, String dirName, Class keyClass) throws IOException {
       super(new Configuration(), fs, dirName, keyClass, NullWritable.class);
     }
