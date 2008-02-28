@@ -151,6 +151,7 @@ public class TaskTracker
   private static final String SUBDIR = "taskTracker";
   private static final String CACHEDIR = "archive";
   private static final String JOBCACHE = "jobcache";
+  private JobConf originalConf;
   private JobConf fConf;
   private MapOutputFile mapOutputFile;
   private int maxCurrentMapTasks;
@@ -387,6 +388,7 @@ public class TaskTracker
    */
   synchronized void initialize() throws IOException {
     // use configured nameserver & interface to get local hostname
+    this.fConf = new JobConf(originalConf);
     this.localHostname =
       DNS.getDefaultHost
       (fConf.get("mapred.tasktracker.dns.interface","default"),
@@ -433,7 +435,7 @@ public class TaskTracker
 
     // get the assigned address
     this.taskReportAddress = taskReportServer.getListenerAddress();
-    this.fConf.set("mapred.task.tracker.report.bindAddress",
+    this.fConf.set("mapred.task.tracker.report.address",
         taskReportAddress.getHostName() + ":" + taskReportAddress.getPort());
     LOG.info("TaskTracker up at: " + this.taskReportAddress);
 
@@ -796,13 +798,13 @@ public class TaskTracker
    * Start with the local machine name, and the default JobTracker
    */
   public TaskTracker(JobConf conf) throws IOException {
+    originalConf = conf;
     maxCurrentMapTasks = handleDeprecatedMaxTasks(
                            conf.get("mapred.tasktracker.map.tasks.maximum"),
                            conf.get("mapred.tasktracker.tasks.maximum"), 2);
     maxCurrentReduceTasks = handleDeprecatedMaxTasks(
                          conf.get("mapred.tasktracker.reduce.tasks.maximum"),
                          conf.get("mapred.tasktracker.tasks.maximum"), 2);
-    this.fConf = conf;
     this.jobTrackAddr = JobTracker.getAddress(conf);
     this.mapOutputFile = new MapOutputFile();
     this.mapOutputFile.setConf(conf);
@@ -817,7 +819,7 @@ public class TaskTracker
     this.server = new StatusHttpServer(
                         "task", httpBindAddress, httpPort, httpPort == 0);
     workerThreads = conf.getInt("tasktracker.http.threads", 40);
-    this.shuffleServerMetrics = new ShuffleServerMetrics(fConf);
+    this.shuffleServerMetrics = new ShuffleServerMetrics(conf);
     server.setThreads(1, workerThreads);
     // let the jsp pages get to the task tracker, config, and other relevant
     // objects

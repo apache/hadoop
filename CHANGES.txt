@@ -153,6 +153,9 @@ Release 0.16.1 - Unreleased
     HADOOP-2852. Update gridmix benchmark to avoid an artifically long tail.
     (cdouglas)
 
+    HADOOP-2894. Fix a problem to do with tasktrackers failing to connect to
+    JobTracker upon reinitialization. (Owen O'Malley via ddas).
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES

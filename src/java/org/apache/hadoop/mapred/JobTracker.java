@@ -672,7 +672,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     this.conf.set("mapred.job.tracker", (this.localMachine + ":" + this.port));
     LOG.info("JobTracker up at: " + this.port);
     this.infoPort = this.infoServer.getPort();
-    this.conf.set("mapred.job.tracker.http.bindAddress", 
+    this.conf.set("mapred.job.tracker.http.address", 
         infoBindAddress + ":" + this.infoPort); 
     LOG.info("JobTracker webserver: " + this.infoServer.getPort());
     this.systemDir = jobConf.getSystemDir();

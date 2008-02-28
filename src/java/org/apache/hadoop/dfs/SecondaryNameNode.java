@@ -118,7 +118,7 @@ public class SecondaryNameNode implements FSConstants, Runnable {
 
     // The web-server port can be ephemeral... ensure we have the correct info
     infoPort = infoServer.getPort();
-    conf.set("dfs.secondary.http.bindAddress", infoBindAddress + ":" +infoPort); 
+    conf.set("dfs.secondary.http.address", infoBindAddress + ":" +infoPort); 
     LOG.info("Secondary Web-server up at: " + infoBindAddress + ":" +infoPort);
 
     //
