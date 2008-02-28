@@ -172,10 +172,13 @@ class DFSClient implements FSConstants {
         Iterator file_itr = pendingCreates.keySet().iterator();
         while (file_itr.hasNext()) {
           String name = (String) file_itr.next();
+          OutputStream out = pendingCreates.get(name);
           try {
-            namenode.abandonFileInProgress(name, clientName);
+            if (out != null) {
+              out.close();
+            }
           } catch (IOException ie) {
-            System.err.println("Exception abandoning create lock on " + name);
+            System.err.println("Exception closing file " + name);
             ie.printStackTrace();
           }
         }

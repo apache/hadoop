@@ -89,6 +89,8 @@ Trunk (unreleased changes)
     HADOOP-2800.  Deprecate SetFile.Writer constructor not the whole class.
     (Johan Oskarsson via tomwhite)
 
+    HADOOP-2891.  DFSClient.close() closes all open files. (dhruba)
+
 Release 0.16.1 - Unreleased
 
   IMPROVEMENTS

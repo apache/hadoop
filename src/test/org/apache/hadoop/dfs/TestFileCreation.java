@@ -418,6 +418,52 @@ public class TestFileCreation extends TestCase {
     }
   }
 
+  /**
+   * Test that all open files are closed when client dies abnormally.
+   */
+  public void testDFSClientDeath() throws IOException {
+    Configuration conf = new Configuration();
+    System.out.println("Testing adbornal client death.");
+    if (simulatedStorage) {
+      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+    }
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    FileSystem fs = cluster.getFileSystem();
+    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    DFSClient dfsclient = dfs.dfs;
+    try {
+
+      // create a new file in home directory. Do not close it.
+      //
+      Path file1 = new Path("/clienttest.dat");
+      FSDataOutputStream stm = createFile(fs, file1, 1);
+      System.out.println("Created file clienttest.dat");
+
+      // write to file
+      writeFile(stm);
+
+      // close the dfsclient before closing the output stream.
+      // This should close all existing file.
+      dfsclient.close();
+
+      try {
+        fs.close();
+        fs = null;
+      } catch (IOException e) {
+      }
+
+      // reopen file system and verify that file exists.
+      fs = cluster.getFileSystem();
+      assertTrue(file1 + " does not exist.", fs.exists(file1));
+
+    } finally {
+      if (fs != null) {
+        fs.close();
+      }
+      cluster.shutdown();
+    }
+  }
+
 /**
  * Test that file data becomes available before file is closed.
  */

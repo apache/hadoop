@@ -185,6 +185,7 @@ interface ClientProtocol extends VersionedProtocol {
    * @param src The filename
    * @param holder The datanode holding the lease
    */
+  @Deprecated
   public void abandonFileInProgress(String src, 
                                     String holder) throws IOException;
 

@@ -325,6 +325,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
   /**
    */
+  @Deprecated
   public void abandonFileInProgress(String src, 
                                     String holder) throws IOException {
     stateChangeLog.debug("*DIR* NameNode.abandonFileInProgress:" + src);
