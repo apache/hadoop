@@ -158,8 +158,8 @@ class ProcessServerShutdown extends RegionServerOperation {
         ToDoEntry todo = new ToDoEntry(row, info);
         toDoList.add(todo);
 
-        if (master.regionManager.isMarkedClosedNoReopen(deadServerName, info.getRegionName())) {
-          master.regionManager.noLongerMarkedClosedNoReopen(deadServerName, info.getRegionName());
+        if (master.regionManager.isMarkedToClose(deadServerName, info.getRegionName())) {
+          master.regionManager.noLongerMarkedToClose(deadServerName, info.getRegionName());
           master.regionManager.noLongerUnassigned(info);
           if (master.regionManager.isMarkedForDeletion(info.getRegionName())) {
             // Delete this region

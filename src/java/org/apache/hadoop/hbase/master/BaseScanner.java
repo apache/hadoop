@@ -358,7 +358,7 @@ abstract class BaseScanner extends Chore implements HConstants {
     boolean deadServer = false;
     if (serverName.length() != 0) {
       
-      if (regionManager.isMarkedClosedNoReopen(serverName, info.getRegionName())) {
+      if (regionManager.isMarkedToClose(serverName, info.getRegionName())) {
         // Skip if region is on kill list
         if(LOG.isDebugEnabled()) {
           LOG.debug("not assigning region (on kill list): " +

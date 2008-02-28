@@ -279,7 +279,7 @@ class ServerManager implements HConstants {
   throws IOException { 
     ArrayList<HMsg> returnMsgs = new ArrayList<HMsg>();
     Map<Text, HRegionInfo> regionsToKill = 
-      master.regionManager.getMarkedClosedNoReopen(serverName);
+      master.regionManager.getMarkedToClose(serverName);
 
     // Get reports on what the RegionServer did.
     for (int i = 0; i < incomingMsgs.length; i++) {
@@ -361,12 +361,13 @@ class ServerManager implements HConstants {
       }
     }
 
-    // Process the kill list
-
+    // Tell the region server to close regions that we have marked for closing.
     if (regionsToKill != null) {
       for (HRegionInfo i: regionsToKill.values()) {
         returnMsgs.add(new HMsg(HMsg.MSG_REGION_CLOSE, i));
+        // Transition the region from toClose to closing state
         master.regionManager.setClosing(i.getRegionName());
+        master.regionManager.noLongerMarkedToClose(serverName, i.getRegionName());
       }
     }
 

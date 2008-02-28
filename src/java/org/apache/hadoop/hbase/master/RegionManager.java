@@ -95,14 +95,17 @@ class RegionManager implements HConstants {
     Collections.synchronizedSet(new HashSet<Text>());
 
   /**
-   * The 'killList' is a list of regions that are going to be closed, but not
-   * reopened.
+   * List of regions that are going to be closed.
    */
-  private final Map<String, Map<Text, HRegionInfo>> killList =
+  private final Map<String, Map<Text, HRegionInfo>> regionsToClose =
     new ConcurrentHashMap<String, Map<Text, HRegionInfo>>();
 
-  /** 'killedRegions' contains regions that are in the process of being closed */
-  private final Set<Text> killedRegions =
+  /** Regions that are in the process of being closed */
+  private final Set<Text> closingRegions =
+    Collections.synchronizedSet(new HashSet<Text>());
+
+  /** Regions that are being reassigned for load balancing. */
+  private final Set<Text> regionsBeingReassigned = 
     Collections.synchronizedSet(new HashSet<Text>());
 
   /**
@@ -498,66 +501,65 @@ class RegionManager implements HConstants {
     unassignedRegions.remove(info);
   }
   
-  /** Mark a region to be closed and not reopened */
-  public void markClosedNoReopen(String serverName, HRegionInfo info) {
-    synchronized (killList) {
-      Map<Text, HRegionInfo> serverKillList = killList.get(serverName);
-      if (serverKillList != null) {
-        serverKillList.put(info.getRegionName(), info);
+  /** Mark a region to be closed */
+  public void markToClose(String serverName, HRegionInfo info) {
+    synchronized (regionsToClose) {
+      Map<Text, HRegionInfo> serverToClose = regionsToClose.get(serverName);
+      if (serverToClose != null) {
+        serverToClose.put(info.getRegionName(), info);
       }
     }
   }
   
   /** Mark a bunch of regions as closed not reopen at once for a server */
-  public void markClosedNoReopenBulk(String serverName, 
+  public void markToCloseBulk(String serverName, 
     Map<Text, HRegionInfo> map) {
-    killList.put(serverName, map);
+    regionsToClose.put(serverName, map);
   }
   
   /** 
    * Get a map of region names to region infos waiting to be offlined for a 
    * given server 
    */
-  public Map<Text, HRegionInfo> getMarkedClosedNoReopen(String serverName) {
-    return killList.get(serverName);
+  public Map<Text, HRegionInfo> getMarkedToClose(String serverName) {
+    return regionsToClose.get(serverName);
   }
   
   /**
    * Check if a region is marked as closed not reopen.
    */
-  public boolean isMarkedClosedNoReopen(String serverName, Text regionName) {
-    synchronized (killList) {
-      Map<Text, HRegionInfo> regionsToKill = 
-        killList.get(serverName);
-      return (regionsToKill != null && regionsToKill.containsKey(regionName));
+  public boolean isMarkedToClose(String serverName, Text regionName) {
+    synchronized (regionsToClose) {
+      Map<Text, HRegionInfo> serverToClose = regionsToClose.get(serverName);
+      return (serverToClose != null && serverToClose.containsKey(regionName));
     }
   }
   
   /**
    * Mark a region as no longer waiting to be closed and not reopened. 
    */
-  public void noLongerMarkedClosedNoReopen(String serverName, Text regionName) {
-    synchronized (killList) {
-      Map<Text, HRegionInfo> serverKillList = killList.get(serverName);
-      if (serverKillList != null) {
-        serverKillList.remove(regionName);
+  public void noLongerMarkedToClose(String serverName, Text regionName) {
+    synchronized (regionsToClose) {
+      Map<Text, HRegionInfo> serverToClose = regionsToClose.get(serverName);
+      if (serverToClose != null) {
+        serverToClose.remove(regionName);
       }
     }
   }
   
   /** Check if a region is closing */
   public boolean isClosing(Text regionName) {
-    return killedRegions.contains(regionName);
+    return closingRegions.contains(regionName);
   }
   
   /** Set a region as no longer closing (closed?) */
   public void noLongerClosing(Text regionName) {
-    killedRegions.remove(regionName);
+    closingRegions.remove(regionName);
   }
   
   /** mark a region as closing */
   public void setClosing(Text regionName) {
-    killedRegions.add(regionName);
+    closingRegions.add(regionName);
   }
   
   /**

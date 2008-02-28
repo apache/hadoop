@@ -121,7 +121,7 @@ class ChangeTableState extends TableOperation {
         new HashMap<Text, HRegionInfo>();
         
       Map<Text, HRegionInfo> killedRegions = 
-        master.regionManager.getMarkedClosedNoReopen(serverName);
+        master.regionManager.getMarkedToClose(serverName);
       if (killedRegions != null) {
         localKillList.putAll(killedRegions);
       }
@@ -138,7 +138,7 @@ class ChangeTableState extends TableOperation {
           LOG.debug("inserted local kill list into kill list for server " +
               serverName);
         }
-        master.regionManager.markClosedNoReopenBulk(serverName, localKillList);
+        master.regionManager.markToCloseBulk(serverName, localKillList);
       }
     }
     servedRegions.clear();
