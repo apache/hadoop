@@ -47,6 +47,9 @@ Trunk (unreleased changes)
     methods for fs.default.name, and check for null authority in HDFS.
     (cutting)
 
+    HADOOP-2895. Let the profiling string be configurable.
+    (Martin Traverso via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES

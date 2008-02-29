@@ -1205,6 +1205,33 @@ public class JobConf extends Configuration {
   }
 
   /**
+   * Get the profiler configuration arguments.
+   *
+   * The default value for this property is
+   * "-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y,verbose=n,file=%s"
+   * 
+   * @return the parameters to pass to the task child to configure profiling
+   */
+  public String getProfileParams() {
+    return get("mapred.task.profile.params",
+               "-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y," +
+                 "verbose=n,file=%s");
+  }
+
+  /**
+   * Set the profiler configuration arguments. If the string contains a '%s' it
+   * will be replaced with the name of the profiling output file when the task
+   * runs.
+   *
+   * This value is passed to the task child JVM on the command line.
+   *
+   * @param value the configuration string
+   */
+  public void setProfileParams(String value) {
+    set("mapred.task.profile.params", value);
+  }
+
+  /**
    * Get the range of maps or reduces to profile.
    * @param isMap is the task a map?
    * @return the task ranges

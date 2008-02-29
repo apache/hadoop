@@ -355,8 +355,7 @@ abstract class TaskRunner extends Thread {
         if (conf.getProfileTaskRange(t.isMapTask()
                                      ).isIncluded(t.getPartition())) {
           File prof = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.PROFILE);
-          vargs.add("-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y,"
-                     + "verbose=n,file=" + prof.toString());
+          vargs.add(String.format(conf.getProfileParams(), prof.toString()));
         }
       }
 
