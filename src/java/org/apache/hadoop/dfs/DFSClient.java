@@ -2218,10 +2218,14 @@ class DFSClient implements FSConstants {
       }
     }
   
-    private void internalClose() throws IOException {
-      // Clean up any resources that might be held.
-      closed = true;
-      
+    /**
+     * Closes this output stream and releases any system 
+     * resources associated with this stream.
+     */
+    @Override
+    public void close() throws IOException {
+      closeInternal();
+
       synchronized (pendingCreates) {
         pendingCreates.remove(src);
       }
@@ -2236,8 +2240,7 @@ class DFSClient implements FSConstants {
      * Closes this output stream and releases any system 
      * resources associated with this stream.
      */
-    @Override
-    public synchronized void close() throws IOException {
+    private synchronized void closeInternal() throws IOException {
       checkOpen();
       isClosed();
 
@@ -2306,7 +2309,7 @@ class DFSClient implements FSConstants {
       } catch (InterruptedException e) {
         throw new IOException("Failed to shutdown response thread");
       } finally {
-        internalClose();
+        closed = true;
       }
     }
 
