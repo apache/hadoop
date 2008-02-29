@@ -17,65 +17,68 @@
  */
 package org.apache.hadoop.fs;
 
+import junit.framework.TestCase;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-
-import junit.framework.TestCase;
+import java.util.Random;
 
 /** This test makes sure that "DU" does not get to run on each call to getUsed */ 
 public class TestDU extends TestCase {
   final static private File DU_DIR = new File(
       System.getProperty("test.build.data","/tmp"), "dutmp");
-  final static private File DU_FILE1 = new File(DU_DIR, "tmp1");
-  final static private File DU_FILE2 = new File(DU_DIR, "tmp2");
-  
-  /** create a file of more than 1K size */
-  private void createFile( File newFile ) throws IOException {
+
+  public void setUp() throws IOException {
+      FileUtil.fullyDelete(DU_DIR);
+      assertTrue(DU_DIR.mkdirs());
+  }
+
+  public void tearDown() throws IOException {
+      FileUtil.fullyDelete(DU_DIR);
+  }
+    
+  private void createFile(File newFile, int size) throws IOException {
+    // write random data so that filesystems with compression enabled (e.g., ZFS)
+    // can't compress the file
+    Random random = new Random();
+    byte[] data = new byte[size];
+    random.nextBytes(data);
+
     newFile.createNewFile();
-    RandomAccessFile file = new RandomAccessFile(newFile, "rw");
-    file.seek(1024);
-    file.writeBytes("du test du test");
+    RandomAccessFile file = new RandomAccessFile(newFile, "rws");
+
+    file.write(data);
+      
     file.getFD().sync();
     file.close();
   }
   
-  /** delete a file */
-  private void rmFile(File file) {
-    if(file.exists()) {
-      assertTrue(file.delete());
-    }
+  /*
+   * Find a number that is a multiple of the block size in this file system
+   */
+  private int getBlockSize() throws IOException, InterruptedException {
+    File file = new File(DU_DIR, "small");
+    createFile(file, 128); // this is an arbitrary number. It has to be big enough for the filesystem to report
+                           // any usage at all. For instance, NFS reports 0 blocks if the file is <= 64 bytes
+
+    Thread.sleep(5000); // let the metadata updater catch up
+
+    DU du = new DU(file, 0);
+    return (int) du.getUsed();
   }
 
-  /* interval is in a unit of minutes */
-  private void testDU(long interval) throws IOException {
-    rmFile(DU_FILE1);
-    rmFile(DU_FILE2);
-    DU_DIR.delete();
-    assertTrue(DU_DIR.mkdirs());
-    try {
-      createFile(DU_FILE1);
-      DU du = new DU(DU_DIR, interval*60000);
-      long oldUsedSpace = du.getUsed();
-      assertTrue(oldUsedSpace>0); // make sure that du is called
-      createFile(DU_FILE2);
-      if(interval>0) {
-        assertEquals( oldUsedSpace, du.getUsed());  // du does not get called
-      } else {
-        assertTrue( oldUsedSpace < du.getUsed());   // du gets called again
-      }
-    } finally {
-      rmFile(DU_FILE1);
-      rmFile(DU_FILE2);
-      DU_DIR.delete();
-    }
-  }
+  public void testDU() throws IOException, InterruptedException {
+    int blockSize = getBlockSize();
 
-  public void testDU() throws Exception {
-    testDU(Long.MIN_VALUE/60000);  // test a negative interval
-    testDU(0L);  // test a zero interval
-    testDU(10L); // interval equal to 10mins
-    testDU(System.currentTimeMillis()/60000+60); // test a very big interval
-  }
+    File file = new File(DU_DIR, "data");
+    createFile(file, 2 * blockSize);
+
+    Thread.sleep(5000); // let the metadata updater catch up
     
+    DU du = new DU(file, 0);
+    long size = du.getUsed();
+
+    assertEquals(2 * blockSize, size);
+  }
 }

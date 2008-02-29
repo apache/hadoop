@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.fs;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.BufferedReader;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants;
 import org.apache.hadoop.util.Shell;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
 
 /** Filesystem disk space usage statistics.  Uses the unix 'du' program*/
 public class DU extends Shell {
@@ -61,12 +61,12 @@ public class DU extends Shell {
   
   public String toString() {
     return
-      "du -s " + dirPath +"\n" +
+      "du -sk " + dirPath +"\n" +
       used + "\t" + dirPath;
   }
 
   protected String[] getExecString() {
-    return new String[] {"du","-s", dirPath};
+    return new String[] {"du","-sk", dirPath};
   }
   
   protected void parseExecResult(BufferedReader lines) throws IOException {

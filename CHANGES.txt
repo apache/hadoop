@@ -91,6 +91,9 @@ Trunk (unreleased changes)
 
     HADOOP-2891.  DFSClient.close() closes all open files. (dhruba)
 
+    HADOOP-2845.  Fix dfsadmin disk utilization report on Solaris.
+    (Martin Traverso via tomwhite)
+
 Release 0.16.1 - Unreleased
 
   IMPROVEMENTS
