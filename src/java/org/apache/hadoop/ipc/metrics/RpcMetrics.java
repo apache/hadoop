@@ -41,24 +41,22 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
  */
 public class RpcMetrics implements Updater {
   private MetricsRecord metricsRecord;
-  private static Log LOG = LogFactory.getLog(JvmMetrics.class);
+  private static Log LOG = LogFactory.getLog(RpcMetrics.class);
   RpcMgt rpcMgt;
   
-  private void setTags(String serverName, String port) {
-    metricsRecord.setTag("serverName", serverName);
-    metricsRecord.setTag("port", port);
-    LOG.info("Initializing RPC Metrics with serverName=" 
-        + serverName + ", port=" + port);
-  }
-
-  public RpcMetrics(String serverName, String port, Server server) {
+  public RpcMetrics(String hostName, String port, Server server) {
     MetricsContext context = MetricsUtil.getContext("rpc");
     metricsRecord = MetricsUtil.createRecord(context, "metrics");
-    setTags(serverName, port);
+
+    metricsRecord.setTag("port", port);
+
+    LOG.info("Initializing RPC Metrics with hostName=" 
+        + hostName + ", port=" + port);
+
     context.registerUpdater(this);
     
     // Need to clean up the interface to RpcMgt - don't need both metrics and server params
-    rpcMgt = new RpcMgt(serverName, port, this, server);
+    rpcMgt = new RpcMgt(hostName, port, this, server);
   }
   
   

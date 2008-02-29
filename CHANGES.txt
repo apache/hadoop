@@ -91,6 +91,9 @@ Trunk (unreleased changes)
 
     HADOOP-2891.  DFSClient.close() closes all open files. (dhruba)
 
+    HADOOP-2904.  Fix to RPC metrics to log the correct host name. 
+    (girish vaitheeswaran via dhruba)
+
 Release 0.16.1 - Unreleased
 
   IMPROVEMENTS
