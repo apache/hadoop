@@ -382,6 +382,19 @@ public class TestDFSShell extends TestCase {
       confirmOwner(null, "herbivores", dstFs, parent, path);
       runCmd(shell, "-chown", "-R", ":reptiles", dstFs.getUri().toString() + "/");
       confirmOwner(null, "reptiles", dstFs, root, parent, path);
+      //check if default hdfs:/// works 
+      argv[0] = "-cat";
+      argv[1] = "hdfs:///furi";
+      ret = ToolRunner.run(shell, argv);
+      assertTrue(" default works for cat", (ret == 0));
+      argv[0] = "-ls";
+      argv[1] = "hdfs:///";
+      ret = ToolRunner.run(shell, argv);
+      assertTrue("default works for ls ", (ret == 0));
+      argv[0] = "-rmr";
+      argv[1] = "hdfs:///furi";
+      ret = ToolRunner.run(shell, argv);
+      assertTrue("default works for rm/rmr", (ret ==0));
     } finally {
       System.setProperty("test.build.data", bak);
       if (null != srcCluster) {

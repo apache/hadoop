@@ -51,6 +51,8 @@ import org.apache.hadoop.ipc.RemoteException;
  * implementation is {@link DistributedFileSystem}.
  *****************************************************************/
 public abstract class FileSystem extends Configured {
+  private static final String FS_DEFAULT_NAME_KEY = "fs.default.name";
+
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.FileSystem");
 
   // cache indexed by URI scheme and authority
@@ -91,7 +93,31 @@ public abstract class FileSystem extends Configured {
 
   /** Returns the configured filesystem implementation.*/
   public static FileSystem get(Configuration conf) throws IOException {
-    return getNamed(conf.get("fs.default.name", "file:///"), conf);
+    return get(getDefaultUri(conf), conf);
+  }
+  
+  /** Get the default filesystem URI from a configuration.
+   * @param conf the configuration to access
+   * @return the uri of the default filesystem
+   */
+  public static URI getDefaultUri(Configuration conf) {
+    return URI.create(fixName(conf.get(FS_DEFAULT_NAME_KEY, "file:///")));
+  }
+
+  /** Set the default filesystem URI in a configuration.
+   * @param conf the configuration to alter
+   * @param uri the new default filesystem uri
+   */
+  public static void setDefaultUri(Configuration conf, URI uri) {
+    conf.set(FS_DEFAULT_NAME_KEY, uri.toString());
+  }
+
+  /** Set the default filesystem URI in a configuration.
+   * @param conf the configuration to alter
+   * @param uri the new default filesystem uri
+   */
+  public static void setDefaultUri(Configuration conf, String uri) {
+    setDefaultUri(conf, URI.create(fixName(uri)));
   }
 
   /** Called after a new FileSystem instance is constructed.
@@ -111,15 +137,24 @@ public abstract class FileSystem extends Configured {
   /** @deprecated call #get(URI,Configuration) instead. */
   public static FileSystem getNamed(String name, Configuration conf)
     throws IOException {
+    return get(URI.create(fixName(name)), conf);
+  }
 
+  /** Update old-format filesystem names, for back-compatibility.  This should
+   * eventually be replaced with a checkName() method that throws an exception
+   * for old-format names. */ 
+  private static String fixName(String name) {
     // convert old-format name to new-format name
     if (name.equals("local")) {         // "local" is now "file:///".
+      LOG.warn("\"local\" is a deprecated filesystem name."
+               +" Use \"file:///\" instead.");
       name = "file:///";
     } else if (name.indexOf('/')==-1) {   // unqualified is "hdfs://"
+      LOG.warn("\""+name+"\" is a deprecated filesystem name."
+               +" Use \"hdfs://"+name+"/\" instead.");
       name = "hdfs://"+name;
     }
-
-    return get(URI.create(name), conf);
+    return name;
   }
 
   /**
@@ -145,6 +180,14 @@ public abstract class FileSystem extends Configured {
 
     if (scheme == null) {                       // no scheme: use default FS
       return get(conf);
+    }
+
+    if (authority == null) {                       // no authority
+      URI defaultUri = getDefaultUri(conf);
+      if (scheme.equals(defaultUri.getScheme())    // if scheme matches default
+          && defaultUri.getAuthority() != null) {  // & default has authority
+        return get(defaultUri, conf);              // return default
+      }
     }
 
     Map<String,FileSystem> authorityToFs = CACHE.get(scheme);
@@ -260,11 +303,22 @@ public abstract class FileSystem extends Configured {
     URI uri = path.toUri();
     if (uri.getScheme() == null)                // fs is relative 
       return;
+    String thisScheme = this.getUri().getScheme();
+    String thatScheme = uri.getScheme();
     String thisAuthority = this.getUri().getAuthority();
     String thatAuthority = uri.getAuthority();
-    if (!(this.getUri().getScheme().equals(uri.getScheme()) &&
-           (thisAuthority == thatAuthority || 
-             (thisAuthority != null && thisAuthority.equals(thatAuthority))))){
+    if (thisScheme.equals(thatScheme)) {          // schemes match
+      if (thisAuthority == thatAuthority ||       // & authorities match
+          (thisAuthority != null && thisAuthority.equals(thatAuthority)))
+        return;
+
+      if (thatAuthority == null &&                // path's authority is null
+          thisAuthority != null) {                // fs has an authority
+        URI defaultUri = getDefaultUri(getConf()); // & is the default fs
+        if (thisScheme.equals(defaultUri.getScheme()) &&
+            thisAuthority.equals(defaultUri.getAuthority()))
+          return;
+      }
       throw new IllegalArgumentException("Wrong FS: "+path+
                                          ", expected: "+this.getUri());
     }

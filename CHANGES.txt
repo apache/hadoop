@@ -41,6 +41,12 @@ Trunk (unreleased changes)
     presence of snapshots. Needed for supporting appends to HDFS
     files. (dhruba) 
 
+    HADOOP-1967.  When a Path specifies the same scheme as the default
+    FileSystem but no authority, the default FileSystem's authority is
+    used.  Also add warnings for old-format FileSystem names, accessor
+    methods for fs.default.name, and check for null authority in HDFS.
+    (cutting)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -63,6 +63,9 @@ public class DistributedFileSystem extends FileSystem {
     setConf(conf);
     String host = uri.getHost();
     int port = uri.getPort();
+    if (host == null || port == -1) {
+      throw new IOException("Incomplete HDFS URI, no host/port: "+ uri);
+    }
     this.dfs = new DFSClient(new InetSocketAddress(host, port), conf);
     this.uri = URI.create("hdfs://"+host+":"+port);
     this.workingDir = getHomeDirectory();
