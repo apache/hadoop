@@ -126,7 +126,7 @@ public class MetricsTimeVaryingRate {
   public synchronized void pushMetric(final MetricsRecord mr) {
     intervalHeartBeat();
     mr.incrMetric(name + "_num_ops", getPreviousIntervalNumOps());
-    mr.incrMetric(name + "_avg_time", getPreviousIntervalAverageTime());
+    mr.incrMetric(name + "_avg_time", (int)getPreviousIntervalAverageTime());
   }
   
   /**
