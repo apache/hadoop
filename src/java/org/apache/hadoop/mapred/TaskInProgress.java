@@ -96,6 +96,7 @@ class TaskInProgress {
   // currently runnings
   private TreeMap<String, String> activeTasks = new TreeMap<String, String>();
   private JobConf conf;
+  private boolean runSpeculative;
   private Map<String,List<String>> taskDiagnosticData =
     new TreeMap<String,List<String>>();
   /**
@@ -130,6 +131,7 @@ class TaskInProgress {
     this.conf = conf;
     this.partition = partition;
     setMaxTaskAttempts();
+    this.runSpeculative = conf.getMapSpeculativeExecution();
     init(JobTracker.getJobUniqueString(jobid));
   }
         
@@ -147,6 +149,7 @@ class TaskInProgress {
     this.job = job;
     this.conf = conf;
     setMaxTaskAttempts();
+    this.runSpeculative = conf.getReduceSpeculativeExecution();
     init(JobTracker.getJobUniqueString(jobid));
   }
   
@@ -201,6 +204,11 @@ class TaskInProgress {
    */
   void init(String jobUniqueString) {
     this.startTime = System.currentTimeMillis();
+    if ("true".equals(conf.get("mapred.speculative.execution"))) {
+      this.runSpeculative = true;
+    } else if ("false".equals(conf.get("mapred.speculative.execution"))) {
+      this.runSpeculative = false;
+    }
     this.taskIdPrefix = makeUniqueString(jobUniqueString);
     this.id = "tip_" + this.taskIdPrefix;
   }
@@ -683,15 +691,16 @@ class TaskInProgress {
    * far behind, and has been behind for a non-trivial amount of 
    * time.
    */
-  boolean hasSpeculativeTask(long currentTime, double averageProgress) {
+  boolean hasSpeculativeTask(double averageProgress) {
     //
     // REMIND - mjc - these constants should be examined
     // in more depth eventually...
     //
       
     if (activeTasks.size() <= MAX_TASK_EXECS &&
+        runSpeculative &&
         (averageProgress - progress >= SPECULATIVE_GAP) &&
-        (currentTime - startTime >= SPECULATIVE_LAG) 
+        (System.currentTimeMillis() - startTime >= SPECULATIVE_LAG) 
         && completes == 0 && !isOnlyCommitPending()) {
       return true;
     }
