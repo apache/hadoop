@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
  * Test log deletion as logs are rolled.
@@ -65,8 +66,8 @@ public class TestLogRolling extends HBaseTestCase {
       // Force a region split after every 768KB
       conf.setLong("hbase.hregion.max.filesize", 768L * 1024L);
 
-      // We roll the log after every 256 writes
-      conf.setInt("hbase.regionserver.maxlogentries", 256);
+      // We roll the log after every 32 writes
+      conf.setInt("hbase.regionserver.maxlogentries", 32);
 
       // For less frequently updated regions flush after every 2 flushes
       conf.setInt("hbase.hregion.memcache.optionalflushcount", 2);
@@ -102,11 +103,11 @@ public class TestLogRolling extends HBaseTestCase {
   @Override
   public void setUp() throws Exception {
     try {
-      super.setUp();
       dfs = new MiniDFSCluster(conf, 2, true, (String[]) null);
       // Set the hbase.rootdir to be the home directory in mini dfs.
       this.conf.set(HConstants.HBASE_DIR,
         this.dfs.getFileSystem().getHomeDirectory().toString());
+      super.setUp();
     } catch (Exception e) {
       StaticTestEnvironment.shutdownDfs(dfs);
       LOG.fatal("error during setUp: ", e);
@@ -141,7 +142,7 @@ public class TestLogRolling extends HBaseTestCase {
     this.log = server.getLog();
 
     // When the META table can be opened, the region servers are running
-    HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+    new HTable(conf, HConstants.META_TABLE_NAME);
     
     // Create the test table and open it
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -150,14 +151,14 @@ public class TestLogRolling extends HBaseTestCase {
     admin.createTable(desc);
     HTable table = new HTable(conf, new Text(tableName));
 
-    for (int i = 1; i <= 2048; i++) {    // 2048 writes should cause 8 log rolls
-      long lockid =
-        table.startUpdate(new Text("row" + String.format("%1$04d", i)));
-      table.put(lockid, HConstants.COLUMN_FAMILY, value);
-      table.commit(lockid);
+    for (int i = 1; i <= 256; i++) {    // 256 writes should cause 8 log rolls
+      BatchUpdate b =
+        new BatchUpdate(new Text("row" + String.format("%1$04d", i)));
+      b.put(HConstants.COLUMN_FAMILY, value);
+      table.commit(b);
 
-      if (i % 256 == 0) {
-        // After every 256 writes sleep to let the log roller run
+      if (i % 32 == 0) {
+        // After every 32 writes sleep to let the log roller run
 
         try {
           Thread.sleep(2000);
@@ -193,7 +194,7 @@ public class TestLogRolling extends HBaseTestCase {
       int count = log.getNumLogFiles();
       LOG.info("after flushing all regions and rolling logs there are " +
           log.getNumLogFiles() + " log files");
-      assertTrue(count <= 2);
+      assertTrue(("actual count: " + count), count <= 2);
     } catch (Exception e) {
       LOG.fatal("unexpected exception", e);
       throw e;
