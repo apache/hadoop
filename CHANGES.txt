@@ -71,6 +71,7 @@ Hbase Change Log
    HBASE-466   Move HMasterInterface, HRegionInterface, and 
                HMasterRegionInterface into o.a.h.h.ipc
    HBASE-479   Speed up TestLogRolling
+   HBASE-480   Tool to manually merge two regions
    
 Branch 0.1
 
