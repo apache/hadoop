@@ -1172,8 +1172,21 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private INodeFileUnderConstruction checkLease(String src, String holder
       ) throws IOException {
     INode file = dir.getFileINode(src);
-    if (file == null || !file.isUnderConstruction()) {
-      throw new LeaseExpiredException("No lease on " + src);
+    if (file == null) {
+      Lease lease = getLease(holder);
+      throw new LeaseExpiredException("No lease on " + src +
+                                      " File does not exist. " +
+                                      (lease != null ? lease.toString() :
+                                       "Holder " + holder + 
+                                       " does not have any open files."));
+    }
+    if (!file.isUnderConstruction()) {
+      Lease lease = getLease(holder);
+      throw new LeaseExpiredException("No lease on " + src + 
+                                      " File is not open for writing. " +
+                                      (lease != null ? lease.toString() :
+                                       "Holder " + holder + 
+                                       " does not have any open files."));
     }
     INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction)file;
     if (holder != null && !pendingFile.getClientName().equals(holder)) {
