@@ -50,6 +50,9 @@ Trunk (unreleased changes)
     HADOOP-2895. Let the profiling string be configurable.
     (Martin Traverso via cdouglas)
 
+    HADOOP-910. Enables Reduces to do merges for the on-disk map output files 
+    in parallel with their copying. (Amar Kamat via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing
