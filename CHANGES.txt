@@ -52,6 +52,10 @@ Trunk (unreleased changes)
 
   OPTIMIZATIONS
 
+    HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing
+    repetitive calls to get the current time and late checking to see if
+    we want speculation on at all. (omalley)
+
   BUG FIXES
 
     HADOOP-2195. '-mkdir' behaviour is now closer to Linux shell in case of
