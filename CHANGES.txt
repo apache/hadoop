@@ -191,6 +191,9 @@ Release 0.16.1 - Unreleased
     HADOOP-2918.  Improve error logging so that dfs writes failure with
     "No lease on file" can be diagnosed. (dhruba)
 
+    HADOOP-2923.  Add SequenceFileAsBinaryInputFormat, which was
+    missed in the commit for HADOOP-2603. (cdouglas via omalley)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES
