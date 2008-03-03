@@ -29,6 +29,8 @@
 #
 #   JAVA_HOME        The java implementation to use.  Overrides JAVA_HOME.
 #
+#   HBASE_CLASSPATH  Extra Java CLASSPATH entries.
+#
 #   HBASE_HEAPSIZE   The maximum amount of heap to use, in MB. 
 #                    Default is 1000.
 #
@@ -132,6 +134,10 @@ for f in $HBASE_HOME/lib/jetty-ext/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
+# add user-specified CLASSPATH last
+if [ "$HBASE_CLASSPATH" != "" ]; then
+  CLASSPATH=${CLASSPATH}:${HBASE_CLASSPATH}
+fi
 
 # default log directory & file
 if [ "$HBASE_LOG_DIR" = "" ]; then

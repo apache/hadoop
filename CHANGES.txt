@@ -72,6 +72,7 @@ Hbase Change Log
                HMasterRegionInterface into o.a.h.h.ipc
    HBASE-479   Speed up TestLogRolling
    HBASE-480   Tool to manually merge two regions
+   HBASE-477   Add support for an HBASE_CLASSPATH
    
 Branch 0.1
 
