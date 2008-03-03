@@ -458,13 +458,12 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      * set this user's id in job configuration, so later job files can be
      * accessed using this user's id
      */
+    UnixUserGroupInformation ugi = null;
     try {
-      UnixUserGroupInformation.saveToConf(job,
-          UnixUserGroupInformation.UGI_PROPERTY_NAME, UnixUserGroupInformation
-          .login(job));
+      ugi = UnixUserGroupInformation.login(job, true);
     } catch (LoginException e) {
-      throw new IOException("Failed to get the current user's information: "
-          + e.getMessage());
+      throw (IOException)(new IOException(
+          "Failed to get the current user's information.").initCause(e));
     }
       
     //
@@ -527,8 +526,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     }
 
     // Set the user's name and working directory
-    String user = System.getProperty("user.name");
-    job.setUser(user != null ? user : "Dr Who");
+    job.setUser(ugi.getUserName());
     if (job.getWorkingDirectory() == null) {
       job.setWorkingDirectory(fs.getWorkingDirectory());          
     }

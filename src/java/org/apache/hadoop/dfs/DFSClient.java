@@ -56,10 +56,11 @@ import javax.security.auth.login.LoginException;
  *
  ********************************************************/
 class DFSClient implements FSConstants {
-  public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.DFSClient");
+  public static final Log LOG = LogFactory.getLog(DFSClient.class);
   static final int MAX_BLOCK_ACQUIRE_FAILURES = 3;
   private static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
   ClientProtocol namenode;
+  final UnixUserGroupInformation ugi;
   volatile boolean clientRunning = true;
   Random r = new Random();
   String clientName;
@@ -140,6 +141,13 @@ class DFSClient implements FSConstants {
     this.socketTimeout = conf.getInt("dfs.socket.timeout", 
                                      FSConstants.READ_TIMEOUT);
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
+
+    try {
+      this.ugi = UnixUserGroupInformation.login(conf, true);
+    } catch (LoginException e) {
+      throw (IOException)(new IOException().initCause(e));
+    }
+
     this.namenode = createNamenode(nameNodeAddr, conf);
     String taskId = conf.get("mapred.task.id");
     if (taskId != null) {

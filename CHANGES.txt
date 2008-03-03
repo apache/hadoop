@@ -40,6 +40,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-2833. Do not use "Dr. Who" as the default user in JobClient. 
+    A valid user name is required. (Tsz Wo (Nicholas), SZE via rangadi)
+
     HADOOP-2655. Copy on write for data and metadata files in the 
     presence of snapshots. Needed for supporting appends to HDFS
     files. (dhruba) 

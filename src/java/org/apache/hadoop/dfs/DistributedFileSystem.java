@@ -100,6 +100,11 @@ public class DistributedFileSystem extends FileSystem {
     workingDir = makeAbsolute(dir);
   }
 
+  /** {@inheritDoc} */
+  public Path getHomeDirectory() {
+    return new Path("/user/" + dfs.ugi.getUserName()).makeQualified(this);
+  }
+
   private String getPathName(Path file) {
     checkPath(file);
     String result = makeAbsolute(file).toUri().getPath();
