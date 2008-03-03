@@ -47,7 +47,7 @@ sys.path.append(libDirectory)
 from hodlib.HodRing.hodRing import HodRing
 from hodlib.Common.setup import *
 from hodlib.Common.util import filter_warnings,get_exception_string, get_exception_error_string
-from hodlib.Common.logger import hodLog
+from hodlib.Common.logger import getLogger, ensureLogDir
 
 filter_warnings()
 
@@ -133,48 +133,6 @@ defList = { 'hodring' : (
               False, 2, False, True)) 
             }            
 
-def getLogger(hodRingOptions):
-  if hodRingOptions['hodring']['debug'] > 0:
-    _baseLogger = hodLog('hodring')
-    log = _baseLogger.add_logger('main')
-
-    if hodRingOptions['hodring'].has_key('stream'):
-      if hodRingOptions['hodring']['stream']:
-        _baseLogger.add_stream(level=hodRingOptions['hodring']['debug'],
-                             addToLoggerNames=('main',))
-
-    _serviceID = os.getenv('PBS_JOBID')
-
-    if hodRingOptions['hodring'].has_key('log-dir'):
-      if _serviceID:
-          __logDir = os.path.join(hodRingOptions['hodring']['log-dir'], "%s.%s" % (
-                                   hodRingOptions['hodring']['userid'], _serviceID))
-      else:
-          __logDir = os.path.join(hodRingOptions['hodring']['log-dir'],
-                                       hodRingOptions['hodring']['userid'])
-      if not os.path.exists(__logDir):
-        os.mkdir(__logDir)
-
-      _baseLogger.add_file(logDirectory=__logDir,
-        level=hodRingOptions['hodring']['debug'], addToLoggerNames=('main',))
-
-    if hodRingOptions['hodring'].has_key('syslog-address'):
-      _baseLogger.add_syslog(hodRingOptions['hodring']['syslog-address'],
-        level=hodRingOptions['hodring']['debug'], addToLoggerNames=('main',))
-    return log
-
-def ensureLogDir(logDir):
-  """Verify that the passed in log directory exists, and if it doesn't
-  create it."""
-  if not os.path.exists(logDir):
-    try:
-      old_mask = os.umask(0)
-      os.makedirs(logDir, 01777)
-      os.umask(old_mask)
-    except Exception, e:
-      print >>sys.stderr, "Could not create log directories %s. Exception: %s. Stack Trace: %s" % (logDir, get_exception_error_string(), get_exception_string())
-      raise e
-
 if __name__ == '__main__':
 
   confDef = definition()
@@ -194,7 +152,7 @@ if __name__ == '__main__':
     if service.log:
       log = service.log
     else: 
-      log = getLogger(hodRingOptions)
+      log = getLogger(hodRingOptions['hodring'],'hodring')
 
     list = []
     
@@ -244,8 +202,9 @@ if __name__ == '__main__':
                   + ",".join(list)
 
     if hodRingOptions['hodring'].has_key('syslog-address'):
-      cmdString = cmdString + " --hodring-syslog-address " \
-                + hodRingOptions['hodring']['syslog-address']
+      syslogAddr = hodRingOptions['hodring']['syslog-address'][0] + \
+                   ':' + str(hodRingOptions['hodring']['syslog-address'][1])
+      cmdString = cmdString + " --hodring-syslog-address " + syslogAddr
     if service._cfg.has_key('pkgs'):
       cmdString = cmdString + " --pkgs " + service._cfg['pkgs']
 
@@ -292,5 +251,5 @@ if __name__ == '__main__':
       if service.log:
         log = service.log
     else:
-      log = getLogger(hodRingOptions)
+      log = getLogger(hodRingOptions['hodring'], 'hodring')
     log.error("Error in bin/hodring %s. \nStack trace:\n%s" %(get_exception_error_string(),get_exception_string()))

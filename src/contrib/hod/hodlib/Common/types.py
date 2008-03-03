@@ -477,11 +477,14 @@ class typeValidator:
     def __verify_address(self, type, value):
         valueInfo = self.__get_value_info()
 
-        socket = tcpSocket(value)
-        if socket.verify():
-            self.__set_value_info(valueInfo, normalized=self.normalize(type, 
+        try:
+            socket = tcpSocket(value)
+            if socket.verify():
+                self.__set_value_info(valueInfo, normalized=self.normalize(type, 
                                                                        value))
-        else:
+            else:
+                self.__set_value_info(valueInfo)
+        except:
             self.__set_value_info(valueInfo)
 
         return valueInfo

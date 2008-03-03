@@ -182,7 +182,7 @@ defList = { 'hod' : (
               False, os.path.join(rootDirectory, 'logs'), False, False),
 
              ('syslog-address', 'address', 'Syslog address.',
-              False, None, False, False),
+              False, None, False, True),
 
              ('xrs-port-range', 'range', 'XML-RPC port range n-m.',
               False, None, True, True),
@@ -292,7 +292,7 @@ defList = { 'hod' : (
               False, None, False, False),
               
              ('syslog-address', 'address', 'Syslog address.',
-              False, None, False, False),
+              False, None, False, True),
           
              ('java-home', 'directory', 'Java home directory.',
               False, None, True, False),

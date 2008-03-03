@@ -219,6 +219,9 @@ Release 0.16.1 - Unreleased
     HADOOP-2847.  Ensure idle cluster cleanup works even if the JobTracker
     becomes unresponsive to RPC calls. (Hemanth Yamijala via nigel)
 
+    HADOOP-2809.  Fix HOD syslog config syslog-address so that it works.
+    (Hemanth Yamijala via nigel)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES
