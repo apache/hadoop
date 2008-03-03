@@ -116,6 +116,11 @@ Trunk (unreleased changes)
     HADOOP-2912. MiniDFSCluster restart should wait for namenode to exit
     safemode. This was causing TestFsck to fail.  (Mahadev Konar via dhruba)
 
+    HADOOP-2820. The following classes in streaming are removed : 
+    StreamLineRecordReader StreamOutputFormat StreamSequenceRecordReader.
+    (Amareshwari Sri Ramadasu via ddas)
+
+
 Release 0.16.1 - Unreleased
 
   IMPROVEMENTS

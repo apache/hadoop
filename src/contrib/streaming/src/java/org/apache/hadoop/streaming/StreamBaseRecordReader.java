@@ -36,7 +36,6 @@ import org.apache.commons.logging.*;
  * Shared functionality for hadoopStreaming formats.
  * A custom reader can be defined to be a RecordReader with the constructor below
  * and is selected with the option bin/hadoopStreaming -inputreader ...
- * @see StreamLineRecordReader
  * @see StreamXmlRecordReader 
  */
 public abstract class StreamBaseRecordReader implements RecordReader<Text, Text> {
