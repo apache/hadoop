@@ -22,6 +22,7 @@ import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -692,9 +693,7 @@ class FSDirectory implements FSConstants {
     return src;
   }
 
-  /* Get the size of the directory subtree.
-   */
-  long getContentLength(String src) throws IOException {
+  ContentSummary getContentSummary(String src) throws IOException {
     String srcs = normalizePath(src);
     synchronized (rootDir) {
       INode targetNode = rootDir.getNode(srcs);
@@ -702,7 +701,7 @@ class FSDirectory implements FSConstants {
         throw new IOException(src + " does not exist");
       }
       else {
-        return targetNode.computeContentsLength();
+        return targetNode.computeContentSummary();
       }
     }
   }

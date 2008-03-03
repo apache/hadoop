@@ -25,6 +25,7 @@ import java.util.zip.GZIPOutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.shell.*;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -465,32 +466,13 @@ public class TestDFSShell extends TestCase {
     shell.setConf(conf);
 
     try {
-      {
-        // create a tree
-        //   ROOT
-        //   |- f1
-        //   |- f2
-        //   + sub
-        //      |- f3
-        //      |- f4
-        //   ROOT2
-        //   |- f1
-        Path root = mkdir(dfs, new Path("/test/copyToLocal"));
-        Path sub = mkdir(dfs, new Path(root, "sub"));
-        Path root2 = mkdir(dfs, new Path("/test/copyToLocal2"));        
-
-        writeFile(fs, new Path(root, "f1"));
-        writeFile(fs, new Path(root, "f2"));
-        writeFile(fs, new Path(sub, "f3"));
-        writeFile(fs, new Path(sub, "f4"));
-        writeFile(fs, new Path(root2, "f1"));        
-      }
+      String root = createTree(dfs, "copyToLocal");
 
       // Verify copying the tree
       {
-        String[] args = {"-copyToLocal", "/test/copyToLocal*", TEST_ROOT_DIR};
         try {
-          assertEquals(0, shell.run(args));
+          assertEquals(0,
+              runCmd(shell, "-copyToLocal", root + "*", TEST_ROOT_DIR));
         } catch (Exception e) {
           System.err.println("Exception raised from DFSShell.run " +
                              e.getLocalizedMessage());
@@ -544,6 +526,67 @@ public class TestDFSShell extends TestCase {
       }
       cluster.shutdown();
     }
+  }
+
+  static String createTree(FileSystem fs, String name) throws IOException {
+    // create a tree
+    //   ROOT
+    //   |- f1
+    //   |- f2
+    //   + sub
+    //      |- f3
+    //      |- f4
+    //   ROOT2
+    //   |- f1
+    String path = "/test/" + name;
+    Path root = mkdir(fs, new Path(path));
+    Path sub = mkdir(fs, new Path(root, "sub"));
+    Path root2 = mkdir(fs, new Path(path + "2"));        
+
+    writeFile(fs, new Path(root, "f1"));
+    writeFile(fs, new Path(root, "f2"));
+    writeFile(fs, new Path(sub, "f3"));
+    writeFile(fs, new Path(sub, "f4"));
+    writeFile(fs, new Path(root2, "f1"));
+    mkdir(fs, new Path(root2, "sub"));
+    return path;
+  }
+
+  public void testCount() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+
+    try {
+      String root = createTree(dfs, "count");
+
+      // Verify the counts
+      runCount(root, 2, 4, conf);
+      runCount(root + "2", 2, 1, conf);
+      runCount(root + "2/f1", 0, 1, conf);
+      runCount(root + "2/sub", 1, 0, conf);
+    } finally {
+      try {
+        dfs.close();
+      } catch (Exception e) {
+      }
+      cluster.shutdown();
+    }
+  }
+  private void runCount(String path, long dirs, long files, Configuration conf
+      ) throws IOException {
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream(); 
+    PrintStream out = new PrintStream(bytes);
+    Count.count(path, conf, out);
+    String results = bytes.toString();
+    System.out.println(results);
+    Scanner in = new Scanner(results);
+    assertEquals(dirs, in.nextLong());
+    assertEquals(files, in.nextLong());
+    in.close();
+    out.close();
   }
 
   //throws IOException instead of Exception as shell.run() does.

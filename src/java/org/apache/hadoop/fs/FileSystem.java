@@ -595,20 +595,29 @@ public abstract class FileSystem extends Configured {
   /** Return the number of bytes of the given path 
    * If <i>f</i> is a file, return the size of the file;
    * If <i>f</i> is a directory, return the size of the directory tree
+   * @deprecated Use {@link #getContentSummary(Path)}.
    */
+  @Deprecated
   public long getContentLength(Path f) throws IOException {
-    if (!isDirectory(f)) {
+    return getContentSummary(f).getLength();
+  }
+
+  /** Return the {@link ContentSummary} of a given {@link Path}. */
+  public ContentSummary getContentSummary(Path f) throws IOException {
+    FileStatus status = getFileStatus(f);
+    if (!status.isDir()) {
       // f is a file
-      return getLength(f);
+      return new ContentSummary(status.getLen(), 1, 0);
     }
-      
-    // f is a diretory
-    Path[] contents = listPaths(f);
-    long size = 0;
-    for(int i=0; i<contents.length; i++) {
-      size += getContentLength(contents[i]);
+    // f is a directory
+    long[] summary = {0, 0, 1};
+    for(FileStatus s : listStatus(f)) {
+      ContentSummary c = getContentSummary(s.getPath());
+      summary[0] += c.getLength();
+      summary[1] += c.getFileCount();
+      summary[2] += c.getDirectoryCount();
     }
-    return size;
+    return new ContentSummary(summary[0], summary[1], summary[2]);
   }
 
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {

@@ -21,6 +21,7 @@ import java.io.*;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
 import org.apache.hadoop.fs.permission.*;
+import org.apache.hadoop.fs.ContentSummary;
 
 /**********************************************************************
  * ClientProtocol is used by user code via 
@@ -35,9 +36,9 @@ interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 24 : added fsync
+   * 25 : added {@link #getContentSummary(String path)}
    */
-  public static final long versionID = 24L;
+  public static final long versionID = 25L;
   
   ///////////////////////////////////////
   // File contents
@@ -436,8 +437,16 @@ interface ClientProtocol extends VersionedProtocol {
    * the specified directory.
    * @param src The string representation of the path
    * @return size of directory subtree in bytes
+   * @deprecated use {@link #getContentSummary(String)}
    */
+  @Deprecated
   public long getContentLength(String src) throws IOException;
+
+  /**
+   * Get {@link ContentSummary} rooted at the specified directory.
+   * @param path The string representation of the path
+   */
+  public ContentSummary getContentSummary(String path) throws IOException;
 
   /**
    * Write all metadata for this file into persistent storage.

@@ -35,6 +35,9 @@ Trunk (unreleased changes)
     HADOOP-2063. A new parameter to dfs -get command to fetch a file 
     even if it is corrupted.  (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-2219. A new command "df -count" that counts the number of
+    files and directories.  (Tsz Wo (Nicholas), SZE via dhruba)
+
   IMPROVEMENTS
 
     HADOOP-2655. Copy on write for data and metadata files in the 

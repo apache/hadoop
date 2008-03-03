@@ -31,6 +31,7 @@ import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.ScriptBasedMapping;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.ipc.Server;
@@ -1117,7 +1118,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       if (!checkFileProgress(pendingFile, false)) {
         throw new NotReplicatedYetException("Not replicated yet:" + src);
       }
-      fileLength = pendingFile.computeContentsLength();
+      fileLength = pendingFile.computeContentSummary().getLength();
       blockSize = pendingFile.getPreferredBlockSize();
       clientNode = pendingFile.getClientNode();
       replication = (int)pendingFile.getReplication();
@@ -1598,16 +1599,11 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return true;
   }
 
-  /* Get the size of the specified directory subtree.
-   * @param src The string representation of the path
-   * @throws IOException if path does not exist
-   * @return size in bytes
-   */
-  long getContentLength(String src) throws IOException {
+  ContentSummary getContentSummary(String src) throws IOException {
     if (isPermissionEnabled) {
       checkPermission(src, false, null, null, null, FsAction.READ_EXECUTE);
     }
-    return dir.getContentLength(src);
+    return dir.getContentSummary(src);
   }
 
   /** Persist all metadata about this file.

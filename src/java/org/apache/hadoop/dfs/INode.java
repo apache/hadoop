@@ -24,15 +24,11 @@ import java.util.Collections;
 import java.util.Arrays;
 import java.util.List;
 import java.io.IOException;
-import java.io.DataOutput;
-import java.io.DataInput;
-import java.io.DataOutputStream;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.dfs.BlocksMap.BlockInfo;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.UTF8;
 
 /**
  * We keep an in-memory representation of the file/block hierarchy.
@@ -139,7 +135,17 @@ abstract class INode implements Comparable<byte[]> {
    */
   abstract boolean isDirectory();
   abstract int collectSubtreeBlocks(List<Block> v);
-  abstract long computeContentsLength();
+
+  /** Compute {@link ContentSummary}. */
+  final ContentSummary computeContentSummary() {
+    long[] a = computeContentSummary(new long[]{0,0,0});
+    return new ContentSummary(a[0], a[1], a[2]);
+  }
+  /**
+   * @return an array of three longs. 
+   * 0: length, 1: file count, 2: directory count
+   */
+  abstract long[] computeContentSummary(long[] summary);
 
   /**
    * Get local file name
@@ -550,17 +556,15 @@ class INodeDirectory extends INode {
     return total;
   }
 
-  /**
-   */
-  long computeContentsLength() {
-    long total = 0;
-    if (children == null) {
-      return total;
+  /** {@inheritDoc} */
+  long[] computeContentSummary(long[] summary) {
+    if (children != null) {
+      for (INode child : children) {
+        child.computeContentSummary(summary);
+      }
     }
-    for (INode child : children) {
-      total += child.computeContentsLength();
-    }
-    return total;
+    summary[2]++;
+    return summary;
   }
 
   /**
@@ -704,12 +708,15 @@ class INodeFile extends INode {
     return 1;
   }
 
-  long computeContentsLength() {
-    long total = 0;
-    for (Block blk : blocks) {
-      total += blk.getNumBytes();
+  /** {@inheritDoc} */
+  long[] computeContentSummary(long[] summary) {
+    long bytes = 0;
+    for(Block blk : blocks) {
+      bytes += blk.getNumBytes();
     }
-    return total;
+    summary[0] += bytes;
+    summary[1]++;
+    return summary;
   }
 
   /**

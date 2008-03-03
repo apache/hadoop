@@ -553,10 +553,16 @@ class DFSClient implements FSConstants {
    * @param src
    * @throws IOException
    * @return the number of bytes in the subtree rooted at src
+   * @deprecated use {@link #getContentSummary(String)}
    */
+  @Deprecated
   public long getContentLength(String src
                                ) throws IOException {
-    return namenode.getContentLength(src);
+    return getContentSummary(src).getLength();
+  }
+  
+  ContentSummary getContentSummary(String src) throws IOException {
+    return namenode.getContentSummary(src);
   }
 
   /**

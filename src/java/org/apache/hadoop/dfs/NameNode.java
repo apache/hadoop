@@ -19,6 +19,7 @@ package org.apache.hadoop.dfs;
 
 import org.apache.commons.logging.*;
 
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.permission.*;
@@ -526,13 +527,15 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     namesystem.metaSave(filename);
   }
 
-  /* Get the size of the directory subtree.
-   * @param src The string representation of the path to the file
-   * @throws IOException if path does not exist
-   * @return size in bytes of the directory subtree
-   */
+  /** {@inheritDoc} */
+  @Deprecated
   public long getContentLength(String src)  throws IOException {
-    return namesystem.getContentLength(src);
+    return getContentSummary(src).getLength();
+  }
+
+  /** {@inheritDoc} */
+  public ContentSummary getContentSummary(String path) throws IOException {
+    return namesystem.getContentSummary(path);
   }
 
   /** {@inheritDoc} */

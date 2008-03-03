@@ -30,6 +30,7 @@ import java.util.zip.GZIPInputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.shell.Count;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
@@ -1256,6 +1257,7 @@ public class FsShell extends Configured implements Tool {
       "[" + FsShellPermissions.CHMOD_USAGE + "]\n\t" +
       "[" + FsShellPermissions.CHOWN_USAGE + "]\n\t" +
       "[" + FsShellPermissions.CHGRP_USAGE + "]\n\t" +      
+      "[" + Count.USAGE + "]\n\t" +      
       "[-help [cmd]]\n";
 
     String conf ="-conf <configuration file>:  Specify an application configuration file.";
@@ -1451,6 +1453,8 @@ public class FsShell extends Configured implements Tool {
       System.out.println(chown);
     } else if ("chgrp".equals(cmd)) {
       System.out.println(chgrp);
+    } else if (Count.NAME.equals(cmd)) {
+      System.out.println(Count.DESCRIPTION);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -1477,6 +1481,7 @@ public class FsShell extends Configured implements Tool {
       System.out.println(chmod);
       System.out.println(chown);      
       System.out.println(chgrp);
+      System.out.println(Count.DESCRIPTION);
       System.out.println(help);
     }        
 
@@ -1511,6 +1516,8 @@ public class FsShell extends Configured implements Tool {
           du(argv[i]);
         } else if ("-dus".equals(cmd)) {
           dus(argv[i]);
+        } else if (Count.matches(cmd)) {
+          Count.count(argv[i], getConf(), System.out);
         } else if ("-ls".equals(cmd)) {
           ls(argv[i], false);
         } else if ("-lsr".equals(cmd)) {
@@ -1552,6 +1559,7 @@ public class FsShell extends Configured implements Tool {
    * 
    */
   void printUsage(String cmd) {
+    String prefix = "Usage: java " + FsShell.class.getSimpleName();
     if ("-fs".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [-fs <local | file system URI>]");
@@ -1568,6 +1576,8 @@ public class FsShell extends Configured implements Tool {
                "-text".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " <path>]");
+    } else if (Count.matches(cmd)) {
+      System.err.println(prefix + " [" + Count.USAGE + "]");
     } else if ("-mv".equals(cmd) || "-cp".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
                          " [" + cmd + " <src> <dst>]");
@@ -1601,6 +1611,7 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [-lsr <path>]");
       System.err.println("           [-du <path>]");
       System.err.println("           [-dus <path>]");
+      System.err.println("           [" + Count.USAGE + "]");
       System.err.println("           [-mv <src> <dst>]");
       System.err.println("           [-cp <src> <dst>]");
       System.err.println("           [-rm <path>]");
@@ -1744,6 +1755,12 @@ public class FsShell extends Configured implements Tool {
           exitCode = doall(cmd, argv, getConf(), i);
         } else {
           dus(".");
+        }         
+      } else if (Count.matches(cmd)) {
+        if (i < argv.length) {
+          exitCode = doall(cmd, argv, getConf(), i);
+        } else {
+          Count.count(".", getConf(), System.out);
         }         
       } else if ("-mkdir".equals(cmd)) {
         exitCode = doall(cmd, argv, getConf(), i);

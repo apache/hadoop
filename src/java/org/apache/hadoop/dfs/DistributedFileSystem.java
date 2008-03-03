@@ -169,6 +169,8 @@ public class DistributedFileSystem extends FileSystem {
     return dfs.exists(getPathName(f));
   }
 
+  /** {@inheritDoc} */
+  @Deprecated
   public long getContentLength(Path f) throws IOException {
     // If it is a directory, then issue a getContentLength
     // RPC to find the size of the entire subtree in one call.
@@ -179,7 +181,12 @@ public class DistributedFileSystem extends FileSystem {
         return dfspath.getContentsLength();
       }
     }
-    return dfs.getContentLength(getPathName(f));
+    return getContentSummary(f).getLength();
+  }
+
+  /** {@inheritDoc} */
+  public ContentSummary getContentSummary(Path f) throws IOException {
+    return dfs.getContentSummary(getPathName(f));
   }
 
   public FileStatus[] listStatus(Path p) throws IOException {

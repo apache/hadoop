@@ -42,7 +42,7 @@ public class LocatedBlocks implements Writable {
   }
   
   LocatedBlocks(INodeFile inode, List<LocatedBlock> blks) {
-    fileLength = inode.computeContentsLength();
+    fileLength = inode.computeContentSummary().getLength();
     blocks = blks;
   }
   
