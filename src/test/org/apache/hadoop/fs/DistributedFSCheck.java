@@ -190,8 +190,6 @@ public class DistributedFSCheck extends TestCase {
 
     job.setInputPath(MAP_INPUT_DIR);
     job.setInputFormat(SequenceFileInputFormat.class);
-    job.setInputKeyClass(UTF8.class);
-    job.setInputValueClass(LongWritable.class);
 
     job.setMapperClass(DistributedFSCheckMapper.class);
     job.setReducerClass(AccumulatingReducer.class);

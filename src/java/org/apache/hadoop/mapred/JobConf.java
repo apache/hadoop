@@ -457,27 +457,6 @@ public class JobConf extends Configuration {
     setClass("mapred.output.format.class", theClass, OutputFormat.class);
   }
 
-  /** @deprecated Call {@link RecordReader#createKey()}. */
-  public Class getInputKeyClass() {
-    return getClass("mapred.input.key.class",
-                    LongWritable.class, WritableComparable.class);
-  }
-
-  /** @deprecated Not used */
-  public void setInputKeyClass(Class theClass) {
-    setClass("mapred.input.key.class", theClass, WritableComparable.class);
-  }
-
-  /** @deprecated Call {@link RecordReader#createValue()}. */
-  public Class getInputValueClass() {
-    return getClass("mapred.input.value.class", Text.class, Writable.class);
-  }
-
-  /** @deprecated Not used */
-  public void setInputValueClass(Class theClass) {
-    setClass("mapred.input.value.class", theClass, Writable.class);
-  }
-  
   /**
    * Should the map outputs be compressed before transfer?
    * Uses the SequenceFile compression.
@@ -827,9 +806,6 @@ public class JobConf extends Configuration {
   }
   
   /**
-   * @deprecated Use {{@link #getMapSpeculativeExecution()} or
-   *             {@link #getReduceSpeculativeExecution()} instead.
-   * 
    * Should speculative execution be used for this job? 
    * Defaults to <code>true</code>.
    * 
@@ -837,20 +813,18 @@ public class JobConf extends Configuration {
    *         <code>false</code> otherwise.
    */
   public boolean getSpeculativeExecution() { 
-    return getBoolean("mapred.speculative.execution", true);
+    return (getMapSpeculativeExecution() || getReduceSpeculativeExecution());
   }
   
   /**
-   * @deprecated Use {@link #setMapSpeculativeExecution(boolean)} or
-   *                 {@link #setReduceSpeculativeExecution(boolean)} instead. 
-   * 
    * Turn speculative execution on or off for this job. 
    * 
    * @param speculativeExecution <code>true</code> if speculative execution 
    *                             should be turned on, else <code>false</code>.
    */
   public void setSpeculativeExecution(boolean speculativeExecution) {
-    setBoolean("mapred.speculative.execution", speculativeExecution);
+    setMapSpeculativeExecution(speculativeExecution);
+    setReduceSpeculativeExecution(speculativeExecution);
   }
 
   /**

@@ -205,8 +205,6 @@ public class TestFileSystem extends TestCase {
 
     job.setInputPath(CONTROL_DIR);
     job.setInputFormat(SequenceFileInputFormat.class);
-    job.setInputKeyClass(UTF8.class);
-    job.setInputValueClass(LongWritable.class);
 
     job.setMapperClass(WriteMapper.class);
     job.setReducerClass(LongSumReducer.class);
@@ -305,8 +303,6 @@ public class TestFileSystem extends TestCase {
 
     job.setInputPath(CONTROL_DIR);
     job.setInputFormat(SequenceFileInputFormat.class);
-    job.setInputKeyClass(UTF8.class);
-    job.setInputValueClass(LongWritable.class);
 
     job.setMapperClass(ReadMapper.class);
     job.setReducerClass(LongSumReducer.class);
@@ -403,8 +399,6 @@ public class TestFileSystem extends TestCase {
 
     job.setInputPath(CONTROL_DIR);
     job.setInputFormat(SequenceFileInputFormat.class);
-    job.setInputKeyClass(UTF8.class);
-    job.setInputValueClass(LongWritable.class);
 
     job.setMapperClass(SeekMapper.class);
     job.setReducerClass(LongSumReducer.class);

@@ -147,7 +147,6 @@ public class MRBench {
     jobConf.setInputFormat(TextInputFormat.class);
     jobConf.setOutputFormat(TextOutputFormat.class);
     
-    jobConf.setInputKeyClass(LongWritable.class);
     jobConf.setOutputValueClass(UTF8.class);
     
     jobConf.setMapOutputKeyClass(UTF8.class);

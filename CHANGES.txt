@@ -120,6 +120,10 @@ Trunk (unreleased changes)
     StreamLineRecordReader StreamOutputFormat StreamSequenceRecordReader.
     (Amareshwari Sri Ramadasu via ddas)
 
+    HADOOP-2819. The following methods in JobConf are removed:
+    getInputKeyClass() setInputKeyClass getInputValueClass()
+    setInputValueClass(Class theClass) setSpeculativeExecution
+    getSpeculativeExecution() (Amareshwari Sri Ramadasu via ddas)
 
 Release 0.16.1 - Unreleased
 

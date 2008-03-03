@@ -269,8 +269,6 @@ public class DFSCIOTest extends TestCase {
 
     job.setInputPath(CONTROL_DIR);
     job.setInputFormat(SequenceFileInputFormat.class);
-    job.setInputKeyClass(UTF8.class);
-    job.setInputValueClass(LongWritable.class);
 
     job.setMapperClass(mapperClass);
     job.setReducerClass(AccumulatingReducer.class);
