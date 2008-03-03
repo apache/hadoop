@@ -265,7 +265,14 @@ public class MiniDFSCluster {
     
     // Start the DataNodes
     startDataNodes(conf, numDataNodes, manageDfsDirs, operation, racks, hosts, simulatedCapacities);
-    
+    waitClusterUp();
+  }
+
+  /**
+   * wait for the cluster to get out of 
+   * safemode.
+   */
+  public void waitClusterUp() {
     if (numDataNodes > 0) {
       while (!isClusterUp()) {
         try {
@@ -276,7 +283,7 @@ public class MiniDFSCluster {
       }
     }
   }
-  
+
   /**
    * Modify the config and start up additional DataNodes.  The info port for
    * DataNodes is guaranteed to use a free port.

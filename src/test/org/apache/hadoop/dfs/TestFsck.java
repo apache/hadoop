@@ -71,6 +71,7 @@ public class TestFsck extends TestCase {
       // bring up data nodes & cleanup cluster
       cluster.startDataNodes(conf, 4, true, null, null);
       cluster.waitActive();
+      cluster.waitClusterUp();
       fs = cluster.getFileSystem();
       util.cleanup(fs, "/srcdat");
     } finally {
