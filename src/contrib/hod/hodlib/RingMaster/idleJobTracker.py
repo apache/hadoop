@@ -31,6 +31,13 @@ class HadoopJobStatus:
   def getStatus(self):
     return self.__status
 
+class HadoopClientException(Exception):
+  """This class represents an exception that is raised when we fail in
+     running the job client."""
+  
+  def __init__(self, errorCode):
+    self.errorCode = errorCode
+  
 class JobTrackerMonitor:
   """This class monitors the JobTracker of an allocated cluster
      periodically to detect whether it is idle. If it is found
@@ -134,7 +141,17 @@ class JobTrackerMonitor:
 
   def __isIdle(self):
     """This method checks if the JobTracker is idle beyond a certain limit."""
-    if self.__getJobCount() == 0:
+    jobCount = 0
+    err = False
+
+    try:
+      jobCount = self.__getJobCount()
+    except HadoopClientException, hce:
+      self.__log.debug('HadoopClientException handled in getting job count. \
+                                      Error code: %s' % hce.errorCode)
+      err = True
+
+    if (jobCount==0) or err:
       if self.__firstIdleTime == 0:
         #detecting idleness for the first time
         self.__firstIdleTime = time.time()
@@ -145,6 +162,7 @@ class JobTrackerMonitor:
     else:
       # reset idleness time
       self.__firstIdleTime = 0
+      
     return False
 
   def __getJobCount(self):
@@ -164,6 +182,11 @@ class JobTrackerMonitor:
         match = self.__jobCountRegExp.match(line)
         if match:
           jobs = int(match.group(1))
+    elif jtStatusCommand.exit_code() == 1:
+      # for now, exit code 1 comes for any exception raised by JobClient. If hadoop gets
+      # to differentiate and give more granular exit codes, we can check for those errors
+      # corresponding to network errors etc.
+      raise HadoopClientException(jtStatusCommand.exit_code())
     return jobs
 
   def __isCompatibleHadoopVersion(self, expectedVersion):
