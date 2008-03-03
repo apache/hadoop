@@ -638,6 +638,7 @@ class DFSClient implements FSConstants {
     private DataChecksum checksum;
     private long lastChunkOffset = -1;
     private long lastChunkLen = -1;
+    private long lastSeqNo = -1;
 
     private long startOffset;
     private long firstChunkOffset;
@@ -646,6 +647,9 @@ class DFSClient implements FSConstants {
     private boolean gotEOS = false;
     
     byte[] skipBuf = null;
+    ByteBuffer checksumBytes = null;
+    int dataLeft = 0;
+    boolean isLastPacket = false;
     
     /* FSInputChecker interface */
     
@@ -722,6 +726,22 @@ class DFSClient implements FSConstants {
                                  "since seek is not required");
     }
     
+    /**
+     * Makes sure that checksumBytes has enough capacity 
+     * and limit is set to the number of checksum bytes needed 
+     * to be read.
+     */
+    private void adjustChecksumBytes(int dataLen) {
+      int requiredSize = 
+        ((dataLen + bytesPerChecksum - 1)/bytesPerChecksum)*checksumSize;
+      if (checksumBytes == null || requiredSize > checksumBytes.capacity()) {
+        checksumBytes =  ByteBuffer.wrap(new byte[requiredSize]);
+      } else {
+        checksumBytes.clear();
+      }
+      checksumBytes.limit(requiredSize);
+    }
+    
     @Override
     protected synchronized int readChunk(long pos, byte[] buf, int offset, 
                                          int len, byte[] checksumBuf) 
@@ -748,42 +768,60 @@ class DFSClient implements FSConstants {
                               firstChunkOffset + " != " + chunkOffset);
       }
 
-      // The chunk is transmitted as one packet. Read packet headers.
-      int packetLen = in.readInt();
-      long offsetInBlock = in.readLong();
-      long seqno = in.readLong();
-      boolean lastPacketInBlock = in.readBoolean();
-      LOG.debug("DFSClient readChunk got seqno " + seqno +
-                " offsetInBlock " + offsetInBlock +
-                " lastPacketInBlock " + lastPacketInBlock +
-                " packetLen " + packetLen);
-
-      int chunkLen = in.readInt();
+      // Read next packet if the previous packet has been read completely.
+      if (dataLeft <= 0) {
+        //Read packet headers.
+        int packetLen = in.readInt();
+        long offsetInBlock = in.readLong();
+        long seqno = in.readLong();
+        boolean lastPacketInBlock = in.readBoolean();
       
-      // Sanity check the lengths
-      if ( chunkLen < 0 || chunkLen > bytesPerChecksum ||
-          ( lastChunkLen >= 0 && // prev packet exists
-              ( (chunkLen > 0 && lastChunkLen != bytesPerChecksum) ||
-                  chunkOffset != (lastChunkOffset + lastChunkLen) ) ) ) {
-        throw new IOException("BlockReader: error in chunk's offset " +
-                              "or length (" + chunkOffset + ":" +
-                              chunkLen + ")");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("DFSClient readChunk got seqno " + seqno +
+                    " offsetInBlock " + offsetInBlock +
+                    " lastPacketInBlock " + lastPacketInBlock +
+                    " packetLen " + packetLen);
+        }
+        
+        int dataLen = in.readInt();
+      
+        // Sanity check the lengths
+        if ( dataLen < 0 || 
+             ( (dataLen % bytesPerChecksum) != 0 && !lastPacketInBlock ) ||
+             (seqno != (lastSeqNo + 1)) ) {
+             throw new IOException("BlockReader: error in packet header" +
+                                   "(chunkOffset : " + chunkOffset + 
+                                   ", dataLen : " + dataLen +
+                                   ", seqno : " + seqno + 
+                                   " (last: " + lastSeqNo + "))");
+        }
+        
+        lastSeqNo = seqno;
+        isLastPacket = lastPacketInBlock;
+        dataLeft = dataLen;
+        adjustChecksumBytes(dataLen);
+        if (dataLen > 0) {
+          IOUtils.readFully(in, checksumBytes.array(), 0,
+                            checksumBytes.limit());
+        }
       }
 
+      int chunkLen = Math.min(dataLeft, bytesPerChecksum);
+      
       if ( chunkLen > 0 ) {
         // len should be >= chunkLen
         IOUtils.readFully(in, buf, offset, chunkLen);
+        checksumBytes.get(checksumBuf, 0, checksumSize);
       }
       
-      if ( checksumSize > 0 ) {
-        IOUtils.readFully(in, checksumBuf, 0, checksumSize);
-      }
-
+      dataLeft -= chunkLen;
       lastChunkOffset = chunkOffset;
       lastChunkLen = chunkLen;
       
-      if ( chunkLen == 0 ) {
+      if ((dataLeft == 0 && isLastPacket) || chunkLen == 0) {
         gotEOS = true;
+      }
+      if ( chunkLen == 0 ) {
         return -1;
       }
       
@@ -827,7 +865,7 @@ class DFSClient implements FSConstants {
                        new BufferedOutputStream(sock.getOutputStream()));
 
       //write the header.
-      out.writeShort( DATA_TRANFER_VERSION );
+      out.writeShort( DATA_TRANSFER_VERSION );
       out.write( OP_READ_BLOCK );
       out.writeLong( blockId );
       out.writeLong( startOffset );
@@ -2030,7 +2068,7 @@ class DFSClient implements FSConstants {
         DataOutputStream out = new DataOutputStream(new BufferedOutputStream(s.getOutputStream(), buffersize));
         blockReplyStream = new DataInputStream(s.getInputStream());
 
-        out.writeShort( DATA_TRANFER_VERSION );
+        out.writeShort( DATA_TRANSFER_VERSION );
         out.write( OP_WRITE_BLOCK );
         out.writeLong( block.getBlockId() );
         out.writeInt( nodes.length );
@@ -2147,8 +2185,8 @@ class DFSClient implements FSConstants {
         }
 
         currentPacket.writeInt(len);
-        currentPacket.write(b, offset, len);
         currentPacket.write(checksum, 0, cklen);
+        currentPacket.write(b, offset, len);
         currentPacket.numChunks++;
         bytesCurBlock += len;
 

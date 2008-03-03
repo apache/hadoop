@@ -152,19 +152,19 @@ public class TestDataTransferProtocol extends TestCase {
     sendBuf.reset();
     
     // bad version
-    recvOut.writeShort((short)(FSConstants.DATA_TRANFER_VERSION-1));
-    sendOut.writeShort((short)(FSConstants.DATA_TRANFER_VERSION-1));
+    recvOut.writeShort((short)(FSConstants.DATA_TRANSFER_VERSION-1));
+    sendOut.writeShort((short)(FSConstants.DATA_TRANSFER_VERSION-1));
     sendRecvData("Wrong Version", true);
 
     // bad ops
     sendBuf.reset();
-    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)(FSConstants.OP_WRITE_BLOCK-1));
     sendRecvData("Wrong Op Code", true);
     
     /* Test OP_WRITE_BLOCK */
     sendBuf.reset();
-    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_WRITE_BLOCK);
     sendOut.writeLong(newBlockId); // block id
     sendOut.writeInt(0);           // targets in pipeline 
@@ -181,7 +181,7 @@ public class TestDataTransferProtocol extends TestCase {
 
     sendBuf.reset();
     recvBuf.reset();
-    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_WRITE_BLOCK);
     sendOut.writeLong(newBlockId);
     sendOut.writeInt(0);           // targets in pipeline 
@@ -195,7 +195,7 @@ public class TestDataTransferProtocol extends TestCase {
 
     sendBuf.reset();
     recvBuf.reset();
-    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_WRITE_BLOCK);
     sendOut.writeLong(++newBlockId);
     sendOut.writeInt(0);           // targets in pipeline 
@@ -220,7 +220,7 @@ public class TestDataTransferProtocol extends TestCase {
     // test for writing a valid zero size block
     sendBuf.reset();
     recvBuf.reset();
-    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_WRITE_BLOCK);
     sendOut.writeLong(++newBlockId);
     sendOut.writeInt(0);           // targets in pipeline 
@@ -247,7 +247,7 @@ public class TestDataTransferProtocol extends TestCase {
     // bad block id
     sendBuf.reset();
     recvBuf.reset();
-    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
     newBlockId = firstBlock.getBlockId()-1;
     sendOut.writeLong(newBlockId);
@@ -258,7 +258,7 @@ public class TestDataTransferProtocol extends TestCase {
 
     // negative block start offset
     sendBuf.reset();
-    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
     sendOut.writeLong(firstBlock.getBlockId());
     sendOut.writeLong(-1L);
@@ -268,7 +268,7 @@ public class TestDataTransferProtocol extends TestCase {
 
     // bad block start offset
     sendBuf.reset();
-    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
     sendOut.writeLong(firstBlock.getBlockId());
     sendOut.writeLong(fileLen);
@@ -280,7 +280,7 @@ public class TestDataTransferProtocol extends TestCase {
     recvBuf.reset();
     recvOut.writeShort((short)FSConstants.OP_STATUS_SUCCESS);    
     sendBuf.reset();
-    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
     sendOut.writeLong(firstBlock.getBlockId());
     sendOut.writeLong(0);
@@ -292,7 +292,7 @@ public class TestDataTransferProtocol extends TestCase {
     recvBuf.reset();
     recvOut.writeShort((short)FSConstants.OP_STATUS_ERROR);    
     sendBuf.reset();
-    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
     sendOut.writeLong(firstBlock.getBlockId());
     sendOut.writeLong(0);
@@ -302,7 +302,7 @@ public class TestDataTransferProtocol extends TestCase {
     
     //At the end of all this, read the file to make sure that succeeds finally.
     sendBuf.reset();
-    sendOut.writeShort((short)FSConstants.DATA_TRANFER_VERSION);
+    sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
     sendOut.writeLong(firstBlock.getBlockId());
     sendOut.writeLong(0);

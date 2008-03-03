@@ -100,21 +100,13 @@ public interface FSConstants {
    * This should change when serialization of DatanodeInfo, not just
    * when protocol changes. It is not very obvious. 
    */
-  /* Version 7: 
-   * Add two operations to data node
-   * OP_COPY_BLOCK: 
-   *   The command is for sending to a proxy source for the balancing purpose
-   *   The datanode then sends OP_REPLACE_BLOCK request to the destination
-   *   OP_COPY_BLOCK BlockID(long) SourceID (UTF8) Destination (DatanodeInfo)
-   *   return OP_STATUS_ERROR if any error occurs; OP_STATUS_SUCCESS otherwise
-   * OP_REPLACE_BLOCK: 
-   *   the command is for sending to a destination for the balancing purpose
-   *   The datanode then writes the block to disk and notifies namenode of this
-   *   received block together with a deletion hint: sourceID
-   *   OP_REPLACE_BLOCK BlockID(long) SourceID(UTF8) Block_Data_With_Crc
-   *   return OP_STATUS_ERROR if any error occurs; OP_STATUS_SUCCESS otherwise
+  /*
+   * Version 9:
+   *   While reading data from Datanode, each PACKET can consist
+   *   of non-interleaved data (check for for larger amount of data,
+   *   followed by data).
    */
-  public static final int DATA_TRANFER_VERSION = 8;
+  public static final int DATA_TRANSFER_VERSION = 9;
 
   // Return codes for file create
   public static final int OPERATION_FAILED = 0;
@@ -140,6 +132,8 @@ public interface FSConstants {
   public static int MAX_PATH_DEPTH = 1000;
     
   public static final int BUFFER_SIZE = new Configuration().getInt("io.file.buffer.size", 4096);
+  //Used for writing header etc.
+  static final int SMALL_BUFFER_SIZE = Math.min(BUFFER_SIZE/2, 512);
   //TODO mb@media-style.com: should be conf injected?
   public static final long DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
   public static final int DEFAULT_DATA_SOCKET_SIZE = 128 * 1024;

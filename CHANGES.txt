@@ -65,6 +65,9 @@ Trunk (unreleased changes)
     repetitive calls to get the current time and late checking to see if
     we want speculation on at all. (omalley)
 
+    HADOOP-2758. Reduce buffer copies in DataNode when data is read from
+    HDFS, without negatively affecting read throughput. (rangadi)
+
   BUG FIXES
 
     HADOOP-2195. '-mkdir' behaviour is now closer to Linux shell in case of

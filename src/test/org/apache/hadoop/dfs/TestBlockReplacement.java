@@ -215,7 +215,7 @@ public class TestBlockReplacement extends TestCase {
     sock.setSoTimeout(FSConstants.READ_TIMEOUT);
     // sendRequest
     DataOutputStream out = new DataOutputStream(sock.getOutputStream());
-    out.writeShort(FSConstants.DATA_TRANFER_VERSION);
+    out.writeShort(FSConstants.DATA_TRANSFER_VERSION);
     out.writeByte(FSConstants.OP_COPY_BLOCK);
     out.writeLong(block.getBlockId());
     Text.writeString(out, source.getStorageID());

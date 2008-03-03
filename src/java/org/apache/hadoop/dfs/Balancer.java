@@ -341,7 +341,7 @@ public class Balancer implements Tool {
     
     /* Send a block copy request to the outputstream*/
     private void sendRequest(DataOutputStream out) throws IOException {
-      out.writeShort(FSConstants.DATA_TRANFER_VERSION);
+      out.writeShort(FSConstants.DATA_TRANSFER_VERSION);
       out.writeByte(FSConstants.OP_COPY_BLOCK);
       out.writeLong(block.getBlock().getBlockId());
       Text.writeString(out, source.getStorageID());

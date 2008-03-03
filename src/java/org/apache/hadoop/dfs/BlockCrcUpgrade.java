@@ -853,7 +853,7 @@ class BlockCrcUpgradeUtils {
         DataInputStream in = new DataInputStream(dnSock.getInputStream());
 
         // Write the header:
-        out.writeShort( DataNode.DATA_TRANFER_VERSION );
+        out.writeShort( DataNode.DATA_TRANSFER_VERSION );
         out.writeByte( DataNode.OP_READ_METADATA );
         out.writeLong( blockInfo.block.getBlockId() );
 
