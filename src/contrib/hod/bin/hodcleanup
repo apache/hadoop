@@ -50,6 +50,7 @@ from hodlib.Common.threads import simpleCommand
 from hodlib.Common.util import local_fqdn, tar, filter_warnings,\
                             get_exception_string, get_exception_error_string
 from hodlib.Common.logger import hodLog
+from hodlib.Common.logger import getLogger
 
 filter_warnings()
 
@@ -61,51 +62,6 @@ if os.path.exists("./VERSION"):
   vFile = open("./VERSION", 'r')
   VERSION = vFile.readline()
   vFile.close()
-
-def getLogger(hodRingOptions):
-  # print >>sys.stderr,"now"
-  if hodRingOptions['hodring-debug'] > 0:
-    _baseLogger = hodLog('hodring')
-    log = _baseLogger.add_logger('main')
-
-    if hodRingOptions.has_key('hodring-stream'):
-      if hodRingOptions['hodring-stream']:
-        _baseLogger.add_stream(level=hodRingOptions['hodring-debug'],
-                             addToLoggerNames=('main',))
-
-    _serviceID = hodRingOptions['service-id']
-    if hodRingOptions['hodring-log-dir']:
-      if _serviceID:
-          __logDir = os.path.join(hodRingOptions['hodring-log-dir'], "%s.%s" % (
-                                   hodRingOptions['user-id'], _serviceID))
-      else:
-          __logDir = os.path.join(hodRingOptions['hodring-log-dir'],
-                                       hodRingOptions['user-id'])
-      if not os.path.exists(__logDir):
-        os.mkdir(__logDir)
-
-      _baseLogger.add_file(logDirectory=__logDir,
-        level=hodRingOptions['hodring-debug'], addToLoggerNames=('main',))
-
-    if hodRingOptions['hodring-syslog-address']:
-      _baseLogger.add_syslog(hodRingOptions['hodring-syslog-address'],
-        level=hodRingOptions['hodring-debug'], addToLoggerNames=('main',))
-    return log
-
-def ensureLogDir(logDir):
-  """Verify that the passed in log directory exists, and if it doesn't
-  create it."""
-  if not os.path.exists(logDir):
-    try:
-      old_mask = os.umask(0)
-      os.makedirs(logDir, 01777)
-      os.umask(old_mask)
-    except Exception, e:
-      print >>sys.stderr, "Could not create log directories %s. Exception: \
-               %s. Stack Trace: %s" % (logDir, get_exception_error_string()
-               , get_exception_string())
-      raise e
-
 
 def __archive_logs(conf, log):
   # need log-destination-uri, __hadoopLogDirs, temp-dir
@@ -206,19 +162,28 @@ def unpack():
                                                         action="store_true")
   (options, args) = parser.parse_args()
   _options= {}
+  _options['hodring'] = {}
   for opt in dir(options):
     if "--"+opt in option_list:
       _options[opt] = getattr(options,opt)
   if _options.has_key('hadoop-log-dirs') and _options['hadoop-log-dirs']:
     _options['hadoop-log-dirs'] = _options['hadoop-log-dirs'].split(",")
-  _options['hodring-debug'] = int(_options['hodring-debug'])
+  if _options.has_key('hodring-syslog-address') and _options['hodring-syslog-address']:
+    _options['hodring']['syslog-address'] = \
+        _options['hodring-syslog-address'].split(':')
+  _options['hodring']['debug']        = int(_options['hodring-debug'])
+  _options['hodring']['log-dir']      = _options['hodring-log-dir']
+  _options['hodring']['stream']      = _options['hodring-stream']
+  _options['hodring']['userid']      = _options['user-id']
+  os.putenv('PBS_JOBID', _options['service-id'] )
   return _options
  
-
 if __name__ == '__main__':  
+  log = None
   try:
     conf = unpack()
-    log = getLogger(conf,)
+    # Use the same log as hodring
+    log = getLogger(conf['hodring'],'hodring')
     log.debug("Logger initialised successfully")
     status =  __archive_logs(conf,log)
     log.info("Archive status : %s" % status)
@@ -232,4 +197,4 @@ if __name__ == '__main__':
     log.info("Cleanup successfully completed")
   except Exception, e:
     if log:
-      log.info("Stack trace:\n%s" %(get_exception_error_string(),get_exception_string()))
+      log.info("Stack trace:\n%s\n%s" %(get_exception_error_string(),get_exception_string()))

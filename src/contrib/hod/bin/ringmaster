@@ -47,7 +47,7 @@ from hodlib.RingMaster.ringMaster import main
 from hodlib.Common.setup import *
 from hodlib.Common.descGenerator import *
 from hodlib.Common.util import local_fqdn, filter_warnings
-from hodlib.Common.logger import hodLog
+from hodlib.Common.logger import getLogger, ensureLogDir
 from hodlib.Common.util import get_exception_string, get_exception_error_string
 
 filter_warnings()
@@ -269,59 +269,21 @@ defList = { 'ringmaster' : (
 defOrder = [ 'ringmaster', 'hodring', 'resource_manager', 
              'gridservice-mapred', 'gridservice-hdfs' ]
 
-def getLogger(cfg):
-  user = cfg['userid']
-  baseLogger = hodLog('ringmaster')
-  log = baseLogger.add_logger('main')
-  
-  if cfg['stream']:
-    baseLogger.add_stream(level=cfg['debug'], addToLoggerNames=('main',))
-
-  if cfg.has_key('log-dir'):
-    serviceId = os.getenv('PBS_JOBID')
-    if serviceId:
-      logDir = os.path.join(cfg['log-dir'], "%s.%s" % (user, serviceId))
-    else:
-      logDir = os.path.join(cfg['log-dir'], user) 
-    if not os.path.exists(logDir):
-      os.mkdir(logDir)
-
-    baseLogger.add_file(logDirectory=logDir, level=cfg['debug'], 
-             addToLoggerNames=('main',))
-
-  if cfg.has_key('syslog-address'):
-    baseLogger.add_syslog(cfg['syslog-address'], 
-      level=cfg['debug'], addToLoggerNames=('main',))
-    
-  return log
-
-def ensureLogDir(logDir):
-  """Verify that the passed in log directory exists, and if it doesn't
-  create it."""
-  if not os.path.exists(logDir):
-    try:
-      old_mask = os.umask(0)
-      os.makedirs(logDir, 01777)
-      os.umask(old_mask)
-    except Exception, e:
-      print >>sys.stderr, "Could not create log directories %s. Exception: %s. Stack Trace: %s" % (logDir, get_exception_error_string(), get_exception_string())
-      raise e
-      
-
 if __name__ == '__main__':
   confDef = definition()
   confDef.add_defs(defList, defOrder)
   ringMasterOptions = options(confDef, "./%s [OPTIONS]" % myName, VERSION)
-  ensureLogDir(ringMasterOptions['ringmaster']['log-dir'])
   log = None
 
   try:
-    log = getLogger(ringMasterOptions['ringmaster'])
     (status, statusMsgs) = ringMasterOptions.verify()
     if not status:
       raise Exception("%s" % statusMsgs)
     ringMasterOptions.replace_escape_seqs()
     ringMasterOptions['ringmaster']['base-dir'] = rootDirectory 
+
+    ensureLogDir(ringMasterOptions['ringmaster']['log-dir'])
+    log = getLogger(ringMasterOptions['ringmaster'],'ringmaster')
     ret = main(ringMasterOptions,log)
     sys.exit(ret)
   except Exception, e:

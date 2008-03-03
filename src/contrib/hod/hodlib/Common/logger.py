@@ -376,7 +376,7 @@ class hodLog:
         def add_syslog_handler(loggerName):
             if not self.__logObjs['syslog'].has_key(loggerName):
                 loggingLevel = self.__get_logging_level(level,
-                    defaultStreamLevel)
+                    defaultSyslogLevel)
 
                 address[1] = int(address[1])
                 syslogHandler = logging.handlers.SysLogHandler(tuple(address),
@@ -738,3 +738,45 @@ class hodDummyLogger:
 
         pass
 
+def ensureLogDir(logDir):
+  """Verify that the passed in log directory exists, and if it doesn't
+  create it."""
+  if not os.path.exists(logDir):
+    try:
+      old_mask = os.umask(0)
+      os.makedirs(logDir, 01777)
+      os.umask(old_mask)
+    except Exception, e:
+      print >>sys.stderr, "Could not create log directories %s. Exception: %s. Stack Trace: %s" % (logDir, get_exception_error_string(), get_exception_string())
+      raise e
+
+def getLogger(cfg, logName):
+  if cfg['debug'] > 0:
+    user = cfg['userid']
+    baseLogger = hodLog(logName)
+    log = baseLogger.add_logger('main')
+
+    if cfg.has_key('log-dir'):
+      serviceId = os.getenv('PBS_JOBID')
+      if serviceId:
+        logDir = os.path.join(cfg['log-dir'], "%s.%s" % (user, serviceId))
+      else:
+        logDir = os.path.join(cfg['log-dir'], user) 
+      if not os.path.exists(logDir):
+        os.mkdir(logDir)
+
+      baseLogger.add_file(logDirectory=logDir, level=cfg['debug'], 
+               addToLoggerNames=('main',))
+
+    try:
+      if cfg.has_key('stream') and cfg['stream']:
+        baseLogger.add_stream(level=cfg['debug'], addToLoggerNames=('main',))
+
+      if cfg.has_key('syslog-address'):
+        baseLogger.add_syslog(cfg['syslog-address'], 
+          level=cfg['debug'], addToLoggerNames=('main',))
+    except Exception,e:
+      # Caught an exception while initialising logger
+      log.critical("%s Logger failed to initialise. Reason : %s" % (logName, e))
+      pass
+    return log
