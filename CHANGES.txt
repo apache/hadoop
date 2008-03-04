@@ -134,6 +134,9 @@ Trunk (unreleased changes)
     HADOOP-2817. Removes deprecated mapred.tasktracker.tasks.maximum and 
     ClusterStatus.getMaxTasks(). (Amareshwari Sri Ramadasu via ddas) 
 
+    HADOOP-2821. Removes deprecated ShellUtil and ToolBase classes from
+    the util package. (Amareshwari Sri Ramadasu via ddas) 
+
 Release 0.16.1 - Unreleased
 
   IMPROVEMENTS
