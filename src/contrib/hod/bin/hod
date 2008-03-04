@@ -51,6 +51,7 @@ from hodlib.Common.util import local_fqdn, need_to_allocate, filter_warnings,\
     get_exception_error_string, hodInterrupt, \
     HOD_INTERRUPTED_MESG, HOD_INTERRUPTED_CODE
 from hodlib.Common.tcp import tcpError, tcpSocket
+from hodlib.Hod.hod import hodHelp
 
 filter_warnings()
 
@@ -80,7 +81,12 @@ if not os.path.exists(DEFAULT_CONFIG):
 #
 defList = { 'hod' : (      
              ('original-dir', 'directory', 'hod original start directory',
-              False, None, True, True, 'r'),        
+              False, None, True, True, 'r'),
+
+             ('clusterdir', 'directory', 
+             'Directory where cluster state information and hadoop-site.xml' +
+             ' will be stored.',
+              True, None, False, True, 'd'),
 
              ('syslog-address', 'address', 'Syslog address.',
               False, None, False, True, 'y'),
@@ -92,15 +98,14 @@ defList = { 'hod' : (
               True, 3, True, True, 'b'),
             
              ('stream', 'bool', 'Output to stderr.',
-              False, True, False, True, 's'),
+              False, True, False, True),
 
-             ('min-nodes', 'pos_int', 
-              'Minimum number of nodes to allocate at startup. ' + \
-              'Used with hod.script option',
-              True, None, False, True, 'm'),
+             ('nodecount', 'pos_int', 
+              'Number of nodes to allocate at startup. ',
+              True, None, False, True, 'n'),
 
              ('script', 'file', 'Hadoop script to execute.',
-              True, None, False, True, 'z'), 
+              True, None, False, False, 's'), 
 
              ('userid', 'user_account', 
               'User ID the hod shell is running under.',
@@ -109,11 +114,11 @@ defList = { 'hod' : (
              ('allocate-wait-time', 'pos_int', 
               'Time to wait for cluster allocation.',
               False, 300, True, True, 'e'),         
-             
-             ('operation', 'string', 
-              'Initiate a hod operation. (help, allocate, deallocate ...)',
-              True, None, False, True, 'o'),
               
+             ('operation', 'string',
+              'Initiate a hod operation. (help, allocate, deallocate ...)',
+              False, None, False, True, 'o'),
+             
              ('cluster-factor', 'pos_float',
               'The number of grid slots per machines', False, 1.9, False, True,
               'x'),
@@ -144,7 +149,7 @@ defList = { 'hod' : (
                True, "HOD", False, True, 'N'),
 
              ('walltime', 'pos_int', 'Walltime in seconds for the current HOD allocation',
-              True, None, False, True),
+              True, None, False, True, 'l'),
 
              ('script-wait-time', 'pos_int', 'Specifies the time to wait before running the script. Used with the hod.script option.',
               True, 10, False, True, 'W')),
@@ -361,9 +366,12 @@ if __name__ == '__main__':
   try:
     confDef = definition()
     confDef.add_defs(defList, defOrder)
-    hodOptions = options(confDef, "./%s -c <CONFIG_FILE> [OPTIONS]" % myName,
-                         VERSION, withConfig=True, defaultConfig=DEFAULT_CONFIG)
-  
+    hodhelp = hodHelp()
+    usage = hodhelp.help()
+            
+    hodOptions = options(confDef, usage,
+                      VERSION, withConfig=True, defaultConfig=DEFAULT_CONFIG,
+                      name=myName )
     # hodConfig is a dict like object, hodConfig[section][name]
     try:
       hodConfig = config(hodOptions['config'], configDef=confDef, 
@@ -384,22 +392,9 @@ if __name__ == '__main__':
       sys.exit(1)
   
     ## TODO : should move the dependency verification to hodConfig.verify
-    if hodConfig['hod'].has_key('script') \
-      and not hodConfig['hod'].has_key('min-nodes'):
-      printErrors(hodConfig.var_error('hod', 'min-nodes',
-          "hod.min-nodes must be specified when using hod.script option."))
-      sys.exit(1)
-  
-    if hodConfig['hod'].has_key('min-nodes'):
-      if hodConfig['hod']['min-nodes'] < 3:
-        printErrors(hodConfig.var_error('hod', 'min-nodes',
-          "hod.min-nodes must be >= 3 nodes: %s." % 
-          hodConfig['hod']['min-nodes']))
-        sys.exit(1)
-    
     if hodConfig['hod'].has_key('operation') and \
       hodConfig['hod'].has_key('script'):
-      print "Script execution and hod operations are mutually exclusive."
+      print "Script operation is mutually exclusive with other HOD operations"
       hodOptions.print_help(sys.stderr)
       sys.exit(1)
     
