@@ -1563,7 +1563,7 @@ class DFSClient implements FSConstants {
     private DatanodeInfo[] nodes = null; // list of targets for current block
     private volatile boolean hasError = false;
     private volatile int errorIndex = 0;
-    private IOException lastException = new IOException("Stream closed.");
+    private IOException lastException = null;
     private long artificialSlowdown = 0;
 
     private class Packet {
@@ -1928,7 +1928,11 @@ class DFSClient implements FSConstants {
 
     private void isClosed() throws IOException {
       if (closed) {
-        throw lastException;
+        if (lastException != null) {
+          throw lastException;
+        } else {
+          throw new IOException("Stream closed.");
+        }
       }
     }
 

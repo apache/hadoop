@@ -228,6 +228,9 @@ Release 0.16.1 - Unreleased
     HADOOP-2809.  Fix HOD syslog config syslog-address so that it works.
     (Hemanth Yamijala via nigel)
 
+    HADOOP-2931. IOException thrown by DFSOutputStream had wrong stack
+    trace in some cases. (Michael Bieniosek via rangadi)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES
