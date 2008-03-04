@@ -27,6 +27,7 @@ from ConfigParser import SafeConfigParser
 from optparse import OptionParser, IndentedHelpFormatter, OptionGroup
 from util import get_perms, replace_escapes
 from types import typeValidator, is_valid_type, typeToString
+from hodlib.Hod.hod import hodHelp
 
 reEmailAddress = re.compile("^.*@.*$")
 reEmailDelimit = re.compile("@")
@@ -228,8 +229,8 @@ class baseConfig:
         errorStrings = []  
         if not self._dict[section].has_key(option):
           self._dict[section][option] = None
-        errorStrings.append("%s: invalid '%s' specified in section %s: %s" % (
-            errorPrefix, option, section, self._dict[section][option]))
+        errorStrings.append("%s: invalid '%s' specified in section %s (--%s.%s): %s" % (
+            errorPrefix, option, section, section, option, self._dict[section][option]))
 
         if addData:
             errorStrings.append("%s: additional info: %s\n" % (errorPrefix,
@@ -238,11 +239,8 @@ class baseConfig:
 
     def var_error_suggest(self, errorStrings):
         if self.configFile:
-            errorStrings.append("See configuration file: %s" % \
-                self.configFile)
-        
-        if self._options:
-            errorStrings.append("Configuration can be overridden by options, see -h")
+            errorStrings.append("Check your command line options and/or " + \
+                              "your configuration file %s" % self.configFile)
     
     def __get_args(self, section):
         def __dummyToString(type, value):
@@ -603,7 +601,8 @@ class formatter(IndentedHelpFormatter):
 
 class options(OptionParser, baseConfig):
     def __init__(self, optionDef, usage, version, originalDir=None, 
-                 withConfig=False, defaultConfig=None, defaultLocation=None):
+                 withConfig=False, defaultConfig=None, defaultLocation=None,
+                 name=None):
         """Constructs and options object.
          
            optionDef     - definition object
@@ -619,6 +618,7 @@ class options(OptionParser, baseConfig):
         self.formatter = formatter(4, max_help_position=100, width=180, 
                                    short_first=1)
         
+        self.__name = name
         self.__version = version
         self.__withConfig = withConfig
         self.__defaultConfig = defaultConfig
@@ -670,6 +670,85 @@ class options(OptionParser, baseConfig):
         self.__init_display_options() 
         
         (self.__parsedOptions, self.args) = self.parse_args()
+
+        # Now process the positional arguments only for the client side
+        if self.__name == 'hod':
+
+          hodhelp = hodHelp()
+
+          _operation = getattr(self.__parsedOptions,'hod.operation')
+          _script = getattr(self.__parsedOptions, 'hod.script')
+          nArgs = self.args.__len__()
+          if _operation:
+            # -o option is given
+            if nArgs != 0:
+              self.error('invalid syntax : command and operation(-o) cannot coexist')
+          elif nArgs == 0 and _script:
+            # for a script option, without subcommand: hod -s script ...
+            pass
+          elif nArgs == 0:
+            print "Usage: ",hodhelp.help()
+            sys.exit(0)
+          else:
+            # subcommand is given
+            cmdstr = self.args[0] # the subcommand itself
+            cmdlist = hodhelp.ops
+            if cmdstr not in cmdlist:
+              print "Usage: ", hodhelp.help()
+              sys.exit(2)
+
+            numNodes = None
+            clusterDir = None
+            # Check which subcommand. cmdstr  = subcommand itself now.
+            if cmdstr == "allocate":
+              clusterDir = getattr(self.__parsedOptions, 'hod.clusterdir')
+              numNodes = getattr(self.__parsedOptions, 'hod.nodecount')
+ 
+              if not clusterDir or not numNodes:
+                print getattr(hodhelp, "help_%s" % cmdstr)()
+                sys.exit(3)
+
+              cmdstr = cmdstr + ' ' + clusterDir + ' ' + numNodes
+
+              setattr(self.__parsedOptions,'hod.operation', cmdstr)
+ 
+            elif cmdstr == "deallocate" or cmdstr == "info":
+              clusterDir = getattr(self.__parsedOptions, 'hod.clusterdir')
+
+              if not clusterDir:
+                print getattr(hodhelp, "help_%s" % cmdstr)()
+                sys.exit(3)
+ 
+              cmdstr = cmdstr + ' ' + clusterDir
+              setattr(self.__parsedOptions,'hod.operation', cmdstr)
+
+            elif cmdstr == "list":
+              setattr(self.__parsedOptions,'hod.operation', cmdstr)
+              pass
+ 
+            elif cmdstr == "script":
+              clusterDir = getattr(self.__parsedOptions, 'hod.clusterdir')
+              numNodes = getattr(self.__parsedOptions, 'hod.nodecount')
+
+              if not _script or not clusterDir or not numNodes:
+                print getattr(hodhelp, "help_%s" % cmdstr)()
+                sys.exit(3)
+              pass
+
+            elif cmdstr == "help":
+              if nArgs == 1:
+                self.print_help()
+                sys.exit(0)
+              elif nArgs != 2:
+                self.print_help()
+                sys.exit(3)
+              elif self.args[1] == 'options':
+                self.print_options()
+                sys.exit(0)
+              cmdstr = cmdstr + ' ' + self.args[1]
+              setattr(self.__parsedOptions,'hod.operation', cmdstr)
+
+        # end of processing for arguments on the client side
 
         if self.__withConfig:
             self.config = self.__parsedOptions.config
@@ -925,6 +1004,12 @@ class options(OptionParser, baseConfig):
         self.__set_display_groups()
         OptionParser.print_help(self, file)
         self.__unset_display_groups()
+
+    def print_options(self):
+        _usage = self.usage
+        self.set_usage('')
+        self.print_help()
+        self.set_usage(_usage)
                         
     def verify(self):
         return baseConfig.verify(self)

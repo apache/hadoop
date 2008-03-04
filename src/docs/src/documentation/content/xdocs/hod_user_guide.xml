@@ -5,7 +5,7 @@
 <document>
   <header>
     <title>
-      Hadoop On Demand 0.4 User Guide
+      Hadoop On Demand User Guide
     </title>
   </header>
 
@@ -13,29 +13,28 @@
   <section>
     <title> Introduction </title><anchor id="Introduction"></anchor>
   <p>Hadoop On Demand (HOD) is a system for provisioning virtual Hadoop clusters over a large physical cluster. It uses the Torque resource manager to do node allocation. On the allocated nodes, it can start Hadoop Map/Reduce and HDFS daemons. It automatically generates the appropriate configuration files (hadoop-site.xml) for the Hadoop daemons and client. HOD also has the capability to distribute Hadoop to the nodes in the virtual cluster that it allocates. In short, HOD makes it easy for administrators and users to quickly setup and use Hadoop. It is also a very useful tool for Hadoop developers and testers who need to share a physical cluster for testing their own Hadoop versions.</p>
-  <p>HOD 0.4 supports Hadoop from version 0.15 onwards.</p>
+  <p>HOD supports Hadoop from version 0.15 onwards.</p>
   <p>The rest of the documentation comprises of a quick-start guide that helps you get quickly started with using HOD, a more detailed guide of all HOD features, command line options, known issues and trouble-shooting information.</p>
   </section>
   <section>
-		<title> Getting Started Using HOD 0.4 </title><anchor id="Getting_Started_Using_HOD_0_4"></anchor>
-  <p>In this section, we shall see a step-by-step introduction on how to use HOD for the most basic operations. Before following these steps, it is assumed that HOD 0.4 and its dependent hardware and software components are setup and configured correctly. This is a step that is generally performed by system administrators of the cluster.</p>
-  <p>The HOD 0.4 user interface is a command line utility called <code>hod</code>. It is driven by a configuration file, that is typically setup for users by system administrators. Users can override this configuration when using the <code>hod</code>, which is described later in this documentation. The configuration file can be specified in two ways when using <code>hod</code>, as described below: </p>
+		<title> Getting Started Using HOD </title><anchor id="Getting_Started_Using_HOD_0_4"></anchor>
+  <p>In this section, we shall see a step-by-step introduction on how to use HOD for the most basic operations. Before following these steps, it is assumed that HOD and its dependent hardware and software components are setup and configured correctly. This is a step that is generally performed by system administrators of the cluster.</p>
+  <p>The HOD user interface is a command line utility called <code>hod</code>. It is driven by a configuration file, that is typically setup for users by system administrators. Users can override this configuration when using the <code>hod</code>, which is described later in this documentation. The configuration file can be specified in two ways when using <code>hod</code>, as described below: </p>
   <ul>
-    <li> Specify it on command line, using the -c option. Such as <code>hod -c path-to-the-configuration-file other-options</code></li>
+    <li> Specify it on command line, using the -c option. Such as <code>hod &lt;operation&gt; &lt;required-args&gt; -c path-to-the-configuration-file [other-options]</code></li>
     <li> Set up an environment variable <em>HOD_CONF_DIR</em> where <code>hod</code> will be run. This should be pointed to a directory on the local file system, containing a file called <em>hodrc</em>. Note that this is analogous to the <em>HADOOP_CONF_DIR</em> and <em>hadoop-site.xml</em> file for Hadoop. If no configuration file is specified on the command line, <code>hod</code> shall look for the <em>HOD_CONF_DIR</em> environment variable and a <em>hodrc</em> file under that.</li>
     </ul>
   <p>In examples listed below, we shall not explicitly point to the configuration option, assuming it is correctly specified.</p>
-  <p><code>hod</code> can be used in two modes, the <em>operation</em> mode and the <em>script</em> mode. We shall describe the two modes in detail below.</p>
-  <section><title> HOD <em>Operation</em> Mode </title><anchor id="HOD_Operation_Mode"></anchor>
-  <p>A typical session of HOD using this option will involve at least three steps: allocate, run hadoop jobs, deallocate. In order to use this mode, perform the following steps.</p>
+  <section><title>A typical HOD session</title><anchor id="HOD_Session"></anchor>
+  <p>A typical session of HOD will involve at least three steps: allocate, run hadoop jobs, deallocate. In order to do this, perform the following steps.</p>
   <p><strong> Create a Cluster Directory </strong></p><anchor id="Create_a_Cluster_Directory"></anchor>
   <p>The <em>cluster directory</em> is a directory on the local file system where <code>hod</code> will generate the Hadoop configuration, <em>hadoop-site.xml</em>, corresponding to the cluster it allocates. Create this directory and pass it to the <code>hod</code> operations as stated below. Once a cluster is allocated, a user can utilize it to run Hadoop jobs by specifying the cluster directory as the Hadoop --config option. </p>
   <p><strong> Operation <em>allocate</em></strong></p><anchor id="Operation_allocate"></anchor>
-  <p>The <em>allocate</em> operation is used to allocate a set of nodes and install and provision Hadoop on them. It has the following syntax:</p>
+  <p>The <em>allocate</em> operation is used to allocate a set of nodes and install and provision Hadoop on them. It has the following syntax. Note that it requires a cluster_dir ( -d, --hod.clusterdir) and the number of nodes (-n, --hod.nodecount) needed to be allocated:</p>
     <table>
       
         <tr>
-          <td><code>$ hod -o "allocate cluster_dir number_of_nodes"</code></td>
+          <td><code>$ hod allocate -d cluster_dir -n number_of_nodes [OPTIONS]</code></td>
         </tr>
       
     </table>
@@ -43,7 +42,7 @@
   <p>An example run of this command produces the following output. Note in this example that <code>~/hod-clusters/test</code> is the cluster directory, and we are allocating 5 nodes:</p>
   <table>
     <tr>
-      <td><code>$ hod -o "allocate ~/hod-clusters/test 5"</code><br/>
+      <td><code>$ hod allocate -d ~/hod-clusters/test -n 5</code><br/>
       <code>INFO - HDFS UI on http://foo1.bar.com:53422</code><br/>
       <code>INFO - Mapred UI on http://foo2.bar.com:55380</code><br/></td>
       </tr>
@@ -75,31 +74,31 @@
     </tr>
   </table>
   <p><strong> Operation <em>deallocate</em></strong></p><anchor id="Operation_deallocate"></anchor>
-  <p>The <em>deallocate</em> operation is used to release an allocated cluster. When finished with a cluster, deallocate must be run so that the nodes become free for others to use. The <em>deallocate</em> operation has the following syntax:</p>
+  <p>The <em>deallocate</em> operation is used to release an allocated cluster. When finished with a cluster, deallocate must be run so that the nodes become free for others to use. The <em>deallocate</em> operation has the following syntax. Note that it requires the cluster_dir (-d, --hod.clusterdir) argument:</p>
     <table>
       
         <tr>
-          <td><code>$ hod -o "deallocate cluster_dir"</code></td>
+          <td><code>$ hod deallocate -d cluster_dir</code></td>
         </tr>
       
     </table>
   <p>Continuing our example, the following command will deallocate the cluster:</p>
-  <table><tr><td><code>$ hod -o "deallocate ~/hod-clusters/test"</code></td></tr></table>
-  <p>As can be seen, when used in the <em>operation</em> mode, HOD allows the users to allocate a cluster, and use it flexibly for running Hadoop jobs. For example, users can run multiple jobs in parallel on the same cluster, by running hadoop from multiple shells pointing to the same configuration.</p>
+  <table><tr><td><code>$ hod deallocate -d ~/hod-clusters/test</code></td></tr></table>
+  <p>As can be seen, HOD allows the users to allocate a cluster, and use it flexibly for running Hadoop jobs. For example, users can run multiple jobs in parallel on the same cluster, by running hadoop from multiple shells pointing to the same configuration.</p>
 	</section>
-  <section><title> HOD <em>Script</em> Mode </title><anchor id="HOD_Script_Mode"></anchor>
-  <p>The HOD <em>script mode</em> combines the operations of allocating, using and deallocating a cluster into a single operation. This is very useful for users who want to run a script of hadoop jobs and let HOD handle the cleanup automatically once the script completes. In order to use <code>hod</code> in the script mode, do the following:</p>
+  <section><title>Running hadoop scripts using HOD</title><anchor id="HOD_Script_Mode"></anchor>
+  <p>The HOD <em>script operation</em> combines the operations of allocating, using and deallocating a cluster into a single operation. This is very useful for users who want to run a script of hadoop jobs and let HOD handle the cleanup automatically once the script completes. In order to run hadoop scripts using <code>hod</code>, do the following:</p>
   <p><strong> Create a script file </strong></p><anchor id="Create_a_script_file"></anchor>
   <p>This will be a regular shell script that will typically contain hadoop commands, such as:</p>
   <table><tr><td><code>$ hadoop jar jar_file options</code></td>
   </tr></table>
-  <p>However, the user can add any valid commands as part of the script. HOD will execute this script setting <em>HADOOP_CONF_DIR</em> automatically to point to the allocated cluster. So users do not need to worry about this. They also do not need to create a cluster directory as in the <em>operation</em> mode.</p>
+  <p>However, the user can add any valid commands as part of the script. HOD will execute this script setting <em>HADOOP_CONF_DIR</em> automatically to point to the allocated cluster. So users do not need to worry about this. The users however need to create a cluster directory just like when using the allocate operation.</p>
   <p><strong> Running the script </strong></p><anchor id="Running_the_script"></anchor>
-  <p>The syntax for the <em>script mode</em> as is as follows:</p>
+  <p>The syntax for the <em>script operation</em> as is as follows. Note that it requires a cluster directory ( -d, --hod.clusterdir), number of nodes (-n, --hod.nodecount) and a script file (-s, --hod.script):</p>
     <table>
       
         <tr>
-          <td><code>$ hod -m number_of_nodes -z script_file</code></td>
+          <td><code>$ hod script -d cluster_directory -n number_of_nodes -s script_file</code></td>
         </tr>
       
     </table>
@@ -107,7 +106,7 @@
    </section>
   </section>
   <section>
-		<title> HOD 0.4 Features </title><anchor id="HOD_0_4_Features"></anchor>
+		<title> HOD Features </title><anchor id="HOD_0_4_Features"></anchor>
   <section><title> Provisioning and Managing Hadoop Clusters </title><anchor id="Provisioning_and_Managing_Hadoop"></anchor>
   <p>The primary feature of HOD is to provision Hadoop Map/Reduce and HDFS clusters. This is described above in the Getting Started section. Also, as long as nodes are available, and organizational policies allow, a user can use HOD to allocate multiple Map/Reduce clusters simultaneously. The user would need to specify different paths for the <code>cluster_dir</code> parameter mentioned above for each cluster he/she allocates. HOD provides the <em>list</em> and the <em>info</em> operations to enable managing multiple clusters.</p>
   <p><strong> Operation <em>list</em></strong></p><anchor id="Operation_list"></anchor>
@@ -115,16 +114,16 @@
     <table>
       
         <tr>
-          <td><code>$ hod -o "list"</code></td>
+          <td><code>$ hod list</code></td>
         </tr>
       
     </table>
   <p><strong> Operation <em>info</em></strong></p><anchor id="Operation_info"></anchor>
-  <p>The info operation shows information about a given cluster. The information shown includes the Torque job id, and locations of the important daemons like the HOD Ringmaster process, and the Hadoop JobTracker and NameNode daemons. The info operation has the following syntax:</p>
+  <p>The info operation shows information about a given cluster. The information shown includes the Torque job id, and locations of the important daemons like the HOD Ringmaster process, and the Hadoop JobTracker and NameNode daemons. The info operation has the following syntax. Note that it requires a cluster directory (-d, --hod.clusterdir):</p>
     <table>
       
         <tr>
-          <td><code>$ hod -o "info cluster_dir"</code></td>
+          <td><code>$ hod info -d cluster_dir</code></td>
         </tr>
       
     </table>
@@ -133,19 +132,18 @@
   <section><title> Using a tarball to distribute Hadoop </title><anchor id="Using_a_tarball_to_distribute_Ha"></anchor>
   <p>When provisioning Hadoop, HOD can use either a pre-installed Hadoop on the cluster nodes or distribute and install a Hadoop tarball as part of the provisioning operation. If the tarball option is being used, there is no need to have a pre-installed Hadoop on the cluster nodes, nor a need to use a pre-installed one. This is especially useful in a development / QE environment where individual developers may have different versions of Hadoop to test on a shared cluster. </p>
   <p>In order to use a pre-installed Hadoop, you must specify, in the hodrc, the <code>pkgs</code> option in the <code>gridservice-hdfs</code> and <code>gridservice-mapred</code> sections. This must point to the path where Hadoop is installed on all nodes of the cluster.</p>
-  <p>The tarball option can be used in both the <em>operation</em> and <em>script</em> options. </p>
-  <p>In the operation option, the syntax is as follows:</p>
+  <p>The syntax for specifying tarball is as follows:</p>
     <table>
         <tr>
-          <td><code>$ hod -t hadoop_tarball_location -o "allocate cluster_dir number_of_nodes"</code></td>
+          <td><code>$ hod allocate -d cluster_dir -n number_of_nodes -t hadoop_tarball_location</code></td>
         </tr>
     </table>
   <p>For example, the following command allocates Hadoop provided by the tarball <code>~/share/hadoop.tar.gz</code>:</p>
-  <table><tr><td><code>$ hod -t ~/share/hadoop.tar.gz -o "allocate ~/hadoop-cluster 10"</code></td></tr></table>
-  <p>In the script option, the syntax is as follows:</p>
+  <table><tr><td><code>$ hod allocate -d ~/hadoop-cluster -n 10 -t ~/share/hadoop.tar.gz</code></td></tr></table>
+  <p>Similarly, when using hod script, the syntax is as follows:</p>
     <table>
         <tr>
-          <td><code>$ hod -t hadoop_tarball_location -m number_of_nodes -z script_file</code></td>
+          <td><code>$ hod script -d cluster_directory -s script_file -n number_of_nodes -t hadoop_tarball_location</code></td>
         </tr>
     </table>
   <p>The hadoop_tarball specified in the syntax above should point to a path on a shared file system that is accessible from all the compute nodes. Currently, HOD only supports NFS mounted file systems.</p>
@@ -162,7 +160,7 @@
     </p>
     <table>
         <tr>
-          <td><code>$ hod --gridservice-hdfs.external -o "allocate cluster_dir number_of_nodes"</code></td>
+          <td><code>$ hod allocate -d cluster_dir -n number_of_nodes --gridservice-hdfs.external</code></td>
         </tr>
     </table>
   <p>HOD can be used to provision an HDFS cluster as well as a Map/Reduce cluster, if required. To do so, set the following option in the section <code>gridservice-hdfs</code> of the hodrc:</p>
@@ -180,13 +178,13 @@
   <p>For configuring the Map/Reduce daemons use:</p>
     <table>
         <tr>
-          <td><code>$ hod -Mmapred.reduce.parallel.copies=20 -Mio.sort.factor=100 -o "allocate cluster_dir number_of_nodes"</code></td>
+          <td><code>$ hod allocate -d cluster_dir -n number_of_nodes -Mmapred.reduce.parallel.copies=20 -Mio.sort.factor=100</code></td>
         </tr>
     </table>
   <p>In the example above, the <em>mapred.reduce.parallel.copies</em> parameter and the <em>io.sort.factor</em> parameter will be appended to the other <code>server-params</code> or if they already exist in <code>server-params</code>, will override them. In order to specify these are <em>final</em> parameters, you can use:</p>
     <table>
         <tr>
-          <td><code>$ hod -Fmapred.reduce.parallel.copies=20 -Fio.sort.factor=100 -o "allocate cluster_dir number_of_nodes"</code></td>
+          <td><code>$ hod allocate -d cluster_dir -n number_of_nodes -Fmapred.reduce.parallel.copies=20 -Fio.sort.factor=100</code></td>
         </tr>
     </table>
   <p>However, note that final parameters cannot be overwritten from command line. They can only be appended if not already specified.</p>
@@ -195,14 +193,14 @@
   <p>As mentioned above, if the allocation operation completes successfully then <code>cluster_dir/hadoop-site.xml</code> will be generated and will contain information about the allocated cluster's JobTracker and NameNode. This configuration is used when submitting jobs to the cluster. HOD provides an option to include additional Hadoop configuration parameters into this file. The syntax for doing so is as follows:</p>
     <table>
         <tr>
-          <td><code>$ hod -Cmapred.userlog.limit.kb=200 -Cmapred.child.java.opts=-Xmx512m -o "allocate cluster_dir number_of_nodes"</code></td>
+          <td><code>$ hod allocate -d cluster_dir -n number_of_nodes -Cmapred.userlog.limit.kb=200 -Cmapred.child.java.opts=-Xmx512m</code></td>
         </tr>
     </table>
   <p>In this example, the <em>mapred.userlog.limit.kb</em> and <em>mapred.child.java.opts</em> options will be included into the hadoop-site.xml that is generated by HOD.</p>
   </section>
   <section><title> Viewing Hadoop Web-UIs </title><anchor id="Viewing_Hadoop_Web_UIs"></anchor>
   <p>The HOD allocation operation prints the JobTracker and NameNode web UI URLs. For example:</p>
-   <table><tr><td><code>$ hod -c ~/hod-conf-dir/hodrc -o "allocate ~/hadoop-cluster 10"</code><br/>
+   <table><tr><td><code>$ hod allocate -d ~/hadoop-cluster -n 10 -c ~/hod-conf-dir/hodrc</code><br/>
     <code>INFO - HDFS UI on http://host242.foo.com:55391</code><br/>
     <code>INFO - Mapred UI on http://host521.foo.com:54874</code>
     </td></tr></table>
@@ -233,14 +231,14 @@
   <p>To specify the wallclock time, use the following syntax:</p>
     <table>
         <tr>
-          <td><code>$ hod -l time_in_seconds -o "allocate cluster_dir number_of_nodes"</code></td>
+          <td><code>$ hod allocate -d cluster_dir -n number_of_nodes -l time_in_seconds</code></td>
         </tr>
     </table>
   <p>The name or title of a Torque job helps in user friendly identification of the job. The string specified here will show up in all information where Torque job attributes are displayed, including the <code>qstat</code> command.</p>
   <p>To specify the name or title, use the following syntax:</p>
     <table>
         <tr>
-          <td><code>$ hod -N name_of_job -o "allocate cluster_dir number_of_nodes"</code></td>
+          <td><code>$ hod allocate -d cluster_dir -n number_of_nodes -N name_of_job</code></td>
         </tr>
     </table>
   <p><em>Note:</em> Due to restriction in the underlying Torque resource manager, names which do not start with a alphabet or contain a 'space' will cause the job to fail. The failure message points to the problem being in the specified job name.</p>
@@ -292,30 +290,37 @@
     
   </table>
   </section>
-	</section>
   <section>
-		<title> Command Line Options </title><anchor id="Command_Line_Options"></anchor>
-  <p>Command line options for the <code>hod</code> command are used for two purposes: defining an operation that HOD must perform, and defining configuration options for customizing HOD that override options defined in the default configuration file. This section covers both types of options. </p>
-  <section><title> Options Defining Operations </title><anchor id="Options_Defining_Operations"></anchor>
-  <p><em>--help</em><br />
-    Prints out the help message to see the basic options.</p>
-  <p><em>--verbose-help</em><br />
-    All configuration options provided in the hodrc file can be passed on the command line, using the syntax <code>--section_name.option_name[=value]</code>. When provided this way, the value provided on command line overrides the option provided in hodrc. The verbose-help command lists all the available options in the hodrc file. This is also a nice way to see the meaning of the configuration options.</p>
-  <p><em>-o "operation_name options"</em><br />
-    This class of options are used to define the <em>operation</em> mode of HOD. <em>Note:</em> The operation_name and other options must be specified within double quotes.</p>
-  <p><em>-o "help"</em><br />
-    Lists the operations available in the <em>operation</em> mode.</p>
-  <p><em>-o "allocate cluster_dir number_of_nodes"</em><br />
-    Allocates a cluster on the given number of cluster nodes, and store the allocation information in cluster_dir for use with subsequent <code>hadoop</code> commands. Note that the <code>cluster_dir</code> must exist before running the command.</p>
-  <p><em>-o "list"</em><br />
-    Lists the clusters allocated by this user. Information provided includes the Torque job id corresponding to the cluster, the cluster directory where the allocation information is stored, and whether the Map/Reduce daemon is still active or not.</p>
-  <p><em>-o "info cluster_dir"</em><br />
-    Lists information about the cluster whose allocation information is stored in the specified cluster directory.</p>
-  <p><em>-o "deallocate cluster_dir"</em><br />
-    Deallocates the cluster whose allocation information is stored in the specified cluster directory.</p>
-  <p><em>-z script_file</em><br />
-    Runs HOD in <em>script mode</em>. Provisions Hadoop on a given number of nodes, executes the given script from the submitting node, and deallocates the cluster when the script completes. Refer to option <em>-m</em></p>
+    <title> Command Line</title><anchor id="Command_Line"></anchor>
+    <p>HOD command line has the following general syntax:<br/>
+      <em>hod &lt;operation&gt; [ARGS] [OPTIONS]<br/></em>
+      Allowed operations are 'allocate', 'deallocate', 'info', 'list', 'script' and 'help'. For help on a particular operation one can do : <code>hod help &lt;operation&gt;</code>. To have a look at possible options one can do a <code>hod help options.</code></p>
+      <p><em>allocate</em><br />
+      <em>Usage : hod allocate -d cluster_dir -n number_of_nodes [OPTIONS]</em><br />
+        Allocates a cluster on the given number of cluster nodes, and store the allocation information in cluster_dir for use with subsequent <code>hadoop</code> commands. Note that the <code>cluster_dir</code> must exist before running the command.</p>
+      <p><em>list</em><br/>
+      <em>Usage : hod list [OPTIONS]</em><br />
+       Lists the clusters allocated by this user. Information provided includes the Torque job id corresponding to the cluster, the cluster directory where the allocation information is stored, and whether the Map/Reduce daemon is still active or not.</p>
+      <p><em>info</em><br/>
+      <em>Usage : hod info -d cluster_dir [OPTIONS]</em><br />
+        Lists information about the cluster whose allocation information is stored in the specified cluster directory.</p>
+      <p><em>deallocate</em><br/>
+      <em>Usage : hod deallocate -d cluster_dir [OPTIONS]</em><br />
+        Deallocates the cluster whose allocation information is stored in the specified cluster directory.</p>
+      <p><em>script</em><br/>
+      <em>Usage : hod script -s script_file -d cluster_directory -n number_of_nodes [OPTIONS]</em><br />
+        Runs a hadoop script using HOD<em>script</em> operation. Provisions Hadoop on a given number of nodes, executes the given script from the submitting node, and deallocates the cluster when the script completes.</p>
+      <p><em>help</em><br/>
+      <em>Usage : hod help [operation | 'options']</em><br/>
+       When no argument is specified, <code>hod help</code> gives the usage and basic options, and is equivalent to <code>hod --help</code> (See below). When 'options' is given as argument, hod displays only the basic options that hod takes. When an operation is specified, it displays the usage and description corresponding to that particular operation. For e.g, to know about allocate operation, one can do a <code>hod help allocate</code></p>
+      <p>Besides the operations, HOD can take the following command line options.</p>
+      <p><em>--help</em><br />
+        Prints out the help message to see the usage and basic options.</p>
+      <p><em>--verbose-help</em><br />
+        All configuration options provided in the hodrc file can be passed on the command line, using the syntax <code>--section_name.option_name[=value]</code>. When provided this way, the value provided on command line overrides the option provided in hodrc. The verbose-help command lists all the available options in the hodrc file. This is also a nice way to see the meaning of the configuration options.</p>
+       <p>See the <a href="#Options_Configuring_HOD">next section</a> for a description of most important hod configuration options. For basic options, one can do a <code>hod help options</code> and for all options possible in hod configuration, one can see <code>hod --verbose-help</code>. See <a href="hod_config_guide.html">config guide</a> for a description of all options.</p>
   </section>
+
   <section><title> Options Configuring HOD </title><anchor id="Options_Configuring_HOD"></anchor>
   <p>As described above, HOD is configured using a configuration file that is usually set up by system administrators. This is a INI style configuration file that is divided into sections, and options inside each section. Each section relates to one of the HOD processes: client, ringmaster, hodring, mapreduce or hdfs. The options inside a section comprise of an option name and value. </p>
   <p>Users can override the configuration defined in the default configuration in two ways: </p>
@@ -326,18 +331,22 @@
   <p>This section describes some of the most commonly used configuration options. These commonly used options are provided with a <em>short</em> option for convenience of specification. All other options can be specified using a <em>long</em> option that is also described below.</p>
   <p><em>-c config_file</em><br />
     Provides the configuration file to use. Can be used with all other options of HOD. Alternatively, the <code>HOD_CONF_DIR</code> environment variable can be defined to specify a directory that contains a file named <code>hodrc</code>, alleviating the need to specify the configuration file in each HOD command.</p>
-  <p><em>-b 1|2|3|4</em><br />
+  <p><em>-d cluster_dir</em><br />
+        This is required for most of the hod operations. As described <a href="#Create_a_Cluster_Directory">here</a>, the <em>cluster directory</em> is a directory on the local file system where <code>hod</code> will generate the Hadoop configuration, <em>hadoop-site.xml</em>, corresponding to the cluster it allocates. Create this directory and pass it to the <code>hod</code> operations as an argument to -d or --hod.clusterdir. Once a cluster is allocated, a user can utilize it to run Hadoop jobs by specifying the clusterdirectory as the Hadoop --config option.</p>
+  <p><em>-n number_of_nodes</em><br />
+  This is required for the hod 'allocation' operation and for script operation. This denotes the number of nodes to be allocated.</p>
+  <p><em>-s script-file</em><br/>
+   Required when using script operation, specifies the script file to execute.</p>
+ <p><em>-b 1|2|3|4</em><br />
     Enables the given debug level. Can be used with all other options of HOD. 4 is most verbose.</p>
   <p><em>-t hadoop_tarball</em><br />
     Provisions Hadoop from the given tar.gz file. This option is only applicable to the <em>allocate</em> operation. For better distribution performance it is strongly recommended that the Hadoop tarball is created <em>after</em> removing the source or documentation.</p>
-  <p><em>-m number_of_nodes</em><br />
-    When used in the <em>script</em> mode, this specifies the number of nodes to allocate. Note that this option is useful only in the script mode.</p>
   <p><em>-N job-name</em><br />
     The Name to give to the resource manager job that HOD uses underneath. For e.g. in the case of Torque, this translates to the <code>qsub -N</code> option, and can be seen as the job name using the <code>qstat</code> command.</p>
   <p><em>-l wall-clock-time</em><br />
     The amount of time for which the user expects to have work on the allocated cluster. This is passed to the resource manager underneath HOD, and can be used in more efficient scheduling and utilization of the cluster. Note that in the case of Torque, the cluster is automatically deallocated after this time expires.</p>
   <p><em>-j java-home</em><br />
-    Path to be set to the JAVA_HOME environment variable. This is used in the <em>script</em> mode. HOD sets the JAVA_HOME environment variable tot his value and launches the user script in that.</p>
+    Path to be set to the JAVA_HOME environment variable. This is used in the <em>script</em> operation. HOD sets the JAVA_HOME environment variable tot his value and launches the user script in that.</p>
   <p><em>-A account-string</em><br />
     Accounting information to pass to underlying resource manager.</p>
   <p><em>-Q queue-name</em><br />
@@ -384,12 +393,12 @@
       <tr>
         <td> 2 </td>
         <td> Invalid operation </td>
-        <td> Do <code>hod -o "help"</code> for the list of valid operations. </td>
+        <td> Do <code>hod help</code> for the list of valid operations. </td>
       </tr>
       <tr>
         <td> 3 </td>
         <td> Invalid operation arguments </td>
-        <td> Do <code>hod -o "help"</code> for the list of valid operations. Note that for an <em>allocate</em> operation, the directory argument must specify an existing directory. </td>
+        <td> Do <code>hod help operation</code> for listing the usage of a particular operation.</td>
       </tr>
       <tr>
         <td> 4 </td>

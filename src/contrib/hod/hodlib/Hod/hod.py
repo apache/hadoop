@@ -88,8 +88,8 @@ class hodState:
         
 class hodRunner:
   def __init__(self, cfg):
-    self.__ops = [ 'prepare', 'allocate', 'deallocate', 
-                   'list', 'info', 'help' ]           
+    self.__hodhelp = hodHelp()
+    self.__ops = self.__hodhelp.ops
     self.__cfg = cfg  
     self.__npd = self.__cfg['nodepooldesc']
     self.__opCode = 0
@@ -185,80 +185,94 @@ class hodRunner:
     argLength = len(args)
     min = 0
     max = 0
+    errorFlag = False
+    errorMsgs = []
+
     if argLength == 3:
       nodes = args[2]
       clusterDir = self.__norm_cluster_dir(args[1])
-      if os.path.isdir(clusterDir):
-        self.__setup_cluster_logger(clusterDir)
-        if re.match('\d+-\d+', nodes):
-          (min, max) = nodes.split("-")
-          min = int(min)
-          max = int(max)
-        else:
-          try:
-            nodes = int(nodes)
-            min = nodes
-            max = nodes
-          except ValueError:
-            self.__log.critical(
-            "%s operation requires a single argument. n nodes, or n-m nodes." % 
-            operation)
-            self.__opCode = 3
-          else:
-            self.__setup_cluster_state(clusterDir)
-            clusterInfo = self.__clusterState.read()
-            self.__opCode = self.__cluster.check_cluster(clusterInfo)
-            if self.__opCode == 0 or self.__opCode == 15:
-              self.__setup_service_registry()   
-              if hodInterrupt.isSet(): 
-                self.__cleanup()
-                raise HodInterruptException()
-              self.__log.info("Service Registry Started.")
-              try:
-                allocateStatus = self.__cluster.allocate(clusterDir, min, max)    
-              except HodInterruptException, h:
-                self.__cleanup()
-                raise h
-              # Allocation has gone through.
-              # Don't care about interrupts any more
 
-              if allocateStatus == 0:
-                self.__set_cluster_state_info(os.environ, 
-                                              self.__cluster.hdfsInfo, 
-                                              self.__cluster.mapredInfo, 
-                                              self.__cluster.ringmasterXRS,
-                                              self.__cluster.jobId,
-                                              min, max)
-                self.__setup_cluster_state(clusterDir)
-                self.__clusterState.write(self.__cluster.jobId, 
-                                          self.__clusterStateInfo)
-                #  Do we need to check for interrupts here ??
-
-                self.__set_user_state_info( 
-                  { clusterDir : self.__cluster.jobId, } )
-              self.__opCode = allocateStatus
-            elif self.__opCode == 12:
-              self.__log.critical("Cluster %s already allocated." % clusterDir)
-            elif self.__opCode == 10:
-              self.__log.critical("dead\t%s\t%s" % (clusterInfo['jobid'], 
-                                                    clusterDir))
-            elif self.__opCode == 13:
-              self.__log.warn("hdfs dead\t%s\t%s" % (clusterInfo['jobid'], 
-                                                         clusterDir))
-            elif self.__opCode == 14:
-              self.__log.warn("mapred dead\t%s\t%s" % (clusterInfo['jobid'], 
-                                                       clusterDir))   
-            
-            if self.__opCode > 0 and self.__opCode != 15:
-              self.__log.critical("Cannot allocate cluster %s" % clusterDir)
-            
-      else:
-        self.__log.critical("Invalid cluster directory '%s' specified." % 
-                          clusterDir)
+      if not os.path.isdir(clusterDir):
+        errorFlag = True
+        errorMsgs.append("Invalid cluster directory(--hod.clusterdir or -d) "+\
+                          "'%s' specified." % clusterDir)
+      if int(nodes) < 3 :
+        errorFlag = True
+        errorMsgs.append("hod.nodecount(--hod.nodecount or -n) must be >= 3."+\
+                          " Given nodes: %s" % nodes)
+      if errorFlag:
+        for msg in errorMsgs:
+          self.__log.critical(msg)
         self.__opCode = 3
+        return
+
+      self.__setup_cluster_logger(clusterDir)
+      if re.match('\d+-\d+', nodes):
+        (min, max) = nodes.split("-")
+        min = int(min)
+        max = int(max)
+      else:
+        try:
+          nodes = int(nodes)
+          min = nodes
+          max = nodes
+        except ValueError:
+          print self.__hodhelp.help_allocate()
+          self.__log.critical(
+          "%s operation requires a single argument. n nodes, or n-m nodes." % 
+          operation)
+          self.__opCode = 3
+        else:
+          self.__setup_cluster_state(clusterDir)
+          clusterInfo = self.__clusterState.read()
+          self.__opCode = self.__cluster.check_cluster(clusterInfo)
+          if self.__opCode == 0 or self.__opCode == 15:
+            self.__setup_service_registry()   
+            if hodInterrupt.isSet(): 
+              self.__cleanup()
+              raise HodInterruptException()
+            self.__log.info("Service Registry Started.")
+            try:
+              allocateStatus = self.__cluster.allocate(clusterDir, min, max)    
+            except HodInterruptException, h:
+              self.__cleanup()
+              raise h
+            # Allocation has gone through.
+            # Don't care about interrupts any more
+
+            if allocateStatus == 0:
+              self.__set_cluster_state_info(os.environ, 
+                                            self.__cluster.hdfsInfo, 
+                                            self.__cluster.mapredInfo, 
+                                            self.__cluster.ringmasterXRS,
+                                            self.__cluster.jobId,
+                                            min, max)
+              self.__setup_cluster_state(clusterDir)
+              self.__clusterState.write(self.__cluster.jobId, 
+                                        self.__clusterStateInfo)
+              #  Do we need to check for interrupts here ??
+
+              self.__set_user_state_info( 
+                { clusterDir : self.__cluster.jobId, } )
+            self.__opCode = allocateStatus
+          elif self.__opCode == 12:
+            self.__log.critical("Cluster %s already allocated." % clusterDir)
+          elif self.__opCode == 10:
+            self.__log.critical("dead\t%s\t%s" % (clusterInfo['jobid'], 
+                                                  clusterDir))
+          elif self.__opCode == 13:
+            self.__log.warn("hdfs dead\t%s\t%s" % (clusterInfo['jobid'], 
+                                                       clusterDir))
+          elif self.__opCode == 14:
+            self.__log.warn("mapred dead\t%s\t%s" % (clusterInfo['jobid'], 
+                                                     clusterDir))   
+          
+          if self.__opCode > 0 and self.__opCode != 15:
+            self.__log.critical("Cannot allocate cluster %s" % clusterDir)
     else:
+      print self.__hodhelp.help_allocate()
       self.__log.critical("%s operation requires two arguments. "  % operation
-                        + "A cluster path and n nodes, or min-max nodes.")
+                        + "A cluster directory and a nodecount.")
       self.__opCode = 3
  
   def _is_cluster_allocated(self, clusterDir):
@@ -292,6 +306,7 @@ class hodRunner:
                             clusterDir)
         self.__opCode = 3        
     else:
+      print self.__hodhelp.help_deallocate()
       self.__log.critical("%s operation requires one argument. "  % operation
                         + "A cluster path.")
       self.__opCode = 3
@@ -341,6 +356,7 @@ class hodRunner:
         self.__log.critical("'%s' does not exist." % clusterDir)
         self.__opCode = 3 
     else:
+      print self.__hodhelp.help_info()
       self.__log.critical("%s operation requires one argument. "  % operation
                         + "A cluster path.")
       self.__opCode = 3      
@@ -356,21 +372,18 @@ class hodRunner:
       for var in clusterInfo['env'].keys():
         self.__log.debug("%s = %s" % (var, clusterInfo['env'][var]))
 
- 
-  def _op_help(self, args):  
-    print "hod operations:\n"
-    print " allocate <directory> <nodes> - Allocates a cluster of n nodes using the specified cluster"
-    print "                                directory to store cluster state information.  The Hadoop site XML" 
-    print "                                is also stored in this location."
-    print ""
-    print " deallocate <directory>       - Deallocates a cluster using the pecified cluster directory.  This"
-    print "                                operation is also required to clean up a dead cluster."      
-    print ""
-    print " list                         - List all clusters currently allocated by a user, along with" 
-    print "                                limited status information and the cluster's job ID."
-    print ""
-    print " info <directory>             - Provide detailed information on an allocated cluster."
-  
+  def _op_help(self, arg):
+    if arg == None or arg.__len__() != 2:
+      print "hod commands:\n"
+      for op in self.__ops:
+        print getattr(self.__hodhelp, "help_%s" % op)()      
+    else:
+      if arg[1] not in self.__ops:
+        print self.__hodhelp.help_help()
+        self.__log.critical("Help requested for invalid operation : %s"%arg[1])
+        self.__opCode = 3
+      else: print getattr(self.__hodhelp, "help_%s" % arg[1])()
+
   def operation(self):  
     operation = self.__cfg['hod']['operation']
     try:
@@ -393,16 +406,37 @@ class hodRunner:
     return self.__opCode
   
   def script(self):
+    errorFlag = False
+    errorMsgs = []
+    
     script = self.__cfg['hod']['script']
-    nodes = self.__cfg['hod']['min-nodes']
-    isExecutable = os.access(script, os.X_OK)
-    if not isExecutable:
-      self.__log.critical('Script %s is not an executable.' % script)
-      return 1
+    nodes = self.__cfg['hod']['nodecount']
+    clusterDir = self.__cfg['hod']['clusterdir']
+    
+    if not os.path.isfile(script):
+      errorFlag = True
+      errorMsgs.append("Invalid script file (--hod.script or -s) " + \
+                       "specified : %s" % script)
+    else:
+      isExecutable = os.access(script, os.X_OK)
+      if not isExecutable:
+        errorFlag = True
+        errorMsgs.append('Script %s is not an executable.' % \
+                                  self.__cfg['hod']['script'])
+    if not os.path.isdir(self.__cfg['hod']['clusterdir']):
+      errorFlag = True
+      errorMsgs.append("Invalid cluster directory (--hod.clusterdir or -d) " +\
+                        "'%s' specified." % self.__cfg['hod']['clusterdir'])
+    if int(self.__cfg['hod']['nodecount']) < 3 :
+      errorFlag = True
+      errorMsgs.append("nodecount(--hod.nodecount or -n) must be >= 3. " + \
+                       "Given nodes: %s" %   self.__cfg['hod']['nodecount'])
 
-    clusterDir = "/tmp/%s.%s" % (self.__cfg['hod']['userid'], 
-                                 random.randint(0, 20000))
-    os.mkdir(clusterDir)
+    if errorFlag:
+      for msg in errorMsgs:
+        self.__log.critical(msg)
+      sys.exit(3)
+
     ret = 0
     try:
       self._op_allocate(('allocate', clusterDir, str(nodes)))
@@ -426,7 +460,6 @@ class hodRunner:
         hodInterrupt.setFlag(False)
       if self._is_cluster_allocated(clusterDir):
         self._op_deallocate(('deallocate', clusterDir))
-      shutil.rmtree(clusterDir, True)
     except HodInterruptException, h:
       self.__log.critical("Script failed because of an process interrupt.")
       self.__opCode = HOD_INTERRUPTED_CODE
@@ -442,3 +475,57 @@ class hodRunner:
       self.__opCode = ret
 
     return self.__opCode
+
+class hodHelp():
+  def __init__(self):
+    self.ops = ['allocate', 'deallocate', 'info', 'list','script',  'help']
+  
+  def help_allocate(self):
+    return \
+    "Usage       : hod allocate -d <clusterdir> -n <nodecount> [OPTIONS]\n" + \
+      "Description : Allocates a cluster of n nodes using the specified \n" + \
+      "              cluster directory to store cluster state \n" + \
+      "              information. The Hadoop site XML is also stored \n" + \
+      "              in this location.\n" + \
+      "For all options : hod help options.\n"
+
+  def help_deallocate(self):
+    return "Usage       : hod deallocate -d <clusterdir> [OPTIONS]\n" + \
+      "Description : Deallocates a cluster using the specified \n" + \
+      "             cluster directory.  This operation is also \n" + \
+      "             required to clean up a dead cluster.\n" + \
+      "For all options : hod help options.\n"
+
+  def help_list(self):
+    return "Usage       : hod list [OPTIONS]\n" + \
+      "Description : List all clusters currently allocated by a user, \n" + \
+      "              along with limited status information and the \n" + \
+      "              cluster ID.\n" + \
+      "For all options : hod help options.\n"
+
+  def help_info(self):
+    return "Usage       : hod info -d <clusterdir> [OPTIONS]\n" + \
+      "Description : Provide detailed information on an allocated cluster.\n" + \
+      "For all options : hod help options.\n"
+
+  def help_script(self):
+    return "Usage       : hod script -d <clusterdir> -n <nodecount> " + \
+                                        "-s <script> [OPTIONS]\n" + \
+           "Description : Allocates a cluster of n nodes with the given \n" +\
+           "              cluster directory, runs the specified script \n" + \
+           "              using the allocated cluster, and then \n" + \
+           "              deallocates the cluster.\n" + \
+           "For all options : hod help options.\n"
+ 
+  def help_help(self):
+    return "Usage       : hod help <OPERATION>\n" + \
+      "Description : Print help for the operation and exit.\n" + \
+      "Available operations : %s.\n" % self.ops + \
+      "For all options : hod help options.\n"
+
+  def help(self):
+    return  "hod <operation> [ARGS] [OPTIONS]\n" + \
+            "Available operations : %s\n" % self.ops + \
+            "For help on a particular operation : hod help <operation>.\n" + \
+            "For all options : hod help options."
+
