@@ -6,7 +6,7 @@
 <meta name="Forrest-version" content="0.8">
 <meta name="Forrest-skin-name" content="pelt">
 <title>
-      Hadoop On Demand 0.4 User Guide
+      Hadoop On Demand User Guide
     </title>
 <link type="text/css" href="skin/basic.css" rel="stylesheet">
 <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
@@ -169,7 +169,7 @@ document.write("Last Published: " + document.lastModified);
         PDF</a>
 </div>
 <h1>
-      Hadoop On Demand 0.4 User Guide
+      Hadoop On Demand User Guide
     </h1>
 <div id="minitoc-area">
 <ul class="minitoc">
@@ -177,18 +177,18 @@ document.write("Last Published: " + document.lastModified);
 <a href="#Introduction-N1000C"> Introduction </a>
 </li>
 <li>
-<a href="#Getting+Started+Using+HOD+0.4"> Getting Started Using HOD 0.4 </a>
+<a href="#Getting+Started+Using+HOD"> Getting Started Using HOD </a>
 <ul class="minitoc">
 <li>
-<a href="#HOD"> HOD Operation Mode </a>
+<a href="#A+typical+HOD+session">A typical HOD session</a>
 </li>
 <li>
-<a href="#HOD-N1013B"> HOD Script Mode </a>
+<a href="#Running+hadoop+scripts+using+HOD">Running hadoop scripts using HOD</a>
 </li>
 </ul>
 </li>
 <li>
-<a href="#HOD+0.4+Features"> HOD 0.4 Features </a>
+<a href="#HOD+Features"> HOD Features </a>
 <ul class="minitoc">
 <li>
 <a href="#Provisioning+and+Managing+Hadoop+Clusters"> Provisioning and Managing Hadoop Clusters </a>
@@ -217,13 +217,8 @@ document.write("Last Published: " + document.lastModified);
 <li>
 <a href="#Capturing+HOD+exit+codes+in+Torque"> Capturing HOD exit codes in Torque </a>
 </li>
-</ul>
-</li>
 <li>
-<a href="#Command+Line+Options"> Command Line Options </a>
-<ul class="minitoc">
-<li>
-<a href="#Options+Defining+Operations"> Options Defining Operations </a>
+<a href="#Command+Line"> Command Line</a>
 </li>
 <li>
 <a href="#Options+Configuring+HOD"> Options Configuring HOD </a>
@@ -231,7 +226,7 @@ document.write("Last Published: " + document.lastModified);
 </ul>
 </li>
 <li>
-<a href="#Troubleshooting-N1055A"> Troubleshooting </a>
+<a href="#Troubleshooting-N10576"> Troubleshooting </a>
 <ul class="minitoc">
 <li>
 <a href="#Hangs+During+Allocation">hod Hangs During Allocation </a>
@@ -273,31 +268,29 @@ document.write("Last Published: " + document.lastModified);
 <div class="section">
 <a name="Introduction" id="Introduction"></a>
 <p>Hadoop On Demand (HOD) is a system for provisioning virtual Hadoop clusters over a large physical cluster. It uses the Torque resource manager to do node allocation. On the allocated nodes, it can start Hadoop Map/Reduce and HDFS daemons. It automatically generates the appropriate configuration files (hadoop-site.xml) for the Hadoop daemons and client. HOD also has the capability to distribute Hadoop to the nodes in the virtual cluster that it allocates. In short, HOD makes it easy for administrators and users to quickly setup and use Hadoop. It is also a very useful tool for Hadoop developers and testers who need to share a physical cluster for testing their own Hadoop versions.</p>
-<p>HOD 0.4 supports Hadoop from version 0.15 onwards.</p>
+<p>HOD supports Hadoop from version 0.15 onwards.</p>
 <p>The rest of the documentation comprises of a quick-start guide that helps you get quickly started with using HOD, a more detailed guide of all HOD features, command line options, known issues and trouble-shooting information.</p>
 </div>
   
-<a name="N1001E"></a><a name="Getting+Started+Using+HOD+0.4"></a>
-<h2 class="h3"> Getting Started Using HOD 0.4 </h2>
+<a name="N1001E"></a><a name="Getting+Started+Using+HOD"></a>
+<h2 class="h3"> Getting Started Using HOD </h2>
 <div class="section">
 <a name="Getting_Started_Using_HOD_0_4" id="Getting_Started_Using_HOD_0_4"></a>
-<p>In this section, we shall see a step-by-step introduction on how to use HOD for the most basic operations. Before following these steps, it is assumed that HOD 0.4 and its dependent hardware and software components are setup and configured correctly. This is a step that is generally performed by system administrators of the cluster.</p>
-<p>The HOD 0.4 user interface is a command line utility called <span class="codefrag">hod</span>. It is driven by a configuration file, that is typically setup for users by system administrators. Users can override this configuration when using the <span class="codefrag">hod</span>, which is described later in this documentation. The configuration file can be specified in two ways when using <span class="codefrag">hod</span>, as described below: </p>
+<p>In this section, we shall see a step-by-step introduction on how to use HOD for the most basic operations. Before following these steps, it is assumed that HOD and its dependent hardware and software components are setup and configured correctly. This is a step that is generally performed by system administrators of the cluster.</p>
+<p>The HOD user interface is a command line utility called <span class="codefrag">hod</span>. It is driven by a configuration file, that is typically setup for users by system administrators. Users can override this configuration when using the <span class="codefrag">hod</span>, which is described later in this documentation. The configuration file can be specified in two ways when using <span class="codefrag">hod</span>, as described below: </p>
 <ul>
     
-<li> Specify it on command line, using the -c option. Such as <span class="codefrag">hod -c path-to-the-configuration-file other-options</span>
+<li> Specify it on command line, using the -c option. Such as <span class="codefrag">hod &lt;operation&gt; &lt;required-args&gt; -c path-to-the-configuration-file [other-options]</span>
 </li>
     
 <li> Set up an environment variable <em>HOD_CONF_DIR</em> where <span class="codefrag">hod</span> will be run. This should be pointed to a directory on the local file system, containing a file called <em>hodrc</em>. Note that this is analogous to the <em>HADOOP_CONF_DIR</em> and <em>hadoop-site.xml</em> file for Hadoop. If no configuration file is specified on the command line, <span class="codefrag">hod</span> shall look for the <em>HOD_CONF_DIR</em> environment variable and a <em>hodrc</em> file under that.</li>
     
 </ul>
 <p>In examples listed below, we shall not explicitly point to the configuration option, assuming it is correctly specified.</p>
-<p>
-<span class="codefrag">hod</span> can be used in two modes, the <em>operation</em> mode and the <em>script</em> mode. We shall describe the two modes in detail below.</p>
-<a name="N10066"></a><a name="HOD"></a>
-<h3 class="h4"> HOD Operation Mode </h3>
-<a name="HOD_Operation_Mode" id="HOD_Operation_Mode"></a>
-<p>A typical session of HOD using this option will involve at least three steps: allocate, run hadoop jobs, deallocate. In order to use this mode, perform the following steps.</p>
+<a name="N1005B"></a><a name="A+typical+HOD+session"></a>
+<h3 class="h4">A typical HOD session</h3>
+<a name="HOD_Session" id="HOD_Session"></a>
+<p>A typical session of HOD will involve at least three steps: allocate, run hadoop jobs, deallocate. In order to do this, perform the following steps.</p>
 <p>
 <strong> Create a Cluster Directory </strong>
 </p>
@@ -307,13 +300,13 @@ document.write("Last Published: " + document.lastModified);
 <strong> Operation <em>allocate</em></strong>
 </p>
 <a name="Operation_allocate" id="Operation_allocate"></a>
-<p>The <em>allocate</em> operation is used to allocate a set of nodes and install and provision Hadoop on them. It has the following syntax:</p>
+<p>The <em>allocate</em> operation is used to allocate a set of nodes and install and provision Hadoop on them. It has the following syntax. Note that it requires a cluster_dir ( -d, --hod.clusterdir) and the number of nodes (-n, --hod.nodecount) needed to be allocated:</p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
       
         
 <tr>
           
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -o "allocate cluster_dir number_of_nodes"</span></td>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod allocate -d cluster_dir -n number_of_nodes [OPTIONS]</span></td>
         
 </tr>
       
@@ -325,7 +318,7 @@ document.write("Last Published: " + document.lastModified);
     
 <tr>
       
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -o "allocate ~/hod-clusters/test 5"</span>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod allocate -d ~/hod-clusters/test -n 5</span>
 <br>
       
 <span class="codefrag">INFO - HDFS UI on http://foo1.bar.com:53422</span>
@@ -391,13 +384,13 @@ document.write("Last Published: " + document.lastModified);
 <strong> Operation <em>deallocate</em></strong>
 </p>
 <a name="Operation_deallocate" id="Operation_deallocate"></a>
-<p>The <em>deallocate</em> operation is used to release an allocated cluster. When finished with a cluster, deallocate must be run so that the nodes become free for others to use. The <em>deallocate</em> operation has the following syntax:</p>
+<p>The <em>deallocate</em> operation is used to release an allocated cluster. When finished with a cluster, deallocate must be run so that the nodes become free for others to use. The <em>deallocate</em> operation has the following syntax. Note that it requires the cluster_dir (-d, --hod.clusterdir) argument:</p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
       
         
 <tr>
           
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -o "deallocate cluster_dir"</span></td>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod deallocate -d cluster_dir</span></td>
         
 </tr>
       
@@ -406,14 +399,14 @@ document.write("Last Published: " + document.lastModified);
 <p>Continuing our example, the following command will deallocate the cluster:</p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
 <tr>
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -o "deallocate ~/hod-clusters/test"</span></td>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod deallocate -d ~/hod-clusters/test</span></td>
 </tr>
 </table>
-<p>As can be seen, when used in the <em>operation</em> mode, HOD allows the users to allocate a cluster, and use it flexibly for running Hadoop jobs. For example, users can run multiple jobs in parallel on the same cluster, by running hadoop from multiple shells pointing to the same configuration.</p>
-<a name="N1013B"></a><a name="HOD-N1013B"></a>
-<h3 class="h4"> HOD Script Mode </h3>
+<p>As can be seen, HOD allows the users to allocate a cluster, and use it flexibly for running Hadoop jobs. For example, users can run multiple jobs in parallel on the same cluster, by running hadoop from multiple shells pointing to the same configuration.</p>
+<a name="N1012A"></a><a name="Running+hadoop+scripts+using+HOD"></a>
+<h3 class="h4">Running hadoop scripts using HOD</h3>
 <a name="HOD_Script_Mode" id="HOD_Script_Mode"></a>
-<p>The HOD <em>script mode</em> combines the operations of allocating, using and deallocating a cluster into a single operation. This is very useful for users who want to run a script of hadoop jobs and let HOD handle the cleanup automatically once the script completes. In order to use <span class="codefrag">hod</span> in the script mode, do the following:</p>
+<p>The HOD <em>script operation</em> combines the operations of allocating, using and deallocating a cluster into a single operation. This is very useful for users who want to run a script of hadoop jobs and let HOD handle the cleanup automatically once the script completes. In order to run hadoop scripts using <span class="codefrag">hod</span>, do the following:</p>
 <p>
 <strong> Create a script file </strong>
 </p>
@@ -425,18 +418,18 @@ document.write("Last Published: " + document.lastModified);
   
 </tr>
 </table>
-<p>However, the user can add any valid commands as part of the script. HOD will execute this script setting <em>HADOOP_CONF_DIR</em> automatically to point to the allocated cluster. So users do not need to worry about this. They also do not need to create a cluster directory as in the <em>operation</em> mode.</p>
+<p>However, the user can add any valid commands as part of the script. HOD will execute this script setting <em>HADOOP_CONF_DIR</em> automatically to point to the allocated cluster. So users do not need to worry about this. The users however need to create a cluster directory just like when using the allocate operation.</p>
 <p>
 <strong> Running the script </strong>
 </p>
 <a name="Running_the_script" id="Running_the_script"></a>
-<p>The syntax for the <em>script mode</em> as is as follows:</p>
+<p>The syntax for the <em>script operation</em> as is as follows. Note that it requires a cluster directory ( -d, --hod.clusterdir), number of nodes (-n, --hod.nodecount) and a script file (-s, --hod.script):</p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
       
         
 <tr>
           
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -m number_of_nodes -z script_file</span></td>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod script -d cluster_directory -n number_of_nodes -s script_file</span></td>
         
 </tr>
       
@@ -445,10 +438,10 @@ document.write("Last Published: " + document.lastModified);
 <p>Note that HOD will deallocate the cluster as soon as the script completes, and this means that the script must not complete until the hadoop jobs themselves are completed. Users must take care of this while writing the script. </p>
 </div>
   
-<a name="N10186"></a><a name="HOD+0.4+Features"></a>
-<h2 class="h3"> HOD 0.4 Features </h2>
+<a name="N1016F"></a><a name="HOD+Features"></a>
+<h2 class="h3"> HOD Features </h2>
 <div class="section">
-<a name="HOD_0_4_Features" id="HOD_0_4_Features"></a><a name="N1018E"></a><a name="Provisioning+and+Managing+Hadoop+Clusters"></a>
+<a name="HOD_0_4_Features" id="HOD_0_4_Features"></a><a name="N10177"></a><a name="Provisioning+and+Managing+Hadoop+Clusters"></a>
 <h3 class="h4"> Provisioning and Managing Hadoop Clusters </h3>
 <a name="Provisioning_and_Managing_Hadoop" id="Provisioning_and_Managing_Hadoop"></a>
 <p>The primary feature of HOD is to provision Hadoop Map/Reduce and HDFS clusters. This is described above in the Getting Started section. Also, as long as nodes are available, and organizational policies allow, a user can use HOD to allocate multiple Map/Reduce clusters simultaneously. The user would need to specify different paths for the <span class="codefrag">cluster_dir</span> parameter mentioned above for each cluster he/she allocates. HOD provides the <em>list</em> and the <em>info</em> operations to enable managing multiple clusters.</p>
@@ -462,7 +455,7 @@ document.write("Last Published: " + document.lastModified);
         
 <tr>
           
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -o "list"</span></td>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod list</span></td>
         
 </tr>
       
@@ -472,31 +465,30 @@ document.write("Last Published: " + document.lastModified);
 <strong> Operation <em>info</em></strong>
 </p>
 <a name="Operation_info" id="Operation_info"></a>
-<p>The info operation shows information about a given cluster. The information shown includes the Torque job id, and locations of the important daemons like the HOD Ringmaster process, and the Hadoop JobTracker and NameNode daemons. The info operation has the following syntax:</p>
+<p>The info operation shows information about a given cluster. The information shown includes the Torque job id, and locations of the important daemons like the HOD Ringmaster process, and the Hadoop JobTracker and NameNode daemons. The info operation has the following syntax. Note that it requires a cluster directory (-d, --hod.clusterdir):</p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
       
         
 <tr>
           
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -o "info cluster_dir"</span></td>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod info -d cluster_dir</span></td>
         
 </tr>
       
     
 </table>
 <p>The <span class="codefrag">cluster_dir</span> should be a valid cluster directory specified in an earlier <em>allocate</em> operation.</p>
-<a name="N101D9"></a><a name="Using+a+tarball+to+distribute+Hadoop"></a>
+<a name="N101C2"></a><a name="Using+a+tarball+to+distribute+Hadoop"></a>
 <h3 class="h4"> Using a tarball to distribute Hadoop </h3>
 <a name="Using_a_tarball_to_distribute_Ha" id="Using_a_tarball_to_distribute_Ha"></a>
 <p>When provisioning Hadoop, HOD can use either a pre-installed Hadoop on the cluster nodes or distribute and install a Hadoop tarball as part of the provisioning operation. If the tarball option is being used, there is no need to have a pre-installed Hadoop on the cluster nodes, nor a need to use a pre-installed one. This is especially useful in a development / QE environment where individual developers may have different versions of Hadoop to test on a shared cluster. </p>
 <p>In order to use a pre-installed Hadoop, you must specify, in the hodrc, the <span class="codefrag">pkgs</span> option in the <span class="codefrag">gridservice-hdfs</span> and <span class="codefrag">gridservice-mapred</span> sections. This must point to the path where Hadoop is installed on all nodes of the cluster.</p>
-<p>The tarball option can be used in both the <em>operation</em> and <em>script</em> options. </p>
-<p>In the operation option, the syntax is as follows:</p>
+<p>The syntax for specifying tarball is as follows:</p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
         
 <tr>
           
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -t hadoop_tarball_location -o "allocate cluster_dir number_of_nodes"</span></td>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod allocate -d cluster_dir -n number_of_nodes -t hadoop_tarball_location</span></td>
         
 </tr>
     
@@ -504,15 +496,15 @@ document.write("Last Published: " + document.lastModified);
 <p>For example, the following command allocates Hadoop provided by the tarball <span class="codefrag">~/share/hadoop.tar.gz</span>:</p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
 <tr>
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -t ~/share/hadoop.tar.gz -o "allocate ~/hadoop-cluster 10"</span></td>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod allocate -d ~/hadoop-cluster -n 10 -t ~/share/hadoop.tar.gz</span></td>
 </tr>
 </table>
-<p>In the script option, the syntax is as follows:</p>
+<p>Similarly, when using hod script, the syntax is as follows:</p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
         
 <tr>
           
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -t hadoop_tarball_location -m number_of_nodes -z script_file</span></td>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod script -d cluster_directory -s script_file -n number_of_nodes -t hadoop_tarball_location</span></td>
         
 </tr>
     
@@ -528,7 +520,7 @@ document.write("Last Published: " + document.lastModified);
 <li> When you want to run jobs against a cluster allocated using the tarball, you must use a compatible version of hadoop to submit your jobs. The best would be to untar and use the version that is present in the tarball itself.</li>
   
 </ul>
-<a name="N10235"></a><a name="Using+an+external+HDFS"></a>
+<a name="N10215"></a><a name="Using+an+external+HDFS"></a>
 <h3 class="h4"> Using an external HDFS </h3>
 <a name="Using_an_external_HDFS" id="Using_an_external_HDFS"></a>
 <p>In typical Hadoop clusters provisioned by HOD, HDFS is already set up statically (without using HOD). This allows data to persist in HDFS after the HOD provisioned clusters is deallocated. To use a statically configured HDFS, your hodrc must point to an external HDFS. Specifically, set the following options to the correct values in the section <span class="codefrag">gridservice-hdfs</span> of the hodrc:</p>
@@ -554,7 +546,7 @@ document.write("Last Published: " + document.lastModified);
         
 <tr>
           
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod --gridservice-hdfs.external -o "allocate cluster_dir number_of_nodes"</span></td>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod allocate -d cluster_dir -n number_of_nodes --gridservice-hdfs.external</span></td>
         
 </tr>
     
@@ -565,7 +557,7 @@ document.write("Last Published: " + document.lastModified);
 <td colspan="1" rowspan="1">external = false</td>
 </tr>
 </table>
-<a name="N10279"></a><a name="Options+for+Configuring+Hadoop"></a>
+<a name="N10259"></a><a name="Options+for+Configuring+Hadoop"></a>
 <h3 class="h4"> Options for Configuring Hadoop </h3>
 <a name="Options_for_Configuring_Hadoop" id="Options_for_Configuring_Hadoop"></a>
 <p>HOD provides a very convenient mechanism to configure both the Hadoop daemons that it provisions and also the hadoop-site.xml that it generates on the client side. This is done by specifying Hadoop configuration parameters in either the HOD configuration file, or from the command line when allocating clusters.</p>
@@ -591,7 +583,7 @@ document.write("Last Published: " + document.lastModified);
         
 <tr>
           
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -Mmapred.reduce.parallel.copies=20 -Mio.sort.factor=100 -o "allocate cluster_dir number_of_nodes"</span></td>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod allocate -d cluster_dir -n number_of_nodes -Mmapred.reduce.parallel.copies=20 -Mio.sort.factor=100</span></td>
         
 </tr>
     
@@ -601,7 +593,7 @@ document.write("Last Published: " + document.lastModified);
         
 <tr>
           
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -Fmapred.reduce.parallel.copies=20 -Fio.sort.factor=100 -o "allocate cluster_dir number_of_nodes"</span></td>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod allocate -d cluster_dir -n number_of_nodes -Fmapred.reduce.parallel.copies=20 -Fio.sort.factor=100</span></td>
         
 </tr>
     
@@ -617,19 +609,19 @@ document.write("Last Published: " + document.lastModified);
         
 <tr>
           
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -Cmapred.userlog.limit.kb=200 -Cmapred.child.java.opts=-Xmx512m -o "allocate cluster_dir number_of_nodes"</span></td>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod allocate -d cluster_dir -n number_of_nodes -Cmapred.userlog.limit.kb=200 -Cmapred.child.java.opts=-Xmx512m</span></td>
         
 </tr>
     
 </table>
 <p>In this example, the <em>mapred.userlog.limit.kb</em> and <em>mapred.child.java.opts</em> options will be included into the hadoop-site.xml that is generated by HOD.</p>
-<a name="N1030B"></a><a name="Viewing+Hadoop+Web-UIs"></a>
+<a name="N102EB"></a><a name="Viewing+Hadoop+Web-UIs"></a>
 <h3 class="h4"> Viewing Hadoop Web-UIs </h3>
 <a name="Viewing_Hadoop_Web_UIs" id="Viewing_Hadoop_Web_UIs"></a>
 <p>The HOD allocation operation prints the JobTracker and NameNode web UI URLs. For example:</p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
 <tr>
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -c ~/hod-conf-dir/hodrc -o "allocate ~/hadoop-cluster 10"</span>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod allocate -d ~/hadoop-cluster -n 10 -c ~/hod-conf-dir/hodrc</span>
 <br>
     
 <span class="codefrag">INFO - HDFS UI on http://host242.foo.com:55391</span>
@@ -640,7 +632,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
 </table>
 <p>The same information is also available via the <em>info</em> operation described above.</p>
-<a name="N1032D"></a><a name="Collecting+and+Viewing+Hadoop+Logs"></a>
+<a name="N1030D"></a><a name="Collecting+and+Viewing+Hadoop+Logs"></a>
 <h3 class="h4"> Collecting and Viewing Hadoop Logs </h3>
 <a name="Collecting_and_Viewing_Hadoop_Lo" id="Collecting_and_Viewing_Hadoop_Lo"></a>
 <p>To get the Hadoop logs of the daemons running on one of the allocated nodes: </p>
@@ -668,13 +660,13 @@ document.write("Last Published: " + document.lastModified);
 </table>
 <p>Under the root directory specified above in the path, HOD will create a create a path user_name/torque_jobid and store gzipped log files for each node that was part of the job.</p>
 <p>Note that to store the files to HDFS, you may need to configure the <span class="codefrag">hodring.pkgs</span> option with the Hadoop version that matches the HDFS mentioned. If not, HOD will try to use the Hadoop version that it is using to provision the Hadoop cluster itself.</p>
-<a name="N10376"></a><a name="Auto-deallocation+of+Idle+Clusters"></a>
+<a name="N10356"></a><a name="Auto-deallocation+of+Idle+Clusters"></a>
 <h3 class="h4"> Auto-deallocation of Idle Clusters </h3>
 <a name="Auto_deallocation_of_Idle_Cluste" id="Auto_deallocation_of_Idle_Cluste"></a>
 <p>HOD automatically deallocates clusters that are not running Hadoop jobs for a given period of time. Each HOD allocation includes a monitoring facility that constantly checks for running Hadoop jobs. If it detects no running Hadoop jobs for a given period, it will automatically deallocate its own cluster and thus free up nodes which are not being used effectively.</p>
 <p>
 <em>Note:</em> While the cluster is deallocated, the <em>cluster directory</em> is not cleaned up automatically. The user must deallocate this cluster through the regular <em>deallocate</em> operation to clean this up.</p>
-<a name="N1038C"></a><a name="Specifying+Additional+Job+Attributes"></a>
+<a name="N1036C"></a><a name="Specifying+Additional+Job+Attributes"></a>
 <h3 class="h4"> Specifying Additional Job Attributes </h3>
 <a name="Specifying_Additional_Job_Attrib" id="Specifying_Additional_Job_Attrib"></a>
 <p>HOD allows the user to specify a wallclock time and a name (or title) for a Torque job. </p>
@@ -684,7 +676,7 @@ document.write("Last Published: " + document.lastModified);
         
 <tr>
           
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -l time_in_seconds -o "allocate cluster_dir number_of_nodes"</span></td>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod allocate -d cluster_dir -n number_of_nodes -l time_in_seconds</span></td>
         
 </tr>
     
@@ -695,14 +687,14 @@ document.write("Last Published: " + document.lastModified);
         
 <tr>
           
-<td colspan="1" rowspan="1"><span class="codefrag">$ hod -N name_of_job -o "allocate cluster_dir number_of_nodes"</span></td>
+<td colspan="1" rowspan="1"><span class="codefrag">$ hod allocate -d cluster_dir -n number_of_nodes -N name_of_job</span></td>
         
 </tr>
     
 </table>
 <p>
 <em>Note:</em> Due to restriction in the underlying Torque resource manager, names which do not start with a alphabet or contain a 'space' will cause the job to fail. The failure message points to the problem being in the specified job name.</p>
-<a name="N103C3"></a><a name="Capturing+HOD+exit+codes+in+Torque"></a>
+<a name="N103A3"></a><a name="Capturing+HOD+exit+codes+in+Torque"></a>
 <h3 class="h4"> Capturing HOD exit codes in Torque </h3>
 <a name="Capturing_HOD_exit_codes_in_Torq" id="Capturing_HOD_exit_codes_in_Torq"></a>
 <p>HOD exit codes are captured in the Torque exit_status field. This will help users and system administrators to distinguish successful runs from unsuccessful runs of HOD. The exit codes are 0 if allocation succeeded and all hadoop jobs ran on the allocated cluster correctly. They are non-zero if allocation failed or some of the hadoop jobs failed on the allocated cluster. The exit codes that are possible are mentioned in the table below. <em>Note: Hadoop job status is captured only if the version of Hadoop used is 16 or above.</em>
@@ -782,54 +774,69 @@ document.write("Last Published: " + document.lastModified);
     
   
 </table>
-</div>
-  
-<a name="N10456"></a><a name="Command+Line+Options"></a>
-<h2 class="h3"> Command Line Options </h2>
-<div class="section">
-<a name="Command_Line_Options" id="Command_Line_Options"></a>
-<p>Command line options for the <span class="codefrag">hod</span> command are used for two purposes: defining an operation that HOD must perform, and defining configuration options for customizing HOD that override options defined in the default configuration file. This section covers both types of options. </p>
-<a name="N10464"></a><a name="Options+Defining+Operations"></a>
-<h3 class="h4"> Options Defining Operations </h3>
-<a name="Options_Defining_Operations" id="Options_Defining_Operations"></a>
+<a name="N10435"></a><a name="Command+Line"></a>
+<h3 class="h4"> Command Line</h3>
+<a name="Command_Line" id="Command_Line"></a>
+<p>HOD command line has the following general syntax:<br>
+      
+<em>hod &lt;operation&gt; [ARGS] [OPTIONS]<br>
+</em>
+      Allowed operations are 'allocate', 'deallocate', 'info', 'list', 'script' and 'help'. For help on a particular operation one can do : <span class="codefrag">hod help &lt;operation&gt;</span>. To have a look at possible options one can do a <span class="codefrag">hod help options.</span>
+</p>
+<p>
+<em>allocate</em>
+<br>
+      
+<em>Usage : hod allocate -d cluster_dir -n number_of_nodes [OPTIONS]</em>
+<br>
+        Allocates a cluster on the given number of cluster nodes, and store the allocation information in cluster_dir for use with subsequent <span class="codefrag">hadoop</span> commands. Note that the <span class="codefrag">cluster_dir</span> must exist before running the command.</p>
+<p>
+<em>list</em>
+<br>
+      
+<em>Usage : hod list [OPTIONS]</em>
+<br>
+       Lists the clusters allocated by this user. Information provided includes the Torque job id corresponding to the cluster, the cluster directory where the allocation information is stored, and whether the Map/Reduce daemon is still active or not.</p>
+<p>
+<em>info</em>
+<br>
+      
+<em>Usage : hod info -d cluster_dir [OPTIONS]</em>
+<br>
+        Lists information about the cluster whose allocation information is stored in the specified cluster directory.</p>
+<p>
+<em>deallocate</em>
+<br>
+      
+<em>Usage : hod deallocate -d cluster_dir [OPTIONS]</em>
+<br>
+        Deallocates the cluster whose allocation information is stored in the specified cluster directory.</p>
+<p>
+<em>script</em>
+<br>
+      
+<em>Usage : hod script -s script_file -d cluster_directory -n number_of_nodes [OPTIONS]</em>
+<br>
+        Runs a hadoop script using HOD<em>script</em> operation. Provisions Hadoop on a given number of nodes, executes the given script from the submitting node, and deallocates the cluster when the script completes.</p>
+<p>
+<em>help</em>
+<br>
+      
+<em>Usage : hod help [operation | 'options']</em>
+<br>
+       When no argument is specified, <span class="codefrag">hod help</span> gives the usage and basic options, and is equivalent to <span class="codefrag">hod --help</span> (See below). When 'options' is given as argument, hod displays only the basic options that hod takes. When an operation is specified, it displays the usage and description corresponding to that particular operation. For e.g, to know about allocate operation, one can do a <span class="codefrag">hod help allocate</span>
+</p>
+<p>Besides the operations, HOD can take the following command line options.</p>
 <p>
 <em>--help</em>
 <br>
-    Prints out the help message to see the basic options.</p>
+        Prints out the help message to see the usage and basic options.</p>
 <p>
 <em>--verbose-help</em>
 <br>
-    All configuration options provided in the hodrc file can be passed on the command line, using the syntax <span class="codefrag">--section_name.option_name[=value]</span>. When provided this way, the value provided on command line overrides the option provided in hodrc. The verbose-help command lists all the available options in the hodrc file. This is also a nice way to see the meaning of the configuration options.</p>
-<p>
-<em>-o "operation_name options"</em>
-<br>
-    This class of options are used to define the <em>operation</em> mode of HOD. <em>Note:</em> The operation_name and other options must be specified within double quotes.</p>
-<p>
-<em>-o "help"</em>
-<br>
-    Lists the operations available in the <em>operation</em> mode.</p>
-<p>
-<em>-o "allocate cluster_dir number_of_nodes"</em>
-<br>
-    Allocates a cluster on the given number of cluster nodes, and store the allocation information in cluster_dir for use with subsequent <span class="codefrag">hadoop</span> commands. Note that the <span class="codefrag">cluster_dir</span> must exist before running the command.</p>
-<p>
-<em>-o "list"</em>
-<br>
-    Lists the clusters allocated by this user. Information provided includes the Torque job id corresponding to the cluster, the cluster directory where the allocation information is stored, and whether the Map/Reduce daemon is still active or not.</p>
-<p>
-<em>-o "info cluster_dir"</em>
-<br>
-    Lists information about the cluster whose allocation information is stored in the specified cluster directory.</p>
-<p>
-<em>-o "deallocate cluster_dir"</em>
-<br>
-    Deallocates the cluster whose allocation information is stored in the specified cluster directory.</p>
-<p>
-<em>-z script_file</em>
-<br>
-    Runs HOD in <em>script mode</em>. Provisions Hadoop on a given number of nodes, executes the given script from the submitting node, and deallocates the cluster when the script completes. Refer to option <em>-m</em>
-</p>
-<a name="N104B9"></a><a name="Options+Configuring+HOD"></a>
+        All configuration options provided in the hodrc file can be passed on the command line, using the syntax <span class="codefrag">--section_name.option_name[=value]</span>. When provided this way, the value provided on command line overrides the option provided in hodrc. The verbose-help command lists all the available options in the hodrc file. This is also a nice way to see the meaning of the configuration options.</p>
+<p>See the <a href="#Options_Configuring_HOD">next section</a> for a description of most important hod configuration options. For basic options, one can do a <span class="codefrag">hod help options</span> and for all options possible in hod configuration, one can see <span class="codefrag">hod --verbose-help</span>. See <a href="hod_config_guide.html">config guide</a> for a description of all options.</p>
+<a name="N104BC"></a><a name="Options+Configuring+HOD"></a>
 <h3 class="h4"> Options Configuring HOD </h3>
 <a name="Options_Configuring_HOD" id="Options_Configuring_HOD"></a>
 <p>As described above, HOD is configured using a configuration file that is usually set up by system administrators. This is a INI style configuration file that is divided into sections, and options inside each section. Each section relates to one of the HOD processes: client, ringmaster, hodring, mapreduce or hdfs. The options inside a section comprise of an option name and value. </p>
@@ -847,6 +854,18 @@ document.write("Last Published: " + document.lastModified);
 <br>
     Provides the configuration file to use. Can be used with all other options of HOD. Alternatively, the <span class="codefrag">HOD_CONF_DIR</span> environment variable can be defined to specify a directory that contains a file named <span class="codefrag">hodrc</span>, alleviating the need to specify the configuration file in each HOD command.</p>
 <p>
+<em>-d cluster_dir</em>
+<br>
+        This is required for most of the hod operations. As described <a href="#Create_a_Cluster_Directory">here</a>, the <em>cluster directory</em> is a directory on the local file system where <span class="codefrag">hod</span> will generate the Hadoop configuration, <em>hadoop-site.xml</em>, corresponding to the cluster it allocates. Create this directory and pass it to the <span class="codefrag">hod</span> operations as an argument to -d or --hod.clusterdir. Once a cluster is allocated, a user can utilize it to run Hadoop jobs by specifying the clusterdirectory as the Hadoop --config option.</p>
+<p>
+<em>-n number_of_nodes</em>
+<br>
+  This is required for the hod 'allocation' operation and for script operation. This denotes the number of nodes to be allocated.</p>
+<p>
+<em>-s script-file</em>
+<br>
+   Required when using script operation, specifies the script file to execute.</p>
+<p>
 <em>-b 1|2|3|4</em>
 <br>
     Enables the given debug level. Can be used with all other options of HOD. 4 is most verbose.</p>
@@ -854,10 +873,6 @@ document.write("Last Published: " + document.lastModified);
 <em>-t hadoop_tarball</em>
 <br>
     Provisions Hadoop from the given tar.gz file. This option is only applicable to the <em>allocate</em> operation. For better distribution performance it is strongly recommended that the Hadoop tarball is created <em>after</em> removing the source or documentation.</p>
-<p>
-<em>-m number_of_nodes</em>
-<br>
-    When used in the <em>script</em> mode, this specifies the number of nodes to allocate. Note that this option is useful only in the script mode.</p>
 <p>
 <em>-N job-name</em>
 <br>
@@ -869,7 +884,7 @@ document.write("Last Published: " + document.lastModified);
 <p>
 <em>-j java-home</em>
 <br>
-    Path to be set to the JAVA_HOME environment variable. This is used in the <em>script</em> mode. HOD sets the JAVA_HOME environment variable tot his value and launches the user script in that.</p>
+    Path to be set to the JAVA_HOME environment variable. This is used in the <em>script</em> operation. HOD sets the JAVA_HOME environment variable tot his value and launches the user script in that.</p>
 <p>
 <em>-A account-string</em>
 <br>
@@ -903,12 +918,12 @@ document.write("Last Published: " + document.lastModified);
 </p>
 </div>
 	
-<a name="N1055A"></a><a name="Troubleshooting-N1055A"></a>
+<a name="N10576"></a><a name="Troubleshooting-N10576"></a>
 <h2 class="h3"> Troubleshooting </h2>
 <div class="section">
 <a name="Troubleshooting" id="Troubleshooting"></a>
 <p>The following section identifies some of the most likely error conditions users can run into when using HOD and ways to trouble-shoot them</p>
-<a name="N10565"></a><a name="Hangs+During+Allocation"></a>
+<a name="N10581"></a><a name="Hangs+During+Allocation"></a>
 <h3 class="h4">hod Hangs During Allocation </h3>
 <a name="_hod_Hangs_During_Allocation" id="_hod_Hangs_During_Allocation"></a><a name="hod_Hangs_During_Allocation" id="hod_Hangs_During_Allocation"></a>
 <p>
@@ -917,12 +932,12 @@ document.write("Last Published: " + document.lastModified);
 <em>Possible Cause:</em> A large allocation is fired with a tarball. Sometimes due to load in the network, or on the allocated nodes, the tarball distribution might be significantly slow and take a couple of minutes to come back. Wait for completion. Also check that the tarball does not have the Hadoop sources or documentation.</p>
 <p>
 <em>Possible Cause:</em> A Torque related problem. If the cause is Torque related, the <span class="codefrag">hod</span> command will not return for more than 5 minutes. Running <span class="codefrag">hod</span> in debug mode may show the <span class="codefrag">qstat</span> command being executed repeatedly. Executing the <span class="codefrag">qstat</span> command from a separate shell may show that the job is in the <span class="codefrag">Q</span> (Queued) state. This usually indicates a problem with Torque. Possible causes could include some nodes being down, or new nodes added that Torque is not aware of. Generally, system administator help is needed to resolve this problem.</p>
-<a name="N10592"></a><a name="Hangs+During+Deallocation"></a>
+<a name="N105AE"></a><a name="Hangs+During+Deallocation"></a>
 <h3 class="h4">hod Hangs During Deallocation </h3>
 <a name="_hod_Hangs_During_Deallocation" id="_hod_Hangs_During_Deallocation"></a><a name="hod_Hangs_During_Deallocation" id="hod_Hangs_During_Deallocation"></a>
 <p>
 <em>Possible Cause:</em> A Torque related problem, usually load on the Torque server, or the allocation is very large. Generally, waiting for the command to complete is the only option.</p>
-<a name="N105A3"></a><a name="Fails+With+an+error+code+and+error+message"></a>
+<a name="N105BF"></a><a name="Fails+With+an+error+code+and+error+message"></a>
 <h3 class="h4">hod Fails With an error code and error message </h3>
 <a name="hod_Fails_With_an_error_code_and" id="hod_Fails_With_an_error_code_and"></a><a name="_hod_Fails_With_an_error_code_an" id="_hod_Fails_With_an_error_code_an"></a>
 <p>If the exit code of the <span class="codefrag">hod</span> command is not <span class="codefrag">0</span>, then refer to the following table of error exit codes to determine why the code may have occurred and how to debug the situation.</p>
@@ -953,7 +968,7 @@ document.write("Last Published: " + document.lastModified);
         
 <td colspan="1" rowspan="1"> 2 </td>
         <td colspan="1" rowspan="1"> Invalid operation </td>
-        <td colspan="1" rowspan="1"> Do <span class="codefrag">hod -o "help"</span> for the list of valid operations. </td>
+        <td colspan="1" rowspan="1"> Do <span class="codefrag">hod help</span> for the list of valid operations. </td>
       
 </tr>
       
@@ -961,7 +976,7 @@ document.write("Last Published: " + document.lastModified);
         
 <td colspan="1" rowspan="1"> 3 </td>
         <td colspan="1" rowspan="1"> Invalid operation arguments </td>
-        <td colspan="1" rowspan="1"> Do <span class="codefrag">hod -o "help"</span> for the list of valid operations. Note that for an <em>allocate</em> operation, the directory argument must specify an existing directory. </td>
+        <td colspan="1" rowspan="1"> Do <span class="codefrag">hod help operation</span> for listing the usage of a particular operation.</td>
       
 </tr>
       
@@ -1062,7 +1077,7 @@ document.write("Last Published: " + document.lastModified);
     
   
 </table>
-<a name="N10715"></a><a name="Hadoop+Jobs+Not+Running+on+a+Successfully+Allocated+Cluster"></a>
+<a name="N1072E"></a><a name="Hadoop+Jobs+Not+Running+on+a+Successfully+Allocated+Cluster"></a>
 <h3 class="h4"> Hadoop Jobs Not Running on a Successfully Allocated Cluster </h3>
 <a name="Hadoop_Jobs_Not_Running_on_a_Suc" id="Hadoop_Jobs_Not_Running_on_a_Suc"></a>
 <p>This scenario generally occurs when a cluster is allocated, and is left inactive for sometime, and then hadoop jobs are attempted to be run on them. Then Hadoop jobs fail with the following exception:</p>
@@ -1081,31 +1096,31 @@ document.write("Last Published: " + document.lastModified);
 <em>Possible Cause:</em> There is a version mismatch between the version of the hadoop client being used to submit jobs and the hadoop used in provisioning (typically via the tarball option). Ensure compatible versions are being used.</p>
 <p>
 <em>Possible Cause:</em> You used one of the options for specifying Hadoop configuration <span class="codefrag">-M or -H</span>, which had special characters like space or comma that were not escaped correctly. Refer to the section <em>Options Configuring HOD</em> for checking how to specify such options correctly.</p>
-<a name="N10750"></a><a name="My+Hadoop+Job+Got+Killed"></a>
+<a name="N10769"></a><a name="My+Hadoop+Job+Got+Killed"></a>
 <h3 class="h4"> My Hadoop Job Got Killed </h3>
 <a name="My_Hadoop_Job_Got_Killed" id="My_Hadoop_Job_Got_Killed"></a>
 <p>
 <em>Possible Cause:</em> The wallclock limit specified by the Torque administrator or the <span class="codefrag">-l</span> option defined in the section <em>Specifying Additional Job Attributes</em> was exceeded since allocation time. Thus the cluster would have got released. Deallocate the cluster and allocate it again, this time with a larger wallclock time.</p>
 <p>
 <em>Possible Cause:</em> Problems with the JobTracker node. Refer to the section in <em>Collecting and Viewing Hadoop Logs</em> to get more information.</p>
-<a name="N1076B"></a><a name="Hadoop+Job+Fails+with+Message%3A+%27Job+tracker+still+initializing%27"></a>
+<a name="N10784"></a><a name="Hadoop+Job+Fails+with+Message%3A+%27Job+tracker+still+initializing%27"></a>
 <h3 class="h4"> Hadoop Job Fails with Message: 'Job tracker still initializing' </h3>
 <a name="Hadoop_Job_Fails_with_Message_Jo" id="Hadoop_Job_Fails_with_Message_Jo"></a>
 <p>
 <em>Possible Cause:</em> The hadoop job was being run as part of the HOD script command, and it started before the JobTracker could come up fully. Allocate the cluster using a large value for the configuration option <span class="codefrag">--hod.script-wait-time</span>. Typically a value of 120 should work, though it is typically unnecessary to be that large.</p>
-<a name="N1077B"></a><a name="The+Exit+Codes+For+HOD+Are+Not+Getting+Into+Torque"></a>
+<a name="N10794"></a><a name="The+Exit+Codes+For+HOD+Are+Not+Getting+Into+Torque"></a>
 <h3 class="h4"> The Exit Codes For HOD Are Not Getting Into Torque </h3>
 <a name="The_Exit_Codes_For_HOD_Are_Not_G" id="The_Exit_Codes_For_HOD_Are_Not_G"></a>
 <p>
 <em>Possible Cause:</em> Version 0.16 of hadoop is required for this functionality to work. The version of Hadoop used does not match. Use the required version of Hadoop.</p>
 <p>
 <em>Possible Cause:</em> The deallocation was done without using the <span class="codefrag">hod</span> command; for e.g. directly using <span class="codefrag">qdel</span>. When the cluster is deallocated in this manner, the HOD processes are terminated using signals. This results in the exit code to be based on the signal number, rather than the exit code of the program.</p>
-<a name="N10793"></a><a name="The+Hadoop+Logs+are+Not+Uploaded+to+DFS"></a>
+<a name="N107AC"></a><a name="The+Hadoop+Logs+are+Not+Uploaded+to+DFS"></a>
 <h3 class="h4"> The Hadoop Logs are Not Uploaded to DFS </h3>
 <a name="The_Hadoop_Logs_are_Not_Uploaded" id="The_Hadoop_Logs_are_Not_Uploaded"></a>
 <p>
 <em>Possible Cause:</em> There is a version mismatch between the version of the hadoop being used for uploading the logs and the external HDFS. Ensure that the correct version is specified in the <span class="codefrag">hodring.pkgs</span> option.</p>
-<a name="N107A3"></a><a name="Locating+Ringmaster+Logs"></a>
+<a name="N107BC"></a><a name="Locating+Ringmaster+Logs"></a>
 <h3 class="h4"> Locating Ringmaster Logs </h3>
 <a name="Locating_Ringmaster_Logs" id="Locating_Ringmaster_Logs"></a>
 <p>To locate the ringmaster logs, follow these steps: </p>
@@ -1122,7 +1137,7 @@ document.write("Last Published: " + document.lastModified);
 <li> If you don't get enough information, you may want to set the ringmaster debug level to 4. This can be done by passing <span class="codefrag">--ringmaster.debug 4</span> to the hod command line.</li>
   
 </ul>
-<a name="N107CF"></a><a name="Locating+Hodring+Logs"></a>
+<a name="N107E8"></a><a name="Locating+Hodring+Logs"></a>
 <h3 class="h4"> Locating Hodring Logs </h3>
 <a name="Locating_Hodring_Logs" id="Locating_Hodring_Logs"></a>
 <p>To locate hodring logs, follow the steps below: </p>
