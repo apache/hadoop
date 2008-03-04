@@ -372,21 +372,13 @@ abstract class BaseScanner extends Chore implements HConstants {
     }
 
     /*
-     * If the server is not dead and either:
-     *   the stored info is not null and the start code does not match
-     * or:
-     *   the stored info is null and the region is neither unassigned nor pending
-     * then:
+     * If the server is a dead server or its startcode is off -- either null
+     * or doesn't match the start code for the address -- then add it to the
+     * list of unassigned regions IF not already there (or pending open).
      */ 
-    if (!deadServer &&
-      ((storedInfo != null && storedInfo.getStartCode() != startCode) ||
-        (storedInfo == null &&
-          !regionManager.isUnassigned(info) &&
+    if (!deadServer && !regionManager.isUnassigned(info) &&
           !regionManager.isPending(info.getRegionName())
-        )
-      )
-    ) {
-
+        && (storedInfo == null || storedInfo.getStartCode() != startCode)) {
       // The current assignment is invalid
       if (LOG.isDebugEnabled()) {
         LOG.debug("Current assignment of " + info.getRegionName() +

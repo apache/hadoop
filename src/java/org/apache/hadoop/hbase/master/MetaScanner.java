@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
  * action would prevent other work from getting done.
  */
 class MetaScanner extends BaseScanner {
-  /** Work for the meta scanner is queued up here */
+  /** Initial work for the meta scanner is queued up here */
   private volatile BlockingQueue<MetaRegion> metaRegionsToScan =
     new LinkedBlockingQueue<MetaRegion>();
     
@@ -50,10 +50,10 @@ class MetaScanner extends BaseScanner {
     super(master, regionManager, false, master.metaRescanInterval, master.closed);
   }
 
+  // Don't retry if we get an error while scanning. Errors are most often
+  // caused by the server going away. Wait until next rescan interval when
+  // things should be back to normal
   private boolean scanOneMetaRegion(MetaRegion region) {
-    // Don't retry if we get an error while scanning. Errors are most often
-    // caused by the server going away. Wait until next rescan interval when
-    // things should be back to normal
     boolean scanSuccessful = false;
     while (!master.closed.get() && !regionManager.isInitialRootScanComplete() &&
       regionManager.getRootRegionLocation() == null) {
@@ -95,7 +95,9 @@ class MetaScanner extends BaseScanner {
   @Override
   protected boolean initialScan() {
     MetaRegion region = null;
-    while (!master.closed.get() && region == null && !metaRegionsScanned()) {
+    while (!master.closed.get() &&
+        (region == null && metaRegionsToScan.size() > 0) &&
+        !metaRegionsScanned()) {
       try {
         region = metaRegionsToScan.poll(master.threadWakeFrequency, 
           TimeUnit.MILLISECONDS);

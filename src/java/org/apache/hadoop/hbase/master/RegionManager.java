@@ -598,7 +598,7 @@ class RegionManager implements HConstants {
   
   public void waitForRootRegionLocation() {
     synchronized (rootRegionLocation) {
-      while(!master.closed.get() && rootRegionLocation.get() == null) {
+      while (!master.closed.get() && rootRegionLocation.get() == null) {
         // rootRegionLocation will be filled in when we get an 'open region'
         // regionServerReport message from the HRegionServer that has been
         // allocated the ROOT region below.

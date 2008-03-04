@@ -44,7 +44,7 @@ public class Sleeper {
    * Sleep for period.
    */
   public void sleep() {
-    sleep(period);
+    sleep(System.currentTimeMillis());
   }
   
   /**

@@ -31,10 +31,10 @@ class RootScanner extends BaseScanner {
     super(master, regionManager, true, master.metaRescanInterval, master.closed);
   }
 
+  // Don't retry if we get an error while scanning. Errors are most often
+  // caused by the server going away. Wait until next rescan interval when
+  // things should be back to normal
   private boolean scanRoot() {
-    // Don't retry if we get an error while scanning. Errors are most often
-    // caused by the server going away. Wait until next rescan interval when
-    // things should be back to normal
     boolean scanSuccessful = false;
     master.waitForRootRegionLocation();
     if (master.closed.get()) {
