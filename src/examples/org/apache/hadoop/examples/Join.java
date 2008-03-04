@@ -77,9 +77,13 @@ public class Join extends Configured implements Tool {
     JobClient client = new JobClient(jobConf);
     ClusterStatus cluster = client.getClusterStatus();
     int num_maps = cluster.getTaskTrackers() * 
-    jobConf.getInt("test.sort.maps_per_host", 10);
-    int num_reduces = cluster.getTaskTrackers() * 
-    jobConf.getInt("test.sort.reduces_per_host", cluster.getMaxTasks());
+                   jobConf.getInt("test.sort.maps_per_host", 10);
+    int num_reduces = (int) (cluster.getMaxReduceTasks() * 0.9);
+    String sort_reduces = jobConf.get("test.sort.reduces_per_host");
+    if (sort_reduces != null) {
+       num_reduces = cluster.getTaskTrackers() * 
+                       Integer.parseInt(sort_reduces);
+    }
     Class<? extends InputFormat> inputFormatClass = 
       SequenceFileInputFormat.class;
     Class<? extends OutputFormat> outputFormatClass = 

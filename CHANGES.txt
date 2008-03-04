@@ -131,6 +131,9 @@ Trunk (unreleased changes)
     setInputValueClass(Class theClass) setSpeculativeExecution
     getSpeculativeExecution() (Amareshwari Sri Ramadasu via ddas)
 
+    HADOOP-2817. Removes deprecated mapred.tasktracker.tasks.maximum and 
+    ClusterStatus.getMaxTasks(). (Amareshwari Sri Ramadasu via ddas) 
+
 Release 0.16.1 - Unreleased
 
   IMPROVEMENTS

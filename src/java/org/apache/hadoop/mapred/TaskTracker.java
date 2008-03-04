@@ -770,46 +770,14 @@ public class TaskTracker
   }
 
   /**
-   * Handles deprecated "mapred.tasktracker.tasks.maximum" 
-   * @param newMax new max values specified through 
-   * mapred.tasktracker.map.tasks.maximum or 
-   * mapred.tasktracker.reduce.tasks.maximum
-   * @param oldMax old max value specified through 
-   * mapred.tasktracker.tasks.maximum
-   * @param def default value if max tasks not specified at all.
-   * @return new value supercedes old value. If both new and old values 
-   * are not set, default value is returned.
-   */
-  private int handleDeprecatedMaxTasks(String newMax, 
-                                       String oldMax,
-                                       int def) {
-    try {
-      if (oldMax != null ) {
-        LOG.warn("mapred.tasktracker.tasks.maximum is deprecated. Use " +
-                 "mapred.tasktracker.map.tasks.maximum and " +
-                 "mapred.tasktracker.reduce.tasks.maximum instead.");
-        return Integer.parseInt(oldMax);
-      }
-      if (newMax != null) {
-        return Integer.parseInt(newMax);
-      }
-    } catch (NumberFormatException ne) {
-      return def;
-    }
-    return def;  
-  }
-  
-  /**
    * Start with the local machine name, and the default JobTracker
    */
   public TaskTracker(JobConf conf) throws IOException {
     originalConf = conf;
-    maxCurrentMapTasks = handleDeprecatedMaxTasks(
-                           conf.get("mapred.tasktracker.map.tasks.maximum"),
-                           conf.get("mapred.tasktracker.tasks.maximum"), 2);
-    maxCurrentReduceTasks = handleDeprecatedMaxTasks(
-                         conf.get("mapred.tasktracker.reduce.tasks.maximum"),
-                         conf.get("mapred.tasktracker.tasks.maximum"), 2);
+    maxCurrentMapTasks = conf.getInt(
+                  "mapred.tasktracker.map.tasks.maximum", 2);
+    maxCurrentReduceTasks = conf.getInt(
+                  "mapred.tasktracker.reduce.tasks.maximum", 2);
     this.jobTrackAddr = JobTracker.getAddress(conf);
     this.mapOutputFile = new MapOutputFile();
     this.mapOutputFile.setConf(conf);

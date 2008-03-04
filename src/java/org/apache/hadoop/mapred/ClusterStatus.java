@@ -108,17 +108,6 @@ public class ClusterStatus implements Writable {
   }
   
   /**
-   * Get the maximum capacity for running tasks in the cluster.
-   * 
-   * @return the maximum capacity for running tasks in the cluster.
-   * @deprecated Use {@link #getMaxMapTasks()} and/or
-   *  {@link #getMaxReduceTasks()}
-   */
-  public int getMaxTasks() {
-    return (max_map_tasks + max_reduce_tasks);
-  }
-  
-  /**
    * Get the maximum capacity for running map tasks in the cluster.
    * 
    * @return the maximum capacity for running map tasks in the cluster.
