@@ -250,6 +250,10 @@ Release 0.16.1 - Unreleased
     datnodes flushes the block file buffered output stream before
     sending a positive ack for the packet back to the client. (dhruba)
 
+    HADOOP-2925. Fix HOD to create the mapred system directory using a 
+    naming convention that will avoid clashes in multi-user shared 
+    cluster scenario. (Hemanth Yamijala via nigel)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES

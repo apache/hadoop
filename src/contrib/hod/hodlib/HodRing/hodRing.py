@@ -25,7 +25,7 @@ from xml.dom import getDOMImplementation
 from pprint import pformat
 from optparse import OptionParser
 from urlparse import urlparse
-from hodlib.Common.util import local_fqdn, parseEquals
+from hodlib.Common.util import local_fqdn, parseEquals, getMapredSystemDirectory
 from hodlib.Common.tcp import tcpSocket, tcpError 
 
 binfile = sys.path[0]
@@ -150,10 +150,12 @@ class CommandDesc:
 class HadoopCommand:
   """Runs a single hadoop command"""
     
-  def __init__(self, id, desc, tempdir, tardir, log, javahome, restart=False):
+  def __init__(self, id, desc, tempdir, tardir, log, javahome, 
+                mrSysDir, restart=False):
     self.desc = desc
     self.log = log
     self.javahome = javahome
+    self.__mrSysDir = mrSysDir
     self.program = desc.getProgram()
     self.name = desc.getName()
     self.workdirs = desc.getWorkDirs()
@@ -218,7 +220,7 @@ class HadoopCommand:
       
       self.filledInKeyVals.append(keyvalpair)
       if ( v == "fillindir"):
-        v = os.path.join('/mapredsystem', local_fqdn())
+        v = self.__mrSysDir
         pass
       
       prop = None
@@ -509,8 +511,11 @@ class HodRing(hodBaseService):
     id = 0
     for desc in self._cfg['commanddesc']:
       self.log.debug(pprint.pformat(desc.dict))
+      mrSysDir = getMapredSystemDirectory(self._cfg['mapred-system-dir-root'],
+                          self._cfg['userid'], self._cfg['service-id'])
+      self.log.debug('mrsysdir is %s' % mrSysDir)
       cmd = HadoopCommand(id, desc, self.__tempDir, self.__pkgDir, self.log, 
-                          self._cfg['java-home'], restart)
+                          self._cfg['java-home'], mrSysDir, restart)
     
       self.__hadoopLogDirs.append(cmd.logdir)
       self.log.debug("hadoop log directory: %s" % self.__hadoopLogDirs)

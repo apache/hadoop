@@ -85,6 +85,10 @@
                              be picked for use to run an HTTP server.</li>
           
           <li>java-home: Location of Java to be used by Hadoop.</li>
+          <li>syslog-address: Address to which a syslog daemon is bound to. The format 
+                              of the value is host:port. If configured, HOD log messages
+                              will be logged to syslog using this value.</li>
+                              
         </ul>
       </section>
       
@@ -200,6 +204,47 @@
                            JobTracker and TaskTrackers</li>
           
           <li>final-server-params: Same as above, except they will be marked final.</li>
+        </ul>
+      </section>
+
+      <section>
+        <title>3.7 hodring options</title>
+
+        <ul>
+          <li>mapred-system-dir-root: Directory in the DFS under which HOD will
+                                      generate sub-directory names and pass the full path
+                                      as the value of the 'mapred.system.dir' configuration 
+                                      parameter to Hadoop daemons. The format of the full 
+                                      path will be value-of-this-option/userid/mapredsystem/cluster-id.
+                                      Note that the directory specified here should be such
+                                      that all users can create directories under this, if
+                                      permissions are enabled in HDFS. Setting the value of
+                                      this option to /user will make HOD use the user's
+                                      home directory to generate the mapred.system.dir value.</li>
+
+          <li>log-destination-uri: URL describing a path in an external, static DFS or the 
+                                   cluster node's local file system where HOD will upload 
+                                   Hadoop logs when a cluster is deallocated. To specify a 
+                                   DFS path, use the format 'hdfs://path'. To specify a 
+                                   cluster node's local file path, use the format 'file://path'.
+
+                                   When clusters are deallocated by HOD, the hadoop logs will
+                                   be deleted as part of HOD's cleanup process. In order to
+                                   persist these logs, you can use this configuration option.
+
+                                   The format of the path is 
+                                   value-of-this-option/userid/hod-logs/cluster-id
+
+                                   Note that the directory you specify here must be such that all
+                                   users can create sub-directories under this. Setting this value
+                                   to hdfs://user will make the logs come in the user's home directory
+                                   in DFS.</li>
+
+          <li>pkgs: Installation directory, under which bin/hadoop executable is located. This will
+                    be used by HOD to upload logs if a HDFS URL is specified in log-destination-uri
+                    option. Note that this is useful if the users are using a tarball whose version
+                    may differ from the external, static HDFS version.</li>
+                                      
         </ul>
       </section>
     </section>
