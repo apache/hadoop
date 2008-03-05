@@ -257,6 +257,9 @@ Release 0.16.1 - Unreleased
     naming convention that will avoid clashes in multi-user shared 
     cluster scenario. (Hemanth Yamijala via nigel)
 
+    HADOOP-2756. NPE in DFSClient while closing DFSOutputStreams 
+    under load. (rangadi)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES

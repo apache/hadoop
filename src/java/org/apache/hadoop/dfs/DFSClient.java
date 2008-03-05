@@ -2322,11 +2322,17 @@ class DFSClient implements FSConstants {
  
         // wait for threads to finish processing
         streamer.close();
-
+        // wait for threads to exit
+        streamer.join();
+        
+        // shutdown response after streamer has exited.
+        if (response != null) {
+          response.close();
+          response.join();
+          response = null;
+        }
+        
         synchronized (dataQueue) {
-          if (response != null) {
-            response.close();
-          }
           if (blockStream != null) {
             blockStream.writeInt(0); // indicate end-of-block to datanode
             blockStream.close();
@@ -2338,15 +2344,9 @@ class DFSClient implements FSConstants {
           }
         }
 
-        // wait for threads to exit
-        streamer.join();
-        if (response != null) {
-          response.join();
-        }
         streamer = null;
         blockStream = null;
         blockReplyStream = null;
-        response = null;
 
         long localstart = System.currentTimeMillis();
         boolean fileComplete = false;
