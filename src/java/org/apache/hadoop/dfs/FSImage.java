@@ -946,10 +946,11 @@ class FSImage extends Storage {
     long preferredBlockSize = in.readLong();
     int numBlocks = in.readInt();
     BlockInfo[] blocks = new BlockInfo[numBlocks];
+    Block blk = new Block();
     for (int i = 0; i < numBlocks; i++) {
-      blocks[i].readFields(in);
+      blk.readFields(in);
+      blocks[i] = new BlockInfo(blk, blockReplication);
     }
-
     PermissionStatus perm = PermissionStatus.read(in);
     UTF8 clientName = new UTF8();
     clientName.readFields(in);
@@ -959,6 +960,7 @@ class FSImage extends Storage {
     int numLocs = in.readInt();
     DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocs];
     for (int i = 0; i < numLocs; i++) {
+      locations[i] = new DatanodeDescriptor();
       locations[i].readFields(in);
     }
 

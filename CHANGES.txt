@@ -137,6 +137,9 @@ Trunk (unreleased changes)
     HADOOP-2821. Removes deprecated ShellUtil and ToolBase classes from
     the util package. (Amareshwari Sri Ramadasu via ddas) 
 
+    HADOOP-2934. The namenode was encountreing a NPE while loading
+    leases from the fsimage. Fixed. (dhruba)
+
 Release 0.16.1 - Unreleased
 
   INCOMPATIBLE CHANGES

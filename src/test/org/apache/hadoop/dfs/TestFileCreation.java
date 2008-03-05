@@ -357,6 +357,7 @@ public class TestFileCreation extends TestCase {
       System.out.println("testFileCreationNamenodeRestart: "
                          + "Created file filestatus.dat with one "
                          + " replicas.");
+      writeFile(stm);
 
       // create another new file.
       //
