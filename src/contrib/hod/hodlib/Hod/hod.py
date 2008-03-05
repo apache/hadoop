@@ -219,7 +219,7 @@ class hodRunner:
         except ValueError:
           print self.__hodhelp.help_allocate()
           self.__log.critical(
-          "%s operation requires a single argument. n nodes, or n-m nodes." % 
+          "%s operation requires a pos_int value for n(nodecount)." % 
           operation)
           self.__opCode = 3
         else:
@@ -231,7 +231,7 @@ class hodRunner:
             if hodInterrupt.isSet(): 
               self.__cleanup()
               raise HodInterruptException()
-            self.__log.info("Service Registry Started.")
+            self.__log.debug("Service Registry started.")
             try:
               allocateStatus = self.__cluster.allocate(clusterDir, min, max)    
             except HodInterruptException, h:
@@ -336,8 +336,8 @@ class hodRunner:
         clusterInfo = self.__clusterState.read()
         clusterStatus = self.__cluster.check_cluster(clusterInfo)
         if clusterStatus == 12:
-          self.__log.info(clusterDir)
           self.__print_cluster_info(clusterInfo)
+          self.__log.info("hadoop-site.xml at %s" % clusterDir)
         elif clusterStatus == 10:
           self.__log.critical("%s cluster is dead" % clusterDir)
         elif clusterStatus == 13:
@@ -350,6 +350,7 @@ class hodRunner:
             self.__log.critical("Cluster %s not allocated." % clusterDir)
           else:
             self.__print_cluster_info(clusterInfo)
+            self.__log.info("hadoop-site.xml at %s" % clusterDir)
             
           self.__opCode = clusterStatus
       else:
@@ -363,11 +364,19 @@ class hodRunner:
  
   def __print_cluster_info(self, clusterInfo):
     keys = clusterInfo.keys()
-    keys.sort()
-    for key in keys:
-      if key != 'env':
-        self.__log.info("%s\t%s" % (key, clusterInfo[key]))  
-            
+
+    _dict = { 
+              'jobid' : 'Cluster Id', 'min' : 'Nodecount',
+              'hdfs' : 'HDFS UI at' , 'mapred' : 'Mapred UI at'
+            }
+
+    for key in _dict.keys():
+      if clusterInfo.has_key(key):
+        self.__log.info("%s %s" % (_dict[key], clusterInfo[key]))
+
+    if clusterInfo.has_key('ring'):
+      self.__log.debug("%s\t%s" % ('Ringmaster at ', clusterInfo['ring']))
+    
     if self.__cfg['hod']['debug'] == 4:
       for var in clusterInfo['env'].keys():
         self.__log.debug("%s = %s" % (var, clusterInfo['env'][var]))
@@ -391,7 +400,7 @@ class hodRunner:
       if self.__opCode == 0:
         getattr(self, "_op_%s" % opList[0])(opList)
     except HodInterruptException, h:
-      self.__log.critical("op: %s failed because of an process interrupt." \
+      self.__log.critical("op: %s failed because of a process interrupt." \
                                                                 % operation)
       self.__opCode = HOD_INTERRUPTED_CODE
     except:
@@ -445,7 +454,7 @@ class hodRunner:
           time.sleep(self.__cfg['hod']['script-wait-time'])
           self.__log.debug('Slept for %d time. Now going to run the script' % self.__cfg['hod']['script-wait-time'])
         if hodInterrupt.isSet():
-          self.__log.debug('Interrupt set - not executing script')
+          self.__log.debug('Hod interrupted - not executing script')
         else:
           scriptRunner = hadoopScript(clusterDir, 
                                   self.__cfg['hod']['original-dir'])
@@ -461,7 +470,7 @@ class hodRunner:
       if self._is_cluster_allocated(clusterDir):
         self._op_deallocate(('deallocate', clusterDir))
     except HodInterruptException, h:
-      self.__log.critical("Script failed because of an process interrupt.")
+      self.__log.critical("Script failed because of a process interrupt.")
       self.__opCode = HOD_INTERRUPTED_CODE
     except:
       self.__log.critical("script: %s failed: %s" % (script,

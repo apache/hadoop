@@ -439,16 +439,16 @@ class hadoopCluster:
         except HodInterruptException, h:
           self.__log.info(HOD_INTERRUPTED_MESG)
           self.delete_job(self.jobId)
-          self.__log.info("Job %s qdelled." % self.jobId)
+          self.__log.info("Job %s removed from queue." % self.jobId)
           raise h
 
         if jobStatus:
-          self.__log.info("Hod Job successfully submitted. JobId : %s." \
+          self.__log.info("Cluster Id %s" \
                                                               % self.jobId)
           try:
             self.ringmasterXRS = self.__get_ringmaster_client()
             
-            self.__log.info("Ringmaster at : %s." % self.ringmasterXRS )
+            self.__log.debug("Ringmaster at : %s" % self.ringmasterXRS )
             ringClient = None
             if self.ringmasterXRS:
               ringClient =  hodXRClient(self.ringmasterXRS)
@@ -457,13 +457,13 @@ class hadoopCluster:
                 self.__init_hadoop_service('hdfs', ringClient)
                 
               if hdfsStatus:
-                self.__log.info("HDFS UI on http://%s" % self.hdfsInfo)
+                self.__log.info("HDFS UI at http://%s" % self.hdfsInfo)
   
                 mapredStatus, mapredAddr, self.mapredInfo = \
                   self.__init_hadoop_service('mapred', ringClient)
   
                 if mapredStatus:
-                  self.__log.info("Mapred UI on http://%s" % self.mapredInfo)
+                  self.__log.info("Mapred UI at http://%s" % self.mapredInfo)
   
                   if self.__cfg['hod'].has_key('update-worker-info') \
                     and self.__cfg['hod']['update-worker-info']:
@@ -519,6 +519,7 @@ class hadoopCluster:
                             hdfsAddr, mapredAddr, clientParams,\
                             serverParams, finalServerParams,\
                             clusterFactor)
+                  self.__log.info("hadoop-site.xml at %s" % clusterDir)
                   # end of hadoop-site.xml generation
                 else:
                   status = 8
@@ -527,7 +528,7 @@ class hadoopCluster:
             else:
               status = 6
             if status != 0:
-              self.__log.info("Cleaning up job id %s, as cluster could not be allocated." % self.jobId)
+              self.__log.info("Cleaning up cluster id %s, as cluster could not be allocated." % self.jobId)
               if ringClient is None:
                 self.delete_job(self.jobId)
               else:
@@ -545,7 +546,7 @@ class hadoopCluster:
               self.__log.info("Job Shutdown by informing ringmaster.")
             else:
               self.delete_job(self.jobId)
-              self.__log.info("Job %s qdelled directly." % self.jobId)
+              self.__log.info("Job %s removed from queue directly." % self.jobId)
             raise h
         else:
           self.__log.critical("No job found, ringmaster failed to run.")

@@ -23,7 +23,7 @@ reEscapeSeq = r"\\(.)?"
 reEscapeSeq = re.compile(reEscapeSeq)
 
 HOD_INTERRUPTED_CODE = 127
-HOD_INTERRUPTED_MESG = "Hod Interrupted. Cleaning up and exitting"
+HOD_INTERRUPTED_MESG = "Hod interrupted. Cleaning up and exiting"
 
 class AlarmException(Exception):
     def __init__(self, msg=''):
