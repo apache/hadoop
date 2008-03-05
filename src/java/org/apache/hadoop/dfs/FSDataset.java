@@ -343,6 +343,14 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       }
       return f;
     }
+
+    /**
+     * Returns the name of the temporary file for this block.
+     */
+    File getTmpFile(Block b) throws IOException {
+      File f = new File(tmpDir, b.getBlockName());
+      return f;
+    }
       
     File addBlock(Block b, File f) throws IOException {
       File blockFile = dataDir.addBlock(b, f);
@@ -698,6 +706,18 @@ class FSDataset implements FSConstants, FSDatasetInterface {
   public void setChannelPosition(Block b, BlockWriteStreams streams, 
                                  long dataOffset, long ckOffset) 
                                  throws IOException {
+    long size = 0;
+    synchronized (this) {
+      FSVolume vol = volumeMap.get(b);
+      size = vol.getTmpFile(b).length();
+    }
+    if (size < dataOffset) {
+      String msg = "Trying to change block file offset of block " + b +
+                     " to " + dataOffset +
+                     " but actual size of file is " +
+                     size;
+      throw new IOException(msg);
+    }
     FileOutputStream file = (FileOutputStream) streams.dataOut;
     file.getChannel().position(dataOffset);
     file = (FileOutputStream) streams.checksumOut;
@@ -717,7 +737,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       return vol.createTmpFile(blk);
     }
   }
-  
+
   //
   // REMIND - mjc - eventually we should have a timeout system
   // in place to clean up block files left by abandoned clients.
@@ -848,7 +868,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   /**
-   * check if a data diretory is healthy
+   * check if a data directory is healthy
    * @throws DiskErrorException
    */
   public void checkDataDir() throws DiskErrorException {
