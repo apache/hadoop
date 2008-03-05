@@ -151,6 +151,9 @@ Release 0.16.1 - Unreleased
 
     HADOOP-2730. HOD documentation update.
     (Vinod Kumar Vavilapalli via ddas)
+
+    HADOOP-2911. Make the information printed by the HOD allocate and
+    info commands less verbose and clearer. (Vinod Kumar via nigel)
     
   BUG FIXES
 
