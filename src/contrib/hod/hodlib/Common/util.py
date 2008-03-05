@@ -250,6 +250,9 @@ def parseEquals(list):
     dict[splits[0]] = splits[1]
   return dict
 
+def getMapredSystemDirectory(mrSysDirRoot, userid, jobid):
+  return os.path.join(mrSysDirRoot, userid, 'mapredsystem', jobid)
+
 class HodInterrupt:
   def __init__(self):
     self.HodInterruptFlag = False

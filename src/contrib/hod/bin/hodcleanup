@@ -123,7 +123,7 @@ def __copy_archive_to_dfs(conf, archiveFile):
   # END LAME HACK
   
   (head, tail) = os.path.split(archiveFile)
-  destFile = os.path.join(hdfsURIMatch.group(2), conf['user-id'], conf['service-id'], tail)
+  destFile = os.path.join(hdfsURIMatch.group(2), conf['user-id'], 'hod-logs', conf['service-id'], tail)
   
   log.info("copying archive %s to DFS %s ..." % (archiveFile, destFile))
   

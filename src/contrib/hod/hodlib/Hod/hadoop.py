@@ -57,7 +57,7 @@ class hadoopConfig:
     
     return prop
 
-  def gen_site_conf(self, confDir, tempDir, numNodes, hdfsAddr,\
+  def gen_site_conf(self, confDir, tempDir, numNodes, hdfsAddr, mrSysDir,\
              mapredAddr=None, clientParams=None, serverParams=None,\
              finalServerParams=None, clusterFactor=None):
     if not mapredAddr:
@@ -76,9 +76,7 @@ class hadoopConfig:
                     'hadoop.tmp.dir'        : confDir, \
                     'dfs.client.buffer.dir' : tempDir, }
 
-    mapredAddrSplit = mapredAddr.split(":")
-    mapredsystem = os.path.join('/mapredsystem', mapredAddrSplit[0])
-    paramsDict['mapred.system.dir'] = mapredsystem 
+    paramsDict['mapred.system.dir'] = mrSysDir
     
     # mapred-default.xml is no longer used now.
     numred = int(math.floor(clusterFactor * (int(numNodes) - 1)))
@@ -515,8 +513,10 @@ class hadoopCluster:
                     os.makedirs(tempDir)
                   tempDir = os.path.join( tempDir, self.__cfg['hod']['userid']\
                                   + "." + self.jobId )
+                  mrSysDir = getMapredSystemDirectory(self.__cfg['hodring']['mapred-system-dir-root'],\
+                                      self.__cfg['hod']['userid'], self.jobId)
                   self.__hadoopCfg.gen_site_conf(clusterDir, tempDir, min,\
-                            hdfsAddr, mapredAddr, clientParams,\
+                            hdfsAddr, mrSysDir, mapredAddr, clientParams,\
                             serverParams, finalServerParams,\
                             clusterFactor)
                   self.__log.info("hadoop-site.xml at %s" % clusterDir)

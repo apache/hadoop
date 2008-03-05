@@ -125,7 +125,7 @@ def runcondense():
   for line in stdout:
     m = re.match("^(.*?)\s.*$", line)
     filename = m.group(1)
-    # file name format: <prefix>/<user>/<jobid>/[0-1]-[jobtracker|tasktracker|datanode|namenode|]-hostname-YYYYMMDDtime-random.tar.gz
+    # file name format: <prefix>/<user>/hod-logs/<jobid>/[0-1]-[jobtracker|tasktracker|datanode|namenode|]-hostname-YYYYMMDDtime-random.tar.gz
     # first strip prefix:
     if filename.startswith(options.log):
       filename = filename.lstrip(options.log)
@@ -135,7 +135,7 @@ def runcondense():
       continue
     
     # Now get other details from filename.
-    k = re.match("/(.*)/(.*)/.*-.*-([0-9][0-9][0-9][0-9])([0-9][0-9])([0-9][0-9]).*$", filename)
+    k = re.match("/(.*)/.*/(.*)/.*-.*-([0-9][0-9][0-9][0-9])([0-9][0-9])([0-9][0-9]).*$", filename)
     if k:
       username = k.group(1)
       jobid =  k.group(2)
@@ -159,7 +159,7 @@ def runcondense():
       if (diff.days > options.days):
         desttodel = filename
         if not toPurge.has_key(jobid):
-          toPurge[jobid] = options.log.rstrip("/") + "/" + username + "/" + jobid
+          toPurge[jobid] = options.log.rstrip("/") + "/" + username + "/hod-logs/" + jobid
 
   for job in toPurge.keys():
     for prefix in deletedNamePrefixes:
