@@ -1097,7 +1097,7 @@ public class DataNode implements FSConstants, Runnable {
           mirrorTarget = NetUtils.createSocketAddr(mirrorNode);
           mirrorSock = new Socket();
           try {
-            int timeoutValue = 3000 * numTargets + socketTimeout;
+            int timeoutValue = numTargets * socketTimeout;
             mirrorSock.connect(mirrorTarget, timeoutValue);
             mirrorSock.setSoTimeout(timeoutValue);
             mirrorSock.setSendBufferSize(DEFAULT_DATA_SOCKET_SIZE);
@@ -1898,6 +1898,11 @@ public class DataNode implements FSConstants, Runnable {
                          " from " + receiver.inAddr);
               }
               lastPacket = true;
+            } else {
+              // flush packet to disk before sending ack
+              if (!receiver.finalized) {
+                receiver.flush();
+              }
             }
 
             replyOut.writeLong(expected);
@@ -1981,6 +1986,12 @@ public class DataNode implements FSConstants, Runnable {
               LOG.info("Received block " + block + 
                        " of size " + block.getNumBytes() + 
                        " from " + receiver.inAddr);
+            }
+            else if (!lastPacketInBlock) {
+              // flush packet to disk before sending ack
+              if (!receiver.finalized) {
+                receiver.flush();
+              }
             }
 
             // send my status back to upstream datanode
@@ -2156,6 +2167,16 @@ public class DataNode implements FSConstants, Runnable {
       if(ioe != null) {
         checkDiskError(ioe);
         throw ioe;
+      }
+    }
+
+    // flush block data and metadata files to disk.
+    void flush() throws IOException {
+      if (checksumOut != null) {
+        checksumOut.flush();
+      }
+      if (out != null) {
+        out.flush();
       }
     }
 
@@ -2481,7 +2502,7 @@ public class DataNode implements FSConstants, Runnable {
       if (checksumOut != null) {
         checksumOut.flush();
       }
-      LOG.info("Changing block file offset from " + 
+      LOG.info("Changing block file offset of block " + block + " from " + 
                data.getChannelPosition(block, streams) +
                " to " + offsetInBlock +
                " meta file offset to " + offsetInChecksum);

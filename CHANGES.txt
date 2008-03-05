@@ -242,6 +242,11 @@ Release 0.16.1 - Unreleased
     HADOOP-2931. IOException thrown by DFSOutputStream had wrong stack
     trace in some cases. (Michael Bieniosek via rangadi)
 
+    HADOOP-2883. Write failures and data corruptions on HDFS files.
+    The write timeout is back to what it was on 0.15 release. Also, the
+    datnodes flushes the block file buffered output stream before
+    sending a positive ack for the packet back to the client. (dhruba)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES
