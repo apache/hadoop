@@ -38,6 +38,10 @@ Trunk (unreleased changes)
     HADOOP-2219. A new command "df -count" that counts the number of
     files and directories.  (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-2906. Add an OutputFormat capable of using keys, values, and
+    config params to map records to different output files.
+    (Runping Qi via cdouglas)
+
   IMPROVEMENTS
 
     HADOOP-2655. Copy on write for data and metadata files in the 
