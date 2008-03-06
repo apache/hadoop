@@ -826,13 +826,6 @@ public class HStore implements HConstants {
         if (column.equals(HLog.METACOLUMN)
             || !key.getRegionName().equals(info.getRegionName())
             || !HStoreKey.extractFamily(column).equals(family.getFamilyName())) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Passing on edit " + key.getRegionName() + ", " +
-                column.toString() + ": " + 
-                new String(val.getVal(), UTF8_ENCODING) +
-                ", my region: " + info.getRegionName() + ", my column: " +
-                family.getFamilyName());
-          }
           continue;
         }
         HStoreKey k = new HStoreKey(key.getRow(), column, val.getTimestamp());
