@@ -113,6 +113,7 @@ public class SequenceFileOutputFormat extends OutputFormatBase {
    */
   public static void setOutputCompressionType(JobConf conf, 
 		                                          CompressionType style) {
+    setCompressOutput(conf, true);
     conf.set("mapred.output.compression.type", style.toString());
   }
 
