@@ -107,4 +107,8 @@
     Keep the maximum filesize small so we split more often in tests.
     </description>
   </property>
+  <property>
+    <name>hadoop.log.dir</name>
+    <value>${user.dir}/logs</value>
+  </property>
 </configuration>

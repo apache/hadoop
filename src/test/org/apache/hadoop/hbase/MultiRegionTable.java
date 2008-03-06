@@ -42,6 +42,15 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 public class MultiRegionTable extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(MultiRegionTable.class.getName());
 
+  /** {@inheritDoc} */
+  @Override
+  public void setUp() throws Exception {
+    // These are needed for the new and improved Map/Reduce framework
+    System.setProperty("hadoop.log.dir", conf.get("hadoop.log.dir"));
+    conf.set("mapred.output.dir", conf.get("hadoop.tmp.dir"));
+    super.setUp();
+  }
+
   /**
    * Make a multi-region table.  Presumption is that table already exists and
    * that there is only one regionserver. Makes it multi-region by filling with
@@ -187,7 +196,7 @@ public class MultiRegionTable extends HBaseTestCase {
       if (splitB == null) {
         LOG.info("splitB was already null. Assuming it was previously compacted.");
       } else {
-        LOG.info("Daughter splitB: " + splitA.getRegionName());
+        LOG.info("Daughter splitB: " + splitB.getRegionName());
 
         // Call second split.
         compact(cluster, splitB);

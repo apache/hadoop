@@ -161,8 +161,8 @@ public class PerformanceEvaluation implements HConstants {
     }
     
     /** {@inheritDoc} */
-    public void map(@SuppressWarnings("unused") final WritableComparable key,
-      final Writable value, final OutputCollector output,
+    public void map(@SuppressWarnings("unused") final Object key,
+      final Object value, final OutputCollector output,
       final Reporter reporter)
     throws IOException {
       Matcher m = LINE_PATTERN.matcher(((Text)value).toString());
