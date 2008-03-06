@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.net;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.URI;
 import java.util.Map.Entry;
 import java.util.*;
@@ -223,5 +227,106 @@ public class NetUtils {
       }
     return l;
     }
+  }
+  
+  /**
+   * Same as getInputStream(socket, socket.getSoTimeout()).<br><br>
+   * 
+   * From documentation for {@link #getInputStream(Socket, long)}:<br>
+   * Returns InputStream for the socket. If the socket has an associated
+   * SocketChannel then it returns a 
+   * {@link SocketInputStream} with the given timeout. If the socket does not
+   * have a channel, {@link Socket#getInputStream()} is returned. In the later
+   * case, the timeout argument is ignored and the timeout set with 
+   * {@link Socket#setSoTimeout(int)} applies for reads.<br><br>
+   *
+   * Any socket created using socket factories returned by {@link #NetUtils},
+   * must use this interface instead of {@link Socket#getInputStream()}.
+   *     
+   * @see #getInputStream(Socket, long)
+   * 
+   * @param socket
+   * @return InputStream for reading from the socket.
+   * @throws IOException
+   */
+  public static InputStream getInputStream(Socket socket) 
+                                           throws IOException {
+    return getInputStream(socket, socket.getSoTimeout());
+  }
+  
+  /**
+   * Returns InputStream for the socket. If the socket has an associated
+   * SocketChannel then it returns a 
+   * {@link SocketInputStream} with the given timeout. If the socket does not
+   * have a channel, {@link Socket#getInputStream()} is returned. In the later
+   * case, the timeout argument is ignored and the timeout set with 
+   * {@link Socket#setSoTimeout(int)} applies for reads.<br><br>
+   * 
+   * Any socket created using socket factories returned by {@link #NetUtils},
+   * must use this interface instead of {@link Socket#getInputStream()}.
+   *     
+   * @see Socket#getChannel()
+   * 
+   * @param socket
+   * @param timeout timeout in milliseconds. This may not always apply. zero
+   *        for waiting as long as necessary.
+   * @return InputStream for reading from the socket.
+   * @throws IOException
+   */
+  public static InputStream getInputStream(Socket socket, long timeout) 
+                                           throws IOException {
+    return (socket.getChannel() == null) ? 
+          socket.getInputStream() : new SocketInputStream(socket, timeout);
+  }
+  
+  /**
+   * Same as getOutputStream(socket, 0). Timeout of zero implies write will
+   * wait until data is available.<br><br>
+   * 
+   * From documentation for {@link #getOutputStream(Socket, long)} : <br>
+   * Returns OutputStream for the socket. If the socket has an associated
+   * SocketChannel then it returns a 
+   * {@link SocketOutputStream} with the given timeout. If the socket does not
+   * have a channel, {@link Socket#getOutputStream()} is returned. In the later
+   * case, the timeout argument is ignored and the write will wait until 
+   * data is available.<br><br>
+   * 
+   * Any socket created using socket factories returned by {@link #NetUtils},
+   * must use this interface instead of {@link Socket#getOutputStream()}.
+   * 
+   * @see #getOutputStream(Socket, long)
+   * 
+   * @param socket
+   * @return OutputStream for writing to the socket.
+   * @throws IOException
+   */  
+  public static OutputStream getOutputStream(Socket socket) 
+                                             throws IOException {
+    return getOutputStream(socket, 0);
+  }
+  
+  /**
+   * Returns OutputStream for the socket. If the socket has an associated
+   * SocketChannel then it returns a 
+   * {@link SocketOutputStream} with the given timeout. If the socket does not
+   * have a channel, {@link Socket#getOutputStream()} is returned. In the later
+   * case, the timeout argument is ignored and the write will wait until 
+   * data is available.<br><br>
+   * 
+   * Any socket created using socket factories returned by {@link #NetUtils},
+   * must use this interface instead of {@link Socket#getOutputStream()}.
+   * 
+   * @see Socket#getChannel()
+   * 
+   * @param socket
+   * @param timeout timeout in milliseconds. This may not always apply. zero
+   *        for waiting as long as necessary.
+   * @return OutputStream for writing to the socket.
+   * @throws IOException   
+   */
+  public static OutputStream getOutputStream(Socket socket, long timeout) 
+                                             throws IOException {
+    return (socket.getChannel() == null) ? 
+            socket.getOutputStream() : new SocketOutputStream(socket, timeout);            
   }
 }

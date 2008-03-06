@@ -22,6 +22,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.channels.SocketChannel;
 
 import javax.net.SocketFactory;
 
@@ -39,7 +40,22 @@ public class StandardSocketFactory extends SocketFactory {
   /* @inheritDoc */
   @Override
   public Socket createSocket() throws IOException {
-    return new Socket();
+    /*
+     * NOTE: This returns an NIO socket so that it has an associated 
+     * SocketChannel. As of now, this unfortunately makes streams returned
+     * by Socket.getInputStream() and Socket.getOutputStream() unusable
+     * (because a blocking read on input stream blocks write on output stream
+     * and vice versa).
+     * 
+     * So users of these socket factories should use 
+     * NetUtils.getInputStream(socket) and 
+     * NetUtils.getOutputStream(socket) instead.
+     * 
+     * A solution for hiding from this from user is to write a 
+     * 'FilterSocket' on the lines of FilterInputStream and extend it by
+     * overriding getInputStream() and getOutputStream().
+     */
+    return SocketChannel.open().socket();
   }
 
   /* @inheritDoc */

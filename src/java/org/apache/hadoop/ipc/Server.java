@@ -176,8 +176,8 @@ public abstract class Server {
    * @throws UnknownHostException if the address isn't a valid host name
    * @throws IOException other random errors from bind
    */
-  static void bind(ServerSocket socket, InetSocketAddress address, 
-                   int backlog) throws IOException {
+  public static void bind(ServerSocket socket, InetSocketAddress address, 
+                          int backlog) throws IOException {
     try {
       socket.bind(address, backlog);
     } catch (BindException e) {

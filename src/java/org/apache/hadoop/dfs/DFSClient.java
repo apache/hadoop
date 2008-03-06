@@ -862,22 +862,27 @@ class DFSClient implements FSConstants {
                                        throws IOException {
       // in and out will be closed when sock is closed (by the caller)
       DataOutputStream out = new DataOutputStream(
-                       new BufferedOutputStream(sock.getOutputStream()));
+        new BufferedOutputStream(NetUtils.getOutputStream(sock,WRITE_TIMEOUT)));
 
-      //write the header.
-      out.writeShort( DATA_TRANSFER_VERSION );
-      out.write( OP_READ_BLOCK );
-      out.writeLong( blockId );
-      out.writeLong( startOffset );
-      out.writeLong( len );
-      out.flush();
-
+      try {
+        //write the header.
+        out.writeShort( DATA_TRANSFER_VERSION );
+        out.write( OP_READ_BLOCK );
+        out.writeLong( blockId );
+        out.writeLong( startOffset );
+        out.writeLong( len );
+        out.flush();
+      } finally {
+        IOUtils.closeStream(out);
+      }
+      
       //
       // Get bytes in block, set streams
       //
 
       DataInputStream in = new DataInputStream(
-                   new BufferedInputStream(sock.getInputStream(), bufferSize));
+          new BufferedInputStream(NetUtils.getInputStream(sock), 
+                                  bufferSize));
       
       if ( in.readShort() != OP_STATUS_SUCCESS ) {
         throw new IOException("Got error in response to OP_READ_BLOCK " +
@@ -921,7 +926,7 @@ class DFSClient implements FSConstants {
      */ 
     void checksumOk(Socket sock) {
       try {
-        OutputStream out = sock.getOutputStream();
+        OutputStream out = NetUtils.getOutputStream(sock, WRITE_TIMEOUT);
         byte buf[] = { (OP_STATUS_CHECKSUM_OK >>> 8) & 0xff,
                        (OP_STATUS_CHECKSUM_OK) & 0xff };
         out.write(buf);
@@ -2065,12 +2070,16 @@ class DFSClient implements FSConstants {
         s.setSoTimeout(timeoutValue);
         s.setSendBufferSize(DEFAULT_DATA_SOCKET_SIZE);
         LOG.debug("Send buf size " + s.getSendBufferSize());
+        long writeTimeout = WRITE_TIMEOUT_EXTENSION * nodes.length +
+                            WRITE_TIMEOUT;
 
         //
         // Xmit header info to datanode
         //
-        DataOutputStream out = new DataOutputStream(new BufferedOutputStream(s.getOutputStream(), buffersize));
-        blockReplyStream = new DataInputStream(s.getInputStream());
+        DataOutputStream out = new DataOutputStream(
+            new BufferedOutputStream(NetUtils.getOutputStream(s, writeTimeout), 
+                                     buffersize));
+        blockReplyStream = new DataInputStream(NetUtils.getInputStream(s));
 
         out.writeShort( DATA_TRANSFER_VERSION );
         out.write( OP_WRITE_BLOCK );

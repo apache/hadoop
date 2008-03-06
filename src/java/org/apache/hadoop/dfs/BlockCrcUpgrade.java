@@ -36,6 +36,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.channels.SocketChannel;
 import java.util.Arrays;
 import java.util.zip.CRC32;
 import java.util.concurrent.*;
@@ -181,7 +182,7 @@ class BlockCrcUpgradeUtils {
       Socket dnSock = null;
       try {
         InetSocketAddress dnAddr = NetUtils.createSocketAddr(dn.getName());
-        dnSock = new Socket();
+        dnSock = SocketChannel.open().socket();
         dnSock.connect(dnAddr, FSConstants.READ_TIMEOUT);
         dnSock.setSoTimeout(FSConstants.READ_TIMEOUT);
         DFSClient.BlockReader reader = DFSClient.BlockReader.newBlockReader

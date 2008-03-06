@@ -42,6 +42,9 @@ Trunk (unreleased changes)
     config params to map records to different output files.
     (Runping Qi via cdouglas)
 
+    HADOOP-2346. Utilities to support timeout while writing to sockets.
+    DFSClient and DataNode sockets have 10min write timeout. (rangadi)
+    
   IMPROVEMENTS
 
     HADOOP-2655. Copy on write for data and metadata files in the 

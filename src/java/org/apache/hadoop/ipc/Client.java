@@ -185,7 +185,7 @@ public class Client {
       socket.setSoTimeout(timeout);
       this.in = new DataInputStream
         (new BufferedInputStream
-         (new FilterInputStream(socket.getInputStream()) {
+         (new FilterInputStream(NetUtils.getInputStream(socket)) {
              public int read(byte[] buf, int off, int len) throws IOException {
                int value = super.read(buf, off, len);
                if (readingCall != null) {
@@ -196,7 +196,7 @@ public class Client {
            }));
       this.out = new DataOutputStream
         (new BufferedOutputStream
-         (new FilterOutputStream(socket.getOutputStream()) {
+         (new FilterOutputStream(NetUtils.getOutputStream(socket)) {
              public void write(byte[] buf, int o, int len) throws IOException {
                out.write(buf, o, len);
                if (writingCall != null) {
