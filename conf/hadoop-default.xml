@@ -884,13 +884,6 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>io.seqfile.compression.type</name>
-  <value>RECORD</value>
-  <description>The default compression type for SequenceFile.Writer.
-  </description>
-</property>
-
-<property>
   <name>map.sort.class</name>
   <value>org.apache.hadoop.mapred.MergeSorter</value>
   <description>The default sort class for sorting keys.

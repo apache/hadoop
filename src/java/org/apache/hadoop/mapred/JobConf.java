@@ -484,6 +484,7 @@ public class JobConf extends Configuration {
    *              are compressed.
    */
   public void setMapOutputCompressionType(CompressionType style) {
+    setCompressMapOutput(true);
     set("mapred.map.output.compression.type", style.toString());
   }
   
@@ -507,6 +508,7 @@ public class JobConf extends Configuration {
    */
   public void 
   setMapOutputCompressorClass(Class<? extends CompressionCodec> codecClass) {
+    setCompressMapOutput(true);
     setClass("mapred.map.output.compression.codec", codecClass, 
              CompressionCodec.class);
   }

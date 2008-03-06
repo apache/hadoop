@@ -268,7 +268,6 @@ public class FileBench extends Configured implements Tool {
     public void configure(JobConf job) {
       job.set("mapred.map.output.compression.type", typ);
       job.set("mapred.output.compression.type", typ);
-      job.set("io.seqfile.compression.type", typ);
     }
   }
   enum Format {

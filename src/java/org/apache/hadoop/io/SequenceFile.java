@@ -219,7 +219,12 @@ public class SequenceFile {
    * Get the compression type for the reduce outputs
    * @param job the job config to look in
    * @return the kind of compression to use
+   * @deprecated Use {@link org.apache.hadoop.mapred.JobConf#getMapOutputCompressionType()}
+   *             to get {@link CompressionType} for intermediate map-outputs or
+   *             {@link org.apache.hadoop.mapred.SequenceFileOutputFormat#getOutputCompressionType(org.apache.hadoop.mapred.JobConf)} 
+   *             to get {@link CompressionType} for job-outputs.
    */
+  @Deprecated
   static public CompressionType getCompressionType(Configuration job) {
     String name = job.get("io.seqfile.compression.type");
     return name == null ? CompressionType.RECORD : 
@@ -230,7 +235,15 @@ public class SequenceFile {
    * Set the compression type for sequence files.
    * @param job the configuration to modify
    * @param val the new compression type (none, block, record)
+   * @deprecated Use the one of the many SequenceFile.createWriter methods to specify
+   *             the {@link CompressionType} while creating the {@link SequenceFile} or
+   *             {@link org.apache.hadoop.mapred.JobConf#setMapOutputCompressionType(org.apache.hadoop.io.SequenceFile.CompressionType)}
+   *             to specify the {@link CompressionType} for intermediate map-outputs or 
+   *             {@link org.apache.hadoop.mapred.SequenceFileOutputFormat#setOutputCompressionType(org.apache.hadoop.mapred.JobConf, org.apache.hadoop.io.SequenceFile.CompressionType)}
+   *             to specify the {@link CompressionType} for job-outputs. 
+   * or 
    */
+  @Deprecated
   static public void setCompressionType(Configuration job, 
                                         CompressionType val) {
     job.set("io.seqfile.compression.type", val.toString());

@@ -102,8 +102,8 @@ public class DataJoinJob {
     job.setMapperClass(mapper);
     job.setOutputPath(new Path(outputDir));
     job.setOutputFormat(outputFormat);
-    SequenceFile.setCompressionType(job,
-                                    SequenceFile.CompressionType.BLOCK);
+    SequenceFileOutputFormat.setOutputCompressionType(job,
+            SequenceFile.CompressionType.BLOCK);
     job.setMapOutputKeyClass(Text.class);
     job.setMapOutputValueClass(mapoutputValueClass);
     job.setOutputKeyClass(Text.class);
