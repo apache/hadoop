@@ -30,6 +30,7 @@ Hbase Change Log
                the region server
    HBASE-490   Doubly-assigned .META.; master uses one and clients another
    HBASE-492   hbase TRUNK does not build against hadoop TRUNK
+   HBASE-496   impossible state for createLease writes 400k lines in about 15mins
    
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling
