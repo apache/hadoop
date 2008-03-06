@@ -42,8 +42,6 @@ public class RawLocalFileSystem extends FileSystem {
   TreeMap<File, FileOutputStream> nonsharedLockDataSet =
     new TreeMap<File, FileOutputStream>();
   TreeMap<File, FileLock> lockObjSet = new TreeMap<File, FileLock>();
-  // by default use copy/delete instead of rename
-  boolean useCopyForRename = true;
   
   public RawLocalFileSystem() {
     workingDir = new Path(System.getProperty("user.dir")).makeQualified(this);
@@ -207,9 +205,10 @@ public class RawLocalFileSystem extends FileSystem {
   }
   
   public boolean rename(Path src, Path dst) throws IOException {
-    if (useCopyForRename) {
-      return FileUtil.copy(this, src, this, dst, true, getConf());
-    } else return pathToFile(src).renameTo(pathToFile(dst));
+    if (pathToFile(src).renameTo(pathToFile(dst))) {
+      return true;
+    }
+    return FileUtil.copy(this, src, this, dst, true, getConf());
   }
   
   public boolean delete(Path p) throws IOException {

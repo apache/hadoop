@@ -66,6 +66,8 @@ Trunk (unreleased changes)
     HADOOP-2833. Do not use "Dr. Who" as the default user in JobClient. 
     A valid user name is required. (Tsz Wo (Nicholas), SZE via rangadi)
 
+    HADOOP-730. Use rename rather than copy for local renames. (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing
