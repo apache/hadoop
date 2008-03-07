@@ -41,7 +41,7 @@
     |start Project Logo
     +-->
 <div class="projectlogo">
-<a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/core-logo.jpg" title="Scalable Computing Platform"></a>
+<a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/core-logo.gif" title="Scalable Computing Platform"></a>
 </div>
 <!--+
     |end Project Logo
@@ -200,6 +200,9 @@ document.write("Last Published: " + document.lastModified);
 <li>
 <a href="#3.6+gridservice-mapred+options">3.6 gridservice-mapred options</a>
 </li>
+<li>
+<a href="#3.7+hodring+options">3.7 hodring options</a>
+</li>
 </ul>
 </li>
 </ul>
@@ -288,9 +291,14 @@ document.write("Last Published: " + document.lastModified);
           
           
 <li>java-home: Location of Java to be used by Hadoop.</li>
+          
+<li>syslog-address: Address to which a syslog daemon is bound to. The format 
+                              of the value is host:port. If configured, HOD log messages
+                              will be logged to syslog using this value.</li>
+                              
         
 </ul>
-<a name="N1006B"></a><a name="3.2+hod+options"></a>
+<a name="N1006E"></a><a name="3.2+hod+options"></a>
 <h3 class="h4">3.2 hod options</h3>
 <ul>
           
@@ -305,7 +313,7 @@ document.write("Last Published: " + document.lastModified);
                            should be used for running MapReduce jobs.</li>
          
 </ul>
-<a name="N1007B"></a><a name="3.3+resource_manager+options"></a>
+<a name="N1007E"></a><a name="3.3+resource_manager+options"></a>
 <h3 class="h4">3.3 resource_manager options</h3>
 <ul>
           
@@ -328,7 +336,7 @@ document.write("Last Published: " + document.lastModified);
                       can then use this variable.</li>
         
 </ul>
-<a name="N1008E"></a><a name="3.4+ringmaster+options"></a>
+<a name="N10091"></a><a name="3.4+ringmaster+options"></a>
 <h3 class="h4">3.4 ringmaster options</h3>
 <ul>
           
@@ -341,7 +349,7 @@ document.write("Last Published: " + document.lastModified);
                        and notes for the temp-dir variable apply here too.</li>
         
 </ul>
-<a name="N1009B"></a><a name="3.5+gridservice-hdfs+options"></a>
+<a name="N1009E"></a><a name="3.5+gridservice-hdfs+options"></a>
 <h3 class="h4">3.5 gridservice-hdfs options</h3>
 <ul>
           
@@ -382,7 +390,7 @@ document.write("Last Published: " + document.lastModified);
 <li>final-server-params: Same as above, except they will be marked final.</li>
         
 </ul>
-<a name="N100BA"></a><a name="3.6+gridservice-mapred+options"></a>
+<a name="N100BD"></a><a name="3.6+gridservice-mapred+options"></a>
 <h3 class="h4">3.6 gridservice-mapred options</h3>
 <ul>
           
@@ -413,6 +421,48 @@ document.write("Last Published: " + document.lastModified);
           
           
 <li>final-server-params: Same as above, except they will be marked final.</li>
+        
+</ul>
+<a name="N100DC"></a><a name="3.7+hodring+options"></a>
+<h3 class="h4">3.7 hodring options</h3>
+<ul>
+          
+<li>mapred-system-dir-root: Directory in the DFS under which HOD will
+                                      generate sub-directory names and pass the full path
+                                      as the value of the 'mapred.system.dir' configuration 
+                                      parameter to Hadoop daemons. The format of the full 
+                                      path will be value-of-this-option/userid/mapredsystem/cluster-id.
+                                      Note that the directory specified here should be such
+                                      that all users can create directories under this, if
+                                      permissions are enabled in HDFS. Setting the value of
+                                      this option to /user will make HOD use the user's
+                                      home directory to generate the mapred.system.dir value.</li>
+
+          
+<li>log-destination-uri: URL describing a path in an external, static DFS or the 
+                                   cluster node's local file system where HOD will upload 
+                                   Hadoop logs when a cluster is deallocated. To specify a 
+                                   DFS path, use the format 'hdfs://path'. To specify a 
+                                   cluster node's local file path, use the format 'file://path'.
+
+                                   When clusters are deallocated by HOD, the hadoop logs will
+                                   be deleted as part of HOD's cleanup process. In order to
+                                   persist these logs, you can use this configuration option.
+
+                                   The format of the path is 
+                                   value-of-this-option/userid/hod-logs/cluster-id
+
+                                   Note that the directory you specify here must be such that all
+                                   users can create sub-directories under this. Setting this value
+                                   to hdfs://user will make the logs come in the user's home directory
+                                   in DFS.</li>
+
+          
+<li>pkgs: Installation directory, under which bin/hadoop executable is located. This will
+                    be used by HOD to upload logs if a HDFS URL is specified in log-destination-uri
+                    option. Note that this is useful if the users are using a tarball whose version
+                    may differ from the external, static HDFS version.</li>
+                                      
         
 </ul>
 </div>

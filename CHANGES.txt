@@ -68,6 +68,8 @@ Trunk (unreleased changes)
 
     HADOOP-730. Use rename rather than copy for local renames. (cdouglas)
 
+    HADOOP-2810. Updated the Hadoop Core logo. (nigel)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing
