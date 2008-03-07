@@ -280,6 +280,12 @@ Release 0.16.1 - Unreleased
     HADOOP-2756. NPE in DFSClient while closing DFSOutputStreams 
     under load. (rangadi)
 
+    HADOOP-2958. Fixed FileBench which broke due to HADOOP-2391 which performs
+    a check for existence of the output directory and a trivial bug in
+    GenericMRLoadGenerator where min/max word lenghts were identical since
+    they were looking at the same config variables (Chris Douglas via
+    acmurthy) 
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES

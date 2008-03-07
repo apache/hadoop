@@ -269,9 +269,9 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
       bytesToWrite = job.getLong("test.randomtextwrite.bytes_per_map",
                                     1*1024*1024*1024);
       keymin = job.getInt("test.randomtextwrite.min_words_key", 5);
-      keymax = job.getInt("test.randomtextwrite.min_words_key", 10);
+      keymax = job.getInt("test.randomtextwrite.max_words_key", 10);
       valmin = job.getInt("test.randomtextwrite.min_words_value", 5);
-      valmax = job.getInt("test.randomtextwrite.min_words_value", 10);
+      valmax = job.getInt("test.randomtextwrite.max_words_value", 10);
     }
 
     public void map(Text key, Text val, OutputCollector<Text,Text> output,
