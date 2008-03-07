@@ -111,10 +111,11 @@ public class FileBench extends Configured implements Tool {
     Text key = new Text();
     Text val = new Text();
 
+    final String fn = conf.get("test.filebench.name", "");
+    final Path outd = conf.getOutputPath();
     OutputFormat outf = conf.getOutputFormat();
-    Path out = conf.getOutputPath();
     RecordWriter<Text,Text> rw =
-      outf.getRecordWriter(out.getFileSystem(conf), conf, out.toString(),
+      outf.getRecordWriter(outd.getFileSystem(conf), conf, fn,
                            Reporter.NULL);
     try {
       long acc = 0L;
@@ -137,7 +138,8 @@ public class FileBench extends Configured implements Tool {
   @SuppressWarnings("unchecked") // InputFormat instantiation
   static long readBench(JobConf conf) throws IOException {
     InputFormat inf = conf.getInputFormat();
-    Path pin = conf.getInputPaths()[0];
+    final String fn = conf.get("test.filebench.name", "");
+    Path pin = new Path(conf.getInputPaths()[0], fn);
     FileStatus in = pin.getFileSystem(conf).getFileStatus(pin);
     RecordReader rr = inf.getRecordReader(
         new FileSplit(pin, 0, in.getLen(), conf), conf, Reporter.NULL);
@@ -173,6 +175,7 @@ public class FileBench extends Configured implements Tool {
       try {
         if ("-dir".equals(argv[i])) {
           root = new Path(argv[++i]).makeQualified(fs);
+          System.out.println("DIR: " + root.toString());
         } else if ("-seed".equals(argv[i])) {
           job.setLong("filebench.seed", Long.valueOf(argv[++i]));
         } else if (argv[i].startsWith("-no")) {
@@ -199,6 +202,8 @@ public class FileBench extends Configured implements Tool {
     fillBlocks(job);
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(Text.class);
+    job.setInputPath(root);
+    job.setOutputPath(root);
 
     if (null == cc) cc = EnumSet.allOf(CCodec.class);
     if (null == ct) ct = EnumSet.allOf(CType.class);
@@ -217,7 +222,7 @@ public class FileBench extends Configured implements Tool {
                 typ.name().toUpperCase();
               typ.configure(job);
               System.out.print(rwop.name().toUpperCase() + " " + fn + ": ");
-              System.out.println(rwop.exec(new Path(root, fn), job) / 1000 +
+              System.out.println(rwop.exec(fn, job) / 1000 +
                   " seconds");
             }
           } else {
@@ -226,10 +231,10 @@ public class FileBench extends Configured implements Tool {
               cod.name().toUpperCase();
             Path p = new Path(root, fn);
             if (rwop == RW.r && !fs.exists(p)) {
-              p = new Path(root, fn + cod.getExt());
+              fn += cod.getExt();
             }
             System.out.print(rwop.name().toUpperCase() + " " + fn + ": ");
-            System.out.println(rwop.exec(p, job) / 1000 +
+            System.out.println(rwop.exec(fn, job) / 1000 +
                 " seconds");
           }
         }
@@ -287,20 +292,20 @@ public class FileBench extends Configured implements Tool {
   }
   enum RW {
     w() {
-      public long exec(Path p, JobConf job) throws IOException {
-        job.setOutputPath(p);
+      public long exec(String fn, JobConf job) throws IOException {
+        job.set("test.filebench.name", fn);
         return writeBench(job);
       }
     },
 
     r() {
-      public long exec(Path p, JobConf job) throws IOException {
-        job.setInputPath(p);
+      public long exec(String fn, JobConf job) throws IOException {
+        job.set("test.filebench.name", fn);
         return readBench(job);
       }
     };
 
-    public abstract long exec(Path p, JobConf job) throws IOException;
+    public abstract long exec(String fn, JobConf job) throws IOException;
   }
   static Map<Class<? extends Enum>, Map<String,? extends Enum>> fullmap
     = new HashMap<Class<? extends Enum>, Map<String,? extends Enum>>();
