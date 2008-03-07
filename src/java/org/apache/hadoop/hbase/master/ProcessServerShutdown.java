@@ -20,25 +20,23 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.HashMap;
-import java.util.SortedMap;
-import java.io.UnsupportedEncodingException;
 import java.util.List;
+import java.util.SortedMap;
 
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.util.Writables;
-
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HLog;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.io.Text;
 
 /** 
  * Instantiated when a server's lease has expired, meaning it has crashed.
@@ -131,10 +129,6 @@ class ProcessServerShutdown extends RegionServerOperation {
         if (serverName.length() > 0 &&
             deadServerName.compareTo(serverName) != 0) {
           // This isn't the server you're looking for - move along
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Server name " + serverName + " is not same as " +
-                deadServerName + ": Passing");
-          }
           continue;
         }
 
@@ -143,9 +137,6 @@ class ProcessServerShutdown extends RegionServerOperation {
         if (info == null) {
           continue;
         }
-        LOG.info(info.getRegionName() + " was on shutdown server <" +
-            serverName + "> (or server is null). Marking unassigned in " +
-        "meta and clearing pendingRegions");
 
         if (info.isMetaTable()) {
           if (LOG.isDebugEnabled()) {

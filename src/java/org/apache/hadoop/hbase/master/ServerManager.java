@@ -80,7 +80,12 @@ class ServerManager implements HConstants {
   public void regionServerStartup(HServerInfo serverInfo) {
     String s = serverInfo.getServerAddress().toString().trim();
     LOG.info("received start message from: " + s);
-
+    // Do the lease check up here. There might already be one out on this
+    // server expecially if it just shutdown and came back up near-immediately
+    // after.
+    if (!master.closed.get()) {
+      serverLeases.createLease(s, new ServerExpirer(s));
+    }
     HServerLoad load = serversToLoad.remove(s);
     if (load != null) {
       // The startup message was from a known server.
@@ -114,10 +119,6 @@ class ServerManager implements HConstants {
     }
     servers.add(s);
     loadToServers.put(load, servers);
-
-    if (!master.closed.get()) {
-      serverLeases.createLease(s, new ServerExpirer(s));
-    }
   }
   
   /** {@inheritDoc} */
