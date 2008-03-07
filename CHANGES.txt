@@ -149,6 +149,9 @@ Trunk (unreleased changes)
     HADOOP-2934. The namenode was encountreing a NPE while loading
     leases from the fsimage. Fixed. (dhruba)
 
+    HADOOP-2938. Some fs commands did not glob paths.
+    (Tsz Wo (Nicholas), SZE via rangadi)
+    
 Release 0.16.1 - Unreleased
 
   INCOMPATIBLE CHANGES

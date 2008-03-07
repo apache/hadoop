@@ -737,6 +737,29 @@ public class TestDFSShell extends TestCase {
       writeFile(fileSys, myFile2);
       assertTrue(fileSys.exists(myFile2));
 
+      // Verify that rm with a pattern
+      {
+        String[] args = new String[2];
+        args[0] = "-rm";
+        args[1] = "/test/mkdirs/myFile*";
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from DFSShell.run " +
+                             e.getLocalizedMessage()); 
+        }
+        assertTrue(val == 0);
+        assertFalse(fileSys.exists(myFile));
+        assertFalse(fileSys.exists(myFile2));
+
+        //re-create the files for other tests
+        writeFile(fileSys, myFile);
+        assertTrue(fileSys.exists(myFile));
+        writeFile(fileSys, myFile2);
+        assertTrue(fileSys.exists(myFile2));
+      }
+
       // Verify that we can read the file
       {
         String[] args = new String[3];

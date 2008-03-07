@@ -339,7 +339,7 @@ public class FsShell extends Configured implements Tool {
         }
         printToStdout(srcFs.open(p));
       }
-    }.process(srcPattern, getSrcFileSystem(srcPattern, verifyChecksum));
+    }.globAndProcess(srcPattern, getSrcFileSystem(srcPattern, verifyChecksum));
   }
 
   private class TextRecordInputStream extends InputStream {
@@ -407,7 +407,7 @@ public class FsShell extends Configured implements Tool {
         }
         printToStdout(forMagic(p, srcFs));
       }
-    }.process(srcPattern, srcPattern.getFileSystem(getConf()));
+    }.globAndProcess(srcPattern, srcPattern.getFileSystem(getConf()));
   }
 
   /**
@@ -1033,7 +1033,7 @@ public class FsShell extends Configured implements Tool {
       void process(Path p, FileSystem srcFs) throws IOException {
         delete(p, srcFs, recursive);
       }
-    }.process(srcPattern, srcPattern.getFileSystem(getConf()));
+    }.globAndProcess(srcPattern, srcPattern.getFileSystem(getConf()));
   }
     
   /* delete a file */
@@ -1843,7 +1843,7 @@ public class FsShell extends Configured implements Tool {
   private abstract class DelayedExceptionThrowing {
     abstract void process(Path p, FileSystem srcFs) throws IOException;
 
-    final void processSrc(Path srcPattern, FileSystem srcFs
+    final void globAndProcess(Path srcPattern, FileSystem srcFs
         ) throws IOException {
       List<IOException> exceptions = new ArrayList<IOException>();
       for(Path p : srcFs.globPaths(srcPattern))
