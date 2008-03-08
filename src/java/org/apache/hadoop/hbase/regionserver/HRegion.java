@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
@@ -1011,8 +1012,8 @@ public class HRegion implements HConstants {
    * @return column value
    * @throws IOException
    */
-  public byte [] get(Text row, Text column) throws IOException {
-    byte [][] results = get(row, column, Long.MAX_VALUE, 1);
+  public Cell get(Text row, Text column) throws IOException {
+    Cell[] results = get(row, column, Long.MAX_VALUE, 1);
     return (results == null || results.length == 0)? null: results[0];
   }
   
@@ -1025,7 +1026,7 @@ public class HRegion implements HConstants {
    * @return array of values one element per version
    * @throws IOException
    */
-  public byte [][] get(Text row, Text column, int numVersions) throws IOException {
+  public Cell[] get(Text row, Text column, int numVersions) throws IOException {
     return get(row, column, Long.MAX_VALUE, numVersions);
   }
 
@@ -1039,7 +1040,7 @@ public class HRegion implements HConstants {
    * @return array of values one element per version that matches the timestamp
    * @throws IOException
    */
-  public byte [][] get(Text row, Text column, long timestamp, int numVersions) 
+  public Cell[] get(Text row, Text column, long timestamp, int numVersions) 
     throws IOException {
     
     if (this.closed.get()) {
@@ -1072,7 +1073,7 @@ public class HRegion implements HConstants {
    * @return Map<columnName, byte[]> values
    * @throws IOException
    */
-  public Map<Text, byte []> getFull(Text row) throws IOException {
+  public Map<Text, Cell> getFull(Text row) throws IOException {
     return getFull(row, HConstants.LATEST_TIMESTAMP);
   }
 
@@ -1091,11 +1092,11 @@ public class HRegion implements HConstants {
    * @return Map<columnName, byte[]> values
    * @throws IOException
    */
-  public Map<Text, byte []> getFull(Text row, long ts) throws IOException {
+  public Map<Text, Cell> getFull(Text row, long ts) throws IOException {
     HStoreKey key = new HStoreKey(row, ts);
     obtainRowLock(row);
     try {
-      TreeMap<Text, byte []> result = new TreeMap<Text, byte[]>();
+      TreeMap<Text, Cell> result = new TreeMap<Text, Cell>();
       for (Text colFamily: stores.keySet()) {
         HStore targetStore = stores.get(colFamily);
         targetStore.getFull(key, result);
@@ -1116,7 +1117,7 @@ public class HRegion implements HConstants {
    * @return map of values
    * @throws IOException
    */
-  public Map<Text, byte[]> getClosestRowBefore(final Text row, final long ts)
+  public Map<Text, Cell> getClosestRowBefore(final Text row, final long ts)
   throws IOException{
     // look across all the HStores for this region and determine what the
     // closest key is across all column families, since the data may be sparse
@@ -1150,7 +1151,7 @@ public class HRegion implements HConstants {
       }
           
       // now that we've found our key, get the values
-      TreeMap<Text, byte []> result = new TreeMap<Text, byte[]>();
+      TreeMap<Text, Cell> result = new TreeMap<Text, Cell>();
       for (Text colFamily: stores.keySet()) {
         HStore targetStore = stores.get(colFamily);
         targetStore.getFull(key, result);

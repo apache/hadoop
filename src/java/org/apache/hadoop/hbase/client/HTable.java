@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Writables;
@@ -257,14 +258,14 @@ public class HTable implements HConstants {
    * @return value for specified row/column
    * @throws IOException
    */
-   public byte[] get(Text row, final Text column) throws IOException {
-     return getRegionServerWithRetries(new ServerCallable<byte[]>(row){
-       public byte[] call() throws IOException {
-         return server.get(location.getRegionInfo().getRegionName(), row, column);
-       }
-     });
-   }
- 
+  public Cell get(final Text row, final Text column) throws IOException {
+    return getRegionServerWithRetries(new ServerCallable<Cell>(row){
+      public Cell call() throws IOException {
+        return server.get(location.getRegionInfo().getRegionName(), row, column);
+      }
+    });
+  }
+    
   /** 
    * Get the specified number of versions of the specified row and column
    * 
@@ -274,27 +275,27 @@ public class HTable implements HConstants {
    * @return            - array byte values
    * @throws IOException
    */
-  public byte[][] get(final Text row, final Text column, final int numVersions) 
+  public Cell[] get(final Text row, final Text column, final int numVersions) 
   throws IOException {
-    byte [][] values = null;
+    Cell[] values = null;
 
-    values = getRegionServerWithRetries(new ServerCallable<byte[][]>(row) {
-      public byte [][] call() throws IOException {
+    values = getRegionServerWithRetries(new ServerCallable<Cell[]>(row) {
+      public Cell[] call() throws IOException {
         return server.get(location.getRegionInfo().getRegionName(), row, 
           column, numVersions);
       }
     });
 
     if (values != null) {
-      ArrayList<byte[]> bytes = new ArrayList<byte[]>();
+      ArrayList<Cell> cellValues = new ArrayList<Cell>();
       for (int i = 0 ; i < values.length; i++) {
-        bytes.add(values[i]);
+        cellValues.add(values[i]);
       }
-      return bytes.toArray(new byte[values.length][]);
+      return cellValues.toArray(new Cell[values.length]);
     }
     return null;
   }
-  
+
   /** 
    * Get the specified number of versions of the specified row and column with
    * the specified timestamp.
@@ -306,28 +307,28 @@ public class HTable implements HConstants {
    * @return            - array of values that match the above criteria
    * @throws IOException
    */
-  public byte[][] get(final Text row, final Text column, final long timestamp, 
+  public Cell[] get(final Text row, final Text column, final long timestamp, 
     final int numVersions)
   throws IOException {
-    byte [][] values = null;
+    Cell[] values = null;
 
-    values = getRegionServerWithRetries(new ServerCallable<byte[][]>(row) {
-      public byte [][] call() throws IOException {
+    values = getRegionServerWithRetries(new ServerCallable<Cell[]>(row) {
+      public Cell[] call() throws IOException {
         return server.get(location.getRegionInfo().getRegionName(), row, 
           column, timestamp, numVersions);
       }
     });
 
     if (values != null) {
-      ArrayList<byte[]> bytes = new ArrayList<byte[]>();
+      ArrayList<Cell> cellValues = new ArrayList<Cell>();
       for (int i = 0 ; i < values.length; i++) {
-        bytes.add(values[i]);
+        cellValues.add(values[i]);
       }
-      return bytes.toArray(new byte[values.length][]);
+      return cellValues.toArray(new Cell[values.length]);
     }
     return null;
   }
-    
+      
   /** 
    * Get all the data for the specified row at the latest timestamp
    * 
@@ -335,7 +336,7 @@ public class HTable implements HConstants {
    * @return Map of columns to values.  Map is empty if row does not exist.
    * @throws IOException
    */
-  public SortedMap<Text, byte[]> getRow(Text row) throws IOException {
+  public SortedMap<Text, Cell> getRow(final Text row) throws IOException {
     return getRow(row, HConstants.LATEST_TIMESTAMP);
   }
 
@@ -347,7 +348,7 @@ public class HTable implements HConstants {
    * @return Map of columns to values.  Map is empty if row does not exist.
    * @throws IOException
    */
-  public SortedMap<Text, byte[]> getRow(final Text row, final long ts) 
+  public SortedMap<Text, Cell> getRow(final Text row, final long ts) 
   throws IOException {
     HbaseMapWritable value = null;
          
@@ -357,17 +358,15 @@ public class HTable implements HConstants {
       }
     });
     
-    SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+    SortedMap<Text, Cell> results = new TreeMap<Text, Cell>();
     if (value != null && value.size() != 0) {
       for (Map.Entry<Writable, Writable> e: value.entrySet()) {
         HStoreKey key = (HStoreKey) e.getKey();
-        results.put(key.getColumn(),
-            ((ImmutableBytesWritable) e.getValue()).get());
+        results.put(key.getColumn(), (Cell)e.getValue());
       }
     }
     return results;
   }
-
 
   /** 
    * Get a scanner on the current table starting at the specified row.

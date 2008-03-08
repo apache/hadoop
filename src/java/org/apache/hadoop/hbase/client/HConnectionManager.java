@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.io.Cell;
 
 /**
  * A non-instantiable class that manages connections to multiple tables in
@@ -358,13 +359,12 @@ public class HConnectionManager implements HConstants {
       * Convenience method for turning a MapWritable into the underlying
       * SortedMap we all know and love.
       */
-    private SortedMap<Text, byte[]> sortedMapFromMapWritable(
+    private SortedMap<Text, Cell> sortedMapFromMapWritable(
       HbaseMapWritable writable) {
-      SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+      SortedMap<Text, Cell> results = new TreeMap<Text, Cell>();
       for (Map.Entry<Writable, Writable> e: writable.entrySet()) {
         HStoreKey key = (HStoreKey) e.getKey();
-        results.put(key.getColumn(), 
-          ((ImmutableBytesWritable) e.getValue()).get());
+        results.put(key.getColumn(), (Cell)e.getValue());
       }
       
       return results;
@@ -423,19 +423,19 @@ public class HConnectionManager implements HConstants {
           }
 
           // convert the MapWritable into a Map we can use
-          SortedMap<Text, byte[]> results = 
+          SortedMap<Text, Cell> results = 
             sortedMapFromMapWritable(regionInfoRow);
 
-          byte[] bytes = results.get(COL_REGIONINFO);
+          Cell value = results.get(COL_REGIONINFO);
 
-          if (bytes == null || bytes.length == 0) {
+          if (value == null || value.getValue().length == 0) {
             throw new IOException("HRegionInfo was null or empty in " + 
               parentTable);
           }
 
           // convert the row result into the HRegionLocation we need!
           HRegionInfo regionInfo = (HRegionInfo) Writables.getWritable(
-              results.get(COL_REGIONINFO), new HRegionInfo());
+              value.getValue(), new HRegionInfo());
 
           // possible we got a region of a different table...
           if (!regionInfo.getTableDesc().getName().equals(tableName)) {
@@ -448,8 +448,10 @@ public class HConnectionManager implements HConstants {
               regionInfo.getRegionName());
           }
 
-          String serverAddress = 
-            Writables.bytesToString(results.get(COL_SERVER));
+          Cell serverValue = results.get(COL_SERVER);
+          
+          String serverAddress = Writables.bytesToString(
+            serverValue == null ? null : serverValue.getValue());
         
           if (serverAddress.equals("")) { 
             throw new NoServerForRegionException(

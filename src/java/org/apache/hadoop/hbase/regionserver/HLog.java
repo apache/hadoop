@@ -383,7 +383,7 @@ public class HLog implements HConstants {
           new HLogKey(regionName, tableName, key.getRow(), seqNum[counter++]);
         HLogEdit logEdit =
           new HLogEdit(key.getColumn(), es.getValue(), key.getTimestamp());
-        this.writer.append(logKey, logEdit);
+      	this.writer.append(logKey, logEdit);
         this.numEntries++;
       }
     }

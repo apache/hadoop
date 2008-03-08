@@ -30,6 +30,7 @@ import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.io.Cell;
 
 /** memcache test case */
 public class TestHMemcache extends TestCase {
@@ -100,9 +101,8 @@ public class TestHMemcache extends TestCase {
     }
   }
   
-  private void isExpectedRow(final int rowIndex, TreeMap<Text, byte []> row)
+  private void isExpectedRowWithoutTimestamps(final int rowIndex, TreeMap<Text, byte[]> row)
     throws UnsupportedEncodingException {
-    
     int i = 0;
     for (Text colname: row.keySet()) {
       String expectedColname = getColumnName(rowIndex, i++).toString();
@@ -118,6 +118,16 @@ public class TestHMemcache extends TestCase {
     }
   }
 
+  private void isExpectedRow(final int rowIndex, TreeMap<Text, Cell> row)
+  throws UnsupportedEncodingException {
+    TreeMap<Text, byte[]> converted = new TreeMap<Text, byte[]>();
+    for (Map.Entry<Text, Cell> entry : row.entrySet()) {
+      converted.put(entry.getKey(), 
+        entry.getValue() == null ? null : entry.getValue().getValue());
+    }
+    isExpectedRowWithoutTimestamps(rowIndex, converted);
+  }
+  
   /** Test getFull from memcache
    * @throws UnsupportedEncodingException
    */
@@ -125,7 +135,7 @@ public class TestHMemcache extends TestCase {
     addRows(this.hmemcache);
     for (int i = 0; i < ROW_COUNT; i++) {
       HStoreKey hsk = new HStoreKey(getRowName(i));
-      TreeMap<Text, byte []> all = new TreeMap<Text, byte[]>();
+      TreeMap<Text, Cell> all = new TreeMap<Text, Cell>();
       this.hmemcache.getFull(hsk, all);
       isExpectedRow(i, all);
     }
@@ -157,7 +167,7 @@ public class TestHMemcache extends TestCase {
       for(Map.Entry<Text, byte []> e: results.entrySet() ) {
         row.put(e.getKey(), e.getValue());
       }
-      isExpectedRow(i, row);
+      isExpectedRowWithoutTimestamps(i, row);
       // Clear out set.  Otherwise row results accumulate.
       results.clear();
     }

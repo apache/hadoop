@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
+import org.apache.hadoop.hbase.io.Cell;
 
 /**
  * Test compactions
@@ -101,9 +102,10 @@ public class TestCompaction extends HBaseTestCase {
     // Assert > 3 and then after compaction, assert that only 3 versions
     // available.
     addContent(new HRegionIncommon(r), COLUMN_FAMILY);
-    byte [][] bytes = this.r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);
+    Cell[] cellValues = 
+      r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);
     // Assert that I can get > 5 versions (Should be at least 5 in there).
-    assertTrue(bytes.length >= 5);
+    assertTrue(cellValues.length >= 5);
     // Try to run compaction concurrent with a thread flush just to see that
     // we can.
     final HRegion region = this.r;
@@ -142,36 +144,36 @@ public class TestCompaction extends HBaseTestCase {
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
     Text secondRow = new Text(secondRowBytes);
-    bytes = this.r.get(secondRow, COLUMN_FAMILY_TEXT, 100/*Too many*/);
-    LOG.info("Count of " + secondRow + ": " + bytes.length);
+    cellValues = r.get(secondRow, COLUMN_FAMILY_TEXT, 100/*Too many*/);
+    LOG.info("Count of " + secondRow + ": " + cellValues.length);
     // Commented out because fails on an hp+ubuntu single-processor w/ 1G and
     // "Intel(R) Pentium(R) 4 CPU 3.20GHz" though passes on all local
     // machines and even on hudson.  On said machine, its reporting in the
     // LOG line above that there are 3 items in row so it should pass the
     // below test.
-    assertTrue(bytes.length == 3 || bytes.length == 4);
+    assertTrue(cellValues.length == 3 || cellValues.length == 4);
 
     // Now add deletes to memcache and then flush it.  That will put us over
     // the compaction threshold of 3 store files.  Compacting these store files
     // should result in a compacted store file that has no references to the
     // deleted row.
-    this.r.deleteAll(STARTROW, COLUMN_FAMILY_TEXT, System.currentTimeMillis());
+    r.deleteAll(STARTROW, COLUMN_FAMILY_TEXT, System.currentTimeMillis());
     // Now, before compacting, remove all instances of the first row so can
     // verify that it is removed as we compact.
     // Assert all delted.
-    assertNull(this.r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/));
-    this.r.flushcache();
-    assertNull(this.r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/));
+    assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/));
+    r.flushcache();
+    assertNull(r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/));
     // Add a bit of data and flush it so we for sure have the compaction limit
     // for store files.  Usually by this time we will have but if compaction
     // included the flush that ran 'concurrently', there may be just the
     // compacted store and the flush above when we added deletes.  Add more
     // content to be certain.
     createSmallerStoreFile(this.r);
-    assertTrue(this.r.compactIfNeeded());
+    assertTrue(r.compactIfNeeded());
     // Assert that the first row is still deleted.
-    bytes = this.r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);
-    assertNull(bytes);
+    cellValues = r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);
+    assertNull(cellValues);
     // Assert the store files do not have the first record 'aaa' keys in them.
     for (MapFile.Reader reader:
         this.r.stores.get(COLUMN_FAMILY_TEXT_MINUS_COLON).getReaders()) {

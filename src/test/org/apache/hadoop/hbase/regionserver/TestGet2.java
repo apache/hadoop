@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
-
+import org.apache.hadoop.hbase.io.Cell;
 
 /**
  * {@link TestGet} is a medley of tests of get all done up as a single test.
@@ -127,14 +127,14 @@ public class TestGet2 extends HBaseTestCase {
       region_incommon.put(lockid, COLUMNS[0], "new text".getBytes());
       region_incommon.commit(lockid, right_now);
 
-      assertCellValueEquals(region, t, COLUMNS[0], right_now, "new text");
-      assertCellValueEquals(region, t, COLUMNS[0], one_second_ago, "old text");
+      assertCellEquals(region, t, COLUMNS[0], right_now, "new text");
+      assertCellEquals(region, t, COLUMNS[0], one_second_ago, "old text");
       
       // Force a flush so store files come into play.
       region_incommon.flushcache();
 
-      assertCellValueEquals(region, t, COLUMNS[0], right_now, "new text");
-      assertCellValueEquals(region, t, COLUMNS[0], one_second_ago, "old text");
+      assertCellEquals(region, t, COLUMNS[0], right_now, "new text");
+      assertCellEquals(region, t, COLUMNS[0], one_second_ago, "old text");
 
     } finally {
       if (region != null) {
@@ -186,33 +186,33 @@ public class TestGet2 extends HBaseTestCase {
       
       // try finding "015"
       Text t15 = new Text("015");
-      Map<Text, byte[]> results = 
+      Map<Text, Cell> results = 
         region.getClosestRowBefore(t15, HConstants.LATEST_TIMESTAMP);
-      assertEquals(new String(results.get(COLUMNS[0])), "t10 bytes");
+      assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t10 bytes");
 
       // try "020", we should get that row exactly
       results = region.getClosestRowBefore(t20, HConstants.LATEST_TIMESTAMP);
-      assertEquals(new String(results.get(COLUMNS[0])), "t20 bytes");
+      assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t20 bytes");
 
       // try "050", should get stuff from "040"
       Text t50 = new Text("050");
       results = region.getClosestRowBefore(t50, HConstants.LATEST_TIMESTAMP);
-      assertEquals(new String(results.get(COLUMNS[0])), "t40 bytes");
+      assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t40 bytes");
 
       // force a flush
       region.flushcache();
 
       // try finding "015"      
       results = region.getClosestRowBefore(t15, HConstants.LATEST_TIMESTAMP);
-      assertEquals(new String(results.get(COLUMNS[0])), "t10 bytes");
+      assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t10 bytes");
 
       // try "020", we should get that row exactly
       results = region.getClosestRowBefore(t20, HConstants.LATEST_TIMESTAMP);
-      assertEquals(new String(results.get(COLUMNS[0])), "t20 bytes");
+      assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t20 bytes");
 
       // try "050", should get stuff from "040"
       results = region.getClosestRowBefore(t50, HConstants.LATEST_TIMESTAMP);
-      assertEquals(new String(results.get(COLUMNS[0])), "t40 bytes");
+      assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t40 bytes");
     } finally {
       if (region != null) {
         try {
@@ -224,26 +224,18 @@ public class TestGet2 extends HBaseTestCase {
       }
     }
   }
-  
-  
-  private void assertCellValueEquals(final HRegion region, final Text row,
-    final Text column, final long timestamp, final String value)
-  throws IOException {
-    Map<Text, byte[]> result = region.getFull(row, timestamp);
-    assertEquals("cell value at a given timestamp", new String(result.get(column)), value);
-  }
-  
+    
   private void assertColumnsPresent(final HRegion r, final Text row)
   throws IOException {
-    Map<Text, byte[]> result = r.getFull(row);
+    Map<Text, Cell> result = r.getFull(row);
     int columnCount = 0;
-    for (Map.Entry<Text, byte[]> e: result.entrySet()) {
+    for (Map.Entry<Text, Cell> e: result.entrySet()) {
       columnCount++;
       String column = e.getKey().toString();
       boolean legitColumn = false;
       for (int i = 0; i < COLUMNS.length; i++) {
         // Assert value is same as row.  This is 'nature' of the data added.
-        assertTrue(row.equals(new Text(e.getValue())));
+        assertTrue(row.equals(new Text(e.getValue().getValue())));
         if (COLUMNS[i].equals(new Text(column))) {
           legitColumn = true;
           break;

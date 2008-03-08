@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.io.Cell;
 
 import org.mortbay.servlet.MultiPartResponse;
 import org.w3c.dom.Document;
@@ -133,7 +134,7 @@ public class TableHandler extends GenericHandler {
       // They want full row returned. 
 
       // Presumption is that this.table has already been focused on target table.
-      Map<Text, byte[]> result = timestampStr == null ? 
+      Map<Text, Cell> result = timestampStr == null ? 
         table.getRow(new Text(row)) 
         : table.getRow(new Text(row), Long.parseLong(timestampStr));
         
@@ -145,15 +146,13 @@ public class TableHandler extends GenericHandler {
           outputRowXml(response, result);
           break;
         case MIME:
-          outputRowMime(response, result);
-          break;
         default:
           doNotAcceptable(response, "Unsupported Accept Header Content: " +
             request.getHeader(CONTENT_TYPE));
         }
       }
     } else {
-      Map<Text, byte[]> prefiltered_result = table.getRow(new Text(row));
+      Map<Text, Cell> prefiltered_result = table.getRow(new Text(row));
     
       if (prefiltered_result == null || prefiltered_result.size() == 0) {
         doNotFound(response, "Row not found!");
@@ -166,10 +165,12 @@ public class TableHandler extends GenericHandler {
         }
   
         // output map that will contain the filtered results
-        Map<Text, byte[]> m = new HashMap<Text, byte[]>();
+        Map<Text, Cell> m = new HashMap<Text, Cell>();
 
         // get an array of all the columns retrieved
-        Object[] columns_retrieved = prefiltered_result.keySet().toArray();
+        Text[] columns_retrieved = 
+          prefiltered_result.keySet().toArray(
+            new Text[prefiltered_result.keySet().size()]);
 
         // copy over those cells with requested column names
         for(int i = 0; i < columns_retrieved.length; i++){
@@ -184,8 +185,6 @@ public class TableHandler extends GenericHandler {
             outputRowXml(response, m);
             break;
           case MIME:
-            outputRowMime(response, m);
-            break;
           default:
             doNotAcceptable(response, "Unsupported Accept Header Content: " +
               request.getHeader(CONTENT_TYPE));
@@ -201,13 +200,17 @@ public class TableHandler extends GenericHandler {
    * @throws IOException
    */
   private void outputRowXml(final HttpServletResponse response,
-      final Map<Text, byte[]> result)
+      final Map<Text, Cell> result)
   throws IOException {
     setResponseHeader(response, result.size() > 0? 200: 204,
         ContentType.XML.toString());
     XMLOutputter outputter = getXMLOutputter(response.getWriter());
     outputter.startTag(ROW);
-    outputColumnsXml(outputter, result);
+    HashMap<Text, byte[]> converted = new HashMap<Text, byte[]>();
+    for (Map.Entry<Text, Cell> entry : result.entrySet()) {
+      converted.put(entry.getKey(), entry.getValue().getValue());
+    }
+    outputColumnsXml(outputter, converted);
     outputter.endTag();
     outputter.endDocument();
     outputter.getWriter().close();
@@ -218,23 +221,23 @@ public class TableHandler extends GenericHandler {
    * @param result
    * Output the results contained in result as a multipart/related response.
    */
-  private void outputRowMime(final HttpServletResponse response,
-      final Map<Text, byte[]> result)
-  throws IOException {
-    response.setStatus(result.size() > 0? 200: 204);
-    // This code ties me to the jetty server.
-    MultiPartResponse mpr = new MultiPartResponse(response);
-    // Content type should look like this for multipart:
-    // Content-type: multipart/related;start="<rootpart*94ebf1e6-7eb5-43f1-85f4-2615fc40c5d6@example.jaxws.sun.com>";type="application/xop+xml";boundary="uuid:94ebf1e6-7eb5-43f1-85f4-2615fc40c5d6";start-info="text/xml"
-    String ct = ContentType.MIME.toString() + ";charset=\"UTF-8\";boundary=\"" +
-      mpr.getBoundary() + "\"";
-    // Setting content type is broken.  I'm unable to set parameters on the
-    // content-type; They get stripped.  Can't set boundary, etc.
-    // response.addHeader("Content-Type", ct);
-    response.setContentType(ct);
-    outputColumnsMime(mpr, result);
-    mpr.close();
-  }
+  // private void outputRowMime(final HttpServletResponse response,
+  //     final Map<Text, Cell> result)
+  // throws IOException {
+  //   response.setStatus(result.size() > 0? 200: 204);
+  //   // This code ties me to the jetty server.
+  //   MultiPartResponse mpr = new MultiPartResponse(response);
+  //   // Content type should look like this for multipart:
+  //   // Content-type: multipart/related;start="<rootpart*94ebf1e6-7eb5-43f1-85f4-2615fc40c5d6@example.jaxws.sun.com>";type="application/xop+xml";boundary="uuid:94ebf1e6-7eb5-43f1-85f4-2615fc40c5d6";start-info="text/xml"
+  //   String ct = ContentType.MIME.toString() + ";charset=\"UTF-8\";boundary=\"" +
+  //     mpr.getBoundary() + "\"";
+  //   // Setting content type is broken.  I'm unable to set parameters on the
+  //   // content-type; They get stripped.  Can't set boundary, etc.
+  //   // response.addHeader("Content-Type", ct);
+  //   response.setContentType(ct);
+  //   outputColumnsMime(mpr, result);
+  //   mpr.close();
+  // }
   
   /*
    * @param request

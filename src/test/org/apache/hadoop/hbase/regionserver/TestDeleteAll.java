@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
+import org.apache.hadoop.hbase.io.Cell;
 
 /**
  * Test the functionality of deleteAll.
@@ -120,40 +121,23 @@ public class TestDeleteAll extends HBaseTestCase {
     // call delete all at a timestamp, make sure only the most recent stuff is left behind
     region.deleteAll(row, t1);
     if (flush) {region_incommon.flushcache();}    
-    assertCellValueEquals(region, row, colA, t0, cellData(0, flush));
-    assertCellValueEquals(region, row, colA, t1, null);
-    assertCellValueEquals(region, row, colA, t2, null);
-    assertCellValueEquals(region, row, colD, t0, cellData(0, flush));
-    assertCellValueEquals(region, row, colD, t1, null);
-    assertCellValueEquals(region, row, colD, t2, null);
+    assertCellEquals(region, row, colA, t0, cellData(0, flush));
+    assertCellEquals(region, row, colA, t1, null);
+    assertCellEquals(region, row, colA, t2, null);
+    assertCellEquals(region, row, colD, t0, cellData(0, flush));
+    assertCellEquals(region, row, colD, t1, null);
+    assertCellEquals(region, row, colD, t2, null);
 
     // call delete all w/o a timestamp, make sure nothing is left.
     region.deleteAll(row, HConstants.LATEST_TIMESTAMP);
     if (flush) {region_incommon.flushcache();}    
-    assertCellValueEquals(region, row, colA, t0, null);
-    assertCellValueEquals(region, row, colA, t1, null);
-    assertCellValueEquals(region, row, colA, t2, null);
-    assertCellValueEquals(region, row, colD, t0, null);
-    assertCellValueEquals(region, row, colD, t1, null);
-    assertCellValueEquals(region, row, colD, t2, null);
+    assertCellEquals(region, row, colA, t0, null);
+    assertCellEquals(region, row, colA, t1, null);
+    assertCellEquals(region, row, colA, t2, null);
+    assertCellEquals(region, row, colD, t0, null);
+    assertCellEquals(region, row, colD, t1, null);
+    assertCellEquals(region, row, colD, t2, null);
     
-  }
-  
-  private void assertCellValueEquals(final HRegion region, final Text row,
-    final Text column, final long timestamp, final String value)
-  throws IOException {
-    Map<Text, byte[]> result = region.getFull(row, timestamp);
-    byte[] cell_value = result.get(column);
-    if(value == null){
-      assertEquals(column.toString() + " at timestamp " + timestamp, null, cell_value);
-    } else {
-      if (cell_value == null) {
-        fail(column.toString() + " at timestamp " + timestamp + 
-          "\" was expected to be \"" + value + " but was null");
-      }
-      assertEquals(column.toString() + " at timestamp " 
-        + timestamp, value, new String(cell_value));
-    }
   }
   
   private String cellData(int tsNum, boolean flush){

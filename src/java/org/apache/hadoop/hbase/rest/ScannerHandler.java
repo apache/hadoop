@@ -154,7 +154,8 @@ public class ScannerHandler extends GenericHandler {
           outputScannerEntryXML(response, sr);
           break;
         case MIME:
-          outputScannerEntryMime(response, sr);
+/*          outputScannerEntryMime(response, sr);*/
+          doNotAcceptable(response);
           break;
         default:
           doNotAcceptable(response);
@@ -199,48 +200,48 @@ public class ScannerHandler extends GenericHandler {
     outputter.getWriter().close();
   }
 
-  private void outputScannerEntryMime(final HttpServletResponse response,
-    final ScannerRecord sr)
-  throws IOException {
-    response.setStatus(200);
-    // This code ties me to the jetty server.
-    MultiPartResponse mpr = new MultiPartResponse(response);
-    // Content type should look like this for multipart:
-    // Content-type: multipart/related;start="<rootpart*94ebf1e6-7eb5-43f1-85f4-2615fc40c5d6@example.jaxws.sun.com>";type="application/xop+xml";boundary="uuid:94ebf1e6-7eb5-43f1-85f4-2615fc40c5d6";start-info="text/xml"
-    String ct = ContentType.MIME.toString() + ";charset=\"UTF-8\";boundary=\"" +
-      mpr.getBoundary() + "\"";
-    // Setting content type is broken.  I'm unable to set parameters on the
-    // content-type; They get stripped.  Can't set boundary, etc.
-    // response.addHeader("Content-Type", ct);
-    response.setContentType(ct);
-    // Write row, key-column and timestamp each in its own part.
-    mpr.startPart("application/octet-stream",
-        new String [] {"Content-Description: row",
-          "Content-Transfer-Encoding: binary",
-          "Content-Length: " + sr.getKey().getRow().getBytes().length});
-    mpr.getOut().write(sr.getKey().getRow().getBytes());
-
-    // Usually key-column is empty when scanning.
-    if (sr.getKey().getColumn() != null &&
-        sr.getKey().getColumn().getLength() > 0) {
-      mpr.startPart("application/octet-stream",
-        new String [] {"Content-Description: key-column",
-          "Content-Transfer-Encoding: binary",
-          "Content-Length: " + sr.getKey().getColumn().getBytes().length});
-    }
-    mpr.getOut().write(sr.getKey().getColumn().getBytes());
-    // TODO: Fix. Need to write out the timestamp in the ordained timestamp
-    // format.
-    byte [] timestampBytes = Long.toString(sr.getKey().getTimestamp()).getBytes();
-    mpr.startPart("application/octet-stream",
-        new String [] {"Content-Description: timestamp",
-          "Content-Transfer-Encoding: binary",
-          "Content-Length: " + timestampBytes.length});
-    mpr.getOut().write(timestampBytes);
-    // Write out columns
-    outputColumnsMime(mpr, sr.getValue());
-    mpr.close();
-  }
+  // private void outputScannerEntryMime(final HttpServletResponse response,
+  //   final ScannerRecord sr)
+  // throws IOException {
+  //   response.setStatus(200);
+  //   // This code ties me to the jetty server.
+  //   MultiPartResponse mpr = new MultiPartResponse(response);
+  //   // Content type should look like this for multipart:
+  //   // Content-type: multipart/related;start="<rootpart*94ebf1e6-7eb5-43f1-85f4-2615fc40c5d6@example.jaxws.sun.com>";type="application/xop+xml";boundary="uuid:94ebf1e6-7eb5-43f1-85f4-2615fc40c5d6";start-info="text/xml"
+  //   String ct = ContentType.MIME.toString() + ";charset=\"UTF-8\";boundary=\"" +
+  //     mpr.getBoundary() + "\"";
+  //   // Setting content type is broken.  I'm unable to set parameters on the
+  //   // content-type; They get stripped.  Can't set boundary, etc.
+  //   // response.addHeader("Content-Type", ct);
+  //   response.setContentType(ct);
+  //   // Write row, key-column and timestamp each in its own part.
+  //   mpr.startPart("application/octet-stream",
+  //       new String [] {"Content-Description: row",
+  //         "Content-Transfer-Encoding: binary",
+  //         "Content-Length: " + sr.getKey().getRow().getBytes().length});
+  //   mpr.getOut().write(sr.getKey().getRow().getBytes());
+  // 
+  //   // Usually key-column is empty when scanning.
+  //   if (sr.getKey().getColumn() != null &&
+  //       sr.getKey().getColumn().getLength() > 0) {
+  //     mpr.startPart("application/octet-stream",
+  //       new String [] {"Content-Description: key-column",
+  //         "Content-Transfer-Encoding: binary",
+  //         "Content-Length: " + sr.getKey().getColumn().getBytes().length});
+  //   }
+  //   mpr.getOut().write(sr.getKey().getColumn().getBytes());
+  //   // TODO: Fix. Need to write out the timestamp in the ordained timestamp
+  //   // format.
+  //   byte [] timestampBytes = Long.toString(sr.getKey().getTimestamp()).getBytes();
+  //   mpr.startPart("application/octet-stream",
+  //       new String [] {"Content-Description: timestamp",
+  //         "Content-Transfer-Encoding: binary",
+  //         "Content-Length: " + timestampBytes.length});
+  //   mpr.getOut().write(timestampBytes);
+  //   // Write out columns
+  //   outputColumnsMime(mpr, sr.getValue());
+  //   mpr.close();
+  // }
   
   /*
    * Create scanner

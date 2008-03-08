@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
+import org.apache.hadoop.hbase.io.Cell;
 
 /**
  * {@Link TestHRegion} does a split but this TestCase adds testing of fast
@@ -182,10 +183,10 @@ public class TestSplit extends MultiRegionTable {
   private void assertGet(final HRegion r, final String family, final Text k)
   throws IOException {
     // Now I have k, get values out and assert they are as expected.
-    byte [][] results = r.get(k, new Text(family),
+    Cell[] results = r.get(k, new Text(family),
       Integer.MAX_VALUE);
     for (int j = 0; j < results.length; j++) {
-      Text tmp = new Text(results[j]);
+      Text tmp = new Text(results[j].getValue());
       // Row should be equal to value every time.
       assertEquals(k.toString(), tmp.toString());
     }

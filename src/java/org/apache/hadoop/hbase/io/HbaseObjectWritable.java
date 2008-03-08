@@ -43,6 +43,7 @@ import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.hbase.io.Cell;
 
 /** 
  * This is a customized version of the polymorphic hadoop
@@ -108,9 +109,14 @@ public class HbaseObjectWritable implements Writable, Configurable {
     addToMap(HRegionInfo.class, code++);
     addToMap(BatchUpdate.class, code++);
     addToMap(HServerAddress.class, code++);
-    addToMap(HRegionInfo.class, code++);
     try {
       addToMap(Class.forName("[Lorg.apache.hadoop.hbase.HMsg;"), code++);
+    } catch (ClassNotFoundException e) {
+      e.printStackTrace();
+    }
+    addToMap(Cell.class, code++);
+    try {
+      addToMap(Class.forName("[Lorg.apache.hadoop.hbase.io.Cell;"), code++);
     } catch (ClassNotFoundException e) {
       e.printStackTrace();
     }

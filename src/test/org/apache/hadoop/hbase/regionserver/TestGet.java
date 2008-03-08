@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
-
+import org.apache.hadoop.hbase.io.Cell;
 
 /** Test case for get */
 public class TestGet extends HBaseTestCase {
@@ -53,7 +53,7 @@ public class TestGet extends HBaseTestCase {
   private void verifyGet(final HRegionIncommon r, final String expectedServer)
   throws IOException {
     // This should return a value because there is only one family member
-    byte [] value = r.get(ROW_KEY, CONTENTS);
+    Cell value = r.get(ROW_KEY, CONTENTS);
     assertNotNull(value);
     
     // This should not return a value because there are multiple family members
@@ -61,13 +61,13 @@ public class TestGet extends HBaseTestCase {
     assertNull(value);
     
     // Find out what getFull returns
-    Map<Text, byte []> values = r.getFull(ROW_KEY);
+    Map<Text, Cell> values = r.getFull(ROW_KEY);
     
     // assertEquals(4, values.keySet().size());
     for(Iterator<Text> i = values.keySet().iterator(); i.hasNext(); ) {
       Text column = i.next();
       if (column.equals(HConstants.COL_SERVER)) {
-        String server = Writables.bytesToString(values.get(column));
+        String server = Writables.bytesToString(values.get(column).getValue());
         assertEquals(expectedServer, server);
         LOG.info(server);
       }

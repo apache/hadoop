@@ -426,7 +426,8 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     t.put(lockid, HConstants.COL_STARTCODE, Writables.longToBytes(startCode));
     t.commit(lockid);
     // Assert added.
-    byte [] bytes = t.get(region.getRegionName(), HConstants.COL_REGIONINFO);
+    byte [] bytes = 
+      t.get(region.getRegionName(), HConstants.COL_REGIONINFO).getValue();
     HRegionInfo hri = Writables.getHRegionInfo(bytes);
     assertEquals(region.getRegionId(), hri.getRegionId());
     if (LOG.isDebugEnabled()) {

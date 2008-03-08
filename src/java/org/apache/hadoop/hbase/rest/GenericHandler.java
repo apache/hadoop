@@ -38,6 +38,8 @@ import org.znerd.xmlenc.LineBreak;
 import org.znerd.xmlenc.XMLOutputter;
 
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.io.Cell;
+
 /**
  * GenericHandler contains some basic common stuff that all the individual
  * REST handler types take advantage of.
@@ -226,7 +228,7 @@ public abstract class GenericHandler {
    * @throws IOException
    */
   protected void outputColumnsXml(final XMLOutputter outputter,
-      final Map<Text, byte[]> m)
+    final Map<Text, byte[]> m)
   throws IllegalStateException, IllegalArgumentException, IOException {
     for (Map.Entry<Text, byte[]> e: m.entrySet()) {
       outputter.startTag(COLUMN);
@@ -239,18 +241,19 @@ public abstract class GenericHandler {
       outputter.endTag();
     }
   }
- 
-  protected void outputColumnsMime(final MultiPartResponse mpr,
-      final Map<Text, byte[]> m)
-  throws IOException {
-    for (Map.Entry<Text, byte[]> e: m.entrySet()) {
-      mpr.startPart("application/octet-stream",
-        new String [] {"Content-Description: " + e.getKey().toString(),
-          "Content-Transfer-Encoding: binary",
-          "Content-Length: " + e.getValue().length});
-      mpr.getOut().write(e.getValue());
-    }  
-  }
+
+//  Commented - multipart support is currently nonexistant.
+//  protected void outputColumnsMime(final MultiPartResponse mpr,
+//     final Map<Text, Cell> m)
+//   throws IOException {
+//     for (Map.Entry<Text, Cell> e: m.entrySet()) {
+//       mpr.startPart("application/octet-stream",
+//         new String [] {"Content-Description: " + e.getKey().toString(),
+//           "Content-Transfer-Encoding: binary",
+//           "Content-Length: " + e.getValue().getValue().length});
+//       mpr.getOut().write(e.getValue().getValue());
+//     }  
+//   }
  
   /*
    * Get an HTable instance by it's table name.

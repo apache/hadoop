@@ -115,7 +115,7 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
       Text rowlabel = new Text("row_" + k);
 
-      byte bodydata[] = table.get(rowlabel, CONTENTS_BASIC);
+      byte bodydata[] = table.get(rowlabel, CONTENTS_BASIC).getValue();
       assertNotNull("no data for row " + rowlabel + "/" + CONTENTS_BASIC,
           bodydata);
       String bodystr = new String(bodydata, HConstants.UTF8_ENCODING);
@@ -125,7 +125,7 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
           bodystr + "'", teststr.compareTo(bodystr) == 0);
       
       collabel = new Text(ANCHORNUM + k);
-      bodydata = table.get(rowlabel, collabel);
+      bodydata = table.get(rowlabel, collabel).getValue();
       assertNotNull("no data for row " + rowlabel + "/" + collabel, bodydata);
       bodystr = new String(bodydata, HConstants.UTF8_ENCODING);
       teststr = ANCHORSTR + k;

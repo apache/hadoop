@@ -137,7 +137,7 @@ public class TestScanner extends HBaseTestCase {
 
   /** Use get to retrieve the HRegionInfo and validate it */
   private void getRegionInfo() throws IOException {
-    byte [] bytes = region.get(ROW_KEY, HConstants.COL_REGIONINFO);
+    byte [] bytes = region.get(ROW_KEY, HConstants.COL_REGIONINFO).getValue();
     validateRegionInfo(bytes);  
   }
  

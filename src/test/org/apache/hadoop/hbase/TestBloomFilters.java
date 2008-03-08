@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 
@@ -206,10 +207,10 @@ public class TestBloomFilters extends HBaseClusterTestCase {
 
     
     for(int i = 0; i < testKeys.length; i++) {
-      byte[] value = table.get(testKeys[i], CONTENTS);
-      if(value != null && value.length != 0) {
+      Cell value = table.get(testKeys[i], CONTENTS);
+      if(value != null && value.getValue().length != 0) {
         LOG.info("non existant key: " + testKeys[i] + " returned value: " +
-            new String(value, HConstants.UTF8_ENCODING));
+            new String(value.getValue(), HConstants.UTF8_ENCODING));
       }
     }
   }
@@ -271,10 +272,10 @@ public class TestBloomFilters extends HBaseClusterTestCase {
     }
     
     for(int i = 0; i < testKeys.length; i++) {
-      byte[] value = table.get(testKeys[i], CONTENTS);
-      if(value != null && value.length != 0) {
+      Cell value = table.get(testKeys[i], CONTENTS);
+      if(value != null && value.getValue().length != 0) {
         LOG.info("non existant key: " + testKeys[i] + " returned value: " +
-            new String(value, HConstants.UTF8_ENCODING));
+            new String(value.getValue(), HConstants.UTF8_ENCODING));
       }
     }
   }

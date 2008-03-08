@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.io.Cell;
 
 /**
  * Tests user specifiable time stamps putting, getting and scanning.  Also
@@ -195,9 +196,9 @@ public class TestTimestamp extends HBaseTestCase {
   private void assertOnlyLatest(final Incommon incommon,
       final long currentTime)
   throws IOException {
-    byte [][] bytesBytes = incommon.get(ROW, COLUMN, 3/*Ask for too much*/);
-    assertEquals(1, bytesBytes.length);
-    long time = Writables.bytesToLong(bytesBytes[0]);
+    Cell[] cellValues = incommon.get(ROW, COLUMN, 3/*Ask for too much*/);
+    assertEquals(1, cellValues.length);
+    long time = Writables.bytesToLong(cellValues[0].getValue());
     assertEquals(time, currentTime);
     assertNull(incommon.get(ROW, COLUMN, T1, 3 /*Too many*/));
     assertTrue(assertScanContentTimestamp(incommon, T1) == 0);
@@ -214,20 +215,20 @@ public class TestTimestamp extends HBaseTestCase {
   private void assertVersions(final Incommon incommon, final long [] tss)
   throws IOException {
     // Assert that 'latest' is what we expect.
-    byte [] bytes = incommon.get(ROW, COLUMN);
+    byte [] bytes = incommon.get(ROW, COLUMN).getValue();
     assertEquals(Writables.bytesToLong(bytes), tss[0]);
     // Now assert that if we ask for multiple versions, that they come out in
     // order.
-    byte [][] bytesBytes = incommon.get(ROW, COLUMN, tss.length);
-    assertEquals(tss.length, bytesBytes.length);
-    for (int i = 0; i < bytesBytes.length; i++) {
-      long ts = Writables.bytesToLong(bytesBytes[i]);
+    Cell[] cellValues = incommon.get(ROW, COLUMN, tss.length);
+    assertEquals(tss.length, cellValues.length);
+    for (int i = 0; i < cellValues.length; i++) {
+      long ts = Writables.bytesToLong(cellValues[i].getValue());
       assertEquals(ts, tss[i]);
     }
     // Specify a timestamp get multiple versions.
-    bytesBytes = incommon.get(ROW, COLUMN, tss[0], bytesBytes.length - 1);
-    for (int i = 1; i < bytesBytes.length; i++) {
-      long ts = Writables.bytesToLong(bytesBytes[i]);
+    cellValues = incommon.get(ROW, COLUMN, tss[0], cellValues.length - 1);
+    for (int i = 1; i < cellValues.length; i++) {
+      long ts = Writables.bytesToLong(cellValues[i].getValue());
       assertEquals(ts, tss[i]);
     }
     // Test scanner returns expected version

@@ -149,7 +149,7 @@ implements RegionUnavailableListener {
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
       Text rowlabel = new Text("row_" + k);
 
-      byte [] bodydata = region.get(rowlabel, CONTENTS_BASIC);
+      byte [] bodydata = region.get(rowlabel, CONTENTS_BASIC).getValue();
       assertNotNull(bodydata);
       String bodystr = new String(bodydata, HConstants.UTF8_ENCODING).trim();
       String teststr = CONTENTSTR + k;
@@ -157,7 +157,7 @@ implements RegionUnavailableListener {
           + "), expected: '" + teststr + "' got: '" + bodystr + "'",
           bodystr, teststr);
       collabel = new Text(ANCHORNUM + k);
-      bodydata = region.get(rowlabel, collabel);
+      bodydata = region.get(rowlabel, collabel).getValue();
       bodystr = new String(bodydata, HConstants.UTF8_ENCODING).trim();
       teststr = ANCHORSTR + k;
       assertEquals("Incorrect value for key: (" + rowlabel + "," + collabel

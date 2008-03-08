@@ -35,6 +35,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.io.Cell;
 
 /**
  * A Writable Map.
@@ -59,6 +60,7 @@ public class HbaseMapWritable implements Map<Writable, Writable>, Writable,
     addToMap(HStoreKey.class, code++);
     addToMap(ImmutableBytesWritable.class, code++);
     addToMap(Text.class, code++);
+    addToMap(Cell.class, code++);
   }
 
   @SuppressWarnings("boxing")
@@ -124,6 +126,14 @@ public class HbaseMapWritable implements Map<Writable, Writable>, Writable,
   /** {@inheritDoc} */
   @SuppressWarnings("unchecked")
   public Writable put(Writable key, Writable value) {
+    if (!CLASS_TO_CODE.containsKey(key.getClass())) {
+      throw new NullPointerException("Unsupported class " + 
+        key.getClass() + " cannot be used as a key.");
+    }
+    if (!CLASS_TO_CODE.containsKey(value.getClass())) {
+      throw new NullPointerException("Unsupported class " + 
+        value.getClass() + " cannot be used as a value.");
+    }
     return instance.put(key, value);
   }
 

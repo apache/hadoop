@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.io.Cell;
 
 /**
  * Selects values from tables.
@@ -113,7 +114,7 @@ public class SelectCommand extends BasicCommand {
     try {
       if (version != 0) {
         // A number of versions has been specified.
-        byte[][] result = null;
+        Cell[] result = null;
         ParsedColumns parsedColumns = getColumns(admin, false);
         boolean multiple = parsedColumns.isMultiple() || version > 1;
         for (Text column : parsedColumns.getColumns()) {
@@ -128,15 +129,15 @@ public class SelectCommand extends BasicCommand {
           for (int ii = 0; result != null && ii < result.length; ii++) {
             if (multiple) {
               formatter.row(new String[] { column.toString(),
-                  toString(column, result[ii]) });
+                toString(column, result[ii].getValue()) });
             } else {
-              formatter.row(new String[] { toString(column, result[ii]) });
+              formatter.row(new String[] { toString(column, result[ii].getValue()) });
             }
             count++;
           }
         }
       } else {
-        for (Map.Entry<Text, byte[]> e : table.getRow(rowKey).entrySet()) {
+        for (Map.Entry<Text, Cell> e : table.getRow(rowKey).entrySet()) {
           if (count == 0) {
             formatter.header(isMultiple() ? HEADER_COLUMN_CELL : null);
           }
@@ -145,7 +146,7 @@ public class SelectCommand extends BasicCommand {
           if (!columns.contains(ASTERISK) && !columns.contains(keyStr)) {
             continue;
           }
-          String cellData = toString(key, e.getValue());
+          String cellData = toString(key, e.getValue().getValue());
           if (isMultiple()) {
             formatter.row(new String[] { key.toString(), cellData });
           } else {

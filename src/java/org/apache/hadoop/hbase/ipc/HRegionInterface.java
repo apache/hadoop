@@ -23,6 +23,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
 
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.Text;
@@ -35,7 +36,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
  */
 public interface HRegionInterface extends VersionedProtocol {
   /** initial version */
-  public static final long versionID = 1L;
+  public static final long versionID = 2L;
 
   /** 
    * Get metainfo about an HRegion
@@ -57,7 +58,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return alue for that region/row/column
    * @throws IOException
    */
-  public byte [] get(final Text regionName, final Text row, final Text column)
+  public Cell get(final Text regionName, final Text row, final Text column)
   throws IOException;
 
   /**
@@ -70,7 +71,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return array of values
    * @throws IOException
    */
-  public byte [][] get(final Text regionName, final Text row,
+  public Cell[] get(final Text regionName, final Text row,
     final Text column, final int numVersions)
   throws IOException;
   
@@ -86,8 +87,8 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return array of values
    * @throws IOException
    */
-  public byte [][] get(final Text regionName, final Text row,
-      final Text column, final long timestamp, final int numVersions)
+  public Cell[] get(final Text regionName, final Text row,
+    final Text column, final long timestamp, final int numVersions)
   throws IOException;
   
   /**

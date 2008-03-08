@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.thrift.generated.RegionDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.ScanEntry;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.io.Cell;
 
 import com.facebook.thrift.TException;
 import com.facebook.thrift.protocol.TBinaryProtocol;
@@ -84,7 +85,7 @@ public class ThriftServer {
      *          name of table
      * @return HTable object
      * @throws IOException
-     * @throws IOException
+     * @throws IOError
      */
     protected HTable getTable(final byte[] tableName) throws IOError,
         IOException {
@@ -144,6 +145,7 @@ public class ThriftServer {
      *          UTF-8 encoded bytes
      * @return Text object
      * @throws IllegalArgument
+     * @throws IOError     
      */
     Text getText(byte[] buf) throws IOError {
       try {
@@ -200,11 +202,11 @@ public class ThriftServer {
       }
       try {
         HTable table = getTable(tableName);
-        byte[] value = table.get(getText(row), getText(column));
+        Cell value = table.get(getText(row), getText(column));
         if (value == null) {
           throw new NotFound();
         }
-        return value;
+        return value.getValue();
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -219,11 +221,16 @@ public class ThriftServer {
       }
       try {
         HTable table = getTable(tableName);
-        byte[][] values = table.get(getText(row), getText(column), numVersions);
+        Cell[] values = 
+          table.get(getText(row), getText(column), numVersions);
         if (values == null) {
           throw new NotFound();
         }
-        return new ArrayList<byte[]>(Arrays.asList(values));
+        ArrayList<byte[]> list = new ArrayList<byte[]>();
+        for (int i = 0; i < values.length; i++) {
+          list.add(values[i].getValue());
+        }
+        return list;
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -239,12 +246,16 @@ public class ThriftServer {
       }
       try {
         HTable table = getTable(tableName);
-        byte[][] values = table.get(getText(row), getText(column), timestamp,
-            numVersions);
+        Cell[] values = table.get(getText(row), 
+          getText(column), timestamp, numVersions);
         if (values == null) {
           throw new NotFound();
         }
-        return new ArrayList<byte[]>(Arrays.asList(values));
+        ArrayList<byte[]> list = new ArrayList<byte[]>();
+        for (int i = 0; i < values.length; i++) {
+          list.add(values[i].getValue());
+        }
+        return list;
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       }
@@ -263,11 +274,12 @@ public class ThriftServer {
       }
       try {
         HTable table = getTable(tableName);
-        SortedMap<Text, byte[]> values = table.getRow(getText(row), timestamp);
+        SortedMap<Text, Cell> values = 
+          table.getRow(getText(row), timestamp);
         // copy the map from type <Text, byte[]> to <byte[], byte[]>
         HashMap<byte[], byte[]> returnValues = new HashMap<byte[], byte[]>();
-        for (Entry<Text, byte[]> e : values.entrySet()) {
-          returnValues.put(e.getKey().getBytes(), e.getValue());
+        for (Entry<Text, Cell> e : values.entrySet()) {
+          returnValues.put(e.getKey().getBytes(), e.getValue().getValue());
         }
         return returnValues;
       } catch (IOException e) {

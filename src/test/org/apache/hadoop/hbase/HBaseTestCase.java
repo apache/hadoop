@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
-
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 
 /**
@@ -340,7 +340,7 @@ public abstract class HBaseTestCase extends TestCase {
      * @return value for row/column pair
      * @throws IOException
      */
-    public byte [] get(Text row, Text column) throws IOException;
+    public Cell get(Text row, Text column) throws IOException;
     /**
      * @param row
      * @param column
@@ -348,7 +348,7 @@ public abstract class HBaseTestCase extends TestCase {
      * @return value for row/column pair for number of versions requested
      * @throws IOException
      */
-    public byte [][] get(Text row, Text column, int versions) throws IOException;
+    public Cell[] get(Text row, Text column, int versions) throws IOException;
     /**
      * @param row
      * @param column
@@ -357,7 +357,7 @@ public abstract class HBaseTestCase extends TestCase {
      * @return value for row/column/timestamp tuple for number of versions
      * @throws IOException
      */
-    public byte [][] get(Text row, Text column, long ts, int versions)
+    public Cell[] get(Text row, Text column, long ts, int versions)
     throws IOException;
     /**
      * @param lockid
@@ -478,16 +478,16 @@ public abstract class HBaseTestCase extends TestCase {
       return this.region.getScanner(columns, firstRow, ts, null);
     }
     /** {@inheritDoc} */
-    public byte[] get(Text row, Text column) throws IOException {
+    public Cell get(Text row, Text column) throws IOException {
       return this.region.get(row, column);
     }
     /** {@inheritDoc} */
-    public byte[][] get(Text row, Text column, int versions) throws IOException {
+    public Cell[] get(Text row, Text column, int versions) throws IOException {
       return this.region.get(row, column, versions);
     }
     /** {@inheritDoc} */
-    public byte[][] get(Text row, Text column, long ts, int versions)
-        throws IOException {
+    public Cell[] get(Text row, Text column, long ts, int versions)
+    throws IOException {
       return this.region.get(row, column, ts, versions);
     }
     /**
@@ -495,7 +495,7 @@ public abstract class HBaseTestCase extends TestCase {
      * @return values for each column in the specified row
      * @throws IOException
      */
-    public Map<Text, byte []> getFull(Text row) throws IOException {
+    public Map<Text, Cell> getFull(Text row) throws IOException {
       return region.getFull(row);
     }
     /** {@inheritDoc} */
@@ -550,17 +550,34 @@ public abstract class HBaseTestCase extends TestCase {
       return this.table.obtainScanner(columns, firstRow, ts, null);
     }
     /** {@inheritDoc} */
-    public byte[] get(Text row, Text column) throws IOException {
+    public Cell get(Text row, Text column) throws IOException {
       return this.table.get(row, column);
     }
     /** {@inheritDoc} */
-    public byte[][] get(Text row, Text column, int versions) throws IOException {
+    public Cell[] get(Text row, Text column, int versions) throws IOException {
       return this.table.get(row, column, versions);
     }
     /** {@inheritDoc} */
-    public byte[][] get(Text row, Text column, long ts, int versions)
+    public Cell[] get(Text row, Text column, long ts, int versions)
     throws IOException {
       return this.table.get(row, column, ts, versions);
+    }
+  }
+  
+  protected void assertCellEquals(final HRegion region, final Text row,
+    final Text column, final long timestamp, final String value)
+  throws IOException {
+    Map<Text, Cell> result = region.getFull(row, timestamp);
+    Cell cell_value = result.get(column);
+    if(value == null){
+      assertEquals(column.toString() + " at timestamp " + timestamp, null, cell_value);
+    } else {
+      if (cell_value == null) {
+        fail(column.toString() + " at timestamp " + timestamp + 
+          "\" was expected to be \"" + value + " but was null");
+      }
+      assertEquals(column.toString() + " at timestamp " 
+        + timestamp, value, new String(cell_value.getValue()));
     }
   }
 }

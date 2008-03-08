@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
@@ -905,14 +906,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public byte [] get(final Text regionName, final Text row,
-      final Text column) throws IOException {
-
+  public Cell get(final Text regionName, final Text row, final Text column) 
+  throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
     try {
-      return getRegion(regionName).get(row, column);
-      
+      return getRegion(regionName).get(row, column);      
     } catch (IOException e) {
       checkFileSystem();
       throw e;
@@ -920,14 +919,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public byte [][] get(final Text regionName, final Text row,
-      final Text column, final int numVersions) throws IOException {
-
+  public Cell[] get(final Text regionName, final Text row,
+    final Text column, final int numVersions) 
+  throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
     try {
       return getRegion(regionName).get(row, column, numVersions);
-      
     } catch (IOException e) {
       checkFileSystem();
       throw e;
@@ -935,14 +933,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public byte [][] get(final Text regionName, final Text row, final Text column, 
-      final long timestamp, final int numVersions) throws IOException {
-
+  public Cell[] get(final Text regionName, final Text row, final Text column, 
+    final long timestamp, final int numVersions) 
+  throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
     try {
       return getRegion(regionName).get(row, column, timestamp, numVersions);
-      
     } catch (IOException e) {
       checkFileSystem();
       throw e;
@@ -951,26 +948,23 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /** {@inheritDoc} */
   public HbaseMapWritable getRow(final Text regionName, final Text row)
-    throws IOException {
+  throws IOException {
     return getRow(regionName, row, HConstants.LATEST_TIMESTAMP);
   }
 
   /** {@inheritDoc} */
   public HbaseMapWritable getRow(final Text regionName, final Text row, final long ts)
-    throws IOException {
-
+  throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
       HbaseMapWritable result = new HbaseMapWritable();
-      Map<Text, byte[]> map = region.getFull(row, ts);
-      for (Map.Entry<Text, byte []> es: map.entrySet()) {
-        result.put(new HStoreKey(row, es.getKey()),
-            new ImmutableBytesWritable(es.getValue()));
+      Map<Text, Cell> map = region.getFull(row, ts);
+      for (Map.Entry<Text, Cell> es: map.entrySet()) {
+        result.put(new HStoreKey(row, es.getKey()), es.getValue());
       }
       return result;
-      
     } catch (IOException e) {
       checkFileSystem();
       throw e;
@@ -988,7 +982,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   public HbaseMapWritable getClosestRowBefore(final Text regionName, 
     final Text row, final long ts)
   throws IOException {
-
     checkOpen();
     requestCount.incrementAndGet();
     try {
@@ -996,14 +989,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       HRegion region = getRegion(regionName);
       HbaseMapWritable result = new HbaseMapWritable();
       // ask the region for all the data 
-      Map<Text, byte[]> map = region.getClosestRowBefore(row, ts);
+      Map<Text, Cell> map = region.getClosestRowBefore(row, ts);
       // convert to a MapWritable
       if (map == null) {
         return null;
       }
-      for (Map.Entry<Text, byte []> es: map.entrySet()) {
-        result.put(new HStoreKey(row, es.getKey()),
-            new ImmutableBytesWritable(es.getValue()));
+      for (Map.Entry<Text, Cell> es: map.entrySet()) {
+        result.put(new HStoreKey(row, es.getKey()), es.getValue());
       }
       return result;
       

@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.io.Cell;
 
 
 /**
@@ -157,16 +158,16 @@ public class HStore implements HConstants {
      * @param numVersions
      * @return An array of byte arrays ordered by timestamp.
      */
-    List<byte[]> get(final HStoreKey key, final int numVersions) {
+    List<Cell> get(final HStoreKey key, final int numVersions) {
       this.lock.readLock().lock();
       try {
-        List<byte []> results;
+        List<Cell> results;
         synchronized (memcache) {
           results = internalGet(memcache, key, numVersions);
         }
         synchronized (snapshot) {
           results.addAll(results.size(),
-              internalGet(snapshot, key, numVersions - results.size()));
+            internalGet(snapshot, key, numVersions - results.size()));
         }
         return results;
         
@@ -183,7 +184,7 @@ public class HStore implements HConstants {
      * @param key
      * @param results
      */
-    void getFull(HStoreKey key, SortedMap<Text, byte[]> results) {
+    void getFull(HStoreKey key, SortedMap<Text, Cell> results) {
       this.lock.readLock().lock();
       try {
         synchronized (memcache) {
@@ -198,14 +199,14 @@ public class HStore implements HConstants {
       }
     }
 
-    private void internalGetFull(SortedMap<HStoreKey, byte []> map, HStoreKey key, 
-        SortedMap<Text, byte []> results) {
+    private void internalGetFull(SortedMap<HStoreKey, byte[]> map, HStoreKey key, 
+        SortedMap<Text, Cell> results) {
 
       if (map.isEmpty() || key == null) {
         return;
       }
 
-      SortedMap<HStoreKey, byte []> tailMap = map.tailMap(key);
+      SortedMap<HStoreKey, byte[]> tailMap = map.tailMap(key);
       for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
         HStoreKey itKey = es.getKey();
         Text itCol = itKey.getColumn();
@@ -213,7 +214,7 @@ public class HStore implements HConstants {
           byte [] val = tailMap.get(itKey);
 
           if (!HLogEdit.isDeleted(val)) {
-            results.put(itCol, val);
+            results.put(itCol, new Cell(val, itKey.getTimestamp()));
           }
 
         } else if (key.getRow().compareTo(itKey.getRow()) < 0) {
@@ -318,11 +319,11 @@ public class HStore implements HConstants {
      * @return Ordered list of items found in passed <code>map</code>.  If no
      * matching values, returns an empty list (does not return null).
      */
-    private ArrayList<byte []> internalGet(
+    private ArrayList<Cell> internalGet(
         final SortedMap<HStoreKey, byte []> map, final HStoreKey key,
         final int numVersions) {
 
-      ArrayList<byte []> result = new ArrayList<byte []>();
+      ArrayList<Cell> result = new ArrayList<Cell>();
       // TODO: If get is of a particular version -- numVersions == 1 -- we
       // should be able to avoid all of the tailmap creations and iterations
       // below.
@@ -331,7 +332,7 @@ public class HStore implements HConstants {
         HStoreKey itKey = es.getKey();
         if (itKey.matchesRowCol(key)) {
           if (!HLogEdit.isDeleted(es.getValue())) { 
-            result.add(tailMap.get(itKey));
+            result.add(new Cell(tailMap.get(itKey), itKey.getTimestamp()));
           }
         }
         if (numVersions > 0 && result.size() >= numVersions) {
@@ -1602,7 +1603,7 @@ public class HStore implements HConstants {
    *
    * The returned object should map column names to byte arrays (byte[]).
    */
-  void getFull(HStoreKey key, TreeMap<Text, byte []> results)
+  void getFull(HStoreKey key, TreeMap<Text, Cell> results)
     throws IOException {
     Map<Text, List<Long>> deletes = new HashMap<Text, List<Long>>();
     
@@ -1630,7 +1631,7 @@ public class HStore implements HConstants {
               if(isDeleted(readkey, readval.get(), true, deletes)) {
                 break;
               }
-              results.put(new Text(readcol), readval.get());
+              results.put(new Text(readcol), new Cell(readval.get(), readkey.getTimestamp()));
               readval = new ImmutableBytesWritable();
             } else if(key.getRow().compareTo(readkey.getRow()) < 0) {
               break;
@@ -1660,7 +1661,7 @@ public class HStore implements HConstants {
    * @return values for the specified versions
    * @throws IOException
    */
-  byte [][] get(HStoreKey key, int numVersions) throws IOException {
+  Cell[] get(HStoreKey key, int numVersions) throws IOException {
     if (numVersions <= 0) {
       throw new IllegalArgumentException("Number of versions must be > 0");
     }
@@ -1668,10 +1669,10 @@ public class HStore implements HConstants {
     this.lock.readLock().lock();
     try {
       // Check the memcache
-      List<byte[]> results = this.memcache.get(key, numVersions);
+      List<Cell> results = this.memcache.get(key, numVersions);
       // If we got sufficient versions from memcache, return.
       if (results.size() == numVersions) {
-        return ImmutableBytesWritable.toArray(results);
+        return results.toArray(new Cell[results.size()]);
       }
 
       // Keep a list of deleted cell keys.  We need this because as we go through
@@ -1702,7 +1703,7 @@ public class HStore implements HConstants {
             continue;
           }
           if (!isDeleted(readkey, readval.get(), true, deletes)) {
-            results.add(readval.get());
+            results.add(new Cell(readval.get(), readkey.getTimestamp()));
             // Perhaps only one version is wanted.  I could let this
             // test happen later in the for loop test but it would cost
             // the allocation of an ImmutableBytesWritable.
@@ -1716,7 +1717,7 @@ public class HStore implements HConstants {
               !hasEnoughVersions(numVersions, results);
               readval = new ImmutableBytesWritable()) {
             if (!isDeleted(readkey, readval.get(), true, deletes)) {
-              results.add(readval.get());
+              results.add(new Cell(readval.get(), readkey.getTimestamp()));
             }
           }
         }
@@ -1725,14 +1726,14 @@ public class HStore implements HConstants {
         }
       }
       return results.size() == 0 ?
-        null : ImmutableBytesWritable.toArray(results);
+        null : results.toArray(new Cell[results.size()]);
     } finally {
       this.lock.readLock().unlock();
     }
   }
   
   private boolean hasEnoughVersions(final int numVersions,
-      final List<byte []> results) {
+      final List<Cell> results) {
     return numVersions > 0 && results.size() >= numVersions;
   }
 
