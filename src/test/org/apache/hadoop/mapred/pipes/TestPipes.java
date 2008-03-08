@@ -43,6 +43,11 @@ public class TestPipes extends TestCase {
   private static final Log LOG =
     LogFactory.getLog(TestPipes.class.getName());
 
+  static void cleanup(FileSystem fs, Path p) throws IOException {
+    FileUtil.fullyDelete(fs, p);
+    assertFalse("output not cleaned up", fs.exists(p));
+  }
+
   public void testPipes() throws IOException {
     if (System.getProperty("compile.c++") == null) {
       LOG.info("compile.c++ is not defined, so skipping TestPipes");
@@ -50,7 +55,6 @@ public class TestPipes extends TestCase {
     }
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
-    FileSystem fs = null;
     Path cppExamples = new Path(System.getProperty("install.c++.examples"));
     Path inputPath = new Path("/testing/in");
     Path outputPath = new Path("/testing/out");
@@ -58,20 +62,19 @@ public class TestPipes extends TestCase {
       final int numSlaves = 2;
       Configuration conf = new Configuration();
       dfs = new MiniDFSCluster(conf, numSlaves, true, null);
-      fs = dfs.getFileSystem();
-      mr = new MiniMRCluster(numSlaves, fs.getName(), 1);
-      writeInputFile(fs, inputPath);
-      runProgram(mr, fs, new Path(cppExamples, "bin/wordcount-simple"), 
+      mr = new MiniMRCluster(numSlaves, dfs.getFileSystem().getName(), 1);
+      writeInputFile(dfs.getFileSystem(), inputPath);
+      runProgram(mr, dfs, new Path(cppExamples, "bin/wordcount-simple"), 
                  inputPath, outputPath, 3, 2, twoSplitOutput);
-      FileUtil.fullyDelete(fs, outputPath);
-      assertFalse("output not cleaned up", fs.exists(outputPath));
-      runProgram(mr, fs, new Path(cppExamples, "bin/wordcount-simple"), 
+      cleanup(dfs.getFileSystem(), outputPath);
+
+      runProgram(mr, dfs, new Path(cppExamples, "bin/wordcount-simple"), 
                  inputPath, outputPath, 3, 0, noSortOutput);
-      FileUtil.fullyDelete(fs, outputPath);
-      assertFalse("output not cleaned up", fs.exists(outputPath));
-      runProgram(mr, fs, new Path(cppExamples, "bin/wordcount-part"),
+      cleanup(dfs.getFileSystem(), outputPath);
+
+      runProgram(mr, dfs, new Path(cppExamples, "bin/wordcount-part"),
                  inputPath, outputPath, 3, 2, fixedPartitionOutput);
-      runNonPipedProgram(mr, fs, new Path(cppExamples, "bin/wordcount-nopipe"));
+      runNonPipedProgram(mr, dfs, new Path(cppExamples,"bin/wordcount-nopipe"));
       mr.waitUntilIdle();
     } finally {
       mr.shutdown();
@@ -127,25 +130,29 @@ public class TestPipes extends TestCase {
     out.close();
   }
 
-  private void runProgram(MiniMRCluster mr, FileSystem fs, 
+  private void runProgram(MiniMRCluster mr, MiniDFSCluster dfs, 
                           Path program, Path inputPath, Path outputPath,
                           int numMaps, int numReduces, String[] expectedResults
                          ) throws IOException {
     Path wordExec = new Path("/testing/bin/application");
-    FileUtil.fullyDelete(fs, wordExec.getParent());
-    fs.copyFromLocalFile(program, wordExec);                                         
     JobConf job = mr.createJobConf();
     job.setNumMapTasks(numMaps);
     job.setNumReduceTasks(numReduces);
-    Submitter.setExecutable(job, fs.makeQualified(wordExec).toString());
-    Submitter.setIsJavaRecordReader(job, true);
-    Submitter.setIsJavaRecordWriter(job, true);
-    job.setInputPath(inputPath);
-    job.setOutputPath(outputPath);
-    RunningJob result = Submitter.submitJob(job);
-    assertTrue("pipes job failed", result.isSuccessful());
+    {
+      FileSystem fs = dfs.getFileSystem();
+      FileUtil.fullyDelete(fs, wordExec.getParent());
+      fs.copyFromLocalFile(program, wordExec);                                         
+      Submitter.setExecutable(job, fs.makeQualified(wordExec).toString());
+      Submitter.setIsJavaRecordReader(job, true);
+      Submitter.setIsJavaRecordWriter(job, true);
+      job.setInputPath(inputPath);
+      job.setOutputPath(outputPath);
+      RunningJob result = Submitter.submitJob(job);
+      assertTrue("pipes job failed", result.isSuccessful());
+    }
+
     List<String> results = new ArrayList<String>();
-    for (Path p:FileUtil.stat2Paths(fs.listStatus(outputPath,
+    for (Path p:FileUtil.stat2Paths(dfs.getFileSystem().listStatus(outputPath,
     		                        new OutputLogFilter()))) {
       results.add(TestMiniMRWithDFS.readOutput(p, job));
     }
@@ -165,7 +172,7 @@ public class TestPipes extends TestCase {
    * @param program the program to run
    * @throws IOException
    */
-  private void runNonPipedProgram(MiniMRCluster mr, FileSystem dfs,
+  private void runNonPipedProgram(MiniMRCluster mr, MiniDFSCluster dfs,
                                   Path program) throws IOException {
     JobConf job = mr.createJobConf();
     job.setInputFormat(WordCountInputFormat.class);
@@ -176,8 +183,11 @@ public class TestPipes extends TestCase {
     Path outDir = new Path(testDir, "output");
     Path wordExec = new Path("/testing/bin/application");
     Path jobXml = new Path(testDir, "job.xml");
-    FileUtil.fullyDelete(dfs, wordExec.getParent());
-    dfs.copyFromLocalFile(program, wordExec);
+    {
+      FileSystem fs = dfs.getFileSystem();
+      FileUtil.fullyDelete(fs, wordExec.getParent());
+      fs.copyFromLocalFile(program, wordExec);
+    }
     DataOutputStream out = local.create(new Path(inDir, "part0"));
     out.writeBytes("i am a silly test\n");
     out.writeBytes("you are silly\n");
@@ -195,7 +205,7 @@ public class TestPipes extends TestCase {
                                   "-input", inDir.toString(),
                                   "-output", outDir.toString(),
                                   "-program", 
-                                  dfs.makeQualified(wordExec).toString(),
+                        dfs.getFileSystem().makeQualified(wordExec).toString(),
                                   "-reduces", "2"});
     } catch (Exception e) {
       assertTrue("got exception: " + StringUtils.stringifyException(e), false);

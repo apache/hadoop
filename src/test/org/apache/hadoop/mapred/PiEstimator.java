@@ -175,15 +175,15 @@ public class PiEstimator {
     try {
       JobClient.runJob(jobConf);
       Path inFile = new Path(outDir, "reduce-out");
-      SequenceFile.Reader reader = new SequenceFile.Reader(fileSys, inFile,
-                                                           jobConf);
+      SequenceFile.Reader reader = new SequenceFile.Reader(
+          FileSystem.get(jobConf), inFile, jobConf);
       IntWritable numInside = new IntWritable();
       IntWritable numOutside = new IntWritable();
       reader.next(numInside, numOutside);
       reader.close();
       estimate = (double) (numInside.get()*4.0)/(numMaps*numPoints);
     } finally {
-      fileSys.delete(tmpDir);
+      FileSystem.get(jobConf).delete(tmpDir);
     }
     
     return estimate;

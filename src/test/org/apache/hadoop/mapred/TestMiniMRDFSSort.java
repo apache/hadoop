@@ -94,7 +94,6 @@ public class TestMiniMRDFSSort extends TestCase {
       // Run sort-validator to check if sort worked correctly
       runSortValidator(mr.createJobConf(), SORT_INPUT_PATH, SORT_OUTPUT_PATH);
     } finally {
-      if (fileSys != null) { fileSys.close(); }
       if (dfs != null) { dfs.shutdown(); }
       if (mr != null) { mr.shutdown();
       }

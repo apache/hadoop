@@ -286,6 +286,9 @@ Release 0.16.1 - Unreleased
     they were looking at the same config variables (Chris Douglas via
     acmurthy) 
 
+    HADOOP-2915. Fixed FileSystem.CACHE so that a username is included
+    in the cache key. (Tsz Wo (Nicholas), SZE via nigel)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES

@@ -174,7 +174,6 @@ public class TestMiniMRClasspath extends TestCase {
                    "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result);
           
     } finally {
-      if (fileSys != null) { fileSys.close(); }
       if (dfs != null) { dfs.shutdown(); }
       if (mr != null) { mr.shutdown();
       }
@@ -209,7 +208,6 @@ public class TestMiniMRClasspath extends TestCase {
       
     } 
     finally {
-      if (fileSys != null) { fileSys.close(); }
       if (dfs != null) { dfs.shutdown(); }
       if (mr != null) { mr.shutdown();
       }

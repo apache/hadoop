@@ -117,7 +117,6 @@ public class TestSpecialCharactersInOutputPath extends TestCase {
       assertTrue(result);
           
     } finally {
-      if (fileSys != null) { fileSys.close(); }
       if (dfs != null) { dfs.shutdown(); }
       if (mr != null) { mr.shutdown(); }
     }

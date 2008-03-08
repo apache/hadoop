@@ -116,7 +116,7 @@ public class TestMiniMRWithDFS extends TestCase {
    * @param mr the map-reduce cluster
    * @param taskDirs the task ids that should be present
    */
-  private static void checkTaskDirectories(MiniMRCluster mr,
+  static void checkTaskDirectories(MiniMRCluster mr,
                                            String[] jobIds,
                                            String[] taskDirs) {
     mr.waitUntilIdle();
@@ -159,7 +159,55 @@ public class TestMiniMRWithDFS extends TestCase {
       assertTrue("Directory " + taskDirs[i] + " not found", found[i]);
     }
   }
-  
+
+  static void runPI(MiniMRCluster mr, JobConf jobconf) throws IOException {
+    LOG.info("runPI");
+    double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, jobconf);
+    double error = Math.abs(Math.PI - estimate);
+    assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
+    checkTaskDirectories(mr, new String[]{}, new String[]{});
+  }
+
+  static void runWordCount(MiniMRCluster mr, JobConf jobConf) throws IOException {
+    LOG.info("runWordCount");
+    // Run a word count example
+    // Keeping tasks that match this pattern
+    jobConf.setKeepTaskFilesPattern("task_[^_]*_[0-9]*_m_000001_.*");
+    TestResult result;
+    final Path inDir = new Path("./wc/input");
+    final Path outDir = new Path("./wc/output");
+    result = launchWordCount(jobConf, inDir, outDir,
+                             "The quick brown fox\nhas many silly\n" + 
+                             "red fox sox\n",
+                             3, 1);
+    assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
+                 "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result.output);
+    String jobid = result.job.getJobID();
+    String taskid = "task_" + jobid.substring(4) + "_m_000001_0";
+    checkTaskDirectories(mr, new String[]{jobid}, new String[]{taskid});
+    // test with maps=0
+    jobConf = mr.createJobConf();
+    result = launchWordCount(jobConf, inDir, outDir, "owen is oom", 0, 1);
+    assertEquals("is\t1\noom\t1\nowen\t1\n", result.output);
+    // Run a job with input and output going to localfs even though the 
+    // default fs is hdfs.
+    {
+      FileSystem localfs = FileSystem.getLocal(jobConf);
+      String TEST_ROOT_DIR =
+        new File(System.getProperty("test.build.data","/tmp"))
+        .toString().replace(' ', '+');
+      Path localIn = localfs.makeQualified
+                        (new Path(TEST_ROOT_DIR + "/local/in"));
+      Path localOut = localfs.makeQualified
+                        (new Path(TEST_ROOT_DIR + "/local/out"));
+      result = launchWordCount(jobConf, localIn, localOut,
+                               "all your base belong to us", 1, 1);
+      assertEquals("all\t1\nbase\t1\nbelong\t1\nto\t1\nus\t1\nyour\t1\n", 
+                   result.output);
+      assertTrue("outputs on localfs", localfs.exists(localOut));
+    }
+  }
+
   public void testWithDFS() throws IOException {
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
@@ -170,52 +218,11 @@ public class TestMiniMRWithDFS extends TestCase {
       Configuration conf = new Configuration();
       dfs = new MiniDFSCluster(conf, 4, true, null);
       fileSys = dfs.getFileSystem();
-      mr = new MiniMRCluster(taskTrackers, fileSys.getName(), 1);
-      double estimate = PiEstimator.launch(NUM_MAPS, NUM_SAMPLES, 
-                                           mr.createJobConf());
-      double error = Math.abs(Math.PI - estimate);
-      assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
-      checkTaskDirectories(mr, new String[]{}, new String[]{});
-          
-      // Run a word count example
-      JobConf jobConf = mr.createJobConf();
-      // Keeping tasks that match this pattern
-      jobConf.setKeepTaskFilesPattern("task_[^_]*_[0-9]*_m_000001_.*");
-      TestResult result;
-      final Path inDir = new Path("/testing/wc/input");
-      final Path outDir = new Path("/testing/wc/output");
-      result = launchWordCount(jobConf, inDir, outDir,
-                               "The quick brown fox\nhas many silly\n" + 
-                               "red fox sox\n",
-                               3, 1);
-      assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
-                   "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result.output);
-      String jobid = result.job.getJobID();
-      String taskid = "task_" + jobid.substring(4) + "_m_000001_0";
-      checkTaskDirectories(mr, new String[]{jobid}, new String[]{taskid});
-      // test with maps=0
-      jobConf = mr.createJobConf();
-      result = launchWordCount(jobConf, inDir, outDir, "owen is oom", 0, 1);
-      assertEquals("is\t1\noom\t1\nowen\t1\n", result.output);
-      // Run a job with input and output going to localfs even though the 
-      // default fs is hdfs.
-      {
-        FileSystem localfs = FileSystem.getLocal(jobConf);
-        String TEST_ROOT_DIR =
-          new File(System.getProperty("test.build.data","/tmp"))
-          .toString().replace(' ', '+');
-        Path localIn = localfs.makeQualified
-                          (new Path(TEST_ROOT_DIR + "/local/in"));
-        Path localOut = localfs.makeQualified
-                          (new Path(TEST_ROOT_DIR + "/local/out"));
-        result = launchWordCount(jobConf, localIn, localOut,
-                                 "all your base belong to us", 1, 1);
-        assertEquals("all\t1\nbase\t1\nbelong\t1\nto\t1\nus\t1\nyour\t1\n", 
-                     result.output);
-        assertTrue("outputs on localfs", localfs.exists(localOut));
-      }
+      mr = new MiniMRCluster(taskTrackers, fileSys.getUri().toString(), 1);
+
+      runPI(mr, mr.createJobConf());
+      runWordCount(mr, mr.createJobConf());
     } finally {
-      if (fileSys != null) { fileSys.close(); }
       if (dfs != null) { dfs.shutdown(); }
       if (mr != null) { mr.shutdown();
       }

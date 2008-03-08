@@ -56,11 +56,10 @@ public class TestMultipleCachefiles extends TestCase
       boolean mayExit = false;
       MiniMRCluster mr = null;
       MiniDFSCluster dfs = null; 
-      FileSystem fileSys = null;
       try{
         Configuration conf = new Configuration();
         dfs = new MiniDFSCluster(conf, 1, true, null);
-        fileSys = dfs.getFileSystem();
+        FileSystem fileSys = dfs.getFileSystem();
         String namenode = fileSys.getName();
         mr  = new MiniMRCluster(1, namenode, 3);
         // During tests, the default Configuration will use a local mapred
@@ -99,6 +98,8 @@ public class TestMultipleCachefiles extends TestCase
           
         job = new StreamJob(argv, mayExit);     
         job.go();
+
+	fileSys = dfs.getFileSystem();
         String line = null;
         String line2 = null;
         Path[] fileList = FileUtil.stat2Paths(fileSys.listStatus(
@@ -116,7 +117,6 @@ public class TestMultipleCachefiles extends TestCase
         assertEquals(cacheString + "\t", line);
         assertEquals(cacheString2 + "\t", line2);
       } finally{
-        if (fileSys != null) { fileSys.close(); }
         if (dfs != null) { dfs.shutdown(); }
         if (mr != null) { mr.shutdown();}
       }

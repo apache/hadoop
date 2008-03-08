@@ -116,6 +116,7 @@ public class TestRackAwareTaskPlacement extends TestCase {
        */
       mr = new MiniMRCluster(taskTrackers, namenode, 1, rack1, hosts3);
       jobConf = mr.createJobConf();
+      fileSys = dfs.getFileSystem();
       if (fileSys.exists(outputPath)) {
         fileSys.delete(outputPath);
       }
@@ -131,9 +132,6 @@ public class TestRackAwareTaskPlacement extends TestCase {
       mr.waitUntilIdle();
       
     } finally {
-      if (fileSys != null) { 
-        fileSys.close(); 
-      }
       if (dfs != null) { 
         dfs.shutdown(); 
       }
