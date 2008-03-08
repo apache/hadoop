@@ -26,9 +26,9 @@
  
   <property name="Name" value="Hadoop"/>
   <property name="name" value="hadoop"/>
-  <property name="version" value="0.16.1-dev"/>
+  <property name="version" value="0.16.2-dev"/>
   <property name="final.name" value="${name}-${version}"/>
-  <property name="year" value="2006"/>
+  <property name="year" value="2008"/>
   <property name="libhdfs.version" value="1"/>
 
   <property name="src.dir" value="${basedir}/src/java"/>
