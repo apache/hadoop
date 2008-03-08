@@ -22,6 +22,7 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Properties;
 
@@ -43,7 +44,6 @@ import java.util.Properties;
 public abstract class ClusterMapReduceTestCase extends TestCase {
   private MiniDFSCluster dfsCluster = null;
   private MiniMRCluster mrCluster = null;
-  private FileSystem fileSystem = null;
 
   /**
    * Creates Hadoop Cluster and DFS before a test case is run.
@@ -79,11 +79,10 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
         }
       }
       dfsCluster = new MiniDFSCluster(conf, 2, reformatDFS, null);
-      fileSystem = dfsCluster.getFileSystem();
 
       ConfigurableMiniMRCluster.setConfiguration(props);
       //noinspection deprecation
-      mrCluster = new ConfigurableMiniMRCluster(2, fileSystem.getName(), 1);
+      mrCluster = new ConfigurableMiniMRCluster(2, getFileSystem().getName(), 1);
     }
   }
 
@@ -129,7 +128,6 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
     if (dfsCluster != null) {
       dfsCluster.shutdown();
       dfsCluster = null;
-      fileSystem = null;
     }
   }
 
@@ -150,9 +148,10 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
    * TestCases should use this Filesystem instance.
    *
    * @return the filesystem used by Hadoop.
+   * @throws IOException 
    */
-  protected FileSystem getFileSystem() {
-    return fileSystem;
+  protected FileSystem getFileSystem() throws IOException {
+    return dfsCluster.getFileSystem();
   }
 
   /**

@@ -22,6 +22,7 @@ import java.util.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.security.UnixUserGroupInformation;
 
 /**
  * This class creates a single-process Map-Reduce cluster for junit testing.
@@ -42,6 +43,7 @@ public class MiniMRCluster {
   private List<Thread> taskTrackerThreadList = new ArrayList<Thread>();
     
   private String namenode;
+  private UnixUserGroupInformation ugi = null;
     
   /**
    * An inner class that runs a job tracker.
@@ -97,7 +99,6 @@ public class MiniMRCluster {
   class TaskTrackerRunner implements Runnable {
     volatile TaskTracker tt;
     int trackerId;
-    JobConf conf = createJobConf();
     // the localDirs for this taskTracker
     String[] localDirs;
     volatile boolean isInitialized = false;
@@ -108,7 +109,7 @@ public class MiniMRCluster {
       this.trackerId = trackerId;
       this.numDir = numDir;
       localDirs = new String[numDir];
-      conf = createJobConf();
+      JobConf conf = createJobConf();
       conf.set("mapred.task.tracker.http.address", "0.0.0.0:0");
       conf.set("mapred.task.tracker.report.address", 
                 "127.0.0.1:" + taskTrackerPort);
@@ -132,6 +133,14 @@ public class MiniMRCluster {
       }
       conf.set("mapred.local.dir", localPath.toString());
       LOG.info("mapred.local.dir is " +  localPath);
+      try {
+        tt = new TaskTracker(conf);
+        isInitialized = true;
+      } catch (Throwable e) {
+        isDead = true;
+        tt = null;
+        LOG.error("task tracker " + trackerId + " crashed", e);
+      }
     }
         
     /**
@@ -139,9 +148,9 @@ public class MiniMRCluster {
      */
     public void run() {
       try {
-        tt = new TaskTracker(conf);
-        isInitialized = true;
-        tt.run();
+        if (tt != null) {
+          tt.run();
+        }
       } catch (Throwable e) {
         isDead = true;
         tt = null;
@@ -227,6 +236,11 @@ public class MiniMRCluster {
     result.set("mapred.job.tracker", "localhost:"+jobTrackerPort);
     result.set("mapred.job.tracker.http.address", 
                         "0.0.0.0:" + jobTrackerInfoPort);
+    if (ugi != null) {
+      result.set("mapred.system.dir", "/mapred/system");
+      UnixUserGroupInformation.saveToConf(result,
+          UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);
+    }
     // for debugging have all task output sent to the test output
     JobClient.setTaskOutputFilter(result, JobClient.TaskStatusFilter.ALL);
     return result;
@@ -264,12 +278,19 @@ public class MiniMRCluster {
                        int numTaskTrackers,
                        String namenode,
                        boolean taskTrackerFirst, int numDir) throws IOException {
+    this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode,
+        taskTrackerFirst, numDir, null);
+  }
 
+  public MiniMRCluster(int jobTrackerPort, int taskTrackerPort,
+      int numTaskTrackers, String namenode, boolean taskTrackerFirst,
+      int numDir, UnixUserGroupInformation ugi) throws IOException {
     this.jobTrackerPort = jobTrackerPort;
     this.taskTrackerPort = taskTrackerPort;
     this.jobTrackerInfoPort = 0;
     this.numTaskTrackers = numTaskTrackers;
     this.namenode = namenode;
+    this.ugi = ugi;
 
     // Create the JobTracker
     jobTracker = new JobTrackerRunner();

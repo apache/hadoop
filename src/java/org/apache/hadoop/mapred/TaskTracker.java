@@ -147,7 +147,6 @@ public class TaskTracker
   //for serving map output to the other nodes
 
   static Random r = new Random();
-  FileSystem fs = null;
   private static final String SUBDIR = "taskTracker";
   private static final String CACHEDIR = "archive";
   private static final String JOBCACHE = "jobcache";
@@ -658,6 +657,7 @@ public class TaskTracker
             throw new IOException("Not able to create job directory "
                                   + jobDir.toString());
         }
+        FileSystem fs =FileSystem.getNamed(jobClient.getFilesystemName(),fConf);
         fs.copyToLocalFile(new Path(jobFile), localJobFile);
         JobConf localJobConf = new JobConf(localJobFile);
         
@@ -846,12 +846,6 @@ public class TaskTracker
     return jobClient;
   }
         
-  /**Return the DFS filesystem
-   */
-  public FileSystem getFileSystem(){
-    return fs;
-  }
-  
   /** Return the port at which the tasktracker bound to */
   public synchronized InetSocketAddress getTaskTrackerReportAddress() {
     return taskReportAddress;
@@ -891,7 +885,6 @@ public class TaskTracker
    */
   State offerService() throws Exception {
     long lastHeartbeat = 0;
-    this.fs = FileSystem.getNamed(jobClient.getFilesystemName(), this.fConf);
 
     while (running && !shuttingDown) {
       try {

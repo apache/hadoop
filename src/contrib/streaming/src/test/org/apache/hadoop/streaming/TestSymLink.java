@@ -52,11 +52,10 @@ public class TestSymLink extends TestCase
       boolean mayExit = false;
       MiniMRCluster mr = null;
       MiniDFSCluster dfs = null; 
-      FileSystem fileSys = null;
       try{
         Configuration conf = new Configuration();
         dfs = new MiniDFSCluster(conf, 1, true, null);
-        fileSys = dfs.getFileSystem();
+        FileSystem fileSys = dfs.getFileSystem();
         String namenode = fileSys.getName();
         mr  = new MiniMRCluster(1, namenode, 3);
         // During tests, the default Configuration will use a local mapred
@@ -90,6 +89,8 @@ public class TestSymLink extends TestCase
           
         job = new StreamJob(argv, mayExit);      
         job.go();
+
+        fileSys = dfs.getFileSystem();
         String line = null;
         Path[] fileList = fileSys.listPaths(new Path(OUTPUT_DIR));
         for (int i = 0; i < fileList.length; i++){
@@ -101,7 +102,6 @@ public class TestSymLink extends TestCase
         }
         assertEquals(cacheString + "\t", line);
       } finally{
-        if (fileSys != null) { fileSys.close(); }
         if (dfs != null) { dfs.shutdown(); }
         if (mr != null) { mr.shutdown();}
       }
