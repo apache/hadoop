@@ -24,6 +24,7 @@ import junit.framework.TestCase;
 import java.io.*;
 import java.util.*;
 
+import static org.apache.hadoop.io.SequenceFile.CompressionType;
 
 /**********************************************************
  * MapredLoadTest generates a bunch of work that exercises
@@ -282,8 +283,8 @@ public class TestMapRed extends TestCase {
       
   }
     
-  private void checkCompression(boolean compressMapOutput,
-                                boolean compressReduceOutput,
+  private void checkCompression(CompressionType mapCompression,
+                                CompressionType redCompression,
                                 boolean includeCombine
                                 ) throws Exception {
     JobConf conf = new JobConf(TestMapRed.class);
@@ -302,12 +303,9 @@ public class TestMapRed extends TestCase {
     if (includeCombine) {
       conf.setCombinerClass(IdentityReducer.class);
     }
-    if (compressMapOutput) {
-      conf.setCompressMapOutput(true);
-    }
-    if (compressReduceOutput) {
-      SequenceFileOutputFormat.setCompressOutput(conf, true);
-    }
+    conf.setMapOutputCompressionType(mapCompression);
+    conf.setCompressMapOutput(mapCompression != CompressionType.NONE);
+    SequenceFileOutputFormat.setOutputCompressionType(conf, redCompression);
     try {
       if (!fs.mkdirs(testdir)) {
         throw new IOException("Mkdirs failed to create " + testdir.toString());
@@ -330,7 +328,7 @@ public class TestMapRed extends TestCase {
       SequenceFile.Reader rdr = 
         new SequenceFile.Reader(fs, output, conf);
       assertEquals("is reduce output compressed " + output, 
-                   compressReduceOutput, 
+                   redCompression != CompressionType.NONE, 
                    rdr.isCompressed());
       rdr.close();
     } finally {
@@ -339,10 +337,12 @@ public class TestMapRed extends TestCase {
   }
     
   public void testCompression() throws Exception {
-    for(int compressMap=0; compressMap < 2; ++compressMap) {
-      for(int compressOut=0; compressOut < 2; ++compressOut) {
+    EnumSet<SequenceFile.CompressionType> seq =
+      EnumSet.allOf(SequenceFile.CompressionType.class);
+    for (CompressionType mapCompression : seq) {
+      for (CompressionType redCompression : seq) {
         for(int combine=0; combine < 2; ++combine) {
-          checkCompression(compressMap == 1, compressOut == 1,
+          checkCompression(mapCompression, redCompression,
                            combine == 1);
         }
       }

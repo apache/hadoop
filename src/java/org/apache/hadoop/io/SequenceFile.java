@@ -795,9 +795,9 @@ public class SequenceFile {
     Metadata metadata = null;
     Compressor compressor = null;
     
-    private Serializer keySerializer;
-    private Serializer uncompressedValSerializer;
-    private Serializer compressedValSerializer;
+    protected Serializer keySerializer;
+    protected Serializer uncompressedValSerializer;
+    protected Serializer compressedValSerializer;
     
     // Insert a globally unique 16-byte value every few entries, so that one
     // can seek into the middle of a file and then synchronize with record
@@ -1111,7 +1111,8 @@ public class SequenceFile {
     boolean isBlockCompressed() { return false; }
 
     /** Append a key/value pair. */
-    public synchronized void append(Writable key, Writable val)
+    @SuppressWarnings("unchecked")
+    public synchronized void append(Object key, Object val)
       throws IOException {
       if (key.getClass() != keyClass)
         throw new IOException("wrong key class: "+key.getClass().getName()
@@ -1123,14 +1124,14 @@ public class SequenceFile {
       buffer.reset();
 
       // Append the 'key'
-      key.write(buffer);
+      keySerializer.serialize(key);
       int keyLength = buffer.getLength();
       if (keyLength == 0)
         throw new IOException("zero length keys not allowed: " + key);
 
       // Compress 'value' and append it
       deflateFilter.resetState();
-      val.write(deflateOut);
+      compressedValSerializer.serialize(val);
       deflateOut.flush();
       deflateFilter.finish();
 
@@ -1238,8 +1239,12 @@ public class SequenceFile {
     boolean isBlockCompressed() { return true; }
 
     /** Initialize */
-    void init(int compressionBlockSize) {
+    void init(int compressionBlockSize) throws IOException {
       this.compressionBlockSize = compressionBlockSize;
+      keySerializer.close();
+      keySerializer.open(keyBuffer);
+      uncompressedValSerializer.close();
+      uncompressedValSerializer.open(valBuffer);
     }
     
     /** Workhorse to check and write out compressed data/lengths */
@@ -1295,7 +1300,8 @@ public class SequenceFile {
     }
 
     /** Append a key/value pair. */
-    public synchronized void append(Writable key, Writable val)
+    @SuppressWarnings("unchecked")
+    public synchronized void append(Object key, Object val)
       throws IOException {
       if (key.getClass() != keyClass)
         throw new IOException("wrong key class: "+key+" is not "+keyClass);
@@ -1304,14 +1310,14 @@ public class SequenceFile {
 
       // Save key/value into respective buffers 
       int oldKeyLength = keyBuffer.getLength();
-      key.write(keyBuffer);
+      keySerializer.serialize(key);
       int keyLength = keyBuffer.getLength() - oldKeyLength;
       if (keyLength == 0)
         throw new IOException("zero length keys not allowed: " + key);
       WritableUtils.writeVInt(keyLenBuffer, keyLength);
 
       int oldValLength = valBuffer.getLength();
-      val.write(valBuffer);
+      uncompressedValSerializer.serialize(val);
       int valLength = valBuffer.getLength() - oldValLength;
       WritableUtils.writeVInt(valLenBuffer, valLength);
       

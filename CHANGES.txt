@@ -150,7 +150,10 @@ Trunk (unreleased changes)
 
     HADOOP-2938. Some fs commands did not glob paths.
     (Tsz Wo (Nicholas), SZE via rangadi)
-    
+
+    HADOOP-2943. Compression of intermediate map output causes failures
+    in the merge. (cdouglas)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
