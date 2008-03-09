@@ -113,9 +113,6 @@ Trunk (unreleased changes)
     HADOOP-2844. distcp closes file handles for sequence files.
     (Tsz Wo (Nicholas), SZE via dhruba)
 
-    HADOOP-2813. TestDU unit test uses its own directory to run its 
-    sequence of tests.  (Mahadev Konar via dhruba)
-
     HADOOP-2727. Fix links in Web UI of the hadoop daemons and some docs
     (Amareshwari Sri Ramadasu via ddas)
 
@@ -288,6 +285,9 @@ Release 0.16.1 - 2008-03-13
 
     HADOOP-2915. Fixed FileSystem.CACHE so that a username is included
     in the cache key. (Tsz Wo (Nicholas), SZE via nigel)
+
+    HADOOP-2813. TestDU unit test uses its own directory to run its 
+    sequence of tests.  (Mahadev Konar via dhruba)
 
 Release 0.16.0 - 2008-02-07
 
