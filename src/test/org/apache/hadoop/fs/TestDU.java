@@ -25,7 +25,8 @@ import junit.framework.TestCase;
 
 /** This test makes sure that "DU" does not get to run on each call to getUsed */ 
 public class TestDU extends TestCase {
-  final static private File DU_DIR = new File(".");
+  final static private File DU_DIR = new File(
+      System.getProperty("test.build.data","/tmp"), "dutmp");
   final static private File DU_FILE1 = new File(DU_DIR, "tmp1");
   final static private File DU_FILE2 = new File(DU_DIR, "tmp2");
   
@@ -50,6 +51,8 @@ public class TestDU extends TestCase {
   private void testDU(long interval) throws IOException {
     rmFile(DU_FILE1);
     rmFile(DU_FILE2);
+    DU_DIR.delete();
+    assertTrue(DU_DIR.mkdirs());
     try {
       createFile(DU_FILE1);
       DU du = new DU(DU_DIR, interval*60000);
@@ -64,6 +67,7 @@ public class TestDU extends TestCase {
     } finally {
       rmFile(DU_FILE1);
       rmFile(DU_FILE2);
+      DU_DIR.delete();
     }
   }
 
