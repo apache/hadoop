@@ -48,7 +48,14 @@ public class TestLocalDFS extends TestCase {
     fileSys.delete(name, true);
     assertTrue(!fileSys.exists(name));
   }
-  
+
+  static String getUserName(FileSystem fs) {
+    if (fs instanceof DistributedFileSystem) {
+      return ((DistributedFileSystem)fs).dfs.ugi.getUserName();
+    }
+    return System.getProperty("user.name");
+  }
+
   /**
    * Tests get/set working directory in DFS.
    */
@@ -75,7 +82,7 @@ public class TestLocalDFS extends TestCase {
                                     file1.toString()));
 
       // test home directory
-      Path home = new Path("/user/"+System.getProperty("user.name"))
+      Path home = new Path("/user/" + getUserName(fileSys))
         .makeQualified(fileSys);
       Path fsHome = fileSys.getHomeDirectory();
       assertEquals(home, fsHome);

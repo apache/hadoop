@@ -164,6 +164,9 @@ Trunk (unreleased changes)
     HADOOP-2870.  DataNode and NameNode closes all connections while
     shutting down. (Hairong Kuang via dhruba)
 
+    HADOOP-2973. Fix TestLocalDFS for Windows platform.
+    (Tsz Wo (Nicholas), SZE via dhruba)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
