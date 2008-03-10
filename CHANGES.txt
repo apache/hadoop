@@ -70,6 +70,9 @@ Trunk (unreleased changes)
 
     HADOOP-2810. Updated the Hadoop Core logo. (nigel)
 
+    HADOOP-2057.  Streaming should optionally treat a non-zero exit status
+    of a child process as a failed task.  (Rick Cox via tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing

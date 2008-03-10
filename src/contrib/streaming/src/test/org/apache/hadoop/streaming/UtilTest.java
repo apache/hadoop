@@ -25,6 +25,30 @@ import java.io.PrintStream;
 
 class UtilTest {
 
+  /**
+   * Utility routine to recurisvely delete a directory.
+   * On normal return, the file does not exist.
+   *
+   * @param file File or directory to delete.
+   *
+   * @throws RuntimeException if the file, or some file within
+   * it, could not be deleted.
+   */
+  static void recursiveDelete(File file) {
+    file = file.getAbsoluteFile();
+
+    if (!file.exists()) return;
+    
+    if (file.isDirectory()) {
+      for (File child : file.listFiles()) {
+	recursiveDelete(child);
+      }
+    }
+    if (!file.delete()) {
+      throw new RuntimeException("Failed to delete " + file);
+    }
+  }
+  
   public UtilTest(String testName) {
     testName_ = testName;
     userDir_ = System.getProperty("user.dir");

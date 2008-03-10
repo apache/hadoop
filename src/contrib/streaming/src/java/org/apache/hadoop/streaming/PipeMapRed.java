@@ -124,8 +124,9 @@ public abstract class PipeMapRed {
       this.reduceOutFieldSeparator = reduceOutputFieldSeparator.charAt(0);
       this.numOfMapOutputKeyFields = job_.getInt("stream.num.map.output.key.fields", 1);
       this.numOfReduceOutputKeyFields = job_.getInt("stream.num.reduce.output.key.fields", 1);
-      
 
+      nonZeroExitIsFailure_ = job_.getBoolean("stream.non.zero.exit.is.failure", false);
+      
       doPipe_ = getDoPipe();
       if (!doPipe_) return;
 
@@ -293,8 +294,14 @@ public abstract class PipeMapRed {
       int exitVal = sim.waitFor();
       // how'd it go?
       if (exitVal != 0) {
-	  logprintln("PipeMapRed.waitOutputThreads(): subprocess failed with code " + exitVal + " in " + PipeMapRed.class.getName());
-      };
+        if (nonZeroExitIsFailure_) {
+          throw new RuntimeException("PipeMapRed.waitOutputThreads(): subprocess failed with code "
+                                     + exitVal);
+        } else {
+          logprintln("PipeMapRed.waitOutputThreads(): subprocess exited with code " + exitVal
+                     + " in " + PipeMapRed.class.getName());
+        }
+      }
       if (outThread_ != null) {
         outThread_.join(joinDelay_);
       }
@@ -541,6 +548,8 @@ public abstract class PipeMapRed {
   boolean debugFailDuring_;
   boolean debugFailLate_;
 
+  boolean nonZeroExitIsFailure_;
+  
   Process sim;
   MROutputThread outThread_;
   String jobLog_;
