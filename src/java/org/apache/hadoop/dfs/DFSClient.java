@@ -59,7 +59,8 @@ class DFSClient implements FSConstants {
   public static final Log LOG = LogFactory.getLog(DFSClient.class);
   static final int MAX_BLOCK_ACQUIRE_FAILURES = 3;
   private static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
-  ClientProtocol namenode;
+  final ClientProtocol namenode;
+  final private ClientProtocol rpcNamenode;
   final UnixUserGroupInformation ugi;
   volatile boolean clientRunning = true;
   Random r = new Random();
@@ -77,9 +78,26 @@ class DFSClient implements FSConstants {
    */
   private TreeMap<String, OutputStream> pendingCreates =
     new TreeMap<String, OutputStream>();
-    
-  static ClientProtocol createNamenode(
-      InetSocketAddress nameNodeAddr, Configuration conf)
+ 
+  static ClientProtocol createNamenode( InetSocketAddress nameNodeAddr,
+      Configuration conf) throws IOException {
+    try {
+      return createNamenode(createRPCNamenode(nameNodeAddr, conf,
+        UnixUserGroupInformation.login(conf, true)));
+    } catch (LoginException e) {
+      throw (IOException)(new IOException().initCause(e));
+    }
+  }
+
+  private static ClientProtocol createRPCNamenode(InetSocketAddress nameNodeAddr,
+      Configuration conf, UnixUserGroupInformation ugi) 
+    throws IOException {
+    return (ClientProtocol)RPC.getProxy(ClientProtocol.class,
+        ClientProtocol.versionID, nameNodeAddr, ugi, conf,
+        NetUtils.getSocketFactory(conf, ClientProtocol.class));
+  }
+
+  private static ClientProtocol createNamenode(ClientProtocol rpcNamenode)
     throws IOException {
     RetryPolicy timeoutPolicy = RetryPolicies.exponentialBackoffRetry(
         5, 200, TimeUnit.MILLISECONDS);
@@ -118,18 +136,8 @@ class DFSClient implements FSConstants {
     methodNameToPolicyMap.put("getEditLogSize", methodPolicy);
     methodNameToPolicyMap.put("create", methodPolicy);
 
-    UserGroupInformation userInfo;
-    try {
-      userInfo = UnixUserGroupInformation.login(conf);
-    } catch (LoginException e) {
-      throw new IOException(e.getMessage());
-    }
-
     return (ClientProtocol) RetryProxy.create(ClientProtocol.class,
-        RPC.getProxy(ClientProtocol.class,
-            ClientProtocol.versionID, nameNodeAddr, userInfo, conf,
-            NetUtils.getSocketFactory(conf, ClientProtocol.class)),
-        methodNameToPolicyMap);
+        rpcNamenode, methodNameToPolicyMap);
   }
         
   /** 
@@ -141,14 +149,16 @@ class DFSClient implements FSConstants {
     this.socketTimeout = conf.getInt("dfs.socket.timeout", 
                                      FSConstants.READ_TIMEOUT);
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
-
+    
     try {
       this.ugi = UnixUserGroupInformation.login(conf, true);
     } catch (LoginException e) {
       throw (IOException)(new IOException().initCause(e));
     }
 
-    this.namenode = createNamenode(nameNodeAddr, conf);
+    this.rpcNamenode = createRPCNamenode(nameNodeAddr, conf, ugi);
+    this.namenode = createNamenode(rpcNamenode);
+
     String taskId = conf.get("mapred.task.id");
     if (taskId != null) {
       this.clientName = "DFSClient_" + taskId; 
@@ -169,8 +179,8 @@ class DFSClient implements FSConstants {
   }
     
   /**
-   * Close the file system, abadoning all of the leases and files being
-   * created.
+   * Close the file system, abandoning all of the leases and files being
+   * created and close connections to the namenode.
    */
   public void close() throws IOException {
     // synchronize in here so that we don't need to change the API
@@ -197,6 +207,9 @@ class DFSClient implements FSConstants {
         leaseChecker.join();
       } catch (InterruptedException ie) {
       }
+      
+      // close connections to the namenode
+      RPC.stopProxy(rpcNamenode);
     }
   }
 

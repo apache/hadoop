@@ -331,7 +331,7 @@ public class TestDatanodeDeath extends TestCase {
   private void complexTest() throws IOException {
     Configuration conf = new Configuration();
     conf.setInt("heartbeat.recheck.interval", 2000);
-    conf.setInt("dfs.heartbeat.interval", 1);
+    conf.setInt("dfs.heartbeat.interval", 2);
     conf.setInt("dfs.replication.pending.timeout.sec", 2);
     conf.setInt("dfs.socket.timeout", 5000);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);

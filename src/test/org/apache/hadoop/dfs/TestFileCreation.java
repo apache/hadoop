@@ -256,6 +256,7 @@ public class TestFileCreation extends TestCase {
     } finally {
       fs.close();
       cluster.shutdown();
+      client.close();
     }
   }
 
@@ -328,6 +329,7 @@ public class TestFileCreation extends TestCase {
       } catch (Exception e) {
       }
       cluster.shutdown();
+      client.close();
     }
   }
 
@@ -336,6 +338,8 @@ public class TestFileCreation extends TestCase {
    */
   public void testFileCreationNamenodeRestart() throws IOException {
     Configuration conf = new Configuration();
+    final int MAX_IDLE_TIME = 2000; // 2s
+    conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
     conf.setInt("heartbeat.recheck.interval", 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
     if (simulatedStorage) {
@@ -348,6 +352,7 @@ public class TestFileCreation extends TestCase {
     int nnport = cluster.getNameNodePort();
     InetSocketAddress addr = new InetSocketAddress("localhost", nnport);
 
+    DFSClient client = null;
     try {
 
       // create a new file.
@@ -371,7 +376,7 @@ public class TestFileCreation extends TestCase {
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
       try {
-        Thread.sleep(5000);
+        Thread.sleep(2*MAX_IDLE_TIME);
       } catch (InterruptedException e) {
       }
       cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
@@ -400,7 +405,7 @@ public class TestFileCreation extends TestCase {
       stm2.close();
 
       // verify that new block is associated with this file
-      DFSClient client = new DFSClient(addr, conf);
+      client = new DFSClient(addr, conf);
       LocatedBlocks locations = client.namenode.getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
       System.out.println("locations = " + locations.locatedBlockCount());
@@ -416,6 +421,7 @@ public class TestFileCreation extends TestCase {
     } finally {
       fs.close();
       cluster.shutdown();
+      if (client != null)  client.close();
     }
   }
 
@@ -473,4 +479,5 @@ public class TestFileCreation extends TestCase {
     testFileCreation();
     simulatedStorage = false;
   }
+
 }

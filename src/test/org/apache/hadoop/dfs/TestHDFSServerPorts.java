@@ -66,7 +66,6 @@ public class TestHDFSServerPorts extends TestCase {
     if (nn != null) {
       nn.stop();
     }
-    RPC.stopClient();
   }
 
   public Configuration getConfig() {

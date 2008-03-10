@@ -74,8 +74,21 @@ public class Client {
   private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
   private Thread connectionCullerThread;
   private SocketFactory socketFactory;           // how to create sockets
-  private boolean simulateError = false;         // unit tests
-
+  
+  private int refCount = 1;
+  
+  synchronized void incCount() {
+	  refCount++;
+  }
+  
+  synchronized void decCount() {
+    refCount--;
+  }
+  
+  synchronized boolean isZeroReference() {
+    return refCount==0;
+  }
+  
   /** A call waiting for a value. */
   private class Call {
     int id;                                       // call id
@@ -289,7 +302,6 @@ public class Client {
           } else {
             Writable value = (Writable)ReflectionUtils.newInstance(valueClass, conf);
             try {
-              waitForEndSimulation();
               readingCall = call;
               value.readFields(in);                 // read value
             } finally {
@@ -473,15 +485,48 @@ public class Client {
     this(valueClass, conf, NetUtils.getDefaultSocketFactory(conf));
   }
  
+  /** Return the socket factory of this client
+   *
+   * @return this client's socket factory
+   */
+  SocketFactory getSocketFactory() {
+    return socketFactory;
+  }
+
   /** Stop all threads related to this client.  No further calls may be made
    * using this client. */
   public void stop() {
-    LOG.info("Stopping client");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Stopping client");
+    }
+    
+    if (running == false) {
+      return;
+    }
     running = false;
+
     connectionCullerThread.interrupt();
     try {
       connectionCullerThread.join();
     } catch(InterruptedException e) {}
+
+    // close and wake up all connections
+    synchronized (connections) {
+      for (Connection conn : connections.values()) {
+        synchronized (conn) {
+          conn.setCloseConnection();
+          conn.notifyAll();
+        }
+      }
+    }
+    
+    // wait until all connections are closed
+    while (!connections.isEmpty()) {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+      }
+    }
   }
 
   /** Sets the timeout used for network i/o. */
@@ -614,19 +659,4 @@ public class Client {
       return address.hashCode() ^ System.identityHashCode(ticket);
     }
   }  
-
-  void simulateError(boolean flag) {
-    simulateError = flag;
-  }
- 
-  // If errors are being simulated, then wait.
-  private void waitForEndSimulation() {
-    while (simulateError) {
-      try {
-        LOG.info("RPC Client waiting for simulation to end");
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-      }
-    }
-  }
 }

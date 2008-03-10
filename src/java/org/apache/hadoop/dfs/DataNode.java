@@ -488,6 +488,9 @@ public class DataNode implements FSConstants, Runnable {
         }
       }
     }
+    
+    RPC.stopProxy(namenode); // stop the RPC threads
+    
     if(upgradeManager != null)
       upgradeManager.shutdownUpgrade();
     if (blockScannerThread != null) {

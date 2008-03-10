@@ -767,6 +767,9 @@ public class TaskTracker
         
     // Shutdown the fetcher thread
     this.mapEventsFetcher.interrupt();
+    
+    // shutdown RPC connections
+    RPC.stopProxy(jobClient);
   }
 
   /**
@@ -2078,6 +2081,7 @@ public class TaskTracker
         throwable.printStackTrace(new PrintStream(baos));
         umbilical.reportDiagnosticInfo(taskid, baos.toString());
       } finally {
+        RPC.stopProxy(umbilical);
         MetricsContext metricsContext = MetricsUtil.getContext("mapred");
         metricsContext.close();
         // Shutting down log4j of the child-vm... 

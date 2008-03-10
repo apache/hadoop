@@ -317,6 +317,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   }
 
   JobSubmissionProtocol jobSubmitClient;
+  private JobSubmissionProtocol rpcProxy;
+  
   FileSystem fs = null;
 
   static Random r = new Random();
@@ -349,10 +351,17 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     if ("local".equals(tracker)) {
       this.jobSubmitClient = new LocalJobRunner(conf);
     } else {
-      this.jobSubmitClient = createProxy(JobTracker.getAddress(conf), conf);
+      this.rpcProxy = createRPCProxy(JobTracker.getAddress(conf), conf);
+      this.jobSubmitClient = createRetryProxy(this.rpcProxy);
     }        
   }
 
+  private JobSubmissionProtocol createRPCProxy(InetSocketAddress addr,
+      Configuration conf) throws IOException {
+    return (JobSubmissionProtocol) RPC.getProxy(JobSubmissionProtocol.class,
+        JobSubmissionProtocol.versionID, addr, conf,
+        NetUtils.getSocketFactory(conf, JobSubmissionProtocol.class));
+  }
   /**
    * Create a proxy JobSubmissionProtocol that retries timeouts.
    * 
@@ -361,13 +370,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    * @return a proxy object that will retry timeouts.
    * @throws IOException
    */
-  private JobSubmissionProtocol createProxy(InetSocketAddress addr,
-                                            Configuration conf
+  private JobSubmissionProtocol createRetryProxy(JobSubmissionProtocol raw
                                             ) throws IOException {
-    JobSubmissionProtocol raw =
-        (JobSubmissionProtocol) RPC.getProxy(JobSubmissionProtocol.class,
-            JobSubmissionProtocol.versionID, addr, conf, NetUtils
-                .getSocketFactory(conf, JobSubmissionProtocol.class));
     RetryPolicy backoffPolicy =
       RetryPolicies.retryUpToMaximumCountWithProportionalSleep
       (5, 10, java.util.concurrent.TimeUnit.SECONDS);
@@ -388,13 +392,15 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    */
   public JobClient(InetSocketAddress jobTrackAddr, 
                    Configuration conf) throws IOException {
-    jobSubmitClient = createProxy(jobTrackAddr, conf);
+    rpcProxy =  createRPCProxy(jobTrackAddr, conf);
+    jobSubmitClient = createRetryProxy(rpcProxy);
   }
 
   /**
    * Close the <code>JobClient</code>.
    */
   public synchronized void close() throws IOException {
+    RPC.stopProxy(rpcProxy);
   }
 
   /**

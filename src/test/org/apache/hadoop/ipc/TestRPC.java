@@ -25,8 +25,6 @@ import java.lang.reflect.Method;
 import junit.framework.TestCase;
 
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
 
 import org.apache.commons.logging.*;
 
@@ -54,6 +52,7 @@ public class TestRPC extends TestCase {
     public static final long versionID = 1L;
     
     void ping() throws IOException;
+    void slowPing(boolean shouldSlow) throws IOException;
     String echo(String value) throws IOException;
     String[] echo(String[] value) throws IOException;
     Writable echo(Writable value) throws IOException;
@@ -65,13 +64,28 @@ public class TestRPC extends TestCase {
   }
 
   public class TestImpl implements TestProtocol {
-
+    int fastPingCounter = 0;
+    
     public long getProtocolVersion(String protocol, long clientVersion) {
       return TestProtocol.versionID;
     }
     
     public void ping() {}
 
+    public synchronized void slowPing(boolean shouldSlow) {
+      if (shouldSlow) {
+        while (fastPingCounter < 2) {
+          try {
+          wait();  // slow response until two fast pings happened
+          } catch (InterruptedException ignored) {}
+        }
+        fastPingCounter -= 2;
+      } else {
+        fastPingCounter++;
+        notify();
+      }
+    }
+    
     public String echo(String value) throws IOException { return value; }
 
     public String[] echo(String[] values) throws IOException { return values; }
@@ -159,7 +173,7 @@ public class TestRPC extends TestCase {
 
     public void run() {
       try {
-        proxy.ping();           // this would hang until simulateError is false
+        proxy.slowPing(true);   // this would hang until two fast pings happened
         done = true;
       } catch (IOException e) {
         assertTrue("SlowRPC ping exception " + e, false);
@@ -169,57 +183,58 @@ public class TestRPC extends TestCase {
 
   public void testSlowRpc() throws Exception {
     System.out.println("Testing Slow RPC");
-    Server server = RPC.getServer(new TestImpl(), ADDRESS, 0, conf);
+    // create a server with two handlers
+    Server server = RPC.getServer(new TestImpl(), ADDRESS, 0, 2, false, conf);
+    TestProtocol proxy = null;
+    
+    try {
     server.start();
 
     InetSocketAddress addr = server.getListenerAddress();
 
-    // create a client and make an RPC that does not read its response
-    //
-    TestProtocol proxy1 =
-      (TestProtocol)RPC.getProxy(TestProtocol.class, TestProtocol.versionID, addr, conf);
-    Collection collection = RPC.allClients();
-    assertTrue("There should be only one client.", collection.size() == 1);
-    Iterator iter = collection.iterator();
-    Client client = (Client) iter.next();
+    // create a client
+    proxy = (TestProtocol)RPC.getProxy(
+        TestProtocol.class, TestProtocol.versionID, addr, conf);
 
-    client.simulateError(true);
-    RPC.removeClients();
-    SlowRPC slowrpc = new SlowRPC(proxy1);
+    SlowRPC slowrpc = new SlowRPC(proxy);
     Thread thread = new Thread(slowrpc, "SlowRPC");
-    thread.start();
+    thread.start(); // send a slow RPC, which won't return until two fast pings
     assertTrue("Slow RPC should not have finished1.", !slowrpc.isDone());
 
-    // create another client and make another RPC to the same server. This
-    // should complete even though the first one is still hanging.
-    //
-    TestProtocol proxy2 =
-      (TestProtocol)RPC.getProxy(TestProtocol.class, TestProtocol.versionID, addr, conf);
-    proxy2.ping();
-
+    proxy.slowPing(false); // first fast ping
+    
     // verify that the first RPC is still stuck
     assertTrue("Slow RPC should not have finished2.", !slowrpc.isDone());
 
-    // Make the first RPC process its response. 
-    client.simulateError(false);
+    proxy.slowPing(false); // second fast ping
+    
+    // Now the slow ping should be able to be executed
     while (!slowrpc.isDone()) {
       System.out.println("Waiting for slow RPC to get done.");
       try {
         Thread.sleep(1000);
       } catch (InterruptedException e) {}
     }
-    server.stop();
+    } finally {
+      server.stop();
+      if (proxy != null) {
+        RPC.stopProxy(proxy);
+      }
+      System.out.println("Down slow rpc testing");
+    }
   }
 
 
   public void testCalls() throws Exception {
     Server server = RPC.getServer(new TestImpl(), ADDRESS, 0, conf);
+    TestProtocol proxy = null;
+    try {
     server.start();
 
     InetSocketAddress addr = server.getListenerAddress();
-    TestProtocol proxy =
-      (TestProtocol)RPC.getProxy(TestProtocol.class, TestProtocol.versionID, addr, conf);
-    
+    proxy = (TestProtocol)RPC.getProxy(
+        TestProtocol.class, TestProtocol.versionID, addr, conf);
+      
     proxy.ping();
 
     String stringResult = proxy.echo("foo");
@@ -288,8 +303,10 @@ public class TestRPC extends TestCase {
     Object[] voids = (Object[])RPC.call(ping, new Object[][]{{},{}},
                                         new InetSocketAddress[] {addr, addr}, conf);
     assertEquals(voids, null);
-
-    server.stop();
+    } finally {
+      server.stop();
+      if(proxy!=null) RPC.stopProxy(proxy);
+    }
   }
   public static void main(String[] args) throws Exception {
 

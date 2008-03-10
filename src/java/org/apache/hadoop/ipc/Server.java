@@ -345,7 +345,11 @@ public abstract class Server {
 
         selector= null;
         acceptChannel= null;
-        connectionList = null;
+        
+        // clean up all connections
+        while (!connectionList.isEmpty()) {
+          closeConnection(connectionList.remove(0));
+        }
       }
     }
 
