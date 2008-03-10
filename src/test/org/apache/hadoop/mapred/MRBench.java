@@ -282,7 +282,7 @@ public class MRBench {
       execTimes = runJobInSequence(jobConf, numRuns);
     } finally {
       // delete output -- should we really do this?
-      fs.delete(BASE_DIR);
+      fs.delete(BASE_DIR, true);
     }
     
     if (verbose) {

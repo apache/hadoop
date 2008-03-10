@@ -132,7 +132,7 @@ public class TestFileLimit extends TestCase {
 
       // delete one file
       Path file0 = new Path("/filestatus0");
-      fs.delete(file0);
+      fs.delete(file0, true);
       System.out.println("Deleted file " + file0);
       currentNodes -= 2;
 
@@ -146,7 +146,7 @@ public class TestFileLimit extends TestCase {
 
       // delete the file again
       file0 = new Path("/filestatus0");
-      fs.delete(file0);
+      fs.delete(file0, true);
       System.out.println("Deleted file " + file0 + " again.");
       currentNodes -= 2;
 

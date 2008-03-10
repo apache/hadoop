@@ -84,7 +84,7 @@ public class Grep extends Configured implements Tool {
       JobClient.runJob(sortJob);
     }
     finally {
-      FileSystem.get(grepJob).delete(tempDir);
+      FileSystem.get(grepJob).delete(tempDir, true);
     }
     return 0;
   }

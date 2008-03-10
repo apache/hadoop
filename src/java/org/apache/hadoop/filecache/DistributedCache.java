@@ -239,7 +239,7 @@ public class DistributedCache {
         synchronized (lcacheStatus) {
           if (lcacheStatus.refcount == 0) {
             // delete this cache entry
-            FileSystem.getLocal(conf).delete(lcacheStatus.localLoadPath);
+            FileSystem.getLocal(conf).delete(lcacheStatus.localLoadPath, true);
             it.remove();
           }
         }
@@ -314,7 +314,7 @@ public class DistributedCache {
                               + " is in use and cannot be refreshed");
       
       FileSystem localFs = FileSystem.getLocal(conf);
-      localFs.delete(cacheStatus.localLoadPath);
+      localFs.delete(cacheStatus.localLoadPath, true);
       Path parchive = new Path(cacheStatus.localLoadPath,
                                new Path(cacheStatus.localLoadPath.getName()));
       
@@ -779,7 +779,7 @@ public class DistributedCache {
       FileSystem localFs = FileSystem.getLocal(conf);
       for (Map.Entry<String,CacheStatus> f: cachedArchives.entrySet()) {
         try {
-          localFs.delete(f.getValue().localLoadPath);
+          localFs.delete(f.getValue().localLoadPath, true);
         } catch (IOException ie) {
           LOG.debug("Error cleaning up cache", ie);
         }

@@ -1047,7 +1047,7 @@ public class FsShell extends Configured implements Tool {
       System.out.println("Moved to trash: " + src);
       return;
     }
-    if (srcFs.delete(src)) {
+    if (srcFs.delete(src, true)) {
       System.out.println("Deleted " + src);
     } else {
       if (!srcFs.exists(src)) {

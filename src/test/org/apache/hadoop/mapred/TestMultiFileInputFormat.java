@@ -57,7 +57,7 @@ public class TestMultiFileInputFormat extends TestCase{
   private Path initFiles(FileSystem fs, int numFiles, int numBytes) throws IOException{
     Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
     Path multiFileDir = new Path(dir, "test.multifile");
-    fs.delete(multiFileDir);
+    fs.delete(multiFileDir, true);
     fs.mkdirs(multiFileDir);
     LOG.info("Creating " + numFiles + " file(s) in " + multiFileDir);
     for(int i=0; i<numFiles ;i++) {
@@ -119,7 +119,7 @@ public class TestMultiFileInputFormat extends TestCase{
         }
       }
       assertEquals(bits.cardinality(), numFiles);
-      fs.delete(dir);
+      fs.delete(dir, true);
     }
     LOG.info("Test Finished");
   }

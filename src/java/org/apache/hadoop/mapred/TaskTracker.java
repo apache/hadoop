@@ -656,7 +656,7 @@ public class TaskTracker
         // we should clean up and then try again
         Path jobDir = localJobFile.getParent();
         if (localFs.exists(jobDir)){
-          localFs.delete(jobDir);
+          localFs.delete(jobDir, true);
           boolean b = localFs.mkdirs(jobDir);
           if (!b)
             throw new IOException("Not able to create job directory "

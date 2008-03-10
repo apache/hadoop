@@ -453,7 +453,22 @@ class FSDirectory implements FSConstants {
     }
     return deletedNode;
   }
-
+  
+  /** Return if a directory is empty or not **/
+  public boolean isDirEmpty(String src) {
+	boolean dirNotEmpty = true;
+    if (!isDir(src)) {
+      return true;
+    }
+    synchronized(rootDir) {
+      INode targetNode = rootDir.getNode(src);
+      if (((INodeDirectory)targetNode).getChildren().size() != 0) {
+        dirNotEmpty = false;
+      }
+    }
+    return dirNotEmpty;
+  }
+  
   /**
    */
   INode unprotectedDelete(String src, long modificationTime, 

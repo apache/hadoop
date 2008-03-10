@@ -413,14 +413,14 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
    */
   public boolean delete(Path f) throws IOException {
     if (fs.isDirectory(f)) {
-      return fs.delete(f);
+      return fs.delete(f, true);
     } else {
       Path checkFile = getChecksumFile(f);
       if (fs.exists(checkFile)) {
-        fs.delete(checkFile);
+        fs.delete(checkFile, true);
       }
 
-      return fs.delete(f);
+      return fs.delete(f, true);
     }
   }
 
@@ -508,7 +508,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       }
       dst = getChecksumFile(dst);
       if (localFs.exists(dst)) { //remove old local checksum file
-        localFs.delete(dst);
+        localFs.delete(dst, true);
       }
       Path checksumFile = getChecksumFile(src);
       if (copyCrc && fs.exists(checksumFile)) { //copy checksum file

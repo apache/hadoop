@@ -155,7 +155,7 @@ public class SleepJob extends Configured implements Tool,
       JobClient.runJob(job);
     } 
     finally {
-      fs.delete(tempPath);
+      fs.delete(tempPath, true);
     }
     return 0;
   }

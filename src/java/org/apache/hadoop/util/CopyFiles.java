@@ -350,7 +350,7 @@ public class CopyFiles implements Tool {
     private void rename(FileSystem fs, Path tmp, Path dst) throws IOException {
       try {
         if (fs.exists(dst)) {
-          fs.delete(dst);
+          fs.delete(dst, true);
         }
         fs.rename(tmp, dst);
       }
@@ -413,7 +413,7 @@ public class CopyFiles implements Tool {
         try {
           for (int i = 0; i < 3; ++i) {
             try {
-              if (destFileSys.delete(dstpath))
+              if (destFileSys.delete(dstpath, true))
                 break;
             } catch (Throwable ex) {
               // ignore, we are just cleaning up

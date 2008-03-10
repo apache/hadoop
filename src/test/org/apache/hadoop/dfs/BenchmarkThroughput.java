@@ -152,7 +152,7 @@ public class BenchmarkThroughput extends Configured implements Tool {
     } finally {
       try {
         if (f != null) {
-          fs.delete(f);
+          fs.delete(f, true);
         }
       } catch (IOException ie) {
         // IGNORE
@@ -216,7 +216,7 @@ public class BenchmarkThroughput extends Configured implements Tool {
       if (cluster != null) {
         cluster.shutdown();
         // clean up minidfs junk
-        rawLocal.delete(new Path(localDir, "dfs"));
+        rawLocal.delete(new Path(localDir, "dfs"), true);
       }
     }
     return 0;

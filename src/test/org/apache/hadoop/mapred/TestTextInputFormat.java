@@ -59,7 +59,7 @@ public class TestTextInputFormat extends TestCase {
     LOG.info("seed = "+seed);
     Random random = new Random(seed);
 
-    localFs.delete(workDir);
+    localFs.delete(workDir, true);
     job.setInputPath(workDir);
 
     // for a variety of lengths
@@ -200,7 +200,7 @@ public class TestTextInputFormat extends TestCase {
     JobConf job = new JobConf();
     CompressionCodec gzip = new GzipCodec();
     ReflectionUtils.setConf(gzip, job);
-    localFs.delete(workDir);
+    localFs.delete(workDir, true);
     writeFile(localFs, new Path(workDir, "part1.txt.gz"), gzip, 
               "the quick\nbrown\nfox jumped\nover\n the lazy\n dog\n");
     writeFile(localFs, new Path(workDir, "part2.txt.gz"), gzip,
@@ -233,7 +233,7 @@ public class TestTextInputFormat extends TestCase {
     JobConf job = new JobConf();
     CompressionCodec gzip = new GzipCodec();
     ReflectionUtils.setConf(gzip, job);
-    localFs.delete(workDir);
+    localFs.delete(workDir, true);
     writeFile(localFs, new Path(workDir, "empty.gz"), gzip, "");
     job.setInputPath(workDir);
     TextInputFormat format = new TextInputFormat();

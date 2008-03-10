@@ -166,10 +166,19 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * Get rid of Path f, whether a true file or dir.
    */
+  @Deprecated
   public boolean delete(Path f) throws IOException {
     return dfs.delete(getPathName(f));
   }
-
+  
+  /**
+   * requires a boolean check to delete a non 
+   * empty directory recursively.
+   */
+  public boolean delete(Path f, boolean recursive) throws IOException {
+   return dfs.delete(getPathName(f), recursive);
+  }
+  
   public boolean exists(Path f) throws IOException {
     return dfs.exists(getPathName(f));
   }

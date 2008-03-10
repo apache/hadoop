@@ -105,7 +105,7 @@ public class TestDFSShellGenericOptions extends TestCase {
                                      shell.getConf());
       assertTrue("Directory does not get created", 
                  fs.isDirectory(new Path("/data")));
-      fs.delete(new Path("/data"));
+      fs.delete(new Path("/data"), true);
     } catch (Exception e) {
       System.err.println(e.getMessage());
       e.printStackTrace();

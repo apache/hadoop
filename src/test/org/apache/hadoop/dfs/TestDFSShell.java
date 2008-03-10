@@ -108,7 +108,33 @@ public class TestDFSShell extends TestCase {
       cluster.shutdown();
     }
   }
-
+  
+  public void testRecrusiveRm() throws IOException {
+	  Configuration conf = new Configuration();
+	  MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+	  FileSystem fs = cluster.getFileSystem();
+	  assertTrue("Not a HDFS: " + fs.getUri(), 
+			  fs instanceof DistributedFileSystem);
+	  try {
+      fs.mkdirs(new Path(new Path("parent"), "child"));
+      try {
+        fs.delete(new Path("parent"), false);
+        assert(false); // should never reach here.
+      } catch(IOException e) {
+         //should have thrown an exception
+      }
+      try {
+        fs.delete(new Path("parent"), true);
+      } catch(IOException e) {
+        assert(false);
+      }
+    } finally {  
+      try { fs.close();}catch(IOException e){};
+      cluster.shutdown();
+    }
+  }
+    
+  
   public void testPut() throws IOException {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
@@ -372,8 +398,8 @@ public class TestDFSShell extends TestCase {
       ret = ToolRunner.run(shell, argv);
       assertTrue(" cat is working ", (ret == 0));
       //check chown
-      dstFs.delete(new Path("/furi"));
-      dstFs.delete(new Path("/hadoopdir"));
+      dstFs.delete(new Path("/furi"), true);
+      dstFs.delete(new Path("/hadoopdir"), true);
       String file = "/tmp/chownTest";
       Path path = new Path(file);
       Path parent = new Path("/tmp");
@@ -613,7 +639,7 @@ public class TestDFSShell extends TestCase {
     try {
      //first make dir
      Path dir = new Path(chmodDir);
-     fs.delete(dir);
+     fs.delete(dir, true);
      fs.mkdirs(dir);
 
      runCmd(shell, "-chmod", "u+rwx,g=rw,o-rwx", chmodDir);
@@ -636,7 +662,7 @@ public class TestDFSShell extends TestCase {
      assertEquals("rw-rw-rw-",
                   fs.getFileStatus(file).getPermission().toString());
      
-     fs.delete(dir);     
+     fs.delete(dir, true);     
     } finally {
       try {
         fs.close();
@@ -775,7 +801,7 @@ public class TestDFSShell extends TestCase {
         }
         assertTrue(val == 0);
       }
-      fileSys.delete(myFile2);
+      fileSys.delete(myFile2, true);
 
       // Verify that we can get with and without crc
       {

@@ -77,10 +77,10 @@ public class TestFileSystem extends TestCase {
     writeTest(fs, false);
     readTest(fs, false);
     seekTest(fs, false);
-    fs.delete(CONTROL_DIR);
-    fs.delete(DATA_DIR);
-    fs.delete(WRITE_DIR);
-    fs.delete(READ_DIR);
+    fs.delete(CONTROL_DIR, true);
+    fs.delete(DATA_DIR, true);
+    fs.delete(WRITE_DIR, true);
+    fs.delete(READ_DIR, true);
   }
 
   public static void createControlFile(FileSystem fs,
@@ -90,7 +90,7 @@ public class TestFileSystem extends TestCase {
     LOG.info("creating control file: "+megaBytes+" bytes, "+numFiles+" files");
 
     Path controlFile = new Path(CONTROL_DIR, "files");
-    fs.delete(controlFile);
+    fs.delete(controlFile, true);
     Random random = new Random(seed);
 
     SequenceFile.Writer writer =
@@ -197,8 +197,8 @@ public class TestFileSystem extends TestCase {
   public static void writeTest(FileSystem fs, boolean fastCheck)
     throws Exception {
 
-    fs.delete(DATA_DIR);
-    fs.delete(WRITE_DIR);
+    fs.delete(DATA_DIR, true);
+    fs.delete(WRITE_DIR, true);
     
     JobConf job = new JobConf(conf, TestFileSystem.class);
     job.setBoolean("fs.test.fastCheck", fastCheck);
@@ -295,7 +295,7 @@ public class TestFileSystem extends TestCase {
   public static void readTest(FileSystem fs, boolean fastCheck)
     throws Exception {
 
-    fs.delete(READ_DIR);
+    fs.delete(READ_DIR, true);
 
     JobConf job = new JobConf(conf, TestFileSystem.class);
     job.setBoolean("fs.test.fastCheck", fastCheck);
@@ -392,7 +392,7 @@ public class TestFileSystem extends TestCase {
   public static void seekTest(FileSystem fs, boolean fastCheck)
     throws Exception {
 
-    fs.delete(READ_DIR);
+    fs.delete(READ_DIR, true);
 
     JobConf job = new JobConf(conf, TestFileSystem.class);
     job.setBoolean("fs.test.fastCheck", fastCheck);

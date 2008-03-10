@@ -104,7 +104,7 @@ public class PhasedFileSystem extends FilterFileSystem {
           // ignore if already closed
         }
         if (fs.exists(fInfo.getTempPath())){
-          fs.delete(fInfo.getTempPath());
+          fs.delete(fInfo.getTempPath(), true);
         }
         finalNameToFileInfo.remove(finalFile); 
       }
@@ -166,23 +166,23 @@ public class PhasedFileSystem extends FilterFileSystem {
         }
         
         if (fs.exists(fPath) && fInfo.isOverwrite()){
-          fs.delete(fPath); 
+          fs.delete(fPath, true); 
         }
         
         try {
           if (!fs.rename(fInfo.getTempPath(), fPath)){
             // delete the temp file if rename failed
-            fs.delete(fInfo.getTempPath());
+            fs.delete(fInfo.getTempPath(), true);
           }
         }catch(IOException ioe){
           // rename failed, log error and delete temp files
           LOG.error("PhasedFileSystem failed to commit file : " + fPath 
                     + " error : " + ioe.getMessage()); 
-          fs.delete(fInfo.getTempPath());
+          fs.delete(fInfo.getTempPath(), true);
         }
       }else{
         // delete temp file
-        fs.delete(fInfo.getTempPath());
+        fs.delete(fInfo.getTempPath(), true);
       }
       // done with the file
       if (removeFromMap){
@@ -224,7 +224,7 @@ public class PhasedFileSystem extends FilterFileSystem {
       }catch(IOException ioe){
         // ignore if already closed
       }
-      fs.delete(fInfo.getTempPath()); 
+      fs.delete(fInfo.getTempPath(), true); 
       if (removeFromMap){
         finalNameToFileInfo.remove(p);
       }

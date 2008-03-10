@@ -179,7 +179,7 @@ public abstract class S3FileSystemBaseTest extends TestCase {
       assertEquals("Position " + i, data[i], buf[i]);
     }
     
-    assertTrue("Deleted", s3FileSystem.delete(path));
+    assertTrue("Deleted", s3FileSystem.delete(path, true));
     
     assertFalse("No longer exists", s3FileSystem.exists(path));
 
@@ -227,7 +227,7 @@ public abstract class S3FileSystemBaseTest extends TestCase {
   public void testDeleteNonExistentFile() throws IOException {
     Path path = new Path("/test/hadoop/file");    
     assertFalse("Doesn't exist", s3FileSystem.exists(path));
-    assertFalse("No deletion", s3FileSystem.delete(path));
+    assertFalse("No deletion", s3FileSystem.delete(path, true));
   }
 
   public void testDeleteDirectory() throws IOException {
@@ -247,7 +247,7 @@ public abstract class S3FileSystemBaseTest extends TestCase {
     assertTrue("subdir exists", s3FileSystem.exists(subdir));
     assertTrue("file2 exists", s3FileSystem.exists(file2));
     
-    assertTrue("Delete", s3FileSystem.delete(dir));
+    assertTrue("Delete", s3FileSystem.delete(dir, true));
 
     assertTrue("root exists", s3FileSystem.exists(root));
     assertFalse("dir exists", s3FileSystem.exists(dir));

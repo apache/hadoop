@@ -86,7 +86,7 @@ public class TestMiniMRLocalFS extends TestCase {
     Path testDir = new Path(TEST_ROOT_DIR + "/test_mini_mr_local");
     Path outDir = new Path(testDir, "out");
     System.out.println("testDir= " + testDir);
-    fileSys.delete(testDir);
+    fileSys.delete(testDir, true);
     
     job.setInputFormat(MyInputFormat.class);
     job.setOutputFormat(MyOutputFormat.class);
@@ -111,7 +111,7 @@ public class TestMiniMRLocalFS extends TestCase {
                               "eggs\t2\n" + 
                               "finagle the agent\t3\n"), result);
     } finally {
-      fileSys.delete(testDir);
+      fileSys.delete(testDir, true);
     }
     
   }

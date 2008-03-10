@@ -115,7 +115,7 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
     // set up the input file system and write input text.
     FileSystem inFs = inDir.getFileSystem(conf);
     FileSystem outFs = outDir.getFileSystem(conf);
-    outFs.delete(outDir);
+    outFs.delete(outDir, true);
     if (!inFs.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }

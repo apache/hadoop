@@ -47,9 +47,9 @@ public class TestAggregates extends TestCase {
     Path OUTPUT_DIR = new Path("build/test/output_for_aggregates_test");
     Path INPUT_DIR = new Path("build/test/input_for_aggregates_test");
     String inputFile = "input.txt";
-    fs.delete(INPUT_DIR);
+    fs.delete(INPUT_DIR, true);
     fs.mkdirs(INPUT_DIR);
-    fs.delete(OUTPUT_DIR);
+    fs.delete(OUTPUT_DIR, true);
 
     StringBuffer inputData = new StringBuffer();
     StringBuffer expectedOutput = new StringBuffer();
@@ -114,7 +114,7 @@ public class TestAggregates extends TestCase {
 
     assertEquals(expectedOutput.toString(),outdata);
     //fs.delete(OUTPUT_DIR);
-    fs.delete(INPUT_DIR);
+    fs.delete(INPUT_DIR, true);
   }
 
   /**

@@ -171,7 +171,7 @@ abstract class TaskRunner extends Thread {
         }
         Path localTaskFile = new Path(t.getJobFile());
         FileSystem localFs = FileSystem.getLocal(conf);
-        localFs.delete(localTaskFile);
+        localFs.delete(localTaskFile, true);
         OutputStream out = localFs.create(localTaskFile);
         try {
           conf.write(out);

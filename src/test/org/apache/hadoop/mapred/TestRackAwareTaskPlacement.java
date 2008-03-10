@@ -96,7 +96,7 @@ public class TestRackAwareTaskPlacement extends TestCase {
       mr = new MiniMRCluster(taskTrackers, namenode, 1, rack2, hosts4);
       JobConf jobConf = mr.createJobConf();
       if (fileSys.exists(outputPath)) {
-        fileSys.delete(outputPath);
+        fileSys.delete(outputPath, true);
       }
       /* The job is configured with three maps since there are three 
        * (non-splittable) files. On rack2, there are two files and both
@@ -118,7 +118,7 @@ public class TestRackAwareTaskPlacement extends TestCase {
       jobConf = mr.createJobConf();
       fileSys = dfs.getFileSystem();
       if (fileSys.exists(outputPath)) {
-        fileSys.delete(outputPath);
+        fileSys.delete(outputPath, true);
       }
       /* The job is configured with three maps since there are three 
        * (non-splittable) files. On rack1, because of the way in which repl

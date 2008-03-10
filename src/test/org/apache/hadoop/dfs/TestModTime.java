@@ -58,7 +58,7 @@ public class TestModTime extends TestCase {
   
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
     assertTrue(fileSys.exists(name));
-    fileSys.delete(name);
+    fileSys.delete(name, true);
     assertTrue(!fileSys.exists(name));
   }
 
@@ -154,7 +154,7 @@ public class TestModTime extends TestCase {
      // delete newfile
      //
      System.out.println("Deleting testdir2/testnew.dat.");
-     assertTrue(fileSys.delete(newfile));
+     assertTrue(fileSys.delete(newfile, true));
      //
      // verify that modification time of testdir1 has not changed.
      //

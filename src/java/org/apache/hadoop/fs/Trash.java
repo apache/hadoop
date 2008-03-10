@@ -161,7 +161,7 @@ public class Trash extends Configured {
       }
 
       if ((now - interval) > time) {
-        if (fs.delete(path)) {
+        if (fs.delete(path, true)) {
           LOG.info("Deleted trash checkpoint: "+dir);
         } else {
           LOG.warn("Couldn't delete checkpoint: "+dir+" Ignoring.");

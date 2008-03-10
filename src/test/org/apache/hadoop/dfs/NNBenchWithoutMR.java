@@ -208,7 +208,7 @@ public class NNBenchWithoutMR {
       int singleFileExceptions = 0;
       do { // delete file until is succeeds
         try {
-          boolean result = fileSys.delete(new Path(taskDir, "A" + index));
+          boolean result = fileSys.delete(new Path(taskDir, "A" + index), true);
           success = true;
         } catch (IOException ioe) { 
           success=false; 

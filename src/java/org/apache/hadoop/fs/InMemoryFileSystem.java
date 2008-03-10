@@ -245,8 +245,13 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
         return true;
       }
     }
-
+    
+    @Deprecated
     public boolean delete(Path f) throws IOException {
+      return delete(f, true);
+    }
+    
+    public boolean delete(Path f, boolean recursive) throws IOException {
       synchronized (this) {
         FileAttributes fAttr = pathToFileAttribs.remove(getPath(f));
         if (fAttr != null) {

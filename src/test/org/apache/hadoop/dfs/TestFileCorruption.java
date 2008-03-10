@@ -91,6 +91,6 @@ public class TestFileCorruption extends TestCase {
     } catch (ChecksumException ignore) {
       //expect this exception but let any NPE get thrown
     }
-    fs.delete(file);
+    fs.delete(file, true);
   }
 }

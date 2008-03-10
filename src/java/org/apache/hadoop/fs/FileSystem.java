@@ -531,9 +531,21 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public abstract boolean rename(Path src, Path dst) throws IOException;
     
-  /** Delete a file */
+  /** Delete a file. */
+  /** @deprecated Use delete(Path, boolean) instead */ @Deprecated 
   public abstract boolean delete(Path f) throws IOException;
-    
+  
+  /** Delete a file.
+   *
+   * @param f the path to delete.
+   * @param recursive if path is a directory and set to 
+   * true, the directory is deleted else throws an exception. In
+   * case of a file the recursive can be set to either true or false. 
+   * @return  true if delete is successful else false. 
+   * @throws IOException
+   */
+  public abstract boolean delete(Path f, boolean recursive) throws IOException;
+  
   /** Check if exists.
    * @param f source file
    */

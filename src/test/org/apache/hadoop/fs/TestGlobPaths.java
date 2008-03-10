@@ -345,7 +345,7 @@ public class TestGlobPaths extends TestCase {
   }
   
   private void cleanupDFS() throws IOException {
-    fs.delete(new Path("/user"));
+    fs.delete(new Path("/user"), true);
   }
   
 }

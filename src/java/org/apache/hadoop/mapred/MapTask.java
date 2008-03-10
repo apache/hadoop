@@ -671,8 +671,8 @@ class MapTask extends Task {
         finalIndexOut.close();
         //cleanup
         for(int i = 0; i < numSpills; i++) {
-          localFs.delete(filename[i]);
-          localFs.delete(indexFileName[i]);
+          localFs.delete(filename[i], true);
+          localFs.delete(indexFileName[i], true);
         }
       }
     }

@@ -52,7 +52,7 @@ public class TestPread extends TestCase {
     }
     assertTrue("Error reading beyond file boundary.", res != null);
     in.close();
-    if (!fileSys.delete(name))
+    if (!fileSys.delete(name, true))
       assertTrue("Cannot delete file", false);
     
     // now create the real file
@@ -153,7 +153,7 @@ public class TestPread extends TestCase {
   
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
     assertTrue(fileSys.exists(name));
-    assertTrue(fileSys.delete(name));
+    assertTrue(fileSys.delete(name, true));
     assertTrue(!fileSys.exists(name));
   }
   

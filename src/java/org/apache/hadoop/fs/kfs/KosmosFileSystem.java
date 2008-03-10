@@ -294,22 +294,31 @@ public class KosmosFileSystem extends FileSystem {
     }
 
     // recursively delete the directory and its contents
-    public boolean delete(Path path) throws IOException {
-	Path absolute = makeAbsolute(path);
-        String srep = absolute.toUri().getPath();
+    public boolean delete(Path path, boolean recursive) throws IOException {
+      Path absolute = makeAbsolute(path);
+      String srep = absolute.toUri().getPath();
+      if (kfsImpl.isFile(srep))
+        return kfsImpl.remove(srep) == 0;
 
-        if (kfsImpl.isFile(srep))
-            return kfsImpl.remove(srep) == 0;
-
-        Path[] dirEntries = listPaths(absolute);
-        if (dirEntries != null) {
-            for (int i = 0; i < dirEntries.length; i++) {
-                delete(new Path(absolute, dirEntries[i]));
-            }
+      Path[] dirEntries = listPaths(absolute);
+      if ((!recursive) && (dirEntries != null) && 
+            (dirEntries.length != 0)) {
+        throw new IOException("Directory " + path.toString() + 
+        " is not empty.");
+      }
+      if (dirEntries != null) {
+        for (int i = 0; i < dirEntries.length; i++) {
+          delete(new Path(absolute, dirEntries[i]), recursive);
         }
-        return kfsImpl.rmdir(srep) == 0;
+      }
+      return kfsImpl.rmdir(srep) == 0;
     }
-
+    
+    @Deprecated
+    public boolean delete(Path path) throws IOException {
+      return delete(path, true);
+    }
+    
     @Deprecated
     public long getLength(Path path) throws IOException {
 	Path absolute = makeAbsolute(path);

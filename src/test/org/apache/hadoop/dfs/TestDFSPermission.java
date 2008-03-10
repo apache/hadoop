@@ -207,7 +207,7 @@ public class TestDFSPermission extends TestCase {
     } finally {
       // delete the file
       if (delete) {
-        fs.delete(name);
+        fs.delete(name, true);
       }
     }
   }
@@ -278,7 +278,7 @@ public class TestDFSPermission extends TestCase {
 
     // delete the file/directory
     login(SUPERUSER);
-    fs.delete(FILE_DIR_PATH);
+    fs.delete(FILE_DIR_PATH, true);
   }
 
   /* Return the group owner of the file/directory */
@@ -596,7 +596,7 @@ public class TestDFSPermission extends TestCase {
     void call() throws IOException {
       create(opType, path);
       if (cleanup) {
-        fs.delete(path);
+        fs.delete(path, true);
       }
     }
   }
@@ -849,7 +849,7 @@ public class TestDFSPermission extends TestCase {
 
     @Override
     void call() throws IOException {
-      fs.delete(path);
+      fs.delete(path, true);
     }
   }
 
@@ -954,7 +954,7 @@ public class TestDFSPermission extends TestCase {
       checkNoPermissionDeny(e);
     }
     try {
-      fs.delete(NON_EXISTENT_FILE);
+      fs.delete(NON_EXISTENT_FILE, true);
     } catch (IOException e) {
       checkNoPermissionDeny(e);
     }

@@ -106,7 +106,7 @@ public class TestSequenceFileInputFilter extends TestCase {
     SequenceFileInputFilter.RegexFilter.setPattern(job, "\\A10*");
     
     // clean input dir
-    fs.delete(inDir);
+    fs.delete(inDir, true);
   
     // for a variety of lengths
     for (int length = 1; length < MAX_LENGTH;
@@ -118,7 +118,7 @@ public class TestSequenceFileInputFilter extends TestCase {
     }
     
     // clean up
-    fs.delete(inDir);
+    fs.delete(inDir, true);
   }
 
   public void testPercentFilter() throws Exception {
@@ -129,7 +129,7 @@ public class TestSequenceFileInputFilter extends TestCase {
     SequenceFileInputFilter.PercentFilter.setFrequency(job, 1000);
       
     // clean input dir
-    fs.delete(inDir);
+    fs.delete(inDir, true);
     
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
@@ -145,7 +145,7 @@ public class TestSequenceFileInputFilter extends TestCase {
     }
       
     // clean up
-    fs.delete(inDir);
+    fs.delete(inDir, true);
   }
   
   public void testMD5Filter() throws Exception {
@@ -156,7 +156,7 @@ public class TestSequenceFileInputFilter extends TestCase {
     SequenceFileInputFilter.MD5Filter.setFrequency(job, 1000);
       
     // clean input dir
-    fs.delete(inDir);
+    fs.delete(inDir, true);
     
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
@@ -166,7 +166,7 @@ public class TestSequenceFileInputFilter extends TestCase {
       LOG.info("Accepted "+countRecords(0)+" records");
     }
     // clean up
-    fs.delete(inDir);
+    fs.delete(inDir, true);
   }
 
   public static void main(String[] args) throws Exception {

@@ -153,7 +153,7 @@ public class PiEstimator {
     Path inDir = new Path(tmpDir, "in");
     Path outDir = new Path(tmpDir, "out");
     FileSystem fileSys = FileSystem.get(jobConf);
-    fileSys.delete(tmpDir);
+    fileSys.delete(tmpDir, true);
     if (!fileSys.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
@@ -183,7 +183,7 @@ public class PiEstimator {
       reader.close();
       estimate = (double) (numInside.get()*4.0)/(numMaps*numPoints);
     } finally {
-      FileSystem.get(jobConf).delete(tmpDir);
+      FileSystem.get(jobConf).delete(tmpDir, true);
     }
     
     return estimate;

@@ -199,7 +199,7 @@ public class DistributedPentomino extends Configured implements Tool {
       
       JobClient.runJob(conf);
       } finally {
-      fileSys.delete(input);
+      fileSys.delete(input, true);
     }
     return 0;
   }

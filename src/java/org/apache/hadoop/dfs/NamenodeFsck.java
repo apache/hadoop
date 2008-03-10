@@ -323,7 +323,7 @@ public class NamenodeFsck {
       }
       if (fos != null) fos.close();
       LOG.warn("\n - moved corrupted file " + file.getPath() + " to /lost+found");
-      dfs.delete(file.getPath().toString());
+      dfs.delete(file.getPath().toString(), true);
     }  catch (Exception e) {
       e.printStackTrace();
       LOG.warn(errmsg + ": " + e.getMessage());

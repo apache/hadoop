@@ -340,7 +340,7 @@ public class SortValidator extends Configured implements Tool {
       jobConf.addInputPath(sortOutput);
       Path outputPath = new Path("/tmp/sortvalidate/recordstatschecker");
       if (fs.exists(outputPath)) {
-        fs.delete(outputPath);
+        fs.delete(outputPath, true);
       }
       jobConf.setOutputPath(outputPath);
       
@@ -482,7 +482,7 @@ public class SortValidator extends Configured implements Tool {
       Path outputPath = new Path("/tmp/sortvalidate/recordchecker");
       FileSystem fs = FileSystem.get(defaults);
       if (fs.exists(outputPath)) {
-        fs.delete(outputPath);
+        fs.delete(outputPath, true);
       }
       jobConf.setOutputPath(outputPath);
       

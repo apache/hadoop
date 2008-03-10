@@ -439,7 +439,7 @@ abstract class Task implements Writable, Configurable {
         moveTaskOutputs(fs, jobOutputPath, taskOutputPath);
 
         // Delete the temporary task-specific output directory
-        if (!fs.delete(taskOutputPath)) {
+        if (!fs.delete(taskOutputPath, true)) {
           LOG.info("Failed to delete the temporary output directory of task: " + 
                   getTaskId() + " - " + taskOutputPath);
         }
@@ -463,7 +463,7 @@ abstract class Task implements Writable, Configurable {
     if (fs.isFile(taskOutput)) {
       Path finalOutputPath = getFinalPath(jobOutputDir, taskOutput);
       if (!fs.rename(taskOutput, finalOutputPath)) {
-        if (!fs.delete(finalOutputPath)) {
+        if (!fs.delete(finalOutputPath, true)) {
           throw new IOException("Failed to delete earlier output of task: " + 
                   getTaskId());
         }

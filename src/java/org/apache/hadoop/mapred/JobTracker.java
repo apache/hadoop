@@ -703,7 +703,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         }
         // clean up the system dir, which will only work if hdfs is out of 
         // safe mode
-        fs.delete(systemDir);
+        fs.delete(systemDir, true);
         if (FileSystem.mkdirs(fs, systemDir, 
             new FsPermission(JobClient.SYSTEM_DIR_PERMISSION))) {
           break;

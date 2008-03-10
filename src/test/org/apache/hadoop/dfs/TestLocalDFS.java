@@ -45,7 +45,7 @@ public class TestLocalDFS extends TestCase {
   
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
     assertTrue(fileSys.exists(name));
-    fileSys.delete(name);
+    fileSys.delete(name, true);
     assertTrue(!fileSys.exists(name));
   }
   
@@ -62,7 +62,7 @@ public class TestLocalDFS extends TestCase {
       Path file1 = new Path("somewhat/random.txt");
       writeFile(fileSys, file1);
       assertTrue(fileSys.exists(new Path(orig_path, file1.toString())));
-      fileSys.delete(file1);
+      fileSys.delete(file1, true);
       Path subdir1 = new Path("/somewhere");
       fileSys.setWorkingDirectory(subdir1);
       writeFile(fileSys, file1);

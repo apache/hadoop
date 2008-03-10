@@ -56,7 +56,7 @@ public class TestLocalFileSystemPermission extends TestCase {
 
   private void cleanupFile(FileSystem fs, Path name) throws IOException {
     assertTrue(fs.exists(name));
-    fs.delete(name);
+    fs.delete(name, true);
     assertTrue(!fs.exists(name));
   }
 

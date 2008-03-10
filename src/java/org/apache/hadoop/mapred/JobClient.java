@@ -485,7 +485,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     Path submitJobDir = new Path(job.getSystemDir(), jobId);
     FileSystem fs = getFs();
     LOG.debug("default FileSystem: " + fs.getUri());
-    fs.delete(submitJobDir);    
+    fs.delete(submitJobDir, true);    
     FileSystem.mkdirs(fs, submitJobDir, new FsPermission(SYSTEM_DIR_PERMISSION));
     Path submitJobFile = new Path(submitJobDir, "job.xml");
     Path submitJarFile = new Path(submitJobDir, "job.jar");

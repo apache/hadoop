@@ -45,9 +45,9 @@ private static NumberFormat idFormat = NumberFormat.getInstance();
     Path OUTPUT_DIR = new Path("build/test/output_for_field_selection_test");
     Path INPUT_DIR = new Path("build/test/input_for_field_selection_test");
     String inputFile = "input.txt";
-    fs.delete(INPUT_DIR);
+    fs.delete(INPUT_DIR, true);
     fs.mkdirs(INPUT_DIR);
-    fs.delete(OUTPUT_DIR);
+    fs.delete(OUTPUT_DIR, true);
 
     StringBuffer inputData = new StringBuffer();
     StringBuffer expectedOutput = new StringBuffer();
@@ -118,8 +118,8 @@ private static NumberFormat idFormat = NumberFormat.getInstance();
     String outdata = TestMiniMRWithDFS.readOutput(outPath,job);
 
     assertEquals(expectedOutput.toString(),outdata);
-    fs.delete(OUTPUT_DIR);
-    fs.delete(INPUT_DIR);
+    fs.delete(OUTPUT_DIR, true);
+    fs.delete(INPUT_DIR, true);
   }
 
   /**

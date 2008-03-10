@@ -292,7 +292,7 @@ public class TestMapRed extends TestCase {
     Path inDir = new Path(testdir, "in");
     Path outDir = new Path(testdir, "out");
     FileSystem fs = FileSystem.get(conf);
-    fs.delete(testdir);
+    fs.delete(testdir, true);
     conf.setInputPath(inDir);
     conf.setOutputPath(outDir);
     conf.setMapperClass(MyMap.class);
@@ -332,7 +332,7 @@ public class TestMapRed extends TestCase {
                    rdr.isCompressed());
       rdr.close();
     } finally {
-      fs.delete(testdir);
+      fs.delete(testdir, true);
     }
   }
     
@@ -415,7 +415,7 @@ public class TestMapRed extends TestCase {
     // file of random numbers.
     //
     Path randomOuts = new Path(testdir, "genouts");
-    fs.delete(randomOuts);
+    fs.delete(randomOuts, true);
 
 
     JobConf genJob = new JobConf(conf, TestMapRed.class);
@@ -462,7 +462,7 @@ public class TestMapRed extends TestCase {
     //
     int intermediateReduces = 10;
     Path intermediateOuts = new Path(testdir, "intermediateouts");
-    fs.delete(intermediateOuts);
+    fs.delete(intermediateOuts, true);
     JobConf checkJob = new JobConf(conf, TestMapRed.class);
     checkJob.setInputPath(randomOuts);
     checkJob.setInputFormat(TextInputFormat.class);
@@ -485,7 +485,7 @@ public class TestMapRed extends TestCase {
     // all the files.
     //
     Path finalOuts = new Path(testdir, "finalouts");        
-    fs.delete(finalOuts);
+    fs.delete(finalOuts, true);
     JobConf mergeJob = new JobConf(conf, TestMapRed.class);
     mergeJob.setInputPath(intermediateOuts);
     mergeJob.setInputFormat(SequenceFileInputFormat.class);
@@ -556,7 +556,7 @@ public class TestMapRed extends TestCase {
     } finally {
       bw.close();
     }
-    fs.delete(testdir);
+    fs.delete(testdir, true);
   }
 
   /**
@@ -591,7 +591,7 @@ public class TestMapRed extends TestCase {
       Path inDir = new Path(testdir, "in");
       Path outDir = new Path(testdir, "out");
       FileSystem fs = FileSystem.get(conf);
-      fs.delete(testdir);
+      fs.delete(testdir, true);
       conf.setInt("io.sort.mb", 1);
       conf.setInputFormat(SequenceFileInputFormat.class);
       conf.setInputPath(inDir);

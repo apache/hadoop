@@ -160,7 +160,7 @@ class MapOutputLocation implements Writable, MRConstants {
     } finally {
       if (!good) {
         try {
-          fileSys.delete(localFilename);
+          fileSys.delete(localFilename, true);
           totalBytes = 0;
         } catch (Throwable th) {
           // IGNORED because we are cleaning up
@@ -264,7 +264,7 @@ class MapOutputLocation implements Writable, MRConstants {
     } finally {
       if (!good) {
         try {
-          fileSys.delete(localFilename);
+          fileSys.delete(localFilename, true);
           totalBytes = 0;
         } catch (Throwable th) {
           // IGNORED because we are cleaning up

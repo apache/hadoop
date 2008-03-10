@@ -265,31 +265,40 @@ public class S3FileSystem extends FileSystem {
     return true;
   }
 
+  public boolean delete(Path path, boolean recursive) throws IOException {
+   Path absolutePath = makeAbsolute(path);
+   INode inode = store.retrieveINode(absolutePath);
+   if (inode == null) {
+     return false;
+   }
+   if (inode.isFile()) {
+     store.deleteINode(absolutePath);
+     for (Block block: inode.getBlocks()) {
+       store.deleteBlock(block);
+     }
+   } else {
+     Path[] contents = listPaths(absolutePath);
+     if (contents == null) {
+       return false;
+     }
+     if ((contents.length !=0) && (!recursive)) {
+       throw new IOException("Directory " + path.toString() 
+           + " is not empty.");
+     }
+     for (Path p:contents) {
+       if (!delete(p, recursive)) {
+         return false;
+       }
+     }
+     store.deleteINode(absolutePath);
+   }
+   return true;
+  }
+  
   @Override
+  @Deprecated
   public boolean delete(Path path) throws IOException {
-    Path absolutePath = makeAbsolute(path);
-    INode inode = store.retrieveINode(absolutePath);
-    if (inode == null) {
-      return false;
-    }
-    if (inode.isFile()) {
-      store.deleteINode(absolutePath);
-      for (Block block : inode.getBlocks()) {
-        store.deleteBlock(block);
-      }
-    } else {
-      Path[] contents = listPaths(absolutePath);
-      if (contents == null) {
-        return false;
-      }
-      for (Path p : contents) {
-        if (!delete(p)) {
-          return false;
-        }
-      }
-      store.deleteINode(absolutePath);
-    }
-    return true;
+    return delete(path, true);
   }
 
   /**

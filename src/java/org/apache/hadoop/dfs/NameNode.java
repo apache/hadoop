@@ -385,11 +385,16 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
   /**
    */
+  @Deprecated
   public boolean delete(String src) throws IOException {
     stateChangeLog.debug("*DIR* NameNode.delete: " + src);
     return namesystem.delete(src);
   }
 
+  public boolean delete(String src, boolean recursive) throws IOException {
+    stateChangeLog.debug("*DIR* Namenode.delete:  " + src);
+    return namesystem.delete(src, recursive);
+  }
   /**
    */
   public boolean exists(String src) throws IOException {

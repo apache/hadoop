@@ -66,7 +66,7 @@ public class TestDFSMkdirs extends TestCase {
       }
       assertFalse(exist);
       assertFalse(fileSys.exists(myIllegalPath));
-      fileSys.delete(myFile);
+      fileSys.delete(myFile, true);
     	
     } finally {
       fileSys.close();

@@ -1458,12 +1458,24 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * Remove the indicated filename from the namespace.  This may
    * invalidate some blocks that make up the file.
    */
+  @Deprecated
   public boolean delete(String src) throws IOException {
-    boolean status = deleteInternal(src, true, true);
-    getEditLog().logSync();
-    return status;
+    return delete(src, true);
   }
 
+  /**
+   * Remove the indicated filename from namespace. If the filename 
+   * is a directory (non empty) and recursive is set to false then throw exception.
+   */
+    public boolean delete(String src, boolean recursive) throws IOException {
+      if (isDir(src) && (!recursive) && (!dir.isDirEmpty(src))) {
+        throw new IOException(src + " is non empty");
+      }
+      boolean status = deleteInternal(src, true, true);
+      getEditLog().logSync();
+      return status;
+    }
+    
   /**
    * An internal delete function that does not enforce safe mode
    */

@@ -218,7 +218,7 @@ public class ThreadedMapBenchmark extends Configured implements Tool {
     job.setOutputPath(INPUT_DIR);
     
     FileSystem fs = FileSystem.get(job);
-    fs.delete(BASE_DIR);
+    fs.delete(BASE_DIR, true);
     
     LOG.info("Generating random input for the benchmark");
     LOG.info("Total data : " + totalDataSize + " mb");
@@ -315,7 +315,7 @@ public class ThreadedMapBenchmark extends Configured implements Tool {
       
       LOG.info("Total time taken : " + String.valueOf(endTime - startTime) 
                + " millisec");
-      fs.delete(OUTPUT_DIR);
+      fs.delete(OUTPUT_DIR, true);
       
       // set io.sort.mb to have multiple spills
       JobConf spilledJob = new JobConf(job, ThreadedMapBenchmark.class);
@@ -335,7 +335,7 @@ public class ThreadedMapBenchmark extends Configured implements Tool {
                + " millisec");
     } finally {
       if (fs != null) {
-        fs.delete(BASE_DIR);
+        fs.delete(BASE_DIR, true);
       }
     }
     return 0;

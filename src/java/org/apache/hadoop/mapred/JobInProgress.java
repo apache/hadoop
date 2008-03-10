@@ -1255,23 +1255,23 @@ class JobInProgress {
     try {
       // Definitely remove the local-disk copy of the job file
       if (localJobFile != null) {
-        localFs.delete(localJobFile);
+        localFs.delete(localJobFile, true);
         localJobFile = null;
       }
       if (localJarFile != null) {
-        localFs.delete(localJarFile);
+        localFs.delete(localJarFile, true);
         localJarFile = null;
       }
 
       // JobClient always creates a new directory with job files
       // so we remove that directory to cleanup
       FileSystem fs = FileSystem.get(conf);
-      fs.delete(new Path(profile.getJobFile()).getParent());
+      fs.delete(new Path(profile.getJobFile()).getParent(), true);
         
       // Delete temp dfs dirs created if any, like in case of 
       // speculative exn of reduces.  
       Path tempDir = new Path(conf.getSystemDir(), jobId); 
-      fs.delete(tempDir); 
+      fs.delete(tempDir, true); 
 
       // delete the temporary directory in output directory
       Path outputPath = conf.getOutputPath();

@@ -123,10 +123,10 @@ public class NNBench {
     // Delete the data directory only if it is the create/write operation
     if (operation.equals(OP_CREATE_WRITE)) {
       LOG.info("Deleting data directory");
-      tempFS.delete(new Path(baseDir, DATA_DIR_NAME));
+      tempFS.delete(new Path(baseDir, DATA_DIR_NAME), true);
     }
-    tempFS.delete(new Path(baseDir, CONTROL_DIR_NAME));
-    tempFS.delete(new Path(baseDir, OUTPUT_DIR_NAME));
+    tempFS.delete(new Path(baseDir, CONTROL_DIR_NAME), true);
+    tempFS.delete(new Path(baseDir, OUTPUT_DIR_NAME), true);
   }
   
   /**
@@ -871,7 +871,7 @@ public class NNBench {
           try {
             // Set up timer for measuring AL
             startTimeAL = System.currentTimeMillis();
-            filesystem.delete(filePath);
+            filesystem.delete(filePath, true);
             totalTimeAL1 += (System.currentTimeMillis() - startTimeAL);
             
             successfulOp = true;

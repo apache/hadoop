@@ -226,8 +226,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
       } finally {
         try {
-          fs.delete(file.getParent());  // delete submit dir
-          localFs.delete(localFile);              // delete local copy
+          fs.delete(file.getParent(), true);  // delete submit dir
+          localFs.delete(localFile, true);              // delete local copy
         } catch (IOException e) {
           LOG.warn("Error cleaning up "+id+": "+e);
         }

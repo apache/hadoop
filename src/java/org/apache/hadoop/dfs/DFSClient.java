@@ -438,11 +438,22 @@ class DFSClient implements FSConstants {
    * Delete file or directory.
    * See {@link ClientProtocol#delete(String)}. 
    */
+  @Deprecated
   public boolean delete(String src) throws IOException {
     checkOpen();
-    return namenode.delete(src);
+    return namenode.delete(src, true);
   }
 
+  /**
+   * delete file or directory.
+   * delete contents of the directory if non empty and recursive 
+   * set to true
+   */
+  public boolean delete(String src, boolean recursive) throws IOException {
+    checkOpen();
+    return namenode.delete(src, recursive);
+  }
+  
   /**
    */
   public boolean exists(String src) throws IOException {

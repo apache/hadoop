@@ -211,7 +211,7 @@ public class DFSTestUtil extends TestCase {
   /** delete directory and everything underneath it.*/
   void cleanup(FileSystem fs, String topdir) throws IOException {
     Path root = new Path(topdir);
-    fs.delete(root);
+    fs.delete(root, true);
     files = null;
   }
   

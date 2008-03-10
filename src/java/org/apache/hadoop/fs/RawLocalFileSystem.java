@@ -211,11 +211,20 @@ public class RawLocalFileSystem extends FileSystem {
     return FileUtil.copy(this, src, this, dst, true, getConf());
   }
   
+  @Deprecated
   public boolean delete(Path p) throws IOException {
+    return delete(p, true);
+  }
+  
+  public boolean delete(Path p, boolean recursive) throws IOException {
     File f = pathToFile(p);
     if (f.isFile()) {
       return f.delete();
-    } else return FileUtil.fullyDelete(f);
+    } else if ((!recursive) && f.isDirectory() && 
+        (f.listFiles().length != 0)) {
+      throw new IOException("Directory " + f.toString() + " is not empty");
+    }
+    return FileUtil.fullyDelete(f);
   }
   
   public boolean exists(Path f) throws IOException {

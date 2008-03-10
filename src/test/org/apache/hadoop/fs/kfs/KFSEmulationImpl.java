@@ -98,14 +98,14 @@ public class KFSEmulationImpl implements IFSImpl {
         if (isDirectory(path)) {
             // the directory better be empty
             String[] dirEntries = readdir(path);
-            if ((dirEntries.length <= 2) && (localFS.delete(new Path(path))))
+            if ((dirEntries.length <= 2) && (localFS.delete(new Path(path), true)))
                 return 0;
         }
         return -1;
     }
 
     public int remove(String path) throws IOException {
-        if (isFile(path) && (localFS.delete(new Path(path))))
+        if (isFile(path) && (localFS.delete(new Path(path), true)))
             return 0;
         return -1;
     }

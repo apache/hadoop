@@ -211,7 +211,7 @@ public class NNThroughputBenchmark implements FSConstants {
 
     void cleanUp() throws IOException {
       nameNode.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
-      nameNode.delete(getBaseDir());
+      nameNode.delete(getBaseDir(), true);
     }
 
     int getNumOpsExecuted() {

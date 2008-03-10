@@ -111,7 +111,7 @@ public class TestDFSIO extends TestCase {
                                         ) throws IOException {
     LOG.info("creating control file: "+fileSize+" mega bytes, "+nrFiles+" files");
 
-    fs.delete(CONTROL_DIR);
+    fs.delete(CONTROL_DIR, true);
 
     for(int i=0; i < nrFiles; i++) {
       String name = getFileName(i);
@@ -212,8 +212,8 @@ public class TestDFSIO extends TestCase {
   private static void writeTest(FileSystem fs)
     throws IOException {
 
-    fs.delete(DATA_DIR);
-    fs.delete(WRITE_DIR);
+    fs.delete(DATA_DIR, true);
+    fs.delete(WRITE_DIR, true);
     
     runIOTest(WriteMapper.class, WRITE_DIR);
   }
@@ -269,7 +269,7 @@ public class TestDFSIO extends TestCase {
   }
 
   private static void readTest(FileSystem fs) throws IOException {
-    fs.delete(READ_DIR);
+    fs.delete(READ_DIR, true);
     runIOTest(ReadMapper.class, READ_DIR);
   }
 
@@ -425,6 +425,6 @@ public class TestDFSIO extends TestCase {
 
   private static void cleanup(FileSystem fs) throws IOException {
     LOG.info("Cleaning up test files");
-    fs.delete(new Path(TEST_ROOT_DIR));
+    fs.delete(new Path(TEST_ROOT_DIR), true);
   }
 }

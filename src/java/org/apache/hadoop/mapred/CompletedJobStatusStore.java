@@ -105,7 +105,7 @@ public class CompletedJobStatusStore implements Runnable {
         try {
           FileStatus status = fs.getFileStatus(jobInfo);
           if ((currentTime - status.getModificationTime()) > retainTime) {
-            fs.delete(jobInfo);
+            fs.delete(jobInfo, true);
           }
         }
         catch (IOException ie) {
@@ -153,7 +153,7 @@ public class CompletedJobStatusStore implements Runnable {
         LOG.warn("Could not store [" + jobId + "] job info : " +
                  ex.getMessage(), ex);
         try {
-          fs.delete(jobStatusFile);
+          fs.delete(jobStatusFile, true);
         }
         catch (IOException ex1) {
           //ignore

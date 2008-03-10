@@ -326,6 +326,6 @@ public class DistributedFSCheck extends TestCase {
 
   private void cleanup() throws IOException {
     LOG.info("Cleaning up test files");
-    fs.delete(TEST_ROOT_DIR);
+    fs.delete(TEST_ROOT_DIR, true);
   }
 }

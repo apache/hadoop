@@ -175,7 +175,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     
       // delete the file
       try {
-        dfsClient.delete("/data/yy");
+        dfsClient.delete("/data/yy", true);
         assertDelete("/data/yy", false);
       } catch(IOException ioe) {
         ioe.printStackTrace();
@@ -191,7 +191,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
       }
 
       try {
-        dfsClient.delete("/data/xx");
+        dfsClient.delete("/data/xx", true);
         assertDelete("/data/xx", true);
       } catch(IOException ioe) {
     	ioe.printStackTrace();

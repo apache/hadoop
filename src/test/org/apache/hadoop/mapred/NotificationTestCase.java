@@ -185,7 +185,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     }
 
     FileSystem fs = FileSystem.get(conf);
-    fs.delete(outDir);
+    fs.delete(outDir, true);
     if (!fs.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }

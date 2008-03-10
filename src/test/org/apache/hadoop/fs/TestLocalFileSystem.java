@@ -37,7 +37,7 @@ public class TestLocalFileSystem extends TestCase {
   
   private void cleanupFile(FileSystem fs, Path name) throws IOException {
     assertTrue(fs.exists(name));
-    fs.delete(name);
+    fs.delete(name, true);
     assertTrue(!fs.exists(name));
   }
   
@@ -64,7 +64,7 @@ public class TestLocalFileSystem extends TestCase {
       assertTrue(fileSys.isDirectory(dir1));
       
       // delete the directory and make sure it went away
-      fileSys.delete(dir1);
+      fileSys.delete(dir1, true);
       assertTrue(!fileSys.exists(dir1));
       
       // create files and manipulate them.
@@ -92,7 +92,7 @@ public class TestLocalFileSystem extends TestCase {
       stm.close();
     } finally {
       fileSys.setWorkingDirectory(origDir);
-      fileSys.delete(subdir);
+      fileSys.delete(subdir, true);
     }
   }
 
@@ -113,7 +113,7 @@ public class TestLocalFileSystem extends TestCase {
     Path tmp = new Path(src, dst.getName());
     assertTrue(fs.exists(tmp) && fs.exists(dst));
     assertTrue(FileUtil.copy(fs, dst, fs, src, false, true, conf));
-    assertTrue(fs.delete(tmp));
+    assertTrue(fs.delete(tmp, true));
     fs.mkdirs(tmp);
     try {
       FileUtil.copy(fs, dst, fs, src, true, true, conf);

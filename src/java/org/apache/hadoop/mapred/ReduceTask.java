@@ -791,7 +791,7 @@ class ReduceTask extends Task {
         if (!neededOutputs.contains(loc.getMapId())) {
           if (tmpFilename != null) {
             FileSystem fs = tmpFilename.getFileSystem(conf);
-            fs.delete(tmpFilename);
+            fs.delete(tmpFilename, true);
           }
           return CopyResult.OBSOLETE;
         }
@@ -805,7 +805,7 @@ class ReduceTask extends Task {
         // lock the ReduceTask while we do the rename
         synchronized (ReduceTask.this) {
           if (!neededOutputs.contains(loc.getMapId())) {
-            fs.delete(tmpFilename);
+            fs.delete(tmpFilename, true);
             return CopyResult.OBSOLETE;
           }
           
@@ -816,7 +816,7 @@ class ReduceTask extends Task {
           // if we can't rename the file, something is broken (and IOException
           // will be thrown). 
           if (!fs.rename(tmpFilename, filename)) {
-            fs.delete(tmpFilename);
+            fs.delete(tmpFilename, true);
             bytes = -1;
             throw new IOException("failure to rename map output " + 
                                   tmpFilename);
@@ -1340,7 +1340,7 @@ class ReduceTask extends Task {
               //make sure that we delete the ondisk file that we created earlier
               //when we invoked cloneFileAttributes
               writer.close();
-              localFileSys.delete(inMemClosedFiles[0]);
+              localFileSys.delete(inMemClosedFiles[0], true);
               throw new IOException (StringUtils.stringifyException(e));
             }
             sorter.writeFile(rIter, writer);
@@ -1599,7 +1599,7 @@ class ReduceTask extends Task {
               //make sure that we delete the ondisk file that we created 
               //earlier when we invoked cloneFileAttributes
               writer.close();
-              localFileSys.delete(outputPath);
+              localFileSys.delete(outputPath, true);
               throw new IOException (StringUtils.stringifyException(e));
             }
             sorter.writeFile(rIter, writer);

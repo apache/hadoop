@@ -208,7 +208,7 @@ public class TestCopyFiles extends TestCase {
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getNamed(fsname, conf);
     Path root = new Path(topdir);
-    fs.delete(root);
+    fs.delete(root, true);
   }
   
   /** copy files from local file system to local file system */

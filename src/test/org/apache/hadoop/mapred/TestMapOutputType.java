@@ -80,7 +80,7 @@ public class TestMapOutputType extends TestCase
     Path inDir = new Path(testdir, "in");
     Path outDir = new Path(testdir, "out");
     FileSystem fs = FileSystem.get(conf);
-    fs.delete(testdir);
+    fs.delete(testdir, true);
     conf.setInt("io.sort.mb", 1);
     conf.setInputFormat(SequenceFileInputFormat.class);
     conf.setInputPath(inDir);

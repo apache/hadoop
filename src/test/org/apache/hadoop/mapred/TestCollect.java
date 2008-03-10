@@ -139,7 +139,7 @@ public class TestCollect extends TestCase
       throw ioe;
     } finally {
       FileSystem fs = FileSystem.get(conf);
-      fs.delete(OUTPUT_DIR);
+      fs.delete(OUTPUT_DIR, true);
     }
   }
   

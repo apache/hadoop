@@ -228,7 +228,7 @@ public class TestDatamerge extends TestCase {
     job.setOutputKeyClass(IntWritable.class);
     job.setOutputValueClass(IntWritable.class);
     JobClient.runJob(job);
-    base.getFileSystem(job).delete(base);
+    base.getFileSystem(job).delete(base, true);
   }
 
   public void testSimpleInnerJoin() throws Exception {

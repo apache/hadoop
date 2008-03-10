@@ -46,7 +46,7 @@ public class TestSequenceFileInputFormat extends TestCase {
     //LOG.info("seed = "+seed);
     Random random = new Random(seed);
 
-    fs.delete(dir);
+    fs.delete(dir, true);
 
     job.setInputPath(dir);
 

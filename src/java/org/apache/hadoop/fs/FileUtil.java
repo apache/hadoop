@@ -93,13 +93,13 @@ public class FileUtil {
     if (paths != null) {
       for (Path p : paths) {
         if (fs.isFile(p))  {
-          fs.delete(p);
+          fs.delete(p, true);
         } else {
           fullyDelete(fs, p);
         }
       }
     }
-    fs.delete(dir);
+    fs.delete(dir, true);
   }
 
   //
@@ -159,7 +159,7 @@ public class FileUtil {
       throw new IOException(src.toString() + ": No such file or directory");
     }
     if (deleteSource) {
-      return srcFS.delete(src);
+      return srcFS.delete(src, true);
     } else {
       return true;
     }
@@ -199,7 +199,7 @@ public class FileUtil {
     
 
     if (deleteSource) {
-      return srcFS.delete(srcDir);
+      return srcFS.delete(srcDir, true);
     } else {
       return true;
     }
@@ -256,7 +256,7 @@ public class FileUtil {
                             ": No such file or directory");
     }
     if (deleteSource) {
-      return srcFS.delete(src);
+      return srcFS.delete(src, true);
     } else {
       return true;
     }

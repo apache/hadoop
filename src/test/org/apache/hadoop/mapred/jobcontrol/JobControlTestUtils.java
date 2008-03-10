@@ -59,7 +59,7 @@ public class JobControlTestUtils {
    * @throws IOException If an error occurs cleaning the data.
    */
   static void cleanData(FileSystem fs, Path dirPath) throws IOException {
-    fs.delete(dirPath);
+    fs.delete(dirPath, true);
   }
 
   /**

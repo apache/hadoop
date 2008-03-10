@@ -71,7 +71,7 @@ public class MRCaching {
           throw new IOException("Mkdirs failed to create " + file.toString());
         }
         Path fileOut = new Path(file, "test.txt");
-        fs.delete(fileOut);
+        fs.delete(fileOut, true);
         DataOutputStream out = fs.create(fileOut);
         for (int i = 0; i < localArchives.length; i++) {
           // read out the files from these archives
@@ -149,7 +149,7 @@ public class MRCaching {
     final Path inDir = new Path(indir);
     final Path outDir = new Path(outdir);
     FileSystem fs = FileSystem.get(conf);
-    fs.delete(outDir);
+    fs.delete(outDir, true);
     if (!fs.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
@@ -179,7 +179,7 @@ public class MRCaching {
     Path jarPath = new Path(localPath, new Path("test.jar"));
     Path zipPath = new Path(localPath, new Path("test.zip"));
     Path cachePath = new Path(cacheDir);
-    fs.delete(cachePath);
+    fs.delete(cachePath, true);
     if (!fs.mkdirs(cachePath)) {
       throw new IOException("Mkdirs failed to create " + cachePath.toString());
     }

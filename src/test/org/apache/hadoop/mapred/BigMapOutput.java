@@ -132,7 +132,7 @@ public class BigMapOutput extends Configured implements Tool {
     jobConf.setOutputFormat(SequenceFileOutputFormat.class);
     jobConf.setInputPath(bigMapInput);
     if (fs.exists(outputPath)) {
-      fs.delete(outputPath);
+      fs.delete(outputPath, true);
     }
     jobConf.setOutputPath(outputPath);
     jobConf.setMapperClass(IdentityMapper.class);

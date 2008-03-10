@@ -295,7 +295,7 @@ public class TestComparators extends TestCase
     Path inDir = new Path(testdir, "in");
     Path outDir = new Path(testdir, "out");
     FileSystem fs = FileSystem.get(conf);
-    fs.delete(testdir);
+    fs.delete(testdir, true);
     conf.setInputFormat(SequenceFileInputFormat.class);
     conf.setInputPath(inDir);
     conf.setOutputPath(outDir);

@@ -336,7 +336,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
         li = testfilesList.listIterator();
         while (li.hasNext()) {
           testFileName = (UTF8) li.next();
-          assertTrue(dfsClient.delete(testFileName.toString()));
+          assertTrue(dfsClient.delete(testFileName.toString(), true));
         }
 
         //

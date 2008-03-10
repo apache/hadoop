@@ -561,9 +561,9 @@ public class MapFile {
     Path data = new Path(dir, DATA_FILE_NAME);
     Path index = new Path(dir, INDEX_FILE_NAME);
 
-    fs.delete(data);
-    fs.delete(index);
-    fs.delete(dir);
+    fs.delete(data, true);
+    fs.delete(index, true);
+    fs.delete(dir, true);
   }
 
   /**

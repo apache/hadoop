@@ -73,7 +73,7 @@ public class TestKosmosFileSystem extends TestCase {
         Path[] p = kosmosFileSystem.listPaths(baseDir);
         assertEquals(p.length, 1);
 
-        kosmosFileSystem.delete(baseDir);
+        kosmosFileSystem.delete(baseDir, true);
         assertFalse(kosmosFileSystem.exists(baseDir));
     }
 
@@ -100,15 +100,15 @@ public class TestKosmosFileSystem extends TestCase {
         Path[] p = kosmosFileSystem.listPaths(subDir1);
         assertEquals(p.length, 2);
 
-        kosmosFileSystem.delete(file1);
+        kosmosFileSystem.delete(file1, true);
         p = kosmosFileSystem.listPaths(subDir1);
         assertEquals(p.length, 1);
 
-        kosmosFileSystem.delete(file2);
+        kosmosFileSystem.delete(file2, true);
         p = kosmosFileSystem.listPaths(subDir1);
         assertEquals(p, null);
 
-        kosmosFileSystem.delete(baseDir);
+        kosmosFileSystem.delete(baseDir, true);
         assertFalse(kosmosFileSystem.exists(baseDir));
     }
 
@@ -158,11 +158,11 @@ public class TestKosmosFileSystem extends TestCase {
 
         s2.close();
 
-        kosmosFileSystem.delete(file1);
+        kosmosFileSystem.delete(file1, true);
         assertFalse(kosmosFileSystem.exists(file1));        
-        kosmosFileSystem.delete(subDir1);
+        kosmosFileSystem.delete(subDir1, true);
         assertFalse(kosmosFileSystem.exists(subDir1));        
-        kosmosFileSystem.delete(baseDir);
+        kosmosFileSystem.delete(baseDir, true);
         assertFalse(kosmosFileSystem.exists(baseDir));        
     }
     

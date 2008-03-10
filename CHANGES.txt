@@ -26,6 +26,10 @@ Trunk (unreleased changes)
     HADOOP-1986.  Add support for a general serialization mechanism for
     Map Reduce. (tomwhite)
 
+    HADOOP-771. FileSystem.delete() takes an explicit parameter that
+    specifies whether a recursive delete is intended.
+    (Mahadev Konar via dhruba)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)

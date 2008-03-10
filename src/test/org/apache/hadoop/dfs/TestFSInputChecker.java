@@ -191,7 +191,7 @@ public class TestFSInputChecker extends TestCase {
 
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
     assertTrue(fileSys.exists(name));
-    fileSys.delete(name);
+    fileSys.delete(name, true);
     assertTrue(!fileSys.exists(name));
   }
   

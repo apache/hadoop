@@ -60,7 +60,7 @@ public class TestEmptyJobWithDFS extends TestCase {
     final Path inDir = new Path("/testing/empty/input");
     final Path outDir = new Path("/testing/empty/output");
     FileSystem fs = FileSystem.getNamed(fileSys, conf);
-    fs.delete(outDir);
+    fs.delete(outDir, true);
     if (!fs.mkdirs(inDir)) {
       LOG.warn("Can't create " + inDir);
       return false;

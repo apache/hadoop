@@ -1452,7 +1452,7 @@ public class Balancer implements Tool {
     } finally {
       IOUtils.closeStream(out); 
       try {
-        fs.delete(BALANCER_ID_PATH);
+        fs.delete(BALANCER_ID_PATH, true);
       } catch(IOException ignored) {
       }
       System.out.println("Balancing took " + 

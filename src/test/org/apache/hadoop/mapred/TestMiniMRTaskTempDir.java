@@ -96,7 +96,7 @@ public class TestMiniMRTaskTempDir extends TestCase {
     // set up the input file system and write input text.
     FileSystem inFs = inDir.getFileSystem(conf);
     FileSystem outFs = outDir.getFileSystem(conf);
-    outFs.delete(outDir);
+    outFs.delete(outDir, true);
     if (!inFs.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
@@ -122,17 +122,17 @@ public class TestMiniMRTaskTempDir extends TestCase {
     // Launch job with default option for temp dir. 
     // i.e. temp dir is ./tmp 
     JobClient.runJob(conf);
-    outFs.delete(outDir);
+    outFs.delete(outDir, true);
 
     // Launch job by giving relative path to temp dir.
     conf.set("mapred.child.tmp", "../temp");
     JobClient.runJob(conf);
-    outFs.delete(outDir);
+    outFs.delete(outDir, true);
 
     // Launch job by giving absolute path to temp dir
     conf.set("mapred.child.tmp", "/tmp");
     JobClient.runJob(conf);
-    outFs.delete(outDir);
+    outFs.delete(outDir, true);
   }
 
   /**

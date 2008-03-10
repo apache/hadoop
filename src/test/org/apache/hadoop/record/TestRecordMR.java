@@ -304,7 +304,7 @@ public class TestRecordMR extends TestCase {
     // file of random numbers.
     //
     Path randomOuts = new Path(testdir, "genouts");
-    fs.delete(randomOuts);
+    fs.delete(randomOuts, true);
 
 
     JobConf genJob = new JobConf(conf, TestRecordMR.class);
@@ -351,7 +351,7 @@ public class TestRecordMR extends TestCase {
     //
     int intermediateReduces = 10;
     Path intermediateOuts = new Path(testdir, "intermediateouts");
-    fs.delete(intermediateOuts);
+    fs.delete(intermediateOuts, true);
     JobConf checkJob = new JobConf(conf, TestRecordMR.class);
     checkJob.setInputPath(randomOuts);
     checkJob.setInputFormat(SequenceFileInputFormat.class);
@@ -374,7 +374,7 @@ public class TestRecordMR extends TestCase {
     // all the files.
     //
     Path finalOuts = new Path(testdir, "finalouts");        
-    fs.delete(finalOuts);
+    fs.delete(finalOuts, true);
     JobConf mergeJob = new JobConf(conf, TestRecordMR.class);
     mergeJob.setInputPath(intermediateOuts);
     mergeJob.setInputFormat(SequenceFileInputFormat.class);
@@ -445,7 +445,7 @@ public class TestRecordMR extends TestCase {
     } finally {
       bw.close();
     }
-    fs.delete(testdir);
+    fs.delete(testdir, true);
   }
 
   /**

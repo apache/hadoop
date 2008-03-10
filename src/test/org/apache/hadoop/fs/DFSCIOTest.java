@@ -116,7 +116,7 @@ public class DFSCIOTest extends TestCase {
                                         ) throws IOException {
     LOG.info("creating control file: "+fileSize+" mega bytes, "+nrFiles+" files");
 
-    fs.delete(CONTROL_DIR);
+    fs.delete(CONTROL_DIR, true);
 
     for(int i=0; i < nrFiles; i++) {
       String name = getFileName(i);
@@ -204,7 +204,7 @@ public class DFSCIOTest extends TestCase {
           
         // copy the dso and executable from dfs and chmod them
         synchronized (this) {
-          localFS.delete(HDFS_TEST_DIR);
+          localFS.delete(HDFS_TEST_DIR, true);
           if (!(localFS.mkdirs(HDFS_TEST_DIR))) {
             throw new IOException("Failed to create " +	HDFS_TEST_DIR + " on local filesystem");
           }
@@ -256,8 +256,8 @@ public class DFSCIOTest extends TestCase {
   private static void writeTest(FileSystem fs)
     throws IOException {
 
-    fs.delete(DATA_DIR);
-    fs.delete(WRITE_DIR);
+    fs.delete(DATA_DIR, true);
+    fs.delete(WRITE_DIR, true);
     
     runIOTest(WriteMapper.class, WRITE_DIR);
   }
@@ -304,7 +304,7 @@ public class DFSCIOTest extends TestCase {
         
         // copy the dso and executable from dfs
         synchronized (this) {
-          localFS.delete(HDFS_TEST_DIR);
+          localFS.delete(HDFS_TEST_DIR, true);
           if (!(localFS.mkdirs(HDFS_TEST_DIR))) {
             throw new IOException("Failed to create " +	HDFS_TEST_DIR + " on local filesystem");
           }
@@ -361,7 +361,7 @@ public class DFSCIOTest extends TestCase {
   }
 
   private static void readTest(FileSystem fs) throws IOException {
-    fs.delete(READ_DIR);
+    fs.delete(READ_DIR, true);
     runIOTest(ReadMapper.class, READ_DIR);
   }
 
@@ -429,7 +429,7 @@ public class DFSCIOTest extends TestCase {
       FileSystem fs = FileSystem.get(fsConfig);
       
       if (testType != TEST_TYPE_CLEANUP) {
-        fs.delete(HDFS_TEST_DIR);
+        fs.delete(HDFS_TEST_DIR, true);
         if (!fs.mkdirs(HDFS_TEST_DIR)) {
           throw new IOException("Mkdirs failed to create " + 
                                 HDFS_TEST_DIR.toString());
@@ -532,7 +532,7 @@ public class DFSCIOTest extends TestCase {
 
   private static void cleanup(FileSystem fs) throws Exception {
     LOG.info("Cleaning up test files");
-    fs.delete(new Path(TEST_ROOT_DIR));
-    fs.delete(HDFS_TEST_DIR);
+    fs.delete(new Path(TEST_ROOT_DIR), true);
+    fs.delete(HDFS_TEST_DIR, true);
   }
 }

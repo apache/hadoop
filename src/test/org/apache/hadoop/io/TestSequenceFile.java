@@ -143,7 +143,7 @@ public class TestSequenceFile extends TestCase {
   private static void writeTest(FileSystem fs, int count, int seed, Path file, 
                                 CompressionType compressionType, CompressionCodec codec)
     throws IOException {
-    fs.delete(file);
+    fs.delete(file, true);
     LOG.info("creating " + count + " records with " + compressionType +
              " compression");
     SequenceFile.Writer writer = 
@@ -219,7 +219,7 @@ public class TestSequenceFile extends TestCase {
   private static void sortTest(FileSystem fs, int count, int megabytes, 
                                int factor, boolean fast, Path file)
     throws IOException {
-    fs.delete(new Path(file+".sorted"));
+    fs.delete(new Path(file+".sorted"), true);
     SequenceFile.Sorter sorter = newSorter(fs, fast, megabytes, factor);
     LOG.debug("sorting " + count + " records");
     sorter.sort(file, file.suffix(".sorted"));
@@ -277,8 +277,8 @@ public class TestSequenceFile extends TestCase {
     for (int i = 0; i < factor; i++) {
       names[i] = file.suffix("."+i);
       sortedNames[i] = names[i].suffix(".sorted");
-      fs.delete(names[i]);
-      fs.delete(sortedNames[i]);
+      fs.delete(names[i], true);
+      fs.delete(sortedNames[i], true);
       writers[i] = SequenceFile.createWriter(fs, conf, names[i], 
                                              RandomDatum.class, RandomDatum.class, compressionType);
     }
@@ -302,7 +302,7 @@ public class TestSequenceFile extends TestCase {
     }
 
     LOG.info("merging " + factor + " files with " + count/factor + " debug");
-    fs.delete(new Path(file+".sorted"));
+    fs.delete(new Path(file+".sorted"), true);
     newSorter(fs, fast, megabytes, factor)
       .merge(sortedNames, file.suffix(".sorted"));
   }
@@ -388,7 +388,7 @@ public class TestSequenceFile extends TestCase {
   private static void writeMetadataTest(FileSystem fs, int count, int seed, Path file, 
                                         CompressionType compressionType, CompressionCodec codec, SequenceFile.Metadata metadata)
     throws IOException {
-    fs.delete(file);
+    fs.delete(file, true);
     LOG.info("creating " + count + " records with metadata and with" + compressionType +
              " compression");
     SequenceFile.Writer writer = 

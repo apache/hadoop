@@ -54,7 +54,7 @@ public class TestDecommission extends TestCase {
 
     // delete if it already exists
     if (fs.exists(name)) {
-      fs.delete(name);
+      fs.delete(name, true);
     }
 
     FSDataOutputStream stm = fs.create(name);
@@ -150,7 +150,7 @@ public class TestDecommission extends TestCase {
   
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
     assertTrue(fileSys.exists(name));
-    fileSys.delete(name);
+    fileSys.delete(name, true);
     assertTrue(!fileSys.exists(name));
   }
 

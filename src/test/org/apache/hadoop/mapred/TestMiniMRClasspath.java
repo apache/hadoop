@@ -45,7 +45,7 @@ public class TestMiniMRClasspath extends TestCase {
     final Path inDir = new Path("/testing/wc/input");
     final Path outDir = new Path("/testing/wc/output");
     FileSystem fs = FileSystem.getNamed(fileSys, conf);
-    fs.delete(outDir);
+    fs.delete(outDir, true);
     if (!fs.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
@@ -101,7 +101,7 @@ public class TestMiniMRClasspath extends TestCase {
     final Path inDir = new Path("/testing/ext/input");
     final Path outDir = new Path("/testing/ext/output");
     FileSystem fs = FileSystem.getNamed(fileSys, conf);
-    fs.delete(outDir);
+    fs.delete(outDir, true);
     if (!fs.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }

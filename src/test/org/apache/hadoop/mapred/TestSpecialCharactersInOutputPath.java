@@ -53,7 +53,7 @@ public class TestSpecialCharactersInOutputPath extends TestCase {
     final Path inDir = new Path("/testing/input");
     final Path outDir = new Path("/testing/output");
     FileSystem fs = FileSystem.getNamed(fileSys, conf);
-    fs.delete(outDir);
+    fs.delete(outDir, true);
     if (!fs.mkdirs(inDir)) {
       LOG.warn("Can't create " + inDir);
       return false;

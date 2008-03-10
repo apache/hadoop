@@ -2340,7 +2340,7 @@ public class SequenceFile {
             if (recordLength == -1) {
               in.close();
               if (deleteInput) {
-                fs.delete(inFiles[currentFile]);
+                fs.delete(inFiles[currentFile], true);
               }
               currentFile += 1;
               atEof = currentFile >= inFiles.length;
@@ -3034,7 +3034,7 @@ public class SequenceFile {
       public void cleanup() throws IOException {
         close();
         if (!preserveInput) {
-          fs.delete(segmentPathName);
+          fs.delete(segmentPathName, true);
         }
       }
     } // SequenceFile.Sorter.SegmentDescriptor
@@ -3092,7 +3092,7 @@ public class SequenceFile {
                                                     segmentLength, segmentName, this));
         }
         fsIndexIn.close();
-        fs.delete(indexIn);
+        fs.delete(indexIn, true);
         numSegmentsContained = segments.size();
         this.inName = inName;
       }
@@ -3103,7 +3103,7 @@ public class SequenceFile {
       public void cleanup() throws IOException {
         numSegmentsCleanedUp++;
         if (numSegmentsCleanedUp == numSegmentsContained) {
-          fs.delete(inName);
+          fs.delete(inName, true);
         }
       }
     } //SequenceFile.Sorter.SegmentContainer

@@ -37,8 +37,9 @@ interface ClientProtocol extends VersionedProtocol {
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
    * 25 : added {@link #getContentSummary(String path)}
+   * 26 : added delete(src, boolean) for recursive deletes on the namenode
    */
-  public static final long versionID = 25L;
+  public static final long versionID = 26L;
   
   ///////////////////////////////////////
   // File contents
@@ -236,6 +237,19 @@ interface ClientProtocol extends VersionedProtocol {
    */
   public boolean delete(String src) throws IOException;
 
+  /**
+   * Delete the given file or directory from the file system.
+   * <p>
+   * same as delete but provides a way to avoid accidentally 
+   * deleting non empty directories programmatically. 
+   * @param src existing name
+   * @param recursive if true deletes a non empty directory recursively,
+   * else throws an exception.
+   * @return true only if the existing file or directory was actually removed 
+   * from the file system. 
+   */
+  public boolean delete(String src, boolean recursive) throws IOException;
+  
   /**
    * Check whether the given file exists.
    */
