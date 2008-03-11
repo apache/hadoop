@@ -77,6 +77,8 @@ Trunk (unreleased changes)
     HADOOP-2057.  Streaming should optionally treat a non-zero exit status
     of a child process as a failed task.  (Rick Cox via tomwhite)
 
+    HADOOP-2765. Enables specifying ulimits for streaming/pipes tasks (ddas)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing

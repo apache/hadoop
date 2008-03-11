@@ -205,31 +205,44 @@ public class TaskLog {
                                                 File stderrFilename,
                                                 long tailLength
                                                ) throws IOException {
+    return captureOutAndError(null, cmd, stdoutFilename,
+                              stderrFilename, tailLength );
+  }
+
+  /**
+   * Wrap a command in a shell to capture stdout and stderr to files.
+   * Setup commands such as setting memory limit can be passed which 
+   * will be executed before exec.
+   * If the tailLength is 0, the entire output will be saved.
+   * @param setup The setup commands for the execed process.
+   * @param cmd The command and the arguments that should be run
+   * @param stdoutFilename The filename that stdout should be saved to
+   * @param stderrFilename The filename that stderr should be saved to
+   * @param tailLength The length of the tail to be saved.
+   * @return the modified command that should be run
+   */
+  public static List<String> captureOutAndError(List<String> setup,
+                                                List<String> cmd, 
+                                                File stdoutFilename,
+                                                File stderrFilename,
+                                                long tailLength
+                                               ) throws IOException {
     String stdout = FileUtil.makeShellPath(stdoutFilename);
     String stderr = FileUtil.makeShellPath(stderrFilename);
     List<String> result = new ArrayList<String>(3);
     result.add(bashCommand);
     result.add("-c");
     StringBuffer mergedCmd = new StringBuffer();
+    if (setup != null && setup.size() > 0) {
+      mergedCmd.append(addCommand(setup, false));
+      mergedCmd.append(";");
+    }
     if (tailLength > 0) {
       mergedCmd.append("(");
     } else {
       mergedCmd.append("exec ");
     }
-    boolean isExecutable = true;
-    for(String s: cmd) {
-      mergedCmd.append('\'');
-      if (isExecutable) {
-        // the executable name needs to be expressed as a shell path for the  
-        // shell to find it.
-        mergedCmd.append(FileUtil.makeShellPath(new File(s)));
-        isExecutable = false; 
-      } else {
-        mergedCmd.append(s);
-      }
-      mergedCmd.append('\'');
-      mergedCmd.append(" ");
-    }
+    mergedCmd.append(addCommand(cmd, true));
     mergedCmd.append(" < /dev/null ");
     if (tailLength > 0) {
       mergedCmd.append(" | ");
@@ -253,6 +266,34 @@ public class TaskLog {
     }
     result.add(mergedCmd.toString());
     return result;
+  }
+
+  /**
+   * Add quotes to each of the command strings and
+   * return as a single string 
+   * @param cmd The command to be quoted
+   * @param isExecutable makes shell path if the first 
+   * argument is executable
+   * @return returns The quoted string. 
+   * @throws IOException
+   */
+  public static String addCommand(List<String> cmd, boolean isExecutable) 
+  throws IOException {
+    StringBuffer command = new StringBuffer();
+    for(String s: cmd) {
+    	command.append('\'');
+      if (isExecutable) {
+        // the executable name needs to be expressed as a shell path for the  
+        // shell to find it.
+    	  command.append(FileUtil.makeShellPath(new File(s)));
+        isExecutable = false; 
+      } else {
+    	  command.append(s);
+      }
+      command.append('\'');
+      command.append(" ");
+    }
+    return command.toString();
   }
   
   /**

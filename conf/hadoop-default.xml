@@ -704,6 +704,8 @@ creations/deletions), or "all".</description>
   For example, to enable verbose gc logging to a file named for the taskid in
   /tmp and to set the heap maximum to be a gigabyte, pass a 'value' of:
         -Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc
+  The value of -Xmx will also directly influence the amount of virtual memory
+  that a streaming/pipes task gets during execution.
   </description>
 </property>
 

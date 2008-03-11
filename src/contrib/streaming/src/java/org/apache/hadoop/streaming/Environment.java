@@ -89,6 +89,17 @@ public class Environment extends Properties {
     return arr;
   }
 
+  public Map<String, String> toMap() {
+    Map<String, String> map = new HashMap<String, String>();
+    Enumeration<Object> it = super.keys();
+    while (it.hasMoreElements()) {
+      String key = (String) it.nextElement();
+      String val = (String) get(key);
+      map.put(key, val);
+    }
+    return map;
+  }
+  
   public String getHost() {
     String host = getProperty("HOST");
     if (host == null) {

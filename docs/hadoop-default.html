@@ -68,6 +68,10 @@ creations/deletions), or "all".</td>
                for compression/decompression.</td>
 </tr>
 <tr>
+<td><a name="io.serializations">io.serializations</a></td><td>org.apache.hadoop.io.serializer.WritableSerialization</td><td>A list of serialization classes that can be used for
+  obtaining serializers and deserializers.</td>
+</tr>
+<tr>
 <td><a name="fs.default.name">fs.default.name</a></td><td>file:///</td><td>The name of the default file system.  A URI whose
   scheme and authority determine the FileSystem implementation.  The
   uri's scheme determines the config property (fs.SCHEME.impl) naming
@@ -429,6 +433,8 @@ creations/deletions), or "all".</td>
   For example, to enable verbose gc logging to a file named for the taskid in
   /tmp and to set the heap maximum to be a gigabyte, pass a 'value' of:
         -Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc
+  The value of -Xmx will also directly influence the amount of virtual memory
+  that a streaming/pipes task gets during execution.
   </td>
 </tr>
 <tr>
@@ -535,10 +541,6 @@ creations/deletions), or "all".</td>
 <tr>
 <td><a name="io.seqfile.sorter.recordlimit">io.seqfile.sorter.recordlimit</a></td><td>1000000</td><td>The limit on number of records to be kept in memory in a spill 
   				in SequenceFiles.Sorter
-  </td>
-</tr>
-<tr>
-<td><a name="io.seqfile.compression.type">io.seqfile.compression.type</a></td><td>RECORD</td><td>The default compression type for SequenceFile.Writer.
   </td>
 </tr>
 <tr>

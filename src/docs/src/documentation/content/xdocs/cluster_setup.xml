@@ -272,7 +272,8 @@
                     <td>mapred.child.java.opts</td>
                     <td>-Xmx512M</td>
                     <td>
-                      Larger heap-size for child jvms of maps/reduces.
+                      Larger heap-size for child jvms of maps/reduces. Also controls the amount 
+                      of virtual memory that a streaming/pipes task gets.
                     </td>
                   </tr>
                   <tr>

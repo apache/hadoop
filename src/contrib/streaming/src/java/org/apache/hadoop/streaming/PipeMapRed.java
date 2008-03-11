@@ -22,6 +22,7 @@ import java.io.*;
 import java.nio.charset.CharacterCodingException;
 import java.io.IOException;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Iterator;
 import java.util.Arrays;
@@ -34,6 +35,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.io.Text;
@@ -164,14 +166,23 @@ public abstract class PipeMapRed {
       addEnvironment(childEnv, job_.get("stream.addenvironment"));
       // add TMPDIR environment variable with the value of java.io.tmpdir
       envPut(childEnv, "TMPDIR", System.getProperty("java.io.tmpdir"));
-      sim = Runtime.getRuntime().exec(argvSplit, childEnv.toArray());
-
-      /* // This way required jdk1.5
-         Builder processBuilder = new ProcessBuilder(argvSplit);
-         Map<String, String> env = processBuilder.environment();
-         addEnvironment(env, job_.get("stream.addenvironment"));
-         sim = processBuilder.start();
-      */
+      if (StreamUtil.isCygwin()) {
+        sim = Runtime.getRuntime().exec(argvSplit, childEnv.toArray());
+      } else {
+        List<String> cmd = new ArrayList<String>();
+        for (String arg : argvSplit) {
+          cmd.add(arg);
+        }
+        // set memory limit using ulimit.
+        ProcessBuilder builder;
+        List<String> setup = new ArrayList<String>();
+        setup.add("ulimit");
+        setup.add("-v"); 
+        setup.add(String.valueOf(Runtime.getRuntime().maxMemory() / 1024));
+        builder = new ProcessBuilder(wrapCommand(setup, cmd));
+        builder.environment().putAll(childEnv.toMap());
+        sim = builder.start();
+      }
 
       clientOut_ = new DataOutputStream(new BufferedOutputStream(sim.getOutputStream()));
       clientIn_ = new DataInputStream(new BufferedInputStream(sim.getInputStream()));
@@ -185,6 +196,29 @@ public abstract class PipeMapRed {
     }
   }
 
+  /**
+   * Wrap command with bash -c with setup commands.
+   * Setup commands such as setting memory limit can be passed which 
+   * will be executed before exec.
+   * @param setup The setup commands for the execed process.
+   * @param cmd The command and the arguments that should be run
+   * @return the modified command that should be run
+   */
+  private List<String> wrapCommand( List<String> setup,
+                                    List<String> cmd 
+                                   ) throws IOException {
+    List<String> result = new ArrayList<String>();
+    result.add("bash");
+    result.add("-c");
+    StringBuffer mergedCmd = new StringBuffer();
+    mergedCmd.append(TaskLog.addCommand(setup, false));
+    mergedCmd.append(";");
+    mergedCmd.append("exec ");
+    mergedCmd.append(TaskLog.addCommand(cmd, true));
+    result.add(mergedCmd.toString());
+    return result;
+  }
+  
   void setStreamJobDetails(JobConf job) {
     jobLog_ = job.get("stream.jobLog_");
     String s = job.get("stream.minRecWrittenToEnableSkip_");
