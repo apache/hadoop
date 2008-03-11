@@ -2080,12 +2080,33 @@ public class DataNode implements FSConstants, Runnable {
   // this class is a bufferoutputstream that exposes the number of
   // bytes in the buffer.
   static private class DFSBufferedOutputStream extends BufferedOutputStream {
+    OutputStream out;
     DFSBufferedOutputStream(OutputStream out, int capacity) {
       super(out, capacity);
+      this.out = out;
     }
 
-    int count() {
-      return count;
+    public synchronized void flush() throws IOException {
+      super.flush();
+    }
+
+    /**
+     * Returns true if the channel pointer is already set at the
+     * specified offset. Otherwise returns false.
+     */
+    synchronized boolean samePosition(FSDatasetInterface data, 
+                                      FSDataset.BlockWriteStreams streams,
+                                      Block block,
+                                      long offset) 
+                                      throws IOException {
+      if (data.getChannelPosition(block, streams) + count == offset) {
+        return true;
+      }
+      LOG.debug("samePosition is false. " +
+                " current position " + data.getChannelPosition(block, streams)+
+                " buffered size " + count +
+                " new offset " + offset);
+      return false;
     }
   }
 
@@ -2111,8 +2132,6 @@ public class DataNode implements FSConstants, Runnable {
     private DataOutputStream mirrorOut;
     private Daemon responder = null;
     private Throttler throttler;
-    private int lastLen = -1;
-    private int curLen = -1;
     private FSDataset.BlockWriteStreams streams;
     private boolean isRecovery = false;
     private String clientName;
@@ -2213,15 +2232,6 @@ public class DataNode implements FSConstants, Runnable {
             + ") from " + inAddr + " at offset " + offsetInBlock + ": " + len
             + " expected <= " + bytesPerChecksum);
       }
-
-      if (lastLen > 0 && lastLen != bytesPerChecksum) {
-        throw new IOException("Got wrong length during receiveBlock(" + block
-          + ") from " + inAddr + " : " + " got " + lastLen + " instead of "
-          + bytesPerChecksum);
-      }
-
-      lastLen = curLen;
-      curLen = len;
 
       in.readFully(buf, 0, len);
 
@@ -2509,9 +2519,8 @@ public class DataNode implements FSConstants, Runnable {
         }
         return;
       }
-      if (data.getChannelPosition(block, streams) + bufStream.count() == 
-                                                    offsetInBlock) {
-        return;                   // nothing to do 
+      if (bufStream.samePosition(data, streams, block, offsetInBlock)) {
+        return;
       }
       if (offsetInBlock % bytesPerChecksum != 0) {
         throw new IOException("setBlockPosition trying to set position to " +

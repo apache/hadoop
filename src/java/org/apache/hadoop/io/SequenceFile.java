@@ -958,11 +958,12 @@ public class SequenceFile {
       }
 
       if (out != null) {
-        out.flush();
         
         // Close the underlying stream iff we own it...
         if (ownOutputStream) {
           out.close();
+        } else {
+          out.flush();
         }
         out = null;
       }

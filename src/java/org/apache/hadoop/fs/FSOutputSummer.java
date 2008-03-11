@@ -97,7 +97,7 @@ abstract public class FSOutputSummer extends OutputStream {
       // local buffer is empty and user data has one chunk
       // checksum and output data
       sum.update(b, off, buf.length);
-      writeChecksumChunk(b, off, buf.length);
+      writeChecksumChunk(b, off, buf.length, false);
       return buf.length;
     }
     
@@ -118,20 +118,34 @@ abstract public class FSOutputSummer extends OutputStream {
    * the underlying output stream. 
    */
   protected synchronized void flushBuffer() throws IOException {
-    if(count != 0) {
+    flushBuffer(false);
+  }
+
+  /* Forces any buffered output bytes to be checksumed and written out to
+   * the underlying output stream.  If keep is true, then the state of 
+   * this object remains intact.
+   */
+  protected synchronized void flushBuffer(boolean keep) throws IOException {
+    if (count != 0) {
       int chunkLen = count;
       count = 0;
-      writeChecksumChunk(buf, 0, chunkLen);
+      writeChecksumChunk(buf, 0, chunkLen, keep);
+      if (keep) {
+        count = chunkLen;
+      }
     }
   }
   
   /* Generate checksum for the data chunk and output data chunk & checksum
-   * to the underlying output stream
+   * to the underlying output stream. If keep is true then keep the
+   * current ckecksum intact, do not reset it.
    */
-  private void writeChecksumChunk(byte b[], int off, int len)
+  private void writeChecksumChunk(byte b[], int off, int len, boolean keep)
   throws IOException {
     int tempChecksum = (int)sum.getValue();
-    sum.reset();
+    if (!keep) {
+      sum.reset();
+    }
     
     checksum[0] = (byte)((tempChecksum >>> 24) & 0xFF);
     checksum[1] = (byte)((tempChecksum >>> 16) & 0xFF);

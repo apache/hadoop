@@ -47,7 +47,6 @@ public class FSDataOutputStream extends DataOutputStream {
     }
     
     public void close() throws IOException {
-      flush();
       out.close();
     }
   }
@@ -63,8 +62,7 @@ public class FSDataOutputStream extends DataOutputStream {
   }
 
   public void close() throws IOException {
-    flush();
-    out.close();
+    out.close();         // This invokes PositionCache.close()
   }
 
   // Returns the underlying output stream. This is used by unit tests.

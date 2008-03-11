@@ -175,6 +175,9 @@ Trunk (unreleased changes)
     HADOOP-2955. Fix TestCrcCorruption test failures caused by HADOOP-2758
     (rangadi)
 
+    HADOOP-2657. A flush call on the DFSOutputStream flushes the last
+    partial CRC chunk too.  (dhruba)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
