@@ -170,6 +170,9 @@ Trunk (unreleased changes)
     HADOOP-2971. select multiple times if it returns early in 
     SocketIOWithTimeout. (rangadi)
 
+    HADOOP-2955. Fix TestCrcCorruption test failures caused by HADOOP-2758
+    (rangadi)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

@@ -1587,7 +1587,16 @@ public class DataNode implements FSConstants, Runnable {
               16 * 1024);
         }
 
+        /* If bytesPerChecksum is very large, then the metadata file
+         * is mostly corrupted. For now just truncate bytesPerchecksum to
+         * blockLength.
+         */        
         bytesPerChecksum = checksum.getBytesPerChecksum();
+        if (bytesPerChecksum > 10*1024*1024 && bytesPerChecksum > blockLength){
+          checksum = DataChecksum.newDataChecksum(checksum.getChecksumType(),
+                                     Math.max((int)blockLength, 10*1024*1024));
+          bytesPerChecksum = checksum.getBytesPerChecksum();        
+        }
         checksumSize = checksum.getChecksumSize();
 
         if (length < 0) {
