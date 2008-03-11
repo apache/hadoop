@@ -163,20 +163,6 @@ abstract class SocketIOWithTimeout {
       } 
 
       if (count == 0) {
-        String channelStr = "Unknown Channel";
-        if (channel instanceof SocketChannel) {
-          Socket sock = ((SocketChannel)channel).socket();
-          SocketAddress remote = sock.getRemoteSocketAddress();
-          SocketAddress local = sock.getLocalSocketAddress();
-          channelStr =  (remote == null ? "Unknown Addr" : remote) +
-                         " (local: " + 
-                         (local == null ? "Unknown Addr" : local) + ")";
-        } else if (channel instanceof Pipe.SinkChannel ||
-                   channel instanceof Pipe.SourceChannel) {
-          channelStr = "pipe";
-        } else if (channel instanceof DatagramChannel) {
-          channelStr = "datagram channel";
-        }
         
         String waitingFor = ""+ops;
         if (ops == SelectionKey.OP_READ) {
@@ -186,8 +172,8 @@ abstract class SocketIOWithTimeout {
         }
         
         throw new SocketTimeoutException(timeout + " millis timeout while " +
-                                         "waiting for " + channelStr +
-                                         " to be ready for " + waitingFor);
+                                         "waiting for channel to be ready for "
+                                         + waitingFor + ". ch : " + channel);
       }
       // otherwise the socket should be ready for io.
     }
@@ -245,11 +231,29 @@ abstract class SocketIOWithTimeout {
       SelectorInfo info = get(channel);
       
       SelectionKey key = null;
-      int ret = -1;
+      int ret = 0;
       
       try {
-        key = channel.register(info.selector, ops);
-        ret = info.selector.select(timeout);
+        while (true) {
+          long start = (timeout == 0) ? 0 : System.currentTimeMillis();
+
+          key = channel.register(info.selector, ops);
+          ret = info.selector.select(timeout);
+          
+          if (ret != 0) {
+            return ret;
+          }
+          
+          /* Sometimes select() returns 0 much before timeout for 
+           * unknown reasons. So select again if required.
+           */
+          if (timeout > 0) {
+            timeout -= System.currentTimeMillis() - start;
+            if (timeout <= 0) {
+              return 0;
+            }
+          }
+        }
       } finally {
         if (key != null) {
           key.cancel();
@@ -268,8 +272,6 @@ abstract class SocketIOWithTimeout {
         
         release(info);
       }
-      
-      return ret;
     }
     
     /**
