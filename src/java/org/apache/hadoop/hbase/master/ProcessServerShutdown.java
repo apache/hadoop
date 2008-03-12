@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.io.RowResult;
 
 /** 
  * Instantiated when a server's lease has expired, meaning it has crashed.
@@ -97,7 +98,7 @@ class ProcessServerShutdown extends RegionServerOperation {
 
     try {
       while (true) {
-        HbaseMapWritable values = null;
+        RowResult values = null;
         try {
           values = server.next(scannerId);
         } catch (IOException e) {
@@ -108,10 +109,9 @@ class ProcessServerShutdown extends RegionServerOperation {
         if (values == null || values.size() == 0) {
           break;
         }
-        // TODO: Why does this have to be a sorted map?
-        RowMap rm = RowMap.fromHbaseMapWritable(values);
-        Text row = rm.getRow();
-        SortedMap<Text, byte[]> map = rm.getMap();
+        
+        Text row = values.getRow();
+        
         if (LOG.isDebugEnabled() && row != null) {
           LOG.debug("shutdown scanner looking at " + row.toString());
         }
@@ -121,7 +121,7 @@ class ProcessServerShutdown extends RegionServerOperation {
         // missed edits in hlog because hdfs does not do write-append).
         String serverName;
         try {
-          serverName = Writables.bytesToString(map.get(COL_SERVER));
+          serverName = Writables.cellToString(values.get(COL_SERVER));
         } catch (UnsupportedEncodingException e) {
           LOG.error("Server name", e);
           break;
@@ -133,7 +133,7 @@ class ProcessServerShutdown extends RegionServerOperation {
         }
 
         // Bingo! Found it.
-        HRegionInfo info = master.getHRegionInfo(map);
+        HRegionInfo info = master.getHRegionInfo(values);
         if (info == null) {
           continue;
         }

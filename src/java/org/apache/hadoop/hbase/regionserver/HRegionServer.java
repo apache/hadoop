@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
@@ -1006,8 +1007,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public HbaseMapWritable next(final long scannerId) throws IOException {
-
+  public RowResult next(final long scannerId) throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
     try {
@@ -1024,8 +1024,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
       while (s.next(key, results)) {
         for(Map.Entry<Text, byte []> e: results.entrySet()) {
-          values.put(new HStoreKey(key.getRow(), e.getKey(), key.getTimestamp()),
-            new ImmutableBytesWritable(e.getValue()));
+          values.put(e.getKey(), new Cell(e.getValue(), key.getTimestamp()));
         }
 
         if(values.size() > 0) {
@@ -1036,8 +1035,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         // No data for this row, go get another.
         results.clear();
       }
-      return values;
-      
+      return new RowResult(key.getRow(), values);
     } catch (IOException e) {
       checkFileSystem();
       throw e;
@@ -1064,8 +1062,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /** {@inheritDoc} */
   public long openScanner(Text regionName, Text[] cols, Text firstRow,
-      final long timestamp, final RowFilterInterface filter)
-    throws IOException {
+    final long timestamp, final RowFilterInterface filter)
+  throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
     try {

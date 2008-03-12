@@ -64,7 +64,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.io.Cell;
-
+import org.apache.hadoop.hbase.io.RowResult;
 
 /**
  * HStore maintains a bunch of data files.  It is responsible for maintaining 
@@ -2252,7 +2252,8 @@ public class HStore implements HConstants {
     /** Create an Scanner with a handle on the memcache and HStore files. */
     @SuppressWarnings("unchecked")
     HStoreScanner(Text[] targetCols, Text firstRow, long timestamp,
-        RowFilterInterface filter) throws IOException {
+      RowFilterInterface filter) 
+    throws IOException {
       
       this.dataFilter = filter;
       if (null != dataFilter) {
@@ -2454,7 +2455,6 @@ public class HStore implements HConstants {
       
       return moreToFollow;
     }
-
     
     /** Shut down a single scanner */
     void closeScanner(int i) {

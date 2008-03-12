@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.RowResult;
 
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -149,8 +150,8 @@ abstract class BaseScanner extends Chore implements HConstants {
 
     // Array to hold list of split parents found.  Scan adds to list.  After
     // scan we go check if parents can be removed.
-    Map<HRegionInfo, SortedMap<Text, byte[]>> splitParents =
-      new HashMap<HRegionInfo, SortedMap<Text, byte[]>>();
+    Map<HRegionInfo, RowResult> splitParents =
+      new HashMap<HRegionInfo, RowResult>();
     try {
       regionServer = master.connection.getHRegionConnection(region.getServer());
       scannerId =
@@ -159,22 +160,18 @@ abstract class BaseScanner extends Chore implements HConstants {
 
       int numberOfRegionsFound = 0;
       while (true) {
-        HbaseMapWritable values = regionServer.next(scannerId);
+        RowResult values = regionServer.next(scannerId);
         if (values == null || values.size() == 0) {
           break;
         }
 
-        // TODO: Why does this have to be a sorted map?
-        SortedMap<Text, byte[]> results = 
-          RowMap.fromHbaseMapWritable(values).getMap();
-        
-        HRegionInfo info = master.getHRegionInfo(results);
+        HRegionInfo info = master.getHRegionInfo(values);
         if (info == null) {
           continue;
         }
 
-        String serverName = Writables.bytesToString(results.get(COL_SERVER));
-        long startCode = Writables.bytesToLong(results.get(COL_STARTCODE));
+        String serverName = Writables.cellToString(values.get(COL_SERVER));
+        long startCode = Writables.cellToLong(values.get(COL_STARTCODE));
         if (LOG.isDebugEnabled()) {
           LOG.debug(Thread.currentThread().getName() + " regioninfo: {" +
             info.toString() + "}, server: " + serverName + ", startCode: " +
@@ -184,7 +181,7 @@ abstract class BaseScanner extends Chore implements HConstants {
         // Note Region has been assigned.
         checkAssigned(info, serverName, startCode);
         if (isSplitParent(info)) {
-          splitParents.put(info, results);
+          splitParents.put(info, values);
         }
         numberOfRegionsFound += 1;
       }
@@ -216,8 +213,7 @@ abstract class BaseScanner extends Chore implements HConstants {
     // Scan is finished.  Take a look at split parents to see if any we can
     // clean up.
     if (splitParents.size() > 0) {
-      for (Map.Entry<HRegionInfo, SortedMap<Text, byte[]>> e:
-          splitParents.entrySet()) {
+      for (Map.Entry<HRegionInfo, RowResult> e : splitParents.entrySet()) {
         HRegionInfo hri = e.getKey();
         cleanupSplits(region.getRegionName(), regionServer, hri, e.getValue());
       }
@@ -252,8 +248,8 @@ abstract class BaseScanner extends Chore implements HConstants {
    * @throws IOException
    */
   private boolean cleanupSplits(final Text metaRegionName, 
-      final HRegionInterface srvr, final HRegionInfo parent,
-      SortedMap<Text, byte[]> rowContent)
+    final HRegionInterface srvr, final HRegionInfo parent,
+    RowResult rowContent)
   throws IOException {
     boolean result = false;
 
@@ -295,11 +291,11 @@ abstract class BaseScanner extends Chore implements HConstants {
    */
   protected boolean hasReferences(final Text metaRegionName, 
     final HRegionInterface srvr, final Text parent,
-    SortedMap<Text, byte[]> rowContent, final Text splitColumn)
+    RowResult rowContent, final Text splitColumn)
   throws IOException {
     boolean result = false;
     HRegionInfo split =
-      Writables.getHRegionInfoOrNull(rowContent.get(splitColumn));
+      Writables.getHRegionInfoOrNull(rowContent.get(splitColumn).getValue());
     if (split == null) {
       return result;
     }

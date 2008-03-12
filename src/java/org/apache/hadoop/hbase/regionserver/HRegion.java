@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
@@ -1204,7 +1205,8 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public HScannerInterface getScanner(Text[] cols, Text firstRow,
-      long timestamp, RowFilterInterface filter) throws IOException {
+    long timestamp, RowFilterInterface filter) 
+  throws IOException {
     lock.readLock().lock();
     try {
       if (this.closed.get()) {
@@ -1639,7 +1641,7 @@ public class HRegion implements HConstants {
     /** Create an HScanner with a handle on many HStores. */
     @SuppressWarnings("unchecked")
     HScanner(Text[] cols, Text firstRow, long timestamp, HStore[] stores,
-        RowFilterInterface filter)
+      RowFilterInterface filter)
     throws IOException {
       this.scanners = new HInternalScannerInterface[stores.length];
       try {
@@ -1756,7 +1758,6 @@ public class HRegion implements HConstants {
       return moreToFollow;
     }
 
-    
     /** Shut down a single scanner */
     void closeScanner(int i) {
       try {

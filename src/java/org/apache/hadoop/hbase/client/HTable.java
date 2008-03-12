@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Writables;
@@ -198,36 +199,28 @@ public class HTable implements HConstants {
         // open a scanner over the meta region
         scannerId = server.openScanner(
           metaLocation.getRegionInfo().getRegionName(),
-          COLUMN_FAMILY_ARRAY, tableName, LATEST_TIMESTAMP,
+          new Text[]{COL_REGIONINFO}, tableName, LATEST_TIMESTAMP,
           null);
         
-        // iterate through the scanner, accumulating unique table names
-        SCANNER_LOOP: while (true) {
-          HbaseMapWritable values = server.next(scannerId);
+        // iterate through the scanner, accumulating unique region names
+        while (true) {
+          RowResult values = server.next(scannerId);
           if (values == null || values.size() == 0) {
             break;
           }
-          for (Map.Entry<Writable, Writable> e: values.entrySet()) {
-            HStoreKey key = (HStoreKey) e.getKey();
-            if (key.getColumn().equals(COL_REGIONINFO)) {
-              HRegionInfo info = new HRegionInfo();
-              info = (HRegionInfo) Writables.getWritable(
-                  ((ImmutableBytesWritable) e.getValue()).get(), info);
-
-              if (!info.getTableDesc().getName().equals(this.tableName)) {
-                break SCANNER_LOOP;
-              }
-
-              if (info.isOffline()) {
-                continue SCANNER_LOOP;
-              }
-
-              if (info.isSplit()) {
-                continue SCANNER_LOOP;
-              }
-
-              keyList.add(info.getStartKey());
-            }
+          
+          HRegionInfo info = new HRegionInfo();
+          info = (HRegionInfo) Writables.getWritable(
+            values.get(COL_REGIONINFO).getValue(), info);
+          
+          if (!info.getTableDesc().getName().equals(this.tableName)) {
+            break;
+          }
+          
+          if (info.isOffline() || info.isSplit()) {
+            continue;
+          } else {
+            keyList.add(info.getStartKey());            
           }
         }
         
@@ -889,7 +882,7 @@ public class HTable implements HConstants {
       if (this.closed) {
         return false;
       }
-      HbaseMapWritable values = null;
+      RowResult values = null;
       // Clear the results so we don't inherit any values from any previous
       // calls to next.
       results.clear();
@@ -898,13 +891,12 @@ public class HTable implements HConstants {
       } while (values != null && values.size() == 0 && nextScanner());
 
       if (values != null && values.size() != 0) {
-        for (Map.Entry<Writable, Writable> e: values.entrySet()) {
-          HStoreKey k = (HStoreKey) e.getKey();
-          key.setRow(k.getRow());
-          key.setVersion(k.getTimestamp());
+        for (Map.Entry<Text, Cell> e: values.entrySet()) {
+          // HStoreKey k = (HStoreKey) e.getKey();
+          key.setRow(values.getRow());
+          key.setVersion(e.getValue().getTimestamp());
           key.setColumn(EMPTY_COLUMN);
-          results.put(k.getColumn(),
-            ((ImmutableBytesWritable) e.getValue()).get());
+          results.put(e.getKey(), e.getValue().getValue());
         }
       }
       return values == null ? false : values.size() != 0;

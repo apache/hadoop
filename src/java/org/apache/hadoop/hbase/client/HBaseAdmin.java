@@ -34,7 +34,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -43,6 +42,8 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.Cell;
 
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
@@ -201,16 +202,15 @@ public class HBaseAdmin implements HConstants {
         scannerId =
           server.openScanner(firstMetaServer.getRegionInfo().getRegionName(),
             COL_REGIONINFO_ARRAY, tableName, System.currentTimeMillis(), null);
-        HbaseMapWritable values = server.next(scannerId);
+        RowResult values = server.next(scannerId);
         if (values == null || values.size() == 0) {
           break;
         }
         boolean found = false;
-        for (Map.Entry<Writable, Writable> e: values.entrySet()) {
-          HStoreKey key = (HStoreKey) e.getKey();
-          if (key.getColumn().equals(COL_REGIONINFO)) {
+        for (Map.Entry<Text, Cell> e: values.entrySet()) {
+          if (e.getKey().equals(COL_REGIONINFO)) {
             info = (HRegionInfo) Writables.getWritable(
-                  ((ImmutableBytesWritable) e.getValue()).get(), info);
+              e.getValue().getValue(), info);
             
             if (info.getTableDesc().getName().equals(tableName)) {
               found = true;
@@ -285,7 +285,7 @@ public class HBaseAdmin implements HConstants {
         boolean isenabled = false;
         
         while (true) {
-          HbaseMapWritable values = server.next(scannerId);
+          RowResult values = server.next(scannerId);
           if (values == null || values.size() == 0) {
             if (valuesfound == 0) {
               throw new NoSuchElementException(
@@ -294,11 +294,10 @@ public class HBaseAdmin implements HConstants {
             break;
           }
           valuesfound += 1;
-          for (Map.Entry<Writable, Writable> e: values.entrySet()) {
-            HStoreKey key = (HStoreKey) e.getKey();
-            if (key.getColumn().equals(COL_REGIONINFO)) {
+          for (Map.Entry<Text, Cell> e: values.entrySet()) {
+            if (e.getKey().equals(COL_REGIONINFO)) {
               info = (HRegionInfo) Writables.getWritable(
-                    ((ImmutableBytesWritable) e.getValue()).get(), info);
+                e.getValue().getValue(), info);
             
               isenabled = !info.isOffline();
               break;
@@ -386,7 +385,7 @@ public class HBaseAdmin implements HConstants {
         
         boolean disabled = false;
         while (true) {
-          HbaseMapWritable values = server.next(scannerId);
+          RowResult values = server.next(scannerId);
           if (values == null || values.size() == 0) {
             if (valuesfound == 0) {
               throw new NoSuchElementException("table " + tableName + " not found");
@@ -394,11 +393,10 @@ public class HBaseAdmin implements HConstants {
             break;
           }
           valuesfound += 1;
-          for (Map.Entry<Writable, Writable> e: values.entrySet()) {
-            HStoreKey key = (HStoreKey) e.getKey();
-            if (key.getColumn().equals(COL_REGIONINFO)) {
+          for (Map.Entry<Text, Cell> e: values.entrySet()) {
+            if (e.getKey().equals(COL_REGIONINFO)) {
               info = (HRegionInfo) Writables.getWritable(
-                    ((ImmutableBytesWritable) e.getValue()).get(), info);
+                e.getValue().getValue(), info);
             
               disabled = info.isOffline();
               break;

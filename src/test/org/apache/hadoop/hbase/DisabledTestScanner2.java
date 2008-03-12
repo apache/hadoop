@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.io.RowResult;
 
 /**
  * Additional scanner tests.
@@ -374,26 +375,19 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
           HConstants.COLUMN_FAMILY_ARRAY, new Text(),
           System.currentTimeMillis(), null);
       while (true) {
-        TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-        HbaseMapWritable values = regionServer.next(scannerId);
+        RowResult values = regionServer.next(scannerId);
         if (values == null || values.size() == 0) {
           break;
         }
         
-        for (Map.Entry<Writable, Writable> e: values.entrySet()) {
-          HStoreKey k = (HStoreKey) e.getKey();
-          results.put(k.getColumn(),
-              ((ImmutableBytesWritable) e.getValue()).get());
-        }
-
         HRegionInfo info = (HRegionInfo) Writables.getWritable(
-            results.get(HConstants.COL_REGIONINFO), new HRegionInfo());
+          values.get(HConstants.COL_REGIONINFO).getValue(), new HRegionInfo());
 
-        byte[] bytes = results.get(HConstants.COL_SERVER);
-        String serverName = Writables.bytesToString(bytes);
+        String serverName = 
+          Writables.cellToString(values.get(HConstants.COL_SERVER));
 
         long startCode =
-          Writables.bytesToLong(results.get(HConstants.COL_STARTCODE));
+          Writables.cellToLong(values.get(HConstants.COL_STARTCODE));
 
         LOG.info(Thread.currentThread().getName() + " scanner: "
             + Long.valueOf(scannerId) + ": regioninfo: {" + info.toString()

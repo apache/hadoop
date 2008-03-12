@@ -46,6 +46,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HbaseRPC;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -614,18 +616,16 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       long scannerid = srvr.openScanner(metaRegionName, COL_REGIONINFO_ARRAY,
         tableName, System.currentTimeMillis(), null);
       try {
-        HbaseMapWritable data = srvr.next(scannerid);
+        RowResult data = srvr.next(scannerid);
             
         // Test data and that the row for the data is for our table. If table
         // does not exist, scanner will return row after where our table would
         // be inserted if it exists so look for exact match on table name.            
         if (data != null && data.size() > 0) {
-          for (Writable k: data.keySet()) {
-            if (HRegionInfo.getTableNameFromRegionName(
-              ((HStoreKey) k).getRow()).equals(tableName)) {
-              // Then a region for this table already exists. Ergo table exists.
-              throw new TableExistsException(tableName.toString());
-            }
+          if (HRegionInfo.getTableNameFromRegionName(
+            data.getRow()).equals(tableName)) {
+            // Then a region for this table already exists. Ergo table exists.
+            throw new TableExistsException(tableName.toString());
           }
         }
       } finally {
@@ -697,15 +697,15 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * @return Null or found HRegionInfo.
    * @throws IOException
    */
-  HRegionInfo getHRegionInfo(final Map<Text, byte[]> map)
+  HRegionInfo getHRegionInfo(final Map<Text, Cell> map)
   throws IOException {
-    byte [] bytes = map.get(COL_REGIONINFO);
-    if (bytes == null) {
+    Cell regioninfo = map.get(COL_REGIONINFO);
+    if (regioninfo == null) {
       LOG.warn(COL_REGIONINFO.toString() + " is empty; has keys: " +
         map.keySet().toString());
       return null;
     }
-    return (HRegionInfo)Writables.getWritable(bytes, new HRegionInfo());
+    return (HRegionInfo)Writables.getWritable(regioninfo.getValue(), new HRegionInfo());
   }
 
   /*

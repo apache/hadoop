@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 
 /**
  * Abstract base class for operations that need to examine all HRegionInfo 
@@ -95,19 +97,19 @@ abstract class TableOperation implements HConstants {
 
             try {
               while (true) {
-                HbaseMapWritable values = server.next(scannerId);
+                RowResult values = server.next(scannerId);
                 if(values == null || values.size() == 0) {
                   break;
                 }
-                RowMap rm = RowMap.fromHbaseMapWritable(values);
-                SortedMap<Text, byte[]> map = rm.getMap();
-                HRegionInfo info = this.master.getHRegionInfo(map);
+                HRegionInfo info = this.master.getHRegionInfo(values);
                 if (info == null) {
                   throw new IOException(COL_REGIONINFO + " not found on " +
-                    rm.getRow());
+                    values.getRow());
                 }
-                String serverName = Writables.bytesToString(map.get(COL_SERVER));
-                long startCode = Writables.bytesToLong(map.get(COL_STARTCODE));
+                String serverName = 
+                  Writables.cellToString(values.get(COL_SERVER));
+                long startCode = 
+                  Writables.cellToLong(values.get(COL_STARTCODE));
                 if (info.getTableDesc().getName().compareTo(tableName) > 0) {
                   break; // Beyond any more entries for this table
                 }

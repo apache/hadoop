@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.hbase.io.Cell;
 
 /**
  * Utility class with methods for manipulating Writable objects
@@ -113,6 +114,19 @@ public class Writables {
   }
 
   /**
+   * @param cell Cell object containing the serialized HRegionInfo
+   * @return A HRegionInfo instance built out of passed <code>cell</code>.
+   * @throws IOException
+   */
+  public static HRegionInfo getHRegionInfo(final Cell cell) throws IOException {
+    if (cell == null) {
+      return null;
+    } else {
+      return getHRegionInfo(cell.getValue());
+    }
+  }
+
+  /**
    * Copy one Writable to another.  Copies bytes using data streams.
    * @param src Source Writable
    * @param tgt Target Writable
@@ -183,5 +197,23 @@ public class Writables {
       return "";
     }
     return new String(bytes, HConstants.UTF8_ENCODING);
+  }
+  
+  public static String cellToString(Cell c) 
+  throws UnsupportedEncodingException {
+    if (c == null) {
+      return "";
+    } else {
+      return bytesToString(c.getValue());
+    }
+  }
+  
+  public static long cellToLong(Cell c) 
+  throws IOException {
+    if (c == null) {
+      return 0;
+    } else {
+      return bytesToLong(c.getValue());
+    }
   }
 }

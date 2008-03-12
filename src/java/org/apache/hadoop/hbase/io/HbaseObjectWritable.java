@@ -44,6 +44,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 
 /** 
  * This is a customized version of the polymorphic hadoop
@@ -120,6 +121,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
     } catch (ClassNotFoundException e) {
       e.printStackTrace();
     }
+    addToMap(RowResult.class, code++);
   }
   
   private Class<?> declaredClass;

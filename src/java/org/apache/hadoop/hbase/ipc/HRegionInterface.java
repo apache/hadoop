@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.Text;
@@ -219,7 +220,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return map of values
    * @throws IOException
    */
-  public HbaseMapWritable next(long scannerId) throws IOException;
+  public RowResult next(long scannerId) throws IOException;
   
   /**
    * Close a scanner

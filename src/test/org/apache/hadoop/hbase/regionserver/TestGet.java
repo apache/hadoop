@@ -67,7 +67,7 @@ public class TestGet extends HBaseTestCase {
     for(Iterator<Text> i = values.keySet().iterator(); i.hasNext(); ) {
       Text column = i.next();
       if (column.equals(HConstants.COL_SERVER)) {
-        String server = Writables.bytesToString(values.get(column).getValue());
+        String server = Writables.cellToString(values.get(column));
         assertEquals(expectedServer, server);
         LOG.info(server);
       }

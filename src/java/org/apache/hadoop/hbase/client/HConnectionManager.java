@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 
 /**
  * A non-instantiable class that manages connections to multiple tables in
@@ -265,27 +266,21 @@ public class HConnectionManager implements HConstants {
           // open a scanner over the meta region
           scannerId = server.openScanner(
             metaLocation.getRegionInfo().getRegionName(),
-            COLUMN_FAMILY_ARRAY, startRow, LATEST_TIMESTAMP,
-            null);
+            new Text[]{COL_REGIONINFO}, startRow, LATEST_TIMESTAMP, null);
           
           // iterate through the scanner, accumulating unique table names
           while (true) {
-            HbaseMapWritable values = server.next(scannerId);
+            RowResult values = server.next(scannerId);
             if (values == null || values.size() == 0) {
               break;
             }
-            for (Map.Entry<Writable, Writable> e: values.entrySet()) {
-              HStoreKey key = (HStoreKey) e.getKey();
-              if (key.getColumn().equals(COL_REGIONINFO)) {
-                HRegionInfo info = new HRegionInfo();
-                info = (HRegionInfo) Writables.getWritable(
-                    ((ImmutableBytesWritable) e.getValue()).get(), info);
+            
+            HRegionInfo info = 
+              Writables.getHRegionInfo(values.get(COL_REGIONINFO));
 
-                // Only examine the rows where the startKey is zero length   
-                if (info.getStartKey().getLength() == 0) {
-                  uniqueTables.add(info.getTableDesc());
-                }
-              }
+            // Only examine the rows where the startKey is zero length   
+            if (info.getStartKey().getLength() == 0) {
+              uniqueTables.add(info.getTableDesc());
             }
           }
           
@@ -447,11 +442,9 @@ public class HConnectionManager implements HConstants {
             throw new IllegalStateException("region offline: " + 
               regionInfo.getRegionName());
           }
-
-          Cell serverValue = results.get(COL_SERVER);
           
-          String serverAddress = Writables.bytesToString(
-            serverValue == null ? null : serverValue.getValue());
+          String serverAddress = 
+            Writables.cellToString(results.get(COL_SERVER));
         
           if (serverAddress.equals("")) { 
             throw new NoServerForRegionException(

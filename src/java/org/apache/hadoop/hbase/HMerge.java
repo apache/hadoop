@@ -335,8 +335,9 @@ class HMerge implements HConstants, Tool {
       root = new HRegion(rootTableDir, hlog, fs, conf,
           HRegionInfo.rootRegionInfo, null, null);
 
-      HScannerInterface rootScanner = root.getScanner(COL_REGIONINFO_ARRAY,
-          new Text(), System.currentTimeMillis(), null);
+      HScannerInterface rootScanner = 
+        root.getScanner(COL_REGIONINFO_ARRAY, new Text(), 
+        HConstants.LATEST_TIMESTAMP, null);
       
       try {
         HStoreKey key = new HStoreKey();
