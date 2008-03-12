@@ -314,6 +314,13 @@ public class HRegion implements HConstants {
         maxSeqId = storeSeqId;
       }
     }
+    if (fs.exists(oldLogFile)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Deleting old log file: " + oldLogFile);
+      }
+      fs.delete(oldLogFile);
+    }
+    
     this.minSequenceId = maxSeqId;
     if (LOG.isDebugEnabled()) {
       LOG.debug("Next sequence id for region " + regionInfo.getRegionName() +

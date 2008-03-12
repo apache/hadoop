@@ -33,6 +33,8 @@ Hbase Change Log
    HBASE-496   impossible state for createLease writes 400k lines in about 15mins
    HBASE-472   Passing on edits, we dump all to log
    HBASE-495   No server address listed in .META.
+   HBASE-433 HBASE-251 Region server should delete restore log after successful
+               restore, Stuck replaying the edits of crashed machine.
    
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling
