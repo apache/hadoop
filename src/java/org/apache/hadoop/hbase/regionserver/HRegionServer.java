@@ -24,6 +24,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -948,20 +949,34 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public HbaseMapWritable getRow(final Text regionName, final Text row)
+  public HbaseMapWritable getRow(final Text regionName, final Text row, final long ts)
   throws IOException {
-    return getRow(regionName, row, HConstants.LATEST_TIMESTAMP);
+    return getRow(regionName, row, null, ts);
   }
 
   /** {@inheritDoc} */
-  public HbaseMapWritable getRow(final Text regionName, final Text row, final long ts)
+  public HbaseMapWritable getRow(final Text regionName, final Text row, 
+    final Text[] columns)
+  throws IOException {
+    return getRow(regionName, row, columns, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /** {@inheritDoc} */
+  public HbaseMapWritable getRow(final Text regionName, final Text row, 
+    final Text[] columns, final long ts)
   throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
     try {
+      // convert the columns array into a set so it's easy to check later.
+      Set<Text> columnSet = new HashSet<Text>();
+      if (columns != null) {
+        columnSet.addAll(Arrays.asList(columns));
+      }
+      
       HRegion region = getRegion(regionName);
+      Map<Text, Cell> map = region.getFull(row, columnSet, ts);
       HbaseMapWritable result = new HbaseMapWritable();
-      Map<Text, Cell> map = region.getFull(row, ts);
       for (Map.Entry<Text, Cell> es: map.entrySet()) {
         result.put(new HStoreKey(row, es.getKey()), es.getValue());
       }

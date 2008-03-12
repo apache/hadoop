@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -1068,24 +1069,6 @@ public class HRegion implements HConstants {
   }
 
   /**
-   * Fetch all the columns for the indicated row.
-   * Returns a TreeMap that maps column names to values.
-   *
-   * We should eventually use Bloom filters here, to reduce running time.  If 
-   * the database has many column families and is very sparse, then we could be 
-   * checking many files needlessly.  A small Bloom for each row would help us 
-   * determine which column groups are useful for that row.  That would let us 
-   * avoid a bunch of disk activity.
-   *
-   * @param row
-   * @return Map<columnName, byte[]> values
-   * @throws IOException
-   */
-  public Map<Text, Cell> getFull(Text row) throws IOException {
-    return getFull(row, HConstants.LATEST_TIMESTAMP);
-  }
-
-  /**
    * Fetch all the columns for the indicated row at a specified timestamp.
    * Returns a TreeMap that maps column names to values.
    *
@@ -1096,18 +1079,21 @@ public class HRegion implements HConstants {
    * avoid a bunch of disk activity.
    *
    * @param row
+   * @param columns Array of columns you'd like to retrieve. When null, get all.
    * @param ts
-   * @return Map<columnName, byte[]> values
+   * @return Map<columnName, Cell> values
    * @throws IOException
    */
-  public Map<Text, Cell> getFull(Text row, long ts) throws IOException {
+  public Map<Text, Cell> getFull(final Text row, final Set<Text> columns, 
+    final long ts) 
+  throws IOException {
     HStoreKey key = new HStoreKey(row, ts);
     obtainRowLock(row);
     try {
       TreeMap<Text, Cell> result = new TreeMap<Text, Cell>();
       for (Text colFamily: stores.keySet()) {
         HStore targetStore = stores.get(colFamily);
-        targetStore.getFull(key, result);
+        targetStore.getFull(key, columns, result);
       }
       return result;
     } finally {
@@ -1162,7 +1148,7 @@ public class HRegion implements HConstants {
       TreeMap<Text, Cell> result = new TreeMap<Text, Cell>();
       for (Text colFamily: stores.keySet()) {
         HStore targetStore = stores.get(colFamily);
-        targetStore.getFull(key, result);
+        targetStore.getFull(key, null, result);
       }
       
       return result;

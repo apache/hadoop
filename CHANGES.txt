@@ -5,9 +5,11 @@ Hbase Change Log
             0.17.0-dev.2008-02-07_12-01-58. (Tom White via Stack) 
 
   NEW FEATURES
-
+   HBASE-40    Add a method of getting multiple (but not all) cells for a row at once
+   
   OPTIMIZATIONS
-
+   HBASE-430   Performance: Scanners and getRow return maps with duplicate data
+   
   BUG FIXES
    HBASE-19    CountingBloomFilter can overflow its storage
                (Stu Hood and Bryan Duxbury via Stack)

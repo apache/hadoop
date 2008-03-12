@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Map.Entry;
@@ -184,14 +185,14 @@ public class HStore implements HConstants {
      * @param key
      * @param results
      */
-    void getFull(HStoreKey key, SortedMap<Text, Cell> results) {
+    void getFull(HStoreKey key, Set<Text> columns, SortedMap<Text, Cell> results) {
       this.lock.readLock().lock();
       try {
         synchronized (memcache) {
-          internalGetFull(memcache, key, results);
+          internalGetFull(memcache, key, columns, results);
         }
         synchronized (snapshot) {
-          internalGetFull(snapshot, key, results);
+          internalGetFull(snapshot, key, columns, results);
         }
 
       } finally {
@@ -200,7 +201,7 @@ public class HStore implements HConstants {
     }
 
     private void internalGetFull(SortedMap<HStoreKey, byte[]> map, HStoreKey key, 
-        SortedMap<Text, Cell> results) {
+      Set<Text> columns, SortedMap<Text, Cell> results) {
 
       if (map.isEmpty() || key == null) {
         return;
@@ -214,7 +215,9 @@ public class HStore implements HConstants {
           byte [] val = tailMap.get(itKey);
 
           if (!HLogEdit.isDeleted(val)) {
-            results.put(itCol, new Cell(val, itKey.getTimestamp()));
+            if (columns == null || columns.contains(itKey.getColumn())) {
+              results.put(itCol, new Cell(val, itKey.getTimestamp()));
+            }
           }
 
         } else if (key.getRow().compareTo(itKey.getRow()) < 0) {
@@ -1601,24 +1604,36 @@ public class HStore implements HConstants {
    * Return all the available columns for the given key.  The key indicates a 
    * row and timestamp, but not a column name.
    *
-   * The returned object should map column names to byte arrays (byte[]).
+   * The returned object should map column names to Cells.
    */
-  void getFull(HStoreKey key, TreeMap<Text, Cell> results)
-    throws IOException {
+  void getFull(HStoreKey key, final Set<Text> columns, TreeMap<Text, Cell> results)
+  throws IOException {
     Map<Text, List<Long>> deletes = new HashMap<Text, List<Long>>();
     
+    // if the key is null, we're not even looking for anything. return.
     if (key == null) {
       return;
     }
     
     this.lock.readLock().lock();
-    memcache.getFull(key, results);
+    
+    // get from the memcache first.
+    memcache.getFull(key, columns, results);
+    
     try {
       MapFile.Reader[] maparray = getReaders();
+      
+      // examine each mapfile
       for (int i = maparray.length - 1; i >= 0; i--) {
         MapFile.Reader map = maparray[i];
+        
+        // synchronize on the map so that no one else iterates it at the same 
+        // time
         synchronized(map) {
+          // seek back to the beginning
           map.reset();
+          
+          // seek to the closest key that should match the row we're looking for
           ImmutableBytesWritable readval = new ImmutableBytesWritable();
           HStoreKey readkey = (HStoreKey)map.getClosest(key, readval);
           if (readkey == null) {
@@ -1631,7 +1646,9 @@ public class HStore implements HConstants {
               if(isDeleted(readkey, readval.get(), true, deletes)) {
                 break;
               }
-              results.put(new Text(readcol), new Cell(readval.get(), readkey.getTimestamp()));
+              if (columns == null || columns.contains(readkey.getColumn())) {
+                results.put(new Text(readcol), new Cell(readval.get(), readkey.getTimestamp()));
+              }
               readval = new ImmutableBytesWritable();
             } else if(key.getRow().compareTo(readkey.getRow()) < 0) {
               break;

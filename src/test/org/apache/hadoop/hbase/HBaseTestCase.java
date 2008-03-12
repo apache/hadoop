@@ -496,7 +496,7 @@ public abstract class HBaseTestCase extends TestCase {
      * @throws IOException
      */
     public Map<Text, Cell> getFull(Text row) throws IOException {
-      return region.getFull(row);
+      return region.getFull(row, null, HConstants.LATEST_TIMESTAMP);
     }
     /** {@inheritDoc} */
     public void flushcache() throws IOException {
@@ -567,7 +567,7 @@ public abstract class HBaseTestCase extends TestCase {
   protected void assertCellEquals(final HRegion region, final Text row,
     final Text column, final long timestamp, final String value)
   throws IOException {
-    Map<Text, Cell> result = region.getFull(row, timestamp);
+    Map<Text, Cell> result = region.getFull(row, null, timestamp);
     Cell cell_value = result.get(column);
     if(value == null){
       assertEquals(column.toString() + " at timestamp " + timestamp, null, cell_value);

@@ -362,6 +362,50 @@ public class HTable implements HConstants {
   }
 
   /** 
+   * Get selected columns for the specified row at the latest timestamp
+   * 
+   * @param row row key
+   * @param columns Array of column names you want to retrieve.
+   * @return Map of columns to values.  Map is empty if row does not exist.
+   * @throws IOException
+   */
+  public SortedMap<Text, Cell> getRow(final Text row, final Text[] columns) 
+  throws IOException {
+    return getRow(row, columns, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /** 
+   * Get selected columns for the specified row at a specified timestamp
+   * 
+   * @param row row key
+   * @param columns Array of column names you want to retrieve.   
+   * @param ts timestamp
+   * @return Map of columns to values.  Map is empty if row does not exist.
+   * @throws IOException
+   */
+  public SortedMap<Text, Cell> getRow(final Text row, final Text[] columns, 
+    final long ts) 
+  throws IOException {
+    HbaseMapWritable value = null;
+         
+    value = getRegionServerWithRetries(new ServerCallable<HbaseMapWritable>(row) {
+      public HbaseMapWritable call() throws IOException {
+        return server.getRow(location.getRegionInfo().getRegionName(), row, 
+          columns, ts);
+      }
+    });
+    
+    SortedMap<Text, Cell> results = new TreeMap<Text, Cell>();
+    if (value != null && value.size() != 0) {
+      for (Map.Entry<Writable, Writable> e: value.entrySet()) {
+        HStoreKey key = (HStoreKey) e.getKey();
+        results.put(key.getColumn(), (Cell)e.getValue());
+      }
+    }
+    return results;
+  }
+
+  /** 
    * Get a scanner on the current table starting at the specified row.
    * Return the specified columns.
    *

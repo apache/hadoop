@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.HashSet;
 import java.util.TreeMap;
 
 import org.apache.hadoop.dfs.MiniDFSCluster;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
  * {@link TestGet} is a medley of tests of get all done up as a single test.
@@ -224,10 +226,84 @@ public class TestGet2 extends HBaseTestCase {
       }
     }
   }
+
+  /**
+   * For HBASE-40
+   */
+  public void testGetFullWithSpecifiedColumns() throws IOException {
+    HRegion region = null;
+    HRegionIncommon region_incommon = null;
+    try {
+      HTableDescriptor htd = createTableDescriptor(getName());
+      region = createNewHRegion(htd, null, null);
+      region_incommon = new HRegionIncommon(region);
+      
+      // write a row with a bunch of columns
+      Text row = new Text("some_row");
+      BatchUpdate bu = new BatchUpdate(row);
+      bu.put(COLUMNS[0], "column 0".getBytes());
+      bu.put(COLUMNS[1], "column 1".getBytes());
+      bu.put(COLUMNS[2], "column 2".getBytes());
+      region.batchUpdate(bu);
+      
+      assertSpecifiedColumns(region, row);
+      // try it again with a cache flush to involve the store, not just the 
+      // memcache.
+      region_incommon.flushcache();
+      assertSpecifiedColumns(region, row);
+      
+    } finally {
+      if (region != null) {
+        try {
+          region.close();
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+        region.getLog().closeAndDelete();
+      }
+    }    
+  }
     
+  private void assertSpecifiedColumns(final HRegion region, final Text row) 
+  throws IOException {
+    HashSet<Text> all = new HashSet<Text>();
+    HashSet<Text> one = new HashSet<Text>();
+    HashSet<Text> none = new HashSet<Text>();
+    
+    all.add(COLUMNS[0]);
+    all.add(COLUMNS[1]);
+    all.add(COLUMNS[2]);      
+    one.add(COLUMNS[0]);
+
+    // make sure we get all of them with standard getFull
+    Map<Text, Cell> result = region.getFull(row, null, 
+      HConstants.LATEST_TIMESTAMP);
+    assertEquals(new String(result.get(COLUMNS[0]).getValue()), "column 0");
+    assertEquals(new String(result.get(COLUMNS[1]).getValue()), "column 1");
+    assertEquals(new String(result.get(COLUMNS[2]).getValue()), "column 2");
+          
+    // try to get just one
+    result = region.getFull(row, one, HConstants.LATEST_TIMESTAMP);
+    assertEquals(new String(result.get(COLUMNS[0]).getValue()), "column 0");
+    assertNull(result.get(COLUMNS[1]));                                   
+    assertNull(result.get(COLUMNS[2]));                                   
+                                                                          
+    // try to get all of them (specified)                                 
+    result = region.getFull(row, all, HConstants.LATEST_TIMESTAMP);       
+    assertEquals(new String(result.get(COLUMNS[0]).getValue()), "column 0");
+    assertEquals(new String(result.get(COLUMNS[1]).getValue()), "column 1");
+    assertEquals(new String(result.get(COLUMNS[2]).getValue()), "column 2");
+    
+    // try to get none with empty column set
+    result = region.getFull(row, none, HConstants.LATEST_TIMESTAMP);
+    assertNull(result.get(COLUMNS[0]));
+    assertNull(result.get(COLUMNS[1]));
+    assertNull(result.get(COLUMNS[2]));    
+  }  
+  
   private void assertColumnsPresent(final HRegion r, final Text row)
   throws IOException {
-    Map<Text, Cell> result = r.getFull(row);
+    Map<Text, Cell> result = r.getFull(row, null, HConstants.LATEST_TIMESTAMP);
     int columnCount = 0;
     for (Map.Entry<Text, Cell> e: result.entrySet()) {
       columnCount++;

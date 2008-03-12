@@ -93,17 +93,6 @@ public interface HRegionInterface extends VersionedProtocol {
   throws IOException;
   
   /**
-   * Get all the data for the specified row
-   * 
-   * @param regionName region name
-   * @param row row key
-   * @return map of values
-   * @throws IOException
-   */
-  public HbaseMapWritable getRow(final Text regionName, final Text row)
-  throws IOException;
-
-  /**
    * Get all the data for the specified row at a given timestamp
    * 
    * @param regionName region name
@@ -138,6 +127,30 @@ public interface HRegionInterface extends VersionedProtocol {
    */
   public HbaseMapWritable getClosestRowBefore(final Text regionName, 
     final Text row, final long ts)
+  throws IOException;
+
+  /**
+   * Get selected columns for the specified row at a given timestamp.
+   * 
+   * @param regionName region name
+   * @param row row key
+   * @return map of values
+   * @throws IOException
+   */
+  public HbaseMapWritable getRow(final Text regionName, final Text row, 
+    final Text[] columns, final long ts)
+  throws IOException;
+
+  /**
+   * Get selected columns for the specified row at the latest timestamp.
+   * 
+   * @param regionName region name
+   * @param row row key
+   * @return map of values
+   * @throws IOException
+   */
+  public HbaseMapWritable getRow(final Text regionName, final Text row, 
+    final Text[] columns)
   throws IOException;
 
   /**
