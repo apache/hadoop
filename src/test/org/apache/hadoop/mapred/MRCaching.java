@@ -218,8 +218,8 @@ public class MRCaching {
     // match the real string. check if there are 3 instances or not.
     Path result = new Path(TEST_ROOT_DIR + "/test.txt");
     {
-      BufferedReader file = new BufferedReader(new InputStreamReader(
-                                                                     FileSystem.getLocal(conf).open(result)));
+      BufferedReader file = new BufferedReader
+         (new InputStreamReader(FileSystem.getLocal(conf).open(result)));
       String line = file.readLine();
       while (line != null) {
         if (!testStr.equals(line))

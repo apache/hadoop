@@ -91,6 +91,9 @@ Trunk (unreleased changes)
     HADOOP-2758. Reduce buffer copies in DataNode when data is read from
     HDFS, without negatively affecting read throughput. (rangadi)
 
+    HADOOP-2399. Input key and value to combiner and reducer is reused.
+    (Owen O'Malley via ddas). 
+
   BUG FIXES
 
     HADOOP-2195. '-mkdir' behaviour is now closer to Linux shell in case of

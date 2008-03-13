@@ -80,7 +80,7 @@ public class UniqValueCount implements ValueAggregator {
    */
   public void addNextValue(Object val) {
     if (this.numItems <= this.maxNumItems) {
-      uniqItems.put(val, "1");
+      uniqItems.put(val.toString(), "1");
       this.numItems = this.uniqItems.size();
     }
   }

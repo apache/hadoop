@@ -681,16 +681,19 @@ class MapTask extends Task {
       //empty for now
     }
     
-    private class CombineValuesIterator extends ValuesIterator {
+    private class CombineValuesIterator<KEY,VALUE> 
+            extends ValuesIterator<KEY,VALUE> {
         
       public CombineValuesIterator(SequenceFile.Sorter.RawKeyValueIterator in, 
-                                   RawComparator comparator, Class keyClass,
-                                   Class valClass, Configuration conf, Reporter reporter) 
+                                   RawComparator<KEY> comparator, 
+                                   Class<KEY> keyClass,
+                                   Class<VALUE> valClass, Configuration conf, 
+                                   Reporter reporter) 
         throws IOException {
         super(in, comparator, keyClass, valClass, conf, reporter);
       }
       
-      public Object next() {
+      public VALUE next() {
         combineInputCounter.increment(1);
         return super.next();
       }
