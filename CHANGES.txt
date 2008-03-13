@@ -82,6 +82,9 @@ Trunk (unreleased changes)
     HADOOP-2888. Make gridmix scripts more readily configurable and amenable
     to automated execution. (Mukund Madhugiri via cdouglas)
 
+    HADOOP-2908.  A document that describes the DFS Shell command. 
+    (Mahadev Konar via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing

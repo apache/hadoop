@@ -1,0 +1,409 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+  
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+      
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+<document>
+	<header>
+		<title>Hadoop Shell Commands</title>
+	</header>
+	<body>
+		<section>
+			<title> DFShell </title>
+			<p>
+      The HDFS shell is invoked by 
+      <code>bin/hadoop dfs &lt;args&gt;</code>.
+      All the HDFS shell commands take path URIs as arguments. The URI format is <em>scheme://autority/path</em>. For HDFS the scheme is <em>hdfs</em>, and for the local filesystem the scheme is <em>file</em>. The scheme and authority are optional. If not specified, the default scheme specified in the configuration is used. An HDFS file or directory such as <em>/parent/child</em> can be specified as <em>hdfs://namenode:namenodeport/parent/child</em> or simply as <em>/parent/child</em> (given that your configuration is set to point to <em>namenode:namenodeport</em>). Most of the commands in HDFS shell behave like corresponding Unix commands. Differences are described with each of the commands. Error information is sent to <em>stderr</em> and the output is sent to <em>stdout</em>. 
+  </p>
+		</section>
+		<section>
+			<title> cat </title>
+			<p>
+				<code>Usage: hadoop dfs -cat URI [URI &#x2026;]</code>
+			</p>
+			<p>
+		   Copies source paths to <em>stdout</em>. 
+		   </p>
+			<p>Example:</p>
+			<ul>
+				<li>
+					<code> hadoop dfs -cat hdfs://host1:port1/file1 hdfs://host2:port2/file2 
+		   </code>
+				</li>
+				<li>
+					<code>hadoop dfs -cat file:///file3 /user/hadoop/file4 </code>
+				</li>
+			</ul>
+			<p>Exit Code:<br/>
+		   <code> Returns 0 on success and -1 on error. </code></p>
+		</section>
+		<section>
+			<title> chgrp </title>
+			<p>
+				<code>Usage: hadoop dfs -chgrp [-R] GROUP URI [URI &#x2026;]</code>
+			</p>
+			<p>
+	    Change group association of files. With <code>-R</code>, make the change recursively through the directory structure. The user must be the owner of files, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
+	    </p>
+		</section>
+		<section>
+			<title> chmod </title>
+			<p>
+				<code>Usage: hadoop dfs -chmod [-R] &lt;MODE[,MODE]... | OCTALMODE&gt; URI [URI &#x2026;]</code>
+			</p>
+			<p>
+	    Change the permissions of files. With <code>-R</code>, make the change recursively through the directory structure. The user must be the owner of the file, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
+	    </p>
+		</section>
+		<section>
+			<title> chown </title>
+			<p>
+				<code>Usage: hadoop dfs -chown [-R] [OWNER][:[GROUP]] URI [URI ]</code>
+			</p>
+			<p>
+	    Change the owner of files. With <code>-R</code>, make the change recursively through the directory structure. The user must be a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
+	    </p>
+		</section>
+		<section>
+			<title>copyFromLocal</title>
+			<p>
+				<code>Usage: hadoop dfs -copyFromLocal &lt;localsrc&gt; URI</code>
+			</p>
+			<p>Similar to <a href="#putlink"><strong>put</strong></a> command, except that the source is restricted to a local file reference. </p>
+		</section>
+		<section>
+			<title> copyToLocal</title>
+			<p>
+				<code>Usage: hadoop dfs -copyToLocal [-ignorecrc] [-crc] URI &lt;localdst&gt;</code>
+			</p>
+			<p> Similar to <a href="#getlink"><strong>get</strong></a> command, except that the destination is restricted to a local file reference.</p>
+		</section>
+		<section>
+			<title> cp </title>
+			<p>
+				<code>Usage: hadoop dfs -cp URI [URI &#x2026;] &lt;dest&gt;</code>
+			</p>
+			<p>
+	    Copy files from source to destination. This command allows multiple sources as well in which case the destination must be a directory.
+	    <br/>
+	    Example:</p>
+			<ul>
+				<li>
+					<code> hadoop dfs -cp /user/hadoop/file1 /user/hadoop/file2</code>
+				</li>
+				<li>
+					<code> hadoop dfs -cp /user/hadoop/file1 /user/hadoop/file2 /user/hadoop/dir </code>
+				</li>
+			</ul>
+			<p>Exit Code:</p>
+			<p>
+				<code> Returns 0 on success and -1 on error.</code>
+			</p>
+		</section>
+		<section>
+			<title>du</title>
+			<p>
+				<code>Usage: hadoop dfs -du URI [URI &#x2026;]</code>
+			</p>
+			<p>
+	     Displays aggregate length of  files contained in the directory or the length of a file in case its just a file.<br/>
+	     Example:<br/><code>hadoop dfs -du /user/hadoop/dir1 /user/hadoop/file1 hdfs://host:port/user/hadoop/dir1</code><br/>
+	     Exit Code:<br/><code> Returns 0 on success and -1 on error. </code><br/></p>
+		</section>
+		<section>
+			<title> dus </title>
+			<p>
+				<code>Usage: hadoop dfs -dus &lt;args&gt;</code>
+			</p>
+			<p>
+	    Displays a summary of file lengths.
+	   </p>
+		</section>
+		<section>
+			<title> expunge </title>
+			<p>
+				<code>Usage: hadoop dfs -expunge</code>
+			</p>
+			<p>Empty the Trash. Refer to <a href="hdfs_design.html">HDFS Design</a> for more information on Trash feature.
+	   </p>
+		</section>
+		<section>
+			<title id="getlink"> get </title>
+			<p>
+				<code>Usage: hadoop dfs -get [-ignorecrc] [-crc] &lt;src&gt; &lt;localdst&gt;</code>
+				<br/>
+			</p>
+			<p>
+	   Copy files to the local file system. Files that fail the CRC check may be copied with the  
+	   <code>-ignorecrc</code> option. Files and CRCs may be copied using the 
+	   <code>-crc</code> option.
+	  </p>
+			<p>Example:</p>
+			<ul>
+				<li>
+					<code> hadoop dfs -get /user/hadoop/file localfile </code>
+				</li>
+				<li>
+					<code> hadoop dfs -get hdfs://host:port/user/hadoop/file localfile</code>
+				</li>
+			</ul>
+			<p>Exit Code:</p>
+			<p>
+				<code> Returns 0 on success and -1 on error. </code>
+			</p>
+		</section>
+		<section>
+			<title> getmerge </title>
+			<p>
+				<code>Usage: hadoop dfs -getmerge &lt;src&gt; &lt;localdst&gt; [addnl]</code>
+			</p>
+			<p>
+	  Takes a source directory and a destination file as input and concatenates files in src into the destination local file. Optionally <code>addnl</code> can be set to enable adding a newline character at the end of each file.  
+	  </p>
+		</section>
+		<section>
+			<title> ls </title>
+			<p>
+				<code>Usage: hadoop dfs -ls &lt;args&gt;</code>
+			</p>
+			<p>
+		 For a file returns stat on the file with the following format:<br/><code>filename &lt;number of replicas&gt; filesize modification_date modification_time permissions userid groupid</code><br/>
+	         For a directory it returns list of its direct children as in unix.
+	         A directory is listed as: <br/><code>dirname &lt;dir&gt; modification_time modification_time permissions userid groupid</code><br/>
+	         Example:<br/><code>hadoop dfs -ls /user/hadoop/file1 /user/hadoop/file2 hdfs://host:port/user/hadoop/dir1 /nonexistentfile</code><br/>
+	         Exit Code:<br/><code> Returns 0 on success and -1 on error. </code><br/></p>
+		</section>
+		<section>
+			<title>lsr</title>
+			<p><code>Usage: hadoop dfs -lsr &lt;args&gt;</code><br/>
+	      Recursive version of <code>ls</code>. Similar to Unix <code>ls -R</code>.
+	      </p>
+		</section>
+		<section>
+			<title> mkdir </title>
+			<p>
+				<code>Usage: hadoop dfs -mkdir &lt;paths&gt;</code>
+				<br/>
+			</p>
+			<p>
+	   Takes path uri's as argument and creates directories. The behavior is much like unix mkdir -p creating parent directories along the path.
+	  </p>
+			<p>Example:</p>
+			<ul>
+				<li>
+					<code>hadoop dfs -mkdir /user/hadoop/dir1 /user/hadoop/dir2 </code>
+				</li>
+				<li>
+					<code>hadoop dfs -mkdir hdfs://host1:port1/user/hadoop/dir hdfs://host2:port2/user/hadoop/dir
+	  </code>
+				</li>
+			</ul>
+			<p>Exit Code:</p>
+			<p>
+				<code>Returns 0 on success and -1 on error.</code>
+			</p>
+		</section>
+		<section>
+			<title> movefromLocal </title>
+			<p>
+				<code>Usage: dfs -moveFromLocal &lt;src&gt; &lt;dst&gt;</code>
+			</p>
+			<p>Displays a "not implemented" message.
+	   </p>
+		</section>
+		<section>
+			<title> mv </title>
+			<p>
+				<code>Usage: hadoop dfs -mv URI [URI &#x2026;] &lt;dest&gt;</code>
+			</p>
+			<p>
+	    Moves files from source to destination. This command allows multiple sources as well in which case the destination needs to be a directory. Moving files across filesystems is not permitted.
+	    <br/>
+	    Example:
+	    </p>
+			<ul>
+				<li>
+					<code> hadoop dfs -mv /user/hadoop/file1 /user/hadoop/file2</code>
+				</li>
+				<li>
+					<code> hadoop dfs -mv hdfs://host:port/file1 hdfs://host:port/file2 hdfs://host:port/file3 hdfs://host:port/dir1</code>
+				</li>
+			</ul>
+			<p>Exit Code:</p>
+			<p>
+				<code> Returns 0 on success and -1 on error.</code>
+			</p>
+		</section>
+		<section>
+			<title id="putlink"> put </title>
+			<p>
+				<code>Usage: hadoop dfs -put &lt;localsrc&gt; &lt;dst&gt;</code>
+			</p>
+			<p>Copy src from local file system to the destination filesystem. Also reads input from stdin and writes to destination filesystem.<br/>
+	   </p>
+			<ul>
+				<li>
+					<code> hadoop dfs -put localfile /user/hadoop/hadoopfile</code>
+				</li>
+				<li>
+					<code> hadoop dfs -put localfile hdfs://host:port/hadoop/hadoopfile</code>
+				</li>
+				<li><code>hadoop dfs -put - hdfs://host:port/hadoop/hadoopfile</code><br/>Reads the input from stdin.</li>
+			</ul>
+			<p>Exit Code:</p>
+			<p>
+				<code> Returns 0 on success and -1 on error. </code>
+			</p>
+		</section>
+		<section>
+			<title> rm </title>
+			<p>
+				<code>Usage: hadoop dfs -rm URI [URI &#x2026;] </code>
+			</p>
+			<p>
+	   Delete files specified as args. Only deletes non empty directory and files. Refer to rmr for recursive deletes.<br/>
+	   Example:
+	   </p>
+			<ul>
+				<li>
+					<code> hadoop dfs -rm hdfs://host:port/file /user/hadoop/emptydir </code>
+				</li>
+			</ul>
+			<p>Exit Code:</p>
+			<p>
+				<code> Returns 0 on success and -1 on error.</code>
+			</p>
+		</section>
+		<section>
+			<title> rmr </title>
+			<p>
+				<code>Usage: hadoop dfs -rmr URI [URI &#x2026;]</code>
+			</p>
+			<p>Recursive version of delete.<br/>
+	   Example:
+	   </p>
+			<ul>
+				<li>
+					<code> hadoop dfs -rmr /user/hadoop/dir </code>
+				</li>
+				<li>
+					<code> hadoop dfs -rmr hdfs://host:port/user/hadoop/dir </code>
+				</li>
+			</ul>
+			<p>Exit Code:</p>
+			<p>
+				<code> Returns 0 on success and -1 on error. </code>
+			</p>
+		</section>
+		<section>
+			<title> setrep </title>
+			<p>
+				<code>Usage: hadoop dfs -setrep [-R] &lt;path&gt;</code>
+			</p>
+			<p>
+	   Changes the replication factor of a file. -R option is for recursively increasing the replication factor of files within a directory.
+	  </p>
+			<p>Example:</p>
+			<ul>
+				<li>
+					<code> hadoop dfs -setrep -w 3 -R /user/hadoop/dir1 </code>
+				</li>
+			</ul>
+			<p>Exit Code:</p>
+			<p>
+				<code>Returns 0 on success and -1 on error. </code>
+			</p>
+		</section>
+		<section>
+			<title> stat </title>
+			<p>
+				<code>Usage: hadoop dfs -stat URI [URI &#x2026;]</code>
+			</p>
+			<p>
+	   Returns the stat information on the path.
+	   </p>
+			<p>Example:</p>
+			<ul>
+				<li>
+					<code> hadoop dfs -stat path </code>
+				</li>
+			</ul>
+			<p>Exit Code:<br/>
+	   <code> Returns 0 on success and -1 on error.</code></p>
+		</section>
+		<section>
+			<title> tail </title>
+			<p>
+				<code>Usage: hadoop dfs -tail [-f] URI </code>
+			</p>
+			<p>
+	   Displays last kilobyte of the file to stdout. -f option can be used as in Unix.
+	   </p>
+			<p>Example:</p>
+			<ul>
+				<li>
+					<code> hadoop dfs -tail pathname </code>
+				</li>
+			</ul>
+			<p>Exit Code: <br/>
+	   <code> Returns 0 on success and -1 on error.</code></p>
+		</section>
+		<section>
+			<title> test </title>
+			<p>
+				<code>Usage: hadoop dfs -test -[ezd] URI</code>
+			</p>
+			<p>
+	   Options: <br/>
+	   -e check to see if the file exists. Return 0 if true. <br/>
+	   -z check to see if the file is zero length. Return 0 if true <br/>
+	   -d check return 1 if the path is directory else return 0. <br/></p>
+			<p>Example:</p>
+			<ul>
+				<li>
+					<code> hadoop dfs -test -e filename </code>
+				</li>
+			</ul>
+		</section>
+		<section>
+			<title> text </title>
+			<p>
+				<code>Usage: hadoop dfs -text &lt;src&gt;</code>
+				<br/>
+			</p>
+			<p>
+	   Takes a source file and outputs the file in text format. The allowed formats are zip and TextRecordInputStream.
+	  </p>
+		</section>
+		<section>
+			<title> touchz </title>
+			<p>
+				<code>Usage: hadoop dfs -touchz URI [URI &#x2026;]</code>
+				<br/>
+			</p>
+			<p>
+	   Create a file of zero length.
+	   </p>
+			<p>Example:</p>
+			<ul>
+				<li>
+					<code> hadoop -touchz pathname </code>
+				</li>
+			</ul>
+			<p>Exit Code:<br/>
+	   <code> Returns 0 on success and -1 on error.</code></p>
+		</section>
+	</body>
+</document>
