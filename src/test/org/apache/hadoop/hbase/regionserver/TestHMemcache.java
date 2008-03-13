@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.io.Cell;
 /** memcache test case */
 public class TestHMemcache extends TestCase {
   
-  private HStore.Memcache hmemcache;
+  private Memcache hmemcache;
 
   private static final int ROW_COUNT = 3;
 
@@ -47,7 +47,7 @@ public class TestHMemcache extends TestCase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    this.hmemcache = new HStore.Memcache();
+    this.hmemcache = new Memcache();
   }
 
   private Text getRowName(final int index) {
@@ -63,7 +63,7 @@ public class TestHMemcache extends TestCase {
    * Adds {@link #ROW_COUNT} rows and {@link #COLUMNS_COUNT}
    * @param hmc Instance to add rows to.
    */
-  private void addRows(final HStore.Memcache hmc)
+  private void addRows(final Memcache hmc)
     throws UnsupportedEncodingException {
     
     for (int i = 0; i < ROW_COUNT; i++) {
@@ -76,7 +76,7 @@ public class TestHMemcache extends TestCase {
     }
   }
 
-  private void runSnapshot(final HStore.Memcache hmc) {
+  private void runSnapshot(final Memcache hmc) {
     // Save off old state.
     int oldHistorySize = hmc.snapshot.size();
     hmc.snapshot();

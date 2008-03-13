@@ -83,6 +83,7 @@ Hbase Change Log
    HBASE-479   Speed up TestLogRolling
    HBASE-480   Tool to manually merge two regions
    HBASE-477   Add support for an HBASE_CLASSPATH
+   HBASE-443   Move internal classes out of HStore
    
 Branch 0.1
 
