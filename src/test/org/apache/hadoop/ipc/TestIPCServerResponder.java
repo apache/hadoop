@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.net.NetUtils;
 
 /**
  * This test provokes partial writes in the server, which is 
@@ -127,7 +128,7 @@ public class TestIPCServerResponder extends TestCase {
     Server server = new TestServer(handlerCount, handlerSleep);
     server.start();
 
-    InetSocketAddress address = server.getListenerAddress();
+    InetSocketAddress address = NetUtils.getConnectAddress(server);
     Client[] clients = new Client[clientCount];
     for (int i = 0; i < clientCount; i++) {
       clients[i] = new Client(BytesWritable.class, conf);

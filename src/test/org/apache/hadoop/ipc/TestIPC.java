@@ -22,6 +22,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.net.NetUtils;
 
 import java.util.Random;
 import java.io.IOException;
@@ -140,7 +141,7 @@ public class TestIPC extends TestCase {
                          int clientCount, int callerCount, int callCount)
     throws Exception {
     Server server = new TestServer(handlerCount, handlerSleep);
-    InetSocketAddress addr = server.getListenerAddress();
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
     server.start();
 
     Client[] clients = new Client[clientCount];
@@ -179,7 +180,7 @@ public class TestIPC extends TestCase {
 
     InetSocketAddress[] addresses = new InetSocketAddress[addressCount];
     for (int i = 0; i < addressCount; i++) {
-      addresses[i] = servers[i%serverCount].getListenerAddress();
+      addresses[i] = NetUtils.getConnectAddress(servers[i%serverCount]);
     }
 
     Client[] clients = new Client[clientCount];

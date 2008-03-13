@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -227,6 +228,23 @@ public class NetUtils {
       }
     return l;
     }
+  }
+  
+  /**
+   * Returns InetSocketAddress that a client can use to 
+   * connect to the server. Server.getListenerAddress() is not correct when
+   * the server binds to "0.0.0.0". This returns "127.0.0.1:port" when
+   * the getListenerAddress() returns "0.0.0.0:port".
+   * 
+   * @param server
+   * @return socket address that a client can use to connect to the server.
+   */
+  public static InetSocketAddress getConnectAddress(Server server) {
+    InetSocketAddress addr = server.getListenerAddress();
+    if (addr.getAddress().getHostAddress().equals("0.0.0.0")) {
+      addr = new InetSocketAddress("127.0.0.1", addr.getPort());
+    }
+    return addr;
   }
   
   /**

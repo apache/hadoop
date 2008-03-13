@@ -33,6 +33,7 @@ import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.net.NetUtils;
 
 /** Unit tests for RPC. */
 public class TestRPC extends TestCase {
@@ -190,7 +191,7 @@ public class TestRPC extends TestCase {
     try {
     server.start();
 
-    InetSocketAddress addr = server.getListenerAddress();
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
 
     // create a client
     proxy = (TestProtocol)RPC.getProxy(
@@ -231,7 +232,7 @@ public class TestRPC extends TestCase {
     try {
     server.start();
 
-    InetSocketAddress addr = server.getListenerAddress();
+    InetSocketAddress addr = NetUtils.getConnectAddress(server);
     proxy = (TestProtocol)RPC.getProxy(
         TestProtocol.class, TestProtocol.versionID, addr, conf);
       

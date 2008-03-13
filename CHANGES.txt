@@ -181,6 +181,9 @@ Trunk (unreleased changes)
     HADOOP-2657. A flush call on the DFSOutputStream flushes the last
     partial CRC chunk too.  (dhruba)
 
+    HADOOP-2974. IPC unit tests used "0.0.0.0" to connect to server, which
+    is not always supported. (rangadi)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
