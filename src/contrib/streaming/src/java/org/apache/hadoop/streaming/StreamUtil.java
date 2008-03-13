@@ -156,21 +156,21 @@ public class StreamUtil {
     double num = numBytes;
 
     if (numBytes < KB) {
-      buf.append(numBytes + " B");
+      buf.append(numBytes).append(" B");
       bDetails = false;
     } else if (numBytes < MB) {
-      buf.append(dfmt(num / KB) + " KB");
+      buf.append(dfmt(num / KB)).append(" KB");
     } else if (numBytes < GB) {
-      buf.append(dfmt(num / MB) + " MB");
+      buf.append(dfmt(num / MB)).append(" MB");
     } else if (numBytes < TB) {
-      buf.append(dfmt(num / GB) + " GB");
+      buf.append(dfmt(num / GB)).append(" GB");
     } else if (numBytes < PB) {
-      buf.append(dfmt(num / TB) + " TB");
+      buf.append(dfmt(num / TB)).append(" TB");
     } else {
-      buf.append(dfmt(num / PB) + " PB");
+      buf.append(dfmt(num / PB)).append(" PB");
     }
     if (bDetails) {
-      buf.append(" (" + ifmt(numBytes) + " bytes)");
+      buf.append(" (").append(ifmt(numBytes)).append(" bytes)");
     }
     return buf.toString();
   }
@@ -181,24 +181,24 @@ public class StreamUtil {
     if (numBytes >= TB) {
       u = numBytes / TB;
       numBytes -= u * TB;
-      buf.append(u + " TB ");
+      buf.append(u).append(" TB ");
     }
     if (numBytes >= GB) {
       u = numBytes / GB;
       numBytes -= u * GB;
-      buf.append(u + " GB ");
+      buf.append(u).append(" GB ");
     }
     if (numBytes >= MB) {
       u = numBytes / MB;
       numBytes -= u * MB;
-      buf.append(u + " MB ");
+      buf.append(u).append(" MB ");
     }
     if (numBytes >= KB) {
       u = numBytes / KB;
       numBytes -= u * KB;
-      buf.append(u + " KB ");
+      buf.append(u).append(" KB ");
     }
-    buf.append(u + " B"); //even if zero
+    buf.append(u).append(" B"); //even if zero
     return buf.toString();
   }
 

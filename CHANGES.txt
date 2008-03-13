@@ -187,6 +187,9 @@ Trunk (unreleased changes)
     HADOOP-2974. IPC unit tests used "0.0.0.0" to connect to server, which
     is not always supported. (rangadi)
 
+    HADOOP-2996. Fixes uses of StringBuffer in StreamUtils class.
+    (Dave Brosius via ddas)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
