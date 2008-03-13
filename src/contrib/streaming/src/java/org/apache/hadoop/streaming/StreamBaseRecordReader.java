@@ -84,7 +84,7 @@ public abstract class StreamBaseRecordReader implements RecordReader<Text, Text>
     if (end_ == start_) {
       return 1.0f;
     } else {
-      return (in_.getPos() - start_) / (end_ - start_);
+      return ((float)(in_.getPos() - start_)) / ((float)(end_ - start_));
     }
   }
   
