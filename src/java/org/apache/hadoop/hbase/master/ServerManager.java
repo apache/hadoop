@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.Set;
@@ -51,11 +50,11 @@ class ServerManager implements HConstants {
   static final Log LOG = LogFactory.getLog(ServerManager.class.getName());
   
   /** The map of known server names to server info */
-  private final Map<String, HServerInfo> serversToServerInfo =
+  final Map<String, HServerInfo> serversToServerInfo =
     new ConcurrentHashMap<String, HServerInfo>();
   
   /** Set of known dead servers */
-  private final Set<String> deadServers =
+  final Set<String> deadServers =
     Collections.synchronizedSet(new HashSet<String>());
 
   /** SortedMap server load -> Set of server names */
@@ -63,20 +62,27 @@ class ServerManager implements HConstants {
     Collections.synchronizedSortedMap(new TreeMap<HServerLoad, Set<String>>());
 
   /** Map of server names -> server load */
-  private final Map<String, HServerLoad> serversToLoad =
+  final Map<String, HServerLoad> serversToLoad =
     new ConcurrentHashMap<String, HServerLoad>();  
   
-  private HMaster master;
+  HMaster master;
   
   private final Leases serverLeases;
     
+  /**
+   * @param master
+   */
   public ServerManager(HMaster master) {
     this.master = master;
     serverLeases = new Leases(master.leaseTimeout, 
       master.conf.getInt("hbase.master.lease.thread.wakefrequency", 15 * 1000));
   }
   
-  /** Let the server manager know a new regionserver has come online */
+  /**
+   * Let the server manager know a new regionserver has come online
+   * 
+   * @param serverInfo
+   */
   public void regionServerStartup(HServerInfo serverInfo) {
     String s = serverInfo.getServerAddress().toString().trim();
     LOG.info("received start message from: " + s);
@@ -121,7 +127,14 @@ class ServerManager implements HConstants {
     loadToServers.put(load, servers);
   }
   
-  /** {@inheritDoc} */
+  /**
+   * @param serverInfo
+   * @param msgs
+   * @return messages from master to region server indicating what region
+   * server should do.
+   * 
+   * @throws IOException
+   */
   public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg msgs[])
   throws IOException {
     String serverName = serverInfo.getServerAddress().toString().trim();
@@ -377,7 +390,16 @@ class ServerManager implements HConstants {
     return returnMsgs.toArray(new HMsg[returnMsgs.size()]);
   }
   
-  /** A region has split. **/
+  /**
+   * A region has split.
+   *
+   * @param serverName
+   * @param serverInfo
+   * @param region
+   * @param splitA
+   * @param splitB
+   * @param returnMsgs
+   */
   private void processSplitRegion(String serverName, HServerInfo serverInfo, 
     HRegionInfo region, HMsg splitA, HMsg splitB, ArrayList<HMsg> returnMsgs) {
     
@@ -467,54 +489,6 @@ class ServerManager implements HConstants {
     }
   }
   
-  /** Region server reporting that it has closed a region */
-  private void processRegionClose(String serverName, HServerInfo info, 
-    HRegionInfo region) {
-    LOG.info(info.getServerAddress().toString() + " no longer serving " +
-      region.getRegionName());
-
-    if (region.isRootRegion()) {
-      if (region.isOffline()) {
-        // Can't proceed without root region. Shutdown.
-        LOG.fatal("root region is marked offline");
-        master.shutdown();
-      }
-      master.regionManager.unassignRootRegion();
-    } else {
-      boolean reassignRegion = !region.isOffline();
-      boolean deleteRegion = false;
-
-      if (master.regionManager.isClosing(region.getRegionName())) {
-        master.regionManager.noLongerClosing(region.getRegionName());
-        reassignRegion = false;
-      }
-
-      if (master.regionManager.isMarkedForDeletion(region.getRegionName())) {
-        master.regionManager.regionDeleted(region.getRegionName());
-        reassignRegion = false;
-        deleteRegion = true;
-      }
-
-      if (region.isMetaTable()) {
-        // Region is part of the meta table. Remove it from onlineMetaRegions
-        master.regionManager.offlineMetaRegion(region.getStartKey());
-      }
-
-      // NOTE: we cannot put the region into unassignedRegions as that
-      //       could create a race with the pending close if it gets 
-      //       reassigned before the close is processed.
-      master.regionManager.noLongerUnassigned(region);
-
-      try {
-        master.toDoQueue.put(new ProcessRegionClose(master, region, reassignRegion,
-          deleteRegion));
-      } catch (InterruptedException e) {
-        throw new RuntimeException(
-          "Putting into toDoQueue was interrupted.", e);
-      }
-    }    
-  }
-  
   /** Cancel a server's lease and update its load information */
   private boolean cancelLease(final String serverName) {
     boolean leaseCancelled = false;
@@ -544,16 +518,20 @@ class ServerManager implements HConstants {
   }
   
   
-  /** compute the average load across all region servers */
+  /** @return the average load across all region servers */
   public int averageLoad() {
     return 0;
   }
   
+  /** @return the number of active servers */
   public int numServers() {
     return serversToServerInfo.size();
   }
   
-  /** get HServerInfo from a server address */
+  /**
+   * @param address server address
+   * @return HServerInfo for the given server address
+   */
   public HServerInfo getServerInfo(String address) {
     return serversToServerInfo.get(address);
   }
@@ -579,6 +557,9 @@ class ServerManager implements HConstants {
     return Collections.unmodifiableMap(loadToServers);
   }
 
+  /**
+   * Wakes up threads waiting on serversToServerInfo
+   */
   public void notifyServers() {
     synchronized (serversToServerInfo) {
       serversToServerInfo.notifyAll();
@@ -666,10 +647,17 @@ class ServerManager implements HConstants {
     serverLeases.close();
   }
   
+  /**
+   * @param serverName
+   */
   public void removeDeadServer(String serverName) {
     deadServers.remove(serverName);
   }
   
+  /**
+   * @param serverName
+   * @return true if server is dead
+   */
   public boolean isDead(String serverName) {
     return deadServers.contains(serverName);
   }

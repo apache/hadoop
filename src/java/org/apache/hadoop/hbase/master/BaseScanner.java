@@ -21,7 +21,8 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.SortedMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -36,7 +37,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -124,6 +124,7 @@ abstract class BaseScanner extends Chore implements HConstants {
     this.initialScanComplete = false;
   }
   
+  /** @return true if initial scan completed successfully */
   public boolean isInitialScanComplete() {
     return initialScanComplete;
   }
@@ -152,6 +153,7 @@ abstract class BaseScanner extends Chore implements HConstants {
     // scan we go check if parents can be removed.
     Map<HRegionInfo, RowResult> splitParents =
       new HashMap<HRegionInfo, RowResult>();
+    List<Text> emptyRows = new ArrayList<Text>();
     try {
       regionServer = master.connection.getHRegionConnection(region.getServer());
       scannerId =
@@ -165,8 +167,9 @@ abstract class BaseScanner extends Chore implements HConstants {
           break;
         }
 
-        HRegionInfo info = master.getHRegionInfo(values);
+        HRegionInfo info = master.getHRegionInfo(values.getRow(), values);
         if (info == null) {
+          emptyRows.add(values.getRow());
           continue;
         }
 
@@ -206,12 +209,24 @@ abstract class BaseScanner extends Chore implements HConstants {
         }
       } catch (IOException e) {
         LOG.error("Closing scanner",
-          RemoteExceptionHandler.checkIOException(e));
+            RemoteExceptionHandler.checkIOException(e));
       }
     }
 
-    // Scan is finished.  Take a look at split parents to see if any we can
-    // clean up.
+    // Scan is finished.
+    
+    // First clean up any meta region rows which had null HRegionInfos
+    
+    if (emptyRows.size() > 0) {
+      LOG.warn("Found " + emptyRows.size() +
+          " rows with empty HRegionInfo while scanning meta region " +
+          region.getRegionName());
+      master.deleteEmptyMetaRows(regionServer, region.getRegionName(),
+          emptyRows);
+    }
+
+    // Take a look at split parents to see if any we can clean up.
+    
     if (splitParents.size() > 0) {
       for (Map.Entry<HRegionInfo, RowResult> e : splitParents.entrySet()) {
         HRegionInfo hri = e.getKey();
@@ -289,7 +304,7 @@ abstract class BaseScanner extends Chore implements HConstants {
    * @return True if still has references to parent.
    * @throws IOException
    */
-  protected boolean hasReferences(final Text metaRegionName, 
+  private boolean hasReferences(final Text metaRegionName, 
     final HRegionInterface srvr, final Text parent,
     RowResult rowContent, final Text splitColumn)
   throws IOException {

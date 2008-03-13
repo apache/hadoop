@@ -20,9 +20,10 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
-import java.util.SortedMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,10 +33,8 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 
 /**
@@ -95,14 +94,17 @@ abstract class TableOperation implements HConstants {
               server.openScanner(m.getRegionName(), COLUMN_FAMILY_ARRAY,
               tableName, System.currentTimeMillis(), null);
 
+            List<Text> emptyRows = new ArrayList<Text>();
             try {
               while (true) {
                 RowResult values = server.next(scannerId);
                 if(values == null || values.size() == 0) {
                   break;
                 }
-                HRegionInfo info = this.master.getHRegionInfo(values);
+                HRegionInfo info =
+                  this.master.getHRegionInfo(values.getRow(), values);
                 if (info == null) {
+                  emptyRows.add(values.getRow());
                   throw new IOException(COL_REGIONINFO + " not found on " +
                     values.getRow());
                 }
@@ -130,6 +132,15 @@ abstract class TableOperation implements HConstants {
                 }
               }
               scannerId = -1L;
+            }
+            
+            // Get rid of any rows that have a null HRegionInfo
+            
+            if (emptyRows.size() > 0) {
+              LOG.warn("Found " + emptyRows.size() +
+                  " rows with empty HRegionInfo while scanning meta region " +
+                  m.getRegionName());
+              master.deleteEmptyMetaRows(server, m.getRegionName(), emptyRows);
             }
 
             if (!tableExists) {

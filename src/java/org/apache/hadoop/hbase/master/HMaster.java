@@ -21,49 +21,38 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HbaseRPC;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Sleeper;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -75,7 +64,6 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.LeaseListener;
 
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -320,6 +308,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     return rootServer;
   }
   
+  /**
+   * Wait until root region is available
+   */
   public void waitForRootRegionLocation() {
     regionManager.waitForRootRegionLocation();
   }
@@ -471,7 +462,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    *  need to install an unexpected exception handler.
    */
   private void startServiceThreads() {
-    String threadName = Thread.currentThread().getName();
     try {
       regionManager.start();
       serverManager.start();
@@ -693,21 +683,45 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * Get HRegionInfo from passed META map of row values.
    * Returns null if none found (and logs fact that expected COL_REGIONINFO
    * was missing).  Utility method used by scanners of META tables.
+   * @param row name of the row
    * @param map Map to do lookup in.
    * @return Null or found HRegionInfo.
    * @throws IOException
    */
-  HRegionInfo getHRegionInfo(final Map<Text, Cell> map)
+  HRegionInfo getHRegionInfo(final Text row, final Map<Text, Cell> map)
   throws IOException {
     Cell regioninfo = map.get(COL_REGIONINFO);
     if (regioninfo == null) {
-      LOG.warn(COL_REGIONINFO.toString() + " is empty; has keys: " +
-        map.keySet().toString());
+      LOG.warn(COL_REGIONINFO.toString() + " is empty for row: " + row +
+          "; has keys: " + map.keySet().toString());
       return null;
     }
     return (HRegionInfo)Writables.getWritable(regioninfo.getValue(), new HRegionInfo());
   }
 
+  /*
+   * When we find rows in a meta region that has an empty HRegionInfo, we
+   * clean them up here.
+   * 
+   * @param server connection to server serving meta region
+   * @param metaRegionName name of the meta region we scanned
+   * @param emptyRows the row keys that had empty HRegionInfos
+   */
+  protected void deleteEmptyMetaRows(HRegionInterface server, 
+      Text metaRegionName,
+      List<Text> emptyRows) {
+    for (Text regionName: emptyRows) {
+      try {
+        HRegion.removeRegionFromMETA(server, metaRegionName, regionName);
+        LOG.warn("Removed region: " + regionName + " from meta region: " +
+            metaRegionName + " because HRegionInfo was empty");
+      } catch (IOException e) {
+        LOG.error("deleting region: " + regionName + " from meta region: " +
+            metaRegionName, e);
+      }
+    }
+  }
+   
   /*
    * Main program
    */

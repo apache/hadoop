@@ -24,14 +24,13 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.SortedMap;
+import java.util.Set;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -66,6 +65,7 @@ class ProcessServerShutdown extends RegionServerOperation {
   }
 
   /**
+   * @param master
    * @param serverInfo
    */
   public ProcessServerShutdown(HMaster master, HServerInfo serverInfo) {
@@ -93,9 +93,9 @@ class ProcessServerShutdown extends RegionServerOperation {
   private void scanMetaRegion(HRegionInterface server, long scannerId,
       Text regionName) throws IOException {
 
-    ArrayList<ToDoEntry> toDoList = new ArrayList<ToDoEntry>();
-    HashSet<HRegionInfo> regions = new HashSet<HRegionInfo>();
-
+    List<ToDoEntry> toDoList = new ArrayList<ToDoEntry>();
+    Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
+    List<Text> emptyRows = new ArrayList<Text>();
     try {
       while (true) {
         RowResult values = null;
@@ -133,8 +133,9 @@ class ProcessServerShutdown extends RegionServerOperation {
         }
 
         // Bingo! Found it.
-        HRegionInfo info = master.getHRegionInfo(values);
+        HRegionInfo info = master.getHRegionInfo(row, values);
         if (info == null) {
+          emptyRows.add(row);
           continue;
         }
 
@@ -180,6 +181,14 @@ class ProcessServerShutdown extends RegionServerOperation {
       }
     }
 
+    // Scan complete. Remove any rows which had empty HRegionInfos
+    
+    if (emptyRows.size() > 0) {
+      LOG.warn("Found " + emptyRows.size() +
+          " rows with empty HRegionInfo while scanning meta region " +
+          regionName);
+      master.deleteEmptyMetaRows(server, regionName, emptyRows);
+    }
     // Update server in root/meta entries
     for (ToDoEntry e: toDoList) {
       if (e.deleteRegion) {

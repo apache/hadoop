@@ -36,10 +36,10 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
  * Data structure used to return results out of the toRowMap method.
  */
 class RowMap {
-  static final Log LOG = LogFactory.getLog(RowMap.class.getName());
+  private static final Log LOG = LogFactory.getLog(RowMap.class.getName());
   
-  final Text row;
-  final SortedMap<Text, byte[]> map;
+  private final Text row;
+  private final SortedMap<Text, byte[]> map;
   
   RowMap(final Text r, final SortedMap<Text, byte[]> m) {
     this.row = r;
@@ -61,7 +61,7 @@ class RowMap {
    * @return Returns a SortedMap currently.  TODO: This looks like it could
    * be a plain Map.
    */
-  public static RowMap fromHbaseMapWritable(HbaseMapWritable mw) {
+  static RowMap fromHbaseMapWritable(HbaseMapWritable mw) {
     if (mw == null) {
       throw new IllegalArgumentException("Passed MapWritable cannot be null");
     }
