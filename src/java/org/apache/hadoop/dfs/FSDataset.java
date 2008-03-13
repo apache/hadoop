@@ -855,7 +855,15 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       FSVolume v;
       synchronized (this) {
         f = getFile(invalidBlks[i]);
-        v = volumeMap.get(invalidBlks[i]).getVolume();
+        DatanodeBlockInfo dinfo = volumeMap.get(invalidBlks[i]);
+        if (dinfo == null) {
+          DataNode.LOG.warn("Unexpected error trying to delete block "
+                           + invalidBlks[i] + 
+                           ". BlockInfo not found in volumeMap.");
+          error = true;
+          continue;
+        }
+        v = dinfo.getVolume();
         if (f == null) {
           DataNode.LOG.warn("Unexpected error trying to delete block "
                             + invalidBlks[i] + 

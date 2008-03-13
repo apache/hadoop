@@ -193,6 +193,9 @@ Trunk (unreleased changes)
     HADOOP-2995. Fixes StreamBaseRecordReader's getProgress to return a 
     floating point number. (Dave Brosius via ddas)
 
+    HADOOP-2972. Fix for a NPE in FSDataset.invalidate.
+    (Mahadev Konar via dhruba)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
