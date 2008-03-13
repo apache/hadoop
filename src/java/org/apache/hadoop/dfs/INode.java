@@ -232,21 +232,32 @@ abstract class INode implements Comparable<byte[]> {
    * a single path component.
    */
   static byte[][] getPathComponents(String path) {
-    if (path == null || !path.startsWith(Path.SEPARATOR)) {
-      return null;
-    }
-    if (Path.SEPARATOR.equals(path))  // root
+    return getPathComponents(getPathNames(path));
+  }
+
+  /** Convert strings to byte arrays for path components. */
+  static byte[][] getPathComponents(String[] strings) {
+    if (strings.length == 0) {
       return new byte[][]{null};
-    String[] strings = path.split(Path.SEPARATOR, -1);
-    int size = strings.length;
-    byte[][] bytes = new byte[size][];
-    for (int i = 0; i < size; i++)
+    }
+    byte[][] bytes = new byte[strings.length][];
+    for (int i = 0; i < strings.length; i++)
       bytes[i] = string2Bytes(strings[i]);
     return bytes;
   }
 
   /**
+   * Breaks file path into names.
+   * @param path
+   * @return array of names 
    */
+  static String[] getPathNames(String path) {
+    if (path == null || !path.startsWith(Path.SEPARATOR)) {
+      return null;
+    }
+    return path.split(Path.SEPARATOR);
+  }
+
   boolean removeNode() {
     if (parent == null) {
       return false;
@@ -423,7 +434,7 @@ class INodeDirectory extends INode {
    * @param existing INode array to fill with existing INodes
    * @return number of existing INodes in the path
    */
-  private int getExistingPathINodes(byte[][] components, INode[] existing) {
+  int getExistingPathINodes(byte[][] components, INode[] existing) {
     assert compareBytes(this.name, components[0]) == 0 :
       "Incorrect name " + getLocalName() + " expected " + components[0];
 
@@ -469,10 +480,21 @@ class INodeDirectory extends INode {
    * Add a child inode to the directory.
    * 
    * @param node INode to insert
+   * @param inheritPermission inherit permission from parent?
    * @return  null if the child with this name already exists; 
    *          inserted INode, otherwise
    */
-  private <T extends INode> T addChild(T node) {
+  <T extends INode> T addChild(final T node, boolean inheritPermission) {
+    if (inheritPermission) {
+      FsPermission p = getFsPermission();
+      //make sure the  permission has wx for the user
+      if (!p.getUserAction().implies(FsAction.WRITE_EXECUTE)) {
+        p = new FsPermission(p.getUserAction().or(FsAction.WRITE_EXECUTE),
+            p.getGroupAction(), p.getOtherAction());
+      }
+      node.setPermission(p);
+    }
+
     if (children == null) {
       children = new ArrayList<INode>(DEFAULT_FILES_PER_DIRECTORY);
     }
@@ -523,21 +545,10 @@ class INodeDirectory extends INode {
     if (!node.isDirectory()) {
       throw new FileNotFoundException("Parent path is not a directory: "+path);
     }
-    INodeDirectory parentNode = (INodeDirectory)node;
-
-    if (inheritPermission) {
-      FsPermission p = parentNode.getFsPermission();
-      //make sure the  permission has wx for the user
-      if (!p.getUserAction().implies(FsAction.WRITE_EXECUTE)) {
-        p = new FsPermission(p.getUserAction().or(FsAction.WRITE_EXECUTE),
-            p.getGroupAction(), p.getOtherAction());
-      }
-      newNode.setPermission(p);
-    }
 
     // insert into the parent children list
     newNode.name = pathComponents[pathLen-1];
-    return parentNode.addChild(newNode);
+    return ((INodeDirectory)node).addChild(newNode, inheritPermission);
   }
 
   /**

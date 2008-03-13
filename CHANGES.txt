@@ -97,6 +97,9 @@ Trunk (unreleased changes)
     HADOOP-2399. Input key and value to combiner and reducer is reused.
     (Owen O'Malley via ddas). 
 
+    HADOOP-2423.  Code optimization in FSNamesystem.mkdirs.
+    (Tsz Wo (Nicholas), SZE via dhruba)
+
   BUG FIXES
 
     HADOOP-2195. '-mkdir' behaviour is now closer to Linux shell in case of

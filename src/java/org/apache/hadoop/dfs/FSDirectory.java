@@ -636,50 +636,39 @@ class FSDirectory implements FSConstants {
   boolean mkdirs(String src, PermissionStatus permissions,
       boolean inheritPermission, long now) throws IOException {
     src = normalizePath(src);
+    String[] names = INode.getPathNames(src);
+    byte[][] components = INode.getPathComponents(names);
 
-    // Use this to collect all the dirs we need to construct
-    List<String> v = new ArrayList<String>();
+    synchronized(rootDir) {
+      INode[] inodes = new INode[components.length];
+      rootDir.getExistingPathINodes(components, inodes);
 
-    // The dir itself
-    v.add(src);
-
-    // All its parents
-    Path parent = new Path(src).getParent();
-    while (parent != null) {
-      v.add(parent.toString());
-      parent = parent.getParent();
-    }
-
-    // Now go backwards through list of dirs, creating along
-    // the way
-    int numElts = v.size();
-    for (int i = numElts - 1; i >= 0; i--) {
-      String cur = v.get(i);
-      try {
-        INode inserted = null;
-        synchronized (rootDir) {
-          inserted = rootDir.addNode(cur, 
-                             new INodeDirectory(permissions, now),
-                             inheritPermission || i != 0);
-          if (inserted != null) {
-            totalInodes++;
-          }
+      // find the index of the first null in inodes[]  
+      StringBuilder pathbuilder = new StringBuilder();
+      int i = 1;
+      for(; i < inodes.length && inodes[i] != null; i++) {
+        pathbuilder.append(Path.SEPARATOR + names[i]);
+        if (!inodes[i].isDirectory()) {
+          throw new FileNotFoundException("Parent path is not a directory: "
+              + pathbuilder);
         }
-        if (inserted != null) {
-          NameNode.stateChangeLog.debug("DIR* FSDirectory.mkdirs: "
-                                        +"created directory "+cur);
-          fsImage.getEditLog().logMkDir(cur, inserted);
-        } else { // otherwise cur exists, verify that it is a directory
-          if (!isDir(cur)) {
-            NameNode.stateChangeLog.debug("DIR* FSDirectory.mkdirs: "
-                                          +"path " + cur + " is not a directory ");
-            return false;
-          } 
-        }
-      } catch (FileNotFoundException e) {
-        NameNode.stateChangeLog.debug("DIR* FSDirectory.mkdirs: "
-                                      +"failed to create directory "+src);
-        return false;
+      }
+
+      // create directories beginning from the first null index
+      for(; i < inodes.length; i++) {
+        pathbuilder.append(Path.SEPARATOR + names[i]);
+        String cur = pathbuilder.toString();
+  
+        inodes[i] = new INodeDirectory(permissions, now);
+        inodes[i].name = components[i];
+        INode inserted = ((INodeDirectory)inodes[i-1]).addChild(
+            inodes[i], inheritPermission || i != inodes.length-1);
+
+        assert inserted == inodes[i];
+        totalInodes++;
+        NameNode.stateChangeLog.debug(
+            "DIR* FSDirectory.mkdirs: created directory " + cur);
+        fsImage.getEditLog().logMkDir(cur, inserted);
       }
     }
     return true;
