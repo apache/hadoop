@@ -407,7 +407,7 @@ class DFSClient implements FSConstants {
     OutputStream result = new DFSOutputStream(src, masked,
         overwrite, replication, blockSize, progress, buffersize);
     synchronized (pendingCreates) {
-      pendingCreates.put(src.toString(), result);
+      pendingCreates.put(src, result);
     }
     return result;
   }
@@ -2192,7 +2192,7 @@ class DFSClient implements FSConstants {
         long localstart = System.currentTimeMillis();
         while (true) {
           try {
-            return namenode.addBlock(src.toString(), clientName);
+            return namenode.addBlock(src, clientName);
           } catch (RemoteException e) {
             if (--retries == 0 && 
                 !NotReplicatedYetException.class.getName().
@@ -2514,7 +2514,7 @@ class DFSClient implements FSConstants {
         long localstart = System.currentTimeMillis();
         boolean fileComplete = false;
         while (!fileComplete) {
-          fileComplete = namenode.complete(src.toString(), clientName);
+          fileComplete = namenode.complete(src, clientName);
           if (!fileComplete) {
             try {
               Thread.sleep(400);

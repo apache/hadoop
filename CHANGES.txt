@@ -196,6 +196,9 @@ Trunk (unreleased changes)
     HADOOP-2972. Fix for a NPE in FSDataset.invalidate.
     (Mahadev Konar via dhruba)
 
+    HADOOP-2994. Code cleanup for DFSClient: remove redundant 
+    conversions from string to string.  (Dave Brosius via dhruba)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
