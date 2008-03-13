@@ -546,7 +546,6 @@ public class HLog implements HConstants {
                   ),
                   HREGION_OLDLOGFILE_NAME
               );
-              
               Path oldlogfile = null;
               SequenceFile.Reader old = null;
               if (fs.exists(logfile)) {
@@ -556,16 +555,15 @@ public class HLog implements HConstants {
                 fs.rename(logfile, oldlogfile);
                 old = new SequenceFile.Reader(fs, oldlogfile, conf);
               }
-
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Creating new log file writer for path " + logfile +
-                  "; map content " + logWriters.toString());
-              }
               w = SequenceFile.createWriter(fs, conf, logfile, HLogKey.class,
                 HLogEdit.class, getCompressionType(conf));
               // Use copy of regionName; regionName object is reused inside in
               // HStoreKey.getRegionName so its content changes as we iterate.
               logWriters.put(new Text(regionName), w);
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Creating new log file writer for path " + logfile +
+                  " and region " + regionName);
+              }
               
               if (old != null) {
                 // Copy from existing log file
@@ -580,9 +578,6 @@ public class HLog implements HConstants {
                 old.close();
                 fs.delete(oldlogfile);
               }
-            }
-            if (LOG.isDebugEnabled() && count > 0 && count % 10000 == 0) {
-              LOG.debug("Applied " + count + " edits");
             }
             w.append(key, val);
           }

@@ -121,7 +121,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     new ConcurrentHashMap<Text, HRegion>();
  
   protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-  private volatile List<HMsg> outboundMsgs =
+  private final List<HMsg> outboundMsgs =
     Collections.synchronizedList(new ArrayList<HMsg>());
 
   final int numRetries;
@@ -141,9 +141,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   
   // Request counter
   private volatile AtomicInteger requestCount = new AtomicInteger();
-  
-  // A sleeper that sleeps for msgInterval.
-  private final Sleeper sleeper;
 
   // Info server.  Default access so can be used by unit tests.  REGIONSERVER
   // is name of the webapp and the attribute name used stuffing this instance
@@ -234,7 +231,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     // Task thread to process requests from Master
     this.worker = new Worker();
     this.workerThread = new Thread(worker);
-    this.sleeper = new Sleeper(this.msgInterval, this.stopRequested);
+
     // Server to handle client requests
     this.server = HbaseRPC.getServer(this, address.getBindAddress(), 
       address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
@@ -259,145 +256,146 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   public void run() {
     boolean quiesceRequested = false;
+    // A sleeper that sleeps for msgInterval.
+    Sleeper sleeper =
+      new Sleeper(this.msgInterval, this.stopRequested);
     try {
-      init(reportForDuty());
+      init(reportForDuty(sleeper));
       long lastMsg = 0;
-      while(!stopRequested.get()) {
-        // Now ask master what it wants us to do and tell it what we have done
-        for (int tries = 0; !stopRequested.get();) {
-          long now = System.currentTimeMillis();
-          if (lastMsg != 0 && (now - lastMsg) >= serverLeaseTimeout) {
-            // It has been way too long since we last reported to the master.
-            // Commit suicide.
-            LOG.fatal("unable to report to master for " + (now - lastMsg) +
-                " milliseconds - aborting server");
-            abort();
-            break;
-          }
-          if ((now - lastMsg) >= msgInterval) {
-            HMsg outboundArray[] = null;
-            synchronized(outboundMsgs) {
-              outboundArray =
-                this.outboundMsgs.toArray(new HMsg[outboundMsgs.size()]);
-            }
+      // Now ask master what it wants us to do and tell it what we have done
+      for (int tries = 0; !stopRequested.get();) {
+        long now = System.currentTimeMillis();
+        if (lastMsg != 0 && (now - lastMsg) >= serverLeaseTimeout) {
+          // It has been way too long since we last reported to the master.
+          // Commit suicide.
+          LOG.fatal("unable to report to master for " + (now - lastMsg) +
+            " milliseconds - aborting server");
+          abort();
+          break;
+        }
+        if ((now - lastMsg) >= msgInterval) {
+          HMsg outboundArray[] = null;
+          synchronized(this.outboundMsgs) {
+            outboundArray =
+              this.outboundMsgs.toArray(new HMsg[outboundMsgs.size()]);
             this.outboundMsgs.clear();
+          }
 
-            try {
-              this.serverInfo.setLoad(new HServerLoad(requestCount.get(),
-                  onlineRegions.size()));
-              this.requestCount.set(0);
-              HMsg msgs[] =
-                this.hbaseMaster.regionServerReport(serverInfo, outboundArray);
-              lastMsg = System.currentTimeMillis();
-              
-              if (this.quiesced.get() && onlineRegions.size() == 0) {
-                // We've just told the master we're exiting because we aren't
-                // serving any regions. So set the stop bit and exit.
-                LOG.info("Server quiesced and not serving any regions. " +
-                    "Starting shutdown");
+          try {
+            this.serverInfo.setLoad(new HServerLoad(requestCount.get(),
+                onlineRegions.size()));
+            this.requestCount.set(0);
+            HMsg msgs[] =
+              this.hbaseMaster.regionServerReport(serverInfo, outboundArray);
+            lastMsg = System.currentTimeMillis();
+
+            if (this.quiesced.get() && onlineRegions.size() == 0) {
+              // We've just told the master we're exiting because we aren't
+              // serving any regions. So set the stop bit and exit.
+              LOG.info("Server quiesced and not serving any regions. " +
+              "Starting shutdown");
+              stopRequested.set(true);
+              continue;
+            }
+
+            // Queue up the HMaster's instruction stream for processing
+            boolean restart = false;
+            for(int i = 0; i < msgs.length && !stopRequested.get() &&
+            !restart; i++) {
+              switch(msgs[i].getMsg()) {
+
+              case HMsg.MSG_CALL_SERVER_STARTUP:
+                LOG.info("Got call server startup message");
+                // We the MSG_CALL_SERVER_STARTUP on startup but we can also
+                // get it when the master is panicing because for instance
+                // the HDFS has been yanked out from under it.  Be wary of
+                // this message.
+                if (checkFileSystem()) {
+                  closeAllRegions();
+                  synchronized (logRollerLock) {
+                    try {
+                      log.closeAndDelete();
+
+                    } catch (Exception e) {
+                      LOG.error("error closing and deleting HLog", e);
+                    }
+                    try {
+                      serverInfo.setStartCode(System.currentTimeMillis());
+                      log = setupHLog();
+                    } catch (IOException e) {
+                      this.abortRequested = true;
+                      this.stopRequested.set(true);
+                      e = RemoteExceptionHandler.checkIOException(e); 
+                      LOG.fatal("error restarting server", e);
+                      break;
+                    }
+                  }
+                  reportForDuty(sleeper);
+                  restart = true;
+                } else {
+                  LOG.fatal("file system available check failed. " +
+                  "Shutting down server.");
+                }
+                break;
+
+              case HMsg.MSG_REGIONSERVER_STOP:
+                LOG.info("Got regionserver stop message");
                 stopRequested.set(true);
+                break;
+
+              case HMsg.MSG_REGIONSERVER_QUIESCE:
+                if (!quiesceRequested) {
+                  LOG.info("Got quiesce server message");
+                  try {
+                    toDo.put(new ToDoEntry(msgs[i]));
+                  } catch (InterruptedException e) {
+                    throw new RuntimeException("Putting into msgQueue was " +
+                        "interrupted.", e);
+                  }
+                  quiesceRequested = true;
+                }
+                break;
+
+              default:
+                if (fsOk) {
+                  try {
+                    toDo.put(new ToDoEntry(msgs[i]));
+                  } catch (InterruptedException e) {
+                    throw new RuntimeException("Putting into msgQueue was " +
+                        "interrupted.", e);
+                  }
+                  if (msgs[i].getMsg() == HMsg.MSG_REGION_OPEN) {
+                    this.outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_PROCESS_OPEN,
+                      msgs[i].getRegionInfo()));
+                  }
+                }
+              }
+            }
+            if (restart || this.stopRequested.get()) {
+              toDo.clear();
+              break;
+            }
+            // Reset tries count if we had a successful transaction.
+            tries = 0;
+          } catch (Exception e) {
+            if (e instanceof IOException) {
+              e = RemoteExceptionHandler.checkIOException((IOException) e);
+            }
+            if (tries < this.numRetries) {
+              LOG.warn("Processing message (Retry: " + tries + ")", e);
+              tries++;
+            } else {
+              LOG.fatal("Exceeded max retries: " + this.numRetries, e);
+              if (!checkFileSystem()) {
                 continue;
               }
-              
-              // Queue up the HMaster's instruction stream for processing
-              boolean restart = false;
-              for(int i = 0; i < msgs.length && !stopRequested.get() &&
-                  !restart; i++) {
-                switch(msgs[i].getMsg()) {
-                
-                case HMsg.MSG_CALL_SERVER_STARTUP:
-                  LOG.info("Got call server startup message");
-                  // We the MSG_CALL_SERVER_STARTUP on startup but we can also
-                  // get it when the master is panicing because for instance
-                  // the HDFS has been yanked out from under it.  Be wary of
-                  // this message.
-                  if (checkFileSystem()) {
-                    closeAllRegions();
-                    synchronized (logRollerLock) {
-                      try {
-                        log.closeAndDelete();
-
-                      } catch (Exception e) {
-                        LOG.error("error closing and deleting HLog", e);
-                      }
-                      try {
-                        serverInfo.setStartCode(System.currentTimeMillis());
-                        log = setupHLog();
-                      } catch (IOException e) {
-                        this.abortRequested = true;
-                        this.stopRequested.set(true);
-                        e = RemoteExceptionHandler.checkIOException(e); 
-                        LOG.fatal("error restarting server", e);
-                        break;
-                      }
-                    }
-                    reportForDuty();
-                    restart = true;
-                  } else {
-                    LOG.fatal("file system available check failed. " +
-                        "Shutting down server.");
-                  }
-                  break;
-
-                case HMsg.MSG_REGIONSERVER_STOP:
-                  LOG.info("Got regionserver stop message");
-                  stopRequested.set(true);
-                  break;
-                  
-                case HMsg.MSG_REGIONSERVER_QUIESCE:
-                  if (!quiesceRequested) {
-                    LOG.info("Got quiesce server message");
-                    try {
-                      toDo.put(new ToDoEntry(msgs[i]));
-                    } catch (InterruptedException e) {
-                      throw new RuntimeException("Putting into msgQueue was " +
-                        "interrupted.", e);
-                    }
-                    quiesceRequested = true;
-                  }
-                  break;
-
-                default:
-                  if (fsOk) {
-                    try {
-                      toDo.put(new ToDoEntry(msgs[i]));
-                    } catch (InterruptedException e) {
-                      throw new RuntimeException("Putting into msgQueue was " +
-                        "interrupted.", e);
-                    }
-                    if (msgs[i].getMsg() == HMsg.MSG_REGION_OPEN) {
-                      outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_PROCESS_OPEN,
-                          msgs[i].getRegionInfo()));
-                    }
-                  }
-                }
-              }
-              if (restart || this.stopRequested.get()) {
-                toDo.clear();
-                break;
-              }
-              // Reset tries count if we had a successful transaction.
-              tries = 0;
-            } catch (Exception e) {
-              if (e instanceof IOException) {
-                e = RemoteExceptionHandler.checkIOException((IOException) e);
-              }
-              if(tries < this.numRetries) {
-                LOG.warn("Processing message (Retry: " + tries + ")", e);
-                tries++;
-              } else {
-                LOG.fatal("Exceeded max retries: " + this.numRetries, e);
-                if (!checkFileSystem()) {
-                  continue;
-                }
-                // Something seriously wrong. Shutdown.
-                stop();
-              }
+              // Something seriously wrong. Shutdown.
+              stop();
             }
           }
-          this.sleeper.sleep(lastMsg);
-        } // for
-      } // while (!stopRequested.get())
+        }
+        sleeper.sleep(lastMsg);
+      } // for
     } catch (Throwable t) {
       LOG.fatal("Unhandled exception. Aborting...", t);
       abort();
@@ -627,7 +625,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Let the master know we're here
    * Run initialization using parameters passed us by the master.
    */
-  private HbaseMapWritable reportForDuty() throws IOException {
+  private HbaseMapWritable reportForDuty(final Sleeper sleeper)
+  throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Telling master at " +
         conf.get(MASTER_ADDRESS) + " that we are up");
@@ -651,7 +650,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         break;
       } catch(IOException e) {
         LOG.warn("error telling master we are up", e);
-        this.sleeper.sleep(lastMsg);
+        sleeper.sleep(lastMsg);
         continue;
       }
     }
@@ -794,12 +793,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       } catch (IOException e) {
         LOG.error("error opening region " + regionInfo.getRegionName(), e);
         
-        // Mark the region offline.
         // TODO: add an extra field in HRegionInfo to indicate that there is
         // an error. We can't do that now because that would be an incompatible
         // change that would require a migration
-        
-        regionInfo.setOffline(true);
         reportClose(regionInfo);
         return;
       }

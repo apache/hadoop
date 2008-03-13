@@ -229,7 +229,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.threadWakeFrequency = conf.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
     this.maxRegionOpenTime =
-      conf.getLong("hbase.hbasemaster.maxregionopen", 30 * 1000);
+      conf.getLong("hbase.hbasemaster.maxregionopen", 60 * 1000);
     this.leaseTimeout = conf.getInt("hbase.master.lease.period", 30 * 1000);
     
     this.server = HbaseRPC.getServer(this, address.getBindAddress(),
@@ -589,6 +589,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   private void createTable(final HRegionInfo newRegion) throws IOException {
     Text tableName = newRegion.getTableDesc().getName();
+    // TODO: Not thread safe check.
     if (tableInCreation.contains(tableName)) {
       throw new TableExistsException("Table " + tableName + " in process "
         + "of being created");

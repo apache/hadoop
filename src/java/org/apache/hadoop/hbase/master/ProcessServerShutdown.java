@@ -295,7 +295,7 @@ class ProcessServerShutdown extends RegionServerOperation {
           if (LOG.isDebugEnabled()) {
             LOG.debug("process server shutdown scanning " +
               r.getRegionName() + " on " + r.getServer() + " " +
-              Thread.currentThread().getName());
+              Thread.currentThread().getName() + " attempt " + tries);
           }
           server = master.connection.getHRegionConnection(r.getServer());
 

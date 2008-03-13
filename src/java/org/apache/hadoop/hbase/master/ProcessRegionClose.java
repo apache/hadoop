@@ -49,7 +49,8 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return "ProcessRegionClose of " + this.regionInfo.getRegionName();
+    return "ProcessRegionClose of " + this.regionInfo.getRegionName() +
+      ", " + this.reassignRegion + ", " + this.deleteRegion;
   }
 
   @Override
@@ -74,7 +75,7 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
         if (deleteRegion) {
           HRegion.removeRegionFromMETA(getMetaServer(), metaRegionName,
             regionInfo.getRegionName());
-        } else {
+        } else if (!this.reassignRegion) {
           HRegion.offlineRegionInMETA(getMetaServer(), metaRegionName,
             regionInfo);
         }

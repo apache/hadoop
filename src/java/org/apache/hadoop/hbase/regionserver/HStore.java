@@ -299,7 +299,8 @@ public class HStore implements HConstants {
    * reflected in the MapFiles.)
    */
   private void doReconstructionLog(final Path reconstructionLog,
-      final long maxSeqID) throws UnsupportedEncodingException, IOException {
+    final long maxSeqID)
+  throws UnsupportedEncodingException, IOException {
     
     if (reconstructionLog == null || !fs.exists(reconstructionLog)) {
       // Nothing to do.
@@ -316,15 +317,12 @@ public class HStore implements HConstants {
       HLogKey key = new HLogKey();
       HLogEdit val = new HLogEdit();
       long skippedEdits = 0;
+      long editsCount = 0;
       while (logReader.next(key, val)) {
         maxSeqIdInLog = Math.max(maxSeqIdInLog, key.getLogSeqNum());
         if (key.getLogSeqNum() <= maxSeqID) {
           skippedEdits++;
           continue;
-        }
-        if (skippedEdits > 0 && LOG.isDebugEnabled()) {
-          LOG.debug("Skipped " + skippedEdits +
-            " edits because sequence id <= " + maxSeqID);
         }
         // Check this edit is for me. Also, guard against writing
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
@@ -335,11 +333,12 @@ public class HStore implements HConstants {
           continue;
         }
         HStoreKey k = new HStoreKey(key.getRow(), column, val.getTimestamp());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Applying edit <" + k.toString() + "=" + val.toString() +
-              ">");
-        }
         reconstructedCache.put(k, val.getVal());
+        editsCount++;
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Applied " + editsCount + ", skipped " + skippedEdits +
+          " because sequence id <= " + maxSeqID);
       }
     } finally {
       logReader.close();

@@ -21,6 +21,9 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * Sleeper for current thread.
  * Sleeps for passed period.  Also checks passed boolean and if interrupted,
@@ -28,6 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * sleep time is up).
  */
 public class Sleeper {
+  private final Log LOG = LogFactory.getLog(this.getClass().getName());
   private final int period;
   private AtomicBoolean stop;
   
@@ -56,10 +60,19 @@ public class Sleeper {
     if (this.stop.get()) {
       return;
     }
-    long waitTime = this.period - (System.currentTimeMillis() - startTime);
+    long now = System.currentTimeMillis();
+    long waitTime = this.period - (now - startTime);
+    if (waitTime > this.period) {
+      LOG.warn("Calculated wait time > " + this.period +
+        "; setting to this.period: " + System.currentTimeMillis() + ", " +
+        startTime);
+    }
     if (waitTime > 0) {
       try {
         Thread.sleep(waitTime);
+        if ((System.currentTimeMillis() - now) > (10 * this.period)) {
+          LOG.warn("We slept ten times longer than scheduled: " + this.period);
+        }
       } catch(InterruptedException iex) {
         // We we interrupted because we're meant to stop?  If not, just
         // continue ignoring the interruption

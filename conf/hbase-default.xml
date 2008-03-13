@@ -108,6 +108,13 @@
     period.</description>
   </property>
   <property>
+    <name>hbase.hbasemaster.maxregionopen</name>
+    <value>60000</value>
+    <description>Period to wait for a region open.  If regionserver
+    takes longer than this interval, assign to a new regionserver.
+    </description>
+  </property>
+  <property>
     <name>hbase.regionserver.lease.period</name>
     <value>30000</value>
     <description>HRegion server lease period in milliseconds. Default is

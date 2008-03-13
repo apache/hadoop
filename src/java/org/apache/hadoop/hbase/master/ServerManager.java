@@ -315,7 +315,7 @@ class ServerManager implements HConstants {
 
         case HMsg.MSG_REPORT_CLOSE:
           LOG.info(serverInfo.getServerAddress().toString() + " no longer serving " +
-              region.getRegionName());
+              region);
 
           if (region.isRootRegion()) {
             // Root region
