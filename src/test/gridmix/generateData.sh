@@ -4,18 +4,27 @@ GRID_DIR=`dirname "$0"`
 GRID_DIR=`cd "$GRID_DIR"; pwd`
 source $GRID_DIR/gridmix-env
 
-# 2TB data compressing to approx 500GB
-#COMPRESSED_DATA_BYTES=2147483648000
+# Smaller data set is used by default.
 COMPRESSED_DATA_BYTES=2147483648
-# 500GB
-#UNCOMPRESSED_DATA_BYTES=536870912000
 UNCOMPRESSED_DATA_BYTES=536870912
-# Number of partitions for output data
-NUM_MAPS=100
-# Default approx 70MB per data file, compressed
-#INDIRECT_DATA_BYTES=58720256000
 INDIRECT_DATA_BYTES=58720256
+
+# Number of partitions for output data
+if [ -z ${NUM_MAPS} ] ; then
+  NUM_MAPS=100
+fi
 INDIRECT_DATA_FILES=200
+
+# If the env var USE_REAL_DATASET is set, then use the params to generate the bigger (real) dataset.
+if [ ! -z ${USE_REAL_DATASET} ] ; then
+  echo "Using real dataset"
+  # 2TB data compressing to approx 500GB
+  COMPRESSED_DATA_BYTES=2147483648000
+  # 500GB
+  UNCOMPRESSED_DATA_BYTES=536870912000
+  # Default approx 70MB per data file, compressed
+  INDIRECT_DATA_BYTES=58720256000 
+fi
 
 ${HADOOP_HOME}/bin/hadoop jar \
   ${EXAMPLE_JAR} randomtextwriter \

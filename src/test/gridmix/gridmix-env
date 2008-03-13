@@ -3,21 +3,42 @@
 
 ## Environment configuration
 # Hadoop installation
-export HADOOP_HOME=
+# set var only if it has not already been set externally
+if [ -z "${HADOOP_HOME}" ] ; then
+  export HADOOP_HOME=
+fi
 # Base directory for gridmix install
-export GRID_MIX_HOME=${GRID_DIR}
+# set var only if it has not already been set externally
+if [ -z "${GRID_MIX_HOME}" ] ; then
+  export GRID_MIX_HOME=${GRID_DIR}
+fi
 # Hadoop example jar
-export EXAMPLE_JAR=${HADOOP_HOME}/hadoop-0.15.2-dev-examples.jar
+# set var only if it has not already been set externally
+if [ -z "${EXAMPLE_JAR}" ] ; then
+  export EXAMPLE_JAR="${HADOOP_HOME}/hadoop-*-examples.jar"
+fi
 # Hadoop test jar
-export APP_JAR=${HADOOP_HOME}/hadoop-0.15.2-dev-test.jar
+# set var only if it has not already been set externally
+if [ -z "${APP_JAR}" ] ; then
+  export APP_JAR="${HADOOP_HOME}/hadoop-*-test.jar"
+fi
 # Hadoop streaming jar
-export STREAM_JAR=${HADOOP_HOME}/contrib/hadoop-0.15.2-streaming.jar
+# set var only if it has not already been set externally
+if [ -z "${STREAM_JAR}" ] ; then
+  export STREAM_JAR="${HADOOP_HOME}/contrib/hadoop-*-streaming.jar"
+fi
 # Location on default filesystem for writing gridmix data (usually HDFS)
 # Default: /gridmix/data
-export GRID_MIX_DATA=/gridmix/data
+# set var only if it has not already been set externally
+if [ -z "${GRID_MIX_DATA}" ] ; then
+  export GRID_MIX_DATA=/gridmix/data
+fi
 # Location of executables in default filesystem (usually HDFS)
 # Default: /gridmix/programs
-export GRID_MIX_PROG=/gridmix/programs
+# set var only if it has not already been set externally
+if [ -z "${GRID_MIX_PROG}" ] ; then
+  export GRID_MIX_PROG=/gridmix/programs
+fi
 
 ## Data sources
 # Variable length key, value compressed SequenceFile
