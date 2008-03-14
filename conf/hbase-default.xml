@@ -103,7 +103,7 @@
     <name>hbase.master.lease.period</name>
     <value>60000</value>
     <description>HMaster server lease period in milliseconds. Default is
-    30 seconds.  Region servers must report in within this period else
+    60 seconds.  Region servers must report in within this period else
     they are considered dead.  On loaded cluster, may need to up this
     period.</description>
   </property>
