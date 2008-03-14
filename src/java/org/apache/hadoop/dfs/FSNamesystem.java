@@ -2605,24 +2605,34 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                    + block.getBlockName() + " on " + node.getName()
                                    + " size " + block.getNumBytes());
     }
-
     //
-    // if file is being actively written to, then do not check 
-    // replication-factor here. It will be checked when the file is closed.
+    // If this block does not belong to anyfile, then we are done.
     //
-    if (fileINode == null || fileINode.isUnderConstruction()) {
+    if (fileINode == null) {
+      NameNode.stateChangeLog.info("BLOCK* NameSystem.addStoredBlock: "
+                                   + "addStoredBlock request received for " 
+                                   + block.getBlockName() + " on " + node.getName()
+                                   + " size " + block.getNumBytes()
+                                   + " But it does not belong to any file.");
       return block;
     }
-        
+
     // filter out containingNodes that are marked for decommission.
     NumberReplicas num = countNodes(block);
     int numCurrentReplica = num.liveReplicas()
       + pendingReplications.getNumReplicas(block);
-        
+
     // check whether safe replication is reached for the block
-    // only if it is a part of a files
     incrementSafeBlockCount(numCurrentReplica);
  
+    //
+    // if file is being actively written to, then do not check 
+    // replication-factor here. It will be checked when the file is closed.
+    //
+    if (fileINode.isUnderConstruction()) {
+      return block;
+    }
+        
     // handle underReplication/overReplication
     short fileReplication = fileINode.getReplication();
     if (numCurrentReplica >= fileReplication) {

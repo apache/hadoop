@@ -67,6 +67,16 @@ public class TestFileCreation extends TestCase {
   }
 
   //
+  // writes specified bytes to file.
+  //
+  private void writeFile(FSDataOutputStream stm, int size) throws IOException {
+    byte[] buffer = new byte[fileSize];
+    Random rand = new Random(seed);
+    rand.nextBytes(buffer);
+    stm.write(buffer, 0, size);
+  }
+
+  //
   // verify that the data written to the full blocks are sane
   // 
   private void checkFile(FileSystem fileSys, Path name, int repl)
@@ -362,7 +372,10 @@ public class TestFileCreation extends TestCase {
       System.out.println("testFileCreationNamenodeRestart: "
                          + "Created file filestatus.dat with one "
                          + " replicas.");
-      writeFile(stm);
+
+      // write two full blocks.
+      writeFile(stm, numBlocks * blockSize);
+      stm.flush();
 
       // create another new file.
       //
@@ -410,7 +423,7 @@ public class TestFileCreation extends TestCase {
                                   file1.toString(), 0, Long.MAX_VALUE);
       System.out.println("locations = " + locations.locatedBlockCount());
       assertTrue("Error blocks were not cleaned up for file " + file1,
-                 locations.locatedBlockCount() == 1);
+                 locations.locatedBlockCount() == 3);
 
       // verify filestatus2.dat
       locations = client.namenode.getBlockLocations(

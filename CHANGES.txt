@@ -218,6 +218,10 @@ Trunk (unreleased changes)
     HADOOP-2994. Code cleanup for DFSClient: remove redundant 
     conversions from string to string.  (Dave Brosius via dhruba)
 
+    HADOOP-3009. TestFileCreation sometimes fails because restarting
+    minidfscluster sometimes creates datanodes with ports that are
+    different from their original instance. (dhruba)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
