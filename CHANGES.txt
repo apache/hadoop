@@ -89,6 +89,9 @@ Trunk (unreleased changes)
     HADOOP-2908.  A document that describes the DFS Shell command. 
     (Mahadev Konar via dhruba)
 
+    HADOOP-2981.  Update README.txt to reflect the upcoming use of
+    cryptography. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing
