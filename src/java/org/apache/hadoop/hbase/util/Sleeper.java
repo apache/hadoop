@@ -70,8 +70,10 @@ public class Sleeper {
     if (waitTime > 0) {
       try {
         Thread.sleep(waitTime);
-        if ((System.currentTimeMillis() - now) > (10 * this.period)) {
-          LOG.warn("We slept ten times longer than scheduled: " + this.period);
+        long slept = System.currentTimeMillis() - now;
+        if (slept > (10 * this.period)) {
+          LOG.warn("We slept " + slept + "ms, ten times longer than scheduled: " +
+            this.period);
         }
       } catch(InterruptedException iex) {
         // We we interrupted because we're meant to stop?  If not, just
