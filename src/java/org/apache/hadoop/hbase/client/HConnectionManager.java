@@ -256,47 +256,51 @@ public class HConnectionManager implements HConstants {
 
       // scan over the each meta region
       do {
-        try{
-          // turn the start row into a location
-          metaLocation = locateRegion(META_TABLE_NAME, startRow);
+        for (int triesSoFar = 0; triesSoFar < numRetries; triesSoFar++) {
+          try{
+            // turn the start row into a location
+            metaLocation = locateRegion(META_TABLE_NAME, startRow);
 
-          // connect to the server hosting the .META. region
-          server = getHRegionConnection(metaLocation.getServerAddress());
+            // connect to the server hosting the .META. region
+            server = getHRegionConnection(metaLocation.getServerAddress());
 
-          // open a scanner over the meta region
-          scannerId = server.openScanner(
-            metaLocation.getRegionInfo().getRegionName(),
-            new Text[]{COL_REGIONINFO}, startRow, LATEST_TIMESTAMP, null);
+            // open a scanner over the meta region
+            scannerId = server.openScanner(
+              metaLocation.getRegionInfo().getRegionName(),
+              new Text[]{COL_REGIONINFO}, startRow, LATEST_TIMESTAMP, null);
           
-          // iterate through the scanner, accumulating unique table names
-          while (true) {
-            RowResult values = server.next(scannerId);
-            if (values == null || values.size() == 0) {
-              break;
-            }
+            // iterate through the scanner, accumulating unique table names
+            while (true) {
+              RowResult values = server.next(scannerId);
+              if (values == null || values.size() == 0) {
+                break;
+              }
             
-            HRegionInfo info = 
-              Writables.getHRegionInfo(values.get(COL_REGIONINFO));
+              HRegionInfo info = 
+                Writables.getHRegionInfo(values.get(COL_REGIONINFO));
 
-            // Only examine the rows where the startKey is zero length   
-            if (info.getStartKey().getLength() == 0) {
-              uniqueTables.add(info.getTableDesc());
+              // Only examine the rows where the startKey is zero length   
+              if (info.getStartKey().getLength() == 0) {
+                uniqueTables.add(info.getTableDesc());
+              }
             }
-          }
           
-          server.close(scannerId);
-          scannerId = -1L;
-          
-          // advance the startRow to the end key of the current region
-          startRow = metaLocation.getRegionInfo().getEndKey();          
-        } catch (IOException e) {
-          // Retry once.
-          metaLocation = relocateRegion(META_TABLE_NAME, startRow);
-          continue;
-        }
-        finally {
-          if (scannerId != -1L && server != null) {
             server.close(scannerId);
+            scannerId = -1L;
+          
+            // advance the startRow to the end key of the current region
+            startRow = metaLocation.getRegionInfo().getEndKey();
+            // break out of retry loop
+            break;
+          } catch (IOException e) {
+            // Retry once.
+            metaLocation = relocateRegion(META_TABLE_NAME, startRow);
+            continue;
+          }
+          finally {
+            if (scannerId != -1L && server != null) {
+              server.close(scannerId);
+            }
           }
         }
       } while (startRow.compareTo(LAST_ROW) != 0);
