@@ -40,6 +40,8 @@ Hbase Change Log
    HBASE-27    hregioninfo cell empty in meta table
    HBASE-501   Empty region server address in info:server entry and a
                startcode of -1 in .META.
+   HBASE-516   HStoreFile.finalKey does not update the final key if it is not
+               the top region of a split region
    
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling
