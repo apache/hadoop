@@ -95,6 +95,9 @@ Trunk (unreleased changes)
     HADOOP-2775.  Adds unit test framework for HOD. 
     (Vinod Kumar Vavilapalli via ddas).
 
+    HADOOP-2804.  Add support to publish CHANGES.txt as HTML when running
+    the Ant 'docs' target. (nigel)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing
