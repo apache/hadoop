@@ -786,8 +786,6 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
   /**
    * Get block locations within the specified range.
-   * 
-   * @see ClientProtocol#open(String, long, long)
    * @see ClientProtocol#getBlockLocations(String, long, long)
    */
   LocatedBlocks getBlockLocations(String src, long offset, long length
@@ -1468,7 +1466,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * is a directory (non empty) and recursive is set to false then throw exception.
    */
     public boolean delete(String src, boolean recursive) throws IOException {
-      if (isDir(src) && (!recursive) && (!dir.isDirEmpty(src))) {
+      if ((!recursive) && (!dir.isDirEmpty(src))) {
         throw new IOException(src + " is non empty");
       }
       boolean status = deleteInternal(src, true, true);
@@ -1527,16 +1525,6 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       checkTraverse(src);
     }
     return dir.exists(src);
-  }
-
-  /**
-   * Whether the given name is a directory
-   */
-  public boolean isDir(String src) throws AccessControlException {
-    if (isPermissionEnabled) {
-      checkTraverse(src);
-    }
-    return dir.isDir(src);
   }
 
   /** Get the file info for a specific file.

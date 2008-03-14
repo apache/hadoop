@@ -46,7 +46,7 @@ public class NameNodeMetrics implements Updater {
     private NameNodeStatistics namenodeStats;
     
     public MetricsTimeVaryingInt numFilesCreated = new MetricsTimeVaryingInt("FilesCreated");
-    public MetricsTimeVaryingInt numFilesOpened = new MetricsTimeVaryingInt("FilesOpened");
+    public MetricsTimeVaryingInt numGetBlockLocations = new MetricsTimeVaryingInt("GetBlockLocations");
     public MetricsTimeVaryingInt numFilesRenamed = new MetricsTimeVaryingInt("FilesRenamed");
     public MetricsTimeVaryingInt numFilesListed = new MetricsTimeVaryingInt("FilesListed");
 
@@ -91,7 +91,7 @@ public class NameNodeMetrics implements Updater {
     public void doUpdates(MetricsContext unused) {
       synchronized (this) {
         numFilesCreated.pushMetric(metricsRecord);
-        numFilesOpened.pushMetric(metricsRecord);
+        numGetBlockLocations.pushMetric(metricsRecord);
         numFilesRenamed.pushMetric(metricsRecord);
         numFilesListed.pushMetric(metricsRecord);
 

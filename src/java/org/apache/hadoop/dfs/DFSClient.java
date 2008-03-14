@@ -28,7 +28,6 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.dfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.security.UnixUserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.*;
 
 import org.apache.commons.logging.*;
@@ -461,11 +460,14 @@ class DFSClient implements FSConstants {
     return namenode.exists(src);
   }
 
-  /**
-   */
+  /** @deprecated Use getFileStatus() instead */
+  @Deprecated
   public boolean isDirectory(String src) throws IOException {
-    checkOpen();
-    return namenode.isDir(src);
+    try {
+      return getFileInfo(src).isDir();
+    } catch (FileNotFoundException e) {
+      return false;               // f does not exist
+    }
   }
 
   /**
@@ -578,21 +580,6 @@ class DFSClient implements FSConstants {
     return namenode.mkdirs(src, masked);
   }
 
-  /**
-   * Retrieves the total size of all files and directories under
-   * the specified path.
-   * 
-   * @param src
-   * @throws IOException
-   * @return the number of bytes in the subtree rooted at src
-   * @deprecated use {@link #getContentSummary(String)}
-   */
-  @Deprecated
-  public long getContentLength(String src
-                               ) throws IOException {
-    return getContentSummary(src).getLength();
-  }
-  
   ContentSummary getContentSummary(String src) throws IOException {
     return namenode.getContentSummary(src);
   }
@@ -1005,7 +992,10 @@ class DFSClient implements FSConstants {
      * Grab the open-file info from namenode
      */
     synchronized void openInfo() throws IOException {
-      LocatedBlocks newInfo = namenode.open(src, 0, prefetchSize);
+      LocatedBlocks newInfo = namenode.getBlockLocations(src, 0, prefetchSize);
+      if (newInfo == null) {
+        throw new IOException("Cannot open filename " + src);
+      }
 
       if (locatedBlocks != null) {
         Iterator<LocatedBlock> oldIter = locatedBlocks.getLocatedBlocks().iterator();

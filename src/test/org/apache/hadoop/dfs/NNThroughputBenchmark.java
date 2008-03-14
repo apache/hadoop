@@ -526,7 +526,7 @@ public class NNThroughputBenchmark implements FSConstants {
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
       long start = System.currentTimeMillis();
-      nameNode.open(fileNames[daemonId][inputIdx], 0L, BLOCK_SIZE);
+      nameNode.getBlockLocations(fileNames[daemonId][inputIdx], 0L, BLOCK_SIZE);
       long end = System.currentTimeMillis();
       return end-start;
     }

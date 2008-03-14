@@ -233,25 +233,11 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   /////////////////////////////////////////////////////
   // ClientProtocol
   /////////////////////////////////////////////////////
-    
-  /**
-   */
-  public LocatedBlocks open(String src,
-                            long offset,
-                            long length) throws IOException {
-    LocatedBlocks result = getBlockLocations(src, offset, length);
-    if (result == null) {
-      throw new IOException("Cannot open filename " + src);
-    }
-    myMetrics.numFilesOpened.inc();
-    return result;
-  }
-
-  /**
-   */
+  /** {@inheritDoc} */
   public LocatedBlocks   getBlockLocations(String src, 
                                           long offset, 
                                           long length) throws IOException {
+    myMetrics.numGetBlockLocations.inc();
     return namesystem.getBlockLocations(getClientMachine(), 
                                         src, offset, length);
   }
@@ -402,12 +388,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   /**
-   */
-  public boolean isDir(String src) throws IOException {
-    return namesystem.isDir(src);
-  }
-
-  /**
    * Check path length does not exceed maximum.  Returns true if
    * length and depth are okay.  Returns false if length is too long 
    * or depth is too great.
@@ -530,12 +510,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    */
   public void metaSave(String filename) throws IOException {
     namesystem.metaSave(filename);
-  }
-
-  /** {@inheritDoc} */
-  @Deprecated
-  public long getContentLength(String src)  throws IOException {
-    return getContentSummary(src).getLength();
   }
 
   /** {@inheritDoc} */

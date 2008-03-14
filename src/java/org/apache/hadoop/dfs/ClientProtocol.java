@@ -36,44 +36,25 @@ interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 25 : added {@link #getContentSummary(String path)}
-   * 26 : added delete(src, boolean) for recursive deletes on the namenode
+   * 27 : removed getContentLength(String), open(String, long, long) and isDir(String)
    */
-  public static final long versionID = 26L;
+  public static final long versionID = 27L;
   
   ///////////////////////////////////////
   // File contents
   ///////////////////////////////////////
   /**
-   * Open an existing file for read and get block locations within 
-   * the specified range. 
+   * Get locations of the blocks of the specified file within the specified range.
+   * DataNode locations for each block are sorted by
+   * the proximity to the client.
    * <p>
    * Return {@link LocatedBlocks} which contains
    * file length, blocks and their locations.
    * DataNode locations for each block are sorted by
    * the distance to the client's address.
    * <p>
-   * The client will then have to contact
-   * one of the indicated DataNodes to obtain the actual data.  There
-   * is no need to call close() or any other function after
-   * calling open().
-   * 
-   * @param src file name
-   * @param offset range start offset
-   * @param length range length
-   * @return file length and array of blocks with their locations
-   * @throws IOException
-   */
-  public LocatedBlocks open(String src, 
-                            long offset,
-                            long length) throws IOException;
-  
-  /**
-   * Get locations of the blocks of the specified file within the specified range.
-   * DataNode locations for each block are sorted by
-   * the proximity to the client.
-   * 
-   * @see #open(String, long, long)
+   * The client will then have to contact 
+   * one of the indicated DataNodes to obtain the actual data.
    * 
    * @param src file name
    * @param offset range start offset
@@ -254,11 +235,6 @@ interface ClientProtocol extends VersionedProtocol {
    * Check whether the given file exists.
    */
   public boolean exists(String src) throws IOException;
-
-  /**
-   * Check whether the given filename is a directory or not.
-   */
-  public boolean isDir(String src) throws IOException;
 
   /**
    * Create a directory (or hierarchy of directories) with the given
@@ -445,16 +421,6 @@ interface ClientProtocol extends VersionedProtocol {
    * @return object containing information regarding the file
    */
   public DFSFileInfo getFileInfo(String src) throws IOException;
-
-  /**
-   * Get the total size of all files and directories rooted at
-   * the specified directory.
-   * @param src The string representation of the path
-   * @return size of directory subtree in bytes
-   * @deprecated use {@link #getContentSummary(String)}
-   */
-  @Deprecated
-  public long getContentLength(String src) throws IOException;
 
   /**
    * Get {@link ContentSummary} rooted at the specified directory.

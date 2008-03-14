@@ -141,11 +141,12 @@ public interface NameNodeStatisticsMBean {
   int getNumFilesCreated();
   
   /**
-   *   Number of files opened for reading in the last interval
+   * Number of
+   * {@link org.apache.hadoop.dfs.NameNode#getBlockLocations(String,long,long)}
    * @return  number of operations
    */
-  int getNumFilesOpened();
-  
+  int getNumGetBlockLocations();
+
   /**
    *   Number of files renamed in the last interval
    * @return number of operations

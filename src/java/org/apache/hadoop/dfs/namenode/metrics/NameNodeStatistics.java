@@ -170,11 +170,9 @@ public class NameNodeStatistics implements NameNodeStatisticsMBean {
     return myMetrics.numFilesListed.getPreviousIntervalValue();
   }
 
-  /**
-   * @inheritDoc
-   */
-  public int getNumFilesOpened() {
-    return myMetrics.numFilesOpened.getPreviousIntervalValue();
+  /** @inheritDoc */
+  public int getNumGetBlockLocations() {
+    return myMetrics.numGetBlockLocations.getPreviousIntervalValue();
   }
 
   /**

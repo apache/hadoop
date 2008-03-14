@@ -30,6 +30,10 @@ Trunk (unreleased changes)
     specifies whether a recursive delete is intended.
     (Mahadev Konar via dhruba)
 
+    HADOOP-2470. Remove getContentLength(String), open(String, long, long)
+    and isDir(String) from ClientProtocol. ClientProtocol version changed
+    from 26 to 27. (Tsz Wo (Nicholas), SZE via cdouglas)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)
