@@ -92,6 +92,9 @@ Trunk (unreleased changes)
     HADOOP-2981.  Update README.txt to reflect the upcoming use of
     cryptography. (omalley)
 
+    HADOOP-2775.  Adds unit test framework for HOD. 
+    (Vinod Kumar Vavilapalli via ddas).
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing

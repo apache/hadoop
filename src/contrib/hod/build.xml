@@ -32,4 +32,45 @@
         </copy>
         <chmod dir="${dist.dir}/contrib/${name}/bin" perm="a+x" includes="*"/>
     </target>
+
+    <target name="test" depends="compile" description="Run HOD unit tests">  
+      <antcall target="python.pathcheck"/>
+      <antcall target="checkAndRunTests"/>
+    </target>
+
+    <target name="checkAndRunTests" if="python.home">
+      <!-- Check python version now -->
+      <exec executable="/bin/sh" outputproperty="hodtest.pythonVersion">
+          <arg value="-c" />
+          <arg value="${python.home}/python -V" />
+      </exec>
+      <condition property="python.versionmatched">
+        <!--- Currently check for only 2.5.1 -->
+        <equals arg1="${hodtest.pythonVersion}" arg2="Python 2.5.1" />
+      </condition>
+      <antcall target="python.versioncheck"/>
+      <antcall target="runtests"/>
+    </target>
+ 
+    <target name="python.pathcheck" unless="python.home">
+      <echo message="'python.home' is not defined. Please pass -Dpython.home=&lt;Path to Python&gt; to Ant on the command-line."/>
+    </target>
+
+    <target name="runtests" if="python.versionmatched">
+      <echo message="Using Python at : ${python.home}" />
+      <echo message="Version : ${hodtest.pythonVersion}"/>
+      <exec executable="/bin/sh" resultproperty="hodtest.failedTests">
+        <arg value="-c" />
+          <arg value="${python.home}/python ${build.dir}/testing/main.py" />
+      </exec>
+      <condition property="hodtest.success">
+        <equals arg1="${hodtest.failedTests}" arg2="0"/>
+      </condition>
+      <fail message="TestCases failed. ${hodtest.failedTests} failed to run successfully." unless="hodtest.success"/>
+    </target>
+    
+    <target name="python.versioncheck" unless="python.versionmatched">
+      <echo message="Need Python version 2.5.1. You specified ${hodtest.pythonVersion}"/>
+    </target>
+
 </project>
