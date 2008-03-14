@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -61,6 +60,10 @@ public class TestDFSUpgradeFromImage extends TestCase {
   boolean printChecksum = false;
   
   protected void setUp() throws IOException {
+    unpackStorage();
+  }
+
+  void unpackStorage() throws IOException {
     String tarFile = System.getProperty("test.cache.data") + 
                      "/hadoop-12-dfs-dir.tgz";
     String dataDir = System.getProperty("test.build.data");
@@ -178,13 +181,12 @@ public class TestDFSUpgradeFromImage extends TestCase {
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new Configuration();
-      cluster = new MiniDFSCluster(0, conf, numDataNodes, false,
-                                                  true, StartupOption.UPGRADE,
-                                                  null);
+      conf.setInt("dfs.datanode.scan.period.hours", -1); // block scanning off
+      cluster = new MiniDFSCluster(0, conf, numDataNodes, false, true,
+                                   StartupOption.UPGRADE, null);
       cluster.waitActive();
       DFSClient dfsClient = new DFSClient(new InetSocketAddress("localhost",
-                                                    cluster.getNameNodePort()),
-                                          conf);
+                                           cluster.getNameNodePort()), conf);
       //Safemode will be off only after upgrade is complete. Wait for it.
       while ( dfsClient.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET) ) {
         LOG.info("Waiting for SafeMode to be OFF.");

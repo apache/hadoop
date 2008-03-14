@@ -45,7 +45,7 @@ abstract class UpgradeObject implements Upgradeable {
 
   public int compareTo(Upgradeable o) {
     if(this.getVersion() != o.getVersion())
-      return (getVersion() < o.getVersion() ? -1 : 1);
+      return (getVersion() > o.getVersion() ? -1 : 1);
     int res = this.getType().toString().compareTo(o.getType().toString());
     if(res != 0)
       return res;

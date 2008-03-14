@@ -17,15 +17,12 @@
 */
 package org.apache.hadoop.dfs;
 
-import java.io.File;
 import java.io.IOException;
 import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
-import static org.apache.hadoop.dfs.FSConstants.NodeType.DATA_NODE;
-import static org.apache.hadoop.dfs.FSConstants.NodeType.NAME_NODE;
 import static org.apache.hadoop.dfs.FSConstants.LAYOUT_VERSION;
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
 
@@ -79,33 +76,30 @@ public class TestDistributedUpgrade extends TestCase {
   /**
    */
   public void testDistributedUpgrade() throws Exception {
-    File[] baseDirs;
     int numDirs = 1;
-    UpgradeUtilities.initialize();
+    TestDFSUpgradeFromImage testImg = new TestDFSUpgradeFromImage();
+    testImg.unpackStorage();
+    int numDNs = testImg.numDataNodes;
 
     // register new upgrade objects (ignore all existing)
     UpgradeObjectCollection.initialize();
-    UpgradeObjectCollection.registerUpgrade(new UpgradeObject_Test_Datanode());
-    UpgradeObjectCollection.registerUpgrade(new UpgradeObject_Test_Namenode());
+    UpgradeObjectCollection.registerUpgrade(new UO_Datanode1());
+    UpgradeObjectCollection.registerUpgrade(new UO_Namenode1());
+    UpgradeObjectCollection.registerUpgrade(new UO_Datanode2());
+    UpgradeObjectCollection.registerUpgrade(new UO_Namenode2());
+    UpgradeObjectCollection.registerUpgrade(new UO_Datanode3());
+    UpgradeObjectCollection.registerUpgrade(new UO_Namenode3());
 
-    conf = UpgradeUtilities.initializeStorageStateConf(numDirs, 
-                                                       new Configuration());
-    String[] nameNodeDirs = conf.getStrings("dfs.name.dir");
-    String[] dataNodeDirs = conf.getStrings("dfs.data.dir");
-    DFSAdmin dfsAdmin = new DFSAdmin();
-    dfsAdmin.setConf(conf);
-    String[] pars = {"-safemode", "wait"};
+    conf = new Configuration();
+    conf.setInt("dfs.datanode.scan.period.hours", -1); // block scanning off
 
     log("NameNode start in regular mode when dustributed upgrade is required", numDirs);
-    baseDirs = UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
-    UpgradeUtilities.createVersionFile(NAME_NODE, baseDirs,
-        new StorageInfo(LAYOUT_VERSION+2,
-                        UpgradeUtilities.getCurrentNamespaceID(cluster),
-                        UpgradeUtilities.getCurrentFsscTime(cluster)));
     startNameNodeShouldFail(StartupOption.REGULAR);
 
     log("Start NameNode only distributed upgrade", numDirs);
-    cluster = new MiniDFSCluster(conf, 0, StartupOption.UPGRADE);
+    // cluster = new MiniDFSCluster(conf, 0, StartupOption.UPGRADE);
+    cluster = new MiniDFSCluster(0, conf, 0, false, true,
+                                  StartupOption.UPGRADE, null);
     cluster.shutdown();
 
     log("NameNode start in regular mode when dustributed upgrade has been started", numDirs);
@@ -115,19 +109,19 @@ public class TestDistributedUpgrade extends TestCase {
     startNameNodeShouldFail(StartupOption.ROLLBACK);
 
     log("Normal distributed upgrade for the cluster", numDirs);
-    cluster = new MiniDFSCluster(conf, 0, StartupOption.UPGRADE);
-    UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
-    cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
-    dfsAdmin.run(pars);
+    cluster = new MiniDFSCluster(0, conf, numDNs, false, true,
+                                  StartupOption.UPGRADE, null);
+    DFSAdmin dfsAdmin = new DFSAdmin();
+    dfsAdmin.setConf(conf);
+    dfsAdmin.run(new String[] {"-safemode", "wait"});
     cluster.shutdown();
 
     // it should be ok to start in regular mode
     log("NameCluster regular startup after the upgrade", numDirs);
-    cluster = new MiniDFSCluster(conf, 0, StartupOption.REGULAR);
-    cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
+    cluster = new MiniDFSCluster(0, conf, numDNs, false, true,
+                                  StartupOption.REGULAR, null);
+    cluster.waitActive();
     cluster.shutdown();
-    UpgradeUtilities.createEmptyDirs(nameNodeDirs);
-    UpgradeUtilities.createEmptyDirs(dataNodeDirs);
   }
 
   public static void main(String[] args) throws Exception {
@@ -139,9 +133,16 @@ public class TestDistributedUpgrade extends TestCase {
 /**
  * Upgrade object for data-node
  */
-class UpgradeObject_Test_Datanode extends UpgradeObjectDatanode {
+class UO_Datanode extends UpgradeObjectDatanode {
+  int version;
+
+  UO_Datanode(int v) {
+    this.status = (short)0;
+    version = v;
+  }
+
   public int getVersion() {
-    return LAYOUT_VERSION+1;
+    return version;
   }
 
   public void doUpgrade() throws IOException {
@@ -152,7 +153,6 @@ class UpgradeObject_Test_Datanode extends UpgradeObjectDatanode {
   }
 
   public UpgradeCommand startUpgrade() throws IOException {
-    this.status = (short)0;
     return null;
   }
 }
@@ -160,16 +160,23 @@ class UpgradeObject_Test_Datanode extends UpgradeObjectDatanode {
 /**
  * Upgrade object for name-node
  */
-class UpgradeObject_Test_Namenode extends UpgradeObjectNamenode {
+class UO_Namenode extends UpgradeObjectNamenode {
+  int version;
+
+  UO_Namenode(int v) {
+    status = (short)0;
+    version = v;
+  }
+
   public int getVersion() {
-    return LAYOUT_VERSION+1;
+    return version;
   }
 
   synchronized public UpgradeCommand processUpgradeCommand(
                                   UpgradeCommand command) throws IOException {
     switch(command.action) {
       case UpgradeCommand.UC_ACTION_REPORT_STATUS:
-        this.status += command.getCurrentStatus()/2;  // 2 reports needed
+        this.status += command.getCurrentStatus()/8;  // 4 reports needed
         break;
       default:
         this.status++;
@@ -179,5 +186,41 @@ class UpgradeObject_Test_Namenode extends UpgradeObjectNamenode {
 
   public UpgradeCommand completeUpgrade() throws IOException {
     return null;
+  }
+}
+
+class UO_Datanode1 extends UO_Datanode {
+  UO_Datanode1() {
+    super(LAYOUT_VERSION+1);
+  }
+}
+
+class UO_Namenode1 extends UO_Namenode {
+  UO_Namenode1() {
+    super(LAYOUT_VERSION+1);
+  }
+}
+
+class UO_Datanode2 extends UO_Datanode {
+  UO_Datanode2() {
+    super(LAYOUT_VERSION+2);
+  }
+}
+
+class UO_Namenode2 extends UO_Namenode {
+  UO_Namenode2() {
+    super(LAYOUT_VERSION+2);
+  }
+}
+
+class UO_Datanode3 extends UO_Datanode {
+  UO_Datanode3() {
+    super(LAYOUT_VERSION+3);
+  }
+}
+
+class UO_Namenode3 extends UO_Namenode {
+  UO_Namenode3() {
+    super(LAYOUT_VERSION+3);
   }
 }

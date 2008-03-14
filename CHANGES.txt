@@ -222,6 +222,9 @@ Trunk (unreleased changes)
     minidfscluster sometimes creates datanodes with ports that are
     different from their original instance. (dhruba)
 
+    HADOOP-2992. Distributed Upgrade framework works correctly with
+    more than one upgrade object.  (Konstantin Shvachko via dhruba)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

@@ -81,6 +81,9 @@ class UpgradeManagerNamenode extends UpgradeManager {
     }
     // current upgrade is done
     curUO.completeUpgrade();
+    NameNode.LOG.info("\n   Distributed upgrade for NameNode version " 
+        + curUO.getVersion() + " to current LV " 
+        + FSConstants.LAYOUT_VERSION + " is complete.");
     // proceede with the next one
     currentUpgrades.remove(curUO);
     if(currentUpgrades.isEmpty()) { // all upgrades are done
@@ -93,9 +96,6 @@ class UpgradeManagerNamenode extends UpgradeManager {
   }
 
   synchronized void completeUpgrade() throws IOException {
-    NameNode.LOG.info("\n   Distributed upgrade for NameNode version " 
-        + getUpgradeVersion() + " to current LV " 
-        + FSConstants.LAYOUT_VERSION + " is complete.");
     // set and write new upgrade state into disk
     setUpgradeState(false, FSConstants.LAYOUT_VERSION);
     FSNamesystem.getFSNamesystem().getFSImage().writeAll();
