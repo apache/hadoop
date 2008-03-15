@@ -6,6 +6,8 @@ Hbase Change Log
 
   NEW FEATURES
    HBASE-40    Add a method of getting multiple (but not all) cells for a row at once
+   HBASE-506   When an exception has to escape ServerCallable due to exhausted retries, 
+               show all the exceptions that lead to this situation
    
   OPTIMIZATIONS
    HBASE-430   Performance: Scanners and getRow return maps with duplicate data
