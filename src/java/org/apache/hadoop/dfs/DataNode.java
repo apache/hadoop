@@ -2327,11 +2327,32 @@ public class DataNode implements FSConstants, Runnable {
                 " offsetInBlock " + offsetInBlock +
                 " lastPacketInBlock " + lastPacketInBlock);
       setBlockPosition(offsetInBlock);
+      
+      int len = in.readInt();
+      curPacketSize += 4;            // read an integer in previous line
 
       // send packet header to next datanode in pipeline
       if (mirrorOut != null) {
         try {
-          mirrorOut.writeInt(packetSize);
+          int mirrorPacketSize = packetSize;
+          if (len > bytesPerChecksum) {
+            /* 
+             * This is a packet with non-interleaved checksum. 
+             * But we are sending interleaving checksums to mirror, 
+             * which changes packet len. Adjust the packet size for mirror.
+             * 
+             * As mentioned above, this is mismatch is 
+             * temporary till HADOOP-1702.
+             */
+            
+            //find out how many chunks are in this patcket :
+            int chunksInPkt = (len + bytesPerChecksum - 1)/bytesPerChecksum;
+            
+            // we send 4 more bytes for for each of the extra 
+            // checksum chunks. so :
+            mirrorPacketSize += (chunksInPkt - 1) * 4;
+          }
+          mirrorOut.writeInt(mirrorPacketSize);
           mirrorOut.writeLong(offsetInBlock);
           mirrorOut.writeLong(seqno);
           mirrorOut.writeBoolean(lastPacketInBlock);
@@ -2356,9 +2377,6 @@ public class DataNode implements FSConstants, Runnable {
                                           lastPacketInBlock); 
         }
       }
-
-      int len = in.readInt();
-      curPacketSize += 4;            // read an integer in previous line
 
       if (len == 0) {
         LOG.info("Receiving empty packet for block " + block);
@@ -2388,16 +2406,17 @@ public class DataNode implements FSConstants, Runnable {
           
           int toRecv = Math.min(len, bytesPerChecksum);
           
-          receiveChunk(toRecv, checksumBuf, checksumOff);
-          
-          len -= toRecv;
-          checksumOff += checksumSize;       
           curPacketSize += (toRecv + checksumSize);
           if (curPacketSize > packetSize) {
             throw new IOException("Packet size for block " + block +
                                   " too long " + curPacketSize +
                                   " was expecting " + packetSize);
           } 
+          
+          receiveChunk(toRecv, checksumBuf, checksumOff);
+          
+          len -= toRecv;
+          checksumOff += checksumSize;       
         }
         
         if (curPacketSize == packetSize) {

@@ -260,6 +260,9 @@ Trunk (unreleased changes)
     HADOOP-3008. SocketIOWithTimeout throws InterruptedIOException if the
     thread is interrupted while it is waiting. (rangadi)
     
+    HADOOP-3006. Fix wrong packet size reported by DataNode when a block
+    is being replicated. (rangadi)
+    
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
