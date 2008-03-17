@@ -250,6 +250,10 @@ Trunk (unreleased changes)
     HADOOP-2924. Fixes an address problem to do with TaskTracker binding 
     to an address. (Vinod Kumar Vavilapalli via ddas)
 
+    HADOOP-2970. Fixes a problem to do with Wrong class definition for 
+    hodlib/Hod/hod.py for Python < 2.5.1.
+    (Vinod Kumar Vavilapalli via ddas)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

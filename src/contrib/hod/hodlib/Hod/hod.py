@@ -485,7 +485,7 @@ class hodRunner:
 
     return self.__opCode
 
-class hodHelp():
+class hodHelp:
   def __init__(self):
     self.ops = ['allocate', 'deallocate', 'info', 'list','script',  'help']
   
