@@ -2589,9 +2589,45 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
                    " reported from " + node.getName() + 
                    " current size is " + cursize +
                    " reported size is " + block.getNumBytes());
-          // Accept this block even if there is a problem with its
-          // size. Clients should detect data corruption because of
-          // CRC mismatch.
+          try {
+            if (cursize > block.getNumBytes()) {
+              // new replica is smaller in size than existing block.
+              // Delete new replica.
+              LOG.warn("Deleting block " + block + " from " + node.getName());
+              invalidateBlock(block, node);
+            } else {
+              // new replica is larger in size than existing block.
+              // Delete pre-existing replicas.
+              int numNodes = blocksMap.numNodes(block);
+              int count = 0;
+              DatanodeDescriptor nodes[] = new DatanodeDescriptor[numNodes];
+              Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(block);
+              for (; it != null && it.hasNext(); ) {
+                DatanodeDescriptor dd = it.next();
+                if (!dd.equals(node)) {
+                  nodes[count++] = dd;
+                }
+              }
+              for (int j = 0; j < count; j++) {
+                LOG.warn("Deleting block " + block + " from " + 
+                         nodes[j].getName());
+                invalidateBlock(block, nodes[j]);
+              }
+              //
+              // change the size of block in blocksMap
+              //
+              storedBlock = blocksMap.getStoredBlock(block); //extra look up!
+              if (storedBlock == null) {
+                LOG.warn("Block " + block + 
+                   " reported from " + node.getName() + 
+                   " does not exist in blockMap. Surprise! Surprise!");
+              } else {
+                storedBlock.setNumBytes(block.getNumBytes());
+              }
+            }
+          } catch (IOException e) {
+            LOG.warn("Error in deleting bad block " + block + e);
+          }
         }
       }
       block = storedBlock;

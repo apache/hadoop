@@ -237,6 +237,9 @@ Trunk (unreleased changes)
     bugs in JSPs to do with analysis - HADOOP-2742, HADOOP-2792.
     (Amareshwari Sri Ramadasu via ddas)
 
+    HADOOP-2890. If different datanodes report the same block but
+    with different sizes to the namenode, the namenode picks the
+    replica(s) with the largest size as the only valid replica(s). (dhruba)
 
 Release 0.16.1 - 2008-03-13
 
