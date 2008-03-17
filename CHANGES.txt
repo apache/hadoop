@@ -244,6 +244,8 @@ Trunk (unreleased changes)
     HADOOP-2825. Deprecated MapOutputLocation.getFile() is removed.
     (Amareshwari Sri Ramadasu via ddas)
 
+    HADOOP-2806. Fixes a streaming document.
+    (Amareshwari Sriramadasu via ddas)
 
 Release 0.16.1 - 2008-03-13
 
