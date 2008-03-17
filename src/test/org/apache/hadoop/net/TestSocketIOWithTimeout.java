@@ -38,7 +38,7 @@ import junit.framework.TestCase;
  */
 public class TestSocketIOWithTimeout extends TestCase {
 
-  Log LOG = LogFactory.getLog(TestSocketIOWithTimeout.class);
+  static Log LOG = LogFactory.getLog(TestSocketIOWithTimeout.class);
   
   private static int TIMEOUT = 1*1000; 
   private static String TEST_STRING = "1234567890";
@@ -61,9 +61,30 @@ public class TestSocketIOWithTimeout extends TestCase {
         long diff = System.currentTimeMillis() - start;
         LOG.info("Got SocketTimeoutException as expected after " + 
                  diff + " millis : " + e.getMessage());
-        assertTrue(Math.abs(TIMEOUT - diff) <= 100);
+        assertTrue(Math.abs(TIMEOUT - diff) <= 200);
         break;
       }
+    }
+  }
+  
+  /**
+   * Just reads one byte from the input stream.
+   */
+  static class ReadRunnable implements Runnable {
+    private InputStream in;
+
+    public ReadRunnable(InputStream in) {
+      this.in = in;
+    }
+    public void run() {
+      try {
+        in.read();
+      } catch (IOException e) {
+        LOG.info("Got expection while reading as expected : " + 
+                 e.getMessage());
+        return;
+      }
+      assertTrue(false);
     }
   }
   
@@ -87,6 +108,27 @@ public class TestSocketIOWithTimeout extends TestCase {
       in.read(readBytes);
       assertTrue(Arrays.equals(writeBytes, readBytes));
       doIO(in, null);
+      
+      /*
+       * Verify that it handles interrupted threads properly.
+       * Use a large timeout and expect the thread to return quickly.
+       */
+      in = new SocketInputStream(source, 0);
+      Thread thread = new Thread(new ReadRunnable(in));
+      thread.start();
+      
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException ignored) {}
+      
+      thread.interrupt();
+      
+      try {
+        thread.join();
+      } catch (InterruptedException e) {
+        throw new IOException("Unexpected InterruptedException : " + e);
+      }
+      
     } finally {
       if (source != null) {
         source.close();

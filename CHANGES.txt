@@ -257,6 +257,9 @@ Trunk (unreleased changes)
     hodlib/Hod/hod.py for Python < 2.5.1.
     (Vinod Kumar Vavilapalli via ddas)
 
+    HADOOP-3008. SocketIOWithTimeout throws InterruptedIOException if the
+    thread is interrupted while it is waiting. (rangadi)
+    
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

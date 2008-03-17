@@ -19,16 +19,12 @@
 package org.apache.hadoop.net;
 
 import java.io.IOException;
-import java.net.Socket;
-import java.net.SocketAddress;
+import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
-import java.nio.channels.Pipe;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -252,6 +248,13 @@ abstract class SocketIOWithTimeout {
             if (timeout <= 0) {
               return 0;
             }
+          }
+          
+          if (Thread.currentThread().isInterrupted()) {
+            throw new InterruptedIOException("Interruped while waiting for " +
+                                             "IO on channel " + channel +
+                                             ". " + timeout + 
+                                             " millis timeout left.");
           }
         }
       } finally {
