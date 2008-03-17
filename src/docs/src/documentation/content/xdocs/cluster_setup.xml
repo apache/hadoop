@@ -373,8 +373,7 @@
             <p> The job history files are stored in central location 
             <code> hadoop.job.history.location </code> which can be on DFS also,
             whose default value is <code>${HADOOP_LOG_DIR}/history</code>. 
-            Job history server is started on job tracker. The history 
-            web UI is accessible from job tracker web UI.</p>
+            The history web UI is accessible from job tracker web UI.</p>
             
             <p> The history files are also logged to user specified directory
             <code>hadoop.job.history.user.location</code> 
@@ -384,16 +383,15 @@
             logging by giving the value <code>none</code> for 
             <code>hadoop.job.history.user.location</code> </p>
             
-            <p> User can view logs in specified directory using 
-            the following command <br/>
-            <code>$ bin/hadoop job -history output-dir</code><br/>
-            This will start a stand alone jetty on the client and 
-            load history jsp's. 
-            It will display the port where the server is up at. The server will
-            be up for 30 minutes. User has to use 
-            <code> http://hostname:port </code> to view the history. User can 
-            also provide http bind address using 
-            <code>mapred.job.history.http.bindAddress</code></p>
+            <p> User can view the history logs summary in specified directory 
+            using the following command <br/>
+            <code>$ bin/hadoop job -history output-dir</code><br/> 
+            This command will print job details, failed and killed tip
+            details. <br/>
+            More details about the job such as successful tasks and 
+            task attempts made for each task can be viewed using the  
+            following command <br/>
+            <code>$ bin/hadoop job -history all output-dir</code><br/></p> 
           </section>
         </section>
       </section>

@@ -611,7 +611,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
 
   // Used to provide an HTML view on Job, Task, and TaskTracker structures
   StatusHttpServer infoServer;
-  StatusHttpServer historyServer;
   int infoPort;
 
   Server interTrackerServer;
@@ -676,6 +675,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     infoServer = new StatusHttpServer("job", infoBindAddress, tmpInfoPort, 
                                       tmpInfoPort == 0);
     infoServer.setAttribute("job.tracker", this);
+    // initialize history parameters.
+    boolean historyInitialized = JobHistory.init(conf, this.localMachine);
+    String historyLogDir = null;
+    FileSystem historyFS = null;
+    if (historyInitialized) {
+      historyLogDir = conf.get("hadoop.job.history.location");
+      infoServer.setAttribute("historyLogDir", historyLogDir);
+      historyFS = new Path(historyLogDir).getFileSystem(conf);
+      infoServer.setAttribute("fileSys", historyFS);
+    }
     infoServer.start();
 
     this.startTime = System.currentTimeMillis();
@@ -719,29 +728,19 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       }
       Thread.sleep(SYSTEM_DIR_CLEANUP_RETRY_PERIOD);
     }
-
-    // start history viewing server.
-    JobHistory.init(conf, this.localMachine); 
-    String histAddr = conf.get("mapred.job.history.http.bindAddress",
-                                  "0.0.0.0:0");
-    InetSocketAddress historySocAddr = NetUtils.createSocketAddr(histAddr);
-    String historyBindAddress = historySocAddr.getHostName();
-    int tmpHistoryPort = historySocAddr.getPort();
-    historyServer = new StatusHttpServer("history", historyBindAddress, 
-                       tmpHistoryPort, tmpHistoryPort == 0);
-    String historyLogDir = conf.get("hadoop.job.history.location");
-    historyServer.setAttribute("historyLogDir", historyLogDir);
-    FileSystem fileSys = new Path(historyLogDir).getFileSystem(conf);
-    historyServer.setAttribute("fileSys", fileSys);
-    historyServer.start();
-    this.conf.set("mapred.job.history.http.bindAddress", 
-                (this.localMachine + ":" + historyServer.getPort()));
-    LOG.info("JobHistory webserver on JobTracker up at: " +
-              historyServer.getPort());
-
-
     // Same with 'localDir' except it's always on the local disk.
     jobConf.deleteLocalFiles(SUBDIR);
+
+    // Initialize history again if it is not initialized
+    // because history was on dfs and namenode was in safemode.
+    if (!historyInitialized) {
+      JobHistory.init(conf, this.localMachine); 
+      historyLogDir = conf.get("hadoop.job.history.location");
+      infoServer.setAttribute("historyLogDir", historyLogDir);
+      historyFS = new Path(historyLogDir).getFileSystem(conf);
+      infoServer.setAttribute("fileSys", historyFS);
+    }
+
     this.dnsToSwitchMapping = (DNSToSwitchMapping)ReflectionUtils.newInstance(
         conf.getClass("topology.node.switch.mapping.impl", ScriptBasedMapping.class,
             DNSToSwitchMapping.class), conf);
@@ -761,10 +760,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     String jobTrackerStr =
       conf.get("mapred.job.tracker", "localhost:8012");
     return NetUtils.createSocketAddr(jobTrackerStr);
-  }
-
-  public String getHistoryAddress() {
-    return conf.get("mapred.job.history.http.bindAddress");
   }
 
   /**
@@ -798,14 +793,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       LOG.info("Stopping infoServer");
       try {
         this.infoServer.stop();
-      } catch (InterruptedException ex) {
-        ex.printStackTrace();
-      }
-    }
-    if (this.historyServer != null) {
-      LOG.info("Stopping historyServer");
-      try {
-        this.historyServer.stop();
       } catch (InterruptedException ex) {
         ex.printStackTrace();
       }

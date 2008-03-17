@@ -127,20 +127,20 @@ public class DefaultJobHistoryParser {
   }
 
   // call this only for jobs that succeeded for better results. 
-  static class FailedOnNodesFilter implements JobHistory.Listener {
+  abstract static class NodesFilter implements JobHistory.Listener {
     private Map<String, Set<String>> badNodesToNumFailedTasks =
       new HashMap<String, Set<String>>();
     
     Map<String, Set<String>> getValues(){
       return badNodesToNumFailedTasks; 
     }
+    String failureType;
+    
     public void handle(JobHistory.RecordTypes recType, Map<Keys, String> values)
       throws IOException {
-      
       if (recType.equals(JobHistory.RecordTypes.MapAttempt) || 
           recType.equals(JobHistory.RecordTypes.ReduceAttempt)) {
-        
-        if (Values.FAILED.name().equals(values.get(Keys.TASK_STATUS)) ){
+        if (failureType.equals(values.get(Keys.TASK_STATUS)) ) {
           String hostName = values.get(Keys.HOSTNAME);
           String taskid = values.get(Keys.TASKID); 
           Set<String> tasks = badNodesToNumFailedTasks.get(hostName); 
@@ -153,34 +153,24 @@ public class DefaultJobHistoryParser {
           }
         }
       }      
+    }
+    abstract void setFailureType();
+    String getFailureType() {
+      return failureType;
+    }
+    NodesFilter() {
+      setFailureType();
     }
   }
-  static class KilledOnNodesFilter implements JobHistory.Listener {
-    private Map<String, Set<String>> badNodesToNumFailedTasks =
-      new HashMap<String, Set<String>>();
-    
-    Map<String, Set<String>> getValues(){
-      return badNodesToNumFailedTasks; 
+ 
+  static class FailedOnNodesFilter extends NodesFilter {
+    void setFailureType() {
+      failureType = Values.FAILED.name();
     }
-    public void handle(JobHistory.RecordTypes recType, Map<Keys, String> values)
-      throws IOException {
-      
-      if (recType.equals(JobHistory.RecordTypes.MapAttempt) || 
-          recType.equals(JobHistory.RecordTypes.ReduceAttempt)) {
-        
-        if (Values.KILLED.name().equals(values.get(Keys.TASK_STATUS)) ){
-          String hostName = values.get(Keys.HOSTNAME);
-          String taskid = values.get(Keys.TASKID); 
-          Set<String> tasks = badNodesToNumFailedTasks.get(hostName); 
-          if (null == tasks ){
-            tasks = new TreeSet<String>(); 
-            tasks.add(taskid);
-            badNodesToNumFailedTasks.put(hostName, tasks);
-          }else{
-            tasks.add(taskid);
-          }
-        }
-      }      
+  }
+  static class KilledOnNodesFilter extends NodesFilter {
+    void setFailureType() {
+      failureType = Values.KILLED.name();
     }
   }
 }

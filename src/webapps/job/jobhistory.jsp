@@ -11,7 +11,8 @@
   import="org.apache.hadoop.mapred.JobHistory.*"
 %>
 <%!	
-	private static SimpleDateFormat dateFormat = new SimpleDateFormat("d/MM HH:mm:ss") ;
+  private static SimpleDateFormat dateFormat = 
+                                    new SimpleDateFormat("d/MM HH:mm:ss");
 %>
 <html>
 <head>
@@ -29,9 +30,17 @@
       }
     };
     
-	FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-	String historyLogDir = (String) application.getAttribute("historyLogDir");
-	Path[] jobFiles = fs.listPaths(new Path(historyLogDir), jobLogFileFilter);
+    FileSystem fs = (FileSystem) application.getAttribute("fileSys");
+    String historyLogDir = (String) application.getAttribute("historyLogDir");
+    if (fs == null) {
+      out.println("Null file system. May be namenode is in safemode!");
+      return;
+    }
+    Path[] jobFiles = fs.listPaths(new Path(historyLogDir), jobLogFileFilter);
+    if (null == jobFiles )  {
+      out.println("NULL files !!!"); 
+      return ; 
+    }
 
     // sort the files on creation time.
     Arrays.sort(jobFiles, new Comparator<Path>() {
@@ -50,16 +59,10 @@
           Long l1 = Long.parseLong(split1[4]);
           res = l1.compareTo(Long.parseLong(split2[4]));
         }
-        
         return res;
       }
     });
 
-    if (null == jobFiles ){
-      out.println("NULL !!!"); 
-      return ; 
-    }
-       
     out.print("<table align=center border=2 cellpadding=\"5\" cellspacing=\"2\">");
     out.print("<tr><td align=\"center\" colspan=\"9\"><b>Available Jobs </b></td></tr>\n");
     out.print("<tr>");
@@ -74,31 +77,29 @@
       String jobId = jobDetails[2] + "_" +jobDetails[3] + "_" + jobDetails[4] ;
       String user = jobDetails[5];
       String jobName = jobDetails[6];
-      
 %>
 <center>
 <%	
-
-	  printJob(trackerHostName, trackerStartTime, jobId,
+      printJob(trackerHostName, trackerStartTime, jobId,
                jobName, user, jobFile.toString(), out) ; 
 %>
 </center> 
 <%
-	} // end while trackers 
+    } // end while trackers 
 %>
 <%!
-	private void printJob(String trackerHostName, String trackerid,
+    private void printJob(String trackerHostName, String trackerid,
                           String jobId, String jobName,
                           String user, String logFile, JspWriter out)
-    throws IOException{
-	    out.print("<tr>"); 
-	    out.print("<td>" + trackerHostName + "</td>"); 
-	    out.print("<td>" + new Date(Long.parseLong(trackerid)) + "</td>"); 
-	    out.print("<td>" + "<a href=\"jobdetailshistory.jsp?jobid="+ jobId + 
-	        "&logFile=" + logFile +"\">" + jobId + "</a></td>"); 
-	    out.print("<td>" + jobName + "</td>"); 
-	    out.print("<td>" + user + "</td>"); 
-	    out.print("</tr>");
-	}
- %> 
+    throws IOException {
+      out.print("<tr>"); 
+      out.print("<td>" + trackerHostName + "</td>"); 
+      out.print("<td>" + new Date(Long.parseLong(trackerid)) + "</td>"); 
+      out.print("<td>" + "<a href=\"jobdetailshistory.jsp?jobid=" + jobId + 
+                "&logFile=" + logFile + "\">" + jobId + "</a></td>"); 
+      out.print("<td>" + jobName + "</td>"); 
+      out.print("<td>" + user + "</td>"); 
+      out.print("</tr>");
+    }
+%> 
 </body></html>

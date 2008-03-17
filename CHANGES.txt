@@ -230,6 +230,14 @@ Trunk (unreleased changes)
     HADOOP-2976. When a lease expires, the Namenode ensures that 
     blocks of the file are adequately replicated. (dhruba)
 
+    HADOOP-2901. Fixes the creation of info servers in the JobClient
+    and JobTracker. Removes the creation from JobClient and removes
+    additional info server from the JobTracker. Also adds the command
+    line utility to view the history files (HADOOP-2896), and fixes
+    bugs in JSPs to do with analysis - HADOOP-2742, HADOOP-2792.
+    (Amareshwari Sri Ramadasu via ddas)
+
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

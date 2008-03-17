@@ -111,29 +111,33 @@ public class JobHistory {
 
   /**
    * Initialize JobHistory files. 
-   *
+   * @param conf Jobconf of the job tracker.
+   * @param hostname jobtracker's hostname
+   * @return true if intialized properly
+   *         false otherwise
    */
-  public static void init(JobConf conf, String hostname){
-    if (!disableHistory){
-      try{
-        LOG_DIR = conf.get("hadoop.job.history.location" ,
-          "file:///" + new File(System.getProperty(
-          "hadoop.log.dir")).getAbsolutePath() + File.separator + "history");
-        JOBTRACKER_UNIQUE_STRING = hostname + "_" + 
+  public static boolean init(JobConf conf, String hostname){
+    try {
+      LOG_DIR = conf.get("hadoop.job.history.location" ,
+        "file:///" + new File(
+        System.getProperty("hadoop.log.dir")).getAbsolutePath()
+        + File.separator + "history");
+      JOBTRACKER_UNIQUE_STRING = hostname + "_" + 
                                    JOBTRACKER_START_TIME + "_";
-        Path logDir = new Path(LOG_DIR);
-        FileSystem fs = logDir.getFileSystem(conf);
-        if (!fs.exists(logDir)){
-          if (!fs.mkdirs(logDir)){
-            throw new IOException("Mkdirs failed to create " + logDir.toString());
-          }
+      Path logDir = new Path(LOG_DIR);
+      FileSystem fs = logDir.getFileSystem(conf);
+      if (!fs.exists(logDir)){
+        if (!fs.mkdirs(logDir)){
+          throw new IOException("Mkdirs failed to create " + logDir.toString());
         }
-        conf.set("hadoop.job.history.location", LOG_DIR);
-      }catch(IOException e){
-        LOG.error("Failed to initialize JobHistory log file", e); 
-        disableHistory = true; 
       }
+      conf.set("hadoop.job.history.location", LOG_DIR);
+      disableHistory = false;
+    } catch(IOException e) {
+        LOG.error("Failed to initialize JobHistory log file", e); 
+        disableHistory = true;
     }
+    return !(disableHistory);
   }
 
   /**

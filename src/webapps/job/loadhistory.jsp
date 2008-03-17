@@ -16,20 +16,21 @@
       }
     };
     
-	FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-	String jobId =  (String)request.getParameter("jobid");
-	JobHistory.JobInfo job = (JobHistory.JobInfo)request.getSession().getAttribute("job");
-	if (null != job && (!jobId.equals(job.get(Keys.JOBID)))){
+    FileSystem fs = (FileSystem) application.getAttribute("fileSys");
+    String jobId =  (String)request.getParameter("jobid");
+    JobHistory.JobInfo job = (JobHistory.JobInfo)
+                               request.getSession().getAttribute("job");
+    if (null != job && (!jobId.equals(job.get(Keys.JOBID)))) {
       // remove jobInfo from session, keep only one job in session at a time
       request.getSession().removeAttribute("job"); 
       job = null ; 
     }
 	
-	if (null == job) {
+    if (null == job) {
       String jobLogFile = (String)request.getParameter("logFile");
       job = new JobHistory.JobInfo(jobId); 
       DefaultJobHistoryParser.parseJobTasks(jobLogFile, job, fs) ; 
       request.getSession().setAttribute("job", job);
       request.getSession().setAttribute("fs", fs);
-	}
+    }
 %>

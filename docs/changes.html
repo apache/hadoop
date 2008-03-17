@@ -97,7 +97,7 @@ DFSClient and DataNode sockets have 10min write timeout.<br />(rangadi)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(13)
+</a>&nbsp;&nbsp;&nbsp;(14)
     <ol id="trunk_(unreleased_changes)_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2655">HADOOP-2655</a>. Copy on write for data and metadata files in the
 presence of snapshots. Needed for supporting appends to HDFS
@@ -125,6 +125,8 @@ cryptography.<br />(omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2775">HADOOP-2775</a>.  Adds unit test framework for HOD.
 (Vinod Kumar Vavilapalli via ddas).
 </li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2804">HADOOP-2804</a>.  Add support to publish CHANGES.txt as HTML when running
+the Ant 'docs' target.<br />(nigel)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
@@ -144,7 +146,7 @@ HDFS, without negatively affecting read throughput.<br />(rangadi)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(34)
+</a>&nbsp;&nbsp;&nbsp;(36)
     <ol id="trunk_(unreleased_changes)_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2195">HADOOP-2195</a>. '-mkdir' behaviour is now closer to Linux shell in case of
 errors.<br />(Mahadev Konar via rangadi)</li>
@@ -208,6 +210,11 @@ floating point number.<br />(Dave Brosius via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2972">HADOOP-2972</a>. Fix for a NPE in FSDataset.invalidate.<br />(Mahadev Konar via dhruba)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2994">HADOOP-2994</a>. Code cleanup for DFSClient: remove redundant
 conversions from string to string.<br />(Dave Brosius via dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3009">HADOOP-3009</a>. TestFileCreation sometimes fails because restarting
+minidfscluster sometimes creates datanodes with ports that are
+different from their original instance.<br />(dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2992">HADOOP-2992</a>. Distributed Upgrade framework works correctly with
+more than one upgrade object.<br />(Konstantin Shvachko via dhruba)</li>
     </ol>
   </li>
 </ul>

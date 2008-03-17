@@ -524,15 +524,6 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>mapred.job.history.http.bindAddress</name>
-  <value>0.0.0.0:0</value>
-  <description>
-    The job history http server bind address and port.
-    If the port is 0 then the server will start on a free port.
-  </description>
-</property>
-
-<property>
   <name>mapred.job.tracker.handler.count</name>
   <value>10</value>
   <description>

@@ -61,6 +61,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.TaskInProgress;
+import org.apache.hadoop.mapred.DefaultJobHistoryParser.*;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -1034,6 +1035,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     boolean killJob = false;
     boolean listEvents = false;
     boolean viewHistory = false;
+    boolean viewAllHistory = false;
     boolean listJobs = false;
     boolean listAllJobs = false;
     boolean killTask = false;
@@ -1064,10 +1066,15 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       nEvents = Integer.parseInt(argv[3]);
       listEvents = true;
     } else if ("-history".equals(argv[0])) {
-      if (argv.length != 2)
-        displayUsage();
-        outputDir = argv[1];
-        viewHistory = true;
+      if (argv.length != 2 && !(argv.length == 3 && "all".equals(argv[1])))
+         displayUsage();
+      viewHistory = true;
+      if (argv.length == 3 && "all".equals(argv[1])) {
+         viewAllHistory = true;
+         outputDir = argv[2];
+      } else {
+         outputDir = argv[1];
+      }
     } else if ("-list".equals(argv[0])) {
       if (argv.length != 1 && !(argv.length == 2 && "all".equals(argv[1])))
         displayUsage();
@@ -1125,8 +1132,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           exitCode = 0;
         }
       } else if (viewHistory) {
-    	// start http server
-        viewHistory(outputDir);
+        viewHistory(outputDir, viewAllHistory);
         exitCode = 0;
       } else if (listEvents) {
         listEvents(jobid, fromEvent, nEvents);
@@ -1160,43 +1166,11 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     return exitCode;
   }
 
-  private void viewHistory(String outputDir) 
+  private void viewHistory(String outputDir, boolean all) 
     throws IOException {
-
-    Path output = new Path(outputDir);
-    FileSystem fs = output.getFileSystem(getConf());
-
-    // start http server used to provide an HTML view on Job history
-    StatusHttpServer infoServer;
-    String infoAddr = new JobConf(getConf()).get(
-             "mapred.job.history.http.bindAddress", "0.0.0.0:0");
-    InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
-    String infoBindAddress = infoSocAddr.getHostName();
-    int tmpInfoPort = infoSocAddr.getPort();
-    infoServer = new StatusHttpServer("history", infoBindAddress, tmpInfoPort,
-                                       tmpInfoPort == 0);
-    infoServer.setAttribute("fileSys", fs);
-    infoServer.setAttribute("historyLogDir", outputDir + "/_logs/history");
-    infoServer.start();
-    int infoPort = infoServer.getPort();
-    getConf().set("mapred.job.history.http.bindAddress", 
-        infoBindAddress + ":" + infoPort);
-    LOG.info("JobHistory webserver up at: " + infoPort);
-
-    // let the server be up for 30 minutes.
-    try {
-      Thread.sleep(30 * 60 * 1000);
-    } catch (InterruptedException ie) {}
-      
-    // stop infoServer
-    if (infoServer != null) {
-      LOG.info("Stopping infoServer");
-      try {
-        infoServer.stop();
-      } catch (InterruptedException ex) {
-        ex.printStackTrace();
-      }
-    } 
+    HistoryViewer historyViewer = new HistoryViewer(outputDir,
+                                        getConf(), all);
+    historyViewer.print();
   }
   
   /**
