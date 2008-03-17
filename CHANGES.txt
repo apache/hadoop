@@ -263,6 +263,13 @@ Trunk (unreleased changes)
     HADOOP-3006. Fix wrong packet size reported by DataNode when a block
     is being replicated. (rangadi)
     
+Release 0.16.2 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-3011. Prohibit distcp from overwriting directories on the
+    destination filesystem with files. (cdouglas)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

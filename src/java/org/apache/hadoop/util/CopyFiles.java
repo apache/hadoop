@@ -333,8 +333,16 @@ public class CopyFiles implements Tool {
       else {
         if (totfiles == 1) {
           // Copying a single file; use dst path provided by user as destination
-          // rather than destination directory
-          absdst = absdst.getParent();
+          // rather than destination directory, if a file
+          Path dstparent = absdst.getParent();
+          if (!(destFileSys.exists(dstparent) &&
+                destFileSys.getFileStatus(dstparent).isDir())) {
+            absdst = dstparent;
+          }
+        }
+        if (destFileSys.exists(absdst) &&
+            destFileSys.getFileStatus(absdst).isDir()) {
+          throw new IOException(absdst + " is a directory");
         }
         rename(destFileSys, tmpfile, absdst);
       }

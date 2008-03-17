@@ -57,7 +57,9 @@ public class TestCopyFiles extends TestCase {
     private long seed = 0L;
 
     MyFile() {
-      int nLevels = gen.nextInt(MAX_LEVELS);
+      this(gen.nextInt(MAX_LEVELS));
+    }
+    MyFile(int nLevels) {
       String xname = "";
       if (nLevels != 0) {
         int[] levels = new int[nLevels];
@@ -101,8 +103,9 @@ public class TestCopyFiles extends TestCase {
     return files;
   }
 
-  static MyFile createFile(Path root, FileSystem fs) throws IOException {
-    MyFile f = new MyFile();
+  static MyFile createFile(Path root, FileSystem fs, int levels)
+      throws IOException {
+    MyFile f = levels < 0 ? new MyFile() : new MyFile(levels);
     Path p = new Path(root, f.getName());
     FSDataOutputStream out = fs.create(p);
     byte[] toWrite = new byte[f.getSize()];
@@ -111,6 +114,10 @@ public class TestCopyFiles extends TestCase {
     out.close();
     FileSystem.LOG.info("created: " + p + ", size=" + f.getSize());
     return f;
+  }
+
+  static MyFile createFile(Path root, FileSystem fs) throws IOException {
+    return createFile(root, fs, -1);
   }
 
   /** check if the files have been copied correctly. */
@@ -413,6 +420,25 @@ public class TestCopyFiles extends TestCase {
                         "file:///"+TEST_ROOT_DIR+"/dest2/"+fname});
       assertTrue("Source and destination directories do not match.",
           checkFiles("local", TEST_ROOT_DIR+"/dest2", files));     
+      //copy single file to existing dir
+      deldir("local", TEST_ROOT_DIR+"/dest2");
+      fs.mkdirs(new Path(TEST_ROOT_DIR+"/dest2"));
+      MyFile[] files2 = {createFile(root, fs, 0)};
+      String sname = files2[0].getName();
+      ToolRunner.run(new CopyFiles(new Configuration()),
+          new String[] {"-update",
+                        "file:///"+TEST_ROOT_DIR+"/srcdat/"+sname,
+                        "file:///"+TEST_ROOT_DIR+"/dest2/"});
+      assertTrue("Source and destination directories do not match.",
+          checkFiles("local", TEST_ROOT_DIR+"/dest2", files2));     
+      updateFiles("local", TEST_ROOT_DIR+"/srcdat", files2, 1);
+      //copy single file to existing dir w/ dst name conflict
+      ToolRunner.run(new CopyFiles(new Configuration()),
+          new String[] {"-update",
+                        "file:///"+TEST_ROOT_DIR+"/srcdat/"+sname,
+                        "file:///"+TEST_ROOT_DIR+"/dest2/"});
+      assertTrue("Source and destination directories do not match.",
+          checkFiles("local", TEST_ROOT_DIR+"/dest2", files2));     
     }
     finally {
       deldir("local", TEST_ROOT_DIR+"/destdat");
