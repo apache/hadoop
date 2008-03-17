@@ -227,6 +227,9 @@ Trunk (unreleased changes)
 
     HADOOP-2679. Fix a typo in libhdfs.  (Jason via dhruba)
 
+    HADOOP-2976. When a lease expires, the Namenode ensures that 
+    blocks of the file are adequately replicated. (dhruba)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

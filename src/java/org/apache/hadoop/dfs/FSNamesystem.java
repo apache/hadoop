@@ -1280,8 +1280,17 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     // Now that the file is real, we need to be sure to replicate
     // the blocks.
-    int numExpectedReplicas = pendingFile.getReplication();
-    Block[] pendingBlocks = pendingFile.getBlocks();
+    checkReplicationFactor(newFile);
+    return COMPLETE_SUCCESS;
+  }
+
+  /** 
+   * Check all blocks of a file. If any blocks are lower than their intended
+   * replication factor, then insert them into neededReplication
+   */
+  private void checkReplicationFactor(INodeFile file) {
+    int numExpectedReplicas = file.getReplication();
+    Block[] pendingBlocks = file.getBlocks();
     int nrBlocks = pendingBlocks.length;
     for (int i = 0; i < nrBlocks; i++) {
       // filter out containingNodes that are marked for decommission.
@@ -1293,7 +1302,6 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                numExpectedReplicas);
       }
     }
-    return COMPLETE_SUCCESS;
   }
 
   static Random randBlockId = new Random();
@@ -1822,6 +1830,9 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     // close file and persist block allocations for this file
     dir.closeFile(src, newFile);
+
+    // replicate blocks of this file.
+    checkReplicationFactor(newFile);
   
     NameNode.stateChangeLog.debug("DIR* NameSystem.internalReleaseCreate: " + 
                                   src + " is no longer written to by " + 
