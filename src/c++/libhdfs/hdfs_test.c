@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
     } 
  
     hdfsFS lfs = hdfsConnect(NULL, 0);
-    if(!fs) {
+    if(!lfs) {
         fprintf(stderr, "Oops! Failed to connect to 'local' hdfs!\n");
         exit(-1);
     } 

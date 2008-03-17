@@ -225,6 +225,8 @@ Trunk (unreleased changes)
     HADOOP-2992. Distributed Upgrade framework works correctly with
     more than one upgrade object.  (Konstantin Shvachko via dhruba)
 
+    HADOOP-2679. Fix a typo in libhdfs.  (Jason via dhruba)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
