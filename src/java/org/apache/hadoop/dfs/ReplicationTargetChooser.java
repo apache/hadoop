@@ -163,8 +163,8 @@ class ReplicationTargetChooser {
           chooseRemoteRack(1, writer, excludedNodes,
                            blocksize, maxNodesPerRack, results);
         } else {
-          chooseLocalRack(writer, excludedNodes, 
-                          blocksize, maxNodesPerRack, results);
+          chooseLocalRack(results.get(1), excludedNodes, blocksize, 
+                          maxNodesPerRack, results);
         }
         if (--numOfReplicas == 0) {
           break;
@@ -290,7 +290,7 @@ class ReplicationTargetChooser {
                    maxReplicasPerRack, results);
     }
   }
-    
+
   /* Randomly choose one target from <i>nodes</i>.
    * @return the choosen node
    */

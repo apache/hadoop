@@ -73,10 +73,11 @@ public class TestReplicationPolicy extends TestCase {
   
   /**
    * In this testcase, client is dataNodes[0]. So the 1st replica should be
-   * placed on dataNodes[0], the 2nd replica should be placed on dataNodes[1],
-   * and the rest should be placed on different racks.
-   * The only excpetion is when the <i>numOfReplicas</i> is 2, the 1st is on
-   * dataNodes[0] and the 2nd is on a different rack.
+   * placed on dataNodes[0], the 2nd replica should be placed on 
+   * different rack and third should be placed on different node
+   * of rack chosen for 2nd node.
+   * The only excpetion is when the <i>numOfReplicas</i> is 2, 
+   * the 1st is on dataNodes[0] and the 2nd is on a different rack.
    * @throws Exception
    */
   public void testChooseTarget1() throws Exception {
@@ -104,17 +105,17 @@ public class TestReplicationPolicy extends TestCase {
                                       3, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 3);
     assertEquals(targets[0], dataNodes[0]);
-    assertTrue(cluster.isOnSameRack(targets[0], targets[1]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[2]));
-    
+    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertTrue(cluster.isOnSameRack(targets[1], targets[2]));
+
     targets = replicator.chooseTarget(
-                                      4, dataNodes[0], null, BLOCK_SIZE);
+                                     4, dataNodes[0], null, BLOCK_SIZE);
     assertEquals(targets.length, 4);
     assertEquals(targets[0], dataNodes[0]);
-    assertTrue(cluster.isOnSameRack(targets[0], targets[1]));
+    assertTrue(cluster.isOnSameRack(targets[1], targets[2]) ||
+               cluster.isOnSameRack(targets[2], targets[3]));
     assertFalse(cluster.isOnSameRack(targets[0], targets[2]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[3]));
-
+    
     dataNodes[0].updateHeartbeat(
         2*FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
         FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0); 
@@ -124,7 +125,7 @@ public class TestReplicationPolicy extends TestCase {
    * In this testcase, client is dataNodes[0], but the dataNodes[1] is
    * not allowed to be choosen. So the 1st replica should be
    * placed on dataNodes[0], the 2nd replica should be placed on a different
-   * rack, the 3rd should the same rack as the 3nd replic, and the rest
+   * rack, the 3rd should be on same rack as the 2nd replica, and the rest
    * should be placed on a third rack.
    * @throws Exception
    */
@@ -281,7 +282,7 @@ public class TestReplicationPolicy extends TestCase {
    * In this testcase, client is is a node outside of file system.
    * So the 1st replica can be placed on any node. 
    * the 2nd replica should be placed on a different rack,
-   * the 3rd replica should be placed on the same rack as the 1st replica,
+   * the 3rd replica should be placed on the same rack as the 2nd replica,
    * @throws Exception
    */
   public void testChooseTarget5() throws Exception {
@@ -302,15 +303,15 @@ public class TestReplicationPolicy extends TestCase {
     targets = replicator.chooseTarget(
                                       3, NODE, null, BLOCK_SIZE);
     assertEquals(targets.length, 3);
-    assertTrue(cluster.isOnSameRack(targets[0], targets[1]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[2]));    
+    assertTrue(cluster.isOnSameRack(targets[1], targets[2]));
+    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));    
   }
   
   /**
    * This testcase tests re-replication, when dataNodes[0] is already choosen.
-   * So the 1st replica can be placed on rack 1. 
-   * the 2nd replica should be placed on a different rack,
-   * the 3rd replica can be placed randomly,
+   * So the 1st replica can be placed on random rack. 
+   * the 2nd replica should be placed on different node by same rack as 
+   * the 1st replica. The 3rd replica can be placed randomly.
    * @throws Exception
    */
   public void testRereplicate1() throws Exception {
@@ -330,15 +331,16 @@ public class TestReplicationPolicy extends TestCase {
     targets = replicator.chooseTarget(
                                       2, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
     assertEquals(targets.length, 2);
-    assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
-    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[1]));
+    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[0]));
+    assertTrue(cluster.isOnSameRack(targets[0], targets[1]));
     
     targets = replicator.chooseTarget(
                                       3, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
     assertEquals(targets.length, 3);
-    assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
-    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[1]));
-    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[2]));    
+    assertTrue(cluster.isOnSameRack(targets[0], targets[1]) ||
+               cluster.isOnSameRack(targets[1], targets[2]));
+    assertFalse(cluster.isOnSameRack(targets[0], targets[2]));
+    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[1]));    
   }
 
   /**
@@ -373,7 +375,7 @@ public class TestReplicationPolicy extends TestCase {
   /**
    * This testcase tests re-replication, 
    * when dataNodes[0] and dataNodes[2] are already choosen.
-   * So the 1st replica should be placed on rack 1. 
+   * So the 1st replica should be placed on rack 2. 
    * the rest replicas can be placed randomly,
    * @throws Exception
    */
@@ -390,12 +392,13 @@ public class TestReplicationPolicy extends TestCase {
     targets = replicator.chooseTarget(
                                       1, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
     assertEquals(targets.length, 1);
-    assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
+    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[0]));
+    assertTrue(cluster.isOnSameRack(dataNodes[2], targets[0]));
     
     targets = replicator.chooseTarget(
                                       2, dataNodes[0], choosenNodes, null, BLOCK_SIZE);
     assertEquals(targets.length, 2);
-    assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
-    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[1]));
+    assertTrue(cluster.isOnSameRack(dataNodes[2], targets[0]) ||
+               cluster.isOnSameRack(dataNodes[2], targets[1]));
   }
 }

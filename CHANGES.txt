@@ -101,6 +101,10 @@ Trunk (unreleased changes)
     HADOOP-2804.  Add support to publish CHANGES.txt as HTML when running
     the Ant 'docs' target. (nigel)
 
+    HADOOP-2559. Change DFS block placement to allocate the first replica
+    locally, the second off-rack, and the third intra-rack from the
+    second. (lohit vijayarenu via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing
