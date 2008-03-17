@@ -147,43 +147,6 @@ class Hdfs(MasterSlave):
   def _parseEquals(self, list):
     return parseEquals(list)
   
-  def _getNameNodePort(self):
-    sd = self.serviceDesc
-    attrs = sd.getfinalAttrs()
-    if not 'fs.default.name' in attrs:
-      return ServiceUtil.getUniqPort()
-
-    v = attrs['fs.default.name']
-    try:
-      [n, p] = v.split(':', 1)
-      return int(p)
-    except:
-      print get_exception_string()
-      raise ValueError, "Can't find port from attr fs.default.name: %s" % (v)
-
-  def _getNameNodeInfoPort(self):
-    sd = self.serviceDesc
-    attrs = sd.getfinalAttrs()
-    if self.version < 16:
-      if 'dfs.info.bindAddress' not in attrs:
-        return ServiceUtil.getUniqPort()
-    else:
-      if 'dfs.http.address' not in attrs:
-        return ServiceUtil.getUniqPort()
-
-    if self.version < 16:
-      p = attrs['dfs.info.port']
-    else:
-      p = attrs['dfs.http.address'].split(':')[1]
-    try:
-      return int(p)
-    except:
-      print get_exception_string()
-      if self.version < 16:
-        raise ValueError, "Can't find port from attr dfs.info.port: %s" % (p)
-      else:
-        raise ValueError, "Can't find port from attr dfs.http.address: %s" % (p)
-
   def _setWorkDirs(self, workDirs, envs, attrs, parentDirs, subDir):
     namedir = None
     datadir = []
@@ -214,11 +177,9 @@ class Hdfs(MasterSlave):
     workDirs = []
     attrs = sd.getfinalAttrs().copy()
     envs = sd.getEnvs().copy()
-    #self.masterPort = port = self._getNameNodePort()
     
     if 'fs.default.name' not in attrs:
       attrs['fs.default.name'] = 'fillinhostport'
-    #self.infoPort = port = self._getNameNodeInfoPort()
  
     if self.version < 16:
      if 'dfs.info.port' not in attrs:

@@ -149,44 +149,6 @@ class MapReduce(MasterSlave):
   def _parseEquals(self, list):
     return parseEquals(list)
 
-  def _getJobTrackerPort(self):
-    sd = self.serviceDesc
-    attrs = sd.getfinalAttrs()
-    if not 'mapred.job.tracker' in attrs:
-      return ServiceUtil.getUniqPort()
-    
-    v = attrs['mapred.job.tracker']
-    try:
-      [n, p] = v.split(':', 1)
-      return int(p)
-    except:
-      print get_exception_string()
-      raise ValueError, "Can't find port from attr mapred.job.tracker: %s" % (v)
-
-  # UNUSED METHOD
-  def _getJobTrackerInfoPort(self):
-    sd = self.serviceDesc
-    attrs = sd.getfinalAttrs()
-    if self.version < 16:
-      if not 'mapred.job.tracker.info.port' in attrs:
-        return ServiceUtil.getUniqPort()
-    else:
-      if 'mapred.job.tracker.http.address' not in attrs:
-        return ServiceUtil.getUniqPort()
-
-    if self.version < 16:
-      p = attrs['mapred.job.tracker.info.port']
-    else:
-      p = attrs['mapred.job.tracker.http.address'].split(':')[1]
-    try:
-      return int(p)
-    except:
-      print get_exception_string()
-      if self.version < 16:
-        raise ValueError, "Can't find port from attr mapred.job.tracker.info.port: %s" % (p)
-      else:
-        raise ValueError, "Can't find port from attr mapred.job.tracker.http.address: %s" % (p)
-
   def _setWorkDirs(self, workDirs, envs, attrs, parentDirs, subDir):
     local = []
     system = None
@@ -223,11 +185,9 @@ class MapReduce(MasterSlave):
     attrs = sd.getfinalAttrs().copy()
     envs = sd.getEnvs().copy()
 
-    #self.masterPort = port = self._getJobTrackerPort()
     if 'mapred.job.tracker' not in attrs:
       attrs['mapred.job.tracker'] = 'fillinhostport'
 
-    #self.infoPort = port = self._getJobTrackerInfoPort()
     if self.version < 16:
       if 'mapred.job.tracker.info.port' not in attrs:
         attrs['mapred.job.tracker.info.port'] = 'fillinport'

@@ -247,6 +247,9 @@ Trunk (unreleased changes)
     HADOOP-2806. Fixes a streaming document.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-2924. Fixes an address problem to do with TaskTracker binding 
+    to an address. (Vinod Kumar Vavilapalli via ddas)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

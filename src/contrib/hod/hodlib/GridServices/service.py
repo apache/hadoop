@@ -174,21 +174,32 @@ class ServiceUtil:
   service.py to a util file"""
   localPortUsed = {}
     
-  def getUniqRandomPort(h=None, low=50000, high=60000, retry = 30):
+  def getUniqRandomPort(h=None, low=50000, high=60000, retry=900, log=None):
     """This allocates a randome free port between low and high"""
+    # We use a default value of 900 retries, which takes an agreeable
+    # time limit of ~ 6.2 seconds to check 900 ports, in the worse case
+    # of no available port in those 900.
+
     while retry > 0:
       n = random.randint(low, high)
       if n in ServiceUtil.localPortUsed:
-        retry -= 1
         continue
       s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       if not h:
         h = socket.gethostname()
       avail = False
+      if log: log.debug("Trying to see if port %s is available"% n)
       try:
-        s.connect((h, n))
-      except:
+        s.bind((h, n))
+      except socket.error,e:
+        if log: log.debug("Could not bind to the port %s. Reason %s" % (n,e))
+        retry -= 1
+        pass
+      else:
+        if log: log.debug("Yes, port %s is available" % n)
         avail = True
+      finally:
+        s.close()
 
       if avail:
         ServiceUtil.localPortUsed[n] = True
@@ -197,25 +208,36 @@ class ServiceUtil:
   
   getUniqRandomPort = staticmethod(getUniqRandomPort)
   
-  def getUniqPort(h=None, low=40000, high=60000, retry = 30):
+  def getUniqPort(h=None, low=40000, high=60000, retry=900, log=None):
     """get unique port on a host that can be used by service
     This and its consumer code should disappear when master
     nodes get allocatet by nodepool"""
+
+    # We use a default value of 900 retries, which takes an agreeable
+    # time limit of ~ 6.2 seconds to check 900 ports, in the worse case
+    # of no available port in those 900.
 
     n  = low
     while retry > 0:
       n = n + 1
       if n in ServiceUtil.localPortUsed:
-        retry -= 1
         continue
       s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
       if not h:
         h = socket.gethostname()
       avail = False
+      if log: log.debug("Trying to see if port %s is available"% n)
       try:
-        s.connect((h, n))
-      except:
+        s.bind((h, n))
+      except socket.error,e:
+        if log: log.debug("Could not bind to the port %s. Reason %s" % (n,e))
+        retry -= 1
+        pass
+      else:
+        if log: log.debug("Yes, port %s is available" % n)
         avail = True
+      finally:
+        s.close()
 
       if avail:
         ServiceUtil.localPortUsed[n] = True

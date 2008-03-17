@@ -190,7 +190,7 @@ class HadoopCommand:
     for k,v in attr.iteritems():
       self.log.debug('_createHadoopSiteXml: ' + str(k) + " " + str(v))
       if ( v == "fillinport" ):
-        v = "%d" % (ServiceUtil.getUniqRandomPort(low=50000))
+        v = "%d" % (ServiceUtil.getUniqRandomPort(low=50000, log=self.log))
 
       keyvalpair = ''
       if isinstance(v, (tuple, list)):
@@ -206,7 +206,7 @@ class HadoopCommand:
         self.filledInKeyVals.append(keyvalpair)
 	
       if ( v == "fillinhostport"):
-        port = "%d" % (ServiceUtil.getUniqRandomPort(low=50000))
+        port = "%d" % (ServiceUtil.getUniqRandomPort(low=50000, log=self.log))
         self.log.debug('Setting hostname to: %s' % local_fqdn())
         v = local_fqdn() + ':' + port
       
