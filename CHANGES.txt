@@ -241,6 +241,10 @@ Trunk (unreleased changes)
     with different sizes to the namenode, the namenode picks the
     replica(s) with the largest size as the only valid replica(s). (dhruba)
 
+    HADOOP-2825. Deprecated MapOutputLocation.getFile() is removed.
+    (Amareshwari Sri Ramadasu via ddas)
+
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
