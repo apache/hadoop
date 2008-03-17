@@ -29,7 +29,7 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 
 public class TestSequenceFileInputFormat extends TestCase {
-  private static final Log LOG = InputFormatBase.LOG;
+  private static final Log LOG = FileInputFormat.LOG;
 
   private static int MAX_LENGTH = 10000;
   private static Configuration conf = new Configuration();

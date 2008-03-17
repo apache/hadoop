@@ -67,7 +67,7 @@ public class DFSCIOTest extends TestCase {
   private static final String BASE_FILE_NAME = "test_io_";
   private static final String DEFAULT_RES_FILE_NAME = "DFSCIOTest_results.log";
   
-  private static final Log LOG = InputFormatBase.LOG;
+  private static final Log LOG = FileInputFormat.LOG;
   private static Configuration fsConfig = new Configuration();
   private static final long MEGA = 0x100000;
   private static String TEST_ROOT_DIR = System.getProperty("test.build.data","/benchmarks/DFSCIOTest");

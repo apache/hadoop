@@ -23,7 +23,7 @@ B.a31   B.a32
 [:~]$ $HADOOP_HOME/bin/hadoop jar hadoop-datajoin-examples.jar org.apache.hadoop.contrib.utils.join.DataJoinJob datajoin/input datajoin/output Text 1 org.apache.hadoop.contrib.utils.join.SampleDataJoinMapper org.apache.hadoop.contrib.utils.join.SampleDataJoinReducer org.apache.hadoop.contrib.utils.join.SampleTaggedMapOutput Text
 Using TextInputFormat: Text
 Using TextOutputFormat: Text
-07/06/01 19:58:23 INFO mapred.InputFormatBase: Total input paths to process : 2
+07/06/01 19:58:23 INFO mapred.FileInputFormat: Total input paths to process : 2
 Job job_kkzk08 is submitted
 Job job_kkzk08 is still running.
 07/06/01 19:58:24 INFO mapred.LocalJobRunner: collectedCount    5

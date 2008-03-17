@@ -34,6 +34,9 @@ Trunk (unreleased changes)
     and isDir(String) from ClientProtocol. ClientProtocol version changed
     from 26 to 27. (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HADOOP-2822. Remove depreceted code for classes InputFormatBase and 
+    PhasedFileSystem. (Amareshwari Sriramadasu via enis)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)

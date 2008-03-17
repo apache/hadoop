@@ -25,13 +25,13 @@ import org.apache.hadoop.fs.FileSystem;
   * InputFormat which simulates the absence of input data
   * by returning zero split.
   */
-public class EmptyInputFormat extends InputFormatBase {
+public class EmptyInputFormat<K, V> extends FileInputFormat<K, V> {
 
   public FileSplit[] getSplits(FileSystem fs, JobConf job, int numSplits) throws IOException {
     return new FileSplit[0];
   }
 
-  public RecordReader getRecordReader(InputSplit split, JobConf job, Reporter reporter) throws IOException {
+  public RecordReader<K, V> getRecordReader(InputSplit split, JobConf job, Reporter reporter) throws IOException {
     return new SequenceFileRecordReader(job, (FileSplit) split);
   }
 }

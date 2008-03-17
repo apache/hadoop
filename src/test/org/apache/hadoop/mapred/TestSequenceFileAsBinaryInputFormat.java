@@ -29,7 +29,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.*;
 
 public class TestSequenceFileAsBinaryInputFormat extends TestCase {
-  private static final Log LOG = InputFormatBase.LOG;
+  private static final Log LOG = FileInputFormat.LOG;
   private static final int RECORDS = 10000;
 
   public void testBinary() throws IOException {
