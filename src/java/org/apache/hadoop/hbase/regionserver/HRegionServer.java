@@ -965,8 +965,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     requestCount.incrementAndGet();
     try {
       // convert the columns array into a set so it's easy to check later.
-      Set<Text> columnSet = new HashSet<Text>();
+      Set<Text> columnSet = null;
       if (columns != null) {
+        columnSet = new HashSet<Text>();
         columnSet.addAll(Arrays.asList(columns));
       }
       

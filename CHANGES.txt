@@ -44,6 +44,7 @@ Hbase Change Log
                startcode of -1 in .META.
    HBASE-516   HStoreFile.finalKey does not update the final key if it is not
                the top region of a split region
+   HBASE-525   HTable.getRow(Text) does not work (Clint Morgan via Bryan Duxbury)
    
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling
