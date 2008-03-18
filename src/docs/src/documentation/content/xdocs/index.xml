@@ -30,6 +30,7 @@
     <a href="ext:lists">mailing list</a> or browse the archives.
     </p>
     <ul>
+      <li><a href="ext:api/started">Getting Started</a></li>
       <li><a href="ext:api/index">API Docs</a></li>
       <li><a href="ext:wiki">Wiki</a></li>
       <li><a href="ext:faq">FAQ</a></li>

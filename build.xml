@@ -285,7 +285,6 @@
           <path refid="classpath" />
           <pathelement path="${java.class.path}"/>
         </classpath>
-    	<group title="${Name}" packages="org.apache.hadoop.hbase.*"/>
     </javadoc>
   </target>	
 

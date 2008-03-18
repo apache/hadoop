@@ -1,1 +1,1 @@
-See http://wiki.apache.org/lucene-hadoop/Hbase
+See the docs directory or http://hbase.org

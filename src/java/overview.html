@@ -22,7 +22,7 @@
     <title>HBase</title>
 </head>
 <body bgcolor="white">
-HBase is the <a href="http://lucene.apache.org/hadoop">Hadoop</a> simple database.
+<a href="http://hbase.org">HBase</a> is the <a href="http://lucene.apache.org/hadoop">Hadoop</a> simple database.
 
 <h2><a name="requirements">Requirements</a></h2>
 <ul>
@@ -31,58 +31,61 @@ HBase is the <a href="http://lucene.apache.org/hadoop">Hadoop</a> simple databas
 
 <h2><a name="getting_started" >Getting Started</a></h2>
 <p>
-What follows presumes you are installing hbase for the first time. If upgrading your
-hbase instance, see <a href="#upgrading">Upgrading</a>.
+What follows presumes you are installing HBase for the first time. If upgrading your
+HBase instance, see <a href="#upgrading">Upgrading</a>.
 </p>
 <p>
-Start by defining the following directory variables for your convenience:
+Start by defining the following environment variables for your convenience:
 </p>
 <p>
 <ul>
-<li><code>${HBASE_HOME}</code>: The HBase root.
+<li><code>${HBASE_HOME}</code>: Set HBASE_HOME to the location of the HBase root: e.g. <code>/user/local/hbase</code>.
 </li>
 </ul>
 </p>
 <p>Edit <code>${HBASE_HOME}/conf/hbase-env.sh</code>.  In this file you can
-set the heapsize for HBase, etc.  At a minimum, set
-<code>JAVA_HOME</code> to the root of your Java installation.
+set the heapsize for HBase, etc.  At a minimum, set <code>JAVA_HOME</code> to point at the root of
+your Java installation.
 <p>
-If you are running a standalone operation, proceed to <a href=#runandconfirm>Running 
-and Confirming Your Installation</a>.  If you are running a distributed operation, continue below.
+If you are running a standalone operation, there should be nothing further to configure; proceed to
+<a href=#runandconfirm>Running and Confirming Your Installation</a>.  If you are running a distributed
+operation, continue reading.
 </p>
 
 <h2><a name="distributed" >Distributed Operation</a></h2>
 <p>Distributed mode requires an instance of the Hadoop Distributed File System (DFS).
 See the Hadoop <a href="http://lucene.apache.org/hadoop/api/overview-summary.html#overview_description">
-requirements and instructions</a> for running a distributed operation.  Configuring HBase for a
-distributed operation requires modification of the following two files:
+requirements and instructions</a> for how to set up a DFS.</p> 
+<p>Once you have confirmed your DFS setup, configuring HBase requires modification of the following two files:
 <code>${HBASE_HOME}/conf/hbase-site.xml</code> and <code>${HBASE_HOME}/conf/regionservers</code>.  
 The former needs to be pointed at the running Hadoop DFS instance.  The latter file lists
-all members of the HBase cluster.
+all the members of the HBase cluster.
 </p>
 <p>
-<code>hbase-site.xml</code> allows the user to override the properties defined in 
+Use <code>hbase-site.xml</code> to override the properties defined in 
 <code>${HBASE_HOME}/conf/hbase-default.xml</code> (<code>hbase-default.xml</code> itself 
 should never be modified).  At a minimum the <code>hbase.master</code> and the 
 <code>hbase.rootdir</code> properties should be redefined 
-in <code>hbase-site.xml</code> to define the <code>host:port</code> pair on which to run the 
-HMaster (<a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseArchitecture">read about the 
-Hbase master, regionservers, etc</a>) and to point hbase at the Hadoop filesystem to use. For
-example:
+in <code>hbase-site.xml</code> to configure the <code>host:port</code> pair on which the 
+HMaster runs (<a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseArchitecture">read about the 
+HBase master, regionservers, etc</a>) and to point HBase at the Hadoop filesystem to use.  For
+example, adding the below to your hbase-site.xml says the master is up on port 60000 on the host
+example.org and that HBase should use the <code>/hbase</code> directory in the HDFS whose namenode
+is at port 9000, again on example.org:
 </p>
 <pre>
 &lt;configuration&gt;
 
   &lt;property&gt;
     &lt;name&gt;hbase.master&lt;/name&gt;
-    &lt;value&gt;localhost:60000&lt;/value&gt;
+    &lt;value&gt;example.org:60000&lt;/value&gt;
     &lt;description&gt;The host and port that the HBase master runs at.
     &lt;/description&gt;
   &lt;/property&gt;
 
   &lt;property&gt;
     &lt;name&gt;hbase.rootdir&lt;/name&gt;
-    &lt;value&gt;hdfs://localhost:9000/hbase&lt;/value&gt;
+    &lt;value&gt;hdfs://example.org:9000/hbase&lt;/value&gt;
     &lt;description&gt;The directory shared by region servers.
     &lt;/description&gt;
   &lt;/property&gt;
@@ -91,18 +94,19 @@ example:
 </pre>
 <p>
 The <code>regionserver</code> file lists all the hosts running HRegionServers, one 
-host per line  (This file is synonymous to the slaves file at 
+host per line  (This file is HBase synonym of the hadoop slaves file at 
 <code>${HADOOP_HOME}/conf/slaves</code>).
 </p>
 
 <h2><a name="runandconfirm">Running and Confirming Your Installation</a></h2>
-<p>If you are running in standalone, non-distributed mode, hbase by default uses
+<p>If you are running in standalone, non-distributed mode, HBase by default uses
 the local filesystem.</p>
+
 <p>If you are running a distributed cluster you will need to start the Hadoop DFS daemons 
 before starting HBase and stop the daemons after HBase has shut down.  Start and 
-stop the Hadoop DFS daemons as per the Hadoop 
-<a href="http://lucene.apache.org/hadoop/api/overview-summary.html">instructions</a>. HBase
-does not normally use the mapreduce daemons.  These do not need to be started.</p>
+stop the Hadoop DFS daemons by running <code>${HADOOP_HOME}/bin/start-dfs.sh</code>.
+Ensure it started properly by testing the put and get of files into the Hadoop filesystem.
+HBase does not normally use the mapreduce daemons.  These do not need to be started.</p>
 
 <p>Start HBase with the following command:
 </p>
@@ -112,11 +116,11 @@ ${HBASE_HOME}/bin/start-hbase.sh
 <p>
 Once HBase has started, enter <code>${HBASE_HOME}/bin/hbase shell</code> to obtain a 
 shell against HBase from which you can execute HQL commands (HQL is a severe subset of SQL).  
-In the HBase shell, type 
-<code>help;</code> to see a list of supported HQL commands.  Note that all commands in the HBase 
+In the HBase shell, type <code>help;</code> to see a list of supported HQL commands.  Note
+that all commands in the HBase 
 shell must end with <code>;</code>.  Test your installation by creating, viewing, and dropping 
 a table, as per the help instructions.  Be patient with the <code>create</code> and 
-<code>drop</code> operations as they may each take 10 seconds or more.  To stop hbase, exit the 
+<code>drop</code> operations as they may each take 10 seconds or more.  To stop HBase, exit the 
 HBase shell and enter:
 </p>
 <pre>
@@ -130,19 +134,21 @@ before stopping the Hadoop daemons.
 The default location for logs is <code>${HBASE_HOME}/logs</code>.
 </p>
 <p>HBase also puts up a UI listing vital attributes.  By default its deployed on the master host
-at port 60010.</p>
+at port 60010 (HBase regionservers listen on port 60020 by default and put up an informational
+http server at 60030).</p>
 
 <h2><a name="upgrading" >Upgrading</a></h2>
-<p>After installing the new HBase, before starting your cluster, run the
-<code>${HBASE_DIR}/bin/hbase migrate</code> migration script. It will make any
-adjustments to the filesystem data under <code>hbase.rootdir</code> necessary to run
-the hbase version (It does not change your install unless you explicitly ask it to).
+<p>After installing a new HBase on top of data written by a previous HBase version, before
+starting your cluster, run the <code>${HBASE_DIR}/bin/hbase migrate</code> migration script.
+It will make any adjustments to the filesystem data under <code>hbase.rootdir</code> necessary to run
+the HBase version. It does not change your install unless you explicitly ask it to.
 </p>
 
 <h2><a name="related" >Related Documentation</a></h2>
 <ul>
-  <li><a href="http://wiki.apache.org/lucene-hadoop/Hbase">HBase Home Page</a>
-  <li><a href="http://wiki.apache.org/lucene-hadoop/Hbase/HbaseArchitecture">HBase Architecture</a>
+  <li><a href="http://hbase.org">HBase Home Page</a>
+  <li><a href="http://wiki.apache.org/hadoop/Hbase">HBase Wiki</a>
+  <li><a href="http://hadoop.apache.org/">Hadoop Home Page</a>
 </ul>
 
 </body>

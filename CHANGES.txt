@@ -95,6 +95,7 @@ Hbase Change Log
    HBASE-443   Move internal classes out of HStore
    HBASE-515   At least double default timeouts between regionserver and master
    HBASE-529   RegionServer needs to recover if datanode goes down
+   HBASE-456   Clearly state which ports need to be opened in order to run HBase
    
 Branch 0.1
 

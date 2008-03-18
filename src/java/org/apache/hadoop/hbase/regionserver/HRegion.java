@@ -1107,7 +1107,6 @@ public class HRegion implements HConstants {
    * <i>ts</i>.
    * 
    * @param row row key
-   * @param ts
    * @return map of values
    * @throws IOException
    */

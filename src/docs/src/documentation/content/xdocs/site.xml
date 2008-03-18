@@ -33,6 +33,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
 
   <docs label="Documentation"> 
     <overview  label="Overview"           href="index.html" />
+    <started   label="Getting Started"    href="ext:api/started" />
     <api       label="API Docs"           href="ext:api/index" />
     <wiki      label="Wiki"               href="ext:wiki" />
     <faq       label="FAQ"                href="ext:faq" />
@@ -54,6 +55,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <cygwin    href="http://www.cygwin.com/" />
     <osx       href="http://www.apple.com/macosx" />
     <api href="api/">
+      <started href="overview-summary.html#overview_description" />
       <index href="index.html" />
       <org href="org/">
         <apache href="apache/">
