@@ -1138,10 +1138,12 @@ public class DataNode implements FSConstants, Runnable {
             // read connect ack (only for clients, not for replication req)
             if (client.length() != 0) {
               firstBadLink = Text.readString(mirrorIn);
-              LOG.info("Datanode " + targets.length +
-                       " got response for connect ack " +
-                       " from downstream datanode with firstbadlink as " +
-                       firstBadLink);
+              if (LOG.isDebugEnabled() || firstBadLink.length() > 0) {
+                LOG.info("Datanode " + targets.length +
+                         " got response for connect ack " +
+                         " from downstream datanode with firstbadlink as " +
+                         firstBadLink);
+              }
             }
 
           } catch (IOException e) {
@@ -1161,9 +1163,11 @@ public class DataNode implements FSConstants, Runnable {
 
         // send connect ack back to source (only for clients)
         if (client.length() != 0) {
-          LOG.info("Datanode " + targets.length +
-                   " forwarding connect ack to upstream firstbadlink is " +
-                   firstBadLink);
+          if (LOG.isDebugEnabled() || firstBadLink.length() > 0) {
+            LOG.info("Datanode " + targets.length +
+                     " forwarding connect ack to upstream firstbadlink is " +
+                     firstBadLink);
+          }
           Text.writeString(replyOut, firstBadLink);
           replyOut.flush();
         }

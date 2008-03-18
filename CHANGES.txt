@@ -269,6 +269,9 @@ Trunk (unreleased changes)
     
     HADOOP-3006. Fix wrong packet size reported by DataNode when a block
     is being replicated. (rangadi)
+
+    HADOOP-3029. Datanode prints log message "firstbadlink" only if 
+    it detects a bad connection to another datanode in the pipeline. (dhruba)
     
 Release 0.16.2 - Unreleased
 
