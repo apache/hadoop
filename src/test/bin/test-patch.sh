@@ -94,8 +94,7 @@ checkout () {
   if [[ $HUDSON == "false" ]] ; then
     if [[ `$SVN stat` != "" ]] ; then
       echo "ERROR: can't run in a workspace that contains modifications"
-      # PENDING: Uncomment the following line
-      # cleanupAndExit 0
+      cleanupAndExit 0
     fi
   else   
     cd $BASEDIR
