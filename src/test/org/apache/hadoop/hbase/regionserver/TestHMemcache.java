@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.TreeMap;
 
 import junit.framework.TestCase;
@@ -173,4 +174,53 @@ public class TestHMemcache extends TestCase {
       results.clear();
     }
   }
+  
+  /** For HBASE-528 **/
+  public void testGetRowKeyAtOrBefore() throws IOException {
+    // set up some test data
+    Text t10 = new Text("010");
+    Text t20 = new Text("020");
+    Text t30 = new Text("030");
+    Text t35 = new Text("035");
+    Text t40 = new Text("040");
+    
+    hmemcache.add(getHSKForRow(t10), "t10 bytes".getBytes());
+    hmemcache.add(getHSKForRow(t20), "t20 bytes".getBytes());
+    hmemcache.add(getHSKForRow(t30), "t30 bytes".getBytes());
+    // write a delete in there to see if things still work ok
+    hmemcache.add(getHSKForRow(t35), HLogEdit.deleteBytes.get());
+    hmemcache.add(getHSKForRow(t40), "t40 bytes".getBytes());
+    
+    SortedMap<HStoreKey, Long> results = null;
+    
+    // try finding "015"
+    results = new TreeMap<HStoreKey, Long>();
+    Text t15 = new Text("015");
+    hmemcache.getRowKeyAtOrBefore(t15, results);
+    assertEquals(t10, results.lastKey().getRow());
+    
+    // try "020", we should get that row exactly
+    results = new TreeMap<HStoreKey, Long>();
+    hmemcache.getRowKeyAtOrBefore(t20, results);
+    assertEquals(t20, results.lastKey().getRow());
+  
+    // try "038", should skip the deleted "035" and give "030"
+    results = new TreeMap<HStoreKey, Long>();
+    Text t38 = new Text("038");
+    hmemcache.getRowKeyAtOrBefore(t38, results);
+    assertEquals(t30, results.lastKey().getRow());
+  
+    // try "050", should get stuff from "040"
+    results = new TreeMap<HStoreKey, Long>();
+    Text t50 = new Text("050");
+    hmemcache.getRowKeyAtOrBefore(t50, results);
+    assertEquals(t40, results.lastKey().getRow());
+  }
+  
+  private HStoreKey getHSKForRow(Text row) {
+    return new HStoreKey(row, new Text("test_col:"), HConstants.LATEST_TIMESTAMP);
+  }
+  
+  
+  
 }

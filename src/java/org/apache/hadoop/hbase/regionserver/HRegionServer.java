@@ -988,13 +988,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   public HbaseMapWritable getClosestRowBefore(final Text regionName, 
     final Text row)
   throws IOException {
-    return getClosestRowBefore(regionName, row, HConstants.LATEST_TIMESTAMP);
-  }
-
-  /** {@inheritDoc} */
-  public HbaseMapWritable getClosestRowBefore(final Text regionName, 
-    final Text row, final long ts)
-  throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
     try {
@@ -1002,7 +995,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       HRegion region = getRegion(regionName);
       HbaseMapWritable result = new HbaseMapWritable();
       // ask the region for all the data 
-      Map<Text, Cell> map = region.getClosestRowBefore(row, ts);
+      Map<Text, Cell> map = region.getClosestRowBefore(row);
       // convert to a MapWritable
       if (map == null) {
         return null;

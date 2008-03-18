@@ -46,6 +46,7 @@ Hbase Change Log
                the top region of a split region
    HBASE-525   HTable.getRow(Text) does not work (Clint Morgan via Bryan Duxbury)
    HBASE-524   Problems with getFull
+   HBASE-528   table 'does not exist' when it does
    
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling

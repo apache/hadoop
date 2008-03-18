@@ -413,8 +413,7 @@ public class HConnectionManager implements HConstants {
 
           // query the root region for the location of the meta region
           HbaseMapWritable regionInfoRow = server.getClosestRowBefore(
-            metaLocation.getRegionInfo().getRegionName(), 
-            metaKey, HConstants.LATEST_TIMESTAMP);
+            metaLocation.getRegionInfo().getRegionName(), metaKey);
 
           if (regionInfoRow == null) {
             throw new TableNotFoundException("Table '" + tableName + 

@@ -1111,7 +1111,7 @@ public class HRegion implements HConstants {
    * @return map of values
    * @throws IOException
    */
-  public Map<Text, Cell> getClosestRowBefore(final Text row, final long ts)
+  public Map<Text, Cell> getClosestRowBefore(final Text row)
   throws IOException{
     // look across all the HStores for this region and determine what the
     // closest key is across all column families, since the data may be sparse
@@ -1125,18 +1125,18 @@ public class HRegion implements HConstants {
         HStore store = stores.get(colFamily);
 
         // get the closest key
-        Text closestKey = store.getRowKeyAtOrBefore(row, ts);
+        Text closestKey = store.getRowKeyAtOrBefore(row);
         
         // if it happens to be an exact match, we can stop looping
         if (row.equals(closestKey)) {
-          key = new HStoreKey(closestKey, ts);
+          key = new HStoreKey(closestKey);
           break;
         }
 
         // otherwise, we need to check if it's the max and move to the next
         if (closestKey != null 
           && (key == null || closestKey.compareTo(key.getRow()) > 0) ) {
-          key = new HStoreKey(closestKey, ts);
+          key = new HStoreKey(closestKey);
         }
       }
 

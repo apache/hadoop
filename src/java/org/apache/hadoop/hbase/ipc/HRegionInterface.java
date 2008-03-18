@@ -116,20 +116,6 @@ public interface HRegionInterface extends VersionedProtocol {
   throws IOException;
 
   /**
-   * Return all the data for the row that matches <i>row</i> exactly, 
-   * or the one that immediately preceeds it, at or immediately before 
-   * <i>ts</i>.
-   * 
-   * @param regionName region name
-   * @param row row key
-   * @return map of values
-   * @throws IOException
-   */
-  public HbaseMapWritable getClosestRowBefore(final Text regionName, 
-    final Text row, final long ts)
-  throws IOException;
-
-  /**
    * Get selected columns for the specified row at a given timestamp.
    * 
    * @param regionName region name

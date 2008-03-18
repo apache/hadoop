@@ -199,82 +199,134 @@ class Memcache {
    * @return the key that matches <i>row</i> exactly, or the one that
    * immediately preceeds it.
    */
-  public Text getRowKeyAtOrBefore(final Text row, long timestamp) {
+  void getRowKeyAtOrBefore(final Text row, 
+    SortedMap<HStoreKey, Long> candidateKeys)
+  throws IOException {
     this.lock.readLock().lock();
-    
-    Text key_memcache = null;
-    Text key_snapshot = null;
     
     try {
       synchronized (memcache) {
-        key_memcache = internalGetRowKeyAtOrBefore(memcache, row, timestamp);
+        internalGetRowKeyAtOrBefore(memcache, row, candidateKeys);
       }
       synchronized (snapshot) {
-        key_snapshot = internalGetRowKeyAtOrBefore(snapshot, row, timestamp);
+        internalGetRowKeyAtOrBefore(snapshot, row, candidateKeys);
       }
-
-      if (key_memcache == null && key_snapshot == null) {
-        // didn't find any candidates, return null
-        return null;
-      } else if (key_memcache == null && key_snapshot != null) {
-        return key_snapshot;
-      } else if (key_memcache != null && key_snapshot == null) {
-        return key_memcache;
-      } else if ( (key_memcache != null && key_memcache.equals(row)) 
-          || (key_snapshot != null && key_snapshot.equals(row)) ) {
-        // if either is a precise match, return the original row.
-        return row;
-      } else if (key_memcache != null) {
-        // no precise matches, so return the one that is closer to the search
-        // key (greatest)
-        return key_memcache.compareTo(key_snapshot) > 0 ? 
-            key_memcache : key_snapshot;
-      }
-      return null;
     } finally {
       this.lock.readLock().unlock();
     }
   }
 
-  private Text internalGetRowKeyAtOrBefore(SortedMap<HStoreKey, byte []> map, 
-    Text key, long timestamp) {
-    // TODO: account for deleted cells
-
-    HStoreKey search_key = new HStoreKey(key, timestamp);
-
+  private void internalGetRowKeyAtOrBefore(SortedMap<HStoreKey, byte []> map,
+    Text key, SortedMap<HStoreKey, Long> candidateKeys) {
+    
+    HStoreKey strippedKey = null;
+    
+    // we want the earliest possible to start searching from
+    HStoreKey search_key = candidateKeys.isEmpty() ? 
+      new HStoreKey(key) : new HStoreKey(candidateKeys.firstKey().getRow());
+        
+    Iterator<HStoreKey> key_iterator = null;
+    HStoreKey found_key = null;
+    
     // get all the entries that come equal or after our search key
     SortedMap<HStoreKey, byte []> tailMap = map.tailMap(search_key);
+    
+    // if there are items in the tail map, there's either a direct match to
+    // the search key, or a range of values between the first candidate key
+    // and the ultimate search key (or the end of the cache)
+    if (!tailMap.isEmpty() && tailMap.firstKey().getRow().compareTo(key) <= 0) {
+      key_iterator = tailMap.keySet().iterator();
 
-    // if the first item in the tail has a matching row, then we have an 
-    // exact match, and we should return that item
-    if (!tailMap.isEmpty() && tailMap.firstKey().getRow().equals(key)) {
-      // seek forward past any cells that don't fulfill the timestamp
-      // argument
-      Iterator<HStoreKey> key_iterator = tailMap.keySet().iterator();
-      HStoreKey found_key = key_iterator.next();
-      
-      // keep seeking so long as we're in the same row, and the timstamp
-      // isn't as small as we'd like, and there are more cells to check
-      while (found_key.getRow().equals(key)
-        && found_key.getTimestamp() > timestamp && key_iterator.hasNext()) {
+      // keep looking at cells as long as they are no greater than the 
+      // ultimate search key and there's still records left in the map.
+      do {
         found_key = key_iterator.next();
-      }
+        if (found_key.getRow().compareTo(key) <= 0) {
+          strippedKey = stripTimestamp(found_key);
+          if (HLogEdit.isDeleted(tailMap.get(found_key))) {
+            if (candidateKeys.containsKey(strippedKey)) {
+              long bestCandidateTs = 
+                candidateKeys.get(strippedKey).longValue();
+              if (bestCandidateTs <= found_key.getTimestamp()) {
+                candidateKeys.remove(strippedKey);
+              }
+            }
+          } else {
+            candidateKeys.put(strippedKey, 
+              new Long(found_key.getTimestamp()));
+          }
+        }
+      } while (found_key.getRow().compareTo(key) <= 0 
+        && key_iterator.hasNext());
+    } else {
+      // the tail didn't contain any keys that matched our criteria, or was 
+      // empty. examine all the keys that preceed our splitting point.
+      SortedMap<HStoreKey, byte []> headMap = map.headMap(search_key);
       
-      // if this check fails, then we've iterated through all the keys that 
-      // match by row, but none match by timestamp, so we fall through to
-      // the headMap case.
-      if (found_key.getTimestamp() <= timestamp) {
-        // we didn't find a key that matched by timestamp, so we have to 
-        // return null;
-/*          LOG.debug("Went searching for " + key + ", found " + found_key.getRow());*/
-        return found_key.getRow();
+      // if we tried to create a headMap and got an empty map, then there are
+      // no keys at or before the search key, so we're done.
+      if (headMap.isEmpty()) {
+        return;
+      }        
+      
+      // if there aren't any candidate keys at this point, we need to search
+      // backwards until we find at least one candidate or run out of headMap.
+      if (candidateKeys.isEmpty()) {
+        HStoreKey[] cells = 
+          headMap.keySet().toArray(new HStoreKey[headMap.keySet().size()]);
+           
+        Text lastRowFound = null;
+        for(int i = cells.length - 1; i >= 0; i--) {
+          HStoreKey thisKey = cells[i];
+          
+          // if the last row we found a candidate key for is different than
+          // the row of the current candidate, we can stop looking.
+          if (lastRowFound != null && !lastRowFound.equals(thisKey.getRow())) {
+            break;
+          }
+          
+          // if this isn't a delete, record it as a candidate key. also 
+          // take note of the row of this candidate so that we'll know when
+          // we cross the row boundary into the previous row.
+          if (!HLogEdit.isDeleted(headMap.get(thisKey))) {
+            lastRowFound = thisKey.getRow();
+            candidateKeys.put(stripTimestamp(thisKey), 
+              new Long(thisKey.getTimestamp()));
+          }
+        }
+      } else {
+        // if there are already some candidate keys, we only need to consider
+        // the very last row's worth of keys in the headMap, because any 
+        // smaller acceptable candidate keys would have caused us to start
+        // our search earlier in the list, and we wouldn't be searching here.
+        SortedMap<HStoreKey, byte[]> thisRowTailMap = 
+          headMap.tailMap(new HStoreKey(headMap.lastKey().getRow()));
+          
+        key_iterator = thisRowTailMap.keySet().iterator();
+  
+        do {
+          found_key = key_iterator.next();
+          
+          if (HLogEdit.isDeleted(thisRowTailMap.get(found_key))) {
+            strippedKey = stripTimestamp(found_key);              
+            if (candidateKeys.containsKey(strippedKey)) {
+              long bestCandidateTs = 
+                candidateKeys.get(strippedKey).longValue();
+              if (bestCandidateTs <= found_key.getTimestamp()) {
+                candidateKeys.remove(strippedKey);
+              }
+            }
+          } else {
+            candidateKeys.put(stripTimestamp(found_key), 
+              found_key.getTimestamp());
+          }
+        } while (key_iterator.hasNext());
       }
     }
-    
-    // the tail didn't contain the key we're searching for, so we should
-    // use the last key in the headmap as the closest before
-    SortedMap<HStoreKey, byte []> headMap = map.headMap(search_key);
-    return headMap.isEmpty()? null: headMap.lastKey().getRow();
+  }
+  
+  static HStoreKey stripTimestamp(HStoreKey key) {
+    return new HStoreKey(key.getRow(), key.getColumn());
   }
   
   /**
