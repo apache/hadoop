@@ -114,6 +114,12 @@
 
   <property name="rat.reporting.classname" value="rat.Report"/>
 
+  <property name="scratch.dir" value="${user.home}/tmp"/>
+  <property name="svn.cmd" value="svn"/>
+  <property name="grep.cmd" value="grep"/>
+  <property name="patch.cmd" value="patch"/>
+
+
   <available property="clover.present" classname="com.cenqua.clover.tasks.CloverReportTask" />
 
   <!-- check if clover reports should be generated -->
@@ -1092,6 +1098,49 @@
      <format type="xml"/>
      </current>
   </clover-report>
+</target>
+
+<target name="findbugs.check" depends="check-for-findbugs" unless="findbugs.present">
+  <fail message="'findbugs.home' is not defined. Please pass -Dfindbugs.home=&lt;base of Findbugs installation&gt; to Ant on the command-line." />
+</target>
+
+<target name="patch.check" unless="patch.file">
+  <fail message="'patch.file' is not defined. Please pass -Dpatch.file=&lt;location of patch file&gt; to Ant on the command-line." />
+</target>
+
+<target name="test-patch" depends="patch.check,findbugs.check,forrest.check">
+  <exec executable="sh" failonerror="true">
+    <arg value="${basedir}/src/test/bin/test-patch.sh"/>
+    <arg value="DEVELOPER"/>
+    <arg value="${patch.file}"/>
+    <arg value="${scratch.dir}"/>
+    <arg value="${svn.cmd}"/>
+    <arg value="${grep.cmd}"/>
+    <arg value="${patch.cmd}"/>
+    <arg value="${findbugs.home}"/>
+    <arg value="${forrest.home}"/>
+    <arg value="${basedir}"/>
+  </exec>
+</target>
+
+<target name="hudson-test-patch" depends="patch.check,findbugs.check,forrest.check">
+  <exec executable="sh" failonerror="true">
+    <arg value="${basedir}/src/test/bin/test-patch.sh"/>
+    <arg value="HUDSON"/>
+    <arg value="${scratch.dir}"/>
+    <arg value="${support.dir}"/>
+    <arg value="${ps.cmd}"/>
+    <arg value="${wget.cmd}"/>
+    <arg value="${jiracli.cmd}"/>
+    <arg value="${svn.cmd}"/>
+    <arg value="${grep.cmd}"/>
+    <arg value="${patch.cmd}"/>
+    <arg value="${findbugs.home}"/>
+    <arg value="${forrest.home}"/>
+    <arg value="${basedir}"/>
+    <arg value="${trigger.url}"/>
+    <arg value="${jira.passwd}"/>
+  </exec>
 </target>
 
 </project>

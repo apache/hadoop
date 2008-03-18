@@ -105,6 +105,9 @@ Trunk (unreleased changes)
     locally, the second off-rack, and the third intra-rack from the
     second. (lohit vijayarenu via cdouglas)
 
+    HADOOP-2939. Make the automated patch testing process an executable 
+    Ant target, test-patch. (nigel)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing
