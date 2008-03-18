@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.HashSet;
 import java.util.TreeMap;
+import java.util.Set;
 
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
@@ -40,7 +41,7 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
  * {@link TestGet} is a medley of tests of get all done up as a single test.
  * This class 
  */
-public class TestGet2 extends HBaseTestCase {
+public class TestGet2 extends HBaseTestCase implements HConstants {
   private MiniDFSCluster miniHdfs;
 
   @Override
@@ -263,7 +264,7 @@ public class TestGet2 extends HBaseTestCase {
       }
     }    
   }
-    
+  
   private void assertSpecifiedColumns(final HRegion region, final Text row) 
   throws IOException {
     HashSet<Text> all = new HashSet<Text>();
@@ -300,6 +301,111 @@ public class TestGet2 extends HBaseTestCase {
     assertNull(result.get(COLUMNS[1]));
     assertNull(result.get(COLUMNS[2]));    
   }  
+  
+  public void testGetFullMultiMapfile() throws IOException {
+    HRegion region = null;
+    HRegionIncommon region_incommon = null;
+    BatchUpdate batchUpdate = null;
+    Map<Text, Cell> results = null;
+    
+    try {
+      HTableDescriptor htd = createTableDescriptor(getName());
+      region = createNewHRegion(htd, null, null);
+      region_incommon = new HRegionIncommon(region);
+           
+      //
+      // Test ordering issue
+      //
+      Text row = new Text("row1");
+     
+      // write some data
+      batchUpdate = new BatchUpdate(row);
+      batchUpdate.put(COLUMNS[0], "olderValue".getBytes());
+      region.batchUpdate(batchUpdate);
+
+      // flush
+      region.flushcache();
+      
+      // assert that getFull gives us the older value
+      results = region.getFull(row, (Set<Text>)null, LATEST_TIMESTAMP);
+      assertEquals("olderValue", new String(results.get(COLUMNS[0]).getValue()));
+      
+      // write a new value for the cell
+      batchUpdate = new BatchUpdate(row);
+      batchUpdate.put(COLUMNS[0], "newerValue".getBytes());
+      region.batchUpdate(batchUpdate);
+      
+      // flush
+      region.flushcache();
+      
+      // assert that getFull gives us the later value
+      results = region.getFull(row, (Set<Text>)null, LATEST_TIMESTAMP);
+      assertEquals("newerValue", new String(results.get(COLUMNS[0]).getValue()));
+     
+      //
+      // Test the delete masking issue
+      //
+      Text row2 = new Text("row2");
+      Text cell1 = new Text(COLUMNS[0].toString() + "a");
+      Text cell2 = new Text(COLUMNS[0].toString() + "b");
+      Text cell3 = new Text(COLUMNS[0].toString() + "c");
+      
+      // write some data at two columns
+      batchUpdate = new BatchUpdate(row2);
+      batchUpdate.put(cell1, "column0 value".getBytes());
+      batchUpdate.put(cell2, "column1 value".getBytes());
+      region.batchUpdate(batchUpdate);
+      
+      // flush
+      region.flushcache();
+      
+      // assert i get both columns
+      results = region.getFull(row2, (Set<Text>)null, LATEST_TIMESTAMP);
+      assertEquals("Should have two columns in the results map", 2, results.size());
+      assertEquals("column0 value", new String(results.get(cell1).getValue()));
+      assertEquals("column1 value", new String(results.get(cell2).getValue()));
+      
+      // write a delete for the first column
+      batchUpdate = new BatchUpdate(row2);
+      batchUpdate.delete(cell1);
+      batchUpdate.put(cell2, "column1 new value".getBytes());      
+      region.batchUpdate(batchUpdate);
+            
+      // flush
+      region.flushcache(); 
+      
+      // assert i get the second column only
+      results = region.getFull(row2, (Set<Text>)null, LATEST_TIMESTAMP);
+      assertEquals("Should have one column in the results map", 1, results.size());
+      assertNull("column0 value", results.get(cell1));
+      assertEquals("column1 new value", new String(results.get(cell2).getValue()));
+      
+      //
+      // Include a delete and value from the memcache in the mix
+      //
+      batchUpdate = new BatchUpdate(row2);
+      batchUpdate.delete(cell2);      
+      batchUpdate.put(cell3, "column2 value!".getBytes());
+      region.batchUpdate(batchUpdate);
+      
+      // assert i get the third column only
+      results = region.getFull(row2, (Set<Text>)null, LATEST_TIMESTAMP);
+      assertEquals("Should have one column in the results map", 1, results.size());
+      assertNull("column0 value", results.get(cell1));
+      assertNull("column1 value", results.get(cell2));
+      assertEquals("column2 value!", new String(results.get(cell3).getValue()));
+      
+    } finally {
+      if (region != null) {
+        try {
+          region.close();
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+        region.getLog().closeAndDelete();
+      }
+    }  
+  }
   
   private void assertColumnsPresent(final HRegion r, final Text row)
   throws IOException {

@@ -1057,7 +1057,7 @@ public class HStore implements HConstants {
    */
   void getFull(HStoreKey key, final Set<Text> columns, TreeMap<Text, Cell> results)
   throws IOException {
-    Map<Text, List<Long>> deletes = new HashMap<Text, List<Long>>();
+    Map<Text, Long> deletes = new HashMap<Text, Long>();
     
     // if the key is null, we're not even looking for anything. return.
     if (key == null) {
@@ -1067,7 +1067,7 @@ public class HStore implements HConstants {
     this.lock.readLock().lock();
     
     // get from the memcache first.
-    memcache.getFull(key, columns, results);
+    memcache.getFull(key, columns, deletes, results);
     
     try {
       MapFile.Reader[] maparray = getReaders();
@@ -1078,37 +1078,66 @@ public class HStore implements HConstants {
         
         // synchronize on the map so that no one else iterates it at the same 
         // time
-        synchronized(map) {
-          // seek back to the beginning
-          map.reset();
-          
-          // seek to the closest key that should match the row we're looking for
-          ImmutableBytesWritable readval = new ImmutableBytesWritable();
-          HStoreKey readkey = (HStoreKey)map.getClosest(key, readval);
-          if (readkey == null) {
-            continue;
-          }
-          do {
-            Text readcol = readkey.getColumn();
-            if (results.get(readcol) == null
-                && key.matchesWithoutColumn(readkey)) {
-              if(isDeleted(readkey, readval.get(), true, deletes)) {
-                break;
-              }
-              if (columns == null || columns.contains(readkey.getColumn())) {
-                results.put(new Text(readcol), new Cell(readval.get(), readkey.getTimestamp()));
-              }
-              readval = new ImmutableBytesWritable();
-            } else if(key.getRow().compareTo(readkey.getRow()) < 0) {
-              break;
-            }
-            
-          } while(map.next(readkey, readval));
-        }
+        getFullFromMapFile(map, key, columns, deletes, results);
       }
       
     } finally {
       this.lock.readLock().unlock();
+    }
+  }
+  
+  private void getFullFromMapFile(MapFile.Reader map, HStoreKey key, 
+    Set<Text> columns, Map<Text, Long> deletes, TreeMap<Text, Cell> results) 
+  throws IOException {
+    synchronized(map) {
+      // seek back to the beginning
+      map.reset();
+      
+      // seek to the closest key that should match the row we're looking for
+      ImmutableBytesWritable readval = new ImmutableBytesWritable();
+      HStoreKey readkey = (HStoreKey)map.getClosest(key, readval);
+      if (readkey == null) {
+        return;
+      }
+      do {
+        Text readcol = readkey.getColumn();
+        
+        // if we're looking for this column (or all of them), and there isn't 
+        // already a value for this column in the results map, and the key we 
+        // just read matches, then we'll consider it
+        if ((columns == null || columns.contains(readcol)) 
+          && !results.containsKey(readcol)
+          && key.matchesWithoutColumn(readkey)) {
+          // if the value of the cell we're looking at right now is a delete, 
+          // we need to treat it differently
+          if(HLogEdit.isDeleted(readval.get())) {
+            // if it's not already recorded as a delete or recorded with a more
+            // recent delete timestamp, record it for later
+            if (!deletes.containsKey(readcol) 
+              || deletes.get(readcol).longValue() < readkey.getTimestamp()) {
+              deletes.put(new Text(readcol), readkey.getTimestamp());              
+            }
+          } else if (!(deletes.containsKey(readcol) 
+            && deletes.get(readcol).longValue() >= readkey.getTimestamp()) ) {
+            // So the cell itself isn't a delete, but there may be a delete 
+            // pending from earlier in our search. Only record this result if
+            // there aren't any pending deletes.
+            if (!(deletes.containsKey(readcol) 
+              && deletes.get(readcol).longValue() >= readkey.getTimestamp())) {
+              results.put(new Text(readcol), 
+                new Cell(readval.get(), readkey.getTimestamp()));
+              // need to reinstantiate the readval so we can reuse it, 
+              // otherwise next iteration will destroy our result
+              readval = new ImmutableBytesWritable();
+            }
+          }
+        } else if(key.getRow().compareTo(readkey.getRow()) < 0) {
+          // if we've crossed into the next row, then we can just stop 
+          // iterating
+          break;
+        }
+        
+      } while(map.next(readkey, readval));
     }
   }
   

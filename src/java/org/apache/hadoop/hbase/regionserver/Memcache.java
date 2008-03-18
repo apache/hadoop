@@ -145,14 +145,15 @@ class Memcache {
    * @param key
    * @param results
    */
-  void getFull(HStoreKey key, Set<Text> columns, SortedMap<Text, Cell> results) {
+  void getFull(HStoreKey key, Set<Text> columns, Map<Text, Long> deletes, 
+    SortedMap<Text, Cell> results) {
     this.lock.readLock().lock();
     try {
       synchronized (memcache) {
-        internalGetFull(memcache, key, columns, results);
+        internalGetFull(memcache, key, columns, deletes, results);
       }
       synchronized (snapshot) {
-        internalGetFull(snapshot, key, columns, results);
+        internalGetFull(snapshot, key, columns, deletes, results);
       }
 
     } finally {
@@ -161,7 +162,8 @@ class Memcache {
   }
 
   private void internalGetFull(SortedMap<HStoreKey, byte[]> map, HStoreKey key, 
-    Set<Text> columns, SortedMap<Text, Cell> results) {
+    Set<Text> columns, Map<Text, Long> deletes, 
+    SortedMap<Text, Cell> results) {
 
     if (map.isEmpty() || key == null) {
       return;
@@ -174,12 +176,17 @@ class Memcache {
       if (results.get(itCol) == null && key.matchesWithoutColumn(itKey)) {
         byte [] val = tailMap.get(itKey);
 
-        if (!HLogEdit.isDeleted(val)) {
-          if (columns == null || columns.contains(itKey.getColumn())) {
-            results.put(itCol, new Cell(val, itKey.getTimestamp()));
+        if (columns == null || columns.contains(itKey.getColumn())) {
+          if (HLogEdit.isDeleted(val)) {
+            if (!deletes.containsKey(itCol) 
+              || deletes.get(itCol).longValue() < itKey.getTimestamp()) {
+              deletes.put(new Text(itCol), itKey.getTimestamp());
+            }
+          } else if (!(deletes.containsKey(itCol) 
+            && deletes.get(itCol).longValue() >= itKey.getTimestamp())) {
+            results.put(new Text(itCol), new Cell(val, itKey.getTimestamp()));
           }
         }
-
       } else if (key.getRow().compareTo(itKey.getRow()) < 0) {
         break;
       }
