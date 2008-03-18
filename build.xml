@@ -276,7 +276,10 @@
       doctitle="${Name} ${version} API"
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
       >
-    	<packageset dir="${src.dir}"/>
+    	<packageset dir="${src.dir}">
+          <include name="org/apache/**"/>
+          <exclude name="org/onelab/**"/>
+    	</packageset>
         <link href="${javadoc.link.java}"/>
         <classpath >
           <path refid="classpath" />
