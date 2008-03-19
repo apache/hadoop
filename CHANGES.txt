@@ -287,6 +287,10 @@ Release 0.16.2 - Unreleased
     HADOOP-3011. Prohibit distcp from overwriting directories on the
     destination filesystem with files. (cdouglas)
 
+    HADOOP-3033. The BlockReceiver thread in the datanode writes data to 
+    the block file, changes file position (if needed) and flushes all by
+    itself. The PacketResponder thread does not flush block file. (dhruba)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
