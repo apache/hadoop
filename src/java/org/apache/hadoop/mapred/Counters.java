@@ -530,7 +530,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
         buffer.append(group.getDisplayName());
         buffer.append('.');
         buffer.append(counter.getDisplayName());
-        buffer.append('=');
+        buffer.append(':');
         buffer.append(counter.getCounter());
       }
     }
