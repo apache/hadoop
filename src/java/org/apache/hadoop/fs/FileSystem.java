@@ -1082,7 +1082,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * release any held locks.
    */
   public void close() throws IOException {
-    CACHE.remove(new Cache.Key(getUri(), getConf()));
+    CACHE.remove(new Cache.Key(this), this);
   }
 
   /** Return the total size of all files in the filesystem.*/
@@ -1183,39 +1183,51 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /** Caching FileSystem objects */
   private static class Cache {
-    final Map<Key, FsRef> map = new HashMap<Key, FsRef>();
+    private final Map<Key, FileSystem> map = new HashMap<Key, FileSystem>();
 
     synchronized FileSystem get(URI uri, Configuration conf) throws IOException{
-      Key key = new Key(uri, conf);
-      FsRef ref = map.get(key);
-      FileSystem fs = ref == null? null: ref.get();
+      FileSystem fs = map.get(new Key(uri, conf));
       if (fs == null) {
         if (map.isEmpty() && !clientFinalizer.isAlive()) {
           Runtime.getRuntime().addShutdownHook(clientFinalizer);
         }
 
         fs = createFileSystem(uri, conf);
-        map.put(key, new FsRef(fs, key));
+        map.put(new Key(fs), fs);
       }
       return fs;
     }
 
-    synchronized FsRef remove(Key key) {
-      FsRef ref = map.remove(key);
-      if (map.isEmpty() && !clientFinalizer.isAlive()) {
-        if (!Runtime.getRuntime().removeShutdownHook(clientFinalizer)) {
-          LOG.info("Could not cancel cleanup thread, though no " +
-                   "FileSystems are open");
+    synchronized void remove(Key key, FileSystem fs) {
+      if (map.containsKey(key) && fs == map.get(key)) {
+        map.remove(key);
+        if (map.isEmpty() && !clientFinalizer.isAlive()) {
+          if (!Runtime.getRuntime().removeShutdownHook(clientFinalizer)) {
+            LOG.info("Could not cancel cleanup thread, though no " +
+                     "FileSystems are open");
+          }
         }
       }
-      return ref;
     }
 
     synchronized void closeAll() throws IOException {
       List<IOException> exceptions = new ArrayList<IOException>();
-      for(FsRef ref : new ArrayList<FsRef>(map.values())) {
-        FileSystem fs = ref.get();
+      for(; !map.isEmpty(); ) {
+        Map.Entry<Key, FileSystem> e = map.entrySet().iterator().next();
+        final Key key = e.getKey();
+        final FileSystem fs = e.getValue();
+
+        //remove from cache
+        remove(key, fs);
+
         if (fs != null) {
+          //check consistency
+          if (!new Key(fs).equals(key)) {
+            exceptions.add(new IOException(fs.getClass().getSimpleName()
+                + "(=" + fs + ") and " + key.getClass().getSimpleName()
+                + "(=" + key + ") do not match."));
+          }
+
           try {
             fs.close();
           }
@@ -1223,9 +1235,6 @@ public abstract class FileSystem extends Configured implements Closeable {
             exceptions.add(ioe);
           }
         }
-        else {
-          remove(ref.key);
-        }        
       }
 
       if (!exceptions.isEmpty()) {
@@ -1233,24 +1242,15 @@ public abstract class FileSystem extends Configured implements Closeable {
       }
     }
 
-    /** Reference of FileSystem which contains the cache key */
-    private static class FsRef {
-      final FileSystem fs;
-      final Key key;
-      
-      FsRef(FileSystem fs, Key key) {
-        this.fs = fs;
-        this.key = key;
-      }
-
-      FileSystem get() {return fs;}
-    }
-
     /** FileSystem.Cache.Key */
     private static class Key {
       final String scheme;
       final String authority;
       final String username;
+
+      Key(FileSystem fs) throws IOException {
+        this(fs.getUri(), fs.getConf());
+      }
 
       Key(URI uri, Configuration conf) throws IOException {
         scheme = uri.getScheme();
@@ -1280,6 +1280,11 @@ public abstract class FileSystem extends Configured implements Closeable {
                  && isEqual(this.username, that.username);
         }
         return false;        
+      }
+
+      /** {@inheritDoc} */
+      public String toString() {
+        return username + "@" + scheme + "://" + authority;        
       }
     }
   }
