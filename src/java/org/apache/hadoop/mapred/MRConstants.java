@@ -54,4 +54,9 @@ interface MRConstants {
    * The custom http header used for the map output length.
    */
   public static final String MAP_OUTPUT_LENGTH = "Map-Output-Length";
+
+  /**
+   * Temporary directory name 
+   */
+  public static final String TEMP_DIR_NAME = "_temporary";
 }
