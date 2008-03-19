@@ -111,6 +111,9 @@ Trunk (unreleased changes)
     HADOOP-2239. Add HsftpFileSystem to permit transferring files over ssl.
     (cdouglas)
 
+    HADOOP-2910. Throttle IPC Client/Server during bursts of 
+    requests or server slowdown. (Hairong Kuang via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing
