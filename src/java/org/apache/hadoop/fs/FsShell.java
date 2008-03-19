@@ -498,10 +498,11 @@ public class FsShell extends Configured implements Tool {
       long len = fs.getFileStatus(f).getLen();
 
       for(boolean done = false; !done; ) {
-        String[][] locations = fs.getFileCacheHints(f, 0, len);
+        BlockLocation[] locations = fs.getFileBlockLocations(f, 0, len);
         int i = 0;
-        for(; i < locations.length && locations[i].length == rep; i++)
-          if (!printWarning && locations[i].length > rep) {
+        for(; i < locations.length && 
+          locations[i].getHosts().length == rep; i++)
+          if (!printWarning && locations[i].getHosts().length > rep) {
             System.out.println("\nWARNING: the waiting time may be long for "
                 + "DECREASING the number of replication.");
             printWarning = true;

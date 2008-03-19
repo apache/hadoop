@@ -191,7 +191,7 @@ public class CopyFiles implements Tool {
           // cut the last split and put this next file in the next split.
           if (acc + key.get() > targetsize && acc != 0) {
             long splitsize = last - pos;
-            splits.add(new FileSplit(src, pos, splitsize, job));
+            splits.add(new FileSplit(src, pos, splitsize, (String[])null));
             cbrem -= splitsize;
             pos = last;
             acc = 0L;
@@ -203,7 +203,7 @@ public class CopyFiles implements Tool {
         checkAndClose(sl);
       }
       if (cbrem != 0) {
-        splits.add(new FileSplit(src, pos, cbrem, job));
+        splits.add(new FileSplit(src, pos, cbrem, (String[])null));
       }
 
       return splits.toArray(new FileSplit[splits.size()]);

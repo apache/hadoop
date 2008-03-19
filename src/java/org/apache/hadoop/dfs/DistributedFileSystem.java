@@ -114,10 +114,11 @@ public class DistributedFileSystem extends FileSystem {
     }
     return result;
   }
+  
 
-  public String[][] getFileCacheHints(Path f, long start, long len)
-      throws IOException {
-    return dfs.getHints(getPathName(f), start, len);
+  public BlockLocation[] getFileBlockLocations(Path f, long start,
+      long len) throws IOException {
+    return dfs.getBlockLocations(getPathName(f), start, len);
   }
 
   public void setVerifyChecksum(boolean verifyChecksum) {

@@ -71,7 +71,8 @@ public class TestSequenceFileAsBinaryInputFormat extends TestCase {
     DataInputBuffer buf = new DataInputBuffer();
     RecordReader<BytesWritable,BytesWritable> reader =
       bformat.getRecordReader(new FileSplit(file, 0,
-            fs.getFileStatus(file).getLen(), job), job, Reporter.NULL);
+                              fs.getFileStatus(file).getLen(), 
+                              (String[])null), job, Reporter.NULL);
     try {
       while (reader.next(bkey, bval)) {
         tkey.set(Integer.toString(r.nextInt(), 36));

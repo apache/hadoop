@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.BlockLocation;
 
 /**
  * This class tests that a file need not be closed before its
@@ -139,12 +140,13 @@ public class TestDatanodeDeath extends TestCase {
         Thread.sleep(1000);
       } catch (InterruptedException e) {}
       done = true;
-      String[][] locations = fileSys.getFileCacheHints(name, start, end);
+      BlockLocation[] locations = fileSys.getFileBlockLocations(name, start, 
+                                                                end);
       if (locations.length < 1) {
         done = false;
         continue;
       }
-      if (locations[0].length < repl) {
+      if (locations[0].getHosts().length < repl) {
         done = false;
         continue;
       }
@@ -205,7 +207,9 @@ public class TestDatanodeDeath extends TestCase {
         Thread.sleep(1000);
       } catch (InterruptedException e) {}
       done = true;
-      String[][] locations = fileSys.getFileCacheHints(name, 0, filesize);
+      BlockLocation[] locations = fileSys.getFileBlockLocations(name, 0, 
+                                                                filesize);
+
       if (locations.length < numblocks) {
         if (attempt > 100) {
           System.out.println("File " + name + " has only " +
@@ -217,14 +221,14 @@ public class TestDatanodeDeath extends TestCase {
         continue;
       }
       for (int idx = 0; idx < locations.length; idx++) {
-        if (locations[idx].length < repl) {
+        if (locations[idx].getHosts().length < repl) {
           if (attempt > 100) {
             System.out.println("File " + name + " has " +
                                locations.length + " blocks: " +
                                " The " + idx + " block has only " +
-                               locations[idx].length + " replicas " +
-                               " but is expected to have " + repl +
-                               " replicas.");
+                               locations[idx].getHosts().length + 
+                               " replicas but is expected to have " 
+                               + repl + " replicas.");
           }
           done = false;
           break;

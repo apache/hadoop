@@ -107,7 +107,8 @@ public class RandomWriter extends Configured implements Tool {
       InputSplit[] result = new InputSplit[numSplits];
       Path outDir = job.getOutputPath();
       for(int i=0; i < result.length; ++i) {
-        result[i] = new FileSplit(new Path(outDir, "dummy-split-" + i), 0, 1, job);
+        result[i] = new FileSplit(new Path(outDir, "dummy-split-" + i), 0, 1, 
+                                  (String[])null);
       }
       return result;
     }

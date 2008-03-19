@@ -34,23 +34,35 @@ public class FileSplit implements InputSplit {
   private Path file;
   private long start;
   private long length;
-  private JobConf conf;
+  private String[] hosts;
   
   FileSplit() {}
 
   /** Constructs a split.
-   *
+   * @deprecated
    * @param file the file name
    * @param start the position of the first byte in the file to process
    * @param length the number of bytes in the file to process
    */
+  @Deprecated
   public FileSplit(Path file, long start, long length, JobConf conf) {
+    this(file, start, length, (String[])null);
+  }
+
+  /** Constructs a split with host information
+   *
+   * @param file the file name
+   * @param start the position of the first byte in the file to process
+   * @param length the number of bytes in the file to process
+   * @param hosts the list of hosts containing the block, possibly null
+   */
+  public FileSplit(Path file, long start, long length, String[] hosts) {
     this.file = file;
     this.start = start;
     this.length = length;
-    this.conf = conf;
+    this.hosts = hosts;
   }
-  
+
   /** @deprecated Call {@link #getPath()} instead. */
   public File getFile() { return new File(file.toString()); }
   
@@ -78,15 +90,15 @@ public class FileSplit implements InputSplit {
     file = new Path(UTF8.readString(in));
     start = in.readLong();
     length = in.readLong();
+    hosts = null;
   }
 
   public String[] getLocations() throws IOException {
-    String[][] hints = file.getFileSystem(conf).
-      getFileCacheHints(file, start, length);
-    if (hints != null && hints.length > 0) {
-      return hints[0];
+    if (this.hosts == null) {
+      return new String[]{};
+    } else {
+      return this.hosts;
     }
-    return new String[]{};
   }
   
 }

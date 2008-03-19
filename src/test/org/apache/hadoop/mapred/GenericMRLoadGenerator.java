@@ -445,7 +445,7 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
             SequenceFileInputFormat.class), job);
       IndirectSplit is = ((IndirectSplit)split);
       return indirIF.getRecordReader(new FileSplit(is.getPath(), 0,
-            is.getLength(), job),
+            is.getLength(), (String[])null),
           job, reporter);
     }
   }

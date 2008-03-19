@@ -24,6 +24,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.*;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
@@ -158,8 +159,9 @@ public class TestRackAwareTaskPlacement extends TestCase {
     boolean isReplicationDone;
     
     do {
-      String[][] hints = fileSys.getFileCacheHints(name, 0, Long.MAX_VALUE);
-      if (hints[0].length == replication) {
+      BlockLocation[] hints = fileSys.getFileBlockLocations(name, 0, 
+                                                            Long.MAX_VALUE);
+      if (hints[0].getHosts().length == replication) {
         isReplicationDone = true;
       } else {
         isReplicationDone = false;  

@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.BlockLocation;
 
 /**
  * This class tests the FileStatus API.
@@ -62,9 +63,10 @@ public class TestFileStatus extends TestCase {
         Thread.sleep(1000);
       } catch (InterruptedException e) {}
       done = true;
-      String[][] locations = fileSys.getFileCacheHints(name, 0, fileSize);
+      BlockLocation[] locations = fileSys.getFileBlockLocations(name, 0, 
+                                                                fileSize);
       for (int idx = 0; idx < locations.length; idx++) {
-        if (locations[idx].length < repl) {
+        if (locations[idx].getHosts().length < repl) {
           done = false;
           break;
         }

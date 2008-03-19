@@ -30,6 +30,7 @@ import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.BlockLocation;
 
 /**
  * This class tests the decommissioning of nodes.
@@ -91,9 +92,10 @@ public class TestDecommission extends TestCase {
         Thread.sleep(1000);
       } catch (InterruptedException e) {}
       done = true;
-      String[][] locations = fileSys.getFileCacheHints(name, 0, fileSize);
+      BlockLocation[] locations = fileSys.getFileBlockLocations(name, 0, 
+                                                                fileSize);
       for (int idx = 0; idx < locations.length; idx++) {
-        if (locations[idx].length < repl) {
+        if (locations[idx].getHosts().length < repl) {
           done = false;
           break;
         }
@@ -103,9 +105,10 @@ public class TestDecommission extends TestCase {
 
   private void printFileLocations(FileSystem fileSys, Path name)
   throws IOException {
-    String[][] locations = fileSys.getFileCacheHints(name, 0, fileSize);
+    BlockLocation[] locations = fileSys.getFileBlockLocations(name, 0, 
+                                                              fileSize);
     for (int idx = 0; idx < locations.length; idx++) {
-      String[] loc = locations[idx];
+      String[] loc = locations[idx].getHosts();
       System.out.print("Block[" + idx + "] : ");
       for (int j = 0; j < loc.length; j++) {
         System.out.print(loc[j] + " ");

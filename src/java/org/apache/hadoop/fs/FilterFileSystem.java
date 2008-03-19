@@ -82,8 +82,8 @@ public class FilterFileSystem extends FileSystem {
   }
 
   /**
-   * Return a 2D array of size 1x1 or greater, containing hostnames 
-   * where portions of the given file can be found.  For a nonexistent 
+   * Return an array containing hostnames, offset and size of 
+   * portions of the given file.  For a nonexistent 
    * file or regions, null will be returned.
    *
    * This call is most helpful with DFS, where it returns 
@@ -91,9 +91,9 @@ public class FilterFileSystem extends FileSystem {
    *
    * The FileSystem will simply return an elt containing 'localhost'.
    */
-  public String[][] getFileCacheHints(Path f, long start, long len)
-    throws IOException {
-    return fs.getFileCacheHints(f, start, len);
+  public BlockLocation[] getFileBlockLocations(Path f, long start,  
+    long len) throws IOException {
+      return fs.getFileBlockLocations(f, start, len);
   }
 
   /**

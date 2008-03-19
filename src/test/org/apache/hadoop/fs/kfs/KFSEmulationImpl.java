@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.BlockLocation;
 
 
 public class KFSEmulationImpl implements IFSImpl {
@@ -120,7 +121,19 @@ public class KFSEmulationImpl implements IFSImpl {
         return 1;
     }
     public String[][] getDataLocation(String path, long start, long len) throws IOException {
-        return localFS.getFileCacheHints(new Path(path), start, len);
+        BlockLocation[] blkLocations = 
+          localFS.getFileBlockLocations(new Path(path), start, len);
+          if ((blkLocations == null) || (blkLocations.length == 0)) {
+            return new String[0][];     
+          }
+          int blkCount = blkLocations.length;
+          String[][]hints = new String[blkCount][];
+          for (int i=0; i < blkCount ; i++) {
+            String[] hosts = blkLocations[i].getHosts();
+            hints[i] = new String[hosts.length];
+            hints[i] = hosts;
+          }
+          return hints;
     }
 
     public long getModificationTime(String path) throws IOException {

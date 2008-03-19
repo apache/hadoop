@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.BlockLocation;
 
 /**
  * This class tests the creation of files with block-size
@@ -58,7 +59,8 @@ public class TestSmallBlock extends TestCase {
   }
   
   private void checkFile(FileSystem fileSys, Path name) throws IOException {
-    String[][] locations = fileSys.getFileCacheHints(name, 0, fileSize);
+    BlockLocation[] locations = fileSys.getFileBlockLocations(name, 0, 
+                                                              fileSize);
     assertEquals("Number of blocks", fileSize, locations.length);
     FSDataInputStream stm = fileSys.open(name);
     byte[] expected = new byte[fileSize];

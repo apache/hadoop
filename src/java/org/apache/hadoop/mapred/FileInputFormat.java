@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.BlockLocation;
 
 /** 
  * A base class for file-based {@link InputFormat}.
@@ -178,23 +179,28 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
       Path file = files[i];
       FileSystem fs = file.getFileSystem(job);
       long length = fs.getLength(file);
+      BlockLocation[] blkLocations = fs.getFileBlockLocations(file, 0, length);
       if ((length != 0) && isSplitable(fs, file)) { 
         long blockSize = fs.getBlockSize(file);
         long splitSize = computeSplitSize(goalSize, minSize, blockSize);
 
         long bytesRemaining = length;
         while (((double) bytesRemaining)/splitSize > SPLIT_SLOP) {
-          splits.add(new FileSplit(file, length-bytesRemaining, splitSize,
-                                   job));
+          int blkIndex = getBlockIndex(blkLocations, length-bytesRemaining);
+          splits.add(new FileSplit(file, length-bytesRemaining, splitSize, 
+                                   blkLocations[blkIndex].getHosts()));
           bytesRemaining -= splitSize;
         }
         
         if (bytesRemaining != 0) {
-          splits.add(new FileSplit(file, length-bytesRemaining, 
-                                   bytesRemaining, job));
+          splits.add(new FileSplit(file, length-bytesRemaining, bytesRemaining, 
+                     blkLocations[blkLocations.length-1].getHosts()));
         }
-      } else {
-        splits.add(new FileSplit(file, 0, length, job));
+      } else if (length != 0) {
+        splits.add(new FileSplit(file, 0, length, blkLocations[0].getHosts()));
+      } else { 
+        //Create empty hosts array for zero length files
+        splits.add(new FileSplit(file, 0, length, new String[0]));
       }
     }
     LOG.debug("Total # of splits: " + splits.size());
@@ -204,5 +210,16 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
   protected long computeSplitSize(long goalSize, long minSize,
                                        long blockSize) {
     return Math.max(minSize, Math.min(goalSize, blockSize));
+  }
+
+  protected int getBlockIndex(BlockLocation[] blkLocations, 
+                              long offset) {
+    for (int i = 0 ; i < blkLocations.length; i++) {
+      if ((blkLocations[i].getOffset() <= offset) &&
+        ((blkLocations[i].getOffset() + blkLocations[i].getLength()) >= 
+        offset))
+          return i;
+    }
+    return 0;
   }
 }

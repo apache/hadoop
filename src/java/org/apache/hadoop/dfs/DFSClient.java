@@ -126,6 +126,7 @@ class DFSClient implements FSConstants {
     methodNameToPolicyMap.put("isDir", methodPolicy);
     methodNameToPolicyMap.put("getListing", methodPolicy);
     methodNameToPolicyMap.put("getHints", methodPolicy);
+    methodNameToPolicyMap.put("getBlockLocations", methodPolicy);
     methodNameToPolicyMap.put("renewLease", methodPolicy);
     methodNameToPolicyMap.put("getStats", methodPolicy);
     methodNameToPolicyMap.put("getDatanodeReport", methodPolicy);
@@ -242,6 +243,8 @@ class DFSClient implements FSConstants {
   }
     
   /**
+   *  @deprecated Use getBlockLocations instead
+   *
    * Get hints about the location of the indicated block(s).
    * 
    * getHints() returns a list of hostnames that store data for
@@ -253,25 +256,58 @@ class DFSClient implements FSConstants {
    * MapReduce system tries to schedule tasks on the same machines
    * as the data-block the task processes. 
    */
+  @Deprecated
   public String[][] getHints(String src, long start, long length) 
     throws IOException {
-    LocatedBlocks blocks = namenode.getBlockLocations(src, start, length);
-    if (blocks == null) {
+    BlockLocation[] blkLocations = getBlockLocations(src, start, length);
+    if ((blkLocations == null) || (blkLocations.length == 0)) {
       return new String[0][];
     }
+    int blkCount = blkLocations.length;
+    String[][]hints = new String[blkCount][];
+    for (int i=0; i < blkCount ; i++) {
+      String[] hosts = blkLocations[i].getHosts();
+      hints[i] = new String[hosts.length];
+      hints[i] = hosts;
+    }
+    return hints;
+  }
+  
+  /**
+   * Get block location info about file
+   * 
+   * getBlockLocations() returns a list of hostnames that store 
+   * data for a specific file region.  It returns a set of hostnames
+   * for every block within the indicated region.
+   *
+   * This function is very useful when writing code that considers
+   * data-placement when performing operations.  For example, the
+   * MapReduce system tries to schedule tasks on the same machines
+   * as the data-block the task processes. 
+   */
+  public BlockLocation[] getBlockLocations(String src, long start, 
+    long length) throws IOException {
+    LocatedBlocks blocks = namenode.getBlockLocations(src, start, length);
+    if (blocks == null) {
+      return new BlockLocation[0];
+    }
     int nrBlocks = blocks.locatedBlockCount();
-    String[][] hints = new String[nrBlocks][];
+    BlockLocation[] blkLocations = new BlockLocation[nrBlocks];
     int idx = 0;
     for (LocatedBlock blk : blocks.getLocatedBlocks()) {
       assert idx < nrBlocks : "Incorrect index";
       DatanodeInfo[] locations = blk.getLocations();
-      hints[idx] = new String[locations.length];
+      String[] hosts = new String[locations.length];
+      String[] names = new String[locations.length];
       for (int hCnt = 0; hCnt < locations.length; hCnt++) {
-        hints[idx][hCnt] = locations[hCnt].getHostName();
+        hosts[hCnt] = locations[hCnt].getHostName();
+        names[hCnt] = locations[hCnt].getName();
       }
+      blkLocations[idx] = new BlockLocation(names, hosts, blk.getStartOffset(),
+                                            blk.getBlockSize());
       idx++;
     }
-    return hints;
+    return blkLocations;
   }
 
   public DFSInputStream open(String src) throws IOException {

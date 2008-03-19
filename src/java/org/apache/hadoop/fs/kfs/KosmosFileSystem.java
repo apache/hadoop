@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.fs.BlockLocation;
 
 /**
  * A FileSystem backed by KFS.
@@ -367,14 +368,22 @@ public class KosmosFileSystem extends FileSystem {
      * Return null if the file doesn't exist; otherwise, get the
      * locations of the various chunks of the file file from KFS.
      */
-    public String[][] getFileCacheHints(Path f, long start, long len)
-	throws IOException {
-	if (!exists(f)) {
-	    return null;
-	}
-        String srep = makeAbsolute(f).toUri().getPath();
-        String[][] hints = kfsImpl.getDataLocation(srep, start, len);
-        return hints;
+    public BlockLocation[] getBlockLocations(Path f, long start, long len
+                                             ) throws IOException {
+      if (!exists(f)) {
+        return null;
+      }
+      String srep = makeAbsolute(f).toUri().getPath();
+      String[][] hints = kfsImpl.getDataLocation(srep, start, len);
+      BlockLocation[] result = new BlockLocation[hints.length];
+      long blockSize = getDefaultBlockSize();
+      long length = len;
+      for(int i=0; i < result.length; ++i) {
+        result[i] = new BlockLocation(null, hints[i], start, 
+                                      length < blockSize ? length : blockSize);
+        length -= blockSize;
+      }
+      return result;
     }
 
     public void copyFromLocalFile(boolean delSrc, Path src, Path dst) throws IOException {

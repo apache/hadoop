@@ -141,8 +141,8 @@ public class FileBench extends Configured implements Tool {
     final String fn = conf.get("test.filebench.name", "");
     Path pin = new Path(conf.getInputPaths()[0], fn);
     FileStatus in = pin.getFileSystem(conf).getFileStatus(pin);
-    RecordReader rr = inf.getRecordReader(
-        new FileSplit(pin, 0, in.getLen(), conf), conf, Reporter.NULL);
+    RecordReader rr = inf.getRecordReader(new FileSplit(pin, 0, in.getLen(), 
+                                          (String[])null), conf, Reporter.NULL);
     try {
       Object key = rr.createKey();
       Object val = rr.createValue();

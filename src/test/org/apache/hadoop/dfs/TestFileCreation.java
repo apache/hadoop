@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
+import org.apache.hadoop.fs.BlockLocation;
 
 
 /**
@@ -89,13 +90,14 @@ public class TestFileCreation extends TestCase {
         Thread.sleep(1000);
       } catch (InterruptedException e) {}
       done = true;
-      String[][] locations = fileSys.getFileCacheHints(name, 0, fileSize);
+      BlockLocation[] locations = fileSys.getFileBlockLocations(name, 0, 
+                                                                fileSize);
       if (locations.length < numBlocks) {
         done = false;
         continue;
       }
       for (int idx = 0; idx < locations.length; idx++) {
-        if (locations[idx].length < repl) {
+        if (locations[idx].getHosts().length < repl) {
           done = false;
           break;
         }

@@ -130,10 +130,14 @@ Trunk (unreleased changes)
     (Tsz Wo (Nicholas), SZE via dhruba)
 
     HADOOP-2606. ReplicationMonitor selects data-nodes to replicate directly
-		from needed replication blocks instead of looking up for the blocks for 
-		each live data-node. (shv)
+    from needed replication blocks instead of looking up for the blocks for 
+    each live data-node. (shv)
 
     HADOOP-2148. Eliminate redundant data-node blockMap lookups. (shv)
+
+    HADOOP-2027. Return the number of bytes in each block in a file
+    via a single rpc to the namenode to speed up job planning. 
+    (Lohit Vijaya Renu via omalley)
 
   BUG FIXES
 

@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.BlockLocation;
 
 /**
  */
@@ -191,9 +192,10 @@ public class DFSTestUtil extends TestCase {
     boolean good;
     do {
       good = true;
-      String locs[][] = fs.getFileCacheHints(fileName, 0, Long.MAX_VALUE);
+      BlockLocation locs[] = fs.getFileBlockLocations(fileName, 0,
+                                                      Long.MAX_VALUE);
       for (int j = 0; j < locs.length; j++) {
-        String[] loc = locs[j];
+        String[] loc = locs[j].getHosts();
         if (loc.length != replFactor) {
           System.out.println("File " + fileName + " has replication factor " +
               loc.length);
