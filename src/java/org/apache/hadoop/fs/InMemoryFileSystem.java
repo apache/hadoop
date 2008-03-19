@@ -319,6 +319,15 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
         return true;
       }
     }
+    public void unreserveSpace(Path f) {
+      synchronized (this) {
+        FileAttributes fAttr = tempFileAttribs.remove(getPath(f));
+        if (fAttr != null) {
+          fAttr.data = null;
+          totalUsed -= fAttr.size;
+        }
+      }
+    }
   
     /** This API getClosedFiles could have been implemented over listPathsRaw
      * but it is an overhead to maintain directory structures for this impl of
@@ -416,11 +425,17 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
    * false.
    */
   public boolean reserveSpaceWithCheckSum(Path f, long size) {
-    long checksumSize = getChecksumFileLength(f, size);
     RawInMemoryFileSystem mfs = (RawInMemoryFileSystem)getRawFileSystem();
     synchronized(mfs) {
-      return (mfs.reserveSpace(f, size) && 
-              mfs.reserveSpace(getChecksumFile(f), checksumSize)); 
+      boolean b = mfs.reserveSpace(f, size);
+      if (b) {
+        long checksumSize = getChecksumFileLength(f, size);
+        b = mfs.reserveSpace(getChecksumFile(f), checksumSize);
+        if (!b) {
+          mfs.unreserveSpace(f);
+        }
+      }
+      return b;
     }
   }
 

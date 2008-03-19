@@ -279,7 +279,10 @@ Trunk (unreleased changes)
 
     HADOOP-3029. Datanode prints log message "firstbadlink" only if 
     it detects a bad connection to another datanode in the pipeline. (dhruba)
-    
+
+    HADOOP-3030. Release reserved space for file in InMemoryFileSystem if
+    checksum reservation fails. (Devaraj Das via cdouglas)
+
 Release 0.16.2 - Unreleased
 
   BUG FIXES
