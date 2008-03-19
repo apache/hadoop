@@ -306,6 +306,9 @@ Release 0.16.2 - Unreleased
     Also makes the _temporary a constant in MRConstants.java.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3003. FileSystem cache key is updated after a 
+    FileSystem object is created. (Tsz Wo (Nicholas), SZE via dhruba)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

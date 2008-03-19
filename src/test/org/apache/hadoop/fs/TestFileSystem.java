@@ -42,7 +42,6 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
 import org.apache.hadoop.security.UnixUserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation;
 
 public class TestFileSystem extends TestCase {
   private static final Log LOG = FileSystem.LOG;
@@ -469,8 +468,18 @@ public class TestFileSystem extends TestCase {
   }
 
   public void testFsCache() throws Exception {
-    Configuration c1 = createConf4Testing("foo");
-    Configuration c2 = createConf4Testing("bar");
-    assertFalse(FileSystem.get(c1) == FileSystem.get(c2));
+    long now = System.currentTimeMillis();
+    Configuration[] conf = {new Configuration(),
+        createConf4Testing("foo" + now), createConf4Testing("bar" + now)};
+    FileSystem[] fs = new FileSystem[conf.length];
+
+    for(int i = 0; i < conf.length; i++) {
+      fs[i] = FileSystem.get(conf[i]);
+      assertEquals(fs[i], FileSystem.get(conf[i]));
+      for(int j = 0; j < i; j++) {
+        assertFalse(fs[j] == fs[i]);
+      }
+    }
+    FileSystem.closeAll();
   }
 }

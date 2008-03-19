@@ -221,9 +221,13 @@ public class DistributedFileSystem extends FileSystem {
     return dfs.mkdirs(getPathName(f), permission);
   }
 
-  public void close() throws IOException {
-    super.close();
-    dfs.close();
+  /** {@inheritDoc} */
+  public synchronized void close() throws IOException {
+    try {
+      dfs.close();
+    } finally {
+      super.close();
+    }
   }
 
   public String toString() {
