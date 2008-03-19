@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.URL;
+import java.net.InetSocketAddress;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -32,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.mortbay.http.HttpContext;
 import org.mortbay.http.SocketListener;
+import org.mortbay.http.SslListener;
 import org.mortbay.http.handler.ResourceHandler;
 import org.mortbay.jetty.servlet.WebApplicationContext;
 
@@ -46,6 +48,7 @@ import org.mortbay.jetty.servlet.WebApplicationContext;
 public class StatusHttpServer {
   private org.mortbay.jetty.Server webServer;
   private SocketListener listener;
+  private SslListener sslListener;
   private boolean findPort;
   private WebApplicationContext webAppContext;
   private static final Log LOG =
@@ -172,6 +175,28 @@ public class StatusHttpServer {
     listener.setMinThreads(min);
     listener.setMaxThreads(max);
   }
+
+  /**
+   * Configure an ssl listener on the server.
+   * @param addr address to listen on
+   * @param keystore location of the keystore
+   * @param storPass password for the keystore
+   * @param keyPass password for the key
+   */
+  public void addSslListener(InetSocketAddress addr, String keystore,
+      String storPass, String keyPass) throws IOException {
+    if (sslListener != null || webServer.isStarted()) {
+      throw new IOException("Failed to add ssl listener");
+    }
+    sslListener = new SslListener();
+    sslListener.setHost(addr.getHostName());
+    sslListener.setPort(addr.getPort());
+    sslListener.setKeystore(keystore);
+    sslListener.setPassword(storPass);
+    sslListener.setKeyPassword(keyPass);
+    webServer.addListener(sslListener);
+  }
+
   /**
    * Start the server. Does not wait for the server to start.
    */

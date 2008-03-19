@@ -311,6 +311,16 @@ public class DataNode implements FSConstants, Runnable {
     String infoHost = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
     this.infoServer = new StatusHttpServer("datanode", infoHost, tmpInfoPort, tmpInfoPort == 0);
+    InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(
+        conf.get("dfs.datanode.https.address", infoHost + ":" + 0));
+    Configuration sslConf = new Configuration(conf);
+    sslConf.addResource(conf.get("https.keystore.info.rsrc", "sslinfo.xml"));
+    String keyloc = sslConf.get("https.keystore.location");
+    if (null != keyloc) {
+      this.infoServer.addSslListener(secInfoSocAddr, keyloc,
+          sslConf.get("https.keystore.password", ""),
+          sslConf.get("https.keystore.keypassword", ""));
+    }
     this.infoServer.addServlet(null, "/streamFile/*", StreamFile.class);
     this.infoServer.setAttribute("datanode.blockScanner", blockScanner);
     this.infoServer.addServlet(null, "/blockScannerReport", 

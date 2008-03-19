@@ -108,6 +108,9 @@ Trunk (unreleased changes)
     HADOOP-2939. Make the automated patch testing process an executable 
     Ant target, test-patch. (nigel)
 
+    HADOOP-2239. Add HsftpFileSystem to permit transferring files over ssl.
+    (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing

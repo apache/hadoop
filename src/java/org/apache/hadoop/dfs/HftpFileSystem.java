@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.IOException;
 
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -64,10 +65,10 @@ public class HftpFileSystem extends FileSystem {
     HttpURLConnection.setFollowRedirects(true);
   }
 
-  private String fshostname = "";
-  private int fsport = -1;
+  protected InetSocketAddress nnAddr;
+  protected UserGroupInformation ugi; 
+
   protected static final SimpleDateFormat df = ListPathsServlet.df;
-  private UserGroupInformation ugi; 
 
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
@@ -76,43 +77,43 @@ public class HftpFileSystem extends FileSystem {
       this.ugi = UnixUserGroupInformation.login(conf);
     } catch (LoginException le) {
       throw new IOException(StringUtils.stringifyException(le));
-    } 
+    }
 
-    this.fshostname = name.getHost();
-    this.fsport = name.getPort();
-    if(fsport >= 0)
-      return;
-    String infoAddr = 
-      NetUtils.getServerAddress(conf, 
-                                "dfs.info.bindAddress", 
-                                "dfs.info.port", 
-                                "dfs.http.address");
-    this.fsport = NetUtils.createSocketAddr(infoAddr).getPort();
+    nnAddr = NetUtils.createSocketAddr(name.toString());
   }
 
   @Override
   public URI getUri() {
     try {
-      return new URI("hftp", null, fshostname, fsport, null, null, null);
+      return new URI("hftp", null, nnAddr.getHostName(), nnAddr.getPort(),
+                     null, null, null);
     } catch (URISyntaxException e) {
       return null;
+    }
+  }
+
+  /**
+   * Open an HTTP connection to the namenode to read file data and metadata.
+   * @param path The path component of the URL
+   * @param query The query component of the URL
+   */
+  protected HttpURLConnection openConnection(String path, String query)
+      throws IOException {
+    try {
+      final URL url = new URI("http", null, nnAddr.getHostName(),
+          nnAddr.getPort(), path, query, null).toURL();
+      return (HttpURLConnection)url.openConnection();
+    } catch (URISyntaxException e) {
+      throw (IOException)new IOException().initCause(e);
     }
   }
 
   @Override
   public FSDataInputStream open(Path f, int buffersize) throws IOException {
     HttpURLConnection connection = null;
-    try {
-      final URL url = new URI("http", null, fshostname, fsport,
-          "/data" + f.toUri().getPath(), "ugi=" + ugi, null).toURL();
-      connection = (HttpURLConnection)url.openConnection();
-      connection.setRequestMethod("GET");
-      connection.connect();
-    } catch (URISyntaxException e) {
-      IOException ie = new IOException("invalid url");
-      ie.initCause(e);
-      throw ie;
-    }
+    connection = openConnection("/data" + f.toUri().getPath(), "ugi=" + ugi);
+    connection.setRequestMethod("GET");
+    connection.connect();
     final InputStream in = connection.getInputStream();
     return new FSDataInputStream(new FSInputStream() {
         public int read() throws IOException {
@@ -160,13 +161,11 @@ public class HftpFileSystem extends FileSystem {
               Long.valueOf(attrs.getValue("blocksize")).longValue(),
               modif, FsPermission.valueOf(attrs.getValue("permission")),
               attrs.getValue("owner"), attrs.getValue("group"),
-              new Path("hftp", fshostname + ":" + fsport, 
-                       attrs.getValue("path")))
+              new Path(getUri().toString(), attrs.getValue("path")))
         : new FileStatus(0L, true, 0, 0L,
               modif, FsPermission.valueOf(attrs.getValue("permission")),
               attrs.getValue("owner"), attrs.getValue("group"),
-              new Path("hftp", fshostname + ":" + fsport, 
-                       attrs.getValue("path")));
+              new Path(getUri().toString(), attrs.getValue("path")));
       fslist.add(fs);
     }
 
@@ -174,10 +173,8 @@ public class HftpFileSystem extends FileSystem {
       try {
         XMLReader xr = XMLReaderFactory.createXMLReader();
         xr.setContentHandler(this);
-        final URL url = new URI("http", null, fshostname, fsport,
-            "/listPaths" + path, "ugi=" + ugi + (recur? "&recursive=yes" : ""),
-            null).toURL();
-        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        HttpURLConnection connection = openConnection("/listPaths" + path,
+            "ugi=" + ugi + (recur? "&recursive=yes" : ""));
         connection.setRequestMethod("GET");
         connection.connect();
 
@@ -185,10 +182,6 @@ public class HftpFileSystem extends FileSystem {
         xr.parse(new InputSource(resp));
       } catch (SAXException e) { 
         IOException ie = new IOException("invalid xml directory content");
-        ie.initCause(e);
-        throw ie;
-      } catch (URISyntaxException e) {
-        IOException ie = new IOException("invalid url");
         ie.initCause(e);
         throw ie;
       }

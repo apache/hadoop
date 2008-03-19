@@ -310,6 +310,21 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     int tmpInfoPort = infoSocAddr.getPort();
     this.infoServer = new StatusHttpServer("dfs", infoHost, tmpInfoPort, 
                                             tmpInfoPort == 0);
+    InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(
+        conf.get("dfs.https.address", infoHost + ":" + 0));
+    Configuration sslConf = new Configuration(conf);
+    sslConf.addResource(conf.get("https.keystore.info.rsrc", "sslinfo.xml"));
+    String keyloc = sslConf.get("https.keystore.location");
+    if (null != keyloc) {
+      this.infoServer.addSslListener(secInfoSocAddr, keyloc,
+          sslConf.get("https.keystore.password", ""),
+          sslConf.get("https.keystore.keypassword", ""));
+    }
+    // assume same ssl port for all datanodes
+    InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(
+        conf.get("dfs.datanode.https.address", infoHost + ":" + 50475));
+    this.infoServer.setAttribute("datanode.https.port",
+        datanodeSslPort.getPort());
     this.infoServer.setAttribute("name.system", this);
     this.infoServer.setAttribute("name.node", nn);
     this.infoServer.setAttribute("name.conf", conf);

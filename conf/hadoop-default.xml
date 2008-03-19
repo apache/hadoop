@@ -175,6 +175,11 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>fs.hsftp.impl</name>
+  <value>org.apache.hadoop.dfs.HsftpFileSystem</value>
+</property>
+
+<property>
   <name>fs.ramfs.impl</name>
   <value>org.apache.hadoop.fs.InMemoryFileSystem</value>
   <description>The FileSystem for ramfs: uris.</description>
@@ -242,6 +247,24 @@ creations/deletions), or "all".</description>
   <description>
     The address and the base port where the dfs namenode web ui will listen on.
     If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.https.address</name>
+  <value>0.0.0.0:50475</value>
+</property>
+
+<property>
+  <name>dfs.https.address</name>
+  <value>0.0.0.0:50470</value>
+</property>
+
+<property>
+  <name>https.keystore.info.rsrc</name>
+  <value>sslinfo.xml</value>
+  <description>The name of the resource from which ssl keystore information
+  will be extracted
   </description>
 </property>
 

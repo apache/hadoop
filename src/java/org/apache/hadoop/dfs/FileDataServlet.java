@@ -34,11 +34,16 @@ import org.apache.hadoop.security.UnixUserGroupInformation;
  * @see org.apache.hadoop.dfs.HftpFileSystem
  */
 public class FileDataServlet extends DfsServlet {
-  private static URI createUri(DFSFileInfo i, UnixUserGroupInformation ugi,
-      ClientProtocol nnproxy) throws IOException, URISyntaxException {
+
+  private URI createUri(DFSFileInfo i, UnixUserGroupInformation ugi,
+      ClientProtocol nnproxy, String scheme)
+      throws IOException, URISyntaxException {
     final DatanodeInfo host = pickSrcDatanode(i, nnproxy);
-    return new URI("http", null, host.getHostName(), host.getInfoPort(),
-          "/streamFile", "filename=" + i.getPath() + "&ugi=" + ugi, null);
+    return new URI(scheme, null, host.getHostName(),
+        "https".equals(scheme)
+          ? (Integer)getServletContext().getAttribute("datanode.https.port")
+          : host.getInfoPort(),
+        "/streamFile", "filename=" + i.getPath() + "&ugi=" + ugi, null);
   }
 
   private final static int BLOCK_SAMPLE = 5;
@@ -97,7 +102,8 @@ public class FileDataServlet extends DfsServlet {
         ? request.getPathInfo() : "/";
       DFSFileInfo info = nnproxy.getFileInfo(path);
       if (!info.isDir()) {
-        response.sendRedirect(createUri(info, ugi, nnproxy).toURL().toString());
+        response.sendRedirect(createUri(info, ugi, nnproxy,
+              request.getScheme()).toURL().toString());
       } else {
         response.sendError(400, "cat: " + path + ": is a directory");
       }
