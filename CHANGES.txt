@@ -123,6 +123,10 @@ Trunk (unreleased changes)
     HADOOP-2423.  Code optimization in FSNamesystem.mkdirs.
     (Tsz Wo (Nicholas), SZE via dhruba)
 
+		HADOOP-2606. ReplicationMonitor selects data-nodes to replicate directly
+		from needed replication blocks instead of looking up for the blocks for 
+		each live data-node. (shv)
+
   BUG FIXES
 
     HADOOP-2195. '-mkdir' behaviour is now closer to Linux shell in case of

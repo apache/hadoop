@@ -100,7 +100,7 @@ class PendingReplicationBlocks {
   /**
    * The total number of blocks that are undergoing replication
    */
-  long size() {
+  int size() {
     return pendingReplications.size();
   } 
 

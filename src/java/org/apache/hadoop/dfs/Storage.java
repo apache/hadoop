@@ -298,7 +298,7 @@ abstract class Storage extends StorageInfo {
           return StorageState.NORMAL;
         if (hasPrevious)
           throw new InconsistentFSStateException(root,
-                                                 "version file in current directory it is missing.");
+                              "version file in current directory is missing.");
         return StorageState.NOT_FORMATTED;
       }
 

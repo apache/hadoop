@@ -23,7 +23,7 @@ import java.util.*;
  * Blocks have replication priority, with priority 0 indicating the highest
  * Blocks have only one replicas has the highest
  */
-class UnderReplicatedBlocks {
+class UnderReplicatedBlocks implements Iterable<Block> {
   private static final int LEVEL = 3;
   private List<TreeSet<Block>> priorityQueues = new ArrayList<TreeSet<Block>>();
       
@@ -173,7 +173,7 @@ class UnderReplicatedBlocks {
   }
       
   /* return a iterator of all the under replication blocks */
-  synchronized Iterator<Block> iterator() {
+  public synchronized Iterator<Block> iterator() {
     return new Iterator<Block>() {
       private int level;
       private List<Iterator<Block>> iterators = new ArrayList<Iterator<Block>>();

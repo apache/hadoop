@@ -214,30 +214,25 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return new BlockIterator(this.blockList, this);
   }
   
-  /*
+  /**
    * Store block replication work.
    */
-  void addBlocksToBeReplicated(Block[] blocklist, 
-                               DatanodeDescriptor[][] targets) {
-    assert(blocklist != null && targets != null);
-    assert(blocklist.length > 0 && targets.length > 0);
+  void addBlockToBeReplicated(Block block, DatanodeDescriptor[] targets) {
+    assert(block != null && targets != null && targets.length > 0);
     synchronized (replicateBlocks) {
-      assert(blocklist.length == targets.length);
-      for (int i = 0; i < blocklist.length; i++) {
-        replicateBlocks.add(blocklist[i]);
-        replicateTargetSets.add(targets[i]);
-      }
+      replicateBlocks.add(block);
+      replicateTargetSets.add(targets);
     }
   }
 
-  /*
+  /**
    * Store block invalidation work.
    */
-  void addBlocksToBeInvalidated(Block[] blocklist) {
-    assert(blocklist != null && blocklist.length > 0);
+  void addBlocksToBeInvalidated(List<Block> blocklist) {
+    assert(blocklist != null && blocklist.size() > 0);
     synchronized (invalidateBlocks) {
-      for (int i = 0; i < blocklist.length; i++) {
-        invalidateBlocks.add(blocklist[i]);
+      for(Block blk : blocklist) {
+        invalidateBlocks.add(blk);
       }
     }
   }

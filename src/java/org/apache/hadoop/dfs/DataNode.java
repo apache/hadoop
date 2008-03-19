@@ -97,7 +97,7 @@ public class DataNode implements FSConstants, Runnable {
   volatile boolean shouldRun = true;
   private LinkedList<Block> receivedBlockList = new LinkedList<Block>();
   private LinkedList<String> delHints = new LinkedList<String>();
-  final private static String EMPTY_DEL_HINT = "";
+  final static String EMPTY_DEL_HINT = "";
   int xmitsInProgress = 0;
   Daemon dataXceiveServer = null;
   ThreadGroup threadGroup = null;
