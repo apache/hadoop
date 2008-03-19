@@ -336,13 +336,11 @@ class JobInProgress {
     // create job specific temporary directory in output path
     Path outputPath = conf.getOutputPath();
     if (outputPath != null) {
-      Path tmpDir = new Path(outputPath, "_temporary");
+      Path tmpDir = new Path(outputPath, MRConstants.TEMP_DIR_NAME);
       FileSystem fileSys = tmpDir.getFileSystem(conf);
       if (!fileSys.mkdirs(tmpDir)) {
         LOG.error("Mkdirs failed to create " + tmpDir.toString());
       }
-    } else {
-      LOG.error("Null Output path");
     }
 
     this.status = new JobStatus(status.getJobId(), 0.0f, 0.0f, JobStatus.RUNNING);
@@ -1276,7 +1274,7 @@ class JobInProgress {
       // delete the temporary directory in output directory
       Path outputPath = conf.getOutputPath();
       if (outputPath != null) {
-        Path tmpDir = new Path(outputPath, "_temporary");
+        Path tmpDir = new Path(outputPath, MRConstants.TEMP_DIR_NAME);
         FileSystem fileSys = tmpDir.getFileSystem(conf);
         if (fileSys.exists(tmpDir)) {
           FileUtil.fullyDelete(fileSys, tmpDir);

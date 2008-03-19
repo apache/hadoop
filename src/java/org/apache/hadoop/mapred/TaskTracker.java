@@ -1398,7 +1398,7 @@ public class TaskTracker
       // create _taskid directory in output path temporary directory.
       Path outputPath = localJobConf.getOutputPath();
       if (outputPath != null) {
-        Path jobTmpDir = new Path(outputPath, "_temporary");
+        Path jobTmpDir = new Path(outputPath, MRConstants.TEMP_DIR_NAME);
         FileSystem fs = jobTmpDir.getFileSystem(localJobConf);
         if (fs.exists(jobTmpDir)) {
           Path taskTmpDir = new Path(jobTmpDir, "_" + task.getTaskId());

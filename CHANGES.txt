@@ -294,6 +294,10 @@ Release 0.16.2 - Unreleased
     HADOOP-2978. Fixes the JobHistory log format for counters.
     (Runping Qi via ddas)
 
+    HADOOP-2985. Fixes LocalJobRunner to tolerate null job output path.
+    Also makes the _temporary a constant in MRConstants.java.
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

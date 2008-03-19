@@ -191,8 +191,8 @@ abstract class Task implements Writable, Configurable {
   public String toString() { return taskId; }
 
   private Path getTaskOutputPath(JobConf conf) {
-    Path p = new Path(conf.getOutputPath(), ("_temporary" 
-                      + Path.SEPARATOR + "_" + taskId));
+    Path p = new Path(conf.getOutputPath(), 
+      (MRConstants.TEMP_DIR_NAME + Path.SEPARATOR + "_" + taskId));
     try {
       FileSystem fs = p.getFileSystem(conf);
       return p.makeQualified(fs);
