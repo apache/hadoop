@@ -283,6 +283,9 @@ Trunk (unreleased changes)
     HADOOP-3030. Release reserved space for file in InMemoryFileSystem if
     checksum reservation fails. (Devaraj Das via cdouglas)
 
+    HADOOP-3036. Fix findbugs warnings in UpgradeUtilities. (Konstantin
+    Shvachko via cdouglas)
+
 Release 0.16.2 - Unreleased
 
   BUG FIXES

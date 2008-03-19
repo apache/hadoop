@@ -52,7 +52,7 @@ public class UpgradeUtilities {
 
   // Root scratch directory on local filesystem 
   private static File TEST_ROOT_DIR = new File(
-                                               System.getProperty("test.build.data","/tmp").toString().replace(' ', '+'));
+      System.getProperty("test.build.data","/tmp").replace(' ', '+'));
   // The singleton master storage directory for Namenode
   private static File namenodeStorage = new File(TEST_ROOT_DIR, "namenodeMaster");
   // A checksum of the contents in namenodeStorage directory
@@ -207,20 +207,25 @@ public class UpgradeUtilities {
     Arrays.sort(list);
     CRC32 checksum = new CRC32();
     for (int i = 0; i < list.length; i++) {
-      if (list[i].isFile()) {
-        // skip VERSION file for DataNodes
-        if (nodeType == DATA_NODE &&
-            list[i].getName().equals("VERSION")) 
-          {
-            continue; 
-          }
-        FileInputStream fis = new FileInputStream(list[i]);
+      if (!list[i].isFile()) {
+        continue;
+      }
+      // skip VERSION file for DataNodes
+      if (nodeType == DATA_NODE && list[i].getName().equals("VERSION")) {
+        continue; 
+      }
+      FileInputStream fis = null;
+      try {
+        fis = new FileInputStream(list[i]);
         byte[] buffer = new byte[1024];
         int bytesRead;
         while ((bytesRead = fis.read(buffer)) != -1) {
           checksum.update(buffer, 0, bytesRead);
         }
-        fis.close();
+      } finally {
+        if(fis != null) {
+          fis.close();
+        }
       }
     }
     return checksum.getValue();
