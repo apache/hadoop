@@ -527,15 +527,16 @@ class FSDataset implements FSConstants, FSDatasetInterface {
   
   protected File getMetaFile(Block b) throws IOException {
     File blockFile = getBlockFile( b );
-    return new File( blockFile.getAbsolutePath() + METADATA_EXTENSION ); 
+    return getMetaFile(blockFile); 
   }
+
   public boolean metaFileExists(Block b) throws IOException {
     return getMetaFile(b).exists();
   }
   
   public long getMetaDataLength(Block b) throws IOException {
     File checksumFile = getMetaFile( b );
-  return checksumFile.length();
+    return checksumFile.length();
   }
 
   public MetaDataInputStream getMetaDataInputStream(Block b)
@@ -566,7 +567,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     volumeMap = new HashMap<Block, DatanodeBlockInfo>();
     volumes.getVolumeMap(volumeMap);
     blockWriteTimeout = Math.max(
-         conf.getInt("dfs.datanode.block.write.timeout.sec", 3600), 1) * 1000;
+         conf.getInt("dfs.datanode.block.write.timeout.sec", 3600), 1) * 1000L;
     registerMBean(storage.getStorageID());
   }
 
@@ -595,10 +596,10 @@ class FSDataset implements FSConstants, FSDatasetInterface {
    * Find the block's on-disk length
    */
   public long getLength(Block b) throws IOException {
-    if (!isValidBlock(b)) {
+    File f = validateBlockFile(b);
+    if(f == null) {
       throw new IOException("Block " + b + " is not valid.");
     }
-    File f = getFile(b);
     return f.length();
   }
 
@@ -606,10 +607,11 @@ class FSDataset implements FSConstants, FSDatasetInterface {
    * Get File name for a given block.
    */
   protected synchronized File getBlockFile(Block b) throws IOException {
-    if (!isValidBlock(b)) {
+    File f = validateBlockFile(b);
+    if(f == null) {
       throw new IOException("Block " + b + " is not valid.");
     }
-    return getFile(b);
+    return f;
   }
   
   public synchronized InputStream getBlockInputStream(Block b) throws IOException {
@@ -838,9 +840,18 @@ class FSDataset implements FSConstants, FSDatasetInterface {
    * Check whether the given block is a valid one.
    */
   public boolean isValidBlock(Block b) {
+    return validateBlockFile(b) != null;
+  }
+
+  /**
+   * Find the file corresponding to the block and return it if it exists.
+   */
+  File validateBlockFile(Block b) {
     //Should we check for metadata file too?
     File f = getFile(b);
-    return (f!= null && f.exists());
+    if(f != null && f.exists())
+      return f;
+    return null;
   }
 
   /**
@@ -973,6 +984,10 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     return toString();
   }
   
+  /**
+   *  A duplicate of {@link #getLength()}
+   */
+  @Deprecated
   public long getBlockSize(Block b) {
     return getFile(b).length();
   }

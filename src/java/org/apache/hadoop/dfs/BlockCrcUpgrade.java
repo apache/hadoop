@@ -441,11 +441,6 @@ class BlockCrcUpgradeUtils {
     Block block = blockInfo.block;
     FSDataset data = (FSDataset) blockInfo.dataNode.data;
     File blockFile = data.getBlockFile( block );
-    if ( blockFile == null || !blockFile.exists() ) {
-      throw new IOException("Block file "  + 
-                            ((blockFile != null) ? blockFile.getAbsolutePath()
-                              : "NULL") + " does not exist.");
-    }
     
     byte[] blockBuf = new byte[bytesPerChecksum];
     FileInputStream in = null;
@@ -785,9 +780,6 @@ class BlockCrcUpgradeUtils {
     Block block = blockInfo.block;
     FSDataset data = (FSDataset) blockInfo.dataNode.data;
     File blockFile = data.getBlockFile( block );
-    if (blockFile == null || !blockFile.exists()) {
-      throw new IOException("Could not local file for block");
-    }
     long blockLen = blockFile.length();
     if ( blockLen != blockFile.length()) {
       LOG.warn("Mismatch in length for block: local file size is " +
@@ -1462,11 +1454,6 @@ class BlockCrcUpgradeObjectDatanode extends UpgradeObjectDatanode {
         LOG.warn("Could not find file location for " + b + 
                  ". It might already be deleted. Exception : " +
                  StringUtils.stringifyException(e));
-        errors++;
-        continue;
-      }
-      if (!blockFile.exists()) {
-        LOG.error("could not find block file " + blockFile);
         errors++;
         continue;
       }
