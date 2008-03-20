@@ -86,7 +86,7 @@ defList = { 'hod' : (
              ('clusterdir', 'directory', 
              'Directory where cluster state information and hadoop-site.xml' +
              ' will be stored.',
-              True, None, False, True, 'd'),
+              True, None, False, False, 'd'),
 
              ('syslog-address', 'address', 'Syslog address.',
               False, None, False, True, 'y'),

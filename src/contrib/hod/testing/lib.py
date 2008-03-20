@@ -62,3 +62,49 @@ def printSeparator():
   for i in range(0,79):
     str = str + "*"
   print >>sys.stderr, "\n", str, "\n"
+
+# This class captures all log messages logged by hodRunner and other classes.
+# It is then used to verify that certain log messages have come. This is one
+# way to validate that messages printed to the logger are correctly written.
+class MockLogger:
+  def __init__(self):
+    self.__logLines = {}
+
+  def info(self, message):
+    self.__logLines[message] = 'info'
+
+  def critical(self, message):
+    self.__logLines[message] = 'critical'
+
+  def warn(self, message):
+    self.__logLines[message] = 'warn'
+
+  def debug(self, message):
+    # don't track debug lines.
+    pass
+
+  # verify a certain message has been logged at the defined level of severity.
+  def hasMessage(self, message, level):
+    if not self.__logLines.has_key(message):
+      return False
+    return self.__logLines[message] == level
+
+# Stub class to test cluster manipulation operations.
+class MockHadoopCluster:
+  
+  def __init__(self):
+    # store the operations received.
+    self.__operations = {}
+  
+  def delete_job(self, jobid):
+    self.__operations['delete_job'] = [jobid]
+  
+  def wasOperationPerformed(self, operation, args):
+    if self.__operations.has_key(operation):
+      actualArgs = self.__operations[operation]
+      for arg in actualArgs:
+        if arg not in args:
+          break
+      else:
+        return True
+    return False
