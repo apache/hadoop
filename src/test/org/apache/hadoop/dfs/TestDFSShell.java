@@ -307,6 +307,13 @@ public class TestDFSShell extends TestCase {
       argv = new String[3];
       argv[0] = "-mv";
       argv[1] = "/testfile";
+      argv[2] = "file";
+      ret = ToolRunner.run(shell, argv);
+      assertTrue("mv failed to rename", ret == -1);
+      out.reset();
+      argv = new String[3];
+      argv[0] = "-mv";
+      argv[1] = "/testfile";
       argv[2] = "/testfiletest";
       ret = ToolRunner.run(shell, argv);
       returned = out.toString();

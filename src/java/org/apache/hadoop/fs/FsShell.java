@@ -855,7 +855,6 @@ public class FsShell extends Configured implements Tool {
         try {
           dstFstatus = dstFs.getFileStatus(dst);
         } catch(IOException e) {
-          //hide this
         }
         if((srcFstatus!= null) && (dstFstatus!= null)) {
           if (srcFstatus.isDir()  && !dstFstatus.isDir()) {
@@ -863,6 +862,7 @@ public class FsShell extends Configured implements Tool {
                 + dst + " with directory " + srcs[i]);
           }
         }
+        throw new IOException("Failed to rename " + srcs[i] + " to " + dst);
       }
     }
   }
