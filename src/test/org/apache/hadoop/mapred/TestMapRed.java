@@ -256,12 +256,14 @@ public class TestMapRed extends TestCase {
     private JobConf conf;
     private boolean compressInput;
     private String taskId;
+    private String jobId;
     private boolean first = true;
       
     public void configure(JobConf conf) {
       this.conf = conf;
       compressInput = conf.getCompressMapOutput();
       taskId = conf.get("mapred.task.id");
+      jobId = conf.get("mapred.job.id");
     }
       
     public void reduce(WritableComparable key, Iterator values,
@@ -269,7 +271,9 @@ public class TestMapRed extends TestCase {
                        ) throws IOException {
       if (first) {
         first = false;
-        Path input = conf.getLocalPath(taskId+"/map_0.out");
+        MapOutputFile mapOutputFile = new MapOutputFile(jobId);
+        mapOutputFile.setConf(conf);
+        Path input = mapOutputFile.getInputFile(0, taskId);
         FileSystem fs = FileSystem.get(conf);
         assertTrue("reduce input exists " + input, fs.exists(input));
         SequenceFile.Reader rdr = 

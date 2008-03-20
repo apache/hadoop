@@ -30,6 +30,15 @@ import org.apache.hadoop.conf.*;
 class MapOutputFile {
 
   private JobConf conf;
+  private String jobDir;
+  
+  MapOutputFile() {
+  }
+
+  MapOutputFile(String jobId) {
+    this.jobDir = TaskTracker.getJobCacheSubdir() + Path.SEPARATOR + jobId;
+  }
+
   private LocalDirAllocator lDirAlloc = 
                             new LocalDirAllocator("mapred.local.dir");
   
@@ -38,7 +47,9 @@ class MapOutputFile {
    */
   public Path getOutputFile(String mapTaskId)
     throws IOException {
-    return lDirAlloc.getLocalPathToRead(mapTaskId+"/file.out", conf);
+    return lDirAlloc.getLocalPathToRead(jobDir + Path.SEPARATOR +
+                                        mapTaskId + Path.SEPARATOR +
+                                        "output" + "/file.out", conf);
   }
 
   /** Create a local map output file name.
@@ -47,7 +58,9 @@ class MapOutputFile {
    */
   public Path getOutputFileForWrite(String mapTaskId, long size)
     throws IOException {
-    return lDirAlloc.getLocalPathForWrite(mapTaskId+"/file.out", size, conf);
+    return lDirAlloc.getLocalPathForWrite(jobDir + Path.SEPARATOR +
+                                          mapTaskId + Path.SEPARATOR +
+                                          "output" + "/file.out", size, conf);
   }
 
   /** Return the path to a local map output index file created earlier
@@ -55,7 +68,9 @@ class MapOutputFile {
    */
   public Path getOutputIndexFile(String mapTaskId)
     throws IOException {
-    return lDirAlloc.getLocalPathToRead(mapTaskId + "/file.out.index", conf);
+    return lDirAlloc.getLocalPathToRead(jobDir + Path.SEPARATOR +
+                                        mapTaskId + Path.SEPARATOR +
+                                        "output" + "/file.out.index", conf);
   }
 
   /** Create a local map output index file name.
@@ -64,7 +79,9 @@ class MapOutputFile {
    */
   public Path getOutputIndexFileForWrite(String mapTaskId, long size)
     throws IOException {
-    return lDirAlloc.getLocalPathForWrite(mapTaskId + "/file.out.index", 
+    return lDirAlloc.getLocalPathForWrite(jobDir + Path.SEPARATOR +
+                                          mapTaskId + Path.SEPARATOR +
+                                          "output" + "/file.out.index", 
                                           size, conf);
   }
 
@@ -74,8 +91,10 @@ class MapOutputFile {
    */
   public Path getSpillFile(String mapTaskId, int spillNumber)
     throws IOException {
-    return lDirAlloc.getLocalPathToRead(mapTaskId+"/spill" +spillNumber+".out",
-                                        conf);
+    return lDirAlloc.getLocalPathToRead(jobDir + Path.SEPARATOR +
+                                        mapTaskId + Path.SEPARATOR +
+                                        "output" + "/spill" 
+                                        + spillNumber + ".out", conf);
   }
 
   /** Create a local map spill file name.
@@ -85,9 +104,10 @@ class MapOutputFile {
    */
   public Path getSpillFileForWrite(String mapTaskId, int spillNumber, 
          long size) throws IOException {
-    return lDirAlloc.getLocalPathForWrite(mapTaskId+
-                                                  "/spill" +spillNumber+".out",
-                                                  size, conf);
+    return lDirAlloc.getLocalPathForWrite(jobDir + Path.SEPARATOR +
+                                          mapTaskId + Path.SEPARATOR +
+                                          "output" + "/spill" + 
+                                          spillNumber + ".out", size, conf);
   }
 
   /** Return a local map spill index file created earlier
@@ -96,8 +116,10 @@ class MapOutputFile {
    */
   public Path getSpillIndexFile(String mapTaskId, int spillNumber)
     throws IOException {
-    return lDirAlloc.getLocalPathToRead(
-        mapTaskId+"/spill" +spillNumber+".out.index", conf);
+    return lDirAlloc.getLocalPathToRead(jobDir + Path.SEPARATOR +
+                                        mapTaskId + Path.SEPARATOR +
+                                        "output" + "/spill" + 
+                                        spillNumber + ".out.index", conf);
   }
 
   /** Create a local map spill index file name.
@@ -107,8 +129,10 @@ class MapOutputFile {
    */
   public Path getSpillIndexFileForWrite(String mapTaskId, int spillNumber,
          long size) throws IOException {
-    return lDirAlloc.getLocalPathForWrite(
-        mapTaskId+"/spill" +spillNumber+".out.index", size, conf);
+    return lDirAlloc.getLocalPathForWrite(jobDir + Path.SEPARATOR +
+                                          mapTaskId + Path.SEPARATOR +
+                                          "output" + "/spill" + spillNumber + 
+                                          ".out.index", size, conf);
   }
 
   /** Return a local reduce input file created earlier
@@ -118,7 +142,9 @@ class MapOutputFile {
   public Path getInputFile(int mapId, String reduceTaskId)
     throws IOException {
     // TODO *oom* should use a format here
-    return lDirAlloc.getLocalPathToRead(reduceTaskId + "/map_"+mapId+".out",
+    return lDirAlloc.getLocalPathToRead(jobDir + Path.SEPARATOR +
+                                        reduceTaskId + Path.SEPARATOR + 
+                                        "output" + "/map_" + mapId + ".out",
                                         conf);
   }
 
@@ -130,21 +156,16 @@ class MapOutputFile {
   public Path getInputFileForWrite(int mapId, String reduceTaskId, long size)
     throws IOException {
     // TODO *oom* should use a format here
-    return lDirAlloc.getLocalPathForWrite(reduceTaskId + "/map_"+mapId+".out",
+    return lDirAlloc.getLocalPathForWrite(jobDir + Path.SEPARATOR +
+                                          reduceTaskId + Path.SEPARATOR +
+                                          "output" + "/map_" + mapId + ".out",
                                           size, conf);
   }
 
   /** Removes all of the files related to a task. */
   public void removeAll(String taskId) throws IOException {
-    conf.deleteLocalFiles(taskId);
-  }
-
-  /** 
-   * Removes all contents of temporary storage.  Called upon 
-   * startup, to remove any leftovers from previous run.
-   */
-  public void cleanupStorage() throws IOException {
-    conf.deleteLocalFiles();
+    conf.deleteLocalFiles(jobDir + Path.SEPARATOR +
+                          taskId + Path.SEPARATOR + "output");
   }
 
   public void setConf(Configuration conf) {
@@ -154,4 +175,9 @@ class MapOutputFile {
       this.conf = new JobConf(conf);
     }
   }
+  
+  public void setJobId(String jobId) {
+    this.jobDir = TaskTracker.getJobCacheSubdir() + Path.SEPARATOR + jobId;
+  }
+
 }

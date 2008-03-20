@@ -144,12 +144,14 @@ public class TestMiniMRWithDFS extends TestCase {
         String name = contents[fileIdx];
         if (!("taskTracker".equals(contents[fileIdx]))) {
           LOG.debug("Looking at " + name);
-          int idx = neededDirs.indexOf(name);
           assertTrue("Spurious directory " + name + " found in " +
-                     localDir, idx != -1);
-          assertTrue("Matching output directory not found " + name +
-                     " in " + trackerDir, 
-                     new File(new File(new File(trackerDir, "jobcache"), jobIds[idx]), name).isDirectory());
+                     localDir, false);
+        }
+      }
+      for (int idx = 0; idx < neededDirs.size(); ++idx) {
+        String name = neededDirs.get(idx);
+        if (new File(new File(new File(trackerDir, "jobcache"),
+                              jobIds[idx]), name).isDirectory()) {
           found[idx] = true;
           numNotDel++;
         }  

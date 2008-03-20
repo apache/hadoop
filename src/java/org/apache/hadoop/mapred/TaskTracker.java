@@ -152,7 +152,6 @@ public class TaskTracker
   private static final String JOBCACHE = "jobcache";
   private JobConf originalConf;
   private JobConf fConf;
-  private MapOutputFile mapOutputFile;
   private int maxCurrentMapTasks;
   private int maxCurrentReduceTasks;
   private int failures;
@@ -448,7 +447,7 @@ public class TaskTracker
 
     // Clear out temporary files that might be lying around
     DistributedCache.purgeCache(this.fConf);
-    this.mapOutputFile.cleanupStorage();
+    cleanupStorage();
     this.justStarted = true;
 
     this.jobClient = (InterTrackerProtocol) 
@@ -465,7 +464,15 @@ public class TaskTracker
                              taskTrackerName);
     mapEventsFetcher.start();
   }
-    
+  
+  /** 
+   * Removes all contents of temporary storage.  Called upon 
+   * startup, to remove any leftovers from previous run.
+   */
+  public void cleanupStorage() throws IOException {
+    this.fConf.deleteLocalFiles();
+  }
+
   // Object on wait which MapEventsFetcherThread is going to wait.
   private Object waitingOn = new Object();
 
@@ -638,13 +645,11 @@ public class TaskTracker
         jarFileSize = -1;
       }
     }
-    // Here we check for double the size of jobfile to accommodate for
-    // localize task file and we check four times the size of jarFileSize to 
-    // accommodate for unjarring the jar file in work directory 
+
     Path localJobFile = lDirAlloc.getLocalPathForWrite((getJobCacheSubdir()
                                     + Path.SEPARATOR + jobId 
                                     + Path.SEPARATOR + "job.xml"),
-                                    2 * jobFileSize + 5 * jarFileSize, fConf);
+                                    jobFileSize, fConf);
     RunningJob rjob = addTaskToJob(jobId, localJobFile, tip);
     synchronized (rjob) {
       if (!rjob.localized) {
@@ -667,18 +672,30 @@ public class TaskTracker
         JobConf localJobConf = new JobConf(localJobFile);
         
         // create the 'work' directory
-        File workDir = new File(new File(localJobFile.toString()).getParent(),
-                                "work");
-        if (!workDir.mkdirs()) {
-          if (!workDir.isDirectory()) {
-            throw new IOException("Mkdirs failed to create " + workDir.toString());
-          }
+        // job-specific shared directory for use as scratch space 
+        Path workDir = lDirAlloc.getLocalPathForWrite((getJobCacheSubdir()
+                       + Path.SEPARATOR + jobId 
+                       + Path.SEPARATOR + "work"), fConf);
+        if (!localFs.mkdirs(workDir)) {
+          throw new IOException("Mkdirs failed to create " 
+                      + workDir.toString());
         }
+        System.setProperty("job.local.dir", workDir.toString());
+        localJobConf.set("job.local.dir", workDir.toString());
         
-        // unjar the job.jar files in workdir
+        // copy Jar file to the local FS and unjar it.
         String jarFile = localJobConf.getJar();
         if (jarFile != null) {
-          localJarFile = new Path(jobDir,"job.jar");
+          // Here we check for and we check five times the size of jarFileSize
+          // to accommodate for unjarring the jar file in work directory 
+          localJarFile = new Path(lDirAlloc.getLocalPathForWrite(
+                                     getJobCacheSubdir()
+                                     + Path.SEPARATOR + jobId 
+                                     + Path.SEPARATOR + "jars",
+                                     5 * jarFileSize, fConf), "job.jar");
+          if (!localFs.mkdirs(localJarFile.getParent())) {
+            throw new IOException("Mkdirs failed to create jars directory "); 
+          }
           fs.copyToLocalFile(new Path(jarFile), localJarFile);
           localJobConf.setJar(localJarFile.toString());
           OutputStream out = localFs.create(localJobFile);
@@ -687,8 +704,9 @@ public class TaskTracker
           } finally {
             out.close();
           }
-
-          RunJar.unJar(new File(localJarFile.toString()), workDir);
+          // also unjar the job.jar files 
+          RunJar.unJar(new File(localJarFile.toString()),
+                       new File(localJarFile.getParent().toString()));
         }
         rjob.keepJobFiles = ((localJobConf.getKeepTaskFilesPattern() != null) ||
                              localJobConf.getKeepFailedTaskFiles());
@@ -763,7 +781,7 @@ public class TaskTracker
     this.running = false;
         
     // Clear local storage
-    this.mapOutputFile.cleanupStorage();
+    cleanupStorage();
         
     // Shutdown the fetcher thread
     this.mapEventsFetcher.interrupt();
@@ -782,8 +800,6 @@ public class TaskTracker
     maxCurrentReduceTasks = conf.getInt(
                   "mapred.tasktracker.reduce.tasks.maximum", 2);
     this.jobTrackAddr = JobTracker.getAddress(conf);
-    this.mapOutputFile = new MapOutputFile();
-    this.mapOutputFile.setConf(conf);
     String infoAddr = 
       NetUtils.getServerAddress(conf,
                                 "tasktracker.http.bindAddress", 
@@ -1370,7 +1386,11 @@ public class TaskTracker
                     Path.SEPARATOR + task.getJobId() + Path.SEPARATOR +
                     task.getTaskId()), defaultJobConf );
       FileSystem localFs = FileSystem.getLocal(fConf);
-      
+      if (!localFs.mkdirs(localTaskDir)) {
+        throw new IOException("Mkdirs failed to create " 
+                    + localTaskDir.toString());
+      }
+
       // create symlink for ../work if it already doesnt exist
       String workDir = lDirAlloc.getLocalPathToRead(
                          TaskTracker.getJobCacheSubdir() 
@@ -1384,9 +1404,17 @@ public class TaskTracker
         FileUtil.symLink(workDir, link);
       
       // create the working-directory of the task 
-      if (!localFs.mkdirs(localTaskDir)) {
-        throw new IOException("Mkdirs failed to create " + localTaskDir.toString());
+      Path cwd = lDirAlloc.getLocalPathForWrite(
+                         TaskTracker.getJobCacheSubdir() 
+                         + Path.SEPARATOR + task.getJobId() 
+                         + Path.SEPARATOR + task.getTaskId()
+                         + Path.SEPARATOR + "work",
+                         defaultJobConf);
+      if (!localFs.mkdirs(cwd)) {
+        throw new IOException("Mkdirs failed to create " 
+                    + cwd.toString());
       }
+
       Path localTaskFile = new Path(localTaskDir, "job.xml");
       task.setJobFile(localTaskFile.toString());
       localJobConf.set("mapred.local.dir",
@@ -1598,7 +1626,19 @@ public class TaskTracker
               } catch(IOException e){
                 LOG.warn("Exception finding task's stdout/err/syslog files");
               }
-              File workDir = new File(task.getJobFile()).getParentFile();
+              File workDir = null;
+              try {
+                workDir = new File(lDirAlloc.getLocalPathToRead(
+                                     TaskTracker.getJobCacheSubdir() 
+                                     + Path.SEPARATOR + task.getJobId() 
+                                     + Path.SEPARATOR + task.getTaskId()
+                                     + Path.SEPARATOR + "work",
+                                     localJobConf). toString());
+              } catch (IOException e) {
+                LOG.warn("Working Directory of the task " + task.getTaskId() +
+                		 "doesnt exist. Throws expetion " +
+                          StringUtils.stringifyException(e));
+              }
               // Build the command  
               File stdout = TaskLog.getTaskLogFile(task.getTaskId(),
                                                    TaskLog.LogName.DEBUGOUT);
@@ -2216,6 +2256,12 @@ public class TaskTracker
                       ) throws ServletException, IOException {
       String mapId = request.getParameter("map");
       String reduceId = request.getParameter("reduce");
+      String jobId = request.getParameter("job");
+
+      if (jobId == null) {
+        throw new IOException("job parameter is required");
+      }
+
       if (mapId == null || reduceId == null) {
         throw new IOException("map and reduce parameters are required");
       }
@@ -2241,11 +2287,15 @@ public class TaskTracker
 
         // Index file
         Path indexFileName = lDirAlloc.getLocalPathToRead(
-            mapId+"/file.out.index", conf);
+            TaskTracker.getJobCacheSubdir() + Path.SEPARATOR + 
+            jobId + Path.SEPARATOR +
+            mapId + "/output" + "/file.out.index", conf);
         
         // Map-output file
         Path mapOutputFileName = lDirAlloc.getLocalPathToRead(
-            mapId+"/file.out", conf);
+            TaskTracker.getJobCacheSubdir() + Path.SEPARATOR + 
+            jobId + Path.SEPARATOR +
+            mapId + "/output" + "/file.out", conf);
 
         /**
          * Read the index file to get the information about where

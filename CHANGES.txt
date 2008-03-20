@@ -37,6 +37,9 @@ Trunk (unreleased changes)
     HADOOP-2822. Remove depreceted code for classes InputFormatBase and 
     PhasedFileSystem. (Amareshwari Sriramadasu via enis)
 
+    HADOOP-2116. Changes the layout of the task execution directory. 
+    (Amareshwari Sriramadasu via ddas)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)

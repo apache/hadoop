@@ -48,14 +48,16 @@ class MapOutputLocation implements Writable, MRConstants {
   private int mapId;
   private String host;
   private int port;
+  private String jobId;
 
   /** RPC constructor **/
   public MapOutputLocation() {
   }
 
   /** Construct a location. */
-  public MapOutputLocation(String mapTaskId, int mapId, 
+  public MapOutputLocation(String jobId, String mapTaskId, int mapId, 
                            String host, int port) {
+    this.jobId = jobId;
     this.mapTaskId = mapTaskId;
     this.mapId = mapId;
     this.host = host;
@@ -80,22 +82,24 @@ class MapOutputLocation implements Writable, MRConstants {
   public int getPort() { return port; }
 
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString(out, mapTaskId);
+    out.writeUTF(jobId);
+    out.writeUTF(mapTaskId);
     out.writeInt(mapId);
-    UTF8.writeString(out, host);
+    out.writeUTF(host);
     out.writeInt(port);
   }
 
   public void readFields(DataInput in) throws IOException {
-    this.mapTaskId = UTF8.readString(in);
+    this.jobId = in.readUTF();
+    this.mapTaskId = in.readUTF();
     this.mapId = in.readInt();
-    this.host = UTF8.readString(in);
+    this.host = in.readUTF();
     this.port = in.readInt();
   }
 
   public String toString() {
-    return "http://" + host + ":" + port + "/mapOutput?map=" + 
-      mapTaskId;
+    return "http://" + host + ":" + port + "/mapOutput?job=" + jobId +
+           "&map=" + mapTaskId;
   }
   
   /**

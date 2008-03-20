@@ -1334,6 +1334,25 @@ public class JobConf extends Configuration {
   public void setJobEndNotificationURI(String uri) {
     set("job.end.notification.url", uri);
   }
+
+  /**
+   * Get job-specific shared directory for use as scratch space
+   * 
+   * <p>
+   * When a job starts, a shared directory is created at location
+   * <code>
+   * ${mapred.local.dir}/taskTracker/jobcache/$jobid/work/ </code>.
+   * This directory is exposed to the users through 
+   * <code>job.local.dir </code>.
+   * So, the tasks can use this space 
+   * as scratch space and share files among them. </p>
+   * This value is available as System property also.
+   * 
+   * @return The localized job specific shared directory
+   */
+  public String getJobLocalDir() {
+    return get("job.local.dir");
+  }
   
   /** 
    * Find a jar that contains a class of the same name, if any.

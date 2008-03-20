@@ -1062,6 +1062,33 @@
           <code>&lt;/property&gt;</code>
         </p>
         
+        <p>When the job starts, the localized job directory
+        <code> ${mapred.local.dir}/taskTracker/jobcache/$jobid/</code>
+        has the following directories: </p>
+        <ul>
+        <li> A job-specific shared directory, created at location
+        <code>${mapred.local.dir}/taskTracker/jobcache/$jobid/work/ </code>.
+        This directory is exposed to the users through 
+        <code>job.local.dir </code>. The tasks can use this space as scratch
+        space and share files among them. The directory can accessed through 
+        api <a href="ext:api/org/apache/hadoop/mapred/jobconf/getjoblocaldir">
+        JobConf.getJobLocalDir()</a>. It is available as System property also.
+        So,users can call <code>System.getProperty("job.local.dir")</code>;
+        </li>
+        <li>A jars directory, which has the job jar file and expanded jar </li>
+        <li>A job.xml file, the generic job configuration </li>
+        <li>Each task has directory <code>task-id</code> which again has the 
+        following structure
+        <ul>
+        <li>A job.xml file, task localized job configuration </li>
+        <li>A directory for intermediate output files</li>
+        <li>The working directory of the task. 
+        And work directory has a temporary directory 
+        to create temporary files</li>
+        </ul>
+        </li>
+        </ul>
+ 
         <p>The <a href="#DistributedCache">DistributedCache</a> can also be used
         as a rudimentary software distribution mechanism for use in the map 
         and/or reduce tasks. It can be used to distribute both jars and 

@@ -114,6 +114,7 @@ abstract class Task implements Writable, Configurable {
                                                     TaskStatus.Phase.MAP : 
                                                     TaskStatus.Phase.SHUFFLE, 
                                                   counters);
+    this.mapOutputFile.setJobId(jobId);
   }
 
   ////////////////////////////////////////////
@@ -186,6 +187,7 @@ abstract class Task implements Writable, Configurable {
       taskOutputPath = null;
     }
     taskStatus.readFields(in);
+    this.mapOutputFile.setJobId(jobId); 
   }
 
   public String toString() { return taskId; }

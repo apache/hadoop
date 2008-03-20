@@ -46,7 +46,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.InMemoryFileSystem;
-import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
@@ -807,7 +806,10 @@ class ReduceTask extends Task {
         // a temp filename. If this file gets created in ramfs, we're fine,
         // else, we will check the localFS to find a suitable final location
         // for this path
-        Path filename = new Path("/" + reduceId + "/map_" +
+        Path filename = new Path("/" + TaskTracker.getJobCacheSubdir() +
+                                 Path.SEPARATOR + getJobId() +
+                                 Path.SEPARATOR + reduceId +
+                                 Path.SEPARATOR + "output" + "/map_" +
                                  loc.getMapId() + ".out");
         // a working filename that will be unique to this attempt
         Path tmpFilename = new Path(filename + "-" + id);
@@ -903,13 +905,7 @@ class ReduceTask extends Task {
       // add the jars and directories to the classpath
       String jar = conf.getJar();
       if (jar != null) {      
-        LocalDirAllocator lDirAlloc = 
-                            new LocalDirAllocator("mapred.local.dir");
-        File jobCacheDir = new File(lDirAlloc.getLocalPathToRead(
-                                      TaskTracker.getJobCacheSubdir() 
-                                      + Path.SEPARATOR + getJobId() 
-                                      + Path.SEPARATOR  
-                                      + "work", conf).toString());
+        File jobCacheDir = new File(new Path(jar).getParent().toString());
 
         File[] libs = new File(jobCacheDir, "lib").listFiles();
         if (libs != null) {
@@ -1484,7 +1480,8 @@ class ReduceTask extends Task {
               maxFetchRetriesPerMap = 
                   getClosestPowerOf2((maxMapRuntime / BACKOFF_INIT) + 1);
             }
-            knownOutputs.add(new MapOutputLocation(taskId, mId, host, port));
+            knownOutputs.add(new MapOutputLocation(reduceTask.getJobId(),
+                             taskId, mId, host, port));
           }
           break;
           case FAILED:

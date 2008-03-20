@@ -54,7 +54,7 @@ abstract class TaskRunner extends Thread {
     this.t = t;
     this.tracker = tracker;
     this.conf = conf;
-    this.mapOutputFile = new MapOutputFile();
+    this.mapOutputFile = new MapOutputFile(t.getJobId());
     this.mapOutputFile.setConf(conf);
   }
 
@@ -91,19 +91,20 @@ abstract class TaskRunner extends Thread {
       
       //before preparing the job localize 
       //all the archives
-      File workDir = new File(t.getJobFile()).getParentFile();
       String taskid = t.getTaskId();
       LocalDirAllocator lDirAlloc = new LocalDirAllocator("mapred.local.dir");
       File jobCacheDir = null;
-      try {
-        jobCacheDir = new File(lDirAlloc.getLocalPathToRead(
-                                    TaskTracker.getJobCacheSubdir() 
-                                    + Path.SEPARATOR + t.getJobId() 
-                                    + Path.SEPARATOR  
-                                    + "work", conf).toString());
-      } catch (IOException ioe) {
-        LOG.warn("work directory doesnt exist");
+      if (conf.getJar() != null) {
+        jobCacheDir = new File(
+                          new Path(conf.getJar()).getParent().toString());
       }
+      File workDir = new File(lDirAlloc.getLocalPathToRead(
+                                TaskTracker.getJobCacheSubdir() 
+                                + Path.SEPARATOR + t.getJobId() 
+                                + Path.SEPARATOR + t.getTaskId()
+                                + Path.SEPARATOR + "work",
+                                conf). toString());
+
       URI[] archives = DistributedCache.getCacheArchives(conf);
       URI[] files = DistributedCache.getCacheFiles(conf);
       FileStatus fileStatus;

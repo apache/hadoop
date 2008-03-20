@@ -137,11 +137,10 @@ public abstract class PipeMapRed {
       String[] argvSplit = splitArgs(argv);
       String prog = argvSplit[0];
       File currentDir = new File(".").getAbsoluteFile();
-      File jobCacheDir = new File(currentDir.getParentFile().getParent(), "work");
       if (new File(prog).isAbsolute()) {
         // we don't own it. Hope it is executable
       } else {
-        FileUtil.chmod(new File(jobCacheDir, prog).toString(), "a+x");
+        FileUtil.chmod(new File(currentDir, prog).toString(), "a+x");
       }
 
       // 
@@ -153,7 +152,7 @@ public abstract class PipeMapRed {
       //
       if (!new File(argvSplit[0]).isAbsolute()) {
         PathFinder finder = new PathFinder("PATH");
-        finder.prependPathComponent(jobCacheDir.toString());
+        finder.prependPathComponent(currentDir.toString());
         File f = finder.getAbsolutePath(argvSplit[0]);
         if (f != null) {
           argvSplit[0] = f.getAbsolutePath();

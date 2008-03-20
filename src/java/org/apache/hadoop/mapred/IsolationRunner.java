@@ -28,6 +28,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
@@ -115,13 +116,14 @@ public class IsolationRunner {
    * @param conf the jobconf
    * @throws IOException if something goes wrong writing
    */
-  private static void fillInMissingMapOutputs(FileSystem fs, 
+  private static void fillInMissingMapOutputs(FileSystem fs,
+                                              String jobId,
                                               String taskId,
                                               int numMaps,
                                               JobConf conf) throws IOException {
     Class keyClass = conf.getMapOutputKeyClass();
     Class valueClass = conf.getMapOutputValueClass();
-    MapOutputFile namer = new MapOutputFile();
+    MapOutputFile namer = new MapOutputFile(jobId);
     namer.setConf(conf);
     for(int i=0; i<numMaps; i++) {
       Path f = namer.getInputFile(i, taskId);
@@ -156,8 +158,13 @@ public class IsolationRunner {
     
     // setup the local and user working directories
     FileSystem local = FileSystem.getLocal(conf);
-    File taskDir = new File(jobFilename.getParent());
-    File workDirName = new File(taskDir.getParent(), "work");
+    LocalDirAllocator lDirAlloc = new LocalDirAllocator("mapred.local.dir");
+    File workDirName = new File(lDirAlloc.getLocalPathToRead(
+                                  TaskTracker.getJobCacheSubdir() 
+                                  + Path.SEPARATOR + jobId 
+                                  + Path.SEPARATOR + taskId
+                                  + Path.SEPARATOR + "work",
+                                  conf). toString());
     local.setWorkingDirectory(new Path(workDirName.toString()));
     FileSystem.get(conf).setWorkingDirectory(conf.getWorkingDirectory());
     
@@ -179,7 +186,7 @@ public class IsolationRunner {
                          taskId, partition, splitClass, split);
     } else {
       int numMaps = conf.getNumMapTasks();
-      fillInMissingMapOutputs(local, taskId, numMaps, conf);
+      fillInMissingMapOutputs(local, jobId, taskId, numMaps, conf);
       task = new ReduceTask(jobId, jobFilename.toString(), conf.get("mapred.tip.id"), taskId, 
                             partition, numMaps);
     }
