@@ -26,7 +26,6 @@ from testing.lib import printSeparator, printLine
 moduleList = []
 allList = []
 excludes = [
-            'Xmlrpc'
            ]
 
 # Build a module list by scanning through all files in testingDir

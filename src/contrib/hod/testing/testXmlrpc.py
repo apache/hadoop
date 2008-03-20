@@ -22,10 +22,15 @@ sys.path.append(rootDirectory)
 
 from hodlib.Common.xmlrpc import hodXRClient
 from hodlib.Common.socketServers import hodXMLRPCServer
+from hodlib.GridServices.service import ServiceUtil
+from hodlib.Common.util import hodInterrupt, HodInterruptException
 
 from testing.lib import BaseTestSuite
 
 excludes = []
+
+global serverPort
+serverPort = None
 
 class test_HodXRClient(unittest.TestCase):
   def setUp(self):
@@ -33,36 +38,39 @@ class test_HodXRClient(unittest.TestCase):
 
   # All testMethods have to have their names start with 'test'
   def testSuccess(self):
-    client = hodXRClient('http://localhost:5555', retryRequests=False)
+    global serverPort
+    client = hodXRClient('http://localhost:' + str(serverPort), retryRequests=False)
     self.assertEqual(client.testing(), True)
     pass
     
   def testFailure(self):
-    client = hodXRClient('http://localhost:5555', retryRequests=False)
-    # client.noMethod()
+    """HOD should raise Exception when unregistered rpc is called"""
+    global serverPort
+    client = hodXRClient('http://localhost:' + str(serverPort), retryRequests=False)
     self.assertRaises(Exception, client.noMethod)
     pass
 
   def testTimeout(self):
     """HOD should raise Exception when rpc call times out"""
-    client = hodXRClient('http://localhost:567823', retryRequests=False)
-    # client.noMethod()
+    # Give client some random nonexistent url
+    serverPort = ServiceUtil.getUniqRandomPort(h='localhost',low=40000,high=50000)
+    client = hodXRClient('http://localhost:' + str(serverPort), retryRequests=False)
     self.assertRaises(Exception, client.testing)
     pass
 
   def testInterrupt(self):
     """ HOD should raise HodInterruptException when interrupted"""
-    from hodlib.Common.util import hodInterrupt, HodInterruptException
 
-    def interrupt():
-      client = hodXRClient('http://localhost:59087')
-      thread = threading.Thread(name='testinterrupt', target=client.testing)
-      thread.start()
-      time.sleep(1)
-      hodInterrupt.setFlag()
-      thread.join()
-
-    self.assertRaises(HodInterruptException, interrupt)
+    def interrupt(testClass):
+      testClass.assertRaises(HodInterruptException, client.testing)
+      
+    serverPort = ServiceUtil.getUniqRandomPort(h='localhost',low=40000,high=50000)
+    client = hodXRClient('http://localhost:' + str(serverPort))
+    myThread = threading.Thread(name='testinterrupt', target=interrupt,args=(self,))
+    # Set the global interrupt
+    hodInterrupt.setFlag()
+    myThread.start()
+    myThread.join()
     pass
 
   def tearDown(self):
@@ -76,7 +84,9 @@ class XmlrpcTestSuite(BaseTestSuite):
     def rpcCall():
       return True
     
-    self.server = hodXMLRPCServer('localhost', ['5555'])
+    global serverPort
+    serverPort = ServiceUtil.getUniqRandomPort(h='localhost',low=40000,high=50000)
+    self.server = hodXMLRPCServer('localhost', [serverPort])
     self.server.register_function(rpcCall, 'testing')
     self.thread = threading.Thread(name="server", 
                                    target=self.server._serve_forever)

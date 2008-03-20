@@ -118,7 +118,7 @@ Trunk (unreleased changes)
     requests or server slowdown. (Hairong Kuang via dhruba)
 
     HADOOP-2848. [HOD]hod -o list and deallocate works even after deleting
-    the cluster directory. (Vinod Kumar Vavilapalli via ddas)
+    the cluster directory. (Hemanth Yamijala via ddas)
 
   OPTIMIZATIONS
 
@@ -300,6 +300,9 @@ Trunk (unreleased changes)
 
     HADOOP-3036. Fix findbugs warnings in UpgradeUtilities. (Konstantin
     Shvachko via cdouglas)
+
+    HADOOP-2783. Fixes a problem to do with import in 
+    hod/hodlib/Common/xmlrpc.py. (Vinod Kumar Vavilapalli via ddas) 
 
 Release 0.16.2 - Unreleased
 
