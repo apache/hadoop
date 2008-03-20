@@ -126,6 +126,9 @@ Trunk (unreleased changes)
     HADOOP-2899. [HOD] Cleans up hdfs:///mapredsystem directory after
     deallocation. (Hemanth Yamijala via ddas) 
 
+    HADOOP-2886.  Track individual RPC metrics.
+    (girish vaitheeswaran via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing

@@ -27,6 +27,9 @@ import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
+import java.util.HashMap;
+import java.util.*;
+
 /**
  * 
  * This class is for maintaining  the various RPC statistics
@@ -69,6 +72,9 @@ public class RpcMetrics implements Updater {
   public MetricsTimeVaryingRate rpcQueueTime = new MetricsTimeVaryingRate("RpcQueueTime");
   public MetricsTimeVaryingRate rpcProcessingTime = new MetricsTimeVaryingRate("RpcProcessingTime");
   public MetricsTimeVaryingRate rpcDiscardedOps = new MetricsTimeVaryingRate("RpcDiscardedOps");
+
+  public Map <String, MetricsTimeVaryingRate> metricsList = Collections.synchronizedMap(new HashMap<String, MetricsTimeVaryingRate>());
+
   
   
   /**
@@ -78,7 +84,20 @@ public class RpcMetrics implements Updater {
     rpcQueueTime.pushMetric(metricsRecord);
     rpcProcessingTime.pushMetric(metricsRecord);
     rpcDiscardedOps.pushMetric(metricsRecord);
-    
+
+    synchronized (metricsList) {
+	// Iterate through the rpcMetrics hashmap to propogate the different rpc metrics.
+	Set keys = metricsList.keySet();
+
+	Iterator keyIter = keys.iterator();
+
+	while (keyIter.hasNext()) {
+		Object key = keyIter.next();
+		MetricsTimeVaryingRate value = metricsList.get(key);
+
+		value.pushMetric(metricsRecord);
+	}
+    }
   }
 
   public void shutdown() {

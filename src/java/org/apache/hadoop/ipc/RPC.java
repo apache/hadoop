@@ -40,6 +40,7 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 /** A simple RPC mechanism.
  *
@@ -450,7 +451,18 @@ public class RPC {
             " procesingTime= " + processingTime);
         rpcMetrics.rpcQueueTime.inc(qTime);
         rpcMetrics.rpcProcessingTime.inc(processingTime);
-        
+
+	MetricsTimeVaryingRate m = rpcMetrics.metricsList.get(call.getMethodName());
+
+	if (m != null) {
+		m.inc(processingTime);
+	}
+	else {
+		rpcMetrics.metricsList.put(call.getMethodName(), new MetricsTimeVaryingRate(call.getMethodName()));
+		m = rpcMetrics.metricsList.get(call.getMethodName());
+		m.inc(processingTime);
+	}
+
         if (verbose) log("Return: "+value);
 
         return new ObjectWritable(method.getReturnType(), value);
