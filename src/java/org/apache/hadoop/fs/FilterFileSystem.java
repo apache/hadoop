@@ -137,7 +137,7 @@ public class FilterFileSystem extends FileSystem {
   
   /** Delete a file */@Deprecated
   public boolean delete(Path f) throws IOException {
-    return fs.delete(f);
+    return delete(f, true);
   }
   
   /** Delete a file */

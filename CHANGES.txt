@@ -316,6 +316,8 @@ Trunk (unreleased changes)
     HADOOP-2936. Fixes HOD in a way that it generates hdfs://host:port on the
     client side configs. (Vinod Kumar Vavilapalli via ddas)
 
+    HADOOP-3025. ChecksumFileSystem supports the delete method with 
+    the recursive flag. (Mahadev Konar via dhruba)
 
 Release 0.16.2 - Unreleased
 

@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.fs;
 
+import java.net.URI;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.InMemoryFileSystem;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.conf.Configuration;
 import junit.framework.TestCase;
 
 public class TestChecksumFileSystem extends TestCase {
@@ -31,5 +37,33 @@ public class TestChecksumFileSystem extends TestCase {
     assertEquals(408, ChecksumFileSystem.getChecksumLength(100L, 1));
     assertEquals(4000000000008L,
                  ChecksumFileSystem.getChecksumLength(10000000000000L, 10));    
-  }    
+  } 
+  
+  // cehck that the checksum file is deleted for Checksum file system.
+  public void testDeletionOfCheckSum() throws Exception {
+    Configuration conf = new Configuration();
+    URI uri = URI.create("ramfs://mapoutput" + "_tmp");
+    InMemoryFileSystem inMemFs =  (InMemoryFileSystem)FileSystem.get(uri, conf);
+    Path testPath = new Path("/file_1");
+    inMemFs.reserveSpaceWithCheckSum(testPath, 1024);
+    FSDataOutputStream fout = inMemFs.create(testPath);
+    fout.write("testing".getBytes());
+    fout.close();
+    assertTrue("checksum exists", inMemFs.exists(inMemFs.getChecksumFile(testPath)));
+    inMemFs.delete(testPath, true);
+    assertTrue("checksum deleted", !inMemFs.exists(inMemFs.getChecksumFile(testPath)));
+    // check for directories getting deleted.
+    testPath = new Path("/tesdir/file_1");
+    inMemFs.reserveSpaceWithCheckSum(testPath, 1024);
+    fout = inMemFs.create(testPath);
+    fout.write("testing".getBytes());
+    fout.close();
+    testPath = new Path("/testdir/file_2");
+    inMemFs.reserveSpaceWithCheckSum(testPath, 1024);
+    fout = inMemFs.create(testPath);
+    fout.write("testing".getBytes());
+    fout.close();
+    inMemFs.delete(testPath, true);
+    assertTrue("nothing in the namespace", inMemFs.listStatus(new Path("/")).length == 0);
+  }
 }

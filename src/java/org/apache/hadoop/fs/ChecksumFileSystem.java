@@ -409,21 +409,30 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   }
 
   /**
-   * Get rid of Path f, whether a true file or dir.
+   * Implement the delete(Path, boolean) in checksum
+   * file system.
    */
-  public boolean delete(Path f) throws IOException {
-    if (fs.isDirectory(f)) {
-      return fs.delete(f, true);
+  public boolean delete(Path f, boolean recursive) throws IOException{
+    FileStatus fstatus = null;
+    try {
+      fstatus = fs.getFileStatus(f);
+    } catch(FileNotFoundException e) {
+      return false;
+    }
+    if(fstatus.isDir()) {
+      //this works since the crcs are in the same
+      //directories and the files. so we just delete
+      //everything in the underlying filesystem
+      return fs.delete(f, recursive);
     } else {
       Path checkFile = getChecksumFile(f);
       if (fs.exists(checkFile)) {
         fs.delete(checkFile, true);
       }
-
       return fs.delete(f, true);
     }
   }
-
+    
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
     public boolean accept(Path file) {
       return !isChecksumFile(file);
