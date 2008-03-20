@@ -1291,10 +1291,11 @@
           not just per task.</p> 
  
           <p>To avoid these issues the Map-Reduce framework maintains a special 
-          <code>${mapred.output.dir}/_${taskid}</code> sub-directory for each 
-          task-attempt on the <code>FileSystem</code> where the output of the 
-          task-attempt is stored. On successful completion of the task-attempt, 
-          the files in the <code>${mapred.output.dir}/_${taskid}</code> (only) 
+          <code>${mapred.output.dir}/_temporary/_${taskid}</code> sub-directory
+          for each task-attempt on the <code>FileSystem</code> where the output
+          of the task-attempt is stored. On successful completion of the 
+          task-attempt, the files in the 
+          <code>${mapred.output.dir}/_temporary/_${taskid}</code> (only) 
           are <em>promoted</em> to <code>${mapred.output.dir}</code>. Of course, 
           the framework discards the sub-directory of unsuccessful task-attempts. 
           This process is completely transparent to the application.</p>

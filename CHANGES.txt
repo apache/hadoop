@@ -332,6 +332,9 @@ Release 0.16.2 - Unreleased
     HADOOP-3003. FileSystem cache key is updated after a 
     FileSystem object is created. (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-3042. Updates the Javadoc in JobConf.getOutputPath to reflect 
+    the actual temporary path. (Amareshwari Sriramadasu via ddas)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

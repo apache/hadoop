@@ -367,10 +367,11 @@ public class JobConf extends Configuration {
    * <tt>task_200709221812_0001_m_000000_0</tt>), not just per TIP.</p> 
    * 
    * <p>To get around this the Map-Reduce framework helps the application-writer 
-   * out by maintaining a special <tt>${mapred.output.dir}/_${taskid}</tt> 
+   * out by maintaining a special 
+   * <tt>${mapred.output.dir}/_temporary/_${taskid}</tt> 
    * sub-directory for each task-attempt on HDFS where the output of the 
    * task-attempt goes. On successful completion of the task-attempt the files 
-   * in the <tt>${mapred.output.dir}/_${taskid}</tt> (only) 
+   * in the <tt>${mapred.output.dir}/_temporary/_${taskid}</tt> (only) 
    * are <i>promoted</i> to <tt>${mapred.output.dir}</tt>. Of course, the 
    * framework discards the sub-directory of unsuccessful task-attempts. This 
    * is completely transparent to the application.</p>
@@ -383,7 +384,7 @@ public class JobConf extends Configuration {
    * 
    * <p><i>Note</i>: the value of <tt>${mapred.output.dir}</tt> during execution 
    * of a particular task-attempt is actually 
-   * <tt>${mapred.output.dir}/_{$taskid}</tt>, not the value set by 
+   * <tt>${mapred.output.dir}/_temporary/_{$taskid}</tt>, not the value set by 
    * {@link #setOutputPath(Path)}. So, just create any side-files in the path 
    * returned by {@link #getOutputPath()} from map/reduce task to take 
    * advantage of this feature.</p>

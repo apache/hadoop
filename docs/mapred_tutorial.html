@@ -1751,10 +1751,11 @@ document.write("Last Published: " + document.lastModified);
           (using the taskid, say <span class="codefrag">task_200709221812_0001_m_000000_0</span>), 
           not just per task.</p>
 <p>To avoid these issues the Map-Reduce framework maintains a special 
-          <span class="codefrag">${mapred.output.dir}/_${taskid}</span> sub-directory for each 
-          task-attempt on the <span class="codefrag">FileSystem</span> where the output of the 
-          task-attempt is stored. On successful completion of the task-attempt, 
-          the files in the <span class="codefrag">${mapred.output.dir}/_${taskid}</span> (only) 
+          <span class="codefrag">${mapred.output.dir}/_temporary/_${taskid}</span> sub-directory
+          for each task-attempt on the <span class="codefrag">FileSystem</span> where the output
+          of the task-attempt is stored. On successful completion of the 
+          task-attempt, the files in the 
+          <span class="codefrag">${mapred.output.dir}/_temporary/_${taskid}</span> (only) 
           are <em>promoted</em> to <span class="codefrag">${mapred.output.dir}</span>. Of course, 
           the framework discards the sub-directory of unsuccessful task-attempts. 
           This process is completely transparent to the application.</p>
