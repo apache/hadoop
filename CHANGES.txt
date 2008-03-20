@@ -304,6 +304,10 @@ Trunk (unreleased changes)
     HADOOP-2783. Fixes a problem to do with import in 
     hod/hodlib/Common/xmlrpc.py. (Vinod Kumar Vavilapalli via ddas) 
 
+    HADOOP-2936. Fixes HOD in a way that it generates hdfs://host:port on the
+    client side configs. (Vinod Kumar Vavilapalli via ddas)
+
+
 Release 0.16.2 - Unreleased
 
   BUG FIXES

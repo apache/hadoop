@@ -72,7 +72,7 @@ class hadoopConfig:
 
     description = {}
     paramsDict = {  'mapred.job.tracker'    : mapredAddr , \
-                    'fs.default.name'       : hdfsAddr, \
+                    'fs.default.name'       : "hdfs://" + hdfsAddr, \
                     'hadoop.tmp.dir'        : confDir, \
                     'dfs.client.buffer.dir' : tempDir, }
 

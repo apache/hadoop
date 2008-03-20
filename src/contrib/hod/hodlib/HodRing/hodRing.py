@@ -229,7 +229,10 @@ class HadoopCommand:
           prop = self._createXmlElement(doc, k, item, "No description", final)
           topElement.appendChild(prop)
       else:
-        prop = self._createXmlElement(doc, k, v, "No description", final)
+        if k == 'fs.default.name':
+          prop = self._createXmlElement(doc, k, "hdfs://" + v, "No description", final)
+        else:
+          prop = self._createXmlElement(doc, k, v, "No description", final)
         topElement.appendChild(prop)
 	
   def _createHadoopSiteXml(self):
