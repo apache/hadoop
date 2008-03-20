@@ -129,6 +129,8 @@ Trunk (unreleased changes)
     HADOOP-2886.  Track individual RPC metrics.
     (girish vaitheeswaran via dhruba)
 
+    HADOOP-2373. Improvement in safe-mode reporting. (shv)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing

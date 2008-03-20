@@ -3647,6 +3647,8 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     int blockTotal; 
     /** Number of safe blocks. */
     private int blockSafe;
+    /** time of the last status printout */
+    private long lastStatusReport = 0;
       
     /**
      * Creates SafeModeInfo when the name node enters
@@ -3678,6 +3680,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       this.blockSafe = -1;
       this.reached = -1;
       enter();
+      reportStatus("STATE* Safe mode is ON.", true);
     }
       
     /**
@@ -3699,10 +3702,6 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
      * Enter safe mode.
      */
     void enter() {
-      if (reached != 0)
-        NameNode.stateChangeLog.info(
-                                     "STATE* SafeModeInfo.enter: " + "Safe mode is ON.\n" 
-                                     + getTurnOffTip());
       this.reached = 0;
     }
       
@@ -3722,18 +3721,16 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         if(needUpgrade) {
           // switch to manual safe mode
           safeMode = new SafeModeInfo();
-          NameNode.stateChangeLog.info("STATE* SafeModeInfo.leave: " 
-                                      + "Safe mode is ON.\n" + getTurnOffTip()); 
           return;
         }
       }
       long timeInSafemode = now() - systemStart;
-      LOG.info("Leaving safemode after " + timeInSafemode + " msecs");
+      NameNode.stateChangeLog.info("STATE* Leaving safe mode after " 
+                                    + timeInSafemode/1000 + " secs.");
       NameNode.getNameNodeMetrics().safeModeTime.set((int) timeInSafemode);
       
       if (reached >= 0) {
-        NameNode.stateChangeLog.info(
-                                     "STATE* SafeModeInfo.leave: " + "Safe mode is OFF."); 
+        NameNode.stateChangeLog.info("STATE* Safe mode is OFF."); 
       }
       reached = -1;
       safeMode = null;
@@ -3753,8 +3750,10 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     synchronized boolean canLeave() {
       if (reached == 0)
         return false;
-      if (now() - reached < extension)
+      if (now() - reached < extension) {
+        reportStatus("STATE* Safe mode ON.", false);
         return false;
+      }
       return !needEnter();
     }
       
@@ -3780,6 +3779,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     private void checkMode() {
       if (needEnter()) {
         enter();
+        reportStatus("STATE* Safe mode ON.", false);
         return;
       }
       // the threshold is reached
@@ -3788,12 +3788,15 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         this.leave(true); // leave safe mode
         return;
       }
-      if (reached > 0)  // threshold has already been reached before
+      if (reached > 0) {  // threshold has already been reached before
+        reportStatus("STATE* Safe mode ON.", false);
         return;
+      }
       // start monitor
       reached = now();
       smmthread = new Daemon(new SafeModeMonitor());
       smmthread.start();
+      reportStatus("STATE* Safe mode extension entered.", true);
     }
       
     /**
@@ -3837,14 +3840,38 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
      * A tip on how safe mode is to be turned off: manually or automatically.
      */
     String getTurnOffTip() {
-      return (isManual() ?  getDistributedUpgradeState() ?
-        "Safe mode will be turned off automatically upon completion of " + 
-        "the distributed upgrade: upgrade progress = " + 
-        getDistributedUpgradeStatus() + "%" :
-        "Use \"hadoop dfs -safemode leave\" to turn safe mode off." :
-        "Safe mode will be turned off automatically.");
+      final String autoOffMsg = "Safe mode will be turned off automatically";
+      if(reached < 0)
+        return "Safe mode is OFF.";
+      if(isManual()) {
+        if(getDistributedUpgradeState())
+          return autoOffMsg + " upon completion of " + 
+            "the distributed upgrade: upgrade progress = " + 
+            getDistributedUpgradeStatus() + "%";
+        return "Use \"hadoop dfs -safemode leave\" to turn safe mode off.";
+      }
+      String safeBlockRatioMsg = 
+        String.format(
+          "The ratio of reported blocks %.4f has not reached the threshold %.4f. ",
+          getSafeBlockRatio(), threshold) + autoOffMsg;
+      if(reached == 0)  // threshold is not reached 
+        return safeBlockRatioMsg + ".";
+      // extension period is in progress
+      return safeBlockRatioMsg + " in " 
+            + Math.abs(reached + extension - now())/1000 + " seconds.";
     }
-      
+
+    /**
+     * Print status every 20 seconds.
+     */
+    private void reportStatus(String msg, boolean rightNow) {
+      long curTime = now();
+      if(!rightNow && (curTime - lastStatusReport < 20 * 1000))
+        return;
+      NameNode.stateChangeLog.info(msg + " \n" + getTurnOffTip());
+      lastStatusReport = curTime;
+    }
+
     /**
      * Returns printable state of the class.
      */
@@ -3973,8 +4000,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   synchronized void enterSafeMode() throws IOException {
     if (isInSafeMode()) {
-      NameNode.stateChangeLog.info(
-                                   "STATE* FSNamesystem.enterSafeMode: " + "Safe mode is already ON."); 
+      NameNode.stateChangeLog.info("STATE* Safe mode is already ON."); 
       return;
     }
     safeMode = new SafeModeInfo();
@@ -3986,8 +4012,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   synchronized void leaveSafeMode(boolean checkForUpgrades) throws IOException {
     if (!isInSafeMode()) {
-      NameNode.stateChangeLog.info(
-                                   "STATE* FSNamesystem.leaveSafeMode: " + "Safe mode is already OFF."); 
+      NameNode.stateChangeLog.info("STATE* Safe mode is already OFF."); 
       return;
     }
     if(getDistributedUpgradeState())
