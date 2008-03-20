@@ -51,11 +51,12 @@ from hodlib.Common.util import local_fqdn, tar, filter_warnings,\
                             get_exception_string, get_exception_error_string
 from hodlib.Common.logger import hodLog
 from hodlib.Common.logger import getLogger
+from hodlib.HodRing.hodRing import createMRSystemDirectoryManager
 
 filter_warnings()
 
 reVersion = re.compile(".*(\d+_\d+).*")
-reHdfsURI = re.compile("hdfs://(.*?:\d+)(.*)")
+reHdfsURI = re.compile("(hdfs://.*?:\d+)(.*)")
 
 VERSION = None
 if os.path.exists("./VERSION"):
@@ -103,25 +104,6 @@ def __copy_archive_to_dfs(conf, archiveFile):
   # need log-destination-uri, hadoopCommandstring and/or pkgs
   hdfsURIMatch = reHdfsURI.match(conf['log-destination-uri'])
   
-  # FIXME this is a complete and utter hack. Currently hadoop is broken
-  # and does not understand hdfs:// syntax on the command line :(
-  
-  pid = os.getpid()
-  tempConfDir = '/tmp/%s' % pid
-  os.mkdir(tempConfDir)
-  tempConfFileName = '%s/hadoop-site.xml' % tempConfDir
-  tempHadoopConfig = open(tempConfFileName, 'w')
-  print >>tempHadoopConfig, "<configuration>"
-  print >>tempHadoopConfig, "  <property>"
-  print >>tempHadoopConfig, "  <name>fs.default.name</name>"
-  print >>tempHadoopConfig, "  <value>%s</value>" % hdfsURIMatch.group(1)
-  print >>tempHadoopConfig, "  <description>No description</description>"
-  print >>tempHadoopConfig, "  </property>"
-  print >>tempHadoopConfig, "</configuration>"
-  tempHadoopConfig.close()
-  
-  # END LAME HACK
-  
   (head, tail) = os.path.split(archiveFile)
   destFile = os.path.join(hdfsURIMatch.group(2), conf['user-id'], 'hod-logs', conf['service-id'], tail)
   
@@ -131,9 +113,8 @@ def __copy_archive_to_dfs(conf, archiveFile):
   if conf['pkgs']:
     hadoopCmd = os.path.join(conf['pkgs'], 'bin', 'hadoop')
 
-  # LAME HACK AGAIN, using config generated above :( 
-  copyCommand = "%s --config %s dfs -copyFromLocal %s %s" % (hadoopCmd, 
-    tempConfDir, archiveFile, destFile)
+  copyCommand = "%s dfs -fs %s -copyFromLocal %s %s" % (hadoopCmd, 
+    hdfsURIMatch.group(1), archiveFile, destFile)
   
   log.debug(copyCommand)
   
@@ -143,9 +124,6 @@ def __copy_archive_to_dfs(conf, archiveFile):
   copyThread.join()
   log.debug(pprint.pformat(copyThread.output()))
   
-  # LAME HACK AGAIN, deleting config generated above :( 
-  os.unlink(tempConfFileName)
-  os.rmdir(tempConfDir)
   os.unlink(archiveFile)
 
 def unpack():
@@ -153,7 +131,8 @@ def unpack():
   option_list=["--log-destination-uri", "--hadoop-log-dirs", \
           "--temp-dir", "--hadoop-command-string", "--pkgs", "--user-id", \
           "--service-id", "--hodring-debug", "--hodring-log-dir", \
-          "--hodring-syslog-address", "--hodring-cleanup-list"]
+          "--hodring-syslog-address", "--hodring-cleanup-list", \
+          "--jt-pid", "--mr-sys-dir", "--fs-name", "--hadoop-path"]
   regexp = re.compile("^--")
   for opt in option_list:
     parser.add_option(opt,dest=regexp.sub("",opt),action="store")
@@ -185,6 +164,10 @@ if __name__ == '__main__':
     # Use the same log as hodring
     log = getLogger(conf['hodring'],'hodring')
     log.debug("Logger initialised successfully")
+    mrSysDirManager = createMRSystemDirectoryManager(conf, log)
+    if mrSysDirManager is not None:
+      mrSysDirManager.removeMRSystemDirectory()
+
     status =  __archive_logs(conf,log)
     log.info("Archive status : %s" % status)
     list = conf['hodring-cleanup-list'].split(',')

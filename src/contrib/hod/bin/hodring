@@ -46,7 +46,7 @@ sys.path.append(libDirectory)
 
 from hodlib.HodRing.hodRing import HodRing
 from hodlib.Common.setup import *
-from hodlib.Common.util import filter_warnings,get_exception_string, get_exception_error_string
+from hodlib.Common.util import filter_warnings,get_exception_string, get_exception_error_string, getMapredSystemDirectory
 from hodlib.Common.logger import getLogger, ensureLogDir
 
 filter_warnings()
@@ -160,8 +160,11 @@ if __name__ == '__main__':
     list = []
     
     runningHadoops = service.getRunningValues()
-      
+
+    mrSysDirManager = None      
     for cmd in runningHadoops:
+      if cmd.name == 'jobtracker':
+        mrSysDirManager = cmd.getMRSystemDirectoryManager()
       log.debug("addding %s to cleanup list..." % cmd)
       cmd.addCleanup(list)
     
@@ -210,6 +213,9 @@ if __name__ == '__main__':
       cmdString = cmdString + " --hodring-syslog-address " + syslogAddr
     if service._cfg.has_key('pkgs'):
       cmdString = cmdString + " --pkgs " + service._cfg['pkgs']
+
+    if mrSysDirManager is not None:
+      cmdString = "%s %s" % (cmdString, mrSysDirManager.toCleanupArgs())
 
     log.info("cleanup commandstring : ")
     log.info(cmdString)

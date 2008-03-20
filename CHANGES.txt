@@ -120,6 +120,9 @@ Trunk (unreleased changes)
     HADOOP-2848. [HOD]hod -o list and deallocate works even after deleting
     the cluster directory. (Hemanth Yamijala via ddas)
 
+    HADOOP-2899. [HOD] Cleans up hdfs:///mapredsystem directory after
+    deallocation. (Hemanth Yamijala via ddas) 
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing

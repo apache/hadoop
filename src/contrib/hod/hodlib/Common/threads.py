@@ -162,6 +162,10 @@ class simpleCommand(baseThread):
         
         sys.exit(0)
 
+    def getPid(self):
+        """return pid of the launches process"""
+        return self.__pid
+
     def output(self):
         return self.__outputBuffer[:]
 

@@ -13,7 +13,7 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-import sys, os, traceback, stat, socket, re, warnings, signal
+import errno, sys, os, traceback, stat, socket, re, warnings, signal
 
 from hodlib.Common.tcp import tcpSocket, tcpError 
 from hodlib.Common.threads import simpleCommand
@@ -32,6 +32,16 @@ class AlarmException(Exception):
 
     def __repr__(self):
         return self.message
+
+def isProcessRunning(pid):
+    '''Check if a process is running, by sending it a 0 signal, and checking for errors'''
+    # This method is documented in some email threads on the python mailing list.
+    # For e.g.: http://mail.python.org/pipermail/python-list/2002-May/144522.html
+    try:
+      os.kill(pid, 0)
+      return True
+    except OSError, err:
+      return err.errno == errno.EPERM
 
 def untar(file, targetDir):
     status = False

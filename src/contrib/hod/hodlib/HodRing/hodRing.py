@@ -25,7 +25,7 @@ from xml.dom import getDOMImplementation
 from pprint import pformat
 from optparse import OptionParser
 from urlparse import urlparse
-from hodlib.Common.util import local_fqdn, parseEquals, getMapredSystemDirectory
+from hodlib.Common.util import local_fqdn, parseEquals, getMapredSystemDirectory, isProcessRunning
 from hodlib.Common.tcp import tcpSocket, tcpError 
 
 binfile = sys.path[0]
@@ -146,7 +146,67 @@ class CommandDesc:
 
   _parseMap = staticmethod(_parseMap)
 
-      
+class MRSystemDirectoryManager:
+  """Class that is responsible for managing the MapReduce system directory"""
+
+  def __init__(self, jtPid, mrSysDir, fsName, hadoopPath, log, retries=120):
+    self.__jtPid = jtPid
+    self.__mrSysDir = mrSysDir
+    self.__fsName = fsName
+    self.__hadoopPath = hadoopPath
+    self.__log = log
+    self.__retries = retries
+
+  def toCleanupArgs(self):
+    return " --jt-pid %s --mr-sys-dir %s --fs-name %s --hadoop-path %s " \
+              % (self.__jtPid, self.__mrSysDir, self.__fsName, self.__hadoopPath)
+
+  def removeMRSystemDirectory(self):
+    
+    jtActive = isProcessRunning(self.__jtPid)
+    count = 0 # try for a max of a minute for the process to end
+    while jtActive and (count<self.__retries):
+      time.sleep(0.5)
+      jtActive = isProcessRunning(self.__jtPid)
+      count += 1
+    
+    if count == self.__retries:
+      self.__log.warn('Job Tracker did not exit even after a minute. Not going to try and cleanup the system directory')
+      return
+
+    self.__log.debug('jt is now inactive')
+
+    cmd = "%s dfs -fs hdfs://%s -rmr %s" % (self.__hadoopPath, self.__fsName, \
+                                            self.__mrSysDir)
+    self.__log.debug('Command to run to remove system directory: %s' % (cmd))
+    try:
+      hadoopCommand = simpleCommand('mr-sys-dir-cleaner', cmd)
+      hadoopCommand.start()
+      hadoopCommand.wait()
+      hadoopCommand.join()
+      ret = hadoopCommand.exit_code()
+      if ret != 0:
+        self.__log.warn("Error in removing MapReduce system directory '%s' from '%s' using path '%s'" \
+                          % (self.__mrSysDir, self.__fsName, self.__hadoopPath))
+        self.__log.warn(pprint.pformat(hadoopCommand.output()))
+      else:
+        self.__log.info("Removed MapReduce system directory successfully.")
+    except:
+      self.__log.error('Exception while cleaning up MapReduce system directory. May not be cleaned up. %s', \
+                          get_exception_error_string())
+      self.__log.debug(get_exception_string())
+
+
+def createMRSystemDirectoryManager(dict, log):
+  keys = [ 'jt-pid', 'mr-sys-dir', 'fs-name', 'hadoop-path' ]
+  for key in keys:
+    if (not dict.has_key(key)) or (dict[key] is None):
+      return None
+
+  mrSysDirManager = MRSystemDirectoryManager(int(dict['jt-pid']), dict['mr-sys-dir'], \
+                                              dict['fs-name'], dict['hadoop-path'], log)
+  return mrSysDirManager
+
 class HadoopCommand:
   """Runs a single hadoop command"""
     
@@ -295,6 +355,11 @@ class HadoopCommand:
       pass
     
     return prop
+
+  def getMRSystemDirectoryManager(self):
+    return MRSystemDirectoryManager(self.__hadoopThread.getPid(), self.__mrSysDir, \
+                                    self.desc.getfinalAttrs()['fs.default.name'], \
+                                    self.path, self.log)
 
   def run(self, dir):
     status = True
