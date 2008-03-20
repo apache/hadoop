@@ -56,6 +56,9 @@ Trunk (unreleased changes)
     HADOOP-2346. Utilities to support timeout while writing to sockets.
     DFSClient and DataNode sockets have 10min write timeout. (rangadi)
     
+    HADOOP-2951.  Add a contrib module that provides a utility to
+    build or update Lucene indexes using Map/Reduce.  (Ning Li via cutting)
+
   IMPROVEMENTS
 
     HADOOP-2655. Copy on write for data and metadata files in the 
