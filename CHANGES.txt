@@ -27,6 +27,10 @@ Release 0.16.2 - Unreleased
     HADOOP-3007. Tolerate mirror failures while DataNode is replicating
     blocks as it used to before. (rangadi)
 
+    HADOOP-3041. Deprecates getOutputPath and defines two new APIs
+    getCurrentOutputPath and getFinalOutputPath.
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

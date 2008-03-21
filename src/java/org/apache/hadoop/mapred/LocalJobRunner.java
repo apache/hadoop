@@ -114,7 +114,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
           job.setNumReduceTasks(1);
         }
         // create job specific temp directory in output path
-        Path outputPath = job.getOutputPath();
+        Path outputPath = job.getCurrentOutputPath();
         FileSystem outputFs = null;
         Path tmpDir = null;
         if (outputPath != null) {
