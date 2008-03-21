@@ -131,6 +131,9 @@ Trunk (unreleased changes)
 
     HADOOP-2373. Improvement in safe-mode reporting. (shv)
 
+    HADOOP-2796. Enables distinguishing exit codes from user code vis-a-vis
+    HOD's exit code. (Hemanth Yamijala via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing

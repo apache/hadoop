@@ -600,6 +600,7 @@ class formatter(IndentedHelpFormatter):
         return ", ".join(opts)    
 
 class options(OptionParser, baseConfig):
+
     def __init__(self, optionDef, usage, version, originalDir=None, 
                  withConfig=False, defaultConfig=None, defaultLocation=None,
                  name=None):
@@ -730,6 +731,9 @@ class options(OptionParser, baseConfig):
               clusterDir = getattr(self.__parsedOptions, 'hod.clusterdir')
               numNodes = getattr(self.__parsedOptions, 'hod.nodecount')
 
+              if clusterDir:
+                self.remove_exit_code_file(originalDir, clusterDir)
+
               if not _script or not clusterDir or not numNodes:
                 print getattr(hodhelp, "help_%s" % cmdstr)()
                 sys.exit(3)
@@ -771,6 +775,24 @@ class options(OptionParser, baseConfig):
                         self.__defaultLoc, self.config)
         self.__build_dict()   
 
+    def norm_cluster_dir(self, orig_dir, directory):
+        directory = os.path.expanduser(directory)
+        if not os.path.isabs(directory):
+            directory = os.path.join(orig_dir, directory)
+        directory = os.path.abspath(directory)
+
+        return directory
+
+
+    def remove_exit_code_file(self, orig_dir, dir):
+        try:
+            dir = self.norm_cluster_dir(orig_dir, dir)
+            if os.path.exists(dir):
+                exit_code_file = os.path.join(dir, "script.exitcode")
+                if os.path.exists(exit_code_file):
+                    os.remove(exit_code_file)
+        except:
+            print >>sys.stderr, "Could not remove the script.exitcode file."
     
     def __init_display_options(self):
         self.__orig_option_list = self.option_list[:]

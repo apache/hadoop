@@ -453,6 +453,7 @@ class hodRunner:
   def script(self):
     errorFlag = False
     errorMsgs = []
+    scriptRet = 0 # return from the script, if run
     
     script = self.__cfg['hod']['script']
     nodes = self.__cfg['hod']['nodecount']
@@ -480,9 +481,9 @@ class hodRunner:
     if errorFlag:
       for msg in errorMsgs:
         self.__log.critical(msg)
+      self.handle_script_exit_code(scriptRet, clusterDir)
       sys.exit(3)
 
-    ret = 0
     try:
       self._op_allocate(('allocate', clusterDir, str(nodes)))
       if self.__opCode == 0:
@@ -495,8 +496,8 @@ class hodRunner:
           scriptRunner = hadoopScript(clusterDir, 
                                   self.__cfg['hod']['original-dir'])
           self.__opCode = scriptRunner.run(script)
-          ret = self.__opCode
-          self.__log.debug("Exit code from running the script: %d" % self.__opCode)
+          scriptRet = self.__opCode
+          self.__log.info("Exit code from running the script: %d" % self.__opCode)
       else:
         self.__log.critical("Error %d in allocating the cluster. Cannot run the script." % self.__opCode)
 
@@ -513,13 +514,27 @@ class hodRunner:
                           get_exception_error_string()))
       self.__log.debug(get_exception_string())
     
-    self.__cleanup()      
-    
-    # We want to give importance to a failed script's exit code.
-    if ret != 0:
-      self.__opCode = ret
+    self.__cleanup()
 
+    self.handle_script_exit_code(scriptRet, clusterDir)
+    
     return self.__opCode
+
+  def handle_script_exit_code(self, scriptRet, clusterDir):
+    # We want to give importance to a failed script's exit code, and write out exit code to a file separately
+    # so users can easily get it if required. This way they can differentiate between the script's exit code
+    # and hod's exit code.
+    if os.path.exists(clusterDir):
+      exit_code_file_name = (os.path.join(clusterDir, 'script.exitcode'))
+      if scriptRet != 0:
+        exit_code_file = open(exit_code_file_name, 'w')
+        print >>exit_code_file, scriptRet
+        exit_code_file.close()
+        self.__opCode = scriptRet
+      else:
+        #ensure script exit code file is not there:
+        if (os.path.exists(exit_code_file_name)):
+          os.remove(exit_code_file_name)
 
 class hodHelp:
   def __init__(self):

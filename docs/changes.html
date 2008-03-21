@@ -56,7 +56,7 @@
 </a></h2>
 <ul id="trunk_(unreleased_changes)_">
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(10)
+</a>&nbsp;&nbsp;&nbsp;(11)
     <ol id="trunk_(unreleased_changes)_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2786">HADOOP-2786</a>.  Move hbase out of hadoop core
 </li>
@@ -79,6 +79,7 @@ from 26 to 27. (Tsz Wo (Nicholas), SZE via cdouglas)
 </li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2822">HADOOP-2822</a>. Remove depreceted code for classes InputFormatBase and
 PhasedFileSystem.<br />(Amareshwari Sriramadasu via enis)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2116">HADOOP-2116</a>. Changes the layout of the task execution directory.<br />(Amareshwari Sriramadasu via ddas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._new_features_')">  NEW FEATURES
@@ -101,7 +102,7 @@ build or update Lucene indexes using Map/Reduce.<br />(Ning Li via cutting)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(20)
+</a>&nbsp;&nbsp;&nbsp;(22)
     <ol id="trunk_(unreleased_changes)_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2655">HADOOP-2655</a>. Copy on write for data and metadata files in the
 presence of snapshots. Needed for supporting appends to HDFS
@@ -143,6 +144,8 @@ requests or server slowdown.<br />(Hairong Kuang via dhruba)</li>
 the cluster directory.<br />(Hemanth Yamijala via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2899">HADOOP-2899</a>. [HOD] Cleans up hdfs:///mapredsystem directory after
 deallocation.<br />(Hemanth Yamijala via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2886">HADOOP-2886</a>.  Track individual RPC metrics.<br />(girish vaitheeswaran via dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2373">HADOOP-2373</a>. Improvement in safe-mode reporting.<br />(shv)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
@@ -168,7 +171,7 @@ via a single rpc to the namenode to speed up job planning.<br />(Lohit Vijaya Re
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(51)
+</a>&nbsp;&nbsp;&nbsp;(53)
     <ol id="trunk_(unreleased_changes)_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2195">HADOOP-2195</a>. '-mkdir' behaviour is now closer to Linux shell in case of
 errors.<br />(Mahadev Konar via rangadi)</li>
@@ -268,6 +271,10 @@ Shvachko via cdouglas)</li>
 hod/hodlib/Common/xmlrpc.py.<br />(Vinod Kumar Vavilapalli via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2936">HADOOP-2936</a>. Fixes HOD in a way that it generates hdfs://host:port on the
 client side configs.<br />(Vinod Kumar Vavilapalli via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3025">HADOOP-3025</a>. ChecksumFileSystem supports the delete method with
+the recursive flag.<br />(Mahadev Konar via dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3012">HADOOP-3012</a>. dfs -mv file to user home directory throws exception if
+the user home directory does not exist.<br />(Mahadev Konar via dhruba)</li>
     </ol>
   </li>
 </ul>

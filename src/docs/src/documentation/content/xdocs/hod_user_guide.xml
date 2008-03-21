@@ -464,7 +464,12 @@
         <td> Cluster not allocated </td>
         <td> An operation which requires an allocated cluster is given a cluster directory with no state information. </td>
       </tr>
-    
+   
+      <tr>
+        <td> Any non-zero exit code </td>
+        <td> HOD script error </td>
+        <td> If the hod script option was used, it is likely that the exit code is from the script. Unfortunately, this could clash with the exit codes of the hod command itself. In order to help users differentiate these two, hod writes the script's exit code to a file called script.exitcode in the cluster directory, if the script returned an exit code. You can cat this file to determine the script's exit code. If it does not exist, then it is a hod command exit code.</td> 
+      </tr>
   </table>
     </section>
   <section><title> Hadoop Jobs Not Running on a Successfully Allocated Cluster </title><anchor id="Hadoop_Jobs_Not_Running_on_a_Suc"></anchor>
