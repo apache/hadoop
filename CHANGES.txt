@@ -355,6 +355,8 @@ Release 0.16.2 - Unreleased
     getCurrentOutputPath and getFinalOutputPath.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3007. Tolerate mirror failures while DataNode is replicating
+    blocks as it used to before. (rangadi)
 
 Release 0.16.1 - 2008-03-13
 
