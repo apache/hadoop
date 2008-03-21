@@ -31,6 +31,9 @@ Release 0.16.2 - Unreleased
     getCurrentOutputPath and getFinalOutputPath.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-2944. Fixes a "Run on Hadoop" wizard NPE when creating a
+    Location from the wizard. (taton)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

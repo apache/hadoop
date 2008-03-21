@@ -94,7 +94,7 @@ public class RunOnHadoopWizard extends Wizard {
   @Override
   public void addPages() {
     addPage(this.mainPage = new MainWizardPage());
-    addPage(new HadoopLocationWizard());
+    addPage(this.createNewPage = new HadoopLocationWizard());
   }
 
   /**
