@@ -3936,15 +3936,16 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
     
   boolean setSafeMode(SafeModeAction action) throws IOException {
-    checkSuperuserPrivilege();
-    switch(action) {
-    case SAFEMODE_LEAVE: // leave safe mode
-      leaveSafeMode(false);
-      break;
-    case SAFEMODE_ENTER: // enter safe mode
-      enterSafeMode();
-      break;
-    case SAFEMODE_GET: // get safe mode
+    if (action != SafeModeAction.SAFEMODE_GET) {
+      checkSuperuserPrivilege();
+      switch(action) {
+      case SAFEMODE_LEAVE: // leave safe mode
+        leaveSafeMode(false);
+        break;
+      case SAFEMODE_ENTER: // enter safe mode
+        enterSafeMode();
+        break;
+      }
     }
     return isInSafeMode();
   }

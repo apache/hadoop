@@ -326,6 +326,9 @@ Trunk (unreleased changes)
 
     HADOOP-3012. dfs -mv file to user home directory throws exception if 
     the user home directory does not exist. (Mahadev Konar via dhruba)
+    
+    HADOOP-3066. Should not require superuser privilege to query if hdfs is in
+    safe mode (jimk)
 
 Release 0.16.2 - Unreleased
 
