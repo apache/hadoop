@@ -49,7 +49,8 @@ Hbase Change Log
    HBASE-528   table 'does not exist' when it does
    HBASE-531   Merge tool won't merge two overlapping regions (port HBASE-483 to
                trunk)
-   
+   HBASE-537   Wait for hdfs to exit safe mode
+      
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling
    HBASE-35    Make BatchUpdate public in the API

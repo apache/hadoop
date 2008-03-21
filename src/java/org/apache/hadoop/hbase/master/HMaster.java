@@ -36,6 +36,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.dfs.DistributedFileSystem;
+import org.apache.hadoop.dfs.FSConstants;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.Cell;
@@ -171,10 +173,25 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   throws IOException {
     this.conf = conf;
     this.rootdir = rd;
+    this.threadWakeFrequency = conf.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000);
     // The filesystem hbase wants to use is probably not what is set into
     // fs.default.name; its value is probably the default.
     this.conf.set("fs.default.name", this.rootdir.toString());
     this.fs = FileSystem.get(conf);
+    if (this.fs instanceof DistributedFileSystem) {
+      // Make sure dfs is not in safe mode
+      String message = "Waiting for dfs to exit safe mode...";
+      while (((DistributedFileSystem) fs).setSafeMode(
+          FSConstants.SafeModeAction.SAFEMODE_GET)) {
+        System.out.println(message);
+        LOG.info(message);
+        try {
+          Thread.sleep(this.threadWakeFrequency);
+        } catch (InterruptedException e) {
+          //continue
+        }
+      }
+    }
     this.conf.set(HConstants.HBASE_DIR, this.rootdir.toString());
     this.rand = new Random();
     Path rootRegionDir =
@@ -215,7 +232,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       throw e;
     }
 
-    this.threadWakeFrequency = conf.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
     this.maxRegionOpenTime =
       conf.getLong("hbase.hbasemaster.maxregionopen", 60 * 1000);
