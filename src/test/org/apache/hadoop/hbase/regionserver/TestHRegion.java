@@ -600,7 +600,7 @@ implements RegionUnavailableListener {
       Path oldRegion1 = subregions[0].getRegionDir();
       Path oldRegion2 = subregions[1].getRegionDir();
       startTime = System.currentTimeMillis();
-      r = HRegion.closeAndMerge(subregions[0], subregions[1]);
+      r = HRegion.mergeAdjacent(subregions[0], subregions[1]);
       region = new HRegionIncommon(r);
       System.out.println("Merge regions elapsed time: "
           + ((System.currentTimeMillis() - startTime) / 1000.0));

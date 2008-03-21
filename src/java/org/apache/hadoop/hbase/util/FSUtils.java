@@ -24,12 +24,16 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import org.apache.hadoop.dfs.DistributedFileSystem;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+
+import org.apache.hadoop.hbase.FileSystemVersionException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.dfs.DistributedFileSystem;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -46,34 +50,32 @@ public class FSUtils {
    * Checks to see if the specified file system is available
    * 
    * @param fs
-   * @return true if the specified file system is available.
+   * @throws IOException
    */
-  public static boolean isFileSystemAvailable(final FileSystem fs) {
+  public static void checkFileSystemAvailable(final FileSystem fs) 
+  throws IOException {
     if (!(fs instanceof DistributedFileSystem)) {
-      return true;
+      return;
     }
-    String exception = "";
-    boolean available = false;
+    IOException exception = null;
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
     try {
       if (dfs.exists(new Path("/"))) {
-        available = true;
+        return;
       }
     } catch (IOException e) {
-      exception = e.getMessage();
+      exception = RemoteExceptionHandler.checkIOException(e);
     }
     
     try {
-      if (!available) {
-        LOG.fatal("File system is not available.. Thread: " +
-            Thread.currentThread().getName() + ": " + exception);
-        fs.close();
-      }
+      fs.close();
         
     } catch (Exception e) {
         LOG.error("file system close failed: ", e);
     }
-    return available;
+    IOException io = new IOException("File system is not available");
+    io.initCause(exception);
+    throw io;
   }
   
   /**
@@ -84,16 +86,44 @@ public class FSUtils {
    * @return null if no version file exists, version string otherwise.
    * @throws IOException
    */
-  public static String checkVersion(FileSystem fs, Path rootdir) throws IOException {
+  public static String getVersion(FileSystem fs, Path rootdir)
+  throws IOException {
     Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
     String version = null;
     if (fs.exists(versionFile)) {
       FSDataInputStream s =
         fs.open(new Path(rootdir, HConstants.VERSION_FILE_NAME));
-      version = DataInputStream.readUTF(s);
-      s.close();
+      try {
+        version = DataInputStream.readUTF(s);
+      } finally {
+        s.close();
+      }
     }
     return version;
+  }
+  
+  /**
+   * Verifies current version of file system
+   * 
+   * @param fs file system
+   * @param rootdir root directory of HBase installation
+   * @param message if true, issues a message on System.out 
+   * 
+   * @throws IOException
+   */
+  public static void checkVersion(FileSystem fs, Path rootdir, boolean message)
+  throws IOException {
+    String version = getVersion(fs, rootdir);
+    if (version == null || 
+        version.compareTo(HConstants.FILE_SYSTEM_VERSION) != 0) {
+      // Output on stdout so user sees it in terminal.
+      String msg = "File system needs to be upgraded. Run " +
+        "the '${HBASE_HOME}/bin/hbase migrate' script.";
+      if (message) {
+        System.out.println("WARNING! " + msg);
+      }
+      throw new FileSystemVersionException(msg);
+    }
   }
   
   /**

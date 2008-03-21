@@ -71,7 +71,6 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.HbaseRPC;
@@ -1179,21 +1178,18 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** @return the info server */
-  /**
-   * Get the InfoServer this HRegionServer has put up.
-   */
   public InfoServer getInfoServer() {
     return infoServer;
   }
   
   /**
-   * Check if a stop has been requested.
+   * @return true if a stop has been requested.
    */
   public boolean isStopRequested() {
     return stopRequested.get();
   }
 
-  /** Get the write lock for the server */
+  /** @return the write lock for the server */
   ReentrantReadWriteLock.WriteLock getWriteLock() {
     return lock.writeLock();
   }
@@ -1295,17 +1291,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @return false if file system is not available
    */
   protected boolean checkFileSystem() {
-    if (this.fsOk) {
+    if (this.fsOk && fs != null) {
       try {
-        if (fs != null && !FSUtils.isFileSystemAvailable(fs)) {
-          LOG.fatal("Shutting down HRegionServer: file system not available");
-          this.abortRequested = true;
-          this.stopRequested.set(true);
-          fsOk = false;
-        }
-      } catch (Exception e) {
-        LOG.error("Failed get of filesystem", e);
-        LOG.fatal("Shutting down HRegionServer: file system not available");
+        FSUtils.checkFileSystemAvailable(fs);
+      } catch (IOException e) {
+        LOG.fatal("Shutting down HRegionServer: file system not available", e);
         this.abortRequested = true;
         this.stopRequested.set(true);
         fsOk = false;

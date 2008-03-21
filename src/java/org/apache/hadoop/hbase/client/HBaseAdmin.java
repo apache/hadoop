@@ -25,11 +25,8 @@ import java.util.NoSuchElementException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.HConstants;
@@ -552,5 +549,18 @@ public class HBaseAdmin implements HConstants {
   throws IOException {
     Text tableKey = new Text(tableName.toString() + ",,99999999999999");
     return connection.locateRegion(META_TABLE_NAME, tableKey);
+  }
+  
+  /**
+   * Check to see if HBase is running. Throw an exception if not.
+   *
+   * @param conf
+   * @throws MasterNotRunningException
+   */
+  public static void checkHBaseAvailable(HBaseConfiguration conf)
+  throws MasterNotRunningException {
+    HBaseConfiguration copyOfConf = new HBaseConfiguration(conf);
+    copyOfConf.setInt("hbase.client.retries.number", 1);
+    new HBaseAdmin(copyOfConf);
   }
 }

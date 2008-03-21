@@ -76,8 +76,8 @@ public class TestMigrate extends HBaseTestCase {
     try {
       dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
       // Set the hbase.rootdir to be the home directory in mini dfs.
-      this.conf.set(HConstants.HBASE_DIR,
-        dfsCluster.getFileSystem().getHomeDirectory().toString());
+      this.conf.set(HConstants.HBASE_DIR, new Path(
+        dfsCluster.getFileSystem().getHomeDirectory(), "hbase").toString());
       FileSystem dfs = dfsCluster.getFileSystem();
       Path root = dfs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
       dfs.mkdirs(root);
@@ -177,13 +177,12 @@ public class TestMigrate extends HBaseTestCase {
       return;
     }
     for (int i = 0; i < stats.length; i++) {
-      String relativePath =
-        stats[i].getPath().toString().substring(rootdirlength);
+      String path = stats[i].getPath().toString();
       if (stats[i].isDir()) {
-        System.out.println("d " + relativePath);
+        System.out.println("d " + path);
         listPaths(fs, stats[i].getPath(), rootdirlength);
       } else {
-        System.out.println("f " + relativePath + " size=" + stats[i].getLen());
+        System.out.println("f " + path + " size=" + stats[i].getLen());
       }
     }
   }

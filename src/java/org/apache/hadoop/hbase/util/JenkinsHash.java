@@ -20,6 +20,9 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+
 /**
  * lookup3.c, by Bob Jenkins, May 2006, Public Domain.
  * <a href="http://burtleburtle.net/bob/c/lookup3.c">lookup3.c</a>
@@ -230,5 +233,24 @@ public class JenkinsHash {
     c ^= b; c = (c - rot(b,24)) & INT_MASK;
 
     return Long.valueOf(c & INT_MASK).intValue();
+  }
+  
+  /**
+   * Compute the hash of the specified file
+   * @param args name of file to compute hash of.
+   * @throws IOException
+   */
+  public static void main(String[] args) throws IOException {
+    if (args.length != 1) {
+      System.err.println("Usage: JenkinsHash filename");
+      System.exit(-1);
+    }
+    FileInputStream in = new FileInputStream(args[0]);
+    byte[] bytes = new byte[512];
+    int value = 0;
+    for (int length = in.read(bytes); length > 0 ; length = in.read(bytes)) {
+      value = hash(bytes, length, value);
+    }
+    System.out.println(Math.abs(value));
   }
 }

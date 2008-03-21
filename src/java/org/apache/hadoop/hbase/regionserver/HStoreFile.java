@@ -28,7 +28,6 @@ import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -282,51 +281,6 @@ public class HStoreFile implements HConstants {
     if (!fs.createNewFile(p)) {
       throw new IOException("Failed create of " + p);
     }
-  }
-
-  /**
-   * Merges the contents of the given source HStoreFiles into a single new one.
-   *
-   * @param srcFiles files to be merged
-   * @param fs file system
-   * @param conf configuration object
-   * @throws IOException
-   */
-  void mergeStoreFiles(List<HStoreFile> srcFiles, FileSystem fs, 
-      @SuppressWarnings("hiding") Configuration conf)
-  throws IOException {
-    // Copy all the source MapFile tuples into this HSF's MapFile
-    MapFile.Writer out = new MapFile.Writer(conf, fs,
-      getMapFilePath().toString(),
-      HStoreKey.class, ImmutableBytesWritable.class);
-    
-    try {
-      for(HStoreFile src: srcFiles) {
-        MapFile.Reader in = src.getReader(fs, null);
-        try {
-          HStoreKey readkey = new HStoreKey();
-          ImmutableBytesWritable readval = new ImmutableBytesWritable();
-          while(in.next(readkey, readval)) {
-            out.append(readkey, readval);
-          }
-          
-        } finally {
-          in.close();
-        }
-      }
-    } finally {
-      out.close();
-    }
-    // Build a unified InfoFile from the source InfoFiles.
-    
-    long unifiedSeqId = -1;
-    for(HStoreFile hsf: srcFiles) {
-      long curSeqId = hsf.loadInfo(fs);
-      if(curSeqId > unifiedSeqId) {
-        unifiedSeqId = curSeqId;
-      }
-    }
-    writeInfo(fs, unifiedSeqId);
   }
 
   /** 

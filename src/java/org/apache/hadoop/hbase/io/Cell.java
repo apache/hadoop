@@ -43,6 +43,8 @@ public class Cell implements Writable {
   
   /**
    * Create a new Cell with a given value and timestamp. Used by HStore.
+   * @param value
+   * @param timestamp
    */
   public Cell(byte[] value, long timestamp) {
     this.value = value;
@@ -71,6 +73,7 @@ public class Cell implements Writable {
   // Writable
   //
 
+  /** {@inheritDoc} */
   public void readFields(final DataInput in) throws IOException {
     timestamp = in.readLong();
     int valueSize = in.readInt();
@@ -78,6 +81,7 @@ public class Cell implements Writable {
     in.readFully(value, 0, valueSize);
   }
 
+  /** {@inheritDoc} */
   public void write(final DataOutput out) throws IOException {
     out.writeLong(timestamp);
     out.writeInt(value.length);

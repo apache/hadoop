@@ -187,18 +187,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         fs.mkdirs(rootdir); 
         FSUtils.setVersion(fs, rootdir);
       } else {
-        String fsversion = FSUtils.checkVersion(fs, rootdir);
-        if (fsversion == null ||
-            fsversion.compareTo(FILE_SYSTEM_VERSION) != 0) {
-          // Output on stdout so user sees it in terminal.
-          String message = "The HBase data files stored on the FileSystem " +
-          "are from an earlier version of HBase. You need to run " +
-          "'${HBASE_HOME}/bin/hbase migrate' to bring your installation " +
-          "up-to-date.";
-          // Output on stdout so user sees it in terminal.
-          System.out.println("WARNING! " + message + " Master shutting down...");
-          throw new IOException(message);
-        }
+        FSUtils.checkVersion(fs, rootdir, true);
       }
 
       if (!fs.exists(rootRegionDir)) {
@@ -262,8 +251,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    */
   protected boolean checkFileSystem() {
     if (fsOk) {
-      if (!FSUtils.isFileSystemAvailable(fs)) {
-        LOG.fatal("Shutting down HBase cluster: file system not available");
+      try {
+        FSUtils.checkFileSystemAvailable(fs);
+      } catch (IOException e) {
+        LOG.fatal("Shutting down HBase cluster: file system not available", e);
         closed.set(true);
         fsOk = false;
       }

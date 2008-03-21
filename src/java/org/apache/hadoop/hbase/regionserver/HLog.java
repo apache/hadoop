@@ -213,7 +213,7 @@ public class HLog implements HConstants {
    *
    * @throws IOException
    */
-  void rollWriter() throws IOException {
+  public void rollWriter() throws IOException {
     this.cacheFlushLock.lock();
     try {
       if (closed) {
