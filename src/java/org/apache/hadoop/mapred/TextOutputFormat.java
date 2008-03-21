@@ -101,7 +101,7 @@ public class TextOutputFormat<K, V> extends OutputFormatBase<K, V> {
                                                   Progressable progress)
     throws IOException {
 
-    Path dir = job.getOutputPath();
+    Path dir = job.getCurrentOutputPath();
     FileSystem fs = dir.getFileSystem(job);
     if (!fs.exists(dir)) {
       throw new IOException("Output directory doesnt exist");

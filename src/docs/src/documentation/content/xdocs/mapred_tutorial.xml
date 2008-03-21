@@ -1330,10 +1330,13 @@
           <p>The application-writer can take advantage of this feature by 
           creating any side-files required in <code>${mapred.output.dir}</code> 
           during execution of a task via 
-          <a href="ext:api/org/apache/hadoop/mapred/jobconf/getoutputpath">
-          JobConf.getOutputPath()</a>, and the framework will promote them 
+          <a href="ext:api/org/apache/hadoop/mapred/jobconf/getcurrentoutputpath">
+          JobConf.getCurrentOutputPath()</a>, and the framework will promote them 
           similarly for succesful task-attempts, thus eliminating the need to 
-          pick unique paths per task-attempt.</p>
+          pick unique paths per task-attempt. she can get the actual configured 
+          path (final output path) via 
+          <a href="ext:api/org/apache/hadoop/mapred/jobconf/getfinaloutputpath">
+          JobConf.getFinalOutputPath()</a></p>
         </section>
         
         <section>

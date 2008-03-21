@@ -183,7 +183,7 @@ public class MRBench {
 
       LOG.info("Running job " + i + ":" +
                " input=" + jobConf.getInputPaths()[0] + 
-               " output=" + jobConf.getOutputPath());
+               " output=" + jobConf.getCurrentOutputPath());
       
       // run the mapred task now 
       long curTime = System.currentTimeMillis();

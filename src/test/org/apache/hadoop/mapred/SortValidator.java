@@ -351,7 +351,7 @@ public class SortValidator extends Configured implements Tool {
                          "from " + jobConf.getInputPaths()[0] + " (" + 
                          noSortInputpaths + " files), " + 
                          jobConf.getInputPaths()[1] + " (" + noSortReduceTasks + 
-                         " files) into " + jobConf.getOutputPath() + 
+                         " files) into " + jobConf.getCurrentOutputPath() + 
                          " with 1 reducer.");
       Date startTime = new Date();
       System.out.println("Job started: " + startTime);
@@ -492,7 +492,8 @@ public class SortValidator extends Configured implements Tool {
       System.out.println("\nSortValidator.RecordChecker: Running on " +
                          cluster.getTaskTrackers() +
                          " nodes to validate sort from " + jobConf.getInputPaths()[0] + ", " + 
-                         jobConf.getInputPaths()[1] + " into " + jobConf.getOutputPath() + 
+                         jobConf.getInputPaths()[1] + " into " +
+                         jobConf.getCurrentOutputPath() + 
                          " with " + noReduces + " reduces.");
       Date startTime = new Date();
       System.out.println("Job started: " + startTime);
