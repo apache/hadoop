@@ -32,7 +32,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.HConstants;
 
@@ -165,11 +164,6 @@ class HStoreScanner implements HInternalScannerInterface {
                 && !multipleMatchers
                 && (keys[i].getTimestamp() != chosenTimestamp)) {
               break;
-            }
-
-            // Filter out null criteria columns that are not null
-            if (dataFilter != null) {
-              filtered = dataFilter.filterNotNull(resultSets[i]);
             }
 
             // NOTE: We used to do results.putAll(resultSets[i]);

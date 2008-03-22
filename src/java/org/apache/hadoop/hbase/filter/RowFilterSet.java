@@ -24,7 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.TreeMap;
+import java.util.SortedMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -232,7 +232,7 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   /** {@inheritDoc} */
-  public boolean filterNotNull(final TreeMap<Text, byte[]> columns) {
+  public boolean filterNotNull(final SortedMap<Text, byte[]> columns) {
     boolean resultFound = false;
     boolean result = operator == Operator.MUST_PASS_ONE;
     for (RowFilterInterface filter : filters) {

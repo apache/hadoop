@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.TreeMap;
+import java.util.SortedMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,7 +31,7 @@ import org.apache.hadoop.io.Text;
 /**
  * WhileMatchRowFilter is a wrapper filter that filters everything after the 
  * first filtered row.  Once the nested filter returns true for either of it's 
- * filter(..) methods or filterNotNull(TreeMap<Text, byte[]>), this wrapper's 
+ * filter(..) methods or filterNotNull(SortedMap<Text, byte[]>), this wrapper's 
  * filterAllRemaining() will return true.  All filtering methods will 
  * thereafter defer to the result of filterAllRemaining().
  */
@@ -115,7 +115,7 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   }
   
   /** {@inheritDoc} */
-  public boolean filterNotNull(final TreeMap<Text, byte[]> columns) {
+  public boolean filterNotNull(final SortedMap<Text, byte[]> columns) {
     changeFAR(this.filter.filterNotNull(columns));
     boolean result = filterAllRemaining();
     if (LOG.isDebugEnabled()) {

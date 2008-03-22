@@ -50,6 +50,10 @@ Hbase Change Log
    HBASE-531   Merge tool won't merge two overlapping regions (port HBASE-483 to
                trunk)
    HBASE-537   Wait for hdfs to exit safe mode
+   HBASE-476   RegexpRowFilter behaves incorectly when there are multiple store
+               files (Clint Morgan via Jim Kellerman)
+   HBASE-527   RegexpRowFilter does not work when there are columns from 
+               multiple families (Clint Morgan via Jim Kellerman)
       
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling

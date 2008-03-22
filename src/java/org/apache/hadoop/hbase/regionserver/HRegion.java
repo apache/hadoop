@@ -1721,12 +1721,14 @@ public class HRegion implements HConstants {
     private HInternalScannerInterface[] scanners;
     private TreeMap<Text, byte []>[] resultSets;
     private HStoreKey[] keys;
+    private RowFilterInterface filter;
 
     /** Create an HScanner with a handle on many HStores. */
     @SuppressWarnings("unchecked")
     HScanner(Text[] cols, Text firstRow, long timestamp, HStore[] stores,
       RowFilterInterface filter)
     throws IOException {
+      this.filter = filter;
       this.scanners = new HInternalScannerInterface[stores.length];
       try {
         for (int i = 0; i < stores.length; i++) {
@@ -1737,8 +1739,8 @@ public class HRegion implements HConstants {
           // At least WhileMatchRowFilter will mess up the scan if only
           // one shared across many rows. See HADOOP-2467.
           scanners[i] = stores[i].getScanner(timestamp, cols, firstRow,
-            (i > 0 && filter != null)?
-              (RowFilterInterface)WritableUtils.clone(filter, conf): filter);
+            filter != null ?
+              (RowFilterInterface)WritableUtils.clone(filter, conf) : filter);
         }
       } catch(IOException e) {
         for (int i = 0; i < this.scanners.length; i++) {
@@ -1839,6 +1841,12 @@ public class HRegion implements HConstants {
           }
         }
       }
+      
+      if (filter != null && filter.filterNotNull(results)) {
+          LOG.warn("Filter return true on assembled Results in hstore");
+          return moreToFollow == true && this.next(key, results);
+      }
+      
       return moreToFollow;
     }
 

@@ -19,17 +19,9 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.TreeMap;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 
-
-/*
+/**
  * Subclass of StopRowFilter that filters rows > the stop row,
  * making it include up to the last row but no further.
  */
@@ -49,6 +41,8 @@ public class InclusiveStopRowFilter extends StopRowFilter{
     super(stopRowKey);
   }
   
+  /** {@inheritDoc} */
+  @Override
   public boolean filter(final Text rowKey) {
     if (rowKey == null) {
       if (this.stopRowKey == null) {

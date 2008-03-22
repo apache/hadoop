@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.filter;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.TreeMap;
+import java.util.SortedMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -137,7 +137,7 @@ public class PageRowFilter implements RowFilterInterface {
    * {@inheritDoc}
    */
   public boolean filterNotNull(@SuppressWarnings("unused")
-      final TreeMap<Text, byte[]> columns) {
+      final SortedMap<Text, byte[]> columns) {
     return filterAllRemaining();
   }
 

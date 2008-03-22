@@ -19,7 +19,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.util.TreeMap;
+import java.util.SortedMap;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -108,7 +108,7 @@ public interface RowFilterInterface extends Writable {
    * @param columns
    * @return true if null/non-null criteria not met.
    */
-  boolean filterNotNull(final TreeMap<Text, byte[]> columns);
+  boolean filterNotNull(final SortedMap<Text, byte[]> columns);
 
   /**
    * Validates that this filter applies only to a subset of the given columns.

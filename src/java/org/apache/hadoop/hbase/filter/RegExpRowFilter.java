@@ -27,7 +27,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
+import java.util.SortedMap;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
@@ -196,7 +196,7 @@ public class RegExpRowFilter implements RowFilterInterface {
    * 
    * {@inheritDoc}
    */
-  public boolean filterNotNull(final TreeMap<Text, byte[]> columns) {
+  public boolean filterNotNull(final SortedMap<Text, byte[]> columns) {
     for (Entry<Text, byte[]> col : columns.entrySet()) {
       if (nullColumns.contains(col.getKey())
           && !HLogEdit.isDeleted(col.getValue())) {
@@ -211,7 +211,7 @@ public class RegExpRowFilter implements RowFilterInterface {
       if (!columns.containsKey(col)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("filterNotNull returning true for colKey: " + col + 
-            ", column not found in given TreeMap<Text, byte[]>.");
+            ", column not found in given SortedMap<Text, byte[]>.");
         }
         return true;
       }
