@@ -34,7 +34,7 @@ Trunk (unreleased changes)
     and isDir(String) from ClientProtocol. ClientProtocol version changed
     from 26 to 27. (Tsz Wo (Nicholas), SZE via cdouglas)
 
-    HADOOP-2822. Remove depreceted code for classes InputFormatBase and 
+    HADOOP-2822. Remove deprecated code for classes InputFormatBase and 
     PhasedFileSystem. (Amareshwari Sriramadasu via enis)
 
     HADOOP-2116. Changes the layout of the task execution directory. 
