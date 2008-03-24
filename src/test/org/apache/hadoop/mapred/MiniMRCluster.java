@@ -284,21 +284,6 @@ public class MiniMRCluster {
     this(0, 0, numTaskTrackers, namenode, false, numDir);
   }
     
-  /**
-   * Create the config and start up the servers.  The ports supplied by the user are
-   * just used as suggestions.  If those ports are already in use, new ports
-   * are tried.  The caller should call getJobTrackerPort to get the actual rpc port used.
-   * @deprecated use {@link #MiniMRCluster(int, String, int)}
-   */
-  public MiniMRCluster(int jobTrackerPort,
-                       int taskTrackerPort,
-                       int numTaskTrackers,
-                       String namenode,
-                       boolean taskTrackerFirst) throws IOException {
-    this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode, 
-         taskTrackerFirst, 1);
-  } 
-
   public MiniMRCluster(int jobTrackerPort,
       int taskTrackerPort,
       int numTaskTrackers,

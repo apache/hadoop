@@ -49,6 +49,8 @@ Trunk (unreleased changes)
         Iterator entries()
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-2824. Removes one deprecated constructor from MiniMRCluster.
+    (Amareshwari Sriramadasu via ddas)
 
   NEW FEATURES
 
