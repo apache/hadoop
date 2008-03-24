@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2008 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
@@ -42,111 +41,23 @@ public class MiniHBaseCluster implements HConstants {
     Logger.getLogger(MiniHBaseCluster.class.getName());
   
   private HBaseConfiguration conf;
-  private MiniDFSCluster cluster;
-  private FileSystem fs;
-  private boolean shutdownDFS;
-  private Path parentdir;
   private LocalHBaseCluster hbaseCluster;
-  private boolean deleteOnExit = true;
 
   /**
-   * Starts a MiniHBaseCluster on top of a new MiniDFSCluster
-   *
-   * @param conf
-   * @param nRegionNodes
-   * @throws IOException
+   * Start a MiniHBaseCluster. conf is assumed to contain a valid fs name to 
+   * hook up to.
    */
-  public MiniHBaseCluster(HBaseConfiguration conf, int nRegionNodes)
+  public MiniHBaseCluster(HBaseConfiguration conf, int numRegionServers) 
   throws IOException {
-    this(conf, nRegionNodes, true, true, true);
-  }
-
-  /**
-   * Start a MiniHBaseCluster. Use the native file system unless
-   * miniHdfsFilesystem is set to true.
-   *
-   * @param conf
-   * @param nRegionNodes
-   * @param miniHdfsFilesystem
-   * @throws IOException
-   */
-  public MiniHBaseCluster(HBaseConfiguration conf, int nRegionNodes,
-      final boolean miniHdfsFilesystem) throws IOException {
-    this(conf, nRegionNodes, miniHdfsFilesystem, true, true);
-  }
-
-  /**
-   * Starts a MiniHBaseCluster on top of an existing HDFSCluster
-   *<pre>
-   ****************************************************************************
-   *            *  *  *  *  *  N O T E  *  *  *  *  *
-   *
-   * If you use this constructor, you should shut down the mini dfs cluster
-   * in your test case.
-   *
-   *            *  *  *  *  *  N O T E  *  *  *  *  *
-   ****************************************************************************
-   *</pre>
-   *
-   * @param conf
-   * @param nRegionNodes
-   * @param dfsCluster
-   * @param deleteOnExit
-   * @throws IOException
-   */
-  public MiniHBaseCluster(HBaseConfiguration conf, int nRegionNodes,
-      MiniDFSCluster dfsCluster, boolean deleteOnExit) throws IOException {
-
     this.conf = conf;
-    this.fs = dfsCluster.getFileSystem();
-    this.cluster = dfsCluster;
-    this.shutdownDFS = false;
-    this.deleteOnExit = deleteOnExit;
-    init(nRegionNodes);
-  }
-
-  /**
-   * Constructor.
-   * @param conf
-   * @param nRegionNodes
-   * @param miniHdfsFilesystem If true, set the hbase mini
-   * cluster atop a mini hdfs cluster.  Otherwise, use the
-   * filesystem configured in <code>conf</code>.
-   * @param format the mini hdfs cluster
-   * @param deleteOnExit clean up mini hdfs files
-   * @throws IOException
-   */
-  public MiniHBaseCluster(HBaseConfiguration conf, int nRegionNodes,
-      final boolean miniHdfsFilesystem, boolean format, boolean deleteOnExit)
-    throws IOException {
-
-    this.conf = conf;
-    this.deleteOnExit = deleteOnExit;
-    this.shutdownDFS = false;
-    if (miniHdfsFilesystem) {
-      try {
-        this.cluster = new MiniDFSCluster(this.conf, 2, format, (String[])null);
-        this.fs = cluster.getFileSystem();
-        this.shutdownDFS = true;
-      } catch (IOException e) {
-        StaticTestEnvironment.shutdownDfs(cluster);
-        throw e;
-      }
-    } else {
-      this.cluster = null;
-      this.fs = FileSystem.get(conf);
-    }
-    init(nRegionNodes);
+    init(numRegionServers);
   }
 
   private void init(final int nRegionNodes) throws IOException {
     try {
-      this.parentdir = this.fs.getHomeDirectory();
-      this.conf.set(HConstants.HBASE_DIR, this.parentdir.toString());
-      this.fs.mkdirs(parentdir);
-      FSUtils.setVersion(fs, parentdir);
-      this.hbaseCluster = new LocalHBaseCluster(this.conf, nRegionNodes);
-      this.hbaseCluster.startup();
+      // start up a LocalHBaseCluster
+      hbaseCluster = new LocalHBaseCluster(conf, nRegionNodes);
+      hbaseCluster.startup();
     } catch(IOException e) {
       shutdown();
       throw e;
@@ -164,15 +75,6 @@ public class MiniHBaseCluster implements HConstants {
       this.hbaseCluster.addRegionServer();
     t.start();
     return t.getName();
-  }
-
-  /**
-   * Get the cluster on which this HBase cluster is running
-   *
-   * @return MiniDFSCluster
-   */
-  public MiniDFSCluster getDFSCluster() {
-    return cluster;
   }
 
   /**
@@ -239,14 +141,6 @@ public class MiniHBaseCluster implements HConstants {
   public void shutdown() {
     if (this.hbaseCluster != null) {
       this.hbaseCluster.shutdown();
-    }
-    if (shutdownDFS) {
-      StaticTestEnvironment.shutdownDfs(cluster);
-    }
-    // Delete all DFS files
-    if(deleteOnExit) {
-      deleteFile(new File(System.getProperty(
-          StaticTestEnvironment.TEST_DIRECTORY_KEY), "dfs"));
     }
   }
 

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.TreeMap;
@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.TimestampTestBase;
 
 import org.apache.commons.logging.Log;
@@ -43,12 +43,13 @@ import org.apache.commons.logging.LogFactory;
  * tests same in presence of deletes.  Test cores are written so can be
  * run against an HRegion and against an HTable: i.e. both local and remote.
  */
-public class TestTimestamp extends HBaseTestCase {
+public class TestTimestamp extends HBaseClusterTestCase {
   private static final Log LOG =
     LogFactory.getLog(TestTimestamp.class.getName());
-
+  
   private static final String COLUMN_NAME = "contents:";
   private static final Text COLUMN = new Text(COLUMN_NAME);
+  // When creating column descriptor, how many versions of a cell to allow.
   private static final int VERSIONS = 3;
   
   /** constructor */
@@ -57,42 +58,38 @@ public class TestTimestamp extends HBaseTestCase {
   }
 
   /**
-   * Test that delete works according to description in <a
-   * href="https://issues.apache.org/jira/browse/HADOOP-1784">hadoop-1784</a>.
+   * Basic test of timestamps.
+   * Do the above tests from client side.
    * @throws IOException
    */
-  public void testDelete() throws IOException {
-    final HRegion r = createRegion();
-    try {
-      final HRegionIncommon region = new HRegionIncommon(r);
-      TimestampTestBase.doTestDelete(region, region);
-    } finally {
-      r.close();
-      r.getLog().closeAndDelete();
-    }
-    LOG.info("testDelete() finished");    
-  }
-
-  /**
-   * Test scanning against different timestamps.
-   * @throws IOException
-   */
-  public void testTimestampScanning() throws IOException {
-    final HRegion r = createRegion();
-    try {
-      final HRegionIncommon region = new HRegionIncommon(r);
-      TimestampTestBase.doTestTimestampScanning(region, region);
-    } finally {
-      r.close();
-      r.getLog().closeAndDelete();
-    }
-    LOG.info("testTimestampScanning() finished");
+  public void testTimestamps() throws IOException {
+    HTable t = createTable();
+    Incommon incommon = new HTableIncommon(t);
+    TimestampTestBase.doTestDelete(incommon, new FlushCache() {
+      public void flushcache() throws IOException {
+        cluster.flushcache();
+      }
+     });
+    
+    // Perhaps drop and readd the table between tests so the former does
+    // not pollute this latter?  Or put into separate tests.
+    TimestampTestBase.doTestTimestampScanning(incommon, new FlushCache() {
+      public void flushcache() throws IOException {
+        cluster.flushcache();
+      }
+    });
   }
   
-  private HRegion createRegion() throws IOException {
-    HTableDescriptor htd = createTableDescriptor(getName());
-    htd.addFamily(new HColumnDescriptor(COLUMN, VERSIONS,
-      CompressionType.NONE, false, false, Integer.MAX_VALUE, null));
-    return createNewHRegion(htd, null, null);
+  /* 
+   * Create a table named TABLE_NAME.
+   * @return An instance of an HTable connected to the created table.
+   * @throws IOException
+   */
+  private HTable createTable() throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(getName());
+    desc.addFamily(new HColumnDescriptor(COLUMN_NAME));
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    admin.createTable(desc);
+    return new HTable(conf, new Text(getName()));
   }
 }

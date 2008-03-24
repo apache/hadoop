@@ -26,49 +26,37 @@ import java.net.URL;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
 
 /**
  * Testing, info servers are disabled.  This test enables then and checks that
  * they serve pages.
  */
-public class TestInfoServers extends HBaseTestCase {
+public class TestInfoServers extends HBaseClusterTestCase {
   static final Log LOG = LogFactory.getLog(TestInfoServers.class);
-
-  @Override  
-  protected void setUp() throws Exception {
-    super.setUp();
-  }
-
+  
   @Override
-  protected void tearDown() throws Exception {
-    super.tearDown();
+  protected void preHBaseClusterSetup() {
+    // Bring up info servers on 'odd' port numbers in case the test is not
+    // sourcing the src/test/hbase-default.xml.
+    conf.setInt("hbase.master.info.port", 60011);
+    conf.setInt("hbase.regionserver.info.port", 60031);
   }
   
   /**
    * @throws Exception
    */
   public void testInfoServersAreUp() throws Exception {
-    // Bring up info servers on 'odd' port numbers in case the test is not
-    // sourcing the src/test/hbase-default.xml.
-    this.conf.setInt("hbase.master.info.port", 60011);
-    this.conf.setInt("hbase.regionserver.info.port", 60031);
-    MiniHBaseCluster miniHbase = new MiniHBaseCluster(this.conf, 1);
-    // Create table so info servers are given time to spin up.
-    HBaseAdmin a = new HBaseAdmin(conf);
-    a.createTable(new HTableDescriptor(getName()));
-    assertTrue(a.tableExists(new Text(getName())));
-    try {
-      int port = miniHbase.getMaster().getInfoServer().getPort();
-      assertHasExpectedContent(new URL("http://localhost:" + port +
-        "/index.html"), "Master");
-      port = miniHbase.getRegionThreads().get(0).getRegionServer().
-        getInfoServer().getPort();
-      assertHasExpectedContent(new URL("http://localhost:" + port +
-        "/index.html"), "Region Server");
-    } finally {
-      miniHbase.shutdown();
-    }
+    // give the cluster time to start up
+    HTable table = new HTable(conf, new Text(".META."));
+    
+    int port = cluster.getMaster().getInfoServer().getPort();
+    assertHasExpectedContent(new URL("http://localhost:" + port +
+      "/index.html"), "Master");
+    port = cluster.getRegionThreads().get(0).getRegionServer().
+      getInfoServer().getPort();
+    assertHasExpectedContent(new URL("http://localhost:" + port +
+      "/index.html"), "Region Server");
   }
   
   private void assertHasExpectedContent(final URL u, final String expected)

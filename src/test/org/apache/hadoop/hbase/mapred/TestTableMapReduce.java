@@ -26,7 +26,6 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MultiRegionTable;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.io.BatchUpdate;
@@ -68,9 +66,7 @@ public class TestTableMapReduce extends MultiRegionTable {
     TEXT_OUTPUT_COLUMN
   };
 
-  private MiniDFSCluster dfsCluster = null;
   private Path dir;
-  private MiniHBaseCluster hCluster = null;
   
   private static byte[][] values = null;
   
@@ -108,46 +104,6 @@ public class TestTableMapReduce extends MultiRegionTable {
     
     // Set client pause to the original default
     conf.setInt("hbase.client.pause", 10 * 1000);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void setUp() throws Exception {
-    dfsCluster = new MiniDFSCluster(conf, 1, true, (String[])null);
-    // Set the hbase.rootdir to be the home directory in mini dfs.
-    this.conf.set(HConstants.HBASE_DIR,
-      this.dfsCluster.getFileSystem().getHomeDirectory().toString());
-
-    // Must call super.setup() after starting mini dfs cluster. Otherwise
-    // we get a local file system instead of hdfs
-    
-    super.setUp();
-    try {
-      dir = new Path("/hbase");
-      fs.mkdirs(dir);
-      // Start up HBase cluster
-      // Only one region server.  MultiRegionServer manufacturing code below
-      // depends on there being one region server only.
-      hCluster = new MiniHBaseCluster(conf, 1, dfsCluster, true);
-      LOG.info("Master is at " + this.conf.get(HConstants.MASTER_ADDRESS));
-    } catch (Exception e) {
-      StaticTestEnvironment.shutdownDfs(dfsCluster);
-      throw e;
-    }
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public void tearDown() throws Exception {
-    super.tearDown();
-    if(hCluster != null) {
-      hCluster.shutdown();
-    }
-    StaticTestEnvironment.shutdownDfs(dfsCluster);
   }
 
   /**
@@ -276,8 +232,8 @@ public class TestTableMapReduce extends MultiRegionTable {
     admin.createTable(desc);
 
     // Populate a table into multiple regions
-    makeMultiRegionTable(conf, hCluster, fs, MULTI_REGION_TABLE_NAME,
-        INPUT_COLUMN);
+    makeMultiRegionTable(conf, cluster, dfsCluster.getFileSystem(), 
+      MULTI_REGION_TABLE_NAME, INPUT_COLUMN);
     
     // Verify table indeed has multiple regions
     HTable table = new HTable(conf, new Text(MULTI_REGION_TABLE_NAME));

@@ -21,10 +21,16 @@ package org.apache.hadoop.hbase;
 
 import java.io.PrintWriter;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.io.Text;
 
 /**
  * Abstract base class for HBase cluster junit tests.  Spins up an hbase
@@ -35,67 +41,116 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     LogFactory.getLog(HBaseClusterTestCase.class.getName());
   
   protected MiniHBaseCluster cluster;
-  final boolean miniHdfs;
-  int regionServers;
+  protected MiniDFSCluster dfsCluster;
+  protected int regionServers;
+  protected boolean startDfs;
   
-  /**
-   * constructor
-   */
   public HBaseClusterTestCase() {
-    this(true);
+    this(1);
   }
   
   /**
-   * @param regionServers
-   */
+   * Start a MiniHBaseCluster with regionServers region servers in-process to
+   * start with. Also, start a MiniDfsCluster before starting the hbase cluster.
+   * The configuration used will be edited so that this works correctly.
+   */  
   public HBaseClusterTestCase(int regionServers) {
-    this(true);
+    this(regionServers, true);
+  }
+  
+  /**
+   * Start a MiniHBaseCluster with regionServers region servers in-process to
+   * start with. Optionally, startDfs indicates if a MiniDFSCluster should be
+   * started. If startDfs is false, the assumption is that an external DFS is
+   * configured in hbase-site.xml and is already started, or you have started a
+   * MiniDFSCluster on your own and edited the configuration in memory. (You 
+   * can modify the config used by overriding the preHBaseClusterSetup method.)
+   */
+  public HBaseClusterTestCase(int regionServers, boolean startDfs) {
+    super();
+    this.startDfs = startDfs;
     this.regionServers = regionServers;
   }
+  
+  /**
+   * Run after dfs is ready but before hbase cluster is started up.
+   */
+  protected void preHBaseClusterSetup() throws Exception {
+  } 
 
   /**
-   * @param name
+   * Actually start the MiniHBase instance.
    */
-  public HBaseClusterTestCase(String name) {
-    this(name, true);
+  protected void HBaseClusterSetup() throws Exception {
+    // start the mini cluster
+    this.cluster = new MiniHBaseCluster(conf, regionServers);
+    HTable meta = new HTable(conf, new Text(".META."));
   }
   
   /**
-   * @param miniHdfs
+   * Run after hbase cluster is started up.
    */
-  public HBaseClusterTestCase(final boolean miniHdfs) {
-    super();
-    this.miniHdfs = miniHdfs;
-    this.regionServers = 1;
-  }
-
-  /**
-   * @param name
-   * @param miniHdfs
-   */
-  public HBaseClusterTestCase(String name, final boolean miniHdfs) {
-    super(name);
-    this.miniHdfs = miniHdfs;
-    this.regionServers = 1;
-  }
+  protected void postHBaseClusterSetup() throws Exception {
+  } 
 
   @Override
   protected void setUp() throws Exception {
-    this.cluster =
-      new MiniHBaseCluster(this.conf, this.regionServers, this.miniHdfs);
-    super.setUp();
+    try {
+      if (startDfs) {
+        // start up the dfs
+        dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+
+        // mangle the conf so that the fs parameter points to the minidfs we
+        // just started up
+        FileSystem fs = dfsCluster.getFileSystem();
+        conf.set("fs.default.name", fs.getName());      
+        Path parentdir = fs.getHomeDirectory();
+        conf.set(HConstants.HBASE_DIR, parentdir.toString());
+        fs.mkdirs(parentdir);
+        FSUtils.setVersion(fs, parentdir);
+      }
+
+      // do the super setup now. if we had done it first, then we would have
+      // gotten our conf all mangled and a local fs started up.
+      super.setUp();
+    
+      // run the pre-cluster setup
+      preHBaseClusterSetup();    
+    
+      // start the instance
+      HBaseClusterSetup();
+      
+      // run post-cluster setup
+      postHBaseClusterSetup();
+    } catch (Exception e) {
+      LOG.error("Exception in setup!", e);
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      if (dfsCluster != null) {
+        StaticTestEnvironment.shutdownDfs(dfsCluster);
+      }
+      throw e;
+    }
   }
 
   @Override
   protected void tearDown() throws Exception {
     super.tearDown();
-    HConnectionManager.deleteConnection(conf);
-    if (this.cluster != null) {
-      try {
-        this.cluster.shutdown();
-      } catch (Exception e) {
-        LOG.warn("Closing mini dfs", e);
+    try {
+      HConnectionManager.deleteConnection(conf);
+      if (this.cluster != null) {
+        try {
+          this.cluster.shutdown();
+        } catch (Exception e) {
+          LOG.warn("Closing mini dfs", e);
+        }
       }
+      if (startDfs) {
+        StaticTestEnvironment.shutdownDfs(dfsCluster);
+      }
+    } catch (Exception e) {
+      LOG.error(e);
     }
     // ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
     //  "Temporary end-of-test thread dump debugging HADOOP-2040: " + getName());

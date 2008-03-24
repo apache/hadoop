@@ -40,7 +40,7 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
 
   /** constructor */
   public TestHBaseCluster() {
-    super(true);
+    super();
     this.desc = null;
     this.admin = null;
     this.table = null;

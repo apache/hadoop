@@ -97,6 +97,18 @@ if [ "$HBASE_HEAPSIZE" != "" ]; then
   #echo $JAVA_HEAP_MAX
 fi
 
+# so that filenames w/ spaces are handled correctly in loops below
+IFS=
+
+# Add libs to CLASSPATH
+# Do this early so hadoop jar comes before hbase classes; otherwise
+# complaint because way webapps are loaded, expectation is that
+# loading class is from same jar as webapps themselves (only true
+# if hadoop comes first).
+for f in $HBASE_HOME/lib/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
+
 # CLASSPATH initially contains $HBASE_CONF_DIR
 CLASSPATH="${CLASSPATH}:${HBASE_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
@@ -112,9 +124,6 @@ if [ -d "$HBASE_HOME/build/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HBASE_HOME/build
 fi
 
-# so that filenames w/ spaces are handled correctly in loops below
-IFS=
-
 # for releases, add hbase, hadoop & webapps to CLASSPATH
 for f in $HBASE_HOME/hbase*.jar; do
   if [ -f $f ]; then
@@ -124,11 +133,6 @@ done
 if [ -d "$HBASE_HOME/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HBASE_HOME
 fi
-
-# add libs to CLASSPATH
-for f in $HBASE_HOME/lib/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
 
 for f in $HBASE_HOME/lib/jetty-ext/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;

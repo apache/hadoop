@@ -31,6 +31,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -561,7 +563,18 @@ public class PerformanceEvaluation implements HConstants {
     }
     
     MiniHBaseCluster hbaseMiniCluster = null;
+    MiniDFSCluster dfsCluster = null;
     if (this.miniCluster) {
+      dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+      // mangle the conf so that the fs parameter points to the minidfs we
+      // just started up
+      FileSystem fs = dfsCluster.getFileSystem();
+      conf.set("fs.default.name", fs.getName());      
+      Path parentdir = fs.getHomeDirectory();
+      conf.set(HConstants.HBASE_DIR, parentdir.toString());
+      fs.mkdirs(parentdir);
+      FSUtils.setVersion(fs, parentdir);
+      
       hbaseMiniCluster = new MiniHBaseCluster(this.conf, N);
     }
     
@@ -577,6 +590,7 @@ public class PerformanceEvaluation implements HConstants {
     } finally {
       if(this.miniCluster && hbaseMiniCluster != null) {
         hbaseMiniCluster.shutdown();
+        StaticTestEnvironment.shutdownDfs(dfsCluster);
       }
     }
   }

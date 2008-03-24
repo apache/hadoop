@@ -40,7 +40,7 @@ public class TestMasterAdmin extends HBaseClusterTestCase {
 
   /** constructor */
   public TestMasterAdmin() {
-    super(true);
+    super();
     admin = null;
 
     // Make the thread wake frequency a little slower so other threads

@@ -32,11 +32,6 @@ public class TestMergeTable extends AbstractMergeTestBase {
    */
   public void testMergeTable() throws IOException {
     assertNotNull(dfsCluster);
-    MiniHBaseCluster hCluster = new MiniHBaseCluster(conf, 1, dfsCluster, true);
-    try {
-      HMerge.merge(conf, dfsCluster.getFileSystem(), desc.getName());
-    } finally {
-      hCluster.shutdown();
-    }
+    HMerge.merge(conf, dfsCluster.getFileSystem(), desc.getName());
   }
 }

@@ -72,13 +72,8 @@ public class TestSplit extends MultiRegionTable {
    * @throws Exception
    */
   public void testBasicSplit() throws Exception {
-    MiniDFSCluster cluster = null;
     HRegion region = null;
     try {
-      cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
-      // Set the hbase.rootdir to be the home directory in mini dfs.
-      this.conf.set(HConstants.HBASE_DIR,
-        cluster.getFileSystem().getHomeDirectory().toString());
       HTableDescriptor htd = createTableDescriptor(getName());
       region = createNewHRegion(htd, null, null);
       basicSplit(region);
@@ -86,9 +81,6 @@ public class TestSplit extends MultiRegionTable {
       if (region != null) {
         region.close();
         region.getLog().closeAndDelete();
-      }
-      if (cluster != null) {
-        StaticTestEnvironment.shutdownDfs(cluster);
       }
     }
   }

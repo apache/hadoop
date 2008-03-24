@@ -57,7 +57,7 @@ public class DFSAbort extends HBaseClusterTestCase {
     try {
       // By now the Mini DFS is running, Mini HBase is running and we have
       // created a table. Now let's yank the rug out from HBase
-      cluster.getDFSCluster().shutdown();
+      dfsCluster.shutdown();
       threadDumpingJoin();
     } catch (Exception e) {
       e.printStackTrace();

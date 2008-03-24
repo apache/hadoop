@@ -308,7 +308,7 @@ abstract class BaseScanner extends Chore implements HConstants {
   throws IOException {
     boolean result = false;
     HRegionInfo split =
-      Writables.getHRegionInfoOrNull(rowContent.get(splitColumn).getValue());
+      Writables.getHRegionInfo(rowContent.get(splitColumn));
     if (split == null) {
       return result;
     }

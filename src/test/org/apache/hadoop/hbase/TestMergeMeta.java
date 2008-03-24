@@ -25,8 +25,8 @@ import java.io.IOException;
 public class TestMergeMeta extends AbstractMergeTestBase {
 
   /** constructor */
-  public TestMergeMeta() {
-    super();
+  public TestMergeMeta() throws Exception {
+    super(false);
     conf.setLong("hbase.client.pause", 1 * 1000);
     conf.setInt("hbase.client.retries.number", 2);
   }

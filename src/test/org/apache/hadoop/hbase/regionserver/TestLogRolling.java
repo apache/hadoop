@@ -28,8 +28,7 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.HBaseClusterTestCase;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
@@ -40,10 +39,8 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 /**
  * Test log deletion as logs are rolled.
  */
-public class TestLogRolling extends HBaseTestCase {
+public class TestLogRolling extends HBaseClusterTestCase {
   private static final Log LOG = LogFactory.getLog(TestLogRolling.class);
-  private MiniDFSCluster dfs;
-  private MiniHBaseCluster cluster;
   private HRegionServer server;
   private HLog log;
   private String tableName;
@@ -54,37 +51,13 @@ public class TestLogRolling extends HBaseTestCase {
    * @throws Exception
    */
   public TestLogRolling() throws Exception {
+    // start one regionserver and a minidfs.
     super();
     try {
-      this.dfs = null;
-      this.cluster = null;
       this.server = null;
       this.log = null;
       this.tableName = null;
       this.value = null;
-
-      // Force a region split after every 768KB
-      conf.setLong("hbase.hregion.max.filesize", 768L * 1024L);
-
-      // We roll the log after every 32 writes
-      conf.setInt("hbase.regionserver.maxlogentries", 32);
-
-      // For less frequently updated regions flush after every 2 flushes
-      conf.setInt("hbase.hregion.memcache.optionalflushcount", 2);
-
-      // We flush the cache after every 8192 bytes
-      conf.setInt("hbase.hregion.memcache.flush.size", 8192);
-
-      // Make lease timeout longer, lease checks less frequent
-      conf.setInt("hbase.master.lease.period", 10 * 1000);
-      conf.setInt("hbase.master.lease.thread.wakefrequency", 5 * 1000);
-
-      // Increase the amount of time between client retries
-      conf.setLong("hbase.client.pause", 15 * 1000);
-
-      // Reduce thread wake frequency so that other threads can get
-      // a chance to run.
-      conf.setInt(HConstants.THREAD_WAKE_FREQUENCY, 2 * 1000);
       
       String className = this.getClass().getName();
       StringBuilder v = new StringBuilder(className);
@@ -99,50 +72,40 @@ public class TestLogRolling extends HBaseTestCase {
     }
   }
 
-  /** {@inheritDoc} */
+  // Need to override this setup so we can edit the config before it gets sent
+  // to the cluster startup.
   @Override
-  public void setUp() throws Exception {
-    try {
-      dfs = new MiniDFSCluster(conf, 2, true, (String[]) null);
-      // Set the hbase.rootdir to be the home directory in mini dfs.
-      this.conf.set(HConstants.HBASE_DIR,
-        this.dfs.getFileSystem().getHomeDirectory().toString());
-      super.setUp();
-    } catch (Exception e) {
-      StaticTestEnvironment.shutdownDfs(dfs);
-      LOG.fatal("error during setUp: ", e);
-      throw e;
-    }
-  }
+  protected void preHBaseClusterSetup() {
+    // Force a region split after every 768KB
+    conf.setLong("hbase.hregion.max.filesize", 768L * 1024L);
 
-  /** {@inheritDoc} */
-  @Override
-  public void tearDown() throws Exception {
-    try {
-      super.tearDown();
-      if (cluster != null) {                      // shutdown mini HBase cluster
-        cluster.shutdown();
-      }
-      StaticTestEnvironment.shutdownDfs(dfs);
-    } catch (Exception e) {
-      LOG.fatal("error in tearDown", e);
-      throw e;
-    }
+    // We roll the log after every 32 writes
+    conf.setInt("hbase.regionserver.maxlogentries", 32);
+
+    // For less frequently updated regions flush after every 2 flushes
+    conf.setInt("hbase.hregion.memcache.optionalflushcount", 2);
+
+    // We flush the cache after every 8192 bytes
+    conf.setInt("hbase.hregion.memcache.flush.size", 8192);
+
+    // Make lease timeout longer, lease checks less frequent
+    conf.setInt("hbase.master.lease.period", 10 * 1000);
+    conf.setInt("hbase.master.lease.thread.wakefrequency", 5 * 1000);
+
+    // Increase the amount of time between client retries
+    conf.setLong("hbase.client.pause", 15 * 1000);
+
+    // Reduce thread wake frequency so that other threads can get
+    // a chance to run.
+    conf.setInt(HConstants.THREAD_WAKE_FREQUENCY, 2 * 1000);
   }
   
   private void startAndWriteData() throws Exception {
-    cluster = new MiniHBaseCluster(conf, 1, dfs, true);
-    try {
-      Thread.sleep(10 * 1000);                  // Wait for region server to start
-    } catch (InterruptedException e) {
-      // continue
-    }
+    // When the META table can be opened, the region servers are running
+    new HTable(conf, HConstants.META_TABLE_NAME);
 
     this.server = cluster.getRegionThreads().get(0).getRegionServer();
     this.log = server.getLog();
-
-    // When the META table can be opened, the region servers are running
-    new HTable(conf, HConstants.META_TABLE_NAME);
     
     // Create the test table and open it
     HTableDescriptor desc = new HTableDescriptor(tableName);

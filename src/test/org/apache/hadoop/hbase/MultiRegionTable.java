@@ -39,16 +39,14 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 /**
  * Utility class to build a table of multiple regions.
  */
-public class MultiRegionTable extends HBaseTestCase {
+public class MultiRegionTable extends HBaseClusterTestCase {
   static final Log LOG = LogFactory.getLog(MultiRegionTable.class.getName());
 
-  /** {@inheritDoc} */
-  @Override
-  public void setUp() throws Exception {
+  public MultiRegionTable() {
+    super();
     // These are needed for the new and improved Map/Reduce framework
     System.setProperty("hadoop.log.dir", conf.get("hadoop.log.dir"));
     conf.set("mapred.output.dir", conf.get("hadoop.tmp.dir"));
-    super.setUp();
   }
 
   /**
