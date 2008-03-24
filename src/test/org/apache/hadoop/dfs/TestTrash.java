@@ -68,7 +68,7 @@ public class TestTrash extends TestCase {
    */
   public void testTrash() throws IOException {
     Configuration conf = new Configuration();
-    conf.set("fs.trash.interval", 10); // 10 minute
+    conf.set("fs.trash.interval", "10"); // 10 minute
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fs = cluster.getFileSystem();
     DistributedFileSystem fileSys = (DistributedFileSystem) fs;

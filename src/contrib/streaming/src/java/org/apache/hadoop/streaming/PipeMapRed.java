@@ -254,7 +254,7 @@ public abstract class PipeMapRed {
     if (debug_) {
       logprintln("addJobConfToEnvironment: begin");
     }
-    Iterator it = conf.entries();
+    Iterator it = conf.iterator();
     while (it.hasNext()) {
       Map.Entry en = (Map.Entry) it.next();
       String name = (String) en.getKey();

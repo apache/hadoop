@@ -40,6 +40,16 @@ Trunk (unreleased changes)
     HADOOP-2116. Changes the layout of the task execution directory. 
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-2828. The following deprecated methods in Configuration.java
+    have been removed
+        getObject(String name)
+        setObject(String name, Object value)
+        get(String name, Object defaultValue)
+        set(String name, Object value)
+        Iterator entries()
+    (Amareshwari Sriramadasu via ddas)
+
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)

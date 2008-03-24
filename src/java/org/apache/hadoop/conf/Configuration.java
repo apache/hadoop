@@ -227,33 +227,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     finalParameters.clear();                      // clear site-limits
   }
   
-  /**
-   * Returns the value of the <code>name</code> property, or null if no such
-   * property exists.
-   * @deprecated A side map of Configuration to Object should be used instead.
-   */
-  @Deprecated
-  public Object getObject(String name) { return getProps().get(name);}
-
-  /** Sets the value of the <code>name</code> property. 
-   * @deprecated
-   */
-  @Deprecated
-  public void setObject(String name, Object value) {
-    getProps().put(name, value);
-  }
-
-  /** Returns the value of the <code>name</code> property.  If no such property
-   * exists, then <code>defaultValue</code> is returned.
-   * @deprecated A side map of Configuration to Object should be used instead.
-   */
-  @Deprecated
-  public Object get(String name, Object defaultValue) {
-    Object res = getObject(name);
-    if (res != null) return res;
-    else return defaultValue;
-  }
-  
   private static Pattern varPat = Pattern.compile("\\$\\{[^\\}\\$\u0020]+\\}");
   private static int MAX_SUBST = 20;
 
@@ -311,15 +284,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     return getProps().getProperty(name);
   }
 
-  /** Sets the value of the <code>name</code> property. 
-   * @deprecated
-   */
-  @Deprecated
-  public void set(String name, Object value) {
-    getOverlay().setProperty(name, value.toString());
-    getProps().setProperty(name, value.toString());
-  }
-  
   /** 
    * Set the <code>value</code> of the <code>name</code> property.
    * 
@@ -780,14 +744,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
         properties.putAll(overlay);
     }
     return properties;
-  }
-
-  /** @return Iterator&lt; Map.Entry&lt;String,String> >  
-   * @deprecated Use {@link #iterator()} instead. 
-   */
-  @Deprecated
-  public Iterator entries() {
-    return iterator();
   }
 
   /**

@@ -869,7 +869,7 @@ public class StreamJob {
   protected void listJobConfProperties()
   {
     msg("==== JobConf properties:");
-    Iterator it = jobConf_.entries();
+    Iterator it = jobConf_.iterator();
     TreeMap sorted = new TreeMap();
     while(it.hasNext()) {
       Map.Entry en = (Map.Entry)it.next();
