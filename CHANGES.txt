@@ -346,6 +346,9 @@ Trunk (unreleased changes)
     HADOOP-3066. Should not require superuser privilege to query if hdfs is in
     safe mode (jimk)
 
+    HADOOP-3040. If the input line starts with the separator char, the key
+    is set as empty. (Amareshwari Sriramadasu via ddas) 
+
 Release 0.16.2 - Unreleased
 
   BUG FIXES

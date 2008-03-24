@@ -74,7 +74,7 @@ public class UTF8ByteArrayUtils {
    */
   private static int findNthByte(byte [] utf, int start, int length, byte b, int n) {
     int pos = -1;
-    int nextStart = start + 1;
+    int nextStart = start;
     for (int i = 0; i < n; i++) {
       pos = findByte(utf, nextStart, length, b);
       if (pos < 0) {
