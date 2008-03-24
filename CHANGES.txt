@@ -54,6 +54,7 @@ Hbase Change Log
                files (Clint Morgan via Jim Kellerman)
    HBASE-527   RegexpRowFilter does not work when there are columns from 
                multiple families (Clint Morgan via Jim Kellerman)
+   HBASE-534   Double-assignment at SPLIT-time
       
   IMPROVEMENTS
    HBASE-415   Rewrite leases to use DelayedBlockingQueue instead of polling

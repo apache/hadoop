@@ -473,7 +473,12 @@ class RegionManager implements HConstants {
   
   /** Set a region to unassigned */
   public void setUnassigned(HRegionInfo info) {
-    unassignedRegions.put(info, ZERO_L);
+    synchronized(this.unassignedRegions) {
+      if (!this.unassignedRegions.containsKey(info) &&
+          !this.pendingRegions.contains(info.getRegionName())) {
+        this.unassignedRegions.put(info, ZERO_L);
+      }
+    }
   }
   
   /** Set a region to pending assignment */

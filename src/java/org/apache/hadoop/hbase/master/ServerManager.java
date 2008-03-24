@@ -409,7 +409,7 @@ class ServerManager implements HConstants {
     HRegionInfo newRegionB = splitB.getRegionInfo();
     master.regionManager.setUnassigned(newRegionB);
 
-    LOG.info("region " + region.getRegionName() + " split. New regions are: " +
+    LOG.info("Region " + region.getRegionName() + " split; new regions: " +
       newRegionA.getRegionName() + ", " + newRegionB.getRegionName());
 
     if (region.isMetaTable()) {
@@ -418,7 +418,7 @@ class ServerManager implements HConstants {
       master.regionManager.incrementNumMetaRegions();
     }
   }
-  
+
   /** Region server is reporting that a region is now opened */
   private void processRegionOpen(String serverName, HServerInfo serverInfo, 
     HRegionInfo region, ArrayList<HMsg> returnMsgs) 

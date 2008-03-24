@@ -783,9 +783,10 @@ public class HStore implements HConstants {
         // Add info about which file threw exception. It may not be in the
         // exception message so output a message here where we know the
         // culprit.
-        LOG.warn("Failed with " + e.toString() + ": " + hsf.toString() +
-          (hsf.isReference() ? " " + hsf.getReference().toString() : "") +
-          " for " + this.storeName);
+        LOG.warn("Failed with " + e.toString() + ": HStoreFile=" +
+          hsf.toString() + (hsf.isReference()? ", Reference=" +
+          hsf.getReference().toString() : "") + " for Store=" +
+          this.storeName);
         closeCompactionReaders(rdrs);
         throw e;
       }
