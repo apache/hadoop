@@ -216,24 +216,6 @@ public class SimpleCharStream
     return (c);
   }
 
-  /**
-   * @deprecated 
-   * @see #getEndColumn
-   */
-
-  public int getColumn() {
-    return bufcolumn[bufpos];
-  }
-
-  /**
-   * @deprecated 
-   * @see #getEndLine
-   */
-
-  public int getLine() {
-    return bufline[bufpos];
-  }
-
   public int getEndColumn() {
     return bufcolumn[bufpos];
   }

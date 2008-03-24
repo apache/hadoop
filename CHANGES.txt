@@ -52,6 +52,10 @@ Trunk (unreleased changes)
     HADOOP-2824. Removes one deprecated constructor from MiniMRCluster.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-2823. Removes deprecated methods getColumn(), getLine() from
+    org.apache.hadoop.record.compiler.generated.SimpleCharStream. 
+    (Amareshwari Sriramadasu via ddas)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)
