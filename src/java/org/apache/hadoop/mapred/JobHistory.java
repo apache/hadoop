@@ -206,7 +206,6 @@ public class JobHistory {
   static void log(PrintWriter out, RecordTypes recordType, Keys key, 
                   String value){
     out.println(recordType.name() + DELIMITER + key + "=\"" + value + "\""); 
-    out.flush();
   }
   
   /**
@@ -231,7 +230,6 @@ public class JobHistory {
     
     for (PrintWriter out : writers) {
       out.println(buf.toString());
-      out.flush();
     }
   }
   
