@@ -2080,6 +2080,7 @@ class DFSClient implements FSConstants {
       namenode.create(
           src, masked, clientName, overwrite, replication, blockSize);
       streamer = new DataStreamer();
+      streamer.setDaemon(true);
       streamer.start();
     }
   

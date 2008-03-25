@@ -386,6 +386,9 @@ Release 0.16.2 - Unreleased
     HADOOP-3049. Fixes a problem in MultiThreadedMapRunner to do with
     catching RuntimeExceptions. (Alejandro Abdelnur via ddas)
 
+    HADOOP-3039. Fixes a problem to do with exceptions in tasks not
+    killing jobs. (Amareshwari Sriramadasu via ddas)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
