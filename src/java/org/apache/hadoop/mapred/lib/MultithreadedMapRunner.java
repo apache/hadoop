@@ -45,12 +45,15 @@ import java.util.concurrent.TimeUnit;
  * Map implementations using this MapRunnable must be thread-safe.
  * <p>
  * The Map-Reduce job has to be configured to use this MapRunnable class (using
- * the <b>mapred.map.runner.class</b> property) and
+ * the JobConf.setMapRunnerClass method) and
  * the number of thread the thread-pool can use (using the
  * <b>mapred.map.multithreadedrunner.threads</b> property).
  * <p>
  */
-public class MultithreadedMapRunner<K1, V1, K2, V2>
+public class MultithreadedMapRunner<K1 extends WritableComparable,
+                                    V1 extends Writable,
+                                    K2 extends WritableComparable,
+                                    V2 extends Writable>
     implements MapRunnable<K1, V1, K2, V2> {
 
   private static final Log LOG =
@@ -60,19 +63,20 @@ public class MultithreadedMapRunner<K1, V1, K2, V2>
   private Mapper<K1, V1, K2, V2> mapper;
   private ExecutorService executorService;
   private volatile IOException ioException;
+  private volatile RuntimeException runtimeException;
 
   @SuppressWarnings("unchecked")
-  public void configure(JobConf job) {
+  public void configure(JobConf jobConf) {
     int numberOfThreads =
-      job.getInt("mapred.map.multithreadedrunner.threads", 10);
+      jobConf.getInt("mapred.map.multithreadedrunner.threads", 10);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Configuring job " + job.getJobName() +
+      LOG.debug("Configuring jobConf " + jobConf.getJobName() +
                 " to use " + numberOfThreads + " threads");
     }
 
-    this.job = job;
-    this.mapper = (Mapper)ReflectionUtils.newInstance(job.getMapperClass(),
-                                                      job);
+    this.job = jobConf;
+    this.mapper = (Mapper)ReflectionUtils.newInstance(jobConf.getMapperClass(),
+        jobConf);
 
     // Creating a threadpool of the configured size to execute the Mapper
     // map method in parallel.
@@ -94,7 +98,8 @@ public class MultithreadedMapRunner<K1, V1, K2, V2>
         // If threads are not available from the thread-pool this method
         // will block until there is a thread available.
         executorService.execute(
-                                new MapperInvokeRunable(key, value, output, reporter));
+                                new MapperInvokeRunable(key, value, output,
+                                    reporter));
 
         // Checking if a Mapper.map within a Runnable has generated an
         // IOException. If so we rethrow it to force an abort of the Map
@@ -102,6 +107,14 @@ public class MultithreadedMapRunner<K1, V1, K2, V2>
         // implementation.
         if (ioException != null) {
           throw ioException;
+        }
+
+        // Checking if a Mapper.map within a Runnable has generated a
+        // RuntimeException. If so we rethrow it to force an abort of the Map
+        // operation thus keeping the semantics of the default
+        // implementation.
+        if (runtimeException != null) {
+          throw runtimeException;
         }
 
         // Allocate new key & value instances as mapper is running in parallel
@@ -127,35 +140,51 @@ public class MultithreadedMapRunner<K1, V1, K2, V2>
                       + job.getJobName());
           }
 
+          // NOTE: while Mapper.map dispatching has concluded there are still
+          // map calls in progress.
+
           // Checking if a Mapper.map within a Runnable has generated an
           // IOException. If so we rethrow it to force an abort of the Map
           // operation thus keeping the semantics of the default
           // implementation.
-          // NOTE: while Mapper.map dispatching has concluded there are still
-          // map calls in progress.
           if (ioException != null) {
             throw ioException;
           }
+
+          // Checking if a Mapper.map within a Runnable has generated a
+          // RuntimeException. If so we rethrow it to force an abort of the Map
+          // operation thus keeping the semantics of the default
+          // implementation.
+          if (runtimeException != null) {
+            throw runtimeException;
+          }
         }
+
+        // NOTE: it could be that a map call has had an exception after the
+        // call for awaitTermination() returing true. And edge case but it
+        // could happen.
 
         // Checking if a Mapper.map within a Runnable has generated an
         // IOException. If so we rethrow it to force an abort of the Map
         // operation thus keeping the semantics of the default
         // implementation.
-        // NOTE: it could be that a map call has had an exception after the
-        // call for awaitTermination() returing true. And edge case but it
-        // could happen.
         if (ioException != null) {
           throw ioException;
         }
-      }
-      catch (IOException ioEx) {
+
+        // Checking if a Mapper.map within a Runnable has generated a
+        // RuntimeException. If so we rethrow it to force an abort of the Map
+        // operation thus keeping the semantics of the default
+        // implementation.
+        if (runtimeException != null) {
+          throw runtimeException;
+        }
+      } catch (IOException ioEx) {
         // Forcing a shutdown of all thread of the threadpool and rethrowing
         // the IOException
         executorService.shutdownNow();
         throw ioEx;
-      }
-      catch (InterruptedException iEx) {
+      } catch (InterruptedException iEx) {
         throw new IOException(iEx.getMessage());
       }
 
@@ -202,14 +231,22 @@ public class MultithreadedMapRunner<K1, V1, K2, V2>
       try {
         // map pair to output
         MultithreadedMapRunner.this.mapper.map(key, value, output, reporter);
-      }
-      catch (IOException ex) {
+      } catch (IOException ex) {
         // If there is an IOException during the call it is set in an instance
         // variable of the MultithreadedMapRunner from where it will be
         // rethrown.
         synchronized (MultithreadedMapRunner.this) {
           if (MultithreadedMapRunner.this.ioException == null) {
             MultithreadedMapRunner.this.ioException = ex;
+          }
+        }
+      } catch (RuntimeException ex) {
+        // If there is a RuntimeException during the call it is set in an
+        // instance variable of the MultithreadedMapRunner from where it will be
+        // rethrown.
+        synchronized (MultithreadedMapRunner.this) {
+          if (MultithreadedMapRunner.this.runtimeException == null) {
+            MultithreadedMapRunner.this.runtimeException = ex;
           }
         }
       }

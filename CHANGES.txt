@@ -383,6 +383,9 @@ Release 0.16.2 - Unreleased
     HADOOP-2944. Fixes a "Run on Hadoop" wizard NPE when creating a
     Location from the wizard. (taton)
 
+    HADOOP-3049. Fixes a problem in MultiThreadedMapRunner to do with
+    catching RuntimeExceptions. (Alejandro Abdelnur via ddas)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
