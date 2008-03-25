@@ -277,7 +277,7 @@ class JobInProgress {
     }
 
     // create job specific temporary directory in output path
-    Path outputPath = conf.getCurrentOutputPath();
+    Path outputPath = conf.getOutputPath();
     if (outputPath != null) {
       Path tmpDir = new Path(outputPath, MRConstants.TEMP_DIR_NAME);
       FileSystem fileSys = tmpDir.getFileSystem(conf);
@@ -1141,7 +1141,7 @@ class JobInProgress {
       fs.delete(tempDir); 
 
       // delete the temporary directory in output directory
-      Path outputPath = conf.getCurrentOutputPath();
+      Path outputPath = conf.getOutputPath();
       if (outputPath != null) {
         Path tmpDir = new Path(outputPath, MRConstants.TEMP_DIR_NAME);
         FileSystem fileSys = tmpDir.getFileSystem(conf);

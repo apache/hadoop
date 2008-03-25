@@ -112,7 +112,7 @@ public class FileBench extends Configured implements Tool {
     Text val = new Text();
 
     final String fn = conf.get("test.filebench.name", "");
-    final Path outd = conf.getCurrentOutputPath();
+    final Path outd = conf.getOutputPath();
     OutputFormat outf = conf.getOutputFormat();
     RecordWriter<Text,Text> rw =
       outf.getRecordWriter(outd.getFileSystem(conf), conf, fn,

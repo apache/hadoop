@@ -42,7 +42,7 @@ public class MapFileOutputFormat extends OutputFormatBase {
                                       String name, Progressable progress)
     throws IOException {
 
-    Path outputPath = job.getCurrentOutputPath();
+    Path outputPath = job.getOutputPath();
     FileSystem fs = outputPath.getFileSystem(job);
     if (!fs.exists(outputPath)) {
       throw new IOException("Output directory doesnt exist");

@@ -353,20 +353,7 @@ public class JobConf extends Configuration {
   }
   
   /**
-   * @deprecated Please use {@link #getCurrentOutputPath()} 
-   *             or {@link #getFinalOutputPath()} 
-   *             
-   * @return the {@link Path} to the output directory for the map-reduce job.
-   */
-  @Deprecated
-  public Path getOutputPath() {
-    return getCurrentOutputPath();
-  }
-
-  /**
-   * Get the {@link Path} to the output directory for the map-reduce job
-   * (This is sensitive to the task execution. While executing task, this 
-   * value points to the task's temporary output directory)
+   * Get the {@link Path} to the output directory for the map-reduce job.
    * 
    * <h4 id="SideEffectFiles">Tasks' Side-Effect Files</h4>
    * 
@@ -391,41 +378,25 @@ public class JobConf extends Configuration {
    * 
    * <p>The application-writer can take advantage of this by creating any 
    * side-files required in <tt>${mapred.output.dir}</tt> during execution of his 
-   * reduce-task i.e. via {@link #getCurrentOutputPath()}, 
-   * and the framework will move them out similarly 
-   * - thus she doesn't have to pick unique paths per task-attempt.</p>
+   * reduce-task i.e. via {@link #getOutputPath()}, and the framework will move 
+   * them out similarly - thus she doesn't have to pick unique paths per 
+   * task-attempt.</p>
    * 
    * <p><i>Note</i>: the value of <tt>${mapred.output.dir}</tt> during execution 
    * of a particular task-attempt is actually 
    * <tt>${mapred.output.dir}/_temporary/_{$taskid}</tt>, not the value set by 
    * {@link #setOutputPath(Path)}. So, just create any side-files in the path 
-   * returned by {@link #getCurrentOutputPath()} from map/reduce task to take 
+   * returned by {@link #getOutputPath()} from map/reduce task to take 
    * advantage of this feature.</p>
    * 
    * <p>The entire discussion holds true for maps of jobs with 
    * reducer=NONE (i.e. 0 reduces) since output of the map, in that case, 
    * goes directly to HDFS.</p> 
    * 
-   * @see #getFinalOutputPath()
-   * 
    * @return the {@link Path} to the output directory for the map-reduce job.
    */
-  public Path getCurrentOutputPath() { 
+  public Path getOutputPath() { 
     String name = get("mapred.output.dir");
-    return name == null ? null: new Path(name);
-  }
-
-  /**
-   * Get the {@link Path} to the output directory for the map-reduce job
-   * 
-   * This is the actual configured output path set 
-   * using {@link #setOutputPath(Path)} for job submission.
-   * 
-   * @see #getCurrentOutputPath()
-   * @return the {@link Path} to the output directory for the map-reduce job.
-   */
-  public Path getFinalOutputPath() { 
-    String name = get("mapred.final.output.dir");
     return name == null ? null: new Path(name);
   }
 
@@ -439,8 +410,6 @@ public class JobConf extends Configuration {
   public void setOutputPath(Path dir) {
     dir = new Path(getWorkingDirectory(), dir);
     set("mapred.output.dir", dir.toString());
-    if (get("mapred.final.output.dir") == null)
-      set("mapred.final.output.dir", dir.toString());
   }
 
   /**

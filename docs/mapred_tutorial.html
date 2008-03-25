@@ -283,7 +283,7 @@ document.write("Last Published: " + document.lastModified);
 <a href="#Example%3A+WordCount+v2.0">Example: WordCount v2.0</a>
 <ul class="minitoc">
 <li>
-<a href="#Source+Code-N10BC1">Source Code</a>
+<a href="#Source+Code-N10BBE">Source Code</a>
 </li>
 <li>
 <a href="#Sample+Runs">Sample Runs</a>
@@ -1731,15 +1731,11 @@ document.write("Last Published: " + document.lastModified);
 <p>The application-writer can take advantage of this feature by 
           creating any side-files required in <span class="codefrag">${mapred.output.dir}</span> 
           during execution of a task via 
-          <a href="api/org/apache/hadoop/mapred/JobConf.html#getCurrentOutputPath()">
-          JobConf.getCurrentOutputPath()</a>, and the framework will promote them 
+          <a href="api/org/apache/hadoop/mapred/JobConf.html#getOutputPath()">
+          JobConf.getOutputPath()</a>, and the framework will promote them 
           similarly for succesful task-attempts, thus eliminating the need to 
-          pick unique paths per task-attempt. She can get the actual configured 
-          path (final output path) via 
-          <a href="api/org/apache/hadoop/mapred/JobConf.html#getFinalOutputPath()">
-          JobConf.getFinalOutputPath()</a>
-</p>
-<a name="N10A34"></a><a name="RecordWriter"></a>
+          pick unique paths per task-attempt.</p>
+<a name="N10A31"></a><a name="RecordWriter"></a>
 <h4>RecordWriter</h4>
 <p>
 <a href="api/org/apache/hadoop/mapred/RecordWriter.html">
@@ -1747,9 +1743,9 @@ document.write("Last Published: " + document.lastModified);
           pairs to an output file.</p>
 <p>RecordWriter implementations write the job outputs to the 
           <span class="codefrag">FileSystem</span>.</p>
-<a name="N10A4B"></a><a name="Other+Useful+Features"></a>
+<a name="N10A48"></a><a name="Other+Useful+Features"></a>
 <h3 class="h4">Other Useful Features</h3>
-<a name="N10A51"></a><a name="Counters"></a>
+<a name="N10A4E"></a><a name="Counters"></a>
 <h4>Counters</h4>
 <p>
 <span class="codefrag">Counters</span> represent global counters, defined either by 
@@ -1763,7 +1759,7 @@ document.write("Last Published: " + document.lastModified);
           Reporter.incrCounter(Enum, long)</a> in the <span class="codefrag">map</span> and/or 
           <span class="codefrag">reduce</span> methods. These counters are then globally 
           aggregated by the framework.</p>
-<a name="N10A7C"></a><a name="DistributedCache"></a>
+<a name="N10A79"></a><a name="DistributedCache"></a>
 <h4>DistributedCache</h4>
 <p>
 <a href="api/org/apache/hadoop/filecache/DistributedCache.html">
@@ -1796,7 +1792,7 @@ document.write("Last Published: " + document.lastModified);
           <a href="api/org/apache/hadoop/filecache/DistributedCache.html#createSymlink(org.apache.hadoop.conf.Configuration)">
           DistributedCache.createSymlink(Path, Configuration)</a> api. Files 
           have <em>execution permissions</em> set.</p>
-<a name="N10ABA"></a><a name="Tool"></a>
+<a name="N10AB7"></a><a name="Tool"></a>
 <h4>Tool</h4>
 <p>The <a href="api/org/apache/hadoop/util/Tool.html">Tool</a> 
           interface supports the handling of generic Hadoop command-line options.
@@ -1836,7 +1832,7 @@ document.write("Last Published: " + document.lastModified);
             </span>
           
 </p>
-<a name="N10AEC"></a><a name="IsolationRunner"></a>
+<a name="N10AE9"></a><a name="IsolationRunner"></a>
 <h4>IsolationRunner</h4>
 <p>
 <a href="api/org/apache/hadoop/mapred/IsolationRunner.html">
@@ -1860,13 +1856,13 @@ document.write("Last Published: " + document.lastModified);
 <p>
 <span class="codefrag">IsolationRunner</span> will run the failed task in a single 
           jvm, which can be in the debugger, over precisely the same input.</p>
-<a name="N10B1F"></a><a name="JobControl"></a>
+<a name="N10B1C"></a><a name="JobControl"></a>
 <h4>JobControl</h4>
 <p>
 <a href="api/org/apache/hadoop/mapred/jobcontrol/package-summary.html">
           JobControl</a> is a utility which encapsulates a set of Map-Reduce jobs
           and their dependencies.</p>
-<a name="N10B2C"></a><a name="Data+Compression"></a>
+<a name="N10B29"></a><a name="Data+Compression"></a>
 <h4>Data Compression</h4>
 <p>Hadoop Map-Reduce provides facilities for the application-writer to
           specify compression for both intermediate map-outputs and the
@@ -1880,7 +1876,7 @@ document.write("Last Published: " + document.lastModified);
           codecs for reasons of both performance (zlib) and non-availability of
           Java libraries (lzo). More details on their usage and availability are
           available <a href="native_libraries.html">here</a>.</p>
-<a name="N10B4C"></a><a name="Intermediate+Outputs"></a>
+<a name="N10B49"></a><a name="Intermediate+Outputs"></a>
 <h5>Intermediate Outputs</h5>
 <p>Applications can control compression of intermediate map-outputs
             via the 
@@ -1901,7 +1897,7 @@ document.write("Last Published: " + document.lastModified);
             <a href="api/org/apache/hadoop/mapred/JobConf.html#setMapOutputCompressionType(org.apache.hadoop.io.SequenceFile.CompressionType)">
             JobConf.setMapOutputCompressionType(SequenceFile.CompressionType)</a> 
             api.</p>
-<a name="N10B78"></a><a name="Job+Outputs"></a>
+<a name="N10B75"></a><a name="Job+Outputs"></a>
 <h5>Job Outputs</h5>
 <p>Applications can control compression of job-outputs via the
             <a href="api/org/apache/hadoop/mapred/OutputFormatBase.html#setCompressOutput(org.apache.hadoop.mapred.JobConf,%20boolean)">
@@ -1921,7 +1917,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
 
     
-<a name="N10BA7"></a><a name="Example%3A+WordCount+v2.0"></a>
+<a name="N10BA4"></a><a name="Example%3A+WordCount+v2.0"></a>
 <h2 class="h3">Example: WordCount v2.0</h2>
 <div class="section">
 <p>Here is a more complete <span class="codefrag">WordCount</span> which uses many of the
@@ -1931,7 +1927,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="quickstart.html#SingleNodeSetup">pseudo-distributed</a> or
       <a href="quickstart.html#Fully-Distributed+Operation">fully-distributed</a> 
       Hadoop installation.</p>
-<a name="N10BC1"></a><a name="Source+Code-N10BC1"></a>
+<a name="N10BBE"></a><a name="Source+Code-N10BBE"></a>
 <h3 class="h4">Source Code</h3>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
           
@@ -3141,7 +3137,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
         
 </table>
-<a name="N11323"></a><a name="Sample+Runs"></a>
+<a name="N11320"></a><a name="Sample+Runs"></a>
 <h3 class="h4">Sample Runs</h3>
 <p>Sample text-files as input:</p>
 <p>
@@ -3309,7 +3305,7 @@ document.write("Last Published: " + document.lastModified);
 <br>
         
 </p>
-<a name="N113F7"></a><a name="Highlights"></a>
+<a name="N113F4"></a><a name="Highlights"></a>
 <h3 class="h4">Highlights</h3>
 <p>The second version of <span class="codefrag">WordCount</span> improves upon the 
         previous one by using some features offered by the Map-Reduce framework:
