@@ -1188,11 +1188,10 @@ public abstract class FileSystem extends Configured implements Closeable {
     synchronized FileSystem get(URI uri, Configuration conf) throws IOException{
       FileSystem fs = map.get(new Key(uri, conf));
       if (fs == null) {
+        fs = createFileSystem(uri, conf);
         if (map.isEmpty() && !clientFinalizer.isAlive()) {
           Runtime.getRuntime().addShutdownHook(clientFinalizer);
         }
-
-        fs = createFileSystem(uri, conf);
         map.put(new Key(fs), fs);
       }
       return fs;
