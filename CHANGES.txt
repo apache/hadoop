@@ -389,6 +389,9 @@ Release 0.16.2 - Unreleased
     HADOOP-3039. Fixes a problem to do with exceptions in tasks not
     killing jobs. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3027. Fixes a problem to do with adding a shutdown hook in
+    FileSystem.  (Amareshwari Sriramadasu via ddas)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
