@@ -352,6 +352,9 @@ Trunk (unreleased changes)
     HADOOP-3080. Removes flush calls from JobHistory.
     (Amareshwari Sriramadasu via ddas) 
 
+    HADOOP-3086. Adds the testcase missed during commit of hadoop-3040.
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.16.2 - Unreleased
 
   BUG FIXES
