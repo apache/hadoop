@@ -42,7 +42,7 @@ public class IndexUpdateOutputFormat extends OutputFormatBase<Shard, Text> {
       JobConf job, String name, final Progressable progress)
       throws IOException {
 
-    final Path perm = new Path(job.getCurrentOutputPath(), name);
+    final Path perm = new Path(job.getOutputPath(), name);
 
     return new RecordWriter<Shard, Text>() {
       public void write(Shard key, Text value) throws IOException {

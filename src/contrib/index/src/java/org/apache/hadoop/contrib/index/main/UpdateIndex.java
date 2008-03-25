@@ -210,7 +210,7 @@ public class UpdateIndex {
     }
 
     if (outputPath == null) {
-      outputPath = jobConf.getCurrentOutputPath();
+      outputPath = jobConf.getOutputPath();
     }
 
     if (inputPaths == null || outputPath == null) {

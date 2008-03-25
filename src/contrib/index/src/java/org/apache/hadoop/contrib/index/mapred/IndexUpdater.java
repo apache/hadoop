@@ -95,8 +95,7 @@ public class IndexUpdater implements IIndexUpdater {
       buffer.append(inputs[i].toString());
     }
     LOG.info("mapred.input.dir = " + buffer.toString());
-    LOG.info("mapred.output.dir = " + 
-              jobConf.getCurrentOutputPath().toString());
+    LOG.info("mapred.output.dir = " + jobConf.getOutputPath().toString());
     LOG.info("mapred.map.tasks = " + jobConf.getNumMapTasks());
     LOG.info("mapred.reduce.tasks = " + jobConf.getNumReduceTasks());
     LOG.info(shards.length + " shards = " + iconf.getIndexShards());

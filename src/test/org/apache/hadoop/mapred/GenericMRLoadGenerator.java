@@ -140,7 +140,7 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
       return -1;
     }
 
-    if (null == job.getCurrentOutputPath()) {
+    if (null == job.getOutputPath()) {
       // No output dir? No writes
       job.setOutputFormat(NullOutputFormat.class);
     }
