@@ -80,5 +80,16 @@ public class TestBytesWritable extends TestCase {
     assertTrue(buf[2].compareTo(buf[3]) > 0);
     assertTrue(buf[3].compareTo(buf[4]) < 0);
   }
+  
+  private void checkToString(byte[] input, String expected) {
+    String actual = new BytesWritable(input).toString();
+    assertEquals(expected, actual);
+  }
+
+  public void testToString() {
+    checkToString(new byte[]{0,1,2,0x10}, "00 01 02 10");
+    checkToString(new byte[]{-0x80, -0x7f, -0x1, -0x2, 1, 0}, 
+                  "80 81 ff fe 01 00");
+  }
 }
 

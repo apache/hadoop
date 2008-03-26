@@ -174,7 +174,7 @@ public class BytesWritable implements WritableComparable {
       if (idx != 0) {
         sb.append(' ');
       }
-      String num = Integer.toHexString((int) bytes[idx]);
+      String num = Integer.toHexString(0xff & bytes[idx]);
       // if it is only one digit, add a leading 0.
       if (num.length() < 2) {
         sb.append('0');
