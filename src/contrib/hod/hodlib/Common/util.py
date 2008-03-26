@@ -159,7 +159,8 @@ def local_fqdn():
     for name in nameInfo[1]:
         if name.count(".") and name.startswith(me):
             fqdn = name
-
+    if fqdn == None:
+        fqdn = me
     return(fqdn)
   
 def need_to_allocate(allocated, config, command):
