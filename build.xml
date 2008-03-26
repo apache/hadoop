@@ -83,6 +83,7 @@
   <property name="test.log.dir" value="${test.build.dir}/logs"/>
   <property name="test.build.classes" value="${test.build.dir}/classes"/>
   <property name="test.build.testjar" value="${test.build.dir}/testjar"/>
+  <property name="test.build.testshell" value="${test.build.dir}/testshell"/>
   <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
   <property name="test.include" value="Test*"/>
   <property name="test.classpath.id" value="test.classpath"/>
@@ -192,6 +193,7 @@
     <mkdir dir="${test.build.dir}"/>
     <mkdir dir="${test.build.classes}"/>
     <mkdir dir="${test.build.testjar}"/>
+    <mkdir dir="${test.build.testshell}"/>
     <tempfile property="touch.temp.file" destDir="${java.io.tmpdir}"/>
     <touch millis="0" file="${touch.temp.file}">
       <fileset dir="${conf.dir}" includes="**/*.template"/>
@@ -498,6 +500,23 @@
     <jar jarfile="${test.build.testjar}/testjob.jar"
      basedir="${test.build.testjar}">
     </jar>
+    <javac 
+     encoding="${build.encoding}"
+     srcdir="${test.src.dir}/testshell"
+     includes="*.java"
+     destdir="${test.build.testshell}"
+     debug="${javac.debug}"
+     optimize="${javac.optimize}"
+     target="${javac.version}"
+     source="${javac.version}"
+     deprecation="${javac.deprecation}">
+      <compilerarg line="${javac.args} ${javac.args.warnings}"/>
+      <classpath refid="test.classpath"/>
+     </javac>
+     <delete file="${test.build.testshell}/testshell.jar"/>
+     <jar jarfile="${test.build.testshell}/testshell.jar"
+      basedir="${test.build.testshell}">
+     </jar>
                                                               
     <delete dir="${test.cache.data}"/>
     <mkdir dir="${test.cache.data}"/>

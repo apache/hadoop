@@ -78,6 +78,9 @@ Trunk (unreleased changes)
     HADOOP-2951.  Add a contrib module that provides a utility to
     build or update Lucene indexes using Map/Reduce.  (Ning Li via cutting)
 
+    HADOOP-1622.  Allow multiple jar files for map reduce.
+    (Mahadev Konar via dhruba)
+
   IMPROVEMENTS
 
     HADOOP-2655. Copy on write for data and metadata files in the 
