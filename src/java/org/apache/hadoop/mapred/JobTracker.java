@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.HashMap;
 import java.util.TreeSet;
 import java.util.Vector;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -86,7 +87,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   private DNSToSwitchMapping dnsToSwitchMapping;
   private NetworkTopology clusterMap = new NetworkTopology();
   private ResolutionThread resThread = new ResolutionThread();
-  private int numTaskCacheLevels; // the max level of a host in the network topology
+  private int numTaskCacheLevels; // the max level to which we cache tasks
+  private Set<Node> nodesAtMaxLevel = new HashSet<Node>();
   
   /**
    * A client tried to submit a job before the Job Tracker was ready.
@@ -556,8 +558,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   Map<String, HeartbeatResponse> trackerToHeartbeatResponseMap = 
     new TreeMap<String, HeartbeatResponse>();
 
-  // (trackerHostName --> Node (NetworkTopology))
-  Map<String, Node> trackerNameToNodeMap = 
+  // (hostname --> Node (NetworkTopology))
+  Map<String, Node> hostnameToNodeMap = 
     Collections.synchronizedMap(new TreeMap<String, Node>());
   
   // Number of resolved entries
@@ -1171,20 +1173,54 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     List <String> tmpList = new ArrayList<String>(1);
     tmpList.add(name);
     List <String> rNameList = dnsToSwitchMapping.resolve(tmpList);
-    if (rNameList == null || rNameList.size() == 0) {
-      return null;
-    }
     String rName = rNameList.get(0);
     String networkLoc = NodeBase.normalize(rName);
-    Node node = null;
-    if ((node = clusterMap.getNode(networkLoc+"/"+name)) == null) {
-      node = new NodeBase(name, networkLoc);
+    return addHostToNodeMapping(name, networkLoc);
+  }
+  
+  private Node addHostToNodeMapping(String host, String networkLoc) {
+    Node node;
+    if ((node = clusterMap.getNode(networkLoc+"/"+host)) == null) {
+      node = new NodeBase(host, networkLoc);
       clusterMap.add(node);
+      if (node.getLevel() < getNumTaskCacheLevels()) {
+        LOG.fatal("Got a host whose level is: " + node.getLevel() + "." 
+                  + " Should get at least a level of value: " 
+                  + getNumTaskCacheLevels());
+        try {
+          stopTracker();
+        } catch (IOException ie) {
+          LOG.warn("Exception encountered during shutdown: " 
+                   + StringUtils.stringifyException(ie));
+          System.exit(-1);
+        }
+      }
+      hostnameToNodeMap.put(host, node);
+      // Make an entry for the node at the max level in the cache
+      nodesAtMaxLevel.add(getParentNode(node, getNumTaskCacheLevels() - 1));
     }
     return node;
   }
+
+  /**
+   * Returns a collection of nodes at the max level
+   */
+  public Collection<Node> getNodesAtMaxLevel() {
+    return nodesAtMaxLevel;
+  }
+
+  public static Node getParentNode(Node node, int level) {
+    for (int i = 0; i < level; ++i) {
+      node = node.getParent();
+    }
+    return node;
+  }
+
+  /**
+   * Return the Node in the network topology that corresponds to the hostname
+   */
   public Node getNode(String name) {
-    return trackerNameToNodeMap.get(name);
+    return hostnameToNodeMap.get(name);
   }
   public int getNumTaskCacheLevels() {
     return numTaskCacheLevels;
@@ -1421,15 +1457,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     public void run() {
       while (!isInterrupted()) {
         try {
-          int size;
-          if((size = queue.size()) == 0) {
-            Thread.sleep(1000);
-            continue;
-          }
           List <TaskTrackerStatus> statuses = 
-            new ArrayList<TaskTrackerStatus>(size);
+            new ArrayList<TaskTrackerStatus>(queue.size());
+          // Block if the queue is empty
+          statuses.add(queue.take());
           queue.drainTo(statuses);
-          List<String> dnHosts = new ArrayList<String>(size);
+          List<String> dnHosts = new ArrayList<String>(statuses.size());
           for (TaskTrackerStatus t : statuses) {
             dnHosts.add(t.getHost());
           }
@@ -1441,12 +1474,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           for (String m : rName) {
             String host = statuses.get(i++).getHost();
             String networkLoc = NodeBase.normalize(m);
-            Node node = null;
-            if (clusterMap.getNode(networkLoc+"/"+host) == null) {
-              node = new NodeBase(host, networkLoc);
-              clusterMap.add(node);
-              trackerNameToNodeMap.put(host, node);
-            }
+            addHostToNodeMapping(host, networkLoc);
             numResolved++;
           }
         } catch (InterruptedException ie) {
@@ -2102,113 +2130,155 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
     
     public void addToQueue(JobInProgress.JobWithTaskContext j) {
-      while (!queue.add(j)) {
-        LOG.warn("Couldn't add to the Task Commit queue now. Will " +
-                 "try again");
+      while (true) { // loop until the element gets added
         try {
-          Thread.sleep(2000);
+          queue.put(j);
+          return;
         } catch (InterruptedException ie) {}
       }
     }
        
     public void run() {
+      int  batchCommitSize = conf.getInt("jobtracker.task.commit.batch.size", 
+                                         5000); 
       while (!isInterrupted()) {
         try {
-          JobInProgress.JobWithTaskContext j = queue.take();
-          JobInProgress job = j.getJob();
-          TaskInProgress tip = j.getTIP();
-          String taskid = j.getTaskId();
-          JobTrackerMetrics metrics = j.getJobTrackerMetrics();
-          Task t;
-          TaskStatus status;
-          boolean isTipComplete = false;
-          TaskStatus.State state;
+          ArrayList <JobInProgress.JobWithTaskContext> jobList = 
+            new ArrayList<JobInProgress.JobWithTaskContext>(batchCommitSize);
+          // Block if the queue is empty
+          jobList.add(queue.take());  
+          queue.drainTo(jobList, batchCommitSize);
+
+          JobInProgress[] jobs = new JobInProgress[jobList.size()];
+          TaskInProgress[] tips = new TaskInProgress[jobList.size()];
+          String[] taskids = new String[jobList.size()];
+          JobTrackerMetrics[] metrics = new JobTrackerMetrics[jobList.size()];
+
+          Iterator<JobInProgress.JobWithTaskContext> iter = jobList.iterator();
+          int count = 0;
+
+          while (iter.hasNext()) {
+            JobInProgress.JobWithTaskContext j = iter.next();
+            jobs[count] = j.getJob();
+            tips[count] = j.getTIP();
+            taskids[count]= j.getTaskId();
+            metrics[count] = j.getJobTrackerMetrics();
+            ++count;
+          }
+
+          Task[] tasks = new Task[jobList.size()];
+          TaskStatus[] status = new TaskStatus[jobList.size()];
+          boolean[] isTipComplete = new boolean[jobList.size()];
+          TaskStatus.State[] states = new TaskStatus.State[jobList.size()];
+
           synchronized (JobTracker.this) {
-            synchronized (job) {
-              synchronized (tip) {
-                status = tip.getTaskStatus(taskid);
-                t = tip.getTaskObject(taskid);
-                state = status.getRunState();
-                isTipComplete = tip.isComplete();
+            for(int i = 0; i < jobList.size(); ++i) {
+              synchronized (jobs[i]) {
+                synchronized (tips[i]) {
+                  status[i] = tips[i].getTaskStatus(taskids[i]);
+                  tasks[i] = tips[i].getTaskObject(taskids[i]);
+                  states[i] = status[i].getRunState();
+                  isTipComplete[i] = tips[i].isComplete();
+                }
               }
             }
           }
-          try {
-            //For COMMIT_PENDING tasks, we save the task output in the dfs
-            //as well as manipulate the JT datastructures to reflect a
-            //successful task. This guarantees that we don't declare a task
-            //as having succeeded until we have successfully completed the
-            //dfs operations.
-            //For failed tasks, we just do the dfs operations here. The
-            //datastructures updates is done earlier as soon as the failure
-            //is detected so that the JT can immediately schedule another
-            //attempt for that task.
-            if (state == TaskStatus.State.COMMIT_PENDING) {
-              if (!isTipComplete) {
-                t.saveTaskOutput();
+
+          //For COMMIT_PENDING tasks, we save the task output in the dfs
+          //as well as manipulate the JT datastructures to reflect a
+          //successful task. This guarantees that we don't declare a task
+          //as having succeeded until we have successfully completed the
+          //dfs operations.
+          //For failed tasks, we just do the dfs operations here. The
+          //datastructures updates is done earlier as soon as the failure
+          //is detected so that the JT can immediately schedule another
+          //attempt for that task.
+
+          Set<String> seenTIPs = new HashSet<String>();
+          for(int index = 0; index < jobList.size(); ++index) {
+            try {
+              if (states[index] == TaskStatus.State.COMMIT_PENDING) {
+                if (!isTipComplete[index]) {
+                  if (!seenTIPs.contains(tips[index].getTIPId())) {
+                    tasks[index].saveTaskOutput();
+                    seenTIPs.add(tips[index].getTIPId());
+                  } else {
+                    // since other task of this tip has saved its output
+                    isTipComplete[index] = true;
+                  }
+                }
               }
+            } catch (IOException ioe) {
+              // Oops! Failed to copy the task's output to its final place;
+              // fail the task!
+              states[index] = TaskStatus.State.FAILED;
               synchronized (JobTracker.this) {
-                //do a check for the case where after the task went to
-                //COMMIT_PENDING, it was lost. So although we would have
-                //saved the task output, we cannot declare it a SUCCESS.
-                TaskStatus newStatus = null;
-                synchronized (job) {
-                  synchronized (tip) {
-                    status = tip.getTaskStatus(taskid);
-                    if (!isTipComplete) {
-                      if (status.getRunState() != 
-                        TaskStatus.State.COMMIT_PENDING) {
-                        state = TaskStatus.State.KILLED;
+                String reason = "Failed to rename output with the exception: " 
+                                + StringUtils.stringifyException(ioe);
+                TaskStatus.Phase phase = (tips[index].isMapTask() 
+                                          ? TaskStatus.Phase.MAP 
+                                          : TaskStatus.Phase.REDUCE);
+                jobs[index].failedTask(tips[index], status[index].getTaskId(), 
+                                       reason, phase, TaskStatus.State.FAILED, 
+                                       status[index].getTaskTracker(), null);
+              }
+              LOG.info("Failed to rename the output of " 
+                       + status[index].getTaskId() + " with " 
+                       + StringUtils.stringifyException(ioe));
+            }
+          }
+
+          synchronized (JobTracker.this) {
+            //do a check for the case where after the task went to
+            //COMMIT_PENDING, it was lost. So although we would have
+            //saved the task output, we cannot declare it a SUCCESS.
+            for(int i = 0; i < jobList.size(); ++i) {
+              TaskStatus newStatus = null;
+              if(states[i] == TaskStatus.State.COMMIT_PENDING) {
+                synchronized (jobs[i]) {
+                  synchronized (tips[i]) {
+                    status[i] = tips[i].getTaskStatus(taskids[i]);
+                    if (!isTipComplete[i]) {
+                      if (status[i].getRunState() 
+                          != TaskStatus.State.COMMIT_PENDING) {
+                        states[i] = TaskStatus.State.KILLED;
                       } else {
-                        state = TaskStatus.State.SUCCEEDED;
+                        states[i] = TaskStatus.State.SUCCEEDED;
                       }
                     } else {
-                      tip.addDiagnosticInfo(t.getTaskId(),"Already completed " +
-                      "TIP");
-                      state = TaskStatus.State.KILLED;
-
+                      tips[i].addDiagnosticInfo(tasks[i].getTaskId(), 
+                                                "Already completed  TIP");
+                      states[i] = TaskStatus.State.KILLED;
                     }
-                    //create new status if required. If the state changed from
-                    //COMMIT_PENDING to KILLED in the JobTracker, while we were
-                    //saving the output,the JT would have called updateTaskStatus
-                    //and we don't need to call it again
-                    if (status.getRunState() == TaskStatus.State.COMMIT_PENDING){
-                      newStatus = (TaskStatus)status.clone();
-                      newStatus.setRunState(state);
-                      newStatus.setProgress((state == TaskStatus.State.SUCCEEDED) ? 1.0f : 0.0f);
-                    }
+                    //create new status if required. If the state changed 
+                    //from COMMIT_PENDING to KILLED in the JobTracker, while 
+                    //we were saving the output,the JT would have called 
+                    //updateTaskStatus and we don't need to call it again
+                    newStatus = (TaskStatus)status[i].clone();
+                    newStatus.setRunState(states[i]);
+                    newStatus.setProgress(
+                        (states[i] == TaskStatus.State.SUCCEEDED) 
+                        ? 1.0f 
+                        : 0.0f);
                   }
                   if (newStatus != null) {
-                    job.updateTaskStatus(tip, newStatus, metrics);
+                    jobs[i].updateTaskStatus(tips[i], newStatus, metrics[i]);
                   }
                 }
               }
             }
-          } catch (IOException ioe) {
-            // Oops! Failed to copy the task's output to its final place;
-            // fail the task!
-            state = TaskStatus.State.FAILED;
-            synchronized (JobTracker.this) {
-              job.failedTask(tip, status.getTaskId(), 
-                  "Failed to rename output with the exception: " + 
-                  StringUtils.stringifyException(ioe), 
-                  (tip.isMapTask() ? 
-                      TaskStatus.Phase.MAP : 
-                        TaskStatus.Phase.REDUCE), 
-                        TaskStatus.State.FAILED,  
-                        status.getTaskTracker(), null);
-            }
-            LOG.info("Failed to rename the output of " + status.getTaskId() + 
-                " with: " + StringUtils.stringifyException(ioe));
           }
-          if (state == TaskStatus.State.FAILED || 
-              state == TaskStatus.State.KILLED) {
-            try {
-              t.discardTaskOutput();
-            } catch (IOException ioe) { 
-              LOG.info("Failed to discard the output of task " + 
-                  status.getTaskId() + " with: " + 
-                  StringUtils.stringifyException(ioe));
+
+          for(int i = 0; i < jobList.size(); ++i) {
+            if (states[i] == TaskStatus.State.FAILED
+                || states[i] == TaskStatus.State.KILLED) {
+              try {
+                tasks[i].discardTaskOutput();
+              } catch (IOException ioe) {
+                LOG.info("Failed to discard the output of task " 
+                         + status[i].getTaskId() + " with: " 
+                         + StringUtils.stringifyException(ioe));
+              }
             }
           }
         } catch (InterruptedException ie) {

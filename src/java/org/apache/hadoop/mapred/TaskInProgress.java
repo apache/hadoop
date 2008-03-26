@@ -53,6 +53,8 @@ class TaskInProgress {
   int maxTaskAttempts = 4;    
   static final double SPECULATIVE_GAP = 0.2;
   static final long SPECULATIVE_LAG = 60 * 1000;
+  static final String MAP_IDENTIFIER = "_m_";
+  static final String REDUCE_IDENTIFIER = "_r_";
   private static NumberFormat idFormat = NumberFormat.getInstance();
   static {
     idFormat.setMinimumIntegerDigits(6);
@@ -160,6 +162,18 @@ class TaskInProgress {
       this.maxTaskAttempts = conf.getMaxReduceAttempts();
     }
   }
+  
+  /**
+   * Return true if the tip id represents a map
+   * @param tipId the tip id
+   * @return whether the tip is a map tip or a reduce tip
+   */
+  public static boolean isMapId(String tipId) {
+    if (tipId.contains(MAP_IDENTIFIER))  {
+      return true;
+    }
+    return false;
+  }
 
   /**
    * Make a unique name for this TIP.
@@ -170,9 +184,9 @@ class TaskInProgress {
     StringBuilder result = new StringBuilder();
     result.append(uniqueBase);
     if (isMapTask()) {
-      result.append("_m_");
+      result.append(MAP_IDENTIFIER);
     } else {
-      result.append("_r_");
+      result.append(REDUCE_IDENTIFIER);
     }
     result.append(idFormat.format(partition));
     return result.toString();

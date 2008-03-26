@@ -181,6 +181,10 @@ Trunk (unreleased changes)
     HADOOP-2902.  Replace uses of "fs.default.name" with calls to the
     accessor methods added in HADOOP-1967.  (cutting)
 
+    HADOOP-2119.  Optimize scheduling of jobs with large numbers of
+    tasks by replacing static arrays with lists of runnable tasks. 
+    (Amar Kamat via omalley)
+
   BUG FIXES
 
     HADOOP-2195. '-mkdir' behaviour is now closer to Linux shell in case of

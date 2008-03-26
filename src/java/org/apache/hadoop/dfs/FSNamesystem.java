@@ -1899,15 +1899,12 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     public void run() {
       try {
         while (fsRunning) {
-          int size;
-          if((size = resolutionQueue.size()) == 0) {
-            Thread.sleep(2000);
-            continue;
-          }
           List <DatanodeDescriptor> datanodes = 
-            new ArrayList<DatanodeDescriptor>(size);
+            new ArrayList<DatanodeDescriptor>(resolutionQueue.size());
+          // Block if the queue is empty
+          datanodes.add(resolutionQueue.take());
           resolutionQueue.drainTo(datanodes);
-          List<String> dnHosts = new ArrayList<String>(size);
+          List<String> dnHosts = new ArrayList<String>(datanodes.size());
           for (DatanodeDescriptor d : datanodes) {
             dnHosts.add(d.getName());
           }
