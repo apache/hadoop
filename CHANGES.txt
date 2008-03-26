@@ -403,6 +403,10 @@ Release 0.16.2 - Unreleased
     HADOOP-3027. Fixes a problem to do with adding a shutdown hook in
     FileSystem.  (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3056. Fix distcp when the target is an empty directory by
+    making sure the directory is created first. (cdouglas and acmurthy 
+    via omalley)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
