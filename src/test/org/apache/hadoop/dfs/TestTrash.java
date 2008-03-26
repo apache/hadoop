@@ -85,6 +85,21 @@ public class TestTrash extends TestCase {
       Path myFile = new Path("/test/mkdirs/myFile");
       writeFile(fs, myFile);
 
+      // Verify that expunge without Trash directory 
+      // won't throw Exception
+      {
+        String[] args = new String[1];
+        args[0] = "-expunge";
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from Trash.run " +
+                             e.getLocalizedMessage()); 
+        }
+        assertTrue(val == 0);
+      }
+
       // Verify that we succeed in removing the file we created.
       // This should go into Trash.
       {

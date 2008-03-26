@@ -410,6 +410,9 @@ Release 0.16.2 - Unreleased
     making sure the directory is created first. (cdouglas and acmurthy 
     via omalley)
 
+    HADOOP-3070. Protect the trash emptier thread from null pointer
+    exceptions. (Koji Noguchi via omalley)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

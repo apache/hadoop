@@ -26,6 +26,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.permission.*;
+import org.apache.hadoop.util.StringUtils;
 
 /** Provides a <i>trash</i> feature.  Files are moved to a user's trash
  * directory, a subdirectory of their home directory named ".Trash".  Files are
@@ -142,6 +143,9 @@ public class Trash extends Configured {
   /** Delete old checkpoints. */
   public void expunge() throws IOException {
     Path[] dirs = fs.listPaths(trash);            // scan trash sub-directories
+    if( dirs == null){
+      return;
+    }
     long now = System.currentTimeMillis();
     for (int i = 0; i < dirs.length; i++) {
       Path path = dirs[i];
@@ -211,31 +215,36 @@ public class Trash extends Configured {
           return;                                 // exit on interrupt
         }
           
-        now = System.currentTimeMillis();
-        if (now >= end) {
+        try {
+          now = System.currentTimeMillis();
+          if (now >= end) {
 
-          FileStatus[] homes = null;
-          try {
-            homes = fs.listStatus(HOMES);         // list all home dirs
-          } catch (IOException e) {
-            LOG.warn("Trash can't list homes: "+e+" Sleeping.");
-            continue;
-          }
-
-          if (homes == null)
-            continue;
-
-          for (FileStatus home : homes) {         // dump each trash
-            if (!home.isDir())
-              continue;
+            FileStatus[] homes = null;
             try {
-              Trash trash = new Trash(home.getPath(), conf);
-              trash.expunge();
-              trash.checkpoint();
+              homes = fs.listStatus(HOMES);         // list all home dirs
             } catch (IOException e) {
-              LOG.warn("Trash caught: "+e+". Skipping "+home.getPath()+".");
+              LOG.warn("Trash can't list homes: "+e+" Sleeping.");
+              continue;
+            }
+
+            if (homes == null)
+              continue;
+
+            for (FileStatus home : homes) {         // dump each trash
+              if (!home.isDir())
+                continue;
+              try {
+                Trash trash = new Trash(home.getPath(), conf);
+                trash.expunge();
+                trash.checkpoint();
+              } catch (IOException e) {
+                LOG.warn("Trash caught: "+e+". Skipping "+home.getPath()+".");
+              } 
             }
           }
+        } catch (Exception e) {
+          LOG.warn("RuntimeException during Trash.Emptier.run() " + 
+                   StringUtils.stringifyException(e));
         }
       }
     }
