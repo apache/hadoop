@@ -142,6 +142,9 @@ public class CopyFiles implements Tool {
       input.write(out);
       Text.writeString(out, output.toString());
     }
+    public String toString() {
+      return input.toString() + " : " + output.toString();
+    }
   }
 
   /**
@@ -338,6 +341,9 @@ public class CopyFiles implements Tool {
             destFileSys.getFileStatus(absdst).isDir()) {
           throw new IOException(absdst + " is a directory");
         }
+        if (!destFileSys.mkdirs(absdst.getParent())) {
+          throw new IOException("Failed to craete parent dir: " + absdst.getParent());
+        }
         rename(destFileSys, tmpfile, absdst);
       }
 
@@ -354,7 +360,9 @@ public class CopyFiles implements Tool {
         if (fs.exists(dst)) {
           fs.delete(dst);
         }
-        fs.rename(tmp, dst);
+        if (!fs.rename(tmp, dst)) {
+          throw new IOException();
+        }
       }
       catch(IOException cause) {
         IOException ioe = new IOException("Fail to rename tmp file (=" + tmp 
