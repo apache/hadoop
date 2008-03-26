@@ -361,6 +361,9 @@ Trunk (unreleased changes)
     HADOOP-2983. [HOD] Fixes the problem - local_fqdn() returns None when 
     gethostbyname_ex doesnt return any FQDNs. (Craig Macdonald via ddas)
 
+    HADOOP-3046. Fix the raw comparators for Text and BytesWritables
+    to use the provided length rather than recompute it. (omalley)
+
 Release 0.16.2 - Unreleased
 
   BUG FIXES

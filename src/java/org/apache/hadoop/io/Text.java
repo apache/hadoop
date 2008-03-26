@@ -306,15 +306,9 @@ public class Text implements WritableComparable {
 
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
-      try {
-        int n1 = readVInt(b1, s1);
-        int n2 = readVInt(b2, s2);
-        return compareBytes(b1, s1+WritableUtils.getVIntSize(n1), n1, 
-                            b2, s2+WritableUtils.getVIntSize(n2), n2);
-      }catch(IOException e) {
-        LOG.warn(e);
-        throw new RuntimeException(e);
-      }
+      int n1 = WritableUtils.decodeVIntSize(b1[s1]);
+      int n2 = WritableUtils.decodeVIntSize(b2[s2]);
+      return compareBytes(b1, s1+n1, l1-n1, b2, s2+n2, l2-n2);
     }
   }
 

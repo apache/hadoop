@@ -29,6 +29,7 @@ import java.io.DataOutput;
  * buffer. The sort order is the same as memcmp.
  */
 public class BytesWritable implements WritableComparable {
+  private static final int LENGTH_BYTES = 4;
   private int size;
   private byte[] bytes;
   
@@ -194,9 +195,8 @@ public class BytesWritable implements WritableComparable {
      */
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
-      int size1 = readInt(b1, s1);
-      int size2 = readInt(b2, s2);
-      return compareBytes(b1, s1+4, size1, b2, s2+4, size2);
+      return compareBytes(b1, s1+LENGTH_BYTES, l1-LENGTH_BYTES, 
+                          b2, s2+LENGTH_BYTES, l2-LENGTH_BYTES);
     }
   }
   

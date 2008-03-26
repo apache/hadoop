@@ -321,19 +321,18 @@ public final class WritableUtils  {
    * @return deserialized long from stream.
    */
   public static long readVLong(DataInput stream) throws IOException {
-    int len = stream.readByte();
-    if (len >= -112) {
-      return len;
+    byte firstByte = stream.readByte();
+    int len = decodeVIntSize(firstByte);
+    if (len == 1) {
+      return firstByte;
     }
-    boolean isNegative = (len < -120);
-    len = isNegative ? -(len + 120) : -(len + 112);
     long i = 0;
-    for (int idx = 0; idx < len; idx++) {
+    for (int idx = 0; idx < len-1; idx++) {
       byte b = stream.readByte();
       i = i << 8;
       i = i | (b & 0xFF);
     }
-    return (isNegative ? (i ^ -1L) : i);
+    return (isNegativeVInt(firstByte) ? (i ^ -1L) : i);
   }
 
   /**
@@ -345,7 +344,29 @@ public final class WritableUtils  {
   public static int readVInt(DataInput stream) throws IOException {
     return (int) readVLong(stream);
   }
-  
+ 
+  /**
+   * Given the first byte of a vint/vlong, determine the sign
+   * @param value the first byte
+   * @return is the value negative
+   */
+  public static boolean isNegativeVInt(byte value) {
+    return value < -120 || (value >= -112 && value < 0);
+  }
+
+  /**
+   * Parse the first byte of a vint/vlong to determine the number of bytes
+   * @param value the first byte of the vint/vlong
+   * @return the total number of bytes (1 to 9)
+   */
+  public static int decodeVIntSize(byte value) {
+    if (value >= -112) {
+      return 1;
+    } else if (value < -120) {
+      return -119 - value;
+    }
+    return -111 - value;
+  }
 
   /**
    * Get the encoded length if an integer is stored in a variable-length format
@@ -356,21 +377,13 @@ public final class WritableUtils  {
       return 1;
     }
       
-    int len = -112;
     if (i < 0) {
       i ^= -1L; // take one's complement'
-      len = -120;
     }
-      
-    long tmp = i;
-    while (tmp != 0) {
-      tmp = tmp >> 8;
-      len--;
-    }
-      
-    len = (len < -120) ? -(len + 120) : -(len + 112);
-      
-    return len+1;
+    // find the number of bytes with non-leading zeros
+    int dataBits = Long.SIZE - Long.numberOfLeadingZeros(i);
+    // find the number of data bytes + length byte
+    return (dataBits + 7) / 8 + 1;
   }
   /**
    * Read an Enum value from DataInput, Enums are read and written 
