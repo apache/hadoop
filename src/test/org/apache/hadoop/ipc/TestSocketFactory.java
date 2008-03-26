@@ -57,7 +57,7 @@ public class TestSocketFactory extends TestCase {
 
     // Get another reference via network using a specific socket factory
     Configuration cconf = new Configuration();
-    cconf.set("fs.default.name", String.format("hdfs://localhost:%s/",
+    FileSystem.setDefaultUri(cconf, String.format("hdfs://localhost:%s/",
         nameNodePort + 10));
     cconf.set("hadoop.rpc.socket.factory.class.default",
         "org.apache.hadoop.ipc.DummySocketFactory");

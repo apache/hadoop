@@ -78,6 +78,12 @@ class DFSClient implements FSConstants {
   private TreeMap<String, OutputStream> pendingCreates =
     new TreeMap<String, OutputStream>();
  
+  static ClientProtocol createNamenode(Configuration conf) throws IOException {
+    return createNamenode(NetUtils.createSocketAddr
+                          (FileSystem.getDefaultUri(conf).getAuthority()),
+                          conf);
+  }
+
   static ClientProtocol createNamenode( InetSocketAddress nameNodeAddr,
       Configuration conf) throws IOException {
     try {
@@ -140,6 +146,15 @@ class DFSClient implements FSConstants {
         rpcNamenode, methodNameToPolicyMap);
   }
         
+  /** 
+   * Create a new DFSClient connected to the default namenode.
+   */
+  public DFSClient(Configuration conf) throws IOException {
+    this(NetUtils.createSocketAddr(FileSystem.getDefaultUri(conf)
+                                   .getAuthority()),
+         conf);
+  }
+
   /** 
    * Create a new DFSClient connected to the given namenode server.
    */

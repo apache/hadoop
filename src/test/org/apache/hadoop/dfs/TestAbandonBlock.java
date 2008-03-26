@@ -48,8 +48,7 @@ public class TestAbandonBlock extends junit.framework.TestCase {
       fout.flush();
   
       //try reading the block by someone
-      DFSClient dfsclient = new DFSClient(
-          NetUtils.createSocketAddr(CONF.get("fs.default.name")), CONF);
+      DFSClient dfsclient = new DFSClient(CONF);
       LocatedBlocks blocks = dfsclient.namenode.getBlockLocations(src, 0, 1);
       LocatedBlock b = blocks.get(0); 
       try {

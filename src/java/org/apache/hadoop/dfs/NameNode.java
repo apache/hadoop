@@ -22,6 +22,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Trash;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
@@ -124,7 +125,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
     // The rpc-server port can be ephemeral... ensure we have the correct info
     this.nameNodeAddress = this.server.getListenerAddress(); 
-    conf.set("fs.default.name", nameNodeAddress.getHostName() + ":" + nameNodeAddress.getPort());
+    FileSystem.setDefaultUri(conf, "hdfs://"+nameNodeAddress.getHostName() + ":" + nameNodeAddress.getPort());
     LOG.info("Namenode up at: " + this.nameNodeAddress);
 
     myMetrics = new NameNodeMetrics(conf, this);
@@ -160,7 +161,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * @throws IOException
    */
   public NameNode(Configuration conf) throws IOException {
-    this(conf.get("fs.default.name"), conf);
+    this(FileSystem.getDefaultUri(conf).getAuthority(), conf);
   }
 
   /**

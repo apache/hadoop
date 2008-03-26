@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.ipc.RPC;
 
@@ -53,7 +54,7 @@ public class TestHDFSServerPorts extends TestCase {
     }
     config = new Configuration();
     config.set("dfs.name.dir", new File(hdfsDir, "name1").getPath());
-    config.set("fs.default.name", NAME_NODE_HOST + "0");
+    FileSystem.setDefaultUri(config, "hdfs://"+NAME_NODE_HOST + "0");
     config.set("dfs.http.address", NAME_NODE_HTTP_HOST + "0");
     NameNode.format(config);
 
@@ -136,12 +137,12 @@ public class TestHDFSServerPorts extends TestCase {
       assertFalse(started); // should fail
 
       // start on a different main port
-      conf2.set("fs.default.name", NAME_NODE_HOST + "0");
+      FileSystem.setDefaultUri(conf2, "hdfs://"+NAME_NODE_HOST + "0");
       started = canStartNameNode(conf2);
       assertFalse(started); // should fail again
 
       // reset conf2 since NameNode modifies it
-      conf2.set("fs.default.name", NAME_NODE_HOST + "0");
+      FileSystem.setDefaultUri(conf2, "hdfs://"+NAME_NODE_HOST + "0");
       // different http port
       conf2.set("dfs.http.address", NAME_NODE_HTTP_HOST + "0");
       started = canStartNameNode(conf2);
@@ -162,7 +163,8 @@ public class TestHDFSServerPorts extends TestCase {
       // start data-node on the same port as name-node
       Configuration conf2 = new Configuration(config);
       conf2.set("dfs.data.dir", new File(hdfsDir, "data").getPath());
-      conf2.set("dfs.datanode.address", config.get("fs.default.name"));
+      conf2.set("dfs.datanode.address",
+                FileSystem.getDefaultUri(config).getAuthority());
       conf2.set("dfs.datanode.http.address", NAME_NODE_HTTP_HOST + "0");
       boolean started = canStartDataNode(conf2);
       assertFalse(started); // should fail

@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
 
 /**
  * <code>GenericOptionsParser</code> is a utility to parse command line
@@ -182,7 +183,7 @@ public class GenericOptionsParser {
   private void processGeneralOptions(Configuration conf,
       CommandLine line) {
     if (line.hasOption("fs")) {
-      conf.set("fs.default.name", line.getOptionValue("fs"));
+      FileSystem.setDefaultUri(conf, line.getOptionValue("fs"));
     }
 
     if (line.hasOption("jt")) {

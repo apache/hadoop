@@ -162,7 +162,7 @@ public class PiEstimator extends Configured implements Tool {
 
     JobConf jobConf = new JobConf(getConf(), PiEstimator.class);
     if (jt != null) { jobConf.set("mapred.job.tracker", jt); }
-    if (dfs != null) { jobConf.set("fs.default.name", dfs); }
+    if (dfs != null) { FileSystem.setDefaultUri(jobConf, dfs); }
     jobConf.setJobName("test-mini-mr");
     
     // turn off speculative execution, because DFS doesn't handle

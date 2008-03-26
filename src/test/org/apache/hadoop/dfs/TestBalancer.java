@@ -72,8 +72,7 @@ public class TestBalancer extends TestCase {
     cluster = new MiniDFSCluster( CONF, numNodes, true, null);
     try {
       cluster.waitActive();
-      client = DFSClient.createNamenode(
-          DataNode.createSocketAddr(CONF.get("fs.default.name")), CONF);
+      client = DFSClient.createNamenode(CONF);
 
       short replicationFactor = (short)(numNodes-1);
       long fileLen = size/replicationFactor;
@@ -157,8 +156,7 @@ public class TestBalancer extends TestCase {
     cluster = new MiniDFSCluster(0, CONF, numDatanodes,
         false, true, null, racks, capacities);
     cluster.waitActive();
-    client = DFSClient.createNamenode(
-        DataNode.createSocketAddr(CONF.get("fs.default.name")), CONF);
+    client = DFSClient.createNamenode(CONF);
 
     cluster.injectBlocks(blocksDN);
 
@@ -195,8 +193,7 @@ public class TestBalancer extends TestCase {
         racks, capacities);
     try {
       cluster.waitActive();
-      client = DFSClient.createNamenode(
-          DataNode.createSocketAddr(CONF.get("fs.default.name")), CONF);
+      client = DFSClient.createNamenode(CONF);
 
       long totalCapacity=0L;
       for(long capacity:capacities) {

@@ -54,7 +54,7 @@ public class TestMiniMRClasspath extends TestCase {
       file.writeBytes(input);
       file.close();
     }
-    conf.set("fs.default.name", fileSys);
+    FileSystem.setDefaultUri(conf, fileSys);
     conf.set("mapred.job.tracker", jobTracker);
     conf.setJobName("wordcount");
     conf.setInputFormat(TextInputFormat.class);
@@ -110,7 +110,7 @@ public class TestMiniMRClasspath extends TestCase {
       file.writeBytes(input);
       file.close();
     }
-    conf.set("fs.default.name", fileSys);
+    FileSystem.setDefaultUri(conf, fileSys);
     conf.set("mapred.job.tracker", jobTracker);
     conf.setJobName("wordcount");
     conf.setInputFormat(TextInputFormat.class);

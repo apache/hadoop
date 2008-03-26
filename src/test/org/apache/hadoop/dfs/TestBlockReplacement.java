@@ -47,7 +47,7 @@ public class TestBlockReplacement extends TestCase {
   MiniDFSCluster cluster;
   public void testThrottler() throws IOException {
     Configuration conf = new Configuration();
-    conf.set("fs.default.name", "localhost:0");
+    FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
     long bandwidthPerSec = 1024*1024L;
     final long TOTAL_BYTES =6*bandwidthPerSec; 
     long bytesToSend = TOTAL_BYTES; 

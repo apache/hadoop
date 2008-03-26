@@ -19,6 +19,7 @@ package org.apache.hadoop.dfs;
 
 import org.apache.commons.logging.*;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -195,8 +196,8 @@ public class DataNode implements FSConstants, Runnable {
                                      conf.get("dfs.datanode.dns.interface","default"),
                                      conf.get("dfs.datanode.dns.nameserver","default"));
     }
-    InetSocketAddress nameNodeAddr = NetUtils.createSocketAddr(
-                                     conf.get("fs.default.name", "local"));
+    InetSocketAddress nameNodeAddr =
+      NetUtils.createSocketAddr(FileSystem.getDefaultUri(conf).getAuthority());
     
     this.defaultBytesPerChecksum = 
        Math.max(conf.getInt("io.bytes.per.checksum", 512), 1); 

@@ -67,7 +67,7 @@ public class TestEmptyJobWithDFS extends TestCase {
     }
 
     // use WordCount example
-    conf.set("fs.default.name", fileSys);
+    FileSystem.setDefaultUri(conf, fileSys);
     conf.set("mapred.job.tracker", jobTracker);
     conf.setJobName("empty");
     // use an InputFormat which returns no split

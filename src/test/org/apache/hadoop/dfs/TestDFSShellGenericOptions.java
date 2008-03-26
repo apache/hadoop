@@ -39,7 +39,7 @@ public class TestDFSShellGenericOptions extends TestCase {
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(conf, 1, true, null);
-      namenode = conf.get("fs.default.name", "local");
+      namenode = FileSystem.getDefaultUri(conf).toString();
       String [] args = new String[4];
       args[2] = "-mkdir";
       args[3] = "/data";

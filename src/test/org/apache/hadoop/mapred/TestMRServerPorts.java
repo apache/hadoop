@@ -21,6 +21,7 @@ import java.io.IOException;
 import junit.framework.TestCase;
 import org.apache.hadoop.dfs.TestHDFSServerPorts;
 import org.apache.hadoop.dfs.NameNode;
+import org.apache.hadoop.fs.FileSystem;
 
 /**
  * This test checks correctness of port usage by mapreduce components:
@@ -99,7 +100,8 @@ public class TestMRServerPorts extends TestCase {
 
       // start job tracker on the same port as name-node
       JobConf conf2 = new JobConf(hdfs.getConfig());
-      conf2.set("mapred.job.tracker", hdfs.getConfig().get("fs.default.name"));
+      conf2.set("mapred.job.tracker",
+                FileSystem.getDefaultUri(hdfs.getConfig()).toString());
       conf2.set("mapred.job.tracker.http.address",
         TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
       boolean started = canStartJobTracker(conf2);
@@ -138,7 +140,7 @@ public class TestMRServerPorts extends TestCase {
 
       // start job tracker on the same port as name-node
       conf2.set("mapred.task.tracker.report.address",
-        hdfs.getConfig().get("fs.default.name"));
+                FileSystem.getDefaultUri(hdfs.getConfig()).toString());
       conf2.set("mapred.task.tracker.http.address",
         TestHDFSServerPorts.NAME_NODE_HTTP_HOST + 0);
       boolean started = canStartTaskTracker(conf2);

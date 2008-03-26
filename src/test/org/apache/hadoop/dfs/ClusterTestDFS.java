@@ -22,6 +22,7 @@ import junit.framework.TestCase;
 import junit.framework.AssertionFailedError;
 
 import org.apache.commons.logging.*;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.UTF8;
@@ -225,7 +226,7 @@ public class ClusterTestDFS extends TestCase implements FSConstants {
       //        start some DataNodes
       //
       ArrayList<DataNode> listOfDataNodeDaemons = new ArrayList<DataNode>();
-      conf.set("fs.default.name", nameNodeSocketAddr);
+      FileSystem.setDefaultUri(conf, "hdfs://"+nameNodeSocketAddr);
       for (int i = 0; i < initialDNcount; i++) {
         // uniquely config real fs path for data storage for this datanode
         String dataDirs[] = new String[1];

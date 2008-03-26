@@ -225,9 +225,9 @@ public class TestCopyFiles extends TestCase {
                            new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
                                          "file:///"+TEST_ROOT_DIR+"/destdat"});
     assertTrue("Source and destination directories do not match.",
-               checkFiles("local", TEST_ROOT_DIR+"/destdat", files));
-    deldir("local", TEST_ROOT_DIR+"/destdat");
-    deldir("local", TEST_ROOT_DIR+"/srcdat");
+               checkFiles("file:///", TEST_ROOT_DIR+"/destdat", files));
+    deldir("file:///", TEST_ROOT_DIR+"/destdat");
+    deldir("file:///", TEST_ROOT_DIR+"/srcdat");
   }
   
   /** copy files from dfs file system to dfs file system */
@@ -237,19 +237,19 @@ public class TestCopyFiles extends TestCase {
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(conf, 2, true, null);
-      namenode = conf.get("fs.default.name", "local");
-      if (!"local".equals(namenode)) {
-        MyFile[] files = createFiles(URI.create("hdfs://"+namenode), "/srcdat");
+      namenode = FileSystem.getDefaultUri(conf).toString();
+      if (namenode.startsWith("hdfs://")) {
+        MyFile[] files = createFiles(URI.create(namenode), "/srcdat");
         ToolRunner.run(new CopyFiles(conf), new String[] {
                                          "-log",
-                                         "hdfs://"+namenode+"/logs",
-                                         "hdfs://"+namenode+"/srcdat",
-                                         "hdfs://"+namenode+"/destdat"});
+                                         namenode+"/logs",
+                                         namenode+"/srcdat",
+                                         namenode+"/destdat"});
         assertTrue("Source and destination directories do not match.",
                    checkFiles(namenode, "/destdat", files));
-        FileSystem fs = FileSystem.get(URI.create("hdfs://"+namenode+"/logs"), conf);
+        FileSystem fs = FileSystem.get(URI.create(namenode+"/logs"), conf);
         assertTrue("Log directory does not exist.",
-                    fs.exists(new Path("hdfs://"+namenode+"/logs")));
+                   fs.exists(new Path(namenode+"/logs")));
         deldir(namenode, "/destdat");
         deldir(namenode, "/srcdat");
         deldir(namenode, "/logs");
@@ -266,22 +266,22 @@ public class TestCopyFiles extends TestCase {
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(conf, 1, true, null);
-      namenode = conf.get("fs.default.name", "local");
-      if (!"local".equals(namenode)) {
+      namenode = FileSystem.getDefaultUri(conf).toString();
+      if (namenode.startsWith("hdfs://")) {
         MyFile[] files = createFiles(LOCAL_FS, TEST_ROOT_DIR+"/srcdat");
         ToolRunner.run(new CopyFiles(conf), new String[] {
                                          "-log",
-                                         "hdfs://"+namenode+"/logs",
+                                         namenode+"/logs",
                                          "file:///"+TEST_ROOT_DIR+"/srcdat",
-                                         "hdfs://"+namenode+"/destdat"});
+                                         namenode+"/destdat"});
         assertTrue("Source and destination directories do not match.",
                    checkFiles(namenode, "/destdat", files));
-        FileSystem fs = FileSystem.get(URI.create("hdfs://"+namenode+"/logs"), conf);
+        FileSystem fs = FileSystem.get(URI.create(namenode+"/logs"), conf);
         assertTrue("Log directory does not exist.",
-                    fs.exists(new Path("hdfs://"+namenode+"/logs")));
+                    fs.exists(new Path(namenode+"/logs")));
         deldir(namenode, "/destdat");
         deldir(namenode, "/logs");
-        deldir("local", TEST_ROOT_DIR+"/srcdat");
+        deldir("file:///", TEST_ROOT_DIR+"/srcdat");
       }
     } finally {
       if (cluster != null) { cluster.shutdown(); }
@@ -295,20 +295,20 @@ public class TestCopyFiles extends TestCase {
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(conf, 1, true, null);
-      namenode = conf.get("fs.default.name", "local");
-      if (!"local".equals(namenode)) {
-        MyFile[] files = createFiles(URI.create("hdfs://"+namenode), "/srcdat");
+      namenode = FileSystem.getDefaultUri(conf).toString();
+      if (namenode.startsWith("hdfs://")) {
+        MyFile[] files = createFiles(URI.create(namenode), "/srcdat");
         ToolRunner.run(new CopyFiles(conf), new String[] {
                                          "-log",
                                          "/logs",
-                                         "hdfs://"+namenode+"/srcdat",
+                                         namenode+"/srcdat",
                                          "file:///"+TEST_ROOT_DIR+"/destdat"});
         assertTrue("Source and destination directories do not match.",
-                   checkFiles("local", TEST_ROOT_DIR+"/destdat", files));
-        FileSystem fs = FileSystem.get(URI.create("hdfs://"+namenode+"/logs"), conf);
+                   checkFiles("file:///", TEST_ROOT_DIR+"/destdat", files));
+        FileSystem fs = FileSystem.get(URI.create(namenode+"/logs"), conf);
         assertTrue("Log directory does not exist.",
                     fs.exists(new Path("/logs")));
-        deldir("local", TEST_ROOT_DIR+"/destdat");
+        deldir("file:///", TEST_ROOT_DIR+"/destdat");
         deldir(namenode, "/logs");
         deldir(namenode, "/srcdat");
       }
@@ -323,20 +323,20 @@ public class TestCopyFiles extends TestCase {
     try {
       Configuration conf = new Configuration();
       cluster = new MiniDFSCluster(conf, 2, true, null);
-      namenode = conf.get("fs.default.name", "local");
-      if (!"local".equals(namenode)) {
-        MyFile[] files = createFiles(URI.create("hdfs://"+namenode), "/srcdat");
+      namenode = FileSystem.getDefaultUri(conf).toString();
+      if (namenode.startsWith("hdfs://")) {
+        MyFile[] files = createFiles(URI.create(namenode), "/srcdat");
         ToolRunner.run(new CopyFiles(conf), new String[] {
                                          "-p",
                                          "-log",
-                                         "hdfs://"+namenode+"/logs",
-                                         "hdfs://"+namenode+"/srcdat",
-                                         "hdfs://"+namenode+"/destdat"});
+                                         namenode+"/logs",
+                                         namenode+"/srcdat",
+                                         namenode+"/destdat"});
         assertTrue("Source and destination directories do not match.",
                    checkFiles(namenode, "/destdat", files));
-        FileSystem fs = FileSystem.get(URI.create("hdfs://"+namenode+"/logs"), conf);
+        FileSystem fs = FileSystem.get(URI.create(namenode+"/logs"), conf);
         assertTrue("Log directory does not exist.",
-                    fs.exists(new Path("hdfs://"+namenode+"/logs")));
+                    fs.exists(new Path(namenode+"/logs")));
 
         FileStatus[] dchkpoint = getFileStatus(namenode, "/destdat", files);
         final int nupdate = NFILES>>2;
@@ -347,9 +347,9 @@ public class TestCopyFiles extends TestCase {
                                          "-p",
                                          "-update",
                                          "-log",
-                                         "hdfs://"+namenode+"/logs",
-                                         "hdfs://"+namenode+"/srcdat",
-                                         "hdfs://"+namenode+"/destdat"});
+                                         namenode+"/logs",
+                                         namenode+"/srcdat",
+                                         namenode+"/destdat"});
         assertTrue("Source and destination directories do not match.",
                    checkFiles(namenode, "/destdat", files));
         assertTrue("Update failed to replicate all changes in src",
@@ -360,9 +360,9 @@ public class TestCopyFiles extends TestCase {
                                          "-p",
                                          "-overwrite",
                                          "-log",
-                                         "hdfs://"+namenode+"/logs",
-                                         "hdfs://"+namenode+"/srcdat",
-                                         "hdfs://"+namenode+"/destdat"});
+                                         namenode+"/logs",
+                                         namenode+"/srcdat",
+                                         namenode+"/destdat"});
         assertTrue("Source and destination directories do not match.",
                    checkFiles(namenode, "/destdat", files));
         assertTrue("-overwrite didn't.",
@@ -384,7 +384,7 @@ public class TestCopyFiles extends TestCase {
           new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
                         "file:///"+TEST_ROOT_DIR+"/src2/srcdat"});
       assertTrue("Source and destination directories do not match.",
-                 checkFiles("local", TEST_ROOT_DIR+"/src2/srcdat", files));
+                 checkFiles("file:///", TEST_ROOT_DIR+"/src2/srcdat", files));
   
       assertEquals(CopyFiles.DuplicationException.ERROR_CODE,
           ToolRunner.run(new CopyFiles(new Configuration()),
@@ -393,9 +393,9 @@ public class TestCopyFiles extends TestCase {
                         "file:///"+TEST_ROOT_DIR+"/destdat",}));
     }
     finally {
-      deldir("local", TEST_ROOT_DIR+"/destdat");
-      deldir("local", TEST_ROOT_DIR+"/srcdat");
-      deldir("local", TEST_ROOT_DIR+"/src2");
+      deldir("file:///", TEST_ROOT_DIR+"/destdat");
+      deldir("file:///", TEST_ROOT_DIR+"/srcdat");
+      deldir("file:///", TEST_ROOT_DIR+"/src2");
     }
   }
 
@@ -409,7 +409,7 @@ public class TestCopyFiles extends TestCase {
           new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
                         "file:///"+TEST_ROOT_DIR+"/destdat"});
       assertTrue("Source and destination directories do not match.",
-                 checkFiles("local", TEST_ROOT_DIR+"/destdat", files));
+                 checkFiles("file:///", TEST_ROOT_DIR+"/destdat", files));
       
       //copy a single file
       String fname = files[0].getName();
@@ -419,9 +419,9 @@ public class TestCopyFiles extends TestCase {
           new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat/"+fname,
                         "file:///"+TEST_ROOT_DIR+"/dest2/"+fname});
       assertTrue("Source and destination directories do not match.",
-          checkFiles("local", TEST_ROOT_DIR+"/dest2", files));     
+          checkFiles("file:///", TEST_ROOT_DIR+"/dest2", files));     
       //copy single file to existing dir
-      deldir("local", TEST_ROOT_DIR+"/dest2");
+      deldir("file:///", TEST_ROOT_DIR+"/dest2");
       fs.mkdirs(new Path(TEST_ROOT_DIR+"/dest2"));
       MyFile[] files2 = {createFile(root, fs, 0)};
       String sname = files2[0].getName();
@@ -430,20 +430,20 @@ public class TestCopyFiles extends TestCase {
                         "file:///"+TEST_ROOT_DIR+"/srcdat/"+sname,
                         "file:///"+TEST_ROOT_DIR+"/dest2/"});
       assertTrue("Source and destination directories do not match.",
-          checkFiles("local", TEST_ROOT_DIR+"/dest2", files2));     
-      updateFiles("local", TEST_ROOT_DIR+"/srcdat", files2, 1);
+          checkFiles("file:///", TEST_ROOT_DIR+"/dest2", files2));     
+      updateFiles("file:///", TEST_ROOT_DIR+"/srcdat", files2, 1);
       //copy single file to existing dir w/ dst name conflict
       ToolRunner.run(new CopyFiles(new Configuration()),
           new String[] {"-update",
                         "file:///"+TEST_ROOT_DIR+"/srcdat/"+sname,
                         "file:///"+TEST_ROOT_DIR+"/dest2/"});
       assertTrue("Source and destination directories do not match.",
-          checkFiles("local", TEST_ROOT_DIR+"/dest2", files2));     
+          checkFiles("file:///", TEST_ROOT_DIR+"/dest2", files2));     
     }
     finally {
-      deldir("local", TEST_ROOT_DIR+"/destdat");
-      deldir("local", TEST_ROOT_DIR+"/dest2");
-      deldir("local", TEST_ROOT_DIR+"/srcdat");
+      deldir("file:///", TEST_ROOT_DIR+"/destdat");
+      deldir("file:///", TEST_ROOT_DIR+"/dest2");
+      deldir("file:///", TEST_ROOT_DIR+"/srcdat");
     }
   }
 }

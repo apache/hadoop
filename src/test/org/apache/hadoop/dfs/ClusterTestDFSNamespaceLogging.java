@@ -23,6 +23,7 @@ import junit.framework.AssertionFailedError;
 
 import org.apache.commons.logging.*;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.conf.Configuration;
@@ -344,7 +345,7 @@ public class ClusterTestDFSNamespaceLogging extends TestCase implements FSConsta
     //
     //          start a NameNode
     String nameNodeSocketAddr = "localhost:" + nameNodePort;
-    conf.set("fs.default.name", nameNodeSocketAddr);
+    FileSystem.setDefaultUri(conf, "hdfs://"+nameNodeSocketAddr);
     
     String nameFSDir = baseDirSpecified + "/name";
     conf.set("dfs.name.dir", nameFSDir);

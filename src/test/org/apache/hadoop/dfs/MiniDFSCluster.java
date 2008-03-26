@@ -234,7 +234,7 @@ public class MiniDFSCluster {
     data_dir = new File(base_dir, "data");
     
     // Setup the NameNode configuration
-    conf.set("fs.default.name", "localhost:"+ Integer.toString(nameNodePort));
+    FileSystem.setDefaultUri(conf, "hdfs://localhost:"+ Integer.toString(nameNodePort));
     conf.set("dfs.http.address", "0.0.0.0:0");  
     if (manageDfsDirs) {
       conf.set("dfs.name.dir", new File(base_dir, "name1").getPath()+","+
@@ -323,8 +323,9 @@ public class MiniDFSCluster {
     if (nameNode != null) { // set conf from the name node
       InetSocketAddress nnAddr = nameNode.getNameNodeAddress(); 
       int nameNodePort = nnAddr.getPort(); 
-      conf.set("fs.default.name", 
-               nnAddr.getHostName()+ ":" + Integer.toString(nameNodePort));
+      FileSystem.setDefaultUri(conf, 
+                               "hdfs://"+ nnAddr.getHostName() +
+                               ":" + Integer.toString(nameNodePort));
     }
     
     if (racks != null && numDataNodes > racks.length ) {

@@ -64,8 +64,7 @@ public class TestReplication extends TestCase {
   private void checkFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     Configuration conf = fileSys.getConf();
-    ClientProtocol namenode = DFSClient.createNamenode(
-        NetUtils.createSocketAddr(conf.get("fs.default.name")), conf);
+    ClientProtocol namenode = DFSClient.createNamenode(conf);
       
     LocatedBlocks locations;
     boolean isReplicationDone;

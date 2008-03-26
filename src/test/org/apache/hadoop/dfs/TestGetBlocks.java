@@ -71,8 +71,7 @@ public class TestGetBlocks extends TestCase {
       DatanodeInfo[] dataNodes=null;
       boolean notWritten;
       do {
-        DFSClient dfsclient = new DFSClient(
-            NetUtils.createSocketAddr(CONF.get("fs.default.name")), CONF);
+        DFSClient dfsclient = new DFSClient(CONF);
         locatedBlocks = dfsclient.namenode.
           getBlockLocations("/tmp.txt", 0, fileLen).getLocatedBlocks();
         assertEquals(2, locatedBlocks.size());

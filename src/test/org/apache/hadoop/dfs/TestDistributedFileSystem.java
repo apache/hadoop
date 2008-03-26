@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.dfs;
 
+import java.net.URI;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
@@ -25,13 +27,13 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
   public void testFileSystemCloseAll() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 0, true, null);
-    String address = conf.get("fs.default.name");
+    URI address = FileSystem.getDefaultUri(conf);
 
     try {
       FileSystem.closeAll();
 
       conf = new Configuration();
-      conf.set("fs.default.name", address);
+      FileSystem.setDefaultUri(conf, address);
       FileSystem.get(conf);
       FileSystem.get(conf);
       FileSystem.closeAll();

@@ -19,6 +19,7 @@ package org.apache.hadoop.dfs;
 
 import org.apache.commons.logging.*;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.StringUtils;
@@ -91,8 +92,8 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     // Create connection to the namenode.
     //
     shouldRun = true;
-    nameNodeAddr = NetUtils.createSocketAddr(
-                              conf.get("fs.default.name", "local"));
+    nameNodeAddr =
+      NetUtils.createSocketAddr(FileSystem.getDefaultUri(conf).getAuthority());
     this.conf = conf;
     this.namenode =
         (ClientProtocol) RPC.waitForProxy(ClientProtocol.class,
@@ -251,8 +252,8 @@ public class SecondaryNameNode implements FSConstants, Runnable {
    * Returns the Jetty server that the Namenode is listening on.
    */
   private String getInfoServer() throws IOException {
-    String fsName = conf.get("fs.default.name", "local");
-    if (fsName.equals("local")) {
+    URI fsName = FileSystem.getDefaultUri(conf);
+    if (!"hdfs".equals(fsName.getScheme())) {
       throw new IOException("This is not a DFS");
     }
     return NetUtils.getServerAddress(conf, "dfs.info.bindAddress", 

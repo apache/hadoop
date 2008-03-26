@@ -175,6 +175,9 @@ Trunk (unreleased changes)
     via a single rpc to the namenode to speed up job planning. 
     (Lohit Vijaya Renu via omalley)
 
+    HADOOP-2902.  Replace uses of "fs.default.name" with calls to the
+    accessor methods added in HADOOP-1967.  (cutting)
+
   BUG FIXES
 
     HADOOP-2195. '-mkdir' behaviour is now closer to Linux shell in case of

@@ -26,6 +26,7 @@ import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.fs.FileSystem;
 
 /**
  * This class creates a single-process Map-Reduce cluster for junit testing.
@@ -246,7 +247,7 @@ public class MiniMRCluster {
 
   public JobConf createJobConf() {
     JobConf result = new JobConf();
-    result.set("fs.default.name", namenode);
+    FileSystem.setDefaultUri(result, namenode);
     result.set("mapred.job.tracker", "localhost:"+jobTrackerPort);
     result.set("mapred.job.tracker.http.address", 
                         "127.0.0.1:" + jobTrackerInfoPort);
@@ -433,7 +434,7 @@ public class MiniMRCluster {
     
   public static void main(String[] args) throws IOException {
     LOG.info("Bringing up Jobtracker and tasktrackers.");
-    MiniMRCluster mr = new MiniMRCluster(4, "local", 1);
+    MiniMRCluster mr = new MiniMRCluster(4, "file:///", 1);
     LOG.info("JobTracker and TaskTrackers are up.");
     mr.shutdown();
     LOG.info("JobTracker and TaskTrackers brought down.");

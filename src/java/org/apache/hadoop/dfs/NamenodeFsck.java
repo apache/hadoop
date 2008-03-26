@@ -267,8 +267,7 @@ public class NamenodeFsck {
   
   private void lostFoundMove(DFSFileInfo file, LocatedBlocks blocks)
     throws IOException {
-    DFSClient dfs = new DFSClient(NetUtils.createSocketAddr(
-                              conf.get("fs.default.name", "local")), conf);
+    DFSClient dfs = new DFSClient(conf);
     if (!lfInited) {
       lostFoundInit(dfs);
     }

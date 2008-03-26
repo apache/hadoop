@@ -148,20 +148,7 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
     }
     debugFs.copyFromLocalFile(scriptPath,cachePath);
     
-    // add debug script as cache file 
-    String fileSys = debugFs.getName();
-    String scr = null;
-    if (fileSys.equals("local")) {
-      scr = "file://" + cachePath + "/testscript.txt#testscript";
-    } else {
-      scr = "hdfs://" + fileSys + cachePath + "/testscript.txt#testscript";
-    }
-    URI uri = null;
-    try {
-      uri = new URI(scr);
-    } catch (URISyntaxException ur) {
-      ur.printStackTrace();
-    }
+    URI uri = debugFs.getUri().resolve(cachePath+"/testscript.txt#testscript");
     DistributedCache.createSymlink(conf);
     DistributedCache.addCacheFile(uri, conf);
 

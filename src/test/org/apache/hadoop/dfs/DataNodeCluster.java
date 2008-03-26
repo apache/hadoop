@@ -25,6 +25,7 @@ import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.DNS;
 
@@ -73,7 +74,7 @@ public class DataNodeCluster {
       System.out.println(usage);
       System.exit(-1);
     }
-    String nameNodeAdr = conf.get("fs.default.name");
+    String nameNodeAdr = FileSystem.getDefaultUri(conf).getAuthority();
     if (nameNodeAdr == null) {
       System.out.println("No name node address and port in config");
       System.exit(-1);

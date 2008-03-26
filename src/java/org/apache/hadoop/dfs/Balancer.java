@@ -838,19 +838,17 @@ public class Balancer implements Tool {
    */
   private void init(double threshold) throws IOException {
     this.threshold = threshold;
-    // get name node address 
-    InetSocketAddress nameNodeAddr = DataNode.createSocketAddr(
-        conf.get("fs.default.name", "local"));
-    // connect to name node
-    this.namenode = createNamenode(nameNodeAddr, conf);
-    this.client = DFSClient.createNamenode(nameNodeAddr, conf);
+    this.namenode = createNamenode(conf);
+    this.client = DFSClient.createNamenode(conf);
     this.fs = FileSystem.get(conf);
   }
   
   /* Build a NamenodeProtocol connection to the namenode and
    * set up the retry policy */ 
-  private static NamenodeProtocol createNamenode(
-      InetSocketAddress nameNodeAddr, Configuration conf) throws IOException {
+  private static NamenodeProtocol createNamenode(Configuration conf)
+    throws IOException {
+    InetSocketAddress nameNodeAddr =
+      DataNode.createSocketAddr(FileSystem.getDefaultUri(conf).getAuthority());
     RetryPolicy timeoutPolicy = RetryPolicies.exponentialBackoffRetry(
         5, 200, TimeUnit.MILLISECONDS);
     Map<Class<? extends Exception>,RetryPolicy> exceptionToPolicyMap =

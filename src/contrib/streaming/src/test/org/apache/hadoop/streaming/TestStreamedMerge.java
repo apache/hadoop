@@ -221,7 +221,7 @@ public class TestStreamedMerge extends TestCase {
         fs_ = cluster.getFileSystem();
       } else {
         System.out.println("overrideFS: " + overrideFS);
-        conf_.set("fs.default.name", overrideFS);
+        FileSystem.setDefaultUri(conf_, overrideFS);
         fs_ = FileSystem.get(conf_);
       }
       doAllTestJobs();

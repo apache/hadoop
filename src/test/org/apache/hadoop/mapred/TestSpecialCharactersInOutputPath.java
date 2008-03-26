@@ -64,7 +64,7 @@ public class TestSpecialCharactersInOutputPath extends TestCase {
     file.close();
 
     // use WordCount example
-    conf.set("fs.default.name", fileSys);
+    FileSystem.setDefaultUri(conf, fileSys);
     conf.set("mapred.job.tracker", jobTracker);
     conf.setJobName("foo");
 

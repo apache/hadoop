@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.fs.FileSystem;
 
 import junit.framework.TestCase;
 
@@ -50,7 +51,7 @@ public class TestReplicationPolicy extends TestCase {
   
   static {
     try {
-      CONF.set("fs.default.name", "localhost:0");
+      FileSystem.setDefaultUri(CONF, "hdfs://localhost:0");
       NameNode.format(CONF);
       namenode = new NameNode(CONF);
     } catch (IOException e) {

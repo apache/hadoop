@@ -187,28 +187,9 @@ public class MRCaching {
     fs.copyFromLocalFile(jarPath, cachePath);
     fs.copyFromLocalFile(zipPath, cachePath);
     // setting the cached archives to zip, jar and simple text files
-    String fileSys = fs.getName();
-    String archive1;
-    String archive2;
-    String file1;
-    if (fileSys.equals("local")) {
-      archive1 = "file://" + cachePath + "/test.jar";
-      archive2 = "file://" + cachePath + "/test.zip";
-      file1 = "file://" + cachePath + "/test.txt";
-    } else {
-      archive1 = "hdfs://" + fileSys + cachePath + "/test.jar";
-      archive2 = "hdfs://" + fileSys + cachePath + "/test.zip";
-      file1 = "hdfs://" + fileSys + cachePath + "/test.txt";
-    }
-    URI uri1 = null;
-    URI uri2 = null;
-    URI uri3 = null;
-    try{
-      uri1 = new URI(archive1);
-      uri2 = new URI(archive2);
-      uri3 = new URI(file1);
-    } catch(URISyntaxException ur){
-    }
+    URI uri1 = fs.getUri().resolve(cachePath + "/test.jar");
+    URI uri2 = fs.getUri().resolve(cachePath + "/test.zip");
+    URI uri3 = fs.getUri().resolve(cachePath + "/test.txt");
     DistributedCache.addCacheArchive(uri1, conf);
     DistributedCache.addCacheArchive(uri2, conf);
     DistributedCache.addCacheFile(uri3, conf);

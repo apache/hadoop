@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -180,8 +181,7 @@ public class Logalyzer {
     doArchive(String logListURI, String archiveDirectory)
     throws IOException
   {
-    String destURL = "hdfs://" + fsConfig.get("fs.default.name", "local") + 
-                         archiveDirectory;
+    String destURL = FileSystem.getDefaultUri(fsConfig) + archiveDirectory;
     CopyFiles.copy(fsConfig, logListURI, destURL, null, true, false);
   }
   
