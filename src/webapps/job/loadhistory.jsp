@@ -20,7 +20,13 @@
     String jobId =  (String)request.getParameter("jobid");
     JobHistory.JobInfo job = (JobHistory.JobInfo)
                                request.getSession().getAttribute("job");
-    if (null != job && (!jobId.equals(job.get(Keys.JOBID)))) {
+    // if session attribute of JobInfo exists and is of different job's,
+    // then remove the attribute
+    // if the job has not yet finished, remove the attribute sothat it 
+    // gets refreshed.
+    if (null != job && 
+       (!jobId.equals(job.get(Keys.JOBID)) 
+         || job.get(Keys.JOB_STATUS) == "")) {
       // remove jobInfo from session, keep only one job in session at a time
       request.getSession().removeAttribute("job"); 
       job = null ; 
