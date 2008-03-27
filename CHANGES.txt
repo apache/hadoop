@@ -444,6 +444,8 @@ Release 0.16.2 - Unreleased
     HADOOP-3084. Fix HftpFileSystem to work for zero-lenghth files.
     (cdouglas)
 
+    HADOOP-3107. Fix NPE when fsck invokes getListings. (dhruba)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
