@@ -1910,7 +1910,12 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
           }
           List<String> rName = dnsToSwitchMapping.resolve(dnHosts);
           if (rName == null) {
-            continue;
+            LOG.error("The resolve call returned null! Using " + 
+                NetworkTopology.DEFAULT_RACK + " for some hosts");
+            rName = new ArrayList<String>(dnHosts.size());
+            for (int i = 0; i < dnHosts.size(); i++) {
+              rName.add(NetworkTopology.DEFAULT_RACK);
+            }
           }
           int i = 0;
           for (String m : rName) {
@@ -2689,6 +2694,8 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
     
     if (node.getNetworkLocation().equals(NetworkTopology.UNRESOLVED)) {
+      LOG.info("Ignoring block report from " + nodeID.getName() + 
+          " because rack location for this datanode is still to be resolved."); 
       return null; //drop the block report if the dn hasn't been resolved
     }
 

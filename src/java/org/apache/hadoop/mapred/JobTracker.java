@@ -1468,7 +1468,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
           }
           List<String> rName = dnsToSwitchMapping.resolve(dnHosts);
           if (rName == null) {
-            continue;
+            LOG.error("The resolve call returned null! Using " + 
+                NetworkTopology.DEFAULT_RACK + " for some hosts");
+            rName = new ArrayList<String>(dnHosts.size());
+            for (int i = 0; i < dnHosts.size(); i++) {
+              rName.add(NetworkTopology.DEFAULT_RACK);
+            }
           }
           int i = 0;
           for (String m : rName) {
