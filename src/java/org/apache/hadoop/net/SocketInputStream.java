@@ -39,7 +39,7 @@ import java.nio.channels.SelectionKey;
 public class SocketInputStream extends InputStream
                                implements ReadableByteChannel {
 
-  private SocketIOWithTimeout reader;
+  private Reader reader;
 
   private static class Reader extends SocketIOWithTimeout {
     ReadableByteChannel channel;
@@ -121,10 +121,23 @@ public class SocketInputStream extends InputStream
     return read(ByteBuffer.wrap(b, off, len));
   }
 
-  public void close() throws IOException {
+  public synchronized void close() throws IOException {
+    /* close the channel since Socket.getInputStream().close()
+     * closes the socket.
+     */
+    reader.channel.close();
     reader.close();
   }
 
+  /**
+   * Returns underlying channel used by inputstream.
+   * This is useful in certain cases like channel for 
+   * {@link FileChannel#transferFrom(ReadableByteChannel, long, long)}.
+   */
+  public ReadableByteChannel getChannel() {
+    return reader.channel; 
+  }
+  
   //ReadableByteChannel interface
     
   public boolean isOpen() {

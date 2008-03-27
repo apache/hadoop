@@ -129,6 +129,16 @@ public class TestSocketIOWithTimeout extends TestCase {
         throw new IOException("Unexpected InterruptedException : " + e);
       }
       
+      //make sure the channels are still open
+      assertTrue(source.isOpen());
+      assertTrue(sink.isOpen());
+      
+      // make sure close() closes the underlying channel.
+      in.close();
+      assertFalse(source.isOpen());
+      out.close();
+      assertFalse(sink.isOpen());
+      
     } finally {
       if (source != null) {
         source.close();

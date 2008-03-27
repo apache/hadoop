@@ -934,17 +934,13 @@ class DFSClient implements FSConstants {
       DataOutputStream out = new DataOutputStream(
         new BufferedOutputStream(NetUtils.getOutputStream(sock,WRITE_TIMEOUT)));
 
-      try {
-        //write the header.
-        out.writeShort( DATA_TRANSFER_VERSION );
-        out.write( OP_READ_BLOCK );
-        out.writeLong( blockId );
-        out.writeLong( startOffset );
-        out.writeLong( len );
-        out.flush();
-      } finally {
-        IOUtils.closeStream(out);
-      }
+      //write the header.
+      out.writeShort( DATA_TRANSFER_VERSION );
+      out.write( OP_READ_BLOCK );
+      out.writeLong( blockId );
+      out.writeLong( startOffset );
+      out.writeLong( len );
+      out.flush();
       
       //
       // Get bytes in block, set streams

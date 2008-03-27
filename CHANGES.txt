@@ -380,6 +380,9 @@ Trunk (unreleased changes)
     HADOOP-3067. DFSInputStream's position read does not close the sockets.
     (rangadi)
 
+    HADOOP-3073. close() on SocketInputStream or SocketOutputStream should
+    close the underlying channel. (rangadi)
+
 Release 0.16.2 - Unreleased
 
   BUG FIXES

@@ -38,7 +38,7 @@ import java.nio.channels.WritableByteChannel;
 public class SocketOutputStream extends OutputStream 
                                 implements WritableByteChannel {                                
   
-  private SocketIOWithTimeout writer;
+  private Writer writer;
   
   private static class Writer extends SocketIOWithTimeout {
     WritableByteChannel channel;
@@ -116,8 +116,21 @@ public class SocketOutputStream extends OutputStream
     }
   }
 
-  public void close() throws IOException {
+  public synchronized void close() throws IOException {
+    /* close the channel since Socket.getOuputStream().close() 
+     * closes the socket.
+     */
+    writer.channel.close();
     writer.close();
+  }
+
+  /**
+   * Returns underlying channel used by this stream.
+   * This is useful in certain cases like channel for 
+   * {@link FileChannel#transferTo(long, long, WritableByteChannel)}
+   */
+  public WritableByteChannel getChannel() {
+    return writer.channel; 
   }
 
   //WritableByteChannle interface 
