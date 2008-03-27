@@ -270,7 +270,7 @@ public class MiniMRCluster {
    */
   public MiniMRCluster(int numTaskTrackers, String namenode, int numDir, 
       String[] racks, String[] hosts) throws IOException {
-    this(0, 0, numTaskTrackers, namenode, false, numDir, racks, hosts);
+    this(0, 0, numTaskTrackers, namenode, numDir, racks, hosts);
   }
   
   /**
@@ -282,41 +282,41 @@ public class MiniMRCluster {
    */
   public MiniMRCluster(int numTaskTrackers, String namenode, int numDir) 
     throws IOException {
-    this(0, 0, numTaskTrackers, namenode, false, numDir);
+    this(0, 0, numTaskTrackers, namenode, numDir);
   }
     
   public MiniMRCluster(int jobTrackerPort,
       int taskTrackerPort,
       int numTaskTrackers,
       String namenode,
-      boolean taskTrackerFirst, int numDir)
+      int numDir)
   throws IOException {
     this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode, 
-        taskTrackerFirst, numDir, null);
+         numDir, null);
   }
   
   public MiniMRCluster(int jobTrackerPort,
       int taskTrackerPort,
       int numTaskTrackers,
       String namenode,
-      boolean taskTrackerFirst, int numDir,
+      int numDir,
       String[] racks) throws IOException {
     this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode, 
-        taskTrackerFirst, numDir, racks, null);
+         numDir, racks, null);
   }
   
   public MiniMRCluster(int jobTrackerPort,
                        int taskTrackerPort,
                        int numTaskTrackers,
                        String namenode,
-                       boolean taskTrackerFirst, int numDir,
+                       int numDir,
                        String[] racks, String[] hosts) throws IOException {
     this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode, 
-        taskTrackerFirst, numDir, racks, hosts, null);
+         numDir, racks, hosts, null);
   }
 
   public MiniMRCluster(int jobTrackerPort, int taskTrackerPort,
-      int numTaskTrackers, String namenode, boolean taskTrackerFirst,
+      int numTaskTrackers, String namenode, 
       int numDir, String[] racks, String[] hosts, UnixUserGroupInformation ugi
       ) throws IOException {
     if (racks != null && racks.length < numTaskTrackers) {
@@ -379,16 +379,8 @@ public class MiniMRCluster {
 
     // Start the MiniMRCluster
         
-    if (taskTrackerFirst) {
-      for (Thread taskTrackerThread : taskTrackerThreadList){
-        taskTrackerThread.start();
-      }
-    }
-        
-    if (!taskTrackerFirst) {
-      for (Thread taskTrackerThread : taskTrackerThreadList){
-        taskTrackerThread.start();
-      }
+    for (Thread taskTrackerThread : taskTrackerThreadList){
+      taskTrackerThread.start();
     }
 
     // Wait till the MR cluster stabilizes

@@ -72,7 +72,7 @@ public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
       UnixUserGroupInformation MR_UGI = createUGI(
           UnixUserGroupInformation.login().getUserName(), true); 
       mr = new MiniMRCluster(0, 0, 4, dfs.getFileSystem().getUri().toString(),
-          false, 1, null, null, MR_UGI);
+           1, null, null, MR_UGI);
 
       JobConf pi = createJobConf(mr, PI_UGI);
       TestMiniMRWithDFS.runPI(mr, pi);
