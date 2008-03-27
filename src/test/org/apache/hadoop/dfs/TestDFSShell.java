@@ -194,6 +194,30 @@ public class TestDFSShell extends TestCase {
   
       try {copy2ndFileThread.join();} catch (InterruptedException e) { }
       System.setSecurityManager(sm);
+
+      // copy multiple files to destination directory
+      final Path destmultiple = mkdir(dfs, new Path("/test/putmultiple"));
+      Path[] srcs = new Path[2];
+      srcs[0] = new Path(f1.getPath());
+      srcs[1] = new Path(f2.getPath());
+      dfs.copyFromLocalFile(false, false, srcs, destmultiple);
+      srcs[0] = new Path(destmultiple,"f1"); 
+      srcs[1] = new Path(destmultiple,"f2"); 
+      assertTrue(dfs.exists(srcs[0]));
+      assertTrue(dfs.exists(srcs[1]));
+
+      // move multiple files to destination directory
+      final Path destmultiple2 = mkdir(dfs, new Path("/test/movemultiple"));
+      srcs[0] = new Path(f1.getPath());
+      srcs[1] = new Path(f2.getPath());
+      dfs.moveFromLocalFile(srcs, destmultiple2);
+      assertFalse(dfs.exists(srcs[0]));
+      assertFalse(dfs.exists(srcs[1]));
+      srcs[0] = new Path(destmultiple2, "f1");
+      srcs[1] = new Path(destmultiple2, "f2");
+      assertTrue(dfs.exists(srcs[0]));
+      assertTrue(dfs.exists(srcs[1]));
+
       f1.delete();
       f2.delete();
     } finally {

@@ -249,13 +249,16 @@
 		<section>
 			<title id="putlink"> put </title>
 			<p>
-				<code>Usage: hadoop dfs -put &lt;localsrc&gt; &lt;dst&gt;</code>
+				<code>Usage: hadoop dfs -put &lt;localsrc&gt; ... &lt;dst&gt;</code>
 			</p>
-			<p>Copy src from local file system to the destination filesystem. Also reads input from stdin and writes to destination filesystem.<br/>
+			<p>Copy single src, or multiple srcs from local file system to the destination filesystem. Also reads input from stdin and writes to destination filesystem.<br/>
 	   </p>
 			<ul>
 				<li>
 					<code> hadoop dfs -put localfile /user/hadoop/hadoopfile</code>
+				</li>
+				<li>
+					<code> hadoop dfs -put localfile1 localfile2 /user/hadoop/hadoopdir</code>
 				</li>
 				<li>
 					<code> hadoop dfs -put localfile hdfs://host:port/hadoop/hadoopfile</code>

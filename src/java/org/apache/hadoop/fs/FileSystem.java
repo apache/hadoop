@@ -1104,6 +1104,15 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
+   * The src files is on the local disk.  Add it to FS at
+   * the given dst name, removing the source afterwards.
+   */
+  public void moveFromLocalFile(Path[] srcs, Path dst)
+    throws IOException {
+    copyFromLocalFile(true, true, srcs, dst);
+  }
+
+  /**
    * The src file is on the local disk.  Add it to FS at
    * the given dst name, removing the source afterwards.
    */
@@ -1121,7 +1130,19 @@ public abstract class FileSystem extends Configured implements Closeable {
     throws IOException {
     copyFromLocalFile(delSrc, true, src, dst);
   }
-
+  
+  /**
+   * The src files are on the local disk.  Add it to FS at
+   * the given dst name.
+   * delSrc indicates if the source should be removed
+   */
+  public void copyFromLocalFile(boolean delSrc, boolean overwrite, 
+                                Path[] srcs, Path dst)
+    throws IOException {
+    Configuration conf = getConf();
+    FileUtil.copy(getLocal(conf), srcs, this, dst, delSrc, overwrite, conf);
+  }
+  
   /**
    * The src file is on the local disk.  Add it to FS at
    * the given dst name.

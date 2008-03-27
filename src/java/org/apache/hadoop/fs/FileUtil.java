@@ -132,7 +132,46 @@ public class FileUtil {
                              Configuration conf) throws IOException {
     return copy(srcFS, src, dstFS, dst, deleteSource, true, conf);
   }
-  
+
+  public static boolean copy(FileSystem srcFS, Path[] srcs, 
+                             FileSystem dstFS, Path dst,
+                             boolean deleteSource, 
+                             boolean overwrite, Configuration conf)
+                             throws IOException {
+    boolean gotException = false;
+    boolean returnVal = true;
+    StringBuffer exceptions = new StringBuffer();
+
+    if (srcs.length == 1)
+      return copy(srcFS, srcs[0], dstFS, dst, deleteSource, overwrite, conf);
+
+    // Check if dest is directory
+    if (!dstFS.exists(dst)) {
+      throw new IOException("`" + dst +"': specified destination directory " +
+                            "doest not exist");
+    } else {
+      FileStatus sdst = dstFS.getFileStatus(dst);
+      if (!sdst.isDir()) 
+        throw new IOException("copying multiple files, but last argument `" +
+                              dst + "' is not a directory");
+    }
+
+    for (Path src : srcs) {
+      try {
+        if (!copy(srcFS, src, dstFS, dst, deleteSource, overwrite, conf))
+          returnVal = false;
+      } catch (IOException e) {
+        gotException = true;
+        exceptions.append(e.getMessage());
+        exceptions.append("\n");
+      }
+    }
+    if (gotException) {
+      throw new IOException(exceptions.toString());
+    }
+    return returnVal;
+  }
+
   /** Copy files between FileSystems. */
   public static boolean copy(FileSystem srcFS, Path src, 
                              FileSystem dstFS, Path dst, 
@@ -204,7 +243,7 @@ public class FileUtil {
       return true;
     }
   }  
-
+  
   /** Copy local files to a FileSystem. */
   public static boolean copy(File src,
                              FileSystem dstFS, Path dst,

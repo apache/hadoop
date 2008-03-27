@@ -121,26 +121,43 @@ public class FsShell extends Configured implements Tool {
     }
   }
 
+  
+  /**
+   * Add local files to the indicated FileSystem name. src is kept.
+   */
+  void copyFromLocal(Path[] srcs, String dstf) throws IOException {
+    Path dstPath = new Path(dstf);
+    FileSystem dstFs = dstPath.getFileSystem(getConf());
+    dstFs.copyFromLocalFile(false, false, srcs, dstPath);
+  }
+  
   /**
    * Add a local file to the indicated FileSystem name. src is kept.
    */
   void copyFromLocal(Path src, String dstf) throws IOException {
-    Path dstPath = new Path(dstf);
-    FileSystem dstFs = dstPath.getFileSystem(getConf());
     if (src.toString().equals("-")) {
+      Path dstPath = new Path(dstf);
+      FileSystem dstFs = dstPath.getFileSystem(getConf());
       copyFromStdin(dstPath, dstFs);
     } else {
-      dstFs.copyFromLocalFile(false, false, src, new Path(dstf));
+      copyFromLocal(new Path[]{src}, dstf);
     }
+  }
+
+  /**
+   * Add local files to the indicated FileSystem name. src is removed.
+   */
+  void moveFromLocal(Path[] srcs, String dstf) throws IOException {
+    Path dstPath = new Path(dstf);
+    FileSystem dstFs = dstPath.getFileSystem(getConf());
+    dstFs.moveFromLocalFile(srcs, dstPath);
   }
 
   /**
    * Add a local file to the indicated FileSystem name. src is removed.
    */
   void moveFromLocal(Path src, String dstf) throws IOException {
-    Path dstPath = new Path(dstf);
-    FileSystem dstFs = dstPath.getFileSystem(getConf());
-    dstFs.moveFromLocalFile(src, dstPath);
+    moveFromLocal((new Path[]{src}), dstf);
   }
 
   /**
@@ -1248,8 +1265,9 @@ public class FsShell extends Configured implements Tool {
       "hadoop fs [-fs <local | file system URI>] [-conf <configuration file>]\n\t" +
       "[-D <property=value>] [-ls <path>] [-lsr <path>] [-du <path>]\n\t" + 
       "[-dus <path>] [-mv <src> <dst>] [-cp <src> <dst>] [-rm <src>]\n\t" + 
-      "[-rmr <src>] [-put <localsrc> <dst>] [-copyFromLocal <localsrc> <dst>]\n\t" +
-      "[-moveFromLocal <localsrc> <dst>] [" + GET_SHORT_USAGE + "\n\t" +
+      "[-rmr <src>] [-put <localsrc> ... <dst>] [-copyFromLocal <localsrc> ... <dst>]\n\t" +
+      "[-moveFromLocal <localsrc> ... <dst>] [" + 
+      GET_SHORT_USAGE + "\n\t" +
       "[-getmerge <src> <localdst> [addnl]] [-cat <src>]\n\t" +
       "[" + COPYTOLOCAL_SHORT_USAGE + "] [-moveToLocal <src> <localdst>]\n\t" +
       "[-mkdir <path>] [-report] [" + SETREP_SHORT_USAGE + "]\n\t" +
@@ -1318,13 +1336,14 @@ public class FsShell extends Configured implements Tool {
     String rmr = "-rmr <src>: \tRemove all directories which match the specified file \n" +
       "\t\tpattern. Equivlent to the Unix command \"rm -rf <src>\"\n";
 
-    String put = "-put <localsrc> <dst>: \tCopy a single file from the local file system \n" +
-      "\t\tinto fs. \n";
+    String put = "-put <localsrc> ... <dst>: \tCopy files " + 
+    "from the local file system \n\t\tinto fs. \n";
 
-    String copyFromLocal = "-copyFromLocal <localsrc> <dst>:  Identical to the -put command.\n";
+    String copyFromLocal = "-copyFromLocal <localsrc> ... <dst>:" +
+    " Identical to the -put command.\n";
 
-    String moveFromLocal = "-moveFromLocal <localsrc> <dst>:  Same as -put, except that the source is\n" +
-      "\t\tdeleted after it's copied.\n"; 
+    String moveFromLocal = "-moveFromLocal <localsrc> ... <dst>:" +
+    " Same as -put, except that the source is\n\t\tdeleted after it's copied.\n"; 
 
     String get = GET_SHORT_USAGE
       + ":  Copy files that match the file pattern <src> \n" +
@@ -1618,9 +1637,9 @@ public class FsShell extends Configured implements Tool {
       System.err.println("           [-rm <path>]");
       System.err.println("           [-rmr <path>]");
       System.err.println("           [-expunge]");
-      System.err.println("           [-put <localsrc> <dst>]");
-      System.err.println("           [-copyFromLocal <localsrc> <dst>]");
-      System.err.println("           [-moveFromLocal <localsrc> <dst>]");
+      System.err.println("           [-put <localsrc> ... <dst>]");
+      System.err.println("           [-copyFromLocal <localsrc> ... <dst>]");
+      System.err.println("           [-moveFromLocal <localsrc> ... <dst>]");
       System.err.println("           [" + GET_SHORT_USAGE + "]");
       System.err.println("           [-getmerge <src> <localdst> [addnl]]");
       System.err.println("           [-cat <src>]");
@@ -1661,7 +1680,7 @@ public class FsShell extends Configured implements Tool {
     //
     if ("-put".equals(cmd) || "-test".equals(cmd) ||
         "-copyFromLocal".equals(cmd) || "-moveFromLocal".equals(cmd)) {
-      if (argv.length != 3) {
+      if (argv.length < 3) {
         printUsage(cmd);
         return exitCode;
       }
@@ -1701,9 +1720,15 @@ public class FsShell extends Configured implements Tool {
     exitCode = 0;
     try {
       if ("-put".equals(cmd) || "-copyFromLocal".equals(cmd)) {
-        copyFromLocal(new Path(argv[i++]), argv[i++]);
+        Path[] srcs = new Path[argv.length-2];
+        for (int j=0 ; i < argv.length-1 ;) 
+          srcs[j++] = new Path(argv[i++]);
+        copyFromLocal(srcs, argv[i++]);
       } else if ("-moveFromLocal".equals(cmd)) {
-        moveFromLocal(new Path(argv[i++]), argv[i++]);
+        Path[] srcs = new Path[argv.length-2];
+        for (int j=0 ; i < argv.length-1 ;) 
+          srcs[j++] = new Path(argv[i++]);
+        moveFromLocal(srcs, argv[i++]);
       } else if ("-get".equals(cmd) || "-copyToLocal".equals(cmd)) {
         copyToLocal(argv, i);
       } else if ("-getmerge".equals(cmd)) {
