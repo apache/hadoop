@@ -27,7 +27,5 @@ then
   echo Usage: checknodes queue-name
   exit 2
 fi
-num=`$PBS_NODES_PATH :$1 2>&1 | grep "state = " | egrep -v "state = down" | grep -v "state = offline" | wc -l`
-totalused=`$PBS_NODES_PATH :$1  2>&1 | grep "jobs =" | wc -l`
-numleft=`expr $num - $totalused`
-echo $numleft
+# the number of nodes marked 'free', and which do not contain a jobs attribute from the server or from the moms.
+$PBS_NODES_PATH :$1 | awk 'BEGIN {c=0} /state = free/ {getline;getline;getline;getline; if ($0 !~ /jobs =/ && $0 !~ /jobs=[0-9].*/)  c++ ; } END {print c}'
