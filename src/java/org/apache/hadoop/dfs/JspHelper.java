@@ -65,6 +65,11 @@ public class JspHelper {
     UnixUserGroupInformation.saveToConf(conf,
         UnixUserGroupInformation.UGI_PROPERTY_NAME, webUGI);
   }
+
+  public DatanodeID randomNode() throws IOException {
+    return fsn.getRandomDatanode();
+  }
+
   public DatanodeInfo bestNode(LocatedBlock blk) throws IOException {
     TreeSet<DatanodeInfo> deadNodes = new TreeSet<DatanodeInfo>();
     DatanodeInfo chosenNode = null;
