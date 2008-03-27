@@ -38,51 +38,35 @@ public class FileDataServlet extends DfsServlet {
   private URI createUri(DFSFileInfo i, UnixUserGroupInformation ugi,
       ClientProtocol nnproxy, String scheme)
       throws IOException, URISyntaxException {
-    final DatanodeInfo host = pickSrcDatanode(i, nnproxy);
-    return new URI(scheme, null, host.getHostName(),
+    final DatanodeID host = pickSrcDatanode(i, nnproxy);
+    final String hostname;
+    if (host instanceof DatanodeInfo) {
+      hostname = ((DatanodeInfo)host).getHostName();
+    } else {
+      hostname = host.getHost();
+    }
+    return new URI(scheme, null, hostname,
         "https".equals(scheme)
           ? (Integer)getServletContext().getAttribute("datanode.https.port")
           : host.getInfoPort(),
         "/streamFile", "filename=" + i.getPath() + "&ugi=" + ugi, null);
   }
 
-  private final static int BLOCK_SAMPLE = 5;
+  private final static JspHelper jspHelper = new JspHelper();
 
   /** Select a datanode to service this request.
    * Currently, this looks at no more than the first five blocks of a file,
    * selecting a datanode randomly from the most represented.
    */
-  private static DatanodeInfo pickSrcDatanode(DFSFileInfo i,
+  private static DatanodeID pickSrcDatanode(DFSFileInfo i,
       ClientProtocol nnproxy) throws IOException {
-    long sample;
-    if (i.getLen() == 0) sample = 1;
-    else sample = i.getLen() / i.getBlockSize() > BLOCK_SAMPLE
-        ? i.getBlockSize() * BLOCK_SAMPLE - 1
-        : i.getLen();
     final LocatedBlocks blks = nnproxy.getBlockLocations(
-        i.getPath().toUri().getPath(), 0, sample);
-    HashMap<DatanodeInfo, Integer> count = new HashMap<DatanodeInfo, Integer>();
-    for (LocatedBlock b : blks.getLocatedBlocks()) {
-      for (DatanodeInfo d : b.getLocations()) {
-        if (!count.containsKey(d)) {
-          count.put(d, 0);
-        }
-        count.put(d, count.get(d) + 1);
-      }
+        i.getPath().toUri().getPath(), 0, 1);
+    if (i.getLen() == 0 || blks.getLocatedBlocks().size() <= 0) {
+      // pick a random datanode
+      return jspHelper.randomNode();
     }
-    ArrayList<DatanodeInfo> loc = new ArrayList<DatanodeInfo>();
-    int max = 0;
-    for (Map.Entry<DatanodeInfo, Integer> e : count.entrySet()) {
-      if (e.getValue() > max) {
-        loc.clear();
-        max = e.getValue();
-      }
-      if (e.getValue() == max) {
-        loc.add(e.getKey());
-      }
-    }
-    final Random r = new Random();
-    return loc.get(r.nextInt(loc.size()));
+    return jspHelper.bestNode(blks.get(0));
   }
 
   /**

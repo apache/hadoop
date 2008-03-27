@@ -441,6 +441,9 @@ Release 0.16.2 - Unreleased
     HADOOP-3070. Protect the trash emptier thread from null pointer
     exceptions. (Koji Noguchi via omalley)
 
+    HADOOP-3084. Fix HftpFileSystem to work for zero-lenghth files.
+    (cdouglas)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

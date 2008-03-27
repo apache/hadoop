@@ -3577,6 +3577,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
     
   /** Stop at and return the datanode at index (used for content browsing)*/
+  @Deprecated
   private DatanodeDescriptor getDatanodeByIndex(int index) {
     int i = 0;
     for (DatanodeDescriptor node : datanodeMap.values()) {
@@ -3588,6 +3589,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return null;
   }
     
+  @Deprecated
   public String randomDataNode() {
     int size = datanodeMap.size();
     int index = 0;
@@ -3603,6 +3605,10 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
     }
     return null;
+  }
+
+  public DatanodeDescriptor getRandomDatanode() {
+    return replicator.chooseTarget(1, null, null, 0)[0];
   }
     
   public int getNameNodeInfoPort() {
