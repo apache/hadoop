@@ -396,7 +396,13 @@ public class DistributedFileSystem extends FileSystem {
   /** {@inheritDoc }*/
   public void setPermission(Path p, FsPermission permission
       ) throws IOException {
-    dfs.namenode.setPermission(getPathName(p), permission);
+    try {
+      dfs.namenode.setPermission(getPathName(p), permission);
+    } catch(RemoteException re) {
+      if(FileNotFoundException.class.getName().equals(re.getClassName())) {
+        throw new FileNotFoundException("File does not exist: " + p);
+      }
+    }
   }
 
   /** {@inheritDoc }*/
@@ -405,6 +411,12 @@ public class DistributedFileSystem extends FileSystem {
     if (username == null && groupname == null) {
       throw new IOException("username == null && groupname == null");
     }
-    dfs.namenode.setOwner(getPathName(p), username, groupname);
+    try {
+      dfs.namenode.setOwner(getPathName(p), username, groupname);
+    } catch(RemoteException re) {
+      if(FileNotFoundException.class.getName().equals(re.getClassName())) {
+        throw new FileNotFoundException("File does not exist: " + p);
+      }
+    }
   }
 }

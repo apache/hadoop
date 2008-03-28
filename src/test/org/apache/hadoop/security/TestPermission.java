@@ -119,6 +119,22 @@ public class TestPermission extends TestCase {
     FileSystem fs = FileSystem.get(conf);
 
     try {
+      // test permissions on files that do not exist
+      assertFalse(fs.exists(CHILD_FILE1));
+      try {
+        fs.setOwner(CHILD_FILE1, "foo", "bar");
+        assertTrue(false);
+      }
+      catch(java.io.FileNotFoundException e) {
+        LOG.info("GOOD: got " + e);
+      }
+      try {
+        fs.setPermission(CHILD_FILE1, new FsPermission((short)0777));
+        assertTrue(false);
+      }
+      catch(java.io.FileNotFoundException e) {
+        LOG.info("GOOD: got " + e);
+      }
       // following dir/file creations are legal
       fs.mkdirs(CHILD_DIR1);
       FSDataOutputStream out = fs.create(CHILD_FILE1);

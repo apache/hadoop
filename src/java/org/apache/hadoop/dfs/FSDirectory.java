@@ -415,9 +415,12 @@ class FSDirectory implements FSConstants {
     fsImage.getEditLog().logSetPermissions(src, permission);
   }
 
-  void unprotectedSetPermission(String src, FsPermission permissions) {
+  void unprotectedSetPermission(String src, FsPermission permissions) throws FileNotFoundException {
     synchronized(rootDir) {
-      rootDir.getNode(src).setPermission(permissions);
+        INode inode = rootDir.getNode(src);
+        if(inode == null)
+            throw new FileNotFoundException("File does not exist: " + src);
+        inode.setPermission(permissions);
     }
   }
 
@@ -427,9 +430,11 @@ class FSDirectory implements FSConstants {
     fsImage.getEditLog().logSetOwner(src, username, groupname);
   }
 
-  void unprotectedSetOwner(String src, String username, String groupname) {
+  void unprotectedSetOwner(String src, String username, String groupname) throws FileNotFoundException {
     synchronized(rootDir) {
       INode inode = rootDir.getNode(src);
+      if(inode == null)
+          throw new FileNotFoundException("File does not exist: " + src);
       if (username != null) {
         inode.setUser(username);
       }

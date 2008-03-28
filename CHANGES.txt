@@ -1257,6 +1257,8 @@ Release 0.16.0 - 2008-02-07
     HADOOP-2768. Fix performance regression caused by HADOOP-1707.
     (dhruba borthakur via nigel)
 
+    HADOOP-3108. Fix NPE in setPermission and setOwner. (shv)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES
