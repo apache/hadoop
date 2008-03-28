@@ -190,11 +190,13 @@ class FsShellPermissions {
 
   /*========== chown ==========*/
   
-  ///allows only alpha-numberic names for owner group
+  static private String allowedChars = "[-_./@a-zA-Z0-9]";
+  ///allows only "allowedChars" above in names for owner and group
   static private Pattern chownPattern = 
-         Pattern.compile("^\\s*(\\p{Alnum}+)?([:.](\\p{Alnum}*))?\\s*$");
+         Pattern.compile("^\\s*(" + allowedChars + "+)?" +
+                          "([:](" + allowedChars + "*))?\\s*$");
   static private Pattern chgrpPattern = 
-         Pattern.compile("^\\s*(\\p{Alnum}+)\\s*$");
+         Pattern.compile("^\\s*(" + allowedChars + "+)\\s*$");
   
   static String CHOWN_USAGE = "-chown [-R] [OWNER][:[GROUP]] PATH...";
   static String CHGRP_USAGE = "-chgrp [-R] GROUP PATH...";  
