@@ -153,6 +153,7 @@ class MapReduce(MasterSlave):
     local = []
     system = None
     temp = None
+    hadooptmpdir = None
     dfsclient = []
     
     for p in parentDirs:
@@ -164,6 +165,9 @@ class MapReduce(MasterSlave):
         system = os.path.join(p, subDir, 'mapred-system')
       if not temp:
         temp = os.path.join(p, subDir, 'mapred-temp')
+      if not hadooptmpdir:
+        # Not used currently, generating hadooptmpdir just in case
+        hadooptmpdir = os.path.join(p, subDir, 'hadoop-tmp')
       dfsclientdir = os.path.join(p, subDir, 'dfs-client')
       dfsclient.append(dfsclientdir)
       workDirs.append(dfsclientdir)
@@ -172,6 +176,7 @@ class MapReduce(MasterSlave):
     attrs['mapred.system.dir'] = 'fillindir'
     attrs['mapred.temp.dir'] = temp
     attrs['dfs.client.buffer.dir'] = ','.join(dfsclient)
+    attrs['hadoop.tmp.dir'] = hadooptmpdir
 
 
     envs['HADOOP_ROOT_LOGGER'] = "INFO,DRFA"

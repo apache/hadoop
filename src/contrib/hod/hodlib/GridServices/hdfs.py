@@ -149,6 +149,7 @@ class Hdfs(MasterSlave):
   
   def _setWorkDirs(self, workDirs, envs, attrs, parentDirs, subDir):
     namedir = None
+    hadooptmpdir = None
     datadir = []
 
     for p in parentDirs:
@@ -156,6 +157,9 @@ class Hdfs(MasterSlave):
       workDirs.append(os.path.join(p, subDir))
       dir = os.path.join(p, subDir, 'dfs-data')
       datadir.append(dir)
+      if not hadooptmpdir:
+        # Not used currently, generating hadooptmpdir just in case
+        hadooptmpdir = os.path.join(p, subDir, 'hadoop-tmp')
 
       if not namedir:
         namedir = os.path.join(p, subDir, 'dfs-name')
@@ -165,6 +169,7 @@ class Hdfs(MasterSlave):
 
     # FIXME!! use csv
     attrs['dfs.name.dir'] = namedir
+    attrs['hadoop.tmp.dir'] = hadooptmpdir
     attrs['dfs.data.dir'] = ','.join(datadir)
     # FIXME -- change dfs.client.buffer.dir
     envs['HADOOP_ROOT_LOGGER'] = "INFO,DRFA"
