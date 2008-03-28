@@ -84,6 +84,9 @@ Trunk (unreleased changes)
     HADOOP-1622.  Allow multiple jar files for map reduce.
     (Mahadev Konar via dhruba)
 
+    HADOOP-2055. Allows users to set PathFilter on the FileInputFormat.
+    (Alejandro Abdelnur via ddas)
+
   IMPROVEMENTS
 
     HADOOP-2655. Copy on write for data and metadata files in the 
