@@ -51,6 +51,10 @@ Release 0.16.2 - Unreleased
 
     HADOOP-3107. Fix NPE when fsck invokes getListings. (dhruba)
 
+    HADOOP-3105. Fix TestMultiThreadedMapRunner to use interfaces
+    available to 0.16. Clearly, this fix was not checked into trunk.
+    (Alejandro Abdelnur and Mukund Madhugiri via cdouglas)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

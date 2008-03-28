@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred.lib;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.*;
@@ -61,7 +62,7 @@ public class TestMultithreadedMapRunner extends HadoopTestCase {
     JobConf conf = createJobConf();
     FileSystem fs = FileSystem.get(conf);
 
-    fs.delete(outDir, true);
+    FileUtil.fullyDelete(fs, outDir);
     if (!fs.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
