@@ -136,6 +136,11 @@ public class TestMultithreadedMapRunner extends HadoopTestCase {
         throw new RuntimeException();
       }
       output.collect(key, value);
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException ex) {
+        throw new RuntimeException(ex);
+      }
     }
 
 

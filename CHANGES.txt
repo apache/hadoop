@@ -465,6 +465,10 @@ Release 0.16.2 - Unreleased
     HADOOP-3103. [HOD] Hadoop.tmp.dir should not be set to cluster 
     directory. (Vinod Kumar Vavilapalli via ddas).
 
+    HADOOP-3104. Limit MultithreadedMapRunner to have a fixed length queue
+    between the RecordReader and the map threads. (Alejandro Abdelnur via
+    omalley)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
