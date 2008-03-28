@@ -411,7 +411,7 @@ Trunk (unreleased changes)
 
     HADOOP-3114. Fix TestDFSShell on Windows. (Lohit Vijaya Renu via cdouglas)
 
-Release 0.16.2 - Unreleased
+Release 0.16.2 - 2008-04-02
 
   BUG FIXES
 
