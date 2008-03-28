@@ -851,6 +851,8 @@ Release 0.16.0 - 2008-02-07
 
     HADOOP-3108. Fix NPE in setPermission and setOwner. (shv)
 
+    HADOOP-3108. Correction to the previous patch. (shv)
+
 Release 0.15.3 - 2008-01-18
 
   BUG FIXES
