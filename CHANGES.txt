@@ -486,6 +486,9 @@ Release 0.16.1 - 2008-03-13
 
     HADOOP-2911. Make the information printed by the HOD allocate and
     info commands less verbose and clearer. (Vinod Kumar via nigel)
+
+    HADOOP-3098. Allow more characters in user and group names while
+    using -chown and -chgrp commands. (rangadi)
     
   BUG FIXES
 

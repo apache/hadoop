@@ -1406,8 +1406,14 @@ public class FsShell extends Configured implements Tool {
       "\t-R\tmodifies the files recursively. This is the only option\n" +
       "\t\tcurrently supported.\n\n" +
       "\t\tIf only owner or group is specified then only owner or\n" +
-      "\t\tgroup is modified. The owner and group names can only\n" + 
-      "\t\tcontain digits and alphabet. These names are case sensitive.\n";
+      "\t\tgroup is modified.\n\n" +
+      "\t\tThe owner and group names may only cosists of digits, alphabet,\n"+
+      "\t\tand any of '-_.@/' i.e. [-_.@/a-zA-Z0-9]. The names are case\n" +
+      "\t\tsensitive.\n\n" +
+      "\t\tWARNING: Avoid using '.' to separate user name and group though\n" +
+      "\t\tLinux allows it. If user names have dots in them and you are\n" +
+      "\t\tusing local file system, you might see surprising results since\n" +
+      "\t\tshell command 'chown' is used for local files.\n";
     
     String chgrp = FsShellPermissions.CHGRP_USAGE + "\n" +
       "\t\tThis is equivalent to -chown ... :GROUP ...\n";

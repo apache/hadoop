@@ -717,7 +717,7 @@ public class TestDFSShell extends TestCase {
   public void testFilePermissions() throws IOException {
     Configuration conf = new Configuration();
     
-    //test chnmod on local fs
+    //test chmod on local fs
     FileSystem fs = FileSystem.getLocal(conf);
     testChmod(conf, fs, 
               (new File(TEST_ROOT_DIR, "chmodTest")).getAbsolutePath());
@@ -759,6 +759,20 @@ public class TestDFSShell extends TestCase {
 
     runCmd(shell, "-chown", "-R", "hadoop:toys", "unknownFile", "/");
     confirmOwner("hadoop", "toys", fs, root, parent, path);
+    
+    // Test different characters in names
+
+    runCmd(shell, "-chown", "hdfs.user", file);
+    confirmOwner("hdfs.user", null, fs, path);
+    
+    runCmd(shell, "-chown", "_Hdfs.User-10:_hadoop.users--", file);
+    confirmOwner("_Hdfs.User-10", "_hadoop.users--", fs, path);
+    
+    runCmd(shell, "-chown", "hdfs/hadoop-core@apache.org:asf-projects", file);
+    confirmOwner("hdfs/hadoop-core@apache.org", "asf-projects", fs, path);
+    
+    runCmd(shell, "-chgrp", "hadoop-core@apache.org/100", file);
+    confirmOwner(null, "hadoop-core@apache.org/100", fs, path);
     
     cluster.shutdown();
   }
