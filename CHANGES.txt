@@ -159,6 +159,9 @@ Trunk (unreleased changes)
     HADOOP-3091. Modify FsShell command -put to accept multiple sources.
     (Lohit Vijaya Renu via cdouglas)
 
+    HADOOP-3092. Show counter values from job -status command.
+    (Tom White via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing

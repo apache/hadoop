@@ -1283,6 +1283,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         } else {
           System.out.println();
           System.out.println(job);
+          System.out.println(job.getCounters());
           exitCode = 0;
         }
       } else if (killJob) {
