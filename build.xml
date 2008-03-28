@@ -1163,5 +1163,19 @@
     <arg value="${jira.passwd}"/>
   </exec>
 </target>
+	
+  <target name="eclipse-files" depends="init"
+          description="Generate files for Eclipse">
+    <pathconvert property="eclipse.project">
+      <path path="${basedir}"/>
+      <regexpmapper from="^.*/([^/]+)$$" to="\1"/>
+    </pathconvert>
+    <copy todir=".">
+      <fileset dir=".eclipse.templates"/>
+      <filterset>
+        <filter token="PROJECT" value="${eclipse.project}"/>
+      </filterset>
+    </copy>
+  </target>
 
 </project>

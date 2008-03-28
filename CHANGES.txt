@@ -162,6 +162,8 @@ Trunk (unreleased changes)
     HADOOP-3092. Show counter values from job -status command.
     (Tom White via ddas)
 
+    HADOOP-1228.  Ant task to generate Eclipse project files.  (tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing
