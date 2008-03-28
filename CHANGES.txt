@@ -55,6 +55,8 @@ Release 0.16.2 - Unreleased
     available to 0.16. Clearly, this fix was not checked into trunk.
     (Alejandro Abdelnur and Mukund Madhugiri via cdouglas)
 
+    HADOOP-3111. Remove HBase from Hadoop contrib
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

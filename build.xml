@@ -677,7 +677,6 @@
 
     	<packageset dir="src/contrib/streaming/src/java"/>
     	<packageset dir="src/contrib/data_join/src/java"/>
-    	<packageset dir="src/contrib/hbase/src/java"/>
 
         <link href="${javadoc.link.java}"/>
 
@@ -694,7 +693,6 @@
 
        <group title="contrib: Streaming" packages="org.apache.hadoop.streaming*"/>
        <group title="contrib: DataJoin" packages="org.apache.hadoop.contrib.utils.join*"/>
-       <group title="contrib: HBase" packages="org.apache.hadoop.hbase*"/>
 
     </javadoc>
   </target>	
