@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.util;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.InetAddress;
@@ -276,6 +277,142 @@ public class StringUtils {
     return values.toArray(new String[values.size()]);
   }
 
+  final public static char COMMA = ',';
+  final public static String COMMA_STR = ",";
+  final public static char ESCAPE_CHAR = '\\';
+  
+  /**
+   * Split a string using the default separator
+   * @param str a string that may have escaped separator
+   * @return an array of strings
+   */
+  public static String[] split(String str) {
+    return split(str, ESCAPE_CHAR, COMMA);
+  }
+  
+  /**
+   * Split a string using the given separator
+   * @param str a string that may have escaped separator
+   * @param escapeChar a char that be used to escape the separator
+   * @param separator a separator char
+   * @return an array of strings
+   */
+  public static String[] split(
+      String str, char escapeChar, char separator) {
+    if (str==null) {
+      return null;
+    }
+    ArrayList<String> strList = new ArrayList<String>();
+    StringBuilder split = new StringBuilder();
+    int numPreEscapes = 0;
+    for (int i=0; i<str.length(); i++) {
+      char curChar = str.charAt(i);
+      if (numPreEscapes==0 && curChar == separator) { // separator 
+        strList.add(split.toString());
+        split.setLength(0); // clear the split
+      } else {
+        split.append(curChar);
+        numPreEscapes = (curChar == escapeChar)?(++numPreEscapes)%2:0;
+      }
+    }
+    strList.add(split.toString());
+    // remove trailing empty split(s)
+    int last = strList.size(); // last split
+    while (--last>=0 && "".equals(strList.get(last))) {
+      strList.remove(last);
+    }
+    return strList.toArray(new String[strList.size()]);
+  }
+  
+  /**
+   * Escape commas in the string using the default escape char
+   * @param str a string
+   * @return an escaped string
+   */
+  public static String escapeString(String str) {
+    return escapeString(str, ESCAPE_CHAR, COMMA);
+  }
+  
+  /**
+   * Escape <code>charToEscape</code> in the string 
+   * with the escape char <code>escapeChar</code>
+   * 
+   * @param str string
+   * @param escapeChar escape char
+   * @param charToEscape the char to be escaped
+   * @return an escaped string
+   */
+  public static String escapeString(
+      String str, char escapeChar, char charToEscape) {
+    if (str == null) {
+      return null;
+    }
+    StringBuilder result = new StringBuilder();
+    for (int i=0; i<str.length(); i++) {
+      char curChar = str.charAt(i);
+      if (curChar == escapeChar || curChar == charToEscape) {
+        // special char
+        result.append(escapeChar);
+      }
+      result.append(curChar);
+    }
+    return result.toString();
+  }
+  
+  /**
+   * Unescape commas in the string using the default escape char
+   * @param str a string
+   * @return an unescaped string
+   */
+  public static String unEscapeString(String str) {
+    return unEscapeString(str, ESCAPE_CHAR, COMMA);
+  }
+  
+  /**
+   * Unescape <code>charToEscape</code> in the string 
+   * with the escape char <code>escapeChar</code>
+   * 
+   * @param str string
+   * @param escapeChar escape char
+   * @param charToEscape the escaped char
+   * @return an unescaped string
+   */
+  public static String unEscapeString(
+      String str, char escapeChar, char charToEscape) {
+    if (str == null) {
+      return null;
+    }
+    StringBuilder result = new StringBuilder(str.length());
+    boolean hasPreEscape = false;
+    for (int i=0; i<str.length(); i++) {
+      char curChar = str.charAt(i);
+      if (hasPreEscape) {
+        if (curChar != escapeChar && curChar != charToEscape) {
+          // no special char
+          throw new IllegalArgumentException("Illegal escaped string " + str + 
+              " unescaped " + escapeChar + " at " + (i-1));
+        } 
+        // otherwise discard the escape char
+        result.append(curChar);
+        hasPreEscape = false;
+      } else {
+        if (curChar == charToEscape) {
+          throw new IllegalArgumentException("Illegal escaped string " + str + 
+              " unescaped " + charToEscape + " at " + i);
+        } else if (curChar == escapeChar) {
+          hasPreEscape = true;
+        } else {
+          result.append(curChar);
+        }
+      }
+    }
+    if (hasPreEscape ) {
+      throw new IllegalArgumentException("Illegal escaped string " + str + 
+          ", not expecting " + charToEscape + " in the end." );
+    }
+    return result.toString();
+  }
+  
   /**
    * Return hostname without throwing exception.
    * @return hostname

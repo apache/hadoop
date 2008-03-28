@@ -45,6 +45,7 @@ import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapred.lib.HashPartitioner;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 
 /** 
@@ -229,7 +230,7 @@ public class JobConf extends Configuration {
    */
   public void setInputPath(Path dir) {
     dir = new Path(getWorkingDirectory(), dir);
-    set("mapred.input.dir", dir.toString());
+    set("mapred.input.dir", StringUtils.escapeString(dir.toString()));
   }
 
   /**
@@ -240,8 +241,10 @@ public class JobConf extends Configuration {
    */
   public void addInputPath(Path dir) {
     dir = new Path(getWorkingDirectory(), dir);
+    String dirStr = StringUtils.escapeString(dir.toString());
     String dirs = get("mapred.input.dir");
-    set("mapred.input.dir", dirs == null ? dir.toString() : dirs + "," + dir);
+    set("mapred.input.dir", dirs == null ? dirStr :
+      dirs + StringUtils.COMMA_STR + dirStr);
   }
 
   /**
@@ -251,10 +254,10 @@ public class JobConf extends Configuration {
    */
   public Path[] getInputPaths() {
     String dirs = get("mapred.input.dir", "");
-    ArrayList list = Collections.list(new StringTokenizer(dirs, ","));
-    Path[] result = new Path[list.size()];
-    for (int i = 0; i < list.size(); i++) {
-      result[i] = new Path((String)list.get(i));
+    String [] list = StringUtils.split(dirs);
+    Path[] result = new Path[list.length];
+    for (int i = 0; i < list.length; i++) {
+      result[i] = new Path(StringUtils.unEscapeString(list[i]));
     }
     return result;
   }
