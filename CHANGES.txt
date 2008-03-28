@@ -409,6 +409,8 @@ Trunk (unreleased changes)
     HADOOP-2997. Adds test for non-writable serialier. Also fixes a problem 
     introduced by HADOOP-2399. (Tom White via ddas)
 
+    HADOOP-3114. Fix TestDFSShell on Windows. (Lohit Vijaya Renu via cdouglas)
+
 Release 0.16.2 - Unreleased
 
   BUG FIXES

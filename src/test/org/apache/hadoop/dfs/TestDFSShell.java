@@ -211,8 +211,8 @@ public class TestDFSShell extends TestCase {
       srcs[0] = new Path(f1.getPath());
       srcs[1] = new Path(f2.getPath());
       dfs.moveFromLocalFile(srcs, destmultiple2);
-      assertFalse(dfs.exists(srcs[0]));
-      assertFalse(dfs.exists(srcs[1]));
+      assertFalse(f1.exists());
+      assertFalse(f2.exists());
       srcs[0] = new Path(destmultiple2, "f1");
       srcs[1] = new Path(destmultiple2, "f2");
       assertTrue(dfs.exists(srcs[0]));

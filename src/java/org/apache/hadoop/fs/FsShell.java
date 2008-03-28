@@ -1610,7 +1610,7 @@ public class FsShell extends Configured implements Tool {
     } else if ("-put".equals(cmd) || "-copyFromLocal".equals(cmd) ||
                "-moveFromLocal".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
-                         " [" + cmd + " <localsrc> <dst>]");
+                         " [" + cmd + " <localsrc> ... <dst>]");
     } else if ("-get".equals(cmd)) {
       System.err.println("Usage: java FsShell [" + GET_SHORT_USAGE + "]"); 
     } else if ("-copyToLocal".equals(cmd)) {
