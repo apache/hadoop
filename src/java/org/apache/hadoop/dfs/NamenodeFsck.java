@@ -144,11 +144,14 @@ public class NamenodeFsck {
     String path = file.getPath().toString();
 
     if (file.isDir()) {
+      DFSFileInfo[] files = nn.namesystem.dir.getListing(path);
+      if (files == null) {
+        return;
+      }
       if (showFiles) {
         out.println(path + " <dir>");
       }
       res.totalDirs++;
-      DFSFileInfo[] files = nn.namesystem.dir.getListing(path);
       for (int i = 0; i < files.length; i++) {
         check(files[i], res);
       }
