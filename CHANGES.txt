@@ -64,6 +64,9 @@ Release 0.16.2 - 2008-04-02
     between the RecordReader and the map threads. (Alejandro Abdelnur via
     omalley)
 
+    HADOOP-2833. Do not use "Dr. Who" as the default user in JobClient.
+    A valid user name is required. (Tsz Wo (Nicholas), SZE via rangadi)
+
 Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES

@@ -251,6 +251,12 @@ public class UnixUserGroupInformation extends UserGroupInformation {
     }
   }
 
+  /** Equivalent to login(conf, false). */
+  public static UnixUserGroupInformation login(Configuration conf)
+    throws LoginException {
+    return login(conf, false);
+  }
+  
   /** Get a user's name & its group names from the given configuration; 
    * If it is not defined in the configuration, get the current user's
    * information from Unix.
@@ -258,16 +264,20 @@ public class UnixUserGroupInformation extends UserGroupInformation {
    * the UGI map.
    * 
    *  @param conf either a job configuration or client's configuration
+   *  @param save saving it to conf?
    *  @return UnixUserGroupInformation a user/group information
    *  @exception LoginException if not able to get the user/group information
    */
-  public static UnixUserGroupInformation login(Configuration conf) 
-   throws LoginException {
+  public static UnixUserGroupInformation login(Configuration conf, boolean save
+      ) throws LoginException {
     UnixUserGroupInformation ugi = readFromConf(conf, UGI_PROPERTY_NAME);
     if (ugi == null) {
       ugi = login();
       LOG.debug("Unix Login: " + ugi);
-    } 
+      if (save) {
+        saveToConf(conf, UGI_PROPERTY_NAME, ugi);
+      }
+    }
     return ugi;
   }
   
