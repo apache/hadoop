@@ -105,9 +105,6 @@ Trunk (unreleased changes)
     HADOOP-910. Enables Reduces to do merges for the on-disk map output files 
     in parallel with their copying. (Amar Kamat via ddas)
 
-    HADOOP-2833. Do not use "Dr. Who" as the default user in JobClient. 
-    A valid user name is required. (Tsz Wo (Nicholas), SZE via rangadi)
-
     HADOOP-730. Use rename rather than copy for local renames. (cdouglas)
 
     HADOOP-2810. Updated the Hadoop Core logo. (nigel)
@@ -468,6 +465,9 @@ Release 0.16.2 - 2008-04-02
     HADOOP-3104. Limit MultithreadedMapRunner to have a fixed length queue
     between the RecordReader and the map threads. (Alejandro Abdelnur via
     omalley)
+
+    HADOOP-2833. Do not use "Dr. Who" as the default user in JobClient. 
+    A valid user name is required. (Tsz Wo (Nicholas), SZE via rangadi)
 
 Release 0.16.1 - 2008-03-13
 
