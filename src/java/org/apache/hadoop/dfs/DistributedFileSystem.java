@@ -363,6 +363,7 @@ public class DistributedFileSystem extends FileSystem {
       if(FileNotFoundException.class.getName().equals(re.getClassName())) {
         throw new FileNotFoundException("File does not exist: " + p);
       }
+      throw re;
     }
   }
 
@@ -378,6 +379,7 @@ public class DistributedFileSystem extends FileSystem {
       if(FileNotFoundException.class.getName().equals(re.getClassName())) {
         throw new FileNotFoundException("File does not exist: " + p);
       }
+      throw re;
     }
   }
 }
