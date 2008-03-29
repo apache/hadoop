@@ -123,15 +123,6 @@ public abstract class Server {
     return (addr == null) ? null : addr.getHostAddress();
   }
 
-  /** Returns {@link UserGroupInformation} associated with current RPC.
-   *  returns null if user information is not available.
-   *  @deprecated should use {@link UserGroupInformation#getCurrentUGI()}
-   */
-  @Deprecated
-  public static UserGroupInformation getUserInfo() {
-    return UserGroupInformation.getCurrentUGI();
-  }
-  
   private String bindAddress; 
   private int port;                               // port we listen on
   private int handlerCount;                       // number of handler threads

@@ -59,6 +59,9 @@ Trunk (unreleased changes)
     HADOOP-3060. Removes one unused constructor argument from MiniMRCluster.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-2854. Remove deprecated o.a.h.ipc.Server::getUserInfo().
+    (lohit vijayarenu via cdouglas)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)
