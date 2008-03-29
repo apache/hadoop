@@ -411,6 +411,9 @@ Trunk (unreleased changes)
 
     HADOOP-3114. Fix TestDFSShell on Windows. (Lohit Vijaya Renu via cdouglas)
 
+    HADOOP-3128. Throw RemoteException in setPermissions and setOwner of 
+    DistributedFileSystem.  (shv via nigel)
+
 Release 0.16.2 - 2008-04-02
 
   BUG FIXES
