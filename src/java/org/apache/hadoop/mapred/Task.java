@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -476,12 +477,12 @@ abstract class Task implements Writable, Configurable {
       }
       LOG.debug("Moved " + taskOutput + " to " + finalOutputPath);
     } else if(fs.isDirectory(taskOutput)) {
-      Path[] paths = fs.listPaths(taskOutput);
+      FileStatus[] paths = fs.listStatus(taskOutput);
       Path finalOutputPath = getFinalPath(jobOutputDir, taskOutput);
       fs.mkdirs(finalOutputPath);
       if (paths != null) {
-        for (Path path : paths) {
-          moveTaskOutputs(fs, jobOutputDir, path);
+        for (FileStatus path : paths) {
+          moveTaskOutputs(fs, jobOutputDir, path.getPath());
         }
       }
     }

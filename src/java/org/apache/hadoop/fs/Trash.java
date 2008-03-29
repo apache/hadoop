@@ -142,13 +142,13 @@ public class Trash extends Configured {
 
   /** Delete old checkpoints. */
   public void expunge() throws IOException {
-    Path[] dirs = fs.listPaths(trash);            // scan trash sub-directories
+    FileStatus[] dirs = fs.listStatus(trash);            // scan trash sub-directories
     if( dirs == null){
       return;
     }
     long now = System.currentTimeMillis();
     for (int i = 0; i < dirs.length; i++) {
-      Path path = dirs[i];
+      Path path = dirs[i].getPath();
       String dir = path.toUri().getPath();
       String name = path.getName();
       if (name.equals(CURRENT.getName()))         // skip current

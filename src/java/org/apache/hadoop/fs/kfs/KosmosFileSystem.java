@@ -211,44 +211,7 @@ public class KosmosFileSystem extends FileSystem {
                                   kfsImpl.getModificationTime(srep), path);
         }
     }
-
     
-    public Path[] listPaths(Path path) throws IOException {
-	Path absolute = makeAbsolute(path);
-        String srep = absolute.toUri().getPath();
-
-	if (kfsImpl.isFile(srep))
-	    return new Path[] { path } ;
-
-	String[] entries = kfsImpl.readdir(srep);
-
-        if (entries == null)
-            return null;
-
-        // kfsreaddir() returns "." and ".."; strip them before
-        // passing back to hadoop fs.
-	int numEntries = 0;
-	for (int i = 0; i < entries.length; i++) {
-	    if ((entries[i].compareTo(".") == 0) || (entries[i].compareTo("..") == 0))
-		continue;
-	    numEntries++;
-	}
-	if (numEntries == 0) {
-	    return null;
-        }
-	Path[] pathEntries = new Path[numEntries];
-	int j = 0;
-	for (int i = 0; i < entries.length; i++) {
-	    if ((entries[i].compareTo(".") == 0) || (entries[i].compareTo("..") == 0))
-		continue;
-
-	    pathEntries[j] = new Path(path, entries[i]);
-	    j++;
-	}
-	return pathEntries;
-
-    }
-
     public FSDataOutputStream create(Path file, FsPermission permission,
                                      boolean overwrite, int bufferSize,
 				     short replication, long blockSize, Progressable progress)
@@ -301,7 +264,7 @@ public class KosmosFileSystem extends FileSystem {
       if (kfsImpl.isFile(srep))
         return kfsImpl.remove(srep) == 0;
 
-      Path[] dirEntries = listPaths(absolute);
+      FileStatus[] dirEntries = listStatus(absolute);
       if ((!recursive) && (dirEntries != null) && 
             (dirEntries.length != 0)) {
         throw new IOException("Directory " + path.toString() + 
@@ -309,7 +272,7 @@ public class KosmosFileSystem extends FileSystem {
       }
       if (dirEntries != null) {
         for (int i = 0; i < dirEntries.length; i++) {
-          delete(new Path(absolute, dirEntries[i]), recursive);
+          delete(new Path(absolute, dirEntries[i].getPath()), recursive);
         }
       }
       return kfsImpl.rmdir(srep) == 0;

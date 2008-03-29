@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
@@ -53,7 +54,7 @@ public class BigMapOutput extends Configured implements Tool {
   throws IOException {
     // Check if the input path exists and is non-empty
     if (fs.exists(dir)) {
-      Path[] list = fs.listPaths(dir);
+      FileStatus[] list = fs.listStatus(dir);
       if (list != null && list.length > 0) {
         throw new IOException("Input path: " + dir + " already exists... ");
       }

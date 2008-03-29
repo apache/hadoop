@@ -147,31 +147,6 @@ public class TestFileStatus extends TestCase {
       // of the two files
       assertTrue(dir + " size should be " + (blockSize/2), 
                  blockSize/2 == fs.getContentLength(dir));
-
-      // The following are test cases for listPaths which is a deprecated
-      // API. These tests shoudl go away when the API is removed.
-
-      // issue a listPaths on directory /test/mkdirs and verify that the
-      // size of the files inside it are valid
-      Path[] files = fs.listPaths(dir);
-      assertTrue(dir + " should have two files", files.length == 2);
-      for (int i = 0; i < files.length; i++) {
-        DfsPath dfspath = (DfsPath) files[i];
-        assertTrue(files[i] + " should be of size " + (blockSize/4), 
-                   blockSize/4 == dfspath.getContentsLength());
-        assertTrue(files[i] + " should be of size " + (blockSize/4), 
-                   blockSize/4 == fs.getContentLength(dfspath));
-      }
-
-      // issue a listPath on directory /test and verify that the
-      // size returned for /test/mkdirs directory is correct.
-      Path[] dirs = fs.listPaths(parentDir);
-      assertTrue(parentDir + " should have one sub directory", 
-                 dirs.length == 1);
-      DfsPath dfsdir = (DfsPath) dirs[0];
-      assertTrue(dirs[0] + " should be of size " + blockSize/2,
-                 fs.getContentLength(dfsdir) == blockSize/2);
-      
     } finally {
       fs.close();
       cluster.shutdown();

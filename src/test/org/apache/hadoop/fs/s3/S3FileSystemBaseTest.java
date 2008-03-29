@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileStatus;
 
 public abstract class S3FileSystemBaseTest extends TestCase {
   
@@ -102,32 +103,32 @@ public abstract class S3FileSystemBaseTest extends TestCase {
   public void testListPathsRaw() throws Exception {
     Path[] testDirs = { new Path("/test/hadoop/a"), new Path("/test/hadoop/b"),
                         new Path("/test/hadoop/c/1"), };
-    assertNull(s3FileSystem.listPaths(testDirs[0]));
+    assertNull(s3FileSystem.listStatus(testDirs[0]));
 
     for (Path path : testDirs) {
       assertTrue(s3FileSystem.mkdirs(path));
     }
 
-    Path[] paths = s3FileSystem.listPaths(new Path("/"));
+    FileStatus[] paths = s3FileSystem.listStatus(new Path("/"));
 
     assertEquals(1, paths.length);
-    assertEquals(new Path("/test").makeQualified(s3FileSystem), paths[0]);
+    assertEquals(new Path("/test").makeQualified(s3FileSystem), paths[0].getPath());
 
-    paths = s3FileSystem.listPaths(new Path("/test"));
+    paths = s3FileSystem.listStatus(new Path("/test"));
     assertEquals(1, paths.length);
     assertEquals(new Path("/test/hadoop").makeQualified(s3FileSystem),
-        paths[0]);
+        paths[0].getPath());
 
-    paths = s3FileSystem.listPaths(new Path("/test/hadoop"));
+    paths = s3FileSystem.listStatus(new Path("/test/hadoop"));
     assertEquals(3, paths.length);
     assertEquals(new Path("/test/hadoop/a").makeQualified(s3FileSystem),
-        paths[0]);
+        paths[0].getPath());
     assertEquals(new Path("/test/hadoop/b").makeQualified(s3FileSystem),
-        paths[1]);
+        paths[1].getPath());
     assertEquals(new Path("/test/hadoop/c").makeQualified(s3FileSystem),
-        paths[2]);
+        paths[2].getPath());
 
-    paths = s3FileSystem.listPaths(new Path("/test/hadoop/a"));
+    paths = s3FileSystem.listStatus(new Path("/test/hadoop/a"));
     assertEquals(0, paths.length);
   }
 

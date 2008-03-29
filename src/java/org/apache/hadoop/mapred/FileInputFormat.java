@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -154,7 +155,9 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
     for (Path p: dirs) {
       FileSystem fs = p.getFileSystem(job); 
       Path[] matches =
-        fs.listPaths(fs.globPaths(p, inputFilter), inputFilter);
+        FileUtil.stat2Paths(fs.listStatus(fs.globPaths(p, inputFilter), 
+                            inputFilter));
+
       for (Path match: matches) {
         result.add(fs.makeQualified(match));
       }
@@ -176,7 +179,9 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
       if (fs.exists(p)) {
         // make sure all paths are files to avoid exception
         // while generating splits
-        for (Path subPath : fs.listPaths(p, hiddenFileFilter)) {
+        Path[] subPaths = FileUtil.stat2Paths(fs.listStatus(p, 
+                                              hiddenFileFilter));
+        for (Path subPath : subPaths) {
           FileSystem subFS = subPath.getFileSystem(job); 
           if (!subFS.exists(subPath)) {
             result.add(new IOException(

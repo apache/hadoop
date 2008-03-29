@@ -62,6 +62,9 @@ Trunk (unreleased changes)
     HADOOP-2854. Remove deprecated o.a.h.ipc.Server::getUserInfo().
     (lohit vijayarenu via cdouglas)
 
+    HADOOP-2563. Remove deprecated FileSystem::listPaths.
+    (lohit vijayarenu via cdouglas)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)

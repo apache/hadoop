@@ -453,28 +453,6 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     return fs.listStatus(f, DEFAULT_FILTER);
   }
   
-  /** 
-   * Filter raw files in the given pathes using the default checksum filter. 
-   * @param files a list of paths
-   * @return a list of files under the source paths
-   * @exception IOException
-   */
-  @Deprecated
-  public Path[] listPaths(Path[] files) throws IOException {
-    return fs.listPaths(files, DEFAULT_FILTER);
-  }
-
-  /** 
-   * Filter raw files in the given path using the default checksum filter. 
-   * @param f source path
-   * @return a list of files under the source path
-   * @exception IOException
-   */
-  @Deprecated
-  public Path[] listPaths(Path f) throws IOException {
-    return fs.listPaths(f, DEFAULT_FILTER);
-  }
-
   @Override
   public boolean mkdirs(Path f) throws IOException {
     return fs.mkdirs(f);
@@ -524,9 +502,10 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
         fs.copyToLocalFile(checksumFile, dst);
       }
     } else {
-      Path[] srcs = listPaths(src);
-      for (Path srcFile : srcs) {
-        copyToLocalFile(srcFile, new Path(dst, srcFile.getName()), copyCrc);
+      FileStatus[] srcs = listStatus(src);
+      for (FileStatus srcFile : srcs) {
+        copyToLocalFile(srcFile.getPath(), 
+                        new Path(dst, srcFile.getPath().getName()), copyCrc);
       }
     }
   }

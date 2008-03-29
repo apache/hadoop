@@ -116,11 +116,11 @@ public class DistributedFSCheck extends TestCase {
       return;
     }
     
-    Path children[] = fs.listPaths(rootFile);
+    FileStatus children[] = fs.listStatus(rootFile);
     if (children == null)
       throw new IOException("Could not get listing for " + rootFile);
     for (int i = 0; i < children.length; i++)
-      listSubtree(children[i], writer);
+      listSubtree(children[i].getPath(), writer);
   }
 
   /**

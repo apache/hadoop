@@ -97,20 +97,19 @@ public class CompletedJobStatusStore implements Runnable {
   private void deleteJobStatusDirs() {
     try {
       long currentTime = System.currentTimeMillis();
-      Path[] jobInfoFiles = fs.listPaths(
+      FileStatus[] jobInfoFiles = fs.listStatus(
               new Path[]{new Path(jobInfoDir)});
 
       //noinspection ForLoopReplaceableByForEach
-      for (Path jobInfo : jobInfoFiles) {
+      for (FileStatus jobInfo : jobInfoFiles) {
         try {
-          FileStatus status = fs.getFileStatus(jobInfo);
-          if ((currentTime - status.getModificationTime()) > retainTime) {
-            fs.delete(jobInfo, true);
+          if ((currentTime - jobInfo.getModificationTime()) > retainTime) {
+            fs.delete(jobInfo.getPath(), true);
           }
         }
         catch (IOException ie) {
           LOG.warn("Could not do housekeeping for [ " +
-                  jobInfo + "] job info : " + ie.getMessage(), ie);
+                  jobInfo.getPath() + "] job info : " + ie.getMessage(), ie);
         }
       }
     }

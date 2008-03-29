@@ -319,9 +319,9 @@ public class SortValidator extends Configured implements Tool {
       jobConf.setJobName("sortvalidate-recordstats-checker");
 
       int noSortReduceTasks = 
-        fs.listPaths(sortOutput, sortPathsFilter).length;
+        fs.listStatus(sortOutput, sortPathsFilter).length;
       jobConf.setInt("sortvalidate.sort.reduce.tasks", noSortReduceTasks);
-      int noSortInputpaths = fs.listPaths(sortInput).length;
+      int noSortInputpaths = fs.listStatus(sortInput).length;
 
       jobConf.setInputFormat(NonSplitableSequenceFileInputFormat.class);
       jobConf.setOutputFormat(SequenceFileOutputFormat.class);

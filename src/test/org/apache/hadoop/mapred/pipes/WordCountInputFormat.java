@@ -54,8 +54,8 @@ public class WordCountInputFormat
     ArrayList<InputSplit> result = new ArrayList<InputSplit>();
     FileSystem local = FileSystem.getLocal(conf);
     for(Path dir: conf.getInputPaths()) {
-      for(Path file: local.listPaths(dir)) {
-        result.add(new WordCountInputSplit(file));
+      for(FileStatus file: local.listStatus(dir)) {
+        result.add(new WordCountInputSplit(file.getPath()));
       }
     }
     return result.toArray(new InputSplit[result.size()]);

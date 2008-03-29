@@ -36,7 +36,8 @@
       out.println("Null file system. May be namenode is in safemode!");
       return;
     }
-    Path[] jobFiles = fs.listPaths(new Path(historyLogDir), jobLogFileFilter);
+    Path[] jobFiles = FileUtil.stat2Paths(fs.listStatus(new Path(historyLogDir),
+                                          jobLogFileFilter));
     if (null == jobFiles )  {
       out.println("NULL files !!!"); 
       return ; 

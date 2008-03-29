@@ -29,6 +29,7 @@ import java.util.jar.JarOutputStream;
 import java.util.zip.ZipOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.dfs.MiniDFSCluster;
@@ -132,7 +133,8 @@ public class TestMultipleArchiveFiles extends TestStreaming
         throw new Exception("Job Failed");
       }
       StringBuffer output = new StringBuffer(256);
-      Path[] fileList = fileSys.listPaths(new Path(OUTPUT_DIR));
+      Path[] fileList = FileUtil.stat2Paths(fileSys.listStatus(
+                                            new Path(OUTPUT_DIR)));
       for (int i = 0; i < fileList.length; i++){
         BufferedReader bread =
           new BufferedReader(new InputStreamReader(fileSys.open(fileList[i])));

@@ -54,7 +54,7 @@ public class KFSEmulationImpl implements IFSImpl {
     // as part of the emulation, KFS adds ./.. as directory entries
     // when doing a directory listing.
     public String[] readdir(String path) throws IOException {
-        Path[] p = localFS.listPaths(new Path(path));
+        FileStatus[] p = localFS.listStatus(new Path(path));
         String[] entries = null;
 
         if (p == null) {
@@ -73,11 +73,11 @@ public class KFSEmulationImpl implements IFSImpl {
             entries[0] = new String(".");
             entries[1] = new String("..");
             for (int i = 0; i < p.length; i++)
-                entries[i+2] = p[i].toString();
+                entries[i+2] = p[i].getPath().toString();
         } else {
             entries = new String[p.length];
             for (int i = 0; i < p.length; i++)
-                entries[i] = p[i].toString();
+                entries[i] = p[i].getPath().toString();
         }
         return entries;
     }

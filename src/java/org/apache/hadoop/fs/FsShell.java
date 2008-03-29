@@ -275,8 +275,9 @@ public class FsShell extends Configured implements Tool {
     } else {
       // once FileUtil.copy() supports tmp file, we don't need to mkdirs().
       dst.mkdirs();
-      for(Path path : srcFS.listPaths(src)) {
-        copyToLocal(srcFS, path, new File(dst, path.getName()), copyCrc);
+      for(FileStatus path : srcFS.listStatus(src)) {
+        copyToLocal(srcFS, path.getPath(), 
+                    new File(dst, path.getPath().getName()), copyCrc);
       }
     }
   }
@@ -566,17 +567,17 @@ public class FsShell extends Configured implements Tool {
       setFileReplication(src, srcFs, newRep, waitingList);
       return;
     }
-    Path items[] = srcFs.listPaths(src);
+    FileStatus items[] = srcFs.listStatus(src);
     if (items == null) {
       throw new IOException("Could not get listing for " + src);
     } else {
 
       for (int i = 0; i < items.length; i++) {
-        Path cur = items[i];
-        if (!srcFs.getFileStatus(cur).isDir()) {
-          setFileReplication(cur, srcFs, newRep, waitingList);
+        if (!items[i].isDir()) {
+          setFileReplication(items[i].getPath(), srcFs, newRep, waitingList);
         } else if (recursive) {
-          setReplication(newRep, srcFs, cur, recursive, waitingList);
+          setReplication(newRep, srcFs, items[i].getPath(), recursive, 
+                         waitingList);
         }
       }
     }
@@ -667,7 +668,7 @@ public class FsShell extends Configured implements Tool {
   void du(String src) throws IOException {
     Path srcPath = new Path(src);
     FileSystem srcFs = srcPath.getFileSystem(getConf());
-    Path items[] = srcFs.listPaths(srcFs.globPaths(srcPath));
+    FileStatus items[] = srcFs.listStatus(srcFs.globPaths(srcPath));
     if ((items == null) || ((items.length == 0) && 
         (!srcFs.exists(srcPath)))){
       throw new FileNotFoundException("Cannot access " + src
@@ -675,8 +676,7 @@ public class FsShell extends Configured implements Tool {
     } else {
       System.out.println("Found " + items.length + " items");
       for (int i = 0; i < items.length; i++) {
-        Path cur = items[i];
-        System.out.println(cur + "\t" + srcFs.getContentLength(cur));
+        System.out.println(items[i].getPath() + "\t" + items[i].getLen());
       }
     }
   }
@@ -1157,7 +1157,7 @@ public class FsShell extends Configured implements Tool {
     public abstract void run(FileStatus file, FileSystem fs) throws IOException;
   }
   
-  ///helper for runCmdHandler*() returns listPaths()
+  ///helper for runCmdHandler*() returns listStatus()
   private static FileStatus[] cmdHandlerListStatus(CmdHandler handler, 
                                                    FileSystem srcFs,
                                                    Path path) {

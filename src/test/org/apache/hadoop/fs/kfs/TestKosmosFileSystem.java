@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 
@@ -70,7 +71,7 @@ public class TestKosmosFileSystem extends TestCase {
         assertFalse(kosmosFileSystem.exists(new Path("test1")));
         assertFalse(kosmosFileSystem.isDirectory(new Path("test/dir.2")));
 
-        Path[] p = kosmosFileSystem.listPaths(baseDir);
+        FileStatus[] p = kosmosFileSystem.listStatus(baseDir);
         assertEquals(p.length, 1);
 
         kosmosFileSystem.delete(baseDir, true);
@@ -97,15 +98,15 @@ public class TestKosmosFileSystem extends TestCase {
         s1.close();
         s2.close();
 
-        Path[] p = kosmosFileSystem.listPaths(subDir1);
+        FileStatus[] p = kosmosFileSystem.listStatus(subDir1);
         assertEquals(p.length, 2);
 
         kosmosFileSystem.delete(file1, true);
-        p = kosmosFileSystem.listPaths(subDir1);
+        p = kosmosFileSystem.listStatus(subDir1);
         assertEquals(p.length, 1);
 
         kosmosFileSystem.delete(file2, true);
-        p = kosmosFileSystem.listPaths(subDir1);
+        p = kosmosFileSystem.listStatus(subDir1);
         assertEquals(p, null);
 
         kosmosFileSystem.delete(baseDir, true);

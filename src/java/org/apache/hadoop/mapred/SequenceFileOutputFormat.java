@@ -23,6 +23,7 @@ import java.util.Arrays;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileUtil;
 
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.WritableComparable;
@@ -81,7 +82,7 @@ public class SequenceFileOutputFormat extends OutputFormatBase {
   public static SequenceFile.Reader[] getReaders(Configuration conf, Path dir)
     throws IOException {
     FileSystem fs = dir.getFileSystem(conf);
-    Path[] names = fs.listPaths(dir);
+    Path[] names = FileUtil.stat2Paths(fs.listStatus(dir));
     
     // sort names, so that hash partitioning works
     Arrays.sort(names);

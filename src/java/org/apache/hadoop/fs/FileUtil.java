@@ -89,13 +89,13 @@ public class FileUtil {
    */
   public static void fullyDelete(FileSystem fs, Path dir) 
   throws IOException {
-    Path[] paths = fs.listPaths(dir);
+    FileStatus[] paths = fs.listStatus(dir);
     if (paths != null) {
-      for (Path p : paths) {
-        if (fs.isFile(p))  {
-          fs.delete(p, true);
+      for (FileStatus p : paths) {
+        if (!p.isDir())  {
+          fs.delete(p.getPath(), true);
         } else {
-          fullyDelete(fs, p);
+          fullyDelete(fs, p.getPath());
         }
       }
     }
@@ -185,9 +185,10 @@ public class FileUtil {
       if (!dstFS.mkdirs(dst)) {
         return false;
       }
-      Path contents[] = srcFS.listPaths(src);
+      FileStatus contents[] = srcFS.listStatus(src);
       for (int i = 0; i < contents.length; i++) {
-        copy(srcFS, contents[i], dstFS, new Path(dst, contents[i].getName()),
+        copy(srcFS, contents[i].getPath(), dstFS, 
+             new Path(dst, contents[i].getPath().getName()),
              deleteSource, overwrite, conf);
       }
     } else if (srcFS.isFile(src)) {
@@ -218,10 +219,10 @@ public class FileUtil {
     OutputStream out = dstFS.create(dstFile);
     
     try {
-      Path contents[] = srcFS.listPaths(srcDir);
+      FileStatus contents[] = srcFS.listStatus(srcDir);
       for (int i = 0; i < contents.length; i++) {
-        if (srcFS.isFile(contents[i])) {
-          InputStream in = srcFS.open(contents[i]);
+        if (!contents[i].isDir()) {
+          InputStream in = srcFS.open(contents[i].getPath());
           try {
             IOUtils.copyBytes(in, out, conf, false);
             if (addString!=null)
@@ -282,9 +283,10 @@ public class FileUtil {
       if (!dst.mkdirs()) {
         return false;
       }
-      Path contents[] = srcFS.listPaths(src);
+      FileStatus contents[] = srcFS.listStatus(src);
       for (int i = 0; i < contents.length; i++) {
-        copy(srcFS, contents[i], new File(dst, contents[i].getName()),
+        copy(srcFS, contents[i].getPath(), 
+             new File(dst, contents[i].getPath().getName()),
              deleteSource, conf);
       }
     } else if (srcFS.isFile(src)) {

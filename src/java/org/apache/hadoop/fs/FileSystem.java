@@ -641,18 +641,6 @@ public abstract class FileSystem extends Configured implements Closeable {
       }     
     };
     
-  /** List files in a directory. */
-  @Deprecated
-  public Path[] listPaths(Path f) throws IOException {
-    FileStatus[] stat = listStatus(f);
-    if (stat == null) return null;
-    Path[] ret = new Path[stat.length];
-    for (int i = 0; i < stat.length; ++i) {
-      ret[i] = stat[i].getPath();
-    }
-    return ret;
-  }
-
   /**
    * List the statuses of the files/directories in the given path if the path is
    * a directory.
@@ -700,6 +688,21 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
+   * Filter files/directories in the given list of paths using default
+   * path filter.
+   * 
+   * @param files
+   *          a list of paths
+   * @return a list of statuses for the files under the given paths after
+   *         applying the filter default Path filter
+   * @exception IOException
+   */
+  public FileStatus[] listStatus(Path[] files)
+      throws IOException {
+    return listStatus(files, DEFAULT_FILTER);
+  }
+
+  /**
    * Filter files/directories in the given list of paths using user-supplied
    * path filter.
    * 
@@ -711,7 +714,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    *         applying the filter
    * @exception IOException
    */
-  private FileStatus[] listStatus(Path[] files, PathFilter filter)
+  public FileStatus[] listStatus(Path[] files, PathFilter filter)
       throws IOException {
     ArrayList<FileStatus> results = new ArrayList<FileStatus>();
     for (int i = 0; i < files.length; i++) {
@@ -720,35 +723,6 @@ public abstract class FileSystem extends Configured implements Closeable {
     return results.toArray(new FileStatus[results.size()]);
   }
 
-  /** 
-   * Filter files in the given pathes using the default checksum filter. 
-   * @param files a list of paths
-   * @return a list of files under the source paths
-   * @exception IOException
-   */
-  @Deprecated
-  public Path[] listPaths(Path[] files) throws IOException {
-    return listPaths(files, DEFAULT_FILTER);
-  }
-
-  /** Filter files in a directory. */
-  @Deprecated
-  public Path[] listPaths(Path f, PathFilter filter) throws IOException {
-    return FileUtil.stat2Paths(listStatus(f, filter));
-  }
-    
-  /** 
-   * Filter files in a list directories using user-supplied path filter. 
-   * @param files a list of paths
-   * @return a list of files under the source paths
-   * @exception IOException
-   */
-  @Deprecated
-  public Path[] listPaths(Path[] files, PathFilter filter)
-    throws IOException {
-    return FileUtil.stat2Paths(listStatus(files, filter));
-  }
-    
   /**
    * <p>Return all the files that match filePattern and are not checksum
    * files. Results are sorted by their names.
@@ -1215,9 +1189,9 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** Return the total size of all files in the filesystem.*/
   public long getUsed() throws IOException{
     long used = 0;
-    Path[] files = listPaths(new Path("/"));
-    for(Path file:files){
-      used += getContentLength(file);
+    FileStatus[] files = listStatus(new Path("/"));
+    for(FileStatus file:files){
+      used += file.getLen();
     }
     return used;
   }

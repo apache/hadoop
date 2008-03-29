@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -277,7 +278,7 @@ public class S3FileSystem extends FileSystem {
        store.deleteBlock(block);
      }
    } else {
-     Path[] contents = listPaths(absolutePath);
+     FileStatus[] contents = listStatus(absolutePath);
      if (contents == null) {
        return false;
      }
@@ -285,8 +286,8 @@ public class S3FileSystem extends FileSystem {
        throw new IOException("Directory " + path.toString() 
            + " is not empty.");
      }
-     for (Path p:contents) {
-       if (!delete(p, recursive)) {
+     for (FileStatus p:contents) {
+       if (!delete(p.getPath(), recursive)) {
          return false;
        }
      }
