@@ -96,11 +96,6 @@ public class DistributedFileSystem extends FileSystem {
     workingDir = makeAbsolute(dir);
   }
 
-  /** {@inheritDoc} */
-  public Path getHomeDirectory() {
-    return new Path("/user/" + dfs.ugi.getUserName()).makeQualified(this);
-  }
-
   private String getPathName(Path file) {
     checkPath(file);
     String result = makeAbsolute(file).toUri().getPath();
@@ -363,7 +358,6 @@ public class DistributedFileSystem extends FileSystem {
       if(FileNotFoundException.class.getName().equals(re.getClassName())) {
         throw new FileNotFoundException("File does not exist: " + p);
       }
-      throw re;
     }
   }
 
@@ -379,7 +373,6 @@ public class DistributedFileSystem extends FileSystem {
       if(FileNotFoundException.class.getName().equals(re.getClassName())) {
         throw new FileNotFoundException("File does not exist: " + p);
       }
-      throw re;
     }
   }
 }
