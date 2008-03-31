@@ -596,8 +596,21 @@ public class HLog implements HConstants {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Applied " + count + " total edits");
           }
+        } catch (IOException e) {
+          LOG.warn("Exception processing " + logfiles[i].getPath() +
+            " -- continuing. Possible DATA LOSS!", e);
         } finally {
-          in.close();
+          try {
+            in.close();
+          } catch (IOException e) {
+            LOG.warn("Close in finally threw exception -- continuing", e);
+          }
+          // Delete the input file now so we do not replay edits.  We could
+          // have gotten here because of an exception.  If so, probably
+          // nothing we can do about it. Replaying it, it could work but we
+          // could be stuck replaying for ever. Just continue though we
+          // could have lost some edits.
+          fs.delete(logfiles[i].getPath());
         }
       }
     } finally {
