@@ -584,6 +584,11 @@ public class SequenceFile {
      */
     public void writeCompressedBytes(DataOutputStream outStream) 
       throws IllegalArgumentException, IOException;
+
+    /**
+     * Size of stored data.
+     */
+    public int getSize();
   }
   
   private static class UncompressedBytes implements ValueBytes {
@@ -1018,14 +1023,12 @@ public class SequenceFile {
       out.write(buffer.getData(), 0, buffer.getLength()); // data
     }
 
-    public synchronized void appendRaw(
-                                       byte[] keyData, int keyOffset, int keyLength, ValueBytes val) 
-      throws IOException {
+    public synchronized void appendRaw(byte[] keyData, int keyOffset,
+        int keyLength, ValueBytes val) throws IOException {
       if (keyLength == 0)
         throw new IOException("zero length keys not allowed: " + keyLength);
 
-      UncompressedBytes value = (UncompressedBytes)val;
-      int valLength = value.getSize();
+      int valLength = val.getSize();
 
       checkAndWriteSync();
       
@@ -1144,16 +1147,13 @@ public class SequenceFile {
     }
 
     /** Append a key/value pair. */
-    public synchronized void appendRaw(
-                                       byte[] keyData, int keyOffset, int keyLength,
-                                       ValueBytes val
-                                       ) throws IOException {
+    public synchronized void appendRaw(byte[] keyData, int keyOffset,
+        int keyLength, ValueBytes val) throws IOException {
 
       if (keyLength == 0)
         throw new IOException("zero length keys not allowed");
 
-      CompressedBytes value = (CompressedBytes)val;
-      int valLength = value.getSize();
+      int valLength = val.getSize();
       
       checkAndWriteSync();                        // sync
       out.writeInt(keyLength+valLength);          // total record length
@@ -1333,16 +1333,13 @@ public class SequenceFile {
     }
     
     /** Append a key/value pair. */
-    public synchronized void appendRaw(
-                                       byte[] keyData, int keyOffset, int keyLength,
-                                       ValueBytes val
-                                       ) throws IOException {
+    public synchronized void appendRaw(byte[] keyData, int keyOffset,
+        int keyLength, ValueBytes val) throws IOException {
       
       if (keyLength == 0)
         throw new IOException("zero length keys not allowed");
 
-      UncompressedBytes value = (UncompressedBytes)val;
-      int valLength = value.getSize();
+      int valLength = val.getSize();
       
       // Save key/value data in relevant buffers
       WritableUtils.writeVInt(keyLenBuffer, keyLength);

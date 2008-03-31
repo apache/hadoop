@@ -202,6 +202,14 @@ Trunk (unreleased changes)
     tasks by replacing static arrays with lists of runnable tasks. 
     (Amar Kamat via omalley)
 
+    HADOOP-2919.  Reduce the number of memory copies done during the
+    map output sorting. Also adds two config variables:
+    io.sort.spill.percent - the percentages of io.sort.mb that should
+                            cause a spill (default 80%)
+    io.sort.record.percent - the percent of io.sort.mb that should
+                             hold key/value indexes (default 5%)
+    (cdouglas via omalley)
+
   BUG FIXES
 
     HADOOP-2195. '-mkdir' behaviour is now closer to Linux shell in case of

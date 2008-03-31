@@ -222,7 +222,7 @@ class MRSortResultIterator implements RawKeyValueIterator {
       dataSize = length;
     }
             
-    public int getSize() throws IOException {
+    public int getSize() {
       return dataSize;
     }
             
