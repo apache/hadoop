@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -206,10 +207,7 @@ public class HStore implements HConstants {
     }
 
     if(LOG.isDebugEnabled()) {
-      LOG.debug("starting " + storeName +
-          ((reconstructionLog == null || !fs.exists(reconstructionLog)) ?
-          " (no reconstruction log)" :
-            " with reconstruction log: " + reconstructionLog.toString()));
+      LOG.debug("starting " + storeName);
     }
 
     // Go through the 'mapdir' and 'infodir' together, make sure that all 
@@ -236,7 +234,16 @@ public class HStore implements HConstants {
           this.maxSeqId);
     }
     
-    doReconstructionLog(reconstructionLog, maxSeqId);
+    try {
+      doReconstructionLog(reconstructionLog, maxSeqId);
+    } catch (IOException e) {
+      // Presume we got here because of some HDFS issue or because of a lack of
+      // HADOOP-1700; for now keep going but this is probably not what we want
+      // long term.  If we got here there has been data-loss
+      LOG.warn("Exception processing reconstruction log " + reconstructionLog +
+        " opening " + this.storeName +
+        " -- continuing.  Probably DATA LOSS!", e);
+    }
 
     // By default, we compact if an HStore has more than
     // MIN_COMMITS_FOR_COMPACTION map files
@@ -303,9 +310,14 @@ public class HStore implements HConstants {
   private void doReconstructionLog(final Path reconstructionLog,
     final long maxSeqID)
   throws UnsupportedEncodingException, IOException {
-    
     if (reconstructionLog == null || !fs.exists(reconstructionLog)) {
       // Nothing to do.
+      return;
+    }
+    // Check its not empty.
+    FileStatus[] stats = fs.listStatus(reconstructionLog);
+    if (stats == null || stats.length == 0) {
+      LOG.warn("Passed reconstruction log " + reconstructionLog + " is zero-length");
       return;
     }
     long maxSeqIdInLog = -1;

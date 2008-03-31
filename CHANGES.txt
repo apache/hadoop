@@ -105,6 +105,7 @@ Hbase Change Log
    HBASE-529   RegionServer needs to recover if datanode goes down
    HBASE-456   Clearly state which ports need to be opened in order to run HBase
    HBASE-536   Remove MiniDFS startup from MiniHBaseCluster
+   HBASE-521   Improve client scanner interface
    
 Branch 0.1
 
