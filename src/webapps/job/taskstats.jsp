@@ -56,9 +56,9 @@
           <td colspan="3"><br/><b><%=displayGroupName%></b></td>
         </tr>
 <%
-        for (String counter : group.getCounterNames()) {
-          String displayCounterName = group.getDisplayName(counter);
-          long value = group.getCounter(counter);
+        for (Counters.Counter counter : group) {
+          String displayCounterName = counter.getDisplayName();
+          long value = counter.getCounter();
 %>
           <tr>
             <td width="50"></td>

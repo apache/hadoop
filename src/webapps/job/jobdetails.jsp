@@ -226,10 +226,11 @@
       Format decimal = new DecimalFormat();
       
       boolean isFirst = true;
-      for (String counter : totalGroup.getCounterNames()) {
-        String mapValue = decimal.format(mapGroup.getCounter(counter));
-        String reduceValue = decimal.format(reduceGroup.getCounter(counter));
-        String totalValue = decimal.format(totalGroup.getCounter(counter));
+      for (Counters.Counter counter : totalGroup) {
+        String name = counter.getDisplayName();
+        String mapValue = decimal.format(mapGroup.getCounter(name));
+        String reduceValue = decimal.format(reduceGroup.getCounter(name));
+        String totalValue = decimal.format(counter.getCounter());
         %>
         <tr>
           <%
@@ -240,7 +241,7 @@
             <%
           }
           %>
-          <td><%=totalGroup.getDisplayName(counter)%></td>
+          <td><%=name%></td>
           <td align="right"><%=mapValue%></td>
           <td align="right"><%=reduceValue%></td>
           <td align="right"><%=totalValue%></td>

@@ -301,8 +301,9 @@ public class HadoopJob {
       Counters.Group group = counters.getGroup(groupName);
       System.out.printf("\t%s[%s]\n", groupName, group.getDisplayName());
 
-      for (String name : group.getCounterNames()) {
-        System.out.printf("\t\t%s: %s\n", name, group.getCounter(name));
+      for (Counters.Counter counter : group) {
+        System.out.printf("\t\t%s: %s\n", counter.getDisplayName(),
+                                          counter.getCounter());
       }
     }
     System.out.printf("\n");

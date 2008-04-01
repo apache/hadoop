@@ -162,31 +162,8 @@ public class Counters implements Writable, Iterable<Counters.Group> {
     }
     
     /**
-     * Returns localized name of the specified counter.
-     * @deprecated get the counter directly
-     */
-    public String getDisplayName(String counter) {
-      return counter;
-    }
-    
-    /**
-     * Returns the counters for this group, with their names localized.
-     * @deprecated iterate through the group instead
-     */
-    public synchronized Collection<String> getCounterNames() {
-      List<String> result = new ArrayList<String>();
-      for (Counter counter:subcounters) {
-        if (counter != null) {
-          result.add(counter.displayName);
-        }
-      }
-      return result;
-    }
-    
-    /**
      * Returns the value of the specified counter, or 0 if the counter does
      * not exist.
-     * @deprecated
      */
     public synchronized long getCounter(String counterName) {
       for(Counter counter: subcounters) {

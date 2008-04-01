@@ -65,6 +65,9 @@ Trunk (unreleased changes)
     HADOOP-2563. Remove deprecated FileSystem::listPaths.
     (lohit vijayarenu via cdouglas)
 
+    HADOOP-2818.  Remove deprecated methods in Counters.
+    (Amareshwari Sriramadasu via tomwhite)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)
