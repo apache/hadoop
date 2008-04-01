@@ -148,9 +148,6 @@ Trunk (unreleased changes)
     HADOOP-2239. Add HsftpFileSystem to permit transferring files over ssl.
     (cdouglas)
 
-    HADOOP-2910. Throttle IPC Client/Server during bursts of 
-    requests or server slowdown. (Hairong Kuang via dhruba)
-
     HADOOP-2848. [HOD]hod -o list and deallocate works even after deleting
     the cluster directory. (Hemanth Yamijala via ddas)
 

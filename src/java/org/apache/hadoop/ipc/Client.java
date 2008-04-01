@@ -171,7 +171,7 @@ public class Client {
         try {
           this.socket = socketFactory.createSocket();
           this.socket.setTcpNoDelay(tcpNoDelay);
-          this.socket.connect(remoteId.getAddress());
+          this.socket.connect(remoteId.getAddress(), FSConstants.READ_TIMEOUT);
           break;
         } catch (IOException ie) { //SocketTimeoutException is also caught 
           if (failures == maxRetries) {
