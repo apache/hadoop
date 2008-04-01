@@ -494,10 +494,12 @@ class RegionManager implements HConstants {
   /** Update the deadline for a region assignment to be completed */
   public void updateAssignmentDeadline(HRegionInfo info) {
     synchronized (unassignedRegions) {
-      // Region server has acknowledged request to open region.
+      // Region server is reporting in that its working on region open
+      // (We can get more than one of these messages if region is replaying
+      // a bunch of edits and taking a while to open).
       // Extend region open time by max region open time.
-      unassignedRegions.put(info,
-        System.currentTimeMillis() + master.maxRegionOpenTime);
+      this.unassignedRegions.put(info,
+        Long.valueOf(System.currentTimeMillis() + this.master.maxRegionOpenTime));
     }
   }
   

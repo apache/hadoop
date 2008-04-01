@@ -54,6 +54,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.hbase.BloomFilterDescriptor;
 import org.onelab.filter.BloomFilter;
@@ -159,10 +160,14 @@ public class HStore implements HConstants {
    * @param fs file system object
    * @param reconstructionLog existing log file to apply if any
    * @param conf configuration object
+   * @param reporter Call on a period so hosting server can report we're
+   * making progress to master -- otherwise master might think region deploy
+   * failed.  Can be null.
    * @throws IOException
    */
   HStore(Path basedir, HRegionInfo info, HColumnDescriptor family,
-      FileSystem fs, Path reconstructionLog, HBaseConfiguration conf)
+      FileSystem fs, Path reconstructionLog, HBaseConfiguration conf,
+      final Progressable reporter)
   throws IOException {  
     this.basedir = basedir;
     this.info = info;
@@ -235,7 +240,7 @@ public class HStore implements HConstants {
     }
     
     try {
-      doReconstructionLog(reconstructionLog, maxSeqId);
+      doReconstructionLog(reconstructionLog, maxSeqId, reporter);
     } catch (IOException e) {
       // Presume we got here because of some HDFS issue or because of a lack of
       // HADOOP-1700; for now keep going but this is probably not what we want
@@ -308,7 +313,7 @@ public class HStore implements HConstants {
    * reflected in the MapFiles.)
    */
   private void doReconstructionLog(final Path reconstructionLog,
-    final long maxSeqID)
+    final long maxSeqID, final Progressable reporter)
   throws UnsupportedEncodingException, IOException {
     if (reconstructionLog == null || !fs.exists(reconstructionLog)) {
       // Nothing to do.
@@ -332,6 +337,8 @@ public class HStore implements HConstants {
       HLogEdit val = new HLogEdit();
       long skippedEdits = 0;
       long editsCount = 0;
+      // How many edits to apply before we send a progress report.
+      int reportInterval = this.conf.getInt("hbase.hstore.report.interval.edits", 2000);
       while (logReader.next(key, val)) {
         maxSeqIdInLog = Math.max(maxSeqIdInLog, key.getLogSeqNum());
         if (key.getLogSeqNum() <= maxSeqID) {
@@ -349,6 +356,11 @@ public class HStore implements HConstants {
         HStoreKey k = new HStoreKey(key.getRow(), column, val.getTimestamp());
         reconstructedCache.put(k, val.getVal());
         editsCount++;
+        // Every 2k edits, tell the reporter we're making progress.
+        // Have seen 60k edits taking 3minutes to complete.
+        if (reporter != null && (editsCount % reportInterval) == 0) {
+          reporter.progress();
+        }
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Applied " + editsCount + ", skipped " + skippedEdits +

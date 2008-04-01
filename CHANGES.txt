@@ -4,6 +4,8 @@ Hbase Change Log
    HBASE-550   EOF trying to read reconstruction log stops region deployment
    HBASE-551   Master stuck splitting server logs in shutdown loop; on each
                iteration, edits are aggregated up into the millions
+   HBASE-505   Region assignments should never time out so long as the region
+               server reports that it is processing the open request
 
 Release 0.1.0
 

@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.hbase.HConstants;
@@ -373,11 +374,40 @@ public class HRegion implements HConstants {
    * @param initialFiles If there are initial files (implying that the HRegion
    * is new), then read them from the supplied path.
    * @param listener an object that implements CacheFlushListener or null
-   * 
    * @throws IOException
    */
   public HRegion(Path basedir, HLog log, FileSystem fs, HBaseConfiguration conf, 
       HRegionInfo regionInfo, Path initialFiles, CacheFlushListener listener)
+    throws IOException {
+    this(basedir, log, fs, conf, regionInfo, initialFiles, listener, null);
+  }
+  
+  /**
+   * HRegion constructor.
+   *
+   * @param log The HLog is the outbound log for any updates to the HRegion
+   * (There's a single HLog for all the HRegions on a single HRegionServer.)
+   * The log file is a logfile from the previous execution that's
+   * custom-computed for this HRegion. The HRegionServer computes and sorts the
+   * appropriate log info for this HRegion. If there is a previous log file
+   * (implying that the HRegion has been written-to before), then read it from
+   * the supplied path.
+   * @param basedir qualified path of directory where region should be located,
+   * usually the table directory.
+   * @param fs is the filesystem.  
+   * @param conf is global configuration settings.
+   * @param regionInfo - HRegionInfo that describes the region
+   * @param initialFiles If there are initial files (implying that the HRegion
+   * is new), then read them from the supplied path.
+   * @param listener an object that implements CacheFlushListener or null
+   * @param reporter Call on a period so hosting server can report we're
+   * making progress to master -- otherwise master might think region deploy
+   * failed.  Can be null.
+   * @throws IOException
+   */
+  public HRegion(Path basedir, HLog log, FileSystem fs, HBaseConfiguration conf, 
+      HRegionInfo regionInfo, Path initialFiles, CacheFlushListener listener,
+      final Progressable reporter)
     throws IOException {
     
     this.basedir = basedir;
@@ -402,12 +432,9 @@ public class HRegion implements HConstants {
     long maxSeqId = -1;
     for(HColumnDescriptor c :
       this.regionInfo.getTableDesc().families().values()) {
-
       HStore store = new HStore(this.basedir, this.regionInfo, c, this.fs,
-          oldLogFile, this.conf);
-
+        oldLogFile, this.conf, reporter);
       stores.put(c.getFamilyName(), store);
-
       long storeSeqId = store.getMaxSequenceId();
       if (storeSeqId > maxSeqId) {
         maxSeqId = storeSeqId;
@@ -423,7 +450,7 @@ public class HRegion implements HConstants {
     this.minSequenceId = maxSeqId;
     if (LOG.isDebugEnabled()) {
       LOG.debug("Next sequence id for region " + regionInfo.getRegionName() +
-          " is " + this.minSequenceId);
+        " is " + this.minSequenceId);
     }
 
     // Get rid of any splits or merges that were lost in-progress

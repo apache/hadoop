@@ -82,6 +82,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -785,7 +786,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             HTableDescriptor.getTableDir(rootDir,
                 regionInfo.getTableDesc().getName()
             ),
-            this.log, this.fs, conf, regionInfo, null, this.cacheFlusher
+            this.log, this.fs, conf, regionInfo, null, this.cacheFlusher,
+            new Progressable() {
+              public void progress() {
+                getOutboundMsgs().add(new HMsg(HMsg.MSG_REPORT_PROCESS_OPEN,
+                  regionInfo));
+              }
+            }
         );
         // Startup a compaction early if one is needed.
         this.compactSplitThread.compactionRequested(region);
@@ -1336,11 +1343,18 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     throw new IOException("Unknown protocol to name node: " + protocol);
   }
-
+  
+  /**
+   * @return Queue to which you can add outbound messages.
+   */
+  protected List<HMsg> getOutboundMsgs() {
+    return this.outboundMsgs;
+  }
+  
   //
   // Main program and support routines
   //
-  
+
   private static void printUsageAndExit() {
     printUsageAndExit(null);
   }
