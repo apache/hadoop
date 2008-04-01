@@ -301,7 +301,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             // Queue up the HMaster's instruction stream for processing
             boolean restart = false;
             for(int i = 0; i < msgs.length && !stopRequested.get() &&
-            !restart; i++) {
+                !restart; i++) {
               switch(msgs[i].getMsg()) {
 
               case HMsg.MSG_CALL_SERVER_STARTUP:
@@ -315,7 +315,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                   synchronized (logRollerLock) {
                     try {
                       log.closeAndDelete();
-
                     } catch (Exception e) {
                       LOG.error("error closing and deleting HLog", e);
                     }
@@ -364,10 +363,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                     throw new RuntimeException("Putting into msgQueue was " +
                         "interrupted.", e);
                   }
-                  if (msgs[i].getMsg() == HMsg.MSG_REGION_OPEN) {
-                    this.outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_PROCESS_OPEN,
-                      msgs[i].getRegionInfo()));
-                  }
                 }
               }
             }
@@ -394,6 +389,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             }
           }
         }
+        // Do some housekeeping before going to sleep
+        housekeeping();
         sleeper.sleep(lastMsg);
       } // for
     } catch (Throwable t) {
@@ -564,6 +561,25 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         serverInfo.getServerAddress().toString());
   }
 
+  /* Run some housekeeping tasks before we go into 'hibernation' sleeping at
+   * the end of the main HRegionServer run loop.
+   */
+  private void housekeeping() {
+    // If the todo list has > 0 messages, iterate looking for open region
+    // messages. Send the master a message that we're working on its
+    // processing so it doesn't assign the region elsewhere.
+    if (this.toDo.size() <= 0) {
+      return;
+    }
+    // This iterator is 'safe'.  We are guaranteed a view on state of the
+    // queue at time iterator was taken out.  Apparently goes from oldest.
+    for (ToDoEntry e: this.toDo) {
+      if (e.msg.getMsg() == HMsg.MSG_REGION_OPEN) {
+        addProcessingMessage(e.msg.getRegionInfo());
+      }
+    }
+  }
+
   /** @return the HLog */
   HLog getLog() {
     return this.log;
@@ -697,7 +713,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.msg = msg;
     }
   }
-  BlockingQueue<ToDoEntry> toDo = new LinkedBlockingQueue<ToDoEntry>();
+  
+  final BlockingQueue<ToDoEntry> toDo = new LinkedBlockingQueue<ToDoEntry>();
   private Worker worker;
   private Thread workerThread;
   
@@ -789,8 +806,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             this.log, this.fs, conf, regionInfo, null, this.cacheFlusher,
             new Progressable() {
               public void progress() {
-                getOutboundMsgs().add(new HMsg(HMsg.MSG_REPORT_PROCESS_OPEN,
-                  regionInfo));
+                addProcessingMessage(regionInfo);
               }
             }
         );
@@ -814,6 +830,17 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       reportOpen(regionInfo); 
     }
+  }
+  
+  /*
+   * Add a MSG_REPORT_PROCESS_OPEN to the outbound queue.
+   * This method is called while region is in the queue of regions to process
+   * and then while the region is being opened, it is called from the Worker
+   * thread that is running the region open.
+   * @param hri Region to add the message for
+   */
+  protected void addProcessingMessage(final HRegionInfo hri) {
+    getOutboundMsgs().add(new HMsg(HMsg.MSG_REPORT_PROCESS_OPEN, hri));
   }
 
   void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)

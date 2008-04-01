@@ -6,6 +6,8 @@ Hbase Change Log
                iteration, edits are aggregated up into the millions
    HBASE-505   Region assignments should never time out so long as the region
                server reports that it is processing the open request
+   HBASE-555   Only one Worker in HRS; on startup, if assigned tens of regions,
+               havoc of reassignments because open processing is done in series
 
   NEW FEATURES
    HBASE-548   Tool to online single region

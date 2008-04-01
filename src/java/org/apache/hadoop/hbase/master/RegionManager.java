@@ -114,11 +114,18 @@ class RegionManager implements HConstants {
    */
   private final Set<Text> regionsToDelete =
     Collections.synchronizedSet(new HashSet<Text>());
+
+  
+  // How many regions to assign a server at a time.
+  private final int maxAssignInOneGo;
   
   private HMaster master;  
   
   RegionManager(HMaster master) {
     this.master = master;
+
+    this.maxAssignInOneGo = this.master.conf.
+      getInt("hbase.regions.percheckin", 10);
     
     // The root region
     rootScannerThread = new RootScanner(master, this);
@@ -258,6 +265,9 @@ class RegionManager implements HConstants {
           nregions = nRegionsToAssign;
         }
 
+        if (nregions > this.maxAssignInOneGo) {
+          nregions = this.maxAssignInOneGo;
+        }
         now = System.currentTimeMillis();
         for (HRegionInfo regionInfo: regionsToAssign) {
           LOG.info("assigning region " + regionInfo.getRegionName() +

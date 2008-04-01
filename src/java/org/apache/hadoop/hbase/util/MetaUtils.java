@@ -40,7 +40,8 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.HTable;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.client.HTable;
 
 /**
  * Contains utility methods for manipulating HBase meta tables
@@ -314,7 +315,7 @@ public class MetaUtils {
       final Text row, final boolean onlineOffline)
   throws IOException {
     HTable t = new HTable(c, HConstants.META_TABLE_NAME);
-    byte [] cell = t.get(row, HConstants.COL_REGIONINFO);
+    Cell cell = t.get(row, HConstants.COL_REGIONINFO);
     // Throws exception if null.
     HRegionInfo info = Writables.getHRegionInfo(cell);
     long id = t.startUpdate(row);
