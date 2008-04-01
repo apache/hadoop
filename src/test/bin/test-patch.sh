@@ -1,6 +1,7 @@
 #!/bin/bash
 
 #set -x
+ulimit -n 1024
 
 ### Setup some variables.  
 ### JOB_NAME, SVN_REVISION, and BUILD_NUMBER are set by Hudson if it is run by patch process
