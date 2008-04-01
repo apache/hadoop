@@ -101,7 +101,7 @@ defList = { 'ringmaster' : (
              ('svcrgy-addr', 'address', 'Download HTTP address.',
               False, None, False, True),             
              
-             ('hadoop-tar-ball', 'string', 'hadoop program tar ball.',
+             ('hadoop-tar-ball', 'uri', 'hadoop program tar ball.',
               False, None, False, False),
         
              ('max-connect','pos_int','max connections allowed for a single tarball server',

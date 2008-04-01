@@ -315,7 +315,7 @@ class baseConfig:
 	
         if self._configDef:
             errorCount = 0
-            configValidator = typeValidator()
+            configValidator = typeValidator(self.__originalDir)
 
             # foreach section and option by type string as defined in configDef
             #   add value to be validated to validator
@@ -330,10 +330,8 @@ class baseConfig:
                                 configValidator.add(configVarName,
                                     self._configDef[section][option]['type'],
                                     self._dict[section][option])
-                            elif self._configDef[section][option]['type'] \
-                                != 'file' and \
-                                self._configDef[section][option]['type'] != \
-                                'directory':
+                            else:
+                                # If asked not to validate, just normalize
                                 self[section][option] = \
                                     configValidator.normalize(
                                     self._configDef[section][option]['type'], 
@@ -351,6 +349,7 @@ class baseConfig:
                                     self._configDef[section][option]['default']
                                     )
                         else:        
+                            # This should not happen. Just in case, take this as 'to be validated' case.
                             configValidator.add(configVarName,
                                 self._configDef[section][option]['type'],
                                 self._dict[section][option])

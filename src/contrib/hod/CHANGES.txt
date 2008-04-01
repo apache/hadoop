@@ -1,0 +1,96 @@
+HOD Change Log
+
+
+Trunk (unreleased changes)
+
+  IMPROVEMENTS
+
+    HADOOP-2775.  Adds unit test framework for HOD.
+    (Vinod Kumar Vavilapalli via ddas).
+
+    HADOOP-2848. [HOD]hod -o list and deallocate works even after deleting
+    the cluster directory. (Hemanth Yamijala via ddas)
+
+    HADOOP-2899. [HOD] Cleans up hdfs:///mapredsystem directory after
+    deallocation. (Hemanth Yamijala via ddas)
+
+    HADOOP-2796. Enables distinguishing exit codes from user code vis-a-vis
+    HOD's exit code. (Hemanth Yamijala via ddas)
+
+  BUG FIXES
+
+    HADOOP-2924. Fixes an address problem to do with TaskTracker binding
+    to an address. (Vinod Kumar Vavilapalli via ddas)
+
+    HADOOP-2970. Fixes a problem to do with Wrong class definition for
+    hodlib/Hod/hod.py for Python < 2.5.1.
+    (Vinod Kumar Vavilapalli via ddas)
+
+    HADOOP-2783. Fixes a problem to do with import in
+    hod/hodlib/Common/xmlrpc.py. (Vinod Kumar Vavilapalli via ddas)
+
+    HADOOP-2936. Fixes HOD in a way that it generates hdfs://host:port on the
+    client side configs. (Vinod Kumar Vavilapalli via ddas)
+
+    HADOOP-2983. [HOD] Fixes the problem - local_fqdn() returns None when
+    gethostbyname_ex doesnt return any FQDNs. (Craig Macdonald via ddas)
+
+    HADOOP-2982. Fixes a problem in the way HOD looks for free nodes.
+    (Hemanth Yamijala via ddas)
+
+    HADOOP-2855. Fixes the way HOD handles relative paths for cluster
+    directory, script file and other options.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
+Release 0.16.2 - 2008-04-02
+
+  BUG FIXES
+
+    HADOOP-3103. [HOD] Hadoop.tmp.dir should not be set to cluster
+    directory. (Vinod Kumar Vavilapalli via ddas).
+
+Release 0.16.1 - 2008-03-13
+
+  INCOMPATIBLE CHANGES
+
+    HADOOP-2861. Improve the user interface for the HOD commands.
+    Command line structure has changed. (Hemanth Yamijala via nigel)
+
+  IMPROVEMENTS
+
+    HADOOP-2730. HOD documentation update.
+    (Vinod Kumar Vavilapalli via ddas)
+
+    HADOOP-2911. Make the information printed by the HOD allocate and
+    info commands less verbose and clearer. (Vinod Kumar via nigel)
+
+  BUG FIXES
+
+    HADOOP-2766. Enables setting of HADOOP_OPTS env variable for the hadoop
+    daemons through HOD. (Vinod Kumar Vavilapalli via ddas)
+
+    HADOOP-2809.  Fix HOD syslog config syslog-address so that it works.
+    (Hemanth Yamijala via nigel)
+
+    HADOOP-2847.  Ensure idle cluster cleanup works even if the JobTracker
+    becomes unresponsive to RPC calls. (Hemanth Yamijala via nigel)
+
+    HADOOP-2925. Fix HOD to create the mapred system directory using a
+    naming convention that will avoid clashes in multi-user shared
+    cluster scenario. (Hemanth Yamijala via nigel)
+
+Release 0.16.0 - 2008-02-07
+
+  NEW FEATURES
+
+    HADOOP-1301.  Hadoop-On-Demand (HOD): resource management
+    provisioning for Hadoop. (Hemanth Yamijala via nigel)
+
+  BUG FIXES
+
+    HADOOP-2720. Jumbo bug fix patch to HOD.  Final sync of Apache SVN with
+    internal Yahoo SVN.  (Hemanth Yamijala via nigel)
+
+    HADOOP-2740. Fix HOD to work with the configuration variables changed in
+    HADOOP-2404. (Hemanth Yamijala via omalley)
+

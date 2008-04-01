@@ -211,7 +211,7 @@ defList = { 'hod' : (
              ('svcrgy-addr', 'address', 'Download HTTP address.',
               False, None, False, False),             
              
-             ('hadoop-tar-ball', 'string', 'hadoop program tar ball.',
+             ('hadoop-tar-ball', 'uri', 'hadoop program tar ball.',
               True, None, False, False, 't'),
 
              ('max-connect','pos_int','max connections allowed for a single tarball server',

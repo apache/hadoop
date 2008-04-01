@@ -59,9 +59,10 @@
       string         - arbitrarily long string
       list           - comma seperated list of strings of arbitrary length,
       keyval         - comma seperated list of key=value pairs, key does not 
-                       need to be unique."""
+                       need to be unique.
+      uri            - a uri """
 
-import sys, os, socket, pwd, grp, stat, re, re, string, pprint
+import sys, os, socket, pwd, grp, stat, re, re, string, pprint, urlparse
 
 from tcp import tcpSocket, check_net_address, check_ip_address
 from util import check_timestamp
@@ -142,6 +143,9 @@ types = { 'directory'      : { 'db'    : 'string',
                                'units' : None     },
 
           'keyval'         : { 'db'    : 'string',
+                               'units' : None     },
+          
+          'uri'            : { 'db'    : 'string',
                                'units' : None     },
 
           ''               : { 'db'    : 'string',
@@ -376,6 +380,9 @@ class typeToString:
     def __tostring_user_group(self, value):
         return self.__tostring(value)
 
+    def __tostring_uri(self, value):
+        return self.__tostring(value)
+
     def __tostring_nothing(self, value):
         return value
 
@@ -383,12 +390,13 @@ class typeValidator:
     """Type validation class used to normalize values or validated 
        single/large sets of values by type."""
 
-    def __init__(self):
+    def __init__(self, originalDir=None):
         self.verifyFunctions = {}
         self.__build_verify_functions()
 
         self.validateList = []
         self.validatedInfo = []
+        self.__originalDir = originalDir
 
     def __getattr__(self, attrname):
         """validateList  = [ { 'func' : <bound method configValidator>,
@@ -472,7 +480,7 @@ class typeValidator:
         return valueInfo
       
     def __norm_directory(self, value):
-        return os.path.realpath(value)
+        return self.__normalizedPath(value)
 
     def __verify_address(self, type, value):
         valueInfo = self.__get_value_info()
@@ -720,7 +728,7 @@ class typeValidator:
         return valueInfo
       
     def __norm_file(self, value):
-        return os.path.realpath(value)
+        return self.__normalizedPath(value)
 
     def __verify_size(self, type, value):
         valueInfo = self.__get_value_info()
@@ -845,6 +853,44 @@ class typeValidator:
             end = None   
             
         return (start, end)     
+
+    def __verify_uri(self, type, value):
+        valueInfo = self.__get_value_info()
+
+        _norm = None
+        try:
+            uriComponents = urlparse.urlparse(value)
+            if uriComponents[0] == '' or uriComponents[0] == 'file':
+              # if scheme is '' or 'file'
+              if not os.path.isfile(uriComponents[2]) and \
+                                         not os.path.isdir(uriComponents[2]):
+                  raise Exception("Invalid local URI")
+              else:
+                  self.__set_value_info(valueInfo, normalized=self.normalize(
+                                                                  type,value))
+            else:
+              # other schemes
+              # currently not checking anything. TODO
+              self.__set_value_info(valueInfo, normalized=self.normalize(
+                                                                   type,value))
+        except:
+            errorString = "%s is an invalid uri" % value
+            self.__set_value_info(valueInfo, errorData=errorString)
+
+        return valueInfo
+
+    def __norm_uri(self, value):
+       uriComponents = list(urlparse.urlparse(value))
+       if uriComponents[0] == '':
+          # if scheme is '''
+          return self.__normalizedPath(uriComponents[2])
+       elif uriComponents[0] == 'file':
+          # if scheme is 'file'
+          normalizedPath = self.__normalizedPath(uriComponents[2])
+          return urlparse.urlunsplit(uriComponents[0:1] + [normalizedPath] + uriComponents[3:])
+
+       # Not dealing with any other case right now
+       return value
 
     def __verify_timestamp(self, type, value):
         valueInfo = self.__get_value_info()
@@ -989,6 +1035,15 @@ class typeValidator:
             else:
                 raise Exception("\nMissing a return value: valueInfo\n%s" % \
                     self.verifyFunctions[valItem['type']](valItem['value']))
+
+    def __normalizedPath(self, value):    
+        oldWd = os.getcwd()
+        if self.__originalDir:
+          os.chdir(self.__originalDir)
+        normPath = os.path.realpath(value)
+        os.chdir(oldWd)
+        return normPath
+
 
 class display:
     def __init__(self):
