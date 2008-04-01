@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.HTable;
 
 /**
  * Contains utility methods for manipulating HBase meta tables
@@ -294,5 +295,33 @@ public class MetaUtils {
       HRegion.openHRegion(metaInfo, this.rootdir, this.log, this.conf);
     meta.compactStores();
     return meta;
+  }
+ 
+  /**
+   * Set a single region on/offline.
+   * This is a tool to repair tables that have offlined tables in their midst.
+   * Can happen on occasion.  Use at your own risk.  Call from a bit of java
+   * or jython script.  This method is 'expensive' in that it creates a
+   * {@link HTable} instance per invocation to go against <code>.META.</code>
+   * @param c A configuration that has its <code>hbase.master</code>
+   * properly set.
+   * @param row Row in the catalog .META. table whose HRegionInfo's offline
+   * status we want to change.
+   * @param onlineOffline Pass <code>true</code> to online the region.
+   * @throws IOException
+   */
+  public static void changeOnlineStatus (final HBaseConfiguration c,
+      final Text row, final boolean onlineOffline)
+  throws IOException {
+    HTable t = new HTable(c, HConstants.META_TABLE_NAME);
+    byte [] cell = t.get(row, HConstants.COL_REGIONINFO);
+    // Throws exception if null.
+    HRegionInfo info = Writables.getHRegionInfo(cell);
+    long id = t.startUpdate(row);
+    info.setOffline(onlineOffline);
+    t.put(id, HConstants.COL_REGIONINFO, Writables.getBytes(info));
+    t.delete(id, HConstants.COL_SERVER);
+    t.delete(id, HConstants.COL_STARTCODE);
+    t.commit(id);
   }
 }
