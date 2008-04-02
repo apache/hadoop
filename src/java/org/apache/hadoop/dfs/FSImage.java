@@ -981,9 +981,10 @@ class FSImage extends Storage {
   // into the input stream
   //
   static void writeINodeUnderConstruction(DataOutputStream out,
-                                           INodeFileUnderConstruction cons) 
+                                           INodeFileUnderConstruction cons,
+                                           String path) 
                                            throws IOException {
-    new UTF8(cons.getAbsoluteName()).write(out);
+    new UTF8(path).write(out);
     out.writeShort(cons.getReplication());
     out.writeLong(cons.getModificationTime());
     out.writeLong(cons.getPreferredBlockSize());

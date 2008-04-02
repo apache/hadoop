@@ -4379,7 +4379,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                   " but is not under construction.");
           }
           INodeFileUnderConstruction cons = (INodeFileUnderConstruction) node;
-          FSImage.writeINodeUnderConstruction(out, cons);
+          FSImage.writeINodeUnderConstruction(out, cons, path);
         }
       }
     }

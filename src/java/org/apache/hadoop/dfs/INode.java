@@ -175,24 +175,6 @@ abstract class INode implements Comparable<byte[]> {
   }
 
   /**
-   * Get the full absolute path name of this file (recursively computed).
-   * 
-   * @return the string representation of the absolute path of this file
-   * 
-   * @deprecated this is used only in crc upgrade now, and should be removed 
-   * in order to be able to eliminate the parent field. 
-   */
-  String getAbsoluteName() {
-    if (this.parent == null) {
-      return Path.SEPARATOR;       // root directory is "/"
-    }
-    if (this.parent.parent == null) {
-      return Path.SEPARATOR + getLocalName();
-    }
-    return parent.getAbsoluteName() + Path.SEPARATOR + getLocalName();
-  }
-
-  /**
    * Get parent directory 
    * @return parent INode
    */
