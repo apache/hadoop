@@ -17,6 +17,9 @@ Trunk (unreleased changes)
     HADOOP-2796. Enables distinguishing exit codes from user code vis-a-vis
     HOD's exit code. (Hemanth Yamijala via ddas)
 
+    HADOOP-2947. HOD redirects stdout and stderr of daemons to assist
+    getting stack traces. (Vinod Kumar Vavilapalli via yhemanth)
+
   BUG FIXES
 
     HADOOP-2924. Fixes an address problem to do with TaskTracker binding

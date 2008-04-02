@@ -224,6 +224,9 @@ class HadoopCommand:
                                 "confdir")
     self.logdir = os.path.join(self.hadoopdir, '%d-%s' % (id, self.name), 
                                "logdir")
+    self.out = os.path.join(self.logdir, '%s.out' % self.name)
+    self.err = os.path.join(self.logdir, '%s.err' % self.name)
+
     self.child = None
     self.restart = restart
     self.filledInKeyVals = []
@@ -395,9 +398,14 @@ class HadoopCommand:
     hadoopCommand = ''
     for item in args:
         hadoopCommand = "%s%s " % (hadoopCommand, item)
+
+    # Redirecting output and error to self.out and self.err
+    hadoopCommand = hadoopCommand + ' 1>%s 2>%s ' % (self.out, self.err)
         
     self.log.debug('running command: %s' % (hadoopCommand)) 
     self.log.debug('hadoop env: %s' % fenvs)
+    self.log.debug('Command stdout will be redirected to %s ' % self.out + \
+                   'and command stderr to %s' % self.err)
 
     self.__hadoopThread = simpleCommand('hadoop', hadoopCommand, env=fenvs)
     self.__hadoopThread.start()
@@ -433,10 +441,12 @@ class HadoopCommand:
     self.log.debug("hadoop run status: %s" % status)    
     
     if status == False:
-      for item in self.__hadoopThread.output():
-        self.log.error(item)
       self.log.error('hadoop error: %s' % (
                        self.__hadoopThread.exit_status_string()))
+      self.log.error('See %s.out and/or %s.err for details. They are ' % \
+                     (self.name, self.name) + \
+                     'located at subdirectories under either ' + \
+                     'hodring.work-dirs or hodring.log-destination-uri.')
    
     if (status == True) or (not desc.isIgnoreFailures()):
       return status
