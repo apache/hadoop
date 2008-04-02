@@ -49,7 +49,8 @@ public class SerializationFactory extends Configured {
    */
   public SerializationFactory(Configuration conf) {
     super(conf);
-    for (String serializerName : conf.getStrings("io.serializations")) {
+    for (String serializerName : conf.getStrings("io.serializations", 
+      new String[]{"org.apache.hadoop.io.serializer.WritableSerialization"})) {
       add(serializerName);
     }
   }

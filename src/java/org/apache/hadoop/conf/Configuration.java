@@ -540,6 +540,36 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     return StringUtils.getStrings(valueString);
   }
 
+  /** 
+   * Get the comma delimited values of the <code>name</code> property as 
+   * an array of <code>String</code>s.  
+   * If no such property is specified then default value is returned.
+   * 
+   * @param name property name.
+   * @param defaultValue The default value
+   * @return property value as an array of <code>String</code>s, 
+   *         or default value. 
+   */
+  public String[] getStrings(String name, String... defaultValue) {
+    String valueString = get(name);
+    if (valueString == null) {
+      return defaultValue;
+    } else {
+      return StringUtils.getStrings(valueString);
+    }
+  }
+
+  /** 
+   * Set the array of string values for the <code>name</code> property as 
+   * as comma delimited values.  
+   * 
+   * @param name property name.
+   * @param values The values
+   */
+  public void setStrings(String name, String... values) {
+    set(name, StringUtils.arrayToString(values));
+  }
+ 
   /**
    * Load a class by name.
    * 

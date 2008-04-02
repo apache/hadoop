@@ -173,6 +173,9 @@ Trunk (unreleased changes)
 
     HADOOP-1228.  Ant task to generate Eclipse project files.  (tomwhite)
 
+    HADOOP-3093. Adds Configuration.getStrings(name, default-value) and
+    the corresponding setStrings. (Amareshwari Sriramadasu via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing
