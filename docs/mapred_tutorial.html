@@ -276,6 +276,9 @@ document.write("Last Published: " + document.lastModified);
 <a href="#IsolationRunner">IsolationRunner</a>
 </li>
 <li>
+<a href="#Debugging">Debugging</a>
+</li>
+<li>
 <a href="#JobControl">JobControl</a>
 </li>
 <li>
@@ -289,7 +292,7 @@ document.write("Last Published: " + document.lastModified);
 <a href="#Example%3A+WordCount+v2.0">Example: WordCount v2.0</a>
 <ul class="minitoc">
 <li>
-<a href="#Source+Code-N10C11">Source Code</a>
+<a href="#Source+Code-N10C63">Source Code</a>
 </li>
 <li>
 <a href="#Sample+Runs">Sample Runs</a>
@@ -1857,7 +1860,7 @@ document.write("Last Published: " + document.lastModified);
           <em>symlink</em> the cached file(s) into the <span class="codefrag">current working 
           directory</span> of the task via the 
           <a href="api/org/apache/hadoop/filecache/DistributedCache.html#createSymlink(org.apache.hadoop.conf.Configuration)">
-          DistributedCache.createSymlink(Path, Configuration)</a> api. Files 
+          DistributedCache.createSymlink(Configuration)</a> api. Files 
           have <em>execution permissions</em> set.</p>
 <a name="N10B0A"></a><a name="Tool"></a>
 <h4>Tool</h4>
@@ -1923,13 +1926,75 @@ document.write("Last Published: " + document.lastModified);
 <p>
 <span class="codefrag">IsolationRunner</span> will run the failed task in a single 
           jvm, which can be in the debugger, over precisely the same input.</p>
-<a name="N10B6F"></a><a name="JobControl"></a>
+<a name="N10B6F"></a><a name="Debugging"></a>
+<h4>Debugging</h4>
+<p>Map/Reduce framework provides a facility to run user-provided 
+          scripts for debugging. When map/reduce task fails, user can run 
+          script for doing post-processing on task logs i.e task's stdout,
+          stderr, syslog and jobconf. The stdout and stderr of the
+          user-provided debug script are printed on the diagnostics. 
+          These outputs are also displayed on job UI on demand. </p>
+<p> In the following sections we discuss how to submit debug script
+          along with the job. For submitting debug script, first it has to
+          distributed. Then the script has to supplied in Configuration. </p>
+<a name="N10B7B"></a><a name="How+to+distribute+script+file%3A"></a>
+<h5> How to distribute script file: </h5>
+<p>
+          To distribute  the debug script file, first copy the file to the dfs.
+          The file can be distributed by setting the property 
+          "mapred.cache.files" with value "path"#"script-name". 
+          If more than one file has to be distributed, the files can be added
+          as comma separated paths. This property can also be set by APIs
+          <a href="api/org/apache/hadoop/filecache/DistributedCache.html#addCacheFile(java.net.URI,%20org.apache.hadoop.conf.Configuration)">
+          DistributedCache.addCacheFile(URI,conf) </a> and
+          <a href="api/org/apache/hadoop/filecache/DistributedCache.html#setCacheFiles(java.net.URI[],%20org.apache.hadoop.conf.Configuration)">
+          DistributedCache.setCacheFiles(URIs,conf) </a> where URI is of 
+          the form "hdfs://host:port/'absolutepath'#'script-name'". 
+          For Streaming, the file can be added through 
+          command line option -cacheFile.
+          </p>
+<p>
+          The files has to be symlinked in the current working directory of 
+          of the task. To create symlink for the file, the property 
+          "mapred.create.symlink" is set to "yes". This can also be set by
+          <a href="api/org/apache/hadoop/filecache/DistributedCache.html#createSymlink(org.apache.hadoop.conf.Configuration)">
+          DistributedCache.createSymLink(Configuration) </a> api.
+          </p>
+<a name="N10B94"></a><a name="How+to+submit+script%3A"></a>
+<h5> How to submit script: </h5>
+<p> A quick way to submit debug script is to set values for the 
+          properties "mapred.map.task.debug.script" and 
+          "mapred.reduce.task.debug.script" for debugging map task and reduce
+          task respectively. These properties can also be set by using APIs 
+          <a href="api/org/apache/hadoop/mapred/JobConf.html#setMapDebugScript(java.lang.String)">
+          JobConf.setMapDebugScript(String) </a> and
+          <a href="api/org/apache/hadoop/mapred/JobConf.html#setReduceDebugScript(java.lang.String)">
+          JobConf.setReduceDebugScript(String) </a>. For streaming, debug 
+          script can be submitted with command-line options -mapdebug,
+          -reducedebug for debugging mapper and reducer respectively.</p>
+<p>The arguments of the script are task's stdout, stderr, 
+          syslog and jobconf files. The debug command, run on the node where
+          the map/reduce failed, is: <br>
+          
+<span class="codefrag"> $script $stdout $stderr $syslog $jobconf </span> 
+</p>
+<p> Pipes programs have the c++ program name as a fifth argument
+          for the command. Thus for the pipes programs the command is <br> 
+          
+<span class="codefrag">$script $stdout $stderr $syslog $jobconf $program </span>  
+          
+</p>
+<a name="N10BB6"></a><a name="Default+Behavior%3A"></a>
+<h5> Default Behavior: </h5>
+<p> For pipes, a default script is run to process core dumps under
+          gdb, prints stack trace and gives info about running threads. </p>
+<a name="N10BC1"></a><a name="JobControl"></a>
 <h4>JobControl</h4>
 <p>
 <a href="api/org/apache/hadoop/mapred/jobcontrol/package-summary.html">
           JobControl</a> is a utility which encapsulates a set of Map-Reduce jobs
           and their dependencies.</p>
-<a name="N10B7C"></a><a name="Data+Compression"></a>
+<a name="N10BCE"></a><a name="Data+Compression"></a>
 <h4>Data Compression</h4>
 <p>Hadoop Map-Reduce provides facilities for the application-writer to
           specify compression for both intermediate map-outputs and the
@@ -1943,7 +2008,7 @@ document.write("Last Published: " + document.lastModified);
           codecs for reasons of both performance (zlib) and non-availability of
           Java libraries (lzo). More details on their usage and availability are
           available <a href="native_libraries.html">here</a>.</p>
-<a name="N10B9C"></a><a name="Intermediate+Outputs"></a>
+<a name="N10BEE"></a><a name="Intermediate+Outputs"></a>
 <h5>Intermediate Outputs</h5>
 <p>Applications can control compression of intermediate map-outputs
             via the 
@@ -1964,7 +2029,7 @@ document.write("Last Published: " + document.lastModified);
             <a href="api/org/apache/hadoop/mapred/JobConf.html#setMapOutputCompressionType(org.apache.hadoop.io.SequenceFile.CompressionType)">
             JobConf.setMapOutputCompressionType(SequenceFile.CompressionType)</a> 
             api.</p>
-<a name="N10BC8"></a><a name="Job+Outputs"></a>
+<a name="N10C1A"></a><a name="Job+Outputs"></a>
 <h5>Job Outputs</h5>
 <p>Applications can control compression of job-outputs via the
             <a href="api/org/apache/hadoop/mapred/OutputFormatBase.html#setCompressOutput(org.apache.hadoop.mapred.JobConf,%20boolean)">
@@ -1984,7 +2049,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
 
     
-<a name="N10BF7"></a><a name="Example%3A+WordCount+v2.0"></a>
+<a name="N10C49"></a><a name="Example%3A+WordCount+v2.0"></a>
 <h2 class="h3">Example: WordCount v2.0</h2>
 <div class="section">
 <p>Here is a more complete <span class="codefrag">WordCount</span> which uses many of the
@@ -1994,7 +2059,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="quickstart.html#SingleNodeSetup">pseudo-distributed</a> or
       <a href="quickstart.html#Fully-Distributed+Operation">fully-distributed</a> 
       Hadoop installation.</p>
-<a name="N10C11"></a><a name="Source+Code-N10C11"></a>
+<a name="N10C63"></a><a name="Source+Code-N10C63"></a>
 <h3 class="h4">Source Code</h3>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
           
@@ -3204,7 +3269,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
         
 </table>
-<a name="N11373"></a><a name="Sample+Runs"></a>
+<a name="N113C5"></a><a name="Sample+Runs"></a>
 <h3 class="h4">Sample Runs</h3>
 <p>Sample text-files as input:</p>
 <p>
@@ -3372,7 +3437,7 @@ document.write("Last Published: " + document.lastModified);
 <br>
         
 </p>
-<a name="N11447"></a><a name="Highlights"></a>
+<a name="N11499"></a><a name="Highlights"></a>
 <h3 class="h4">Highlights</h3>
 <p>The second version of <span class="codefrag">WordCount</span> improves upon the 
         previous one by using some features offered by the Map-Reduce framework:

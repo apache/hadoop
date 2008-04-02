@@ -1401,7 +1401,7 @@
           <em>symlink</em> the cached file(s) into the <code>current working 
           directory</code> of the task via the 
           <a href="ext:api/org/apache/hadoop/filecache/distributedcache/createsymlink">
-          DistributedCache.createSymlink(Path, Configuration)</a> api. Files 
+          DistributedCache.createSymlink(Configuration)</a> api. Files 
           have <em>execution permissions</em> set.</p>
         </section>
         
@@ -1463,6 +1463,74 @@
           
           <p><code>IsolationRunner</code> will run the failed task in a single 
           jvm, which can be in the debugger, over precisely the same input.</p>
+        </section>
+        
+        <section>
+          <title>Debugging</title>
+          <p>Map/Reduce framework provides a facility to run user-provided 
+          scripts for debugging. When map/reduce task fails, user can run 
+          script for doing post-processing on task logs i.e task's stdout,
+          stderr, syslog and jobconf. The stdout and stderr of the
+          user-provided debug script are printed on the diagnostics. 
+          These outputs are also displayed on job UI on demand. </p>
+
+          <p> In the following sections we discuss how to submit debug script
+          along with the job. For submitting debug script, first it has to
+          distributed. Then the script has to supplied in Configuration. </p>
+          <section>
+          <title> How to distribute script file: </title>
+          <p>
+          To distribute  the debug script file, first copy the file to the dfs.
+          The file can be distributed by setting the property 
+          "mapred.cache.files" with value "path"#"script-name". 
+          If more than one file has to be distributed, the files can be added
+          as comma separated paths. This property can also be set by APIs
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/addcachefile">
+          DistributedCache.addCacheFile(URI,conf) </a> and
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/setcachefiles">
+          DistributedCache.setCacheFiles(URIs,conf) </a> where URI is of 
+          the form "hdfs://host:port/'absolutepath'#'script-name'". 
+          For Streaming, the file can be added through 
+          command line option -cacheFile.
+          </p>
+          
+          <p>
+          The files has to be symlinked in the current working directory of 
+          of the task. To create symlink for the file, the property 
+          "mapred.create.symlink" is set to "yes". This can also be set by
+          <a href="ext:api/org/apache/hadoop/filecache/distributedcache/createsymlink">
+          DistributedCache.createSymLink(Configuration) </a> api.
+          </p>
+          </section>
+          <section>
+          <title> How to submit script: </title>
+          <p> A quick way to submit debug script is to set values for the 
+          properties "mapred.map.task.debug.script" and 
+          "mapred.reduce.task.debug.script" for debugging map task and reduce
+          task respectively. These properties can also be set by using APIs 
+          <a href="ext:api/org/apache/hadoop/mapred/jobconf/setmapdebugscript">
+          JobConf.setMapDebugScript(String) </a> and
+          <a href="ext:api/org/apache/hadoop/mapred/jobconf/setreducedebugscript">
+          JobConf.setReduceDebugScript(String) </a>. For streaming, debug 
+          script can be submitted with command-line options -mapdebug,
+          -reducedebug for debugging mapper and reducer respectively.</p>
+            
+          <p>The arguments of the script are task's stdout, stderr, 
+          syslog and jobconf files. The debug command, run on the node where
+          the map/reduce failed, is: <br/>
+          <code> $script $stdout $stderr $syslog $jobconf </code> </p> 
+
+          <p> Pipes programs have the c++ program name as a fifth argument
+          for the command. Thus for the pipes programs the command is <br/> 
+          <code>$script $stdout $stderr $syslog $jobconf $program </code>  
+          </p>
+          </section>
+          
+          <section>
+          <title> Default Behavior: </title>
+          <p> For pipes, a default script is run to process core dumps under
+          gdb, prints stack trace and gives info about running threads. </p>
+          </section>
         </section>
         
         <section>
