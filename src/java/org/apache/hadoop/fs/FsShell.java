@@ -168,7 +168,7 @@ public class FsShell extends Configured implements Tool {
    * @param argv: arguments
    * @param pos: Ignore everything before argv[pos]  
    * @exception: IOException  
-   * @see org.apache.hadoop.fs.FileSystem.globPaths 
+   * @see org.apache.hadoop.fs.FileSystem.globStatus 
    */
   void copyToLocal(String[]argv, int pos) throws IOException {
     CommandFormat cf = new CommandFormat("copyToLocal", 2,2,"crc","ignoreCrc");
@@ -289,7 +289,7 @@ public class FsShell extends Configured implements Tool {
    * @param srcf: a file pattern specifying source files
    * @param dstf: a destination local file/directory 
    * @exception: IOException  
-   * @see org.apache.hadoop.fs.FileSystem.globPaths 
+   * @see org.apache.hadoop.fs.FileSystem.globStatus 
    */
   void copyMergeToLocal(String srcf, Path dst) throws IOException {
     copyMergeToLocal(srcf, dst, false);
@@ -307,12 +307,13 @@ public class FsShell extends Configured implements Tool {
    * @param dstf: a destination local file/directory
    * @param endline: if an end of line character is added to a text file 
    * @exception: IOException  
-   * @see org.apache.hadoop.fs.FileSystem.globPaths 
+   * @see org.apache.hadoop.fs.FileSystem.globStatus 
    */
   void copyMergeToLocal(String srcf, Path dst, boolean endline) throws IOException {
     Path srcPath = new Path(srcf);
     FileSystem srcFs = srcPath.getFileSystem(getConf());
-    Path [] srcs = srcFs.globPaths(new Path(srcf));
+    Path [] srcs = FileUtil.stat2Paths(srcFs.globStatus(srcPath), 
+                                       srcPath);
     for(int i=0; i<srcs.length; i++) {
       if (endline) {
         FileUtil.copyMerge(srcFs, srcs[i], 
@@ -337,7 +338,7 @@ public class FsShell extends Configured implements Tool {
    * their content on stdout. 
    * @param srcf: a file pattern specifying source files
    * @exception: IOException
-   * @see org.apache.hadoop.fs.FileSystem.globPaths 
+   * @see org.apache.hadoop.fs.FileSystem.globStatus 
    */
   void cat(String src, boolean verifyChecksum) throws IOException {
     //cat behavior in Linux
@@ -546,14 +547,15 @@ public class FsShell extends Configured implements Tool {
    * @param srcf a file pattern specifying source files
    * @param recursive if need to set replication factor for files in subdirs
    * @throws IOException  
-   * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
+   * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
    */
   void setReplication(short newRep, String srcf, boolean recursive,
                       List<Path> waitingList)
     throws IOException {
     Path srcPath = new Path(srcf);
     FileSystem srcFs = srcPath.getFileSystem(getConf());
-    Path[] srcs = srcFs.globPaths(new Path(srcf));
+    Path[] srcs = FileUtil.stat2Paths(srcFs.globStatus(srcPath),
+                                      srcPath);
     for(int i=0; i<srcs.length; i++) {
       setReplication(newRep, srcFs, srcs[i], recursive, waitingList);
     }
@@ -608,7 +610,7 @@ public class FsShell extends Configured implements Tool {
    * @param srcf a file pattern specifying source files
    * @param recursive if need to list files in subdirs
    * @throws IOException  
-   * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
+   * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
    */
   void ls(String srcf, boolean recursive) throws IOException {
     Path srcPath = new Path(srcf);
@@ -663,12 +665,14 @@ public class FsShell extends Configured implements Tool {
    * Show the size of all files that match the file pattern <i>src</i>
    * @param src a file pattern specifying source files
    * @throws IOException  
-   * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
+   * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
    */
   void du(String src) throws IOException {
     Path srcPath = new Path(src);
     FileSystem srcFs = srcPath.getFileSystem(getConf());
-    FileStatus items[] = srcFs.listStatus(srcFs.globPaths(srcPath));
+    Path[] pathItems = FileUtil.stat2Paths(srcFs.globStatus(srcPath), 
+                                           srcPath);
+    FileStatus items[] = srcFs.listStatus(pathItems);
     if ((items == null) || ((items.length == 0) && 
         (!srcFs.exists(srcPath)))){
       throw new FileNotFoundException("Cannot access " + src
@@ -686,7 +690,7 @@ public class FsShell extends Configured implements Tool {
    * that matches the file pattern <i>src</i>
    * @param src a file pattern specifying source files
    * @throws IOException  
-   * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
+   * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
    */
   void dus(String src) throws IOException {
     Path srcPath = new Path(src);
@@ -790,11 +794,10 @@ public class FsShell extends Configured implements Tool {
   void stat(char[] fmt, String src) throws IOException {
     Path srcPath = new Path(src);
     FileSystem srcFs = srcPath.getFileSystem(getConf());
-    Path glob[] = srcFs.globPaths(srcPath);
+    FileStatus glob[] = srcFs.globStatus(srcPath);
     if (null == glob)
       throw new IOException("cannot stat `" + src + "': No such file or directory");
-    for (Path f : glob) {
-      FileStatus st = srcFs.getFileStatus(f);
+    for (FileStatus f : glob) {
       StringBuilder buf = new StringBuilder();
       for (int i = 0; i < fmt.length; ++i) {
         if (fmt[i] != '%') {
@@ -803,25 +806,25 @@ public class FsShell extends Configured implements Tool {
           if (i + 1 == fmt.length) break;
           switch(fmt[++i]) {
             case 'b':
-              buf.append(st.getLen());
+              buf.append(f.getLen());
               break;
             case 'F':
-              buf.append(st.isDir() ? "directory" : "regular file");
+              buf.append(f.isDir() ? "directory" : "regular file");
               break;
             case 'n':
-              buf.append(f.getName());
+              buf.append(f.getPath().getName());
               break;
             case 'o':
-              buf.append(st.getBlockSize());
+              buf.append(f.getBlockSize());
               break;
             case 'r':
-              buf.append(st.getReplication());
+              buf.append(f.getReplication());
               break;
             case 'y':
-              buf.append(modifFmt.format(new Date(st.getModificationTime())));
+              buf.append(modifFmt.format(new Date(f.getModificationTime())));
               break;
             case 'Y':
-              buf.append(st.getModificationTime());
+              buf.append(f.getModificationTime());
               break;
             default:
               buf.append(fmt[i]);
@@ -841,7 +844,7 @@ public class FsShell extends Configured implements Tool {
    * @param srcf a file pattern specifying source files
    * @param dstf a destination local file/directory 
    * @throws IOException  
-   * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
+   * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
    */
   void rename(String srcf, String dstf) throws IOException {
     Path srcPath = new Path(srcf);
@@ -853,7 +856,7 @@ public class FsShell extends Configured implements Tool {
     if (srcURI.compareTo(dstURI) != 0) {
       throw new IOException("src and destination filesystems do not match.");
     }
-    Path [] srcs = srcFs.globPaths(new Path(srcf));
+    Path[] srcs = FileUtil.stat2Paths(srcFs.globStatus(srcPath), srcPath);
     Path dst = new Path(dstf);
     if (srcs.length > 1 && !srcFs.isDirectory(dst)) {
       throw new IOException("When moving multiple files, " 
@@ -953,14 +956,14 @@ public class FsShell extends Configured implements Tool {
    * @param srcf a file pattern specifying source files
    * @param dstf a destination local file/directory 
    * @throws IOException  
-   * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
+   * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
    */
   void copy(String srcf, String dstf, Configuration conf) throws IOException {
     Path srcPath = new Path(srcf);
     FileSystem srcFs = srcPath.getFileSystem(getConf());
     Path dstPath = new Path(dstf);
     FileSystem dstFs = dstPath.getFileSystem(getConf());
-    Path [] srcs = srcFs.globPaths(srcPath);
+    Path [] srcs = FileUtil.stat2Paths(srcFs.globStatus(srcPath), srcPath);
     if (srcs.length > 1 && !dstFs.isDirectory(dstPath)) {
       throw new IOException("When copying multiple files, " 
                             + "destination should be a directory.");
@@ -1036,7 +1039,7 @@ public class FsShell extends Configured implements Tool {
    * @param srcf a file pattern specifying source files
    * @param recursive if need to delete subdirs
    * @throws IOException  
-   * @see org.apache.hadoop.fs.FileSystem#globPaths(Path)
+   * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
    */
   void delete(String srcf, final boolean recursive) throws IOException {
     //rm behavior in Linux
@@ -1208,7 +1211,7 @@ public class FsShell extends Configured implements Tool {
     for (int i=startIndex; i<args.length; i++) {
       Path srcPath = new Path(args[i]);
       FileSystem srcFs = srcPath.getFileSystem(getConf());
-      Path[] paths = srcFs.globPaths(new Path(args[i]));
+      Path[] paths = FileUtil.stat2Paths(srcFs.globStatus(srcPath), srcPath);
       for(Path path : paths) {
         try {
           FileStatus file = srcFs.getFileStatus(path);
@@ -1878,7 +1881,8 @@ public class FsShell extends Configured implements Tool {
     final void globAndProcess(Path srcPattern, FileSystem srcFs
         ) throws IOException {
       List<IOException> exceptions = new ArrayList<IOException>();
-      for(Path p : srcFs.globPaths(srcPattern))
+      for(Path p : FileUtil.stat2Paths(srcFs.globStatus(srcPattern), 
+                                       srcPattern))
         try { process(p, srcFs); } 
         catch(IOException ioe) { exceptions.add(ioe); }
     

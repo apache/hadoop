@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -154,12 +155,11 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
 
     for (Path p: dirs) {
       FileSystem fs = p.getFileSystem(job); 
-      Path[] matches =
-        FileUtil.stat2Paths(fs.listStatus(fs.globPaths(p, inputFilter), 
-                            inputFilter));
+      FileStatus[] matches = fs.listStatus(FileUtil.stat2Paths(fs.globStatus(p,
+                                     inputFilter)), inputFilter);
 
-      for (Path match: matches) {
-        result.add(fs.makeQualified(match));
+      for (FileStatus match: matches) {
+        result.add(fs.makeQualified(match.getPath()));
       }
     }
 
@@ -191,7 +191,8 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
           }
         }
       } else {
-        Path [] paths = fs.globPaths(p, hiddenFileFilter); 
+        Path [] paths = FileUtil.stat2Paths(fs.globStatus(p, 
+                                                          hiddenFileFilter), p);
         if (paths.length == 0) {
           result.add(
                      new IOException("Input Pattern " + p + " matches 0 files")); 

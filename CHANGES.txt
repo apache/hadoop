@@ -71,6 +71,9 @@ Trunk (unreleased changes)
     HADOOP-2831. Remove deprecated o.a.h.dfs.INode::getAbsoluteName()
     (lohit vijayarenu via cdouglas)
 
+    HADOOP-2839. Remove deprecated FileSystem::globPaths.
+    (lohit vijayarenu via cdouglas)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)

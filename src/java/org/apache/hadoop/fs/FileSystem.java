@@ -861,28 +861,6 @@ public abstract class FileSystem extends Configured implements Closeable {
     return results;
   }
 
-  /**
-   * glob all the path names that match filePattern using the default filter
-   */
-  @Deprecated
-  public Path[] globPaths(Path filePattern) throws IOException {
-    return globPaths(filePattern, DEFAULT_FILTER);
-  }
-
-  /**
-   * glob all the path names that match filePattern and is accepted by filter.
-   */
-  @Deprecated
-  public Path[] globPaths(Path filePattern, PathFilter filter)
-      throws IOException {
-    FileStatus[] stats = globStatus(filePattern, filter);
-    if (stats == null) {
-      return new Path[]{filePattern};
-    } else {
-      return FileUtil.stat2Paths(stats);
-    }
-  }
-
   /*
    * For a path of N components, return a list of paths that match the
    * components [<code>level</code>, <code>N-1</code>].

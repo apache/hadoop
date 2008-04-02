@@ -49,6 +49,22 @@ public class FileUtil {
   }
 
   /**
+   * convert an array of FileStatus to an array of Path.
+   * If stats if null, return path
+   * @param stats
+   *          an array of FileStatus objects
+   * @param path
+   *          default path to return in stats is null
+   * @return an array of paths corresponding to the input
+   */
+  public static Path[] stat2Paths(FileStatus[] stats, Path path) {
+    if (stats == null)
+      return new Path[]{path};
+    else
+      return stat2Paths(stats);
+  }
+  
+  /**
    * Delete a directory and all its contents.  If
    * we return false, the directory may be partially-deleted.
    */

@@ -337,7 +337,9 @@ public class TestGlobPaths extends TestCase {
         throw new IOException("Mkdirs failed to create " + path[i].toString());
       }
     }
-    Path[] globResults = fs.globPaths(new Path(pattern));
+    Path patternPath = new Path(pattern);
+    Path[] globResults = FileUtil.stat2Paths(fs.globStatus(patternPath),
+                                             patternPath);
     for(int i=0; i<globResults.length; i++) {
       globResults[i] = globResults[i].makeQualified(fs);
     }
