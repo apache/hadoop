@@ -24,7 +24,7 @@ classes to the hadoop <code>CLASSPATH<code>
 
 <blockquote><pre># Extra Java CLASSPATH elements.  Optional.
 # export HADOOP_CLASSPATH=
-export HADOOP_CLASSPATH=$HBASE_HOME/build/test:$HBASE_HOME/build/hbase-X.X.X.jar:$HBASE_HOME/conf</pre></blockquote>
+export HADOOP_CLASSPATH=$HBASE_HOME/build/test:$HBASE_HOME/build/hbase-X.X.X.jar:$HBASE_HOME/build/hbase-X.X.X-test.jar:$HBASE_HOME/conf</pre></blockquote>
 
 <p>Expand $HBASE_HOME appropriately in the in accordance with your local environment.</p>
 
@@ -114,7 +114,7 @@ import org.apache.hadoop.util.ToolRunner;
  * &lt;/pre>
  * 
  * &lt;p>This code was written against hbase 0.1 branch.
- *&#x27;
+ *&#x2f;
 public class SampleUploader extends MapReduceBase
 implements Mapper<LongWritable, Text, Text, MapWritable>, Tool {
   private static final String NAME = "SampleUploader";
