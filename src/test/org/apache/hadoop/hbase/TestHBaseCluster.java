@@ -24,6 +24,8 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -33,6 +35,7 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
  * Test HBase Master and Region servers, client API 
  */
 public class TestHBaseCluster extends HBaseClusterTestCase {
+  private static final Log LOG = LogFactory.getLog(TestHBaseCluster.class);
 
   private HTableDescriptor desc;
   private HBaseAdmin admin;
@@ -104,7 +107,7 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
           (ANCHORSTR + k).getBytes(HConstants.UTF8_ENCODING));
       table.commit(b);
     }
-    System.out.println("Write " + NUM_VALS + " rows. Elapsed time: "
+    LOG.info("Write " + NUM_VALS + " rows. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
     // Read them back in
@@ -134,7 +137,7 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
           teststr.compareTo(bodystr) == 0);
     }
 
-    System.out.println("Read " + NUM_VALS + " rows. Elapsed time: "
+    LOG.info("Read " + NUM_VALS + " rows. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
   }
   
@@ -175,7 +178,7 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
             anchorFetched++;
             
           } else {
-            System.out.println(col);
+            LOG.info(col);
           }
         }
         curVals.clear();
@@ -184,7 +187,7 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
       assertEquals("Expected " + NUM_VALS + " " + CONTENTS_BASIC + " values, but fetched " + contentsFetched, NUM_VALS, contentsFetched);
       assertEquals("Expected " + NUM_VALS + " " + ANCHORNUM + " values, but fetched " + anchorFetched, NUM_VALS, anchorFetched);
 
-      System.out.println("Scanned " + NUM_VALS
+      LOG.info("Scanned " + NUM_VALS
           + " rows. Elapsed time: "
           + ((System.currentTimeMillis() - startTime) / 1000.0));
 

@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -42,7 +43,6 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MultiRegionTable;
-import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -76,9 +76,9 @@ public class TestTableIndex extends MultiRegionTable {
 
 
   private HTableDescriptor desc;
+  private JobConf jobConf = null;
 
-  private Path dir;
-
+  /** default constructor */
   public TestTableIndex() {
     // Enable DEBUG-level MR logging.
     Logger.getLogger("org.apache.hadoop.mapred").setLevel(Level.DEBUG);
@@ -105,7 +105,6 @@ public class TestTableIndex extends MultiRegionTable {
     // Create a table.
     HBaseAdmin admin = new HBaseAdmin(conf);
     admin.createTable(desc);
-
     // Populate a table into multiple regions
     makeMultiRegionTable(conf, cluster, dfsCluster.getFileSystem(), TABLE_NAME,
       INPUT_COLUMN);
@@ -114,6 +113,14 @@ public class TestTableIndex extends MultiRegionTable {
     HTable table = new HTable(conf, new Text(TABLE_NAME));
     Text[] startKeys = table.getStartKeys();
     assertTrue(startKeys.length > 1);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public void tearDown() throws Exception {
+    if (jobConf != null) {
+      FileUtil.fullyDelete(new File(jobConf.get("hadoop.tmp.dir")));
+    }
   }
 
   /**
@@ -135,7 +142,7 @@ public class TestTableIndex extends MultiRegionTable {
     conf.set("hbase.index.conf", createIndexConfContent());
 
     try {
-      JobConf jobConf = new JobConf(conf, TestTableIndex.class);
+      jobConf = new JobConf(conf, TestTableIndex.class);
       jobConf.setJobName("index column contents");
       jobConf.setNumMapTasks(2);
       // number of indexes to partition into

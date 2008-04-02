@@ -19,20 +19,12 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.TimestampTestBase;
 
 import org.apache.commons.logging.Log;
@@ -43,7 +35,7 @@ import org.apache.commons.logging.LogFactory;
  * tests same in presence of deletes.  Test cores are written so can be
  * run against an HRegion and against an HTable: i.e. both local and remote.
  */
-public class TestTimestamp extends HBaseTestCase {
+public class TestTimestamp extends HBaseClusterTestCase {
   private static final Log LOG =
     LogFactory.getLog(TestTimestamp.class.getName());
 
@@ -51,11 +43,6 @@ public class TestTimestamp extends HBaseTestCase {
   private static final Text COLUMN = new Text(COLUMN_NAME);
   private static final int VERSIONS = 3;
   
-  /** constructor */
-  public TestTimestamp() {
-    super();
-  }
-
   /**
    * Test that delete works according to description in <a
    * href="https://issues.apache.org/jira/browse/HADOOP-1784">hadoop-1784</a>.

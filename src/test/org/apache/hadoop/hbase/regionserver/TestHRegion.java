@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -57,7 +56,7 @@ implements RegionUnavailableListener {
    */
   public void testHRegion() throws IOException {
     try {
-      setup();
+      init();
       locks();
       badPuts();
       basic();
@@ -65,14 +64,7 @@ implements RegionUnavailableListener {
       batchWrite();
       splitAndMerge();
       read();
-      cleanup();
     } finally {
-      if (r != null) {
-        r.close();
-      }
-      if (log != null) {
-        log.closeAndDelete();
-      }
       StaticTestEnvironment.shutdownDfs(cluster);
     }
   }
@@ -96,22 +88,36 @@ implements RegionUnavailableListener {
   HRegionIncommon region = null;
   
   private static int numInserted = 0;
-
-  // Create directories, start mini cluster, etc.
   
-  private void setup() throws IOException {
+  /** {@inheritDoc} */
+  @Override
+  public void setUp() throws Exception {
+    this.conf.set("hbase.hstore.compactionThreshold", "2");
+
+    if (!StaticTestEnvironment.debugging) {
+      conf.setLong("hbase.hregion.max.filesize", 65536);
+    }
 
     cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
+    fs = cluster.getFileSystem();
+    
     // Set the hbase.rootdir to be the home directory in mini dfs.
     this.conf.set(HConstants.HBASE_DIR,
       this.cluster.getFileSystem().getHomeDirectory().toString());
+    
+    super.setUp();
+  }
 
+  // Create directories, start mini cluster, etc.
+  
+  private void init() throws IOException {
     desc = new HTableDescriptor("test");
     desc.addFamily(new HColumnDescriptor("contents:"));
     desc.addFamily(new HColumnDescriptor("anchor:"));
     r = createNewHRegion(desc, null, null);
     log = r.getLog();
     region = new HRegionIncommon(r);
+    LOG.info("setup completed.");
   }
 
   // Test basic functionality. Writes to contents:basic and anchor:anchornum-*
@@ -129,7 +135,7 @@ implements RegionUnavailableListener {
           (ANCHORSTR + k).getBytes(HConstants.UTF8_ENCODING));
       region.commit(writeid, System.currentTimeMillis());
     }
-    System.out.println("Write " + NUM_VALS + " rows. Elapsed time: "
+    LOG.info("Write " + NUM_VALS + " rows. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
     // Flush cache
@@ -138,7 +144,7 @@ implements RegionUnavailableListener {
 
     region.flushcache();
 
-    System.out.println("Cache flush elapsed time: "
+    LOG.info("Cache flush elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
     // Read them back in
@@ -165,8 +171,10 @@ implements RegionUnavailableListener {
           bodystr, teststr);
     }
 
-    System.out.println("Read " + NUM_VALS + " rows. Elapsed time: "
+    LOG.info("Read " + NUM_VALS + " rows. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
+
+    LOG.info("basic completed.");
   }
   
   private void badPuts() {
@@ -198,6 +206,7 @@ implements RegionUnavailableListener {
       }
     }
     assertTrue("Bad family", exceptionThrown);
+    LOG.info("badPuts completed.");
   }
   
   /**
@@ -253,6 +262,7 @@ implements RegionUnavailableListener {
         }
       }
     }
+    LOG.info("locks completed.");
   }
 
   // Test scanners. Writes contents:firstcol and anchor:secondcol
@@ -283,7 +293,7 @@ implements RegionUnavailableListener {
       numInserted += 2;
     }
 
-    System.out.println("Write " + (vals1.length / 2) + " elapsed time: "
+    LOG.info("Write " + (vals1.length / 2) + " elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
     // 2.  Scan from cache
@@ -321,7 +331,7 @@ implements RegionUnavailableListener {
     }
     assertEquals("Inserted " + numInserted + " values, but fetched " + numFetched, numInserted, numFetched);
 
-    System.out.println("Scanned " + (vals1.length / 2)
+    LOG.info("Scanned " + (vals1.length / 2)
         + " rows from cache. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
@@ -331,7 +341,7 @@ implements RegionUnavailableListener {
     
     region.flushcache();
 
-    System.out.println("Cache flush elapsed time: "
+    LOG.info("Cache flush elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
     // 4.  Scan from disk
@@ -368,7 +378,7 @@ implements RegionUnavailableListener {
     }
     assertEquals("Inserted " + numInserted + " values, but fetched " + numFetched, numInserted, numFetched);
 
-    System.out.println("Scanned " + (vals1.length / 2)
+    LOG.info("Scanned " + (vals1.length / 2)
         + " rows from disk. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
@@ -386,7 +396,7 @@ implements RegionUnavailableListener {
       numInserted += 2;
     }
 
-    System.out.println("Write " + (vals1.length / 2) + " rows. Elapsed time: "
+    LOG.info("Write " + (vals1.length / 2) + " rows. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
     // 6.  Scan from cache and disk
@@ -423,7 +433,7 @@ implements RegionUnavailableListener {
     }
     assertEquals("Inserted " + numInserted + " values, but fetched " + numFetched, numInserted, numFetched);
 
-    System.out.println("Scanned " + vals1.length
+    LOG.info("Scanned " + vals1.length
         + " rows from cache and disk. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
     
@@ -433,7 +443,7 @@ implements RegionUnavailableListener {
     
     region.flushcache();
 
-    System.out.println("Cache flush elapsed time: "
+    LOG.info("Cache flush elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
     
     // 8.  Scan from disk
@@ -468,7 +478,7 @@ implements RegionUnavailableListener {
     }
     assertEquals("Inserted " + numInserted + " values, but fetched " + numFetched, numInserted, numFetched);
     
-    System.out.println("Scanned " + vals1.length
+    LOG.info("Scanned " + vals1.length
         + " rows from disk. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
 
@@ -506,9 +516,11 @@ implements RegionUnavailableListener {
     }
     assertEquals("Should have fetched " + (numInserted / 2) + " values, but fetched " + numFetched, (numInserted / 2), numFetched);
     
-    System.out.println("Scanned " + (numFetched / 2)
+    LOG.info("Scanned " + (numFetched / 2)
         + " rows from disk with specified start point. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
+
+    LOG.info("scan completed.");
   }
   
   // Do a large number of writes. Disabled if not debugging because it takes a 
@@ -517,6 +529,7 @@ implements RegionUnavailableListener {
   
   private void batchWrite() throws IOException {
     if(! StaticTestEnvironment.debugging) {
+      LOG.info("batchWrite completed.");
       return;
     }
 
@@ -542,7 +555,7 @@ implements RegionUnavailableListener {
           buf1.toString().getBytes(HConstants.UTF8_ENCODING));
       region.commit(writeid, System.currentTimeMillis());
       if (k > 0 && k % (N_ROWS / 100) == 0) {
-        System.out.println("Flushing write #" + k);
+        LOG.info("Flushing write #" + k);
 
         long flushStart = System.currentTimeMillis();
         region.flushcache();
@@ -550,51 +563,55 @@ implements RegionUnavailableListener {
         totalFlush += (flushEnd - flushStart);
 
         if (k % (N_ROWS / 10) == 0) {
-          System.out.print("Rolling log...");
+          System.err.print("Rolling log...");
           long logStart = System.currentTimeMillis();
           log.rollWriter();
           long logEnd = System.currentTimeMillis();
           totalLog += (logEnd - logStart);
-          System.out.println("  elapsed time: " + ((logEnd - logStart) / 1000.0));
+          LOG.info("  elapsed time: " + ((logEnd - logStart) / 1000.0));
         }
       }
     }
     long startCompact = System.currentTimeMillis();
-    if(r.compactIfNeeded()) {
-      totalCompact = System.currentTimeMillis() - startCompact;
-      System.out.println("Region compacted - elapsedTime: " + (totalCompact / 1000.0));
-
-    } else {
-      System.out.println("No compaction required.");
-    }
+    r.compactStores();
+    totalCompact = System.currentTimeMillis() - startCompact;
+    LOG.info("Region compacted - elapsedTime: " + (totalCompact / 1000.0));
     long endTime = System.currentTimeMillis();
 
     long totalElapsed = (endTime - startTime);
-    System.out.println();
-    System.out.println("Batch-write complete.");
-    System.out.println("Wrote " + N_ROWS + " rows, each of ~" + valsize + " bytes");
-    System.out.println("Total flush-time: " + (totalFlush / 1000.0));
-    System.out.println("Total compact-time: " + (totalCompact / 1000.0));
-    System.out.println("Total log-time: " + (totalLog / 1000.0));
-    System.out.println("Total time elapsed: " + (totalElapsed / 1000.0));
-    System.out.println("Total time, rows/second: " + (N_ROWS / (totalElapsed / 1000.0)));
-    System.out.println("Adjusted time (not including flush, compact, or log): " + ((totalElapsed - totalFlush - totalCompact - totalLog) / 1000.0));
-    System.out.println("Adjusted time, rows/second: " + (N_ROWS / ((totalElapsed - totalFlush - totalCompact - totalLog) / 1000.0)));
-    System.out.println();
+    LOG.info("");
+    LOG.info("Batch-write complete.");
+    LOG.info("Wrote " + N_ROWS + " rows, each of ~" + valsize + " bytes");
+    LOG.info("Total flush-time: " + (totalFlush / 1000.0));
+    LOG.info("Total compact-time: " + (totalCompact / 1000.0));
+    LOG.info("Total log-time: " + (totalLog / 1000.0));
+    LOG.info("Total time elapsed: " + (totalElapsed / 1000.0));
+    LOG.info("Total time, rows/second: " + (N_ROWS / (totalElapsed / 1000.0)));
+    LOG.info("Adjusted time (not including flush, compact, or log): " + ((totalElapsed - totalFlush - totalCompact - totalLog) / 1000.0));
+    LOG.info("Adjusted time, rows/second: " + (N_ROWS / ((totalElapsed - totalFlush - totalCompact - totalLog) / 1000.0)));
+    LOG.info("");
 
+    LOG.info("batchWrite completed.");
   }
 
   // NOTE: This test depends on testBatchWrite succeeding
   private void splitAndMerge() throws IOException {
     Path oldRegionPath = r.getRegionDir();
+    Text midKey = r.compactStores();
+    assertNotNull(midKey);
     long startTime = System.currentTimeMillis();
-    HRegion subregions[] = r.splitRegion(this);
+    HRegion subregions[] = r.splitRegion(this, midKey);
     if (subregions != null) {
-      System.out.println("Split region elapsed time: "
+      LOG.info("Split region elapsed time: "
           + ((System.currentTimeMillis() - startTime) / 1000.0));
 
       assertEquals("Number of subregions", subregions.length, 2);
 
+      for (int i = 0; i < subregions.length; i++) {
+        subregions[i] = openClosedRegion(subregions[i]);
+        subregions[i].compactStores();
+      }
+      
       // Now merge it back together
 
       Path oldRegion1 = subregions[0].getRegionDir();
@@ -602,12 +619,13 @@ implements RegionUnavailableListener {
       startTime = System.currentTimeMillis();
       r = HRegion.mergeAdjacent(subregions[0], subregions[1]);
       region = new HRegionIncommon(r);
-      System.out.println("Merge regions elapsed time: "
+      LOG.info("Merge regions elapsed time: "
           + ((System.currentTimeMillis() - startTime) / 1000.0));
       fs.delete(oldRegion1);
       fs.delete(oldRegion2);
       fs.delete(oldRegionPath);
     }
+    LOG.info("splitAndMerge completed.");
   }
 
   /**
@@ -668,7 +686,7 @@ implements RegionUnavailableListener {
             anchorFetched++;
             
           } else {
-            System.out.println("UNEXPECTED COLUMN " + col);
+            LOG.info("UNEXPECTED COLUMN " + col);
           }
         }
         curVals.clear();
@@ -677,7 +695,7 @@ implements RegionUnavailableListener {
       assertEquals("Expected " + NUM_VALS + " " + CONTENTS_BASIC + " values, but fetched " + contentsFetched, NUM_VALS, contentsFetched);
       assertEquals("Expected " + NUM_VALS + " " + ANCHORNUM + " values, but fetched " + anchorFetched, NUM_VALS, anchorFetched);
 
-      System.out.println("Scanned " + NUM_VALS
+      LOG.info("Scanned " + NUM_VALS
           + " rows from disk. Elapsed time: "
           + ((System.currentTimeMillis() - startTime) / 1000.0));
       
@@ -720,7 +738,7 @@ implements RegionUnavailableListener {
       }
       assertEquals("Inserted " + numInserted + " values, but fetched " + numFetched, numInserted, numFetched);
 
-      System.out.println("Scanned " + (numFetched / 2)
+      LOG.info("Scanned " + (numFetched / 2)
           + " rows from disk. Elapsed time: "
           + ((System.currentTimeMillis() - startTime) / 1000.0));
       
@@ -753,7 +771,7 @@ implements RegionUnavailableListener {
         }
         assertEquals("Inserted " + N_ROWS + " values, but fetched " + numFetched, N_ROWS, numFetched);
 
-        System.out.println("Scanned " + N_ROWS
+        LOG.info("Scanned " + N_ROWS
             + " rows from disk. Elapsed time: "
             + ((System.currentTimeMillis() - startTime) / 1000.0));
         
@@ -785,37 +803,14 @@ implements RegionUnavailableListener {
       }
       assertEquals("Inserted " + (NUM_VALS + numInserted/2) + " values, but fetched " + fetched, (NUM_VALS + numInserted/2), fetched);
 
-      System.out.println("Scanned " + fetched
+      LOG.info("Scanned " + fetched
           + " rows from disk. Elapsed time: "
           + ((System.currentTimeMillis() - startTime) / 1000.0));
       
     } finally {
       s.close();
     }
+    LOG.info("read completed.");
   }
   
-  private static void deleteFile(File f) {
-    if(f.isDirectory()) {
-      File[] children = f.listFiles();
-      for(int i = 0; i < children.length; i++) {
-        deleteFile(children[i]);
-      }
-    }
-    f.delete();
-  }
-  
-  private void cleanup() {
-    try {
-      r.close();
-      r = null;
-      log.closeAndDelete();
-      log = null;
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-
-    // Delete all the DFS files
-
-    deleteFile(new File(System.getProperty("test.build.data"), "dfs"));
-  }
 }

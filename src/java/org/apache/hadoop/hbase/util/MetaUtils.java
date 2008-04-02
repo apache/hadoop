@@ -35,12 +35,13 @@ import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.client.HTable;
 
 /**
@@ -316,13 +317,16 @@ public class MetaUtils {
   throws IOException {
     HTable t = new HTable(c, HConstants.META_TABLE_NAME);
     Cell cell = t.get(row, HConstants.COL_REGIONINFO);
+    if (cell == null) {
+      throw new IOException("no information for row " + row);
+    }
     // Throws exception if null.
     HRegionInfo info = Writables.getHRegionInfo(cell);
-    long id = t.startUpdate(row);
+    BatchUpdate b = new BatchUpdate(row);
     info.setOffline(onlineOffline);
-    t.put(id, HConstants.COL_REGIONINFO, Writables.getBytes(info));
-    t.delete(id, HConstants.COL_SERVER);
-    t.delete(id, HConstants.COL_STARTCODE);
-    t.commit(id);
+    b.put(HConstants.COL_REGIONINFO, Writables.getBytes(info));
+    b.delete(HConstants.COL_SERVER);
+    b.delete(HConstants.COL_STARTCODE);
+    t.commit(b);
   }
 }

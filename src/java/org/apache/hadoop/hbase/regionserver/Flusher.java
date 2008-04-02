@@ -20,14 +20,16 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.concurrent.DelayQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.HashSet;
 import java.util.Set;
-import java.util.Iterator;
 import java.util.ConcurrentModificationException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -35,60 +37,60 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 /** Flush cache upon request */
 class Flusher extends Thread implements CacheFlushListener {
   static final Log LOG = LogFactory.getLog(Flusher.class);
-  private final DelayQueue<QueueEntry> flushQueue =
-    new DelayQueue<QueueEntry>();
+  private final BlockingQueue<HRegion> flushQueue =
+    new LinkedBlockingQueue<HRegion>();
+  
+  private final HashSet<HRegion> regionsInQueue = new HashSet<HRegion>();
 
+  private final long threadWakeFrequency;
   private final long optionalFlushPeriod;
   private final HRegionServer server;
-  private final HBaseConfiguration conf;
   private final Integer lock = new Integer(0);
   
-  /** constructor */
-  public Flusher(final HRegionServer server) {
+  /**
+   * @param conf
+   * @param server
+   */
+  public Flusher(final HBaseConfiguration conf, final HRegionServer server) {
     super();
     this.server = server;
-    conf = server.conf;
     this.optionalFlushPeriod = conf.getLong(
-      "hbase.regionserver.optionalcacheflushinterval", 30 * 60 * 1000L);
+        "hbase.regionserver.optionalcacheflushinterval", 30 * 60 * 1000L);
+    this.threadWakeFrequency = conf.getLong(
+        HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
   }
   
   /** {@inheritDoc} */
   @Override
   public void run() {
+    long lastOptionalCheck = System.currentTimeMillis(); 
     while (!server.isStopRequested()) {
-      QueueEntry e = null;
+      HRegion r = null;
       try {
-        e = flushQueue.poll(server.threadWakeFrequency, TimeUnit.MILLISECONDS);
-        if (e == null) {
-          continue;
-        }
-        synchronized(lock) { // Don't interrupt while we're working
-          if (e.getRegion().flushcache()) {
-            server.compactionRequested(e);
-          }
-            
-          e.setExpirationTime(System.currentTimeMillis() +
-              optionalFlushPeriod);
-          flushQueue.add(e);
-        }
-        
-        // Now ensure that all the active regions are in the queue
-        Set<HRegion> regions = server.getRegionsToCheck();
-        for (HRegion r: regions) {
-          e = new QueueEntry(r, r.getLastFlushTime() + optionalFlushPeriod);
-          synchronized (flushQueue) {
-            if (!flushQueue.contains(e)) {
-              flushQueue.add(e);
+        long now = System.currentTimeMillis();
+        if (now - threadWakeFrequency > lastOptionalCheck) {
+          lastOptionalCheck = now;
+          // Queue up regions for optional flush if they need it
+          Set<HRegion> regions = server.getRegionsToCheck();
+          for (HRegion region: regions) {
+            synchronized (regionsInQueue) {
+              if (!regionsInQueue.contains(region) &&
+                  (now - optionalFlushPeriod) > region.getLastFlushTime()) {
+                regionsInQueue.add(region);
+                flushQueue.add(region);
+                region.setLastFlushTime(now);
+              }
             }
           }
         }
-
-        // Now make sure that the queue only contains active regions
-        synchronized (flushQueue) {
-          for (Iterator<QueueEntry> i = flushQueue.iterator(); i.hasNext();  ) {
-            e = i.next();
-            if (!regions.contains(e.getRegion())) {
-              i.remove();
+        r = flushQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
+        if (r != null) {
+          synchronized (regionsInQueue) {
+            regionsInQueue.remove(r);
+          }
+          synchronized (lock) { // Don't interrupt while we're working
+            if (r.flushcache()) {
+              server.compactSplitThread.compactionRequested(r);
             }
           }
         }
@@ -108,32 +110,32 @@ class Flusher extends Thread implements CacheFlushListener {
         server.stop();
       } catch (IOException ex) {
         LOG.error("Cache flush failed" +
-          (e != null ? (" for region " + e.getRegion().getRegionName()) : ""),
+          (r != null ? (" for region " + r.getRegionName()) : ""),
           RemoteExceptionHandler.checkIOException(ex));
         if (!server.checkFileSystem()) {
           break;
         }
       } catch (Exception ex) {
         LOG.error("Cache flush failed" +
-          (e != null ? (" for region " + e.getRegion().getRegionName()) : ""),
+          (r != null ? (" for region " + r.getRegionName()) : ""),
           ex);
         if (!server.checkFileSystem()) {
           break;
         }
       }
     }
+    regionsInQueue.clear();
     flushQueue.clear();
     LOG.info(getName() + " exiting");
   }
   
   /** {@inheritDoc} */
-  public void flushRequested(HRegion region) {
-    QueueEntry e = new QueueEntry(region, System.currentTimeMillis());
-    synchronized (flushQueue) {
-      if (flushQueue.contains(e)) {
-        flushQueue.remove(e);
+  public void flushRequested(HRegion r) {
+    synchronized (regionsInQueue) {
+      if (!regionsInQueue.contains(r)) {
+        regionsInQueue.add(r);
+        flushQueue.add(r);
       }
-      flushQueue.add(e);
     }
   }
   

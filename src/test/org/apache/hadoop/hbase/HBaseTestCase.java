@@ -102,11 +102,8 @@ public abstract class HBaseTestCase extends TestCase {
     localfs =
       (conf.get("fs.default.name", "file:///").compareTo("file::///") == 0);
 
-    try {
+    if (fs == null) {
       this.fs = FileSystem.get(conf);
-    } catch (IOException e) {
-      LOG.fatal("error getting file system", e);
-      throw e;
     }
     try {
       if (localfs) {
@@ -509,54 +506,88 @@ public abstract class HBaseTestCase extends TestCase {
    */
   public static class HTableIncommon implements Incommon {
     final HTable table;
+    private BatchUpdate batch;
+    
+    private void checkBatch() {
+      if (batch == null) {
+        throw new IllegalStateException("No batch update in progress.");
+      }
+    }
+    
     /**
      * @param table
      */
     public HTableIncommon(final HTable table) {
       super();
       this.table = table;
+      this.batch = null;
     }
     /** {@inheritDoc} */
-    public void abort(long lockid) {
-      this.table.abort(lockid);
+    public void abort(@SuppressWarnings("unused") long lockid) {
+      if (this.batch != null) {
+        this.batch = null;
+      }
     }
     /** {@inheritDoc} */
-    public void commit(long lockid) throws IOException {
-      this.table.commit(lockid);
+    public void commit(@SuppressWarnings("unused") long lockid)
+    throws IOException {
+      checkBatch();
+      this.table.commit(batch);
+      this.batch = null;
     }
+
     /** {@inheritDoc} */
-    public void commit(long lockid, final long ts) throws IOException {
-      this.table.commit(lockid, ts);
+    public void commit(@SuppressWarnings("unused") long lockid, final long ts)
+    throws IOException {
+      checkBatch();
+      this.batch.setTimestamp(ts);
+      this.table.commit(batch);
+      this.batch = null;
     }
+
     /** {@inheritDoc} */
-    public void put(long lockid, Text column, byte[] val) {
-      this.table.put(lockid, column, val);
+    public void put(@SuppressWarnings("unused") long lockid, Text column,
+        byte[] val) {
+      checkBatch();
+      this.batch.put(column, val);
     }
+
     /** {@inheritDoc} */
-    public void delete(long lockid, Text column) {
-      this.table.delete(lockid, column);
+    public void delete(@SuppressWarnings("unused") long lockid, Text column) {
+      checkBatch();
+      this.batch.delete(column);
     }
+    
     /** {@inheritDoc} */
     public void deleteAll(Text row, Text column, long ts) throws IOException {
       this.table.deleteAll(row, column, ts);
     }
+    
     /** {@inheritDoc} */
     public long startUpdate(Text row) {
-      return this.table.startUpdate(row);
+      if (this.batch != null) {
+        throw new IllegalStateException("Batch update already in progress.");
+      }
+      this.batch = new BatchUpdate(row);
+      return 0L;
     }
+
     /** {@inheritDoc} */
     public HScannerInterface getScanner(Text [] columns, Text firstRow,
         long ts) throws IOException {
       return this.table.obtainScanner(columns, firstRow, ts, null);
     }
+    
     /** {@inheritDoc} */
     public Cell get(Text row, Text column) throws IOException {
       return this.table.get(row, column);
     }
+    
     /** {@inheritDoc} */
     public Cell[] get(Text row, Text column, int versions) throws IOException {
       return this.table.get(row, column, versions);
     }
+    
     /** {@inheritDoc} */
     public Cell[] get(Text row, Text column, long ts, int versions)
     throws IOException {
@@ -576,8 +607,10 @@ public abstract class HBaseTestCase extends TestCase {
         fail(column.toString() + " at timestamp " + timestamp + 
           "\" was expected to be \"" + value + " but was null");
       }
-      assertEquals(column.toString() + " at timestamp " 
-        + timestamp, value, new String(cell_value.getValue()));
+      if (cell_value != null) {
+        assertEquals(column.toString() + " at timestamp " 
+            + timestamp, value, new String(cell_value.getValue()));
+      }
     }
   }
 }

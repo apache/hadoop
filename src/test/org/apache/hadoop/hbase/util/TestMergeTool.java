@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 
 /** Test stand alone merge tool that can merge arbitrary regions */
@@ -54,6 +55,7 @@ public class TestMergeTool extends HBaseTestCase {
   /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
+    this.conf.set("hbase.hstore.compactionThreshold", "2");
 
     // Create table description
     
@@ -237,7 +239,9 @@ public class TestMergeTool extends HBaseTestCase {
 
       for (int i = 0; i < 3 ; i++) {
         for (int j = 0; j < rows[i].length; j++) {
-          byte[] bytes = merged.get(rows[i][j], COLUMN_NAME).getValue();
+          Cell cell = merged.get(rows[i][j], COLUMN_NAME);
+          assertNotNull(cell);
+          byte[] bytes = cell.getValue();
           assertNotNull(bytes);
           Text value = new Text(bytes);
           assertTrue(value.equals(rows[i][j]));

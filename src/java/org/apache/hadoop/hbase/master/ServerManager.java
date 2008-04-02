@@ -128,6 +128,9 @@ class ServerManager implements HConstants {
   }
   
   /**
+   * Called to process the messages sent from the region server to the master
+   * along with the heart beat.
+   * 
    * @param serverInfo
    * @param msgs
    * @return messages from master to region server indicating what region
@@ -142,7 +145,7 @@ class ServerManager implements HConstants {
     if (msgs.length > 0) {
       if (msgs[0].getMsg() == HMsg.MSG_REPORT_EXITING) {
         processRegionServerExit(serverName, msgs);
-        return new HMsg[]{msgs[0]};
+        return new HMsg[0];
       } else if (msgs[0].getMsg() == HMsg.MSG_REPORT_QUIESCED) {
         LOG.info("Region server " + serverName + " quiesced");
         master.quiescedMetaServers.incrementAndGet();
@@ -157,6 +160,11 @@ class ServerManager implements HConstants {
     }
 
     if (master.shutdownRequested && !master.closed.get()) {
+      if (msgs.length > 0 && msgs[0].getMsg() == HMsg.MSG_REPORT_QUIESCED) {
+        // Server is already quiesced, but we aren't ready to shut down
+        // return empty response
+        return new HMsg[0];
+      }
       // Tell the server to stop serving any user regions
       return new HMsg[]{new HMsg(HMsg.MSG_REGIONSERVER_QUIESCE)};
     }
@@ -522,7 +530,7 @@ class ServerManager implements HConstants {
   public int averageLoad() {
     return 0;
   }
-  
+
   /** @return the number of active servers */
   public int numServers() {
     return serversToServerInfo.size();

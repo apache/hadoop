@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -42,19 +43,22 @@ import org.apache.hadoop.hbase.util.Writables;
 class CompactSplitThread extends Thread 
 implements RegionUnavailableListener, HConstants {
   static final Log LOG = LogFactory.getLog(CompactSplitThread.class);
-    
+  
   private HTable root = null;
   private HTable meta = null;
-  private long startTime;
+  private volatile long startTime;
   private final long frequency;
+  private final Integer lock = new Integer(0);
   
-  private HRegionServer server;
-  private HBaseConfiguration conf;
+  private final HRegionServer server;
+  private final HBaseConfiguration conf;
   
-  private final BlockingQueue<QueueEntry> compactionQueue =
-    new LinkedBlockingQueue<QueueEntry>();
-
-  /** constructor */
+  private final BlockingQueue<HRegion> compactionQueue =
+    new LinkedBlockingQueue<HRegion>();
+  
+  private final HashSet<HRegion> regionsInQueue = new HashSet<HRegion>();
+  
+  /** @param server */
   public CompactSplitThread(HRegionServer server) {
     super();
     this.server = server;
@@ -68,19 +72,26 @@ implements RegionUnavailableListener, HConstants {
   @Override
   public void run() {
     while (!server.isStopRequested()) {
-      QueueEntry e = null;
+      HRegion r = null;
       try {
-        e = compactionQueue.poll(this.frequency, TimeUnit.MILLISECONDS);
-        if (e == null) {
-          continue;
+        r = compactionQueue.poll(this.frequency, TimeUnit.MILLISECONDS);
+        if (r != null) {
+          synchronized (regionsInQueue) {
+            regionsInQueue.remove(r);
+          }
+          synchronized (lock) {
+            // Don't interrupt us while we are working
+            Text midKey = r.compactStores();
+            if (midKey != null) {
+              split(r, midKey);
+            }
+          }
         }
-        e.getRegion().compactIfNeeded();
-        split(e.getRegion());
       } catch (InterruptedException ex) {
         continue;
       } catch (IOException ex) {
         LOG.error("Compaction failed" +
-            (e != null ? (" for region " + e.getRegion().getRegionName()) : ""),
+            (r != null ? (" for region " + r.getRegionName()) : ""),
             RemoteExceptionHandler.checkIOException(ex));
         if (!server.checkFileSystem()) {
           break;
@@ -88,30 +99,35 @@ implements RegionUnavailableListener, HConstants {
 
       } catch (Exception ex) {
         LOG.error("Compaction failed" +
-            (e != null ? (" for region " + e.getRegion().getRegionName()) : ""),
+            (r != null ? (" for region " + r.getRegionName()) : ""),
             ex);
         if (!server.checkFileSystem()) {
           break;
         }
       }
     }
+    regionsInQueue.clear();
+    compactionQueue.clear();
     LOG.info(getName() + " exiting");
   }
   
   /**
-   * @param e QueueEntry for region to be compacted
+   * @param r HRegion store belongs to
    */
-  public void compactionRequested(QueueEntry e) {
-    compactionQueue.add(e);
+  public synchronized void compactionRequested(HRegion r) {
+    LOG.debug("Compaction requested for region: " + r.getRegionName());
+    synchronized (regionsInQueue) {
+      if (!regionsInQueue.contains(r)) {
+        compactionQueue.add(r);
+        regionsInQueue.add(r);
+      }
+    }
   }
   
-  void compactionRequested(final HRegion r) {
-    compactionRequested(new QueueEntry(r, System.currentTimeMillis()));
-  }
-  
-  private void split(final HRegion region) throws IOException {
+  private void split(final HRegion region, final Text midKey)
+  throws IOException {
     final HRegionInfo oldRegionInfo = region.getRegionInfo();
-    final HRegion[] newRegions = region.splitRegion(this);
+    final HRegion[] newRegions = region.splitRegion(this, midKey);
     if (newRegions == null) {
       // Didn't need to be split
       return;
@@ -196,6 +212,15 @@ implements RegionUnavailableListener, HConstants {
       }
     } finally {
       server.getWriteLock().unlock();
+    }
+  }
+
+  /**
+   * Only interrupt once it's done with a run through the work loop.
+   */ 
+  void interruptPolitely() {
+    synchronized (lock) {
+      interrupt();
     }
   }
 }

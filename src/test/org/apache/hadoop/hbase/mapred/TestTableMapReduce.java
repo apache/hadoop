@@ -20,13 +20,14 @@
 package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -35,7 +36,6 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MultiRegionTable;
-import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.MapWritable;
@@ -66,8 +66,6 @@ public class TestTableMapReduce extends MultiRegionTable {
     TEXT_OUTPUT_COLUMN
   };
 
-  private Path dir;
-  
   private static byte[][] values = null;
   
   static {
@@ -193,8 +191,9 @@ public class TestTableMapReduce extends MultiRegionTable {
     @SuppressWarnings("deprecation")
     MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
 
+    JobConf jobConf = null;
     try {
-      JobConf jobConf = new JobConf(conf, TestTableMapReduce.class);
+      jobConf = new JobConf(conf, TestTableMapReduce.class);
       jobConf.setJobName("process column contents");
       jobConf.setNumMapTasks(1);
       jobConf.setNumReduceTasks(1);
@@ -215,6 +214,9 @@ public class TestTableMapReduce extends MultiRegionTable {
     verify(SINGLE_REGION_TABLE_NAME);
     } finally {
       mrCluster.shutdown();
+      if (jobConf != null) {
+        FileUtil.fullyDelete(new File(jobConf.get("hadoop.tmp.dir")));
+      }
     }
   }
   
@@ -244,8 +246,9 @@ public class TestTableMapReduce extends MultiRegionTable {
     @SuppressWarnings("deprecation")
     MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
 
+    JobConf jobConf = null;
     try {
-      JobConf jobConf = new JobConf(conf, TestTableMapReduce.class);
+      jobConf = new JobConf(conf, TestTableMapReduce.class);
       jobConf.setJobName("process column contents");
       jobConf.setNumMapTasks(2);
       jobConf.setNumReduceTasks(1);
@@ -262,6 +265,9 @@ public class TestTableMapReduce extends MultiRegionTable {
       verify(MULTI_REGION_TABLE_NAME);
     } finally {
       mrCluster.shutdown();
+      if (jobConf != null) {
+        FileUtil.fullyDelete(new File(jobConf.get("hadoop.tmp.dir")));
+      }
     }
   }
 

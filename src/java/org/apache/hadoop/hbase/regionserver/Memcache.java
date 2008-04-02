@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Set;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -63,7 +62,7 @@ class Memcache {
     snapshot = 
       Collections.synchronizedSortedMap(new TreeMap<HStoreKey, byte []>());
   }
-
+  
   /**
    * Creates a snapshot of the current Memcache
    */
@@ -196,12 +195,9 @@ class Memcache {
   /**
    * @param row
    * @param timestamp
-   * @return the key that matches <i>row</i> exactly, or the one that
-   * immediately preceeds it.
    */
   void getRowKeyAtOrBefore(final Text row, 
-    SortedMap<HStoreKey, Long> candidateKeys)
-  throws IOException {
+    SortedMap<HStoreKey, Long> candidateKeys) {
     this.lock.readLock().lock();
     
     try {

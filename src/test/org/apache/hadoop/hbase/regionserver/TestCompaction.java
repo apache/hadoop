@@ -93,7 +93,6 @@ public class TestCompaction extends HBaseTestCase {
    */
   public void testCompaction() throws Exception {
     createStoreFile(r);
-    assertFalse(r.compactIfNeeded());
     for (int i = 0; i < COMPACTION_THRESHOLD; i++) {
       createStoreFile(r);
     }
@@ -106,35 +105,8 @@ public class TestCompaction extends HBaseTestCase {
       r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);
     // Assert that I can get > 5 versions (Should be at least 5 in there).
     assertTrue(cellValues.length >= 5);
-    // Try to run compaction concurrent with a thread flush just to see that
-    // we can.
-    final HRegion region = this.r;
-    Thread t1 = new Thread() {
-      @Override
-      public void run() {
-        try {
-          region.flushcache();
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-      }
-    };
-    Thread t2 = new Thread() {
-      @Override
-      public void run() {
-        try {
-          assertTrue(region.compactIfNeeded());
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-      }
-    };
-    t1.setDaemon(true);
-    t1.start();
-    t2.setDaemon(true);
-    t2.start();
-    t1.join();
-    t2.join();
+    r.flushcache();
+    r.compactStores();
     // Now assert that there are 4 versions of a record only: thats the
     // 3 versions that should be in the compacted store and then the one more
     // we added when we flushed. But could be 3 only if the flush happened
@@ -170,7 +142,8 @@ public class TestCompaction extends HBaseTestCase {
     // compacted store and the flush above when we added deletes.  Add more
     // content to be certain.
     createSmallerStoreFile(this.r);
-    assertTrue(r.compactIfNeeded());
+    r.flushcache();
+    r.compactStores();
     // Assert that the first row is still deleted.
     cellValues = r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);
     assertNull(cellValues);

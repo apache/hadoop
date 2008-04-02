@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -44,11 +45,62 @@ public class TestHMemcache extends TestCase {
   
   private static final String COLUMN_FAMILY = "column";
 
+  private static final int FIRST_ROW = 1;
+  private static final int NUM_VALS = 1000;
+  private static final Text CONTENTS_BASIC = new Text("contents:basic");
+  private static final String CONTENTSTR = "contentstr";
+  private static final String ANCHORNUM = "anchor:anchornum-";
+  private static final String ANCHORSTR = "anchorstr";
+
   /** {@inheritDoc} */
   @Override
   public void setUp() throws Exception {
     super.setUp();
     this.hmemcache = new Memcache();
+  }
+
+  /**
+   * @throws UnsupportedEncodingException
+   */
+  public void testMemcache() throws UnsupportedEncodingException {
+    for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
+      Text row = new Text("row_" + k);
+      HStoreKey key =
+        new HStoreKey(row, CONTENTS_BASIC, System.currentTimeMillis());
+      hmemcache.add(key, (CONTENTSTR + k).getBytes(HConstants.UTF8_ENCODING));
+      
+      key =
+        new HStoreKey(row, new Text(ANCHORNUM + k), System.currentTimeMillis());
+      hmemcache.add(key, (ANCHORSTR + k).getBytes(HConstants.UTF8_ENCODING));
+    }
+
+    // Read them back
+
+    for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
+      List<Cell> results;
+      Text row = new Text("row_" + k);
+      HStoreKey key = new HStoreKey(row, CONTENTS_BASIC, Long.MAX_VALUE);
+      results = hmemcache.get(key, 1);
+      assertNotNull("no data for " + key.toString(), results);
+      assertEquals(1, results.size());
+      String bodystr = new String(results.get(0).getValue(),
+          HConstants.UTF8_ENCODING);
+      String teststr = CONTENTSTR + k;
+      assertTrue("Incorrect value for key: (" + key.toString() +
+          "), expected: '" + teststr + "' got: '" +
+          bodystr + "'", teststr.compareTo(bodystr) == 0);
+      
+      key = new HStoreKey(row, new Text(ANCHORNUM + k), Long.MAX_VALUE);
+      results = hmemcache.get(key, 1);
+      assertNotNull("no data for " + key.toString(), results);
+      assertEquals(1, results.size());
+      bodystr = new String(results.get(0).getValue(),
+          HConstants.UTF8_ENCODING);
+      teststr = ANCHORSTR + k;
+      assertTrue("Incorrect value for key: (" + key.toString() +
+          "), expected: '" + teststr + "' got: '" + bodystr + "'",
+          teststr.compareTo(bodystr) == 0);
+    }
   }
 
   private Text getRowName(final int index) {
@@ -175,8 +227,8 @@ public class TestHMemcache extends TestCase {
     }
   }
   
-  /** For HBASE-528 **/
-  public void testGetRowKeyAtOrBefore() throws IOException {
+  /** For HBASE-528 */
+  public void testGetRowKeyAtOrBefore() {
     // set up some test data
     Text t10 = new Text("010");
     Text t20 = new Text("020");

@@ -220,7 +220,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       conf.getInt("hbase.master.lease.period", 30 * 1000);
 
     // Cache flushing thread.
-    this.cacheFlusher = new Flusher(this);
+    this.cacheFlusher = new Flusher(conf, this);
     
     // Compaction thread
     this.compactSplitThread = new CompactSplitThread(this);
@@ -295,6 +295,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               LOG.info("Server quiesced and not serving any regions. " +
               "Starting shutdown");
               stopRequested.set(true);
+              this.outboundMsgs.clear();
               continue;
             }
 
@@ -412,7 +413,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive?  If OOME could have exited already
     cacheFlusher.interruptPolitely();
-    compactSplitThread.interrupt();
+    compactSplitThread.interruptPolitely();
     synchronized (logRollerLock) {
       this.logRoller.interrupt();
     }
@@ -828,8 +829,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       } finally {
         this.lock.writeLock().unlock();
       }
-      reportOpen(regionInfo); 
     }
+    reportOpen(regionInfo); 
   }
   
   /*
@@ -1226,10 +1227,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /** @return the write lock for the server */
   ReentrantReadWriteLock.WriteLock getWriteLock() {
     return lock.writeLock();
-  }
-
-  void compactionRequested(QueueEntry e) {
-    compactSplitThread.compactionRequested(e);
   }
 
   /**

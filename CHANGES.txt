@@ -11,6 +11,9 @@ Hbase Change Log
 
   NEW FEATURES
    HBASE-548   Tool to online single region
+   
+  IMPROVEMENTS
+   HBASE-469   Streamline HStore startup and compactions
 
 Release 0.1.0
 

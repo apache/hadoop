@@ -24,15 +24,11 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
@@ -44,7 +40,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -53,7 +48,6 @@ import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.hbase.BloomFilterDescriptor;
@@ -69,7 +63,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.RowResult;
 
 /**
  * HStore maintains a bunch of data files.  It is responsible for maintaining 
@@ -87,7 +80,7 @@ public class HStore implements HConstants {
    * If reference, then the regex has more than just one group.  Group 1 is
    * this files id.  Group 2 the referenced region name, etc.
    */
-  private static Pattern REF_NAME_PARSER =
+  private static final Pattern REF_NAME_PARSER =
     Pattern.compile("^(\\d+)(?:\\.(.+))?$");
   
   private static final String BLOOMFILTER_FILE_NAME = "filter";
@@ -101,15 +94,16 @@ public class HStore implements HConstants {
   private final HBaseConfiguration conf;
   private final Path filterDir;
   final Filter bloomFilter;
-  private final Path compactionDir;
 
-  private final Integer compactLock = new Integer(0);
+  private final long desiredMaxFileSize;
+  private volatile long storeSize;
+
   private final Integer flushLock = new Integer(0);
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   final AtomicInteger activeScanners = new AtomicInteger(0);
 
-  final String storeName;
+  final Text storeName;
 
   /*
    * Sorted Map of readers keyed by sequence id (Most recent should be last in
@@ -125,8 +119,15 @@ public class HStore implements HConstants {
   private final SortedMap<Long, MapFile.Reader> readers =
     new TreeMap<Long, MapFile.Reader>();
 
+  // The most-recent log-seq-ID that's present.  The most-recent such ID means
+  // we can ignore all log messages up to and including that ID (because they're
+  // already reflected in the TreeMaps).
   private volatile long maxSeqId;
+  
+  private final Path compactionDir;
+  private final Integer compactLock = new Integer(0);
   private final int compactionThreshold;
+  
   private final ReentrantReadWriteLock newScannerLock =
     new ReentrantReadWriteLock();
 
@@ -177,8 +178,18 @@ public class HStore implements HConstants {
     
     this.compactionDir = HRegion.getCompactionDir(basedir);
     this.storeName =
-      this.info.getEncodedName() + "/" + this.family.getFamilyName();
+      new Text(this.info.getEncodedName() + "/" + this.family.getFamilyName());
     
+    // By default, we compact if an HStore has more than
+    // MIN_COMMITS_FOR_COMPACTION map files
+    this.compactionThreshold =
+      conf.getInt("hbase.hstore.compactionThreshold", 3);
+    
+    // By default we split region if a file > DEFAULT_MAX_FILE_SIZE.
+    this.desiredMaxFileSize =
+      conf.getLong("hbase.hregion.max.filesize", DEFAULT_MAX_FILE_SIZE);
+    this.storeSize = 0L;
+
     if (family.getCompression() == HColumnDescriptor.CompressionType.BLOCK) {
       this.compression = SequenceFile.CompressionType.BLOCK;
     } else if (family.getCompression() ==
@@ -219,21 +230,10 @@ public class HStore implements HConstants {
     // MapFiles are in a reliable state.  Every entry in 'mapdir' must have a 
     // corresponding one in 'loginfodir'. Without a corresponding log info
     // file, the entry in 'mapdir' must be deleted.
-    List<HStoreFile> hstoreFiles = loadHStoreFiles(infodir, mapdir);
-    for(HStoreFile hsf: hstoreFiles) {
-      this.storefiles.put(Long.valueOf(hsf.loadInfo(fs)), hsf);
-    }
+    // loadHStoreFiles also computes the max sequence id
+    this.maxSeqId = -1L;
+    this.storefiles.putAll(loadHStoreFiles(infodir, mapdir));
 
-    // Now go through all the HSTORE_LOGINFOFILEs and figure out the
-    // most-recent log-seq-ID that's present.  The most-recent such ID means we
-    // can ignore all log messages up to and including that ID (because they're
-    // already reflected in the TreeMaps).
-    //
-    // If the HSTORE_LOGINFOFILE doesn't contain a number, just ignore it. That
-    // means it was built prior to the previous run of HStore, and so it cannot 
-    // contain any updates also contained in the log.
-    
-    this.maxSeqId = getMaxSequenceId(hstoreFiles);
     if (LOG.isDebugEnabled()) {
       LOG.debug("maximum sequence id for hstore " + storeName + " is " +
           this.maxSeqId);
@@ -249,16 +249,6 @@ public class HStore implements HConstants {
         " opening " + this.storeName +
         " -- continuing.  Probably DATA LOSS!", e);
     }
-
-    // By default, we compact if an HStore has more than
-    // MIN_COMMITS_FOR_COMPACTION map files
-    this.compactionThreshold =
-      conf.getInt("hbase.hstore.compactionThreshold", 3);
-    
-    // We used to compact in here before bringing the store online.  Instead
-    // get it online quick even if it needs compactions so we can start
-    // taking updates as soon as possible (Once online, can take updates even
-    // during a compaction).
 
     // Move maxSeqId on by one. Why here?  And not in HRegion?
     this.maxSeqId += 1;
@@ -276,28 +266,13 @@ public class HStore implements HConstants {
         first = false;
       } else {
         this.readers.put(e.getKey(),
-          e.getValue().getReader(this.fs, this.bloomFilter));
+            e.getValue().getReader(this.fs, this.bloomFilter));
       }
     }
   }
-  
-  /* 
-   * @param hstoreFiles
-   * @return Maximum sequence number found or -1.
-   * @throws IOException
-   */
-  private long getMaxSequenceId(final List<HStoreFile> hstoreFiles)
-  throws IOException {
-    long maxSeqID = -1;
-    for (HStoreFile hsf : hstoreFiles) {
-      long seqid = hsf.loadInfo(fs);
-      if (seqid > 0) {
-        if (seqid > maxSeqID) {
-          maxSeqID = seqid;
-        }
-      }
-    }
-    return maxSeqID;
+
+  HColumnDescriptor getFamily() {
+    return this.family;
   }
   
   long getMaxSequenceId() {
@@ -388,7 +363,7 @@ public class HStore implements HConstants {
    * @param mapdir qualified path for map file directory
    * @throws IOException
    */
-  private List<HStoreFile> loadHStoreFiles(Path infodir, Path mapdir)
+  private SortedMap<Long, HStoreFile> loadHStoreFiles(Path infodir, Path mapdir)
   throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("infodir: " + infodir.toString() + " mapdir: " +
@@ -397,7 +372,7 @@ public class HStore implements HConstants {
     // Look first at info files.  If a reference, these contain info we need
     // to create the HStoreFile.
     FileStatus infofiles[] = fs.listStatus(infodir);
-    ArrayList<HStoreFile> results = new ArrayList<HStoreFile>(infofiles.length);
+    SortedMap<Long, HStoreFile> results = new TreeMap<Long, HStoreFile>();
     ArrayList<Path> mapfiles = new ArrayList<Path>(infofiles.length);
     for (int i = 0; i < infofiles.length; i++) {
       Path p = infofiles[i].getPath();
@@ -414,6 +389,11 @@ public class HStore implements HConstants {
       boolean isReference = isReference(p, m);
       long fid = Long.parseLong(m.group(1));
 
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("loading file " + p.toString() + ", isReference=" +
+            isReference + ", file id=" + fid);
+      }
+      
       HStoreFile curfile = null;
       HStoreFile.Reference reference = null;
       if (isReference) {
@@ -421,6 +401,22 @@ public class HStore implements HConstants {
       }
       curfile = new HStoreFile(conf, fs, basedir, info.getEncodedName(),
           family.getFamilyName(), fid, reference);
+
+      storeSize += curfile.length();
+      long storeSeqId = -1;
+      try {
+        storeSeqId = curfile.loadInfo(fs);
+        if (storeSeqId > this.maxSeqId) {
+          this.maxSeqId = storeSeqId;
+        }
+      } catch (IOException e) {
+        // If the HSTORE_LOGINFOFILE doesn't contain a number, just ignore it.
+        // That means it was built prior to the previous run of HStore, and so
+        // it cannot contain any updates also contained in the log.
+        LOG.info("HSTORE_LOGINFOFILE " + curfile +
+            " does not contain a sequence number - ignoring");
+      }
+
       Path mapfile = curfile.getMapFilePath();
       if (!fs.exists(mapfile)) {
         fs.delete(curfile.getInfoFilePath());
@@ -432,7 +428,7 @@ public class HStore implements HConstants {
       // TODO: Confirm referent exists.
       
       // Found map and sympathetic info file.  Add this hstorefile to result.
-      results.add(curfile);
+      results.put(storeSeqId, curfile);
       // Keep list of sympathetic data mapfiles for cleaning info dir in next
       // section.  Make sure path is fully qualified for compare.
       mapfiles.add(mapfile);
@@ -581,17 +577,14 @@ public class HStore implements HConstants {
       for (MapFile.Reader reader: this.readers.values()) {
         reader.close();
       }
-      this.readers.clear();
       result = new ArrayList<HStoreFile>(storefiles.values());
-      this.storefiles.clear();
       LOG.debug("closed " + this.storeName);
       return result;
     } finally {
       this.lock.writeLock().unlock();
     }
   }
-
-
+  
   //////////////////////////////////////////////////////////////////////////////
   // Flush changes to disk
   //////////////////////////////////////////////////////////////////////////////
@@ -627,10 +620,10 @@ public class HStore implements HConstants {
     synchronized(flushLock) {
       // A. Write the Maps out to the disk
       HStoreFile flushedFile = new HStoreFile(conf, fs, basedir,
-        info.getEncodedName(), family.getFamilyName(), -1L, null);
+          info.getEncodedName(), family.getFamilyName(), -1L, null);
       String name = flushedFile.toString();
       MapFile.Writer out = flushedFile.getWriter(this.fs, this.compression,
-        this.bloomFilter);
+          this.bloomFilter);
       
       // Here we tried picking up an existing HStoreFile from disk and
       // interlacing the memcache flush compacting as we go.  The notion was
@@ -644,18 +637,23 @@ public class HStore implements HConstants {
       // Related, looks like 'merging compactions' in BigTable paper interlaces
       // a memcache flush.  We don't.
       int entries = 0;
+      long cacheSize = 0;
       try {
         for (Map.Entry<HStoreKey, byte []> es: cache.entrySet()) {
           HStoreKey curkey = es.getKey();
+          byte[] bytes = es.getValue();
           TextSequence f = HStoreKey.extractFamily(curkey.getColumn());
           if (f.equals(this.family.getFamilyName())) {
             entries++;
-            out.append(curkey, new ImmutableBytesWritable(es.getValue()));
+            out.append(curkey, new ImmutableBytesWritable(bytes));
+            cacheSize += curkey.getSize() + (bytes != null ? bytes.length : 0);
           }
         }
       } finally {
         out.close();
       }
+      long newStoreSize = flushedFile.length(); 
+      storeSize += newStoreSize;
 
       // B. Write out the log sequence number that corresponds to this output
       // MapFile.  The MapFile is current up to and including the log seq num.
@@ -676,14 +674,14 @@ public class HStore implements HConstants {
         this.storefiles.put(flushid, flushedFile);
         if(LOG.isDebugEnabled()) {
           LOG.debug("Added " + name + " with " + entries +
-            " entries, sequence id " + logCacheFlushId + ", and size " +
-            StringUtils.humanReadableInt(flushedFile.length()) + " for " +
+            " entries, sequence id " + logCacheFlushId + ", data size " +
+            StringUtils.humanReadableInt(cacheSize) + ", file size " +
+            StringUtils.humanReadableInt(newStoreSize) + " for " +
             this.storeName);
         }
       } finally {
         this.lock.writeLock().unlock();
       }
-      return;
     }
   }
 
@@ -691,28 +689,6 @@ public class HStore implements HConstants {
   // Compaction
   //////////////////////////////////////////////////////////////////////////////
   
-  /**
-   * @return True if this store needs compaction.
-   */
-  boolean needsCompaction() {
-    return this.storefiles != null &&
-      (this.storefiles.size() >= this.compactionThreshold || hasReferences());
-  }
-  
-  /*
-   * @return True if this store has references.
-   */
-  private boolean hasReferences() {
-    if (this.storefiles != null) {
-      for (HStoreFile hsf: this.storefiles.values()) {
-        if (hsf.isReference()) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
   /**
    * Compact the back-HStores.  This method may take some time, so the calling 
    * thread must be able to block for long periods.
@@ -728,42 +704,66 @@ public class HStore implements HConstants {
    * 
    * We don't want to hold the structureLock for the whole time, as a compact() 
    * can be lengthy and we want to allow cache-flushes during this period.
-   * @throws IOException
    * 
-   * @return true if compaction completed successfully
+   * @return mid key if a split is needed, null otherwise
+   * @throws IOException
    */
-  boolean compact() throws IOException {
+  Text compact() throws IOException {
     synchronized (compactLock) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("started compaction of " + storefiles.size() +
-          " files using " + compactionDir.toString() + " for " +
-          this.storeName);
-      }
-
-      // Storefiles are keyed by sequence id. The oldest file comes first.
-      // We need to return out of here a List that has the newest file first.
-      List<HStoreFile> filesToCompact =
-        new ArrayList<HStoreFile>(this.storefiles.values());
-      Collections.reverse(filesToCompact);
-      if (filesToCompact.size() < 1 ||
-        (filesToCompact.size() == 1 && !filesToCompact.get(0).isReference())) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("nothing to compact for " + this.storeName);
+      long maxId = -1;
+      List<HStoreFile> filesToCompact = null;
+      synchronized (storefiles) {
+        filesToCompact = new ArrayList<HStoreFile>(this.storefiles.values());
+        if (filesToCompact.size() < 1) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Not compacting " + this.storeName +
+            " because no store files to compact.");
+          }
+          return checkSplit();
+        } else if (filesToCompact.size() == 1) {
+          if (!filesToCompact.get(0).isReference()) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Not compacting " + this.storeName +
+              " because only one store file and it is not a reference");
+            }
+            return checkSplit();
+          }
+        } else if (filesToCompact.size() < compactionThreshold) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Not compacting " + this.storeName +
+                " because number of stores " + filesToCompact.size() +
+                " < compaction threshold " + compactionThreshold);
+          }
+          return checkSplit();
         }
-        return false;
-      }
 
-      if (!fs.exists(compactionDir) && !fs.mkdirs(compactionDir)) {
-        LOG.warn("Mkdir on " + compactionDir.toString() + " failed");
-        return false;
+        if (!fs.exists(compactionDir) && !fs.mkdirs(compactionDir)) {
+          LOG.warn("Mkdir on " + compactionDir.toString() + " failed");
+          return checkSplit();
+        }
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("started compaction of " + filesToCompact.size() +
+              " files using " + compactionDir.toString() + " for " +
+              this.storeName);
+        }
+
+        // Storefiles are keyed by sequence id. The oldest file comes first.
+        // We need to return out of here a List that has the newest file first.
+        Collections.reverse(filesToCompact);
+
+        // The max-sequenceID in any of the to-be-compacted TreeMaps is the 
+        // last key of storefiles.
+
+        maxId = this.storefiles.lastKey();
       }
 
       // Step through them, writing to the brand-new MapFile
       HStoreFile compactedOutputFile = new HStoreFile(conf, fs, 
-        this.compactionDir, info.getEncodedName(), family.getFamilyName(),
-        -1L, null);
+          this.compactionDir, info.getEncodedName(), family.getFamilyName(),
+          -1L, null);
       MapFile.Writer compactedOut = compactedOutputFile.getWriter(this.fs,
-        this.compression, this.bloomFilter);
+          this.compression, this.bloomFilter);
       try {
         compactHStoreFiles(compactedOut, filesToCompact);
       } finally {
@@ -771,14 +771,17 @@ public class HStore implements HConstants {
       }
 
       // Now, write out an HSTORE_LOGINFOFILE for the brand-new TreeMap.
-      // Compute max-sequenceID seen in any of the to-be-compacted TreeMaps.
-      long maxId = getMaxSequenceId(filesToCompact);
       compactedOutputFile.writeInfo(fs, maxId);
 
       // Move the compaction into place.
       completeCompaction(filesToCompact, compactedOutputFile);
-      return true;
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Completed compaction of " + this.storeName +
+            " store size is " + StringUtils.humanReadableInt(storeSize));
+      }
     }
+    return checkSplit();
   }
   
   /*
@@ -975,11 +978,11 @@ public class HStore implements HConstants {
    * <pre>
    * 1) Wait for active scanners to exit
    * 2) Acquiring the write-lock
-   * 3) Figuring out what MapFiles are going to be replaced
-   * 4) Moving the new compacted MapFile into place
-   * 5) Unloading all the replaced MapFiles.
-   * 6) Deleting all the old MapFile files.
-   * 7) Loading the new TreeMap.
+   * 3) Moving the new compacted MapFile into place
+   * 4) Unloading all the replaced MapFiles and close.
+   * 5) Deleting all the replaced MapFile files.
+   * 6) Loading the new TreeMap.
+   * 7) Compute new store size
    * 8) Releasing the write-lock
    * 9) Allow new scanners to proceed.
    * </pre>
@@ -1027,46 +1030,53 @@ public class HStore implements HConstants {
 
         // 4. and 5. Unload all the replaced MapFiles, close and delete.
         
-        List<Long> toDelete = new ArrayList<Long>();
-        for (Map.Entry<Long, HStoreFile> e: this.storefiles.entrySet()) {
-          if (!compactedFiles.contains(e.getValue())) {
-            continue;
-          }
-          Long key = e.getKey();
-          MapFile.Reader reader = this.readers.remove(key);
-          if (reader != null) {
-            reader.close();
-          }
-          toDelete.add(key);
-        }
-
-        try {
-          for (Long key: toDelete) {
-            HStoreFile hsf = this.storefiles.remove(key);
-            hsf.delete();
+        synchronized (storefiles) {
+          List<Long> toDelete = new ArrayList<Long>();
+          for (Map.Entry<Long, HStoreFile> e: this.storefiles.entrySet()) {
+            if (!compactedFiles.contains(e.getValue())) {
+              continue;
+            }
+            Long key = e.getKey();
+            MapFile.Reader reader = this.readers.remove(key);
+            if (reader != null) {
+              reader.close();
+            }
+            toDelete.add(key);
           }
 
-          // 6. Loading the new TreeMap.
-          Long orderVal = Long.valueOf(finalCompactedFile.loadInfo(fs));
-          this.readers.put(orderVal,
-            // Use a block cache (if configured) for this reader since
-            // it is the only one.
-            finalCompactedFile.getReader(this.fs, this.bloomFilter,
-                family.isBlockCacheEnabled()));
-          this.storefiles.put(orderVal, finalCompactedFile);
-        } catch (IOException e) {
-          e = RemoteExceptionHandler.checkIOException(e);
-          LOG.error("Failed replacing compacted files for " + this.storeName +
-              ". Compacted file is " + finalCompactedFile.toString() +
-              ".  Files replaced are " + compactedFiles.toString() +
-              " some of which may have been already removed", e);
+          try {
+            for (Long key: toDelete) {
+              HStoreFile hsf = this.storefiles.remove(key);
+              hsf.delete();
+            }
+
+            // 6. Loading the new TreeMap.
+            Long orderVal = Long.valueOf(finalCompactedFile.loadInfo(fs));
+            this.readers.put(orderVal,
+                // Use a block cache (if configured) for this reader since
+                // it is the only one.
+                finalCompactedFile.getReader(this.fs, this.bloomFilter,
+                    family.isBlockCacheEnabled()));
+            this.storefiles.put(orderVal, finalCompactedFile);
+          } catch (IOException e) {
+            e = RemoteExceptionHandler.checkIOException(e);
+            LOG.error("Failed replacing compacted files for " + this.storeName +
+                ". Compacted file is " + finalCompactedFile.toString() +
+                ".  Files replaced are " + compactedFiles.toString() +
+                " some of which may have been already removed", e);
+          }
+          // 7. Compute new store size
+          storeSize = 0L;
+          for (HStoreFile hsf: storefiles.values()) {
+            storeSize += hsf.length();
+          }
         }
       } finally {
-        // 7. Releasing the write-lock
+        // 8. Releasing the write-lock
         this.lock.writeLock().unlock();
       }
     } finally {
-      // 8. Allow new scanners to proceed.
+      // 9. Allow new scanners to proceed.
       newScannerLock.writeLock().unlock();
     }
   }
@@ -1304,7 +1314,7 @@ public class HStore implements HConstants {
           
           do{
             // if the row matches, we might want this one.
-            if(rowMatches(origin, readkey)){
+            if (rowMatches(origin, readkey)) {
               // if the cell matches, then we definitely want this key.
               if (cellMatches(origin, readkey)) {
                 // store the key if it isn't deleted or superceeded by what's
@@ -1323,11 +1333,11 @@ public class HStore implements HConstants {
                 // timestamps, so move to the next key
                 continue;
               }
-            } else{
+            } else {
               // the row doesn't match, so we've gone too far.
               break;
             }
-          }while(map.next(readkey, readval)); // advance to the next key
+          } while (map.next(readkey, readval)); // advance to the next key
         }
       }
       
@@ -1572,71 +1582,77 @@ public class HStore implements HConstants {
   }
   
   /**
-   * Gets size for the store.
+   * Determines if HStore can be split
    * 
-   * @param midKey Gets set to the middle key of the largest splitable store
-   * file or its set to empty if largest is not splitable.
-   * @return Sizes for the store and the passed <code>midKey</code> is
-   * set to midKey of largest splitable.  Otherwise, its set to empty
-   * to indicate we couldn't find a midkey to split on
+   * @return midKey if store can be split, null otherwise
    */
-  HStoreSize size(Text midKey) {
-    long maxSize = 0L;
-    long aggregateSize = 0L;
-    // Not splitable if we find a reference store file present in the store.
-    boolean splitable = true;
+  Text checkSplit() {
     if (this.storefiles.size() <= 0) {
-      return new HStoreSize(0, 0, splitable);
+      return null;
     }
-    
+    if (storeSize < this.desiredMaxFileSize) {
+      return null;
+    }
     this.lock.readLock().lock();
     try {
+      // Not splitable if we find a reference store file present in the store.
+      boolean splitable = true;
+      long maxSize = 0L;
       Long mapIndex = Long.valueOf(0L);
       // Iterate through all the MapFiles
-      for (Map.Entry<Long, HStoreFile> e: storefiles.entrySet()) {
-        HStoreFile curHSF = e.getValue();
-        long size = curHSF.length();
-        aggregateSize += size;
-        if (maxSize == 0L || size > maxSize) {
-          // This is the largest one so far
-          maxSize = size;
-          mapIndex = e.getKey();
-        }
-        if (splitable) {
-          splitable = !curHSF.isReference();
+      synchronized (storefiles) {
+        for (Map.Entry<Long, HStoreFile> e: storefiles.entrySet()) {
+          HStoreFile curHSF = e.getValue();
+          long size = curHSF.length();
+          if (size > maxSize) {
+            // This is the largest one so far
+            maxSize = size;
+            mapIndex = e.getKey();
+          }
+          if (splitable) {
+            splitable = !curHSF.isReference();
+          }
         }
       }
-      if (splitable) {
-        MapFile.Reader r = this.readers.get(mapIndex);
-        // seek back to the beginning of mapfile
-        r.reset();
-        // get the first and last keys
-        HStoreKey firstKey = new HStoreKey();
-        HStoreKey lastKey = new HStoreKey();
-        Writable value = new ImmutableBytesWritable();
-        r.next(firstKey, value);
-        r.finalKey(lastKey);
-        // get the midkey
-        HStoreKey mk = (HStoreKey)r.midKey();
-        if (mk != null) {
-          // if the midkey is the same as the first and last keys, then we cannot
-          // (ever) split this region. 
-          if (mk.getRow().equals(firstKey.getRow()) && 
-              mk.getRow().equals(lastKey.getRow())) {
-            return new HStoreSize(aggregateSize, maxSize, false);
-          }
-          // Otherwise, set midKey
-          midKey.set(mk.getRow());
+      if (!splitable) {
+        return null;
+      }
+      MapFile.Reader r = this.readers.get(mapIndex);
+
+      // seek back to the beginning of mapfile
+      r.reset();
+
+      // get the first and last keys
+      HStoreKey firstKey = new HStoreKey();
+      HStoreKey lastKey = new HStoreKey();
+      Writable value = new ImmutableBytesWritable();
+      r.next(firstKey, value);
+      r.finalKey(lastKey);
+
+      // get the midkey
+      HStoreKey mk = (HStoreKey)r.midKey();
+      if (mk != null) {
+        // if the midkey is the same as the first and last keys, then we cannot
+        // (ever) split this region. 
+        if (mk.getRow().equals(firstKey.getRow()) && 
+            mk.getRow().equals(lastKey.getRow())) {
+          return null;
         }
+        return mk.getRow();
       }
     } catch(IOException e) {
       LOG.warn("Failed getting store size for " + this.storeName, e);
     } finally {
       this.lock.readLock().unlock();
     }
-    return new HStoreSize(aggregateSize, maxSize, splitable);
+    return null;
   }
   
+  /** @return aggregate size of HStore */
+  public long getSize() {
+    return storeSize;
+  }
+     
   //////////////////////////////////////////////////////////////////////////////
   // File administration
   //////////////////////////////////////////////////////////////////////////////
@@ -1665,7 +1681,7 @@ public class HStore implements HConstants {
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return this.storeName;
+    return this.storeName.toString();
   }
 
   /*

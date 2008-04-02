@@ -144,17 +144,16 @@ class HMerge implements HConstants {
       long currentSize = 0;
       HRegion nextRegion = null;
       long nextSize = 0;
-      Text midKey = new Text();
       for (int i = 0; i < info.length - 1; i++) {
         if (currentRegion == null) {
           currentRegion =
             new HRegion(tabledir, hlog, fs, conf, info[i], null, null);
-          currentSize = currentRegion.largestHStore(midKey).getAggregate();
+          currentSize = currentRegion.getLargestHStoreSize();
         }
         nextRegion =
           new HRegion(tabledir, hlog, fs, conf, info[i + 1], null, null);
 
-        nextSize = nextRegion.largestHStore(midKey).getAggregate();
+        nextSize = nextRegion.getLargestHStoreSize();
 
         if ((currentSize + nextSize) <= (maxFilesize / 2)) {
           // We merge two adjacent regions if their total size is less than

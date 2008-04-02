@@ -44,7 +44,8 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
   protected MiniDFSCluster dfsCluster;
   protected int regionServers;
   protected boolean startDfs;
-  
+
+  /** default constructor */
   public HBaseClusterTestCase() {
     this(1);
   }
@@ -53,6 +54,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
    * Start a MiniHBaseCluster with regionServers region servers in-process to
    * start with. Also, start a MiniDfsCluster before starting the hbase cluster.
    * The configuration used will be edited so that this works correctly.
+   * @param regionServers number of region servers to start.
    */  
   public HBaseClusterTestCase(int regionServers) {
     this(regionServers, true);
@@ -65,6 +67,8 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
    * configured in hbase-site.xml and is already started, or you have started a
    * MiniDFSCluster on your own and edited the configuration in memory. (You 
    * can modify the config used by overriding the preHBaseClusterSetup method.)
+   * @param regionServers number of region servers to start.
+   * @param startDfs set to true if MiniDFS should be started
    */
   public HBaseClusterTestCase(int regionServers, boolean startDfs) {
     super();
@@ -81,9 +85,11 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
   /**
    * Actually start the MiniHBase instance.
    */
+  @SuppressWarnings("unused")
   protected void HBaseClusterSetup() throws Exception {
     // start the mini cluster
     this.cluster = new MiniHBaseCluster(conf, regionServers);
+    // opening the META table ensures that cluster is running
     HTable meta = new HTable(conf, new Text(".META."));
   }
   

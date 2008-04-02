@@ -24,16 +24,15 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.MultiRegionTable;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HScannerInterface;
-import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.io.Cell;
 
 /**
@@ -75,6 +74,7 @@ public class TestSplit extends MultiRegionTable {
     HRegion region = null;
     try {
       HTableDescriptor htd = createTableDescriptor(getName());
+      htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME3));
       region = createNewHRegion(htd, null, null);
       basicSplit(region);
     } finally {
@@ -88,9 +88,9 @@ public class TestSplit extends MultiRegionTable {
   private void basicSplit(final HRegion region) throws Exception {
     addContent(region, COLFAMILY_NAME3);
     region.flushcache();
-    Text midkey = new Text();
-    assertTrue(region.needsSplit(midkey));
-    HRegion [] regions = split(region);
+    Text midkey = region.compactStores();
+    assertNotNull(midkey);
+    HRegion [] regions = split(region, midkey);
     try {
       // Need to open the regions.
       // TODO: Add an 'open' to HRegion... don't do open by constructing
@@ -106,17 +106,9 @@ public class TestSplit extends MultiRegionTable {
       assertScan(regions[0], COLFAMILY_NAME3, new Text(START_KEY));
       assertScan(regions[1], COLFAMILY_NAME3, midkey);
       // Now prove can't split regions that have references.
-      Text[] midkeys = new Text[regions.length];
       for (int i = 0; i < regions.length; i++) {
-        midkeys[i] = new Text();
-        // Even after above splits, still needs split but after splits its
-        // unsplitable because biggest store file is reference. References
-        // make the store unsplittable, until something bigger comes along.
-        assertFalse(regions[i].needsSplit(midkeys[i]));
         // Add so much data to this region, we create a store file that is >
-        // than
-        // one of our unsplitable references.
-        // it will.
+        // than one of our unsplitable references. it will.
         for (int j = 0; j < 2; j++) {
           addContent(regions[i], COLFAMILY_NAME3);
         }
@@ -125,30 +117,23 @@ public class TestSplit extends MultiRegionTable {
         regions[i].flushcache();
       }
 
-      // Assert that even if one store file is larger than a reference, the
-      // region is still deemed unsplitable (Can't split region if references
-      // presen).
-      for (int i = 0; i < regions.length; i++) {
-        midkeys[i] = new Text();
-        // Even after above splits, still needs split but after splits its
-        // unsplitable because biggest store file is reference. References
-        // make the store unsplittable, until something bigger comes along.
-        assertFalse(regions[i].needsSplit(midkeys[i]));
-      }
-
+      Text[] midkeys = new Text[regions.length];
       // To make regions splitable force compaction.
       for (int i = 0; i < regions.length; i++) {
-        regions[i].compactStores();
+        midkeys[i] = regions[i].compactStores();
       }
 
       TreeMap<String, HRegion> sortedMap = new TreeMap<String, HRegion>();
       // Split these two daughter regions so then I'll have 4 regions. Will
       // split because added data above.
       for (int i = 0; i < regions.length; i++) {
-        HRegion[] rs = split(regions[i]);
-        for (int j = 0; j < rs.length; j++) {
-          sortedMap.put(rs[j].getRegionName().toString(),
-            openClosedRegion(rs[j]));
+        HRegion[] rs = null;
+        if (midkeys[i] != null) {
+          rs = split(regions[i], midkeys[i]);
+          for (int j = 0; j < rs.length; j++) {
+            sortedMap.put(rs[j].getRegionName().toString(),
+              openClosedRegion(rs[j]));
+          }
         }
       }
       LOG.info("Made 4 regions");
@@ -219,12 +204,11 @@ public class TestSplit extends MultiRegionTable {
     }
   }
   
-  private HRegion [] split(final HRegion r) throws IOException {
-    Text midKey = new Text();
-    assertTrue(r.needsSplit(midKey));
+  private HRegion [] split(final HRegion r, final Text midKey)
+  throws IOException {
     // Assert can get mid key from passed region.
     assertGet(r, COLFAMILY_NAME3, midKey);
-    HRegion [] regions = r.splitRegion(null);
+    HRegion [] regions = r.splitRegion(null, midKey);
     assertEquals(regions.length, 2);
     return regions;
   }
