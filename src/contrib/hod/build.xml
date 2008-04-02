@@ -22,8 +22,13 @@
     <target name="compile">
         <mkdir dir="${build.dir}"/>
         <copy todir="${build.dir}">
-            <fileset dir="${basedir}"/>
+            <fileset dir="${basedir}">
+                <exclude name="**/VERSION"/>
+            </fileset>
         </copy>
+        <exec executable="echo" output="${build.dir}/bin/VERSION">
+            <arg line="${version}" />
+        </exec>
     </target>
     <target name="package" depends="compile">
         <mkdir dir="${dist.dir}/contrib/${name}"/>

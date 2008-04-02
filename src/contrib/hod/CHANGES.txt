@@ -3,6 +3,11 @@ HOD Change Log
 
 Trunk (unreleased changes)
 
+  INCOMPATIBLE CHANGES
+
+    HADOOP-3137. Modified build script to pick up version automatically
+    from Hadoop build. (yhemanth)
+
   IMPROVEMENTS
 
     HADOOP-2775.  Adds unit test framework for HOD.
