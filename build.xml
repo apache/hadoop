@@ -53,6 +53,7 @@
   <property name="build.javadoc" value="${build.docs}/api"/>
   <property name="build.encoding" value="ISO-8859-1"/>
   <property name="build.src" value="${build.dir}/src"/>
+  <property name="generated.webapps.src" value="${build.src}"/>
 
   <property name="test.build.dir" value="${build.dir}/test"/>
   <property name="test.log.dir" value="${test.build.dir}/logs"/>
@@ -134,7 +135,7 @@
      />
   </target>
 
-  <target name="compile" depends="init,javacc">
+  <target name="compile" depends="init,jspc,javacc">
    <!--Compile whats under src and generated java classes made from jsp-->
    <javac
     encoding="${build.encoding}"
@@ -154,6 +155,33 @@
       <fileset file="${basedir}/conf/hbase-default.xml"/>
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
     </jar>
+  </target>
+
+  <target name="jspc" >
+    <path id="jspc.classpath">
+      <fileset dir="${basedir}/lib/jetty-ext/">
+        <include name="*jar" />
+      </fileset>
+      <fileset dir="${basedir}/lib/">
+        <include name="servlet-api*jar" />
+        <include name="commons-logging*jar" />
+      </fileset>
+    </path>
+    <taskdef classname="org.apache.jasper.JspC" name="jspcompiler" >
+      <classpath refid="jspc.classpath"/>
+    </taskdef>
+    <jspcompiler
+     uriroot="${src.webapps}/master"
+     outputdir="${generated.webapps.src}"
+     package="org.apache.hadoop.hbase.generated.master"
+     webxml="${src.webapps}/master/WEB-INF/web.xml">
+    </jspcompiler>
+    <jspcompiler
+     uriroot="${src.webapps}/regionserver"
+     outputdir="${generated.webapps.src}"
+     package="org.apache.hadoop.hbase.generated.regionserver"
+     webxml="${src.webapps}/regionserver/WEB-INF/web.xml">
+    </jspcompiler>
   </target>
 
   <!-- ================================================================== -->

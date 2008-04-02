@@ -1,7 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.*"
   import="org.apache.hadoop.io.Text"
-  import="org.apache.hadoop.util.VersionInfo"
   import="org.apache.hadoop.hbase.regionserver.HRegionServer"
   import="org.apache.hadoop.hbase.regionserver.HRegion"
   import="org.apache.hadoop.hbase.HConstants"
@@ -15,12 +14,12 @@
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-<title>Hbase Region Server: <%= serverInfo.getServerAddress().toString() %></title>
+<title>HBase Region Server: <%= serverInfo.getServerAddress().toString() %></title>
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
 </head>
 
 <body>
-<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="Hbase Logo" title="Hbase Logo" /></a>
+<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
 <h1 id="page_title">Region Server: <%= serverInfo.getServerAddress().toString() %></h1>
 <p id="links_menu"><a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
 <hr id="head_rule" />
@@ -28,8 +27,8 @@
 <h2>Region Server Attributes</h2>
 <table>
 <tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
-<tr><td>Version</td><td><%= VersionInfo.getVersion() %>, r<%= VersionInfo.getRevision() %></td><td>Hbase version and svn revision</td></tr>
-<tr><td>Compiled</td><td><%= VersionInfo.getDate() %>, <%= VersionInfo.getUser() %></td><td>When this version was compiled and by whom</td></tr>
+<tr><td>HBase Version</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, r<%= org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and svn revision</td></tr>
+<tr><td>HBase Compiled</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td><td>When HBase version was compiled and by whom</td></tr>
 <tr><td>Load</td><td><%= serverInfo.getLoad().toString() %></td><td>Requests/<em>hbase.regionserver.msginterval</em> + count of loaded regions</td></tr>
 </table>
 
@@ -53,7 +52,7 @@ keeps a list of all regions in the system. The empty key is used to denote
 table start and table end.  A region with an
 empty start key is the first region in a table.  If region has both an empty
 start and an empty end key, its the only region in the table.  See
-<a href="http://wiki.apache.org/lucene-hadoop/Hbase">Hbase Home</a> for
+<a href="http://wiki.apache.org/lucene-hadoop/Hbase">HBase Home</a> for
 further explication.<p>
 <% } else { %>
 <p>Not serving regions</p>

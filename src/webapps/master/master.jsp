@@ -1,7 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.*"
   import="org.apache.hadoop.io.Text"
-  import="org.apache.hadoop.util.VersionInfo"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.master.MetaRegion"
@@ -28,13 +27,13 @@
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-<title>Hbase Master: <%= master.getMasterAddress()%></title>
+<title>HBase Master: <%= master.getMasterAddress()%></title>
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
 </head>
 
 <body>
 
-<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="Hbase Logo" title="Hbase Logo" /></a>
+<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
 <h1 id="page_title">Master: <%=master.getMasterAddress()%></h1>
 <p id="links_menu"><a href="/hql.jsp">HQL</a>, <a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
 <hr id="head_rule" />
@@ -42,10 +41,12 @@
 <h2>Master Attributes</h2>
 <table>
 <tr><th>Attribute Name</th><th>Value</th><th>Description</th></tr>
-<tr><td>Version</td><td><%= VersionInfo.getVersion() %>, r<%= VersionInfo.getRevision() %></td><td>Hbase version and svn revision</td></tr>
-<tr><td>Compiled</td><td><%= VersionInfo.getDate() %>, <%= VersionInfo.getUser() %></td><td>When this version was compiled and by whom</td></tr>
-<tr><td>Filesystem</td><td><%= conf.get("fs.default.name") %></td><td>Filesystem hbase is running on</td></tr>
-<tr><td>Hbase Root Directory</td><td><%= master.getRootDir().toString() %></td><td>Location of hbase home directory</td></tr>
+<tr><td>HBase Version</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getVersion() %>, r<%= org.apache.hadoop.hbase.util.VersionInfo.getRevision() %></td><td>HBase version and svn revision</td></tr>
+<tr><td>HBase Compiled</td><td><%= org.apache.hadoop.hbase.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.hbase.util.VersionInfo.getUser() %></td><td>When HBase version was compiled and by whom</td></tr>
+<tr><td>Hadoop Version</td><td><%= org.apache.hadoop.util.VersionInfo.getVersion() %>, r<%= org.apache.hadoop.util.VersionInfo.getRevision() %></td><td>Hadoop version and svn revision</td></tr>
+<tr><td>Hadoop Compiled</td><td><%= org.apache.hadoop.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.util.VersionInfo.getUser() %></td><td>When Hadoop version was compiled and by whom</td></tr>
+<tr><td>Filesystem</td><td><%= conf.get("fs.default.name") %></td><td>Filesystem HBase is running on</td></tr>
+<tr><td>HBase Root Directory</td><td><%= master.getRootDir().toString() %></td><td>Location of HBase home directory</td></tr>
 </table>
 
 <h2>Online META Regions</h2>
