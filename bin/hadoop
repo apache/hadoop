@@ -28,6 +28,13 @@
 #                    Default is 1000.
 #
 #   HADOOP_OPTS      Extra Java runtime options.
+#   
+#   HADOOP_NAMENODE_OPTS       These options are added to HADOOP_OPTS 
+#   HADOOP_CLIENT_OPTS         when the respective command is run.
+#   HADOOP_{COMMAND}_OPTS etc  HADOOP_JT_OPTS applies to JobTracker 
+#                              for e.g.  HADOOP_CLIENT_OPTS applies to 
+#                              more than one command (fs, dfs, fsck, 
+#                              dfsadmin etc)  
 #
 #   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_HOME}/conf.
 #
@@ -182,41 +189,50 @@ unset IFS
 # figure out which class to run
 if [ "$COMMAND" = "namenode" ] ; then
   CLASS='org.apache.hadoop.dfs.NameNode'
-  HADOOP_OPTS="-Dcom.sun.management.jmxremote $HADOOP_OPTS" 
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_NAMENODE_OPTS"
 elif [ "$COMMAND" = "secondarynamenode" ] ; then
   CLASS='org.apache.hadoop.dfs.SecondaryNameNode'
-  HADOOP_OPTS="-Dcom.sun.management.jmxremote $HADOOP_OPTS" 
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_SECONDARYNAMENODE_OPTS"
 elif [ "$COMMAND" = "datanode" ] ; then
   CLASS='org.apache.hadoop.dfs.DataNode'
-  HADOOP_OPTS="-Dcom.sun.management.jmxremote $HADOOP_OPTS" 
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_DATANODE_OPTS"
 elif [ "$COMMAND" = "fs" ] ; then
   CLASS=org.apache.hadoop.fs.FsShell
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "dfs" ] ; then
   CLASS=org.apache.hadoop.fs.FsShell
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "dfsadmin" ] ; then
   CLASS=org.apache.hadoop.dfs.DFSAdmin
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "fsck" ] ; then
   CLASS=org.apache.hadoop.dfs.DFSck
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "balancer" ] ; then
   CLASS=org.apache.hadoop.dfs.Balancer
-  HADOOP_OPTS="-Dcom.sun.management.jmxremote $HADOOP_OPTS" 
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_BALANCER_OPTS"
 elif [ "$COMMAND" = "jobtracker" ] ; then
   CLASS=org.apache.hadoop.mapred.JobTracker
-  HADOOP_OPTS="-Dcom.sun.management.jmxremote $HADOOP_OPTS" 
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_JOBTRACKER_OPTS"
 elif [ "$COMMAND" = "tasktracker" ] ; then
   CLASS=org.apache.hadoop.mapred.TaskTracker
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_TASKTRACKER_OPTS"
 elif [ "$COMMAND" = "job" ] ; then
   CLASS=org.apache.hadoop.mapred.JobClient
 elif [ "$COMMAND" = "pipes" ] ; then
   CLASS=org.apache.hadoop.mapred.pipes.Submitter
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "version" ] ; then
   CLASS=org.apache.hadoop.util.VersionInfo
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "jar" ] ; then
   CLASS=org.apache.hadoop.mapred.JobShell
 elif [ "$COMMAND" = "distcp" ] ; then
   CLASS=org.apache.hadoop.util.CopyFiles
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "daemonlog" ] ; then
   CLASS=org.apache.hadoop.log.LogLevel
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 else
   CLASS=$COMMAND
 fi

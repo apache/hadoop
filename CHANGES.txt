@@ -102,6 +102,9 @@ Trunk (unreleased changes)
     HADOOP-2055. Allows users to set PathFilter on the FileInputFormat.
     (Alejandro Abdelnur via ddas)
 
+    HADOOP-2551. More environment variables like HADOOP_NAMENODE_OPTS
+    for better control of HADOOP_OPTS for each component. (rangadi)
+
   IMPROVEMENTS
 
     HADOOP-2655. Copy on write for data and metadata files in the 
