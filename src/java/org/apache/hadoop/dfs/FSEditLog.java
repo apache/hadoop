@@ -486,8 +486,9 @@ class FSEditLog {
             }
 
             // clientname, clientMachine and block locations of last block.
-            clientName = null;
-            clientMachine = null;
+            clientName = "";
+            clientMachine = "";
+            lastLocations = null;
             if (opcode == OP_ADD && logVersion <= -12) {
               UTF8 uu = new UTF8();
               UTF8 cl = new UTF8();
@@ -500,6 +501,8 @@ class FSEditLog {
               writables = aw.get();
               lastLocations = new DatanodeDescriptor[writables.length];
               System.arraycopy(writables, 0, lastLocations, 0, writables.length);
+            } else {
+              lastLocations = new DatanodeDescriptor[0];
             }
   
             // The open lease transaction re-creates a file if necessary.
@@ -507,10 +510,8 @@ class FSEditLog {
             if (FSNamesystem.LOG.isDebugEnabled()) {
               FSNamesystem.LOG.debug(opcode + ": " + name.toString() + 
                                      " numblocks : " + blocks.length +
-                                     " clientHolder " +  
-                                     ((clientName != null) ? clientName : "") +
-                                     " clientMachine " +
-                                     ((clientMachine != null) ? clientMachine : ""));
+                                     " clientHolder " +  clientName +
+                                     " clientMachine " + clientMachine);
             }
 
             old = fsDir.unprotectedDelete(path, mtime, null);
@@ -534,7 +535,7 @@ class FSEditLog {
                                         node.getPermissionStatus(),
                                         clientName, 
                                         clientMachine, 
-                                        null, 
+                                        null,
                                         lastLocations);
               fsDir.replaceNode(path, node, cons);
               fsNamesys.addLease(path, clientName);

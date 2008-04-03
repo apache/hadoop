@@ -440,6 +440,9 @@ Trunk (unreleased changes)
 
     HADOOP-3114. Fix TestDFSShell on Windows. (Lohit Vijaya Renu via cdouglas)
 
+    HADOOP-3118.  Fix Namenode NPE while loading fsimage after a cluster 
+    upgrade from older disk format. (dhruba)
+
 Release 0.16.2 - 2008-04-02
 
   BUG FIXES
