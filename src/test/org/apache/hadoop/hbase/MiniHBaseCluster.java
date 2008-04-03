@@ -19,15 +19,11 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
 
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -44,8 +40,10 @@ public class MiniHBaseCluster implements HConstants {
   private LocalHBaseCluster hbaseCluster;
 
   /**
-   * Start a MiniHBaseCluster. conf is assumed to contain a valid fs name to 
-   * hook up to.
+   * Start a MiniHBaseCluster. 
+   * @param conf HBaseConfiguration to be used for cluster
+   * @param numRegionServers initial number of region servers to start.
+   * @throws IOException
    */
   public MiniHBaseCluster(HBaseConfiguration conf, int numRegionServers) 
   throws IOException {
@@ -74,6 +72,7 @@ public class MiniHBaseCluster implements HConstants {
     LocalHBaseCluster.RegionServerThread t =
       this.hbaseCluster.addRegionServer();
     t.start();
+    t.waitForServerOnline();
     return t.getName();
   }
 
@@ -110,11 +109,10 @@ public class MiniHBaseCluster implements HConstants {
    * @param serverNumber  Used as index into a list.
    * @return the region server that was stopped
    */
-  public HRegionServer stopRegionServer(int serverNumber) {
-    HRegionServer server =
-      this.hbaseCluster.getRegionServers().get(serverNumber).getRegionServer();
+  public LocalHBaseCluster.RegionServerThread stopRegionServer(int serverNumber) {
+    LocalHBaseCluster.RegionServerThread server = hbaseCluster.getRegionServers().get(serverNumber);
     LOG.info("Stopping " + server.toString());
-    server.stop();
+    server.getRegionServer().stop();
     return server;
   }
 
@@ -142,16 +140,6 @@ public class MiniHBaseCluster implements HConstants {
     if (this.hbaseCluster != null) {
       this.hbaseCluster.shutdown();
     }
-  }
-
-  private void deleteFile(File f) {
-    if(f.isDirectory()) {
-      File[] children = f.listFiles();
-      for(int i = 0; i < children.length; i++) {
-        deleteFile(children[i]);
-      }
-    }
-    f.delete();
   }
 
   /**

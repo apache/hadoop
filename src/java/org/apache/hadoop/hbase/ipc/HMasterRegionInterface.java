@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
  * HRegionServers interact with the HMasterRegionInterface to report on local 
@@ -49,9 +50,13 @@ public interface HMasterRegionInterface extends VersionedProtocol {
    * 
    * @param info server's address and start code
    * @param msgs things the region server wants to tell the master
+   * @param mostLoadedRegions Array of HRegionInfos that should contain the 
+   * reporting server's most loaded regions. These are candidates for being
+   * rebalanced.
    * @return instructions from the master to the region server
    * @throws IOException
    */
-  public HMsg[] regionServerReport(HServerInfo info, HMsg msgs[])
+  public HMsg[] regionServerReport(HServerInfo info, HMsg msgs[], 
+    HRegionInfo mostLoadedRegions[])
   throws IOException;
 }

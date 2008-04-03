@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
  * An HMaster that runs out of memory.
@@ -48,11 +49,12 @@ public class OOMEHMaster extends HMaster {
   }
   
   @Override
-  public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg[] msgs)
+  public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg[] msgs, 
+    HRegionInfo[] mostLoadedRegions)
   throws IOException {
     // Retain 1M.
     this.retainer.add(new byte [1024 * 1024]);
-    return super.regionServerReport(serverInfo, msgs);
+    return super.regionServerReport(serverInfo, msgs, mostLoadedRegions);
   }
 
   /**

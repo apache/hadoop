@@ -11,6 +11,7 @@ Hbase Change Log
 
   NEW FEATURES
    HBASE-548   Tool to online single region
+   HBASE-71    Master should rebalance region assignments periodically
    
   IMPROVEMENTS
    HBASE-469   Streamline HStore startup and compactions

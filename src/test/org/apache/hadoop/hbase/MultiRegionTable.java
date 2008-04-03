@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.ConcurrentModificationException;
 import java.util.Map;
-import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
@@ -42,6 +41,9 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 public class MultiRegionTable extends HBaseClusterTestCase {
   static final Log LOG = LogFactory.getLog(MultiRegionTable.class.getName());
 
+  /**
+   * Default constructor
+   */
   public MultiRegionTable() {
     super();
     // These are needed for the new and improved Map/Reduce framework
@@ -345,7 +347,7 @@ public class MultiRegionTable extends HBaseClusterTestCase {
     LOG.info("Starting compaction");
     for (LocalHBaseCluster.RegionServerThread thread:
         cluster.getRegionThreads()) {
-      SortedMap<Text, HRegion> regions = thread.getRegionServer().getOnlineRegions();
+      Map<Text, HRegion> regions = thread.getRegionServer().getOnlineRegions();
       
       // Retry if ConcurrentModification... alternative of sync'ing is not
       // worth it for sake of unit test.

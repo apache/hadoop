@@ -122,6 +122,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
       e.printStackTrace();
     }
     addToMap(RowResult.class, code++);
+    addToMap(HRegionInfo[].class, code++);
   }
   
   private Class<?> declaredClass;

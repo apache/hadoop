@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -115,13 +114,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private final Random rand = new Random();
   
   // region name -> HRegion
-  protected volatile SortedMap<Text, HRegion> onlineRegions =
-    Collections.synchronizedSortedMap(new TreeMap<Text, HRegion>());
+  protected volatile Map<Text, HRegion> onlineRegions =
+    new ConcurrentHashMap<Text, HRegion>();
   protected volatile Map<Text, HRegion> retiringRegions =
     new ConcurrentHashMap<Text, HRegion>();
  
   protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-  private final List<HMsg> outboundMsgs =
+  private volatile List<HMsg> outboundMsgs =
     Collections.synchronizedList(new ArrayList<HMsg>());
 
   final int numRetries;
@@ -129,6 +128,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private final int msgInterval;
   private final int serverLeaseTimeout;
 
+  protected final int numRegionsToReport;
+  
   // Remote HMaster
   private HMasterRegionInterface hbaseMaster;
 
@@ -190,6 +191,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   final LogRoller logRoller;
   final Integer logRollerLock = new Integer(0);
   
+  // flag set after we're done setting up server threads (used for testing)
+  protected volatile boolean isOnline;
+    
   /**
    * Starts a HRegionServer at the default location
    * @param conf
@@ -211,6 +215,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.abortRequested = false;
     this.fsOk = true;
     this.conf = conf;
+
+    this.isOnline = false;
 
     // Config'ed params
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
@@ -240,13 +246,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       new InetSocketAddress(getThisIP(),
       this.server.getListenerAddress().getPort())), System.currentTimeMillis(),
       this.conf.getInt("hbase.regionserver.info.port", 60030));
-     this.leases = new Leases(
-       conf.getInt("hbase.regionserver.lease.period", 3 * 60 * 1000),
-       this.threadWakeFrequency);
+    this.numRegionsToReport =                                        
+      conf.getInt("hbase.regionserver.numregionstoreport", 10);      
+      
+    this.leases = new Leases(
+      conf.getInt("hbase.regionserver.lease.period", 3 * 60 * 1000),
+      this.threadWakeFrequency);
      
-     // Register shutdown hook for HRegionServer, runs an orderly shutdown
-     // when a kill signal is recieved
-     Runtime.getRuntime().addShutdownHook(new ShutdownThread(this));
+    // Register shutdown hook for HRegionServer, runs an orderly shutdown
+    // when a kill signal is recieved
+    Runtime.getRuntime().addShutdownHook(new ShutdownThread(this));
   }
 
   /**
@@ -285,8 +294,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             this.serverInfo.setLoad(new HServerLoad(requestCount.get(),
                 onlineRegions.size()));
             this.requestCount.set(0);
-            HMsg msgs[] =
-              this.hbaseMaster.regionServerReport(serverInfo, outboundArray);
+            HMsg msgs[] = hbaseMaster.regionServerReport(
+              serverInfo, outboundArray, getMostLoadedRegions());
             lastMsg = System.currentTimeMillis();
 
             if (this.quiesced.get() && onlineRegions.size() == 0) {
@@ -452,7 +461,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
         LOG.info("telling master that region server is shutting down at: " +
             serverInfo.getServerAddress().toString());
-        hbaseMaster.regionServerReport(serverInfo, exitMsg);
+        hbaseMaster.regionServerReport(serverInfo, exitMsg, (HRegionInfo[])null);
       } catch (IOException e) {
         LOG.warn("Failed to send exiting message to master: ",
             RemoteExceptionHandler.checkIOException(e));
@@ -489,8 +498,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.rootDir = new Path(this.conf.get(HConstants.HBASE_DIR));
       this.log = setupHLog();
       startServiceThreads();
+      isOnline = true;
     } catch (IOException e) {
       this.stopRequested.set(true);
+      isOnline = false;
       e = RemoteExceptionHandler.checkIOException(e); 
       LOG.fatal("Failed init", e);
       IOException ex = new IOException("region server startup failed");
@@ -498,7 +509,17 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       throw ex;
     }
   }
-  
+
+  /**
+   * Report the status of the server. A server is online once all the startup 
+   * is completed (setting up filesystem, starting service threads, etc.). This
+   * method is designed mostly to be useful in tests.
+   * @return true if online, false if not.
+   */
+  public boolean isOnline() {
+    return isOnline;
+  }
+    
   private HLog setupHLog() throws RegionServerRunningException,
     IOException {
     
@@ -1232,8 +1253,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /**
    * @return Immutable list of this servers regions.
    */
-  public SortedMap<Text, HRegion> getOnlineRegions() {
-    return Collections.unmodifiableSortedMap(this.onlineRegions);
+  public Map<Text, HRegion> getOnlineRegions() {
+    return Collections.unmodifiableMap(onlineRegions);
   }
 
   /** @return the request count */
@@ -1302,6 +1323,26 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /**
+   * Get the top N most loaded regions this server is serving so we can
+   * tell the master which regions it can reallocate if we're overloaded.
+   * TODO: actually calculate which regions are most loaded. (Right now, we're
+   * just grabbing the first N regions being served regardless of load.)
+   */
+  protected HRegionInfo[] getMostLoadedRegions() {
+    ArrayList<HRegionInfo> regions = new ArrayList<HRegionInfo>();
+    synchronized (onlineRegions) {
+      for (Map.Entry<Text, HRegion> entry : onlineRegions.entrySet()) {
+        if (regions.size() < numRegionsToReport) {
+          regions.add(entry.getValue().getRegionInfo());
+        } else {
+          break;
+        }
+      }
+    }
+    return regions.toArray(new HRegionInfo[regions.size()]);
+  }
+  
+  /**  
    * Called to verify that this server is up and running.
    * 
    * @throws IOException

@@ -26,23 +26,29 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
 /**
-* ProcessRegionClose is instantiated when a region server reports that it
-* has closed a region.
-*/
+ * ProcessRegionClose is the way we do post-processing on a closed region. We
+ * only spawn one of these asynchronous tasks when the region needs to be 
+ * either offlined or deleted. We used to create one of these tasks whenever
+ * a region was closed, but since closing a region that isn't being offlined
+ * or deleted doesn't actually require post processing, it's no longer 
+ * necessary.
+ */
 class ProcessRegionClose extends ProcessRegionStatusChange {
-  private boolean reassignRegion;
+  private boolean offlineRegion;
   private boolean deleteRegion;
 
   /**
-  * @param regionInfo
-  * @param reassignRegion
-  * @param deleteRegion
+  * @param master
+  * @param regionInfo Region to operate on
+  * @param offlineRegion if true, set the region to offline in meta
+  * @param deleteRegion if true, delete the region row from meta and then
+  * delete the region files from disk.
   */
   public ProcessRegionClose(HMaster master, HRegionInfo regionInfo, 
-   boolean reassignRegion, boolean deleteRegion) {
+   boolean offlineRegion, boolean deleteRegion) {
 
    super(master, regionInfo);
-   this.reassignRegion = reassignRegion;
+   this.offlineRegion = offlineRegion;
    this.deleteRegion = deleteRegion;
   }
 
@@ -50,7 +56,7 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
   @Override
   public String toString() {
     return "ProcessRegionClose of " + this.regionInfo.getRegionName() +
-      ", " + this.reassignRegion + ", " + this.deleteRegion;
+      ", " + this.offlineRegion + ", " + this.deleteRegion;
   }
 
   @Override
@@ -75,12 +81,14 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
         if (deleteRegion) {
           HRegion.removeRegionFromMETA(getMetaServer(), metaRegionName,
             regionInfo.getRegionName());
-        } else if (!this.reassignRegion) {
+        } else if (offlineRegion) {
+          // offline the region in meta and then note that we've offlined the
+          // region. 
           HRegion.offlineRegionInMETA(getMetaServer(), metaRegionName,
             regionInfo);
+          master.regionManager.regionOfflined(regionInfo.getRegionName());
         }
         break;
-
       } catch (IOException e) {
         if (tries == numRetries - 1) {
           throw RemoteExceptionHandler.checkIOException(e);
@@ -89,10 +97,9 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
       }
     }
 
-    if (reassignRegion) {
-      LOG.info("reassign region: " + regionInfo.getRegionName());
-      master.regionManager.setUnassigned(regionInfo);
-    } else if (deleteRegion) {
+    // now that meta is updated, if we need to delete the region's files, now's
+    // the time.
+    if (deleteRegion) {
       try {
         HRegion.deleteRegion(master.fs, master.rootdir, regionInfo);
       } catch (IOException e) {
@@ -101,6 +108,7 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
         throw e;
       }
     }
+    
     return true;
   }
 }

@@ -133,12 +133,15 @@ class ServerManager implements HConstants {
    * 
    * @param serverInfo
    * @param msgs
+   * @param mostLoadedRegions Array of regions the region server is submitting
+   * as candidates to be rebalanced, should it be overloaded
    * @return messages from master to region server indicating what region
    * server should do.
    * 
    * @throws IOException
    */
-  public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg msgs[])
+  public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg msgs[], 
+    HRegionInfo[] mostLoadedRegions)
   throws IOException {
     String serverName = serverInfo.getServerAddress().toString().trim();
 
@@ -206,7 +209,8 @@ class ServerManager implements HConstants {
       
       return new HMsg[]{new HMsg(HMsg.MSG_REGIONSERVER_STOP)};
     } else {
-      return processRegionServerAllsWell(serverName, serverInfo, msgs);
+      return processRegionServerAllsWell(serverName, serverInfo, 
+        mostLoadedRegions, msgs);
     }
   }
 
@@ -254,7 +258,7 @@ class ServerManager implements HConstants {
 
   /** RegionServer is checking in, no exceptional circumstances */
   private HMsg[] processRegionServerAllsWell(String serverName, 
-    HServerInfo serverInfo, HMsg[] msgs) 
+    HServerInfo serverInfo, HRegionInfo[] mostLoadedRegions, HMsg[] msgs)
   throws IOException {
     // All's well.  Renew the server's lease.
     // This will always succeed; otherwise, the fetch of serversToServerInfo
@@ -287,7 +291,7 @@ class ServerManager implements HConstants {
     loadToServers.put(load, servers);
 
     // Next, process messages for this server
-    return processMsgs(serverName, serverInfo, msgs);
+    return processMsgs(serverName, serverInfo, mostLoadedRegions, msgs);
   }
 
   /** 
@@ -297,7 +301,7 @@ class ServerManager implements HConstants {
    * that has already been done in regionServerReport.
    */
   private HMsg[] processMsgs(String serverName, HServerInfo serverInfo, 
-    HMsg incomingMsgs[])
+    HRegionInfo[] mostLoadedRegions, HMsg incomingMsgs[])
   throws IOException { 
     ArrayList<HMsg> returnMsgs = new ArrayList<HMsg>();
     Map<Text, HRegionInfo> regionsToKill = 
@@ -317,58 +321,11 @@ class ServerManager implements HConstants {
           break;
         
         case HMsg.MSG_REPORT_OPEN:
-          processRegionOpen(serverName, serverInfo, 
-            incomingMsgs[i].getRegionInfo(), returnMsgs);
+          processRegionOpen(serverName, serverInfo, region, returnMsgs);
           break;
 
         case HMsg.MSG_REPORT_CLOSE:
-          LOG.info(serverInfo.getServerAddress().toString() + " no longer serving " +
-              region);
-
-          if (region.isRootRegion()) {
-            // Root region
-            if (region.isOffline()) {
-              // Can't proceed without root region. Shutdown.
-              LOG.fatal("root region is marked offline");
-              master.shutdown();
-            }
-            master.regionManager.unassignRootRegion();
-
-          } else {
-            boolean reassignRegion = !region.isOffline();
-            boolean deleteRegion = false;
-
-            if (master.regionManager.isClosing(region.getRegionName())) {
-              master.regionManager.noLongerClosing(region.getRegionName());
-              reassignRegion = false;
-            }
-
-            if (master.regionManager.isMarkedForDeletion(region.getRegionName())) {
-              master.regionManager.regionDeleted(region.getRegionName());
-              reassignRegion = false;
-              deleteRegion = true;
-            }
-
-            if (region.isMetaTable()) {
-              // Region is part of the meta table. Remove it from onlineMetaRegions
-              master.regionManager.offlineMetaRegion(region.getStartKey());
-            }
-
-            // NOTE: we cannot put the region into unassignedRegions as that
-            //       could create a race with the pending close if it gets 
-            //       reassigned before the close is processed.
-
-            master.regionManager.noLongerUnassigned(region);
-
-            try {
-              master.toDoQueue.put(new ProcessRegionClose(master, region, 
-                reassignRegion, deleteRegion));
-
-            } catch (InterruptedException e) {
-              throw new RuntimeException(
-                "Putting into toDoQueue was interrupted.", e);
-            }
-          }
+          processRegionClose(serverInfo, region);
           break;
 
         case HMsg.MSG_REPORT_SPLIT:
@@ -394,7 +351,8 @@ class ServerManager implements HConstants {
     }
 
     // Figure out what the RegionServer ought to do, and write back.
-    master.regionManager.assignRegions(serverInfo, serverName, returnMsgs);
+    master.regionManager.assignRegions(serverInfo, serverName, 
+      mostLoadedRegions, returnMsgs);
     return returnMsgs.toArray(new HMsg[returnMsgs.size()]);
   }
   
@@ -497,6 +455,71 @@ class ServerManager implements HConstants {
     }
   }
   
+  private void processRegionClose(HServerInfo serverInfo, HRegionInfo region) {
+    LOG.info(serverInfo.getServerAddress().toString() + " no longer serving " +
+        region);
+
+    if (region.isRootRegion()) {
+      // Root region
+      if (region.isOffline()) {
+        // Can't proceed without root region. Shutdown.
+        LOG.fatal("root region is marked offline");
+        master.shutdown();
+      }
+      master.regionManager.unassignRootRegion();
+
+    } else {
+      boolean reassignRegion = !region.isOffline();
+      boolean deleteRegion = false;
+      boolean offlineRegion = false;
+      
+      // either this region is being closed because it was marked to close, or
+      // the region server is going down peacefully. in either case, we should
+      // at least try to remove it from the closing list. 
+      master.regionManager.noLongerClosing(region.getRegionName());
+      
+      // if the region is marked to be offlined, we don't want to reassign 
+      // it.
+      if (master.regionManager.isMarkedForOffline(region.getRegionName())) {
+        reassignRegion = false;
+        offlineRegion = true;
+      }
+
+      if (master.regionManager.isMarkedForDeletion(region.getRegionName())) {
+        master.regionManager.regionDeleted(region.getRegionName());
+        reassignRegion = false;
+        deleteRegion = true;
+      }
+
+      if (region.isMetaTable()) {
+        // Region is part of the meta table. Remove it from onlineMetaRegions
+        master.regionManager.offlineMetaRegion(region.getStartKey());
+      }
+
+      // if the region is already on the unassigned list, let's remove it. this
+      // is safe because if it's going to be reassigned, it'll get added again
+      // shortly. if it's not going to get reassigned, then we need to make 
+      // sure it's not on the unassigned list, because that would contend with
+      // the ProcessRegionClose going on asynchronously.
+      master.regionManager.noLongerUnassigned(region);
+
+      if (!reassignRegion) {
+        // either the region is being offlined or deleted. we want to do those 
+        // operations asynchronously, so we'll creating a todo item for that.
+        try {
+          master.toDoQueue.put(new ProcessRegionClose(master, region, 
+            offlineRegion, deleteRegion));
+        } catch (InterruptedException e) {
+          throw new RuntimeException(
+            "Putting into toDoQueue was interrupted.", e);
+        }
+      } else {
+        // we are reassigning the region eventually, so set it unassigned
+        master.regionManager.setUnassigned(region);
+      }
+    }
+  }
+  
   /** Cancel a server's lease and update its load information */
   private boolean cancelLease(final String serverName) {
     boolean leaseCancelled = false;
@@ -525,10 +548,31 @@ class ServerManager implements HConstants {
     return leaseCancelled;
   }
   
-  
-  /** @return the average load across all region servers */
-  public int averageLoad() {
-    return 0;
+  /** 
+   * Compute the average load across all region servers. 
+   * Currently, this uses a very naive computation - just uses the number of 
+   * regions being served, ignoring stats about number of requests.
+   * @return the average load
+   */
+  public double getAverageLoad() {
+    int totalLoad = 0;
+    int numServers = 0;
+    double averageLoad = 0.0;
+    
+    synchronized (serversToLoad) {
+      numServers = serversToLoad.size();
+      
+      for (Map.Entry<String, HServerLoad> entry : serversToLoad.entrySet()) {
+        totalLoad += entry.getValue().getNumberOfRegions();
+      }
+      
+      averageLoad = Math.ceil((double)totalLoad / (double)numServers);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Total Load: " + totalLoad + ", Num Servers: " + numServers 
+          + ", Avg Load: " + averageLoad);
+      }
+    }
+    return averageLoad;
   }
 
   /** @return the number of active servers */

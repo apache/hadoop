@@ -715,7 +715,8 @@ public class HRegion implements HConstants {
       Text startKey = new Text(this.regionInfo.getStartKey());
       Text endKey = new Text(this.regionInfo.getEndKey());
       if (startKey.equals(midKey)) {
-        LOG.debug("Startkey and midkey are same, not splitting");
+        LOG.debug("Startkey (" + startKey + ") and midkey + (" + 
+          midKey + ") are same, not splitting");
         return null;
       }
       if (midKey.equals(endKey)) {

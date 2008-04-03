@@ -131,7 +131,10 @@ class ChangeTableState extends TableOperation {
           LOG.debug("adding region " + i.getRegionName() +
               " to kill list");
         }
+        // this marks the regions to be closed
         localKillList.put(i.getRegionName(), i);
+        // this marks the regions to be offlined once they are closed
+        master.regionManager.markRegionForOffline(i.getRegionName());
       }
       if (localKillList.size() > 0) {
         if (LOG.isDebugEnabled()) {

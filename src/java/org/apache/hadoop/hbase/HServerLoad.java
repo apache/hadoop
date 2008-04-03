@@ -112,6 +112,13 @@ public class HServerLoad implements WritableComparable {
     this.numberOfRegions = numberOfRegions;
   }
 
+  /**
+   * @param numberOfRequests the numberOfRequests to set
+   */
+  public void setNumberOfRequests(int numberOfRequests) {
+    this.numberOfRequests = numberOfRequests;
+  }
+
   // Writable
 
   /** {@inheritDoc} */

@@ -131,6 +131,20 @@ public class LocalHBaseCluster implements HConstants {
     public HRegionServer getRegionServer() {
       return this.regionServer;
     }
+    
+    /**
+     * Block until the region server has come online, indicating it is ready
+     * to be used.
+     */
+    public void waitForServerOnline() {
+      while (!regionServer.isOnline()) {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          // continue waiting
+        }
+      }
+    }
   }
 
   /**
