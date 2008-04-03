@@ -180,10 +180,6 @@ public class DistributedFileSystem extends FileSystem {
    return dfs.delete(getPathName(f), recursive);
   }
   
-  public boolean exists(Path f) throws IOException {
-    return dfs.exists(getPathName(f));
-  }
-
   /** {@inheritDoc} */
   @Deprecated
   public long getContentLength(Path f) throws IOException {

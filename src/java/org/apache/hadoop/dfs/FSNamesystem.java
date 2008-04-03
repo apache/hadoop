@@ -985,7 +985,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       throw new IOException("Invalid file name: " + src);      	  
     }
     if (isPermissionEnabled) {
-      if (overwrite && exists(src)) {
+      if (overwrite && dir.exists(src)) {
         checkPathAccess(src, FsAction.WRITE);
       }
       else {
@@ -1539,14 +1539,18 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return true;
   }
 
-  /**
+  /** @deprecated Use getFileInfo(String) instead
    * Return whether the given filename exists
    */
+  @Deprecated
   public boolean exists(String src) throws AccessControlException {
-    if (isPermissionEnabled) {
-      checkTraverse(src);
+    try {
+      getFileInfo(src);
+      return true;
+    } catch (IOException e) {
+      //getFileInfo throws IOException for file not found
+      return false;
     }
-    return dir.exists(src);
   }
 
   /** Get the file info for a specific file.

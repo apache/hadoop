@@ -273,12 +273,6 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
         return false;
       }
     }
-
-    public boolean exists(Path f) throws IOException {
-      synchronized (this) {
-        return pathToFileAttribs.containsKey(getPath(f));
-      }
-    }
   
     /**
      * Directory operations are not supported

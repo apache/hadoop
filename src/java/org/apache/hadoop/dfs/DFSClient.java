@@ -504,11 +504,15 @@ class DFSClient implements FSConstants {
     return namenode.delete(src, recursive);
   }
   
-  /**
+  /** Implemented using getFileInfo(src)
    */
   public boolean exists(String src) throws IOException {
     checkOpen();
-    return namenode.exists(src);
+    try {
+      return getFileInfo(src) != null;
+    } catch (FileNotFoundException e) {
+      return false;
+    }
   }
 
   /** @deprecated Use getFileStatus() instead */

@@ -95,13 +95,6 @@ public class KosmosFileSystem extends FileSystem {
 	return new Path(workingDir, path);
     }
 
-    public boolean exists(Path path) throws IOException {
-	// stat the path to make sure it exists
-	Path absolute = makeAbsolute(path);
-        String srep = absolute.toUri().getPath();
-        return kfsImpl.exists(srep);
-    }
-
     public boolean mkdirs(Path path, FsPermission permission
         ) throws IOException {
 	Path absolute = makeAbsolute(path);

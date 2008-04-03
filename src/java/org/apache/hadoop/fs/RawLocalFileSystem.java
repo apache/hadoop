@@ -226,11 +226,7 @@ public class RawLocalFileSystem extends FileSystem {
     }
     return FileUtil.fullyDelete(f);
   }
-  
-  public boolean exists(Path f) throws IOException {
-    return pathToFile(f).exists();
-  }
-
+ 
   public FileStatus[] listStatus(Path f) throws IOException {
     File localf = pathToFile(f);
     FileStatus[] results;

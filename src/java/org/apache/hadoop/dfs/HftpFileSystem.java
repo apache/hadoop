@@ -209,12 +209,6 @@ public class HftpFileSystem extends FileSystem {
   }
 
   @Override
-  public boolean exists(Path f) throws IOException {
-    LsParser lsparser = new LsParser();
-    return lsparser.getFileStatus(f) != null;
-  }
-
-  @Override
   public FileStatus[] listStatus(Path f) throws IOException {
     LsParser lsparser = new LsParser();
     return lsparser.listStatus(f);

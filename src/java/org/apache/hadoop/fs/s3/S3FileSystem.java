@@ -125,11 +125,6 @@ public class S3FileSystem extends FileSystem {
     return new Path(workingDir, path);
   }
 
-  @Override
-  public boolean exists(Path path) throws IOException {
-    return store.inodeExists(makeAbsolute(path));
-  }
-
   /**
    * @param permission Currently ignored.
    */

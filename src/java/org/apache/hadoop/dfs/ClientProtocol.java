@@ -231,9 +231,10 @@ interface ClientProtocol extends VersionedProtocol {
    */
   public boolean delete(String src, boolean recursive) throws IOException;
   
-  /**
+  /** @deprecated Use getFileInfo() instead
    * Check whether the given file exists.
    */
+  @Deprecated
   public boolean exists(String src) throws IOException;
 
   /**

@@ -74,6 +74,9 @@ Trunk (unreleased changes)
     HADOOP-2839. Remove deprecated FileSystem::globPaths.
     (lohit vijayarenu via cdouglas)
 
+    HADOOP-2634. Deprecate ClientProtocol::exists.
+    (lohit vijayarenu via cdouglas)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)

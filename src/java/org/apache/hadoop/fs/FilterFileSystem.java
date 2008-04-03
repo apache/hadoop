@@ -145,13 +145,6 @@ public class FilterFileSystem extends FileSystem {
     return fs.delete(f, recursive);
   }
   
-  /** Check if exists.
-   * @param f source file
-   */
-  public boolean exists(Path f) throws IOException {
-    return fs.exists(f);
-  }
-
   /** List files in a directory. */
   public FileStatus[] listStatus(Path f) throws IOException {
     return fs.listStatus(f);

@@ -580,7 +580,13 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** Check if exists.
    * @param f source file
    */
-  public abstract boolean exists(Path f) throws IOException;
+  public boolean exists(Path f) throws IOException {
+    try {
+      return getFileStatus(f) != null;
+    } catch (FileNotFoundException e) {
+      return false;
+    }
+  }
 
   /** True iff the named path is a directory. */
   /** @deprecated Use getFileStatus() instead */ @Deprecated
