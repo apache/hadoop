@@ -443,6 +443,9 @@ Trunk (unreleased changes)
     HADOOP-3118.  Fix Namenode NPE while loading fsimage after a cluster 
     upgrade from older disk format. (dhruba)
 
+    HADOOP-3010. Fix ConcurrentModificationException in ipc.Server.Responder.
+    (rangadi)
+
 Release 0.16.2 - 2008-04-02
 
   BUG FIXES

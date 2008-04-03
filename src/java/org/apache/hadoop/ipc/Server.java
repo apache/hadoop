@@ -465,13 +465,15 @@ public abstract class Server {
           // long time, discard them.
           //
           LOG.debug("Checking for old call responses.");
-          iter = writeSelector.keys().iterator();
-          while (iter.hasNext()) {
-            SelectionKey key = iter.next();
-            try {
-              doPurge(key, now);
-            } catch (IOException e) {
-              LOG.warn("Error in purging old calls " + e);
+          synchronized (writeSelector.keys()) {
+            iter = writeSelector.keys().iterator();
+            while (iter.hasNext()) {
+              SelectionKey key = iter.next();
+              try {
+                doPurge(key, now);
+              } catch (IOException e) {
+                LOG.warn("Error in purging old calls " + e);
+              }
             }
           }
         } catch (OutOfMemoryError e) {
