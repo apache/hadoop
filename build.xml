@@ -223,6 +223,7 @@
     <copy todir="${dist.dir}">
       <fileset dir=".">
         <include name="*.txt" />
+        <include name="build.xml" />
       </fileset>
     </copy>
     <mkdir dir="${dist.dir}/src" />
