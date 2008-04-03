@@ -26,6 +26,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.CopyFiles;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -444,6 +445,78 @@ public class TestCopyFiles extends TestCase {
       deldir("file:///", TEST_ROOT_DIR+"/destdat");
       deldir("file:///", TEST_ROOT_DIR+"/dest2");
       deldir("file:///", TEST_ROOT_DIR+"/srcdat");
+    }
+  }
+
+  public void testPreserveOption() throws Exception {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster(conf, 2, true, null);
+      String nnUri = FileSystem.getDefaultUri(conf).toString();
+      FileSystem fs = FileSystem.get(URI.create(nnUri), conf);
+
+      {//test preserving user
+        MyFile[] files = createFiles(URI.create(nnUri), "/srcdat");
+        FileStatus[] srcstat = getFileStatus(nnUri, "/srcdat", files);
+        for(int i = 0; i < srcstat.length; i++) {
+          fs.setOwner(srcstat[i].getPath(), "u" + i, null);
+        }
+        ToolRunner.run(new CopyFiles(conf),
+            new String[]{"-pu", nnUri+"/srcdat", nnUri+"/destdat"});
+        assertTrue("Source and destination directories do not match.",
+                   checkFiles(nnUri, "/destdat", files));
+        
+        FileStatus[] dststat = getFileStatus(nnUri, "/destdat", files);
+        for(int i = 0; i < dststat.length; i++) {
+          assertEquals("i=" + i, "u" + i, dststat[i].getOwner());
+        }
+        deldir(nnUri, "/destdat");
+        deldir(nnUri, "/srcdat");
+      }
+
+      {//test preserving group
+        MyFile[] files = createFiles(URI.create(nnUri), "/srcdat");
+        FileStatus[] srcstat = getFileStatus(nnUri, "/srcdat", files);
+        for(int i = 0; i < srcstat.length; i++) {
+          fs.setOwner(srcstat[i].getPath(), null, "g" + i);
+        }
+        ToolRunner.run(new CopyFiles(conf),
+            new String[]{"-pg", nnUri+"/srcdat", nnUri+"/destdat"});
+        assertTrue("Source and destination directories do not match.",
+                   checkFiles(nnUri, "/destdat", files));
+        
+        FileStatus[] dststat = getFileStatus(nnUri, "/destdat", files);
+        for(int i = 0; i < dststat.length; i++) {
+          assertEquals("i=" + i, "g" + i, dststat[i].getGroup());
+        }
+        deldir(nnUri, "/destdat");
+        deldir(nnUri, "/srcdat");
+      }
+
+      {//test preserving mode
+        MyFile[] files = createFiles(URI.create(nnUri), "/srcdat");
+        FileStatus[] srcstat = getFileStatus(nnUri, "/srcdat", files);
+        FsPermission[] permissions = new FsPermission[srcstat.length];
+        for(int i = 0; i < srcstat.length; i++) {
+          permissions[i] = new FsPermission((short)(i & 0666));
+          fs.setPermission(srcstat[i].getPath(), permissions[i]);
+        }
+
+        ToolRunner.run(new CopyFiles(conf),
+            new String[]{"-pp", nnUri+"/srcdat", nnUri+"/destdat"});
+        assertTrue("Source and destination directories do not match.",
+                   checkFiles(nnUri, "/destdat", files));
+  
+        FileStatus[] dststat = getFileStatus(nnUri, "/destdat", files);
+        for(int i = 0; i < dststat.length; i++) {
+          assertEquals("i=" + i, permissions[i], dststat[i].getPermission());
+        }
+        deldir(nnUri, "/destdat");
+        deldir(nnUri, "/srcdat");
+      }
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
     }
   }
 }

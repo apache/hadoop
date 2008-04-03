@@ -188,6 +188,9 @@ Trunk (unreleased changes)
     HADOOP-3106. Adds documentation in forrest for debugging.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3099. Add an option to distcp to preserve user, group, and
+    permission information. (Tsz Wo (Nicholas), SZE via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing
