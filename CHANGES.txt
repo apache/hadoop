@@ -505,6 +505,9 @@ Trunk (unreleased changes)
     HADOOP-3050. DataNode sends one and only one block report after
     it registers with the namenode. (Hairong Kuang)
 
+    HADOOP-3044. NNBench sets the right configuration for the mapper.
+    (Hairong Kuang)
+
 Release 0.16.3 - Unreleased
 
   BUG FIXES

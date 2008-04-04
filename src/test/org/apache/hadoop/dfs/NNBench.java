@@ -613,10 +613,16 @@ public class NNBench {
      * Constructor
      */
     public NNBenchMapper() {
-      super(config);
+    }
+    
+    /**
+     * Mapper base implementation
+     */
+    public void configure(JobConf conf) {
+      setConf(conf);
       
       try {
-        filesystem = FileSystem.get(config);
+        filesystem = FileSystem.get(conf);
       } catch(Exception e) {
         throw new RuntimeException("Cannot get file system.", e);
       }
@@ -626,13 +632,6 @@ public class NNBench {
       } catch(Exception e) {
         throw new RuntimeException("Error getting hostname", e);
       }
-    }
-    
-    /**
-     * Mapper base implementation
-     */
-    public void configure(JobConf conf) {
-      setConf(conf);
     }
     
     /**
@@ -648,8 +647,7 @@ public class NNBench {
     * synchronized nodes, to start at roughly the same time.
     */
     private boolean barrier() {
-      Configuration conf = filesystem.getConf();
-      long startTime = conf.getLong("test.nnbench.starttime", 0l);
+      long startTime = getConf().getLong("test.nnbench.starttime", 0l);
       long currentTime = System.currentTimeMillis();
       long sleepTime = startTime - currentTime;
       boolean retVal = false;
