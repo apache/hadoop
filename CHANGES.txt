@@ -18,6 +18,7 @@ Hbase Change Log
   IMPROVEMENTS
    HBASE-469   Streamline HStore startup and compactions
    HBASE-544   Purge startUpdate from internal code and test cases
+   HBASE-557   HTable.getRow() should receive RowResult objects
 
 Release 0.1.0
 

@@ -24,7 +24,7 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.SortedMap;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.Map.Entry;
 
@@ -275,9 +275,9 @@ public class ThriftServer {
       }
       try {
         HTable table = getTable(tableName);
-        SortedMap<Text, Cell> values = 
+        Map<Text, Cell> values = 
           table.getRow(getText(row), timestamp);
-        // copy the map from type <Text, byte[]> to <byte[], byte[]>
+        // copy the map from type <Text, Cell> to <byte[], byte[]>
         HashMap<byte[], byte[]> returnValues = new HashMap<byte[], byte[]>();
         for (Entry<Text, Cell> e : values.entrySet()) {
           returnValues.put(e.getKey().getBytes(), e.getValue().getValue());
@@ -472,7 +472,7 @@ public class ThriftServer {
       retval.row = key.getRow().getBytes();
       retval.columns = new HashMap<byte[], byte[]>(results.size());
       
-      for (SortedMap.Entry<Text, byte[]> e : results.entrySet()) {
+      for (Map.Entry<Text, byte[]> e : results.entrySet()) {
         retval.columns.put(e.getKey().getBytes(), e.getValue());
       }
       return retval;

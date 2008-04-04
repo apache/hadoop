@@ -39,8 +39,6 @@ import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -329,7 +327,7 @@ public class HTable implements HConstants {
    * @return Map of columns to values.  Map is empty if row does not exist.
    * @throws IOException
    */
-  public SortedMap<Text, Cell> getRow(final Text row) throws IOException {
+  public Map<Text, Cell> getRow(final Text row) throws IOException {
     return getRow(row, HConstants.LATEST_TIMESTAMP);
   }
 
@@ -341,24 +339,13 @@ public class HTable implements HConstants {
    * @return Map of columns to values.  Map is empty if row does not exist.
    * @throws IOException
    */
-  public SortedMap<Text, Cell> getRow(final Text row, final long ts) 
+  public Map<Text, Cell> getRow(final Text row, final long ts) 
   throws IOException {
-    HbaseMapWritable value = null;
-         
-    value = getRegionServerWithRetries(new ServerCallable<HbaseMapWritable>(row) {
-      public HbaseMapWritable call() throws IOException {
+    return getRegionServerWithRetries(new ServerCallable<RowResult>(row) {
+      public RowResult call() throws IOException {
         return server.getRow(location.getRegionInfo().getRegionName(), row, ts);
       }
     });
-    
-    SortedMap<Text, Cell> results = new TreeMap<Text, Cell>();
-    if (value != null && value.size() != 0) {
-      for (Map.Entry<Writable, Writable> e: value.entrySet()) {
-        HStoreKey key = (HStoreKey) e.getKey();
-        results.put(key.getColumn(), (Cell)e.getValue());
-      }
-    }
-    return results;
   }
 
   /** 
@@ -369,7 +356,7 @@ public class HTable implements HConstants {
    * @return Map of columns to values.  Map is empty if row does not exist.
    * @throws IOException
    */
-  public SortedMap<Text, Cell> getRow(final Text row, final Text[] columns) 
+  public Map<Text, Cell> getRow(final Text row, final Text[] columns) 
   throws IOException {
     return getRow(row, columns, HConstants.LATEST_TIMESTAMP);
   }
@@ -383,26 +370,15 @@ public class HTable implements HConstants {
    * @return Map of columns to values.  Map is empty if row does not exist.
    * @throws IOException
    */
-  public SortedMap<Text, Cell> getRow(final Text row, final Text[] columns, 
+  public Map<Text, Cell> getRow(final Text row, final Text[] columns, 
     final long ts) 
-  throws IOException {
-    HbaseMapWritable value = null;
-         
-    value = getRegionServerWithRetries(new ServerCallable<HbaseMapWritable>(row) {
-      public HbaseMapWritable call() throws IOException {
+  throws IOException {       
+    return getRegionServerWithRetries(new ServerCallable<RowResult>(row) {
+      public RowResult call() throws IOException {
         return server.getRow(location.getRegionInfo().getRegionName(), row, 
           columns, ts);
       }
     });
-    
-    SortedMap<Text, Cell> results = new TreeMap<Text, Cell>();
-    if (value != null && value.size() != 0) {
-      for (Map.Entry<Writable, Writable> e: value.entrySet()) {
-        HStoreKey key = (HStoreKey) e.getKey();
-        results.put(key.getColumn(), (Cell)e.getValue());
-      }
-    }
-    return results;
   }
 
   /** 

@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -100,7 +99,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return map of values
    * @throws IOException
    */
-  public HbaseMapWritable getRow(final Text regionName, final Text row, final long ts)
+  public RowResult getRow(final Text regionName, final Text row, final long ts)
   throws IOException;
 
   /**
@@ -112,7 +111,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return map of values
    * @throws IOException
    */
-  public HbaseMapWritable getClosestRowBefore(final Text regionName, final Text row)
+  public RowResult getClosestRowBefore(final Text regionName, final Text row)
   throws IOException;
 
   /**
@@ -123,7 +122,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return map of values
    * @throws IOException
    */
-  public HbaseMapWritable getRow(final Text regionName, final Text row, 
+  public RowResult getRow(final Text regionName, final Text row, 
     final Text[] columns, final long ts)
   throws IOException;
 
@@ -135,7 +134,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return map of values
    * @throws IOException
    */
-  public HbaseMapWritable getRow(final Text regionName, final Text row, 
+  public RowResult getRow(final Text regionName, final Text row, 
     final Text[] columns)
   throws IOException;
 

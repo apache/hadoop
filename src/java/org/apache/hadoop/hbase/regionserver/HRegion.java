@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.HashMap;
 import java.util.TreeSet;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,6 +47,8 @@ import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
@@ -1158,7 +1161,7 @@ public class HRegion implements HConstants {
    * @return map of values
    * @throws IOException
    */
-  public Map<Text, Cell> getClosestRowBefore(final Text row)
+  public RowResult getClosestRowBefore(final Text row)
   throws IOException{
     // look across all the HStores for this region and determine what the
     // closest key is across all column families, since the data may be sparse
@@ -1190,15 +1193,18 @@ public class HRegion implements HConstants {
       if (key == null) {
         return null;
       }
-          
+      
       // now that we've found our key, get the values
-      TreeMap<Text, Cell> result = new TreeMap<Text, Cell>();
+      Map<Text, Cell> cells = new HashMap<Text, Cell>();
       for (Text colFamily: stores.keySet()) {
         HStore targetStore = stores.get(colFamily);
-        targetStore.getFull(key, null, result);
+        targetStore.getFull(key, null, cells);
       }
       
-      return result;
+      HbaseMapWritable cellsWritten = new HbaseMapWritable();
+      cellsWritten.putAll(cells);
+      
+      return new RowResult(key.getRow(), cellsWritten);
     } finally {
       lock.readLock().unlock();
     }

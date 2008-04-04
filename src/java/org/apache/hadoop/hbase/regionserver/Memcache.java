@@ -145,7 +145,7 @@ class Memcache {
    * @param results
    */
   void getFull(HStoreKey key, Set<Text> columns, Map<Text, Long> deletes, 
-    SortedMap<Text, Cell> results) {
+    Map<Text, Cell> results) {
     this.lock.readLock().lock();
     try {
       synchronized (memcache) {
@@ -161,8 +161,7 @@ class Memcache {
   }
 
   private void internalGetFull(SortedMap<HStoreKey, byte[]> map, HStoreKey key, 
-    Set<Text> columns, Map<Text, Long> deletes, 
-    SortedMap<Text, Cell> results) {
+    Set<Text> columns, Map<Text, Long> deletes, Map<Text, Cell> results) {
 
     if (map.isEmpty() || key == null) {
       return;

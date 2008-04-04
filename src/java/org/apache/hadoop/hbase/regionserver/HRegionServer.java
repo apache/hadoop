@@ -1000,20 +1000,20 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public HbaseMapWritable getRow(final Text regionName, final Text row, final long ts)
+  public RowResult getRow(final Text regionName, final Text row, final long ts)
   throws IOException {
     return getRow(regionName, row, null, ts);
   }
 
   /** {@inheritDoc} */
-  public HbaseMapWritable getRow(final Text regionName, final Text row, 
+  public RowResult getRow(final Text regionName, final Text row, 
     final Text[] columns)
   throws IOException {
     return getRow(regionName, row, columns, HConstants.LATEST_TIMESTAMP);
   }
 
   /** {@inheritDoc} */
-  public HbaseMapWritable getRow(final Text regionName, final Text row, 
+  public RowResult getRow(final Text regionName, final Text row, 
     final Text[] columns, final long ts)
   throws IOException {
     checkOpen();
@@ -1029,10 +1029,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       HRegion region = getRegion(regionName);
       Map<Text, Cell> map = region.getFull(row, columnSet, ts);
       HbaseMapWritable result = new HbaseMapWritable();
-      for (Map.Entry<Text, Cell> es: map.entrySet()) {
-        result.put(new HStoreKey(row, es.getKey()), es.getValue());
-      }
-      return result;
+      result.putAll(map);
+      return new RowResult(row, result);
     } catch (IOException e) {
       checkFileSystem();
       throw e;
@@ -1040,7 +1038,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public HbaseMapWritable getClosestRowBefore(final Text regionName, 
+  public RowResult getClosestRowBefore(final Text regionName, 
     final Text row)
   throws IOException {
     checkOpen();
@@ -1048,18 +1046,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     try {
       // locate the region we're operating on
       HRegion region = getRegion(regionName);
-      HbaseMapWritable result = new HbaseMapWritable();
+
       // ask the region for all the data 
-      Map<Text, Cell> map = region.getClosestRowBefore(row);
-      // convert to a MapWritable
-      if (map == null) {
-        return null;
-      }
-      for (Map.Entry<Text, Cell> es: map.entrySet()) {
-        result.put(new HStoreKey(row, es.getKey()), es.getValue());
-      }
-      return result;
-      
+      return region.getClosestRowBefore(row);
     } catch (IOException e) {
       checkFileSystem();
       throw e;

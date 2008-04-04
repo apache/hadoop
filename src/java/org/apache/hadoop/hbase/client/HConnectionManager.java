@@ -24,22 +24,16 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.ipc.HbaseRPC;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.util.SoftSortedMap;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -355,21 +349,6 @@ public class HConnectionManager implements HConstants {
     }
 
     /**
-      * Convenience method for turning a MapWritable into the underlying
-      * SortedMap we all know and love.
-      */
-    private SortedMap<Text, Cell> sortedMapFromMapWritable(
-      HbaseMapWritable writable) {
-      SortedMap<Text, Cell> results = new TreeMap<Text, Cell>();
-      for (Map.Entry<Writable, Writable> e: writable.entrySet()) {
-        HStoreKey key = (HStoreKey) e.getKey();
-        results.put(key.getColumn(), (Cell)e.getValue());
-      }
-      
-      return results;
-    }
-
-    /**
       * Search one of the meta tables (-ROOT- or .META.) for the HRegionLocation
       * info that contains the table and row we're seeking.
       */
@@ -412,7 +391,7 @@ public class HConnectionManager implements HConstants {
             getHRegionConnection(metaLocation.getServerAddress());
 
           // query the root region for the location of the meta region
-          HbaseMapWritable regionInfoRow = server.getClosestRowBefore(
+          RowResult regionInfoRow = server.getClosestRowBefore(
             metaLocation.getRegionInfo().getRegionName(), metaKey);
 
           if (regionInfoRow == null) {
@@ -420,11 +399,7 @@ public class HConnectionManager implements HConstants {
               "' does not exist.");
           }
 
-          // convert the MapWritable into a Map we can use
-          SortedMap<Text, Cell> results = 
-            sortedMapFromMapWritable(regionInfoRow);
-
-          Cell value = results.get(COL_REGIONINFO);
+          Cell value = regionInfoRow.get(COL_REGIONINFO);
 
           if (value == null || value.getValue().length == 0) {
             throw new IOException("HRegionInfo was null or empty in " + 
@@ -447,7 +422,7 @@ public class HConnectionManager implements HConstants {
           }
           
           String serverAddress = 
-            Writables.cellToString(results.get(COL_SERVER));
+            Writables.cellToString(regionInfoRow.get(COL_SERVER));
         
           if (serverAddress.equals("")) { 
             throw new NoServerForRegionException(

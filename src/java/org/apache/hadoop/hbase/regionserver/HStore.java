@@ -1092,7 +1092,7 @@ public class HStore implements HConstants {
    *
    * The returned object should map column names to Cells.
    */
-  void getFull(HStoreKey key, final Set<Text> columns, TreeMap<Text, Cell> results)
+  void getFull(HStoreKey key, final Set<Text> columns, Map<Text, Cell> results)
   throws IOException {
     Map<Text, Long> deletes = new HashMap<Text, Long>();
     
@@ -1124,7 +1124,7 @@ public class HStore implements HConstants {
   }
   
   private void getFullFromMapFile(MapFile.Reader map, HStoreKey key, 
-    Set<Text> columns, Map<Text, Long> deletes, TreeMap<Text, Cell> results) 
+    Set<Text> columns, Map<Text, Long> deletes, Map<Text, Cell> results) 
   throws IOException {
     synchronized(map) {
       // seek back to the beginning
