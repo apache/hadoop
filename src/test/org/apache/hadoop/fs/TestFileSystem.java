@@ -499,11 +499,35 @@ public class TestFileSystem extends TestCase {
         int n = Thread.activeCount();
         for(int i = 0; i < 100; i++) {
           FileSystem.get(uri, new Configuration());
+          Thread.sleep(100);
           assertTrue(n >= Thread.activeCount());
         }
       } finally {
         cluster.shutdown(); 
       }
+    }
+  }
+    
+  public void testFsClose() throws Exception {
+    {
+      Configuration conf = new Configuration();
+      new Path("file:///").getFileSystem(conf);
+      UnixUserGroupInformation.login(conf, true);
+      FileSystem.closeAll();
+    }
+
+    {
+      Configuration conf = new Configuration();
+      new Path("hftp://localhost:12345/").getFileSystem(conf);
+      UnixUserGroupInformation.login(conf, true);
+      FileSystem.closeAll();
+    }
+
+    {
+      Configuration conf = new Configuration();
+      FileSystem fs = new Path("hftp://localhost:12345/").getFileSystem(conf);
+      UnixUserGroupInformation.login(fs.getConf(), true);
+      FileSystem.closeAll();
     }
   }
 }

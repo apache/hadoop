@@ -185,7 +185,7 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /** {@inheritDoc} */
-  public synchronized void close() throws IOException {
+  public void close() throws IOException {
     try {
       dfs.close();
     } finally {
