@@ -20,7 +20,8 @@ Hbase Change Log
    HBASE-544   Purge startUpdate from internal code and test cases
    HBASE-557   HTable.getRow() should receive RowResult objects
    HBASE-452   "region offline" should throw IOException, not IllegalStateException
-
+   HBASE-541   Update hadoop jars.
+   
 Release 0.1.0
 
   INCOMPATIBLE CHANGES
