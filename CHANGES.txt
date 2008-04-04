@@ -518,6 +518,9 @@ Release 0.16.3 - Unreleased
     HADOOP-3010. Fix ConcurrentModificationException in ipc.Server.Responder.
     (rangadi)
 
+    HADOOP-3154. Catch all Throwables from the SpillThread in MapTask, rather
+    than IOExceptions only. (ddas via cdouglas)
+
     HADOOP-3159. Avoid file system cache being overwritten whenever
     configuration is modified. (Tsz Wo (Nicholas), SZE via hairong)
 
