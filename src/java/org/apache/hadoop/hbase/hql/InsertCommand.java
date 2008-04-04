@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
  * Inserts values into tables.
@@ -59,7 +60,9 @@ public class InsertCommand extends BasicCommand {
 
       try {
         HTable table = new HTable(conf, tableName);
-        long lockId = table.startUpdate(getRow());
+        BatchUpdate batchUpdate = timestamp == null ? 
+          new BatchUpdate(getRow()) 
+          : new BatchUpdate(getRow(), Long.parseLong(timestamp));
 
         for (int i = 0; i < values.size(); i++) {
           Text column = null;
@@ -67,13 +70,10 @@ public class InsertCommand extends BasicCommand {
             column = getColumn(i);
           else
             column = new Text(getColumn(i) + ":");
-          table.put(lockId, column, getValue(i));
+          batchUpdate.put(column, getValue(i));
         }
 
-        if(timestamp != null) 
-          table.commit(lockId, Long.parseLong(timestamp));
-        else
-          table.commit(lockId);
+        table.commit(batchUpdate);
 
         return new ReturnMsg(1, "1 row inserted successfully.");
       } catch (IOException e) {

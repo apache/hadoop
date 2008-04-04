@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HScannerInterface;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
  * Basic stand-alone testing of HRegion.
@@ -128,12 +129,13 @@ implements RegionUnavailableListener {
     // Write out a bunch of values
 
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
-      long writeid = region.startUpdate(new Text("row_" + k));
-      region.put(writeid, CONTENTS_BASIC,
+      BatchUpdate batchUpdate = 
+        new BatchUpdate(new Text("row_" + k), System.currentTimeMillis());
+      batchUpdate.put(CONTENTS_BASIC,
           (CONTENTSTR + k).getBytes(HConstants.UTF8_ENCODING));
-      region.put(writeid, new Text(ANCHORNUM + k),
+      batchUpdate.put(new Text(ANCHORNUM + k),
           (ANCHORSTR + k).getBytes(HConstants.UTF8_ENCODING));
-      region.commit(writeid, System.currentTimeMillis());
+      region.commit(batchUpdate);
     }
     LOG.info("Write " + NUM_VALS + " rows. Elapsed time: "
         + ((System.currentTimeMillis() - startTime) / 1000.0));
@@ -178,32 +180,18 @@ implements RegionUnavailableListener {
   }
   
   private void badPuts() {
-    
-    // Try put with bad lockid.
+    // Try column name not registered in the table.    
     boolean exceptionThrown = false;
-    try {
-      region.put(-1, CONTENTS_BASIC,
-          "bad input".getBytes(HConstants.UTF8_ENCODING));
-    } catch (Exception e) {
-      exceptionThrown = true;
-    }
-    assertTrue("Bad lock id", exceptionThrown);
-
-    // Try column name not registered in the table.
     exceptionThrown = false;
-    long lockid = -1;
     try {
-      lockid = region.startUpdate(new Text("Some old key"));
+      BatchUpdate batchUpdate = new BatchUpdate(new Text("Some old key"));
       String unregisteredColName = "FamilyGroup:FamilyLabel";
-      region.put(lockid, new Text(unregisteredColName),
+      batchUpdate.put(new Text(unregisteredColName),
         unregisteredColName.getBytes(HConstants.UTF8_ENCODING));
-      region.commit(lockid);
+      region.commit(batchUpdate);
     } catch (IOException e) {
       exceptionThrown = true;
     } finally {
-      if (lockid != -1) {
-        region.abort(lockid);
-      }
     }
     assertTrue("Bad family", exceptionThrown);
     LOG.info("badPuts completed.");
@@ -286,10 +274,12 @@ implements RegionUnavailableListener {
     for(int k = 0; k < vals1.length / 2; k++) {
       String kLabel = String.format("%1$03d", k);
 
-      long lockid = region.startUpdate(new Text("row_vals1_" + kLabel));
-      region.put(lockid, cols[0], vals1[k].getBytes(HConstants.UTF8_ENCODING));
-      region.put(lockid, cols[1], vals1[k].getBytes(HConstants.UTF8_ENCODING));
-      region.commit(lockid, System.currentTimeMillis());
+      BatchUpdate batchUpdate = 
+        new BatchUpdate(new Text("row_vals1_" + kLabel), 
+          System.currentTimeMillis());
+      batchUpdate.put(cols[0], vals1[k].getBytes(HConstants.UTF8_ENCODING));
+      batchUpdate.put(cols[1], vals1[k].getBytes(HConstants.UTF8_ENCODING));
+      region.commit(batchUpdate);
       numInserted += 2;
     }
 
@@ -389,10 +379,12 @@ implements RegionUnavailableListener {
     for(int k = vals1.length/2; k < vals1.length; k++) {
       String kLabel = String.format("%1$03d", k);
       
-      long lockid = region.startUpdate(new Text("row_vals1_" + kLabel));
-      region.put(lockid, cols[0], vals1[k].getBytes(HConstants.UTF8_ENCODING));
-      region.put(lockid, cols[1], vals1[k].getBytes(HConstants.UTF8_ENCODING));
-      region.commit(lockid, System.currentTimeMillis());
+      BatchUpdate batchUpdate = 
+        new BatchUpdate(new Text("row_vals1_" + kLabel), 
+          System.currentTimeMillis());
+      batchUpdate.put(cols[0], vals1[k].getBytes(HConstants.UTF8_ENCODING));
+      batchUpdate.put(cols[1], vals1[k].getBytes(HConstants.UTF8_ENCODING));
+      region.commit(batchUpdate);
       numInserted += 2;
     }
 
@@ -550,10 +542,11 @@ implements RegionUnavailableListener {
       }
 
       // Write to the HRegion
-      long writeid = region.startUpdate(new Text("row_" + k));
-      region.put(writeid, CONTENTS_BODY,
+      BatchUpdate batchUpdate = 
+        new BatchUpdate(new Text("row_" + k), System.currentTimeMillis());
+      batchUpdate.put(CONTENTS_BODY,
           buf1.toString().getBytes(HConstants.UTF8_ENCODING));
-      region.commit(writeid, System.currentTimeMillis());
+      region.commit(batchUpdate);
       if (k > 0 && k % (N_ROWS / 100) == 0) {
         LOG.info("Flushing write #" + k);
 

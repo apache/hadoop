@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
  * Test of a long-lived scanner validating as we go.
@@ -150,14 +151,14 @@ public class TestScanner extends HBaseTestCase {
       region = new HRegionIncommon(r);
       
       // Write information to the meta table
-      
-      long lockid = region.startUpdate(ROW_KEY);
+
+      BatchUpdate batchUpdate = new BatchUpdate(ROW_KEY, System.currentTimeMillis());
 
       ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
       DataOutputStream s = new DataOutputStream(byteStream);
       HRegionInfo.rootRegionInfo.write(s);
-      region.put(lockid, HConstants.COL_REGIONINFO, byteStream.toByteArray());
-      region.commit(lockid, System.currentTimeMillis());
+      batchUpdate.put(HConstants.COL_REGIONINFO, byteStream.toByteArray());
+      region.commit(batchUpdate);
 
       // What we just committed is in the memcache. Verify that we can get
       // it back both with scanning and get
@@ -180,15 +181,15 @@ public class TestScanner extends HBaseTestCase {
  
       HServerAddress address = new HServerAddress("foo.bar.com:1234");
 
-      lockid = region.startUpdate(ROW_KEY);
+      batchUpdate = new BatchUpdate(ROW_KEY, System.currentTimeMillis());
 
-      region.put(lockid, HConstants.COL_SERVER, 
+      batchUpdate.put(HConstants.COL_SERVER, 
         Writables.stringToBytes(address.toString()));
 
-      region.put(lockid, HConstants.COL_STARTCODE,
-          Writables.longToBytes(START_CODE));
+      batchUpdate.put(HConstants.COL_STARTCODE,
+        Writables.longToBytes(START_CODE));
 
-      region.commit(lockid, System.currentTimeMillis());
+      region.commit(batchUpdate);
       
       // Validate that we can still get the HRegionInfo, even though it is in
       // an older row on disk and there is a newer row in the memcache
@@ -220,12 +221,12 @@ public class TestScanner extends HBaseTestCase {
 
       address = new HServerAddress("bar.foo.com:4321");
       
-      lockid = region.startUpdate(ROW_KEY);
+      batchUpdate = new BatchUpdate(ROW_KEY, System.currentTimeMillis());
 
-      region.put(lockid, HConstants.COL_SERVER, 
+      batchUpdate.put(HConstants.COL_SERVER, 
         Writables.stringToBytes(address.toString()));
 
-      region.commit(lockid, System.currentTimeMillis());
+      region.commit(batchUpdate);
       
       // Validate again
       

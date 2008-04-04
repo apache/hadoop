@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.thrift.generated.ScanEntry;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 import com.facebook.thrift.TException;
 import com.facebook.thrift.protocol.TBinaryProtocol;
@@ -296,9 +297,9 @@ public class ThriftServer {
       }
       try {
         HTable table = getTable(tableName);
-        long lockid = table.startUpdate(getText(row));
-        table.put(lockid, getText(column), value);
-        table.commit(lockid);
+        BatchUpdate batchUpdate = new BatchUpdate(getText(row));
+        batchUpdate.put(getText(column), value);
+        table.commit(batchUpdate);
       } catch (IOException e) {
         throw new IOError(e.getMessage());
       } catch (IllegalArgumentException e) {
@@ -412,15 +413,15 @@ public class ThriftServer {
       
       try {
         table = getTable(tableName);
-        lockid = table.startUpdate(getText(row));
+        BatchUpdate batchUpdate = new BatchUpdate(getText(row), timestamp);
         for (Mutation m : mutations) {
           if (m.isDelete) {
-            table.delete(lockid, getText(m.column));
+            batchUpdate.delete(getText(m.column));
           } else {
-            table.put(lockid, getText(m.column), m.value);
+            batchUpdate.put(getText(m.column), m.value);
           }
         }
-        table.commit(lockid, timestamp);
+        table.commit(batchUpdate);
       } catch (IOException e) {
         if (lockid != null) {
           table.abort(lockid);

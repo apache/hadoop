@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /** Test case for get */
 public class TestGet extends HBaseTestCase {
@@ -99,20 +100,21 @@ public class TestGet extends HBaseTestCase {
       HRegionIncommon r = new HRegionIncommon(region);
       
       // Write information to the table
-      
-      long lockid = r.startUpdate(ROW_KEY);
-      r.put(lockid, CONTENTS, Writables.getBytes(CONTENTS));
-      r.put(lockid, HConstants.COL_REGIONINFO, 
+
+      BatchUpdate batchUpdate = null;
+      batchUpdate = new BatchUpdate(ROW_KEY, System.currentTimeMillis());
+      batchUpdate.put(CONTENTS, Writables.getBytes(CONTENTS));
+      batchUpdate.put(HConstants.COL_REGIONINFO, 
           Writables.getBytes(HRegionInfo.rootRegionInfo));
-      r.commit(lockid, System.currentTimeMillis());
+      r.commit(batchUpdate);
       
-      lockid = r.startUpdate(ROW_KEY);
-      r.put(lockid, HConstants.COL_SERVER, 
+      batchUpdate = new BatchUpdate(ROW_KEY, System.currentTimeMillis());
+      batchUpdate.put(HConstants.COL_SERVER, 
         Writables.stringToBytes(new HServerAddress(SERVER_ADDRESS).toString()));
-      r.put(lockid, HConstants.COL_STARTCODE, Writables.longToBytes(lockid));
-      r.put(lockid, new Text(HConstants.COLUMN_FAMILY + "region"), 
+      batchUpdate.put(HConstants.COL_STARTCODE, Writables.longToBytes(12345));
+      batchUpdate.put(new Text(HConstants.COLUMN_FAMILY + "region"), 
         "region".getBytes(HConstants.UTF8_ENCODING));
-      r.commit(lockid, System.currentTimeMillis());
+      r.commit(batchUpdate);
       
       // Verify that get works the same from memcache as when reading from disk
       // NOTE dumpRegion won't work here because it only reads from disk.
@@ -131,15 +133,15 @@ public class TestGet extends HBaseTestCase {
       
       // Update one family member and add a new one
       
-      lockid = r.startUpdate(ROW_KEY);
-      r.put(lockid, new Text(HConstants.COLUMN_FAMILY + "region"),
+      batchUpdate = new BatchUpdate(ROW_KEY, System.currentTimeMillis());
+      batchUpdate.put(new Text(HConstants.COLUMN_FAMILY + "region"),
         "region2".getBytes(HConstants.UTF8_ENCODING));
       String otherServerName = "bar.foo.com:4321";
-      r.put(lockid, HConstants.COL_SERVER, 
+      batchUpdate.put(HConstants.COL_SERVER, 
         Writables.stringToBytes(new HServerAddress(otherServerName).toString()));
-      r.put(lockid, new Text(HConstants.COLUMN_FAMILY + "junk"),
+      batchUpdate.put(new Text(HConstants.COLUMN_FAMILY + "junk"),
         "junk".getBytes(HConstants.UTF8_ENCODING));
-      r.commit(lockid, System.currentTimeMillis());
+      r.commit(batchUpdate);
 
       verifyGet(r, otherServerName);
       

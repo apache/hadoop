@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 import org.mortbay.servlet.MultiPartResponse;
 import org.w3c.dom.Document;
@@ -296,12 +297,13 @@ public class TableHandler extends GenericHandler {
       throw new ServletException(e);
     }
 
-    long lock_id = -1;
+    BatchUpdate batchUpdate;
     
     try{
       // start an update
       Text key = new Text(row);
-      lock_id = table.startUpdate(key);
+      batchUpdate = timestamp == null ? 
+        new BatchUpdate(key) : new BatchUpdate(key, Long.parseLong(timestamp));
 
       // set the columns from the xml
       NodeList columns = doc.getElementsByTagName("column");
@@ -328,24 +330,16 @@ public class TableHandler extends GenericHandler {
         }
 
         // put the value
-        table.put(lock_id, name, value);
+        batchUpdate.put(name, value);
       }
 
       // commit the update
-      if (timestamp != null) {
-        table.commit(lock_id, Long.parseLong(timestamp));
-      }
-      else{
-        table.commit(lock_id);      
-      }
-
+      table.commit(batchUpdate);
+      
       // respond with a 200
       response.setStatus(200);      
     }
     catch(Exception e){
-      if (lock_id != -1) {
-        table.abort(lock_id);
-      }
       throw new ServletException(e);
     }
   }

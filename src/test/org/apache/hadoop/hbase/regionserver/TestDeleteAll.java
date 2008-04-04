@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
  * Test the functionality of deleteAll.
@@ -94,27 +95,27 @@ public class TestDeleteAll extends HBaseTestCase {
     Text colB = new Text(COLUMNS[0].toString() + "b");
     Text colC = new Text(COLUMNS[0].toString() + "c");
     Text colD = new Text(COLUMNS[0].toString());
-    
-    long lock = region_incommon.startUpdate(row);
-    region_incommon.put(lock, colA, cellData(0, flush).getBytes());
-    region_incommon.put(lock, colB, cellData(0, flush).getBytes());
-    region_incommon.put(lock, colC, cellData(0, flush).getBytes());      
-    region_incommon.put(lock, colD, cellData(0, flush).getBytes());      
-    region_incommon.commit(lock, t0);
 
-    lock = region_incommon.startUpdate(row);
-    region_incommon.put(lock, colA, cellData(1, flush).getBytes());
-    region_incommon.put(lock, colB, cellData(1, flush).getBytes());
-    region_incommon.put(lock, colC, cellData(1, flush).getBytes());      
-    region_incommon.put(lock, colD, cellData(1, flush).getBytes());      
-    region_incommon.commit(lock, t1);
+    BatchUpdate batchUpdate = new BatchUpdate(row, t0);
+    batchUpdate.put(colA, cellData(0, flush).getBytes());
+    batchUpdate.put(colB, cellData(0, flush).getBytes());
+    batchUpdate.put(colC, cellData(0, flush).getBytes());      
+    batchUpdate.put(colD, cellData(0, flush).getBytes());      
+    region_incommon.commit(batchUpdate);
+
+    batchUpdate = new BatchUpdate(row, t1);
+    batchUpdate.put(colA, cellData(1, flush).getBytes());
+    batchUpdate.put(colB, cellData(1, flush).getBytes());
+    batchUpdate.put(colC, cellData(1, flush).getBytes());      
+    batchUpdate.put(colD, cellData(1, flush).getBytes());      
+    region_incommon.commit(batchUpdate);
     
-    lock = region_incommon.startUpdate(row);
-    region_incommon.put(lock, colA, cellData(2, flush).getBytes());
-    region_incommon.put(lock, colB, cellData(2, flush).getBytes());
-    region_incommon.put(lock, colC, cellData(2, flush).getBytes());      
-    region_incommon.put(lock, colD, cellData(2, flush).getBytes());      
-    region_incommon.commit(lock, t2);
+    batchUpdate = new BatchUpdate(row, t2);
+    batchUpdate.put(colA, cellData(2, flush).getBytes());
+    batchUpdate.put(colB, cellData(2, flush).getBytes());
+    batchUpdate.put(colC, cellData(2, flush).getBytes());      
+    batchUpdate.put(colD, cellData(2, flush).getBytes());      
+    region_incommon.commit(batchUpdate);
 
     if (flush) {region_incommon.flushcache();}
 

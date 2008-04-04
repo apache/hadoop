@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.HBaseTestCase;
 
 import org.apache.commons.logging.Log;
@@ -228,13 +229,10 @@ public class TimestampTestBase extends HBaseTestCase {
   public static void put(final Incommon loader, final byte [] bytes,
     final long ts)
   throws IOException {
-    long lockid = loader.startUpdate(ROW);
-    loader.put(lockid, COLUMN, bytes);
-    if (ts == HConstants.LATEST_TIMESTAMP) {
-      loader.commit(lockid);
-    } else {
-      loader.commit(lockid, ts);
-    }
+    BatchUpdate batchUpdate = ts == HConstants.LATEST_TIMESTAMP ? 
+      new BatchUpdate(ROW) : new BatchUpdate(ROW, ts);
+    batchUpdate.put(COLUMN, bytes);
+    loader.commit(batchUpdate);
   }
   
   public static void delete(final Incommon loader) throws IOException {
@@ -242,12 +240,9 @@ public class TimestampTestBase extends HBaseTestCase {
   }
 
   public static void delete(final Incommon loader, final long ts) throws IOException {
-    long lockid = loader.startUpdate(ROW);
-    loader.delete(lockid, COLUMN);
-    if (ts == HConstants.LATEST_TIMESTAMP) {
-      loader.commit(lockid);
-    } else {
-      loader.commit(lockid, ts);
-    }
+    BatchUpdate batchUpdate = ts == HConstants.LATEST_TIMESTAMP ? 
+      new BatchUpdate(ROW) : new BatchUpdate(ROW, ts);
+    batchUpdate.delete(COLUMN);
+    loader.commit(batchUpdate);  
   }
 }

@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.HScannerInterface;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
  * Tests HTable
@@ -87,9 +88,9 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     HTableDescriptor meta = a.getMetadata();
     assertTrue(meta.equals(tableAdesc));
     
-    long lockid = a.startUpdate(row);
-    a.put(lockid, COLUMN_FAMILY, value);
-    a.commit(lockid);
+    BatchUpdate batchUpdate = new BatchUpdate(row);
+    batchUpdate.put(COLUMN_FAMILY, value);
+    a.commit(batchUpdate);
     
     // open a new connection to A and a connection to b
     
@@ -105,12 +106,11 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
       HStoreKey key = new HStoreKey();
       TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
       while(s.next(key, results)) {
-        lockid = b.startUpdate(key.getRow());
+        batchUpdate = new BatchUpdate(key.getRow());
         for(Map.Entry<Text, byte[]> e: results.entrySet()) {
-          b.put(lockid, e.getKey(), e.getValue());
+          batchUpdate.put(e.getKey(), e.getValue());
         }
-        b.commit(lockid);
-        b.abort(lockid);
+        b.commit(batchUpdate);
       }
     } finally {
       s.close();

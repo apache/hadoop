@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
  * Additional scanner tests.
@@ -106,9 +107,9 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
         // flipping the switch in StopRowFilter stopping us returning all
         // of the rest of the other store content.
         if (i == 0) {
-          long id = inc.startUpdate(new Text("bbb"));
-          inc.put(id, families[0], "bbb".getBytes());
-          inc.commit(id);
+          BatchUpdate batchUpdate = new BatchUpdate(new Text("bbb"));
+          batchUpdate.put(families[0], "bbb".getBytes());
+          inc.commit(batchUpdate);
         }
       }
       RowFilterInterface f =
@@ -173,12 +174,12 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     HTable table = new HTable(this.conf, tableName);
     // Add a row to columns without qualifiers and then two with.  Make one
     // numbers only so easy to find w/ a regex.
-    long id = table.startUpdate(new Text(getName()));
+    BatchUpdate batchUpdate = new BatchUpdate(new Text(getName()));
     final String firstColkeyFamily = Character.toString(FIRST_COLKEY) + ":";
-    table.put(id, new Text(firstColkeyFamily + getName()), GOOD_BYTES);
-    table.put(id, new Text(firstColkeyFamily + "22222"), GOOD_BYTES);
-    table.put(id, new Text(firstColkeyFamily), GOOD_BYTES);
-    table.commit(id);
+    batchUpdate.put(new Text(firstColkeyFamily + getName()), GOOD_BYTES);
+    batchUpdate.put(new Text(firstColkeyFamily + "22222"), GOOD_BYTES);
+    batchUpdate.put(new Text(firstColkeyFamily), GOOD_BYTES);
+    table.commit(batchUpdate);
     // Now do a scan using a regex for a column name.
     checkRegexingScanner(table, firstColkeyFamily + "\\d+");
     // Do a new scan that only matches on column family.
@@ -230,12 +231,12 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     HTable table = new HTable(conf, tableName);
     for (char i = FIRST_ROWKEY; i <= LAST_ROWKEY; i++) {
       Text rowKey = new Text(new String(new char[] { i }));
-      long lockID = table.startUpdate(rowKey);
+      BatchUpdate batchUpdate = new BatchUpdate(rowKey);
       for (char j = 0; j < colKeys.length; j++) {
-        table.put(lockID, colKeys[j], (i >= FIRST_BAD_RANGE_ROWKEY && 
+        batchUpdate.put(colKeys[j], (i >= FIRST_BAD_RANGE_ROWKEY && 
             i <= LAST_BAD_RANGE_ROWKEY)? BAD_BYTES : GOOD_BYTES);
       }
-      table.commit(lockID);
+      table.commit(batchUpdate);
     }
 
     regExpFilterTest(table, colKeys);
@@ -412,13 +413,13 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
       final HServerAddress serverAddress,
       final long startCode)
   throws IOException {
-    long lockid = t.startUpdate(region.getRegionName());
-    t.put(lockid, HConstants.COL_REGIONINFO,
+    BatchUpdate batchUpdate = new BatchUpdate(region.getRegionName());
+    batchUpdate.put(HConstants.COL_REGIONINFO,
       Writables.getBytes(region.getRegionInfo()));
-    t.put(lockid, HConstants.COL_SERVER,
+    batchUpdate.put(HConstants.COL_SERVER,
       Writables.stringToBytes(serverAddress.toString()));
-    t.put(lockid, HConstants.COL_STARTCODE, Writables.longToBytes(startCode));
-    t.commit(lockid);
+    batchUpdate.put(HConstants.COL_STARTCODE, Writables.longToBytes(startCode));
+    t.commit(batchUpdate);
     // Assert added.
     byte [] bytes = 
       t.get(region.getRegionName(), HConstants.COL_REGIONINFO).getValue();
@@ -439,11 +440,11 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
    */
   private void removeRegionFromMETA(final HTable t, final Text regionName)
   throws IOException {
-    long lockid = t.startUpdate(regionName);
-    t.delete(lockid, HConstants.COL_REGIONINFO);
-    t.delete(lockid, HConstants.COL_SERVER);
-    t.delete(lockid, HConstants.COL_STARTCODE);
-    t.commit(lockid);
+    BatchUpdate batchUpdate = new BatchUpdate(regionName);
+    batchUpdate.delete(HConstants.COL_REGIONINFO);
+    batchUpdate.delete(HConstants.COL_SERVER);
+    batchUpdate.delete(HConstants.COL_STARTCODE);
+    t.commit(batchUpdate);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removed " + regionName + " from table " + t.getTableName());
     }

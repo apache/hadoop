@@ -25,8 +25,11 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 
 /**
- * Tests that HClient protects against multiple updates
+ * Tests that HClient protects against multiple updates. This test case will
+ * be removed at the same time that HTable.startuUpdate and friends are 
+ * removed.
  */
+@Deprecated
 public class TestMultipleUpdates extends HBaseClusterTestCase {
   private static final String CONTENTS_STR = "contents:";
   private static final Text CONTENTS = new Text(CONTENTS_STR);

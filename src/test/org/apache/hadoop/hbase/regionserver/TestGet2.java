@@ -122,13 +122,13 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
       long one_second_ago = right_now - 1000;
       
       Text t = new Text("test_row");
-      long lockid = region_incommon.startUpdate(t);
-      region_incommon.put(lockid, COLUMNS[0], "old text".getBytes());
-      region_incommon.commit(lockid, one_second_ago);
+      BatchUpdate batchUpdate = new BatchUpdate(t, one_second_ago);
+      batchUpdate.put(COLUMNS[0], "old text".getBytes());
+      region_incommon.commit(batchUpdate);
  
-      lockid = region_incommon.startUpdate(t);
-      region_incommon.put(lockid, COLUMNS[0], "new text".getBytes());
-      region_incommon.commit(lockid, right_now);
+      batchUpdate = new BatchUpdate(t, right_now);
+      batchUpdate.put(COLUMNS[0], "new text".getBytes());
+      region_incommon.commit(batchUpdate);
 
       assertCellEquals(region, t, COLUMNS[0], right_now, "new text");
       assertCellEquals(region, t, COLUMNS[0], one_second_ago, "old text");

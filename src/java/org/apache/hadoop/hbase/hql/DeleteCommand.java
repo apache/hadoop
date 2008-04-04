@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
  * Deletes values from tables.
@@ -55,11 +56,11 @@ public class DeleteCommand extends BasicCommand {
       HTable hTable = new HTable(conf, tableName);
 
       if (rowKey != null) {
-        long lockID = hTable.startUpdate(rowKey);
+        BatchUpdate bu = new BatchUpdate(rowKey);
         for (Text column : getColumnList(admin, hTable)) {
-          hTable.delete(lockID, new Text(column));
+          bu.delete(new Text(column));
         }
-        hTable.commit(lockID);
+        hTable.commit(bu);
       } else {
         admin.disableTable(tableName);
         for (Text column : getColumnList(admin, hTable)) {

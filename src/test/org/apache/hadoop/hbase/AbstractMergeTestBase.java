@@ -25,6 +25,7 @@ import java.util.Random;
 
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Logger;
 
@@ -126,11 +127,11 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
 
     HRegionIncommon r = new HRegionIncommon(region);
     for(int i = firstRow; i < firstRow + nrows; i++) {
-      long lockid = r.startUpdate(new Text("row_"
+      BatchUpdate batchUpdate = new BatchUpdate(new Text("row_"
           + String.format("%1$05d", i)));
 
-      r.put(lockid, COLUMN_NAME, value.get());
-      r.commit(lockid, System.currentTimeMillis());
+      batchUpdate.put(COLUMN_NAME, value.get());
+      region.batchUpdate(batchUpdate);
       if(i % 10000 == 0) {
         System.out.println("Flushing write #" + i);
         r.flushcache();

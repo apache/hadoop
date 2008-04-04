@@ -270,32 +270,21 @@ public abstract class HBaseTestCase extends TestCase {
             break EXIT;
           }
           try {
-            long lockid = updater.startUpdate(t);
+            BatchUpdate batchUpdate = ts == -1 ? 
+              new BatchUpdate(t) : new BatchUpdate(t, ts);
             try {
-              updater.put(lockid, new Text(column), bytes);
-              if (ts == -1) {
-                updater.commit(lockid);
-              } else {
-                updater.commit(lockid, ts);
-              }
-              lockid = -1;
+              batchUpdate.put(new Text(column), bytes);
+              updater.commit(batchUpdate);
             } catch (RuntimeException ex) {
               ex.printStackTrace();
               throw ex;
-              
             } catch (IOException ex) {
               ex.printStackTrace();
               throw ex;
-              
-            } finally {
-              if (lockid != -1) {
-                updater.abort(lockid);
-              }
-            }
+            } 
           } catch (RuntimeException ex) {
             ex.printStackTrace();
             throw ex;
-            
           } catch (IOException ex) {
             ex.printStackTrace();
             throw ex;
@@ -327,12 +316,6 @@ public abstract class HBaseTestCase extends TestCase {
   public static interface Incommon {
     /**
      * @param row
-     * @return update id
-     * @throws IOException
-     */
-    public long startUpdate(Text row) throws IOException;    
-    /**
-     * @param row
      * @param column
      * @return value for row/column pair
      * @throws IOException
@@ -357,41 +340,19 @@ public abstract class HBaseTestCase extends TestCase {
     public Cell[] get(Text row, Text column, long ts, int versions)
     throws IOException;
     /**
-     * @param lockid
-     * @param column
-     * @param val
-     * @throws IOException
-     */
-    public void put(long lockid, Text column, byte val[]) throws IOException;
-    /**
-     * @param lockid
-     * @param column
-     * @throws IOException
-     */
-    public void delete(long lockid, Text column) throws IOException;
-    /**
      * @param row
      * @param column
      * @param ts
      * @throws IOException
      */
     public void deleteAll(Text row, Text column, long ts) throws IOException;
+
     /**
-     * @param lockid
+     * @param batchUpdate
      * @throws IOException
      */
-    public void commit(long lockid) throws IOException;
-    /**
-     * @param lockid
-     * @param ts
-     * @throws IOException
-     */
-    public void commit(long lockid, long ts) throws IOException;
-    /**
-     * @param lockid
-     * @throws IOException
-     */
-    public void abort(long lockid) throws IOException;
+    public void commit(BatchUpdate batchUpdate) throws IOException;
+
     /**
      * @param columns
      * @param firstRow
@@ -423,70 +384,39 @@ public abstract class HBaseTestCase extends TestCase {
       this.region = HRegion;
       this.batch = null;
     }
+    
     /** {@inheritDoc} */
-    public void abort(@SuppressWarnings("unused") long lockid) {
-      this.batch = null;
-    }
-    /** {@inheritDoc} */
-    public void commit(long lockid) throws IOException {
-      commit(lockid, HConstants.LATEST_TIMESTAMP);
-    }
-    /** {@inheritDoc} */
-    public void commit(@SuppressWarnings("unused") long lockid, final long ts)
-    throws IOException {
-      checkBatch();
-      try {
-        this.batch.setTimestamp(ts);
-        this.region.batchUpdate(batch);
-      } finally {
-        this.batch = null;
-      }
-    }
-    /** {@inheritDoc} */
-    public void put(@SuppressWarnings("unused") long lockid, Text column,
-        byte[] val) {
-      checkBatch();
-      this.batch.put(column, val);
-    }
-    /** {@inheritDoc} */
-    public void delete(@SuppressWarnings("unused") long lockid, Text column) {
-      checkBatch();
-      this.batch.delete(column);
-    }
+    public void commit(BatchUpdate batchUpdate) throws IOException {
+      region.batchUpdate(batchUpdate);
+    };
+    
     /** {@inheritDoc} */
     public void deleteAll(Text row, Text column, long ts) throws IOException {
       this.region.deleteAll(row, column, ts);
     }
 
-    /**
-     * @param row
-     * @return update id
-     */
-    public long startUpdate(Text row) {
-      if (this.batch != null) {
-        throw new IllegalStateException("Update already in progress");
-      }
-      this.batch = new BatchUpdate(row);
-      return 1;
-    }
     /** {@inheritDoc} */
     public HScannerInterface getScanner(Text [] columns, Text firstRow,
         long ts) throws IOException {
       return this.region.getScanner(columns, firstRow, ts, null);
     }
+
     /** {@inheritDoc} */
     public Cell get(Text row, Text column) throws IOException {
       return this.region.get(row, column);
     }
+
     /** {@inheritDoc} */
     public Cell[] get(Text row, Text column, int versions) throws IOException {
       return this.region.get(row, column, versions);
     }
+
     /** {@inheritDoc} */
     public Cell[] get(Text row, Text column, long ts, int versions)
     throws IOException {
       return this.region.get(row, column, ts, versions);
     }
+
     /**
      * @param row
      * @return values for each column in the specified row
@@ -495,6 +425,7 @@ public abstract class HBaseTestCase extends TestCase {
     public Map<Text, Cell> getFull(Text row) throws IOException {
       return region.getFull(row, null, HConstants.LATEST_TIMESTAMP);
     }
+
     /** {@inheritDoc} */
     public void flushcache() throws IOException {
       this.region.flushcache();
@@ -522,56 +453,17 @@ public abstract class HBaseTestCase extends TestCase {
       this.table = table;
       this.batch = null;
     }
+    
     /** {@inheritDoc} */
-    public void abort(@SuppressWarnings("unused") long lockid) {
-      if (this.batch != null) {
-        this.batch = null;
-      }
-    }
-    /** {@inheritDoc} */
-    public void commit(@SuppressWarnings("unused") long lockid)
-    throws IOException {
-      checkBatch();
-      this.table.commit(batch);
-      this.batch = null;
-    }
-
-    /** {@inheritDoc} */
-    public void commit(@SuppressWarnings("unused") long lockid, final long ts)
-    throws IOException {
-      checkBatch();
-      this.batch.setTimestamp(ts);
-      this.table.commit(batch);
-      this.batch = null;
-    }
-
-    /** {@inheritDoc} */
-    public void put(@SuppressWarnings("unused") long lockid, Text column,
-        byte[] val) {
-      checkBatch();
-      this.batch.put(column, val);
-    }
-
-    /** {@inheritDoc} */
-    public void delete(@SuppressWarnings("unused") long lockid, Text column) {
-      checkBatch();
-      this.batch.delete(column);
-    }
+    public void commit(BatchUpdate batchUpdate) throws IOException {
+      table.commit(batchUpdate);
+    };
     
     /** {@inheritDoc} */
     public void deleteAll(Text row, Text column, long ts) throws IOException {
       this.table.deleteAll(row, column, ts);
     }
     
-    /** {@inheritDoc} */
-    public long startUpdate(Text row) {
-      if (this.batch != null) {
-        throw new IllegalStateException("Batch update already in progress.");
-      }
-      this.batch = new BatchUpdate(row);
-      return 0L;
-    }
-
     /** {@inheritDoc} */
     public HScannerInterface getScanner(Text [] columns, Text firstRow,
         long ts) throws IOException {
