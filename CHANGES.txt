@@ -491,6 +491,9 @@ Trunk (unreleased changes)
     APIs in FileOutputFormat: setOutputPath, getOutputPath, getWorkOutputPath.
     (Amareshwari Sriramadasu via nigel)
 
+    HADOOP-3083. The fsimage does not store leases. This would have to be
+    reworked in the next release to support appends. (dhruba)
+
 Release 0.16.3 - Unreleased
 
   BUG FIXES

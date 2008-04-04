@@ -4365,35 +4365,11 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
   }
 
-  /** 
-   * Serializes leases
+  /**
+   * Serializes leases. This current code does not save leases but will do
+   * so in the future.
    */
   void saveFilesUnderConstruction(DataOutputStream out) throws IOException {
-    synchronized (sortedLeases) {
-      int count = 0;
-      for (Lease lease : sortedLeases) {
-        count += lease.getPaths().size();
-      }
-      out.writeInt(count); // write the size
-      for (Lease lease : sortedLeases) {
-        Collection<StringBytesWritable> files = lease.getPaths();
-        for (Iterator<StringBytesWritable> i = files.iterator(); i.hasNext();){
-          String path = i.next().getString();
-          
-          // verify that path exists in namespace
-          INode node = dir.getFileINode(path);
-          if (node == null) {
-            throw new IOException("saveLeases found path " + path +
-                                  " but no matching entry in namespace.");
-          }
-          if (!node.isUnderConstruction()) {
-            throw new IOException("saveLeases found path " + path +
-                                  " but is not under construction.");
-          }
-          INodeFileUnderConstruction cons = (INodeFileUnderConstruction) node;
-          FSImage.writeINodeUnderConstruction(out, cons, path);
-        }
-      }
-    }
+    out.writeInt(0);      // the number of leases
   }
 }
