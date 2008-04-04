@@ -463,7 +463,8 @@ public class FileUtil {
     enum OSType {
       OS_TYPE_UNIX, 
       OS_TYPE_WINXP,
-      OS_TYPE_SOLARIS; 
+      OS_TYPE_SOLARIS,
+      OS_TYPE_MAC; 
     }
   
     private static String[] hardLinkCommand;
@@ -480,6 +481,10 @@ public class FileUtil {
         hardLinkCommand = new String[] {"ln", null, null};
         getLinkCountCommand = new String[] {"ls","-l"};
         break;
+      case OS_TYPE_MAC:
+        hardLinkCommand = new String[] {"ln", null, null};
+        getLinkCountCommand = new String[] {"stat","-f%l"};
+        break;
       case OS_TYPE_UNIX:
       default:
         hardLinkCommand = new String[] {"ln", null, null};
@@ -493,6 +498,8 @@ public class FileUtil {
         return OSType.OS_TYPE_WINXP;
       else if (osName.indexOf("SunOS") >= 0)
          return OSType.OS_TYPE_SOLARIS;
+      else if (osName.indexOf("Mac") >= 0)
+         return OSType.OS_TYPE_MAC;
       else
         return OSType.OS_TYPE_UNIX;
     }
