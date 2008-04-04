@@ -41,7 +41,7 @@ public class TestMiniMRLocalFS extends TestCase {
   static final int NUM_SAMPLES = 100000;
   private static String TEST_ROOT_DIR =
     new File(System.getProperty("test.build.data","/tmp"))
-    .toString().replace(' ', '+');
+    .toURI().toString().replace(' ', '+');
     
   public void testWithLocal() throws IOException {
     MiniMRCluster mr = null;

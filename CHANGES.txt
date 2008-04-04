@@ -517,6 +517,9 @@ Trunk (unreleased changes)
     HADOOP-1911. Fix an infinite loop in DFSClient when all replicas of a
     block are bad (cdouglas)
 
+    HADOOP-3157. Fix path handling in DistributedCache and TestMiniMRLocalFS.
+    (Doug Cutting via rangadi) 
+
 Release 0.16.3 - Unreleased
 
   BUG FIXES

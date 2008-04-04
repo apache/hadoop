@@ -257,15 +257,19 @@ public class DistributedCache {
    */
   public static String makeRelative(URI cache, Configuration conf)
     throws IOException {
-    String fsname = cache.getScheme();
-    String path;
-    FileSystem dfs = FileSystem.get(conf);
-    if ("hdfs".equals(fsname)) {
-      path = cache.getHost() + cache.getPath();
-    } else {
-      String[] split = dfs.getName().split(":");
-      path = split[0] + cache.getPath();
+    String host = cache.getHost();
+    if (host == null) {
+      host = cache.getScheme();
     }
+    if (host == null) {
+      URI defaultUri = FileSystem.get(conf).getUri();
+      host = defaultUri.getHost();
+      if (host == null) {
+        host = defaultUri.getScheme();
+      }
+    }
+    String path = host + cache.getPath();
+    path = path.replace(":/","/");                // remove windows device colon
     return path;
   }
 
