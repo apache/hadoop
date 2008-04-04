@@ -44,7 +44,7 @@ public class IsolationRunner {
       return TaskUmbilicalProtocol.versionID;
     }
     
-    public void done(String taskid) throws IOException {
+    public void done(String taskid, boolean shouldPromote) throws IOException {
       LOG.info("Task " + taskid + " reporting done.");
     }
 

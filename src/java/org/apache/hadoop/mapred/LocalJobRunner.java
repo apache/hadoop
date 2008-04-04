@@ -287,7 +287,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
       return true;
     }
 
-    public void done(String taskId) throws IOException {
+    public void done(String taskId, boolean shouldPromote) throws IOException {
       int taskIndex = mapIds.indexOf(taskId);
       if (taskIndex >= 0) {                       // mapping
         status.setMapProgress(1.0f);

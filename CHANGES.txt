@@ -246,6 +246,9 @@ Trunk (unreleased changes)
                              hold key/value indexes (default 5%)
     (cdouglas via omalley)
 
+    HADOOP-3140. Doesn't add a task in the commit queue if the task hadn't
+    generated any output. (Amar Kamat via ddas)
+
   BUG FIXES
 
     HADOOP-2195. '-mkdir' behaviour is now closer to Linux shell in case of

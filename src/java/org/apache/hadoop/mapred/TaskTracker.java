@@ -1360,6 +1360,7 @@ public class TaskTracker
     private TaskStatus taskStatus; 
     private long taskTimeout;
     private String debugCommand;
+    private boolean shouldPromoteOutput = false;
         
     /**
      */
@@ -1569,8 +1570,15 @@ public class TaskTracker
     /**
      * The task is reporting that it's done running
      */
-    public synchronized void reportDone() {
-      this.taskStatus.setRunState(TaskStatus.State.COMMIT_PENDING);
+    public synchronized void reportDone(boolean shouldPromote) {
+      TaskStatus.State state = null;
+      this.shouldPromoteOutput = shouldPromote;
+      if (shouldPromote) {
+        state = TaskStatus.State.COMMIT_PENDING;
+      } else {
+        state = TaskStatus.State.SUCCEEDED;
+      }
+      this.taskStatus.setRunState(state);
       this.taskStatus.setProgress(1.0f);
       this.taskStatus.setFinishTime(System.currentTimeMillis());
       this.done = true;
@@ -1602,7 +1610,11 @@ public class TaskTracker
       boolean needCleanup = false;
       synchronized (this) {
         if (done) {
-          taskStatus.setRunState(TaskStatus.State.COMMIT_PENDING);
+          if (shouldPromoteOutput) {
+            taskStatus.setRunState(TaskStatus.State.COMMIT_PENDING);
+          } else {
+            taskStatus.setRunState(TaskStatus.State.SUCCEEDED);
+          }
         } else {
           if (!wasKilled) {
             failures += 1;
@@ -1953,10 +1965,11 @@ public class TaskTracker
   /**
    * The task is done.
    */
-  public synchronized void done(String taskid) throws IOException {
+  public synchronized void done(String taskid, boolean shouldPromote) 
+  throws IOException {
     TaskInProgress tip = tasks.get(taskid);
     if (tip != null) {
-      tip.reportDone();
+      tip.reportDone(shouldPromote);
     } else {
       LOG.warn("Unknown child task done: "+taskid+". Ignored.");
     }

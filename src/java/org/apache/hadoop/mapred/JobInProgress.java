@@ -466,6 +466,13 @@ class JobInProgress {
     double oldProgress = tip.getProgress();   // save old progress
     boolean wasRunning = tip.isRunning();
     boolean wasComplete = tip.isComplete();
+    // If the TIP is already completed and the task reports as SUCCEEDED then 
+    // mark the task as KILLED.
+    // In case of task with no promotion the task tracker will mark the task 
+    // as SUCCEEDED.
+    if (wasComplete && (status.getRunState() == TaskStatus.State.SUCCEEDED)) {
+      status.setRunState(TaskStatus.State.KILLED);
+    }
     boolean change = tip.updateStatus(status);
     if (change) {
       TaskStatus.State state = status.getRunState();
@@ -473,9 +480,7 @@ class JobInProgress {
         this.jobtracker.getTaskTracker(status.getTaskTracker());
       String httpTaskLogLocation = null; 
 
-      if (state == TaskStatus.State.COMMIT_PENDING ||
-          state == TaskStatus.State.FAILED ||
-          state == TaskStatus.State.KILLED) {
+      if (state == TaskStatus.State.COMMIT_PENDING) {
         JobWithTaskContext j = new JobWithTaskContext(this, tip, 
                                                       status.getTaskId(),
                                                       metrics);

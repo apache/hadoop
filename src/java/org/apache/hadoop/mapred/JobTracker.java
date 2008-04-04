@@ -2273,19 +2273,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
               }
             }
           }
-
-          for(int i = 0; i < jobList.size(); ++i) {
-            if (states[i] == TaskStatus.State.FAILED
-                || states[i] == TaskStatus.State.KILLED) {
-              try {
-                tasks[i].discardTaskOutput();
-              } catch (IOException ioe) {
-                LOG.info("Failed to discard the output of task " 
-                         + status[i].getTaskId() + " with: " 
-                         + StringUtils.stringifyException(ioe));
-              }
-            }
-          }
         } catch (InterruptedException ie) {
           break;
         }

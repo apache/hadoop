@@ -38,8 +38,10 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    *         with {@link #statusUpdate(String, TaskStatus)}
    * Version 5 changed counters representation for HADOOP-2248
    * Version 6 changes the TaskStatus representation for HADOOP-2208
+   * Version 7 changes the done api (via HADOOP-3140). It now expects whether
+   *           or not the task's output needs to be promoted.
    * */
-  public static final long versionID = 6L;
+  public static final long versionID = 7L;
   
   /** Called when a child task process starts, to get its task.*/
   Task getTask(String taskid) throws IOException;
@@ -69,8 +71,11 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
   boolean ping(String taskid) throws IOException;
 
   /** Report that the task is successfully completed.  Failure is assumed if
-   * the task process exits without calling this. */
-  void done(String taskid) throws IOException;
+   * the task process exits without calling this.
+   * @param taskid task's id
+   * @param shouldBePromoted whether to promote the task's output or not 
+   */
+  void done(String taskid, boolean shouldBePromoted) throws IOException;
 
   /** Report that a reduce-task couldn't shuffle map-outputs.*/
   void shuffleError(String taskId, String message) throws IOException;
