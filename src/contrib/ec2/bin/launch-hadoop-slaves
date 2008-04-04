@@ -15,11 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Launch an EC2 cluster of Hadoop instances.
-
-# Import variables
-bin=`dirname "$0"`
-bin=`cd "$bin"; pwd`
+# Launch an EC2 Hadoop slaves.
 
 if [ -z $1 ]; then
   echo "Cluster name required!"
@@ -30,10 +26,27 @@ if [ -z $2 ]; then
   echo "Must specify the number of slaves to start."
 fi
 
-if ! "$bin"/launch-hadoop-master $1 ; then
-  exit $?
+CLUSTER=$1
+NO_INSTANCES=$2
+
+# Import variables
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+. "$bin"/hadoop-ec2-env.sh
+
+if [ ! -f $MASTER_IP_PATH ]; then
+  echo "Must start Cluster Master first!"
+  exit -1
 fi
 
-if ! "$bin"/launch-hadoop-slaves $*; then
-  exit $?
-fi
+# Finding Hadoop image
+AMI_IMAGE=`ec2-describe-images -a | grep $S3_BUCKET | grep $HADOOP_VERSION | grep $ARCH |grep available | awk '{print $2}'`
+MASTER_HOST=`cat $MASTER_PRIVATE_IP_PATH`
+MASTER_ZONE=`cat $MASTER_ZONE_PATH`
+
+# Start slaves
+echo "Adding $1 node(s) to cluster group $CLUSTER with AMI $AMI_IMAGE"
+USER_DATA="MASTER_HOST=$MASTER_HOST,MAX_MAP_TASKS=$MAX_MAP_TASKS,MAX_REDUCE_TASKS=$MAX_REDUCE_TASKS,COMPRESS=$COMPRESS"
+ec2-run-instances $AMI_IMAGE -n "$NO_INSTANCES" -g "$CLUSTER" -k "$KEY_NAME" -d "$USER_DATA" -t "$INSTANCE_TYPE" -z "$MASTER_ZONE" | grep INSTANCE | awk '{print $2}'
+
+

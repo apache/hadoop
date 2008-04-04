@@ -77,6 +77,12 @@ Trunk (unreleased changes)
     HADOOP-2634. Deprecate ClientProtocol::exists.
     (lohit vijayarenu via cdouglas)
 
+    HADOOP-2410.  Make EC2 cluster nodes more independent of each other.
+    Multiple concurrent EC2 clusters are now supported, and nodes may be
+    added to a cluster on the fly with new nodes starting in the same EC2
+    availability zone as the cluster.  Ganglia monitoring and large
+    instance sizes have also been added.  (Chris K Wensel via tomwhite)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)

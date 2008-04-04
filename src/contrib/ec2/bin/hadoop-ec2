@@ -15,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
@@ -23,30 +22,37 @@ bin=`cd "$bin"; pwd`
 if [ $# = 0 ]; then
   echo "Usage: hadoop-ec2 COMMAND"
   echo "where COMMAND is one of:"
-  echo "  create-image         create a Hadoop AMI"
-  echo "  launch-cluster       launch a cluster of Hadoop EC2 instances"
-  echo "  start-hadoop         start Hadoop daemons on a cluster"
-  echo "  login                login to the master node of the Hadoop EC2 cluster"
-  echo "  run                  'launch-cluster', 'start-hadoop', 'login'"
-  echo "  terminate-cluster    terminate all Hadoop EC2 instances"
+  echo "  list                                 list all running Hadoop EC2 clusters"
+  echo "  launch-cluster <group> <num slaves>  launch a cluster of Hadoop EC2 instances - launch-master then launch-slaves"
+  echo "  launch-master  <group>               launch or find a cluster master"
+  echo "  launch-slaves  <group> <num slaves>  launch the cluster slaves"
+  echo "  terminate-cluster                    terminate all Hadoop EC2 instances"
+  echo "  login  <group|instance id>           login to the master node of the Hadoop EC2 cluster"
+  echo "  screen <group|instance id>           start or attach 'screen' on the master node of the Hadoop EC2 cluster"
+  echo "  proxy  <group|instance id>           start a socks proxy on localhost:6666 (use w/foxyproxy)"
+  echo "  push   <group> <file>                scp a file to the master node of the Hadoop EC2 cluster"
+  echo "  <shell cmd> <group|instance id>      execute any command remotely on the master"
+  echo "  create-image                         create a Hadoop AMI"
   exit 1
 fi
 
 # get arguments
-COMMAND=$1
+COMMAND="$1"
 shift
 
 if [ "$COMMAND" = "create-image" ] ; then
-  . "$bin"/create-hadoop-image
+  . "$bin"/create-hadoop-image $*
 elif [ "$COMMAND" = "launch-cluster" ] ; then
-  . "$bin"/launch-hadoop-cluster
-elif [ "$COMMAND" = "start-hadoop" ] ; then
-  . "$bin"/start-hadoop
-elif [ "$COMMAND" = "run" ] ; then
-  . "$bin"/run-hadoop-cluster
-elif [ "$COMMAND" = "login" ] ; then
-  . "$bin"/login-hadoop-cluster
+  . "$bin"/launch-hadoop-cluster $*
+elif [ "$COMMAND" = "launch-master" ] ; then
+  . "$bin"/launch-hadoop-master $*
+elif [ "$COMMAND" = "launch-slaves" ] ; then
+  . "$bin"/launch-hadoop-slaves $*
 elif [ "$COMMAND" = "terminate-cluster" ] ; then
-  . "$bin"/terminate-hadoop-cluster
+  . "$bin"/terminate-hadoop-cluster $*
+elif [ "$COMMAND" = "list" ] ; then
+  . "$bin"/list-hadoop-clusters
+else
+  . "$bin"/cmd-hadoop-cluster "$COMMAND" $*
 fi
-  
+

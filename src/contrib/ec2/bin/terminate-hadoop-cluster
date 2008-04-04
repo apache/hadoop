@@ -15,8 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # Terminate a cluster.
+
+if [ -z $1 ]; then
+  echo "Cluster name required!"
+  exit -1
+fi
+
+CLUSTER=$1
 
 # Import variables
 bin=`dirname "$0"`
@@ -24,8 +30,10 @@ bin=`cd "$bin"; pwd`
 . "$bin"/hadoop-ec2-env.sh
 
 # Finding Hadoop image
-AMI_IMAGE=`ec2-describe-images -a | grep $S3_BUCKET | grep $HADOOP_VERSION | grep available | awk '{print $2}'`
-HADOOP_INSTANCES=`ec2-describe-instances | grep INSTANCE | grep $AMI_IMAGE`
+HADOOP_INSTANCES=`ec2-describe-instances | awk '"RESERVATION" == $1 && ("'$CLUSTER'" == $4 || "'$CLUSTER_MASTER'" == $4), "RESERVATION" == $1 && ("'$CLUSTER'" != $4 && "'$CLUSTER_MASTER'" != $4)'`
+HADOOP_INSTANCES=`echo "$HADOOP_INSTANCES" | grep INSTANCE | grep running`
+
+[ -z "$HADOOP_INSTANCES" ] && echo "No running instances in cluster $CLUSTER." && exit 0
 
 echo "Running Hadoop instances:"
 echo "$HADOOP_INSTANCES"

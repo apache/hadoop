@@ -15,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # Login to the master node of a running Hadoop EC2 cluster.
 
 # Import variables

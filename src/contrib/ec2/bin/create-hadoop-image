@@ -15,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # Create a Hadoop AMI.
 # Inspired by Jonathan Siegel's EC2 script (http://blogsiegel.blogspot.com/2006/08/sandboxing-amazon-ec2.html)
 
@@ -24,11 +23,12 @@ bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 . "$bin"/hadoop-ec2-env.sh
 
-# Use fedora core
-AMI_IMAGE=`ec2-describe-images -a | grep fedora-core4-base | awk '{print $2}'`
+AMI_IMAGE=`ec2-describe-images -a | grep $S3_BUCKET | grep $HADOOP_VERSION | grep $ARCH | grep available | awk '{print $2}'`
 
-echo "Starting a fedora core base AMI with ID $AMI_IMAGE."
-OUTPUT=`ec2-run-instances $AMI_IMAGE -k $KEY_NAME`
+[ ! -z $AMI_IMAGE ] && echo "AMI already registered, use: ec2-deregister $AMI_IMAGE" && exit -1
+
+echo "Starting a AMI with ID $BASE_AMI_IMAGE."
+OUTPUT=`ec2-run-instances $BASE_AMI_IMAGE -k $KEY_NAME -t $INSTANCE_TYPE`
 BOOTING_INSTANCE=`echo $OUTPUT | awk '{print $6}'`
 
 echo "Instance is $BOOTING_INSTANCE."
@@ -44,25 +44,35 @@ while true; do
 done
 
 echo "The server is available at $HOSTNAME."
+while true; do
+  REPLY=`ssh $SSH_OPTS "root@$HOSTNAME" 'echo "hello"'`
+  if [ ! -z $REPLY ]; then
+   break;
+  fi
+  sleep 5
+done
 
-echo "Waiting before trying to connect..."
-sleep 30
+#read -p "Login first? [yes or no]: " answer
+
+if [ "$answer" == "yes" ]; then
+  ssh $SSH_OPTS "root@$HOSTNAME"
+fi
 
 echo "Copying scripts."
 
 # Copy setup scripts
-scp $SSH_OPTS "$bin"/hadoop-ec2-env.sh "root@$HOSTNAME:"
+scp $SSH_OPTS "$bin"/hadoop-ec2-env.sh "root@$HOSTNAME:/mnt"
+scp $SSH_OPTS "$bin"/image/create-hadoop-image-remote "root@$HOSTNAME:/mnt"
 scp $SSH_OPTS "$bin"/image/hadoop-init "root@$HOSTNAME:"
-scp $SSH_OPTS "$bin"/image/create-hadoop-image-remote "root@$HOSTNAME:"
 
 # Copy private key and certificate (for bundling image)
-scp $SSH_OPTS $EC2_KEYDIR/pk-*.pem "root@$HOSTNAME:/mnt"
-scp $SSH_OPTS $EC2_KEYDIR/cert-*.pem "root@$HOSTNAME:/mnt"
+scp $SSH_OPTS $EC2_KEYDIR/pk*.pem "root@$HOSTNAME:/mnt"
+scp $SSH_OPTS $EC2_KEYDIR/cert*.pem "root@$HOSTNAME:/mnt"
 
 # Connect to it
-ssh $SSH_OPTS "root@$HOSTNAME" './create-hadoop-image-remote'
+ssh $SSH_OPTS "root@$HOSTNAME" '/mnt/create-hadoop-image-remote'
 
 # Register image
-ec2-register $S3_BUCKET/hadoop-$HADOOP_VERSION.manifest.xml
+ec2-register $S3_BUCKET/hadoop-$HADOOP_VERSION-$ARCH.manifest.xml
 
 echo "Terminate with: ec2-terminate-instances $BOOTING_INSTANCE"

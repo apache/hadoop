@@ -15,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # Your Amazon Account Number.
 AWS_ACCOUNT_ID=
 
@@ -38,10 +37,10 @@ KEY_NAME=gsg-keypair
 PRIVATE_KEY_PATH=`echo "$EC2_KEYDIR"/"id_rsa-$KEY_NAME"`
 
 # SSH options used when connecting to EC2 instances.
-SSH_OPTS=`echo -i "$PRIVATE_KEY_PATH" -o StrictHostKeyChecking=no`
+SSH_OPTS=`echo -i "$PRIVATE_KEY_PATH" -o StrictHostKeyChecking=no -o ServerAliveInterval=30`
 
 # The version of Hadoop to use.
-HADOOP_VERSION=0.14.1
+HADOOP_VERSION=0.17.0
 
 # The Amazon S3 bucket where the Hadoop AMI is stored.
 # The default value is for public images, so can be left if you are using running a public image.
@@ -49,22 +48,42 @@ HADOOP_VERSION=0.14.1
 # so you can store it in a bucket you own.
 S3_BUCKET=hadoop-ec2-images
 
-# The EC2 group to run your cluster in.
-GROUP=hadoop-cluster-group
+# Enable public access to JobTracker and TaskTracker web interfaces
+ENABLE_WEB_PORTS=true
 
-# The hostname of the master node in the cluster. You need to be able to set the DNS for this host to point to the master's IP address.
-# See http://www.dyndns.com/services/dns/dyndns/, for example.
-MASTER_HOST=
+# Boot parameters
+MAX_MAP_TASKS=2
+MAX_REDUCE_TASKS=2
+COMPRESS=true
 
-# The number of nodes in your cluster.
-NO_INSTANCES=2
+# The EC2 instance type: m1.small, m1.large, m1.xlarge
+INSTANCE_TYPE="m1.small"
+#INSTANCE_TYPE="m1.large"
+#INSTANCE_TYPE="m1.xlarge"
+
+# The EC2 group master name. CLUSTER is set by calling scripts
+CLUSTER_MASTER=$CLUSTER-master
+
+# Cached values for a given cluster
+MASTER_PRIVATE_IP_PATH=~/.hadooop-private-$CLUSTER_MASTER
+MASTER_IP_PATH=~/.hadooop-$CLUSTER_MASTER
+MASTER_ZONE_PATH=~/.hadooop-zone-$CLUSTER_MASTER
 
 #
 # The following variables are only used when creating an AMI.
 #
 
-# The download URL for the Sun JDK. Visit http://java.sun.com/javase/downloads/index.jsp and get the URL for the "Linux self-extracting file".
-JAVA_BINARY_URL=''
-
 # The version number of the installed JDK.
-JAVA_VERSION=1.6.0_02
+JAVA_VERSION=1.6.0_05
+
+# SUPPORTED_ARCHITECTURES = ['i386', 'x86_64']
+# The download URL for the Sun JDK. Visit http://java.sun.com/javase/downloads/index.jsp and get the URL for the "Linux self-extracting file".
+if [ "$INSTANCE_TYPE" == "m1.small" ]; then
+  ARCH='i386'
+  BASE_AMI_IMAGE="ami-f51aff9c"  # ec2-public-images/fedora-8-i386-base-v1.06.manifest.xml
+  JAVA_BINARY_URL=
+else
+  ARCH='x86_64'
+  BASE_AMI_IMAGE="ami-f21aff9b"  # ec2-public-images/fedora-8-x86_64-base-v1.06.manifest.xml
+  JAVA_BINARY_URL=
+fi

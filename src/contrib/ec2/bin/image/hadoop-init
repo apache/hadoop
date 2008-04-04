@@ -1,13 +1,30 @@
 # Use parameters passed in during launch to configure Hadoop
-USER_DATA=`wget -q -O - http://169.254.169.254/1.0/user-data`
-NO_INSTANCES=`python -c "print '$USER_DATA'.split(',')[0]"`
-MASTER_HOST=`python -c "print '$USER_DATA'.split(',')[1]"`
+# expects:
+# MASTER_HOST, MAX_MAP_TASKS, MAX_REDUCE_TASKS, COMPRESS, DFS_WRITE_RETRIES
+
+# set defaults
+MAX_TASKS=3
+[ "$INSTANCE_TYPE" == "m1.large" ] && MAX_TASKS=6
+[ "$INSTANCE_TYPE" == "m1.xlarge" ] && MAX_TASKS=12
+
+MAX_MAP_TASKS=$MAX_TASKS
+MAX_REDUCE_TASKS=$MAX_TASKS
+COMPRESS="true"
+DFS_WRITE_RETRIES=3
+
+wget -q -O - http://169.254.169.254/latest/user-data | tr ',' '\n' > /tmp/user-data
+source /tmp/user-data
+
 HADOOP_HOME=`ls -d /usr/local/hadoop-*`
-echo $NO_INSTANCES, $MASTER_HOST, $HADOOP_HOME
- 
-sed -i -e "s|# export HADOOP_MASTER=.*|export HADOOP_MASTER=$MASTER_HOST:$HADOOP_HOME|" \
-    $HADOOP_HOME/conf/hadoop-env.sh
-      
+
+IS_MASTER="false"
+if [ "$MASTER_HOST" == "master" ]; then
+ IS_MASTER="true"
+ MASTER_HOST=`wget -q -O - http://169.254.169.254/latest/meta-data/local-hostname`
+fi
+
+echo $IS_MASTER $MASTER_HOST $MAX_MAP_TASKS $MAX_REDUCE_TASKS $COMPRESS
+
 cat > $HADOOP_HOME/conf/hadoop-site.xml <<EOF
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
@@ -30,14 +47,95 @@ cat > $HADOOP_HOME/conf/hadoop-site.xml <<EOF
 </property>
 
 <property>
-  <name>mapred.map.tasks</name>
-  <value>$(( NO_INSTANCES * 10 ))</value>
+  <name>tasktracker.http.threads</name>
+  <value>80</value>
 </property>
 
 <property>
-  <name>mapred.reduce.tasks</name>
-  <value>$(( NO_INSTANCES * 3 ))</value>
+  <name>mapred.tasktracker.map.tasks.maximum</name>
+  <value>$MAX_MAP_TASKS</value>
+</property>
+
+<property>
+  <name>mapred.tasktracker.reduce.tasks.maximum</name>
+  <value>$MAX_REDUCE_TASKS</value>
+</property>
+
+<property>
+  <name>mapred.output.compress</name>
+  <value>$COMPRESS</value>
+</property>
+
+<property>
+  <name>mapred.output.compression.type</name>
+  <value>BLOCK</value>
+</property>
+
+<property>
+  <name>dfs.client.block.write.retries</name>
+  <value>$DFS_WRITE_RETRIES</value>
 </property>
 
 </configuration>
 EOF
+
+# Configure Hadoop for Ganglia
+# overwrite hadoop-metrics.properties
+cat > $HADOOP_HOME/conf/hadoop-metrics.properties <<EOF
+
+# Ganglia
+# we push to the master gmond so hostnames show up properly
+dfs.class=org.apache.hadoop.metrics.ganglia.GangliaContext
+dfs.period=10
+dfs.servers=$MASTER_HOST:8649
+
+mapred.class=org.apache.hadoop.metrics.ganglia.GangliaContext
+mapred.period=10
+mapred.servers=$MASTER_HOST:8649
+
+jvm.class=org.apache.hadoop.metrics.ganglia.GangliaContext
+jvm.period=10
+jvm.servers=$MASTER_HOST:8649
+EOF
+
+[ ! -f /etc/hosts ] &&  echo "127.0.0.1 localhost" > /etc/hosts
+
+mkdir -p /mnt/hadoop/logs
+
+# not set on boot
+export USER="root"
+
+if [ "$IS_MASTER" == "true" ]; then
+  # MASTER
+  # Prep Ganglia
+  sed -i -e "s|\( *mcast_join *=.*\)|#\1|" \
+         -e "s|\( *bind *=.*\)|#\1|" \
+         -e "s|\( *mute *=.*\)|  mute = yes|" \
+         -e "s|\( *location *=.*\)|  location = \"master-node\"|" \
+         /etc/gmond.conf
+  mkdir -p /mnt/ganglia/rrds
+  chown -R ganglia:ganglia /mnt/ganglia/rrds
+  rm -rf /var/lib/ganglia; cd /var/lib; ln -s /mnt/ganglia ganglia; cd
+  service gmond start
+  service gmetad start
+  apachectl start
+
+  # Hadoop
+  # only format on first boot
+  [ ! -e /mnt/hadoop/dfs ] && "$HADOOP_HOME"/bin/hadoop namenode -format
+
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start namenode
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start jobtracker
+else
+  # SLAVE
+  # Prep Ganglia
+  sed -i -e "s|\( *mcast_join *=.*\)|#\1|" \
+         -e "s|\( *bind *=.*\)|#\1|" \
+         -e "s|\(udp_send_channel {\)|\1\n  host=$MASTER_HOST|" \
+         /etc/gmond.conf
+  service gmond start
+
+  # Hadoop
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start datanode
+  "$HADOOP_HOME"/bin/hadoop-daemon.sh start tasktracker
+fi
