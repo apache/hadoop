@@ -511,8 +511,11 @@ public abstract class PipeMapRed {
       String info = numRecInfo();
       logprintln(info);
       logflush();
-      //nextRecReadLog_ *= 10;
-      nextRecReadLog_ += 100;
+      if (nextRecReadLog_ < 100000) {
+	  nextRecReadLog_ *= 10;
+      } else {
+	  nextRecReadLog_ += 100000;
+      }
     }
   }
 

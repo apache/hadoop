@@ -249,6 +249,10 @@ Trunk (unreleased changes)
     HADOOP-3140. Doesn't add a task in the commit queue if the task hadn't
     generated any output. (Amar Kamat via ddas)
 
+    HADOOP-3168. Reduce the amount of logging in streaming to an
+    exponentially increasing number of records (up to 10,000
+    records/log). (Zheng Shao via omalley)
+ 
   BUG FIXES
 
     HADOOP-2195. '-mkdir' behaviour is now closer to Linux shell in case of
