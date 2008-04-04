@@ -464,9 +464,6 @@ Trunk (unreleased changes)
     HADOOP-3118.  Fix Namenode NPE while loading fsimage after a cluster 
     upgrade from older disk format. (dhruba)
 
-    HADOOP-3010. Fix ConcurrentModificationException in ipc.Server.Responder.
-    (rangadi)
-
     HADOOP-3161. Fix FIleUtil.HardLink.getLinkCount on Mac OS. (nigel
     via omalley)
 
@@ -493,6 +490,13 @@ Trunk (unreleased changes)
     extending OutputFormatBase, now extend FileOutputFormat. Add the following
     APIs in FileOutputFormat: setOutputPath, getOutputPath, getWorkOutputPath.
     (Amareshwari Sriramadasu via nigel)
+
+Release 0.16.3 - Unreleased
+
+  BUG FIXES
+
+    HADOOP-3010. Fix ConcurrentModificationException in ipc.Server.Responder.
+    (rangadi)
 
 Release 0.16.2 - 2008-04-02
 
