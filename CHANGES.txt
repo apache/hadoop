@@ -111,6 +111,9 @@ Trunk (unreleased changes)
     HADOOP-3001. Add job counters that measure the number of bytes
     read and written to HDFS, S3, KFS, and local file systems. (omalley)
 
+    HADOOP-3048.  A new Interface and a default implementation to convert 
+    and restore serializaztions of objects to strings. (enis)
+
   IMPROVEMENTS
 
     HADOOP-2655. Copy on write for data and metadata files in the 
