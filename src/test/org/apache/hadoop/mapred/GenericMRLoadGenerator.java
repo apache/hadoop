@@ -109,7 +109,7 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
         } else if ("-keepred".equals(argv[i])) {
           job.set("hadoop.sort.reduce.keep.percent", argv[++i]);
         } else if ("-outdir".equals(argv[i])) {
-          job.setOutputPath(new Path(argv[++i]));
+          FileOutputFormat.setOutputPath(job, new Path(argv[++i]));
         } else if ("-indir".equals(argv[i])) {
           job.addInputPath(new Path(argv[++i]));
         } else if ("-inFormatIndirect".equals(argv[i])) {
@@ -140,7 +140,7 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
       return -1;
     }
 
-    if (null == job.getOutputPath()) {
+    if (null == FileOutputFormat.getOutputPath(job)) {
       // No output dir? No writes
       job.setOutputFormat(NullOutputFormat.class);
     }

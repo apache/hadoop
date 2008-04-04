@@ -52,6 +52,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.mapred.FileAlreadyExistsException;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobClient;
@@ -796,7 +797,7 @@ public class StreamJob {
     }
     
     setUserJobConfProps(false);
-    jobConf_.setOutputPath(new Path(output_));
+    FileOutputFormat.setOutputPath(jobConf_, new Path(output_));
     fmt = null;
     if (outputFormatSpec_!= null) {
       c = StreamUtil.goodClassOrNull(outputFormatSpec_, defaultPackage);

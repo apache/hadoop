@@ -23,8 +23,8 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.OutputFormatBase;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
@@ -33,16 +33,16 @@ import org.apache.hadoop.util.Progressable;
  * The record writer of this output format simply puts a message in an output
  * path when a shard update is done.
  */
-public class IndexUpdateOutputFormat extends OutputFormatBase<Shard, Text> {
+public class IndexUpdateOutputFormat extends FileOutputFormat<Shard, Text> {
 
   /* (non-Javadoc)
-   * @see org.apache.hadoop.mapred.OutputFormatBase#getRecordWriter(org.apache.hadoop.fs.FileSystem, org.apache.hadoop.mapred.JobConf, java.lang.String, org.apache.hadoop.util.Progressable)
+   * @see FileOutputFormat#getRecordWriter(FileSystem, JobConf, String, Progressable)
    */
   public RecordWriter<Shard, Text> getRecordWriter(final FileSystem fs,
       JobConf job, String name, final Progressable progress)
       throws IOException {
 
-    final Path perm = new Path(job.getOutputPath(), name);
+    final Path perm = new Path(getWorkOutputPath(job), name);
 
     return new RecordWriter<Shard, Text>() {
       public void write(Shard key, Text value) throws IOException {

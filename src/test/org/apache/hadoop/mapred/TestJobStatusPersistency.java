@@ -51,7 +51,7 @@ public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
 
     conf.setInputPath(getInputDir());
 
-    conf.setOutputPath(getOutputDir());
+    FileOutputFormat.setOutputPath(conf, getOutputDir());
 
     return JobClient.runJob(conf).getJobID();
   }

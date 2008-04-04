@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileUtil;
 
-import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Writable;
@@ -37,13 +36,14 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** An {@link OutputFormat} that writes {@link MapFile}s. */
-public class MapFileOutputFormat extends OutputFormatBase {
+public class MapFileOutputFormat 
+extends FileOutputFormat<WritableComparable, Writable> {
 
-  public RecordWriter getRecordWriter(FileSystem ignored, JobConf job,
+  public RecordWriter<WritableComparable, Writable> getRecordWriter(FileSystem ignored, JobConf job,
                                       String name, Progressable progress)
     throws IOException {
 
-    Path outputPath = job.getOutputPath();
+    Path outputPath = getWorkOutputPath(job);
     FileSystem fs = outputPath.getFileSystem(job);
     if (!fs.exists(outputPath)) {
       throw new IOException("Output directory doesnt exist");

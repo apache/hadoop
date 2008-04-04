@@ -81,7 +81,7 @@ public class TestAggregates extends TestCase {
     job.setInputPath(INPUT_DIR);
     job.setInputFormat(TextInputFormat.class);
 
-    job.setOutputPath(OUTPUT_DIR);
+    FileOutputFormat.setOutputPath(job, OUTPUT_DIR);
     job.setOutputFormat(TextOutputFormat.class);
     job.setMapOutputKeyClass(Text.class);
     job.setMapOutputValueClass(Text.class);

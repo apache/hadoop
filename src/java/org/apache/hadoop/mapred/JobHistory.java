@@ -375,7 +375,7 @@ public class JobHistory {
         }
 
         // find user log directory 
-        Path outputPath = jobConf.getOutputPath();
+        Path outputPath = FileOutputFormat.getOutputPath(jobConf);
         userLogDir = jobConf.get("hadoop.job.history.user.location",
         		outputPath == null ? null : outputPath.toString());
         if ("none".equals(userLogDir)) {

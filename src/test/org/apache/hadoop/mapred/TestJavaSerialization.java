@@ -49,7 +49,7 @@ public class TestJavaSerialization extends ClusterMapReduceTestCase {
 
   }
   
-  static class StringOutputFormat<K, V> extends OutputFormatBase<K, V> {
+  static class StringOutputFormat<K, V> extends FileOutputFormat<K, V> {
     
     static class LineRecordWriter<K, V> implements RecordWriter<K, V> {
       
@@ -80,7 +80,7 @@ public class TestJavaSerialization extends ClusterMapReduceTestCase {
     public RecordWriter<K, V> getRecordWriter(FileSystem ignored, JobConf job,
         String name, Progressable progress) throws IOException {
 
-      Path dir = job.getOutputPath();
+      Path dir = getWorkOutputPath(job);
       FileSystem fs = dir.getFileSystem(job);
       FSDataOutputStream fileOut = fs.create(new Path(dir, name), progress);
       return new LineRecordWriter<K, V>(fileOut);
@@ -119,7 +119,7 @@ public class TestJavaSerialization extends ClusterMapReduceTestCase {
 
     conf.setInputPath(getInputDir());
 
-    conf.setOutputPath(getOutputDir());
+    FileOutputFormat.setOutputPath(conf, getOutputDir());
 
     JobClient.runJob(conf);
 

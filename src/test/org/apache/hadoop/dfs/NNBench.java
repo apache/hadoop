@@ -47,6 +47,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile;
 
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.JobClient;
@@ -475,7 +476,7 @@ public class NNBench {
     job.setMapperClass(NNBenchMapper.class);
     job.setReducerClass(NNBenchReducer.class);
 
-    job.setOutputPath(new Path(baseDir, OUTPUT_DIR_NAME));
+    FileOutputFormat.setOutputPath(job, new Path(baseDir, OUTPUT_DIR_NAME));
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(Text.class);
     job.setNumReduceTasks((int) numberOfReduces);

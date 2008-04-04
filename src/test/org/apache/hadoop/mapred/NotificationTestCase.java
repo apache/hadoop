@@ -22,10 +22,8 @@ import org.mortbay.http.HttpServer;
 import org.mortbay.http.SocketListener;
 import org.mortbay.http.HttpContext;
 import org.mortbay.jetty.servlet.ServletHandler;
-import org.apache.log4j.net.SocketServer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.examples.WordCount;
@@ -37,8 +35,6 @@ import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.DataOutputStream;
 import java.util.Date;
-import java.net.Socket;
-import java.net.InetSocketAddress;
 
 /**
  * Base class to test Job end notification in local and cluster mode.
@@ -207,7 +203,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     conf.setReducerClass(WordCount.Reduce.class);
 
     conf.setInputPath(inDir);
-    conf.setOutputPath(outDir);
+    FileOutputFormat.setOutputPath(conf, outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);
     JobClient.runJob(conf);

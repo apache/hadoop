@@ -32,6 +32,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
@@ -221,7 +222,7 @@ public class TestDatamerge extends TestCase {
         SequenceFileInputFormat.class, src));
     job.setInt("testdatamerge.sources", srcs);
     job.setInputFormat(CompositeInputFormat.class);
-    job.setOutputPath(new Path(base, "out"));
+    FileOutputFormat.setOutputPath(job, new Path(base, "out"));
 
     job.setMapperClass(c);
     job.setReducerClass(c);

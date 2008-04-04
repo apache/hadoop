@@ -158,7 +158,7 @@ public class PiEstimator {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
     jobConf.setInputPath(inDir);
-    jobConf.setOutputPath(outDir);
+    FileOutputFormat.setOutputPath(jobConf, outDir);
     
     jobConf.setNumMapTasks(numMaps);
     

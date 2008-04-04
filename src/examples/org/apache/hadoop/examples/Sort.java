@@ -134,13 +134,14 @@ public class Sort extends Configured implements Tool {
       return printUsage();
     }
     jobConf.setInputPath(new Path(otherArgs.get(0)));
-    jobConf.setOutputPath(new Path(otherArgs.get(1)));
+    FileOutputFormat.setOutputPath(jobConf, new Path(otherArgs.get(1)));
 
     System.out.println("Running on " +
         cluster.getTaskTrackers() +
         " nodes to sort from " + 
         jobConf.getInputPaths()[0] + " into " +
-        jobConf.getOutputPath() + " with " + num_reduces + " reduces.");
+        FileOutputFormat.getOutputPath(jobConf) +
+        " with " + num_reduces + " reduces.");
     Date startTime = new Date();
     System.out.println("Job started: " + startTime);
     JobClient.runJob(jobConf);

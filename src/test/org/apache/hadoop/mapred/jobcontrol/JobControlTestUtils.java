@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
@@ -124,7 +125,7 @@ public class JobControlTestUtils {
       }
     }
     theJob.setMapperClass(DataCopy.class);
-    theJob.setOutputPath(outdir);
+    FileOutputFormat.setOutputPath(theJob, outdir);
     theJob.setOutputKeyClass(Text.class);
     theJob.setOutputValueClass(Text.class);
     theJob.setReducerClass(DataCopy.class);

@@ -30,6 +30,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.ClusterStatus;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputSplit;
@@ -105,7 +106,7 @@ public class RandomWriter extends Configured implements Tool {
     public InputSplit[] getSplits(JobConf job, 
                                   int numSplits) throws IOException {
       InputSplit[] result = new InputSplit[numSplits];
-      Path outDir = job.getOutputPath();
+      Path outDir = FileOutputFormat.getOutputPath(job);
       for(int i=0; i < result.length; ++i) {
         result[i] = new FileSplit(new Path(outDir, "dummy-split-" + i), 0, 1, 
                                   (String[])null);
@@ -237,7 +238,7 @@ public class RandomWriter extends Configured implements Tool {
     
     job.setJarByClass(RandomWriter.class);
     job.setJobName("random-writer");
-    job.setOutputPath(outDir);
+    FileOutputFormat.setOutputPath(job, outDir);
     
     job.setOutputKeyClass(BytesWritable.class);
     job.setOutputValueClass(BytesWritable.class);

@@ -134,7 +134,8 @@ public class Join extends Configured implements Tool {
       return printUsage();
     }
 
-    jobConf.setOutputPath(new Path(otherArgs.remove(otherArgs.size() - 1)));
+    FileOutputFormat.setOutputPath(jobConf, 
+      new Path(otherArgs.remove(otherArgs.size() - 1)));
     List<Path> plist = new ArrayList<Path>(otherArgs.size());
     for (String s : otherArgs) {
       plist.add(new Path(s));

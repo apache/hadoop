@@ -342,7 +342,7 @@ public class SortValidator extends Configured implements Tool {
       if (fs.exists(outputPath)) {
         fs.delete(outputPath, true);
       }
-      jobConf.setOutputPath(outputPath);
+      FileOutputFormat.setOutputPath(jobConf, outputPath);
       
       // Uncomment to run locally in a single process
       //job_conf.set("mapred.job.tracker", "local");
@@ -350,8 +350,10 @@ public class SortValidator extends Configured implements Tool {
       System.out.println("\nSortValidator.RecordStatsChecker: Validate sort " +
                          "from " + jobConf.getInputPaths()[0] + " (" + 
                          noSortInputpaths + " files), " + 
-                         jobConf.getInputPaths()[1] + " (" + noSortReduceTasks + 
-                         " files) into " + jobConf.getOutputPath() + 
+                         jobConf.getInputPaths()[1] + " (" + 
+                         noSortReduceTasks + 
+                         " files) into " + 
+                         FileOutputFormat.getOutputPath(jobConf) + 
                          " with 1 reducer.");
       Date startTime = new Date();
       System.out.println("Job started: " + startTime);
@@ -484,15 +486,17 @@ public class SortValidator extends Configured implements Tool {
       if (fs.exists(outputPath)) {
         fs.delete(outputPath, true);
       }
-      jobConf.setOutputPath(outputPath);
+      FileOutputFormat.setOutputPath(jobConf, outputPath);
       
       // Uncomment to run locally in a single process
       //job_conf.set("mapred.job.tracker", "local");
       
       System.out.println("\nSortValidator.RecordChecker: Running on " +
                          cluster.getTaskTrackers() +
-                         " nodes to validate sort from " + jobConf.getInputPaths()[0] + ", " + 
-                         jobConf.getInputPaths()[1] + " into " + jobConf.getOutputPath() + 
+                         " nodes to validate sort from " +
+                         jobConf.getInputPaths()[0] + ", " + 
+                         jobConf.getInputPaths()[1] + " into " +
+                         FileOutputFormat.getOutputPath(jobConf) + 
                          " with " + noReduces + " reduces.");
       Date startTime = new Date();
       System.out.println("Job started: " + startTime);

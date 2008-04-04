@@ -77,7 +77,7 @@ public class TestEmptyJobWithDFS extends TestCase {
     conf.setMapperClass(IdentityMapper.class);        
     conf.setReducerClass(IdentityReducer.class);
     conf.setInputPath(inDir);
-    conf.setOutputPath(outDir);
+    FileOutputFormat.setOutputPath(conf, outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);
       

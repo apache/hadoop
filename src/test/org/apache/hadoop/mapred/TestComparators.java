@@ -20,7 +20,6 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.BooleanWritable.Comparator;
-import org.apache.hadoop.mapred.lib.*;
 import junit.framework.TestCase;
 import java.io.*;
 import java.util.*;
@@ -298,7 +297,7 @@ public class TestComparators extends TestCase
     fs.delete(testdir, true);
     conf.setInputFormat(SequenceFileInputFormat.class);
     conf.setInputPath(inDir);
-    conf.setOutputPath(outDir);
+    FileOutputFormat.setOutputPath(conf, outDir);
     conf.setOutputKeyClass(IntWritable.class);
     conf.setOutputValueClass(Text.class);
     conf.setMapOutputValueClass(IntWritable.class);

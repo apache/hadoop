@@ -103,7 +103,7 @@ public:
   WordCountWriter(HadoopPipes::ReduceContext& context) {
     const HadoopPipes::JobConf* job = context.getJobConf();
     int part = job->getInt("mapred.task.partition");
-    std::string outDir = job->get("mapred.output.dir");
+    std::string outDir = job->get("mapred.work.output.dir");
     // remove the file: schema substring
     std::string::size_type posn = outDir.find(":");
     HADOOP_ASSERT(posn != std::string::npos, 

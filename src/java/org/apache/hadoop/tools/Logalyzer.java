@@ -35,6 +35,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
@@ -223,7 +224,7 @@ public class Logalyzer {
     grepJob.setCombinerClass(LongSumReducer.class);
     grepJob.setReducerClass(LongSumReducer.class);
     
-    grepJob.setOutputPath(analysisOutput);
+    FileOutputFormat.setOutputPath(grepJob, analysisOutput);
     grepJob.setOutputFormat(TextOutputFormat.class);
     grepJob.setOutputKeyClass(Text.class);
     grepJob.setOutputValueClass(LongWritable.class);

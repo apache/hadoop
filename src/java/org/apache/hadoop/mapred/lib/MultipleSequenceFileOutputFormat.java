@@ -21,6 +21,8 @@ package org.apache.hadoop.mapred.lib;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
@@ -30,12 +32,18 @@ import org.apache.hadoop.util.Progressable;
  * This class extends the MultipleOutputFormat, allowing to write the output data 
  * to different output files in sequence file output format. 
  */
-public class MultipleSequenceFileOutputFormat extends MultipleOutputFormat {
+public class MultipleSequenceFileOutputFormat 
+extends MultipleOutputFormat<WritableComparable, Writable> {
 
   private SequenceFileOutputFormat theSequenceFileOutputFormat = null;
   
   @Override
-  protected RecordWriter getBaseRecordWriter(FileSystem fs, JobConf job, String name, Progressable arg3) throws IOException {
+  protected RecordWriter<WritableComparable, Writable> getBaseRecordWriter(
+                                                         FileSystem fs,
+                                                         JobConf job,
+                                                         String name,
+                                                         Progressable arg3) 
+  throws IOException {
     if (theSequenceFileOutputFormat == null) {
       theSequenceFileOutputFormat = new SequenceFileOutputFormat();
     }

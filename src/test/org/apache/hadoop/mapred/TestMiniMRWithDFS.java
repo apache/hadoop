@@ -80,7 +80,7 @@ public class TestMiniMRWithDFS extends TestCase {
     conf.setCombinerClass(WordCount.Reduce.class);
     conf.setReducerClass(WordCount.Reduce.class);
     conf.setInputPath(inDir);
-    conf.setOutputPath(outDir);
+    FileOutputFormat.setOutputPath(conf, outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);
     RunningJob job = JobClient.runJob(conf);

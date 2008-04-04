@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.ClusterStatus;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
@@ -224,7 +225,7 @@ public class RandomTextWriter extends Configured implements Tool {
     }
 
     job.setOutputFormat(outputFormatClass);
-    job.setOutputPath(new Path(otherArgs.get(0)));
+    FileOutputFormat.setOutputPath(job, new Path(otherArgs.get(0)));
     
     job.setNumMapTasks(numMaps);
     System.out.println("Running " + numMaps + " maps.");

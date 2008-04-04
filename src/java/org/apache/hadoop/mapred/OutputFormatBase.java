@@ -25,7 +25,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.util.Progressable;
 
-/** A base class for {@link OutputFormat}. */
+/** A base class for {@link OutputFormat}.
+ * @deprecated Use {@link FileOutputFormat}
+ */
+@Deprecated
 public abstract class OutputFormatBase<K, V> implements OutputFormat<K, V> {
 
   /**
@@ -96,7 +99,7 @@ public abstract class OutputFormatBase<K, V> implements OutputFormat<K, V> {
     throws FileAlreadyExistsException, 
            InvalidJobConfException, IOException {
     // Ensure that the output directory is set and not already there
-    Path outDir = job.getOutputPath();
+    Path outDir = FileOutputFormat.getOutputPath(job);
     if (outDir == null && job.getNumReduceTasks() != 0) {
       throw new InvalidJobConfException("Output directory not set in JobConf.");
     }

@@ -36,6 +36,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
@@ -210,7 +211,7 @@ public class TestFileSystem extends TestCase {
     job.setMapperClass(WriteMapper.class);
     job.setReducerClass(LongSumReducer.class);
 
-    job.setOutputPath(WRITE_DIR);
+    FileOutputFormat.setOutputPath(job, WRITE_DIR);
     job.setOutputKeyClass(UTF8.class);
     job.setOutputValueClass(LongWritable.class);
     job.setNumReduceTasks(1);
@@ -308,7 +309,7 @@ public class TestFileSystem extends TestCase {
     job.setMapperClass(ReadMapper.class);
     job.setReducerClass(LongSumReducer.class);
 
-    job.setOutputPath(READ_DIR);
+    FileOutputFormat.setOutputPath(job, READ_DIR);
     job.setOutputKeyClass(UTF8.class);
     job.setOutputValueClass(LongWritable.class);
     job.setNumReduceTasks(1);
@@ -404,7 +405,7 @@ public class TestFileSystem extends TestCase {
     job.setMapperClass(SeekMapper.class);
     job.setReducerClass(LongSumReducer.class);
 
-    job.setOutputPath(READ_DIR);
+    FileOutputFormat.setOutputPath(job, READ_DIR);
     job.setOutputKeyClass(UTF8.class);
     job.setOutputValueClass(LongWritable.class);
     job.setNumReduceTasks(1);

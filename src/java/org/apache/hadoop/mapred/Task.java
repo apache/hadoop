@@ -211,7 +211,7 @@ abstract class Task implements Writable, Configurable {
   public String toString() { return taskId; }
 
   private Path getTaskOutputPath(JobConf conf) {
-    Path p = new Path(conf.getOutputPath(), 
+    Path p = new Path(FileOutputFormat.getOutputPath(conf), 
       (MRConstants.TEMP_DIR_NAME + Path.SEPARATOR + "_" + taskId));
     try {
       FileSystem fs = p.getFileSystem(conf);
@@ -233,9 +233,9 @@ abstract class Task implements Writable, Configurable {
     conf.set("mapred.job.id", jobId);
     
     // The task-specific output path
-    if (conf.getOutputPath() != null) {
+    if (FileOutputFormat.getOutputPath(conf) != null) {
       taskOutputPath = getTaskOutputPath(conf);
-      conf.setOutputPath(taskOutputPath);
+      FileOutputFormat.setWorkOutputPath(conf, taskOutputPath);
     }
   }
   
@@ -513,7 +513,7 @@ abstract class Task implements Writable, Configurable {
       this.conf = (JobConf) conf;
 
       if (taskId != null && taskOutputPath == null && 
-              this.conf.getOutputPath() != null) {
+          FileOutputFormat.getOutputPath(this.conf) != null) {
         taskOutputPath = getTaskOutputPath(this.conf);
       }
     } else {

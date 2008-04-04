@@ -194,7 +194,7 @@ public class DistributedFSCheck extends TestCase {
     job.setMapperClass(DistributedFSCheckMapper.class);
     job.setReducerClass(AccumulatingReducer.class);
 
-    job.setOutputPath(READ_DIR);
+    FileOutputFormat.setOutputPath(job, READ_DIR);
     job.setOutputKeyClass(UTF8.class);
     job.setOutputValueClass(UTF8.class);
     job.setNumReduceTasks(1);

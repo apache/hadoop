@@ -114,7 +114,7 @@ public class TestMiniMRTaskTempDir extends TestCase {
     conf.setNumMapTasks(1);
     conf.setNumReduceTasks(0);
     conf.setInputPath(inDir);
-    conf.setOutputPath(outDir);
+    FileOutputFormat.setOutputPath(conf, outDir);
     String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data",
                                       "/tmp")).toString().replace(' ', '+');
     conf.set("test.build.data", TEST_ROOT_DIR);

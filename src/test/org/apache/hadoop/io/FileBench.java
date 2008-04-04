@@ -19,12 +19,10 @@
 package org.apache.hadoop.io;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -37,10 +35,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.LzoCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -112,7 +107,7 @@ public class FileBench extends Configured implements Tool {
     Text val = new Text();
 
     final String fn = conf.get("test.filebench.name", "");
-    final Path outd = conf.getOutputPath();
+    final Path outd = FileOutputFormat.getOutputPath(conf);
     OutputFormat outf = conf.getOutputFormat();
     RecordWriter<Text,Text> rw =
       outf.getRecordWriter(outd.getFileSystem(conf), conf, fn,
@@ -203,7 +198,7 @@ public class FileBench extends Configured implements Tool {
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(Text.class);
     job.setInputPath(root);
-    job.setOutputPath(root);
+    FileOutputFormat.setOutputPath(job, root);
 
     if (null == cc) cc = EnumSet.allOf(CCodec.class);
     if (null == ct) ct = EnumSet.allOf(CType.class);

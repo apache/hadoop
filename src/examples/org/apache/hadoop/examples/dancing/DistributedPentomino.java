@@ -178,7 +178,7 @@ public class DistributedPentomino extends Configured implements Tool {
     FileSystem fileSys = FileSystem.get(conf);
     try {
       conf.setInputPath(input);
-      conf.setOutputPath(output);
+      FileOutputFormat.setOutputPath(conf, output);
       conf.setJarByClass(PentMap.class);
       
       conf.setJobName("dancingElephant");

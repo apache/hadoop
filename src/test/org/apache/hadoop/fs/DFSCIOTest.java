@@ -273,7 +273,7 @@ public class DFSCIOTest extends TestCase {
     job.setMapperClass(mapperClass);
     job.setReducerClass(AccumulatingReducer.class);
 
-    job.setOutputPath(outputDir);
+    FileOutputFormat.setOutputPath(job, outputDir);
     job.setOutputKeyClass(UTF8.class);
     job.setOutputValueClass(UTF8.class);
     job.setNumReduceTasks(1);

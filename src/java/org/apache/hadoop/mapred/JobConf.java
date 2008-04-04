@@ -72,7 +72,8 @@ import org.apache.hadoop.util.Tool;
  * (if any), {@link Partitioner}, {@link Reducer}, {@link InputFormat} and 
  * {@link OutputFormat} implementations to be used etc. It also indicates the 
  * set of input files ({@link #setInputPath(Path)}/{@link #addInputPath(Path)}), 
- * and where the output files should be written ({@link #setOutputPath(Path)}).
+ * and where the output files should be written via
+ * {@link FileOutputFormat#setOutputPath(JobConf, Path)}.
  *
  * <p>Optionally <code>JobConf</code> is used to specify other advanced facets 
  * of the job such as <code>Comparator</code>s to be used, files to be put in  
@@ -91,7 +92,7 @@ import org.apache.hadoop.util.Tool;
  *     job.setJobName("myjob");
  *     
  *     job.setInputPath(new Path("in"));
- *     job.setOutputPath(new Path("out"));
+ *     FileOutputFormat.setOutputPath(job, new Path("out"));
  *     
  *     job.setMapperClass(MyJob.MyMapper.class);
  *     job.setCombinerClass(MyJob.MyReducer.class);
@@ -356,63 +357,35 @@ public class JobConf extends Configuration {
   }
   
   /**
+   * @deprecated Use {@link FileOutputFormat#getOutputPath(JobConf)} or
+   *                 {@link FileOutputFormat#getWorkOutputPath(JobConf)}
    * Get the {@link Path} to the output directory for the map-reduce job.
-   * 
-   * <h4 id="SideEffectFiles">Tasks' Side-Effect Files</h4>
-   * 
-   * <p>Some applications need to create/write-to side-files, which differ from
-   * the actual job-outputs.
-   * 
-   * <p>In such cases there could be issues with 2 instances of the same TIP 
-   * (running simultaneously e.g. speculative tasks) trying to open/write-to the
-   * same file (path) on HDFS. Hence the application-writer will have to pick 
-   * unique names per task-attempt (e.g. using the taskid, say 
-   * <tt>task_200709221812_0001_m_000000_0</tt>), not just per TIP.</p> 
-   * 
-   * <p>To get around this the Map-Reduce framework helps the application-writer 
-   * out by maintaining a special 
-   * <tt>${mapred.output.dir}/_temporary/_${taskid}</tt> 
-   * sub-directory for each task-attempt on HDFS where the output of the 
-   * task-attempt goes. On successful completion of the task-attempt the files 
-   * in the <tt>${mapred.output.dir}/_temporary/_${taskid}</tt> (only) 
-   * are <i>promoted</i> to <tt>${mapred.output.dir}</tt>. Of course, the 
-   * framework discards the sub-directory of unsuccessful task-attempts. This 
-   * is completely transparent to the application.</p>
-   * 
-   * <p>The application-writer can take advantage of this by creating any 
-   * side-files required in <tt>${mapred.output.dir}</tt> during execution of his 
-   * reduce-task i.e. via {@link #getOutputPath()}, and the framework will move 
-   * them out similarly - thus she doesn't have to pick unique paths per 
-   * task-attempt.</p>
-   * 
-   * <p><i>Note</i>: the value of <tt>${mapred.output.dir}</tt> during execution 
-   * of a particular task-attempt is actually 
-   * <tt>${mapred.output.dir}/_temporary/_{$taskid}</tt>, not the value set by 
-   * {@link #setOutputPath(Path)}. So, just create any side-files in the path 
-   * returned by {@link #getOutputPath()} from map/reduce task to take 
-   * advantage of this feature.</p>
-   * 
-   * <p>The entire discussion holds true for maps of jobs with 
-   * reducer=NONE (i.e. 0 reduces) since output of the map, in that case, 
-   * goes directly to HDFS.</p> 
    * 
    * @return the {@link Path} to the output directory for the map-reduce job.
    */
-  public Path getOutputPath() { 
-    String name = get("mapred.output.dir");
-    return name == null ? null: new Path(name);
+  @Deprecated
+  public Path getOutputPath() {
+    // this return context sensitive value for output path
+    // Returns task's temporary output path while task's execution
+    // Otherwise returns the output path that was set.
+    Path workOutputDir = FileOutputFormat.getWorkOutputPath(this);
+    if (workOutputDir != null) {
+      return workOutputDir;
+    }
+    else return FileOutputFormat.getOutputPath(this);
   }
 
   /**
+   * @deprecated Use {@link FileOutputFormat#setOutputPath(JobConf, Path)} 
    * Set the {@link Path} of the output directory for the map-reduce job.
    * 
    * <p><i>Note</i>:
    * </p>
    * @param dir the {@link Path} of the output directory for the map-reduce job.
    */
+  @Deprecated
   public void setOutputPath(Path dir) {
-    dir = new Path(getWorkingDirectory(), dir);
-    set("mapred.output.dir", dir.toString());
+    FileOutputFormat.setOutputPath(this, dir);
   }
 
   /**
@@ -964,7 +937,8 @@ public class JobConf extends Configuration {
    * <p>It is legal to set the number of reduce-tasks to <code>zero</code>.</p>
    * 
    * <p>In this case the output of the map-tasks directly go to distributed 
-   * file-system, to the path set by {@link #setOutputPath(Path)}. Also, the 
+   * file-system, to the path set by 
+   * {@link FileOutputFormat#setOutputPath(JobConf, Path)}. Also, the 
    * framework doesn't sort the map-outputs before writing it out to HDFS.</p>
    * 
    * @param n the number of reduce tasks for this job.

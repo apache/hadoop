@@ -33,7 +33,7 @@ import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.util.*;
 
 /** An {@link OutputFormat} that writes plain text files. */
-public class TextOutputFormat<K, V> extends OutputFormatBase<K, V> {
+public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
 
   protected static class LineRecordWriter<K, V>
     implements RecordWriter<K, V> {
@@ -101,7 +101,7 @@ public class TextOutputFormat<K, V> extends OutputFormatBase<K, V> {
                                                   Progressable progress)
     throws IOException {
 
-    Path dir = job.getOutputPath();
+    Path dir = getWorkOutputPath(job);
     FileSystem fs = dir.getFileSystem(job);
     if (!fs.exists(dir)) {
       throw new IOException("Output directory doesnt exist");

@@ -27,6 +27,7 @@ import org.apache.hadoop.contrib.index.lucene.FileSystemDirectory;
 import org.apache.hadoop.contrib.index.lucene.LuceneUtil;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 
@@ -79,7 +80,7 @@ public class IndexUpdater implements IIndexUpdater {
       jobConf.addInputPath(inputPaths[i]);
     }
 
-    jobConf.setOutputPath(outputPath);
+    FileOutputFormat.setOutputPath(jobConf, outputPath);
 
     jobConf.setNumMapTasks(numMapTasks);
 
@@ -95,7 +96,8 @@ public class IndexUpdater implements IIndexUpdater {
       buffer.append(inputs[i].toString());
     }
     LOG.info("mapred.input.dir = " + buffer.toString());
-    LOG.info("mapred.output.dir = " + jobConf.getOutputPath().toString());
+    LOG.info("mapred.output.dir = " + 
+             FileOutputFormat.getOutputPath(jobConf).toString());
     LOG.info("mapred.map.tasks = " + jobConf.getNumMapTasks());
     LOG.info("mapred.reduce.tasks = " + jobConf.getNumReduceTasks());
     LOG.info(shards.length + " shards = " + iconf.getIndexShards());

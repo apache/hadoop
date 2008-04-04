@@ -31,6 +31,7 @@ import org.apache.hadoop.contrib.index.mapred.Shard;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -210,7 +211,7 @@ public class UpdateIndex {
     }
 
     if (outputPath == null) {
-      outputPath = jobConf.getOutputPath();
+      outputPath = FileOutputFormat.getOutputPath(jobConf);
     }
 
     if (inputPaths == null || outputPath == null) {

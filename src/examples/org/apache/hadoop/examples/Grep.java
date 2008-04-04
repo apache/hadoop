@@ -61,7 +61,7 @@ public class Grep extends Configured implements Tool {
       grepJob.setCombinerClass(LongSumReducer.class);
       grepJob.setReducerClass(LongSumReducer.class);
 
-      grepJob.setOutputPath(tempDir);
+      FileOutputFormat.setOutputPath(grepJob, tempDir);
       grepJob.setOutputFormat(SequenceFileOutputFormat.class);
       grepJob.setOutputKeyClass(Text.class);
       grepJob.setOutputValueClass(LongWritable.class);
@@ -77,7 +77,7 @@ public class Grep extends Configured implements Tool {
       sortJob.setMapperClass(InverseMapper.class);
 
       sortJob.setNumReduceTasks(1);                 // write a single file
-      sortJob.setOutputPath(new Path(args[1]));
+      FileOutputFormat.setOutputPath(sortJob, new Path(args[1]));
       sortJob.setOutputKeyComparatorClass           // sort by decreasing freq
       (LongWritable.DecreasingComparator.class);
 

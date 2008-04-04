@@ -35,13 +35,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.*;
 
 /** An {@link OutputFormat} that writes {@link SequenceFile}s. */
-public class SequenceFileOutputFormat extends OutputFormatBase {
+public class SequenceFileOutputFormat 
+extends FileOutputFormat<WritableComparable, Writable> {
 
-  public RecordWriter getRecordWriter(FileSystem ignored, JobConf job,
-                                      String name, Progressable progress)
+  public RecordWriter<WritableComparable, Writable> getRecordWriter(
+                                          FileSystem ignored, JobConf job,
+                                          String name, Progressable progress)
     throws IOException {
 
-    Path outputPath = job.getOutputPath();
+    Path outputPath = getWorkOutputPath(job);
     FileSystem fs = outputPath.getFileSystem(job);
     if (!fs.exists(outputPath)) {
       throw new IOException("Output directory doesnt exist");

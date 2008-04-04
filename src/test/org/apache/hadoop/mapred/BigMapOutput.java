@@ -135,7 +135,7 @@ public class BigMapOutput extends Configured implements Tool {
     if (fs.exists(outputPath)) {
       fs.delete(outputPath, true);
     }
-    jobConf.setOutputPath(outputPath);
+    FileOutputFormat.setOutputPath(jobConf, outputPath);
     jobConf.setMapperClass(IdentityMapper.class);
     jobConf.setReducerClass(IdentityReducer.class);
     jobConf.setOutputKeyClass(BytesWritable.class);

@@ -510,7 +510,7 @@
             <td>53.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
-              <code>conf.setOutputPath(new Path(args[1]));</code>
+              <code>FileOutputFormat.setOutputPath(conf, new Path(args[1]));</code>
             </td>
           </tr>
           <tr>
@@ -907,7 +907,7 @@
  
             <p>In this case the outputs of the map-tasks go directly to the
             <code>FileSystem</code>, into the output path set by 
-            <a href="ext:api/org/apache/hadoop/mapred/jobconf/setoutputpath">
+            <a href="ext:api/org/apache/hadoop/mapred/fileoutputformat/setoutputpath">
             setOutputPath(Path)</a>. The framework does not sort the 
             map-outputs before writing them out to the <code>FileSystem</code>.
             </p>
@@ -1002,7 +1002,7 @@
         indicates the set of input files 
         (<a href="ext:api/org/apache/hadoop/mapred/jobconf/setinputpath">setInputPath(Path)</a>/<a href="ext:api/org/apache/hadoop/mapred/jobconf/addinputpath">addInputPath(Path)</a>)
         and where the output files should be written
-        (<a href="ext:api/org/apache/hadoop/mapred/jobconf/setoutputpath">setOutputPath(Path)</a>).</p>
+        (<a href="ext:api/org/apache/hadoop/mapred/fileoutputformat/setoutputpath">setOutputPath(Path)</a>).</p>
 
         <p>Optionally, <code>JobConf</code> is used to specify other advanced 
         facets of the job such as the <code>Comparator</code> to be used, files 
@@ -1319,6 +1319,7 @@
  
           <p>To avoid these issues the Map-Reduce framework maintains a special 
           <code>${mapred.output.dir}/_temporary/_${taskid}</code> sub-directory
+          accessible via <code>${mapred.work.output.dir}</code>
           for each task-attempt on the <code>FileSystem</code> where the output
           of the task-attempt is stored. On successful completion of the 
           task-attempt, the files in the 
@@ -1328,12 +1329,25 @@
           This process is completely transparent to the application.</p>
  
           <p>The application-writer can take advantage of this feature by 
-          creating any side-files required in <code>${mapred.output.dir}</code> 
+          creating any side-files required in <code>${mapred.work.output.dir}</code>
           during execution of a task via 
-          <a href="ext:api/org/apache/hadoop/mapred/jobconf/getoutputpath">
-          JobConf.getOutputPath()</a>, and the framework will promote them 
+          <a href="ext:api/org/apache/hadoop/mapred/fileoutputformat/getworkoutputpath">
+          FileOutputFormat.getWorkOutputPath()</a>, and the framework will promote them 
           similarly for succesful task-attempts, thus eliminating the need to 
           pick unique paths per task-attempt.</p>
+          
+          <p>Note: The value of <code>${mapred.work.output.dir}</code> during 
+          execution of a particular task-attempt is actually 
+          <code>${mapred.output.dir}/_temporary/_{$taskid}</code>, and this value is 
+          set by the map-reduce framework. So, just create any side-files in the 
+          path  returned by
+          <a href="ext:api/org/apache/hadoop/mapred/fileoutputformat/getworkoutputpath">
+          FileOutputFormat.getWorkOutputPath() </a>from map/reduce 
+          task to take advantage of this feature.</p>
+          
+          <p>The entire discussion holds true for maps of jobs with 
+           reducer=NONE (i.e. 0 reduces) since output of the map, in that case, 
+           goes directly to HDFS.</p> 
         </section>
         
         <section>
@@ -2381,7 +2395,7 @@
             <td>112.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
-              <code>conf.setOutputPath(new Path(other_args.get(1)));</code>
+              <code>FileOutputFormat.setOutputPath(conf, new Path(other_args.get(1)));</code>
             </td>
           </tr>
           <tr>

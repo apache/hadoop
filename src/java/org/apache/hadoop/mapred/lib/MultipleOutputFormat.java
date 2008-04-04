@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.OutputFormatBase;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
@@ -50,8 +50,9 @@ import org.apache.hadoop.util.Progressable;
  * output file name that depends on both the keys and the input file name,
  * 
  */
-public abstract class MultipleOutputFormat<K extends WritableComparable, V extends Writable>
-    extends OutputFormatBase<K, V> {
+public abstract class MultipleOutputFormat<K extends WritableComparable,
+                                           V extends Writable>
+extends FileOutputFormat<K, V> {
 
   /**
    * Create a composite record writer that can write key/value data to different

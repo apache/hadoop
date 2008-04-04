@@ -40,6 +40,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputSplit;
@@ -881,7 +882,7 @@ public class CopyFiles implements Tool {
         logPath = new Path(destPath, filename);
       }
     }
-    jobConf.setOutputPath(logPath);
+    FileOutputFormat.setOutputPath(jobConf, logPath);
     
     // create src list, dst list
     FileSystem jobfs = jobDirectory.getFileSystem(jobConf);

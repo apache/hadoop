@@ -21,8 +21,6 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapred.lib.*;
 import junit.framework.TestCase;
-import java.io.*;
-import java.util.*;
 import java.text.NumberFormat;
 
 public class TestFieldSelection extends TestCase {
@@ -96,7 +94,7 @@ private static NumberFormat idFormat = NumberFormat.getInstance();
     job.setMapperClass(FieldSelectionMapReduce.class);
     job.setReducerClass(FieldSelectionMapReduce.class);
 
-    job.setOutputPath(OUTPUT_DIR);
+    FileOutputFormat.setOutputPath(job, OUTPUT_DIR);
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(Text.class);
     job.setOutputFormat(TextOutputFormat.class);

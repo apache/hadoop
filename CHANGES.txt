@@ -488,6 +488,12 @@ Trunk (unreleased changes)
     HADOOP-3138. DFS mkdirs() should not throw an exception if the directory
     already exists. (rangadi)
 
+    HADOOP-3041. Deprecate JobConf.setOutputPath and JobConf.getOutputPath.
+    Deprecate OutputFormatBase. Add FileOutputFormat. Existing output formats
+    extending OutputFormatBase, now extend FileOutputFormat. Add the following
+    APIs in FileOutputFormat: setOutputPath, getOutputPath, getWorkOutputPath.
+    (Amareshwari Sriramadasu via nigel)
+
 Release 0.16.2 - 2008-04-02
 
   BUG FIXES

@@ -75,7 +75,7 @@ public class TestSpecialCharactersInOutputPath extends TestCase {
     conf.setMapperClass(IdentityMapper.class);        
     conf.setReducerClass(IdentityReducer.class);
     conf.setInputPath(inDir);
-    conf.setOutputPath(outDir);
+    FileOutputFormat.setOutputPath(conf, outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);
       
@@ -123,9 +123,10 @@ public class TestSpecialCharactersInOutputPath extends TestCase {
   }
 
   /** generates output filenames with special characters */
-  static class SpecialTextOutputFormat extends TextOutputFormat {
+  static class SpecialTextOutputFormat<K,V> extends TextOutputFormat<K,V> {
     @Override
-    public RecordWriter getRecordWriter(FileSystem ignored, JobConf job, String name, Progressable progress) throws IOException {
+    public RecordWriter<K,V> getRecordWriter(FileSystem ignored, JobConf job,
+             String name, Progressable progress) throws IOException {
         return super.getRecordWriter(ignored, job, OUTPUT_FILENAME, progress);
     }
   }

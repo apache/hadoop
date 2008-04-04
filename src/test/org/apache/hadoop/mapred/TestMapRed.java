@@ -298,7 +298,7 @@ public class TestMapRed extends TestCase {
     FileSystem fs = FileSystem.get(conf);
     fs.delete(testdir, true);
     conf.setInputPath(inDir);
-    conf.setOutputPath(outDir);
+    FileOutputFormat.setOutputPath(conf, outDir);
     conf.setMapperClass(MyMap.class);
     conf.setReducerClass(MyReduce.class);
     conf.setOutputKeyClass(Text.class);
@@ -427,7 +427,7 @@ public class TestMapRed extends TestCase {
     genJob.setInputFormat(SequenceFileInputFormat.class);
     genJob.setMapperClass(RandomGenMapper.class);
 
-    genJob.setOutputPath(randomOuts);
+    FileOutputFormat.setOutputPath(genJob, randomOuts);
     genJob.setOutputKeyClass(IntWritable.class);
     genJob.setOutputValueClass(IntWritable.class);
     genJob.setOutputFormat(TextOutputFormat.class);
@@ -472,7 +472,7 @@ public class TestMapRed extends TestCase {
     checkJob.setInputFormat(TextInputFormat.class);
     checkJob.setMapperClass(RandomCheckMapper.class);
 
-    checkJob.setOutputPath(intermediateOuts);
+    FileOutputFormat.setOutputPath(checkJob, intermediateOuts);
     checkJob.setOutputKeyClass(IntWritable.class);
     checkJob.setOutputValueClass(IntWritable.class);
     checkJob.setOutputFormat(MapFileOutputFormat.class);
@@ -495,7 +495,7 @@ public class TestMapRed extends TestCase {
     mergeJob.setInputFormat(SequenceFileInputFormat.class);
     mergeJob.setMapperClass(MergeMapper.class);
         
-    mergeJob.setOutputPath(finalOuts);
+    FileOutputFormat.setOutputPath(mergeJob, finalOuts);
     mergeJob.setOutputKeyClass(IntWritable.class);
     mergeJob.setOutputValueClass(IntWritable.class);
     mergeJob.setOutputFormat(SequenceFileOutputFormat.class);
@@ -599,7 +599,7 @@ public class TestMapRed extends TestCase {
       conf.setInt("io.sort.mb", 1);
       conf.setInputFormat(SequenceFileInputFormat.class);
       conf.setInputPath(inDir);
-      conf.setOutputPath(outDir);
+      FileOutputFormat.setOutputPath(conf, outDir);
       conf.setMapperClass(IdentityMapper.class);
       conf.setReducerClass(IdentityReducer.class);
       conf.setOutputKeyClass(Text.class);

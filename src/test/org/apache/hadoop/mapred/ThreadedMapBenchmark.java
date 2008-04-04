@@ -78,7 +78,7 @@ public class ThreadedMapBenchmark extends Configured implements Tool {
     public InputSplit[] getSplits(JobConf job, 
                                   int numSplits) throws IOException {
       InputSplit[] result = new InputSplit[numSplits];
-      Path outDir = job.getOutputPath();
+      Path outDir = FileOutputFormat.getOutputPath(job);
       for(int i=0; i < result.length; ++i) {
         result[i] = new FileSplit(new Path(outDir, "dummy-split-" + i),
                                   0, 1, (String[])null);
@@ -215,7 +215,7 @@ public class ThreadedMapBenchmark extends Configured implements Tool {
             String.valueOf(dataSizePerMap * 1024 * 1024));
     job.setNumReduceTasks(0); // none reduce
     job.setNumMapTasks(numMapsPerHost * cluster.getTaskTrackers());
-    job.setOutputPath(INPUT_DIR);
+    FileOutputFormat.setOutputPath(job, INPUT_DIR);
     
     FileSystem fs = FileSystem.get(job);
     fs.delete(BASE_DIR, true);
@@ -296,7 +296,7 @@ public class ThreadedMapBenchmark extends Configured implements Tool {
       job.setReducerClass(IdentityReducer.class);
       
       job.addInputPath(INPUT_DIR);
-      job.setOutputPath(OUTPUT_DIR);
+      FileOutputFormat.setOutputPath(job, OUTPUT_DIR);
       
       JobClient client = new JobClient(job);
       ClusterStatus cluster = client.getClusterStatus();

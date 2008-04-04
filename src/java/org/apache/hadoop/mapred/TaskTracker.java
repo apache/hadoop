@@ -1425,7 +1425,7 @@ public class TaskTracker
       keepFailedTaskFiles = localJobConf.getKeepFailedTaskFiles();
 
       // create _taskid directory in output path temporary directory.
-      Path outputPath = localJobConf.getOutputPath();
+      Path outputPath = FileOutputFormat.getOutputPath(localJobConf);
       if (outputPath != null) {
         Path jobTmpDir = new Path(outputPath, MRConstants.TEMP_DIR_NAME);
         FileSystem fs = jobTmpDir.getFileSystem(localJobConf);

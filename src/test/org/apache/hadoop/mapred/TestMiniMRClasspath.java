@@ -19,13 +19,11 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
-import java.util.*;
 import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
@@ -69,7 +67,7 @@ public class TestMiniMRClasspath extends TestCase {
     conf.set("mapred.combine.class", "testjar.ClassWordCount$Reduce");
     conf.set("mapred.reducer.class", "testjar.ClassWordCount$Reduce");
     conf.setInputPath(inDir);
-    conf.setOutputPath(outDir);
+    FileOutputFormat.setOutputPath(conf, outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);
     //pass a job.jar already included in the hadoop build
@@ -122,7 +120,7 @@ public class TestMiniMRClasspath extends TestCase {
     conf.set("mapred.output.key.class", "testjar.ExternalWritable");
 
     conf.setInputPath(inDir);
-    conf.setOutputPath(outDir);
+    FileOutputFormat.setOutputPath(conf, outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);
     

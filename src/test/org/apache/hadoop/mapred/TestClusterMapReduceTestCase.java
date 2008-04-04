@@ -57,7 +57,7 @@ public class TestClusterMapReduceTestCase extends ClusterMapReduceTestCase {
 
     conf.setInputPath(getInputDir());
 
-    conf.setOutputPath(getOutputDir());
+    FileOutputFormat.setOutputPath(conf, getOutputDir());
 
 
     JobClient.runJob(conf);

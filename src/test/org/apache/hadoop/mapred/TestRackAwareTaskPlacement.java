@@ -178,7 +178,7 @@ public class TestRackAwareTaskPlacement extends TestCase {
     jobConf.setInputFormat(NonSplitableSequenceFileInputFormat.class);
     jobConf.setOutputFormat(SequenceFileOutputFormat.class);
     jobConf.setInputPath(inDir);
-    jobConf.setOutputPath(outputPath);
+    FileOutputFormat.setOutputPath(jobConf, outputPath);
     jobConf.setMapperClass(IdentityMapper.class);
     jobConf.setReducerClass(IdentityReducer.class);
     jobConf.setOutputKeyClass(BytesWritable.class);

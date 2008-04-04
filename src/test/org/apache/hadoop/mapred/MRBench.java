@@ -26,12 +26,9 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.UTF8;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Text;
 
@@ -179,11 +176,12 @@ public class MRBench {
       // reset the job jar because the copy constructor doesn't
       jobConf.setJar(masterJobConf.getJar());
       // give a new random name to output of the mapred tasks
-      jobConf.setOutputPath(new Path(OUTPUT_DIR, "output_" + rand.nextInt()));
+      FileOutputFormat.setOutputPath(jobConf, 
+                         new Path(OUTPUT_DIR, "output_" + rand.nextInt()));
 
       LOG.info("Running job " + i + ":" +
                " input=" + jobConf.getInputPaths()[0] + 
-               " output=" + jobConf.getOutputPath());
+               " output=" + FileOutputFormat.getOutputPath(jobConf));
       
       // run the mapred task now 
       long curTime = System.currentTimeMillis();

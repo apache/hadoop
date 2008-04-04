@@ -118,7 +118,7 @@ public class TestCollect extends TestCase
     conf.setInputFormat(RandomInputFormat.class); // for self data generation
     conf.setOutputKeyClass(IntWritable.class);
     conf.setOutputValueClass(IntWritable.class);
-    conf.setOutputPath(OUTPUT_DIR);
+    FileOutputFormat.setOutputPath(conf, OUTPUT_DIR);
     
     conf.setMapperClass(Map.class);
     conf.setReducerClass(Reduce.class);

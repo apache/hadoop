@@ -43,7 +43,7 @@ public class TestTextOutputFormat extends TestCase {
   @SuppressWarnings("unchecked")
   public void testFormat() throws Exception {
     JobConf job = new JobConf();
-    job.setOutputPath(workDir);
+    FileOutputFormat.setWorkOutputPath(job, workDir);
     FileSystem fs = workDir.getFileSystem(job);
     if (!fs.mkdirs(workDir)) {
       fail("Failed to create output directory");

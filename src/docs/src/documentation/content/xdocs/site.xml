@@ -126,6 +126,11 @@ See http://forrest.apache.org/docs/linking.html for more info.
               <clusterstatus href="ClusterStatus.html" />
               <counters href="Counters.html" />
               <fileinputformat href="FileInputFormat.html" />
+              <fileoutputformat href="FileInputFormat.html">
+                <getoutputpath href="#getOutputPath(org.apache.hadoop.mapred.JobConf)" />
+                <getworkoutputpath href="#getWorkOutputPath(org.apache.hadoop.mapred.JobConf)" />
+                <setoutputpath href="#setOutputPath(org.apache.hadoop.mapred.JobConf,%20org.apache.hadoop.fs.Path)" />
+              </fileoutputformat>
               <filesplit href="FileSplit.html" />
               <inputformat href="InputFormat.html" />
               <inputsplit href="InputSplit.html" />
@@ -141,8 +146,6 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <setoutputvaluegroupingcomparator href="#setOutputValueGroupingComparator(java.lang.Class)" />
                 <setinputpath href="#setInputPath(org.apache.hadoop.fs.Path)" />
                 <addinputpath href="#addInputPath(org.apache.hadoop.fs.Path)" />
-                <getoutputpath href="#getOutputPath()" />
-                <setoutputpath href="#setOutputPath(org.apache.hadoop.fs.Path)" />
                 <setcombinerclass href="#setCombinerClass(java.lang.Class)" />
                 <setmapdebugscript href="#setMapDebugScript(java.lang.String)" />
                 <setreducedebugscript href="#setReduceDebugScript(java.lang.String)" />
