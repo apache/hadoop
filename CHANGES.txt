@@ -498,6 +498,10 @@ Trunk (unreleased changes)
     HADOOP-3083. The fsimage does not store leases. This would have to be
     reworked in the next release to support appends. (dhruba)
 
+    HADOOP-3166. Fix an ArrayIndexOutOfBoundsException in the spill thread
+    and make exception handling more promiscuous to catch this condition.
+    (cdouglas)
+
 Release 0.16.3 - Unreleased
 
   BUG FIXES
