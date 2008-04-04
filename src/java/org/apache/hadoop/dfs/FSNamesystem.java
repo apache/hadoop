@@ -1948,7 +1948,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * @param nodeReg
    * @return true or false
    */
-  public synchronized boolean blockReportProcessed(DatanodeRegistration nodeReg)
+  synchronized boolean blockReportProcessed(DatanodeRegistration nodeReg)
   throws IOException {
     return getDatanode(nodeReg).getBlockReportProcessed();
   }
@@ -1956,7 +1956,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   /**
    * Has the datanode been resolved to a switch/rack
    */
-  public synchronized boolean isResolved(DatanodeRegistration dnReg) {
+  synchronized boolean isResolved(DatanodeRegistration dnReg) {
     try {
       return !getDatanode(dnReg).getNetworkLocation()
             .equals(NetworkTopology.UNRESOLVED);
@@ -2062,6 +2062,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       nodeS.updateRegInfo(nodeReg);
       nodeS.setHostName(hostName);
       nodeS.setNetworkLocation(NetworkTopology.UNRESOLVED);
+      nodeS.setBlockReportProcessed(false);
       addToResolutionQueue(nodeS);
         
       // also treat the registration message as a heartbeat
@@ -2711,6 +2712,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       return null; //drop the block report if the dn hasn't been resolved
     }
 
+    node.setBlockReportProcessed(true);
     //
     // Modify the (block-->datanode) map, according to the difference
     // between the old and new block report.
@@ -2759,7 +2761,6 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
     }
     NameNode.getNameNodeMetrics().blockReport.inc((int) (now() - startTime));
-    node.setBlockReportProcessed(true);
     return obsolete.toArray(new Block[obsolete.size()]);
   }
 

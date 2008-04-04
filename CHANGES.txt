@@ -502,6 +502,9 @@ Trunk (unreleased changes)
     and make exception handling more promiscuous to catch this condition.
     (cdouglas)
 
+    HADOOP-3050. DataNode sends one and only one block report after
+    it registers with the namenode. (Hairong Kuang)
+
 Release 0.16.3 - Unreleased
 
   BUG FIXES
