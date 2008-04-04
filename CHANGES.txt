@@ -1,7 +1,7 @@
 Hadoop Change Log
 
 
-Trunk (unreleased changes)
+Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
 
