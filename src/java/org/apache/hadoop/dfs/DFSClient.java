@@ -1113,6 +1113,7 @@ class DFSClient implements FSConstants {
     private Block currentBlock = null;
     private long pos = 0;
     private long blockEnd = -1;
+    private int failures = 0;
 
     /* XXX Use of CocurrentHashMap is temp fix. Need to fix 
      * parallel accesses to DFSInputStream (through ptreads) properly */
@@ -1421,7 +1422,6 @@ class DFSClient implements FSConstants {
         
     private DNAddrPair chooseDataNode(LocatedBlock block)
       throws IOException {
-      int failures = 0;
       while (true) {
         DatanodeInfo[] nodes = block.getLocations();
         try {

@@ -514,6 +514,9 @@ Trunk (unreleased changes)
     HADOOP-3178. Fix GridMix scripts for small and medium jobs
     to handle input paths differently. (Mukund Madhugiri via nigel)
 
+    HADOOP-1911. Fix an infinite loop in DFSClient when all replicas of a
+    block are bad (cdouglas)
+
 Release 0.16.3 - Unreleased
 
   BUG FIXES
