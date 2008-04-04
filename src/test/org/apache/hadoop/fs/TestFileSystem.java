@@ -503,4 +503,27 @@ public class TestFileSystem extends TestCase {
       }
     }
   }
+    
+  public void testFsClose() throws Exception {
+    {
+      Configuration conf = new Configuration();
+      new Path("file:///").getFileSystem(conf);
+      UnixUserGroupInformation.login(conf, true);
+      FileSystem.closeAll();
+    }
+
+    {
+      Configuration conf = new Configuration();
+      new Path("hftp://localhost:12345/").getFileSystem(conf);
+      UnixUserGroupInformation.login(conf, true);
+      FileSystem.closeAll();
+    }
+
+    {
+      Configuration conf = new Configuration();
+      FileSystem fs = new Path("hftp://localhost:12345/").getFileSystem(conf);
+      UnixUserGroupInformation.login(fs.getConf(), true);
+      FileSystem.closeAll();
+    }
+  }
 }

@@ -74,7 +74,7 @@ public class HftpFileSystem extends FileSystem {
   public void initialize(URI name, Configuration conf) throws IOException {
     setConf(conf);
     try {
-      this.ugi = UnixUserGroupInformation.login(conf);
+      this.ugi = UnixUserGroupInformation.login(conf, true);
     } catch (LoginException le) {
       throw new IOException(StringUtils.stringifyException(le));
     }

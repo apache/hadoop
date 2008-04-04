@@ -1318,13 +1318,6 @@ public abstract class FileSystem extends Configured implements Closeable {
         remove(key, fs);
 
         if (fs != null) {
-          //check consistency
-          if (!new Key(fs).equals(key)) {
-            exceptions.add(new IOException(fs.getClass().getSimpleName()
-                + "(=" + fs + ") and " + key.getClass().getSimpleName()
-                + "(=" + key + ") do not match."));
-          }
-
           try {
             fs.close();
           }

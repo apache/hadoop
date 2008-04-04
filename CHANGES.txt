@@ -518,6 +518,10 @@ Release 0.16.3 - Unreleased
     HADOOP-3159. Avoid file system cache being overwritten whenever
     configuration is modified. (Tsz Wo (Nicholas), SZE via hairong)
 
+    HADOOP-3139. Remove the consistency check for the FileSystem cache in
+    closeAll() that causes spurious warnings and a deadlock.
+    (Tsz Wo (Nicholas), SZE via cdouglas)
+
 Release 0.16.2 - 2008-04-02
 
   BUG FIXES
