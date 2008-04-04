@@ -22,6 +22,8 @@ import java.net.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
+import javax.security.auth.login.LoginException;
+
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.dfs.*;
@@ -1255,6 +1257,13 @@ public abstract class FileSystem extends Configured implements Closeable {
         scheme = uri.getScheme();
         authority = uri.getAuthority();
         UserGroupInformation ugi = UserGroupInformation.readFrom(conf);
+        if (ugi == null) {
+          try {
+            ugi = UserGroupInformation.login(conf);
+          } catch(LoginException e) {
+            LOG.warn("uri=" + uri, e);
+          }
+        }
         username = ugi == null? null: ugi.getUserName();
       }
 
