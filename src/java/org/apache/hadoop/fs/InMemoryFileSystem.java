@@ -223,7 +223,8 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
       // map) until close is called on the outputstream that this method is
       // going to return
       // Create an output stream out of data byte array
-      return new FSDataOutputStream(new InMemoryOutputStream(f, fAttr));
+      return new FSDataOutputStream(new InMemoryOutputStream(f, fAttr), 
+                                    statistics);
     }
 
     public void close() throws IOException {

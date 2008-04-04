@@ -108,6 +108,9 @@ Trunk (unreleased changes)
     HADOOP-2551. More environment variables like HADOOP_NAMENODE_OPTS
     for better control of HADOOP_OPTS for each component. (rangadi)
 
+    HADOOP-3001. Add job counters that measure the number of bytes
+    read and written to HDFS, S3, KFS, and local file systems. (omalley)
+
   IMPROVEMENTS
 
     HADOOP-2655. Copy on write for data and metadata files in the 

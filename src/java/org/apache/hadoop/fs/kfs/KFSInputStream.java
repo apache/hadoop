@@ -21,28 +21,28 @@
 package org.apache.hadoop.fs.kfs;
 
 import java.io.*;
-import java.net.*;
-import java.util.*;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.util.Progressable;
 
 import org.kosmix.kosmosfs.access.KfsAccess;
 import org.kosmix.kosmosfs.access.KfsInputChannel;
 
 class KFSInputStream extends FSInputStream {
 
-    private String path;
     private KfsInputChannel kfsChannel;
-
+    private FileSystem.Statistics statistics;
     private long fsize;
 
+    @Deprecated
     public KFSInputStream(KfsAccess kfsAccess, String path) {
-        this.path = path;
+      this(kfsAccess, path, null);
+    }
 
+    public KFSInputStream(KfsAccess kfsAccess, String path,
+                            FileSystem.Statistics stats) {
+        this.statistics = stats;
         this.kfsChannel = kfsAccess.kfs_open(path);
         if (this.kfsChannel != null)
             this.fsize = kfsAccess.kfs_filesize(path);
@@ -81,8 +81,12 @@ class KFSInputStream extends FSInputStream {
         }
         byte b[] = new byte[4];
         int res = read(b, 0, 4);
-        if (res == 4)
-            return (b[0] + (b[1] << 8) + (b[2] << 16) + (b[3] << 24));
+        if (res == 4) {
+          if (statistics != null) {
+            statistics.incrementBytesRead(1);
+          }
+          return (b[0] + (b[1] << 8) + (b[2] << 16) + (b[3] << 24));          
+        }
         return -1;
     }
 
@@ -96,6 +100,9 @@ class KFSInputStream extends FSInputStream {
 	// Use -1 to signify EOF
 	if (res == 0)
 	    return -1;
+	if (statistics != null) {
+	  statistics.incrementBytesRead(res);
+	}
 	return res;
     }
 

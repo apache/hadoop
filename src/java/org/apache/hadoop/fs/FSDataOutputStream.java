@@ -26,20 +26,29 @@ public class FSDataOutputStream extends DataOutputStream {
   private OutputStream wrappedStream;
 
   private static class PositionCache extends FilterOutputStream {
+    private FileSystem.Statistics statistics;
     long position;
 
-    public PositionCache(OutputStream out) throws IOException {
+    public PositionCache(OutputStream out, 
+                         FileSystem.Statistics stats) throws IOException {
       super(out);
+      statistics = stats;
     }
 
     public void write(int b) throws IOException {
       out.write(b);
       position++;
+      if (statistics != null) {
+        statistics.incrementBytesWritten(1);
+      }
     }
     
     public void write(byte b[], int off, int len) throws IOException {
       out.write(b, off, len);
       position += len;                            // update position
+      if (statistics != null) {
+        statistics.incrementBytesWritten(len);
+      }
     }
       
     public long getPos() throws IOException {
@@ -51,9 +60,14 @@ public class FSDataOutputStream extends DataOutputStream {
     }
   }
 
-  public FSDataOutputStream(OutputStream out)
+  @Deprecated
+  public FSDataOutputStream(OutputStream out) throws IOException {
+    this(out, null);
+  }
+
+  public FSDataOutputStream(OutputStream out, FileSystem.Statistics stats)
     throws IOException {
-    super(new PositionCache(out));
+    super(new PositionCache(out, stats));
     wrappedStream = out;
   }
   

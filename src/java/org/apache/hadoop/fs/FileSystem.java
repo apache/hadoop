@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.*;
@@ -57,7 +58,16 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /** FileSystem cache */
   private static final Cache CACHE = new Cache();
+  /** Recording statistics per a FileSystem class */
+  private static final Map<Class<? extends FileSystem>, Statistics> 
+    statisticsTable =
+      new IdentityHashMap<Class<? extends FileSystem>, Statistics>();
 
+  /**
+   * The statistics for this file system.
+   */
+  protected final Statistics statistics;
+  
   /**
    * Parse the cmd-line args, starting at i.  Remove consumed args
    * from array.  We expect param in the form:
@@ -268,6 +278,7 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   protected FileSystem() {
     super(null);
+    statistics = getStatistics(this.getClass());
   }
 
   /** Check that a Path belongs to this FileSystem. */
@@ -1370,6 +1381,72 @@ public abstract class FileSystem extends Configured implements Closeable {
       public String toString() {
         return username + "@" + scheme + "://" + authority;        
       }
+    }
+  }
+  
+  public static final class Statistics {
+    private AtomicLong bytesRead = new AtomicLong();
+    private AtomicLong bytesWritten = new AtomicLong();
+    
+    /**
+     * Increment the bytes read in the statistics
+     * @param newBytes the additional bytes read
+     */
+    public void incrementBytesRead(long newBytes) {
+      bytesRead.getAndAdd(newBytes);
+    }
+    
+    /**
+     * Increment the bytes written in the statistics
+     * @param newBytes the additional bytes written
+     */
+    public void incrementBytesWritten(long newBytes) {
+      bytesWritten.getAndAdd(newBytes);
+    }
+    
+    /**
+     * Get the total number of bytes read
+     * @return the number of bytes
+     */
+    public long getBytesRead() {
+      return bytesRead.get();
+    }
+    
+    /**
+     * Get the total number of bytes written
+     * @return the number of bytes
+     */
+    public long getBytesWritten() {
+      return bytesWritten.get();
+    }
+    
+    public String toString() {
+      return bytesRead + " bytes read and " + bytesWritten + 
+             " bytes written";
+    }
+  }
+  
+  /**
+   * Get the statistics for a particular file system
+   * @param cls the class to lookup
+   * @return a statistics object
+   */
+  public static synchronized 
+  Statistics getStatistics(Class<? extends FileSystem> cls) {
+    Statistics result = statisticsTable.get(cls);
+    if (result == null) {
+      result = new Statistics();
+      statisticsTable.put(cls, result);
+    }
+    return result;
+  }
+  
+  public static synchronized
+  void printStatistics() throws IOException {
+    for (Map.Entry<Class<? extends FileSystem>, Statistics> pair: 
+            statisticsTable.entrySet()) {
+      System.out.println("  FileSystem " + pair.getKey().getName() + 
+                         ": " + pair.getValue());
     }
   }
 }

@@ -65,6 +65,36 @@ public class RawLocalFileSystem extends FileSystem {
     setConf(conf);
   }
   
+  class TrackingFileInputStream extends FileInputStream {
+    public TrackingFileInputStream(File f) throws IOException {
+      super(f);
+    }
+    
+    public int read() throws IOException {
+      int result = super.read();
+      if (result != -1) {
+        statistics.incrementBytesRead(1);
+      }
+      return result;
+    }
+    
+    public int read(byte[] data) throws IOException {
+      int result = super.read(data);
+      if (result != -1) {
+        statistics.incrementBytesRead(result);
+      }
+      return result;
+    }
+    
+    public int read(byte[] data, int offset, int length) throws IOException {
+      int result = super.read(data, offset, length);
+      if (result != -1) {
+        statistics.incrementBytesRead(result);
+      }
+      return result;
+    }
+  }
+
   /*******************************************************
    * For open()'s FSInputStream
    *******************************************************/
@@ -73,7 +103,7 @@ public class RawLocalFileSystem extends FileSystem {
     private long position;
 
     public LocalFSFileInputStream(Path f) throws IOException {
-      this.fis = new FileInputStream(pathToFile(f));
+      this.fis = new TrackingFileInputStream(pathToFile(f));
     }
     
     public void seek(long pos) throws IOException {
@@ -190,7 +220,8 @@ public class RawLocalFileSystem extends FileSystem {
       throw new IOException("Mkdirs failed to create " + parent.toString());
     }
     return new FSDataOutputStream(
-        new BufferedOutputStream(new LocalFSFileOutputStream(f), bufferSize));
+        new BufferedOutputStream(new LocalFSFileOutputStream(f), bufferSize),
+        statistics);
   }
 
   /** {@inheritDoc} */

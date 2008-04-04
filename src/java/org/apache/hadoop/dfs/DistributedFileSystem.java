@@ -66,7 +66,8 @@ public class DistributedFileSystem extends FileSystem {
     if (host == null || port == -1) {
       throw new IOException("Incomplete HDFS URI, no host/port: "+ uri);
     }
-    this.dfs = new DFSClient(new InetSocketAddress(host, port), conf);
+    this.dfs = new DFSClient(new InetSocketAddress(host, port), conf,
+                             statistics);
     this.uri = URI.create("hdfs://"+host+":"+port);
     this.workingDir = getHomeDirectory();
   }
@@ -128,7 +129,7 @@ public class DistributedFileSystem extends FileSystem {
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     try {
       return new DFSClient.DFSDataInputStream(
-          dfs.open(getPathName(f), bufferSize, verifyChecksum));
+          dfs.open(getPathName(f), bufferSize, verifyChecksum, statistics));
     } catch(RemoteException e) {
       if (IOException.class.getName().equals(e.getClassName()) &&
           e.getMessage().startsWith(
@@ -147,8 +148,10 @@ public class DistributedFileSystem extends FileSystem {
     int bufferSize, short replication, long blockSize,
     Progressable progress) throws IOException {
 
-    return new FSDataOutputStream(dfs.create(getPathName(f), permission,
-        overwrite, replication, blockSize, progress, bufferSize));
+    return new FSDataOutputStream
+       (dfs.create(getPathName(f), permission,
+                   overwrite, replication, blockSize, progress, bufferSize),
+        statistics);
   }
 
   public boolean setReplication(Path src, 

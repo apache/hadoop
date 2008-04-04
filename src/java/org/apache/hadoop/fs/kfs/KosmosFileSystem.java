@@ -63,7 +63,8 @@ public class KosmosFileSystem extends FileSystem {
         try {
             if (kfsImpl == null) {
                 kfsImpl = new KFSImpl(conf.get("fs.kfs.metaServerHost", ""),
-                                      conf.getInt("fs.kfs.metaServerPort", -1));
+                                      conf.getInt("fs.kfs.metaServerPort", -1),
+                                      statistics);
             }
             this.localFs = FileSystem.getLocal(conf);
             this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());

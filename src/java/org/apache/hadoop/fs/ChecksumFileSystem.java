@@ -272,7 +272,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     return new FSDataInputStream(
-        new ChecksumFSInputChecker(this, f, bufferSize) );
+        new ChecksumFSInputChecker(this, f, bufferSize));
   }
 
   /**
@@ -358,8 +358,11 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     if (parent != null && !mkdirs(parent)) {
       throw new IOException("Mkdirs failed to create " + parent);
     }
-    return new FSDataOutputStream(new ChecksumFSOutputSummer(
-        this, f, overwrite, bufferSize, replication, blockSize, progress));
+    return new FSDataOutputStream
+            (new ChecksumFSOutputSummer
+                (this, f, overwrite, bufferSize, replication, 
+                 blockSize, progress),
+             null);
   }
 
   /**

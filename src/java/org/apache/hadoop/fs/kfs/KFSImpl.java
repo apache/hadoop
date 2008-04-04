@@ -20,23 +20,27 @@
 package org.apache.hadoop.fs.kfs;
 
 import java.io.*;
-import java.net.*;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.Progressable;
 
 import org.kosmix.kosmosfs.access.KfsAccess;
 
 class KFSImpl implements IFSImpl {
     private KfsAccess kfsAccess = null;
+    private FileSystem.Statistics statistics;
 
-    public KFSImpl(String metaServerHost, int metaServerPort) throws IOException {
+    @Deprecated
+    public KFSImpl(String metaServerHost, int metaServerPort
+                   ) throws IOException {
+      this(metaServerHost, metaServerPort, null);
+    }
+
+    public KFSImpl(String metaServerHost, int metaServerPort, 
+                   FileSystem.Statistics stats) throws IOException {
         kfsAccess = new KfsAccess(metaServerHost, metaServerPort);
+        statistics = stats;
     }
 
     public boolean exists(String path) throws IOException {
@@ -95,10 +99,12 @@ class KFSImpl implements IFSImpl {
     }
 
     public FSDataOutputStream create(String path, short replication, int bufferSize) throws IOException {
-        return new FSDataOutputStream(new KFSOutputStream(kfsAccess, path, replication));
+        return new FSDataOutputStream(new KFSOutputStream(kfsAccess, path, replication), 
+                                      statistics);
     }
 
     public FSDataInputStream open(String path, int bufferSize) throws IOException {
-        return new FSDataInputStream(new KFSInputStream(kfsAccess, path));
+        return new FSDataInputStream(new KFSInputStream(kfsAccess, path, 
+                                                        statistics));
     }
-};
+}

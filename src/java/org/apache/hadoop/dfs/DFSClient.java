@@ -70,6 +70,7 @@ class DFSClient implements FSConstants {
   private short defaultReplication;
   private SocketFactory socketFactory;
   private int socketTimeout;
+  private FileSystem.Statistics stats;
     
   /**
    * A map from name -> DFSOutputStream of files that are currently being
@@ -158,9 +159,11 @@ class DFSClient implements FSConstants {
   /** 
    * Create a new DFSClient connected to the given namenode server.
    */
-  public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf)
+  public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf,
+                   FileSystem.Statistics stats)
     throws IOException {
     this.conf = conf;
+    this.stats = stats;
     this.socketTimeout = conf.getInt("dfs.socket.timeout", 
                                      FSConstants.READ_TIMEOUT);
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
@@ -184,6 +187,12 @@ class DFSClient implements FSConstants {
     defaultReplication = (short) conf.getInt("dfs.replication", 3);
     this.leaseChecker = new Daemon(new LeaseChecker());
     this.leaseChecker.start();
+  }
+
+  public DFSClient(InetSocketAddress nameNodeAddr, 
+                   Configuration conf) throws IOException {
+    this(nameNodeAddr, conf, 
+         FileSystem.getStatistics(DistributedFileSystem.class));
   }
 
   private void checkOpen() throws IOException {
@@ -326,15 +335,17 @@ class DFSClient implements FSConstants {
   }
 
   public DFSInputStream open(String src) throws IOException {
-    return open(src, conf.getInt("io.file.buffer.size", 4096), true);
+    return open(src, conf.getInt("io.file.buffer.size", 4096), true, null);
   }
+
   /**
    * Create an input stream that obtains a nodelist from the
    * namenode, and then reads from all the right places.  Creates
    * inner subclass of InputStream that does the right out-of-band
    * work.
    */
-  DFSInputStream open(String src, int buffersize, boolean verifyChecksum
+  DFSInputStream open(String src, int buffersize, boolean verifyChecksum,
+                      FileSystem.Statistics stats
       ) throws IOException {
     checkOpen();
     //    Get block info from namenode
@@ -1026,6 +1037,7 @@ class DFSClient implements FSConstants {
     private Block currentBlock = null;
     private long pos = 0;
     private long blockEnd = -1;
+
     /* XXX Use of CocurrentHashMap is temp fix. Need to fix 
      * parallel accesses to DFSInputStream (through ptreads) properly */
     private ConcurrentHashMap<DatanodeInfo, DatanodeInfo> deadNodes = 
@@ -1039,7 +1051,7 @@ class DFSClient implements FSConstants {
     }
     
     DFSInputStream(String src, int buffersize, boolean verifyChecksum
-        ) throws IOException {
+                   ) throws IOException {
       this.verifyChecksum = verifyChecksum;
       this.buffersize = buffersize;
       this.src = src;
@@ -1309,6 +1321,9 @@ class DFSClient implements FSConstants {
               // got a EOS from reader though we expect more data on it.
               throw new IOException("Unexpected EOS from the reader");
             }
+            if (stats != null && result != -1) {
+              stats.incrementBytesRead(result);
+            }
             return result;
           } catch (ChecksumException ce) {
             throw ce;            
@@ -1456,6 +1471,9 @@ class DFSClient implements FSConstants {
         offset += bytesToRead;
       }
       assert remaining == 0 : "Wrong number of bytes read.";
+      if (stats != null) {
+        stats.incrementBytesRead(realLen);
+      }
       return realLen;
     }
      

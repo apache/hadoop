@@ -25,6 +25,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.FileSystem;
 
 class S3InputStream extends FSInputStream {
 
@@ -43,11 +44,20 @@ class S3InputStream extends FSInputStream {
   private DataInputStream blockStream;
 
   private long blockEnd = -1;
+  
+  private FileSystem.Statistics stats;
 
+  @Deprecated
   public S3InputStream(Configuration conf, FileSystemStore store,
                        INode inode) {
+    this(conf, store, inode, null);
+  }
+
+  public S3InputStream(Configuration conf, FileSystemStore store,
+                       INode inode, FileSystem.Statistics stats) {
     
     this.store = store;
+    this.stats = stats;
     this.blocks = inode.getBlocks();
     for (Block block : blocks) {
       this.fileLength += block.getLength();
@@ -93,6 +103,9 @@ class S3InputStream extends FSInputStream {
         pos++;
       }
     }
+    if (stats != null & result >= 0) {
+      stats.incrementBytesRead(1);
+    }
     return result;
   }
 
@@ -109,6 +122,9 @@ class S3InputStream extends FSInputStream {
       int result = blockStream.read(buf, off, realLen);
       if (result >= 0) {
         pos += result;
+      }
+      if (stats != null && result > 0) {
+        stats.incrementBytesRead(result);
       }
       return result;
     }

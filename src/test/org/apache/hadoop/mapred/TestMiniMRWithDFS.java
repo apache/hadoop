@@ -178,10 +178,8 @@ public class TestMiniMRWithDFS extends TestCase {
     TestResult result;
     final Path inDir = new Path("./wc/input");
     final Path outDir = new Path("./wc/output");
-    result = launchWordCount(jobConf, inDir, outDir,
-                             "The quick brown fox\nhas many silly\n" + 
-                             "red fox sox\n",
-                             3, 1);
+    String input = "The quick brown fox\nhas many silly\nred fox sox\n";
+    result = launchWordCount(jobConf, inDir, outDir, input, 3, 1);
     assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
                  "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result.output);
     String jobid = result.job.getJobID();
@@ -189,8 +187,17 @@ public class TestMiniMRWithDFS extends TestCase {
     checkTaskDirectories(mr, new String[]{jobid}, new String[]{taskid});
     // test with maps=0
     jobConf = mr.createJobConf();
-    result = launchWordCount(jobConf, inDir, outDir, "owen is oom", 0, 1);
+    input = "owen is oom";
+    result = launchWordCount(jobConf, inDir, outDir, input, 0, 1);
     assertEquals("is\t1\noom\t1\nowen\t1\n", result.output);
+    Counters counters = result.job.getCounters();
+    long hdfsRead = 
+      counters.findCounter(Task.FileSystemCounter.HDFS_READ).getCounter();
+    long hdfsWrite = 
+      counters.findCounter(Task.FileSystemCounter.HDFS_WRITE).getCounter();
+    assertEquals(result.output.length(), hdfsWrite);
+    assertEquals(input.length(), hdfsRead);
+
     // Run a job with input and output going to localfs even though the 
     // default fs is hdfs.
     {
@@ -207,6 +214,7 @@ public class TestMiniMRWithDFS extends TestCase {
       assertEquals("all\t1\nbase\t1\nbelong\t1\nto\t1\nus\t1\nyour\t1\n", 
                    result.output);
       assertTrue("outputs on localfs", localfs.exists(localOut));
+
     }
   }
 

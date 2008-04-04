@@ -203,15 +203,17 @@ public class S3FileSystem extends FileSystem {
         }
       }      
     }
-    return new FSDataOutputStream(
-        new S3OutputStream(getConf(), store, makeAbsolute(file),
-                           blockSize, progress, bufferSize));
+    return new FSDataOutputStream
+        (new S3OutputStream(getConf(), store, makeAbsolute(file),
+                            blockSize, progress, bufferSize),
+         statistics);
   }
 
   @Override
   public FSDataInputStream open(Path path, int bufferSize) throws IOException {
     INode inode = checkFile(path);
-    return new FSDataInputStream(new S3InputStream(getConf(), store, inode));
+    return new FSDataInputStream(new S3InputStream(getConf(), store, inode,
+                                                   statistics));
   }
 
   @Override
