@@ -53,32 +53,27 @@ public class TestDU extends TestCase {
     file.getFD().sync();
     file.close();
   }
-  
-  /*
-   * Find a number that is a multiple of the block size in this file system
+
+  /**
+   * Verify that du returns expected used space for a file.
+   * We assume here that if a file system crates a file of size 
+   * that is a multiple of the block size in this file system,
+   * then the used size for the file will be exactly that size.
+   * This is true for most file systems.
+   * 
+   * @throws IOException
+   * @throws InterruptedException
    */
-  private int getBlockSize() throws IOException, InterruptedException {
-    File file = new File(DU_DIR, "small");
-    createFile(file, 128); // this is an arbitrary number. It has to be big enough for the filesystem to report
-                           // any usage at all. For instance, NFS reports 0 blocks if the file is <= 64 bytes
-
-    Thread.sleep(5000); // let the metadata updater catch up
-
-    DU du = new DU(file, 0);
-    return (int) du.getUsed();
-  }
-
   public void testDU() throws IOException, InterruptedException {
-    int blockSize = getBlockSize();
-
+    int writtenSize = 32*1024;   // writing 32K
     File file = new File(DU_DIR, "data");
-    createFile(file, 2 * blockSize);
+    createFile(file, writtenSize);
 
     Thread.sleep(5000); // let the metadata updater catch up
     
     DU du = new DU(file, 0);
-    long size = du.getUsed();
+    long duSize = du.getUsed();
 
-    assertEquals(2 * blockSize, size);
+    assertEquals(writtenSize, duSize);
   }
 }
