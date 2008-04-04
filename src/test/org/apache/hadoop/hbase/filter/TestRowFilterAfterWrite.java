@@ -92,19 +92,6 @@ public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
    * {@inheritDoc}
    */
   @Override
-  public void setUp() throws Exception {
-    // this.conf.set(HConstants.HBASE_DIR, "file:///opt/benchmark/hadoop/hbase");
-    this.conf.set(HConstants.MASTER_ADDRESS, "0.0.0.0:60100");
-    // Must call super.setup() after starting mini dfs cluster. Otherwise
-    // we get a local file system instead of hdfs
-
-    super.setUp();
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
   public void tearDown() throws Exception {
     super.tearDown();
   }

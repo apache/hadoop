@@ -10,6 +10,8 @@ Hbase Change Log
                havoc of reassignments because open processing is done in series
    HBASE-547   UI shows hadoop version, not hbase version
    HBASE-561   HBase package does not include LICENSE.txt nor build.xml
+   HBASE-563   TestRowFilterAfterWrite erroneously sets master address to
+               0.0.0.0:60100 rather than relying on conf
 
   NEW FEATURES
    HBASE-548   Tool to online single region
