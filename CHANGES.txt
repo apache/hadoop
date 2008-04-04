@@ -693,6 +693,9 @@ Release 0.16.1 - 2008-03-13
     HADOOP-2813. TestDU unit test uses its own directory to run its 
     sequence of tests.  (Mahadev Konar via dhruba)
 
+    HADOOP-3159. Avoid file system cache being overwritten whenever
+    configuration is modified. (Tsz Wo (Nicholas), SZE via hairong)
+
 Release 0.16.0 - 2008-02-07
 
   INCOMPATIBLE CHANGES

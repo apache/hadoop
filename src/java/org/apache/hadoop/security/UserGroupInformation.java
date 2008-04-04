@@ -30,6 +30,7 @@ import org.apache.hadoop.io.Writable;
  */
 public abstract class UserGroupInformation implements Writable {
   public static final Log LOG = LogFactory.getLog(UserGroupInformation.class);
+  private static UserGroupInformation LOGIN_UGI = null;
 
   private static final ThreadLocal<UserGroupInformation> currentUGI
     = new ThreadLocal<UserGroupInformation>();
@@ -58,6 +59,15 @@ public abstract class UserGroupInformation implements Writable {
    * @return an array of group names
    */
   public abstract String[] getGroupNames();
+
+  /** Login and return a UserGroupInformation object. */
+  public static UserGroupInformation login(Configuration conf
+      ) throws LoginException {
+    if (LOGIN_UGI == null) {
+      LOGIN_UGI = UnixUserGroupInformation.login(conf);
+    }
+    return LOGIN_UGI;
+  }
 
   /** Read a {@link UserGroupInformation} from conf */
   public static UserGroupInformation readFrom(Configuration conf

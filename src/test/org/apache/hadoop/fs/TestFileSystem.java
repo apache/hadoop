@@ -23,12 +23,14 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Random;
+import java.net.URI;
 
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.UTF8;
@@ -468,18 +470,36 @@ public class TestFileSystem extends TestCase {
   }
 
   public void testFsCache() throws Exception {
-    long now = System.currentTimeMillis();
-    Configuration[] conf = {new Configuration(),
-        createConf4Testing("foo" + now), createConf4Testing("bar" + now)};
-    FileSystem[] fs = new FileSystem[conf.length];
-
-    for(int i = 0; i < conf.length; i++) {
-      fs[i] = FileSystem.get(conf[i]);
-      assertEquals(fs[i], FileSystem.get(conf[i]));
-      for(int j = 0; j < i; j++) {
-        assertFalse(fs[j] == fs[i]);
+    {
+      long now = System.currentTimeMillis();
+      Configuration[] conf = {new Configuration(),
+          createConf4Testing("foo" + now), createConf4Testing("bar" + now)};
+      FileSystem[] fs = new FileSystem[conf.length];
+  
+      for(int i = 0; i < conf.length; i++) {
+        fs[i] = FileSystem.get(conf[i]);
+        assertEquals(fs[i], FileSystem.get(conf[i]));
+        for(int j = 0; j < i; j++) {
+          assertFalse(fs[j] == fs[i]);
+        }
+      }
+      FileSystem.closeAll();
+    }
+    
+    {
+      MiniDFSCluster cluster = null;
+      try {
+        cluster = new MiniDFSCluster(new Configuration(), 2, true, null);
+        URI uri = cluster.getFileSystem().getUri();
+        FileSystem.get(uri, new Configuration());
+        int n = Thread.activeCount();
+        for(int i = 0; i < 100; i++) {
+          FileSystem.get(uri, new Configuration());
+          assertTrue(n >= Thread.activeCount());
+        }
+      } finally {
+        cluster.shutdown(); 
       }
     }
-    FileSystem.closeAll();
   }
 }
