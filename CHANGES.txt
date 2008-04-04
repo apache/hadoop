@@ -512,6 +512,9 @@ Release 0.16.3 - Unreleased
     HADOOP-3010. Fix ConcurrentModificationException in ipc.Server.Responder.
     (rangadi)
 
+    HADOOP-3159. Avoid file system cache being overwritten whenever
+    configuration is modified. (Tsz Wo (Nicholas), SZE via hairong)
+
 Release 0.16.2 - 2008-04-02
 
   BUG FIXES
@@ -716,9 +719,6 @@ Release 0.16.1 - 2008-03-13
 
     HADOOP-2813. TestDU unit test uses its own directory to run its 
     sequence of tests.  (Mahadev Konar via dhruba)
-
-    HADOOP-3159. Avoid file system cache being overwritten whenever
-    configuration is modified. (Tsz Wo (Nicholas), SZE via hairong)
 
 Release 0.16.0 - 2008-02-07
 
