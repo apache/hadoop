@@ -57,6 +57,12 @@ public class TestFileCreation extends TestCase {
     return stm;
   }
 
+  private void flushFile(FSDataOutputStream stm) throws IOException {
+    DFSClient.DFSOutputStream dfstream = (DFSClient.DFSOutputStream)
+                                            (stm.getWrappedStream());
+    dfstream.fsync();
+  }
+
   //
   // writes to file but does not close it
   //
@@ -377,7 +383,7 @@ public class TestFileCreation extends TestCase {
 
       // write two full blocks.
       writeFile(stm, numBlocks * blockSize);
-      stm.flush();
+      flushFile(stm);
 
       // create another new file.
       //

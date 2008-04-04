@@ -2359,8 +2359,7 @@ class DFSClient implements FSConstants {
      * that data has been flushed to persistent store on the 
      * datanode. Block allocations are persisted on namenode.
      */
-    @Override
-    public synchronized void flush() throws IOException {
+    public synchronized void fsync() throws IOException {
       Packet savePacket = null;
       int position = 0;
       long saveOffset = 0;
