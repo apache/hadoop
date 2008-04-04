@@ -128,22 +128,12 @@ public class FsShell extends Configured implements Tool {
   void copyFromLocal(Path[] srcs, String dstf) throws IOException {
     Path dstPath = new Path(dstf);
     FileSystem dstFs = dstPath.getFileSystem(getConf());
-    dstFs.copyFromLocalFile(false, false, srcs, dstPath);
+    if (srcs.length == 1 && srcs[0].toString().equals("-"))
+      copyFromStdin(dstPath, dstFs);
+    else
+      dstFs.copyFromLocalFile(false, false, srcs, dstPath);
   }
   
-  /**
-   * Add a local file to the indicated FileSystem name. src is kept.
-   */
-  void copyFromLocal(Path src, String dstf) throws IOException {
-    if (src.toString().equals("-")) {
-      Path dstPath = new Path(dstf);
-      FileSystem dstFs = dstPath.getFileSystem(getConf());
-      copyFromStdin(dstPath, dstFs);
-    } else {
-      copyFromLocal(new Path[]{src}, dstf);
-    }
-  }
-
   /**
    * Add local files to the indicated FileSystem name. src is removed.
    */
