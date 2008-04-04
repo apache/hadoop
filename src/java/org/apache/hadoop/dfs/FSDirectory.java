@@ -467,6 +467,7 @@ class FSDirectory implements FSConstants {
     }
     synchronized(rootDir) {
       INode targetNode = rootDir.getNode(src);
+      assert targetNode != null : "should be taken care in isDir() above";
       if (((INodeDirectory)targetNode).getChildren().size() != 0) {
         dirNotEmpty = false;
       }
@@ -569,12 +570,12 @@ class FSDirectory implements FSConstants {
    * @throws IOException if file does not exist
    * @return object containing information regarding the file
    */
-  DFSFileInfo getFileInfo(String src) throws IOException {
+  DFSFileInfo getFileInfo(String src) throws FileNotFoundException {
     String srcs = normalizePath(src);
     synchronized (rootDir) {
       INode targetNode = rootDir.getNode(srcs);
       if (targetNode == null) {
-        throw new IOException("File does not exist: " + srcs);
+        throw new FileNotFoundException("File does not exist: " + srcs);
       }
       else {
         return new DFSFileInfo(srcs, targetNode);
@@ -707,7 +708,7 @@ class FSDirectory implements FSConstants {
     synchronized (rootDir) {
       INode targetNode = rootDir.getNode(srcs);
       if (targetNode == null) {
-        throw new IOException(src + " does not exist");
+        throw new FileNotFoundException("File does not exist: " + srcs);
       }
       else {
         return targetNode.computeContentSummary();

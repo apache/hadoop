@@ -27,7 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.*;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 
 import junit.framework.AssertionFailedError;
@@ -37,8 +36,6 @@ import junit.framework.TestCase;
 public class TestDFSPermission extends TestCase {
   public static final Log LOG = LogFactory.getLog(TestDFSPermission.class);
   final private static Configuration conf = new Configuration();
-  final private static String PERMISSION_EXCEPTION_NAME = 
-    AccessControlException.class.getName();
   
   final private static String GROUP1_NAME = "group1";
   final private static String GROUP2_NAME = "group2";
@@ -236,12 +233,8 @@ public class TestDFSPermission extends TestCase {
       fs.setOwner(path, owner, group);
       checkOwnership(path, expectedOwner, expectedGroup);
       assertFalse(expectDeny);
-    } catch (RemoteException e) {
-      if (PERMISSION_EXCEPTION_NAME.equals(e.getClassName())) {
-        assertTrue(expectDeny);
-      } else {
-        throw e;
-      }
+    } catch(AccessControlException e) {
+      assertTrue(expectDeny);
     }
   }
 
@@ -490,12 +483,8 @@ public class TestDFSPermission extends TestCase {
         try {
           call();
           assertFalse(expectPermissionDeny());
-        } catch (RemoteException e) {
-          if (PERMISSION_EXCEPTION_NAME.equals(e.getClassName())) {
-            assertTrue(expectPermissionDeny());
-          } else {
-            throw e; // re-throw
-          }
+        } catch(AccessControlException e) {
+          assertTrue(expectPermissionDeny());
         }
       } catch (AssertionFailedError ae) {
         logPermissions();
@@ -966,9 +955,6 @@ public class TestDFSPermission extends TestCase {
   }
   
   private void checkNoPermissionDeny(IOException e) {
-    if (e instanceof RemoteException) {
-      assertFalse(PERMISSION_EXCEPTION_NAME.equals((
-          (RemoteException)e).getClassName()));
-    }
+    assertFalse(e instanceof AccessControlException);
   }
 }

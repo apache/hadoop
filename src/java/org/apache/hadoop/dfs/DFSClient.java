@@ -22,6 +22,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.permission.AccessControlException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ipc.*;
 import org.apache.hadoop.net.NetUtils;
@@ -296,7 +297,17 @@ class DFSClient implements FSConstants {
     }
     return hints;
   }
-  
+
+  private LocatedBlocks callGetBlockLocations(String src, long start, 
+      long length) throws IOException {
+    try {
+      return namenode.getBlockLocations(src, start, length);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                    FileNotFoundException.class);
+    }
+  }
+
   /**
    * Get block location info about file
    * 
@@ -311,7 +322,7 @@ class DFSClient implements FSConstants {
    */
   public BlockLocation[] getBlockLocations(String src, long start, 
     long length) throws IOException {
-    LocatedBlocks blocks = namenode.getBlockLocations(src, start, length);
+    LocatedBlocks blocks = callGetBlockLocations(src, start, length);
     if (blocks == null) {
       return new BlockLocation[0];
     }
@@ -483,7 +494,11 @@ class DFSClient implements FSConstants {
   public boolean setReplication(String src, 
                                 short replication
                                 ) throws IOException {
-    return namenode.setReplication(src, replication);
+    try {
+      return namenode.setReplication(src, replication);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class);
+    }
   }
 
   /**
@@ -492,7 +507,11 @@ class DFSClient implements FSConstants {
    */
   public boolean rename(String src, String dst) throws IOException {
     checkOpen();
-    return namenode.rename(src, dst);
+    try {
+      return namenode.rename(src, dst);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class);
+    }
   }
 
   /**
@@ -512,7 +531,11 @@ class DFSClient implements FSConstants {
    */
   public boolean delete(String src, boolean recursive) throws IOException {
     checkOpen();
-    return namenode.delete(src, recursive);
+    try {
+      return namenode.delete(src, recursive);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class);
+    }
   }
   
   /** Implemented using getFileInfo(src)
@@ -540,12 +563,56 @@ class DFSClient implements FSConstants {
    */
   public DFSFileInfo[] listPaths(String src) throws IOException {
     checkOpen();
-    return namenode.getListing(src);
+    try {
+      return namenode.getListing(src);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class);
+    }
   }
 
   public DFSFileInfo getFileInfo(String src) throws IOException {
     checkOpen();
-    return namenode.getFileInfo(src);
+    try {
+      return namenode.getFileInfo(src);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class);
+    }
+  }
+
+  /**
+   * Set permissions to a file or directory.
+   * @param src path name.
+   * @param permission
+   * @throws <code>FileNotFoundException</code> is file does not exist.
+   */
+  public void setPermission(String src, FsPermission permission
+                            ) throws IOException {
+    checkOpen();
+    try {
+      namenode.setPermission(src, permission);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class);
+    }
+  }
+
+  /**
+   * Set file or directory owner.
+   * @param src path name.
+   * @param username user id.
+   * @param groupname user group.
+   * @throws <code>FileNotFoundException</code> is file does not exist.
+   */
+  public void setOwner(String src, String username, String groupname
+                      ) throws IOException {
+    checkOpen();
+    try {
+      namenode.setOwner(src, username, groupname);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class);
+    }
   }
 
   public DiskStatus getDiskStatus() throws IOException {
@@ -643,11 +710,20 @@ class DFSClient implements FSConstants {
     }
     FsPermission masked = permission.applyUMask(FsPermission.getUMask(conf));
     LOG.debug(src + ": masked=" + masked);
-    return namenode.mkdirs(src, masked);
+    try {
+      return namenode.mkdirs(src, masked);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class);
+    }
   }
 
   ContentSummary getContentSummary(String src) throws IOException {
-    return namenode.getContentSummary(src);
+    try {
+      return namenode.getContentSummary(src);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class);
+    }
   }
 
   /**
@@ -1063,7 +1139,7 @@ class DFSClient implements FSConstants {
      * Grab the open-file info from namenode
      */
     synchronized void openInfo() throws IOException {
-      LocatedBlocks newInfo = namenode.getBlockLocations(src, 0, prefetchSize);
+      LocatedBlocks newInfo = callGetBlockLocations(src, 0, prefetchSize);
       if (newInfo == null) {
         throw new IOException("Cannot open filename " + src);
       }
@@ -1122,7 +1198,7 @@ class DFSClient implements FSConstants {
         targetBlockIdx = LocatedBlocks.getInsertIndex(targetBlockIdx);
         // fetch more blocks
         LocatedBlocks newBlocks;
-        newBlocks = namenode.getBlockLocations(src, offset, prefetchSize);
+        newBlocks = callGetBlockLocations(src, offset, prefetchSize);
         assert (newBlocks != null) : "Could not find target position " + offset;
         locatedBlocks.insertRange(targetBlockIdx, newBlocks.getLocatedBlocks());
       }
@@ -1161,7 +1237,7 @@ class DFSClient implements FSConstants {
           blk = locatedBlocks.get(blockIdx);
         if (blk == null || curOff < blk.getStartOffset()) {
           LocatedBlocks newBlocks;
-          newBlocks = namenode.getBlockLocations(src, curOff, remaining);
+          newBlocks = callGetBlockLocations(src, curOff, remaining);
           locatedBlocks.insertRange(blockIdx, newBlocks.getLocatedBlocks());
           continue;
         }
@@ -2114,8 +2190,12 @@ class DFSClient implements FSConstants {
       chunksPerPacket = Math.min(chunksPerBlock, 128);
       packetSize = chunkSize * chunksPerPacket;
 
-      namenode.create(
-          src, masked, clientName, overwrite, replication, blockSize);
+      try {
+        namenode.create(
+            src, masked, clientName, overwrite, replication, blockSize);
+      } catch(RemoteException re) {
+        throw re.unwrapRemoteException(AccessControlException.class);
+      }
       streamer = new DataStreamer();
       streamer.setDaemon(true);
       streamer.start();

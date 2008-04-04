@@ -40,6 +40,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.dfs.DistributedFileSystem;
@@ -982,7 +983,6 @@ public class FsShell extends Configured implements Tool {
     //
     if (argv.length > 3) {
       Path dst = new Path(dest);
-      FileSystem dstFs = dst.getFileSystem(getConf());
       if (!fs.isDirectory(dst)) {
         throw new IOException("When copying multiple files, " 
                               + "destination " + dest + " should be a directory.");
@@ -1091,7 +1091,6 @@ public class FsShell extends Configured implements Tool {
     CommandFormat c = new CommandFormat("tail", 1, 1, "f");
     String src = null;
     Path path = null;
-    short rep = 0;
 
     try {
       List<String> parameters = c.parse(cmd, pos);
@@ -1213,9 +1212,11 @@ public class FsShell extends Configured implements Tool {
             errors += runCmdHandler(handler, file, srcFs, recursive);
           }
         } catch (IOException e) {
-          System.err.println(handler.getName() + 
-                             ": could not get status for '" + path + "': " +
-                             e.getMessage().split("\n")[0]);        
+          String msg = (e.getMessage() != null ? e.getLocalizedMessage() :
+            (e.getCause().getMessage() != null ? 
+                e.getCause().getLocalizedMessage() : "null"));
+          System.err.println(handler.getName() + ": could not get status for '"
+                                        + path + "': " + msg.split("\n")[0]);        
         }
       }
     }
@@ -1350,10 +1351,12 @@ public class FsShell extends Configured implements Tool {
     String cat = "-cat <src>: \tFetch all files that match the file pattern <src> \n" +
       "\t\tand display their content on stdout.\n";
 
+    /*
     String text = "-text <path>: Attempt to decode contents if the first few bytes\n" +
       "\t\tmatch a magic number associated with a known format\n" +
       "\t\t(gzip, SequenceFile)\n";
-        
+    */
+
     String copyToLocal = COPYTOLOCAL_SHORT_USAGE
                          + ":  Identical to the -get command.\n";
 

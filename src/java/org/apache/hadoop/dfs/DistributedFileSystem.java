@@ -23,7 +23,6 @@ import java.net.*;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.*;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
 import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
@@ -127,20 +126,8 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-    try {
-      return new DFSClient.DFSDataInputStream(
+    return new DFSClient.DFSDataInputStream(
           dfs.open(getPathName(f), bufferSize, verifyChecksum, statistics));
-    } catch(RemoteException e) {
-      if (IOException.class.getName().equals(e.getClassName()) &&
-          e.getMessage().startsWith(
-              "java.io.IOException: Cannot open filename")) {
-          // non-existent path
-          FileNotFoundException ne = new FileNotFoundException("File " + f + " does not exist.");
-          throw (FileNotFoundException) ne.initCause(e);
-      } else {
-        throw e;      // unexpected exception
-      }
-    }
   }
 
   public FSDataOutputStream create(Path f, FsPermission permission,
@@ -376,33 +363,13 @@ public class DistributedFileSystem extends FileSystem {
       return p.info;
     }
     
-    try {
-      DFSFileInfo p = dfs.getFileInfo(getPathName(f));
-      return p;
-    } catch (RemoteException e) {
-      if (IOException.class.getName().equals(e.getClassName()) &&
-          e.getMessage().startsWith(
-              "java.io.IOException: File does not exist: ")) {
-        // non-existent path
-        FileNotFoundException fe = new FileNotFoundException("File " + f + " does not exist.");
-        throw (FileNotFoundException) fe.initCause(e); 
-      } else {
-        throw e;      // unexpected exception
-      }
-    }
+    return dfs.getFileInfo(getPathName(f));
   }
 
   /** {@inheritDoc }*/
   public void setPermission(Path p, FsPermission permission
       ) throws IOException {
-    try {
-      dfs.namenode.setPermission(getPathName(p), permission);
-    } catch(RemoteException re) {
-      if(FileNotFoundException.class.getName().equals(re.getClassName())) {
-        throw new FileNotFoundException("File does not exist: " + p);
-      }
-      throw re;
-    }
+    dfs.setPermission(getPathName(p), permission);
   }
 
   /** {@inheritDoc }*/
@@ -411,13 +378,6 @@ public class DistributedFileSystem extends FileSystem {
     if (username == null && groupname == null) {
       throw new IOException("username == null && groupname == null");
     }
-    try {
-      dfs.namenode.setOwner(getPathName(p), username, groupname);
-    } catch(RemoteException re) {
-      if(FileNotFoundException.class.getName().equals(re.getClassName())) {
-        throw new FileNotFoundException("File does not exist: " + p);
-      }
-      throw re;
-    }
+    dfs.setOwner(getPathName(p), username, groupname);
   }
 }

@@ -27,7 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.*;
-import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 
 import junit.framework.TestCase;
@@ -47,9 +47,6 @@ public class TestPermission extends TestCase {
   final private static Path CHILD_FILE2 = new Path(ROOT_PATH, "file2");
 
   final private static int FILE_LEN = 100;
-  final private static String PERMISSION_EXCEPTION_NAME =
-    AccessControlException.class.getName();
-
   final private static String USER_NAME = "Who";
   final private static String GROUP1_NAME = "group1";
   final private static String GROUP2_NAME = "group2";
@@ -71,11 +68,13 @@ public class TestPermission extends TestCase {
     Configuration conf = new Configuration();
     conf.setBoolean("dfs.permissions", true);
     conf.setInt(FsPermission.UMASK_LABEL, 0);
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
-    cluster.waitActive();
-    FileSystem fs = FileSystem.get(conf);
+    MiniDFSCluster cluster = null;
+    FileSystem fs = null;
 
     try {
+      cluster = new MiniDFSCluster(conf, 3, true, null);
+      cluster.waitActive();
+      fs = FileSystem.get(conf);
       FsPermission rootPerm = checkPermission(fs, "/", null);
       FsPermission inheritPerm = FsPermission.createImmutable(
           (short)(rootPerm.toShort() | 0300));
@@ -104,10 +103,17 @@ public class TestPermission extends TestCase {
           new FsPermission(permission));
       checkPermission(fs, "/c1", permission);
       checkPermission(fs, "/c1/c2.txt", permission);
-    }
-    finally {
-      try{fs.close();} catch(Exception e) {}
-      try{cluster.shutdown();} catch(Exception e) {}
+    } finally {
+      try {
+        if(fs != null) fs.close();
+      } catch(Exception e) {
+        LOG.error(StringUtils.stringifyException(e));
+      }
+      try {
+        if(cluster != null) cluster.shutdown();
+      } catch(Exception e) {
+        LOG.error(StringUtils.stringifyException(e));
+      }
     }
   }
 
@@ -148,11 +154,13 @@ public class TestPermission extends TestCase {
       // following read is legal
       byte dataIn[] = new byte[FILE_LEN];
       FSDataInputStream fin = fs.open(CHILD_FILE1);
-      fin.read(dataIn);
+      int bytesRead = fin.read(dataIn);
+      assertTrue(bytesRead == FILE_LEN);
       for(int i=0; i<FILE_LEN; i++) {
         assertEquals(data[i], dataIn[i]);
       }
       fs.close();
+      fs = null;
 
       // test illegal file/dir creation
       UnixUserGroupInformation userGroupInfo = new UnixUserGroupInformation(
@@ -173,10 +181,17 @@ public class TestPermission extends TestCase {
 
       // illegal file open
       assertTrue(!canOpen(fs, CHILD_FILE1));
-    }
-    finally {
-      try{fs.close();} catch(Exception e) {}
-      try{cluster.shutdown();} catch(Exception e) {}
+    } finally {
+      try {
+        if(fs != null) fs.close();
+      } catch(Exception e) {
+        LOG.error(StringUtils.stringifyException(e));
+      }
+      try {
+        if(cluster != null) cluster.shutdown();
+      } catch(Exception e) {
+        LOG.error(StringUtils.stringifyException(e));
+      }
     }
   }
 
@@ -184,8 +199,7 @@ public class TestPermission extends TestCase {
     try {
       fs.mkdirs(p);
       return true;
-    } catch(RemoteException e) {
-      assertEquals(PERMISSION_EXCEPTION_NAME, e.getClassName());
+    } catch(AccessControlException e) {
       return false;
     }
   }
@@ -194,8 +208,7 @@ public class TestPermission extends TestCase {
     try {
       fs.create(p);
       return true;
-    } catch(RemoteException e) {
-      assertEquals(PERMISSION_EXCEPTION_NAME, e.getClassName());
+    } catch(AccessControlException e) {
       return false;
     }
   }
@@ -204,8 +217,7 @@ public class TestPermission extends TestCase {
     try {
       fs.open(p);
       return true;
-    } catch(RemoteException e) {
-      assertEquals(PERMISSION_EXCEPTION_NAME, e.getClassName());
+    } catch(AccessControlException e) {
       return false;
     }
   }

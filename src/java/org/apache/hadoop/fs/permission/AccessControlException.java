@@ -25,6 +25,12 @@ public class AccessControlException extends java.io.IOException {
   private static final long serialVersionUID = 1L;
 
   /**
+   * Default constructor is needed for unwrapping from 
+   * {@link org.apache.hadoop.ipc.RemoteException}.
+   */
+  public AccessControlException() {}
+
+  /**
    * Constructs an {@link AccessControlException}
    * with the specified detail message.
    * @param s the detail message.

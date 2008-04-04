@@ -206,6 +206,9 @@ Trunk (unreleased changes)
     HADOOP-3099. Add an option to distcp to preserve user, group, and
     permission information. (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HADOOP-2841. Unwrap AccessControlException and FileNotFoundException
+    from RemoteException for DFSClient. (shv)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing

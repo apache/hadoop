@@ -31,4 +31,55 @@ public class RemoteException extends IOException {
   public String getClassName() {
     return className;
   }
+
+  /**
+   * If this remote exception wraps up one of the lookupTypes
+   * then return this exception.
+   * <p>
+   * Unwraps any IOException that has a default constructor.
+   * 
+   * @param lookupTypes the desired exception class.
+   * @return IOException, which is either the lookupClass exception or this.
+   */
+  public IOException unwrapRemoteException(Class... lookupTypes) {
+    if(lookupTypes == null)
+      return this;
+    for(Class lookupClass : lookupTypes) {
+      if(!IOException.class.isAssignableFrom(lookupClass))
+        continue;
+      if(lookupClass.getName().equals(getClassName())) {
+        try {
+          IOException ex = (IOException)lookupClass.newInstance();
+          ex.initCause(this);
+          return ex;
+        } catch(Exception e) {
+          // cannot instantiate lookupClass, just return this
+          return this;
+        }
+      } 
+    }
+    return this;
+  }
+
+  /**
+   * If this remote exception wraps an IOException that has a default
+   * contructor then instantiate and return the original exception.
+   * Otherwise return this.
+   * 
+   * @return IOException
+   */
+  public IOException unwrapRemoteException() {
+    IOException ex;
+    try {
+      Class realClass = Class.forName(getClassName());
+      if(!IOException.class.isAssignableFrom(realClass))
+        return this;
+      ex = (IOException)realClass.newInstance();
+      ex.initCause(this);
+      return ex;
+    } catch(Exception e) {
+      // cannot instantiate the original exception, just throw this
+    }
+    return this;
+  }
 }
