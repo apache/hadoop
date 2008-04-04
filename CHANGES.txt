@@ -83,6 +83,9 @@ Trunk (unreleased changes)
     availability zone as the cluster.  Ganglia monitoring and large
     instance sizes have also been added.  (Chris K Wensel via tomwhite)
 
+    HADOOP-2826. Deprecated FileSplit.getFile(), LineRecordReader.readLine().
+    (Amareshwari Sriramadasu via ddas)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)

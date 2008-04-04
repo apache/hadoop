@@ -35,6 +35,8 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.LineRecordReader.LineReader;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
@@ -190,14 +192,14 @@ public class TestStreamedMerge extends TestCase {
     public void run() {
       try {
         in_ = connectInputStream();
-        while (true) {
-          byte[] b = UTF8ByteArrayUtils.readLine(in_);
-          if (b == null) {
-            break;
-          }
-          buf_.append(new String(b, "UTF-8"));
+        LineReader lineReader = new LineReader((InputStream)in_, conf_);
+        Text line = new Text();
+        while (lineReader.readLine(line) > 0) {
+          buf_.append(line.toString());
           buf_.append('\n');
+          line.clear();
         }
+        lineReader.close();
         in_.close();
       } catch (IOException io) {
         throw new RuntimeException(io);

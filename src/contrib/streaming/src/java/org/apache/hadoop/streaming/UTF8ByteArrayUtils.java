@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.streaming;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapred.LineRecordReader;
+import org.apache.hadoop.mapred.LineRecordReader.LineReader;
 
 /**
  * General utils for byte array containing UTF-8 encoded strings
@@ -67,12 +65,12 @@ public class UTF8ByteArrayUtils {
    * Find the nth occurrence of the given byte b in a UTF-8 encoded string
    * @param utf a byte array containing a UTF-8 encoded string
    * @param start starting offset
-   * @param end ending position
+   * @param length the length of byte array
    * @param b the byte to find
    * @param n the desired occurrence of the given byte
    * @return position that nth occurrence of the given byte if exists; otherwise -1
    */
-  private static int findNthByte(byte [] utf, int start, int length, byte b, int n) {
+  public static int findNthByte(byte [] utf, int start, int length, byte b, int n) {
     int pos = -1;
     int nextStart = start;
     for (int i = 0; i < n; i++) {
@@ -148,16 +146,14 @@ public class UTF8ByteArrayUtils {
     
   /**
    * Read a utf8 encoded line from a data input stream. 
-   * @param in data input stream
-   * @return a byte array containing the line 
+   * @param lineReader LineReader to read the line from.
+   * @param out Text to read into
+   * @return number of bytes read 
    * @throws IOException
    */
-  public static byte [] readLine(InputStream in) throws IOException {
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    long bytes = LineRecordReader.readLine(in, baos);
-    baos.close();
-    if (bytes <= 0)
-      return null;
-    return baos.toByteArray();
+  public static int readLine(LineReader lineReader, Text out) 
+  throws IOException {
+    out.clear();
+    return lineReader.readLine(out);
   }
 }

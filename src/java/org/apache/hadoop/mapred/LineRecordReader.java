@@ -74,7 +74,7 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
      * @param conf configuration
      * @throws IOException
      */
-    LineReader(InputStream in, Configuration conf) throws IOException {
+    public LineReader(InputStream in, Configuration conf) throws IOException {
       this(in, conf.getInt("io.file.buffer.size", DEFAULT_BUFFER_SIZE));
     }
 
@@ -220,43 +220,6 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
     return false;
   }
 
-  /**
-   * @deprecated
-   */
-  public static long readLine(InputStream in, 
-                              OutputStream out) throws IOException {
-    long bytes = 0;
-    while (true) {
-      
-      int b = in.read();
-      if (b == -1) {
-        break;
-      }
-      bytes += 1;
-      
-      byte c = (byte)b;
-      if (c == '\n') {
-        break;
-      }
-      
-      if (c == '\r') {
-        in.mark(1);
-        byte nextC = (byte)in.read();
-        if (nextC != '\n') {
-          in.reset();
-        } else {
-          bytes += 1;
-        }
-        break;
-      }
-      
-      if (out != null) {
-        out.write(c);
-      }
-    }
-    return bytes;
-  }
-  
   /**
    * Get the progress within the split
    */

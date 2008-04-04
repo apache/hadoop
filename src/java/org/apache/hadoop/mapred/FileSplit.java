@@ -63,9 +63,6 @@ public class FileSplit implements InputSplit {
     this.hosts = hosts;
   }
 
-  /** @deprecated Call {@link #getPath()} instead. */
-  public File getFile() { return new File(file.toString()); }
-  
   /** The file containing this split's data. */
   public Path getPath() { return file; }
   

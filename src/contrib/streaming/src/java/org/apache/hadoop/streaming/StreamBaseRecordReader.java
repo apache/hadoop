@@ -52,7 +52,7 @@ public abstract class StreamBaseRecordReader implements RecordReader<Text, Text>
     start_ = split_.getStart();
     length_ = split_.getLength();
     end_ = start_ + length_;
-    splitName_ = split_.getFile().getName();
+    splitName_ = split_.getPath().getName();
     reporter_ = reporter;
     job_ = job;
     fs_ = fs;
@@ -128,8 +128,8 @@ public abstract class StreamBaseRecordReader implements RecordReader<Text, Text>
     } else {
       recStr = record.toString();
     }
-    String unqualSplit = split_.getFile().getName() + ":" + split_.getStart() + "+"
-      + split_.getLength();
+    String unqualSplit = split_.getPath().getName() + ":" +
+                         split_.getStart() + "+" + split_.getLength();
     String status = "HSTR " + StreamUtil.HOST + " " + numRec_ + ". pos=" + pos + " " + unqualSplit
       + " Processing record=" + recStr;
     status += " " + splitName_;

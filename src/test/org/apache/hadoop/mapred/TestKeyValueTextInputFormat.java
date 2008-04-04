@@ -26,6 +26,7 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.io.compress.*;
+import org.apache.hadoop.mapred.LineRecordReader.LineReader;
 import org.apache.hadoop.util.ReflectionUtils;
 
 public class TestKeyValueTextInputFormat extends TestCase {
@@ -128,48 +129,39 @@ public class TestKeyValueTextInputFormat extends TestCase {
 
     }
   }
-
-  private InputStream makeStream(String str) throws IOException {
-    Text text = new Text(str);
-    return new ByteArrayInputStream(text.getBytes(), 0, text.getLength());
+  private LineReader makeStream(String str) throws IOException {
+    return new LineRecordReader.LineReader(new ByteArrayInputStream
+                                           (str.getBytes("UTF-8")), 
+                                           defaultConf);
   }
   
   public void testUTF8() throws Exception {
-    InputStream in = makeStream("abcd\u20acbdcd\u20ac");
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    LineRecordReader.readLine(in, out);
+    LineReader in = makeStream("abcd\u20acbdcd\u20ac");
     Text line = new Text();
-    line.set(out.toByteArray());
+    in.readLine(line);
     assertEquals("readLine changed utf8 characters", 
                  "abcd\u20acbdcd\u20ac", line.toString());
     in = makeStream("abc\u200axyz");
-    out.reset();
-    LineRecordReader.readLine(in, out);
-    line.set(out.toByteArray());
+    in.readLine(line);
     assertEquals("split on fake newline", "abc\u200axyz", line.toString());
   }
 
   public void testNewLines() throws Exception {
-    InputStream in = makeStream("a\nbb\n\nccc\rdddd\r\neeeee");
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    LineRecordReader.readLine(in, out);
-    assertEquals("line1 length", 1, out.size());
-    out.reset();
-    LineRecordReader.readLine(in, out);
-    assertEquals("line2 length", 2, out.size());
-    out.reset();
-    LineRecordReader.readLine(in, out);
-    assertEquals("line3 length", 0, out.size());
-    out.reset();
-    LineRecordReader.readLine(in, out);
-    assertEquals("line4 length", 3, out.size());
-    out.reset();
-    LineRecordReader.readLine(in, out);
-    assertEquals("line5 length", 4, out.size());
-    out.reset();
-    LineRecordReader.readLine(in, out);
-    assertEquals("line5 length", 5, out.size());
-    assertEquals("end of file", 0, LineRecordReader.readLine(in, out));
+    LineReader in = makeStream("a\nbb\n\nccc\rdddd\r\neeeee");
+    Text out = new Text();
+    in.readLine(out);
+    assertEquals("line1 length", 1, out.getLength());
+    in.readLine(out);
+    assertEquals("line2 length", 2, out.getLength());
+    in.readLine(out);
+    assertEquals("line3 length", 0, out.getLength());
+    in.readLine(out);
+    assertEquals("line4 length", 3, out.getLength());
+    in.readLine(out);
+    assertEquals("line5 length", 4, out.getLength());
+    in.readLine(out);
+    assertEquals("line5 length", 5, out.getLength());
+    assertEquals("end of file", 0, in.readLine(out));
   }
   
   private static void writeFile(FileSystem fs, Path name, 
