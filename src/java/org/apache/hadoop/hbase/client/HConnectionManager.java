@@ -417,7 +417,7 @@ public class HConnectionManager implements HConstants {
           }
 
           if (regionInfo.isOffline()) {
-            throw new IllegalStateException("region offline: " + 
+            throw new RegionOfflineException("region offline: " + 
               regionInfo.getRegionName());
           }
           
@@ -437,15 +437,6 @@ public class HConnectionManager implements HConstants {
           cacheLocation(tableName, location);
 
           return location;
-        } catch (IllegalStateException e) {
-          if (tries < numRetries - 1) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("reloading table servers because: " + e.getMessage());
-            }
-            relocateRegion(parentTable, metaKey);
-          } else {
-            throw e;
-          }
         } catch (TableNotFoundException e) {
           // if we got this error, probably means the table just plain doesn't
           // exist. rethrow the error immediately. this should always be coming
