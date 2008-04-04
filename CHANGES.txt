@@ -464,6 +464,9 @@ Trunk (unreleased changes)
     HADOOP-3123. Fix the native library build scripts to work on Solaris.
     (tomwhite via omalley)
 
+    HADOOP-3089.  Streaming should accept stderr from task before
+    first key arrives.  (Rick Cox via tomwhite)
+
 Release 0.16.2 - 2008-04-02
 
   BUG FIXES

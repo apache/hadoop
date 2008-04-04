@@ -188,6 +188,8 @@ public abstract class PipeMapRed {
       clientErr_ = new DataInputStream(new BufferedInputStream(sim.getErrorStream()));
       startTime_ = System.currentTimeMillis();
 
+      errThread_ = new MRErrorThread();
+      errThread_.start();
     } catch (Exception e) {
       logStackTrace(e);
       LOG.error("configuration exception", e);
@@ -318,8 +320,7 @@ public abstract class PipeMapRed {
   void startOutputThreads(OutputCollector output, Reporter reporter) {
     outThread_ = new MROutputThread(output, reporter);
     outThread_.start();
-    errThread_ = new MRErrorThread(reporter);
-    errThread_.start();
+    errThread_.setReporter(reporter);
   }
 
   void waitOutputThreads() {
@@ -423,11 +424,14 @@ public abstract class PipeMapRed {
 
   class MRErrorThread extends Thread {
 
-    public MRErrorThread(Reporter reporter) {
-      this.reporter = reporter;
+    public MRErrorThread() {
       setDaemon(true);
     }
-
+    
+    public void setReporter(Reporter reporter) {
+      this.reporter = reporter;
+    }
+      
     public void run() {
       byte[] line;
       try {
@@ -435,7 +439,7 @@ public abstract class PipeMapRed {
           String lineStr = new String(line, "UTF-8");
           System.err.println(lineStr);
           long now = System.currentTimeMillis(); 
-          if (now-lastStderrReport > reporterErrDelay_) {
+          if (reporter != null && now-lastStderrReport > reporterErrDelay_) {
             lastStderrReport = now;
             reporter.progress();
           }
@@ -459,7 +463,7 @@ public abstract class PipeMapRed {
       }
     }
     long lastStderrReport = 0;
-    Reporter reporter;
+    volatile Reporter reporter;
   }
 
   public void mapRedFinished() {
