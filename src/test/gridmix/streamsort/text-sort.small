@@ -5,7 +5,7 @@ GRID_DIR=`cd "$GRID_DIR"; pwd`
 source $GRID_DIR/../gridmix-env
 
 NUM_OF_REDUCERS=$NUM_OF_REDUCERS_FOR_SMALL_JOB
-INDIR=${VARINFLTEXT}/part-00000,${VARINFLTEXT}/part-00001,${VARINFLTEXT}/part-00002
+INDIR="${VARINFLTEXT}/{part-00000,part-00001,part-00002}"
 Date=`date +%F-%H-%M-%S`
 
 OUTDIR=perf-out/stream-out-dir-small_$Date

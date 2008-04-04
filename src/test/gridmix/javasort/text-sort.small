@@ -4,7 +4,7 @@ GRID_DIR=`dirname "$0"`
 GRID_DIR=`cd "$GRID_DIR"; pwd`
 source $GRID_DIR/../gridmix-env
 
-INDIR=${VARINFLTEXT}/part-00000,${VARINFLTEXT}/part-00001,${VARINFLTEXT}/part-00002
+INDIR="${VARINFLTEXT}/{part-00000,part-00001,part-00002}"
 Date=`date +%F-%H-%M-%S`
 
 OUTDIR=perf-out/sort-out-dir-small_$Date

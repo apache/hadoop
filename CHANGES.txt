@@ -508,6 +508,9 @@ Trunk (unreleased changes)
     HADOOP-3044. NNBench sets the right configuration for the mapper.
     (Hairong Kuang)
 
+    HADOOP-3178. Fix GridMix scripts for small and medium jobs
+    to handle input paths differently. (Mukund Madhugiri via nigel)
+
 Release 0.16.3 - Unreleased
 
   BUG FIXES

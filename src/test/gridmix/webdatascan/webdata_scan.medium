@@ -5,7 +5,7 @@ GRID_DIR=`cd "$GRID_DIR"; pwd`
 source $GRID_DIR/../gridmix-env
 
 NUM_OF_REDUCERS=1
-INDIR=${VARCOMPSEQ}/part-000*0,${VARCOMPSEQ}/part-000*1,${VARCOMPSEQ}/part-000*2
+INDIR="${VARCOMPSEQ}/{part-000*0,part-000*1,part-000*2}"
 Date=`date +%F-%H-%M-%S`
 
 OUTDIR=perf-out/webdata-scan-out-dir-medium_$Date

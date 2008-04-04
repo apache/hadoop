@@ -5,7 +5,7 @@ GRID_DIR=`cd "$GRID_DIR"; pwd`
 source $GRID_DIR/../gridmix-env
 
 NUM_OF_REDUCERS=$NUM_OF_REDUCERS_FOR_MEDIUM_JOB
-INDIR=${FIXCOMPSEQ}/part-000*0,${FIXCOMPSEQ}/part-000*1,${FIXCOMPSEQ}/part-000*2
+INDIR="${FIXCOMPSEQ}/{part-000*0,part-000*1,part-000*2}"
 Date=`date +%F-%H-%M-%S`
 
 OUTDIR=perf-out/mq-out-dir-medium_$Date.1
