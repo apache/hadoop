@@ -112,7 +112,7 @@ Trunk (unreleased changes)
     read and written to HDFS, S3, KFS, and local file systems. (omalley)
 
     HADOOP-3048.  A new Interface and a default implementation to convert 
-    and restore serializaztions of objects to strings. (enis)
+    and restore serializations of objects to/from strings. (enis)
 
   IMPROVEMENTS
 
