@@ -161,6 +161,10 @@ public class TestPermission extends TestCase {
           userGroupInfo.toString());
       fs = FileSystem.get(conf);
 
+      // make sure mkdir of a existing directory that is not owned by 
+      // this user does not throw an exception.
+      fs.mkdirs(CHILD_DIR1);
+      
       // illegal mkdir
       assertTrue(!canMkdirs(fs, CHILD_DIR2));
 

@@ -1605,6 +1605,14 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private synchronized boolean mkdirsInternal(String src,
       PermissionStatus permissions) throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
+    if (isPermissionEnabled) {
+      checkTraverse(src);
+    }
+    if (dir.isDir(src)) {
+      // all the users of mkdirs() are used to expect 'true' even if
+      // a new directory is not created.
+      return true;
+    }
     if (isInSafeMode())
       throw new SafeModeException("Cannot create directory " + src, safeMode);
     if (!isValidName(src)) {

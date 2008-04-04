@@ -485,6 +485,9 @@ Trunk (unreleased changes)
     HADOOP-3165. -put/-copyFromLocal did not treat input file "-" as stdin.
     (Lohit Vijayarenu via rangadi)
 
+    HADOOP-3138. DFS mkdirs() should not throw an exception if the directory
+    already exists. (rangadi)
+
 Release 0.16.2 - 2008-04-02
 
   BUG FIXES
