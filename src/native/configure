@@ -19516,11 +19516,11 @@ if test "${ac_cv_libname_z+set}" = set; then
 else
 
   echo 'int main(int argc, char **argv){return 0;}' > conftest.c
-  if test -z "`${CC} -o conftest conftest.c -lz 2>&1`"; then
-        if test ! -z "`which objdump`"; then
+  if test -z "`${CC} ${LDFLAGS} -o conftest conftest.c -lz 2>&1`"; then
+        if test ! -z "`which objdump | grep -v 'no objdump'`"; then
       ac_cv_libname_z="`objdump -p conftest | grep NEEDED | grep z | sed 's/\W*NEEDED\W*\(.*\)\W*$/\"\1\"/'`"
-    elif test ! -z "`which ldd`"; then
-      ac_cv_libname_z="`ldd conftest | grep z | sed 's/^\W*\(\w*z\.\w*\(\.\w*\)\?\)\W*=>.*$/\"\1\"/'`"
+    elif test ! -z "`which ldd | grep -v 'no ldd'`"; then
+      ac_cv_libname_z="`ldd conftest | grep z | sed 's/^[^A-Za-z0-9]*\([A-Za-z0-9\.]*\)[^A-Za-z0-9]*=>.*$/\"\1\"/'`"
     else
       { { echo "$as_me:$LINENO: error: Can't find either 'objdump' or 'ldd' to compute the dynamic library for '-lz'" >&5
 echo "$as_me: error: Can't find either 'objdump' or 'ldd' to compute the dynamic library for '-lz'" >&2;}
@@ -19712,11 +19712,11 @@ if test "${ac_cv_libname_lzo2+set}" = set; then
 else
 
   echo 'int main(int argc, char **argv){return 0;}' > conftest.c
-  if test -z "`${CC} -o conftest conftest.c -llzo2 2>&1`"; then
-        if test ! -z "`which objdump`"; then
+  if test -z "`${CC} ${LDFLAGS} -o conftest conftest.c -llzo2 2>&1`"; then
+        if test ! -z "`which objdump | grep -v 'no objdump'`"; then
       ac_cv_libname_lzo2="`objdump -p conftest | grep NEEDED | grep lzo2 | sed 's/\W*NEEDED\W*\(.*\)\W*$/\"\1\"/'`"
-    elif test ! -z "`which ldd`"; then
-      ac_cv_libname_lzo2="`ldd conftest | grep lzo2 | sed 's/^\W*\(\w*z\.\w*\(\.\w*\)\?\)\W*=>.*$/\"\1\"/'`"
+    elif test ! -z "`which ldd | grep -v 'no ldd'`"; then
+      ac_cv_libname_lzo2="`ldd conftest | grep lzo2 | sed 's/^[^A-Za-z0-9]*\([A-Za-z0-9\.]*\)[^A-Za-z0-9]*=>.*$/\"\1\"/'`"
     else
       { { echo "$as_me:$LINENO: error: Can't find either 'objdump' or 'ldd' to compute the dynamic library for '-llzo2'" >&5
 echo "$as_me: error: Can't find either 'objdump' or 'ldd' to compute the dynamic library for '-llzo2'" >&2;}

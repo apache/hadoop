@@ -458,6 +458,9 @@ Trunk (unreleased changes)
     HADOOP-2927. Fix TestDU to acurately calculate the expected file size.
     (shv via nigel)
 
+    HADOOP-3123. Fix the native library build scripts to work on Solaris.
+    (tomwhite via omalley)
+
 Release 0.16.2 - 2008-04-02
 
   BUG FIXES

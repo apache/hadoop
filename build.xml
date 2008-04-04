@@ -119,6 +119,7 @@
   <property name="svn.cmd" value="svn"/>
   <property name="grep.cmd" value="grep"/>
   <property name="patch.cmd" value="patch"/>
+  <property name="make.cmd" value="make"/>
 
 
   <available property="clover.present" classname="com.cenqua.clover.tasks.CloverReportTask" />
@@ -348,7 +349,7 @@
 	  <arg line="${native.src.dir}/configure"/>
     </exec>
 
-    <exec dir="${build.native}" executable="make" failonerror="true">
+    <exec dir="${build.native}" executable="${make.cmd}" failonerror="true">
       <env key="OS_NAME" value="${os.name}"/>
       <env key="OS_ARCH" value="${os.arch}"/>
   	  <env key="JVM_DATA_MODEL" value="${sun.arch.data.model}"/>
@@ -907,7 +908,7 @@
   <!-- ================================================================== -->
   <target name="compile-libhdfs" depends="init">
     <mkdir dir="${build.libhdfs}"/>
-    <exec dir="${libhdfs.src}" executable="make" failonerror="true">
+    <exec dir="${libhdfs.src}" executable="${make.cmd}" failonerror="true">
       <env key="OS_NAME" value="${os.name}"/>
       <env key="OS_ARCH" value="${os.arch}"/>
       <env key="SHLIB_VERSION" value="${libhdfs.version}"/>
@@ -921,7 +922,7 @@
     <mkdir dir="${libhdfs.test.dir}/logs"/>
     <mkdir dir="${libhdfs.test.dir}/dfs/name"/>
 
-    <exec dir="${libhdfs.src}" executable="make" failonerror="true">
+    <exec dir="${libhdfs.src}" executable="${make.cmd}" failonerror="true">
         <env key="OS_NAME" value="${os.name}"/>
         <env key="OS_ARCH" value="${os.arch}"/>
         <env key="SHLIB_VERSION" value="${libhdfs.version}"/>
@@ -934,14 +935,14 @@
   </target>
 	
   <target name="clean-libhdfs">
-    <exec dir="${libhdfs.src}" executable="make">
+    <exec dir="${libhdfs.src}" executable="${make.cmd}">
       <env key="LIBHDFS_BUILD_DIR" value="${build.libhdfs}"/>
     	<arg value="clean"/>
     </exec>
   </target>
 
   <target name="doc-libhdfs" depends="compile-libhdfs">
-	<exec dir="${libhdfs.src}" executable="make">
+	<exec dir="${libhdfs.src}" executable="${make.cmd}">
 	  <arg value="doc"/>
 	</exec>
   </target>
@@ -1003,7 +1004,7 @@
 
   <target name="compile-c++-utils" depends="create-c++-utils-makefile"
                                    if="compile.c++">
-    <exec executable="make" dir="${build.c++.utils}" searchpath="yes" 
+    <exec executable="${make.cmd}" dir="${build.c++.utils}" searchpath="yes" 
           failonerror="yes">
       <arg  value="install"/>
     </exec>
@@ -1021,7 +1022,7 @@
   <target name="compile-c++-pipes" 
           depends="create-c++-pipes-makefile,compile-c++-utils"
           if="compile.c++">
-    <exec executable="make" dir="${build.c++.pipes}" searchpath="yes" 
+    <exec executable="${make.cmd}" dir="${build.c++.pipes}" searchpath="yes" 
           failonerror="yes">
       <arg value="install"/>
     </exec>
@@ -1046,7 +1047,7 @@
   <target name="compile-c++-examples-pipes" 
           depends="create-c++-examples-pipes-makefile,compile-c++-pipes"
           if="compile.c++">
-    <exec executable="make" dir="${build.c++.examples.pipes}" searchpath="yes" 
+    <exec executable="${make.cmd}" dir="${build.c++.examples.pipes}" searchpath="yes" 
           failonerror="yes">
       <arg  value="install"/>
     </exec>
