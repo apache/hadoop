@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.util.Sleeper;
 
 /**
  * Abstract base class for operations that need to examine all HRegionInfo 
@@ -53,9 +54,11 @@ abstract class TableOperation implements HConstants {
   protected Set<HRegionInfo> unservedRegions;
   protected HMaster master;
   protected final int numRetries;
+  protected final Sleeper sleeper;
   
   protected TableOperation(final HMaster master, final Text tableName) 
   throws IOException {
+    this.sleeper = master.sleeper;
     this.numRetries = master.numRetries;
     
     this.master = master;
@@ -78,93 +81,85 @@ abstract class TableOperation implements HConstants {
     this.metaRegions = master.regionManager.getMetaRegionsForTable(tableName);
   }
 
-  void process() throws IOException {
-    for (int tries = 0; tries < numRetries; tries++) {
+  private class ProcessTableOperation extends RetryableMetaOperation<Boolean> {
+    ProcessTableOperation(MetaRegion m, HMaster master) {
+      super(m, master);
+    }
+
+    /** {@inheritDoc} */
+    public Boolean call() throws IOException {
       boolean tableExists = false;
+
+      // Open a scanner on the meta region
+      long scannerId = server.openScanner(m.getRegionName(),
+          COLUMN_FAMILY_ARRAY, tableName, System.currentTimeMillis(), null);
+
+      List<Text> emptyRows = new ArrayList<Text>();
       try {
-        // Prevent meta scanner from running
-        synchronized(master.regionManager.metaScannerThread.scannerLock) {
-          for (MetaRegion m: metaRegions) {
-            // Get a connection to a meta server
-            HRegionInterface server =
-              master.connection.getHRegionConnection(m.getServer());
+        while (true) {
+          RowResult values = server.next(scannerId);
+          if(values == null || values.size() == 0) {
+            break;
+          }
+          HRegionInfo info = this.master.getHRegionInfo(values.getRow(), values);
+          if (info == null) {
+            emptyRows.add(values.getRow());
+            throw new IOException(COL_REGIONINFO + " not found on " +
+                values.getRow());
+          }
+          String serverName = Writables.cellToString(values.get(COL_SERVER));
+          long startCode = Writables.cellToLong(values.get(COL_STARTCODE));
+          if (info.getTableDesc().getName().compareTo(tableName) > 0) {
+            break; // Beyond any more entries for this table
+          }
 
-            // Open a scanner on the meta region
-            long scannerId =
-              server.openScanner(m.getRegionName(), COLUMN_FAMILY_ARRAY,
-              tableName, System.currentTimeMillis(), null);
-
-            List<Text> emptyRows = new ArrayList<Text>();
-            try {
-              while (true) {
-                RowResult values = server.next(scannerId);
-                if(values == null || values.size() == 0) {
-                  break;
-                }
-                HRegionInfo info =
-                  this.master.getHRegionInfo(values.getRow(), values);
-                if (info == null) {
-                  emptyRows.add(values.getRow());
-                  throw new IOException(COL_REGIONINFO + " not found on " +
-                    values.getRow());
-                }
-                String serverName = 
-                  Writables.cellToString(values.get(COL_SERVER));
-                long startCode = 
-                  Writables.cellToLong(values.get(COL_STARTCODE));
-                if (info.getTableDesc().getName().compareTo(tableName) > 0) {
-                  break; // Beyond any more entries for this table
-                }
-
-                tableExists = true;
-                if (!isBeingServed(serverName, startCode)) {
-                  unservedRegions.add(info);
-                }
-                processScanItem(serverName, startCode, info);
-              } // while(true)
-            } finally {
-              if (scannerId != -1L) {
-                try {
-                  server.close(scannerId);
-                } catch (IOException e) {
-                  e = RemoteExceptionHandler.checkIOException(e);
-                  LOG.error("closing scanner", e);
-                }
-              }
-              scannerId = -1L;
-            }
-            
-            // Get rid of any rows that have a null HRegionInfo
-            
-            if (emptyRows.size() > 0) {
-              LOG.warn("Found " + emptyRows.size() +
-                  " rows with empty HRegionInfo while scanning meta region " +
-                  m.getRegionName());
-              master.deleteEmptyMetaRows(server, m.getRegionName(), emptyRows);
-            }
-
-            if (!tableExists) {
-              throw new IOException(tableName + " does not exist");
-            }
-
-            postProcessMeta(m, server);
-            unservedRegions.clear();
-
-          } // for(MetaRegion m:)
-        } // synchronized(metaScannerLock)
-
-      } catch (IOException e) {
-        if (tries == numRetries - 1) {
-          // No retries left
-          this.master.checkFileSystem();
-          throw RemoteExceptionHandler.checkIOException(e);
+          tableExists = true;
+          if (!isBeingServed(serverName, startCode)) {
+            unservedRegions.add(info);
+          }
+          processScanItem(serverName, startCode, info);
         }
-        continue;
+      } finally {
+        if (scannerId != -1L) {
+          try {
+            server.close(scannerId);
+          } catch (IOException e) {
+            e = RemoteExceptionHandler.checkIOException(e);
+            LOG.error("closing scanner", e);
+          }
+        }
+        scannerId = -1L;
       }
-      break;
-    } // for(tries...)
+
+      // Get rid of any rows that have a null HRegionInfo
+
+      if (emptyRows.size() > 0) {
+        LOG.warn("Found " + emptyRows.size() +
+            " rows with empty HRegionInfo while scanning meta region " +
+            m.getRegionName());
+        master.deleteEmptyMetaRows(server, m.getRegionName(), emptyRows);
+      }
+
+      if (!tableExists) {
+        throw new IOException(tableName + " does not exist");
+      }
+
+      postProcessMeta(m, server);
+      unservedRegions.clear();
+
+      return true;
+    }
   }
 
+  void process() throws IOException {
+    // Prevent meta scanner from running
+    synchronized(master.regionManager.metaScannerThread.scannerLock) {
+      for (MetaRegion m: metaRegions) {
+        new ProcessTableOperation(m, master).doWithRetries();
+      }
+    }
+  }
+  
   protected boolean isBeingServed(String serverName, long startCode) {
     boolean result = false;
     if (serverName != null && serverName.length() > 0 && startCode != -1L) {

@@ -12,6 +12,7 @@ Hbase Change Log
    HBASE-561   HBase package does not include LICENSE.txt nor build.xml
    HBASE-563   TestRowFilterAfterWrite erroneously sets master address to
                0.0.0.0:60100 rather than relying on conf
+   HBASE-507   Use Callable pattern to sleep between retries
 
   NEW FEATURES
    HBASE-548   Tool to online single region

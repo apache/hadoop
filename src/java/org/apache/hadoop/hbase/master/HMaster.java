@@ -591,6 +591,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         if (tries == numRetries - 1) {
           throw RemoteExceptionHandler.checkIOException(e);
         }
+        sleeper.sleep();
       }
     }
   }

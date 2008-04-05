@@ -25,9 +25,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
 /** 
  * ProcessRegionOpen is instantiated when a region server reports that it is
@@ -35,10 +33,11 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
  * root region which is handled specially.
  */
 class ProcessRegionOpen extends ProcessRegionStatusChange {
-  private final HServerAddress serverAddress;
-  private final byte [] startCode;
+  protected final HServerAddress serverAddress;
+  protected final byte [] startCode;
 
   /**
+   * @param master
    * @param info
    * @param regionInfo
    * @throws IOException
@@ -59,61 +58,54 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
 
   @Override
   protected boolean process() throws IOException {
-    for (int tries = 0; tries < numRetries; tries++) {
-      if (master.closed.get()) {
-        return true;
-      }
-      LOG.info(regionInfo.toString() + " open on " + 
-          this.serverAddress.toString());
+    Boolean result =
+      new RetryableMetaOperation<Boolean>(this.metaRegion, this.master) {
+        public Boolean call() throws IOException {
+          LOG.info(regionInfo.toString() + " open on " + serverAddress.toString());
 
-      if (!metaRegionAvailable()) {
-        // We can't proceed unless the meta region we are going to update
-        // is online. metaRegionAvailable() has put this operation on the
-        // delayedToDoQueue, so return true so the operation is not put 
-        // back on the toDoQueue
-        return true;
-      }
-
-      // Register the newly-available Region's location.
-      
-      HRegionInterface server = getMetaServer();
-      LOG.info("updating row " + regionInfo.getRegionName() + " in table " +
-        metaRegionName + " with startcode " +
-        Writables.bytesToLong(this.startCode) + " and server "+
-        serverAddress.toString());
-      try {
-        BatchUpdate b = new BatchUpdate(regionInfo.getRegionName());
-        b.put(COL_SERVER, Writables.stringToBytes(serverAddress.toString()));
-        b.put(COL_STARTCODE, startCode);
-        server.batchUpdate(metaRegionName, b);
-        if (isMetaTable) {
-          // It's a meta region.
-          MetaRegion m = new MetaRegion(this.serverAddress,
-            this.regionInfo.getRegionName(), this.regionInfo.getStartKey());
-          if (!master.regionManager.isInitialMetaScanComplete()) {
-            // Put it on the queue to be scanned for the first time.
-            try {
-              LOG.debug("Adding " + m.toString() + " to regions to scan");
-              master.regionManager.addMetaRegionToScan(m);
-            } catch (InterruptedException e) {
-              throw new RuntimeException(
-                "Putting into metaRegionsToScan was interrupted.", e);
-            }
-          } else {
-            // Add it to the online meta regions
-            LOG.debug("Adding to onlineMetaRegions: " + m.toString());
-            master.regionManager.putMetaRegionOnline(m);
+          if (!metaRegionAvailable()) {
+            // We can't proceed unless the meta region we are going to update
+            // is online. metaRegionAvailable() has put this operation on the
+            // delayedToDoQueue, so return true so the operation is not put 
+            // back on the toDoQueue
+            return true;
           }
+
+          // Register the newly-available Region's location.
+
+          LOG.info("updating row " + regionInfo.getRegionName() + " in table " +
+              metaRegionName + " with startcode " +
+              Writables.bytesToLong(startCode) + " and server " +
+              serverAddress.toString());
+
+          BatchUpdate b = new BatchUpdate(regionInfo.getRegionName());
+          b.put(COL_SERVER, Writables.stringToBytes(serverAddress.toString()));
+          b.put(COL_STARTCODE, startCode);
+          server.batchUpdate(metaRegionName, b);
+          if (isMetaTable) {
+            // It's a meta region.
+            MetaRegion m = new MetaRegion(serverAddress,
+                regionInfo.getRegionName(), regionInfo.getStartKey());
+            if (!master.regionManager.isInitialMetaScanComplete()) {
+              // Put it on the queue to be scanned for the first time.
+              try {
+                LOG.debug("Adding " + m.toString() + " to regions to scan");
+                master.regionManager.addMetaRegionToScan(m);
+              } catch (InterruptedException e) {
+                throw new RuntimeException(
+                    "Putting into metaRegionsToScan was interrupted.", e);
+              }
+            } else {
+              // Add it to the online meta regions
+              LOG.debug("Adding to onlineMetaRegions: " + m.toString());
+              master.regionManager.putMetaRegionOnline(m);
+            }
+          }
+          // If updated successfully, remove from pending list.
+          master.regionManager.noLongerPending(regionInfo.getRegionName());
+          return true;
         }
-        // If updated successfully, remove from pending list.
-        master.regionManager.noLongerPending(regionInfo.getRegionName());
-        break;
-      } catch (IOException e) {
-        if (tries == numRetries - 1) {
-          throw RemoteExceptionHandler.checkIOException(e);
-        }
-      }
-    }
-    return true;
+    }.doWithRetries();
+    return result == null ? true : result;
   }
 }

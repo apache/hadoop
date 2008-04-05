@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
 /**
  * ProcessRegionClose is the way we do post-processing on a closed region. We
@@ -34,8 +34,8 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
  * necessary.
  */
 class ProcessRegionClose extends ProcessRegionStatusChange {
-  private boolean offlineRegion;
-  private boolean deleteRegion;
+  protected final  boolean offlineRegion;
+  protected final boolean deleteRegion;
 
   /**
   * @param master
@@ -61,41 +61,34 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
 
   @Override
   protected boolean process() throws IOException {
-    for (int tries = 0; tries < numRetries; tries++) {
-      if (master.closed.get()) {
-        return true;
-      }
-      LOG.info("region closed: " + regionInfo.getRegionName());
+    Boolean result =
+      new RetryableMetaOperation<Boolean>(this.metaRegion, this.master) {
+        public Boolean call() throws IOException {
+          LOG.info("region closed: " + regionInfo.getRegionName());
 
-      // Mark the Region as unavailable in the appropriate meta table
+          // Mark the Region as unavailable in the appropriate meta table
 
-      if (!metaRegionAvailable()) {
-        // We can't proceed unless the meta region we are going to update
-        // is online. metaRegionAvailable() has put this operation on the
-        // delayedToDoQueue, so return true so the operation is not put 
-        // back on the toDoQueue
-        return true;
-      }
+          if (!metaRegionAvailable()) {
+            // We can't proceed unless the meta region we are going to update
+            // is online. metaRegionAvailable() has put this operation on the
+            // delayedToDoQueue, so return true so the operation is not put 
+            // back on the toDoQueue
+            return true;
+          }
 
-      try {
-        if (deleteRegion) {
-          HRegion.removeRegionFromMETA(getMetaServer(), metaRegionName,
-            regionInfo.getRegionName());
-        } else if (offlineRegion) {
-          // offline the region in meta and then note that we've offlined the
-          // region. 
-          HRegion.offlineRegionInMETA(getMetaServer(), metaRegionName,
-            regionInfo);
-          master.regionManager.regionOfflined(regionInfo.getRegionName());
+          if (deleteRegion) {
+            HRegion.removeRegionFromMETA(server, metaRegionName,
+                regionInfo.getRegionName());
+          } else if (offlineRegion) {
+            // offline the region in meta and then note that we've offlined the
+            // region. 
+            HRegion.offlineRegionInMETA(server, metaRegionName,
+                regionInfo);
+            master.regionManager.regionOfflined(regionInfo.getRegionName());
+          }
+          return true;
         }
-        break;
-      } catch (IOException e) {
-        if (tries == numRetries - 1) {
-          throw RemoteExceptionHandler.checkIOException(e);
-        }
-        continue;
-      }
-    }
+    }.doWithRetries();
 
     // now that meta is updated, if we need to delete the region's files, now's
     // the time.
@@ -108,7 +101,6 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
         throw e;
       }
     }
-    
-    return true;
+    return result == null ? true : result;
   }
 }

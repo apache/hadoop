@@ -19,11 +19,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.io.IOException;
-
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -33,18 +30,26 @@ import org.apache.hadoop.io.Text;
 abstract class ProcessRegionStatusChange extends RegionServerOperation {
   protected final boolean isMetaTable;
   protected final HRegionInfo regionInfo;
-  private MetaRegion metaRegion;
-  protected Text metaRegionName;
+  protected final MetaRegion metaRegion;
+  protected final Text metaRegionName;
   
   /**
+   * @param master
    * @param regionInfo
    */
   public ProcessRegionStatusChange(HMaster master, HRegionInfo regionInfo) {
     super(master);
     this.regionInfo = regionInfo;
     this.isMetaTable = regionInfo.isMetaTable();
-    this.metaRegion = null;
-    this.metaRegionName = null;
+    if (isMetaTable) {
+      this.metaRegionName = HRegionInfo.rootRegionInfo.getRegionName();
+      this.metaRegion = new MetaRegion(master.getRootRegionLocation(),
+          this.metaRegionName, HConstants.EMPTY_START_ROW);
+    } else {
+      this.metaRegion =
+        master.regionManager.getFirstMetaRegionForRegion(regionInfo);
+      this.metaRegionName = this.metaRegion.getRegionName();
+    }
   }
   
   protected boolean metaRegionAvailable() {
@@ -66,23 +71,4 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
     }
     return available;
   }
-  
-  protected HRegionInterface getMetaServer() throws IOException {
-    if (isMetaTable) {
-      metaRegionName = HRegionInfo.rootRegionInfo.getRegionName();
-    } else {
-      if (metaRegion == null) {
-        metaRegion = master.regionManager.getFirstMetaRegionForRegion(regionInfo);
-        metaRegionName = metaRegion.getRegionName();
-      }
-    }
-
-    HServerAddress server = null;
-    if (isMetaTable) {
-      server = master.getRootRegionLocation();      
-    } else {
-      server = metaRegion.getServer();
-    }
-    return master.connection.getHRegionConnection(server);
-  } 
 }
