@@ -38,10 +38,12 @@ public class TestMapFile extends TestCase {
       getName() + ".mapfile"); 
     FileSystem fs = FileSystem.getLocal(conf);
     Path qualifiedDirName = fs.makeQualified(dirName);
+    // Make an index entry for each insertion.
+    MapFile.Writer.setIndexInterval(conf, 1);
     MapFile.Writer writer = new MapFile.Writer(conf, fs,
       qualifiedDirName.toString(), Text.class, Text.class);
-    // Make an index entry for each insertion.
-    writer.setIndexInterval(1);
+    // Assert that the index interval is 1
+    assertEquals(1, writer.getIndexInterval());
     // Add entries up to 100 in intervals of ten.
     final int FIRST_KEY = 10;
     for (int i = FIRST_KEY; i < 100; i += 10) {

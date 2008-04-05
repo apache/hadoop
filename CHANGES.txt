@@ -221,6 +221,9 @@ Release 0.17.0 - Unreleased
     HADOOP-2841. Unwrap AccessControlException and FileNotFoundException
     from RemoteException for DFSClient. (shv)
 
+    HADOOP-3152.  Make index interval configuable when using
+    MapFileOutputFormat for map-reduce job.  (Rong-En Fan via cutting)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing
