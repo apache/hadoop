@@ -62,6 +62,7 @@ public class MapFile {
     private SequenceFile.Writer data;
     private SequenceFile.Writer index;
 
+    final private static String INDEX_INTERVAL = "io.map.index.interval";
     private int indexInterval = 128;
 
     private long size;
@@ -139,6 +140,8 @@ public class MapFile {
                   Progressable progress)
       throws IOException {
 
+      this.indexInterval = conf.getInt(INDEX_INTERVAL, this.indexInterval);
+
       this.comparator = comparator;
       this.lastKey = comparator.newKey();
 
@@ -166,6 +169,13 @@ public class MapFile {
      * @see #getIndexInterval()
      */
     public void setIndexInterval(int interval) { indexInterval = interval; }
+
+    /** Sets the index interval and stores it in conf
+     * @see #getIndexInterval()
+     */
+    public static void setIndexInterval(Configuration conf, int interval) {
+      conf.setInt(INDEX_INTERVAL, interval);
+    }
 
     /** Close the map. */
     public synchronized void close() throws IOException {
