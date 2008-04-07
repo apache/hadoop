@@ -617,6 +617,11 @@ public class HStore implements HConstants {
   private void internalFlushCache(SortedMap<HStoreKey, byte []> cache,
       long logCacheFlushId) throws IOException {
     
+    // Don't flush if there are no entries.
+    if (cache.size() == 0) {
+      return;
+    }
+    
     synchronized(flushLock) {
       // A. Write the Maps out to the disk
       HStoreFile flushedFile = new HStoreFile(conf, fs, basedir,
