@@ -18,6 +18,7 @@ Hbase Change Log
   NEW FEATURES
    HBASE-548   Tool to online single region
    HBASE-71    Master should rebalance region assignments periodically
+   HBASE-512   Add configuration for global aggregate memcache size
    
   IMPROVEMENTS
    HBASE-469   Streamline HStore startup and compactions

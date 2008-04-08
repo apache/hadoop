@@ -1098,6 +1098,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
     try {
+      cacheFlusher.reclaimMemcacheMemory();
       region.batchUpdate(b);
     } catch (IOException e) {
       checkFileSystem();
@@ -1403,6 +1404,20 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   protected List<HMsg> getOutboundMsgs() {
     return this.outboundMsgs;
+  }
+
+  /**
+   * Return the total size of all memcaches in every region.
+   * @return memcache size in bytes
+   */
+  public long getGlobalMemcacheSize() {
+    long total = 0;
+    synchronized (onlineRegions) {
+      for (HRegion region : onlineRegions.values()) {
+        total += region.memcacheSize.get();
+      }
+    }
+    return total;
   }
   
   //

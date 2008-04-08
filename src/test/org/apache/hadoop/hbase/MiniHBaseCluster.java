@@ -161,4 +161,13 @@ public class MiniHBaseCluster implements HConstants {
   public List<LocalHBaseCluster.RegionServerThread> getRegionThreads() {
     return this.hbaseCluster.getRegionServers();
   }
+  
+  /**
+   * Grab a numbered region server of your choice.
+   * @param serverNumber
+   * @return region server
+   */
+  public HRegionServer getRegionServer(int serverNumber) {
+    return hbaseCluster.getRegionServer(serverNumber);
+  }
 }

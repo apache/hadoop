@@ -118,6 +118,16 @@ public class LocalHBaseCluster implements HConstants {
     }
   }
 
+  /**
+   * @param serverNumber
+   * @return region server
+   */
+  public HRegionServer getRegionServer(int serverNumber) {
+    synchronized (regionThreads) {
+      return regionThreads.get(serverNumber).getRegionServer();
+    }
+  }
+
   /** runs region servers */
   public static class RegionServerThread extends Thread {
     private final HRegionServer regionServer;
