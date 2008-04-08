@@ -14,7 +14,7 @@ Hbase Change Log
                0.0.0.0:60100 rather than relying on conf
    HBASE-507   Use Callable pattern to sleep between retries
    HBASE-564   Don't do a cache flush if there are zero entries in the cache.
-   HBASE-544   filters generate StackOverflowException
+   HBASE-554   filters generate StackOverflowException
 
   NEW FEATURES
    HBASE-548   Tool to online single region
