@@ -492,11 +492,9 @@ public class TestFileSystem extends TestCase {
       try {
         cluster = new MiniDFSCluster(new Configuration(), 2, true, null);
         URI uri = cluster.getFileSystem().getUri();
-        FileSystem.get(uri, new Configuration());
-        int n = Thread.activeCount();
+        FileSystem fs = FileSystem.get(uri, new Configuration());
         for(int i = 0; i < 100; i++) {
-          FileSystem.get(uri, new Configuration());
-          assertTrue(n >= Thread.activeCount());
+          assertTrue(fs == FileSystem.get(uri, new Configuration()));
         }
       } finally {
         cluster.shutdown(); 
