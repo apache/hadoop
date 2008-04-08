@@ -25,7 +25,8 @@ import java.util.ArrayList;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
@@ -38,7 +39,7 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * Extract grouping columns from input record
  */
-public class GroupingTableMap extends TableMap<Text,MapWritable> {
+public class GroupingTableMap extends TableMap<Text,RowResult> {
 
   /**
    * JobConf parameter to specify the columns used to produce the key passed to 
@@ -62,9 +63,9 @@ public class GroupingTableMap extends TableMap<Text,MapWritable> {
    */
   @SuppressWarnings("unchecked")
   public static void initJob(String table, String columns, String groupColumns, 
-      Class<? extends TableMap> mapper, JobConf job) {
+    Class<? extends TableMap> mapper, JobConf job) {
     
-    initJob(table, columns, mapper, job);
+    initJob(table, columns, mapper, Text.class, RowResult.class, job);
     job.set(GROUP_COLUMNS, groupColumns);
   }
 
@@ -88,8 +89,8 @@ public class GroupingTableMap extends TableMap<Text,MapWritable> {
    * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.io.MapWritable, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
    */
   @Override
-  public void map(@SuppressWarnings("unused") HStoreKey key,
-      MapWritable value, OutputCollector<Text,MapWritable> output,
+  public void map(@SuppressWarnings("unused") Text key,
+      RowResult value, OutputCollector<Text,RowResult> output,
       @SuppressWarnings("unused") Reporter reporter) throws IOException {
     
     byte[][] keyVals = extractKeyValues(value);
@@ -108,16 +109,16 @@ public class GroupingTableMap extends TableMap<Text,MapWritable> {
    * @param r
    * @return array of byte values
    */
-  protected byte[][] extractKeyValues(MapWritable r) {
+  protected byte[][] extractKeyValues(RowResult r) {
     byte[][] keyVals = null;
     ArrayList<byte[]> foundList = new ArrayList<byte[]>();
     int numCols = m_columns.length;
     if(numCols > 0) {
-      for (Map.Entry<Writable, Writable> e: r.entrySet()) {
-        Text column = (Text) e.getKey();
+      for (Map.Entry<Text, Cell> e: r.entrySet()) {
+        Text column = e.getKey();
         for (int i = 0; i < numCols; i++) {
           if (column.equals(m_columns[i])) {
-            foundList.add(((ImmutableBytesWritable) e.getValue()).get());
+            foundList.add(e.getValue().getValue());
             break;
           }
         }

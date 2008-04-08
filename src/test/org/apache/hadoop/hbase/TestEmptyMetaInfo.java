@@ -28,6 +28,9 @@ import java.util.TreeMap;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
@@ -59,14 +62,14 @@ public class TestEmptyMetaInfo extends HBaseClusterTestCase {
       } catch (InterruptedException e) {
         // ignore
       }
-      HScannerInterface scanner =
-        t.obtainScanner(HConstants.ALL_META_COLUMNS, new Text("tablename"));
+      Scanner scanner =
+        t.getScanner(HConstants.ALL_META_COLUMNS, new Text("tablename"));
 
       try {
         count = 0;
         HStoreKey key = new HStoreKey();
         SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-        while (scanner.next(key, results)) {
+        for (RowResult r : scanner) {
           count += 1;
         }
       } finally {

@@ -26,9 +26,9 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.io.Cell;
@@ -186,7 +186,7 @@ public class TimestampTestBase extends HBaseTestCase {
    */
   public static int assertScanContentTimestamp(final Incommon in, final long ts)
   throws IOException {
-    HScannerInterface scanner =
+    ScannerIncommon scanner =
       in.getScanner(COLUMNS, HConstants.EMPTY_START_ROW, ts);
     int count = 0;
     try {

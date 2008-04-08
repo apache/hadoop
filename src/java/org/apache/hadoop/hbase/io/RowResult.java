@@ -164,5 +164,5 @@ public class RowResult implements Writable, Map<Text, Cell> {
   public void write(final DataOutput out) throws IOException {
     row.write(out);
     cells.write(out);
-  }
+  }  
 }

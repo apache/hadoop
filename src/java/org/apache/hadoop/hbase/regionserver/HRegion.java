@@ -61,7 +61,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.WrongRegionException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -1247,10 +1246,10 @@ public class HRegion implements HConstants {
    * @param firstRow row which is the starting point of the scan
    * @param timestamp only return rows whose timestamp is <= this value
    * @param filter row filter
-   * @return HScannerInterface
+   * @return InternalScanner
    * @throws IOException
    */
-  public HScannerInterface getScanner(Text[] cols, Text firstRow,
+  public InternalScanner getScanner(Text[] cols, Text firstRow,
     long timestamp, RowFilterInterface filter) 
   throws IOException {
     lock.readLock().lock();
@@ -1687,8 +1686,8 @@ public class HRegion implements HConstants {
   /**
    * HScanner is an iterator through a bunch of rows in an HRegion.
    */
-  private class HScanner implements HScannerInterface {
-    private HInternalScannerInterface[] scanners;
+  private class HScanner implements InternalScanner {
+    private InternalScanner[] scanners;
     private TreeMap<Text, byte []>[] resultSets;
     private HStoreKey[] keys;
     private RowFilterInterface filter;
@@ -1699,7 +1698,7 @@ public class HRegion implements HConstants {
       RowFilterInterface filter)
     throws IOException {
       this.filter = filter;
-      this.scanners = new HInternalScannerInterface[stores.length];
+      this.scanners = new InternalScanner[stores.length];
       try {
         for (int i = 0; i < stores.length; i++) {
           // TODO: The cols passed in here can include columns from other
@@ -1865,6 +1864,16 @@ public class HRegion implements HConstants {
       throw new UnsupportedOperationException("Unimplemented serverside. " +
         "next(HStoreKey, StortedMap(...) is more efficient");
     }
+    
+    /** {@inheritDoc} */
+    public boolean isWildcardScanner() {
+      throw new UnsupportedOperationException("Unimplemented on HScanner");
+    }
+
+    /** {@inheritDoc} */
+    public boolean isMultipleMatchScanner() {
+      throw new UnsupportedOperationException("Unimplemented on HScanner");
+    }  
   }
   
   // Utility methods

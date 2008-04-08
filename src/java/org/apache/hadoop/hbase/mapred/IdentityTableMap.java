@@ -22,20 +22,35 @@ package org.apache.hadoop.hbase.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
-
+import org.apache.hadoop.hbase.io.RowResult;
 
 /**
  * Pass the given key and record as-is to reduce
  */
-public class IdentityTableMap extends TableMap<Text, MapWritable> {
+public class IdentityTableMap extends TableMap<Text, RowResult> {
 
   /** constructor */
   public IdentityTableMap() {
     super();
+  }
+
+  /**
+   * Use this before submitting a TableMap job. It will
+   * appropriately set up the JobConf.
+   * 
+   * @param table table name
+   * @param columns columns to scan
+   * @param mapper mapper class
+   * @param job job configuration
+   */
+  public static void initJob(String table, String columns,
+    Class<? extends TableMap> mapper, JobConf job) {
+    TableMap.initJob(table, columns, mapper, Text.class, RowResult.class, job);
   }
 
   /**
@@ -44,11 +59,11 @@ public class IdentityTableMap extends TableMap<Text, MapWritable> {
    * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.io.MapWritable, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
    */
   @Override
-  public void map(HStoreKey key, MapWritable value,
-      OutputCollector<Text,MapWritable> output,
+  public void map(Text key, RowResult value,
+      OutputCollector<Text,RowResult> output,
       @SuppressWarnings("unused") Reporter reporter) throws IOException {
     
-    Text tKey = key.getRow();
-    output.collect(tKey, value);
+    // convert 
+    output.collect(key, value);
   }
 }

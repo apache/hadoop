@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HRegionInfo;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
@@ -88,7 +87,7 @@ public class TestScanner extends HBaseTestCase {
   private void scan(boolean validateStartcode, String serverName)
       throws IOException {
     
-    HScannerInterface scanner = null;
+    InternalScanner scanner = null;
     TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
     HStoreKey key = new HStoreKey();
 
@@ -127,7 +126,7 @@ public class TestScanner extends HBaseTestCase {
         }
 
       } finally {
-        HScannerInterface s = scanner;
+        InternalScanner s = scanner;
         scanner = null;
         if(s != null) {
           s.close();

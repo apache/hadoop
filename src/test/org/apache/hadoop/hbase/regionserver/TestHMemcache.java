@@ -208,7 +208,7 @@ public class TestHMemcache extends TestCase {
         cols[(ii + (i * COLUMNS_COUNT))] = getColumnName(i, ii);
       }
     }
-    HInternalScannerInterface scanner =
+    InternalScanner scanner =
       this.hmemcache.getScanner(timestamp, cols, new Text());
     HStoreKey key = new HStoreKey();
     TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();

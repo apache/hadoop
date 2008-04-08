@@ -22,6 +22,10 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
@@ -75,7 +79,7 @@ public class TestTimestamp extends HBaseClusterTestCase {
     }
     LOG.info("testTimestampScanning() finished");
   }
-  
+
   private HRegion createRegion() throws IOException {
     HTableDescriptor htd = createTableDescriptor(getName());
     htd.addFamily(new HColumnDescriptor(COLUMN, VERSIONS,

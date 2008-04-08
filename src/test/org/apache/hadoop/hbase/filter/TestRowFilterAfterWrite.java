@@ -33,12 +33,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.io.Text;
 
 /** Test regexp filters HBASE-476 */
@@ -169,7 +171,7 @@ public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
   private void scanTable(final String tableName, final boolean printValues) throws IOException {
     HTable table = new HTable(conf, new Text(tableName));
 
-    HScannerInterface scanner = table.obtainScanner(columns, HConstants.EMPTY_START_ROW);
+    Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
     int numFound = doScan(scanner, printValues);
     Assert.assertEquals(NUM_ROWS, numFound);
   }
@@ -179,25 +181,23 @@ public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
     Map<Text, byte[]> columnMap = new HashMap<Text, byte[]>();
     columnMap.put(TEXT_COLUMN1, VALUE);
     RegExpRowFilter filter = new RegExpRowFilter(null, columnMap);
-    HScannerInterface scanner = table.obtainScanner(columns, HConstants.EMPTY_START_ROW, filter);
+    Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW, filter);
     int numFound = doScan(scanner, printValues);
     Assert.assertEquals(NUM_ROWS, numFound);
   }
 
-  private int doScan(final HScannerInterface scanner, final boolean printValues) throws IOException {
+  private int doScan(final Scanner scanner, final boolean printValues) throws IOException {
     {
       int count = 0;
 
       try {
-        HStoreKey key = new HStoreKey();
-        TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-        while (scanner.next(key, results)) {
+        for (RowResult result : scanner) {
           if (printValues) {
-            LOG.info("row: " + key.getRow());
+            LOG.info("row: " + result.getRow());
 
-            for (Map.Entry<Text, byte[]> e : results.entrySet()) {
+            for (Map.Entry<Text, Cell> e : result.entrySet()) {
               LOG.info(" column: " + e.getKey() + " value: "
-                  + new String(e.getValue(), HConstants.UTF8_ENCODING));
+                  + new String(e.getValue().getValue(), HConstants.UTF8_ENCODING));
             }
           }
           count++;

@@ -28,8 +28,9 @@ import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 
 /**
  * Test batch updates
@@ -97,13 +98,11 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
     table.commit(lockid);
 
     Text[] columns = { CONTENTS };
-    HScannerInterface scanner = table.obtainScanner(columns, new Text());
-    HStoreKey key = new HStoreKey();
-    TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-    while(scanner.next(key, results)) {
-      for(Map.Entry<Text, byte[]> e: results.entrySet()) {
-        System.out.println(key + ": row: " + e.getKey() + " value: " + 
-            new String(e.getValue(), HConstants.UTF8_ENCODING));
+    Scanner scanner = table.getScanner(columns, new Text());
+    for (RowResult r : scanner) {
+      for(Map.Entry<Text, Cell> e: r.entrySet()) {
+        System.out.println(r.getRow() + ": row: " + e.getKey() + " value: " + 
+            new String(e.getValue().getValue(), HConstants.UTF8_ENCODING));
       }
     }
   }

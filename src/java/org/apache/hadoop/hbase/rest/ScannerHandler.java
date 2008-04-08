@@ -32,11 +32,12 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HScannerInterface;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.util.JenkinsHash;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.io.Text;
 import org.mortbay.servlet.MultiPartResponse;
 import org.znerd.xmlenc.XMLOutputter;
@@ -52,43 +53,38 @@ public class ScannerHandler extends GenericHandler {
   }
     
   private class ScannerRecord {
-    private final HScannerInterface scanner;
-    private HStoreKey key = null;
-    private SortedMap<Text, byte []> value = null;
+    private final Scanner scanner;
+    private RowResult next;
     
-    private boolean isEmpty;
-    
-    ScannerRecord(final HScannerInterface s) {
-      this.isEmpty = false;
+    ScannerRecord(final Scanner s) {
       this.scanner = s;
     }
   
-    public HScannerInterface getScanner() {
+    public Scanner getScanner() {
       return this.scanner;
     }
-  
-    public HStoreKey getKey() {
-      return this.key;
-    }
-  
-    public SortedMap<Text, byte[]> getValue() {
-      return this.value;
-    }
-
-    public boolean isEmpty(){
-      return this.isEmpty;
+    
+    public boolean hasNext() throws IOException {
+      if (next == null) {
+        next = scanner.next();
+        return next != null;
+      } else {
+        return true;
+      }
     }
     
     /**
      * Call next on the scanner.
-     * @return True if more values in scanner.
+     * @return Null if finished, RowResult otherwise
      * @throws IOException
      */
-    public boolean next() throws IOException {
-      this.key = new HStoreKey();
-      this.value = new TreeMap<Text, byte []>();
-      this.isEmpty = !this.scanner.next(this.key, this.value);
-      return !this.isEmpty;
+    public RowResult next() throws IOException {
+      if (!hasNext()) {
+        return null;
+      }
+      RowResult temp = next;
+      next = null;
+      return temp;
     }
   }
   
@@ -148,7 +144,7 @@ public class ScannerHandler extends GenericHandler {
       return;
     }
 
-    if (sr.next()) {
+    if (sr.hasNext()) {
       switch (ContentType.getContentType(request.getHeader(ACCEPT))) {
         case XML:
           outputScannerEntryXML(response, sr);
@@ -170,7 +166,7 @@ public class ScannerHandler extends GenericHandler {
   private void outputScannerEntryXML(final HttpServletResponse response,
     final ScannerRecord sr)
   throws IOException {
-    HStoreKey key = sr.getKey();
+    RowResult rowResult = sr.next();
     
     // respond with a 200 and Content-type: text/xml
     setResponseHeader(response, 200, ContentType.XML.toString());
@@ -182,19 +178,9 @@ public class ScannerHandler extends GenericHandler {
     
     // write the row key
     doElement(outputter, "name", 
-      org.apache.hadoop.hbase.util.Base64.encodeBytes(key.getRow().getBytes()));
+      org.apache.hadoop.hbase.util.Base64.encodeBytes(rowResult.getRow().getBytes()));
     
-    // Normally no column is supplied when scanning.
-    if (key.getColumn() != null &&
-        key.getColumn().getLength() > 0) {
-      doElement(outputter, "key-column", 
-        org.apache.hadoop.hbase.util.Base64.encodeBytes(
-          key.getColumn().getBytes()));
-    }
-    
-    doElement(outputter, "timestamp", Long.toString(key.getTimestamp()));
-    
-    outputColumnsXml(outputter, sr.getValue());
+    outputColumnsXml(outputter, rowResult);
     outputter.endTag();
     outputter.endDocument();
     outputter.getWriter().close();
@@ -288,9 +274,9 @@ public class ScannerHandler extends GenericHandler {
       new Text(URLDecoder.decode(request.getParameter(END_ROW),
         HConstants.UTF8_ENCODING));
 
-    HScannerInterface scanner = (request.getParameter(END_ROW) == null)?
-       table.obtainScanner(columns, startRow):
-       table.obtainScanner(columns, startRow, endRow);
+    Scanner scanner = (request.getParameter(END_ROW) == null)?
+       table.getScanner(columns, startRow):
+       table.getScanner(columns, startRow, endRow);
     
     // Make a scanner id by hashing the object toString value (object name +
     // an id).  Will make identifier less burdensome and more url friendly.

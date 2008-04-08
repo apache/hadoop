@@ -1,5 +1,7 @@
 Hbase Change Log
-
+  INCOMPATIBLE CHANGES
+   HBASE-521   Improve client scanner interface
+  
   BUG FIXES
    HBASE-550   EOF trying to read reconstruction log stops region deployment
    HBASE-551   Master stuck splitting server logs in shutdown loop; on each
@@ -15,6 +17,7 @@ Hbase Change Log
    HBASE-507   Use Callable pattern to sleep between retries
    HBASE-564   Don't do a cache flush if there are zero entries in the cache.
    HBASE-554   filters generate StackOverflowException
+   HBASE-567   Reused BatchUpdate instances accumulate BatchOperations
 
   NEW FEATURES
    HBASE-548   Tool to online single region
@@ -135,6 +138,7 @@ Release 0.1.0
    HBASE-529   RegionServer needs to recover if datanode goes down
    HBASE-456   Clearly state which ports need to be opened in order to run HBase
    HBASE-536   Remove MiniDFS startup from MiniHBaseCluster
+   HBASE-521   Improve client scanner interface
    
 Branch 0.1
 

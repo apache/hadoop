@@ -26,26 +26,31 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Write to table each key, record pair
  */
-public class IdentityTableReduce extends TableReduce<Text, MapWritable> {
+public class IdentityTableReduce extends TableReduce<Text, BatchUpdate> {
+  private static final Log LOG =
+    LogFactory.getLog(IdentityTableReduce.class.getName());
+  
   /**
    * No aggregation, output pairs of (key, record)
    *
    * @see org.apache.hadoop.hbase.mapred.TableReduce#reduce(org.apache.hadoop.io.WritableComparable, java.util.Iterator, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
    */
   @Override
-  public void reduce(Text key, Iterator<MapWritable> values,
-      OutputCollector<Text, MapWritable> output,
+  public void reduce(Text key, Iterator<BatchUpdate> values,
+      OutputCollector<Text, BatchUpdate> output,
       @SuppressWarnings("unused") Reporter reporter)
       throws IOException {
     
     while(values.hasNext()) {
-      MapWritable r = values.next();
-      output.collect(key, r);
+      output.collect(key, values.next());
     }
   }
 }

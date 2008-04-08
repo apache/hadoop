@@ -30,8 +30,11 @@ import java.util.TreeMap;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.RowResult;
 
 /** test the scanner API at all levels */
 public class TestScannerAPI extends HBaseClusterTestCase {
@@ -105,46 +108,40 @@ public class TestScannerAPI extends HBaseClusterTestCase {
       throw iox;
     }
     @SuppressWarnings("null")
-    HScannerInterface scanner = 
-      region.getScanner(columns, startRow, System.currentTimeMillis(), null);
+    ScannerIncommon scanner = new InternalScannerIncommon(
+      region.getScanner(columns, startRow, System.currentTimeMillis(), null));
     try {
       verify(scanner);
     } finally {
       scanner.close();
     }
     
-    scanner = table.obtainScanner(columns, startRow);
+    scanner = new ClientScannerIncommon(table.getScanner(columns, startRow));
     try {
       verify(scanner);
     } finally {
       scanner.close();
     }
-    scanner = table.obtainScanner(columns, startRow);
+    Scanner scanner2 = table.getScanner(columns, startRow);
     try {
-      for (Iterator<Map.Entry<HStoreKey, SortedMap<Text, byte[]>>> iterator =
-        scanner.iterator();
-      iterator.hasNext();
-      ) {
-        Map.Entry<HStoreKey, SortedMap<Text, byte[]>> row = iterator.next();
-        HStoreKey key = row.getKey();
-        assertTrue("row key", values.containsKey(key.getRow()));
+      for (RowResult r : scanner2) {
+        assertTrue("row key", values.containsKey(r.getRow()));
 
-        SortedMap<Text, byte[]> results = row.getValue();
-        SortedMap<Text, byte[]> columnValues = values.get(key.getRow());
-        assertEquals(columnValues.size(), results.size());
+        SortedMap<Text, byte[]> columnValues = values.get(r.getRow());
+        assertEquals(columnValues.size(), r.size());        
         for (Map.Entry<Text, byte[]> e: columnValues.entrySet()) {
           Text column = e.getKey();
-          assertTrue("column", results.containsKey(column));
+          assertTrue("column", r.containsKey(column));
           assertTrue("value", Arrays.equals(columnValues.get(column),
-              results.get(column)));
+            r.get(column).getValue()));
         }
-      }
+      }      
     } finally {
       scanner.close();
     }
   }
   
-  private void verify(HScannerInterface scanner) throws IOException {
+  private void verify(ScannerIncommon scanner) throws IOException {
     HStoreKey key = new HStoreKey();
     SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
     while (scanner.next(key, results)) {

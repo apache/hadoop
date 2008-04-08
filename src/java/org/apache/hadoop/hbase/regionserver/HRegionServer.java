@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
@@ -1061,7 +1060,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     requestCount.incrementAndGet();
     try {
       String scannerName = String.valueOf(scannerId);
-      HScannerInterface s = scanners.get(scannerName);
+      InternalScanner s = scanners.get(scannerName);
       if (s == null) {
         throw new UnknownScannerException("Name: " + scannerName);
       }
@@ -1119,7 +1118,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     try {
       HRegion r = getRegion(regionName);
       long scannerId = -1L;
-      HScannerInterface s =
+      InternalScanner s =
         r.getScanner(cols, firstRow, timestamp, filter);
       scannerId = rand.nextLong();
       String scannerName = String.valueOf(scannerId);
@@ -1143,7 +1142,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     requestCount.incrementAndGet();
     try {
       String scannerName = String.valueOf(scannerId);
-      HScannerInterface s = null;
+      InternalScanner s = null;
       synchronized(scanners) {
         s = scanners.remove(scannerName);
       }
@@ -1158,8 +1157,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
   }
 
-  Map<String, HScannerInterface> scanners =
-    Collections.synchronizedMap(new HashMap<String, HScannerInterface>());
+  Map<String, InternalScanner> scanners =
+    Collections.synchronizedMap(new HashMap<String, InternalScanner>());
 
   /** 
    * Instantiated as a scanner lease.
@@ -1175,7 +1174,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     /** {@inheritDoc} */
     public void leaseExpired() {
       LOG.info("Scanner " + this.scannerName + " lease expired");
-      HScannerInterface s = null;
+      InternalScanner s = null;
       synchronized(scanners) {
         s = scanners.remove(this.scannerName);
       }

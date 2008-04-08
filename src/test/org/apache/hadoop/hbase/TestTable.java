@@ -58,11 +58,15 @@ public class TestTable extends HBaseClusterTestCase {
     HTableDescriptor desc = new HTableDescriptor(getName());
     desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
     admin.createTable(desc);
+    assertTrue("First table creation completed", admin.listTables().length == 1);
+    boolean gotException = false;
     try {
       admin.createTable(desc);
     } catch (TableExistsException e) {
+      gotException = true;
       msg = e.getMessage();
     }
+    assertTrue("Didn't get a TableExistsException!", gotException);
     assertTrue("Unexpected exception message " + msg, msg != null &&
       msg.contains(getName()));
     
@@ -85,7 +89,8 @@ public class TestTable extends HBaseClusterTestCase {
           } catch (TableExistsException e) {
             failures.incrementAndGet();
           } catch (IOException e) {
-            // ignore.
+            System.out.println("Got an IOException... " + e);
+            fail();
           }
         }
       };

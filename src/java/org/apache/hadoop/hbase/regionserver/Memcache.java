@@ -450,7 +450,7 @@ class Memcache {
   /**
    * @return a scanner over the keys in the Memcache
    */
-  HInternalScannerInterface getScanner(long timestamp,
+  InternalScanner getScanner(long timestamp,
       Text targetCols[], Text firstRow) throws IOException {
 
     // Here we rely on ReentrantReadWriteLock's ability to acquire multiple
@@ -473,7 +473,7 @@ class Memcache {
   }
 
   //////////////////////////////////////////////////////////////////////////////
-  // MemcacheScanner implements the HScannerInterface.
+  // MemcacheScanner implements the InternalScanner.
   // It lets the caller scan the contents of the Memcache.
   //////////////////////////////////////////////////////////////////////////////
 

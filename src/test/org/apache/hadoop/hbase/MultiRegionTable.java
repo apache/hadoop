@@ -30,7 +30,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
 
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -146,19 +149,20 @@ public class MultiRegionTable extends HBaseClusterTestCase {
     // Get info on the parent from the meta table.  Pass in 'hri'. Its the
     // region we have been dealing with up to this. Its the parent of the
     // region split.
-    Map<Text, byte []> data = getSplitParentInfo(meta, parent);
+    RowResult data = getSplitParentInfo(meta, parent);
     if (data == null) {
       // We changed stuff so daughters get cleaned up much faster now.  Can
       // run so fast, parent has been deleted by time we get to here.
     } else {
-      parent  = Writables.getHRegionInfoOrNull(data.get(HConstants.COL_REGIONINFO));
+      parent = Writables.getHRegionInfo(
+        data.get(HConstants.COL_REGIONINFO));
       LOG.info("Found parent region: " + parent);
       assertTrue(parent.isOffline());
       assertTrue(parent.isSplit());
       HRegionInfo splitA =
-        Writables.getHRegionInfoOrNull(data.get(HConstants.COL_SPLITA));
+        Writables.getHRegionInfo(data.get(HConstants.COL_SPLITA));
       HRegionInfo splitB =
-        Writables.getHRegionInfoOrNull(data.get(HConstants.COL_SPLITB));
+        Writables.getHRegionInfo(data.get(HConstants.COL_SPLITB));
       assertTrue("parentDir should exist", fs.exists(parentDir));
       LOG.info("Split happened. Parent is " + parent.getRegionName());
 
@@ -246,14 +250,12 @@ public class MultiRegionTable extends HBaseClusterTestCase {
     
     int size = 0;
     Text [] cols = new Text[] {HConstants.COLUMN_FAMILY};
-    HScannerInterface s = t.obtainScanner(cols, HConstants.EMPTY_START_ROW,
+    Scanner s = t.getScanner(cols, HConstants.EMPTY_START_ROW,
       System.currentTimeMillis(), null);
     try {
-      HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
-      while(s.next(curKey, curVals)) {
+      for (RowResult r : s) {
         HRegionInfo hri = Writables.
-          getHRegionInfoOrNull(curVals.get(HConstants.COL_REGIONINFO));
+          getHRegionInfo(r.get(HConstants.COL_REGIONINFO));
         if (hri.getTableDesc().getName().toString().equals(tableName)) {
           size++;
         }
@@ -269,24 +271,22 @@ public class MultiRegionTable extends HBaseClusterTestCase {
   /*
    * @return Return row info for passed in region or null if not found in scan.
    */
-  private static Map<Text, byte []> getSplitParentInfo(final HTable t,
+  private static RowResult getSplitParentInfo(final HTable t,
       final HRegionInfo parent)
   throws IOException {  
-    HScannerInterface s = t.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY,
+    Scanner s = t.getScanner(HConstants.COLUMN_FAMILY_ARRAY,
         HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
     try {
-      HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
-      while(s.next(curKey, curVals)) {
+      for (RowResult r : s) {
         HRegionInfo hri = Writables.
-          getHRegionInfoOrNull(curVals.get(HConstants.COL_REGIONINFO));
+          getHRegionInfo(r.get(HConstants.COL_REGIONINFO));
         if (hri == null) {
           continue;
         }
         // Make sure I get the parent.
         if (hri.getRegionName().equals(parent.getRegionName()) &&
               hri.getRegionId() == parent.getRegionId()) {
-          return curVals;
+          return r;
         }
       }
       return null;
@@ -311,12 +311,10 @@ public class MultiRegionTable extends HBaseClusterTestCase {
     
     for (int i = 0; i < retries; i++) {
       try {
-        HScannerInterface s =
-          t.obtainScanner(new Text[] {column}, HConstants.EMPTY_START_ROW);
+        Scanner s =
+          t.getScanner(new Text[] {column}, HConstants.EMPTY_START_ROW);
         try {
-          HStoreKey key = new HStoreKey();
-          TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-          s.next(key, results);
+          s.next();
           break;
         } finally {
           s.close();

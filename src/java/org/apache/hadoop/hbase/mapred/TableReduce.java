@@ -31,13 +31,14 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
  * Write a table, sorting by the input key
  */
 @SuppressWarnings("unchecked")
 public abstract class TableReduce<K extends WritableComparable, V extends Writable>
-    extends MapReduceBase implements Reducer<K, V, Text, MapWritable> {
+    extends MapReduceBase implements Reducer<K, V, Text, BatchUpdate> {
   /**
    * Use this before submitting a TableReduce job. It will
    * appropriately set up the JobConf.
@@ -51,6 +52,8 @@ public abstract class TableReduce<K extends WritableComparable, V extends Writab
     job.setOutputFormat(TableOutputFormat.class);
     job.setReducerClass(reducer);
     job.set(TableOutputFormat.OUTPUT_TABLE, table);
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(BatchUpdate.class);
   }
 
   /**
@@ -62,6 +65,6 @@ public abstract class TableReduce<K extends WritableComparable, V extends Writab
    * @throws IOException
    */
   public abstract void reduce(K key, Iterator<V> values,
-      OutputCollector<Text, MapWritable> output, Reporter reporter)
+      OutputCollector<Text, BatchUpdate> output, Reporter reporter)
       throws IOException;
 }

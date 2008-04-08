@@ -38,9 +38,10 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MultiRegionTable;
 import org.apache.hadoop.io.Text;
@@ -208,19 +209,17 @@ public class TestTableIndex extends MultiRegionTable {
   private void scanTable(boolean printResults)
   throws IOException {
     HTable table = new HTable(conf, new Text(TABLE_NAME));
-    HScannerInterface scanner = table.obtainScanner(columns,
+    Scanner scanner = table.getScanner(columns,
         HConstants.EMPTY_START_ROW);
     try {
-      HStoreKey key = new HStoreKey();
-      TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-      while (scanner.next(key, results)) {
+      for (RowResult r : scanner) {
         if (printResults) {
-          LOG.info("row: " + key.getRow());
+          LOG.info("row: " + r.getRow());
         }
-        for (Map.Entry<Text, byte[]> e : results.entrySet()) {
+        for (Map.Entry<Text, Cell> e : r.entrySet()) {
           if (printResults) {
             LOG.info(" column: " + e.getKey() + " value: "
-                + new String(e.getValue(), HConstants.UTF8_ENCODING));
+                + new String(e.getValue().getValue(), HConstants.UTF8_ENCODING));
           }
         }
       }
@@ -244,7 +243,7 @@ public class TestTableIndex extends MultiRegionTable {
     FileSystem localfs = FileSystem.getLocal(conf);
     FileStatus [] indexDirs = localfs.listStatus(localDir);
     Searcher searcher = null;
-    HScannerInterface scanner = null;
+    Scanner scanner = null;
     try {
       if (indexDirs.length == 1) {
         searcher = new IndexSearcher((new File(indexDirs[0].getPath().
@@ -261,10 +260,7 @@ public class TestTableIndex extends MultiRegionTable {
       }
 
       HTable table = new HTable(conf, new Text(TABLE_NAME));
-      scanner = table.obtainScanner(columns, HConstants.EMPTY_START_ROW);
-
-      HStoreKey key = new HStoreKey();
-      TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+      scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
 
       IndexConfiguration indexConf = new IndexConfiguration();
       String content = conf.get("hbase.index.conf");
@@ -274,8 +270,8 @@ public class TestTableIndex extends MultiRegionTable {
       String rowkeyName = indexConf.getRowkeyName();
 
       int count = 0;
-      while (scanner.next(key, results)) {
-        String value = key.getRow().toString();
+      for (RowResult r : scanner) {
+        String value = r.getRow().toString();
         Term term = new Term(rowkeyName, value);
         int hitCount = searcher.search(new TermQuery(term)).length();
         assertEquals("check row " + value, 1, hitCount);

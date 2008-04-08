@@ -37,19 +37,21 @@ import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HScannerInterface;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.client.HTable;
-
-import org.apache.log4j.Logger;
+import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.util.Writables;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Convert HBase tabular data into a format that is consumable by Map/Reduce
  */
 public class TableInputFormat
-implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {  
-  static final Logger LOG = Logger.getLogger(TableInputFormat.class.getName());
+implements InputFormat<Text, RowResult>, JobConfigurable {  
+  protected final Log LOG = LogFactory.getLog(TableInputFormat.class);
 
   /**
    * space delimited list of columns 
@@ -63,12 +65,10 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
 
   /**
    * Iterate over an HBase table data,
-   * return (HStoreKey, MapWritable<Text, ImmutableBytesWritable>) pairs
+   * return (Text, RowResult) pairs
    */
-  class TableRecordReader implements RecordReader<HStoreKey, MapWritable> {
-    private final HScannerInterface m_scanner;
-    // current buffer
-    private final SortedMap<Text, byte[]> m_row = new TreeMap<Text, byte[]>();
+  class TableRecordReader implements RecordReader<Text, RowResult> {
+    private final Scanner m_scanner;
 
     /**
      * Constructor
@@ -78,9 +78,9 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
      */
     public TableRecordReader(Text startRow, Text endRow) throws IOException {
       if (endRow != null && endRow.getLength() > 0) {
-        this.m_scanner = m_table.obtainScanner(m_cols, startRow, endRow);
+        this.m_scanner = m_table.getScanner(m_cols, startRow, endRow);
       } else {
-        this.m_scanner = m_table.obtainScanner(m_cols, startRow);
+        this.m_scanner = m_table.getScanner(m_cols, startRow);
       }
     }
 
@@ -90,22 +90,22 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
     }
 
     /**
-     * @return HStoreKey
+     * @return Text
      *
      * @see org.apache.hadoop.mapred.RecordReader#createKey()
      */
-    public HStoreKey createKey() {
-      return new HStoreKey();
+    public Text createKey() {
+      return new Text();
     }
 
     /**
-     * @return MapWritable
+     * @return RowResult
      *
      * @see org.apache.hadoop.mapred.RecordReader#createValue()
      */
     @SuppressWarnings("unchecked")
-    public MapWritable createValue() {
-      return new MapWritable();
+    public RowResult createValue() {
+      return new RowResult();
     }
 
     /** {@inheritDoc} */
@@ -125,23 +125,19 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
      * @param key HStoreKey as input key.
      * @param value MapWritable as input value
      * 
-     * Converts HScannerInterface.next(HStoreKey, SortedMap<Text, byte[]>) to
-     * HStoreKey, MapWritable<Text, ImmutableBytesWritable>
+     * Converts Scanner.next() to
+     * Text, RowResult
      * 
      * @return true if there was more data
      * @throws IOException
      */
     @SuppressWarnings("unchecked")
-    public boolean next(HStoreKey key, MapWritable value) throws IOException {
-      this.m_row.clear();
-      HStoreKey tKey = key;
-      boolean hasMore = this.m_scanner.next(tKey, this.m_row);
+    public boolean next(Text key, RowResult value) throws IOException {
+      RowResult result = m_scanner.next();
+      boolean hasMore = result != null;
       if (hasMore) {
-        // Clear value to remove content added by previous call to next.
-        value.clear();
-        for (Map.Entry<Text, byte[]> e: this.m_row.entrySet()) {
-          value.put(e.getKey(), new ImmutableBytesWritable(e.getValue()));
-        }
+        Writables.copyWritable(result.getRow(), key);
+        Writables.copyWritable(result, value);
       }
       return hasMore;
     }
@@ -149,7 +145,7 @@ implements InputFormat<HStoreKey, MapWritable>, JobConfigurable {
   }
 
   /** {@inheritDoc} */
-  public RecordReader<HStoreKey, MapWritable> getRecordReader(
+  public RecordReader<Text, RowResult> getRecordReader(
       InputSplit split,
       @SuppressWarnings("unused") JobConf job,
       @SuppressWarnings("unused") Reporter reporter)

@@ -38,10 +38,10 @@ import org.apache.hadoop.hbase.HConstants;
 /**
  * Scanner scans both the memcache and the HStore
  */
-class HStoreScanner implements HInternalScannerInterface {
+class HStoreScanner implements InternalScanner {
   static final Log LOG = LogFactory.getLog(HStoreScanner.class);
 
-  private HInternalScannerInterface[] scanners;
+  private InternalScanner[] scanners;
   private TreeMap<Text, byte []>[] resultSets;
   private HStoreKey[] keys;
   private boolean wildcardMatch = false;
@@ -59,7 +59,7 @@ class HStoreScanner implements HInternalScannerInterface {
     if (null != dataFilter) {
       dataFilter.reset();
     }
-    this.scanners = new HInternalScannerInterface[2];
+    this.scanners = new InternalScanner[2];
     this.resultSets = new TreeMap[scanners.length];
     this.keys = new HStoreKey[scanners.length];
 

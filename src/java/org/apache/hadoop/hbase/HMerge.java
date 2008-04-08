@@ -37,9 +37,13 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Writables;
 
 /** 
@@ -189,7 +193,7 @@ class HMerge implements HConstants {
   private static class OnlineMerger extends Merger {
     private final Text tableName;
     private final HTable table;
-    private final HScannerInterface metaScanner;
+    private final Scanner metaScanner;
     private HRegionInfo latestRegion;
     
     OnlineMerger(HBaseConfiguration conf, FileSystem fs, Text tableName)
@@ -197,22 +201,22 @@ class HMerge implements HConstants {
       super(conf, fs, tableName);
       this.tableName = tableName;
       this.table = new HTable(conf, META_TABLE_NAME);
-      this.metaScanner = table.obtainScanner(COL_REGIONINFO_ARRAY, tableName);
+      this.metaScanner = table.getScanner(COL_REGIONINFO_ARRAY, tableName);
       this.latestRegion = null;
     }
     
     private HRegionInfo nextRegion() throws IOException {
       try {
-        Map<Text, byte[]> results = getMetaRow();
+        RowResult results = getMetaRow();
         if (results == null) {
           return null;
         }
-        byte[] bytes = results.get(COL_REGIONINFO);
-        if (bytes == null || bytes.length == 0) {
+        Cell regionInfo = results.get(COL_REGIONINFO);
+        if (regionInfo == null || regionInfo.getValue().length == 0) {
           throw new NoSuchElementException("meta region entry missing " +
             COL_REGIONINFO);
         }
-        HRegionInfo region = Writables.getHRegionInfo(bytes);
+        HRegionInfo region = Writables.getHRegionInfo(regionInfo.getValue());
         if (!region.getTableDesc().getName().equals(this.tableName)) {
           return null;
         }
@@ -221,12 +225,7 @@ class HMerge implements HConstants {
       } catch (IOException e) {
         e = RemoteExceptionHandler.checkIOException(e);
         LOG.error("meta scanner error", e);
-        try {
-          metaScanner.close();
-        } catch (IOException ex) {
-          ex = RemoteExceptionHandler.checkIOException(ex);
-          LOG.error("error closing scanner", ex);
-        }
+        metaScanner.close();
         throw e;
       }
     }
@@ -244,20 +243,20 @@ class HMerge implements HConstants {
      * @return A Map of the row content else null if we are off the end.
      * @throws IOException
      */
-    private Map<Text, byte[]> getMetaRow() throws IOException {
-      HStoreKey key = new HStoreKey();
-      SortedMap<Text, byte[]> value = new TreeMap<Text, byte[]>();
+    private RowResult getMetaRow() throws IOException {
+      RowResult currentRow = metaScanner.next();
       boolean foundResult = false;
-      while (metaScanner.next(key, value)) {
-        LOG.info("Row: <" + key.getRow() + ">");
-        byte[] bytes = value.get(COL_REGIONINFO);
-        if (bytes == null || bytes.length == 0) {
+      while (currentRow != null) {
+        LOG.info("Row: <" + currentRow.getRow() + ">");
+        Cell regionInfo = currentRow.get(COL_REGIONINFO);
+        if (regionInfo == null || regionInfo.getValue().length == 0) {
+          currentRow = metaScanner.next();
           continue;
         }
         foundResult = true;
         break;
       }
-      return foundResult? value: null;
+      return foundResult ? currentRow : null;
     }
 
     @Override
@@ -324,7 +323,7 @@ class HMerge implements HConstants {
       root = new HRegion(rootTableDir, hlog, fs, conf,
           HRegionInfo.rootRegionInfo, null, null);
 
-      HScannerInterface rootScanner = 
+      InternalScanner rootScanner = 
         root.getScanner(COL_REGIONINFO_ARRAY, new Text(), 
         HConstants.LATEST_TIMESTAMP, null);
       

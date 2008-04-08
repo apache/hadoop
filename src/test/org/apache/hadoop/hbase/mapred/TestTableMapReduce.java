@@ -31,8 +31,10 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MultiRegionTable;
@@ -47,7 +49,9 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
 
 /**
- * Test Map/Reduce job over HBase tables
+ * Test Map/Reduce job over HBase tables. The map/reduce process we're testing
+ * on our tables is simple - take every row in the table, reverse the value of
+ * a particular cell, and write it back to the table.
  */
 public class TestTableMapReduce extends MultiRegionTable {
   @SuppressWarnings("hiding")
@@ -104,10 +108,14 @@ public class TestTableMapReduce extends MultiRegionTable {
     conf.setInt("hbase.client.pause", 10 * 1000);
   }
 
+  public void teardown() {
+    
+  }
+
   /**
    * Pass the given key and processed record reduce
    */
-  public static class ProcessContentsMapper extends TableMap<Text, MapWritable> {
+  public static class ProcessContentsMapper extends TableMap<Text, BatchUpdate> {
     /**
      * Pass the key, and reversed value to reduce
      *
@@ -115,12 +123,10 @@ public class TestTableMapReduce extends MultiRegionTable {
      */
     @SuppressWarnings("unchecked")
     @Override
-    public void map(HStoreKey key, MapWritable value,
-        OutputCollector<Text, MapWritable> output,
-        @SuppressWarnings("unused") Reporter reporter) throws IOException {
-      
-      Text tKey = key.getRow();
-      
+    public void map(Text key, RowResult value,
+      OutputCollector<Text, BatchUpdate> output,
+      @SuppressWarnings("unused") Reporter reporter) 
+    throws IOException {
       if(value.size() != 1) {
         throw new IOException("There should only be one input column");
       }
@@ -134,8 +140,7 @@ public class TestTableMapReduce extends MultiRegionTable {
       // Get the original value and reverse it
       
       String originalValue =
-        new String(((ImmutableBytesWritable)value.get(keys[0])).get(),
-            HConstants.UTF8_ENCODING);
+        new String(value.get(keys[0]).getValue(), HConstants.UTF8_ENCODING);
       StringBuilder newValue = new StringBuilder();
       for(int i = originalValue.length() - 1; i >= 0; i--) {
         newValue.append(originalValue.charAt(i));
@@ -143,21 +148,26 @@ public class TestTableMapReduce extends MultiRegionTable {
       
       // Now set the value to be collected
 
-      MapWritable outval = new MapWritable();
-      outval.put(TEXT_OUTPUT_COLUMN, new ImmutableBytesWritable(
-          newValue.toString().getBytes(HConstants.UTF8_ENCODING)));
+      BatchUpdate outval = new BatchUpdate(key);
+      outval.put(TEXT_OUTPUT_COLUMN, 
+        newValue.toString().getBytes(HConstants.UTF8_ENCODING));
       
-      output.collect(tKey, outval);
+      output.collect(key, outval);
     }
   }
   
   /**
-   * Test hbase mapreduce jobs against single region and multi-region tables.
-   * @throws IOException
+   * Test a map/reduce against a single-region table
    */
-  public void testTableMapReduce() throws IOException {
+  public void testSingleRegionTable() throws IOException {
     localTestSingleRegionTable();
-    localTestMultiRegionTable();
+  }
+  
+  /**
+   * Test a map/reduce against a multi-region table
+   */
+  public void testMultiRegionTable() throws IOException {
+    localTestMultiRegionTable();    
   }
 
   /*
@@ -188,36 +198,7 @@ public class TestTableMapReduce extends MultiRegionTable {
       SINGLE_REGION_TABLE_NAME);
     scanTable(SINGLE_REGION_TABLE_NAME, true);
 
-    @SuppressWarnings("deprecation")
-    MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
-
-    JobConf jobConf = null;
-    try {
-      jobConf = new JobConf(conf, TestTableMapReduce.class);
-      jobConf.setJobName("process column contents");
-      jobConf.setNumMapTasks(1);
-      jobConf.setNumReduceTasks(1);
-
-      TableMap.initJob(SINGLE_REGION_TABLE_NAME, INPUT_COLUMN, 
-          ProcessContentsMapper.class, jobConf);
-
-      TableReduce.initJob(SINGLE_REGION_TABLE_NAME,
-          IdentityTableReduce.class, jobConf);
-      LOG.info("Started " + SINGLE_REGION_TABLE_NAME);
-      JobClient.runJob(jobConf);
-
-      LOG.info("Print table contents after map/reduce for " +
-        SINGLE_REGION_TABLE_NAME);
-    scanTable(SINGLE_REGION_TABLE_NAME, true);
-
-    // verify map-reduce results
-    verify(SINGLE_REGION_TABLE_NAME);
-    } finally {
-      mrCluster.shutdown();
-      if (jobConf != null) {
-        FileUtil.fullyDelete(new File(jobConf.get("hadoop.tmp.dir")));
-      }
-    }
+    runTestOnTable(table);
   }
   
   /*
@@ -236,33 +217,40 @@ public class TestTableMapReduce extends MultiRegionTable {
     // Populate a table into multiple regions
     makeMultiRegionTable(conf, cluster, dfsCluster.getFileSystem(), 
       MULTI_REGION_TABLE_NAME, INPUT_COLUMN);
-    
+        
     // Verify table indeed has multiple regions
     HTable table = new HTable(conf, new Text(MULTI_REGION_TABLE_NAME));
 
     Text[] startKeys = table.getStartKeys();
     assertTrue(startKeys.length > 1);
 
+    runTestOnTable(table);
+  }
+
+
+  private void runTestOnTable(HTable table) throws IOException {
     @SuppressWarnings("deprecation")
     MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
 
     JobConf jobConf = null;
     try {
+      LOG.info("Before map/reduce startup");
       jobConf = new JobConf(conf, TestTableMapReduce.class);
       jobConf.setJobName("process column contents");
-      jobConf.setNumMapTasks(2);
       jobConf.setNumReduceTasks(1);
+      
+      TableMap.initJob(table.getTableName().toString(), INPUT_COLUMN, 
+          ProcessContentsMapper.class, Text.class, BatchUpdate.class, jobConf);
 
-      TableMap.initJob(MULTI_REGION_TABLE_NAME, INPUT_COLUMN, 
-          ProcessContentsMapper.class, jobConf);
-
-      TableReduce.initJob(MULTI_REGION_TABLE_NAME,
+      TableReduce.initJob(table.getTableName().toString(),
           IdentityTableReduce.class, jobConf);
-      LOG.info("Started " + MULTI_REGION_TABLE_NAME);
+            
+      LOG.info("Started " + table.getTableName());
       JobClient.runJob(jobConf);
+      LOG.info("After map/reduce completion");
 
       // verify map-reduce results
-      verify(MULTI_REGION_TABLE_NAME);
+      verify(table.getTableName().toString());
     } finally {
       mrCluster.shutdown();
       if (jobConf != null) {
@@ -275,20 +263,17 @@ public class TestTableMapReduce extends MultiRegionTable {
   throws IOException {
     HTable table = new HTable(conf, new Text(tableName));
     
-    HScannerInterface scanner =
-      table.obtainScanner(columns, HConstants.EMPTY_START_ROW);
+    Scanner scanner =
+      table.getScanner(columns, HConstants.EMPTY_START_ROW);
     
     try {
-      HStoreKey key = new HStoreKey();
-      TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-      
-      while(scanner.next(key, results)) {
+      for (RowResult r : scanner) {
         if (printValues) {
-          LOG.info("row: " + key.getRow());
+          LOG.info("row: " + r.getRow());
 
-          for(Map.Entry<Text, byte[]> e: results.entrySet()) {
+          for(Map.Entry<Text, Cell> e: r.entrySet()) {
             LOG.info(" column: " + e.getKey() + " value: "
-                + new String(e.getValue(), HConstants.UTF8_ENCODING));
+                + new String(e.getValue().getValue(), HConstants.UTF8_ENCODING));
           }
         }
       }
@@ -306,6 +291,7 @@ public class TestTableMapReduce extends MultiRegionTable {
     int numRetries = conf.getInt("hbase.client.retries.number", 5);
     for (int i = 0; i < numRetries; i++) {
       try {
+        LOG.info("Verification attempt #" + i);
         verifyAttempt(table);
         verified = true;
         break;
@@ -331,28 +317,25 @@ public class TestTableMapReduce extends MultiRegionTable {
    * @throws NullPointerException if we failed to find a cell value
    */
   private void verifyAttempt(final HTable table) throws IOException, NullPointerException {
-    HScannerInterface scanner =
-      table.obtainScanner(columns, HConstants.EMPTY_START_ROW);
+    Scanner scanner =
+      table.getScanner(columns, HConstants.EMPTY_START_ROW);
     try {
-      HStoreKey key = new HStoreKey();
-      TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-      
-      while(scanner.next(key, results)) {
+      for (RowResult r : scanner) {
         if (LOG.isDebugEnabled()) {
-          if (results.size() > 2 ) {
+          if (r.size() > 2 ) {
             throw new IOException("Too many results, expected 2 got " +
-              results.size());
+              r.size());
           }
         }
         byte[] firstValue = null;
         byte[] secondValue = null;
         int count = 0;
-        for(Map.Entry<Text, byte[]> e: results.entrySet()) {
+        for(Map.Entry<Text, Cell> e: r.entrySet()) {
           if (count == 0) {
-            firstValue = e.getValue();
+            firstValue = e.getValue().getValue();
           }
           if (count == 1) {
-            secondValue = e.getValue();
+            secondValue = e.getValue().getValue();
           }
           count++;
           if (count == 2) {
@@ -362,14 +345,14 @@ public class TestTableMapReduce extends MultiRegionTable {
         
         String first = "";
         if (firstValue == null) {
-          throw new NullPointerException(key.getRow().toString() +
+          throw new NullPointerException(r.getRow().toString() +
             ": first value is null");
         }
         first = new String(firstValue, HConstants.UTF8_ENCODING);
         
         String second = "";
         if (secondValue == null) {
-          throw new NullPointerException(key.getRow().toString() +
+          throw new NullPointerException(r.getRow().toString() +
             ": second value is null");
         }
         byte[] secondReversed = new byte[secondValue.length];
@@ -381,7 +364,7 @@ public class TestTableMapReduce extends MultiRegionTable {
         if (first.compareTo(second) != 0) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("second key is not the reverse of first. row=" +
-                key.getRow() + ", first value=" + first + ", second value=" +
+                r.getRow() + ", first value=" + first + ", second value=" +
                 second);
           }
           fail();

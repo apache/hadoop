@@ -25,7 +25,8 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.JobConf;
@@ -42,7 +43,7 @@ import org.apache.lucene.document.Field;
  * to build a Lucene index
  */
 public class IndexTableReduce extends MapReduceBase implements
-    Reducer<Text, MapWritable, Text, LuceneDocumentWrapper> {
+    Reducer<Text, RowResult, Text, LuceneDocumentWrapper> {
   private static final Logger LOG = Logger.getLogger(IndexTableReduce.class);
 
   private IndexConfiguration indexConf;
@@ -63,7 +64,7 @@ public class IndexTableReduce extends MapReduceBase implements
     super.close();
   }
 
-  public void reduce(Text key, Iterator<MapWritable> values,
+  public void reduce(Text key, Iterator<RowResult> values,
       OutputCollector<Text, LuceneDocumentWrapper> output, Reporter reporter)
       throws IOException {
     if (!values.hasNext()) {
@@ -79,13 +80,13 @@ public class IndexTableReduce extends MapReduceBase implements
     doc.add(keyField);
 
     while (values.hasNext()) {
-      MapWritable value = values.next();
+      RowResult value = values.next();
 
       // each column (name-value pair) is a field (name-value pair)
-      for (Map.Entry<Writable, Writable> entry : value.entrySet()) {
+      for (Map.Entry<Text, Cell> entry : value.entrySet()) {
         // name is already UTF-8 encoded
-        String column = ((Text) entry.getKey()).toString();
-        byte[] columnValue = ((ImmutableBytesWritable)entry.getValue()).get();
+        String column = entry.getKey().toString();
+        byte[] columnValue = entry.getValue().getValue();
         Field.Store store = indexConf.isStore(column)?
           Field.Store.YES: Field.Store.NO;
         Field.Index index = indexConf.isIndex(column)?

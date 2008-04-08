@@ -40,8 +40,9 @@ import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.client.HTable;
 
 /**
@@ -216,7 +217,7 @@ public class MetaUtils {
       openRootRegion();
     }
 
-    HScannerInterface rootScanner = rootRegion.getScanner(
+    InternalScanner rootScanner = rootRegion.getScanner(
         HConstants.COL_REGIONINFO_ARRAY, HConstants.EMPTY_START_ROW,
         HConstants.LATEST_TIMESTAMP, null);
 
@@ -260,7 +261,7 @@ public class MetaUtils {
 
     HRegion metaRegion = openMetaRegion(metaRegionInfo);
 
-    HScannerInterface metaScanner = metaRegion.getScanner(
+    InternalScanner metaScanner = metaRegion.getScanner(
         HConstants.COL_REGIONINFO_ARRAY, HConstants.EMPTY_START_ROW,
         HConstants.LATEST_TIMESTAMP, null);
 

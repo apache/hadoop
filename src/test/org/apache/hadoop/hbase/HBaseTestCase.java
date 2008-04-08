@@ -22,7 +22,8 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
-
+import java.util.SortedMap;
+import java.util.Iterator;
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
@@ -33,8 +34,11 @@ import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
 
 /**
  * Abstract base class for test cases. Performs all static initialization
@@ -360,7 +364,7 @@ public abstract class HBaseTestCase extends TestCase {
      * @return scanner for specified columns, first row and timestamp
      * @throws IOException
      */
-    public HScannerInterface getScanner(Text [] columns, Text firstRow,
+    public ScannerIncommon getScanner(Text [] columns, Text firstRow,
       long ts) throws IOException;
   }
   
@@ -396,9 +400,10 @@ public abstract class HBaseTestCase extends TestCase {
     }
 
     /** {@inheritDoc} */
-    public HScannerInterface getScanner(Text [] columns, Text firstRow,
-        long ts) throws IOException {
-      return this.region.getScanner(columns, firstRow, ts, null);
+    public ScannerIncommon getScanner(Text [] columns, Text firstRow, long ts) 
+    throws IOException {
+      return new 
+        InternalScannerIncommon(region.getScanner(columns, firstRow, ts, null));
     }
 
     /** {@inheritDoc} */
@@ -465,9 +470,10 @@ public abstract class HBaseTestCase extends TestCase {
     }
     
     /** {@inheritDoc} */
-    public HScannerInterface getScanner(Text [] columns, Text firstRow,
-        long ts) throws IOException {
-      return this.table.obtainScanner(columns, firstRow, ts, null);
+    public ScannerIncommon getScanner(Text [] columns, Text firstRow, long ts) 
+    throws IOException {
+      return new 
+        ClientScannerIncommon(table.getScanner(columns, firstRow, ts, null));
     }
     
     /** {@inheritDoc} */
@@ -484,6 +490,65 @@ public abstract class HBaseTestCase extends TestCase {
     public Cell[] get(Text row, Text column, long ts, int versions)
     throws IOException {
       return this.table.get(row, column, ts, versions);
+    }
+  }
+  
+  public interface ScannerIncommon 
+  extends Iterable<Map.Entry<HStoreKey, SortedMap<Text, byte[]>>> {
+    public boolean next(HStoreKey key, SortedMap<Text, byte[]> values)
+    throws IOException;
+    
+    public void close() throws IOException;
+  }
+  
+  public static class ClientScannerIncommon implements ScannerIncommon {
+    Scanner scanner;
+    public ClientScannerIncommon(Scanner scanner) {
+      this.scanner = scanner;
+    }
+    
+    public boolean next(HStoreKey key, SortedMap<Text, byte[]> values)
+    throws IOException {
+      RowResult results = scanner.next();
+      if (results == null) {
+        return false;
+      } else {
+        key.setRow(results.getRow());
+        values.clear();
+        for (Map.Entry<Text, Cell> entry : results.entrySet()) {
+          values.put(entry.getKey(), entry.getValue().getValue());
+        }
+        return true;
+      }
+    }
+    
+    public void close() throws IOException {
+      scanner.close();
+    }
+    
+    public Iterator iterator() {
+      return scanner.iterator();
+    }
+  }
+  
+  public static class InternalScannerIncommon implements ScannerIncommon {
+    InternalScanner scanner;
+    
+    public InternalScannerIncommon(InternalScanner scanner) {
+      this.scanner = scanner;
+    }
+    
+    public boolean next(HStoreKey key, SortedMap<Text, byte[]> values)
+    throws IOException {
+      return scanner.next(key, values);
+    }
+    
+    public void close() throws IOException {
+      scanner.close();
+    }
+    
+    public Iterator iterator() {
+      throw new UnsupportedOperationException();
     }
   }
   

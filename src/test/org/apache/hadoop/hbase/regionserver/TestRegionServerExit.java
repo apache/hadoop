@@ -29,8 +29,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Scanner;
 
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HConstants;
@@ -38,7 +40,6 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
-import org.apache.hadoop.hbase.HScannerInterface;
 
 /**
  * Tests region server failover when a region server exits both cleanly and
@@ -165,27 +166,27 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
           // Now try to open a scanner on the meta table. Should stall until
           // meta server comes back up.
           HTable t = new HTable(conf, HConstants.META_TABLE_NAME);
-          HScannerInterface s =
-            t.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY, new Text());
+          Scanner s =
+            t.getScanner(HConstants.COLUMN_FAMILY_ARRAY, new Text());
           s.close();
           
         } catch (IOException e) {
           LOG.fatal("could not re-open meta table because", e);
           fail();
         }
-        HScannerInterface scanner = null;
+        Scanner scanner = null;
         try {
           // Verify that the client can find the data after the region has moved
           // to a different server
           scanner =
-            table.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY, new Text());
+            table.getScanner(HConstants.COLUMN_FAMILY_ARRAY, new Text());
           LOG.info("Obtained scanner " + scanner);
           HStoreKey key = new HStoreKey();
           TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-          while (scanner.next(key, results)) {
-            assertTrue(key.getRow().equals(row));
-            assertEquals(1, results.size());
-            byte[] bytes = results.get(HConstants.COLUMN_FAMILY);
+          for (RowResult r : scanner) {
+            assertTrue(r.getRow().equals(row));
+            assertEquals(1, r.size());
+            byte[] bytes = r.get(HConstants.COLUMN_FAMILY).getValue();
             assertNotNull(bytes);
             assertTrue(tableName.equals(new String(bytes,
                 HConstants.UTF8_ENCODING)));
@@ -197,11 +198,7 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
         } finally {
           if (scanner != null) {
             LOG.info("Closing scanner " + scanner);
-            try {
-              scanner.close();
-            } catch (IOException e) {
-              e.printStackTrace();
-            }
+            scanner.close();
           }
         }
       }

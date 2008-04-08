@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -49,7 +48,9 @@ import org.apache.hadoop.hbase.thrift.generated.RegionDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.ScanEntry;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 
 import com.facebook.thrift.TException;
@@ -77,7 +78,7 @@ public class ThriftServer {
 
     // nextScannerId and scannerMap are used to manage scanner state
     protected int nextScannerId = 0;
-    protected HashMap<Integer, HScannerInterface> scannerMap = null;
+    protected HashMap<Integer, Scanner> scannerMap = null;
     
     /**
      * Creates and returns an HTable instance from a given table name.
@@ -100,7 +101,7 @@ public class ThriftServer {
      * @param scanner
      * @return integer scanner id
      */
-    protected synchronized int addScanner(HScannerInterface scanner) {
+    protected synchronized int addScanner(Scanner scanner) {
       int id = nextScannerId++;
       scannerMap.put(id, scanner);
       return id;
@@ -110,9 +111,9 @@ public class ThriftServer {
      * Returns the scanner associated with the specified ID.
      * 
      * @param id
-     * @return a HScannerInterface, or null if ID was invalid.
+     * @return a Scanner, or null if ID was invalid.
      */
-    protected synchronized HScannerInterface getScanner(int id) {
+    protected synchronized Scanner getScanner(int id) {
       return scannerMap.get(id);
     }
     
@@ -121,9 +122,9 @@ public class ThriftServer {
      * id->scanner hash-map.
      * 
      * @param id
-     * @return a HScannerInterface, or null if ID was invalid.
+     * @return a Scanner, or null if ID was invalid.
      */
-    protected synchronized HScannerInterface removeScanner(int id) {
+    protected synchronized Scanner removeScanner(int id) {
       return scannerMap.remove(id);
     }
     
@@ -135,7 +136,7 @@ public class ThriftServer {
     HBaseHandler() throws MasterNotRunningException {
       conf = new HBaseConfiguration();
       admin = new HBaseAdmin(conf);
-      scannerMap = new HashMap<Integer, HScannerInterface>();
+      scannerMap = new HashMap<Integer, Scanner>();
     }
     
     /**
@@ -437,31 +438,27 @@ public class ThriftServer {
     
     public void scannerClose(int id) throws IOError, IllegalArgument {
       LOG.debug("scannerClose: id=" + id);
-      HScannerInterface scanner = getScanner(id);
+      Scanner scanner = getScanner(id);
       if (scanner == null) {
         throw new IllegalArgument("scanner ID is invalid");
       }
-      try {
-        scanner.close();
-        removeScanner(id);
-      } catch (IOException e) {
-        throw new IOError(e.getMessage());
-      }
+      scanner.close();
+      removeScanner(id);
     }
     
     public ScanEntry scannerGet(int id) throws IllegalArgument, NotFound,
         IOError {
       LOG.debug("scannerGet: id=" + id);
-      HScannerInterface scanner = getScanner(id);
+      Scanner scanner = getScanner(id);
       if (scanner == null) {
         throw new IllegalArgument("scanner ID is invalid");
       }
       
-      HStoreKey key = new HStoreKey();
-      TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+      RowResult results = null;
       
       try {
-        if (scanner.next(key, results) == false) {
+        results = scanner.next();
+        if (results == null) {
           throw new NotFound("end of scanner reached");
         }
       } catch (IOException e) {
@@ -469,11 +466,11 @@ public class ThriftServer {
       }
       
       ScanEntry retval = new ScanEntry();
-      retval.row = key.getRow().getBytes();
+      retval.row = results.getRow().getBytes();
       retval.columns = new HashMap<byte[], byte[]>(results.size());
       
-      for (Map.Entry<Text, byte[]> e : results.entrySet()) {
-        retval.columns.put(e.getKey().getBytes(), e.getValue());
+      for (Map.Entry<Text, Cell> e : results.entrySet()) {
+        retval.columns.put(e.getKey().getBytes(), e.getValue().getValue());
       }
       return retval;
     }
@@ -490,7 +487,7 @@ public class ThriftServer {
         for (int i = 0; i < columns.size(); ++i) {
           columnsText[i] = getText(columns.get(i));
         }
-        HScannerInterface scanner = table.obtainScanner(columnsText,
+        Scanner scanner = table.getScanner(columnsText,
             getText(startRow));
         return addScanner(scanner);
       } catch (IOException e) {
@@ -511,7 +508,7 @@ public class ThriftServer {
         for (int i = 0; i < columns.size(); ++i) {
           columnsText[i] = getText(columns.get(i));
         }
-        HScannerInterface scanner = table.obtainScanner(columnsText,
+        Scanner scanner = table.getScanner(columnsText,
             getText(startRow), getText(stopRow));
         return addScanner(scanner);
       } catch (IOException e) {
@@ -532,7 +529,7 @@ public class ThriftServer {
         for (int i = 0; i < columns.size(); ++i) {
           columnsText[i] = getText(columns.get(i));
         }
-        HScannerInterface scanner = table.obtainScanner(columnsText,
+        Scanner scanner = table.getScanner(columnsText,
             getText(startRow), timestamp);
         return addScanner(scanner);
       } catch (IOException e) {
@@ -554,7 +551,7 @@ public class ThriftServer {
         for (int i = 0; i < columns.size(); ++i) {
           columnsText[i] = getText(columns.get(i));
         }
-        HScannerInterface scanner = table.obtainScanner(columnsText,
+        Scanner scanner = table.getScanner(columnsText,
             getText(startRow), getText(stopRow), timestamp);
         return addScanner(scanner);
       } catch (IOException e) {

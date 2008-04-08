@@ -132,6 +132,11 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
   //
 
   public void readFields(final DataInput in) throws IOException {
+    // Clear any existing operations; may be hangovers from previous use of
+    // this instance.
+    if (this.operations.size() != 0) {
+      this.operations.clear();
+    }
     row.readFields(in);
     timestamp = in.readLong();
     int nOps = in.readInt();

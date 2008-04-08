@@ -17,23 +17,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.regionserver;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.SortedMap;
-
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.HStoreKey;
 
 /**
- * HScannerInterface iterates through a set of rows.  It's implemented by
- * several classes.  Implements {@link Iterable} but be sure to still call
- * {@link #close()} when done with your {@link Iterator}
+ * Internal scanners differ from client-side scanners in that they operate on
+ * HStoreKeys and byte[] instead of RowResults. This is because they are 
+ * actually close to how the data is physically stored, and therefore it is more
+ * convenient to interact with them that way. It is also much easier to merge 
+ * the results across SortedMaps that RowResults. 
+ *
+ * Additionally, we need to be able to determine if the scanner is doing wildcard
+ * column matches (when only a column family is specified or if a column regex
+ * is specified) or if multiple members of the same column family were
+ * specified. If so, we need to ignore the timestamp to ensure that we get all
+ * the family members, as they may have been last updated at different times.
  */
-public interface HScannerInterface extends Closeable,
-Iterable<Map.Entry<HStoreKey, SortedMap<Text, byte []>>> {
+public interface InternalScanner extends Closeable {
   /**
    * Grab the next row's worth of values. The scanner will return the most
    * recent data value for each row that is not newer than the target time
@@ -48,8 +53,14 @@ Iterable<Map.Entry<HStoreKey, SortedMap<Text, byte []>>> {
   throws IOException;
   
   /**
-   * Closes a scanner and releases any resources it has allocated
+   * Closes the scanner and releases any resources it has allocated
    * @throws IOException
    */
-  public void close() throws IOException;
+  public void close() throws IOException;  
+  
+  /** @return true if the scanner is matching a column family or regex */
+  public boolean isWildcardScanner();
+  
+  /** @return true if the scanner is matching multiple column family members */
+  public boolean isMultipleMatchScanner();
 }

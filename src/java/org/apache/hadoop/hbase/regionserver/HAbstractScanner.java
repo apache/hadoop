@@ -33,10 +33,10 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.io.Text;
 
 /**
- * Abstract base class that implements the HScannerInterface.
+ * Abstract base class that implements the InternalScanner.
  * Used by the concrete HMemcacheScanner and HStoreScanners
  */
-public abstract class HAbstractScanner implements HInternalScannerInterface {
+public abstract class HAbstractScanner implements InternalScanner {
   final Log LOG = LogFactory.getLog(this.getClass().getName());
 
   // Pattern to determine if a column key is a regex
@@ -201,7 +201,7 @@ public abstract class HAbstractScanner implements HInternalScannerInterface {
    * @return true if a match was found
    * @throws IOException
    * 
-   * @see org.apache.hadoop.hbase.HScannerInterface#next(org.apache.hadoop.hbase.HStoreKey, java.util.SortedMap)
+   * @see org.apache.hadoop.hbase.InternalScanner#next(org.apache.hadoop.hbase.HStoreKey, java.util.SortedMap)
    */
   public boolean next(HStoreKey key, SortedMap<Text, byte []> results)
   throws IOException {

@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
@@ -290,7 +289,7 @@ implements RegionUnavailableListener {
     
     startTime = System.currentTimeMillis();
 
-    HScannerInterface s =
+    InternalScanner s =
       r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
     int numFetched = 0;
     try {
@@ -648,7 +647,7 @@ implements RegionUnavailableListener {
     
     long startTime = System.currentTimeMillis();
     
-    HScannerInterface s =
+    InternalScanner s =
       r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
 
     try {

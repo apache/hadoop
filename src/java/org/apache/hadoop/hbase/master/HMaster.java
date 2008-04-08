@@ -586,7 +586,8 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
         createTable(newRegion);
         LOG.info("created table " + desc.getName());
         break;
-      
+      } catch (TableExistsException e) {
+        throw e;
       } catch (IOException e) {
         if (tries == numRetries - 1) {
           throw RemoteExceptionHandler.checkIOException(e);
@@ -596,46 +597,37 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     }
   }
 
-  private void createTable(final HRegionInfo newRegion) throws IOException {
+  private synchronized void createTable(final HRegionInfo newRegion) 
+  throws IOException {
     Text tableName = newRegion.getTableDesc().getName();
-    // TODO: Not thread safe check.
-    if (tableInCreation.contains(tableName)) {
-      throw new TableExistsException("Table " + tableName + " in process "
-        + "of being created");
-    }
-    tableInCreation.add(tableName);
+    // 1. Check to see if table already exists. Get meta region where
+    // table would sit should it exist. Open scanner on it. If a region
+    // for the table we want to create already exists, then table already
+    // created. Throw already-exists exception.
+    MetaRegion m = regionManager.getFirstMetaRegionForRegion(newRegion);
+        
+    Text metaRegionName = m.getRegionName();
+    HRegionInterface srvr = connection.getHRegionConnection(m.getServer());
+    long scannerid = srvr.openScanner(metaRegionName, COL_REGIONINFO_ARRAY,
+      tableName, LATEST_TIMESTAMP, null);
     try {
-      // 1. Check to see if table already exists. Get meta region where
-      // table would sit should it exist. Open scanner on it. If a region
-      // for the table we want to create already exists, then table already
-      // created. Throw already-exists exception.
-      MetaRegion m = regionManager.getFirstMetaRegionForRegion(newRegion);
+      RowResult data = srvr.next(scannerid);
           
-      Text metaRegionName = m.getRegionName();
-      HRegionInterface srvr = connection.getHRegionConnection(m.getServer());
-      long scannerid = srvr.openScanner(metaRegionName, COL_REGIONINFO_ARRAY,
-        tableName, System.currentTimeMillis(), null);
-      try {
-        RowResult data = srvr.next(scannerid);
-            
-        // Test data and that the row for the data is for our table. If table
-        // does not exist, scanner will return row after where our table would
-        // be inserted if it exists so look for exact match on table name.            
-        if (data != null && data.size() > 0) {
-          if (HRegionInfo.getTableNameFromRegionName(
-            data.getRow()).equals(tableName)) {
-            // Then a region for this table already exists. Ergo table exists.
-            throw new TableExistsException(tableName.toString());
-          }
+      // Test data and that the row for the data is for our table. If table
+      // does not exist, scanner will return row after where our table would
+      // be inserted if it exists so look for exact match on table name.            
+      if (data != null && data.size() > 0) {
+        if (HRegionInfo.getTableNameFromRegionName(
+          data.getRow()).equals(tableName)) {
+          // Then a region for this table already exists. Ergo table exists.
+          throw new TableExistsException(tableName.toString());
         }
-      } finally {
-        srvr.close(scannerid);
       }
-
-      regionManager.createRegion(newRegion, srvr, metaRegionName);
     } finally {
-      tableInCreation.remove(newRegion.getTableDesc().getName());
+      srvr.close(scannerid);
     }
+
+    regionManager.createRegion(newRegion, srvr, metaRegionName);
   }
 
   /** {@inheritDoc} */

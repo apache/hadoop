@@ -142,10 +142,10 @@ public class Merge extends Configured implements Tool {
    */
   private void mergeTwoMetaRegions() throws IOException {
     HRegion rootRegion = utils.getRootRegion();
-    HRegionInfo info1 = Writables.getHRegionInfoOrNull(
-        rootRegion.get(region1, HConstants.COL_REGIONINFO).getValue());
-    HRegionInfo info2 = Writables.getHRegionInfoOrNull(
-        rootRegion.get(region2, HConstants.COL_REGIONINFO).getValue());
+    HRegionInfo info1 = Writables.getHRegionInfo(
+        rootRegion.get(region1, HConstants.COL_REGIONINFO));
+    HRegionInfo info2 = Writables.getHRegionInfo(
+        rootRegion.get(region2, HConstants.COL_REGIONINFO));
     HRegion merged = merge(info1, rootRegion, info2, rootRegion); 
     LOG.info("Adding " + merged.getRegionInfo() + " to " +
         rootRegion.getRegionInfo());
@@ -204,8 +204,8 @@ public class Merge extends Configured implements Tool {
     }
 
     HRegion metaRegion1 = utils.getMetaRegion(meta1);
-    HRegionInfo info1 = Writables.getHRegionInfoOrNull(
-        metaRegion1.get(region1, HConstants.COL_REGIONINFO).getValue());
+    HRegionInfo info1 = Writables.getHRegionInfo(
+        metaRegion1.get(region1, HConstants.COL_REGIONINFO));
 
 
     HRegion metaRegion2 = null;
@@ -214,8 +214,8 @@ public class Merge extends Configured implements Tool {
     } else {
       metaRegion2 = utils.getMetaRegion(meta2);
     }
-    HRegionInfo info2 = Writables.getHRegionInfoOrNull(
-        metaRegion2.get(region2, HConstants.COL_REGIONINFO).getValue());
+    HRegionInfo info2 = Writables.getHRegionInfo(
+        metaRegion2.get(region2, HConstants.COL_REGIONINFO));
 
     HRegion merged = merge(info1, metaRegion1, info2, metaRegion2);
 

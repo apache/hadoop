@@ -228,16 +228,16 @@ public abstract class GenericHandler {
    * @throws IOException
    */
   protected void outputColumnsXml(final XMLOutputter outputter,
-    final Map<Text, byte[]> m)
+    final Map<Text, Cell> m)
   throws IllegalStateException, IllegalArgumentException, IOException {
-    for (Map.Entry<Text, byte[]> e: m.entrySet()) {
+    for (Map.Entry<Text, Cell> e: m.entrySet()) {
       outputter.startTag(COLUMN);
       doElement(outputter, "name", 
         org.apache.hadoop.hbase.util.Base64.encodeBytes(
           e.getKey().getBytes()));
       // We don't know String from binary data so we always base64 encode.
       doElement(outputter, "value",
-        org.apache.hadoop.hbase.util.Base64.encodeBytes(e.getValue()));
+        org.apache.hadoop.hbase.util.Base64.encodeBytes(e.getValue().getValue()));
       outputter.endTag();
     }
   }

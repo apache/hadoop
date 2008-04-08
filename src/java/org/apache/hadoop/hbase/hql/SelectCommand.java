@@ -30,7 +30,6 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Shell;
@@ -42,7 +41,9 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 
 /**
  * Selects values from tables.
@@ -181,6 +182,15 @@ public class SelectCommand extends BasicCommand {
     return result;
   }
 
+  private String toString(final Text columnName, final Cell cell) 
+  throws IOException {
+    if (cell == null) {
+      return null;
+    } else {
+      return toString(columnName, cell.getValue());
+    }
+  }
+
   /**
    * Data structure with columns to use scanning and whether or not the scan
    * could return more than one column.
@@ -209,31 +219,31 @@ public class SelectCommand extends BasicCommand {
 
   private int scanPrint(HTable table, HBaseAdmin admin) {
     int count = 0;
-    HScannerInterface scan = null;
+    Scanner scan = null;
     try {
       ParsedColumns parsedColumns = getColumns(admin, true);
       Text[] cols = parsedColumns.getColumns().toArray(new Text[] {});
       if (timestamp == 0) {
-        scan = table.obtainScanner(cols, rowKey);
+        scan = table.getScanner(cols, rowKey);
       } else {
-        scan = table.obtainScanner(cols, rowKey, timestamp);
+        scan = table.getScanner(cols, rowKey, timestamp);
       }
 
       if (this.stopRow.toString().length() > 0) {
         RowFilterInterface filter = new WhileMatchRowFilter(new StopRowFilter(
             stopRow));
-        scan = table.obtainScanner(cols, rowKey, filter);
+        scan = table.getScanner(cols, rowKey, filter);
       }
 
-      HStoreKey key = new HStoreKey();
-      TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+      RowResult results = scan.next();
+
       // If only one column in query, then don't print out the column.
-      while (scan.next(key, results) && checkLimit(count)) {
+      while (results != null && checkLimit(count)) {
         if (count == 0 && !countFunction) {
           formatter.header((parsedColumns.isMultiple()) ? HEADER : HEADER_ROW_CELL);
         }
 
-        Text r = key.getRow();
+        Text r = results.getRow();
 
         if (!countFunction) {
           for (Text columnKey : results.keySet()) {
@@ -252,8 +262,7 @@ public class SelectCommand extends BasicCommand {
         }
 
         count++;
-        // Clear results else subsequent results polluted w/ previous finds.
-        results.clear();
+        results = scan.next();
       }
 
       if (count == 0 && Shell.HTML_OPTION != null && !countFunction) {

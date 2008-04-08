@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.MultiRegionTable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.io.Cell;
 
 /**
@@ -180,7 +179,7 @@ public class TestSplit extends MultiRegionTable {
       final Text firstValue)
   throws IOException {
     Text [] cols = new Text[] {new Text(column)};
-    HScannerInterface s = r.getScanner(cols,
+    InternalScanner s = r.getScanner(cols,
       HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
     try {
       HStoreKey curKey = new HStoreKey();

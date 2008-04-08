@@ -29,6 +29,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
@@ -149,29 +151,27 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     
     long startTime = System.currentTimeMillis();
     
-    HScannerInterface s = table.obtainScanner(cols, new Text());
+    Scanner s = table.getScanner(cols, new Text());
     try {
 
       int contentsFetched = 0;
       int anchorFetched = 0;
-      HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte[]> curVals = new TreeMap<Text, byte[]>();
       int k = 0;
-      while(s.next(curKey, curVals)) {
+      for (RowResult curVals : s) {
         for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
           Text col = it.next();
-          byte val[] = curVals.get(col);
+          byte val[] = curVals.get(col).getValue();
           String curval = new String(val, HConstants.UTF8_ENCODING).trim();
 
           if(col.compareTo(CONTENTS_BASIC) == 0) {
-            assertTrue("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
+            assertTrue("Error at:" + curVals.getRow() 
                 + ", Value for " + col + " should start with: " + CONTENTSTR
                 + ", but was fetched as: " + curval,
                 curval.startsWith(CONTENTSTR));
             contentsFetched++;
             
           } else if(col.toString().startsWith(ANCHORNUM)) {
-            assertTrue("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
+            assertTrue("Error at:" + curVals.getRow()
                 + ", Value for " + col + " should start with: " + ANCHORSTR
                 + ", but was fetched as: " + curval,
                 curval.startsWith(ANCHORSTR));
@@ -181,7 +181,6 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
             LOG.info(col);
           }
         }
-        curVals.clear();
         k++;
       }
       assertEquals("Expected " + NUM_VALS + " " + CONTENTS_BASIC + " values, but fetched " + contentsFetched, NUM_VALS, contentsFetched);

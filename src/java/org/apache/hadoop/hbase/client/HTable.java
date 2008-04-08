@@ -46,7 +46,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -394,9 +393,9 @@ public class HTable implements HConstants {
    * @return scanner
    * @throws IOException
    */
-  public HScannerInterface obtainScanner(Text[] columns, Text startRow)
+  public Scanner getScanner(Text[] columns, Text startRow)
   throws IOException {
-    return obtainScanner(columns, startRow, HConstants.LATEST_TIMESTAMP, null);
+    return getScanner(columns, startRow, HConstants.LATEST_TIMESTAMP, null);
   }
   
   /** 
@@ -413,10 +412,10 @@ public class HTable implements HConstants {
    * @return scanner
    * @throws IOException
    */
-  public HScannerInterface obtainScanner(Text[] columns, Text startRow,
+  public Scanner getScanner(Text[] columns, Text startRow,
     long timestamp)
   throws IOException {
-    return obtainScanner(columns, startRow, timestamp, null);
+    return getScanner(columns, startRow, timestamp, null);
   }
   
   /** 
@@ -433,12 +432,12 @@ public class HTable implements HConstants {
    * @return scanner
    * @throws IOException
    */
-  public HScannerInterface obtainScanner(Text[] columns, Text startRow,
+  public Scanner getScanner(Text[] columns, Text startRow,
     RowFilterInterface filter)
   throws IOException { 
-    return obtainScanner(columns, startRow, HConstants.LATEST_TIMESTAMP, filter);
+    return getScanner(columns, startRow, HConstants.LATEST_TIMESTAMP, filter);
   }
-
+  
   /** 
    * Get a scanner on the current table starting at the specified row and
    * ending just before <code>stopRow<code>.
@@ -456,13 +455,13 @@ public class HTable implements HConstants {
    * @return scanner
    * @throws IOException
    */
-  public HScannerInterface obtainScanner(final Text[] columns,
+  public Scanner getScanner(final Text[] columns,
     final Text startRow, final Text stopRow)
   throws IOException {
-    return obtainScanner(columns, startRow, stopRow,
+    return getScanner(columns, startRow, stopRow,
       HConstants.LATEST_TIMESTAMP);
   }
-
+  
   /** 
    * Get a scanner on the current table starting at the specified row and
    * ending just before <code>stopRow<code>.
@@ -481,12 +480,12 @@ public class HTable implements HConstants {
    * @return scanner
    * @throws IOException
    */
-  public HScannerInterface obtainScanner(final Text[] columns,
+  public Scanner getScanner(final Text[] columns,
     final Text startRow, final Text stopRow, final long timestamp)
   throws IOException {
-    return obtainScanner(columns, startRow, timestamp,
+    return getScanner(columns, startRow, timestamp,
       new WhileMatchRowFilter(new StopRowFilter(stopRow)));
-  }
+  }  
   
   /** 
    * Get a scanner on the current table starting at the specified row.
@@ -503,7 +502,7 @@ public class HTable implements HConstants {
    * @return scanner
    * @throws IOException
    */
-  public HScannerInterface obtainScanner(Text[] columns,
+  public Scanner getScanner(Text[] columns,
     Text startRow, long timestamp, RowFilterInterface filter)
   throws IOException {
     return new ClientScanner(columns, startRow, timestamp, filter);
@@ -551,7 +550,7 @@ public class HTable implements HConstants {
    * @see #commit(long, long)
    * @see #abort(long)
    */
-  @Deprecated
+  @Deprecated 
   public synchronized long startUpdate(final Text row) {
     updateInProgress(false);
     batch.set(new BatchUpdate(row));
@@ -778,7 +777,7 @@ public class HTable implements HConstants {
    * If there are multiple regions in a table, this scanner will iterate
    * through them all.
    */
-  protected class ClientScanner implements HScannerInterface {
+  protected class ClientScanner implements Scanner {
     private final Text EMPTY_COLUMN = new Text();
     private Text[] columns;
     private Text startRow;
@@ -794,7 +793,7 @@ public class HTable implements HConstants {
       RowFilterInterface filter) 
     throws IOException {
 
-      LOG.info("Creating scanner over " + tableName + " starting at key " + startRow);
+      LOG.debug("Creating scanner over " + tableName + " starting at key " + startRow);
 
       // defaults
       this.closed = false;
@@ -829,15 +828,14 @@ public class HTable implements HConstants {
 
       // if we're at the end of the table, then close and return false
       // to stop iterating
-      if (this.currentRegionLocation != null){
+      if (currentRegionLocation != null){
         LOG.debug("Advancing forward from region " 
-          + this.currentRegionLocation.getRegionInfo());
-        
-        if (this.currentRegionLocation.getRegionInfo().getEndKey() == null
-          || this.currentRegionLocation.getRegionInfo().getEndKey().equals(EMPTY_TEXT)) {
-            LOG.debug("We're at the end of the region, returning.");
-            close();
-            return false;
+          + currentRegionLocation.getRegionInfo());
+
+        Text endKey = currentRegionLocation.getRegionInfo().getEndKey();
+        if (endKey == null || endKey.equals(EMPTY_TEXT)) {
+          close();
+          return false;
         }
       } 
       
@@ -847,11 +845,11 @@ public class HTable implements HConstants {
         startRow : oldLocation.getRegionInfo().getEndKey();
 
       // advance to the region that starts with the current region's end key
-      LOG.debug("Advancing internal scanner to startKey " + localStartKey);
-      this.currentRegionLocation = getRegionLocation(localStartKey);
-      
-      LOG.debug("New region: " + this.currentRegionLocation);
-      
+      currentRegionLocation = getRegionLocation(localStartKey);
+
+      LOG.debug("Advancing internal scanner to startKey " + localStartKey 
+        + ", new region: " + currentRegionLocation);
+            
       try {
         for (int tries = 0; tries < numRetries; tries++) {
           // connect to the server
@@ -897,46 +895,35 @@ public class HTable implements HConstants {
     }
 
     /** {@inheritDoc} */
-    public boolean next(HStoreKey key, SortedMap<Text, byte[]> results)
-    throws IOException {
+    public RowResult next() throws IOException {
       if (this.closed) {
-        return false;
+        return null;
       }
+      
       RowResult values = null;
-      // Clear the results so we don't inherit any values from any previous
-      // calls to next.
-      results.clear();
       do {
         values = server.next(scannerId);
       } while (values != null && values.size() == 0 && nextScanner());
 
       if (values != null && values.size() != 0) {
-        for (Map.Entry<Text, Cell> e: values.entrySet()) {
-          // HStoreKey k = (HStoreKey) e.getKey();
-          key.setRow(values.getRow());
-          key.setVersion(e.getValue().getTimestamp());
-          key.setColumn(EMPTY_COLUMN);
-          results.put(e.getKey(), e.getValue().getValue());
-        }
+        return values;
       }
-      return values == null ? false : values.size() != 0;
+      
+      return null;
     }
 
     /**
      * {@inheritDoc}
      */
-    public void close() throws IOException {
+    public void close() {
       if (scannerId != -1L) {
         try {
           server.close(scannerId);
-          
         } catch (IOException e) {
-          if (e instanceof RemoteException) {
-            e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-          }
-          if (!(e instanceof NotServingRegionException)) {
-            throw e;
-          }
+          // We used to catch this error, interpret, and rethrow. However, we
+          // have since decided that it's not nice for a scanner's close to
+          // throw exceptions. Chances are it was just an UnknownScanner
+          // exception due to lease time out.
         }
         scannerId = -1L;
       }
@@ -945,38 +932,43 @@ public class HTable implements HConstants {
     }
 
     /** {@inheritDoc} */
-    public Iterator<Entry<HStoreKey, SortedMap<Text, byte[]>>> iterator() {
-      return new Iterator<Entry<HStoreKey, SortedMap<Text, byte[]>>>() {
-        HStoreKey key = null;
-        SortedMap<Text, byte []> value = null;
+    public Iterator<RowResult> iterator() {
+      return new Iterator<RowResult>() {
+        // The next RowResult, possibly pre-read
+        RowResult next = null;
         
+        // return true if there is another item pending, false if there isn't.
+        // this method is where the actual advancing takes place, but you need
+        // to call next() to consume it. hasNext() will only advance if there
+        // isn't a pending next().
         public boolean hasNext() {
-          boolean hasNext = false;
-          try {
-            this.key = new HStoreKey();
-            this.value = new TreeMap<Text, byte[]>();
-            hasNext = ClientScanner.this.next(key, value);
-          } catch (IOException e) {
-            throw new RuntimeException(e);
+          if (next == null) {
+            try {
+              next = ClientScanner.this.next();
+              return next != null;
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }            
+          } else {
+            return true;
           }
-          return hasNext;
         }
 
-        public Entry<HStoreKey, SortedMap<Text, byte[]>> next() {
-          return new Map.Entry<HStoreKey, SortedMap<Text, byte[]>>() {
-            public HStoreKey getKey() {
-              return key;
-            }
-
-            public SortedMap<Text, byte[]> getValue() {
-              return value;
-            }
-
-            public SortedMap<Text, byte[]> setValue(@SuppressWarnings("unused")
-            SortedMap<Text, byte[]> value) {
-              throw new UnsupportedOperationException();
-            }
-          };
+        // get the pending next item and advance the iterator. returns null if
+        // there is no next item.
+        public RowResult next() {
+          // since hasNext() does the real advancing, we call this to determine
+          // if there is a next before proceeding.
+          if (!hasNext()) {
+            return null;
+          }
+          
+          // if we get to here, then hasNext() has given us an item to return.
+          // we want to return the item and then null out the next pointer, so
+          // we use a temporary variable.
+          RowResult temp = next;
+          next = null;
+          return temp;
         }
 
         public void remove() {

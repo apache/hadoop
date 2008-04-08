@@ -32,6 +32,8 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
  * Scan an HBase table to sort by a specified sort column.
@@ -42,7 +44,7 @@ import org.apache.hadoop.mapred.Reporter;
  */
 @SuppressWarnings("unchecked")
 public abstract class TableMap<K extends WritableComparable, V extends Writable>
-    extends MapReduceBase implements Mapper<HStoreKey, MapWritable, K, V> {
+    extends MapReduceBase implements Mapper<Text, RowResult, K, V> {
   /**
    * Use this before submitting a TableMap job. It will
    * appropriately set up the JobConf.
@@ -53,10 +55,13 @@ public abstract class TableMap<K extends WritableComparable, V extends Writable>
    * @param job job configuration
    */
   public static void initJob(String table, String columns,
-      Class<? extends TableMap> mapper, JobConf job) {
+    Class<? extends TableMap> mapper, 
+    Class<? extends WritableComparable> outputKeyClass, 
+    Class<? extends Writable> outputValueClass, JobConf job) {
+      
     job.setInputFormat(TableInputFormat.class);
-    job.setOutputKeyClass(Text.class);
-    job.setOutputValueClass(MapWritable.class);
+    job.setMapOutputValueClass(outputValueClass);
+    job.setMapOutputKeyClass(outputKeyClass);
     job.setMapperClass(mapper);
     job.setInputPath(new Path(table));
     job.set(TableInputFormat.COLUMN_LIST, columns);
@@ -72,6 +77,6 @@ public abstract class TableMap<K extends WritableComparable, V extends Writable>
    * @param reporter
    * @throws IOException
    */
-  public abstract void map(HStoreKey key, MapWritable value,
+  public abstract void map(Text key, RowResult value,
       OutputCollector<K, V> output, Reporter reporter) throws IOException;
 }

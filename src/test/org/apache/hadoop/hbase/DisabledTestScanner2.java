@@ -45,6 +45,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Scanner;
 
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -92,7 +93,7 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     Text tableName = new Text(getName());
     final Text [] families = createTable(new HBaseAdmin(this.conf), tableName);
     HTable table = new HTable(this.conf, tableName);
-    HScannerInterface scanner = null;
+    Scanner scanner = null;
     try {
       long time = System.currentTimeMillis();
       LOG.info("Current time " + time);
@@ -114,10 +115,10 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
       }
       RowFilterInterface f =
         new WhileMatchRowFilter(new StopRowFilter(new Text("aad")));
-      scanner = table.obtainScanner(families, HConstants.EMPTY_START_ROW,
+      scanner = table.getScanner(families, HConstants.EMPTY_START_ROW,
         HConstants.LATEST_TIMESTAMP, f);
       int count = 0;
-      for (Map.Entry<HStoreKey, SortedMap<Text, byte []>> e: scanner) {
+      for (RowResult e: scanner) {
         count++;
       }
       // Should get back 3 rows: aaa, aab, and aac.
@@ -136,12 +137,12 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     HTable table = new HTable(this.conf, tableName);
     final String lastKey = "aac";
     addContent(new HTableIncommon(table), FIRST_COLKEY + ":");
-    HScannerInterface scanner =
-      table.obtainScanner(new Text [] {new Text(FIRST_COLKEY + ":")},
+    Scanner scanner =
+      table.getScanner(new Text [] {new Text(FIRST_COLKEY + ":")},
           HConstants.EMPTY_START_ROW, new Text(lastKey));
-    for (Map.Entry<HStoreKey, SortedMap<Text, byte []>> e: scanner) {
-      if(e.getKey().getRow().toString().compareTo(lastKey) >= 0) {
-        LOG.info(e.getKey());
+    for (RowResult e: scanner) {
+      if(e.getRow().toString().compareTo(lastKey) >= 0) {
+        LOG.info(e.getRow());
         fail();
       }
     }
@@ -152,12 +153,12 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
    */
   public void testIterator() throws Exception {
     HTable table = new HTable(this.conf, HConstants.ROOT_TABLE_NAME);
-    HScannerInterface scanner =
-      table.obtainScanner(HConstants.COLUMN_FAMILY_ARRAY,
+    Scanner scanner =
+      table.getScanner(HConstants.COLUMN_FAMILY_ARRAY,
           HConstants.EMPTY_START_ROW);
-    for (Map.Entry<HStoreKey, SortedMap<Text, byte []>> e: scanner) {
-      assertNotNull(e.getKey());
-      assertNotNull(e.getValue());
+    for (RowResult e: scanner) {
+      assertNotNull(e);
+      assertNotNull(e.getRow());
     }
   }
 
@@ -197,13 +198,11 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     final String regexColumnname) 
   throws IOException {
     Text [] regexCol = new Text [] {new Text(regexColumnname)};
-    HScannerInterface scanner =
-      table.obtainScanner(regexCol, HConstants.EMPTY_START_ROW);
-    HStoreKey key = new HStoreKey();
-    TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
+    Scanner scanner =
+      table.getScanner(regexCol, HConstants.EMPTY_START_ROW);
     int count = 0;
-    while (scanner.next(key, results)) {
-      for (Text c: results.keySet()) {
+    for (RowResult r : scanner) {
+      for (Text c: r.keySet()) {
         System.out.println(c);
         assertTrue(c.toString().matches(regexColumnname));
         count++;
@@ -275,7 +274,7 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     RowFilterInterface filter = new RegExpRowFilter("[^aeiou]", colCriteria);
 
     // Create the scanner from the filter.
-    HScannerInterface scanner = table.obtainScanner(colKeys, new Text(new 
+    Scanner scanner = table.getScanner(colKeys, new Text(new 
       String(new char[] { FIRST_ROWKEY })), filter);
 
     // Iterate over the scanner, ensuring that results match the passed regex.
@@ -294,24 +293,22 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
       new RowFilterSet(RowFilterSet.Operator.MUST_PASS_ALL, filterSet);
     
     // Create the scanner from the filter.
-    HScannerInterface scanner = table.obtainScanner(colKeys, new Text(new 
+    Scanner scanner = table.getScanner(colKeys, new Text(new 
         String(new char[] { FIRST_ROWKEY })), filter);
     
     // Iterate over the scanner, ensuring that results match the passed regex.
     iterateOnScanner(scanner, "[^aeior-z]");
   }
   
-  private void iterateOnScanner(HScannerInterface scanner, String regexToMatch)
+  private void iterateOnScanner(Scanner scanner, String regexToMatch)
   throws Exception {
     // A pattern that will only match rows that should not have been filtered.
     Pattern p = Pattern.compile(regexToMatch);
     
     try {
       // Use the scanner to ensure all results match the above pattern.
-      HStoreKey rowKey = new HStoreKey();
-      TreeMap<Text, byte[]> columns = new TreeMap<Text, byte[]>();
-      while (scanner.next(rowKey, columns)) {
-        String key = rowKey.getRow().toString();
+      for (RowResult r : scanner) {
+        String key = r.getRow().toString();
         assertTrue("Shouldn't have extracted '" + key + "'", 
           p.matcher(key).matches());
       }

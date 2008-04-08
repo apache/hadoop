@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HScannerInterface;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.Cell;
@@ -59,7 +58,7 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
    */
   public void testGetFull() throws Exception {
     HRegion region = null;
-    HScannerInterface scanner = null;
+    InternalScanner scanner = null;
     try {
       HTableDescriptor htd = createTableDescriptor(getName());
       region = createNewHRegion(htd, null, null);

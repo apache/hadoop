@@ -37,6 +37,7 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 
 import org.apache.log4j.Logger;
 
@@ -44,7 +45,7 @@ import org.apache.log4j.Logger;
  * Convert Map/Reduce output and write it to an HBase table
  */
 public class TableOutputFormat
-  extends OutputFormatBase<Text, MapWritable> {
+  extends OutputFormatBase<Text, BatchUpdate> {
 
   /** JobConf parameter that specifies the output table */
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
@@ -61,7 +62,7 @@ public class TableOutputFormat
    * and write to an HBase table
    */
   protected class TableRecordWriter
-    implements RecordWriter<Text, MapWritable> {
+    implements RecordWriter<Text, BatchUpdate> {
     private HTable m_table;
 
     /**
@@ -79,14 +80,8 @@ public class TableOutputFormat
     }
 
     /** {@inheritDoc} */
-    public void write(Text key, MapWritable value) throws IOException {
-      long xid = m_table.startUpdate(key);              // start transaction
-
-      for (Map.Entry<Writable, Writable> e: value.entrySet()) {
-        m_table.put(xid, (Text)e.getKey(),
-            ((ImmutableBytesWritable)e.getValue()).get());
-      }
-      m_table.commit(xid);                              // end transaction
+    public void write(Text key, BatchUpdate value) throws IOException {
+      m_table.commit(value);
     }
   }
   

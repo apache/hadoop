@@ -50,6 +50,7 @@ import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.log4j.Logger;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 
 
@@ -400,9 +401,7 @@ public class PerformanceEvaluation implements HConstants {
   }
   
   class ScanTest extends Test {
-    private HScannerInterface testScanner;
-    private HStoreKey key = new HStoreKey();
-    private TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+    private Scanner testScanner;
     
     ScanTest(final HBaseConfiguration conf, final int startRow,
         final int perClientRunRows, final int totalRows, final Status status) {
@@ -412,7 +411,7 @@ public class PerformanceEvaluation implements HConstants {
     @Override
     void testSetup() throws IOException {
       super.testSetup();
-      this.testScanner = table.obtainScanner(new Text[] {COLUMN_NAME},
+      this.testScanner = table.getScanner(new Text[] {COLUMN_NAME},
         format(this.startRow));
     }
     
@@ -427,8 +426,7 @@ public class PerformanceEvaluation implements HConstants {
     
     @Override
     void testRow(@SuppressWarnings("unused") final int i) throws IOException {
-      this.testScanner.next(this.key, this.results);
-      this.results.clear();
+      testScanner.next();
     }
 
     @Override

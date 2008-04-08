@@ -207,11 +207,7 @@ public class TableHandler extends GenericHandler {
         ContentType.XML.toString());
     XMLOutputter outputter = getXMLOutputter(response.getWriter());
     outputter.startTag(ROW);
-    HashMap<Text, byte[]> converted = new HashMap<Text, byte[]>();
-    for (Map.Entry<Text, Cell> entry : result.entrySet()) {
-      converted.put(entry.getKey(), entry.getValue().getValue());
-    }
-    outputColumnsXml(outputter, converted);
+    outputColumnsXml(outputter, result);
     outputter.endTag();
     outputter.endDocument();
     outputter.getWriter().close();

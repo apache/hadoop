@@ -1665,7 +1665,7 @@ public class HStore implements HConstants {
   /**
    * Return a scanner for both the memcache and the HStore files
    */
-  HInternalScannerInterface getScanner(long timestamp, Text targetCols[],
+  InternalScanner getScanner(long timestamp, Text targetCols[],
       Text firstRow, RowFilterInterface filter) throws IOException {
 
     newScannerLock.readLock().lock();           // ability to create a new

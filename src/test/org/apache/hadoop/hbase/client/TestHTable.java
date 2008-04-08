@@ -33,7 +33,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.HScannerInterface;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
@@ -99,16 +100,14 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
 
     // copy data from A to B
     
-    HScannerInterface s =
-      newA.obtainScanner(COLUMN_FAMILY_ARRAY, EMPTY_START_ROW);
+    Scanner s =
+      newA.getScanner(COLUMN_FAMILY_ARRAY, EMPTY_START_ROW);
     
     try {
-      HStoreKey key = new HStoreKey();
-      TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-      while(s.next(key, results)) {
-        batchUpdate = new BatchUpdate(key.getRow());
-        for(Map.Entry<Text, byte[]> e: results.entrySet()) {
-          batchUpdate.put(e.getKey(), e.getValue());
+      for (RowResult r : s) {
+        batchUpdate = new BatchUpdate(r.getRow());
+        for(Map.Entry<Text, Cell> e: r.entrySet()) {
+          batchUpdate.put(e.getKey(), e.getValue().getValue());
         }
         b.commit(batchUpdate);
       }
