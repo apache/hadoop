@@ -145,6 +145,117 @@ It will make any adjustments to the filesystem data under <code>hbase.rootdir</c
 the HBase version. It does not change your install unless you explicitly ask it to.
 </p>
 
+<h2><a name="client_example">Example API Usage</a></h2>
+<p>Once you have a running HBase, you probably want a way to hook your application up to it. 
+  If your application is in Java, then you should use the Java API. Here's an example of what 
+  a simple client might look like.  This example assumes that you've created a table called
+  "myTable" with a column family called "myColumnFamily".
+</p>
+
+<div style="background-color: #cccccc; padding: 2px">
+<code><pre>
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.HScannerInterface;
+import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.io.Text;
+import java.io.IOException;
+
+public class MyClient {
+
+  public static void main(String args[]) throws IOException {
+    // You need a configuration object to tell the client where to connect.
+    // But don't worry, the defaults are pulled from the local config file.
+    HBaseConfiguration config = new HBaseConfiguration();
+
+    // This instantiates an HTable object that connects you to the "myTable"
+    // table. 
+    HTable table = new HTable(config, new Text("myTable"));
+
+    // To do any sort of update on a row, you use an instance of the BatchUpdate
+    // class. A BatchUpdate takes a row and optionally a timestamp which your
+    // updates will affect. 
+    BatchUpdate batchUpdate = new BatchUpdate(new Text("myRow"));
+
+    // The BatchUpdate#put method takes a Text that describes what cell you want
+    // to put a value into, and a byte array that is the value you want to 
+    // store. Note that if you want to store strings, you have to getBytes() 
+    // from the string for HBase to understand how to store it. (The same goes
+    // for primitives like ints and longs and user-defined classes - you must 
+    // find a way to reduce it to bytes.)
+    batchUpdate.put(new Text("myColumnFamily:columnQualifier1"), 
+      "columnQualifier1 value!".getBytes());
+
+    // Deletes are batch operations in HBase as well. 
+    batchUpdate.delete(new Text("myColumnFamily:cellIWantDeleted"));
+
+    // Once you've done all the puts you want, you need to commit the results.
+    // The HTable#commit method takes the BatchUpdate instance you've been 
+    // building and pushes the batch of changes you made into HBase.
+    table.commit(batchUpdate);
+
+    // Now, to retrieve the data we just wrote. The values that come back are
+    // Cell instances. A Cell is a combination of the value as a byte array and
+    // the timestamp the value was stored with. If you happen to know that the 
+    // value contained is a string and want an actual string, then you must 
+    // convert it yourself.
+    Cell cell = table.get(new Text("myRow"), 
+      new Text("myColumnFamily:columnQualifier1"));
+    String valueStr = new String(valueBytes.getValue());
+    
+    // Sometimes, you won't know the row you're looking for. In this case, you
+    // use a Scanner. This will give you cursor-like interface to the contents
+    // of the table.
+    HStoreKey row = new HStoreKey();
+    SortedMap<Text, byte[]> columns = new TreeMap<Text, byte[]>();
+    HScannerInterface scanner = 
+      // we want to get back only "myColumnFamily:columnQualifier1" when we iterate
+      table.obtainScanner(new Text[]{new Text("myColumnFamily:columnQualifier1")}, 
+      // we want to start scanning from an empty Text, meaning the beginning of
+      // the table
+      new Text(""));
+    
+    
+    // Scanners in HBase 0.2 return RowResult instances. A RowResult is like the
+    // row key and the columns all wrapped up in a single interface. 
+    // RowResult#getRow gives you the row key. RowResult also implements 
+    // Map<Text, Cell>, so you can get to your column results easily. 
+    
+    // Now, for the actual iteration. One way is to use a while loop like so:
+    RowResult rowResult = scanner.next();
+    
+    while(rowResult != null) {
+      // print out the row we found and the columns we were looking for
+      System.out.println("Found row: " + rowResult.getRow() + " with value: " +
+       new String(rowResult.get("myColumnFamily:columnQualifier1")));
+      
+      rowResult = scanner.next();
+    }
+    
+    // The other approach is to use a foreach loop. Scanners are iterable!
+    for (RowResult rowResult : scanner) {
+      // print out the row we found and the columns we were looking for
+      System.out.println("Found row: " + rowResult.getRow() + " with value: " +
+       new String(rowResult.get("myColumnFamily:columnQualifier1")));
+    }
+    
+    // Make sure you close your scanners when you are done!
+    scanner.close();
+  }
+}
+</pre></code>
+</div>
+
+<p>There are many other methods for putting data into and getting data out of 
+  HBase, but these examples should get you started. See the HTable javadoc for
+  more methods. Additionally, there are methods for managing tables in the 
+  HBaseAdmin class.</p>
+
+<p>If your client is NOT Java, then you should consider the Thrift or REST 
+  libraries.</p>
+
 <h2><a name="related" >Related Documentation</a></h2>
 <ul>
   <li><a href="http://hbase.org">HBase Home Page</a>
