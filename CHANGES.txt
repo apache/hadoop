@@ -552,6 +552,9 @@ Release 0.16.3 - Unreleased
     closeAll() that causes spurious warnings and a deadlock.
     (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HADOOP-3195. Fix TestFileSystem to be deterministic.
+    (Tsz Wo (Nicholas), SZE via cdouglas)
+
 Release 0.16.2 - 2008-04-02
 
   BUG FIXES
