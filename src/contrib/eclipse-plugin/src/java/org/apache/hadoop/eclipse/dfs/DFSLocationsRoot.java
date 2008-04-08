@@ -26,7 +26,6 @@ import org.apache.hadoop.eclipse.server.HadoopServer;
 import org.apache.hadoop.eclipse.servers.IHadoopServerListener;
 import org.apache.hadoop.eclipse.servers.ServerRegistry;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.ipc.RPC;
 
 /**
  * Representation of the root element containing all DFS servers. This
@@ -138,6 +137,7 @@ public class DFSLocationsRoot implements DFSContent, IHadoopServerListener {
       }
     };
 
+    // Wait 5 seconds for the connections to be closed
     closeThread.start();
     try {
       closeThread.join(5000);
@@ -145,7 +145,6 @@ public class DFSLocationsRoot implements DFSContent, IHadoopServerListener {
     } catch (InterruptedException ie) {
       // Ignore
     }
-    RPC.stopClient();
   }
 
 }
