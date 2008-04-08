@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import org.apache.hadoop.eclipse.server.HadoopServer;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.IStatus;
@@ -57,31 +58,15 @@ public class DFSFolder extends DFSPath implements DFSContent {
   protected void loadDFSFolderChildren() throws IOException {
     List<DFSPath> list = new ArrayList<DFSPath>();
 
-    for (Path path : getDFS().listPaths(this.getPath())) {
-      if (getDFS().isDirectory(path)) {
-        list.add(new DFSFolder(this, path));
+    for (FileStatus status : getDFS().listStatus(this.getPath())) {
+      if (status.isDir()) {
+        list.add(new DFSFolder(this, status.getPath()));
       } else {
-        list.add(new DFSFile(this, path));
+        list.add(new DFSFile(this, status.getPath()));
       }
     }
 
     this.children = list.toArray(new DFSContent[list.size()]);
-  }
-
-  /**
-   * Does a recursive delete of the remote directory tree at this node.
-   */
-  @Override
-  public void delete() {
-
-    try {
-      getDFS().delete(this.path);
-
-    } catch (IOException e) {
-      e.printStackTrace();
-      MessageDialog.openWarning(null, "Delete file",
-          "Unable to delete file \"" + this.path + "\"\n" + e);
-    }
   }
 
   /**

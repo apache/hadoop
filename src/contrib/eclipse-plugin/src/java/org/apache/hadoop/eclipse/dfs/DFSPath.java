@@ -96,9 +96,12 @@ public abstract class DFSPath implements DFSContent {
     }
   }
 
+  /**
+   * Does a recursive delete of the remote directory tree at this node.
+   */
   public void delete() {
     try {
-      dfs.delete(this.path);
+      getDFS().delete(this.path, true);
 
     } catch (IOException e) {
       e.printStackTrace();
