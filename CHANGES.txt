@@ -545,6 +545,8 @@ Release 0.17.0 - Unreleased
     HADOOP-3175. Fix FsShell.CommandFormat to handle "-" in arguments.
     (Edward J. Yoon via rangadi)
 
+    HADOOP-3220. Safemode message corrected. (shv)
+
 Release 0.16.3 - Unreleased
 
   BUG FIXES
