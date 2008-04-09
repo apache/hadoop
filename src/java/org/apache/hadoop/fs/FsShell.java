@@ -428,7 +428,7 @@ public class FsShell extends Configured implements Tool {
     final int minPar, maxPar;
     final Map<String, Boolean> options = new HashMap<String, Boolean>();
 
-    private CommandFormat(String n, int min, int max, String ... possibleOpt) {
+    CommandFormat(String n, int min, int max, String ... possibleOpt) {
       name = n;
       minPar = min;
       maxPar = max;
@@ -439,7 +439,7 @@ public class FsShell extends Configured implements Tool {
     List<String> parse(String[] args, int pos) {
       List<String> parameters = new ArrayList<String>();
       for(; pos < args.length; pos++) {
-        if (args[pos].charAt(0) == '-') {
+        if (args[pos].charAt(0) == '-' && args[pos].length() > 1) {
           String opt = args[pos].substring(1);
           if (options.containsKey(opt))
             options.put(opt, Boolean.TRUE);
