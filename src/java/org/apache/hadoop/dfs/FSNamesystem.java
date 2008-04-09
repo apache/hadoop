@@ -3874,8 +3874,8 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         return "Use \"hadoop dfs -safemode leave\" to turn safe mode off.";
       }
       String safeBlockRatioMsg = 
-        String.format(
-          "The ratio of reported blocks %.4f has not reached the threshold %.4f. ",
+        String.format("The ratio of reported blocks %.4f has " +
+          (reached == 0 ? "not " : "") + "reached the threshold %.4f. ",
           getSafeBlockRatio(), threshold) + autoOffMsg;
       if(reached == 0)  // threshold is not reached 
         return safeBlockRatioMsg + ".";
