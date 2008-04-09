@@ -73,7 +73,35 @@ public class SecondaryNameNode implements FSConstants, Runnable {
   private File destImage;
   private File editFile;
 
-  private boolean[] simulation = null; // error simulation events
+  /**
+   * Utility class to facilitate junit test error simulation.
+   */
+  static class ErrorSimulator {
+    private static boolean[] simulation = null; // error simulation events
+    static void initializeErrorSimulationEvent(int numberOfEvents) {
+      simulation = new boolean[numberOfEvents]; 
+      for (int i = 0; i < numberOfEvents; i++) {
+        simulation[i] = false;
+      }
+    }
+    
+    static boolean getErrorSimulation(int index) {
+      if(simulation == null)
+        return false;
+      assert(index < simulation.length);
+      return simulation[index];
+    }
+    
+    static void setErrorSimulation(int index) {
+      assert(index < simulation.length);
+      simulation[index] = true;
+    }
+    
+    static void clearErrorSimulation(int index) {
+      assert(index < simulation.length);
+      simulation[index] = false;
+    }
+  }
 
   /**
    * Create a connection to the primary namenode.
@@ -83,11 +111,6 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     // initiate Java VM metrics
     JvmMetrics.init("SecondaryNameNode", conf.get("session.id"));
     
-    //
-    // initialize error simulation code for junit test
-    //
-    initializeErrorSimulationEvent(2);
-
     //
     // Create connection to the namenode.
     //
@@ -279,7 +302,7 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     //
     // error simulation code for junit test
     //
-    if (simulation != null && simulation[0]) {
+    if (ErrorSimulator.getErrorSimulation(0)) {
       throw new IOException("Simulating error0 " +
                             "after creating edits.new");
     }
@@ -297,7 +320,7 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     //
     // error simulation code for junit test
     //
-    if (simulation != null && simulation[1]) {
+    if (ErrorSimulator.getErrorSimulation(1)) {
       throw new IOException("Simulating error1 " +
                             "after uploading new image to NameNode");
     }
@@ -423,26 +446,6 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     }
   }
 
-  //
-  // utility method to facilitate junit test error simulation
-  //
-  void initializeErrorSimulationEvent(int numberOfEvents) {
-    simulation = new boolean[numberOfEvents]; 
-    for (int i = 0; i < numberOfEvents; i++) {
-      simulation[i] = false;
-    }
-  }
-
-  void setErrorSimulation(int index) {
-    assert(index < simulation.length);
-    simulation[index] = true;
-  }
-
-  void clearErrorSimulation(int index) {
-    assert(index < simulation.length);
-    simulation[index] = false;
-  }
-
   /**
    * This class is used in Namesystem's jetty to retrieve a file.
    * Typically used by the Secondary NameNode to retrieve image and
@@ -464,13 +467,12 @@ public class SecondaryNameNode implements FSConstants, Runnable {
                                         nn.getNewImage());
         }
         LOG.info("New Image " + nn.getNewImage() + " retrieved by Namenode.");
-      } catch (IOException ie) {
-        StringUtils.stringifyException(ie);
-        LOG.error(ie);
-        String errMsg = "GetImage failed.";
+      } catch (Exception ie) {
+        String errMsg = "GetImage failed. " + StringUtils.stringifyException(ie);
         response.sendError(HttpServletResponse.SC_GONE, errMsg);
-        throw ie;
-
+        throw new IOException(errMsg);
+      } finally {
+        response.getOutputStream().close();
       }
     }
   }

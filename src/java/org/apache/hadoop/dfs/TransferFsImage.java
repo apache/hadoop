@@ -24,6 +24,8 @@ import java.util.Map;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.hadoop.dfs.SecondaryNameNode.ErrorSimulator;
+
 /**
  * This class provides fetching a specified file from the NameNode.
  */
@@ -108,6 +110,12 @@ class TransferFsImage implements FSConstants {
     FileInputStream infile = null;
     try {
       infile = new FileInputStream(localfile);
+      if (ErrorSimulator.getErrorSimulation(2)
+          && localfile.getAbsolutePath().contains("secondary")) {
+        // throw exception only when the secondary sends its image
+        throw new IOException("If this exception is not caught by the " +
+            "name-node fs image will be truncated.");
+      }
       int num = 1;
       while (num > 0) {
         num = infile.read(buf);
@@ -117,7 +125,6 @@ class TransferFsImage implements FSConstants {
         outstream.write(buf, 0, num);
       }
     } finally {
-      outstream.close();
       if (infile != null) {
         infile.close();
       }

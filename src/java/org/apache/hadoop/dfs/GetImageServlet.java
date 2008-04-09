@@ -61,12 +61,12 @@ public class GetImageServlet extends HttpServlet {
                                       nn.getFsImageNameCheckpoint());
         nn.checkpointUploadDone();
       }
-    } catch (IOException ie) {
-      StringUtils.stringifyException(ie);
-      LOG.warn(ie);
-      String errMsg = "GetImage failed.";
+    } catch (Exception ie) {
+      String errMsg = "GetImage failed. " + StringUtils.stringifyException(ie);
       response.sendError(HttpServletResponse.SC_GONE, errMsg);
-      throw ie;
+      throw new IOException(errMsg);
+    } finally {
+      response.getOutputStream().close();
     }
   }
 }

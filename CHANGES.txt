@@ -565,6 +565,9 @@ Release 0.16.3 - Unreleased
     HADOOP-3195. Fix TestFileSystem to be deterministic.
     (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HADOOP-3069. Primary name-node should not truncate image when transferring
+    it from the secondary. (shv)
+
 Release 0.16.2 - 2008-04-02
 
   BUG FIXES
