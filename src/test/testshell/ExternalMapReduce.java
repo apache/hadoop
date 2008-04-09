@@ -63,11 +63,24 @@ public class ExternalMapReduce
     if (classpath.indexOf("testjob.jar") == -1) {
       throw new IOException("failed to find in the library " + classpath);
     }
-    File f = new File("files_tmp");
-    //check for files 
-    if (!f.exists()) {
-      throw new IOException("file file_tmpfile not found");
+    //fork off ls to see if the file exists.
+    // java file.exists() will not work on 
+    // cygwin since it is a symlink
+    String[] argv = new String[2];
+    argv[0] = "ls";
+    argv[1] = "files_tmp";
+    Process p = Runtime.getRuntime().exec(argv);
+    int ret = -1;
+    try {
+      ret = p.waitFor();
+    } catch(InterruptedException ie) {
+      //do nothing here.
     }
+    if (ret != 0) {
+      throw new IOException("files_tmp does not exist");
+    }
+    
+    //check for files 
   }
 
   public void reduce(WritableComparable key, Iterator<Writable> values,

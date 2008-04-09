@@ -538,6 +538,10 @@ Release 0.17.0 - Unreleased
     HADOOP-3018. Fix the eclipse plug-in contrib wrt removed deprecated
     methods (taton)
 
+    HADOOP-3183. Fix TestJobShell to use 'ls' instead of java.io.File::exists
+    since cygwin symlinks are unsupported.
+    (Mahadev konar via cdouglas)
+
 Release 0.16.3 - Unreleased
 
   BUG FIXES
