@@ -542,6 +542,9 @@ Release 0.17.0 - Unreleased
     since cygwin symlinks are unsupported.
     (Mahadev konar via cdouglas)
 
+    HADOOP-3175. Fix FsShell.CommandFormat to handle "-" in arguments.
+    (Edward J. Yoon via rangadi)
+
 Release 0.16.3 - Unreleased
 
   BUG FIXES
