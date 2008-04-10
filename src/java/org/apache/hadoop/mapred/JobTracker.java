@@ -89,7 +89,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   private ResolutionThread resThread = new ResolutionThread();
   private int numTaskCacheLevels; // the max level to which we cache tasks
   private Set<Node> nodesAtMaxLevel = new HashSet<Node>();
-  
+
+  // system directories are world-wide readable and owner readable
+  final static FsPermission SYSTEM_DIR_PERMISSION =
+    FsPermission.createImmutable((short) 0733); // rwx-wx-wx
+
   /**
    * A client tried to submit a job before the Job Tracker was ready.
    */
@@ -716,7 +720,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         // safe mode
         fs.delete(systemDir, true);
         if (FileSystem.mkdirs(fs, systemDir, 
-            new FsPermission(JobClient.SYSTEM_DIR_PERMISSION))) {
+            new FsPermission(SYSTEM_DIR_PERMISSION))) {
           break;
         }
         LOG.error("Mkdirs failed to create " + systemDir);
