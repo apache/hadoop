@@ -134,7 +134,55 @@ public class TestDFSShell extends TestCase {
     }
   }
     
-  
+  public void testDu() throws IOException {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    FileSystem fs = cluster.getFileSystem();
+    assertTrue("Not a HDFS: "+fs.getUri(),
+                fs instanceof DistributedFileSystem);
+    final DistributedFileSystem dfs = (DistributedFileSystem)fs;
+    PrintStream psBackup = System.out;
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream psOut = new PrintStream(out);
+    System.setOut(psOut);
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+    
+    try {
+      Path myPath = new Path("/test/dir");
+      assertTrue(fs.mkdirs(myPath));
+      assertTrue(fs.exists(myPath));
+      Path myFile = new Path("/test/dir/file");
+      writeFile(fs, myFile);
+      assertTrue(fs.exists(myFile));
+      Path myFile2 = new Path("/test/dir/file2");
+      writeFile(fs, myFile2);
+      assertTrue(fs.exists(myFile2));
+      
+      String[] args = new String[2];
+      args[0] = "-du";
+      args[1] = "/test/dir";
+      int val = -1;
+      try {
+        val = shell.run(args);
+      } catch (Exception e) {
+        System.err.println("Exception raised from DFSShell.run " +
+                            e.getLocalizedMessage());
+      }
+      assertTrue(val == 0);
+      String returnString = out.toString();
+      out.reset();
+      // Check if size matchs as expected
+      assertTrue(returnString.contains("22"));
+      assertTrue(returnString.contains("23"));
+      
+    } finally {
+      try {dfs.close();} catch (Exception e) {}
+      System.setOut(psBackup);
+      cluster.shutdown();
+    }
+                                  
+  }
   public void testPut() throws IOException {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);

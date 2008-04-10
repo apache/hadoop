@@ -671,7 +671,9 @@ public class FsShell extends Configured implements Tool {
     } else {
       System.out.println("Found " + items.length + " items");
       for (int i = 0; i < items.length; i++) {
-        System.out.println(items[i].getPath() + "\t" + items[i].getLen());
+        System.out.println(items[i].getPath() + "\t" + 
+                           srcFs.getContentSummary(items[i].getPath()).
+                           getLength());
       }
     }
   }

@@ -16,6 +16,9 @@ Trunk (unreleased changes)
    HADOOP-2905. 'fsck -move' triggers NPE in NameNode. 
    (Lohit Vjayarenu via rangadi)
 
+   HADOOP-3224. 'dfs -du /dir' does not return correct size.
+   (Lohit Vjayarenu via rangadi)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
