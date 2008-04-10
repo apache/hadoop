@@ -562,6 +562,9 @@ Release 0.17.0 - Unreleased
 
    HADOOP-3223. Fix typo in help message for -chmod. (rangadi)
 
+   HADOOP-1373. checkPath() should ignore case when it compares authoriy.
+   (Edward J. Yoon via rangadi)
+
 Release 0.16.3 - Unreleased
 
   BUG FIXES

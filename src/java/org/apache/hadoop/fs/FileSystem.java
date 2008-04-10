@@ -292,16 +292,18 @@ public abstract class FileSystem extends Configured implements Closeable {
     String thatScheme = uri.getScheme();
     String thisAuthority = this.getUri().getAuthority();
     String thatAuthority = uri.getAuthority();
-    if (thisScheme.equals(thatScheme)) {          // schemes match
+    //authority and scheme are not case sensitive
+    if (thisScheme.equalsIgnoreCase(thatScheme)) {// schemes match
       if (thisAuthority == thatAuthority ||       // & authorities match
-          (thisAuthority != null && thisAuthority.equals(thatAuthority)))
+          (thisAuthority != null && 
+           thisAuthority.equalsIgnoreCase(thatAuthority)))
         return;
 
       if (thatAuthority == null &&                // path's authority is null
           thisAuthority != null) {                // fs has an authority
         URI defaultUri = getDefaultUri(getConf()); // & is the default fs
-        if (thisScheme.equals(defaultUri.getScheme()) &&
-            thisAuthority.equals(defaultUri.getAuthority()))
+        if (thisScheme.equalsIgnoreCase(defaultUri.getScheme()) &&
+            thisAuthority.equalsIgnoreCase(defaultUri.getAuthority()))
           return;
       }
       throw new IllegalArgumentException("Wrong FS: "+path+
