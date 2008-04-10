@@ -13,6 +13,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+   HADOOP-2905. 'fsck -move' triggers NPE in NameNode. 
+   (Lohit Vjayarenu via rangadi)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

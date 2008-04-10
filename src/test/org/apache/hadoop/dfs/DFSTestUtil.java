@@ -185,6 +185,19 @@ public class DFSTestUtil extends TestCase {
       waitReplication(fs, new Path(root, files[idx].getName()), value);
     }
   }
+
+  /** return list of filenames created as part of createFiles */
+  public String[] getFileNames(String topDir) {
+    if (nFiles == 0)
+      return new String[]{};
+    else {
+      String[] fileNames =  new String[nFiles];
+      for (int idx=0; idx < nFiles; idx++) {
+        fileNames[idx] = topDir + "/" + files[idx].getName();
+      }
+      return fileNames;
+    }
+  }
   
   /** wait for the file's replication to be done */
   static void waitReplication(FileSystem fs, Path fileName, 

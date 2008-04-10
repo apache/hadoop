@@ -689,8 +689,7 @@ class DFSClient implements FSConstants {
   /**
    */
   public boolean mkdirs(String src) throws IOException {
-    checkOpen();
-    return namenode.mkdirs(src, null);
+    return mkdirs(src, null);
   }
 
   /**
