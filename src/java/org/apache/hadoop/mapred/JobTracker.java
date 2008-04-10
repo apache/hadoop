@@ -86,6 +86,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
   }
 
+  // system directories are world-wide readable and owner readable
+  final static FsPermission SYSTEM_DIR_PERMISSION =
+    FsPermission.createImmutable((short) 0733); // rwx-wx-wx
+
   /**
    * The maximum no. of 'completed' (successful/failed/killed)
    * jobs kept in memory per-user. 
@@ -686,7 +690,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         // safe mode
         fs.delete(systemDir);
         if (FileSystem.mkdirs(fs, systemDir, 
-            new FsPermission(JobClient.SYSTEM_DIR_PERMISSION))) {
+            new FsPermission(SYSTEM_DIR_PERMISSION))) {
           break;
         }
         LOG.error("Mkdirs failed to create " + systemDir);

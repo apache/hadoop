@@ -436,9 +436,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   final private static FsPermission JOB_FILE_PERMISSION = 
     FsPermission.createImmutable((short) 0644); // rw-r--r--
 
-  // system directories are world-wide readable and owner readable
-  final static FsPermission SYSTEM_DIR_PERMISSION =
-    FsPermission.createImmutable((short) 0733); // rwx-wx-wx
+  // job submission directory is world readable/writable/executable
+  final static FsPermission JOB_DIR_PERMISSION =
+    FsPermission.createImmutable((short) 0777); // rwx-rwx-rwx
    
   /**
    * Submit a job to the MR system.
@@ -480,7 +480,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     FileSystem fs = getFs();
     LOG.debug("default FileSystem: " + fs.getUri());
     fs.delete(submitJobDir);    
-    FileSystem.mkdirs(fs, submitJobDir, new FsPermission(SYSTEM_DIR_PERMISSION));
+    FileSystem.mkdirs(fs, submitJobDir, new FsPermission(JOB_DIR_PERMISSION));
     Path submitJobFile = new Path(submitJobDir, "job.xml");
     Path submitJarFile = new Path(submitJobDir, "job.jar");
     Path submitSplitFile = new Path(submitJobDir, "job.split");
