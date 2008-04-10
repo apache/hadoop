@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Random;
+import java.net.InetSocketAddress;
 import java.net.URI;
 
 import junit.framework.TestCase;
@@ -509,6 +510,7 @@ public class TestFileSystem extends TestCase {
         cluster = new MiniDFSCluster(new Configuration(), 2, true, null);
         URI uri = cluster.getFileSystem().getUri();
         FileSystem fs = FileSystem.get(uri, new Configuration());
+        checkPath(cluster, fs);
         for(int i = 0; i < 100; i++) {
           assertTrue(fs == FileSystem.get(uri, new Configuration()));
         }
@@ -517,7 +519,13 @@ public class TestFileSystem extends TestCase {
       }
     }
   }
-    
+  
+  private void checkPath(MiniDFSCluster cluster, FileSystem fileSys) throws IOException {
+    InetSocketAddress add = cluster.getNameNode().getNameNodeAddress();
+    // Test upper/lower case
+    fileSys.checkPath(new Path("hdfs://" + add.getHostName().toUpperCase() + ":" + add.getPort()));
+  }
+
   public void testFsClose() throws Exception {
     {
       Configuration conf = new Configuration();
