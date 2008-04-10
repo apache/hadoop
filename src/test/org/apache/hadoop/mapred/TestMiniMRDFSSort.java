@@ -38,7 +38,7 @@ public class TestMiniMRDFSSort extends TestCase {
   private static final Path SORT_OUTPUT_PATH = new Path("/sort/output");
 
   // Knobs to control randomwriter; and hence sort
-  private static final int NUM_HADOOP_SLAVES = 4;
+  private static final int NUM_HADOOP_SLAVES = 3;
   private static final int RW_BYTES_PER_MAP = 50000;
   private static final int RW_MAPS_PER_HOST = 5;
   

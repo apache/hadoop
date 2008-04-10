@@ -224,6 +224,10 @@ Release 0.17.0 - Unreleased
     HADOOP-3152.  Make index interval configuable when using
     MapFileOutputFormat for map-reduce job.  (Rong-En Fan via cutting)
 
+    HADOOP-3143. Decrease number of slaves from 4 to 3 in TestMiniMRDFSSort,
+    as Hudson generates false negatives under the current load.
+    (Nigel Daley via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing
