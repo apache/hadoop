@@ -585,6 +585,10 @@ Release 0.16.3 - Unreleased
     HADOOP-3069. Primary name-node should not truncate image when transferring
     it from the secondary. (shv)
 
+    HADOOP-3182. Change permissions of the job-submission directory to 777
+    from 733 to ensure sharing of HOD clusters works correctly. (Tsz Wo
+    (Nicholas), Sze and Amareshwari Sri Ramadasu via acmurthy) 
+
 Release 0.16.2 - 2008-04-02
 
   BUG FIXES

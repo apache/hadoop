@@ -70,7 +70,7 @@ public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
       mkdir(fs, "/mapred");
 
       UnixUserGroupInformation MR_UGI = createUGI(
-          UnixUserGroupInformation.login().getUserName(), true); 
+          UnixUserGroupInformation.login().getUserName(), false); 
       mr = new MiniMRCluster(0, 0, 4, dfs.getFileSystem().getUri().toString(),
            1, null, null, MR_UGI);
 
