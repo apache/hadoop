@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -32,14 +34,17 @@ import org.apache.hadoop.util.ReflectionUtils;
  * {@link Writable#write(java.io.DataOutput)} and
  * {@link Writable#readFields(java.io.DataInput)}.
  */
-public class WritableSerialization implements Serialization<Writable> {
+public class WritableSerialization extends Configured 
+  implements Serialization<Writable> {
   
-  static class WritableDeserializer implements Deserializer<Writable> {
+  static class WritableDeserializer extends Configured 
+    implements Deserializer<Writable> {
 
     private Class<?> writableClass;
     private DataInputStream dataIn;
     
-    public WritableDeserializer(Class<?> c) {
+    public WritableDeserializer(Configuration conf, Class<?> c) {
+      setConf(conf);
       this.writableClass = c;
     }
     
@@ -54,7 +59,8 @@ public class WritableSerialization implements Serialization<Writable> {
     public Writable deserialize(Writable w) throws IOException {
       Writable writable;
       if (w == null) {
-        writable = (Writable) ReflectionUtils.newInstance(writableClass, null);
+        writable 
+          = (Writable) ReflectionUtils.newInstance(writableClass, getConf());
       } else {
         writable = w;
       }
@@ -95,7 +101,7 @@ public class WritableSerialization implements Serialization<Writable> {
   }
 
   public Deserializer<Writable> getDeserializer(Class<Writable> c) {
-    return new WritableDeserializer(c);
+    return new WritableDeserializer(getConf(), c);
   }
 
   public Serializer<Writable> getSerializer(Class<Writable> c) {

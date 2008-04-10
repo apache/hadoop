@@ -551,6 +551,9 @@ Release 0.17.0 - Unreleased
 
     HADOOP-3220. Safemode message corrected. (shv)
 
+    HADOOP-3208. Fix WritableDeserializer to set the Configuration on
+    deserialized Writables. (Enis Soztutar via cdouglas)
+
 Release 0.16.3 - Unreleased
 
   BUG FIXES

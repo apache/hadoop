@@ -22,10 +22,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-
-import junit.framework.TestCase;
 
 /**
  * TestCase for {@link GenericWritable} class.
@@ -34,9 +34,10 @@ import junit.framework.TestCase;
 public class TestGenericWritable extends TestCase {
 
   private Configuration conf;
-  private static final String CONF_TEST_KEY = "test.generic.writable";
-  private static final String CONF_TEST_VALUE = "dummy";
+  public static final String CONF_TEST_KEY = "test.generic.writable";
+  public static final String CONF_TEST_VALUE = "dummy";
 
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
     conf = new Configuration();
@@ -53,6 +54,7 @@ public class TestGenericWritable extends TestCase {
     public void write(DataOutput out) throws IOException {
       Text.writeString(out, foo);
     }
+    @Override
     public boolean equals(Object obj) {
       if (!(obj instanceof Foo))
         return false;
@@ -75,6 +77,7 @@ public class TestGenericWritable extends TestCase {
     public void setConf(Configuration conf) {
       this.conf = conf;
     }
+    @Override
     public boolean equals(Object obj) {
       if (!(obj instanceof Bar))
         return false;
@@ -84,12 +87,14 @@ public class TestGenericWritable extends TestCase {
 
   /** Dummy class for testing {@link GenericWritable} */
   public static class Baz extends Bar {
+    @Override
     public void readFields(DataInput in) throws IOException {
       super.readFields(in);
       //needs a configuration parameter
       assertEquals("Configuration is not set for the wrapped object", 
           CONF_TEST_VALUE, getConf().get(CONF_TEST_KEY)); 
     }
+    @Override
     public void write(DataOutput out) throws IOException {
       super.write(out);
     }
@@ -97,10 +102,12 @@ public class TestGenericWritable extends TestCase {
 
   /** Dummy class for testing {@link GenericWritable} */ 
   public static class FooGenericWritable extends GenericWritable {
+    @Override
     @SuppressWarnings("unchecked")
     protected Class<? extends Writable>[] getTypes() {
       return new Class[] {Foo.class, Bar.class, Baz.class};
     }
+    @Override
     public boolean equals(Object obj) {
       if(! (obj instanceof FooGenericWritable))
         return false;
