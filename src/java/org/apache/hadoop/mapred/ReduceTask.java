@@ -1380,6 +1380,10 @@ class ReduceTask extends Task {
             LOG.warn(reduceTask.getTaskId() +
                      " Final merge of the inmemory files threw an exception: " + 
                      StringUtils.stringifyException(t));
+            // check if the last merge generated an error
+            if (mergeThrowable != null) {
+              mergeThrowable = t;
+            }
             return false;
           }
         }
@@ -1548,9 +1552,15 @@ class ReduceTask extends Task {
             .suffix(".merged");
           SequenceFile.Writer writer =
             sorter.cloneFileAttributes(mapFiles[0], outputPath, null);
-          SequenceFile.Sorter.RawKeyValueIterator iter;
+          SequenceFile.Sorter.RawKeyValueIterator iter  = null;
           Path tmpDir = new Path(reduceTask.getTaskId());
-          iter = sorter.merge(mapFiles, true, ioSortFactor, tmpDir);
+          try {
+            iter = sorter.merge(mapFiles, true, ioSortFactor, tmpDir);
+          } catch (Exception e) {
+            writer.close();
+            localFileSys.delete(outputPath, true);
+            throw new IOException (StringUtils.stringifyException(e));
+          }
           sorter.writeFile(iter, writer);
           writer.close();
           
@@ -1560,12 +1570,12 @@ class ReduceTask extends Task {
           
           LOG.info(reduceTask.getTaskId()
                    + " Finished merging map output files on disk.");
-        } catch (IOException ioe) {
+        } catch (Throwable t) {
           LOG.warn(reduceTask.getTaskId()
                    + " Merging of the local FS files threw an exception: "
-                   + StringUtils.stringifyException(ioe));
+                   + StringUtils.stringifyException(t));
           if (mergeThrowable == null) {
-            mergeThrowable = ioe;
+            mergeThrowable = t;
           }
         } finally {
           localFSMergeInProgress = false;
