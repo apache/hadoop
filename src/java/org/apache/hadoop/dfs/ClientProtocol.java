@@ -39,7 +39,7 @@ interface ClientProtocol extends VersionedProtocol {
    * The log of historical changes can be retrieved from the svn).
    * 28 : rollEditLog() returns CheckpointSignature instead of long.
    */
-  public static final long versionID = 27L;
+  public static final long versionID = 28L;
   
   ///////////////////////////////////////
   // File contents

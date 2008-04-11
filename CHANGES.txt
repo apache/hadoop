@@ -19,6 +19,8 @@ Trunk (unreleased changes)
     HADOOP-2905. 'fsck -move' triggers NPE in NameNode. 
     (Lohit Vjayarenu via rangadi)
 
+    Increment ClientProtocol.versionID missed by HADOOP-2585. (shv)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
