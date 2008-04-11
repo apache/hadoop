@@ -20,6 +20,7 @@ rootDirectory   = re.sub("/testing/.*", "", myDirectory)
 
 sys.path.append(rootDirectory)
 
+import tempfile
 from testing.lib import BaseTestSuite, MockLogger, MockHadoopCluster
 from hodlib.Hod.hod import hodRunner, hodState
 from hodlib.Common.desc import NodePoolDesc
@@ -27,46 +28,44 @@ from hodlib.Common.desc import NodePoolDesc
 excludes = []
 
 # Information about all clusters is written to a file called clusters.state.
-TEST_CLUSTER_DATA_FILE='clusters'
+from hodlib.Hod.hod import CLUSTER_DATA_FILE as TEST_CLUSTER_DATA_FILE, \
+                           INVALID_STATE_FILE_MSGS
 
 # Temp directory prefix
 TMP_DIR_PREFIX=os.path.join('/tmp', 'hod-%s' % (getpass.getuser()))
 
+# build a config object with all required keys for initializing hod.
+def setupConf():
+  cfg = {
+          'hod' : {
+                    'original-dir' : os.getcwd(),
+                    'stream' : True,
+                    # store all the info about clusters in this directory
+                    'user_state' : '/tmp/hodtest',
+                    'debug' : 3,
+                    'java-home' : os.getenv('JAVA_HOME'),
+                    'cluster' : 'dummy',
+                    'cluster-factor' : 1.8,
+                    'xrs-port-range' : (32768,65536),
+                    'allocate-wait-time' : 3600,
+                    'temp-dir' : '/tmp/hod'
+                  },
+          # just set everything to dummy. Need something to initialize the
+          # node pool description object.
+          'resource_manager' : {
+                                 'id' : 'dummy',
+                                 'batch-home' : 'dummy',
+                                 'queue' : 'dummy',
+                               }
+        }
+  cfg['nodepooldesc'] = NodePoolDesc(cfg['resource_manager'])
+  return cfg
+
 # Test class that defines methods to test invalid arguments to hod operations.
 class test_InvalidArgsOperations(unittest.TestCase):
-
-  # build a config object with all required keys for initializing hod.
-  def setupConf():
-    cfg = {
-            'hod' : {
-                      'original-dir' : os.getcwd(),
-                      'stream' : True,
-                      # store all the info about clusters in this directory
-                      'user_state' : '/tmp/hodtest',
-                      'debug' : 3,
-                      'java-home' : os.getenv('JAVA_HOME'),
-                      'cluster' : 'dummy',
-                      'cluster-factor' : 1.8,
-                      'xrs-port-range' : (32768,65536),
-                      'allocate-wait-time' : 3600,
-                      'temp-dir' : '/tmp/hod'
-                    },
-            # just set everything to dummy. Need something to initialize the
-            # node pool description object.
-            'resource_manager' : {
-                                   'id' : 'dummy',
-                                   'batch-home' : 'dummy',
-                                   'queue' : 'dummy',
-                                 }
-          }
-    cfg['nodepooldesc'] = NodePoolDesc(cfg['resource_manager'])
-    return cfg
-
-  setupConf = staticmethod(setupConf)
-
   def setUp(self):
 
-    self.cfg = test_InvalidArgsOperations.setupConf()
+    self.cfg = setupConf()
     # initialize the mock objects
     self.log = MockLogger()
     self.cluster = MockHadoopCluster()
@@ -201,6 +200,91 @@ class test_InvalidArgsOperations(unittest.TestCase):
     for clusterDir in clusterStateMap.keys():
       self.assertTrue(clusterDir in state.keys())
       self.assertEquals(clusterStateMap[clusterDir], state[clusterDir])
+
+class test_InvalidHodStateFiles(unittest.TestCase):
+  def setUp(self):
+    self.rootDir = '/tmp/hod-%s' % getpass.getuser()
+    self.cfg = setupConf() # creat a conf
+    # Modify hod.user_state
+    self.cfg['hod']['user_state'] = tempfile.mkdtemp(dir=self.rootDir,
+                              prefix='HodTestSuite.test_InvalidHodStateFiles_')
+    self.log = MockLogger() # mock logger
+    self.cluster = MockHadoopCluster() # mock hadoop cluster
+    self.client = hodRunner(self.cfg, log=self.log, cluster=self.cluster)
+    self.state = hodState(self.cfg['hod']['user_state'])
+    self.statePath = os.path.join(self.cfg['hod']['user_state'], '%s.state' % \
+                                  TEST_CLUSTER_DATA_FILE)
+    self.clusterDir = tempfile.mkdtemp(dir=self.rootDir,
+                              prefix='HodTestSuite.test_InvalidHodStateFiles_')
+  
+  def testOperationWithInvalidStateFile(self):
+    jobid = '1234.hadoop.apache.org'
+    # create user state file with invalid permissions
+    stateFile = open(self.statePath, "w")
+    os.chmod(self.statePath, 000) # has no read/write permissions
+    self.client._hodRunner__cfg['hod']['operation'] = \
+                                             "info %s" % self.clusterDir
+    ret = self.client.operation()
+    os.chmod(self.statePath, 700) # restore permissions
+    stateFile.close()
+    os.remove(self.statePath)
+
+    # print self.log._MockLogger__logLines
+    self.assertTrue(self.log.hasMessage(INVALID_STATE_FILE_MSGS[0] % \
+                          os.path.realpath(self.statePath), 'critical'))
+    self.assertEquals(ret, 1)
+    
+  def testAllocateWithInvalidStateFile(self):
+    jobid = '1234.hadoop.apache.org'
+    # create user state file with invalid permissions
+    stateFile = open(self.statePath, "w")
+    os.chmod(self.statePath, 0400) # has no write permissions
+    self.client._hodRunner__cfg['hod']['operation'] = \
+                                        "allocate %s %s" % (self.clusterDir, '3')
+    ret = self.client.operation()
+    os.chmod(self.statePath, 700) # restore permissions
+    stateFile.close()
+    os.remove(self.statePath)
+
+    # print self.log._MockLogger__logLines
+    self.assertTrue(self.log.hasMessage(INVALID_STATE_FILE_MSGS[2] % \
+                        os.path.realpath(self.statePath), 'critical'))
+    self.assertEquals(ret, 1)
+  
+  def testAllocateWithInvalidStateStore(self):
+    jobid = '1234.hadoop.apache.org'
+    self.client._hodRunner__cfg['hod']['operation'] = \
+                                      "allocate %s %s" % (self.clusterDir, 3)
+
+    ###### check with no executable permissions ######
+    stateFile = open(self.statePath, "w") # create user state file
+    os.chmod(self.cfg['hod']['user_state'], 0600) 
+    ret = self.client.operation()
+    os.chmod(self.cfg['hod']['user_state'], 0700) # restore permissions
+    stateFile.close()
+    os.remove(self.statePath)
+    # print self.log._MockLogger__logLines
+    self.assertTrue(self.log.hasMessage(INVALID_STATE_FILE_MSGS[0] % \
+                          os.path.realpath(self.statePath), 'critical'))
+    self.assertEquals(ret, 1)
+    
+    ###### check with no write permissions ######
+    stateFile = open(self.statePath, "w") # create user state file
+    os.chmod(self.cfg['hod']['user_state'], 0500) 
+    ret = self.client.operation()
+    os.chmod(self.cfg['hod']['user_state'], 0700) # restore permissions
+    stateFile.close()
+    os.remove(self.statePath)
+    # print self.log._MockLogger__logLines
+    self.assertTrue(self.log.hasMessage(INVALID_STATE_FILE_MSGS[0] % \
+                          os.path.realpath(self.statePath), 'critical'))
+    self.assertEquals(ret, 1)
+
+  def tearDown(self):
+    if os.path.exists(self.clusterDir): os.rmdir(self.clusterDir)
+    if os.path.exists(self.cfg['hod']['user_state']):
+      os.rmdir(self.cfg['hod']['user_state'])
+
 
 class HodTestSuite(BaseTestSuite):
   def __init__(self):

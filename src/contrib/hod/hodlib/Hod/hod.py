@@ -15,7 +15,7 @@
 #limitations under the License.
 # -*- python -*-
 
-import sys, os, getpass, pprint, re, cPickle, random, shutil, time
+import sys, os, getpass, pprint, re, cPickle, random, shutil, time, errno
 
 import hodlib.Common.logger
 
@@ -30,6 +30,23 @@ from hodlib.Common.nodepoolutil import NodePoolUtil
 from hodlib.Hod.hadoop import hadoopCluster, hadoopScript
 
 CLUSTER_DATA_FILE = 'clusters'
+INVALID_STATE_FILE_MSGS = \
+              [
+
+                "Requested operation cannot be performed. Cannot read %s: " + \
+                "Permission denied.",
+
+                "Requested operation cannot be performed. " + \
+                "Cannot write to %s: Permission denied.",
+
+                "Requested operation cannot be performed. " + \
+                "Cannot read/write to %s: Permission denied.",
+
+                "Cannot update %s: Permission denied. " + \
+                "Cluster is deallocated, but info and list " + \
+                "operations might show incorrect information.",
+
+              ]
 
 class hodState:
   def __init__(self, store):
@@ -50,7 +67,28 @@ class hodState:
       for item in os.listdir(self.__store):
         if item.endswith(self.__STORE_EXT):  
           self.__stateFile = os.path.join(self.__store, item)          
+
+  def get_state_file(self):
+    return self.__stateFile
           
+  def checkStateFile(self, id=None, modes=(os.R_OK,)):
+    # is state file exists/readable/writable/both?
+    self.__set_state_file(id)
+
+    # return true if file doesn't exist, because HOD CAN create
+    # state file and so WILL have permissions to read and/or write
+    try:
+      os.stat(self.__stateFile)
+    except OSError, err:
+      if err.errno == errno.ENOENT: # error 2 (no such file)
+        return True
+
+    # file exists
+    ret = True
+    for mode in modes:
+      ret = ret and os.access(self.__stateFile, mode)
+    return ret
+
   def read(self, id=None):
     info = {}
     
@@ -72,7 +110,7 @@ class hodState:
     self.__set_state_file(id)
     if not os.path.exists(self.__stateFile):
       self.clear(id)
-      
+ 
     stateFile = open(self.__stateFile, 'w')
     cPickle.dump(info, stateFile)
     stateFile.close()
@@ -215,6 +253,13 @@ class hodRunner:
         self.__opCode = 3
         return
 
+      if not self.__userState.checkStateFile(CLUSTER_DATA_FILE, \
+                                              (os.R_OK, os.W_OK)):
+        self.__log.critical(INVALID_STATE_FILE_MSGS[2] % \
+                         self.__userState.get_state_file())
+        self.__opCode = 1
+        return
+
       clusterList = self.__userState.read(CLUSTER_DATA_FILE)
       if clusterDir in clusterList.keys():
         self.__log.critical("Found a previously allocated cluster at cluster directory '%s'. Deallocate the cluster first." % (clusterDir))
@@ -255,21 +300,28 @@ class hodRunner:
             # Allocation has gone through.
             # Don't care about interrupts any more
 
-            if allocateStatus == 0:
-              self.__set_cluster_state_info(os.environ, 
-                                            self.__cluster.hdfsInfo, 
-                                            self.__cluster.mapredInfo, 
-                                            self.__cluster.ringmasterXRS,
-                                            self.__cluster.jobId,
-                                            min, max)
-              self.__setup_cluster_state(clusterDir)
-              self.__clusterState.write(self.__cluster.jobId, 
-                                        self.__clusterStateInfo)
-              #  Do we need to check for interrupts here ??
-
-              self.__set_user_state_info( 
-                { clusterDir : self.__cluster.jobId, } )
-            self.__opCode = allocateStatus
+            try:
+              if allocateStatus == 0:
+                self.__set_cluster_state_info(os.environ, 
+                                              self.__cluster.hdfsInfo, 
+                                              self.__cluster.mapredInfo, 
+                                              self.__cluster.ringmasterXRS,
+                                              self.__cluster.jobId,
+                                              min, max)
+                self.__setup_cluster_state(clusterDir)
+                self.__clusterState.write(self.__cluster.jobId, 
+                                          self.__clusterStateInfo)
+                #  Do we need to check for interrupts here ??
+  
+                self.__set_user_state_info( 
+                  { clusterDir : self.__cluster.jobId, } )
+              self.__opCode = allocateStatus
+            except Exception, e:
+              # Some unknown problem.
+              self.__cleanup()
+              self.__cluster.deallocate(clusterDir, self.__clusterStateInfo)
+              self.__opCode = 1
+              raise Exception(e)
           elif self.__opCode == 12:
             self.__log.critical("Cluster %s already allocated." % clusterDir)
           elif self.__opCode == 10:
@@ -314,6 +366,11 @@ class hodRunner:
           # irrespective of whether deallocate failed or not\
           # remove the cluster state.
           self.__clusterState.clear()
+          if not self.__userState.checkStateFile(CLUSTER_DATA_FILE, (os.W_OK,)):
+            self.__log.critical(INVALID_STATE_FILE_MSGS[3] % \
+                               self.__userState.get_state_file())
+            self.__opCode = 1
+            return
           self.__remove_cluster(clusterDir)
       else:
         self.__handle_invalid_cluster_directory(clusterDir, cleanUp=True)
@@ -385,14 +442,25 @@ class hodRunner:
       self.__opCode = 3      
 
   def __handle_invalid_cluster_directory(self, clusterDir, cleanUp=False):
+    if not self.__userState.checkStateFile(CLUSTER_DATA_FILE, (os.R_OK,)):
+      self.__log.critical(INVALID_STATE_FILE_MSGS[0] % \
+                           self.__userState.get_state_file())
+      self.__opCode = 1
+      return
+
     clusterList = self.__userState.read(CLUSTER_DATA_FILE)
     if clusterDir in clusterList.keys():
       # previously allocated cluster.
       self.__log.critical("Cannot find information for cluster with id '%s' in previously allocated cluster directory '%s'." % (clusterList[clusterDir], clusterDir))
       if cleanUp:
         self.__cluster.delete_job(clusterList[clusterDir])
-        self.__remove_cluster(clusterDir)
         self.__log.critical("Freeing resources allocated to the cluster.")
+        if not self.__userState.checkStateFile(CLUSTER_DATA_FILE, (os.W_OK,)):
+          self.__log.critical(INVALID_STATE_FILE_MSGS[1] % \
+                              self.__userState.get_state_file())
+          self.__opCode = 1
+          return
+        self.__remove_cluster(clusterDir)
       self.__opCode = 3
     else:
       self.__log.critical("'%s' is not a valid cluster directory." % (clusterDir))
@@ -434,6 +502,11 @@ class hodRunner:
     try:
       opList = self.__check_operation(operation)
       if self.__opCode == 0:
+        if not self.__userState.checkStateFile(CLUSTER_DATA_FILE, (os.R_OK,)):
+           self.__log.critical(INVALID_STATE_FILE_MSGS[0] % \
+                         self.__userState.get_state_file())
+           self.__opCode = 1
+           return self.__opCode
         getattr(self, "_op_%s" % opList[0])(opList)
     except HodInterruptException, h:
       self.__log.critical("op: %s failed because of a process interrupt." \

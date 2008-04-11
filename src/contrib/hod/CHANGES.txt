@@ -1,7 +1,7 @@
 HOD Change Log
 
 
-Trunk (unreleased changes)
+Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
 
@@ -48,6 +48,10 @@ Trunk (unreleased changes)
 
     HADOOP-2855. Fixes the way HOD handles relative paths for cluster
     directory, script file and other options.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
+    HADOOP-3153. Fixes the way HOD handles allocation if the user has no
+    permissions to update the clusters state file.
     (Vinod Kumar Vavilapalli via yhemanth)
 
 Release 0.16.2 - 2008-04-02
