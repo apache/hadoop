@@ -22,13 +22,14 @@ import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Random;
 
+import junit.framework.TestCase;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
-import junit.framework.TestCase;
+import org.apache.hadoop.io.Text;
 
 public class TestMultiFileInputFormat extends TestCase{
 
@@ -46,9 +47,9 @@ public class TestMultiFileInputFormat extends TestCase{
   private HashMap<String, Long> lengths = new HashMap<String, Long>();
   
   /** Dummy class to extend MultiFileInputFormat*/
-  private class DummyMultiFileInputFormat extends MultiFileInputFormat {
+  private class DummyMultiFileInputFormat extends MultiFileInputFormat<Text, Text> {
     @Override
-    public RecordReader getRecordReader(InputSplit split, JobConf job
+    public RecordReader<Text,Text> getRecordReader(InputSplit split, JobConf job
         , Reporter reporter) throws IOException {
       return null;
     }
@@ -89,7 +90,7 @@ public class TestMultiFileInputFormat extends TestCase{
       LOG.info("Number of files increment = " + NUM_FILES_INCR);
     }
     
-    MultiFileInputFormat format = new DummyMultiFileInputFormat();
+    MultiFileInputFormat<Text,Text> format = new DummyMultiFileInputFormat();
     FileSystem fs = FileSystem.getLocal(job);
     
     for(int numFiles = 1; numFiles< MAX_NUM_FILES ; 
@@ -106,7 +107,7 @@ public class TestMultiFileInputFormat extends TestCase{
         for(MultiFileSplit split : splits) {
           long splitLength = 0;
           for(Path p : split.getPaths()) {
-            long length = fs.getContentLength(p);
+            long length = fs.getContentSummary(p).getLength();
             assertEquals(length, lengths.get(p.getName()).longValue());
             splitLength += length;
             String name = p.getName();
@@ -125,7 +126,7 @@ public class TestMultiFileInputFormat extends TestCase{
   }
   
   public void testFormatWithLessPathsThanSplits() throws Exception {
-    MultiFileInputFormat format = new DummyMultiFileInputFormat();
+    MultiFileInputFormat<Text,Text> format = new DummyMultiFileInputFormat();
     FileSystem fs = FileSystem.getLocal(job);     
     
     // Test with no path
