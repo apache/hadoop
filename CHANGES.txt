@@ -576,7 +576,7 @@ Release 0.17.0 - Unreleased
    HADOOP-3204. Fixes a problem to do with ReduceTask's LocalFSMerger not
    catching Throwable.  (Amar Ramesh Kamat via ddas)
 
-Release 0.16.3 - Unreleased
+Release 0.16.3 - 2008-04-16
 
   BUG FIXES
 
