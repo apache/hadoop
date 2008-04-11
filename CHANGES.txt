@@ -231,6 +231,9 @@ Release 0.17.0 - Unreleased
     as Hudson generates false negatives under the current load.
     (Nigel Daley via cdouglas)
 
+    HADOOP-3174. Illustrative example for MultipleFileInputFormat. (Enis
+    Soztutar via acmurthy)  
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing

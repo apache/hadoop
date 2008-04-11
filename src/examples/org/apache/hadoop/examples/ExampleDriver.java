@@ -49,6 +49,7 @@ public class ExampleDriver {
       pgd.addClass("sudoku", Sudoku.class, "A sudoku solver.");
       pgd.addClass("sleep", SleepJob.class, "A job that sleeps at each map and reduce task.");
       pgd.addClass("join", Join.class, "A job that effects a join over sorted, equally partitioned datasets");
+      pgd.addClass("multifilewc", MultiFileWordCount.class, "A job that counts words from several files.");
       pgd.driver(argv);
     }
     catch(Throwable e){
