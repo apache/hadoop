@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 0.16.3 - Unreleased
+Release 0.16.3 - 2008-04-16
 
   BUG FIXES
 
