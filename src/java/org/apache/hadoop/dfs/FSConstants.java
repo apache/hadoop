@@ -146,7 +146,18 @@ public interface FSConstants {
   public enum SafeModeAction{ SAFEMODE_LEAVE, SAFEMODE_ENTER, SAFEMODE_GET; }
 
   // Startup options
-  public enum StartupOption{ FORMAT, REGULAR, UPGRADE, ROLLBACK, FINALIZE; }
+  public enum StartupOption{
+    FORMAT  ("-format"),
+    REGULAR ("-regular"),
+    UPGRADE ("-upgrade"),
+    ROLLBACK("-rollback"),
+    FINALIZE("-finalize"),
+    IMPORT  ("-importCheckpoint");
+    
+    private String name = null;
+    private StartupOption(String arg) {this.name = arg;}
+    String getName() {return name;}
+  }
 
   // type of the datanode report
   public static enum DatanodeReportType {ALL, LIVE, DEAD }

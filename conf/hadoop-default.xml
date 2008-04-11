@@ -213,7 +213,9 @@ creations/deletions), or "all".</description>
   <name>fs.checkpoint.dir</name>
   <value>${hadoop.tmp.dir}/dfs/namesecondary</value>
   <description>Determines where on the local filesystem the DFS secondary
-      name node should store the temporary images and edits to merge.  
+      name node should store the temporary images and edits to merge.
+      If this is a comma-delimited list of directories then the image is
+      replicated in all of the directories for redundancy.
   </description>
 </property>
 

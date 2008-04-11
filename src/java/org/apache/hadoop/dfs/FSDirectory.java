@@ -52,6 +52,7 @@ class FSDirectory implements FSConstants {
   /** Access an existing dfs name directory. */
   public FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
     this(new FSImage(), ns, conf);
+    fsImage.setCheckpointDirectories(FSImage.getCheckpointDirs(conf, null));
   }
 
   public FSDirectory(FSImage fsImage, FSNamesystem ns, Configuration conf) throws IOException {
@@ -77,7 +78,14 @@ class FSDirectory implements FSConstants {
       startOpt = StartupOption.REGULAR;
     }
     try {
-      fsImage.recoverTransitionRead(dataDirs, startOpt);
+      if (fsImage.recoverTransitionRead(dataDirs, startOpt)) {
+        fsImage.saveFSImage();
+      }
+      FSEditLog editLog = fsImage.getEditLog();
+      assert editLog != null : "editLog must be initialized";
+      if (!editLog.isOpen())
+        editLog.open();
+      fsImage.setCheckpointDirectories(null);
     } catch(IOException e) {
       fsImage.close();
       throw e;

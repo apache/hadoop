@@ -23,6 +23,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Iterator;
@@ -57,14 +58,18 @@ class StorageInfo {
   }
   
   StorageInfo(StorageInfo from) {
-    layoutVersion = from.layoutVersion;
-    namespaceID = from.namespaceID;
-    cTime = from.cTime;
+    setStorageInfo(from);
   }
 
   public int    getLayoutVersion(){ return layoutVersion; }
   public int    getNamespaceID()  { return namespaceID; }
   public long   getCTime()        { return cTime; }
+
+  public void   setStorageInfo(StorageInfo from) {
+    layoutVersion = from.layoutVersion;
+    namespaceID = from.namespaceID;
+    cTime = from.cTime;
+  }
 }
 
 /**
@@ -100,6 +105,8 @@ abstract class Storage extends StorageInfo {
   private   static final String STORAGE_TMP_REMOVED   = "removed.tmp";
   private   static final String STORAGE_TMP_PREVIOUS  = "previous.tmp";
   private   static final String STORAGE_TMP_FINALIZED = "finalized.tmp";
+  private   static final String STORAGE_TMP_LAST_CKPT = "lastcheckpoint.tmp";
+  private   static final String STORAGE_PREVIOUS_CKPT = "previous.checkpoint";
   
   protected enum StorageState {
     NON_EXISTENT,
@@ -110,6 +117,8 @@ abstract class Storage extends StorageInfo {
     COMPLETE_FINALIZE,
     COMPLETE_ROLLBACK,
     RECOVER_ROLLBACK,
+    COMPLETE_CHECKPOINT,
+    RECOVER_CHECKPOINT,
     NORMAL;
   }
   
@@ -237,6 +246,12 @@ abstract class Storage extends StorageInfo {
     File getFinalizedTmp() {
       return new File(root, STORAGE_TMP_FINALIZED);
     }
+    File getLastCheckpointTmp() {
+      return new File(root, STORAGE_TMP_LAST_CKPT);
+    }
+    File getPreviousCheckpoint() {
+      return new File(root, STORAGE_PREVIOUS_CKPT);
+    }
 
     /**
      * Check consistency of the storage directory
@@ -280,7 +295,7 @@ abstract class Storage extends StorageInfo {
       if (startOpt == StartupOption.FORMAT)
         return StorageState.NOT_FORMATTED;
       // check whether a conversion is required
-      if (isConversionNeeded(this))
+      if (startOpt != StartupOption.IMPORT && isConversionNeeded(this))
         return StorageState.CONVERT;
       // check whether current directory is valid
       File versionFile = getVersionFile();
@@ -291,8 +306,10 @@ abstract class Storage extends StorageInfo {
       boolean hasPreviousTmp = getPreviousTmp().exists();
       boolean hasRemovedTmp = getRemovedTmp().exists();
       boolean hasFinalizedTmp = getFinalizedTmp().exists();
+      boolean hasCheckpointTmp = getLastCheckpointTmp().exists();
 
-      if (!(hasPreviousTmp || hasRemovedTmp || hasFinalizedTmp)) {
+      if (!(hasPreviousTmp || hasRemovedTmp
+          || hasFinalizedTmp || hasCheckpointTmp)) {
         // no temp dirs - no recovery
         if (hasCurrent)
           return StorageState.NORMAL;
@@ -302,12 +319,18 @@ abstract class Storage extends StorageInfo {
         return StorageState.NOT_FORMATTED;
       }
 
-      if ((hasPreviousTmp?1:0)+(hasRemovedTmp?1:0)+(hasFinalizedTmp?1:0) > 1)
+      if ((hasPreviousTmp?1:0) + (hasRemovedTmp?1:0)
+          + (hasFinalizedTmp?1:0) + (hasCheckpointTmp?1:0) > 1)
         // more than one temp dirs
         throw new InconsistentFSStateException(root,
                                                "too many temporary directories.");
 
       // # of temp dirs == 1 should either recover or complete a transition
+      if (hasCheckpointTmp) {
+        return hasCurrent ? StorageState.COMPLETE_CHECKPOINT
+                          : StorageState.RECOVER_CHECKPOINT;
+      }
+
       if (hasFinalizedTmp) {
         if (hasPrevious)
           throw new InconsistentFSStateException(root,
@@ -375,34 +398,70 @@ abstract class Storage extends StorageInfo {
                  + rootPath + ".");
         deleteDir(getFinalizedTmp());
         return;
+      case COMPLETE_CHECKPOINT: // mv lastcheckpoint.tmp -> previous.checkpoint
+        LOG.info("Completing previous checkpoint for storage directory " 
+                 + rootPath + ".");
+        File prevCkptDir = getPreviousCheckpoint();
+        if (prevCkptDir.exists())
+          deleteDir(prevCkptDir);
+        rename(getLastCheckpointTmp(), prevCkptDir);
+        return;
+      case RECOVER_CHECKPOINT:  // mv lastcheckpoint.tmp -> current
+        LOG.info("Recovering storage directory " + rootPath
+                 + " from failed checkpoint.");
+        if (curDir.exists())
+          deleteDir(curDir);
+        rename(getLastCheckpointTmp(), curDir);
+        return;
       default:
         throw new IOException("Unexpected FS state: " + curState);
       }
     }
 
     /**
-     * Lock storage.
+     * Lock storage to provide exclusive access.
+     * 
+     * <p> Locking is not supported by all file systems.
+     * E.g., NFS does not consistently support exclusive locks.
+     * 
+     * <p> If locking is supported we guarantee exculsive access to the
+     * storage directory. Otherwise, no guarantee is given.
      * 
      * @throws IOException if locking fails
      */
     void lock() throws IOException {
+      this.lock = tryLock();
+      if (lock == null) {
+        String msg = "Cannot lock storage " + this.root 
+          + ". The directory is already locked.";
+        LOG.info(msg);
+        throw new IOException(msg);
+      }
+    }
+
+    /**
+     * Attempts to acquire an exclusive lock on the storage.
+     * 
+     * @return A lock object representing the newly-acquired lock or
+     * <code>null</code> if storage is already locked.
+     * @throws IOException if locking fails.
+     */
+    FileLock tryLock() throws IOException {
       File lockF = new File(root, STORAGE_FILE_LOCK);
       lockF.deleteOnExit();
       RandomAccessFile file = new RandomAccessFile(lockF, "rws");
+      FileLock res = null;
       try {
-        this.lock = file.getChannel().tryLock();
+        res = file.getChannel().tryLock();
+      } catch(OverlappingFileLockException oe) {
+        file.close();
+        return null;
       } catch(IOException e) {
         LOG.info(StringUtils.stringifyException(e));
         file.close();
         throw e;
       }
-      if (lock == null) {
-        String msg = "Cannot lock storage " + this.root 
-          + ". The directory is already locked.";
-        LOG.info(msg);
-        file.close();
-        throw new IOException(msg);
-      }
+      return res;
     }
 
     /**
@@ -415,6 +474,7 @@ abstract class Storage extends StorageInfo {
         return;
       this.lock.release();
       lock.channel().close();
+      lock = null;
     }
   }
 
@@ -524,13 +584,48 @@ abstract class Storage extends StorageInfo {
   }
 
   /**
-   * Close all the version files.
+   * Unlock all storage directories.
    * @throws IOException
    */
   public void unlockAll() throws IOException {
     for (Iterator<StorageDirectory> it = storageDirs.iterator(); it.hasNext();) {
       it.next().unlock();
     }
+  }
+
+  /**
+   * Check whether underlying file system supports file locking.
+   * 
+   * @return <code>true</code> if exclusive locks are supported or
+   *         <code>false</code> otherwise.
+   * @throws IOException
+   * @see StorageDirectory#lock()
+   */
+  boolean isLockSupported(int idx) throws IOException {
+    StorageDirectory sd = storageDirs.get(idx);
+    FileLock firstLock = null;
+    FileLock secondLock = null;
+    try {
+      firstLock = sd.lock;
+      if(firstLock == null) {
+        firstLock = sd.tryLock();
+        if(firstLock == null)
+          return true;
+      }
+      secondLock = sd.tryLock();
+      if(secondLock == null)
+        return true;
+    } finally {
+      if(firstLock != null && firstLock != sd.lock) {
+        firstLock.release();
+        firstLock.channel().close();
+      }
+      if(secondLock != null) {
+        secondLock.release();
+        secondLock.channel().close();
+      }
+    }
+    return false;
   }
 
   public static String getBuildVersion() {

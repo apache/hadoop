@@ -36,7 +36,7 @@ class TransferFsImage implements FSConstants {
   private boolean isPutImage;
   private int remoteport;
   private String machineName;
-  private long token;
+  private CheckpointSignature token;
   
   /**
    * File downloader.
@@ -53,7 +53,7 @@ class TransferFsImage implements FSConstants {
     isGetImage = isGetEdit = isPutImage = false;
     remoteport = 0;
     machineName = null;
-    token = 0;
+    token = null;
 
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
       String key = it.next();
@@ -68,12 +68,13 @@ class TransferFsImage implements FSConstants {
       } else if (key.equals("machine")) { 
         machineName = pmap.get("machine")[0];
       } else if (key.equals("token")) { 
-        token = new Long(pmap.get("token")[0]).longValue();
+        token = new CheckpointSignature(pmap.get("token")[0]);
       }
     }
-    if ((isGetImage && isGetEdit) ||
-        (!isGetImage && !isGetEdit && !isPutImage)) {
-      throw new IOException("No good parameters to TransferFsImage");
+
+    int numGets = (isGetImage?1:0) + (isGetEdit?1:0);
+    if ((numGets > 1) || (numGets == 0) && !isPutImage) {
+      throw new IOException("Illegal parameters to TransferFsImage");
     }
   }
 
@@ -89,7 +90,7 @@ class TransferFsImage implements FSConstants {
     return isPutImage;
   }
 
-  long getToken() {
+  CheckpointSignature getToken() {
     return token;
   }
 
@@ -167,7 +168,7 @@ class TransferFsImage implements FSConstants {
       }
     } finally {
       stream.close();
-      if (localPath != null) {
+      if (output != null) {
         for (int i = 0; i < output.length; i++) {
           if (output[i] != null) {
             output[i].close();
@@ -175,16 +176,5 @@ class TransferFsImage implements FSConstants {
         }
       }
     }
-  }
-
-  /**
-   * Client-side Method to fetch file from a server
-   * Copies the response from the URL to the local file.
-   */
-  static void getFileClient(String fsName, String id, File localPath)
-    throws IOException {
-    File[] filelist = new File[1];
-    filelist[0] = localPath;
-    getFileClient(fsName, id, filelist);
   }
 }

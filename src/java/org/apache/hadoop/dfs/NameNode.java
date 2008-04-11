@@ -492,7 +492,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   /**
    * Roll the edit log.
    */
-  public long rollEditLog() throws IOException {
+  public CheckpointSignature rollEditLog() throws IOException {
     return namesystem.rollEditLog();
   }
 
@@ -706,27 +706,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   /**
-   * Validates that this is a valid checkpoint upload request
-   */
-  public void validateCheckpointUpload(long token) throws IOException {
-    namesystem.validateCheckpointUpload(token);
-  }
-
-  /**
-   * Indicates that a new checkpoint has been successfully uploaded.
-   */
-  public void checkpointUploadDone() {
-    namesystem.checkpointUploadDone();
-  }
-
-  /**
-   * Returns the name of the edits file
-   */
-  public File getFsEditName() throws IOException {
-    return namesystem.getFsEditName();
-  }
-
-  /**
    * Returns the address on which the NameNodes is listening to.
    * @return the address on which the NameNodes is listening to.
    */
@@ -794,7 +773,12 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
   private static void printUsage() {
     System.err.println(
-      "Usage: java NameNode [-format] | [-upgrade] | [-rollback] | [-finalize]");
+      "Usage: java NameNode [" +
+      StartupOption.FORMAT.getName() + "] | [" +
+      StartupOption.UPGRADE.getName() + "] | [" +
+      StartupOption.ROLLBACK.getName() + "] | [" +
+      StartupOption.FINALIZE.getName() + "] | [" +
+      StartupOption.IMPORT.getName() + "]");
   }
 
   private static StartupOption parseArguments(String args[], 
@@ -803,16 +787,18 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     StartupOption startOpt = StartupOption.REGULAR;
     for(int i=0; i < argsLen; i++) {
       String cmd = args[i];
-      if ("-format".equalsIgnoreCase(cmd)) {
+      if (StartupOption.FORMAT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.FORMAT;
-      } else if ("-regular".equalsIgnoreCase(cmd)) {
+      } else if (StartupOption.REGULAR.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.REGULAR;
-      } else if ("-upgrade".equalsIgnoreCase(cmd)) {
+      } else if (StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.UPGRADE;
-      } else if ("-rollback".equalsIgnoreCase(cmd)) {
+      } else if (StartupOption.ROLLBACK.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.ROLLBACK;
-      } else if ("-finalize".equalsIgnoreCase(cmd)) {
+      } else if (StartupOption.FINALIZE.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.FINALIZE;
+      } else if (StartupOption.IMPORT.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.IMPORT;
       } else
         return null;
     }

@@ -28,15 +28,19 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.text.SimpleDateFormat;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.Random;
 import java.lang.Math;
 
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.FSConstants.CheckpointStates;
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
 import org.apache.hadoop.dfs.FSConstants.NodeType;
 import org.apache.hadoop.io.UTF8;
@@ -48,6 +52,9 @@ import org.apache.hadoop.dfs.BlocksMap.BlockInfo;
  * 
  */
 class FSImage extends Storage {
+
+  private static final SimpleDateFormat DATE_FORM =
+    new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   //
   // The filenames used for storing the images
@@ -64,9 +71,18 @@ class FSImage extends Storage {
     String getName() {return fileName;}
   }
   
-  private long checkpointTime = -1L;
+  protected long checkpointTime = -1L;
   private FSEditLog editLog = null;
   private boolean isUpgradeFinalized = false;
+  /**
+   * Directories for importing an image from a checkpoint.
+   */
+  private Collection<File> checkpointDirs;
+
+  /**
+   * Can fs-image be rolled?
+   */
+  volatile private CheckpointStates ckptState = CheckpointStates.START; 
 
   /**
    */
@@ -102,6 +118,10 @@ class FSImage extends Storage {
       this.addStorageDir(new StorageDirectory(it.next()));
   }
 
+  void setCheckpointDirectories(Collection<File> dirs) {
+    checkpointDirs = dirs;
+  }
+
   /**
    */
   File getImageFile(int imageDirIdx, NameNodeFile type) {
@@ -119,7 +139,28 @@ class FSImage extends Storage {
   File getEditNewFile(int idx) {
     return getImageFile(idx, NameNodeFile.EDITS_NEW);
   }
-  
+
+  File[] getFileNames(NameNodeFile type) {
+    File[] list = new File[getNumStorageDirs()];
+    int i=0;
+    for(StorageDirectory sd : storageDirs) {
+      list[i++] = getImageFile(sd, type);
+    }
+    return list;
+  }
+
+  File[] getImageFiles() {
+    return getFileNames(NameNodeFile.IMAGE);
+  }
+
+  File[] getEditsFiles() {
+    return getFileNames(NameNodeFile.EDITS);
+  }
+
+  File[] getTimeFiles() {
+    return getFileNames(NameNodeFile.TIME);
+  }
+
   /**
    * Analyze storage directories.
    * Recover from previous transitions if required. 
@@ -129,12 +170,19 @@ class FSImage extends Storage {
    * @param dataDirs
    * @param startOpt startup option
    * @throws IOException
+   * @return true if the image needs to be saved or false otherwise
    */
-  void recoverTransitionRead(Collection<File> dataDirs,
+  boolean recoverTransitionRead(Collection<File> dataDirs,
                              StartupOption startOpt
                              ) throws IOException {
     assert startOpt != StartupOption.FORMAT : 
       "NameNode formatting should be performed before reading the image";
+
+    if(startOpt == StartupOption.IMPORT 
+        && (checkpointDirs == null || checkpointDirs.isEmpty()))
+      throw new IOException("Cannot import image from a checkpoint. "
+                          + "\"fs.checkpoint.dir\" is not set." );
+
     // 1. For each data directory calculate its state and 
     // check whether all is consistent before transitioning.
     this.storageDirs = new ArrayList<StorageDirectory>(dataDirs.size());
@@ -169,6 +217,10 @@ class FSImage extends Storage {
           sd.read(); // read and verify consistency with other directories
           isFormatted = true;
         }
+        if (startOpt == StartupOption.IMPORT && isFormatted)
+          // import of a checkpoint is allowed only into empty image directories
+          throw new IOException("Cannot import image from a checkpoint. " 
+              + " NameNode already contains an image in " + sd.root);
       } catch (IOException ioe) {
         sd.unlock();
         throw ioe;
@@ -180,8 +232,9 @@ class FSImage extends Storage {
 
     if (dataDirs.size() == 0)  // none of the data dirs exist
       throw new IOException(
-                            "All specified directories are not accessible or do not exist.");
-    if (!isFormatted && startOpt != StartupOption.ROLLBACK)
+        "All specified directories are not accessible or do not exist.");
+    if (!isFormatted && startOpt != StartupOption.ROLLBACK 
+                     && startOpt != StartupOption.IMPORT)
       throw new IOException("NameNode is not formatted.");
     if (startOpt != StartupOption.UPGRADE
           && layoutVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION
@@ -215,17 +268,17 @@ class FSImage extends Storage {
     switch(startOpt) {
     case UPGRADE:
       doUpgrade();
-      break;
+      return false; // upgrade saved image already
+    case IMPORT:
+      doImportCheckpoint();
+      return true;
     case ROLLBACK:
       doRollback();
-      // and now load that image
+      break;
     case REGULAR:
-      if (loadFSImage())
-        saveFSImage();
+      // just load the image
     }
-    assert editLog != null : "editLog must be initialized";
-    if(!editLog.isOpen())
-      editLog.open();
+    return loadFSImage();
   }
 
   private void doUpgrade() throws IOException {
@@ -358,6 +411,30 @@ class FSImage extends Storage {
     deleteDir(tmpDir);
     isUpgradeFinalized = true;
     LOG.info("Finalize upgrade for " + sd.root + " is complete.");
+  }
+
+  /**
+   * Load image from a checkpoint directory and save it into the current one.
+   * @throws IOException
+   */
+  void doImportCheckpoint() throws IOException {
+    FSImage ckptImage = new FSImage();
+    FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
+    // replace real image with the checkpoint image
+    FSImage realImage = fsNamesys.getFSImage();
+    assert realImage == this;
+    fsNamesys.dir.fsImage = ckptImage;
+    // load from the checkpoint dirs
+    try {
+      ckptImage.recoverTransitionRead(checkpointDirs, StartupOption.REGULAR);
+    } finally {
+      ckptImage.close();
+    }
+    // return back the real image
+    realImage.setStorageInfo(ckptImage);
+    fsNamesys.dir.fsImage = realImage;
+    // and save it
+    saveFSImage();
   }
 
   void finalizeUpgrade() throws IOException {
@@ -808,6 +885,7 @@ class FSImage extends Storage {
       if (editsNew.exists()) 
         editLog.createEditLogFile(editsNew);
     }
+    ckptState = CheckpointStates.UPLOAD_DONE;
     rollFSImage();
   }
 
@@ -1009,6 +1087,9 @@ class FSImage extends Storage {
    * Reopens the new edits file.
    */
   void rollFSImage() throws IOException {
+    if (ckptState != CheckpointStates.UPLOAD_DONE) {
+      throw new IOException("Cannot roll fsImage before rolling edits log.");
+    }
     //
     // First, verify that edits.new and fsimage.ckpt exists in all
     // checkpoint directories.
@@ -1059,6 +1140,43 @@ class FSImage extends Storage {
         idx--;
       }
     }
+    ckptState = CheckpointStates.START;
+  }
+
+  CheckpointSignature rollEditLog() throws IOException {
+    getEditLog().rollEditLog();
+    ckptState = CheckpointStates.ROLLED_EDITS;
+    return new CheckpointSignature(this);
+  }
+
+  /**
+   * This is called just before a new checkpoint is uploaded to the
+   * namenode.
+   */
+  void validateCheckpointUpload(CheckpointSignature sig) throws IOException {
+    if (ckptState != CheckpointStates.ROLLED_EDITS) {
+      throw new IOException("Namenode is not expecting an new image " +
+                             ckptState);
+    } 
+    // verify token
+    long modtime = getEditLog().getFsEditTime();
+    if (sig.editsTime != modtime) {
+      throw new IOException("Namenode has an edit log with timestamp of " +
+                            DATE_FORM.format(new Date(modtime)) +
+                            " but new checkpoint was created using editlog " +
+                            " with timestamp " + 
+                            DATE_FORM.format(new Date(sig.editsTime)) + 
+                            ". Checkpoint Aborted.");
+    }
+    sig.validateStorageInfo(this);
+    ckptState = CheckpointStates.UPLOAD_START;
+  }
+
+  /**
+   * This is called when a checkpoint upload finishes successfully.
+   */
+  synchronized void checkpointUploadDone() {
+    ckptState = CheckpointStates.UPLOAD_DONE;
   }
 
   void close() throws IOException {
@@ -1071,6 +1189,14 @@ class FSImage extends Storage {
    */
   File getFsImageName() {
     return getImageFile(0, NameNodeFile.IMAGE);
+  }
+
+  File getFsEditName() throws IOException {
+    return getEditLog().getFsEditName();
+  }
+
+  File getFsTimeName() {
+    return getImageFile(0, NameNodeFile.TIME);
   }
 
   /**
@@ -1191,7 +1317,7 @@ class FSImage extends Storage {
 
   private void verifyDistributedUpgradeProgress(StartupOption startOpt
                                                 ) throws IOException {
-    if(startOpt == StartupOption.ROLLBACK)
+    if(startOpt == StartupOption.ROLLBACK || startOpt == StartupOption.IMPORT)
       return;
     UpgradeManager um = FSNamesystem.getFSNamesystem().upgradeManager;
     assert um != null : "FSNameSystem.upgradeManager is null.";
@@ -1218,4 +1344,16 @@ class FSImage extends Storage {
         + FSConstants.LAYOUT_VERSION + " is initialized.");
   }
 
+  static Collection<File> getCheckpointDirs(Configuration conf,
+                                            String defaultName) {
+    Collection<String> dirNames = conf.getStringCollection("fs.checkpoint.dir");
+    if (dirNames.size() == 0 && defaultName != null) {
+      dirNames.add(defaultName);
+    }
+    Collection<File> dirs = new ArrayList<File>(dirNames.size());
+    for(String name : dirNames) {
+      dirs.add(new File(name));
+    }
+    return dirs;
+  }
 }

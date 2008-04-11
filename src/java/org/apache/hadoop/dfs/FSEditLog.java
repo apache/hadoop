@@ -1055,7 +1055,7 @@ class FSEditLog {
   /**
    * Returns the timestamp of the edit log
    */
-  synchronized long getFsEditTime() throws IOException {
+  synchronized long getFsEditTime() {
     return getEditFile(0).lastModified();
   }
 

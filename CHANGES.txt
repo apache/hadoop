@@ -7,14 +7,17 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HADOOP-2585. Name-node imports namespace data from a recent checkpoint
+    accessible via a NFS mount. (shv)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
 
   BUG FIXES
 
-   HADOOP-2905. 'fsck -move' triggers NPE in NameNode. 
-   (Lohit Vjayarenu via rangadi)
+    HADOOP-2905. 'fsck -move' triggers NPE in NameNode. 
+    (Lohit Vjayarenu via rangadi)
 
 Release 0.17.0 - Unreleased
 

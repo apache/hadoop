@@ -187,6 +187,7 @@
     <mkdir dir="${build.webapps}/job/WEB-INF"/>
     <mkdir dir="${build.webapps}/dfs/WEB-INF"/>
     <mkdir dir="${build.webapps}/datanode/WEB-INF"/>
+    <mkdir dir="${build.webapps}/secondary/WEB-INF"/>
     <mkdir dir="${build.examples}"/>
     <mkdir dir="${build.anttasks}"/>
     <mkdir dir="${build.dir}/c++"/>

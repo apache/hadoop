@@ -18,6 +18,7 @@
 package org.apache.hadoop.dfs;
 
 import java.io.*;
+
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
 import org.apache.hadoop.fs.permission.*;
@@ -36,7 +37,7 @@ interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 27 : removed getContentLength(String), open(String, long, long) and isDir(String)
+   * 28 : rollEditLog() returns CheckpointSignature instead of long.
    */
   public static final long versionID = 27L;
   
@@ -376,10 +377,10 @@ interface ClientProtocol extends VersionedProtocol {
   /**
    * Closes the current edit log and opens a new one. The 
    * call fails if the file system is in SafeMode.
-   * Returns a unique token to identify this transaction.
    * @throws IOException
+   * @return a unique token to identify this transaction.
    */
-  public long rollEditLog() throws IOException;
+  public CheckpointSignature rollEditLog() throws IOException;
 
   /**
    * Rolls the fsImage log. It removes the old fsImage, copies the
@@ -433,7 +434,7 @@ interface ClientProtocol extends VersionedProtocol {
    * Write all metadata for this file into persistent storage.
    * The file must be currently open for writing.
    * @param src The string representation of the path
-   * @param clientName The string representation of the client
+   * @param client The string representation of the client
    */
   public void fsync(String src, String client) throws IOException;
 }

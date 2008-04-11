@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.util;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.InetAddress;
@@ -32,6 +31,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
+import java.util.Collection;
 
 import org.apache.hadoop.fs.*;
 
@@ -262,19 +262,33 @@ public class StringUtils {
   }
   
   /**
-   * returns an arraylist of strings  
+   * Returns an arraylist of strings.
    * @param str the comma seperated string values
    * @return the arraylist of the comma seperated string values
    */
   public static String[] getStrings(String str){
-    if (str == null)
+    Collection<String> values = getStringCollection(str);
+    if(values.size() == 0) {
       return null;
-    StringTokenizer tokenizer = new StringTokenizer (str,",");
+    }
+    return values.toArray(new String[values.size()]);
+  }
+
+  /**
+   * Returns a collection of strings.
+   * @param str comma seperated string values
+   * @return an <code>ArrayList</code> of string values
+   */
+  public static Collection<String> getStringCollection(String str){
     List<String> values = new ArrayList<String>();
+    if (str == null)
+      return values;
+    StringTokenizer tokenizer = new StringTokenizer (str,",");
+    values = new ArrayList<String>();
     while (tokenizer.hasMoreTokens()) {
       values.add(tokenizer.nextToken());
     }
-    return values.toArray(new String[values.size()]);
+    return values;
   }
 
   final public static char COMMA = ',';

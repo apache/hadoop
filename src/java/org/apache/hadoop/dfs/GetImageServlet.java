@@ -19,14 +19,13 @@ package org.apache.hadoop.dfs;
 
 import java.util.*;
 import java.io.*;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.commons.logging.*;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * This class is used in Namesystem's jetty to retrieve a file.
@@ -34,8 +33,7 @@ import javax.servlet.http.HttpServletResponse;
  * edit file for periodic checkpointing.
  */
 public class GetImageServlet extends HttpServlet {
-
-  private static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.FSNamesystem");
+  private static final long serialVersionUID = -7669068179452648952L;
 
   @SuppressWarnings("unchecked")
   public void doGet(HttpServletRequest request,
@@ -44,22 +42,22 @@ public class GetImageServlet extends HttpServlet {
     Map<String,String[]> pmap = request.getParameterMap();
     try {
       ServletContext context = getServletContext();
-      NameNode nn = (NameNode) context.getAttribute("name.node");
+      FSImage nnImage = (FSImage)context.getAttribute("name.system.image");
       TransferFsImage ff = new TransferFsImage(pmap, request, response);
       if (ff.getImage()) {
-        // send fsImage to Secondary
+        // send fsImage
         TransferFsImage.getFileServer(response.getOutputStream(),
-                                      nn.getFsImageName()); 
+                                      nnImage.getFsImageName()); 
       } else if (ff.getEdit()) {
-        // send old edits to Secondary
+        // send edits
         TransferFsImage.getFileServer(response.getOutputStream(),
-                                      nn.getFsEditName());
+                                      nnImage.getFsEditName());
       } else if (ff.putImage()) {
         // issue a HTTP get request to download the new fsimage 
-        nn.validateCheckpointUpload(ff.getToken());
+        nnImage.validateCheckpointUpload(ff.getToken());
         TransferFsImage.getFileClient(ff.getInfoServer(), "getimage=1", 
-                                      nn.getFsImageNameCheckpoint());
-        nn.checkpointUploadDone();
+                                      nnImage.getFsImageNameCheckpoint());
+        nnImage.checkpointUploadDone();
       }
     } catch (Exception ie) {
       String errMsg = "GetImage failed. " + StringUtils.stringifyException(ie);

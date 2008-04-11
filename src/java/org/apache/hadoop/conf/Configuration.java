@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.Collection;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -524,6 +525,21 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
    */
   public IntegerRanges getRange(String name, String defaultValue) {
     return new IntegerRanges(get(name, defaultValue));
+  }
+
+  /** 
+   * Get the comma delimited values of the <code>name</code> property as 
+   * a collection of <code>String</code>s.  
+   * If no such property is specified then empty collection is returned.
+   * <p>
+   * This is an optimized version of {@link #getStrings(String)}
+   * 
+   * @param name property name.
+   * @return property value as a collection of <code>String</code>s. 
+   */
+  public Collection<String> getStringCollection(String name) {
+    String valueString = get(name);
+    return StringUtils.getStringCollection(valueString);
   }
 
   /** 

@@ -20,12 +20,15 @@ package org.apache.hadoop.dfs;
 import junit.framework.TestCase;
 import java.io.*;
 import java.util.Collection;
+import java.util.List;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.FSConstants.StartupOption;
 import org.apache.hadoop.dfs.FSImage.NameNodeFile;
 import org.apache.hadoop.dfs.SecondaryNameNode.ErrorSimulator;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 
 /**
@@ -361,6 +364,163 @@ public class TestCheckpoint extends TestCase {
   }
 
   /**
+   * Test different startup scenarios.
+   * <p><ol>
+   * <li> Start of primary name-node in secondary directory must succeed. 
+   * <li> Start of secondary node when the primary is already running in 
+   *      this directory must fail.
+   * <li> Start of primary name-node if secondary node is already running in 
+   *      this directory must fail.
+   * <li> Start of two secondary nodes in the same directory must fail.
+   * <li> Import of a checkpoint must fail if primary 
+   * directory contains a valid image.
+   * <li> Import of the secondary image directory must succeed if primary 
+   * directory does not exist.
+   * <li> Recover failed checkpoint for secondary node.
+   * <li> Complete failed checkpoint for secondary node.
+   * </ol>
+   */
+  void testStartup(Configuration conf) throws IOException {
+    System.out.println("Startup of the name-node in the checkpoint directory.");
+    String primaryDirs = conf.get("dfs.name.dir");
+    String checkpointDirs = conf.get("fs.checkpoint.dir");
+    conf.set("dfs.http.address", "0.0.0.0:0");  
+    conf.set("dfs.name.dir", checkpointDirs);
+    String[] args = new String[]{};
+    NameNode nn = NameNode.createNameNode(args, conf);
+    assertTrue(nn.isInSafeMode());
+
+    // Starting secondary node in the same directory as the primary
+    System.out.println("Startup of secondary in the same dir as the primary.");
+    SecondaryNameNode secondary = null;
+    try {
+      conf.set("dfs.secondary.http.address", "0.0.0.0:0");
+      secondary = new SecondaryNameNode(conf);
+      assertFalse(secondary.getFSImage().isLockSupported(0));
+      secondary.shutdown();
+    } catch (IOException e) { // expected to fail
+      assertTrue(secondary == null);
+    }
+    nn.stop(); nn = null;
+
+    // Starting primary node in the same directory as the secondary
+    System.out.println("Startup of primary in the same dir as the secondary.");
+    conf.set("dfs.http.address", "0.0.0.0:0");  
+    conf.set("dfs.name.dir", primaryDirs);
+    // secondary won't start without primary
+    nn = NameNode.createNameNode(args, conf);
+    conf.set("dfs.secondary.http.address", "0.0.0.0:0");
+    boolean succeed = false;
+    do {
+      try {
+        secondary = new SecondaryNameNode(conf);
+        succeed = true;
+      } catch(IOException ie) { // keep trying
+        System.out.println("Try again: " + ie.getLocalizedMessage());
+      }
+    } while(!succeed);
+    nn.stop(); nn = null;
+    try {
+      conf.set("dfs.http.address", "0.0.0.0:0");  
+      conf.set("dfs.name.dir", checkpointDirs);
+      nn = NameNode.createNameNode(args, conf);
+      assertFalse(nn.getFSImage().isLockSupported(0));
+      nn.stop(); nn = null;
+    } catch (IOException e) { // expected to fail
+      assertTrue(nn == null);
+    }
+
+    // Try another secondary in the same directory
+    System.out.println("Startup of two secondaries in the same dir.");
+    conf.set("dfs.http.address", "0.0.0.0:0");  
+    conf.set("dfs.name.dir", primaryDirs);
+    // secondary won't start without primary
+    nn = NameNode.createNameNode(args, conf);
+    SecondaryNameNode secondary2 = null;
+    try {
+      conf.set("dfs.secondary.http.address", "0.0.0.0:0");
+      secondary2 = new SecondaryNameNode(conf);
+      assertFalse(secondary2.getFSImage().isLockSupported(0));
+      secondary2.shutdown();
+    } catch (IOException e) { // expected to fail
+      assertTrue(secondary2 == null);
+    }
+    nn.stop(); nn = null;
+    secondary.shutdown();
+
+    // Import a checkpoint with existing primary image.
+    System.out.println("Import a checkpoint with existing primary image.");
+    args = new String[]{StartupOption.IMPORT.getName()};
+    try {
+      conf.set("dfs.http.address", "0.0.0.0:0");  
+      conf.set("dfs.name.dir", primaryDirs);
+      nn = NameNode.createNameNode(args, conf);
+      assertTrue(false);
+    } catch (IOException e) { // expected to fail
+      assertTrue(nn == null);
+    }
+
+    // Remove current image and import a checkpoint.
+    System.out.println("Import a checkpoint with existing primary image.");
+    List<File> nameDirs = (List<File>)FSNamesystem.getNamespaceDirs(conf);
+    long fsimageLength = new File(new File(nameDirs.get(0), "current"), 
+                                        NameNodeFile.IMAGE.getName()).length();
+    for(File dir : nameDirs) {
+      if(dir.exists())
+        if(!(FileUtil.fullyDelete(dir)))
+          throw new IOException("Cannot remove directory: " + dir);
+      if (!dir.mkdirs())
+        throw new IOException("Cannot create directory " + dir);
+    }
+    conf.set("dfs.http.address", "0.0.0.0:0");  
+    conf.set("dfs.name.dir", primaryDirs);
+    nn = NameNode.createNameNode(args, conf);
+    // Verify that image file sizes did not change.
+    FSImage image = nn.getFSImage();
+    int nrDirs = image.getNumStorageDirs();
+    for(int idx = 0; idx < nrDirs; idx++) {
+      assertTrue(image.getImageFile(idx, 
+                              NameNodeFile.IMAGE).length() == fsimageLength);
+    }
+    nn.stop();
+
+    // recover failed checkpoint
+    conf.set("dfs.name.dir", primaryDirs);
+    args = new String[]{};
+    nn = NameNode.createNameNode(args, conf);
+    Collection<File> secondaryDirs = FSImage.getCheckpointDirs(conf, null);
+    for(File dir : secondaryDirs) {
+      Storage.rename(new File(dir, "current"), 
+                     new File(dir, "lastcheckpoint.tmp"));
+    }
+    secondary = new SecondaryNameNode(conf);
+    secondary.shutdown();
+    for(File dir : secondaryDirs) {
+      assertTrue(new File(dir, "current").exists()); 
+      assertFalse(new File(dir, "lastcheckpoint.tmp").exists());
+    }
+    
+    // complete failed checkpoint
+    for(File dir : secondaryDirs) {
+      Storage.rename(new File(dir, "previous.checkpoint"), 
+                     new File(dir, "lastcheckpoint.tmp"));
+    }
+    secondary = new SecondaryNameNode(conf);
+    secondary.shutdown();
+    for(File dir : secondaryDirs) {
+      assertTrue(new File(dir, "current").exists()); 
+      assertTrue(new File(dir, "previous.checkpoint").exists()); 
+      assertFalse(new File(dir, "lastcheckpoint.tmp").exists());
+    }
+    nn.stop(); nn = null;
+    
+    // Check that everything starts ok now.
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, false, null);
+    cluster.waitActive();
+    cluster.shutdown();
+  }
+
+  /**
    * Tests checkpoint in DFS.
    */
   public void testCheckpoint() throws IOException {
@@ -452,5 +612,6 @@ public class TestCheckpoint extends TestCase {
     testSecondaryNamenodeError3(conf);
     testNamedirError(conf, namedirs);
     testSecondaryFailsToReturnImage(conf);
+    testStartup(conf);
   }
 }

@@ -46,7 +46,6 @@ import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.text.SimpleDateFormat;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
@@ -227,12 +226,6 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private HostsFileReader hostsReader; 
   private Daemon dnthread = null;
 
-  // can fs-image be rolled?
-  volatile private CheckpointStates ckptState = CheckpointStates.START; 
-
-  private static final SimpleDateFormat DATE_FORM =
-    new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
   private long maxFsObjects = 0;          // maximum number of fs objects
 
   /**
@@ -325,8 +318,8 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         conf.get("dfs.datanode.https.address", infoHost + ":" + 50475));
     this.infoServer.setAttribute("datanode.https.port",
         datanodeSslPort.getPort());
-    this.infoServer.setAttribute("name.system", this);
     this.infoServer.setAttribute("name.node", nn);
+    this.infoServer.setAttribute("name.system.image", getFSImage());
     this.infoServer.setAttribute("name.conf", conf);
     this.infoServer.addServlet("fsck", "/fsck", FsckServlet.class);
     this.infoServer.addServlet("getimage", "/getimage", GetImageServlet.class);
@@ -341,12 +334,12 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   static Collection<File> getNamespaceDirs(Configuration conf) {
-    String[] dirNames = conf.getStrings("dfs.name.dir");
-    if (dirNames == null)
-      dirNames = new String[] {"/tmp/hadoop/dfs/name"};
-    Collection<File> dirs = new ArrayList<File>(dirNames.length);
-    for(int idx = 0; idx < dirNames.length; idx++) {
-      dirs.add(new File(dirNames[idx]));
+    Collection<String> dirNames = conf.getStringCollection("dfs.name.dir");
+    if (dirNames.isEmpty())
+      dirNames.add("/tmp/hadoop/dfs/name");
+    Collection<File> dirs = new ArrayList<File>(dirNames.size());
+    for(String name : dirNames) {
+      dirs.add(new File(name));
     }
     return dirs;
   }
@@ -2105,7 +2098,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   /**
    * Get registrationID for datanodes based on the namespaceID.
    * 
-   * @see #registerDatanode(DatanodeRegistration,String)
+   * @see #registerDatanode(DatanodeRegistration)
    * @see FSImage#newNamespaceID()
    * @return registration ID
    */
@@ -4055,61 +4048,22 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return getEditLog().getEditLogSize();
   }
 
-  synchronized long rollEditLog() throws IOException {
+  synchronized CheckpointSignature rollEditLog() throws IOException {
     if (isInSafeMode()) {
       throw new SafeModeException("Checkpoint not created",
                                   safeMode);
     }
     LOG.info("Roll Edit Log from " + Server.getRemoteAddress());
-    getEditLog().rollEditLog();
-    ckptState = CheckpointStates.ROLLED_EDITS;
-    return getEditLog().getFsEditTime();
+    return getFSImage().rollEditLog();
   }
 
   synchronized void rollFSImage() throws IOException {
-    LOG.info("Roll FSImage from " + Server.getRemoteAddress());
     if (isInSafeMode()) {
       throw new SafeModeException("Checkpoint not created",
                                   safeMode);
     }
-    if (ckptState != CheckpointStates.UPLOAD_DONE) {
-      throw new IOException("Cannot roll fsImage before rolling edits log.");
-    }
-    dir.fsImage.rollFSImage();
-    ckptState = CheckpointStates.START;
-  }
-
-  File getFsEditName() throws IOException {
-    return getEditLog().getFsEditName();
-  }
-
-  /**
-   * This is called just before a new checkpoint is uploaded to the
-   * namenode.
-   */
-  synchronized void validateCheckpointUpload(long token) throws IOException {
-    if (ckptState != CheckpointStates.ROLLED_EDITS) {
-      throw new IOException("Namenode is not expecting an new image " +
-                             ckptState);
-    } 
-    // verify token
-    long modtime = getEditLog().getFsEditTime();
-    if (token != modtime) {
-      throw new IOException("Namenode has an edit log with timestamp of " +
-                            DATE_FORM.format(new Date(modtime)) +
-                            " but new checkpoint was created using editlog " +
-                            " with timestamp " + 
-                            DATE_FORM.format(new Date(token)) + 
-                            ". Checkpoint Aborted.");
-    }
-    ckptState = CheckpointStates.UPLOAD_START;
-  }
-
-  /**
-   * This is called when a checkpoint upload finishes successfully.
-   */
-  synchronized void checkpointUploadDone() {
-    ckptState = CheckpointStates.UPLOAD_DONE;
+    LOG.info("Roll FSImage from " + Server.getRemoteAddress());
+    getFSImage().rollFSImage();
   }
 
   /**
@@ -4273,7 +4227,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
   /**
    * Number of live data nodes
-   * @returns Number of live data nodes
+   * @return Number of live data nodes
    */
   public int numLiveDataNodes() {
     int numLive = 0;
@@ -4292,7 +4246,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
   /**
    * Number of dead data nodes
-   * @returns Number of dead data nodes
+   * @return Number of dead data nodes
    */
   public int numDeadDataNodes() {
     int numDead = 0;
