@@ -59,8 +59,7 @@
         
         <ol>
           <li>
-            Java<sup>TM</sup> 1.5.x, preferably from Sun, must be installed. Set 
-            <code>JAVA_HOME</code> to the root of your Java installation.
+            Java<sup>TM</sup> 1.5.x, preferably from Sun, must be installed.
           </li>
           <li>
             <strong>ssh</strong> must be installed and <strong>sshd</strong> must 
@@ -107,13 +106,18 @@
       <title>Download</title>
       
       <p>
-        First, you need to get a Hadoop distribution: download a recent 
-        <a href="ext:releases">stable release</a> and unpack it.
+        To get a Hadoop distribution, download a recent 
+        <a href="ext:releases">stable release</a> from one of the Apache Download
+        Mirrors.
       </p>
+    </section>
 
+    <section>
+      <title>Prepare to Start the Hadoop Cluster</title>
       <p>
-        Once done, in the distribution edit the file 
-        <code>conf/hadoop-env.sh</code> to define at least <code>JAVA_HOME</code>.
+        Unpack the downloaded Hadoop distribution. In the distribution, edit the
+        file <code>conf/hadoop-env.sh</code> to define at least 
+        <code>JAVA_HOME</code> to be the root of your Java installation.
       </p>
 
 	  <p>
@@ -122,9 +126,18 @@
         This will display the usage documentation for the <strong>hadoop</strong> 
         script.
       </p>
+      
+      <p>Now you are ready to start your Hadoop cluster in one of the three supported
+      modes:
+      </p>
+      <ul>
+        <li>Local (Standalone) Mode</li>
+        <li>Pseudo-Distributed Mode</li>
+        <li>Fully-Distributed Mode</li>
+      </ul>
     </section>
     
-    <section>
+    <section id="Local">
       <title>Standalone Operation</title>
       
       <p>By default, Hadoop is configured to run things in a non-distributed 
@@ -144,7 +157,7 @@
       </p>
     </section>
     
-    <section id="SingleNodeSetup">
+    <section id="PseudoDistributed">
       <title>Pseudo-Distributed Operation</title>
 
 	  <p>Hadoop can also be run on a single-node in a pseudo-distributed mode 
@@ -253,10 +266,10 @@
       </section>
     </section>
     
-    <section>
+    <section id="FullyDistributed">
       <title>Fully-Distributed Operation</title>
       
-	  <p>Information on setting up fully-distributed non-trivial clusters
+	  <p>Information on setting up fully-distributed, non-trivial clusters
 	  can be found <a href="cluster_setup.html">here</a>.</p>  
     </section>
     

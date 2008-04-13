@@ -67,7 +67,7 @@
 <a class="unselected" href="http://wiki.apache.org/hadoop">Wiki</a>
 </li>
 <li class="current">
-<a class="selected" href="index.html">Hadoop 0.16 Documentation</a>
+<a class="selected" href="index.html">Hadoop 0.18 Documentation</a>
 </li>
 </ul>
 <!--+
@@ -621,10 +621,10 @@ document.write("Last Published: " + document.lastModified);
 <div class="section">
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -put &lt;localsrc&gt; &lt;dst&gt;</span>
+<span class="codefrag">Usage: hadoop dfs -put &lt;localsrc&gt; ... &lt;dst&gt;</span>
 			
 </p>
-<p>Copy src from local file system to the destination filesystem. Also reads input from stdin and writes to destination filesystem.<br>
+<p>Copy single src, or multiple srcs from local file system to the destination filesystem. Also reads input from stdin and writes to destination filesystem.<br>
 	   
 </p>
 <ul>
@@ -632,6 +632,12 @@ document.write("Last Published: " + document.lastModified);
 <li>
 					
 <span class="codefrag"> hadoop dfs -put localfile /user/hadoop/hadoopfile</span>
+				
+</li>
+				
+<li>
+					
+<span class="codefrag"> hadoop dfs -put localfile1 localfile2 /user/hadoop/hadoopdir</span>
 				
 </li>
 				
@@ -654,7 +660,7 @@ document.write("Last Published: " + document.lastModified);
 </p>
 </div>
 		
-<a name="N1024E"></a><a name="rm"></a>
+<a name="N10254"></a><a name="rm"></a>
 <h2 class="h3"> rm </h2>
 <div class="section">
 <p>
@@ -683,7 +689,7 @@ document.write("Last Published: " + document.lastModified);
 </p>
 </div>
 		
-<a name="N10272"></a><a name="rmr"></a>
+<a name="N10278"></a><a name="rmr"></a>
 <h2 class="h3"> rmr </h2>
 <div class="section">
 <p>
@@ -717,7 +723,7 @@ document.write("Last Published: " + document.lastModified);
 </p>
 </div>
 		
-<a name="N1029C"></a><a name="setrep"></a>
+<a name="N102A2"></a><a name="setrep"></a>
 <h2 class="h3"> setrep </h2>
 <div class="section">
 <p>
@@ -746,7 +752,7 @@ document.write("Last Published: " + document.lastModified);
 </p>
 </div>
 		
-<a name="N102C1"></a><a name="stat"></a>
+<a name="N102C7"></a><a name="stat"></a>
 <h2 class="h3"> stat </h2>
 <div class="section">
 <p>
@@ -773,7 +779,7 @@ document.write("Last Published: " + document.lastModified);
 </p>
 </div>
 		
-<a name="N102E4"></a><a name="tail"></a>
+<a name="N102EA"></a><a name="tail"></a>
 <h2 class="h3"> tail </h2>
 <div class="section">
 <p>
@@ -800,7 +806,7 @@ document.write("Last Published: " + document.lastModified);
 </p>
 </div>
 		
-<a name="N10307"></a><a name="test"></a>
+<a name="N1030D"></a><a name="test"></a>
 <h2 class="h3"> test </h2>
 <div class="section">
 <p>
@@ -826,7 +832,7 @@ document.write("Last Published: " + document.lastModified);
 </ul>
 </div>
 		
-<a name="N1032A"></a><a name="text"></a>
+<a name="N10330"></a><a name="text"></a>
 <h2 class="h3"> text </h2>
 <div class="section">
 <p>
@@ -841,7 +847,7 @@ document.write("Last Published: " + document.lastModified);
 	  </p>
 </div>
 		
-<a name="N1033C"></a><a name="touchz"></a>
+<a name="N10342"></a><a name="touchz"></a>
 <h2 class="h3"> touchz </h2>
 <div class="section">
 <p>

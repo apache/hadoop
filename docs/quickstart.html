@@ -67,7 +67,7 @@
 <a class="unselected" href="http://wiki.apache.org/hadoop">Wiki</a>
 </li>
 <li class="current">
-<a class="selected" href="index.html">Hadoop 0.16 Documentation</a>
+<a class="selected" href="index.html">Hadoop 0.18 Documentation</a>
 </li>
 </ul>
 <!--+
@@ -201,10 +201,13 @@ document.write("Last Published: " + document.lastModified);
 <a href="#Download">Download</a>
 </li>
 <li>
-<a href="#Standalone+Operation">Standalone Operation</a>
+<a href="#Prepare+to+Start+the+Hadoop+Cluster">Prepare to Start the Hadoop Cluster</a>
 </li>
 <li>
-<a href="#SingleNodeSetup">Pseudo-Distributed Operation</a>
+<a href="#Local">Standalone Operation</a>
+</li>
+<li>
+<a href="#PseudoDistributed">Pseudo-Distributed Operation</a>
 <ul class="minitoc">
 <li>
 <a href="#Configuration">Configuration</a>
@@ -218,7 +221,7 @@ document.write("Last Published: " + document.lastModified);
 </ul>
 </li>
 <li>
-<a href="#Fully-Distributed+Operation">Fully-Distributed Operation</a>
+<a href="#FullyDistributed">Fully-Distributed Operation</a>
 </li>
 </ul>
 </div>
@@ -259,8 +262,7 @@ document.write("Last Published: " + document.lastModified);
 <ol>
           
 <li>
-            Java<sup>TM</sup> 1.5.x, preferably from Sun, must be installed. Set 
-            <span class="codefrag">JAVA_HOME</span> to the root of your Java installation.
+            Java<sup>TM</sup> 1.5.x, preferably from Sun, must be installed.
           </li>
           
 <li>
@@ -271,7 +273,7 @@ document.write("Last Published: " + document.lastModified);
           </li>
         
 </ol>
-<a name="N10056"></a><a name="Additional+requirements+for+Windows"></a>
+<a name="N10053"></a><a name="Additional+requirements+for+Windows"></a>
 <h4>Additional requirements for Windows</h4>
 <ol>
             
@@ -282,7 +284,7 @@ document.write("Last Published: " + document.lastModified);
             </li>
           
 </ol>
-<a name="N10068"></a><a name="Installing+Software"></a>
+<a name="N10065"></a><a name="Installing+Software"></a>
 <h3 class="h4">Installing Software</h3>
 <p>If your cluster doesn't have the requisite software you will need to
         install it.</p>
@@ -305,16 +307,24 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N1008C"></a><a name="Download"></a>
+<a name="N10089"></a><a name="Download"></a>
 <h2 class="h3">Download</h2>
 <div class="section">
 <p>
-        First, you need to get a Hadoop distribution: download a recent 
-        <a href="http://hadoop.apache.org/core/releases.html">stable release</a> and unpack it.
+        To get a Hadoop distribution, download a recent 
+        <a href="http://hadoop.apache.org/core/releases.html">stable release</a> from one of the Apache Download
+        Mirrors.
       </p>
+</div>
+
+    
+<a name="N10097"></a><a name="Prepare+to+Start+the+Hadoop+Cluster"></a>
+<h2 class="h3">Prepare to Start the Hadoop Cluster</h2>
+<div class="section">
 <p>
-        Once done, in the distribution edit the file 
-        <span class="codefrag">conf/hadoop-env.sh</span> to define at least <span class="codefrag">JAVA_HOME</span>.
+        Unpack the downloaded Hadoop distribution. In the distribution, edit the
+        file <span class="codefrag">conf/hadoop-env.sh</span> to define at least 
+        <span class="codefrag">JAVA_HOME</span> to be the root of your Java installation.
       </p>
 <p>
 	    Try the following command:<br>
@@ -324,10 +334,22 @@ document.write("Last Published: " + document.lastModified);
         This will display the usage documentation for the <strong>hadoop</strong> 
         script.
       </p>
+<p>Now you are ready to start your Hadoop cluster in one of the three supported
+      modes:
+      </p>
+<ul>
+        
+<li>Local (Standalone) Mode</li>
+        
+<li>Pseudo-Distributed Mode</li>
+        
+<li>Fully-Distributed Mode</li>
+      
+</ul>
 </div>
     
     
-<a name="N100AF"></a><a name="Standalone+Operation"></a>
+<a name="N100C2"></a><a name="Local"></a>
 <h2 class="h3">Standalone Operation</h2>
 <div class="section">
 <p>By default, Hadoop is configured to run things in a non-distributed 
@@ -355,12 +377,12 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N100D3"></a><a name="SingleNodeSetup"></a>
+<a name="N100E6"></a><a name="PseudoDistributed"></a>
 <h2 class="h3">Pseudo-Distributed Operation</h2>
 <div class="section">
 <p>Hadoop can also be run on a single-node in a pseudo-distributed mode 
 	  where each Hadoop daemon runs in a separate Java process.</p>
-<a name="N100DC"></a><a name="Configuration"></a>
+<a name="N100EF"></a><a name="Configuration"></a>
 <h3 class="h4">Configuration</h3>
 <p>Use the following <span class="codefrag">conf/hadoop-site.xml</span>:</p>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
@@ -426,7 +448,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
         
 </table>
-<a name="N10140"></a><a name="Setup+passphraseless"></a>
+<a name="N10153"></a><a name="Setup+passphraseless"></a>
 <h3 class="h4">Setup passphraseless ssh</h3>
 <p>
           Now check that you can ssh to the localhost without a passphrase:<br>
@@ -444,7 +466,7 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">$ cat ~/.ssh/id_dsa.pub &gt;&gt; ~/.ssh/authorized_keys</span>
 		
 </p>
-<a name="N1015D"></a><a name="Execution"></a>
+<a name="N10170"></a><a name="Execution"></a>
 <h3 class="h4">Execution</h3>
 <p>
           Format a new distributed-filesystem:<br>
@@ -521,10 +543,10 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N101CA"></a><a name="Fully-Distributed+Operation"></a>
+<a name="N101DD"></a><a name="FullyDistributed"></a>
 <h2 class="h3">Fully-Distributed Operation</h2>
 <div class="section">
-<p>Information on setting up fully-distributed non-trivial clusters
+<p>Information on setting up fully-distributed, non-trivial clusters
 	  can be found <a href="cluster_setup.html">here</a>.</p>
 </div>
     

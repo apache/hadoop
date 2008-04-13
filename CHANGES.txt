@@ -239,6 +239,9 @@ Release 0.17.0 - Unreleased
     HADOOP-3174. Illustrative example for MultipleFileInputFormat. (Enis
     Soztutar via acmurthy)  
 
+    HADOOP-2993. Clarify the usage of JAVA_HOME in the Quick Start guide.
+    (acmurthy via nigel)
+
   OPTIMIZATIONS
 
     HADOOP-2790.  Fixed inefficient method hasSpeculativeTask by removing

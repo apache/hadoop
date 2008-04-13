@@ -44,6 +44,18 @@ creations/deletions), or "all".</td>
   should minimize seeks.</td>
 </tr>
 <tr>
+<td><a name="io.sort.record.percent">io.sort.record.percent</a></td><td>0.05</td><td>The percentage of io.sort.mb dedicated to tracking record
+  boundaries. Let this value be r, io.sort.mb be x. The maximum number
+  of records collected before the collection thread must block is equal
+  to (r * x) / 4</td>
+</tr>
+<tr>
+<td><a name="io.sort.spill.percent">io.sort.spill.percent</a></td><td>0.80</td><td>The soft limit in either the buffer or record collection
+  buffers. Once reached, a thread will begin to spill the contents to disk
+  in the background. Note that this does not imply any chunking of data to
+  the spill. A value less than 0.5 is not recommended.</td>
+</tr>
+<tr>
 <td><a name="io.file.buffer.size">io.file.buffer.size</a></td><td>4096</td><td>The size of buffer for use in sequence files.
   The size of this buffer should probably be a multiple of hardware
   page size (4096 on Intel x86), and it determines how much data is
@@ -99,6 +111,9 @@ creations/deletions), or "all".</td>
 <td><a name="fs.hftp.impl">fs.hftp.impl</a></td><td>org.apache.hadoop.dfs.HftpFileSystem</td><td></td>
 </tr>
 <tr>
+<td><a name="fs.hsftp.impl">fs.hsftp.impl</a></td><td>org.apache.hadoop.dfs.HsftpFileSystem</td><td></td>
+</tr>
+<tr>
 <td><a name="fs.ramfs.impl">fs.ramfs.impl</a></td><td>org.apache.hadoop.fs.InMemoryFileSystem</td><td>The FileSystem for ramfs: uris.</td>
 </tr>
 <tr>
@@ -106,7 +121,9 @@ creations/deletions), or "all".</td>
 </tr>
 <tr>
 <td><a name="fs.checkpoint.dir">fs.checkpoint.dir</a></td><td>${hadoop.tmp.dir}/dfs/namesecondary</td><td>Determines where on the local filesystem the DFS secondary
-      name node should store the temporary images and edits to merge.  
+      name node should store the temporary images and edits to merge.
+      If this is a comma-delimited list of directories then the image is
+      replicated in all of the directories for redundancy.
   </td>
 </tr>
 <tr>
@@ -140,6 +157,17 @@ creations/deletions), or "all".</td>
 <td><a name="dfs.http.address">dfs.http.address</a></td><td>0.0.0.0:50070</td><td>
     The address and the base port where the dfs namenode web ui will listen on.
     If the port is 0 then the server will start on a free port.
+  </td>
+</tr>
+<tr>
+<td><a name="dfs.datanode.https.address">dfs.datanode.https.address</a></td><td>0.0.0.0:50475</td><td></td>
+</tr>
+<tr>
+<td><a name="dfs.https.address">dfs.https.address</a></td><td>0.0.0.0:50470</td><td></td>
+</tr>
+<tr>
+<td><a name="https.keystore.info.rsrc">https.keystore.info.rsrc</a></td><td>sslinfo.xml</td><td>The name of the resource from which ssl keystore information
+  will be extracted
   </td>
 </tr>
 <tr>
