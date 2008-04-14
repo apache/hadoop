@@ -6,7 +6,6 @@ Release 0.1.1 04/11/2008
 
   INCOMPATIBLE CHANGES
    HBASE-521   Improve client scanner interface
-   HBASE-577   NPE getting scanner
   
   BUG FIXES
    HBASE-550   EOF trying to read reconstruction log stops region deployment
@@ -24,6 +23,7 @@ Release 0.1.1 04/11/2008
    HBASE-564   Don't do a cache flush if there are zero entries in the cache.
    HBASE-554   filters generate StackOverflowException
    HBASE-567   Reused BatchUpdate instances accumulate BatchOperations
+   HBASE-577   NPE getting scanner
 
   NEW FEATURES
    HBASE-548   Tool to online single region
