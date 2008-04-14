@@ -263,6 +263,7 @@ class MapTask extends Task {
     }
 
     public void collect(K key, V value) throws IOException {
+      reporter.progress();
       this.out.write(key, value);
     }
     
@@ -406,13 +407,14 @@ class MapTask extends Task {
         deflateFilter = null;
       }
       combineCollector = (null != combinerClass)
-        ? new CombineOutputCollector()
+        ? new CombineOutputCollector(reporter)
         : null;
     }
 
     @SuppressWarnings("unchecked")
     public synchronized void collect(Object key, Object value)
         throws IOException {
+      reporter.progress();
       if (key.getClass() != keyClass) {
         throw new IOException("Type mismatch in key from map: expected "
                               + keyClass.getName() + ", recieved "
@@ -1063,12 +1065,17 @@ class MapTask extends Task {
    * OutputCollector for the combiner.
    */
   private static class CombineOutputCollector implements OutputCollector {
+    private Reporter reporter;
     private SequenceFile.Writer writer;
+    public CombineOutputCollector(Reporter reporter) {
+      this.reporter = reporter;
+    }
     public synchronized void setWriter(SequenceFile.Writer writer) {
       this.writer = writer;
     }
     public synchronized void collect(Object key, Object value)
         throws IOException {
+        reporter.progress();
         writer.append(key, value);
     }
   }
