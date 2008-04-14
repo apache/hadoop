@@ -85,9 +85,11 @@ public class FileDataServlet extends DfsServlet {
       final String path = request.getPathInfo() != null
         ? request.getPathInfo() : "/";
       DFSFileInfo info = nnproxy.getFileInfo(path);
-      if (!info.isDir()) {
+      if ((info != null) && !info.isDir()) {
         response.sendRedirect(createUri(info, ugi, nnproxy,
               request.getScheme()).toURL().toString());
+      } else if (info == null){
+        response.sendError(400, "cat: File not found " + path);
       } else {
         response.sendError(400, "cat: " + path + ": is a directory");
       }

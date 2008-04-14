@@ -134,7 +134,7 @@ public class ListPathsServlet extends DfsServlet {
       }
 
       DFSFileInfo base = nnproxy.getFileInfo(path);
-      if (base.isDir()) {
+      if ((base != null) && base.isDir()) {
         writeInfo(base, doc);
       }
 

@@ -386,12 +386,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    */
   @Deprecated
   public boolean exists(String src) throws IOException {
-    try {
-      getFileInfo(src);
-      return true;
-    } catch (FileNotFoundException e) {
-      return false;
-    }
+    return getFileInfo(src) != null;
   }
 
   /**
@@ -437,8 +432,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   /**
    * Get the file info for a specific file.
    * @param src The string representation of the path to the file
-   * @throws IOException if file does not exist
+   * @throws IOException if permission to access file is denied by the system
    * @return object containing information regarding the file
+   *         or null if file not found
    */
   public DFSFileInfo getFileInfo(String src)  throws IOException {
     return namesystem.getFileInfo(src);
