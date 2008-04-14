@@ -106,6 +106,9 @@ Release 0.17.0 - Unreleased
     HADOOP-2826. Deprecated FileSplit.getFile(), LineRecordReader.readLine().
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3239. getFileInfo() returns null for non-existing files instead
+    of throwing FileNotFoundException. (Lohit Vijayarenu via shv)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)

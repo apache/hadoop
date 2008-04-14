@@ -82,6 +82,7 @@ public class TestFileStatus extends TestCase {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fs = cluster.getFileSystem();
+    DFSClient dfsClient = new DFSClient(conf);
     try {
 
       //
@@ -94,6 +95,10 @@ public class TestFileStatus extends TestCase {
       assertTrue("/ should be a directory", 
                  fs.getFileStatus(path).isDir() == true);
       
+      // make sure getFileInfo returns null for files which do not exist
+      DFSFileInfo fileInfo = dfsClient.getFileInfo("/noSuchFile");
+      assertTrue(fileInfo == null);
+
       // create a file in home directory
       //
       Path file1 = new Path("filestatus.dat");

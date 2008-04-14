@@ -573,17 +573,17 @@ class FSDirectory implements FSConstants {
     }
   }
 
-  /* Get the file info for a specific file.
+  /** Get the file info for a specific file.
    * @param src The string representation of the path to the file
-   * @throws IOException if file does not exist
    * @return object containing information regarding the file
+   *         or null if file not found
    */
-  DFSFileInfo getFileInfo(String src) throws FileNotFoundException {
+  DFSFileInfo getFileInfo(String src) {
     String srcs = normalizePath(src);
     synchronized (rootDir) {
       INode targetNode = rootDir.getNode(srcs);
       if (targetNode == null) {
-        throw new FileNotFoundException("File does not exist: " + srcs);
+        return null;
       }
       else {
         return new DFSFileInfo(srcs, targetNode);

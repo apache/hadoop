@@ -542,21 +542,17 @@ class DFSClient implements FSConstants {
    */
   public boolean exists(String src) throws IOException {
     checkOpen();
-    try {
-      return getFileInfo(src) != null;
-    } catch (FileNotFoundException e) {
-      return false;
-    }
+    return getFileInfo(src) != null;
   }
 
   /** @deprecated Use getFileStatus() instead */
   @Deprecated
   public boolean isDirectory(String src) throws IOException {
-    try {
-      return getFileInfo(src).isDir();
-    } catch (FileNotFoundException e) {
-      return false;               // f does not exist
-    }
+    FileStatus fs = getFileInfo(src);
+    if (fs != null)
+      return fs.isDir();
+    else
+      throw new FileNotFoundException("File does not exist: " + src);
   }
 
   /**
@@ -575,8 +571,7 @@ class DFSClient implements FSConstants {
     try {
       return namenode.getFileInfo(src);
     } catch(RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class,
-                                     FileNotFoundException.class);
+      throw re.unwrapRemoteException(AccessControlException.class);
     }
   }
 

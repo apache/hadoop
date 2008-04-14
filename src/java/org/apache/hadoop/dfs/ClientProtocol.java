@@ -37,9 +37,9 @@ interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 28 : rollEditLog() returns CheckpointSignature instead of long.
+   * 29 : getFileInfo returns null instead of throwing FileNotFoundException
    */
-  public static final long versionID = 28L;
+  public static final long versionID = 29L;
   
   ///////////////////////////////////////
   // File contents
@@ -419,8 +419,9 @@ interface ClientProtocol extends VersionedProtocol {
   /**
    * Get the file info for a specific file or directory.
    * @param src The string representation of the path to the file
-   * @throws IOException if file does not exist
+   * @throws IOException if permission to access file is denied by the system 
    * @return object containing information regarding the file
+   *         or null if file not found
    */
   public DFSFileInfo getFileInfo(String src) throws IOException;
 

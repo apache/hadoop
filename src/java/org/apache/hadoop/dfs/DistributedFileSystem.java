@@ -362,8 +362,11 @@ public class DistributedFileSystem extends FileSystem {
       DfsPath p = (DfsPath) f;
       return p.info;
     }
-    
-    return dfs.getFileInfo(getPathName(f));
+    FileStatus fs = dfs.getFileInfo(getPathName(f));
+    if (fs != null)
+      return fs;
+    else
+      throw new FileNotFoundException("File does not exist: " + f);
   }
 
   /** {@inheritDoc }*/
