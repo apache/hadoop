@@ -1,6 +1,7 @@
 Hbase Change Log
   INCOMPATIBLE CHANGES
    HBASE-521   Improve client scanner interface
+   HBASE-577   NPE getting scanner
   
   BUG FIXES
    HBASE-550   EOF trying to read reconstruction log stops region deployment

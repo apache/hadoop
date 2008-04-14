@@ -1114,6 +1114,19 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     final long timestamp, final RowFilterInterface filter)
   throws IOException {
     checkOpen();
+    NullPointerException npe = null;
+    if (regionName == null) {
+      npe = new NullPointerException("regionName is null");
+    } else if (cols == null) {
+      npe = new NullPointerException("columns to scan is null");
+    } else if (firstRow == null) {
+      npe = new NullPointerException("firstRow for scanner is null");
+    }
+    if (npe != null) {
+      IOException io = new IOException("Invalid arguments to openScanner");
+      io.initCause(npe);
+      throw io;
+    }
     requestCount.incrementAndGet();
     try {
       HRegion r = getRegion(regionName);
