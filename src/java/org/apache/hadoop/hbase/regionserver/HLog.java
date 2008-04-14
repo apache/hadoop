@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.FileNotFoundException;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -296,7 +297,7 @@ public class HLog implements HConstants {
   private void deleteLogFile(final Path p, final Long seqno) throws IOException {
     LOG.info("removing old log file " + p.toString() +
       " whose highest sequence/edit id is " + seqno);
-    this.fs.delete(p);
+    this.fs.delete(p, true);
   }
 
   /**
@@ -314,7 +315,7 @@ public class HLog implements HConstants {
    */
   public void closeAndDelete() throws IOException {
     close();
-    fs.delete(dir);
+    fs.delete(dir, true);
   }
 
   /**
@@ -588,7 +589,7 @@ public class HLog implements HConstants {
                   w.append(oldkey, oldval);
                 }
                 old.close();
-                fs.delete(oldlogfile);
+                fs.delete(oldlogfile, true);
               }
             }
             w.append(key, val);
@@ -597,8 +598,11 @@ public class HLog implements HConstants {
             LOG.debug("Applied " + count + " total edits");
           }
         } catch (IOException e) {
-          LOG.warn("Exception processing " + logfiles[i].getPath() +
-            " -- continuing. Possible DATA LOSS!", e);
+          e = RemoteExceptionHandler.checkIOException(e);
+          if (!(e instanceof EOFException)) {
+            LOG.warn("Exception processing " + logfiles[i].getPath() +
+                " -- continuing. Possible DATA LOSS!", e);
+          }
         } finally {
           try {
             in.close();
@@ -610,7 +614,7 @@ public class HLog implements HConstants {
           // nothing we can do about it. Replaying it, it could work but we
           // could be stuck replaying for ever. Just continue though we
           // could have lost some edits.
-          fs.delete(logfiles[i].getPath());
+          fs.delete(logfiles[i].getPath(), true);
         }
       }
     } finally {

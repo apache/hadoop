@@ -3,6 +3,7 @@ Hbase Change Log
    HBASE-574   HBase does not load hadoop native libs (Rong-En Fan via Stack)
    HBASE-573   HBase does not read hadoop-*.xml for dfs configuration after 
                moving out hadoop/contrib
+   HBASE-11    Unexpected exits corrupt DFS
 
 Release 0.1.1 - 04/11/2008
 
