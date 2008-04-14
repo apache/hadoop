@@ -157,6 +157,23 @@ if $cygwin; then
   HBASE_HOME=`cygpath -d "$HBASE_HOME"`
   HBASE_LOG_DIR=`cygpath -d "$HBASE_LOG_DIR"`
 fi
+# setup 'java.library.path' for native-hadoop code if necessary
+JAVA_LIBRARY_PATH=''
+if [ -d "${HBASE_HOME}/build/native" -o -d "${HBASE_HOME}/lib/native" ]; then
+  JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
+
+  if [ -d "$HBASE_HOME/build/native" ]; then
+    JAVA_LIBRARY_PATH=${HBASE_HOME}/build/native/${JAVA_PLATFORM}/lib
+  fi
+
+  if [ -d "${HBASE_HOME}/lib/native" ]; then
+    if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
+      JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HBASE_HOME}/lib/native/${JAVA_PLATFORM}
+    else
+      JAVA_LIBRARY_PATH=${HBASE_HOME}/lib/native/${JAVA_PLATFORM}
+    fi
+  fi
+fi
 
 # cygwin path translation
 if $cygwin; then
