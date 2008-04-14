@@ -22,21 +22,23 @@
     <title>HBase</title>
 </head>
 <body bgcolor="white">
-<a href="http://hbase.org">HBase</a> builds on <a href="http://hadoop.apache.org/core">Hadoop Core</a>
-to build a scalable, distributed database.
+<a href="http://hbase.org">HBase</a> is a scalable, distributed database built on <a href="http://hadoop.apache.org/core">Hadoop Core</a>.
 
 <h2><a name="requirements">Requirements</a></h2>
 <ul>
-<li>Java 1.5.x, preferably from <a href="http://www.java.com/en/download/">Sun</a>.</li>
+  <li>Java 1.5.x, preferably from <a href="http://www.java.com/en/download/">Sun</a>.
+  </li>
+  <li>
+    ssh must be installed and sshd must be running to use Hadoop's
+    scripts to manage remote Hadoop daemons.
+  </li>
 </ul>
 
 <h2><a name="getting_started" >Getting Started</a></h2>
 <p>
-What follows presumes you are installing HBase for the first time. If upgrading your
+What follows presumes you have obtained a copy of HBase and are installing
+for the first time. If upgrading your
 HBase instance, see <a href="#upgrading">Upgrading</a>.
-</p>
-<p>
-Start by defining the following environment variables for your convenience:
 </p>
 <p>
 <ul>
@@ -62,8 +64,7 @@ requirements and instructions</a> for how to set up a DFS.</p>
 The former needs to be pointed at the running Hadoop DFS instance.  The latter file lists
 all the members of the HBase cluster.
 </p>
-<p>
-Use <code>hbase-site.xml</code> to override the properties defined in 
+<p>Use <code>hbase-site.xml</code> to override the properties defined in 
 <code>${HBASE_HOME}/conf/hbase-default.xml</code> (<code>hbase-default.xml</code> itself 
 should never be modified).  At a minimum the <code>hbase.master</code> and the 
 <code>hbase.rootdir</code> properties should be redefined 
@@ -97,6 +98,17 @@ is at port 9000, again on example.org:
 The <code>regionserver</code> file lists all the hosts running HRegionServers, one 
 host per line  (This file is HBase synonym of the hadoop slaves file at 
 <code>${HADOOP_HOME}/conf/slaves</code>).
+</p>
+<p>Of note, if you have made <i>HDFS client configuration</i> on your hadoop cluster, hbase will not
+see this configuration unless you do one of the following:
+<ul>
+    <li>Add a pointer to your <code>HADOOP_CONF_DIR</code> to <code>CLASSPATH</code> in <code>hbase-env.sh</code></li>
+    <li>Add a copy of <code>hadoop-site.xml</code> to <code>${HBASE_HOME}/conf</code>, or</li>
+    <li>If only a small set of HDFS client configurations, add them to <code>hbase-site.xml</code></li>
+</ul>
+An example of such an HDFS client configuration is <code>dfs.replication</code>.  If for example,
+you want to run with a replication factor of 5, hbase will make files will create files with
+the default of 3 unless you do the above to make the configuration available to hbase.
 </p>
 
 <h2><a name="runandconfirm">Running and Confirming Your Installation</a></h2>

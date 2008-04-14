@@ -1,8 +1,10 @@
 Hbase Change Log
   BUG FIXES
    HBASE-574   HBase does not load hadoop native libs (Rong-En Fan via Stack)
+   HBASE-573   HBase does not read hadoop-*.xml for dfs configuration after 
+               moving out hadoop/contrib
 
-Release 0.1.1 04/11/2008
+Release 0.1.1 - 04/11/2008
 
   INCOMPATIBLE CHANGES
    HBASE-521   Improve client scanner interface

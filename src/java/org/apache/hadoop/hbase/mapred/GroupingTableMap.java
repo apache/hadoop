@@ -25,12 +25,9 @@ import java.util.ArrayList;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
@@ -85,8 +82,6 @@ public class GroupingTableMap extends TableMap<Text,RowResult> {
    * 
    * Pass the new key and value to reduce.
    * If any of the grouping columns are not found in the value, the record is skipped.
-   *
-   * @see org.apache.hadoop.hbase.mapred.TableMap#map(org.apache.hadoop.hbase.HStoreKey, org.apache.hadoop.io.MapWritable, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)
    */
   @Override
   public void map(@SuppressWarnings("unused") Text key,
