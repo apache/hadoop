@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -140,4 +142,23 @@ public class FSUtils {
     s.close();
   }
 
+  /**
+   * Verifies root directory path is a valid URI with a scheme
+   * 
+   * @param root root directory path
+   * @throws IOException if not a valid URI with a scheme
+   */
+  public static void validateRootPath(Path root) throws IOException {
+    try {
+      URI rootURI = new URI(root.toString());
+      String scheme = rootURI.getScheme();
+      if (scheme == null) {
+        throw new IOException("Root directory does not contain a scheme");
+      }
+    } catch (URISyntaxException e) {
+      IOException io = new IOException("Root directory path is not a valid URI");
+      io.initCause(e);
+      throw io;
+    }
+  }
 }

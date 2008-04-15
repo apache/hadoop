@@ -6,6 +6,7 @@ Hbase Change Log
    HBASE-11    Unexpected exits corrupt DFS
    HBASE-12    When hbase regionserver restarts, it says "impossible state for
                createLease()"
+   HBASE-575   master dies with stack overflow error if rootdir isn't qualified
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

@@ -172,6 +172,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public HMaster(Path rd, HServerAddress address, HBaseConfiguration conf)
   throws IOException {
     this.conf = conf;
+    try {
+      FSUtils.validateRootPath(rd);
+    } catch (IOException e) {
+      LOG.fatal("Not starting HMaster because the root directory path '" +
+          rd.toString() + "' is not valid. Check the setting of the" +
+          " configuration parameter '" + HBASE_DIR + "'", e);
+      throw e;
+    }
     this.rootdir = rd;
     this.threadWakeFrequency = conf.getInt(THREAD_WAKE_FREQUENCY, 10 * 1000);
     // The filesystem hbase wants to use is probably not what is set into
