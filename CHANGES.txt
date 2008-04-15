@@ -598,6 +598,10 @@ Release 0.17.0 - Unreleased
     HADOOP-3225. Unwrapping methods of RemoteException should initialize
     detailedMassage field. (Mahadev Konar, shv, cdouglas)
 
+    HADOOP-3247. Fix gridmix scripts to use the correct globbing syntax and
+    change maxentToSameCluster to run the correct number of jobs.
+    (Runping Qi via cdouglas)
+
 Release 0.16.3 - 2008-04-16
 
   BUG FIXES
