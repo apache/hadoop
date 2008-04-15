@@ -90,7 +90,12 @@ class ServerManager implements HConstants {
     // server expecially if it just shutdown and came back up near-immediately
     // after.
     if (!master.closed.get()) {
-      serverLeases.createLease(s, new ServerExpirer(s));
+      try {
+        serverLeases.createLease(s, new ServerExpirer(s));
+      } catch (Leases.LeaseStillHeldException e) {
+        LOG.debug("Lease still held on " + e.getName());
+        return;
+      }
     }
     HServerLoad load = serversToLoad.remove(s);
     if (load != null) {

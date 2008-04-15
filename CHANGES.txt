@@ -4,6 +4,8 @@ Hbase Change Log
    HBASE-573   HBase does not read hadoop-*.xml for dfs configuration after 
                moving out hadoop/contrib
    HBASE-11    Unexpected exits corrupt DFS
+   HBASE-12    When hbase regionserver restarts, it says "impossible state for
+               createLease()"
 
 Release 0.1.1 - 04/11/2008
 

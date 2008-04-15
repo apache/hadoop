@@ -29,6 +29,8 @@ import java.util.concurrent.Delayed;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.TimeUnit;
 
+import java.io.IOException;
+
 /**
  * Leases
  *
@@ -125,8 +127,10 @@ public class Leases extends Thread {
    * 
    * @param leaseName name of the lease
    * @param listener listener that will process lease expirations
+   * @throws LeaseStillHeldException 
    */
-  public void createLease(String leaseName, final LeaseListener listener) {
+  public void createLease(String leaseName, final LeaseListener listener)
+  throws LeaseStillHeldException {
     if (stopRequested) {
       return;
     }
@@ -134,11 +138,26 @@ public class Leases extends Thread {
         System.currentTimeMillis() + leasePeriod);
     synchronized (leaseQueue) {
       if (leases.containsKey(leaseName)) {
-        throw new IllegalStateException("lease '" + leaseName +
-            "' already exists");
+        throw new LeaseStillHeldException(leaseName);
       }
       leases.put(leaseName, lease);
       leaseQueue.add(lease);
+    }
+  }
+
+  /**
+   * Thrown if we are asked create a lease but lease on passed name already
+   * exists.
+   */
+  public static class LeaseStillHeldException extends IOException {
+    private final String leaseName;
+    
+    public LeaseStillHeldException(final String name) {
+      this.leaseName = name;
+    }
+    
+    public String getName() {
+      return this.leaseName;
     }
   }
   
