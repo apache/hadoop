@@ -49,7 +49,7 @@ public abstract class MultiFileInputFormat<K, V>
       long totLength = 0;
       for(int i=0; i<paths.length; i++) {
         FileSystem fs = paths[i].getFileSystem(job);
-        lengths[i] = fs.getContentLength(paths[i]);
+        lengths[i] = fs.getContentSummary(paths[i]).getLength();
         totLength += lengths[i];
       }
       double avgLengthPerSplit = ((double)totLength) / numSplits;

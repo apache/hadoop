@@ -14,6 +14,9 @@ Trunk (unreleased changes)
     accessible via a NFS mount. (shv)
 
   IMPROVEMENTS
+   
+    HADOOP-2928. Remove deprecated FileSystem.getContentLength().
+    (Lohit Vjayarenu via rangadi)
 
   OPTIMIZATIONS
 

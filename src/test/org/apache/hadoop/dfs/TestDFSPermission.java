@@ -657,7 +657,7 @@ public class TestDFSPermission extends TestCase {
   }
 
   /* A class that verifies the permission checking is correct for isDirectory,
-   * exist,  getFileInfo, getContentLength */
+   * exist,  getFileInfo, getContentSummary */
   private class StatsPermissionVerifier extends PermissionVerifier {
     OpType opType;
 
@@ -668,7 +668,7 @@ public class TestDFSPermission extends TestCase {
       setOpType(opType);
     }
 
-    /* set if operation is getFileInfo, isDirectory, exist, getContenLength */
+    /* set if operation is getFileInfo, isDirectory, exist, getContenSummary */
     void setOpType(OpType opType) {
       this.opType = opType;
     }
@@ -691,7 +691,7 @@ public class TestDFSPermission extends TestCase {
         fs.exists(path);
         break;
       case GET_CONTENT_LENGTH:
-        fs.getContentLength(path);
+        fs.getContentSummary(path).getLength();
         break;
       default:
         throw new IllegalArgumentException("Unexpected operation type: "
@@ -702,7 +702,7 @@ public class TestDFSPermission extends TestCase {
 
   private StatsPermissionVerifier statsVerifier = new StatsPermissionVerifier();
   /* test if the permission checking of isDirectory, exist,
-   * getFileInfo, getContentLength is correct */
+   * getFileInfo, getContentSummary is correct */
   private void testStats(UnixUserGroupInformation ugi, Path path,
       short ancestorPermission, short parentPermission) throws Exception {
     statsVerifier.set(path, OpType.GET_FILEINFO, ancestorPermission,
@@ -933,7 +933,7 @@ public class TestDFSPermission extends TestCase {
       checkNoPermissionDeny(e);
     }
     try {      
-      fs.getContentLength(NON_EXISTENT_FILE);
+      fs.getContentSummary(NON_EXISTENT_FILE).getLength();
     } catch (IOException e) {
       checkNoPermissionDeny(e);
     }

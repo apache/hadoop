@@ -215,7 +215,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     /* Return the file length */
     private long getFileLength() throws IOException {
       if( fileLen==-1L ) {
-        fileLen = fs.getContentLength(file);
+        fileLen = fs.getContentSummary(file).getLength();
       }
       return fileLen;
     }

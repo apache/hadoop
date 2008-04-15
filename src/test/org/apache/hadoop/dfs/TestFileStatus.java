@@ -111,7 +111,6 @@ public class TestFileStatus extends TestCase {
       assertTrue(fs.getFileStatus(file1).getBlockSize() == blockSize);
       assertTrue(fs.getFileStatus(file1).getReplication() == 1);
       assertTrue(fs.getFileStatus(file1).getLen() == fileSize);
-      assertTrue(fs.getContentLength(file1) == fileSize);
       System.out.println("Path : \"" + file1 + "\"");
 
       // create an empty directory
@@ -123,7 +122,7 @@ public class TestFileStatus extends TestCase {
       assertTrue(dir + " should be a directory", 
                  fs.getFileStatus(path).isDir() == true);
       assertTrue(dir + " should be zero size ",
-                 fs.getContentLength(dir) == 0);
+                 fs.getContentSummary(dir).getLength() == 0);
       assertTrue(dir + " should be zero size ",
                  fs.getFileStatus(dir).getLen() == 0);
       System.out.println("Dir : \"" + dir + "\"");
@@ -151,7 +150,7 @@ public class TestFileStatus extends TestCase {
       // verify that the size of the directory increased by the size 
       // of the two files
       assertTrue(dir + " size should be " + (blockSize/2), 
-                 blockSize/2 == fs.getContentLength(dir));
+                 blockSize/2 == fs.getContentSummary(dir).getLength());
     } finally {
       fs.close();
       cluster.shutdown();

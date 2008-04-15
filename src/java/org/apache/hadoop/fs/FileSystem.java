@@ -628,16 +628,6 @@ public abstract class FileSystem extends Configured implements Closeable {
     return getFileStatus(f).getLen();
   }
     
-  /** Return the number of bytes of the given path 
-   * If <i>f</i> is a file, return the size of the file;
-   * If <i>f</i> is a directory, return the size of the directory tree
-   * @deprecated Use {@link #getContentSummary(Path)}.
-   */
-  @Deprecated
-  public long getContentLength(Path f) throws IOException {
-    return getContentSummary(f).getLength();
-  }
-
   /** Return the {@link ContentSummary} of a given {@link Path}. */
   public ContentSummary getContentSummary(Path f) throws IOException {
     FileStatus status = getFileStatus(f);

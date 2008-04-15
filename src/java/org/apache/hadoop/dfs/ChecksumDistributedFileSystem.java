@@ -49,11 +49,6 @@ public class ChecksumDistributedFileSystem extends ChecksumFileSystem {
     return (DistributedFileSystem)fs;
   }
 
-  @Override
-  public long getContentLength(Path f) throws IOException {
-    return fs.getContentLength(f);
-  }
-
   /** Return the total raw capacity of the filesystem, disregarding
    * replication .*/
   public long getRawCapacity() throws IOException{

@@ -694,17 +694,9 @@ public class FsShell extends Configured implements Tool {
           ": No such file or directory.");
     }
     for(int i=0; i<status.length; i++) {
-      FileStatus items[] = srcFs.listStatus(status[i].getPath());
-      if (items != null) {
-        long totalSize=0;
-        for(int j=0; j<items.length; j++) {
-          totalSize += srcFs.getContentLength(
-              items[j].getPath());
-        }
-        String pathStr = status[i].getPath().toString();
-        System.out.println(
-                           ("".equals(pathStr)?".":pathStr) + "\t" + totalSize);
-      }
+      long totalSize = srcFs.getContentSummary(status[i].getPath()).getLength();
+      String pathStr = status[i].getPath().toString();
+      System.out.println(("".equals(pathStr)?".":pathStr) + "\t" + totalSize);
     }
   }
 

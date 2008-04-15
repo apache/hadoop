@@ -171,21 +171,6 @@ public class DistributedFileSystem extends FileSystem {
   }
   
   /** {@inheritDoc} */
-  @Deprecated
-  public long getContentLength(Path f) throws IOException {
-    // If it is a directory, then issue a getContentLength
-    // RPC to find the size of the entire subtree in one call.
-    //
-    if (f instanceof DfsPath) {
-      DfsPath dfspath = (DfsPath)f;
-      if (!dfspath.isDirectory()) {
-        return dfspath.getContentsLength();
-      }
-    }
-    return getContentSummary(f).getLength();
-  }
-
-  /** {@inheritDoc} */
   public ContentSummary getContentSummary(Path f) throws IOException {
     return dfs.getContentSummary(getPathName(f));
   }
