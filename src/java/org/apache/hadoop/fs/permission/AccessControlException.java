@@ -28,7 +28,9 @@ public class AccessControlException extends java.io.IOException {
    * Default constructor is needed for unwrapping from 
    * {@link org.apache.hadoop.ipc.RemoteException}.
    */
-  public AccessControlException() {}
+  public AccessControlException() {
+    super("Permission denied.");
+  }
 
   /**
    * Constructs an {@link AccessControlException}
