@@ -48,6 +48,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   List<DatanodeDescriptor[]> replicateTargetSets;
   Set<Block> invalidateBlocks;
   boolean processedBlockReport = false;
+
   
   /** Default constructor */
   public DatanodeDescriptor() {
@@ -274,15 +275,12 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * Remove the specified number of target sets
    */
-  void getReplicationSets(int maxNumTransfers, Object[] xferResults) {
-    assert(xferResults.length == 2);
-    assert(xferResults[0] == null && xferResults[1] == null);
-
+  BlockCommand getReplicationCommand(int maxNumTransfers) {
     synchronized (replicateBlocks) {
       assert(replicateBlocks.size() == replicateTargetSets.size());
 
       if (maxNumTransfers <= 0 || replicateBlocks.size() == 0) {
-        return;
+        return null;
       }
       int numTransfers = 0;
       int numBlocks = 0;
@@ -301,32 +299,34 @@ public class DatanodeDescriptor extends DatanodeInfo {
         replicateBlocks.remove(0);
         replicateTargetSets.remove(0);
       }
-      xferResults[0] = blocklist;
-      xferResults[1] = targets;
       assert(blocklist.length > 0 && targets.length > 0);
+      return new BlockCommand(blocklist, targets);
     }
   }
 
   /**
    * Remove the specified number of blocks to be invalidated
    */
-  void getInvalidateBlocks(int maxblocks, Object[] xferResults) {
-    assert(xferResults[0] == null);
+  BlockCommand getInvalidateBlocks(int maxblocks) {
+    Block[] deleteList = getBlockArray(invalidateBlocks, maxblocks); 
+    return deleteList == null? 
+        null: new BlockCommand(DatanodeProtocol.DNA_INVALIDATE, deleteList);
+  }
 
-    synchronized (invalidateBlocks) {
-      if (maxblocks <= 0 || invalidateBlocks.size() == 0) {
-        return;
+  static private Block[] getBlockArray(Collection<Block> blocks, int max) {
+    Block[] blockarray = null;
+    synchronized(blocks) {
+      int n = blocks.size();
+      if (max > 0 && n > 0) {
+        if (max < n) {
+          n = max;
+        }
+        blockarray = blocks.toArray(new Block[n]);
+        blocks.clear();
+        assert(blockarray.length > 0);
       }
-      int outnum = Math.min(maxblocks, invalidateBlocks.size());
-      Block[] blocklist = new Block[outnum];
-      Iterator<Block> iter = invalidateBlocks.iterator();
-      for (int i = 0; i < outnum; i++) {
-        blocklist[i] = iter.next();
-        iter.remove();
-      }
-      assert(blocklist.length > 0);
-      xferResults[0] = blocklist;
     }
+    return blockarray;
   }
 
   void reportDiff(BlocksMap blocksMap,

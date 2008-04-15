@@ -27,6 +27,10 @@ Trunk (unreleased changes)
 
     Increment ClientProtocol.versionID missed by HADOOP-2585. (shv)
 
+    HADOOP-3176. Restructure internal namenode methods that process
+    heartbeats to use well-defined BlockCommand object(s) instead of 
+    using the base java Object. (Tsz Wo (Nicholas), SZE via dhruba)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

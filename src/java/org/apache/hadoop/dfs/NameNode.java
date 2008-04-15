@@ -537,7 +537,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       
     return nodeReg;
   }
-    
+
   /**
    * Data node notify the name node that it is alive 
    * Return a block-oriented command for the datanode to execute.
@@ -549,55 +549,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                                        long remaining,
                                        int xmitsInProgress,
                                        int xceiverCount) throws IOException {
-    Object xferResults[] = new Object[2];
-    xferResults[0] = xferResults[1] = null;
-    Object deleteList[] = new Object[1];
-    deleteList[0] = null; 
-
     verifyRequest(nodeReg);
-    if (namesystem.gotHeartbeat(nodeReg, capacity, dfsUsed, remaining, 
-                                xceiverCount, 
-                                xmitsInProgress,
-                                xferResults,
-                                deleteList)) {
-      // request block report from the datanode
-      assert(xferResults[0] == null && deleteList[0] == null);
-      return new DatanodeCommand(DatanodeProtocol.DNA_REGISTER);
-    }
-    //
-    // If the datanode has (just) been resolved and we haven't ever processed 
-    // a block report from it yet, ask for one now.
-    //
-    if (!namesystem.blockReportProcessed(nodeReg)) {
-      // If we never processed a block report from this datanode, we shouldn't
-      // have any work for that as well
-      assert(xferResults[0] == null && deleteList[0] == null);
-      if (namesystem.isResolved(nodeReg)) {
-        return new DatanodeCommand(DatanodeProtocol.DNA_BLOCKREPORT);
-      }
-    }
-        
-    //
-    // Ask to perform pending transfers, if any
-    //
-    if (xferResults[0] != null) {
-      assert(deleteList[0] == null);
-      return new BlockCommand((Block[]) xferResults[0], (DatanodeInfo[][]) xferResults[1]);
-    }
-
-    //
-    // If there are no transfers, check for recently-deleted blocks that
-    // should be removed.  This is not a full-datanode sweep, as is done during
-    // a block report.  This is just a small fast removal of blocks that have
-    // just been removed.
-    //
-    if (deleteList[0] != null) {
-      return new BlockCommand((Block[]) deleteList[0]);
-    }
-    
-    // check whether a distributed upgrade need to be done
-    // and send a request to start one if required
-    return namesystem.getDistributedUpgradeCommand();
+    return namesystem.handleHeartbeat(nodeReg, capacity, dfsUsed, remaining,
+        xceiverCount, xmitsInProgress);
   }
 
   public DatanodeCommand blockReport(DatanodeRegistration nodeReg,
@@ -609,7 +563,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
     Block blocksToDelete[] = namesystem.processReport(nodeReg, blist);
     if (blocksToDelete != null && blocksToDelete.length > 0)
-      return new BlockCommand(blocksToDelete);
+      return new BlockCommand(DatanodeProtocol.DNA_INVALIDATE, blocksToDelete);
     if (getFSImage().isUpgradeFinalized())
       return new DatanodeCommand(DatanodeProtocol.DNA_FINALIZE);
     return null;

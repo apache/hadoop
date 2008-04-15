@@ -81,11 +81,11 @@ class BlockCommand extends DatanodeCommand {
   }
 
   /**
-   * Create BlockCommand for block invalidation
-   * @param blocks  blocks to invalidate
+   * Create BlockCommand for the given action
+   * @param blocks blocks related to the action
    */
-  public BlockCommand(Block blocks[]) {
-    super(DatanodeProtocol.DNA_INVALIDATE);
+  public BlockCommand(int action, Block blocks[]) {
+    super(action);
     this.blocks = blocks;
     this.targets = new DatanodeInfo[0][];
   }

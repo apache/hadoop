@@ -2136,55 +2136,63 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * If a substantial amount of time passed since the last datanode 
    * heartbeat then request an immediate block report.  
    * 
-   * @return true if registration is required or false otherwise.
+   * @return a datanode command 
    * @throws IOException
    */
-  public boolean gotHeartbeat(DatanodeID nodeID,
-                              long capacity,
-                              long dfsUsed,
-                              long remaining,
-                              int xceiverCount,
-                              int xmitsInProgress,
-                              Object[] xferResults,
-                              Object deleteList[]
-                              ) throws IOException {
+  DatanodeCommand handleHeartbeat(DatanodeRegistration nodeReg,
+      long capacity, long dfsUsed, long remaining,
+      int xceiverCount, int xmitsInProgress) throws IOException {
+    DatanodeCommand cmd = null;
     synchronized (heartbeats) {
       synchronized (datanodeMap) {
-        DatanodeDescriptor nodeinfo;
+        DatanodeDescriptor nodeinfo = null;
         try {
-          nodeinfo = getDatanode(nodeID);
-          if (nodeinfo == null) {
-            return true;
-          }
+          nodeinfo = getDatanode(nodeReg);
         } catch(UnregisteredDatanodeException e) {
-          return true;
+          return new DatanodeCommand(DatanodeProtocol.DNA_REGISTER);
         }
           
         // Check if this datanode should actually be shutdown instead. 
-        if (shouldNodeShutdown(nodeinfo)) {
+        if (nodeinfo != null && shouldNodeShutdown(nodeinfo)) {
           setDatanodeDead(nodeinfo);
           throw new DisallowedDatanodeException(nodeinfo);
         }
 
-        if (!nodeinfo.isAlive) {
-          return true;
-        } else {
-          updateStats(nodeinfo, false);
-          nodeinfo.updateHeartbeat(capacity, dfsUsed, remaining, xceiverCount);
-          updateStats(nodeinfo, true);
-          //
-          // Extract pending replication work or block invalidation
-          // work from the datanode descriptor
-          //
-          nodeinfo.getReplicationSets(this.maxReplicationStreams - 
-                                      xmitsInProgress, xferResults); 
-          if (xferResults[0] == null) {
-            nodeinfo.getInvalidateBlocks(blockInvalidateLimit, deleteList);
-          }
-          return false;
+        if (nodeinfo == null || !nodeinfo.isAlive) {
+          return new DatanodeCommand(DatanodeProtocol.DNA_REGISTER);
+        }
+
+        updateStats(nodeinfo, false);
+        nodeinfo.updateHeartbeat(capacity, dfsUsed, remaining, xceiverCount);
+        updateStats(nodeinfo, true);
+        
+        //check pending replication
+        if (cmd == null) {
+          cmd = nodeinfo.getReplicationCommand(
+              maxReplicationStreams - xmitsInProgress);
+        }
+        //check block invalidation
+        if (cmd == null) {
+          cmd = nodeinfo.getInvalidateBlocks(blockInvalidateLimit);
         }
       }
     }
+
+    // If the datanode has (just) been resolved and we haven't ever processed 
+    // a block report from it yet, ask for one now.
+    if (!blockReportProcessed(nodeReg)) {
+      // If we never processed a block report from this datanode, we shouldn't
+      // have any work for that as well
+      assert(cmd == null);
+      if (isResolved(nodeReg)) {
+        return new DatanodeCommand(DatanodeProtocol.DNA_BLOCKREPORT);
+      }
+    }
+    //check distributed upgrade
+    if (cmd == null) {
+      cmd = getDistributedUpgradeCommand();
+    }
+    return cmd;
   }
 
   private void updateStats(DatanodeDescriptor node, boolean isAdded) {
