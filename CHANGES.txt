@@ -7,6 +7,10 @@ Hbase Change Log
    HBASE-12    When hbase regionserver restarts, it says "impossible state for
                createLease()"
 
+  IMPROVEMENTS
+   HBASE-559   MR example job to count table rows
+
+
 Release 0.1.1 - 04/11/2008
 
   INCOMPATIBLE CHANGES

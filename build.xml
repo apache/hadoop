@@ -148,12 +148,20 @@
    </javac>
   </target>
 	
-  <!-- Override jar target to specify main class -->
   <target name="jar" depends="compile">
+    <!--Copy over any properties under src-->
+    <copy todir="${build.classes}">
+      <fileset dir="${src.dir}">
+        <include name="**/*.properties" />
+      </fileset>
+    </copy>
     <jar jarfile="${build.dir}/${final.name}.jar"
         basedir="${build.classes}" >
       <fileset file="${basedir}/conf/hbase-default.xml"/>
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
+   		<manifest>
+            <attribute name="Main-Class" value="org/apache/hadoop/hbase/mapred/Driver" />
+    	</manifest>
     </jar>
   </target>
 

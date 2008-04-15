@@ -75,7 +75,15 @@ regions and makes a map-per-region.  Writing, its better to have lots of
 reducers so load is spread across the hbase cluster.
 </p>
 
-<h2> Sample MR Bulk Uploader </h2>
+<h2>Example Code</h2>
+<h3>Sample Row Counter</h3>
+<p>See {@link org.apache.hadoop.hbase.mapred.RowCounter}.  You should be able to run
+it by doing: <code>% ./bin/hadoop jar hbase-X.X.X.jar</code>.  This will invoke
+the hbase MapReduce Driver class.  Select 'rowcounter' from the choice of jobs
+offered.
+</p>
+
+<h3> Sample MR Bulk Uploader </h3>
 <p>Read the class comment below for specification of inputs, prerequisites, etc.
 </p>
 <blockquote><pre>package org.apache.hadoop.hbase.mapred;
