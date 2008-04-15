@@ -25,7 +25,9 @@ import java.util.zip.GZIPOutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.shell.*;
+import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -1095,6 +1097,44 @@ public class TestDFSShell extends TestCase {
     String run(int exitcode, String... options) throws IOException;
   }
 
+  public void testRemoteException() throws Exception {
+    UnixUserGroupInformation tmpUGI = new UnixUserGroupInformation("tmpname",
+        new String[] {
+        "mygroup"});
+    MiniDFSCluster dfs = null;
+    PrintStream bak = null;
+    try {
+      Configuration conf = new Configuration();
+      dfs = new MiniDFSCluster(conf, 2, true, null);
+      FileSystem fs = dfs.getFileSystem();
+      Path p = new Path("/foo");
+      fs.mkdirs(p);
+      fs.setPermission(p, new FsPermission((short)0700));
+      UnixUserGroupInformation.saveToConf(conf,
+          UnixUserGroupInformation.UGI_PROPERTY_NAME, tmpUGI);
+      FsShell fshell = new FsShell(conf);
+      bak = System.err;
+      ByteArrayOutputStream out = new ByteArrayOutputStream();
+      PrintStream tmp = new PrintStream(out);
+      System.setErr(tmp);
+      String[] args = new String[2];
+      args[0] = "-ls";
+      args[1] = "/foo";
+      int ret = ToolRunner.run(fshell, args);
+      assertTrue("returned should be -1", (ret == -1));
+      String str = out.toString();
+      assertTrue("permission denied printed", str.indexOf("Permission denied") != -1);
+      out.reset();
+    } finally {
+      if (bak != null) {
+        System.setErr(bak);
+      }
+      if (dfs != null) {
+        dfs.shutdown();
+      }
+    }
+  }
+  
   public void testGet() throws IOException {
     DFSTestUtil.setLogLevel2All(FSInputChecker.LOG);
     final Configuration conf = new Configuration();

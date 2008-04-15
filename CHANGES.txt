@@ -595,6 +595,9 @@ Release 0.17.0 - Unreleased
     HADOOP-3229. Report progress when collecting records from the mapper and
     the combiner. (Doug Cutting via cdouglas)
 
+    HADOOP-3225. Unwrapping methods of RemoteException should initialize
+    detailedMassage field. (Mahadev Konar, shv, cdouglas)
+
 Release 0.16.3 - 2008-04-16
 
   BUG FIXES

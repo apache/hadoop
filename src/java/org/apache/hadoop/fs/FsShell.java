@@ -915,8 +915,7 @@ public class FsShell extends Configured implements Tool {
         try {
           String[] content;
           content = e.getLocalizedMessage().split("\n");
-          System.err.println(cmd.substring(1) + ": " +
-                             content[0]);
+          System.err.println(cmd.substring(1) + ": " + content[0]);
         } catch (Exception ex) {
           System.err.println(cmd.substring(1) + ": " +
                              ex.getLocalizedMessage());
@@ -1563,8 +1562,12 @@ public class FsShell extends Configured implements Tool {
         // IO exception encountered locally.
         //
         exitCode = -1;
+        String content = e.getLocalizedMessage();
+        if (content != null) {
+          content = content.split("\n")[0];
+        }
         System.err.println(cmd.substring(1) + ": " +
-                           e.getLocalizedMessage());
+                          content);
       }
     }
     return exitCode;

@@ -485,6 +485,7 @@ public class TestCheckpoint extends TestCase {
     nn.stop();
 
     // recover failed checkpoint
+    conf.set("dfs.http.address", "0.0.0.0:0");  
     conf.set("dfs.name.dir", primaryDirs);
     args = new String[]{};
     nn = NameNode.createNameNode(args, conf);
@@ -493,6 +494,7 @@ public class TestCheckpoint extends TestCase {
       Storage.rename(new File(dir, "current"), 
                      new File(dir, "lastcheckpoint.tmp"));
     }
+    conf.set("dfs.secondary.http.address", "0.0.0.0:0");
     secondary = new SecondaryNameNode(conf);
     secondary.shutdown();
     for(File dir : secondaryDirs) {
@@ -505,6 +507,7 @@ public class TestCheckpoint extends TestCase {
       Storage.rename(new File(dir, "previous.checkpoint"), 
                      new File(dir, "lastcheckpoint.tmp"));
     }
+    conf.set("dfs.secondary.http.address", "0.0.0.0:0");
     secondary = new SecondaryNameNode(conf);
     secondary.shutdown();
     for(File dir : secondaryDirs) {
