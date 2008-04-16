@@ -1742,6 +1742,7 @@ public class HRegion implements HConstants {
     public boolean next(HStoreKey key, SortedMap<Text, byte[]> results)
     throws IOException {
       boolean moreToFollow = false;
+      boolean filtered = false;
 
       do {
         // Find the lowest-possible key.
@@ -1804,7 +1805,13 @@ public class HRegion implements HConstants {
           // If we got no results, then there is no more to follow.
           moreToFollow = false;
         }
-      } while(filter != null && filter.filterNotNull(results) && moreToFollow);
+        
+        filtered = filter == null ? false : filter.filterNotNull(results);
+        
+        if (filtered && moreToFollow) {
+          results.clear();
+        }
+      } while(filtered && moreToFollow);
 
       // Make sure scanners closed if no more results
       if (!moreToFollow) {
