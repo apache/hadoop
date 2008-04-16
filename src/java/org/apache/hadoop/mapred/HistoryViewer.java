@@ -81,7 +81,8 @@ class HistoryViewer {
                               + historyLogDir.toString());
       }
       jobLogFile = jobFiles[0].toString();
-      String[] jobDetails = jobFiles[0].getName().split("_");
+      String[] jobDetails = 
+          JobInfo.decodeJobHistoryFileName(jobFiles[0].getName()).split("_");
       trackerHostName = jobDetails[0];
       trackerStartTime = jobDetails[1];
       jobId = jobDetails[2] + "_" + jobDetails[3] + "_" + jobDetails[4];

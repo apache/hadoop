@@ -20,6 +20,7 @@
 <%	
   String jobid = request.getParameter("jobid");
   String logFile = request.getParameter("logFile");
+  String encodedLogFileName = JobHistory.JobInfo.encodeJobHistoryFilePath(logFile);
   String taskStatus = request.getParameter("status"); 
   String taskType = request.getParameter("taskType"); 
   
@@ -29,7 +30,7 @@
 %>
 <html>
 <body>
-<h2><%=taskStatus%> <%=taskType %> task list for <a href="jobdetailshistory.jsp?jobid=<%=jobid%>&&logFile=<%=logFile %>"><%=jobid %> </a></h2>
+<h2><%=taskStatus%> <%=taskType %> task list for <a href="jobdetailshistory.jsp?jobid=<%=jobid%>&&logFile=<%=encodedLogFileName%>"><%=jobid %> </a></h2>
 <center>
 <table border="2" cellpadding="5" cellspacing="2">
 <tr><td>Task Id</td><td>Start Time</td><td>Finish Time<br/></td><td>Error</td></tr>
@@ -40,7 +41,7 @@
       for (JobHistory.TaskAttempt taskAttempt : taskAttempts.values()) {
         if (taskStatus.equals(taskAttempt.get(Keys.TASK_STATUS)) || 
           taskStatus.equals("all")){
-          printTask(jobid, logFile, taskAttempt, out); 
+          printTask(jobid, encodedLogFileName, taskAttempt, out); 
         }
       }
     }
@@ -48,11 +49,11 @@
 %>
 </table>
 <%!
-  private void printTask(String jobid, String trackerId,
+  private void printTask(String jobid, String logFile,
     JobHistory.TaskAttempt attempt, JspWriter out) throws IOException{
     out.print("<tr>"); 
     out.print("<td>" + "<a href=\"taskdetailshistory.jsp?jobid=" + jobid + 
-          "&logFile="+ trackerId +"&taskid="+attempt.get(Keys.TASKID)+"\">" +
+          "&logFile="+ logFile +"&taskid="+attempt.get(Keys.TASKID)+"\">" +
           attempt.get(Keys.TASKID) + "</a></td>");
     out.print("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, 
           attempt.getLong(Keys.START_TIME), 0 ) + "</td>");

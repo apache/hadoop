@@ -26,6 +26,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -350,6 +353,75 @@ public class JobHistory {
     }
     
     /**
+     * Helper function to encode the URL of the path of the job-history
+     * log file. 
+     * 
+     * @param logFile path of the job-history file
+     * @return URL encoded path
+     * @throws IOException
+     */
+    public static String encodeJobHistoryFilePath(String logFile)
+    throws IOException {
+      Path rawPath = new Path(logFile);
+      String encodedFileName = null;
+      try {
+        encodedFileName = URLEncoder.encode(rawPath.getName(), "UTF-8");
+      } catch (UnsupportedEncodingException uee) {
+        IOException ioe = new IOException();
+        ioe.initCause(uee);
+        ioe.setStackTrace(uee.getStackTrace());
+        throw ioe;
+      }
+      
+      Path encodedPath = new Path(rawPath.getParent(), encodedFileName);
+      return encodedPath.toString();
+    }
+    
+    /**
+     * Helper function to encode the URL of the filename of the job-history 
+     * log file.
+     * 
+     * @param logFileName file name of the job-history file
+     * @return URL encoded filename
+     * @throws IOException
+     */
+    public static String encodeJobHistoryFileName(String logFileName)
+    throws IOException {
+      String encodedFileName = null;
+      try {
+        encodedFileName = URLEncoder.encode(logFileName, "UTF-8");
+      } catch (UnsupportedEncodingException uee) {
+        IOException ioe = new IOException();
+        ioe.initCause(uee);
+        ioe.setStackTrace(uee.getStackTrace());
+        throw ioe;
+      }
+      return encodedFileName;
+    }
+    
+    /**
+     * Helper function to decode the URL of the filename of the job-history 
+     * log file.
+     * 
+     * @param logFileName file name of the job-history file
+     * @return URL decoded filename
+     * @throws IOException
+     */
+    public static String decodeJobHistoryFileName(String logFileName)
+    throws IOException {
+      String decodedFileName = null;
+      try {
+        decodedFileName = URLDecoder.decode(logFileName, "UTF-8");
+      } catch (UnsupportedEncodingException uee) {
+        IOException ioe = new IOException();
+        ioe.initCause(uee);
+        ioe.setStackTrace(uee.getStackTrace());
+        throw ioe;
+      }
+      return decodedFileName;
+    }
+    
+    /**
      * Log job submitted event to history. Creates a new file in history 
      * for the job. if history file creation fails, it disables history 
      * for all other events. 
@@ -357,9 +429,11 @@ public class JobHistory {
      * @param jobConf job conf of the job
      * @param jobConfPath path to job conf xml file in HDFS.
      * @param submitTime time when job tracker received the job
+     * @throws IOException
      */
     public static void logSubmitted(String jobId, JobConf jobConf, 
-                                    String jobConfPath, long submitTime) {
+                                    String jobConfPath, long submitTime) 
+    throws IOException {
       String jobName = jobConf.getJobName();
       String user = jobConf.getUser(); 
       FileSystem fs = null;
@@ -368,8 +442,10 @@ public class JobHistory {
 
       if (!disableHistory){
         // setup the history log file for this job
-        String logFileName = jobUniqueString +  
-                             "_" + user+ "_" + jobName;
+        String logFileName = 
+            encodeJobHistoryFileName(jobUniqueString +  "_" + user+ "_" + 
+                                     jobName);
+        
         if (logFileName.length() > MAX_FILENAME_SIZE) {
           logFileName = logFileName.substring(0, MAX_FILENAME_SIZE-1);
         }
@@ -382,16 +458,17 @@ public class JobHistory {
           userLogDir = null;
         }
         if (userLogDir != null) {
-          userLogDir = userLogDir + "/_logs/history";
+          userLogDir = userLogDir + Path.SEPARATOR + "_logs" + 
+                       Path.SEPARATOR + "history";
         }
 
-        String logFile = null;
-        String userLogFile = null;
+        Path logFile = null;
+        Path userLogFile = null;
         if (LOG_DIR != null ) {
-          logFile = LOG_DIR + File.separator + logFileName;
+          logFile = new Path(LOG_DIR, logFileName);
         }
         if (userLogDir != null ) {
-          userLogFile = userLogDir + File.separator + logFileName;
+          userLogFile = new Path(userLogDir, logFileName);
         }
 
         try{
@@ -402,7 +479,7 @@ public class JobHistory {
           if (LOG_DIR != null) {
             // create output stream for logging in hadoop.job.history.location
             fs = new Path(LOG_DIR).getFileSystem(jobConf);
-            out = fs.create(new Path(logFile), true, 4096);
+            out = fs.create(logFile, true, 4096);
             writer = new PrintWriter(out);
             writers.add(writer);
           }
@@ -410,7 +487,7 @@ public class JobHistory {
             // create output stream for logging 
             // in hadoop.job.history.user.location
             fs = new Path(userLogDir).getFileSystem(jobConf);
-            out = fs.create(new Path(userLogFile), true, 4096);
+            out = fs.create(userLogFile, true, 4096);
             writer = new PrintWriter(out);
             writers.add(writer);
           }
