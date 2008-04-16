@@ -17,6 +17,7 @@
 <%	
   String jobid = request.getParameter("jobid");
   String logFile = request.getParameter("logFile");
+  String encodedLogFileName = JobHistory.JobInfo.encodeJobHistoryFilePath(logFile);
   String taskid = request.getParameter("taskid"); 
   JobHistory.JobInfo job = (JobHistory.JobInfo)
                               request.getSession().getAttribute("job");
@@ -24,7 +25,7 @@
 %>
 <html>
 <body>
-<h2><%=taskid %> attempts for <a href="jobdetailshistory.jsp?jobid=<%=jobid%>&&logFile=<%=logFile %>"> <%=jobid %> </a></h2>
+<h2><%=taskid %> attempts for <a href="jobdetailshistory.jsp?jobid=<%=jobid%>&&logFile=<%=encodedLogFileName%>"> <%=jobid %> </a></h2>
 <center>
 <table border="2" cellpadding="5" cellspacing="2">
 <tr><td>Task Id</td><td>Start Time</td>

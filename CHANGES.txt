@@ -612,6 +612,9 @@ Release 0.17.0 - Unreleased
     correctly read from the start of the split and not the beginning of the
     file. (cdouglas via acmurthy) 
 
+    HADOOP-3256. Encodes the job name used in the filename for history files.
+    (Arun Murthy via ddas)
+
 Release 0.16.3 - 2008-04-16
 
   BUG FIXES

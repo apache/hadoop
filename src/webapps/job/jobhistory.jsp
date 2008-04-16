@@ -46,8 +46,18 @@
     // sort the files on creation time.
     Arrays.sort(jobFiles, new Comparator<Path>() {
       public int compare(Path p1, Path p2) {
-        String[] split1 = p1.getName().split("_");
-        String[] split2 = p2.getName().split("_");
+        String dp1 = null;
+        String dp2 = null;
+        
+        try {
+          dp1 = JobHistory.JobInfo.decodeJobHistoryFileName(p1.getName());
+          dp2 = JobHistory.JobInfo.decodeJobHistoryFileName(p2.getName());
+        } catch (IOException ioe) {
+            throw new RuntimeException(ioe);
+        }
+                
+        String[] split1 = dp1.split("_");
+        String[] split2 = dp2.split("_");
         
         // compare job tracker start time
         int res = new Date(Long.parseLong(split1[1])).compareTo(
@@ -72,17 +82,25 @@
               "<td>Job Id</td><td>Name</td><td>User</td>") ; 
     out.print("</tr>"); 
     for (Path jobFile: jobFiles) {
-      String[] jobDetails = jobFile.getName().split("_");
+      String decodedJobFileName = 
+          JobHistory.JobInfo.decodeJobHistoryFileName(jobFile.getName());
+
+      String[] jobDetails = decodedJobFileName.split("_");
       String trackerHostName = jobDetails[0];
       String trackerStartTime = jobDetails[1];
       String jobId = jobDetails[2] + "_" +jobDetails[3] + "_" + jobDetails[4] ;
       String user = jobDetails[5];
       String jobName = jobDetails[6];
+      
+      // Encode the logfile name again to cancel the decoding done by the browser
+      String encodedJobFileName = 
+          JobHistory.JobInfo.encodeJobHistoryFileName(jobFile.getName());
 %>
 <center>
 <%	
       printJob(trackerHostName, trackerStartTime, jobId,
-               jobName, user, jobFile.toString(), out) ; 
+               jobName, user, new Path(jobFile.getParent(), encodedJobFileName), 
+               out) ; 
 %>
 </center> 
 <%
@@ -91,13 +109,13 @@
 <%!
     private void printJob(String trackerHostName, String trackerid,
                           String jobId, String jobName,
-                          String user, String logFile, JspWriter out)
+                          String user, Path logFile, JspWriter out)
     throws IOException {
       out.print("<tr>"); 
       out.print("<td>" + trackerHostName + "</td>"); 
       out.print("<td>" + new Date(Long.parseLong(trackerid)) + "</td>"); 
       out.print("<td>" + "<a href=\"jobdetailshistory.jsp?jobid=" + jobId + 
-                "&logFile=" + logFile + "\">" + jobId + "</a></td>"); 
+                "&logFile=" + logFile.toString() + "\">" + jobId + "</a></td>"); 
       out.print("<td>" + jobName + "</td>"); 
       out.print("<td>" + user + "</td>"); 
       out.print("</tr>");
