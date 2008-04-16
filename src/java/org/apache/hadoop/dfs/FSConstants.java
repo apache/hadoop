@@ -125,7 +125,7 @@ public interface FSConstants {
   public static final long LEASE_SOFTLIMIT_PERIOD = 60 * 1000;
   public static final long LEASE_HARDLIMIT_PERIOD = 60 * LEASE_SOFTLIMIT_PERIOD;
   public static int READ_TIMEOUT = 60 * 1000;
-  public static int WRITE_TIMEOUT = 10 * 60 * 1000;  
+  public static int WRITE_TIMEOUT = 8 * 60 * 1000;  
   public static int WRITE_TIMEOUT_EXTENSION = 5 * 1000; //for write pipeline
 
   // We need to limit the length and depth of a path in the filesystem.  HADOOP-438
