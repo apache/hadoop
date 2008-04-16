@@ -47,6 +47,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile;
 
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
@@ -464,7 +465,7 @@ public class NNBench {
     JobConf job = new JobConf(config, NNBench.class);
 
     job.setJobName("NNBench-" + operation);
-    job.setInputPath(new Path(baseDir, CONTROL_DIR_NAME));
+    FileInputFormat.setInputPaths(job, new Path(baseDir, CONTROL_DIR_NAME));
     job.setInputFormat(SequenceFileInputFormat.class);
     
     // Explicitly set number of max map attempts to 1.

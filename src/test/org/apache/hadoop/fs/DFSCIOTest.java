@@ -267,7 +267,7 @@ public class DFSCIOTest extends TestCase {
                                  ) throws IOException {
     JobConf job = new JobConf(fsConfig, DFSCIOTest.class);
 
-    job.setInputPath(CONTROL_DIR);
+    FileInputFormat.setInputPaths(job, CONTROL_DIR);
     job.setInputFormat(SequenceFileInputFormat.class);
 
     job.setMapperClass(mapperClass);

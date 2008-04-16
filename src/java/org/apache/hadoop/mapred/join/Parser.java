@@ -34,6 +34,7 @@ import java.util.Stack;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
@@ -291,7 +292,7 @@ public class Parser {
 
     private JobConf getConf(JobConf job) {
       JobConf conf = new JobConf(job);
-      conf.setInputPath(new Path(indir));
+      FileInputFormat.setInputPaths(conf, indir);
       return conf;
     }
 

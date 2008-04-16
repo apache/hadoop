@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
@@ -118,12 +119,7 @@ public class JobControlTestUtils {
     JobConf theJob = new JobConf(defaults, TestJobControl.class);
     theJob.setJobName("DataMoveJob");
 
-    theJob.setInputPath((Path) indirs.get(0));
-    if (indirs.size() > 1) {
-      for (int i = 1; i < indirs.size(); i++) {
-        theJob.addInputPath((Path) indirs.get(i));
-      }
-    }
+    FileInputFormat.setInputPaths(theJob, indirs.toArray(new Path[0]));
     theJob.setMapperClass(DataCopy.class);
     FileOutputFormat.setOutputPath(theJob, outdir);
     theJob.setOutputKeyClass(Text.class);

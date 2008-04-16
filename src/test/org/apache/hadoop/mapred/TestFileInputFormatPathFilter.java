@@ -101,7 +101,7 @@ public class TestFileInputFormatPathFilter extends TestCase {
     JobConf conf = new JobConf();
 
     Path inputDir = (withGlob) ? new Path(workDir, "a*") : workDir;
-    conf.setInputPath(inputDir);
+    FileInputFormat.setInputPaths(conf, inputDir);
     conf.setInputFormat(DummyFileInputFormat.class);
 
     if (withFilter) {

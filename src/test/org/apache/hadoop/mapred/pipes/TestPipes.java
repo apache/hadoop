@@ -30,6 +30,7 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
@@ -146,7 +147,7 @@ public class TestPipes extends TestCase {
       Submitter.setExecutable(job, fs.makeQualified(wordExec).toString());
       Submitter.setIsJavaRecordReader(job, true);
       Submitter.setIsJavaRecordWriter(job, true);
-      job.setInputPath(inputPath);
+      FileInputFormat.setInputPaths(job, inputPath);
       FileOutputFormat.setOutputPath(job, outputPath);
       RunningJob result = Submitter.submitJob(job);
       assertTrue("pipes job failed", result.isSuccessful());

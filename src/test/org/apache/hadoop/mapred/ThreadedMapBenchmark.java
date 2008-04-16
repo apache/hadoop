@@ -295,7 +295,7 @@ public class ThreadedMapBenchmark extends Configured implements Tool {
       job.setMapperClass(IdentityMapper.class);        
       job.setReducerClass(IdentityReducer.class);
       
-      job.addInputPath(INPUT_DIR);
+      FileInputFormat.addInputPath(job, INPUT_DIR);
       FileOutputFormat.setOutputPath(job, OUTPUT_DIR);
       
       JobClient client = new JobClient(job);

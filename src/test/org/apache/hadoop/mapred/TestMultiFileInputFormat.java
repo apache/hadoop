@@ -76,7 +76,7 @@ public class TestMultiFileInputFormat extends TestCase{
        }
        lengths.put(path.getName(), new Long(numBytes));
     }
-    job.setInputPath(multiFileDir);
+    FileInputFormat.setInputPaths(job, multiFileDir);
     return multiFileDir;
   }
   

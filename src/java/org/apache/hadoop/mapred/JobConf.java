@@ -21,10 +21,10 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import java.util.StringTokenizer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.StringTokenizer;
 
 import java.net.URL;
 import java.net.URLDecoder;
@@ -45,7 +45,6 @@ import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapred.lib.HashPartitioner;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 
 /** 
@@ -70,10 +69,7 @@ import org.apache.hadoop.util.Tool;
  * 
  * <p><code>JobConf</code> typically specifies the {@link Mapper}, combiner 
  * (if any), {@link Partitioner}, {@link Reducer}, {@link InputFormat} and 
- * {@link OutputFormat} implementations to be used etc. It also indicates the 
- * set of input files ({@link #setInputPath(Path)}/{@link #addInputPath(Path)}), 
- * and where the output files should be written via
- * {@link FileOutputFormat#setOutputPath(JobConf, Path)}.
+ * {@link OutputFormat} implementations to be used etc.
  *
  * <p>Optionally <code>JobConf</code> is used to specify other advanced facets 
  * of the job such as <code>Comparator</code>s to be used, files to be put in  
@@ -91,7 +87,7 @@ import org.apache.hadoop.util.Tool;
  *     // Specify various job-specific parameters     
  *     job.setJobName("myjob");
  *     
- *     job.setInputPath(new Path("in"));
+ *     FileInputFormat.setInputPaths(job, new Path("in"));
  *     FileOutputFormat.setOutputPath(job, new Path("out"));
  *     
  *     job.setMapperClass(MyJob.MyMapper.class);
@@ -228,10 +224,13 @@ public class JobConf extends Configuration {
    * Set the {@link Path} of the input directory for the map-reduce job.
    * 
    * @param dir the {@link Path} of the input directory for the map-reduce job.
+   * @deprecated Use {@link FileInputFormat#setInputPaths(JobConf, Path...)} or
+   *                 {@link FileInputFormat#setInputPaths(JobConf, String)}
    */
+  @Deprecated
   public void setInputPath(Path dir) {
     dir = new Path(getWorkingDirectory(), dir);
-    set("mapred.input.dir", StringUtils.escapeString(dir.toString()));
+    set("mapred.input.dir", dir.toString());
   }
 
   /**
@@ -239,26 +238,29 @@ public class JobConf extends Configuration {
    * 
    * @param dir {@link Path} to be added to the list of inputs for 
    *            the map-reduce job.
+   * @deprecated Use {@link FileInputFormat#addInputPath(JobConf, Path)} or
+   *                 {@link FileInputFormat#addInputPaths(JobConf, String)}
    */
+  @Deprecated
   public void addInputPath(Path dir) {
     dir = new Path(getWorkingDirectory(), dir);
-    String dirStr = StringUtils.escapeString(dir.toString());
     String dirs = get("mapred.input.dir");
-    set("mapred.input.dir", dirs == null ? dirStr :
-      dirs + StringUtils.COMMA_STR + dirStr);
+    set("mapred.input.dir", dirs == null ? dir.toString() : dirs + "," + dir);
   }
 
   /**
    * Get the list of input {@link Path}s for the map-reduce job.
    * 
    * @return the list of input {@link Path}s for the map-reduce job.
+   * @deprecated Use {@link FileInputFormat#getInputPaths(JobConf)}
    */
+  @Deprecated
   public Path[] getInputPaths() {
     String dirs = get("mapred.input.dir", "");
-    String [] list = StringUtils.split(dirs);
-    Path[] result = new Path[list.length];
-    for (int i = 0; i < list.length; i++) {
-      result[i] = new Path(StringUtils.unEscapeString(list[i]));
+    ArrayList<Object> list = Collections.list(new StringTokenizer(dirs, ","));
+    Path[] result = new Path[list.size()];
+    for (int i = 0; i < list.size(); i++) {
+      result[i] = new Path((String)list.get(i));
     }
     return result;
   }

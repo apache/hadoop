@@ -131,7 +131,7 @@ public class BigMapOutput extends Configured implements Tool {
     jobConf.setJobName("BigMapOutput");
     jobConf.setInputFormat(NonSplitableSequenceFileInputFormat.class);
     jobConf.setOutputFormat(SequenceFileOutputFormat.class);
-    jobConf.setInputPath(bigMapInput);
+    FileInputFormat.setInputPaths(jobConf, bigMapInput);
     if (fs.exists(outputPath)) {
       fs.delete(outputPath, true);
     }

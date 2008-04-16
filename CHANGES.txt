@@ -615,6 +615,9 @@ Release 0.17.0 - Unreleased
     HADOOP-3256. Encodes the job name used in the filename for history files.
     (Arun Murthy via ddas)
 
+    HADOOP-3162. Ensure that comma-separated input paths are treated correctly
+    as multiple input paths. (Amareshwari Sri Ramadasu via acmurthy)
+
 Release 0.16.3 - 2008-04-16
 
   BUG FIXES

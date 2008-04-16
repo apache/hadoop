@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobClient;
@@ -250,7 +251,7 @@ public class MultiFileWordCount extends Configured implements Tool {
     job.setCombinerClass(WordCount.Reduce.class);
     job.setReducerClass(WordCount.Reduce.class);
 
-    job.addInputPath(new Path(args[0]));
+    FileInputFormat.addInputPaths(job, args[0]);
     FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
     JobClient.runJob(job);

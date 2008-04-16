@@ -41,7 +41,7 @@ public class TestSequenceFileInputFilter extends TestCase {
   private static final Reporter reporter = Reporter.NULL;
   
   static {
-    job.setInputPath(inDir);
+    FileInputFormat.setInputPaths(job, inDir);
     try {
       fs = FileSystem.getLocal(conf);
     } catch (IOException e) {

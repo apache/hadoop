@@ -202,7 +202,7 @@ public abstract class NotificationTestCase extends HadoopTestCase {
     conf.setCombinerClass(WordCount.Reduce.class);
     conf.setReducerClass(WordCount.Reduce.class);
 
-    conf.setInputPath(inDir);
+    FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);

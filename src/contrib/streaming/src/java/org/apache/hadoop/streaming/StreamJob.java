@@ -52,6 +52,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.mapred.FileAlreadyExistsException;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapred.JobConf;
@@ -687,7 +688,8 @@ public class StreamJob {
     // (to resolve local vs. dfs drive letter differences) 
     // (mapred.working.dir will be lazily initialized ONCE and depends on FS)
     for (int i = 0; i < inputSpecs_.size(); i++) {
-      jobConf_.addInputPath(new Path(((String) inputSpecs_.get(i))));
+      FileInputFormat.addInputPaths(jobConf_, 
+                        (String) inputSpecs_.get(i));
     }
     jobConf_.set("stream.numinputspecs", "" + inputSpecs_.size());
 

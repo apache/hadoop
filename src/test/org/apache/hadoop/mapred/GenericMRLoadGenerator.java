@@ -111,7 +111,7 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
         } else if ("-outdir".equals(argv[i])) {
           FileOutputFormat.setOutputPath(job, new Path(argv[++i]));
         } else if ("-indir".equals(argv[i])) {
-          job.addInputPath(new Path(argv[++i]));
+          FileInputFormat.addInputPaths(job, argv[++i]);
         } else if ("-inFormatIndirect".equals(argv[i])) {
           job.setClass("mapred.indirect.input.format",
               Class.forName(argv[++i]).asSubclass(InputFormat.class),
@@ -145,7 +145,7 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
       job.setOutputFormat(NullOutputFormat.class);
     }
 
-    if (0 == job.getInputPaths().length) {
+    if (0 == FileInputFormat.getInputPaths(job).length) {
       // No input dir? Generate random data
       System.err.println("No input path; ignoring InputFormat");
       confRandom(job);
@@ -161,7 +161,7 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
           LongWritable.class, Text.class,
           SequenceFile.CompressionType.NONE);
       try {
-        for (Path p : job.getInputPaths()) {
+        for (Path p : FileInputFormat.getInputPaths(job)) {
           FileSystem fs = p.getFileSystem(job);
           Stack<Path> pathstack = new Stack<Path>();
           pathstack.push(p);

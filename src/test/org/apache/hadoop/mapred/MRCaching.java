@@ -166,7 +166,7 @@ public class MRCaching {
     conf.setMapperClass(MRCaching.MapClass.class);
     conf.setCombinerClass(MRCaching.ReduceClass.class);
     conf.setReducerClass(MRCaching.ReduceClass.class);
-    conf.setInputPath(inDir);
+    FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);
     conf.setNumMapTasks(1);
     conf.setNumReduceTasks(1);

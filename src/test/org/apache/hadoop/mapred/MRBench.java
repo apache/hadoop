@@ -139,7 +139,7 @@ public class MRBench {
    */
   private static JobConf setupJob(int numMaps, int numReduces, String jarFile) {
     JobConf jobConf = new JobConf(MRBench.class);
-    jobConf.addInputPath(INPUT_DIR);
+    FileInputFormat.addInputPath(jobConf, INPUT_DIR);
     
     jobConf.setInputFormat(TextInputFormat.class);
     jobConf.setOutputFormat(TextOutputFormat.class);
@@ -180,7 +180,7 @@ public class MRBench {
                          new Path(OUTPUT_DIR, "output_" + rand.nextInt()));
 
       LOG.info("Running job " + i + ":" +
-               " input=" + jobConf.getInputPaths()[0] + 
+               " input=" + FileInputFormat.getInputPaths(jobConf)[0] + 
                " output=" + FileOutputFormat.getOutputPath(jobConf));
       
       // run the mapred task now 

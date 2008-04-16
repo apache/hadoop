@@ -28,6 +28,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
@@ -92,11 +93,7 @@ public class DataJoinJob {
 
     FileSystem fs = FileSystem.get(defaults);
     fs.delete(new Path(outputDir));
-    String[] inputDirsSpecs = inputDir.split(",");
-    for (int i = 0; i < inputDirsSpecs.length; i++) {
-      String spec = inputDirsSpecs[i];
-      job.addInputPath(new Path(spec));
-    }
+    FileInputFormat.setInputPaths(job, inputDir);
 
     job.setInputFormat(inputFormat);
 

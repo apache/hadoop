@@ -55,7 +55,7 @@ public class TestClusterMapReduceTestCase extends ClusterMapReduceTestCase {
     conf.setMapperClass(org.apache.hadoop.mapred.lib.IdentityMapper.class);
     conf.setReducerClass(org.apache.hadoop.mapred.lib.IdentityReducer.class);
 
-    conf.setInputPath(getInputDir());
+    FileInputFormat.setInputPaths(conf, getInputDir());
 
     FileOutputFormat.setOutputPath(conf, getOutputDir());
 

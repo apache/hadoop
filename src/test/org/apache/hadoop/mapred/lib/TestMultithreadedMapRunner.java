@@ -87,7 +87,7 @@ public class TestMultithreadedMapRunner extends HadoopTestCase {
     conf.setMapperClass(IDMap.class);
     conf.setReducerClass(IDReduce.class);
 
-    conf.setInputPath(inDir);
+    FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);
 
     conf.setMapRunnerClass(MultithreadedMapRunner.class);

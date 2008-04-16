@@ -308,7 +308,7 @@ public class TestRecordMR extends TestCase {
 
 
     JobConf genJob = new JobConf(conf, TestRecordMR.class);
-    genJob.setInputPath(randomIns);
+    FileInputFormat.setInputPaths(genJob, randomIns);
     genJob.setInputFormat(SequenceFileInputFormat.class);
     genJob.setMapperClass(RandomGenMapper.class);
 
@@ -353,7 +353,7 @@ public class TestRecordMR extends TestCase {
     Path intermediateOuts = new Path(testdir, "intermediateouts");
     fs.delete(intermediateOuts, true);
     JobConf checkJob = new JobConf(conf, TestRecordMR.class);
-    checkJob.setInputPath(randomOuts);
+    FileInputFormat.setInputPaths(checkJob, randomOuts);
     checkJob.setInputFormat(SequenceFileInputFormat.class);
     checkJob.setMapperClass(RandomCheckMapper.class);
 
@@ -376,7 +376,7 @@ public class TestRecordMR extends TestCase {
     Path finalOuts = new Path(testdir, "finalouts");        
     fs.delete(finalOuts, true);
     JobConf mergeJob = new JobConf(conf, TestRecordMR.class);
-    mergeJob.setInputPath(intermediateOuts);
+    FileInputFormat.setInputPaths(mergeJob, intermediateOuts);
     mergeJob.setInputFormat(SequenceFileInputFormat.class);
     mergeJob.setMapperClass(MergeMapper.class);
         

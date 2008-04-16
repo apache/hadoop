@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred.jobcontrol;
 
 
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RunningJob;
@@ -332,7 +333,7 @@ public class Job {
     try {
       if (theJobConf.getBoolean("create.empty.dir.if.nonexist", false)) {
         FileSystem fs = FileSystem.get(theJobConf);
-        Path inputPaths[] = theJobConf.getInputPaths();
+        Path inputPaths[] = FileInputFormat.getInputPaths(theJobConf);
         for (int i = 0; i < inputPaths.length; i++) {
           if (!fs.exists(inputPaths[i])) {
             try {

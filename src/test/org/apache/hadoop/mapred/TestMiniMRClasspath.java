@@ -66,7 +66,7 @@ public class TestMiniMRClasspath extends TestCase {
     conf.set("mapred.mapper.class", "testjar.ClassWordCount$MapClass");        
     conf.set("mapred.combine.class", "testjar.ClassWordCount$Reduce");
     conf.set("mapred.reducer.class", "testjar.ClassWordCount$Reduce");
-    conf.setInputPath(inDir);
+    FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);
@@ -119,7 +119,7 @@ public class TestMiniMRClasspath extends TestCase {
     // the values are the messages
     conf.set("mapred.output.key.class", "testjar.ExternalWritable");
 
-    conf.setInputPath(inDir);
+    FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);

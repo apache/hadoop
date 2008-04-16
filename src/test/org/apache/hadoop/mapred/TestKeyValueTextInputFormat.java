@@ -60,7 +60,7 @@ public class TestKeyValueTextInputFormat extends TestCase {
     Random random = new Random(seed);
 
     localFs.delete(workDir, true);
-    job.setInputPath(workDir);
+    FileInputFormat.setInputPaths(job, workDir);
 
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
@@ -206,7 +206,7 @@ public class TestKeyValueTextInputFormat extends TestCase {
               "line-1\tthe quick\nline-2\tbrown\nline-3\tfox jumped\nline-4\tover\nline-5\t the lazy\nline-6\t dog\n");
     writeFile(localFs, new Path(workDir, "part2.txt.gz"), gzip,
               "line-1\tthis is a test\nline-1\tof gzip\n");
-    job.setInputPath(workDir);
+    FileInputFormat.setInputPaths(job, workDir);
     KeyValueTextInputFormat format = new KeyValueTextInputFormat();
     format.configure(job);
     InputSplit[] splits = format.getSplits(job, 100);

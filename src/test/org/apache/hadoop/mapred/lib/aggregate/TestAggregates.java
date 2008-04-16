@@ -78,7 +78,7 @@ public class TestAggregates extends TestCase {
     System.out.println("inputData:");
     System.out.println(inputData.toString());
     JobConf job = new JobConf(conf, TestAggregates.class);
-    job.setInputPath(INPUT_DIR);
+    FileInputFormat.setInputPaths(job, INPUT_DIR);
     job.setInputFormat(TextInputFormat.class);
 
     FileOutputFormat.setOutputPath(job, OUTPUT_DIR);

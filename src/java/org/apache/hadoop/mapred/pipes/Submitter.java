@@ -36,6 +36,7 @@ import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.JobClient;
@@ -354,7 +355,8 @@ public class Submitter {
         conf.addResource(new Path((String) results.getValue("-conf")));
       }
       if (results.hasOption("-input")) {
-        conf.setInputPath(new Path((String) results.getValue("-input")));
+        FileInputFormat.setInputPaths(conf, 
+                          (String) results.getValue("-input"));
       }
       if (results.hasOption("-output")) {
         FileOutputFormat.setOutputPath(conf, 
