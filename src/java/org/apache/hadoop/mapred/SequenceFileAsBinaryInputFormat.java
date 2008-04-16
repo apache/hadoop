@@ -66,7 +66,11 @@ public class SequenceFileAsBinaryInputFormat
       FileSystem fs = path.getFileSystem(conf);
       this.in = new SequenceFile.Reader(fs, path, conf);
       this.end = split.getStart() + split.getLength();
+      if (split.getStart() > in.getPosition())
+        in.sync(split.getStart());                  // sync to start
+      this.start = in.getPosition();
       vbytes = in.createValueBytes();
+      done = start >= end;
     }
 
     public BytesWritable createKey() {
