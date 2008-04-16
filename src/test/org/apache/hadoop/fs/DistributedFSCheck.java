@@ -188,7 +188,7 @@ public class DistributedFSCheck extends TestCase {
   private void runDistributedFSCheck() throws Exception {
     JobConf job = new JobConf(fs.getConf(), DistributedFSCheck.class);
 
-    job.setInputPath(MAP_INPUT_DIR);
+    FileInputFormat.setInputPaths(job, MAP_INPUT_DIR);
     job.setInputFormat(SequenceFileInputFormat.class);
 
     job.setMapperClass(DistributedFSCheckMapper.class);

@@ -52,7 +52,7 @@ public class TestRecordWritable extends TestCase {
 
     fs.delete(dir, true);
 
-    job.setInputPath(dir);
+    FileInputFormat.setInputPaths(job, dir);
 
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;

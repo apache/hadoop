@@ -297,7 +297,7 @@ public class TestMapRed extends TestCase {
     Path outDir = new Path(testdir, "out");
     FileSystem fs = FileSystem.get(conf);
     fs.delete(testdir, true);
-    conf.setInputPath(inDir);
+    FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);
     conf.setMapperClass(MyMap.class);
     conf.setReducerClass(MyReduce.class);
@@ -423,7 +423,7 @@ public class TestMapRed extends TestCase {
 
 
     JobConf genJob = new JobConf(conf, TestMapRed.class);
-    genJob.setInputPath(randomIns);
+    FileInputFormat.setInputPaths(genJob, randomIns);
     genJob.setInputFormat(SequenceFileInputFormat.class);
     genJob.setMapperClass(RandomGenMapper.class);
 
@@ -468,7 +468,7 @@ public class TestMapRed extends TestCase {
     Path intermediateOuts = new Path(testdir, "intermediateouts");
     fs.delete(intermediateOuts, true);
     JobConf checkJob = new JobConf(conf, TestMapRed.class);
-    checkJob.setInputPath(randomOuts);
+    FileInputFormat.setInputPaths(checkJob, randomOuts);
     checkJob.setInputFormat(TextInputFormat.class);
     checkJob.setMapperClass(RandomCheckMapper.class);
 
@@ -491,7 +491,7 @@ public class TestMapRed extends TestCase {
     Path finalOuts = new Path(testdir, "finalouts");        
     fs.delete(finalOuts, true);
     JobConf mergeJob = new JobConf(conf, TestMapRed.class);
-    mergeJob.setInputPath(intermediateOuts);
+    FileInputFormat.setInputPaths(mergeJob, intermediateOuts);
     mergeJob.setInputFormat(SequenceFileInputFormat.class);
     mergeJob.setMapperClass(MergeMapper.class);
         
@@ -598,7 +598,7 @@ public class TestMapRed extends TestCase {
       fs.delete(testdir, true);
       conf.setInt("io.sort.mb", 1);
       conf.setInputFormat(SequenceFileInputFormat.class);
-      conf.setInputPath(inDir);
+      FileInputFormat.setInputPaths(conf, inDir);
       FileOutputFormat.setOutputPath(conf, outDir);
       conf.setMapperClass(IdentityMapper.class);
       conf.setReducerClass(IdentityReducer.class);

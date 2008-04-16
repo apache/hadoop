@@ -38,6 +38,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -222,7 +223,7 @@ public class TestFileSystem extends TestCase {
     JobConf job = new JobConf(conf, TestFileSystem.class);
     job.setBoolean("fs.test.fastCheck", fastCheck);
 
-    job.setInputPath(CONTROL_DIR);
+    FileInputFormat.setInputPaths(job, CONTROL_DIR);
     job.setInputFormat(SequenceFileInputFormat.class);
 
     job.setMapperClass(WriteMapper.class);
@@ -320,7 +321,7 @@ public class TestFileSystem extends TestCase {
     job.setBoolean("fs.test.fastCheck", fastCheck);
 
 
-    job.setInputPath(CONTROL_DIR);
+    FileInputFormat.setInputPaths(job, CONTROL_DIR);
     job.setInputFormat(SequenceFileInputFormat.class);
 
     job.setMapperClass(ReadMapper.class);
@@ -416,7 +417,7 @@ public class TestFileSystem extends TestCase {
     JobConf job = new JobConf(conf, TestFileSystem.class);
     job.setBoolean("fs.test.fastCheck", fastCheck);
 
-    job.setInputPath(CONTROL_DIR);
+    FileInputFormat.setInputPaths(job,CONTROL_DIR);
     job.setInputFormat(SequenceFileInputFormat.class);
 
     job.setMapperClass(SeekMapper.class);

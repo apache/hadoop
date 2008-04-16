@@ -74,7 +74,7 @@ public class TestSpecialCharactersInOutputPath extends TestCase {
     conf.setOutputValueClass(Text.class);
     conf.setMapperClass(IdentityMapper.class);        
     conf.setReducerClass(IdentityReducer.class);
-    conf.setInputPath(inDir);
+    FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);

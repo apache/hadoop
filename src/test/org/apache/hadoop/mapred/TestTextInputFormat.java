@@ -60,7 +60,7 @@ public class TestTextInputFormat extends TestCase {
     Random random = new Random(seed);
 
     localFs.delete(workDir, true);
-    job.setInputPath(workDir);
+    FileInputFormat.setInputPaths(job, workDir);
 
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
@@ -205,7 +205,7 @@ public class TestTextInputFormat extends TestCase {
               "the quick\nbrown\nfox jumped\nover\n the lazy\n dog\n");
     writeFile(localFs, new Path(workDir, "part2.txt.gz"), gzip,
               "this is a test\nof gzip\n");
-    job.setInputPath(workDir);
+    FileInputFormat.setInputPaths(job, workDir);
     TextInputFormat format = new TextInputFormat();
     format.configure(job);
     InputSplit[] splits = format.getSplits(job, 100);
@@ -235,7 +235,7 @@ public class TestTextInputFormat extends TestCase {
     ReflectionUtils.setConf(gzip, job);
     localFs.delete(workDir, true);
     writeFile(localFs, new Path(workDir, "empty.gz"), gzip, "");
-    job.setInputPath(workDir);
+    FileInputFormat.setInputPaths(job, workDir);
     TextInputFormat format = new TextInputFormat();
     format.configure(job);
     InputSplit[] splits = format.getSplits(job, 100);

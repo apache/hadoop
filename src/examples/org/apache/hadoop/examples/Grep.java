@@ -51,7 +51,7 @@ public class Grep extends Configured implements Tool {
       
       grepJob.setJobName("grep-search");
 
-      grepJob.setInputPath(new Path(args[0]));
+      FileInputFormat.setInputPaths(grepJob, args[0]);
 
       grepJob.setMapperClass(RegexMapper.class);
       grepJob.set("mapred.mapper.regex", args[2]);
@@ -71,7 +71,7 @@ public class Grep extends Configured implements Tool {
       JobConf sortJob = new JobConf(Grep.class);
       sortJob.setJobName("grep-sort");
 
-      sortJob.setInputPath(tempDir);
+      FileInputFormat.setInputPaths(sortJob, tempDir);
       sortJob.setInputFormat(SequenceFileInputFormat.class);
 
       sortJob.setMapperClass(InverseMapper.class);

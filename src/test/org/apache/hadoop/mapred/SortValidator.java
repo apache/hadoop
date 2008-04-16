@@ -63,7 +63,7 @@ public class SortValidator extends Configured implements Tool {
   }
 
   static private IntWritable deduceInputFile(JobConf job) {
-    Path[] inputPaths = job.getInputPaths();
+    Path[] inputPaths = FileInputFormat.getInputPaths(job);
     Path inputFile = new Path(job.get("map.input.file"));
 
     // value == one for sort-input; value == two for sort-output
@@ -336,8 +336,8 @@ public class SortValidator extends Configured implements Tool {
       jobConf.setNumMapTasks(noSortReduceTasks);
       jobConf.setNumReduceTasks(1);
 
-      jobConf.setInputPath(sortInput);
-      jobConf.addInputPath(sortOutput);
+      FileInputFormat.setInputPaths(jobConf, sortInput);
+      FileInputFormat.addInputPath(jobConf, sortOutput);
       Path outputPath = new Path("/tmp/sortvalidate/recordstatschecker");
       if (fs.exists(outputPath)) {
         fs.delete(outputPath, true);
@@ -346,11 +346,11 @@ public class SortValidator extends Configured implements Tool {
       
       // Uncomment to run locally in a single process
       //job_conf.set("mapred.job.tracker", "local");
-      
+      Path[] inputPaths = FileInputFormat.getInputPaths(jobConf);
       System.out.println("\nSortValidator.RecordStatsChecker: Validate sort " +
-                         "from " + jobConf.getInputPaths()[0] + " (" + 
+                         "from " + inputPaths[0] + " (" + 
                          noSortInputpaths + " files), " + 
-                         jobConf.getInputPaths()[1] + " (" + 
+                         inputPaths[1] + " (" + 
                          noSortReduceTasks + 
                          " files) into " + 
                          FileOutputFormat.getOutputPath(jobConf) + 
@@ -479,8 +479,8 @@ public class SortValidator extends Configured implements Tool {
       jobConf.setNumMapTasks(noMaps);
       jobConf.setNumReduceTasks(noReduces);
       
-      jobConf.setInputPath(sortInput);
-      jobConf.addInputPath(sortOutput);
+      FileInputFormat.setInputPaths(jobConf, sortInput);
+      FileInputFormat.addInputPath(jobConf, sortOutput);
       Path outputPath = new Path("/tmp/sortvalidate/recordchecker");
       FileSystem fs = FileSystem.get(defaults);
       if (fs.exists(outputPath)) {
@@ -490,12 +490,12 @@ public class SortValidator extends Configured implements Tool {
       
       // Uncomment to run locally in a single process
       //job_conf.set("mapred.job.tracker", "local");
-      
+      Path[] inputPaths = FileInputFormat.getInputPaths(jobConf);
       System.out.println("\nSortValidator.RecordChecker: Running on " +
                          cluster.getTaskTrackers() +
-                         " nodes to validate sort from " +
-                         jobConf.getInputPaths()[0] + ", " + 
-                         jobConf.getInputPaths()[1] + " into " +
+                        " nodes to validate sort from " + 
+                         inputPaths[0] + ", " + 
+                         inputPaths[1] + " into " + 
                          FileOutputFormat.getOutputPath(jobConf) + 
                          " with " + noReduces + " reduces.");
       Date startTime = new Date();

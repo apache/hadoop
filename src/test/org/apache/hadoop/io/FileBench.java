@@ -134,7 +134,7 @@ public class FileBench extends Configured implements Tool {
   static long readBench(JobConf conf) throws IOException {
     InputFormat inf = conf.getInputFormat();
     final String fn = conf.get("test.filebench.name", "");
-    Path pin = new Path(conf.getInputPaths()[0], fn);
+    Path pin = new Path(FileInputFormat.getInputPaths(conf)[0], fn);
     FileStatus in = pin.getFileSystem(conf).getFileStatus(pin);
     RecordReader rr = inf.getRecordReader(new FileSplit(pin, 0, in.getLen(), 
                                           (String[])null), conf, Reporter.NULL);
@@ -197,7 +197,7 @@ public class FileBench extends Configured implements Tool {
     fillBlocks(job);
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(Text.class);
-    job.setInputPath(root);
+    FileInputFormat.setInputPaths(job, root);
     FileOutputFormat.setOutputPath(job, root);
 
     if (null == cc) cc = EnumSet.allOf(CCodec.class);

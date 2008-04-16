@@ -117,7 +117,7 @@ public class TestJavaSerialization extends ClusterMapReduceTestCase {
     conf.setMapperClass(TypeConverterMapper.class);
     conf.setReducerClass(IdentityReducer.class);
 
-    conf.setInputPath(getInputDir());
+    FileInputFormat.setInputPaths(conf, getInputDir());
 
     FileOutputFormat.setOutputPath(conf, getOutputDir());
 

@@ -503,7 +503,7 @@
             <td>52.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
-              <code>conf.setInputPath(new Path(args[0]));</code>
+              <code>FileInputFormat.setInputPaths(conf, new Path(args[0]));</code>
             </td>
           </tr>
           <tr>
@@ -1000,7 +1000,10 @@
         <code>Reducer</code>, <code>InputFormat</code> and 
         <code>OutputFormat</code> implementations. <code>JobConf</code> also 
         indicates the set of input files 
-        (<a href="ext:api/org/apache/hadoop/mapred/jobconf/setinputpath">setInputPath(Path)</a>/<a href="ext:api/org/apache/hadoop/mapred/jobconf/addinputpath">addInputPath(Path)</a>)
+        (<a href="ext:api/org/apache/hadoop/mapred/fileinputformat/setinputpaths">setInputPaths(JobConf, Path...)</a>
+        /<a href="ext:api/org/apache/hadoop/mapred/fileinputformat/addinputpath">addInputPath(JobConf, Path)</a>)
+        and (<a href="ext:api/org/apache/hadoop/mapred/fileinputformat/setinputpathstring">setInputPaths(JobConf, String)</a>
+        /<a href="ext:api/org/apache/hadoop/mapred/fileinputformat/addinputpathstring">addInputPaths(JobConf, String)</a>)
         and where the output files should be written
         (<a href="ext:api/org/apache/hadoop/mapred/fileoutputformat/setoutputpath">setOutputPath(Path)</a>).</p>
 
@@ -2388,7 +2391,7 @@
             <td>111.</td>
             <td>
               &nbsp;&nbsp;&nbsp;&nbsp;
-              <code>conf.setInputPath(new Path(other_args.get(0)));</code>
+              <code>FileInputFormat.setInputPaths(conf, new Path(other_args.get(0)));</code>
             </td>
           </tr>
           <tr>

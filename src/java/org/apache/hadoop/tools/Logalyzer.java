@@ -35,6 +35,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -213,7 +214,7 @@ public class Logalyzer {
     JobConf grepJob = new JobConf(fsConfig);
     grepJob.setJobName("logalyzer-grep-sort");
     
-    grepJob.setInputPath(grepInput);
+    FileInputFormat.setInputPaths(grepJob, grepInput);
     grepJob.setInputFormat(TextInputFormat.class);
     
     grepJob.setMapperClass(LogRegexMapper.class);

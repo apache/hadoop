@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
@@ -146,7 +147,7 @@ public class SleepJob extends Configured implements Tool,
       job.setInputFormat(SequenceFileInputFormat.class);
       job.setSpeculativeExecution(false);
       job.setJobName("Sleep job");
-      job.addInputPath(tempPath);
+      FileInputFormat.addInputPath(job, tempPath);
       job.setLong("sleep.job.map.sleep.time", mapSleepTime);
       job.setLong("sleep.job.reduce.sleep.time", reduceSleepTime);
       job.setLong("sleep.job.map.sleep.count", mapSleepCount);

@@ -83,7 +83,7 @@ public class TestMapOutputType extends TestCase
     fs.delete(testdir, true);
     conf.setInt("io.sort.mb", 1);
     conf.setInputFormat(SequenceFileInputFormat.class);
-    conf.setInputPath(inDir);
+    FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);
     conf.setMapperClass(TextGen.class);
     conf.setReducerClass(TextReduce.class);

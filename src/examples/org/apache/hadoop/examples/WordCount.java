@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -142,7 +143,7 @@ public class WordCount extends Configured implements Tool {
                          other_args.size() + " instead of 2.");
       return printUsage();
     }
-    conf.setInputPath(new Path(other_args.get(0)));
+    FileInputFormat.setInputPaths(conf, other_args.get(0));
     FileOutputFormat.setOutputPath(conf, new Path(other_args.get(1)));
         
     JobClient.runJob(conf);

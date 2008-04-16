@@ -42,7 +42,7 @@ public class TestSequenceFileAsBinaryInputFormat extends TestCase {
     r.setSeed(seed);
 
     fs.delete(dir, true);
-    job.setInputPath(dir);
+    FileInputFormat.setInputPaths(job, dir);
 
     Text tkey = new Text();
     Text tval = new Text();

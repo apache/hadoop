@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -205,7 +206,7 @@ public class UpdateIndex {
     if (inputPathsString != null) {
       jobConf.set("mapred.input.dir", inputPathsString);
     }
-    inputPaths = jobConf.getInputPaths();
+    inputPaths = FileInputFormat.getInputPaths(jobConf);
     if (inputPaths.length == 0) {
       inputPaths = null;
     }

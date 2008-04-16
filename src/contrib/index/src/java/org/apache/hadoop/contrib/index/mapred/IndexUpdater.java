@@ -27,6 +27,7 @@ import org.apache.hadoop.contrib.index.lucene.FileSystemDirectory;
 import org.apache.hadoop.contrib.index.lucene.LuceneUtil;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -75,11 +76,7 @@ public class IndexUpdater implements IIndexUpdater {
         + System.currentTimeMillis());
 
     // provided by application
-    jobConf.setInputPath(inputPaths[0]);
-    for (int i = 1; i < inputPaths.length; i++) {
-      jobConf.addInputPath(inputPaths[i]);
-    }
-
+    FileInputFormat.setInputPaths(jobConf, inputPaths);
     FileOutputFormat.setOutputPath(jobConf, outputPath);
 
     jobConf.setNumMapTasks(numMapTasks);
@@ -89,7 +86,7 @@ public class IndexUpdater implements IIndexUpdater {
 
     jobConf.setInputFormat(iconf.getIndexInputFormatClass());
 
-    Path[] inputs = jobConf.getInputPaths();
+    Path[] inputs = FileInputFormat.getInputPaths(jobConf);
     StringBuilder buffer = new StringBuilder(inputs[0].toString());
     for (int i = 1; i < inputs.length; i++) {
       buffer.append(",");

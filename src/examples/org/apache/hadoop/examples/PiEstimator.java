@@ -31,6 +31,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -189,7 +190,7 @@ public class PiEstimator extends Configured implements Tool {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
     
-    jobConf.setInputPath(inDir);
+    FileInputFormat.setInputPaths(jobConf, inDir);
     FileOutputFormat.setOutputPath(jobConf, outDir);
     
     jobConf.setNumMapTasks(numMaps);

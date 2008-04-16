@@ -31,7 +31,7 @@ import org.apache.hadoop.mapred.*;
  * RecordReaders are not implemented in Java, naturally...
  */
 public class WordCountInputFormat
-  implements InputFormat<IntWritable, Text> {
+  extends FileInputFormat<IntWritable, Text> {
   
   static class WordCountInputSplit implements InputSplit  {
     private String filename;
@@ -53,7 +53,7 @@ public class WordCountInputFormat
                                 int numSplits) throws IOException {
     ArrayList<InputSplit> result = new ArrayList<InputSplit>();
     FileSystem local = FileSystem.getLocal(conf);
-    for(Path dir: conf.getInputPaths()) {
+    for(Path dir: getInputPaths(conf)) {
       for(FileStatus file: local.listStatus(dir)) {
         result.add(new WordCountInputSplit(file.getPath()));
       }

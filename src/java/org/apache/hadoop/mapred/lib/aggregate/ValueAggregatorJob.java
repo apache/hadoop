@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.InputFormat;
 import org.apache.hadoop.mapred.JobClient;
@@ -161,10 +162,7 @@ public class ValueAggregatorJob {
     }
     theJob.setJobName("ValueAggregatorJob: " + jobName);
 
-    String[] inputDirsSpecs = inputDir.split(",");
-    for (int i = 0; i < inputDirsSpecs.length; i++) {
-      theJob.addInputPath(new Path(inputDirsSpecs[i]));
-    }
+    FileInputFormat.addInputPaths(theJob, inputDir);
 
     theJob.setInputFormat(theInputFormat);
     

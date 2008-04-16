@@ -89,7 +89,7 @@ private static NumberFormat idFormat = NumberFormat.getInstance();
     System.out.println("inputData:");
     System.out.println(inputData.toString());
     JobConf job = new JobConf(conf, TestFieldSelection.class);
-    job.setInputPath(INPUT_DIR);
+    FileInputFormat.setInputPaths(job, INPUT_DIR);
     job.setInputFormat(TextInputFormat.class);
     job.setMapperClass(FieldSelectionMapReduce.class);
     job.setReducerClass(FieldSelectionMapReduce.class);

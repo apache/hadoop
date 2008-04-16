@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -100,7 +101,7 @@ public class ExternalMapReduce
     Configuration commandConf = JobClient.getCommandLineConfig();
     JobConf testConf = new JobConf(commandConf, ExternalMapReduce.class);
     testConf.setJobName("external job");
-    testConf.setInputPath(input);
+    FileInputFormat.setInputPaths(testConf, input);
     FileOutputFormat.setOutputPath(testConf, outDir);
     testConf.setMapperClass(ExternalMapReduce.class);
     testConf.setReducerClass(ExternalMapReduce.class);

@@ -296,7 +296,7 @@ public class TestComparators extends TestCase
     FileSystem fs = FileSystem.get(conf);
     fs.delete(testdir, true);
     conf.setInputFormat(SequenceFileInputFormat.class);
-    conf.setInputPath(inDir);
+    FileInputFormat.setInputPaths(conf, inDir);
     FileOutputFormat.setOutputPath(conf, outDir);
     conf.setOutputKeyClass(IntWritable.class);
     conf.setOutputValueClass(Text.class);
