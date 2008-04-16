@@ -61,15 +61,19 @@
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._new_features_')">  NEW FEATURES
-</a>&nbsp;&nbsp;&nbsp;(1)
+</a>&nbsp;&nbsp;&nbsp;(2)
     <ol id="trunk_(unreleased_changes)_._new_features_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3074">HADOOP-3074</a>. Provides a UrlStreamHandler for DFS and other FS,
+relying on FileSystem<br />(taton)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a>. Name-node imports namespace data from a recent checkpoint
 accessible via a NFS mount.<br />(shv)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(none)
+</a>&nbsp;&nbsp;&nbsp;(2)
     <ol id="trunk_(unreleased_changes)_._improvements_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2928">HADOOP-2928</a>. Remove deprecated FileSystem.getContentLength().<br />(Lohit Vjayarenu via rangadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3130">HADOOP-3130</a>. Make the connect timeout smaller for getFile.<br />(Amar Ramesh Kamat via ddas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
@@ -78,10 +82,16 @@ accessible via a NFS mount.<br />(shv)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(2)
+</a>&nbsp;&nbsp;&nbsp;(4)
     <ol id="trunk_(unreleased_changes)_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2905">HADOOP-2905</a>. 'fsck -move' triggers NPE in NameNode.<br />(Lohit Vjayarenu via rangadi)</li>
       <li>Increment ClientProtocol.versionID missed by <a href="http://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a>.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3254">HADOOP-3254</a>. Restructure internal namenode methods that process
+heartbeats to use well-defined BlockCommand object(s) instead of
+using the base java Object. (Tsz Wo (Nicholas), SZE via dhruba)
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3176">HADOOP-3176</a>.  Change lease record when a open-for-write-file
+gets renamed.<br />(dhruba)</li>
     </ol>
   </li>
 </ul>
@@ -89,7 +99,7 @@ accessible via a NFS mount.<br />(shv)</li>
 </a></h2>
 <ul id="release_0.17.0_-_unreleased_">
   <li><a href="javascript:toggleList('release_0.17.0_-_unreleased_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(23)
+</a>&nbsp;&nbsp;&nbsp;(24)
     <ol id="release_0.17.0_-_unreleased_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2786">HADOOP-2786</a>.  Move hbase out of hadoop core
 </li>
@@ -136,6 +146,8 @@ added to a cluster on the fly with new nodes starting in the same EC2
 availability zone as the cluster.  Ganglia monitoring and large
 instance sizes have also been added.<br />(Chris K Wensel via tomwhite)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2826">HADOOP-2826</a>. Deprecated FileSplit.getFile(), LineRecordReader.readLine().<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3239">HADOOP-3239</a>. getFileInfo() returns null for non-existing files instead
+of throwing FileNotFoundException.<br />(Lohit Vijayarenu via shv)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.17.0_-_unreleased_._new_features_')">  NEW FEATURES
@@ -265,7 +277,7 @@ records/log).<br />(Zheng Shao via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.17.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(93)
+</a>&nbsp;&nbsp;&nbsp;(99)
     <ol id="release_0.17.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2195">HADOOP-2195</a>. '-mkdir' behaviour is now closer to Linux shell in case of
 errors.<br />(Mahadev Konar via rangadi)</li>
@@ -433,6 +445,18 @@ deserialized Writables.<br />(Enis Soztutar via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-1373">HADOOP-1373</a>. checkPath() should ignore case when it compares authoriy.<br />(Edward J. Yoon via rangadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3204">HADOOP-3204</a>. Fixes a problem to do with ReduceTask's LocalFSMerger not
 catching Throwable.<br />(Amar Ramesh Kamat via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3229">HADOOP-3229</a>. Report progress when collecting records from the mapper and
+the combiner.<br />(Doug Cutting via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3225">HADOOP-3225</a>. Unwrapping methods of RemoteException should initialize
+detailedMassage field.<br />(Mahadev Konar, shv, cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3247">HADOOP-3247</a>. Fix gridmix scripts to use the correct globbing syntax and
+change maxentToSameCluster to run the correct number of jobs.<br />(Runping Qi via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3242">HADOOP-3242</a>. Fix the RecordReader of SequenceFileAsBinaryInputFormat to
+correctly read from the start of the split and not the beginning of the
+file.<br />(cdouglas via acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3256">HADOOP-3256</a>. Encodes the job name used in the filename for history files.<br />(Arun Murthy via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3162">HADOOP-3162</a>. Ensure that comma-separated input paths are treated correctly
+as multiple input paths.<br />(Amareshwari Sri Ramadasu via acmurthy)</li>
     </ol>
   </li>
 </ul>
