@@ -40,7 +40,6 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.dfs.DistributedFileSystem;
@@ -54,6 +53,7 @@ public class FsShell extends Configured implements Tool {
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
   protected static final SimpleDateFormat modifFmt =
     new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+  static final int BORDER = 2;
   static {
     modifFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
   }
@@ -632,19 +632,34 @@ public class FsShell extends Configured implements Tool {
           System.out.println("Found " + items.length + " items");
         }
       }
+      
+      int maxReplication = 3, maxLen = 10, maxOwner = 0,maxGroup = 0;
+
+      for(int i = 0; i < items.length; i++) {
+        FileStatus stat = items[i];
+        int replication = String.valueOf(stat.getReplication()).length();
+        int len = String.valueOf(stat.getLen()).length();
+        int owner = String.valueOf(stat.getOwner()).length();
+        int group = String.valueOf(stat.getGroup()).length();
+        
+        if (replication > maxReplication) maxReplication = replication;
+        if (len > maxLen) maxLen = len;
+        if (owner > maxOwner)  maxOwner = owner;
+        if (group > maxGroup)  maxGroup = group;
+      }
+      
       for (int i = 0; i < items.length; i++) {
         FileStatus stat = items[i];
         Path cur = stat.getPath();
         String mdate = dateForm.format(new Date(stat.getModificationTime()));
-        System.out.println(cur.toUri().getPath() + "\t" 
-                           + (stat.isDir() ? 
-                              "<dir>\t" : 
-                              ("<r " + stat.getReplication() 
-                               + ">\t" + stat.getLen()))
-                           + "\t" + mdate 
-                           + "\t" + stat.getPermission()
-                           + "\t" + stat.getOwner() 
-                           + "\t" + stat.getGroup());
+        System.out.printf("%-"+ (maxReplication + BORDER)
+            +"s", (!stat.isDir() ? stat.getReplication() : ""));
+        System.out.printf("%-"+ (maxLen + BORDER) +"d", stat.getLen());
+        System.out.print(mdate + "  " 
+            + (stat.isDir() ? "d" : "-") + stat.getPermission() + "  ");
+        System.out.printf("%-"+ (maxOwner + BORDER) +"s", stat.getOwner());
+        System.out.printf("%-"+ (maxGroup + BORDER) +"s", stat.getGroup());
+        System.out.println(cur.toUri().getPath());
         if (recursive && stat.isDir()) {
           ls(cur,srcFs, recursive, printHeader);
         }
@@ -670,10 +685,17 @@ public class FsShell extends Configured implements Tool {
             + ": No such file or directory.");
     } else {
       System.out.println("Found " + items.length + " items");
+      int maxLength = 10;
+      
       for (int i = 0; i < items.length; i++) {
-        System.out.println(items[i].getPath() + "\t" + 
-                           srcFs.getContentSummary(items[i].getPath()).
-                           getLength());
+        String size = String.valueOf(srcFs.getContentSummary(items[i]
+                                                                   .getPath()).getLength());
+        if (size.length() > maxLength) maxLength = size.length();
+      }
+      for(int i = 0; i < items.length; i++) {
+        System.out.printf("%-"+ (maxLength + BORDER) +"d", 
+            srcFs.getContentSummary(items[i].getPath()).getLength());
+        System.out.println(items[i].getPath());
       }
     }
   }

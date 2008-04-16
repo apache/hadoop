@@ -9,6 +9,9 @@ Trunk (unreleased changes)
     that are being written to. The output of fsck is incompatible
     with previous release. (lohit vijayarenu via dhruba) 
 
+    HADOOP-2865. FsShell.ls() printout format changed to print file names
+    in the end of the line. (Edward J. Yoon via shv)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,
