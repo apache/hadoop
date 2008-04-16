@@ -627,6 +627,11 @@ Release 0.17.0 - Unreleased
     HADOOP-3162. Ensure that comma-separated input paths are treated correctly
     as multiple input paths. (Amareshwari Sri Ramadasu via acmurthy)
 
+    HADOOP-3263. Ensure that the job-history log file always follows the
+    pattern of hostname_timestamp_jobid_username_jobname even if username
+    and/or jobname are not specfied. This helps to avoid wrong assumptions
+    made about the job-history log filename in jobhistory.jsp. (acmurthy) 
+
 Release 0.16.3 - 2008-04-16
 
   BUG FIXES
