@@ -605,6 +605,10 @@ Release 0.17.0 - Unreleased
     change maxentToSameCluster to run the correct number of jobs.
     (Runping Qi via cdouglas)
 
+    HADOOP-3242. Fix the RecordReader of SequenceFileAsBinaryInputFormat to
+    correctly read from the start of the split and not the beginning of the
+    file. (cdouglas via acmurthy) 
+
 Release 0.16.3 - 2008-04-16
 
   BUG FIXES

@@ -69,30 +69,32 @@ public class TestSequenceFileAsBinaryInputFormat extends TestCase {
     Text cmpkey = new Text();
     Text cmpval = new Text();
     DataInputBuffer buf = new DataInputBuffer();
-    RecordReader<BytesWritable,BytesWritable> reader =
-      bformat.getRecordReader(new FileSplit(file, 0,
-                              fs.getFileStatus(file).getLen(), 
-                              (String[])null), job, Reporter.NULL);
-    try {
-      while (reader.next(bkey, bval)) {
-        tkey.set(Integer.toString(r.nextInt(), 36));
-        tval.set(Long.toString(r.nextLong(), 36));
-        buf.reset(bkey.get(), bkey.getSize());
-        cmpkey.readFields(buf);
-        buf.reset(bval.get(), bval.getSize());
-        cmpval.readFields(buf);
-        assertTrue(
-            "Keys don't match: " + "*" + cmpkey.toString() + ":" +
-                                         tkey.toString() + "*",
-            cmpkey.toString().equals(tkey.toString()));
-        assertTrue(
-            "Vals don't match: " + "*" + cmpval.toString() + ":" +
-                                         tval.toString() + "*",
-            cmpval.toString().equals(tval.toString()));
-        ++count;
+    final int NUM_SPLITS = 3;
+    job.setInputPath(file);
+    for (InputSplit split : bformat.getSplits(job, NUM_SPLITS)) {
+      RecordReader<BytesWritable,BytesWritable> reader =
+        bformat.getRecordReader(split, job, Reporter.NULL);
+      try {
+        while (reader.next(bkey, bval)) {
+          tkey.set(Integer.toString(r.nextInt(), 36));
+          tval.set(Long.toString(r.nextLong(), 36));
+          buf.reset(bkey.get(), bkey.getSize());
+          cmpkey.readFields(buf);
+          buf.reset(bval.get(), bval.getSize());
+          cmpval.readFields(buf);
+          assertTrue(
+              "Keys don't match: " + "*" + cmpkey.toString() + ":" +
+                                           tkey.toString() + "*",
+              cmpkey.toString().equals(tkey.toString()));
+          assertTrue(
+              "Vals don't match: " + "*" + cmpval.toString() + ":" +
+                                           tval.toString() + "*",
+              cmpval.toString().equals(tval.toString()));
+          ++count;
+        }
+      } finally {
+        reader.close();
       }
-    } finally {
-      reader.close();
     }
     assertEquals("Some records not found", RECORDS, count);
   }
