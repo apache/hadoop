@@ -73,6 +73,7 @@ public class NamenodeFsck {
   private boolean lfInited = false;
   private boolean lfInitedOk = false;
   private boolean showFiles = false;
+  private boolean showOpenFiles = false;
   private boolean showBlocks = false;
   private boolean showLocations = false;
   private boolean showRacks = false;
@@ -106,6 +107,7 @@ public class NamenodeFsck {
       else if (key.equals("blocks")) { this.showBlocks = true; }
       else if (key.equals("locations")) { this.showLocations = true; }
       else if (key.equals("racks")) { this.showRacks = true; }
+      else if (key.equals("openforwrite")) {this.showOpenFiles = true; }
     }
   }
   
@@ -142,6 +144,7 @@ public class NamenodeFsck {
   private void check(DFSFileInfo file, FsckResult res) throws IOException {
     int minReplication = nn.namesystem.getMinReplication();
     String path = file.getPath().toString();
+    boolean isOpen = false;
 
     if (file.isDir()) {
       DFSFileInfo[] files = nn.namesystem.dir.getListing(path);
@@ -157,15 +160,26 @@ public class NamenodeFsck {
       }
       return;
     }
-    res.totalFiles++;
     long fileLen = file.getLen();
-    res.totalSize += fileLen;
     LocatedBlocks blocks = nn.namesystem.getBlockLocations(path, 0, fileLen);
+    isOpen = blocks.isUnderConstruction();
+    if (isOpen && !showOpenFiles) {
+      // We collect these stats about open files to report with default options
+      res.totalOpenFilesSize += fileLen;
+      res.totalOpenFilesBlocks += blocks.locatedBlockCount();
+      res.totalOpenFiles++;
+      return;
+    }
+    res.totalFiles++;
+    res.totalSize += fileLen;
     res.totalBlocks += blocks.locatedBlockCount();
-    if (showFiles) {
+    if (showOpenFiles && isOpen) {
       out.print(path + " " + fileLen + " bytes, " +
-          blocks.locatedBlockCount() + " block(s): ");
-    }  else {
+        blocks.locatedBlockCount() + " block(s), OPENFORWRITE: ");
+    } else if (showFiles) {
+      out.print(path + " " + fileLen + " bytes, " +
+        blocks.locatedBlockCount() + " block(s): ");
+    } else {
       out.print('.');
       out.flush();
       if (res.totalFiles % 100 == 0) { out.println(); }
@@ -250,10 +264,12 @@ public class NamenodeFsck {
       case FIXING_NONE:
         break;
       case FIXING_MOVE:
-        lostFoundMove(file, blocks);
+        if (!isOpen)
+          lostFoundMove(file, blocks);
         break;
       case FIXING_DELETE:
-        nn.namesystem.deleteInternal(path, true, false);
+        if (!isOpen)
+          nn.namesystem.deleteInternal(path, true, false);
       }
     }
     if (showFiles) {
@@ -484,9 +500,12 @@ public class NamenodeFsck {
     private long numMinReplicatedBlocks = 0L;  // minimally replicatedblocks
     private int replication = 0;
     private long totalBlocks = 0L;
+    private long totalOpenFilesBlocks = 0L;
     private long totalFiles = 0L;
+    private long totalOpenFiles = 0L;
     private long totalDirs = 0L;
     private long totalSize = 0L;
+    private long totalOpenFilesSize = 0L;
     private long totalReplicas = 0L;
     private int totalDatanodes = 0;
     private int totalRacks = 0;
@@ -513,7 +532,7 @@ public class NamenodeFsck {
     public long getMissingSize() {
       return missingSize;
     }
-    
+
     public void setMissingSize(long missingSize) {
       this.missingSize = missingSize;
     }
@@ -561,6 +580,16 @@ public class NamenodeFsck {
       this.totalFiles = totalFiles;
     }
     
+    /** Return total number of files opened for write encountered during this scan. */
+    public long getTotalOpenFiles() {
+      return totalOpenFiles;
+    }
+
+    /** Set total number of open files encountered during this scan. */
+    public void setTotalOpenFiles(long totalOpenFiles) {
+      this.totalOpenFiles = totalOpenFiles;
+    }
+    
     /** Return total size of scanned data, in bytes. */
     public long getTotalSize() {
       return totalSize;
@@ -568,6 +597,15 @@ public class NamenodeFsck {
     
     public void setTotalSize(long totalSize) {
       this.totalSize = totalSize;
+    }
+    
+    /** Return total size of open files data, in bytes. */
+    public long getTotalOpenFilesSize() {
+      return totalOpenFilesSize;
+    }
+    
+    public void setTotalOpenFilesSize(long totalOpenFilesSize) {
+      this.totalOpenFilesSize = totalOpenFilesSize;
     }
     
     /** Return the intended replication factor, against which the over/under-
@@ -592,15 +630,32 @@ public class NamenodeFsck {
       this.totalBlocks = totalBlocks;
     }
     
+    /** Return the total number of blocks held by open files. */
+    public long getTotalOpenFilesBlocks() {
+      return totalOpenFilesBlocks;
+    }
+    
+    public void setTotalOpenFilesBlocks(long totalOpenFilesBlocks) {
+      this.totalOpenFilesBlocks = totalOpenFilesBlocks;
+    }
+    
     public String toString() {
       StringBuffer res = new StringBuffer();
       res.append("Status: " + (isHealthy() ? "HEALTHY" : "CORRUPT"));
       res.append("\n Total size:\t" + totalSize + " B");
+      if (totalOpenFilesSize != 0) 
+        res.append(" (Total open files size: " + totalOpenFilesSize + " B)");
       res.append("\n Total dirs:\t" + totalDirs);
       res.append("\n Total files:\t" + totalFiles);
-      res.append("\n Total blocks:\t" + totalBlocks);
+      if (totalOpenFiles != 0)
+        res.append(" (Files currently being written: " + 
+                   totalOpenFiles + ")");
+      res.append("\n Total blocks (validated):\t" + totalBlocks);
       if (totalBlocks > 0) res.append(" (avg. block size "
                                       + (totalSize / totalBlocks) + " B)");
+      if (totalOpenFilesBlocks != 0)
+        res.append(" (Total open file blocks (not validated): " + 
+                   totalOpenFilesBlocks + ")");
       if (missingSize > 0) {
         res.append("\n  ********************************");
         res.append("\n  CORRUPT FILES:\t" + corruptFiles);

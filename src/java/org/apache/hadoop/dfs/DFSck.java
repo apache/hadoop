@@ -51,6 +51,7 @@ import org.apache.hadoop.util.ToolRunner;
  *  Additionally, the tool collects a detailed overall DFS statistics, and
  *  optionally can print detailed statistics on block locations and replication
  *  factors of each file.
+ *  The tool also provides and option to filter open files during the scan.
  *  
  */
 public class DFSck extends Configured implements Tool {
@@ -77,14 +78,19 @@ public class DFSck extends Configured implements Tool {
   public int run(String[] args) throws Exception {
     String fsName = getInfoServer();
     if (args.length == 0) {
-      System.err.println("Usage: DFSck <path> [-move | -delete] [-files [-blocks [-locations | -racks]]]");
+      System.err.println("Usage: DFSck <path> [-move | -delete | -openforwrite] [-files [-blocks [-locations | -racks]]]");
       System.err.println("\t<path>\tstart checking from this path");
       System.err.println("\t-move\tmove corrupted files to /lost+found");
       System.err.println("\t-delete\tdelete corrupted files");
       System.err.println("\t-files\tprint out files being checked");
+      System.err.println("\t-openforwrite\tprint out files opened for write");
       System.err.println("\t-blocks\tprint out block report");
       System.err.println("\t-locations\tprint out locations for every block");
       System.err.println("\t-racks\tprint out network topology for data-node locations");
+      System.err.println("\t\tBy default fsck ignores files opened for write, " +
+                         "use -openforwrite to report such files. They are usually " +
+                         " tagged CORRUPT or HEALTHY depending on their block " +
+                          "allocation status");
       ToolRunner.printGenericCommandUsage(System.err);
       return -1;
     }
@@ -99,6 +105,7 @@ public class DFSck extends Configured implements Tool {
       if (args[idx].equals("-move")) { url.append("&move=1"); }
       else if (args[idx].equals("-delete")) { url.append("&delete=1"); }
       else if (args[idx].equals("-files")) { url.append("&files=1"); }
+      else if (args[idx].equals("-openforwrite")) { url.append("&openforwrite=1"); }
       else if (args[idx].equals("-blocks")) { url.append("&blocks=1"); }
       else if (args[idx].equals("-locations")) { url.append("&locations=1"); }
       else if (args[idx].equals("-racks")) { url.append("&racks=1"); }

@@ -35,15 +35,18 @@ import org.apache.hadoop.io.WritableFactory;
 public class LocatedBlocks implements Writable {
   private long fileLength;
   private List<LocatedBlock> blocks; // array of blocks with prioritized locations
+  private boolean underConstruction;
 
   LocatedBlocks() {
     fileLength = 0;
     blocks = null;
+    underConstruction = false;
   }
   
   LocatedBlocks(INodeFile inode, List<LocatedBlock> blks) {
     fileLength = inode.computeContentSummary().getLength();
     blocks = blks;
+    underConstruction = inode.isUnderConstruction();
   }
   
   /**
@@ -72,6 +75,14 @@ public class LocatedBlocks implements Writable {
    */
   public long getFileLength() {
     return this.fileLength;
+  }
+
+  /**
+   * Return ture if file was under construction when 
+   * this LocatedBlocks was constructed, false otherwise.
+   */
+  public boolean isUnderConstruction() {
+    return underConstruction;
   }
   
   /**
@@ -148,6 +159,7 @@ public class LocatedBlocks implements Writable {
 
   public void write(DataOutput out) throws IOException {
     out.writeLong(this.fileLength);
+    out.writeBoolean(underConstruction);
     // write located blocks
     int nrBlocks = locatedBlockCount();
     out.writeInt(nrBlocks);
@@ -161,6 +173,7 @@ public class LocatedBlocks implements Writable {
   
   public void readFields(DataInput in) throws IOException {
     this.fileLength = in.readLong();
+    underConstruction = in.readBoolean();
     // read located blocks
     int nrBlocks = in.readInt();
     this.blocks = new ArrayList<LocatedBlock>(nrBlocks);

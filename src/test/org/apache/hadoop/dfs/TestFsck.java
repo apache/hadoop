@@ -29,6 +29,8 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.log4j.Level;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
@@ -148,6 +150,54 @@ public class TestFsck extends TestCase {
       // Check to make sure we have healthy filesystem
       outStr = runFsck(conf, "/");
       assertTrue(outStr.contains("HEALTHY")); 
+      util.cleanup(fs, topDir);
+      if (fs != null) {try{fs.close();} catch(Exception e){}}
+      cluster.shutdown();
+    } finally {
+      if (fs != null) {try{fs.close();} catch(Exception e){}}
+      if (cluster != null) { cluster.shutdown(); }
+    }
+  }
+  
+  public void testFsckOpenFiles() throws Exception {
+    DFSTestUtil util = new DFSTestUtil("TestFsck", 4, 3, 8*1024); 
+    MiniDFSCluster cluster = null;
+    FileSystem fs = null;
+    try {
+      Configuration conf = new Configuration();
+      cluster = new MiniDFSCluster(conf, 4, true, null);
+      String topDir = "/srcdat";
+      String randomString = "HADOOP  ";
+      fs = cluster.getFileSystem();
+      cluster.waitActive();
+      util.createFiles(fs, topDir);
+      String outStr = runFsck(conf, "/");
+      assertTrue(outStr.contains("HEALTHY"));
+      // Open a file for writing and do not close for now
+      Path openFile = new Path(topDir + "/openFile");
+      FSDataOutputStream out = fs.create(openFile);
+      int writeCount = 0;
+      while (writeCount != 100) {
+        out.write(randomString.getBytes());
+        writeCount++;                  
+      }
+      // We expect the filesystem to be HEALTHY and show one open file
+      outStr = runFsck(conf, topDir);
+      System.out.println(outStr);
+      assertTrue(outStr.contains("HEALTHY"));
+      assertFalse(outStr.contains("OPENFORWRITE")); 
+      // Use -openforwrite option to list open files
+      outStr = runFsck(conf, topDir, "-openforwrite");
+      System.out.println(outStr);
+      assertTrue(outStr.contains("OPENFORWRITE"));
+      assertTrue(outStr.contains("openFile"));
+      // Close the file
+      out.close(); 
+      // Now, fsck should show HEALTHY fs and should not show any open files
+      outStr = runFsck(conf, topDir);
+      System.out.println(outStr);
+      assertTrue(outStr.contains("HEALTHY"));
+      assertFalse(outStr.contains("OPENFORWRITE"));
       util.cleanup(fs, topDir);
       if (fs != null) {try{fs.close();} catch(Exception e){}}
       cluster.shutdown();

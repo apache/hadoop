@@ -298,7 +298,8 @@
       files, for e.g. missing blocks for a file or under replicated
       blocks. Unlike a traditional fsck utility for native filesystems,
       this command does not correct the errors it detects. Normally Namenode
-      automatically corrects most of the recoverable failures.
+      automatically corrects most of the recoverable failures. By default
+      fsck ignores open files but provides an option to select during reporting.
       HDFS' fsck is not a
       Hadoop shell command. It can be run as '<code>bin/hadoop fsck</code>'.
       Fsck can be run on the whole filesystem or on a subset of files.

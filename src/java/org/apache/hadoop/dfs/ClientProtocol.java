@@ -37,9 +37,9 @@ interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 29 : getFileInfo returns null instead of throwing FileNotFoundException
+   * 30 : add underConstruction flag to LocatedBlocks
    */
-  public static final long versionID = 29L;
+  public static final long versionID = 30L;
   
   ///////////////////////////////////////
   // File contents
