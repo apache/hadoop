@@ -70,7 +70,6 @@ public class JobHistory {
   private static final String VALUE = "[[^\"]?]+"; // anything but a " in ""
   
   private static final Pattern pattern = Pattern.compile(KEY + "=" + "\"" + VALUE + "\"");
-  private static final int MAX_FILENAME_SIZE = 255;
   
   public static final String JOBTRACKER_START_TIME =
                                String.valueOf(System.currentTimeMillis());
@@ -434,21 +433,27 @@ public class JobHistory {
     public static void logSubmitted(String jobId, JobConf jobConf, 
                                     String jobConfPath, long submitTime) 
     throws IOException {
-      String jobName = jobConf.getJobName();
-      String user = jobConf.getUser(); 
       FileSystem fs = null;
       String userLogDir = null;
       String jobUniqueString = JOBTRACKER_UNIQUE_STRING + jobId;
 
       if (!disableHistory){
+        // Get the username and job name to be used in the actual log filename;
+        // sanity check them too
+        String jobName = jobConf.getJobName();
+        if (jobName == null || jobName.length() == 0) {
+          jobName = "NA";
+        }
+
+        String user = jobConf.getUser();
+        if (user == null || user.length() == 0) {
+          user = "NA";
+        }
+        
         // setup the history log file for this job
         String logFileName = 
-            encodeJobHistoryFileName(jobUniqueString +  "_" + user+ "_" + 
+            encodeJobHistoryFileName(jobUniqueString +  "_" + user + "_" + 
                                      jobName);
-        
-        if (logFileName.length() > MAX_FILENAME_SIZE) {
-          logFileName = logFileName.substring(0, MAX_FILENAME_SIZE-1);
-        }
 
         // find user log directory 
         Path outputPath = FileOutputFormat.getOutputPath(jobConf);
