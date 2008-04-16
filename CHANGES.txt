@@ -5,6 +5,10 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-2703.  The default options to fsck skips checking files
+    that are being written to. The output of fsck is incompatible
+    with previous release. (lohit vijayarenu via dhruba) 
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,
@@ -39,9 +43,6 @@ Trunk (unreleased changes)
 
     HADOOP-3176.  Change lease record when a open-for-write-file 
     gets renamed. (dhruba)
-
-    HADOOP-2703.  The default options to fsck skips checking files
-    that are being written to. (lohit vijayarenu via dhruba) 
 
 Release 0.17.0 - Unreleased
 
