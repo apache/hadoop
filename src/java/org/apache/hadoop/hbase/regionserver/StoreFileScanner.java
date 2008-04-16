@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.SortedMap;
 
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.Text;
@@ -28,14 +29,19 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 
 /**
- * A scanner that iterates through the HStore files
+ * A scanner that iterates through HStore files
  */
 class StoreFileScanner extends HAbstractScanner {
-  @SuppressWarnings("hiding")
+    // Keys retrieved from the sources
+  private HStoreKey keys[];
+  // Values that correspond to those keys
+  private byte [][] vals;
+  
   private MapFile.Reader[] readers;
   private HStore store;
   
-  public StoreFileScanner(HStore store, long timestamp, Text[] targetCols, Text firstRow)
+  public StoreFileScanner(final HStore store, final long timestamp,
+    final Text[] targetCols, final Text firstRow)
   throws IOException {
     super(timestamp, targetCols);
     this.store = store;
@@ -54,13 +60,11 @@ class StoreFileScanner extends HAbstractScanner {
       // Advance the readers to the first pos.
       for(i = 0; i < readers.length; i++) {
         keys[i] = new HStoreKey();
-        
         if(firstRow.getLength() != 0) {
           if(findFirstRow(i, firstRow)) {
             continue;
           }
         }
-        
         while(getNext(i)) {
           if(columnMatch(i)) {
             break;
@@ -75,16 +79,110 @@ class StoreFileScanner extends HAbstractScanner {
       throw e;
     }
   }
+  
+  /**
+   * For a particular column i, find all the matchers defined for the column.
+   * Compare the column family and column key using the matchers. The first one
+   * that matches returns true. If no matchers are successful, return false.
+   * 
+   * @param i index into the keys array
+   * @return true if any of the matchers for the column match the column family
+   * and the column key.
+   * @throws IOException
+   */
+  boolean columnMatch(int i) throws IOException {
+    return columnMatch(keys[i].getColumn());
+  }
+
+  /**
+   * Get the next set of values for this scanner.
+   * 
+   * @param key The key that matched
+   * @param results All the results for <code>key</code>
+   * @return true if a match was found
+   * @throws IOException
+   * 
+   * @see org.apache.hadoop.hbase.regionserver.InternalScanner#next(org.apache.hadoop.hbase.HStoreKey, java.util.SortedMap)
+   */
+  @Override
+  public boolean next(HStoreKey key, SortedMap<Text, byte []> results)
+  throws IOException {
+    if (scannerClosed) {
+      return false;
+    }
+    // Find the next row label (and timestamp)
+    Text chosenRow = null;
+    long chosenTimestamp = -1;
+    for(int i = 0; i < keys.length; i++) {
+      if((keys[i] != null)
+          && (columnMatch(i))
+          && (keys[i].getTimestamp() <= this.timestamp)
+          && ((chosenRow == null)
+              || (keys[i].getRow().compareTo(chosenRow) < 0)
+              || ((keys[i].getRow().compareTo(chosenRow) == 0)
+                  && (keys[i].getTimestamp() > chosenTimestamp)))) {
+        chosenRow = new Text(keys[i].getRow());
+        chosenTimestamp = keys[i].getTimestamp();
+      }
+    }
+
+    // Grab all the values that match this row/timestamp
+    boolean insertedItem = false;
+    if(chosenRow != null) {
+      key.setRow(chosenRow);
+      key.setVersion(chosenTimestamp);
+      key.setColumn(new Text(""));
+
+      for(int i = 0; i < keys.length; i++) {
+        // Fetch the data
+        while((keys[i] != null)
+            && (keys[i].getRow().compareTo(chosenRow) == 0)) {
+
+          // If we are doing a wild card match or there are multiple matchers
+          // per column, we need to scan all the older versions of this row
+          // to pick up the rest of the family members
+          
+          if(!isWildcardScanner()
+              && !isMultipleMatchScanner()
+              && (keys[i].getTimestamp() != chosenTimestamp)) {
+            break;
+          }
+
+          if(columnMatch(i)) {              
+            // We only want the first result for any specific family member
+            if(!results.containsKey(keys[i].getColumn())) {
+              results.put(new Text(keys[i].getColumn()), vals[i]);
+              insertedItem = true;
+            }
+          }
+
+          if(!getNext(i)) {
+            closeSubScanner(i);
+          }
+        }
+
+        // Advance the current scanner beyond the chosen row, to
+        // a valid timestamp, so we're ready next time.
+        
+        while((keys[i] != null)
+            && ((keys[i].getRow().compareTo(chosenRow) <= 0)
+                || (keys[i].getTimestamp() > this.timestamp)
+                || (! columnMatch(i)))) {
+          getNext(i);
+        }
+      }
+    }
+    return insertedItem;
+  }
 
   /**
    * The user didn't want to start scanning at the first row. This method
    * seeks to the requested row.
    *
-   * @param i         - which iterator to advance
-   * @param firstRow  - seek to this row
-   * @return          - true if this is the first row or if the row was not found
+   * @param i which iterator to advance
+   * @param firstRow seek to this row
+   * @return true if this is the first row or if the row was not found
    */
-  @Override
   boolean findFirstRow(int i, Text firstRow) throws IOException {
     ImmutableBytesWritable ibw = new ImmutableBytesWritable();
     HStoreKey firstKey
@@ -104,10 +202,9 @@ class StoreFileScanner extends HAbstractScanner {
   /**
    * Get the next value from the specified reader.
    * 
-   * @param i - which reader to fetch next value from
-   * @return - true if there is more data available
+   * @param i which reader to fetch next value from
+   * @return true if there is more data available
    */
-  @Override
   boolean getNext(int i) throws IOException {
     boolean result = false;
     ImmutableBytesWritable ibw = new ImmutableBytesWritable();
@@ -126,7 +223,6 @@ class StoreFileScanner extends HAbstractScanner {
   }
   
   /** Close down the indicated reader. */
-  @Override
   void closeSubScanner(int i) {
     try {
       if(readers[i] != null) {

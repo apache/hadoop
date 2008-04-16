@@ -611,24 +611,30 @@ public class HStore implements HConstants {
    * @throws IOException
    */
   void flushCache(final long logCacheFlushId) throws IOException {
-      internalFlushCache(memcache.getSnapshot(), logCacheFlushId);
+    SortedMap<HStoreKey, byte []> cache = this.memcache.snapshot();
+    internalFlushCache(cache, logCacheFlushId);
+    // If an exception happens flushing, we let it out without clearing
+    // the memcache snapshot.  The old snapshot will be returned when we say
+    // 'snapshot', the next time flush comes around.
+    this.memcache.clearSnapshot(cache);
   }
   
   private void internalFlushCache(SortedMap<HStoreKey, byte []> cache,
       long logCacheFlushId) throws IOException {
-    
     // Don't flush if there are no entries.
     if (cache.size() == 0) {
       return;
     }
     
+    // TODO:  We can fail in the below block before we complete adding this
+    // flush to list of store files.  Add cleanup of anything put on filesystem
+    // if we fail.
     synchronized(flushLock) {
       // A. Write the Maps out to the disk
       HStoreFile flushedFile = new HStoreFile(conf, fs, basedir,
-          info.getEncodedName(), family.getFamilyName(), -1L, null);
-      String name = flushedFile.toString();
+        info.getEncodedName(),  family.getFamilyName(), -1L, null);
       MapFile.Writer out = flushedFile.getWriter(this.fs, this.compression,
-          this.bloomFilter);
+        this.bloomFilter);
       
       // Here we tried picking up an existing HStoreFile from disk and
       // interlacing the memcache flush compacting as we go.  The notion was
@@ -657,7 +663,7 @@ public class HStore implements HConstants {
       } finally {
         out.close();
       }
-      long newStoreSize = flushedFile.length(); 
+      long newStoreSize = flushedFile.length();
       storeSize += newStoreSize;
 
       // B. Write out the log sequence number that corresponds to this output
@@ -678,7 +684,7 @@ public class HStore implements HConstants {
             flushedFile.getReader(this.fs, this.bloomFilter));
         this.storefiles.put(flushid, flushedFile);
         if(LOG.isDebugEnabled()) {
-          LOG.debug("Added " + name + " with " + entries +
+          LOG.debug("Added " + flushedFile.toString() + " with " + entries +
             " entries, sequence id " + logCacheFlushId + ", data size " +
             StringUtils.humanReadableInt(cacheSize) + ", file size " +
             StringUtils.humanReadableInt(newStoreSize) + " for " +
@@ -1360,31 +1366,27 @@ public class HStore implements HConstants {
    */
   Text getRowKeyAtOrBefore(final Text row)
   throws IOException{
-    // map of HStoreKeys that are candidates for holding the row key that
-    // most closely matches what we're looking for. we'll have to update it 
+    // Map of HStoreKeys that are candidates for holding the row key that
+    // most closely matches what we're looking for. We'll have to update it 
     // deletes found all over the place as we go along before finally reading
     // the best key out of it at the end.
     SortedMap<HStoreKey, Long> candidateKeys = new TreeMap<HStoreKey, Long>();    
     
-    // obtain read lock
+    // Obtain read lock
     this.lock.readLock().lock();
     try {
+      // Process each store file
       MapFile.Reader[] maparray = getReaders();
-      
-      // process each store file
-      for(int i = maparray.length - 1; i >= 0; i--) {
+      for (int i = maparray.length - 1; i >= 0; i--) {
         // update the candidate keys from the current map file
         rowAtOrBeforeFromMapFile(maparray[i], row, candidateKeys);
       }
       
-      // finally, check the memcache
-      memcache.getRowKeyAtOrBefore(row, candidateKeys);
+      // Finally, check the memcache
+      this.memcache.getRowKeyAtOrBefore(row, candidateKeys);
       
-      // return the best key from candidateKeys
-      if (!candidateKeys.isEmpty()) {
-        return candidateKeys.lastKey().getRow();
-      } 
-      return null;
+      // Return the best key from candidateKeys
+      return candidateKeys.isEmpty()? null: candidateKeys.lastKey().getRow();
     } finally {
       this.lock.readLock().unlock();
     }

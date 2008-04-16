@@ -9,6 +9,7 @@ Hbase Change Log
    HBASE-575   master dies with stack overflow error if rootdir isn't qualified
    HBASE-582   HBase 554 forgot to clear results on each iteration caused by a filter
                (Clint Morgan via Stack)
+   HBASE-532   Odd interaction between HRegion.get, HRegion.deleteAll and compactions
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
