@@ -31,6 +31,9 @@ Trunk (unreleased changes)
     heartbeats to use well-defined BlockCommand object(s) instead of 
     using the base java Object. (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-3176.  Change lease record when a open-for-write-file 
+    gets renamed. (dhruba)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

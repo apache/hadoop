@@ -356,7 +356,7 @@ public class TestFileCreation extends TestCase {
    * This test is currently not triggered because more HDFS work is 
    * is needed to handle persistent leases.
    */
-  public void XXXtestFileCreationNamenodeRestart() throws IOException {
+  public void testFileCreationNamenodeRestart() throws IOException {
     Configuration conf = new Configuration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
@@ -380,20 +380,49 @@ public class TestFileCreation extends TestCase {
       Path file1 = new Path("/filestatus.dat");
       FSDataOutputStream stm = createFile(fs, file1, 1);
       System.out.println("testFileCreationNamenodeRestart: "
-                         + "Created file filestatus.dat with one "
-                         + " replicas.");
+                         + "Created file " + file1);
 
       // write two full blocks.
       writeFile(stm, numBlocks * blockSize);
       flushFile(stm);
+
+      // rename file wile keeping it open.
+      Path fileRenamed = new Path("/filestatusRenamed.dat");
+      fs.rename(file1, fileRenamed);
+      System.out.println("testFileCreationNamenodeRestart: "
+                         + "Renamed file " + file1 + " to " +
+                         fileRenamed);
+      file1 = fileRenamed;
 
       // create another new file.
       //
       Path file2 = new Path("/filestatus2.dat");
       FSDataOutputStream stm2 = createFile(fs, file2, 1);
       System.out.println("testFileCreationNamenodeRestart: "
-                         + "Created file filestatus2.dat with one "
-                         + " replicas.");
+                         + "Created file " + file2);
+
+      // create yet another new file with full path name. 
+      // rename it while open
+      //
+      Path file3 = new Path("/user/home/fullpath.dat");
+      FSDataOutputStream stm3 = createFile(fs, file3, 1);
+      System.out.println("testFileCreationNamenodeRestart: "
+                         + "Created file " + file3);
+      Path file4 = new Path("/user/home/fullpath4.dat");
+      FSDataOutputStream stm4 = createFile(fs, file4, 1);
+      System.out.println("testFileCreationNamenodeRestart: "
+                         + "Created file " + file4);
+
+      fs.mkdirs(new Path("/bin"));
+      fs.rename(new Path("/user/home"), new Path("/bin"));
+      Path file3new = new Path("/bin/home/fullpath.dat");
+      System.out.println("testFileCreationNamenodeRestart: "
+                         + "Renamed file " + file3 + " to " +
+                         file3new);
+      Path file4new = new Path("/bin/home/fullpath4.dat");
+      System.out.println("testFileCreationNamenodeRestart: "
+                         + "Renamed file " + file4 + " to " +
+                         file4new);
 
       // restart cluster with the same namenode port as before.
       // This ensures that leases are persisted in fsimage.
@@ -417,6 +446,16 @@ public class TestFileCreation extends TestCase {
                                    null, null, null);
       cluster.waitActive();
 
+      // instruct the dfsclient to use a new filename when it requests
+      // new blocks for files that were renamed.
+      DFSClient.DFSOutputStream dfstream = (DFSClient.DFSOutputStream)
+                                                 (stm.getWrappedStream());
+      dfstream.setTestFilename(file1.toString());
+      dfstream = (DFSClient.DFSOutputStream) (stm3.getWrappedStream());
+      dfstream.setTestFilename(file3new.toString());
+      dfstream = (DFSClient.DFSOutputStream) (stm4.getWrappedStream());
+      dfstream.setTestFilename(file4new.toString());
+
       // write 1 byte to file.  This should succeed because the 
       // namenode should have persisted leases.
       byte[] buffer = new byte[1];
@@ -426,6 +465,8 @@ public class TestFileCreation extends TestCase {
       stm.close();
       stm2.write(buffer);
       stm2.close();
+      stm3.close();
+      stm4.close();
 
       // verify that new block is associated with this file
       client = new DFSClient(addr, conf);

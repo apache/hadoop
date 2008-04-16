@@ -170,6 +170,13 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   // Set of: Lease
   private SortedSet<Lease> sortedLeases = new TreeSet<Lease>();
 
+  // 
+  // Map path names to leases. It is protected by the sortedLeases lock.
+  // The map stores pathnames in lexicographical order.
+  //
+  private TreeMap<String, Lease> sortedLeasesByPath = 
+                        new TreeMap<String, Lease>();
+
   //
   // Threaded object that checks to see if we have been
   // getting heartbeats from all clients. 
@@ -1464,7 +1471,11 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       checkAncestorAccess(dst, FsAction.WRITE);
     }
 
-    return dir.renameTo(src, dst);
+    if (dir.renameTo(src, dst)) {
+      changeLease(src, dst);     // update lease with new filename
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -1752,6 +1763,34 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     Collection<StringBytesWritable> getPaths() throws IOException {
       return creates;
+    }
+
+    // If a file with the specified prefix exists, then replace 
+    // it with the new prefix.
+    //
+    void replacePrefix(String src, String overwrite, 
+                       String replaceBy) throws IOException {
+      List<StringBytesWritable> toAdd = new ArrayList<StringBytesWritable>();
+      for (Iterator<StringBytesWritable> f = creates.iterator(); 
+           f.hasNext();){
+        String path = f.next().getString();
+        if (!path.startsWith(src)) {
+          continue;
+        }
+        // remove this filename from this lease.
+        f.remove();
+
+        // remember new filename
+        String newPath = path.replaceFirst(overwrite, replaceBy);
+        toAdd.add(new StringBytesWritable(newPath));
+        LOG.info("Modified Lease for file " + path +
+                 " to new path " + newPath);
+      }
+      // add modified filenames back into lease.
+      for (Iterator<StringBytesWritable> f = toAdd.iterator(); 
+           f.hasNext();) {
+        creates.add(f.next());
+      }
     }
   }
   
@@ -4290,6 +4329,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         if (!lease.hasLocks()) {
           removeLease(holder);
           sortedLeases.remove(lease);
+          sortedLeasesByPath.remove(src);
         }
       }
     }
@@ -4310,10 +4350,69 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         lease.renew();
         sortedLeases.add(lease);
       }
+      sortedLeasesByPath.put(src, lease);
       lease.startedCreate(src);
     }
   }
 
+  // rename was successful. If any part of the renamed subtree had
+  // files that were being written to, update with new filename.
+  //
+  void changeLease(String src, String dst) throws IOException {
+    Map<String, Lease> addTo = new TreeMap<String, Lease>();
+    String overwrite;
+    String replaceBy;
+
+    DFSFileInfo dinfo = getFileInfo(dst);
+    if (dinfo.isDir()) {
+      Path spath = new Path(src);
+      overwrite = spath.getParent().toString() + Path.SEPARATOR;
+      replaceBy = dst + Path.SEPARATOR;
+    } else {
+      overwrite = src;
+      replaceBy = dst;
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("changelease " +
+               " src " + src + " dest " + dst + 
+               " overwrite " + overwrite +
+               " replaceBy " + replaceBy);
+    }
+
+    synchronized (sortedLeases) {
+      SortedMap<String, Lease> myset = sortedLeasesByPath.tailMap(src);
+      for (Iterator<Map.Entry<String, Lease>> iter = myset.entrySet().iterator(); 
+           iter.hasNext();) {
+        Map.Entry<String, Lease> value = iter.next();
+        String path = (String)value.getKey();
+        if (!path.startsWith(src)) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("changelease comparing " + path +
+                     " with " + src + " and terminating.");
+          }
+          break;
+        }
+        Lease lease = (Lease)value.getValue();
+
+        // Fix up all the pathnames in this lease.
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("changelease comparing " + path +
+                    " with " + src + " and replacing ");
+        }
+        lease.replacePrefix(src, overwrite, replaceBy);
+
+        // Remove this lease from sortedLeasesByPath because the 
+        // pathname has changed.
+        String newPath = path.replaceFirst(overwrite, replaceBy);
+        addTo.put(newPath, lease);
+        iter.remove();
+      }
+      // re-add entries back in sortedLeasesByPath
+      sortedLeasesByPath.putAll(addTo);
+    }
+  }
+           
   /**
    * Returns the number of leases currently in the system
    */
@@ -4324,10 +4423,34 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   /**
-   * Serializes leases. This current code does not save leases but will do
-   * so in the future.
+   * Serializes leases. 
    */
   void saveFilesUnderConstruction(DataOutputStream out) throws IOException {
-    out.writeInt(0);      // the number of leases
+    synchronized (sortedLeases) {
+      int count = 0;
+      for (Lease lease : sortedLeases) {
+        count += lease.getPaths().size();
+      }
+      out.writeInt(count); // write the size
+      for (Lease lease : sortedLeases) {
+        Collection<StringBytesWritable> files = lease.getPaths();
+        for (Iterator<StringBytesWritable> i = files.iterator(); i.hasNext();){
+          String path = i.next().getString();
+
+          // verify that path exists in namespace
+          INode node = dir.getFileINode(path);
+          if (node == null) {
+            throw new IOException("saveLeases found path " + path +
+                                  " but no matching entry in namespace.");
+          }
+          if (!node.isUnderConstruction()) {
+            throw new IOException("saveLeases found path " + path +
+                                  " but is not under construction.");
+          }
+          INodeFileUnderConstruction cons = (INodeFileUnderConstruction) node;
+          FSImage.writeINodeUnderConstruction(out, cons, path);
+        }
+      }
+    }
   }
 }

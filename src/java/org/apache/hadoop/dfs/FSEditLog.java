@@ -584,7 +584,10 @@ class FSEditLog {
               dst = (UTF8) writables[1];
               timestamp = Long.parseLong(((UTF8)writables[2]).toString());
             }
-            fsDir.unprotectedRenameTo(src.toString(), dst.toString(), timestamp);
+            String s = src.toString();
+            String d = dst.toString();
+            fsDir.unprotectedRenameTo(s, d, timestamp);
+            fsNamesys.changeLease(s, d);
             break;
           }
           case OP_DELETE: {

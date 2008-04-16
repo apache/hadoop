@@ -2675,6 +2675,10 @@ class DFSClient implements FSConstants {
       chunksPerPacket = Math.min(chunksPerPacket, value);
       packetSize = chunkSize * chunksPerPacket;
     }
+
+    synchronized void setTestFilename(String newname) {
+      src = newname;
+    }
   }
 
   void reportChecksumFailure(String file, Block blk, DatanodeInfo dn) {
