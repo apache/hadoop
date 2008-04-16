@@ -382,12 +382,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     stateChangeLog.debug("*DIR* Namenode.delete:  " + src);
     return namesystem.delete(src, recursive);
   }
-  /**@deprecated Use getFileInfo(String) instead
-   */
-  @Deprecated
-  public boolean exists(String src) throws IOException {
-    return getFileInfo(src) != null;
-  }
 
   /**
    * Check path length does not exceed maximum.  Returns true if

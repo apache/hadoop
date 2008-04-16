@@ -21,6 +21,9 @@ Trunk (unreleased changes)
     HADOOP-3130. Make the connect timeout smaller for getFile.
     (Amar Ramesh Kamat via ddas)
 
+    HADOOP-3160. Remove deprecated exists() from ClientProtocol and 
+    FSNamesystem (Lohit Vjayarenu via rangadi)
+
   OPTIMIZATIONS
 
   BUG FIXES

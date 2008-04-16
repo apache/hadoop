@@ -1543,14 +1543,6 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return true;
   }
 
-  /** @deprecated Use getFileInfo(String) instead
-   * Return whether the given filename exists
-   */
-  @Deprecated
-  public boolean exists(String src) throws IOException {
-      return getFileInfo(src) != null;
-  }
-
   /** Get the file info for a specific file.
    * @param src The string representation of the path to the file
    * @throws IOException if permission to access file is denied by the system 

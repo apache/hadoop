@@ -130,7 +130,6 @@ class DFSClient implements FSConstants {
     methodNameToPolicyMap.put("abandonBlock", methodPolicy);
     methodNameToPolicyMap.put("abandonFileInProgress", methodPolicy);
     methodNameToPolicyMap.put("reportBadBlocks", methodPolicy);
-    methodNameToPolicyMap.put("exists", methodPolicy);
     methodNameToPolicyMap.put("isDir", methodPolicy);
     methodNameToPolicyMap.put("getListing", methodPolicy);
     methodNameToPolicyMap.put("getHints", methodPolicy);
