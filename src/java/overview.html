@@ -32,6 +32,11 @@
     ssh must be installed and sshd must be running to use Hadoop's
     scripts to manage remote Hadoop daemons.
   </li>
+  <li>HBase currently is a file handle hog.  The usual default of
+  1024 on *nix systems is insufficient if you are loading any significant
+  amount of data into regionservers.  See the
+  <a href="http://wiki.apache.org/hadoop/Hbase/FAQ#6">FAQ: Why do I see "java.io.IOException...(Too many open files)" in my logs?</a>
+  for how to up the limit.</li>
 </ul>
 
 <h2><a name="getting_started" >Getting Started</a></h2>
