@@ -1030,8 +1030,9 @@ class ReduceTask extends Task {
         // loop until we get all required outputs
         while (!neededOutputs.isEmpty() && mergeThrowable == null) {
           
-          LOG.info(reduceTask.getTaskId() + " Need " + neededOutputs.size() +
-          " map output(s)");
+          LOG.info(reduceTask.getTaskId() + " Need another " 
+                   + neededOutputs.size() + " map output(s) where " 
+                   + numInFlight + " is already in progress");
           
           try {
             // Put the hash entries for the failed fetches. Entries here

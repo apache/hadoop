@@ -18,6 +18,9 @@ Trunk (unreleased changes)
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().
     (Lohit Vjayarenu via rangadi)
 
+    HADOOP-3130. Make the connect timeout smaller for getFile.
+    (Amar Ramesh Kamat via ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
