@@ -939,7 +939,6 @@ public class HRegion implements HConstants {
       return -1;
     }
     long startTime = System.currentTimeMillis();
-    
     if(LOG.isDebugEnabled()) {
       LOG.debug("Started memcache flush for region " +
         this.regionInfo.getRegionName() + ". Size " +
@@ -948,13 +947,11 @@ public class HRegion implements HConstants {
 
     // We reset the aggregate memcache size here so that subsequent updates
     // will add to the unflushed size
-    
     this.memcacheSize.set(0L);
     this.flushRequested = false;
     
     // Record latest flush time
     this.lastFlushTime = System.currentTimeMillis();
-    
     for (HStore hstore: stores.values()) {
       hstore.snapshotMemcache();
     }

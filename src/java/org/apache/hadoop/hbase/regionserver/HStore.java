@@ -590,8 +590,9 @@ public class HStore implements HConstants {
   //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * Prior to doing a cache flush, we need to snapshot the memcache. Locking is
-   * handled by the memcache.
+   * Prior to doing a cache flush, we need to snapshot the memcache.
+   * TODO: This method is ugly.  Why let client of HStore run snapshots.  How
+   * do we know they'll be cleaned up?
    */
   void snapshotMemcache() {
     this.memcache.snapshot();

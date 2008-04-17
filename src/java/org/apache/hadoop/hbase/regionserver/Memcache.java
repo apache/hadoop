@@ -23,8 +23,10 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.rmi.UnexpectedException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +77,7 @@ class Memcache {
   }
 
   /**
-   * Creates a snapshot of the current Memcache
+   * Creates a snapshot of the current Memcache or returns existing snapshot.
    * Must be followed by a call to {@link #clearSnapshot(SortedMap)}
    * @return Snapshot. Never null.  May have no entries.
    */
@@ -84,8 +86,9 @@ class Memcache {
     try {
       // If snapshot has entries, then flusher failed or didn't call cleanup.
       if (this.snapshot.size() > 0) {
-        LOG.warn("Returning extant snapshot. Is there another ongoing " +
-          "flush or did last attempt fail?");
+        LOG.debug("Returning existing snapshot. Either the snapshot was run " +
+          "by the region -- normal operation but to be fixed -- or there is " +
+          "another ongoing flush or did we fail last attempt?");
         return this.snapshot;
       }
       // We used to synchronize on the memcache here but we're inside a
@@ -236,10 +239,10 @@ class Memcache {
   /**
    * Return all the available columns for the given key.  The key indicates a 
    * row and timestamp, but not a column name.
-   *
-   * The returned object should map column names to byte arrays (byte[]).
    * @param key
-   * @param results
+   * @param columns Pass null for all columns else the wanted subset.
+   * @param deletes Map to accumulate deletes found.
+   * @param results Where to stick row results found.
    */
   void getFull(HStoreKey key, Set<Text> columns, Map<Text, Long> deletes, 
     Map<Text, Cell> results) {
@@ -565,7 +568,7 @@ class Memcache {
 
   private class MemcacheScanner extends HAbstractScanner {
     private Text currentRow;
-    private final Set<Text> columns;
+    private Set<Text> columns = null;
     
     MemcacheScanner(final long timestamp, final Text targetCols[],
       final Text firstRow)
@@ -577,7 +580,13 @@ class Memcache {
       // If we're being asked to scan explicit columns rather than all in 
       // a family or columns that match regexes, cache the sorted array of
       // columns.
-      this.columns = this.isWildcardScanner()? this.okCols.keySet(): null;
+      this.columns = null;
+      if (!isWildcardScanner()) {
+        this.columns = new HashSet<Text>();
+        for (int i = 0; i < targetCols.length; i++) {
+          this.columns.add(targetCols[i]);
+        }
+      }
     }
 
     @Override

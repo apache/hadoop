@@ -131,10 +131,6 @@ public abstract class HAbstractScanner implements InternalScanner {
         this.wildcardMatch = true;
       }
       matchers.add(matcher);
-      // TODO: Does this multipleMatchers matter any more now that scanners
-      // are done at the store level?  It might have mattered when scanners
-      // could have been done at the region level when memcache was at the
-      // region level rather than down here at store level.
       if (matchers.size() > 1) {
         this.multipleMatchers = true;
       }
