@@ -135,6 +135,9 @@ Release 0.17.0 - Unreleased
     HADOOP-3239. getFileInfo() returns null for non-existing files instead
     of throwing FileNotFoundException. (Lohit Vijayarenu via shv)
 
+    HADOOP-3266. Removed HOD changes from CHANGES.txt, as they are now inside 
+    src/contrib/hod  (Hemanth Yamijala via ddas)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)
@@ -208,9 +211,6 @@ Release 0.17.0 - Unreleased
     HADOOP-2981.  Update README.txt to reflect the upcoming use of
     cryptography. (omalley)
 
-    HADOOP-2775.  Adds unit test framework for HOD. 
-    (Vinod Kumar Vavilapalli via ddas).
-
     HADOOP-2804.  Add support to publish CHANGES.txt as HTML when running
     the Ant 'docs' target. (nigel)
 
@@ -224,19 +224,10 @@ Release 0.17.0 - Unreleased
     HADOOP-2239. Add HsftpFileSystem to permit transferring files over ssl.
     (cdouglas)
 
-    HADOOP-2848. [HOD]hod -o list and deallocate works even after deleting
-    the cluster directory. (Hemanth Yamijala via ddas)
-
-    HADOOP-2899. [HOD] Cleans up hdfs:///mapredsystem directory after
-    deallocation. (Hemanth Yamijala via ddas) 
-
     HADOOP-2886.  Track individual RPC metrics.
     (girish vaitheeswaran via dhruba)
 
     HADOOP-2373. Improvement in safe-mode reporting. (shv)
-
-    HADOOP-2796. Enables distinguishing exit codes from user code vis-a-vis
-    HOD's exit code. (Hemanth Yamijala via ddas)
 
     HADOOP-3091. Modify FsShell command -put to accept multiple sources.
     (Lohit Vijaya Renu via cdouglas)
@@ -454,13 +445,6 @@ Release 0.17.0 - Unreleased
     HADOOP-2806. Fixes a streaming document.
     (Amareshwari Sriramadasu via ddas)
 
-    HADOOP-2924. Fixes an address problem to do with TaskTracker binding 
-    to an address. (Vinod Kumar Vavilapalli via ddas)
-
-    HADOOP-2970. Fixes a problem to do with Wrong class definition for 
-    hodlib/Hod/hod.py for Python < 2.5.1.
-    (Vinod Kumar Vavilapalli via ddas)
-
     HADOOP-3008. SocketIOWithTimeout throws InterruptedIOException if the
     thread is interrupted while it is waiting. (rangadi)
     
@@ -475,12 +459,6 @@ Release 0.17.0 - Unreleased
 
     HADOOP-3036. Fix findbugs warnings in UpgradeUtilities. (Konstantin
     Shvachko via cdouglas)
-
-    HADOOP-2783. Fixes a problem to do with import in 
-    hod/hodlib/Common/xmlrpc.py. (Vinod Kumar Vavilapalli via ddas) 
-
-    HADOOP-2936. Fixes HOD in a way that it generates hdfs://host:port on the
-    client side configs. (Vinod Kumar Vavilapalli via ddas)
 
     HADOOP-3025. ChecksumFileSystem supports the delete method with 
     the recursive flag. (Mahadev Konar via dhruba)
@@ -500,9 +478,6 @@ Release 0.17.0 - Unreleased
     HADOOP-3086. Adds the testcase missed during commit of hadoop-3040.
     (Amareshwari Sriramadasu via ddas)
 
-    HADOOP-2983. [HOD] Fixes the problem - local_fqdn() returns None when 
-    gethostbyname_ex doesnt return any FQDNs. (Craig Macdonald via ddas)
-
     HADOOP-3046. Fix the raw comparators for Text and BytesWritables
     to use the provided length rather than recompute it. (omalley)
 
@@ -517,9 +492,6 @@ Release 0.17.0 - Unreleased
 
     HADOOP-3087. Fixes a problem to do with refreshing of loadHistory.jsp.
     (Amareshwari Sriramadasu via ddas)
-
-    HADOOP-2982. Fixes a problem in the way HOD looks for free nodes.
-    (Hemanth Yamijala via ddas)
 
     HADOOP-3065. Better logging message if the rack location of a datanode
     cannot be determined.  (Devaraj Das via dhruba)
@@ -716,9 +688,6 @@ Release 0.16.2 - 2008-04-02
 
     HADOOP-3107. Fix NPE when fsck invokes getListings. (dhruba)
 
-    HADOOP-3103. [HOD] Hadoop.tmp.dir should not be set to cluster 
-    directory. (Vinod Kumar Vavilapalli via ddas).
-
     HADOOP-3104. Limit MultithreadedMapRunner to have a fixed length queue
     between the RecordReader and the map threads. (Alejandro Abdelnur via
     omalley)
@@ -733,9 +702,6 @@ Release 0.16.1 - 2008-03-13
 
   INCOMPATIBLE CHANGES
 
-    HADOOP-2861. Improve the user interface for the HOD commands. 
-    Command line structure has changed. (Hemanth Yamijala via nigel)
-
     HADOOP-2869. Deprecate SequenceFile.setCompressionType in favor of
     SequenceFile.createWriter, SequenceFileOutputFormat.setCompressionType,
     and JobConf.setMapOutputCompressionType. (Arun C Murthy via cdouglas)
@@ -746,12 +712,6 @@ Release 0.16.1 - 2008-03-13
 
     HADOOP-2371. User guide for file permissions in HDFS.
     (Robert Chansler via rangadi)
-
-    HADOOP-2730. HOD documentation update.
-    (Vinod Kumar Vavilapalli via ddas)
-
-    HADOOP-2911. Make the information printed by the HOD allocate and
-    info commands less verbose and clearer. (Vinod Kumar via nigel)
 
     HADOOP-3098. Allow more characters in user and group names while
     using -chown and -chgrp commands. (rangadi)
@@ -813,9 +773,6 @@ Release 0.16.1 - 2008-03-13
     HADOOP-2840. Fix gridmix scripts to correctly invoke the java sort through
     the proper jar. (Mukund Madhugiri via cdouglas)
 
-    HADOOP-2766. Enables setting of HADOOP_OPTS env variable for the hadoop
-    daemons through HOD. (Vinod Kumar Vavilapalli via ddas)
-
     HADOOP-2769.  TestNNThroughputBnechmark should not use a fixed port for
     the namenode http port. (omalley)
 
@@ -837,12 +794,6 @@ Release 0.16.1 - 2008-03-13
     HADOOP-2923.  Add SequenceFileAsBinaryInputFormat, which was
     missed in the commit for HADOOP-2603. (cdouglas via omalley)
 
-    HADOOP-2847.  Ensure idle cluster cleanup works even if the JobTracker
-    becomes unresponsive to RPC calls. (Hemanth Yamijala via nigel)
-
-    HADOOP-2809.  Fix HOD syslog config syslog-address so that it works.
-    (Hemanth Yamijala via nigel)
-
     HADOOP-2931. IOException thrown by DFSOutputStream had wrong stack
     trace in some cases. (Michael Bieniosek via rangadi)
 
@@ -850,10 +801,6 @@ Release 0.16.1 - 2008-03-13
     The write timeout is back to what it was on 0.15 release. Also, the
     datnodes flushes the block file buffered output stream before
     sending a positive ack for the packet back to the client. (dhruba)
-
-    HADOOP-2925. Fix HOD to create the mapred system directory using a 
-    naming convention that will avoid clashes in multi-user shared 
-    cluster scenario. (Hemanth Yamijala via nigel)
 
     HADOOP-2756. NPE in DFSClient while closing DFSOutputStreams 
     under load. (rangadi)
@@ -971,9 +918,6 @@ Release 0.16.0 - 2008-02-07
 
     HADOOP-2085.  A library to support map-side joins of consistently 
     partitioned and sorted data sets. (Chris Douglas via omalley)
-
-    HADOOP-1301.  Hadoop-On-Demand (HOD): resource management 
-    provisioning for Hadoop. (Hemanth Yamijala via nigel)
 
     HADOOP-2336. Shell commands to modify file permissions. (rangadi)
 
@@ -1489,9 +1433,6 @@ Release 0.16.0 - 2008-02-07
     HADOOP-2576. Namenode performance degradation over time triggered by
     large heartbeat interval. (Raghu Angadi)
 
-    HADOOP-2720. Jumbo bug fix patch to HOD.  Final sync of Apache SVN with
-    internal Yahoo SVN.  (Hemanth Yamijala via nigel)
-
     HADOOP-2713. TestDatanodeDeath failed on windows because the replication
     request was timing out. (dhruba)
 
@@ -1512,9 +1453,6 @@ Release 0.16.0 - 2008-02-07
     HADOOP-2404. Fix backwards compatability with hadoop-0.15 configuration
     files that was broken by HADOOP-2185. (omalley)
 
-    HADOOP-2740. Fix HOD to work with the configuration variables changed in
-    HADOOP-2404. (Hemanth Yamijala via omalley)
-    
     HADOOP-2755. Fix fsck performance degradation because of permissions 
     issue.  (Tsz Wo (Nicholas), SZE via dhruba)
 
