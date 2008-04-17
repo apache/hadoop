@@ -1693,7 +1693,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     if (fs == null) {
       throw new IllegalStateException("FileSystem object not available yet");
     }
-    return fs.getName();
+    return fs.getUri().toString();
   }
 
 
