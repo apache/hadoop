@@ -368,7 +368,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
   }
 
   public String getFilesystemName() throws IOException {
-    return fs.getName();
+    return fs.getUri().toString();
   }
   
   public ClusterStatus getClusterStatus() {
