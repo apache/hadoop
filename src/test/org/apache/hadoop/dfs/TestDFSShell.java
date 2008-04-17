@@ -404,8 +404,7 @@ public class TestDFSShell extends TestCase {
       out.reset();
       argv = new String[1];
       argv[0] = "-du";
-      srcFs.mkdirs(new Path("/user/"+ 
-          System.getProperty("user.name")));
+      srcFs.mkdirs(srcFs.getHomeDirectory());
       ret = ToolRunner.run(shell, argv);
       returned = out.toString();
       assertTrue(" no error ", (ret == 0));

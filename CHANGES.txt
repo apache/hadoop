@@ -610,6 +610,9 @@ Release 0.17.0 - Unreleased
     HADOOP-3251. Fixes getFilesystemName in JobTracker and LocalJobRunner to
     use FileSystem.getUri instead of FileSystem.getName. (Arun Murthy via ddas)
 
+    HADOOP-3237. Fixes TestDFSShell.testErrOutPut on Windows platform.
+    (Mahadev Konar via ddas)
+
 Release 0.16.3 - 2008-04-16
 
   BUG FIXES
