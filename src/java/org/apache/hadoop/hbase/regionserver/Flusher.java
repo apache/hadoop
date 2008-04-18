@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.TimeUnit;
 import java.util.HashSet;
 import java.util.Set;
@@ -48,7 +49,7 @@ class Flusher extends Thread implements CacheFlushListener {
   private final long threadWakeFrequency;
   private final long optionalFlushPeriod;
   private final HRegionServer server;
-  private final Integer lock = new Integer(0);
+  private final ReentrantLock lock = new ReentrantLock();
   private final Integer memcacheSizeLock = new Integer(0);  
   private long lastOptionalCheck = System.currentTimeMillis();
 
@@ -84,7 +85,10 @@ class Flusher extends Thread implements CacheFlushListener {
       try {
         enqueueOptionalFlushRegions();
         r = flushQueue.poll(threadWakeFrequency, TimeUnit.MILLISECONDS);
-        if (!flushImmediately(r)) {
+        if (r == null) {
+          continue;
+        }
+        if (!flushRegion(r, false)) {
           break;
         }
       } catch (InterruptedException ex) {
@@ -118,49 +122,72 @@ class Flusher extends Thread implements CacheFlushListener {
   /**
    * Only interrupt once it's done with a run through the work loop.
    */ 
-  void interruptPolitely() {
-    synchronized (lock) {
-      interrupt();
+  void interruptIfNecessary() {
+    if (lock.tryLock()) {
+      this.interrupt();
     }
   }
   
   /**
    * Flush a region right away, while respecting concurrency with the async
    * flushing that is always going on.
+   * 
+   * @param region the region to be flushed
+   * @param removeFromQueue true if the region needs to be removed from the
+   * flush queue. False if called from the main run loop and true if called from
+   * flushSomeRegions to relieve memory pressure from the region server.
+   * 
+   * <p>In the main run loop, regions have already been removed from the flush
+   * queue, and if this method is called for the relief of memory pressure,
+   * this may not be necessarily true. We want to avoid trying to remove 
+   * region from the queue because if it has already been removed, it reqires a
+   * sequential scan of the queue to determine that it is not in the queue.
+   * 
+   * <p>If called from flushSomeRegions, the region may be in the queue but
+   * it may have been determined that the region had a significant amout of 
+   * memory in use and needed to be flushed to relieve memory pressure. In this
+   * case, its flush may preempt the pending request in the queue, and if so,
+   * it needs to be removed from the queue to avoid flushing the region multiple
+   * times.
+   * 
+   * @return true if the region was successfully flushed, false otherwise. If 
+   * false, there will be accompanying log messages explaining why the log was
+   * not flushed.
    */
-  private boolean flushImmediately(HRegion region) {
-    try {
-      if (region != null) {
-        synchronized (regionsInQueue) {
-          // take the region out of the set and the queue, if it happens to be 
-          // in the queue. this didn't used to be a constraint, but now that
-          // HBASE-512 is in play, we need to try and limit double-flushing
-          // regions.
-          regionsInQueue.remove(region);
-          flushQueue.remove(region);
-        }
-        synchronized (lock) { // Don't interrupt while we're working
-          if (region.flushcache()) {
-            server.compactSplitThread.compactionRequested(region);
-          }
-        }
-      }      
-    } catch (DroppedSnapshotException ex) {
-      // Cache flush can fail in a few places.  If it fails in a critical
-      // section, we get a DroppedSnapshotException and a replay of hlog
-      // is required. Currently the only way to do this is a restart of
-      // the server.
-      LOG.fatal("Replay of hlog required. Forcing server restart", ex);
-      if (!server.checkFileSystem()) {
-        return false;
+  private boolean flushRegion(HRegion region, boolean removeFromQueue) {
+    synchronized (regionsInQueue) {
+      // take the region out of the set. If removeFromQueue is true, remove it
+      // from the queue too if it is there. This didn't used to be a constraint,
+      // but now that HBASE-512 is in play, we need to try and limit
+      // double-flushing of regions.
+      if (regionsInQueue.remove(region) && removeFromQueue) {
+        flushQueue.remove(region);
       }
-      server.stop();
-    } catch (IOException ex) {
-      LOG.error("Cache flush failed" +
-        (region != null ? (" for region " + region.getRegionName()) : ""),
-        RemoteExceptionHandler.checkIOException(ex));
-      if (!server.checkFileSystem()) {
+      lock.lock();
+      try {
+        if (region.flushcache()) {
+          server.compactSplitThread.compactionRequested(region);
+        }
+      } catch (DroppedSnapshotException ex) {
+        // Cache flush can fail in a few places.  If it fails in a critical
+        // section, we get a DroppedSnapshotException and a replay of hlog
+        // is required. Currently the only way to do this is a restart of
+        // the server.
+        LOG.fatal("Replay of hlog required. Forcing server restart", ex);
+        if (!server.checkFileSystem()) {
+          return false;
+        }
+        server.stop();
         return false;
+      } catch (IOException ex) {
+        LOG.error("Cache flush failed" +
+            (region != null ? (" for region " + region.getRegionName()) : ""),
+            RemoteExceptionHandler.checkIOException(ex));
+        if (!server.checkFileSystem()) {
+          return false;
+        }
+      } finally {
+        lock.unlock();
       }
     }
     return true;
@@ -223,7 +250,10 @@ class Flusher extends Thread implements CacheFlushListener {
       // flush the region with the biggest memcache
       HRegion biggestMemcacheRegion = 
         sortedRegions.remove(sortedRegions.firstKey());
-      flushImmediately(biggestMemcacheRegion);
+      if (!flushRegion(biggestMemcacheRegion, true)) {
+        // Something bad happened - give up.
+        break;
+      }
     }
   }
   

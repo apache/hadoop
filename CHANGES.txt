@@ -10,7 +10,8 @@ Hbase Change Log
    HBASE-582   HBase 554 forgot to clear results on each iteration caused by a filter
                (Clint Morgan via Stack)
    HBASE-532   Odd interaction between HRegion.get, HRegion.deleteAll and compactions
-
+   HBASE-10    HRegionServer hangs upon exit due to DFSClient Exception
+   
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
 

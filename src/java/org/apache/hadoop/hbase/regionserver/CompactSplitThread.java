@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.StringUtils;
@@ -48,7 +49,7 @@ implements RegionUnavailableListener, HConstants {
   private HTable meta = null;
   private volatile long startTime;
   private final long frequency;
-  private final Integer lock = new Integer(0);
+  private final ReentrantLock lock = new ReentrantLock();
   
   private final HRegionServer server;
   private final HBaseConfiguration conf;
@@ -79,12 +80,15 @@ implements RegionUnavailableListener, HConstants {
           synchronized (regionsInQueue) {
             regionsInQueue.remove(r);
           }
-          synchronized (lock) {
+          lock.lock();
+          try {
             // Don't interrupt us while we are working
             Text midKey = r.compactStores();
             if (midKey != null) {
               split(r, midKey);
             }
+          } finally {
+            lock.unlock();
           }
         }
       } catch (InterruptedException ex) {
@@ -218,9 +222,9 @@ implements RegionUnavailableListener, HConstants {
   /**
    * Only interrupt once it's done with a run through the work loop.
    */ 
-  void interruptPolitely() {
-    synchronized (lock) {
-      interrupt();
+  void interruptIfNecessary() {
+    if (lock.tryLock()) {
+      this.interrupt();
     }
   }
 }

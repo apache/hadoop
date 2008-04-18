@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Member;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
@@ -47,7 +46,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.dfs.AlreadyBeingCreatedException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -190,7 +188,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // eclipse warning when accessed by inner classes
   protected HLog log;
   final LogRoller logRoller;
-  final Integer logRollerLock = new Integer(0);
   
   // flag set after we're done setting up server threads (used for testing)
   protected volatile boolean isOnline;
@@ -323,22 +320,20 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 // this message.
                 if (checkFileSystem()) {
                   closeAllRegions();
-                  synchronized (logRollerLock) {
-                    try {
-                      log.closeAndDelete();
-                    } catch (Exception e) {
-                      LOG.error("error closing and deleting HLog", e);
-                    }
-                    try {
-                      serverInfo.setStartCode(System.currentTimeMillis());
-                      log = setupHLog();
-                    } catch (IOException e) {
-                      this.abortRequested = true;
-                      this.stopRequested.set(true);
-                      e = RemoteExceptionHandler.checkIOException(e); 
-                      LOG.fatal("error restarting server", e);
-                      break;
-                    }
+                  try {
+                    log.closeAndDelete();
+                  } catch (Exception e) {
+                    LOG.error("error closing and deleting HLog", e);
+                  }
+                  try {
+                    serverInfo.setStartCode(System.currentTimeMillis());
+                    log = setupHLog();
+                  } catch (IOException e) {
+                    this.abortRequested = true;
+                    this.stopRequested.set(true);
+                    e = RemoteExceptionHandler.checkIOException(e); 
+                    LOG.fatal("error restarting server", e);
+                    break;
                   }
                   reportForDuty(sleeper);
                   restart = true;
@@ -422,11 +417,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive?  If OOME could have exited already
-    cacheFlusher.interruptPolitely();
-    compactSplitThread.interruptPolitely();
-    synchronized (logRollerLock) {
-      this.logRoller.interrupt();
-    }
+    cacheFlusher.interruptIfNecessary();
+    compactSplitThread.interruptIfNecessary();
+    this.logRoller.interruptIfNecessary();
 
     if (abortRequested) {
       if (this.fsOk) {
@@ -470,7 +463,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       LOG.info("stopping server at: " +
         serverInfo.getServerAddress().toString());
     }
-
     join();
     LOG.info(Thread.currentThread().getName() + " exiting");
   }
