@@ -4355,7 +4355,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     String overwrite;
     String replaceBy;
 
-    DFSFileInfo dinfo = getFileInfo(dst);
+    DFSFileInfo dinfo = dir.getFileInfo(dst);
     if (dinfo.isDir()) {
       Path spath = new Path(src);
       overwrite = spath.getParent().toString() + Path.SEPARATOR;

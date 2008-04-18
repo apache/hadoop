@@ -47,6 +47,9 @@ Trunk (unreleased changes)
     HADOOP-3176.  Change lease record when a open-for-write-file 
     gets renamed. (dhruba)
 
+    HADOOP-3269.  Fix a case when namenode fails to restart
+    while processing a lease record.  ((Tsz Wo (Nicholas), SZE via dhruba)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
