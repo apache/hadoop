@@ -124,6 +124,20 @@ public class Migrate extends Configured implements Tool {
       return -1;
     }
 
+    // Validate root directory path
+    
+    Path rd = new Path(conf.get(HConstants.HBASE_DIR));
+    try {
+      // Validate root directory path
+      FSUtils.validateRootPath(rd);
+    } catch (IOException e) {
+      LOG.fatal("Not starting migration because the root directory path '" +
+          rd.toString() + "' is not valid. Check the setting of the" +
+          " configuration parameter '" + HConstants.HBASE_DIR + "'", e);
+      return -1;
+    }
+    this.conf.set("fs.default.name", rd.toString());
+
     try {
       // Verify file system is up.
       fs = FileSystem.get(conf);                        // get DFS handle
@@ -315,13 +329,13 @@ public class Migrate extends Configured implements Tool {
       LOG.info(message + " ignoring");
     } else if (action == ACTION.DELETE) {
       LOG.info(message + " deleting");
-      fs.delete(p);
+      fs.delete(p, true);
     } else {
       // ACTION.PROMPT
       String response = prompt(message + " delete? [y/n]");
       if (response.startsWith("Y") || response.startsWith("y")) {
         LOG.info(message + " deleting");
-        fs.delete(p);
+        fs.delete(p, true);
       }
     }
   }
