@@ -100,6 +100,9 @@ fi
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
 
+# CLASSPATH initially contains $HBASE_CONF_DIR
+CLASSPATH="${CLASSPATH}:${HBASE_CONF_DIR}"
+
 # Add libs to CLASSPATH
 # Do this early so hadoop jar comes before hbase classes; otherwise
 # complaint because way webapps are loaded, expectation is that
@@ -109,8 +112,6 @@ for f in $HBASE_HOME/lib/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
-# CLASSPATH initially contains $HBASE_CONF_DIR
-CLASSPATH="${CLASSPATH}:${HBASE_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
 # for developers, add hbase classes to CLASSPATH
