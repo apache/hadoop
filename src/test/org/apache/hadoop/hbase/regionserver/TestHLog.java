@@ -118,7 +118,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       long logSeqId = log.startCacheFlush();
       log.completeCacheFlush(regionName, tableName, logSeqId);
       log.close();
-      Path filename = log.computeFilename(log.filenum);
+      Path filename = log.computeFilename(log.getFilenum());
       log = null;
       // Now open a reader on the log and assert append worked.
       reader = new SequenceFile.Reader(fs, filename, conf);

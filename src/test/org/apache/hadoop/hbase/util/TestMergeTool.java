@@ -20,25 +20,25 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.util.ToolRunner;
-
-import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.HLog;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.regionserver.HLog;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.util.ToolRunner;
 
 /** Test stand alone merge tool that can merge arbitrary regions */
 public class TestMergeTool extends HBaseTestCase {
@@ -163,8 +163,53 @@ public class TestMergeTool extends HBaseTestCase {
     super.tearDown();
     StaticTestEnvironment.shutdownDfs(dfsCluster);
   }
+  
+  /*
+   * @param msg Message that describes this merge
+   * @param regionName1
+   * @param regionName2
+   * @param log Log to use merging.
+   * @param upperbound Verifying, how high up in this.rows to go.
+   * @return Merged region.
+   * @throws Exception
+   */
+  private HRegion mergeAndVerify(final String msg, final String regionName1,
+    final String regionName2, final HLog log, final int upperbound)
+  throws Exception {
+    Merge merger = new Merge(this.conf);
+    LOG.info(msg);
+    int errCode = ToolRunner.run(merger,
+      new String[] {this.desc.getName().toString(), regionName1, regionName2}
+    );
+    assertTrue("'" + msg + "' failed", errCode == 0);
+    HRegionInfo mergedInfo = merger.getMergedHRegionInfo();
+  
+    // Now verify that we can read all the rows from regions 0, 1
+    // in the new merged region.
+    HRegion merged =
+      HRegion.openHRegion(mergedInfo, this.rootdir, log, this.conf);
+    verifyMerge(merged, upperbound);
+    merged.close();
+    LOG.info("Verified " + msg);
+    return merged;
+  }
+  
+  private void verifyMerge(final HRegion merged, final int upperbound)
+  throws IOException {
+    for (int i = 0; i < upperbound; i++) {
+      for (int j = 0; j < rows[i].length; j++) {
+        byte[] bytes = merged.get(rows[i][j], COLUMN_NAME).getValue();
+        assertNotNull(rows[i][j].toString(), bytes);
+        Text value = new Text(bytes);
+        assertTrue(value.equals(rows[i][j]));
+      }
+    }
+  }
 
-  /** @throws Exception */
+  /**
+   * Test merge tool.
+   * @throws Exception
+   */
   public void testMergeTool() throws Exception {
     // First verify we can read the rows from the source regions and that they
     // contain the right data.
@@ -181,132 +226,30 @@ public class TestMergeTool extends HBaseTestCase {
     }
 
     // Create a log that we can reuse when we need to open regions
-    
-    HLog log = new HLog(this.fs, 
-        new Path("/tmp", HConstants.HREGION_LOGDIR_NAME + "_" +
-            System.currentTimeMillis()
-        ),
-        this.conf, null
-    );
+    Path logPath = new Path("/tmp", HConstants.HREGION_LOGDIR_NAME + "_" +
+      System.currentTimeMillis());
+    LOG.info("Creating log " + logPath.toString());
+    HLog log = new HLog(this.fs, logPath, this.conf, null);
     try {
-      /*
-       * Merge Region 0 and Region 1
-       */
-      LOG.info("merging regions 0 and 1");
-      Merge merger = new Merge(this.conf);
-      ToolRunner.run(merger,
-          new String[] {
-          this.desc.getName().toString(),
-          this.sourceRegions[0].getRegionName().toString(),
-          this.sourceRegions[1].getRegionName().toString()
-      }
-      );
-      HRegionInfo mergedInfo = merger.getMergedHRegionInfo();
-    
-      // Now verify that we can read all the rows from regions 0, 1
-      // in the new merged region.
-      HRegion merged =
-        HRegion.openHRegion(mergedInfo, this.rootdir, log, this.conf);
-      
-      for (int i = 0; i < 2 ; i++) {
-        for (int j = 0; j < rows[i].length; j++) {
-          byte[] bytes = merged.get(rows[i][j], COLUMN_NAME).getValue();
-          assertNotNull(rows[i][j].toString(), bytes);
-          Text value = new Text(bytes);
-          assertTrue(value.equals(rows[i][j]));
-        }
-      }
-      merged.close();
-      LOG.info("verified merge of regions 0 and 1");
-      /*
-       * Merge the result of merging regions 0 and 1 with region 2
-       */
-      LOG.info("merging regions 0+1 and 2");
-      merger = new Merge(this.conf);
-      ToolRunner.run(merger,
-          new String[] {
-            this.desc.getName().toString(),
-            mergedInfo.getRegionName().toString(),
-            this.sourceRegions[2].getRegionName().toString()
-          }
-      );
-      mergedInfo = merger.getMergedHRegionInfo();
+       // Merge Region 0 and Region 1
+      HRegion merged = mergeAndVerify("merging regions 0 and 1",
+        this.sourceRegions[0].getRegionName().toString(),
+        this.sourceRegions[1].getRegionName().toString(), log, 2);
 
-      // Now verify that we can read all the rows from regions 0, 1 and 2
-      // in the new merged region.
-      
-      merged = HRegion.openHRegion(mergedInfo, this.rootdir, log, this.conf);
+      // Merge the result of merging regions 0 and 1 with region 2
+      merged = mergeAndVerify("merging regions 0+1 and 2",
+        merged.getRegionInfo().getRegionName().toString(),
+        this.sourceRegions[2].getRegionName().toString(), log, 3);
 
-      for (int i = 0; i < 3 ; i++) {
-        for (int j = 0; j < rows[i].length; j++) {
-          Cell cell = merged.get(rows[i][j], COLUMN_NAME);
-          assertNotNull(cell);
-          byte[] bytes = cell.getValue();
-          assertNotNull(bytes);
-          Text value = new Text(bytes);
-          assertTrue(value.equals(rows[i][j]));
-        }
-      }
-      merged.close();
-      LOG.info("verified merge of regions 0+1 and 2");
-      /*
-       * Merge the result of merging regions 0, 1 and 2 with region 3
-       */
-      LOG.info("merging regions 0+1+2 and 3");
-      merger = new Merge(this.conf);
-      ToolRunner.run(merger,
-          new String[] {
-            this.desc.getName().toString(),
-            mergedInfo.getRegionName().toString(),
-            this.sourceRegions[3].getRegionName().toString()
-          }
-      );
-      mergedInfo = merger.getMergedHRegionInfo();
+      // Merge the result of merging regions 0, 1 and 2 with region 3
+      merged = mergeAndVerify("merging regions 0+1+2 and 3",
+        merged.getRegionInfo().getRegionName().toString(),
+        this.sourceRegions[3].getRegionName().toString(), log, 4);
       
-      // Now verify that we can read all the rows from regions 0, 1, 2 and 3
-      // in the new merged region.
-      
-      merged = HRegion.openHRegion(mergedInfo, this.rootdir, log, this.conf);
-      
-      for (int i = 0; i < 4 ; i++) {
-        for (int j = 0; j < rows[i].length; j++) {
-          byte[] bytes = merged.get(rows[i][j], COLUMN_NAME).getValue();
-          assertNotNull(bytes);
-          Text value = new Text(bytes);
-          assertTrue(value.equals(rows[i][j]));
-        }
-      }
-      merged.close();
-      LOG.info("verified merge of regions 0+1+2 and 3");
-      /*
-       * Merge the result of merging regions 0, 1, 2 and 3 with region 4
-       */
-      LOG.info("merging regions 0+1+2+3 and 4");
-      merger = new Merge(this.conf);
-      ToolRunner.run(merger,
-          new String[] {
-            this.desc.getName().toString(),
-            mergedInfo.getRegionName().toString(),
-            this.sourceRegions[4].getRegionName().toString()
-          }
-      );
-      mergedInfo = merger.getMergedHRegionInfo();
-      
-      // Now verify that we can read all the rows from the new merged region.
-
-      merged = HRegion.openHRegion(mergedInfo, this.rootdir, log, this.conf);
-      
-      for (int i = 0; i < rows.length ; i++) {
-        for (int j = 0; j < rows[i].length; j++) {
-          byte[] bytes = merged.get(rows[i][j], COLUMN_NAME).getValue();
-          assertNotNull(bytes);
-          Text value = new Text(bytes);
-          assertTrue(value.equals(rows[i][j]));
-        }
-      }
-      merged.close();
-      LOG.info("verified merge of regions 0+1+2+3 and 4");
-      
+      // Merge the result of merging regions 0, 1, 2 and 3 with region 4
+      merged = mergeAndVerify("merging regions 0+1+2+3 and 4",
+        merged.getRegionInfo().getRegionName().toString(),
+        this.sourceRegions[4].getRegionName().toString(), log, rows.length);
     } finally {
       log.closeAndDelete();
     }

@@ -22,28 +22,25 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
-
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.io.Text;
 
 /**
  * Contains utility methods for manipulating HBase meta tables
@@ -148,7 +145,7 @@ public class MetaUtils {
     HRegion meta = metaRegions.get(metaInfo.getRegionName());
     if (meta == null) {
       meta = openMetaRegion(metaInfo);
-      metaRegions.put(metaInfo.getRegionName(), meta);
+      this.metaRegions.put(metaInfo.getRegionName(), meta);
     }
     return meta;
   }
@@ -246,6 +243,9 @@ public class MetaUtils {
   /**
    * Scans a meta region. For every region found, calls the listener with
    * the HRegionInfo of the region.
+   * TODO: Use Visitor rather than Listener pattern.  Allow multiple Visitors.
+   * Use this everywhere we scan meta regions: e.g. in metascanners, in close
+   * handling, etc.  Have it pass in the whole row, not just HRegionInfo.
    * 
    * @param metaRegionInfo HRegionInfo for meta region
    * @param listener method to be called for each meta region found

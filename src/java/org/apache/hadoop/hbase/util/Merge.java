@@ -107,7 +107,6 @@ public class Merge extends Configured implements Tool {
         mergeTwoRegions();
       }
       return 0;
-
     } catch (Exception e) {
       LOG.fatal("Merge failed", e);
       utils.scanMetaRegion(HRegionInfo.firstMetaRegionInfo,
@@ -190,10 +189,12 @@ public class Merge extends Configured implements Tool {
    * Merges two regions from a user table.
    */
   private void mergeTwoRegions() throws IOException {
+    LOG.info("Merging regions " + this.region1.toString() + " and " +
+      this.region2.toString() + " in table " + this.tableName.toString());
     // Scan the root region for all the meta regions that contain the regions
     // we're merging.
     MetaScannerListener listener = new MetaScannerListener(region1, region2);
-    utils.scanRootRegion(listener);
+    this.utils.scanRootRegion(listener);
     HRegionInfo meta1 = listener.getMeta1();
     if (meta1 == null) {
       throw new IOException("Could not find meta region for " + region1);
@@ -202,11 +203,15 @@ public class Merge extends Configured implements Tool {
     if (meta2 == null) {
       throw new IOException("Could not find meta region for " + region2);
     }
-
-    HRegion metaRegion1 = utils.getMetaRegion(meta1);
+    LOG.info("Found meta for region1 " + meta1.getRegionName() +
+      ", meta for region2 " + meta2.getRegionName());
+    HRegion metaRegion1 = this.utils.getMetaRegion(meta1);
     HRegionInfo info1 = Writables.getHRegionInfo(
-        metaRegion1.get(region1, HConstants.COL_REGIONINFO));
-
+      metaRegion1.get(region1, HConstants.COL_REGIONINFO));
+    if (info1== null) {
+      throw new NullPointerException("info1 is null using key " + region1 +
+        " in " + meta1);
+    }
 
     HRegion metaRegion2 = null;
     if (meta1.getRegionName().equals(meta2.getRegionName())) {
@@ -215,8 +220,10 @@ public class Merge extends Configured implements Tool {
       metaRegion2 = utils.getMetaRegion(meta2);
     }
     HRegionInfo info2 = Writables.getHRegionInfo(
-        metaRegion2.get(region2, HConstants.COL_REGIONINFO));
-
+      metaRegion2.get(region2, HConstants.COL_REGIONINFO));
+    if (info2 == null) {
+      throw new NullPointerException("info2 is null using key " + meta2);
+    }
     HRegion merged = merge(info1, metaRegion1, info2, metaRegion2);
 
     // Now find the meta region which will contain the newly merged region
@@ -250,7 +257,8 @@ public class Merge extends Configured implements Tool {
    * Returns HRegion object for newly merged region
    */
   private HRegion merge(HRegionInfo info1, HRegion meta1, HRegionInfo info2,
-      HRegion meta2) throws IOException {
+      HRegion meta2)
+  throws IOException {
     if (info1 == null) {
       throw new IOException("Could not find " + region1 + " in " +
           meta1.getRegionName());
@@ -261,21 +269,19 @@ public class Merge extends Configured implements Tool {
     }
     HRegion merged = null;
     HLog log = utils.getLog();
-    HRegion region1 =
-      HRegion.openHRegion(info1, this.rootdir, log, this.conf);
+    HRegion r1 = HRegion.openHRegion(info1, this.rootdir, log, this.conf);
     try {
-      HRegion region2 =
-        HRegion.openHRegion(info2, this.rootdir, log, this.conf);
+      HRegion r2 = HRegion.openHRegion(info2, this.rootdir, log, this.conf);
       try {
-        merged = HRegion.merge(region1, region2);
+        merged = HRegion.merge(r1, r2);
       } finally {
-        if (!region2.isClosed()) {
-          region2.close();
+        if (!r2.isClosed()) {
+          r2.close();
         }
       }
     } finally {
-      if (!region1.isClosed()) {
-        region1.close();
+      if (!r1.isClosed()) {
+        r1.close();
       }
     }
     
@@ -330,6 +336,7 @@ public class Merge extends Configured implements Tool {
     region1 = new Text(remainingArgs[1]);
     region2 = new Text(remainingArgs[2]);
     int status = 0;
+    // Why we duplicate code here? St.Ack
     if (WritableComparator.compareBytes(
         tableName.getBytes(), 0, tableName.getLength(),
         region1.getBytes(), 0, tableName.getLength()) != 0) {
@@ -369,5 +376,4 @@ public class Merge extends Configured implements Tool {
     }
     System.exit(status);
   }
-
 }

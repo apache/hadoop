@@ -46,7 +46,9 @@ public class FSUtils {
   /**
    * Not instantiable
    */
-  private FSUtils() {}
+  private FSUtils() {
+    super();
+  }
   
   /**
    * Checks to see if the specified file system is available
@@ -160,5 +162,19 @@ public class FSUtils {
       io.initCause(e);
       throw io;
     }
+  }
+  
+  /**
+   * Return the 'path' component of a Path.  In Hadoop, Path is an URI.  This
+   * method returns the 'path' component of a Path's URI: e.g. If a Path is
+   * <code>hdfs://example.org:9000/hbase_trunk/TestTable/compaction.dir</code>,
+   * this method returns <code>/hbase_trunk/TestTable/compaction.dir</code>.
+   * This method is useful if you want to print out a Path without qualifying
+   * Filesystem instance.
+   * @param p Filesystem Path whose 'path' component we are to return.
+   * @return Path portion of the Filesystem 
+   */
+  public static String getPath(Path p) {
+    return p.toUri().getPath();
   }
 }

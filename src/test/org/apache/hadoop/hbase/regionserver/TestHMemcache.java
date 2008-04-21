@@ -133,7 +133,8 @@ public class TestHMemcache extends TestCase {
   private void runSnapshot(final Memcache hmc) throws UnexpectedException {
     // Save off old state.
     int oldHistorySize = hmc.getSnapshot().size();
-    SortedMap<HStoreKey, byte[]> ss = hmc.snapshot();
+    hmc.snapshot();
+    SortedMap<HStoreKey, byte[]> ss = hmc.getSnapshot();
     // Make some assertions about what just happened.
     assertTrue("History size has not increased", oldHistorySize < ss.size());
     hmc.clearSnapshot(ss);

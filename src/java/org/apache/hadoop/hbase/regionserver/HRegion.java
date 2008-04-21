@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
@@ -75,7 +76,6 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
  * they make up all the data for the rows.  
  *
  * <p>Each HRegion has a 'startKey' and 'endKey'.
- *   
  * <p>The first is inclusive, the second is exclusive (except for
  * the final region)  The endKey of region 0 is the same as
  * startKey for region 1 (if it exists).  The startKey for the
@@ -213,8 +213,7 @@ public class HRegion implements HConstants {
       makeColumnFamilyDirs(fs, basedir, encodedRegionName, colFamily, tabledesc);
       
       // Because we compacted the source regions we should have no more than two
-      // HStoreFiles per family and there will be no reference stores
-
+      // HStoreFiles per family and there will be no reference store
       List<HStoreFile> srcFiles = es.getValue();
       if (srcFiles.size() == 2) {
         long seqA = srcFiles.get(0).loadInfo(fs);
@@ -222,8 +221,9 @@ public class HRegion implements HConstants {
         if (seqA == seqB) {
           // We can't have duplicate sequence numbers
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Adjusting sequence number of storeFile " +
-                srcFiles.get(1));
+            LOG.debug("Adjusting sequence id of storeFile " + srcFiles.get(1) +
+              " down by one; sequence id A=" + seqA + ", sequence id B=" +
+              seqB);
           }
           srcFiles.get(1).writeInfo(fs, seqB - 1);
         }
@@ -423,7 +423,11 @@ public class HRegion implements HConstants {
     this.threadWakeFrequency = conf.getLong(THREAD_WAKE_FREQUENCY, 10 * 1000);
     this.regiondir = new Path(basedir, this.regionInfo.getEncodedName());
     Path oldLogFile = new Path(regiondir, HREGION_OLDLOGFILE_NAME);
-
+    
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Opening region " + this.regionInfo.getRegionName() + "/" +
+        this.regionInfo.getEncodedName());
+    }
     this.regionCompactionDir =
       new Path(getCompactionDir(basedir), this.regionInfo.getEncodedName());
 
@@ -452,7 +456,8 @@ public class HRegion implements HConstants {
       fs.delete(oldLogFile);
     }
     
-    this.minSequenceId = maxSeqId;
+    // Add one to the current maximum sequence id so new edits are beyond.
+    this.minSequenceId = maxSeqId + 1;
     if (LOG.isDebugEnabled()) {
       LOG.debug("Next sequence id for region " + regionInfo.getRegionName() +
         " is " + this.minSequenceId);
@@ -478,7 +483,8 @@ public class HRegion implements HConstants {
     // HRegion is ready to go!
     this.writestate.compacting = false;
     this.lastFlushTime = System.currentTimeMillis();
-    LOG.info("region " + this.regionInfo.getRegionName() + " available");
+    LOG.info("region " + this.regionInfo.getRegionName() + "/" +
+      this.regionInfo.getEncodedName() + " available");
   }
 
   /**
@@ -596,7 +602,7 @@ public class HRegion implements HConstants {
         
         // Don't flush the cache if we are aborting
         if (!abort) {
-          internalFlushcache(snapshotMemcaches());
+          internalFlushcache();
         }
 
         List<HStoreFile> result = new ArrayList<HStoreFile>();
@@ -788,7 +794,7 @@ public class HRegion implements HConstants {
       // Cleanup
       boolean deleted = fs.delete(splits);    // Get rid of splits directory
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Cleaned up " + splits.toString() + " " + deleted);
+        LOG.debug("Cleaned up " + FSUtils.getPath(splits) + " " + deleted);
       }
       HRegion regions[] = new HRegion [] {regionA, regionB};
       return regions;
@@ -915,11 +921,7 @@ public class HRegion implements HConstants {
     try {
       lock.readLock().lock();                      // Prevent splits and closes
       try {
-        long startTime = -1;
-        synchronized (updateLock) {// Stop updates while we snapshot the memcaches
-          startTime = snapshotMemcaches();
-        }
-        return internalFlushcache(startTime);
+        return internalFlushcache();
       } finally {
         lock.readLock().unlock();
       }
@@ -929,33 +931,6 @@ public class HRegion implements HConstants {
         writestate.notifyAll();
       }
     }
-  }
-
-  /*
-   * It is assumed that updates are blocked for the duration of this method
-   */
-  private long snapshotMemcaches() {
-    if (this.memcacheSize.get() == 0) {
-      return -1;
-    }
-    long startTime = System.currentTimeMillis();
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("Started memcache flush for region " +
-        this.regionInfo.getRegionName() + ". Size " +
-        StringUtils.humanReadableInt(this.memcacheSize.get()));
-    }
-
-    // We reset the aggregate memcache size here so that subsequent updates
-    // will add to the unflushed size
-    this.memcacheSize.set(0L);
-    this.flushRequested = false;
-    
-    // Record latest flush time
-    this.lastFlushTime = System.currentTimeMillis();
-    for (HStore hstore: stores.values()) {
-      hstore.snapshotMemcache();
-    }
-    return startTime;
   }
 
   /**
@@ -984,45 +959,56 @@ public class HRegion implements HConstants {
    * 
    * <p> This method may block for some time.
    * 
-   * @param startTime the time the cache was snapshotted or -1 if a flush is
-   * not needed
-   * 
    * @return true if the cache was flushed
    * 
    * @throws IOException
    * @throws DroppedSnapshotException Thrown when replay of hlog is required
    * because a Snapshot was not properly persisted.
    */
-  private boolean internalFlushcache(long startTime) throws IOException {
-    if (startTime == -1) {
-      return false;
-    }
+  private boolean internalFlushcache() throws IOException {
+    final long startTime = System.currentTimeMillis();
+    
+    // Clear flush flag.
+    this.flushRequested = false;
+    
+    // Record latest flush time
+    this.lastFlushTime = startTime;
+  
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Started memcache flush for region " +
+          this.regionInfo.getRegionName() + ". Current region memcache size " +
+          StringUtils.humanReadableInt(this.memcacheSize.get()));
+      }
 
-    // We pass the log to the HMemcache, so we can lock down both
-    // simultaneously.  We only have to do this for a moment: we need the
-    // HMemcache state at the time of a known log sequence number. Since
-    // multiple HRegions may write to a single HLog, the sequence numbers may
-    // zoom past unless we lock it.
-    //
-    // When execution returns from snapshotMemcacheForLog() with a non-NULL
-    // value, the HMemcache will have a snapshot object stored that must be
-    // explicitly cleaned up using a call to deleteSnapshot() or by calling
-    // abort.
-    //
+    // Stop updates while we snapshot the memcache of all stores. We only have
+    // to do this for a moment.  Its quick.  The subsequent sequence id that
+    // goes into the HLog after we've flushed all these snapshots also goes
+    // into the info file that sits beside the flushed files.
+    synchronized (updateLock) {
+      for (HStore s: stores.values()) {
+        s.snapshot();
+      }
+    }
     long sequenceId = log.startCacheFlush();
 
     // Any failure from here on out will be catastrophic requiring server
     // restart so hlog content can be replayed and put back into the memcache.
     // Otherwise, the snapshot content while backed up in the hlog, it will not
     // be part of the current running servers state.
-
     try {
       // A.  Flush memcache to all the HStores.
       // Keep running vector of all store files that includes both old and the
       // just-made new flush store file.
-      
       for (HStore hstore: stores.values()) {
-        hstore.flushCache(sequenceId);
+        long flushed = hstore.flushCache(sequenceId);
+        // Subtract amount flushed.
+        long size = this.memcacheSize.addAndGet(-flushed);
+        if (size < 0) {
+           if (LOG.isDebugEnabled()) {
+             LOG.warn("Memcache size went negative " + size + "; resetting");
+           }
+           this.memcacheSize.set(0);
+        }
       }
     } catch (IOException e) {
       // An exception here means that the snapshot was not persisted.
@@ -1051,7 +1037,7 @@ public class HRegion implements HConstants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Finished memcache flush for region " +
           this.regionInfo.getRegionName() + " in " +
-          (System.currentTimeMillis() - startTime) + "ms, sequenceid=" +
+          (System.currentTimeMillis() - startTime) + "ms, sequence id=" +
           sequenceId);
     }
     return true;
@@ -1533,8 +1519,7 @@ public class HRegion implements HConstants {
       for (Map.Entry<HStoreKey, byte[]> e: updatesByColumn.entrySet()) {
         HStoreKey key = e.getKey();
         byte[] val = e.getValue();
-        size = this.memcacheSize.addAndGet(key.getSize() +
-            (val == null ? 0 : val.length));
+        size = this.memcacheSize.addAndGet(getEntrySize(key, val));
         stores.get(HStoreKey.extractFamily(key.getColumn())).add(key, val);
       }
       if (this.flushListener != null && !this.flushRequested &&
@@ -1544,6 +1529,19 @@ public class HRegion implements HConstants {
         this.flushRequested = true;
       }
     }
+  }
+  
+  /*
+   * Calculate size of passed key/value pair.
+   * Used here when we update region to figure what to add to this.memcacheSize
+   * Also used in Store when flushing calculating size of flush.  Both need to
+   * use same method making size calculation.
+   * @param key
+   * @param value
+   * @return Size of the passed key + value
+   */
+  static long getEntrySize(final HStoreKey key, byte [] value) {
+    return key.getSize() + (value == null ? 0 : value.length);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -1868,7 +1866,6 @@ public class HRegion implements HConstants {
       }
     }
 
-    /** {@inheritDoc} */
     public Iterator<Entry<HStoreKey, SortedMap<Text, byte[]>>> iterator() {
       throw new UnsupportedOperationException("Unimplemented serverside. " +
         "next(HStoreKey, StortedMap(...) is more efficient");
@@ -1913,10 +1910,13 @@ public class HRegion implements HConstants {
   }
   
   /**
-   * Convenience method to open a HRegion.
+   * Convenience method to open a HRegion outside of an HRegionServer context.
    * @param info Info for region to be opened.
    * @param rootDir Root directory for HBase instance
-   * @param log HLog for region to use
+   * @param log HLog for region to use. This method will call
+   * HLog#setSequenceNumber(long) passing the result of the call to
+   * HRegion#getMinSequenceId() to ensure the log id is properly kept
+   * up.  HRegionStore does this every time it opens a new region.
    * @param conf
    * @return new HRegion
    * 
@@ -1927,9 +1927,16 @@ public class HRegion implements HConstants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region: " + info);
     }
-    return new HRegion(
+    if (info == null) {
+      throw new NullPointerException("Passed region info is null");
+    }
+    HRegion r = new HRegion(
         HTableDescriptor.getTableDir(rootDir, info.getTableDesc().getName()),
         log, FileSystem.get(conf), conf, info, null, null);
+    if (log != null) {
+      log.setSequenceNumber(r.getMinSequenceId());
+    }
+    return r;
   }
   
   /**

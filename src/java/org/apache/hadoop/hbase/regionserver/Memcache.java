@@ -23,7 +23,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.rmi.UnexpectedException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -77,28 +76,28 @@ class Memcache {
   }
 
   /**
-   * Creates a snapshot of the current Memcache or returns existing snapshot.
-   * Must be followed by a call to {@link #clearSnapshot(SortedMap)}
-   * @return Snapshot. Never null.  May have no entries.
+   * Creates a snapshot of the current Memcache.
+   * Snapshot must be cleared by call to {@link #clearSnapshot(SortedMap)}
+   * To get the snapshot made by this method, use
+   * {@link #getSnapshot}.
    */
-  SortedMap<HStoreKey, byte[]> snapshot() {
+  void snapshot() {
     this.lock.writeLock().lock();
     try {
-      // If snapshot has entries, then flusher failed or didn't call cleanup.
+      // If snapshot currently has entries, then flusher failed or didn't call
+      // cleanup.  Log a warning.
       if (this.snapshot.size() > 0) {
-        LOG.debug("Returning existing snapshot. Either the snapshot was run " +
-          "by the region -- normal operation but to be fixed -- or there is " +
-          "another ongoing flush or did we fail last attempt?");
-        return this.snapshot;
+        LOG.debug("Snapshot called again without clearing previous. " +
+          "Doing nothing. Another ongoing flush or did we fail last attempt?");
+      } else {
+        // We used to synchronize on the memcache here but we're inside a
+        // write lock so removed it. Comment is left in case removal was a
+        // mistake. St.Ack
+        if (this.memcache.size() != 0) {
+          this.snapshot = this.memcache;
+          this.memcache = createSynchronizedSortedMap();
+        }
       }
-      // We used to synchronize on the memcache here but we're inside a
-      // write lock so removed it. Comment is left in case removal was a
-      // mistake. St.Ack
-      if (this.memcache.size() != 0) {
-        this.snapshot = this.memcache;
-        this.memcache = createSynchronizedSortedMap();
-      }
-      return this.snapshot;
     } finally {
       this.lock.writeLock().unlock();
     }
@@ -106,6 +105,8 @@ class Memcache {
   
   /**
    * Return the current snapshot.
+   * Called by flusher to get current snapshot made by a previous
+   * call to {@link snapshot}.
    * @return Return snapshot.
    * @see {@link #snapshot()}
    * @see {@link #clearSnapshot(SortedMap)}

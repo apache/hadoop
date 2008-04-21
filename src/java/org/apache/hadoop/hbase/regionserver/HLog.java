@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * HLog stores all the edits to the HStore.
@@ -121,15 +122,15 @@ public class HLog implements HConstants {
    */
   final Map<Text, Long> lastSeqWritten = new ConcurrentHashMap<Text, Long>();
 
-  volatile boolean closed = false;
+  private volatile boolean closed = false;
 
   private final Integer sequenceLock = new Integer(0);
-  volatile long logSeqNum = 0;
+  private volatile long logSeqNum = 0;
 
-  volatile long filenum = 0;
-  volatile long old_filenum = -1;
+  private volatile long filenum = 0;
+  private volatile long old_filenum = -1;
   
-  volatile int numEntries = 0;
+  private volatile int numEntries = 0;
 
   // This lock prevents starting a log roll during a cache flush.
   // synchronized is insufficient because a cache flush spans two method calls.
@@ -167,7 +168,15 @@ public class HLog implements HConstants {
     fs.mkdirs(dir);
     rollWriter();
   }
-  
+
+  /*
+   * Accessor for tests.
+   * @return Current state of the monotonically increasing file id.
+   */
+  long getFilenum() {
+    return this.filenum;
+  }
+
   /**
    * Get the compression type for the hlog files.
    * @param c Configuration to use.
@@ -191,7 +200,7 @@ public class HLog implements HConstants {
       if (newvalue > logSeqNum) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("changing sequence number from " + logSeqNum + " to " +
-              newvalue);
+            newvalue);
         }
         logSeqNum = newvalue;
       }
@@ -226,8 +235,7 @@ public class HLog implements HConstants {
           this.writer.close();
           Path p = computeFilename(old_filenum);
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Closing current log writer " + p.toString() +
-            " to get a new one");
+            LOG.debug("Closing current log writer " + FSUtils.getPath(p));
           }
           if (filenum > 0) {
             synchronized (this.sequenceLock) {
@@ -240,7 +248,7 @@ public class HLog implements HConstants {
         Path newPath = computeFilename(filenum);
         this.writer = SequenceFile.createWriter(this.fs, this.conf, newPath,
             HLogKey.class, HLogEdit.class, getCompressionType(this.conf));
-        LOG.info("new log writer created at " + newPath);
+        LOG.info("New log writer created at " + FSUtils.getPath(newPath));
 
         // Can we delete any of the old log files?
         if (this.outputfiles.size() > 0) {
@@ -295,7 +303,7 @@ public class HLog implements HConstants {
   }
   
   private void deleteLogFile(final Path p, final Long seqno) throws IOException {
-    LOG.info("removing old log file " + p.toString() +
+    LOG.info("removing old log file " + FSUtils.getPath(p) +
       " whose highest sequence/edit id is " + seqno);
     this.fs.delete(p, true);
   }
