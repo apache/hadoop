@@ -1804,9 +1804,14 @@ public class HRegion implements HConstants {
         }
         
         filtered = filter == null ? false : filter.filterNotNull(results);
-        
-        if (filtered && moreToFollow) {
-          results.clear();
+
+        if (moreToFollow) {
+          if (filter != null) {
+            filter.rowProcessed(filtered, key.getRow());
+          }
+          if (filtered) {
+            results.clear();
+          }
         }
       } while(filtered && moreToFollow);
 

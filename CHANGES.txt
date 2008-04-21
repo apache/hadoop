@@ -12,6 +12,8 @@ Hbase Change Log
    HBASE-532   Odd interaction between HRegion.get, HRegion.deleteAll and compactions
    HBASE-10    HRegionServer hangs upon exit due to DFSClient Exception
    HBASE-598   Loggging, no .log file; all goes into .out
+   HBASE-595   RowFilterInterface.rowProcessed() is called *before* fhe final
+               filtering decision is made (Clint Morgan via Stack)
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

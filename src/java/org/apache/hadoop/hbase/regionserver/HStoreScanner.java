@@ -219,9 +219,6 @@ class HStoreScanner implements InternalScanner {
       moreToFollow = chosenTimestamp >= 0;
       
       if (dataFilter != null) {
-        if (moreToFollow) {
-          dataFilter.rowProcessed(filtered, chosenRow);
-        }
         if (dataFilter.filterAllRemaining()) {
           moreToFollow = false;
         }
