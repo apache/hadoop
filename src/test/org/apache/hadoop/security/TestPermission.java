@@ -41,16 +41,15 @@ public class TestPermission extends TestCase {
   }
 
   final private static Path ROOT_PATH = new Path("/data");
-  final private static Path CHILD_DIR1 = new Path(ROOT_PATH, "web1");
-  final private static Path CHILD_DIR2 = new Path(ROOT_PATH, "web2");
+  final private static Path CHILD_DIR1 = new Path(ROOT_PATH, "child1");
+  final private static Path CHILD_DIR2 = new Path(ROOT_PATH, "child2");
   final private static Path CHILD_FILE1 = new Path(ROOT_PATH, "file1");
   final private static Path CHILD_FILE2 = new Path(ROOT_PATH, "file2");
 
   final private static int FILE_LEN = 100;
-  final private static String USER_NAME = "Who";
-  final private static String GROUP1_NAME = "group1";
-  final private static String GROUP2_NAME = "group2";
-  final private static String[] GROUP_NAMES = {GROUP1_NAME, GROUP2_NAME};
+  final private static Random RAN = new Random();
+  final private static String USER_NAME = "user" + RAN.nextInt();
+  final private static String[] GROUP_NAMES = {"group1", "group2"};
 
   static FsPermission checkPermission(FileSystem fs,
       String path, FsPermission expected) throws IOException {
@@ -122,76 +121,72 @@ public class TestPermission extends TestCase {
     conf.setBoolean("dfs.permissions", true);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
     cluster.waitActive();
-    FileSystem fs = FileSystem.get(conf);
 
     try {
+      FileSystem nnfs = FileSystem.get(conf);
       // test permissions on files that do not exist
-      assertFalse(fs.exists(CHILD_FILE1));
+      assertFalse(nnfs.exists(CHILD_FILE1));
       try {
-        fs.setOwner(CHILD_FILE1, "foo", "bar");
+        nnfs.setOwner(CHILD_FILE1, "foo", "bar");
         assertTrue(false);
       }
       catch(java.io.FileNotFoundException e) {
         LOG.info("GOOD: got " + e);
       }
       try {
-        fs.setPermission(CHILD_FILE1, new FsPermission((short)0777));
+        nnfs.setPermission(CHILD_FILE1, new FsPermission((short)0777));
         assertTrue(false);
       }
       catch(java.io.FileNotFoundException e) {
         LOG.info("GOOD: got " + e);
       }
       // following dir/file creations are legal
-      fs.mkdirs(CHILD_DIR1);
-      FSDataOutputStream out = fs.create(CHILD_FILE1);
+      nnfs.mkdirs(CHILD_DIR1);
+      FSDataOutputStream out = nnfs.create(CHILD_FILE1);
       byte data[] = new byte[FILE_LEN];
-      Random r = new Random();
-      r.nextBytes(data);
+      RAN.nextBytes(data);
       out.write(data);
       out.close();
-      fs.setPermission(CHILD_FILE1, new FsPermission((short)0700));
+      nnfs.setPermission(CHILD_FILE1, new FsPermission((short)0700));
 
       // following read is legal
       byte dataIn[] = new byte[FILE_LEN];
-      FSDataInputStream fin = fs.open(CHILD_FILE1);
+      FSDataInputStream fin = nnfs.open(CHILD_FILE1);
       int bytesRead = fin.read(dataIn);
       assertTrue(bytesRead == FILE_LEN);
       for(int i=0; i<FILE_LEN; i++) {
         assertEquals(data[i], dataIn[i]);
       }
-      fs.close();
-      fs = null;
 
+      ////////////////////////////////////////////////////////////////
       // test illegal file/dir creation
       UnixUserGroupInformation userGroupInfo = new UnixUserGroupInformation(
           USER_NAME, GROUP_NAMES );
-      conf.set(UnixUserGroupInformation.UGI_PROPERTY_NAME,
-          userGroupInfo.toString());
-      fs = FileSystem.get(conf);
+      UnixUserGroupInformation.saveToConf(conf,
+          UnixUserGroupInformation.UGI_PROPERTY_NAME, userGroupInfo);
+      FileSystem userfs = FileSystem.get(conf);
 
       // make sure mkdir of a existing directory that is not owned by 
       // this user does not throw an exception.
-      fs.mkdirs(CHILD_DIR1);
+      userfs.mkdirs(CHILD_DIR1);
       
       // illegal mkdir
-      assertTrue(!canMkdirs(fs, CHILD_DIR2));
+      assertTrue(!canMkdirs(userfs, CHILD_DIR2));
 
       // illegal file creation
-      assertTrue(!canCreate(fs, CHILD_FILE2));
+      assertTrue(!canCreate(userfs, CHILD_FILE2));
 
       // illegal file open
-      assertTrue(!canOpen(fs, CHILD_FILE1));
+      assertTrue(!canOpen(userfs, CHILD_FILE1));
+
+      nnfs.setPermission(ROOT_PATH, new FsPermission((short)0755));
+      nnfs.setPermission(CHILD_DIR1, new FsPermission((short)0777));
+      nnfs.setPermission(new Path("/"), new FsPermission((short)0777));
+      final Path RENAME_PATH = new Path("/foo/bar");
+      userfs.mkdirs(RENAME_PATH);
+      assertTrue(canRename(userfs, RENAME_PATH, CHILD_DIR1));
     } finally {
-      try {
-        if(fs != null) fs.close();
-      } catch(Exception e) {
-        LOG.error(StringUtils.stringifyException(e));
-      }
-      try {
-        if(cluster != null) cluster.shutdown();
-      } catch(Exception e) {
-        LOG.error(StringUtils.stringifyException(e));
-      }
+      if(cluster != null) cluster.shutdown();
     }
   }
 
@@ -216,6 +211,16 @@ public class TestPermission extends TestCase {
   static boolean canOpen(FileSystem fs, Path p) throws IOException {
     try {
       fs.open(p);
+      return true;
+    } catch(AccessControlException e) {
+      return false;
+    }
+  }
+
+  static boolean canRename(FileSystem fs, Path src, Path dst
+      ) throws IOException {
+    try {
+      fs.rename(src, dst);
       return true;
     } catch(AccessControlException e) {
       return false;
