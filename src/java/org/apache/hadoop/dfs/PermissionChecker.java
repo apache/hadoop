@@ -84,12 +84,14 @@ class PermissionChecker {
   void checkPermission(String path, INodeDirectory root, boolean doCheckOwner,
       FsAction ancestorAccess, FsAction parentAccess, FsAction access,
       FsAction subAccess) throws AccessControlException {
-    LOG.debug("ACCESS CHECK: " + this
-        + ", doCheckOwner=" + doCheckOwner
-        + ", ancestorAccess=" + ancestorAccess
-        + ", parentAccess=" + parentAccess
-        + ", access=" + access
-        + ", subAccess=" + subAccess);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("ACCESS CHECK: " + this
+          + ", doCheckOwner=" + doCheckOwner
+          + ", ancestorAccess=" + ancestorAccess
+          + ", parentAccess=" + parentAccess
+          + ", access=" + access
+          + ", subAccess=" + subAccess);
+    }
 
     synchronized(root) {
       INode[] inodes = root.getExistingPathINodes(path);

@@ -620,6 +620,9 @@ Release 0.17.0 - Unreleased
     COMMIT_PENDING status when it fails maps due to lost map.
     (Devaraj Das)
 
+    HADOOP-3186. Fix incorrect permission checkding for mv and renameTo 
+    in HDFS. (Tsz Wo (Nicholas), SZE via rangadi)
+
 Release 0.16.3 - 2008-04-16
 
   BUG FIXES

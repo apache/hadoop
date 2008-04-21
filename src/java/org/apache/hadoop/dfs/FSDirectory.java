@@ -290,8 +290,10 @@ class FSDirectory implements FSConstants {
    * Change the filename
    */
   public boolean renameTo(String src, String dst) {
-    NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: "
+    if (NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: "
                                   +src+" to "+dst);
+    }
     waitForReady();
     long now = FSNamesystem.now();
     if (!unprotectedRenameTo(src, dst, now))
@@ -311,7 +313,7 @@ class FSDirectory implements FSConstants {
         return false;
       }
       if (isDir(dst)) {
-        dst += "/" + new File(src).getName();
+        dst += Path.SEPARATOR + new Path(src).getName();
       }
       if (rootDir.getNode(dst) != null) {
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
