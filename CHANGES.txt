@@ -616,6 +616,10 @@ Release 0.17.0 - Unreleased
     HADOOP-3237. Fixes TestDFSShell.testErrOutPut on Windows platform.
     (Mahadev Konar via ddas)
 
+    HADOOP-3279. TaskTracker checks for SUCCEEDED task status in addition to 
+    COMMIT_PENDING status when it fails maps due to lost map.
+    (Devaraj Das)
+
 Release 0.16.3 - 2008-04-16
 
   BUG FIXES

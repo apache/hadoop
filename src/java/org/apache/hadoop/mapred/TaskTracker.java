@@ -1847,10 +1847,8 @@ public class TaskTracker
      */
     private synchronized void mapOutputLost(String failure
                                            ) throws IOException {
-      //The check for COMMIT_PENDING should actually be a check for SUCCESS
-      //however for that, we have to introduce another Action type from the
-      //JT to the TT (SuccessTaskAction in the lines of KillTaskAction).
-      if (taskStatus.getRunState() == TaskStatus.State.COMMIT_PENDING) {
+      if (taskStatus.getRunState() == TaskStatus.State.COMMIT_PENDING || 
+          taskStatus.getRunState() == TaskStatus.State.SUCCEEDED) {
         // change status to failure
         LOG.info("Reporting output lost:"+task.getTaskId());
         taskStatus.setRunState(TaskStatus.State.FAILED);
