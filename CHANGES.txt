@@ -33,6 +33,9 @@ Trunk (unreleased changes)
 
   OPTIMIZATIONS
 
+    HADOOP-3274. The default constructor of BytesWritable creates empty 
+    byte array. (Tsz Wo (Nicholas), SZE via shv)
+
   BUG FIXES
 
     HADOOP-2905. 'fsck -move' triggers NPE in NameNode. 

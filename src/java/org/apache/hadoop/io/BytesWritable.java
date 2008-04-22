@@ -30,16 +30,15 @@ import java.io.DataOutput;
  */
 public class BytesWritable implements WritableComparable {
   private static final int LENGTH_BYTES = 4;
+  private static final byte[] EMPTY_BYTES = {};
+
   private int size;
   private byte[] bytes;
   
   /**
    * Create a zero-size sequence.
    */
-  public BytesWritable() {
-    size = 0;
-    bytes = new byte[100];
-  }
+  public BytesWritable() {this(EMPTY_BYTES);}
   
   /**
    * Create a BytesWritable using the byte array as the initial value.
