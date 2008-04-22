@@ -50,6 +50,8 @@ Trunk (unreleased changes)
     HADOOP-3269.  Fix a case when namenode fails to restart
     while processing a lease record.  ((Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-3282. Port issues in TestCheckpoint resolved. (shv)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
