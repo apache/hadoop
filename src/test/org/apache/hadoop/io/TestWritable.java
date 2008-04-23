@@ -64,6 +64,14 @@ public class TestWritable extends TestCase {
   public void testSimpleWritable() throws Exception {
     testWritable(new SimpleWritable());
   }
+  
+  public void testByteWritable() throws Exception {
+    testWritable(new ByteWritable((byte)128));
+  }
+
+  public void testDoubleWritable() throws Exception {
+    testWritable(new DoubleWritable(1.0));
+  }
 
   /** Utility method for testing writables. */
   public static Writable testWritable(Writable before) 
