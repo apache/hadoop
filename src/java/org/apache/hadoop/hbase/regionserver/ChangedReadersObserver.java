@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2008 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,17 +20,15 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-/**
- * Implementors of this interface want to be notified when an HRegion
- * determines that a cache flush is needed. A CacheFlushListener (or null)
- * must be passed to the HRegion constructor.
- */
-public interface CacheFlushListener {
+import java.io.IOException;
 
+
+/**
+ * If set of MapFile.Readers in Store change, implementors are notified.
+ */
+public interface ChangedReadersObserver {
   /**
-   * Tell the listener the cache needs to be flushed.
-   * 
-   * @param region the HRegion requesting the cache flush
+   * Notify observers.
    */
-  void flushRequested(HRegion region);
+  void updateReaders() throws IOException;
 }

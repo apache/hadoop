@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.WrongRegionException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
@@ -341,18 +342,22 @@ public class HRegion implements HConstants {
     volatile boolean writesEnabled = true;
   }
 
-  volatile WriteState writestate = new WriteState();
+  private volatile WriteState writestate = new WriteState();
 
   final int memcacheFlushSize;
   private volatile long lastFlushTime;
-  final CacheFlushListener flushListener;
-  final int blockingMemcacheSize;
-  protected final long threadWakeFrequency;
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-  private final Integer updateLock = new Integer(0);
+  final FlushRequester flushListener;
+  private final int blockingMemcacheSize;
+  final long threadWakeFrequency;
+  // Used to guard splits and closes
+  private final ReentrantReadWriteLock splitsAndClosesLock =
+    new ReentrantReadWriteLock();
+  // Stop updates lock
+  private final ReentrantReadWriteLock updatesLock =
+    new ReentrantReadWriteLock();
   private final Integer splitLock = new Integer(0);
   private final long minSequenceId;
-  final AtomicInteger activeScannerCount = new AtomicInteger(0);
+  private final AtomicInteger activeScannerCount = new AtomicInteger(0);
 
   //////////////////////////////////////////////////////////////////////////////
   // Constructor
@@ -381,7 +386,7 @@ public class HRegion implements HConstants {
    */
   public HRegion(Path basedir, HLog log, FileSystem fs, HBaseConfiguration conf, 
       HRegionInfo regionInfo, Path initialFiles,
-      CacheFlushListener flushListener) throws IOException {
+      FlushRequester flushListener) throws IOException {
     this(basedir, log, fs, conf, regionInfo, initialFiles, flushListener, null);
   }
   
@@ -410,7 +415,7 @@ public class HRegion implements HConstants {
    */
   public HRegion(Path basedir, HLog log, FileSystem fs, HBaseConfiguration conf, 
       HRegionInfo regionInfo, Path initialFiles,
-      CacheFlushListener flushListener, final Progressable reporter)
+      FlushRequester flushListener, final Progressable reporter)
     throws IOException {
     
     this.basedir = basedir;
@@ -566,20 +571,17 @@ public class HRegion implements HConstants {
           }
         }
       }
-      lock.writeLock().lock();
-      LOG.debug("new updates and scanners for region " + regionName +
-          " disabled");
-      
+      splitsAndClosesLock.writeLock().lock();
+      LOG.debug("Updates and scanners for region " + regionName + " disabled");
       try {
-        // Wait for active scanners to finish. The write lock we hold will prevent
-        // new scanners from being created.
+        // Wait for active scanners to finish. The write lock we hold will
+        // prevent new scanners from being created.
         synchronized (activeScannerCount) {
           while (activeScannerCount.get() != 0) {
             LOG.debug("waiting for " + activeScannerCount.get() +
                 " scanners to finish");
             try {
               activeScannerCount.wait();
-
             } catch (InterruptedException e) {
               // continue
             }
@@ -620,7 +622,7 @@ public class HRegion implements HConstants {
         LOG.info("closed " + this.regionInfo.getRegionName());
         return result;
       } finally {
-        lock.writeLock().unlock();
+        splitsAndClosesLock.writeLock().unlock();
       }
     }
   }
@@ -868,10 +870,8 @@ public class HRegion implements HConstants {
         }
       }
       doRegionCompactionCleanup();
-      LOG.info("compaction completed on region " + getRegionName() +
-          ". Took " +
-          StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
-      
+      LOG.info("compaction completed on region " + getRegionName() + " in " +
+        StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
     } finally {
       synchronized (writestate) {
         writestate.compacting = false;
@@ -919,11 +919,12 @@ public class HRegion implements HConstants {
       }
     }
     try {
-      lock.readLock().lock();                      // Prevent splits and closes
+      // Prevent splits and closes
+      splitsAndClosesLock.readLock().lock();
       try {
         return internalFlushcache();
       } finally {
-        lock.readLock().unlock();
+        splitsAndClosesLock.readLock().unlock();
       }
     } finally {
       synchronized (writestate) {
@@ -984,10 +985,13 @@ public class HRegion implements HConstants {
     // to do this for a moment.  Its quick.  The subsequent sequence id that
     // goes into the HLog after we've flushed all these snapshots also goes
     // into the info file that sits beside the flushed files.
-    synchronized (updateLock) {
+    this.updatesLock.writeLock().lock();
+    try {
       for (HStore s: stores.values()) {
         s.snapshot();
       }
+    } finally {
+      this.updatesLock.writeLock().unlock();
     }
     long sequenceId = log.startCacheFlush();
 
@@ -1150,7 +1154,7 @@ public class HRegion implements HConstants {
     
     HStoreKey key = null;
     checkRow(row);
-    lock.readLock().lock();
+    splitsAndClosesLock.readLock().lock();
     try {
       // examine each column family for the preceeding or matching key
       for(Text colFamily : stores.keySet()){
@@ -1188,7 +1192,7 @@ public class HRegion implements HConstants {
       
       return new RowResult(key.getRow(), cellsWritten);
     } finally {
-      lock.readLock().unlock();
+      splitsAndClosesLock.readLock().unlock();
     }
   }
 
@@ -1235,7 +1239,7 @@ public class HRegion implements HConstants {
   public InternalScanner getScanner(Text[] cols, Text firstRow,
     long timestamp, RowFilterInterface filter) 
   throws IOException {
-    lock.readLock().lock();
+    splitsAndClosesLock.readLock().lock();
     try {
       if (this.closed.get()) {
         throw new IOException("Region " + this.getRegionName().toString() +
@@ -1257,7 +1261,7 @@ public class HRegion implements HConstants {
       return new HScanner(cols, firstRow, timestamp,
         storelist.toArray(new HStore [storelist.size()]), filter);
     } finally {
-      lock.readLock().unlock();
+      splitsAndClosesLock.readLock().unlock();
     }
   }
 
@@ -1506,15 +1510,15 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   private void update(final TreeMap<HStoreKey, byte []> updatesByColumn)
-    throws IOException {
-    
+  throws IOException {
     if (updatesByColumn == null || updatesByColumn.size() <= 0) {
       return;
     }
-    synchronized (updateLock) {                         // prevent a cache flush
+    boolean flush = false;
+    this.updatesLock.readLock().lock();
+    try {
       this.log.append(regionInfo.getRegionName(),
-          regionInfo.getTableDesc().getName(), updatesByColumn);
-
+        regionInfo.getTableDesc().getName(), updatesByColumn);
       long size = 0;
       for (Map.Entry<HStoreKey, byte[]> e: updatesByColumn.entrySet()) {
         HStoreKey key = e.getKey();
@@ -1522,12 +1526,15 @@ public class HRegion implements HConstants {
         size = this.memcacheSize.addAndGet(getEntrySize(key, val));
         stores.get(HStoreKey.extractFamily(key.getColumn())).add(key, val);
       }
-      if (this.flushListener != null && !this.flushRequested &&
-          size > this.memcacheFlushSize) {
-        // Request a cache flush
-        this.flushListener.flushRequested(this);
-        this.flushRequested = true;
-      }
+      flush = this.flushListener != null && !this.flushRequested &&
+        size > this.memcacheFlushSize;
+    } finally {
+      this.updatesLock.readLock().unlock();
+    }
+    if (flush) {
+      // Request a cache flush.  Do it outside update lock.
+      this.flushListener.request(this);
+      this.flushRequested = true;
     }
   }
   
@@ -1597,11 +1604,11 @@ public class HRegion implements HConstants {
    */
   long obtainRowLock(Text row) throws IOException {
     checkRow(row);
-    lock.readLock().lock();
+    splitsAndClosesLock.readLock().lock();
     try {
       if (this.closed.get()) {
-        throw new IOException("Region " + this.getRegionName().toString() +
-          " closed");
+        throw new NotServingRegionException("Region " +
+          this.getRegionName().toString() + " closed");
       }
       synchronized (rowsToLocks) {
         while (rowsToLocks.get(row) != null) {
@@ -1618,7 +1625,7 @@ public class HRegion implements HConstants {
         return lid.longValue();
       }
     } finally {
-      lock.readLock().unlock();
+      splitsAndClosesLock.readLock().unlock();
     }
   }
   

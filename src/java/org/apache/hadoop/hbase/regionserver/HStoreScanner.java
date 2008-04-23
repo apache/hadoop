@@ -66,7 +66,6 @@ class HStoreScanner implements InternalScanner {
     try {
       scanners[0] = store.memcache.getScanner(timestamp, targetCols, firstRow);
       scanners[1] = new StoreFileScanner(store, timestamp, targetCols, firstRow);
-      
       for (int i = 0; i < scanners.length; i++) {
         if (scanners[i].isWildcardScanner()) {
           this.wildcardMatch = true;
@@ -75,7 +74,6 @@ class HStoreScanner implements InternalScanner {
           this.multipleMatchers = true;
         }
       }
-
     } catch(IOException e) {
       for (int i = 0; i < this.scanners.length; i++) {
         if(scanners[i] != null) {
@@ -87,7 +85,6 @@ class HStoreScanner implements InternalScanner {
     
     // Advance to the first key in each scanner.
     // All results will match the required column-set and scanTime.
-    
     for (int i = 0; i < scanners.length; i++) {
       keys[i] = new HStoreKey();
       resultSets[i] = new TreeMap<Text, byte []>();
@@ -95,9 +92,6 @@ class HStoreScanner implements InternalScanner {
         closeScanner(i);
       }
     }
-    // As we have now successfully completed initialization, increment the
-    // activeScanner count.
-    store.activeScanners.incrementAndGet();
   }
 
   /** @return true if the scanner is a wild card scanner */
@@ -265,18 +259,13 @@ class HStoreScanner implements InternalScanner {
 
   /** {@inheritDoc} */
   public void close() {
-    try {
     for(int i = 0; i < scanners.length; i++) {
       if(scanners[i] != null) {
         closeScanner(i);
       }
     }
-    } finally {
-      store.updateActiveScanners();
-    }
   }
 
-  /** {@inheritDoc} */
   public Iterator<Map.Entry<HStoreKey, SortedMap<Text, byte[]>>> iterator() {
     throw new UnsupportedOperationException("Unimplemented serverside. " +
       "next(HStoreKey, StortedMap(...) is more efficient");

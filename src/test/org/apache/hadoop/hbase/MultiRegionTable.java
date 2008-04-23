@@ -127,7 +127,7 @@ public class MultiRegionTable extends HBaseClusterTestCase {
     assertNotNull(r);
 
     // Flush the cache
-    server.getCacheFlushListener().flushRequested(r);
+    server.getFlushRequester().request(r);
 
     // Now, wait until split makes it into the meta table.
     int oldCount = count;

@@ -1264,8 +1264,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return this.requestCount;
   }
 
-  /** @return reference to CacheFlushListener */
-  public CacheFlushListener getCacheFlushListener() {
+  /** @return reference to FlushRequester */
+  public FlushRequester getFlushRequester() {
     return this.cacheFlusher;
   }
   

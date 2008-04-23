@@ -38,8 +38,11 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 
-/** Flush cache upon request */
-class Flusher extends Thread implements CacheFlushListener {
+/**
+ * Thread that flushes cache on request
+ * @see FlushRequester
+ */
+class Flusher extends Thread implements FlushRequester {
   static final Log LOG = LogFactory.getLog(Flusher.class);
   private final BlockingQueue<HRegion> flushQueue =
     new LinkedBlockingQueue<HRegion>();
@@ -110,13 +113,8 @@ class Flusher extends Thread implements CacheFlushListener {
   }
   
   /** {@inheritDoc} */
-  public void flushRequested(HRegion r) {
-    synchronized (regionsInQueue) {
-      if (!regionsInQueue.contains(r)) {
-        regionsInQueue.add(r);
-        flushQueue.add(r);
-      }
-    }
+  public void request(HRegion r) {
+    addRegion(r, System.currentTimeMillis());
   }
   
   /**
@@ -204,18 +202,41 @@ class Flusher extends Thread implements CacheFlushListener {
       // Queue up regions for optional flush if they need it
       Set<HRegion> regions = server.getRegionsToCheck();
       for (HRegion region: regions) {
-        synchronized (regionsInQueue) {
-          if (!regionsInQueue.contains(region) &&
-              (now - optionalFlushPeriod) > region.getLastFlushTime()) {
-            regionsInQueue.add(region);
-            flushQueue.add(region);
-            region.setLastFlushTime(now);
-          }
-        }
+        optionallyAddRegion(region, now);
+      }
+    }
+  }
+
+  /*
+   * Add region if not already added and if optional flush period has been
+   * exceeded.
+   * @param r Region to add.
+   * @param now The 'now' to use.  Set last flush time to this value.
+   */
+  private void optionallyAddRegion(final HRegion r, final long now) {
+    synchronized (regionsInQueue) {
+      if (!regionsInQueue.contains(r) &&
+          (now - optionalFlushPeriod) > r.getLastFlushTime()) {
+        addRegion(r, now);
       }
     }
   }
   
+  /*
+   * Add region if not already added.
+   * @param r Region to add.
+   * @param now The 'now' to use.  Set last flush time to this value.
+   */
+  private void addRegion(final HRegion r, final long now) {
+    synchronized (regionsInQueue) {
+      if (!regionsInQueue.contains(r)) {
+        regionsInQueue.add(r);
+        flushQueue.add(r);
+        r.setLastFlushTime(now);
+      }
+    }
+  }
+
   /**
    * Check if the regionserver's memcache memory usage is greater than the 
    * limit. If so, flush regions with the biggest memcaches until we're down

@@ -24,12 +24,12 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,29 +41,28 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.BloomFilterDescriptor;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.TextSequence;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.hbase.BloomFilterDescriptor;
 import org.onelab.filter.BloomFilter;
 import org.onelab.filter.CountingBloomFilter;
 import org.onelab.filter.Filter;
 import org.onelab.filter.RetouchedBloomFilter;
-
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * HStore maintains a bunch of data files.  It is responsible for maintaining 
@@ -102,7 +101,6 @@ public class HStore implements HConstants {
   private final Integer flushLock = new Integer(0);
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-  final AtomicInteger activeScanners = new AtomicInteger(0);
 
   final Text storeName;
 
@@ -110,7 +108,7 @@ public class HStore implements HConstants {
    * Sorted Map of readers keyed by sequence id (Most recent should be last in
    * in list).
    */
-  final SortedMap<Long, HStoreFile> storefiles =
+  private final SortedMap<Long, HStoreFile> storefiles =
     Collections.synchronizedSortedMap(new TreeMap<Long, HStoreFile>());
   
   /*
@@ -128,9 +126,8 @@ public class HStore implements HConstants {
   private final Path compactionDir;
   private final Integer compactLock = new Integer(0);
   private final int compactionThreshold;
-  
-  private final ReentrantReadWriteLock newScannerLock =
-    new ReentrantReadWriteLock();
+  private final Set<ChangedReadersObserver> changedReaderObservers =
+    Collections.synchronizedSet(new HashSet<ChangedReadersObserver>());
 
   /**
    * An HStore is a set of zero or more MapFiles, which stretch backwards over 
@@ -563,7 +560,9 @@ public class HStore implements HConstants {
       for (MapFile.Reader reader: this.readers.values()) {
         reader.close();
       }
-      result = new ArrayList<HStoreFile>(storefiles.values());
+      synchronized (this.storefiles) {
+        result = new ArrayList<HStoreFile>(storefiles.values());
+      }
       LOG.debug("closed " + this.storeName);
       return result;
     } finally {
@@ -659,25 +658,67 @@ public class HStore implements HConstants {
       }
 
       // D. Finally, make the new MapFile available.
-      this.lock.writeLock().lock();
-      try {
-        Long flushid = Long.valueOf(logCacheFlushId);
-        // Open the map file reader.
-        this.readers.put(flushid,
-            flushedFile.getReader(this.fs, this.bloomFilter));
-        this.storefiles.put(flushid, flushedFile);
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("Added " + FSUtils.getPath(flushedFile.getMapFilePath()) +
-            " with " + entries +
-            " entries, sequence id " + logCacheFlushId + ", data size " +
-            StringUtils.humanReadableInt(flushed) + ", file size " +
-            StringUtils.humanReadableInt(newStoreSize));
-        }
-      } finally {
-        this.lock.writeLock().unlock();
+      updateReaders(logCacheFlushId, flushedFile);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("Added " + FSUtils.getPath(flushedFile.getMapFilePath()) +
+          " with " + entries +
+          " entries, sequence id " + logCacheFlushId + ", data size " +
+          StringUtils.humanReadableInt(flushed) + ", file size " +
+          StringUtils.humanReadableInt(newStoreSize));
       }
     }
     return flushed;
+  }
+  
+  /*
+   * Change readers adding into place the Reader produced by this new flush.
+   * @param logCacheFlushId
+   * @param flushedFile
+   * @throws IOException
+   */
+  private void updateReaders(final long logCacheFlushId,
+      final HStoreFile flushedFile)
+  throws IOException {
+    this.lock.writeLock().lock();
+    try {
+      Long flushid = Long.valueOf(logCacheFlushId);
+      // Open the map file reader.
+      this.readers.put(flushid,
+        flushedFile.getReader(this.fs, this.bloomFilter));
+      this.storefiles.put(flushid, flushedFile);
+      // Tell listeners of the change in readers.
+      notifyChangedReadersObservers();
+    } finally {
+      this.lock.writeLock().unlock();
+    }
+  }
+  
+  /*
+   * Notify all observers that set of Readers has changed.
+   * @throws IOException
+   */
+  private void notifyChangedReadersObservers() throws IOException {
+    synchronized (this.changedReaderObservers) {
+      for (ChangedReadersObserver o: this.changedReaderObservers) {
+        o.updateReaders();
+      }
+    }
+  }
+  
+  /*
+   * @param o Observer who wants to know about changes in set of Readers
+   */
+  void addChangedReaderObserver(ChangedReadersObserver o) {
+    this.changedReaderObservers.add(o);
+  }
+  
+  /*
+   * @param o Observer no longer interested in changes in set of Readers.
+   */
+  void deleteChangedReaderObserver(ChangedReadersObserver o) {
+    if (!this.changedReaderObservers.remove(o)) {
+      LOG.warn("Not in set" + o);
+    }
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -724,12 +765,6 @@ public class HStore implements HConstants {
           return checkSplit();
         }
 
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("started compaction of " + filesToCompact.size() +
-            " files " + filesToCompact.toString() + " into " +
-            compactionDir.toUri().getPath());
-        }
-
         // Storefiles are keyed by sequence id. The oldest file comes first.
         // We need to return out of here a List that has the newest file first.
         Collections.reverse(filesToCompact);
@@ -737,15 +772,20 @@ public class HStore implements HConstants {
         // The max-sequenceID in any of the to-be-compacted TreeMaps is the 
         // last key of storefiles.
 
-        maxId = this.storefiles.lastKey();
+        maxId = this.storefiles.lastKey().longValue();
       }
 
       // Step through them, writing to the brand-new MapFile
       HStoreFile compactedOutputFile = new HStoreFile(conf, fs, 
           this.compactionDir, info.getEncodedName(), family.getFamilyName(),
           -1L, null);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("started compaction of " + filesToCompact.size() +
+          " files " + filesToCompact.toString() + " into " +
+          FSUtils.getPath(compactedOutputFile.getMapFilePath()));
+      }
       MapFile.Writer compactedOut = compactedOutputFile.getWriter(this.fs,
-          this.compression, this.bloomFilter);
+        this.compression, this.bloomFilter);
       try {
         compactHStoreFiles(compactedOut, filesToCompact);
       } finally {
@@ -955,112 +995,92 @@ public class HStore implements HConstants {
    * 
    * <p>Moving the compacted TreeMap into place means:
    * <pre>
-   * 1) Wait for active scanners to exit
-   * 2) Acquiring the write-lock
-   * 3) Moving the new compacted MapFile into place
-   * 4) Unloading all the replaced MapFiles and close.
-   * 5) Deleting all the replaced MapFile files.
-   * 6) Loading the new TreeMap.
-   * 7) Compute new store size
-   * 8) Releasing the write-lock
-   * 9) Allow new scanners to proceed.
+   * 1) Moving the new compacted MapFile into place
+   * 2) Unload all replaced MapFiles, close and collect list to delete.
+   * 3) Loading the new TreeMap.
+   * 4) Compute new store size
    * </pre>
    * 
    * @param compactedFiles list of files that were compacted
    * @param compactedFile HStoreFile that is the result of the compaction
    * @throws IOException
    */
-  private void completeCompaction(List<HStoreFile> compactedFiles,
-      HStoreFile compactedFile) throws IOException {
-    
-    // 1. Wait for active scanners to exit
-    
-    newScannerLock.writeLock().lock();                  // prevent new scanners
+  private void completeCompaction(final List<HStoreFile> compactedFiles,
+    final HStoreFile compactedFile)
+  throws IOException {
+    this.lock.writeLock().lock();
     try {
-      synchronized (activeScanners) {
-        while (activeScanners.get() != 0) {
-          try {
-            activeScanners.wait();
-          } catch (InterruptedException e) {
-            // continue
-          }
-        }
-
-        // 2. Acquiring the HStore write-lock
-        this.lock.writeLock().lock();
+      // 1. Moving the new MapFile into place.
+      HStoreFile finalCompactedFile = new HStoreFile(conf, fs, basedir,
+        info.getEncodedName(), family.getFamilyName(), -1, null);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("moving " + FSUtils.getPath(compactedFile.getMapFilePath()) +
+          " to " + FSUtils.getPath(finalCompactedFile.getMapFilePath()));
+      }
+      if (!compactedFile.rename(this.fs, finalCompactedFile)) {
+        LOG.error("Failed move of compacted file " +
+          finalCompactedFile.getMapFilePath().toString());
+        return;
       }
 
-      try {
-        // 3. Moving the new MapFile into place.
-        
-        HStoreFile finalCompactedFile = new HStoreFile(conf, fs, basedir,
-            info.getEncodedName(), family.getFamilyName(), -1, null);
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("moving " +
-            FSUtils.getPath(compactedFile.getMapFilePath()) +
-            " to " + FSUtils.getPath(finalCompactedFile.getMapFilePath()));
-        }
-        if (!compactedFile.rename(this.fs, finalCompactedFile)) {
-          LOG.error("Failed move of compacted file " +
-            finalCompactedFile.getMapFilePath().toString());
-          return;
+      // 2. Unload all replaced MapFiles, close and collect list to delete.
+      synchronized (storefiles) {
+        Map<Long, HStoreFile> toDelete = new HashMap<Long, HStoreFile>();
+        for (Map.Entry<Long, HStoreFile> e : this.storefiles.entrySet()) {
+          if (!compactedFiles.contains(e.getValue())) {
+            continue;
+          }
+          Long key = e.getKey();
+          MapFile.Reader reader = this.readers.remove(key);
+          if (reader != null) {
+            reader.close();
+          }
+          toDelete.put(key, e.getValue());
         }
 
-        // 4. and 5. Unload all the replaced MapFiles, close and delete.
-        
-        synchronized (storefiles) {
-          List<Long> toDelete = new ArrayList<Long>();
-          for (Map.Entry<Long, HStoreFile> e: this.storefiles.entrySet()) {
-            if (!compactedFiles.contains(e.getValue())) {
-              continue;
-            }
-            Long key = e.getKey();
-            MapFile.Reader reader = this.readers.remove(key);
-            if (reader != null) {
-              reader.close();
-            }
-            toDelete.add(key);
+        try {
+          // 3. Loading the new TreeMap.
+          // Change this.storefiles so it reflects new state but do not
+          // delete old store files until we have sent out notification of
+          // change in case old files are still being accessed by outstanding
+          // scanners.
+          for (Long key : toDelete.keySet()) {
+            this.storefiles.remove(key);
           }
-
-          try {
-            for (Long key: toDelete) {
-              HStoreFile hsf = this.storefiles.remove(key);
-              hsf.delete();
-            }
-
-            // 6. Loading the new TreeMap.
-            Long orderVal = Long.valueOf(finalCompactedFile.loadInfo(fs));
-            this.readers.put(orderVal,
-                // Use a block cache (if configured) for this reader since
-                // it is the only one.
-                finalCompactedFile.getReader(this.fs, this.bloomFilter,
-                    family.isBlockCacheEnabled()));
-            this.storefiles.put(orderVal, finalCompactedFile);
-          } catch (IOException e) {
-            e = RemoteExceptionHandler.checkIOException(e);
-            LOG.error("Failed replacing compacted files for " + this.storeName +
-                ". Compacted file is " + finalCompactedFile.toString() +
-                ".  Files replaced are " + compactedFiles.toString() +
-                " some of which may have been already removed", e);
+          // Add new compacted Reader and store file.
+          Long orderVal = Long.valueOf(finalCompactedFile.loadInfo(fs));
+          this.readers.put(orderVal,
+          // Use a block cache (if configured) for this reader since
+              // it is the only one.
+              finalCompactedFile.getReader(this.fs, this.bloomFilter, family
+                  .isBlockCacheEnabled()));
+          this.storefiles.put(orderVal, finalCompactedFile);
+          // Tell observers that list of Readers has changed.
+          notifyChangedReadersObservers();
+          // Finally, delete old store files.
+          for (HStoreFile hsf : toDelete.values()) {
+            hsf.delete();
           }
-          // 7. Compute new store size
-          storeSize = 0L;
-          for (HStoreFile hsf: storefiles.values()) {
-            storeSize += hsf.length();
-          }
+        } catch (IOException e) {
+          e = RemoteExceptionHandler.checkIOException(e);
+          LOG.error("Failed replacing compacted files for " + this.storeName +
+            ". Compacted file is " + finalCompactedFile.toString() +
+            ".  Files replaced are " + compactedFiles.toString() +
+            " some of which may have been already removed", e);
         }
-      } finally {
-        // 8. Releasing the write-lock
-        this.lock.writeLock().unlock();
+        // 4. Compute new store size
+        storeSize = 0L;
+        for (HStoreFile hsf : storefiles.values()) {
+          storeSize += hsf.length();
+        }
       }
     } finally {
-      // 9. Allow new scanners to proceed.
-      newScannerLock.writeLock().unlock();
+      this.lock.writeLock().unlock();
     }
   }
 
-  //////////////////////////////////////////////////////////////////////////////
-  // Accessors.  
+  // ////////////////////////////////////////////////////////////////////////////
+  // Accessors.
   // (This is the only section that is directly useful!)
   //////////////////////////////////////////////////////////////////////////////
   
@@ -1635,20 +1655,13 @@ public class HStore implements HConstants {
    * Return a scanner for both the memcache and the HStore files
    */
   InternalScanner getScanner(long timestamp, Text targetCols[],
-      Text firstRow, RowFilterInterface filter) throws IOException {
-
-    newScannerLock.readLock().lock();           // ability to create a new
-                                                // scanner during a compaction
+      Text firstRow, RowFilterInterface filter)
+  throws IOException {
+    lock.readLock().lock();
     try {
-      lock.readLock().lock();                   // lock HStore
-      try {
-        return new HStoreScanner(this, targetCols, firstRow, timestamp, filter);
-
-      } finally {
-        lock.readLock().unlock();
-      }
+      return new HStoreScanner(this, targetCols, firstRow, timestamp, filter);
     } finally {
-      newScannerLock.readLock().unlock();
+      lock.readLock().unlock();
     }
   }
 
@@ -1689,20 +1702,15 @@ public class HStore implements HConstants {
     }
     return m.groupCount() > 1 && m.group(2) != null;
   }
-  
-  protected void updateActiveScanners() {
-    synchronized (activeScanners) {
-      int numberOfScanners = activeScanners.decrementAndGet();
-      if (numberOfScanners < 0) {
-        LOG.error(storeName +
-            " number of active scanners less than zero: " +
-            numberOfScanners + " resetting to zero");
-        activeScanners.set(0);
-        numberOfScanners = 0;
-      }
-      if (numberOfScanners == 0) {
-        activeScanners.notifyAll();
-      }
+
+  /**
+   * @return Current list of store files.
+   */
+  SortedMap<Long, HStoreFile> getStorefiles() {
+    synchronized (this.storefiles) {
+      SortedMap<Long, HStoreFile> copy =
+        new TreeMap<Long, HStoreFile>(this.storefiles);
+      return copy;
     }
   }
 }

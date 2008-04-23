@@ -107,10 +107,15 @@ public abstract class HAbstractScanner implements InternalScanner {
     }
   }
 
-  protected TreeMap<Text, Vector<ColumnMatcher>> okCols;        // Holds matchers for each column family 
+  // Holds matchers for each column family 
+  protected TreeMap<Text, Vector<ColumnMatcher>> okCols;
   
-  protected boolean scannerClosed = false;                      // True when scanning is done
-  protected long timestamp;                                     // The timestamp to match entries against
+  // True when scanning is done
+  protected volatile boolean scannerClosed = false;
+  
+  // The timestamp to match entries against
+  protected long timestamp;
+  
   private boolean wildcardMatch;
   private boolean multipleMatchers;
 
