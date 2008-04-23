@@ -317,8 +317,8 @@ public class NetworkTopology {
       throw new IllegalArgumentException(
         "Not allow to add an inner node: "+NodeBase.getPath(node));
     }
-    netlock.writeLock().lock();
     LOG.info("Adding a new node: "+NodeBase.getPath(node));
+    netlock.writeLock().lock();
     try {
       Node rack = getNode(node.getNetworkLocation());
       if (rack != null && !(rack instanceof InnerNode)) {
@@ -344,12 +344,12 @@ public class NetworkTopology {
    */ 
   public void remove(Node node) {
     if (node==null) return;
-    netlock.writeLock().lock();
     if( node instanceof InnerNode ) {
       throw new IllegalArgumentException(
         "Not allow to remove an inner node: "+NodeBase.getPath(node));
     }
     LOG.info("Removing a node: "+NodeBase.getPath(node));
+    netlock.writeLock().lock();
     try {
       if (clusterMap.remove(node)) {
         InnerNode rack = (InnerNode)getNode(node.getNetworkLocation());

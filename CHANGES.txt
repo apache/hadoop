@@ -71,6 +71,9 @@ Trunk (unreleased changes)
     HADOOP-3127. Deleting files in trash should really remove them.
     (Brice Arnould via omalley)
 
+    HADOOP-3300. Fix locking of explicit locks in NetworkTopology.
+    (tomwhite via omalley)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
