@@ -93,8 +93,8 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   }
   
   /** {@inheritDoc} */
-  public boolean filter(final Text rowKey) {
-    changeFAR(this.filter.filter(rowKey));
+  public boolean filterRowKey(final Text rowKey) {
+    changeFAR(this.filter.filterRowKey(rowKey));
     boolean result = filterAllRemaining();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Filter on rowKey:" + rowKey + ".  Result = " + result);
@@ -103,9 +103,9 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   }
   
   /** {@inheritDoc} */
-  public boolean filter(final Text rowKey, final Text colKey,
+  public boolean filterColumn(final Text rowKey, final Text colKey,
     final byte[] data) {
-    changeFAR(this.filter.filter(rowKey, colKey, data));
+    changeFAR(this.filter.filterColumn(rowKey, colKey, data));
     boolean result = filterAllRemaining();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Filter on rowKey:" + rowKey + ", colKey: " + colKey + 
@@ -115,8 +115,8 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   }
   
   /** {@inheritDoc} */
-  public boolean filterNotNull(final SortedMap<Text, byte[]> columns) {
-    changeFAR(this.filter.filterNotNull(columns));
+  public boolean filterRow(final SortedMap<Text, byte[]> columns) {
+    changeFAR(this.filter.filterRow(columns));
     boolean result = filterAllRemaining();
     if (LOG.isDebugEnabled()) {
       LOG.debug("FilterNotNull on cols:" + columns + ".  Result = " + 

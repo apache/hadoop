@@ -1,4 +1,9 @@
 Hbase Change Log
+
+  INCOMPATIBLE CHANGES
+   HBASE-584   Names in the filter interface are confusing (Clint Morgan via
+               Jim Kellerman) (API change for filters)
+   
   BUG FIXES
    HBASE-574   HBase does not load hadoop native libs (Rong-En Fan via Stack)
    HBASE-573   HBase does not read hadoop-*.xml for dfs configuration after 

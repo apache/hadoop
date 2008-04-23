@@ -28,6 +28,9 @@ import java.util.SortedMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -157,13 +160,13 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   /** {@inheritDoc} */
-  public boolean filter(final Text rowKey) {
+  public boolean filterRowKey(final Text rowKey) {
     boolean resultFound = false;
     boolean result = operator == Operator.MUST_PASS_ONE;
     for (RowFilterInterface filter : filters) {
       if (!resultFound) {
         if (operator == Operator.MUST_PASS_ALL) {
-          if (filter.filterAllRemaining() || filter.filter(rowKey)) {
+          if (filter.filterAllRemaining() || filter.filterRowKey(rowKey)) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("op.MPALL filter(Text) will return true due" + 
                 " to subfilter of type " + filter.getClass().getSimpleName());
@@ -172,7 +175,7 @@ public class RowFilterSet implements RowFilterInterface {
             resultFound = true;
           }
         } else if (operator == Operator.MUST_PASS_ONE) {
-          if (!filter.filterAllRemaining() && !filter.filter(rowKey)) {
+          if (!filter.filterAllRemaining() && !filter.filterRowKey(rowKey)) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("op.MPONE filter(Text) will return false due" + 
                 " to subfilter of type " + filter.getClass().getSimpleName());
@@ -182,7 +185,7 @@ public class RowFilterSet implements RowFilterInterface {
           }
         }
       } else if (filter.processAlways()) {
-        filter.filter(rowKey);
+        filter.filterRowKey(rowKey);
       }
     }
     if (LOG.isDebugEnabled()) {
@@ -192,7 +195,7 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   /** {@inheritDoc} */
-  public boolean filter(final Text rowKey, final Text colKey, 
+  public boolean filterColumn(final Text rowKey, final Text colKey, 
     final byte[] data) {
     boolean resultFound = false;
     boolean result = operator == Operator.MUST_PASS_ONE;
@@ -200,7 +203,7 @@ public class RowFilterSet implements RowFilterInterface {
       if (!resultFound) {
         if (operator == Operator.MUST_PASS_ALL) {
           if (filter.filterAllRemaining() || 
-            filter.filter(rowKey, colKey, data)) {
+            filter.filterColumn(rowKey, colKey, data)) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("op.MPALL filter(Text, Text, byte[]) will" + 
                 " return true due to subfilter of type " + 
@@ -211,7 +214,7 @@ public class RowFilterSet implements RowFilterInterface {
           }
         } else if (operator == Operator.MUST_PASS_ONE) {
           if (!filter.filterAllRemaining() && 
-            !filter.filter(rowKey, colKey, data)) {
+            !filter.filterColumn(rowKey, colKey, data)) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("op.MPONE filter(Text, Text, byte[]) will" + 
                 " return false due to subfilter of type " + 
@@ -222,7 +225,7 @@ public class RowFilterSet implements RowFilterInterface {
           }
         }
       } else if (filter.processAlways()) {
-        filter.filter(rowKey, colKey, data);
+        filter.filterColumn(rowKey, colKey, data);
       }
     }
     if (LOG.isDebugEnabled()) {
@@ -232,13 +235,13 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   /** {@inheritDoc} */
-  public boolean filterNotNull(final SortedMap<Text, byte[]> columns) {
+  public boolean filterRow(final SortedMap<Text, byte[]> columns) {
     boolean resultFound = false;
     boolean result = operator == Operator.MUST_PASS_ONE;
     for (RowFilterInterface filter : filters) {
       if (!resultFound) {
         if (operator == Operator.MUST_PASS_ALL) {
-          if (filter.filterAllRemaining() || filter.filterNotNull(columns)) {
+          if (filter.filterAllRemaining() || filter.filterRow(columns)) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("op.MPALL filterNotNull will return true due" + 
                 " to subfilter of type " + filter.getClass().getSimpleName());
@@ -247,7 +250,7 @@ public class RowFilterSet implements RowFilterInterface {
             resultFound = true;
           }
         } else if (operator == Operator.MUST_PASS_ONE) {
-          if (!filter.filterAllRemaining() && !filter.filterNotNull(columns)) {
+          if (!filter.filterAllRemaining() && !filter.filterRow(columns)) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("op.MPONE filterNotNull will return false due" + 
                 " to subfilter of type " + filter.getClass().getSimpleName());
@@ -257,7 +260,7 @@ public class RowFilterSet implements RowFilterInterface {
           }
         }
       } else if (filter.processAlways()) {
-        filter.filterNotNull(columns);
+        filter.filterRow(columns);
       }
     }
     if (LOG.isDebugEnabled()) {
@@ -268,46 +271,32 @@ public class RowFilterSet implements RowFilterInterface {
 
   /** {@inheritDoc} */
   public void readFields(final DataInput in) throws IOException {
+    Configuration conf = new HBaseConfiguration();
     byte opByte = in.readByte();
     operator = Operator.values()[opByte];
     int size = in.readInt();
     if (size > 0) {
       filters = new HashSet<RowFilterInterface>();
-      try {
-        for (int i = 0; i < size; i++) {
-          String className = in.readUTF();
-          Class<?> clazz = Class.forName(className);
-          RowFilterInterface filter;
-          filter = (RowFilterInterface) clazz.newInstance();
-          filter.readFields(in);
-          filters.add(filter);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Successfully read in subfilter of type " + 
-              filter.getClass().getSimpleName());
-          }
-        }
-      } catch (InstantiationException e) {
-        throw new RuntimeException("Failed to deserialize RowFilterInterface.",
-            e);
-      } catch (IllegalAccessException e) {
-        throw new RuntimeException("Failed to deserialize RowFilterInterface.",
-            e);
-      } catch (ClassNotFoundException e) {
-        throw new RuntimeException("Failed to deserialize RowFilterInterface.",
-            e);
+      for (int i = 0; i < size; i++) {
+	RowFilterInterface filter = (RowFilterInterface) ObjectWritable
+	    .readObject(in, conf);
+	filters.add(filter);
+	if (LOG.isDebugEnabled()) {
+	  LOG.debug("Successfully read in subfilter of type "
+	      + filter.getClass().getSimpleName());
+	}
       }
     }
-
   }
 
   /** {@inheritDoc} */
   public void write(final DataOutput out) throws IOException {
+    Configuration conf = new HBaseConfiguration();
     out.writeByte(operator.ordinal());
     out.writeInt(filters.size());
     for (RowFilterInterface filter : filters) {
-      out.writeUTF(filter.getClass().getName());
-      filter.write(out);
+      ObjectWritable.writeObject(out, filter, RowFilterInterface.class, conf);
     }
   }
-
+  
 }

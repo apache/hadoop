@@ -97,7 +97,7 @@ public class StopRowFilter implements RowFilterInterface {
   }
 
   /** {@inheritDoc} */
-  public boolean filter(final Text rowKey) {
+  public boolean filterRowKey(final Text rowKey) {
     if (rowKey == null) {
       if (this.stopRowKey == null) {
         return true;
@@ -118,10 +118,10 @@ public class StopRowFilter implements RowFilterInterface {
    * Because StopRowFilter does not examine column information, this method 
    * defaults to calling the rowKey-only version of filter.
    */
-  public boolean filter(@SuppressWarnings("unused") final Text rowKey,
+  public boolean filterColumn(@SuppressWarnings("unused") final Text rowKey,
     @SuppressWarnings("unused") final Text colKey,
     @SuppressWarnings("unused") final byte[] data) {
-    return filter(rowKey);
+    return filterRowKey(rowKey);
   }
 
   /** {@inheritDoc}
@@ -131,7 +131,7 @@ public class StopRowFilter implements RowFilterInterface {
    * 
    * @param columns
    */
-  public boolean filterNotNull(@SuppressWarnings("unused")
+  public boolean filterRow(@SuppressWarnings("unused")
       final SortedMap<Text, byte[]> columns) {
     return filterAllRemaining();
   }

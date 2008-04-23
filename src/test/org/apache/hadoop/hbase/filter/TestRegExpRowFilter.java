@@ -114,11 +114,11 @@ public class TestRegExpRowFilter extends TestCase {
   private void regexRowTests(RowFilterInterface filter) throws Exception {
     for (char c = FIRST_CHAR; c <= LAST_CHAR; c++) {
       Text t = createRow(c);
-      assertFalse("Failed with characer " + c, filter.filter(t));
+      assertFalse("Failed with characer " + c, filter.filterRowKey(t));
     }
     String yahooSite = "com.yahoo.www";
     assertTrue("Failed with character " +
-      yahooSite, filter.filter(new Text(yahooSite)));
+      yahooSite, filter.filterRowKey(new Text(yahooSite)));
   }
   
   private void regexRowColumnTests(RowFilterInterface filter)
@@ -128,7 +128,7 @@ public class TestRegExpRowFilter extends TestCase {
       Text t = createRow(c);
       for (Map.Entry<Text, byte []> e: this.colvalues.entrySet()) {
         assertFalse("Failed on " + c,
-          filter.filter(t, e.getKey(), e.getValue()));
+          filter.filterColumn(t, e.getKey(), e.getValue()));
       }
     }
     // Try a row and column I know will pass.
@@ -136,19 +136,19 @@ public class TestRegExpRowFilter extends TestCase {
     Text r = createRow(c);
     Text col = new Text(Character.toString(c));
     assertFalse("Failed with character " + c,
-      filter.filter(r, col, GOOD_BYTES));
+      filter.filterColumn(r, col, GOOD_BYTES));
     
     // Do same but with bad bytes.
     assertTrue("Failed with character " + c,
-      filter.filter(r, col, "badbytes".getBytes(HConstants.UTF8_ENCODING)));
+      filter.filterColumn(r, col, "badbytes".getBytes(HConstants.UTF8_ENCODING)));
     
     // Do with good bytes but bad column name.  Should not filter out.
     assertFalse("Failed with character " + c,
-      filter.filter(r, new Text("badcolumn"), GOOD_BYTES));
+      filter.filterColumn(r, new Text("badcolumn"), GOOD_BYTES));
     
     // Good column, good bytes but bad row.
     assertTrue("Failed with character " + c,
-      filter.filter(new Text("bad row"), new Text("badcolumn"), GOOD_BYTES));
+      filter.filterColumn(new Text("bad row"), new Text("badcolumn"), GOOD_BYTES));
   }
  
   private void filterNotNullTests(RowFilterInterface filter) throws Exception {
@@ -166,7 +166,7 @@ public class TestRegExpRowFilter extends TestCase {
     // Try a row that is missing an expected columnKey.
     // Testing row with columnKeys: a-c
     assertTrue("Failed with last columnKey " + thirdToLast, filter.
-      filterNotNull(colvalues));
+      filterRow(colvalues));
 
     // Try a row that has all expected columnKeys, and NO null-expected
     // columnKeys.
@@ -174,13 +174,13 @@ public class TestRegExpRowFilter extends TestCase {
     colvalues.put(new Text(new String(new char[] { secondToLast })),
       GOOD_BYTES);
     assertFalse("Failed with last columnKey " + secondToLast, filter.
-      filterNotNull(colvalues));
+      filterRow(colvalues));
 
     // Try a row that has all expected columnKeys AND a null-expected columnKey.
     // Testing row with columnKeys: a-e
     colvalues.put(new Text(new String(new char[] { LAST_CHAR })), GOOD_BYTES);
     assertTrue("Failed with last columnKey " + LAST_CHAR, filter.
-      filterNotNull(colvalues));
+      filterRow(colvalues));
     
     // Try a row that has all expected columnKeys and a null-expected columnKey 
     // that maps to a null value.
@@ -188,7 +188,7 @@ public class TestRegExpRowFilter extends TestCase {
     colvalues.put(new Text(new String(new char[] { LAST_CHAR })), 
       HLogEdit.deleteBytes.get());
     assertFalse("Failed with last columnKey " + LAST_CHAR + " mapping to null.", 
-      filter.filterNotNull(colvalues));
+      filter.filterRow(colvalues));
   }
 
   private Text createRow(final char c) {

@@ -163,7 +163,7 @@ public class TestRowFilterSet extends TestCase {
     RFSAssertReset(filter);
     
     // A row that should cause the RegExpRowFilter to fail.
-    boolean filtered = filter.filter(new Text("regex_match"), 
+    boolean filtered = filter.filterColumn(new Text("regex_match"), 
       new Text(new String(new char[] { FIRST_CHAR })), BAD_BYTES);
     assertTrue("Filtering on 'regex_match' and bad column data.", filtered);
     filterMPALL.rowProcessed(filtered, new Text("regex_match"));
@@ -172,7 +172,7 @@ public class TestRowFilterSet extends TestCase {
   private void RFSAssertion(RowFilterInterface filter, String toTest, 
     boolean assertTrue) throws Exception {
     Text testText = new Text(toTest);
-    boolean filtered = filter.filter(testText);
+    boolean filtered = filter.filterRowKey(testText);
     assertTrue("Filtering on '" + toTest + "'", 
       assertTrue? filtered : !filtered);
     filter.rowProcessed(filtered, testText);

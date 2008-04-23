@@ -118,7 +118,7 @@ public class PageRowFilter implements RowFilterInterface {
    * 
    * {@inheritDoc}
    */
-  public boolean filter(@SuppressWarnings("unused") final Text rowKey) {
+  public boolean filterRowKey(@SuppressWarnings("unused") final Text rowKey) {
     return filterAllRemaining();
   }
 
@@ -126,7 +126,7 @@ public class PageRowFilter implements RowFilterInterface {
    * 
    * {@inheritDoc}
    */
-  public boolean filter(@SuppressWarnings("unused") final Text rowKey,
+  public boolean filterColumn(@SuppressWarnings("unused") final Text rowKey,
     @SuppressWarnings("unused") final Text colKey,
     @SuppressWarnings("unused") final byte[] data) {
     return filterAllRemaining();
@@ -136,7 +136,7 @@ public class PageRowFilter implements RowFilterInterface {
    * 
    * {@inheritDoc}
    */
-  public boolean filterNotNull(@SuppressWarnings("unused")
+  public boolean filterRow(@SuppressWarnings("unused")
       final SortedMap<Text, byte[]> columns) {
     return filterAllRemaining();
   }

@@ -134,7 +134,7 @@ class HStoreScanner implements InternalScanner {
       }
       
       // Filter whole row by row key?
-      filtered = dataFilter != null? dataFilter.filter(chosenRow) : false;
+      filtered = dataFilter != null? dataFilter.filterRowKey(chosenRow) : false;
 
       // Store the key and results for each sub-scanner. Merge them as
       // appropriate.
@@ -187,7 +187,7 @@ class HStoreScanner implements InternalScanner {
                 if (dataFilter != null) {
                   // Filter whole row by column data?
                   filtered =
-                      dataFilter.filter(chosenRow, e.getKey(), e.getValue());
+                      dataFilter.filterColumn(chosenRow, e.getKey(), e.getValue());
                   if (filtered) {
                     results.clear();
                     break;

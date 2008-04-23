@@ -43,7 +43,7 @@ public class InclusiveStopRowFilter extends StopRowFilter{
   
   /** {@inheritDoc} */
   @Override
-  public boolean filter(final Text rowKey) {
+  public boolean filterRowKey(final Text rowKey) {
     if (rowKey == null) {
       if (this.stopRowKey == null) {
         return true;

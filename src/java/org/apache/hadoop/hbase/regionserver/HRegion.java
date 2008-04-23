@@ -1801,7 +1801,7 @@ public class HRegion implements HConstants {
           moreToFollow = false;
         }
         
-        filtered = filter == null ? false : filter.filterNotNull(results);
+        filtered = filter == null ? false : filter.filterRow(results);
 
         if (moreToFollow) {
           if (filter != null) {

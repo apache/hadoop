@@ -83,7 +83,7 @@ public class TestPageRowFilter extends TestCase {
     final int pageSize) {
     for (int i = 0; i < (pageSize * 2); i++) {
       Text row = new Text(Integer.toString(i));
-      boolean filterOut = filter.filter(row);
+      boolean filterOut = filter.filterRowKey(row);
       if (!filterOut) {
         assertFalse("Disagrees with 'filter'", filter.filterAllRemaining());
       } else {

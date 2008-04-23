@@ -75,19 +75,19 @@ public class TestInclusiveStopRowFilter extends TestCase {
   }
   
   private void stopRowTests(RowFilterInterface filter) throws Exception {
-    assertFalse("Filtering on " + GOOD_ROW, filter.filter(GOOD_ROW));
-    assertFalse("Filtering on " + STOP_ROW, filter.filter(STOP_ROW));
-    assertTrue("Filtering on " + PAST_STOP_ROW, filter.filter(PAST_STOP_ROW));
+    assertFalse("Filtering on " + GOOD_ROW, filter.filterRowKey(GOOD_ROW));
+    assertFalse("Filtering on " + STOP_ROW, filter.filterRowKey(STOP_ROW));
+    assertTrue("Filtering on " + PAST_STOP_ROW, filter.filterRowKey(PAST_STOP_ROW));
     
-    assertFalse("Filtering on " + GOOD_ROW, filter.filter(GOOD_ROW, null, 
+    assertFalse("Filtering on " + GOOD_ROW, filter.filterColumn(GOOD_ROW, null, 
       null));
-    assertFalse("Filtering on " + STOP_ROW, filter.filter(STOP_ROW, null, null));
-    assertTrue("Filtering on " + PAST_STOP_ROW, filter.filter(PAST_STOP_ROW, 
+    assertFalse("Filtering on " + STOP_ROW, filter.filterColumn(STOP_ROW, null, null));
+    assertTrue("Filtering on " + PAST_STOP_ROW, filter.filterColumn(PAST_STOP_ROW, 
       null, null));
 
     assertFalse("FilterAllRemaining", filter.filterAllRemaining());
-    assertFalse("FilterNotNull", filter.filterNotNull(null));
+    assertFalse("FilterNotNull", filter.filterRow(null));
     
-    assertFalse("Filter a null", filter.filter(null));
+    assertFalse("Filter a null", filter.filterRowKey(null));
   }
 }

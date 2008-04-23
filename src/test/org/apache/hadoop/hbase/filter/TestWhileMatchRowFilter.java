@@ -90,14 +90,14 @@ public class TestWhileMatchRowFilter extends TestCase {
     
     // Test cases that should pass the row
     toTest = "apples";
-    assertFalse("filter: '" + toTest + "'", filter.filter(new Text(toTest)));
-    assertFalse("innerFilter: '" + toTest + "'", innerFilter.filter(new Text(
+    assertFalse("filter: '" + toTest + "'", filter.filterRowKey(new Text(toTest)));
+    assertFalse("innerFilter: '" + toTest + "'", innerFilter.filterRowKey(new Text(
         toTest)));
     
     // Test cases that should fail the row
     toTest = "tuna";
-    assertTrue("filter: '" + toTest + "'", filter.filter(new Text(toTest)));
-    assertTrue("innerFilter: '" + toTest + "'", innerFilter.filter(new Text(
+    assertTrue("filter: '" + toTest + "'", filter.filterRowKey(new Text(toTest)));
+    assertTrue("innerFilter: '" + toTest + "'", innerFilter.filterRowKey(new Text(
         toTest)));
     
     // The difference in switch
@@ -111,7 +111,7 @@ public class TestWhileMatchRowFilter extends TestCase {
         filter.filterAllRemaining());
     
     // Test filterNotNull for functionality only (no switch-cases)
-    assertFalse("filter: filterNotNull", filter.filterNotNull(null));
+    assertFalse("filter: filterNotNull", filter.filterRow(null));
   }
   
   private void whileMatchRegExpTests(WhileMatchRowFilter filter) throws 
@@ -121,14 +121,14 @@ public class TestWhileMatchRowFilter extends TestCase {
     
     // Test cases that should pass the row
     toTest = "regex_match";
-    assertFalse("filter: '" + toTest + "'", filter.filter(new Text(toTest)));
-    assertFalse("innerFilter: '" + toTest + "'", innerFilter.filter(new Text(
+    assertFalse("filter: '" + toTest + "'", filter.filterRowKey(new Text(toTest)));
+    assertFalse("innerFilter: '" + toTest + "'", innerFilter.filterRowKey(new Text(
         toTest)));
     
     // Test cases that should fail the row
     toTest = "not_a_match";
-    assertTrue("filter: '" + toTest + "'", filter.filter(new Text(toTest)));
-    assertTrue("innerFilter: '" + toTest + "'", innerFilter.filter(new Text(
+    assertTrue("filter: '" + toTest + "'", filter.filterRowKey(new Text(toTest)));
+    assertTrue("innerFilter: '" + toTest + "'", innerFilter.filterRowKey(new Text(
         toTest)));
     
     // The difference in switch
@@ -143,7 +143,7 @@ public class TestWhileMatchRowFilter extends TestCase {
     
     // Test filter(Text, Text, byte[]) for functionality only (no switch-cases)
     toTest = "asdf_regex_hjkl";
-    assertFalse("filter: '" + toTest + "'", filter.filter(new Text(toTest), 
+    assertFalse("filter: '" + toTest + "'", filter.filterColumn(new Text(toTest), 
       null, null));
   }
 }

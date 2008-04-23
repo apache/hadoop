@@ -145,7 +145,7 @@ public class RegExpRowFilter implements RowFilterInterface {
    * 
    * {@inheritDoc}
    */
-  public boolean filter(final Text rowKey) {
+  public boolean filterRowKey(final Text rowKey) {
     if (filtersByRowKey() && rowKey != null) {
       boolean result = !getRowKeyPattern().matcher(rowKey.toString()).matches();
       if (LOG.isDebugEnabled()) {
@@ -160,9 +160,9 @@ public class RegExpRowFilter implements RowFilterInterface {
    * 
    * {@inheritDoc}
    */
-  public boolean filter(final Text rowKey, final Text colKey,
+  public boolean filterColumn(final Text rowKey, final Text colKey,
       final byte[] data) {
-    if (filter(rowKey)) {
+    if (filterRowKey(rowKey)) {
       return true;
     }
     if (filtersByColumnValue()) {
@@ -196,7 +196,7 @@ public class RegExpRowFilter implements RowFilterInterface {
    * 
    * {@inheritDoc}
    */
-  public boolean filterNotNull(final SortedMap<Text, byte[]> columns) {
+  public boolean filterRow(final SortedMap<Text, byte[]> columns) {
     for (Entry<Text, byte[]> col : columns.entrySet()) {
       if (nullColumns.contains(col.getKey())
           && !HLogEdit.isDeleted(col.getValue())) {
