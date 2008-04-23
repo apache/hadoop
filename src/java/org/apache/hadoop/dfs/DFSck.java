@@ -20,6 +20,7 @@ package org.apache.hadoop.dfs;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.BufferedReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
@@ -113,13 +114,12 @@ public class DFSck extends Configured implements Tool {
     URL path = new URL(url.toString());
     URLConnection connection = path.openConnection();
     InputStream stream = connection.getInputStream();
-    InputStreamReader input =
-      new InputStreamReader(stream, "UTF-8");
+    BufferedReader input = new BufferedReader(new InputStreamReader(
+                                              stream, "UTF-8"));
+    String line = null;
     try {
-      int c = input.read();
-      while (c != -1) {
-        System.out.print((char) c);
-        c = input.read();
+      while ((line = input.readLine()) != null) {
+        System.out.println(line);
       }
     } finally {
       input.close();
