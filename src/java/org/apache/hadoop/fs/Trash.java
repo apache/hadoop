@@ -19,7 +19,6 @@ package org.apache.hadoop.fs;
 
 import java.text.*;
 import java.io.*;
-import java.net.URI;
 import java.util.Date;
 
 import org.apache.commons.logging.*;
@@ -85,7 +84,7 @@ public class Trash extends Configured {
     if (!fs.exists(path))                         // check that path exists
       throw new FileNotFoundException(path.toString());
 
-    if (path.toString().startsWith(trash.toString())) {
+    if (path.makeQualified(fs).toString().startsWith(trash.toString())) {
       return false;                               // already in trash
     }
 

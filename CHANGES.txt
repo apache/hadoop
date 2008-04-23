@@ -64,6 +64,9 @@ Trunk (unreleased changes)
     HADOOP-3268. file:// URLs issue in TestUrlStreamHandler under Windows.
     (taton)
 
+    HADOOP-3127. Deleting files in trash should really remove them.
+    (Brice Arnould via omalley)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

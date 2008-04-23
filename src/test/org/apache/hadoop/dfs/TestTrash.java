@@ -174,6 +174,22 @@ public class TestTrash extends TestCase {
         assertTrue(val == 0);
       }
 
+      // Check that we can delete a file from the trash
+      {
+          Path toErase = new Path(trashRoot, "toErase");
+          int retVal = -1;
+          writeFile(fs, toErase);
+          try {
+            retVal = shell.run(new String[] {"-rm", toErase.toString()});
+          } catch (Exception e) {
+            System.err.println("Exception raised from Trash.run " +
+                               e.getLocalizedMessage()); 
+          }
+          assertTrue(retVal == 0);
+          checkNotInTrash (fs, trashRoot, toErase.toString());
+          checkNotInTrash (fs, trashRoot, toErase.toString()+".1");
+      }
+
       // simulate Trash removal
       {
         String[] args = new String[1];
