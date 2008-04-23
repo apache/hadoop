@@ -5,7 +5,7 @@ GRID_DIR=`cd "$GRID_DIR"; pwd`
 source $GRID_DIR/../gridmix-env
 
 INDIR="${VARINFLTEXT}/{part-00000,part-00001,part-00002}"
-Date=`date +%F-%H-%M-%S`
+Date=`date +%F-%H-%M-%S-%N`
 
 OUTDIR=perf-out/sort-out-dir-small_$Date
 ${HADOOP_HOME}/bin/hadoop dfs -rmr $OUTDIR
