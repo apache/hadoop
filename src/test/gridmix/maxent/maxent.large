@@ -6,7 +6,7 @@ source $GRID_DIR/../gridmix-env
 
 NUM_OF_REDUCERS=100
 INDIR=${FIXCOMPTEXT}
-Date=`date +%F-%H-%M-%S`
+Date=`date +%F-%H-%M-%S-%N`
 
 OUTDIR=perf-out/maxent-out-dir-large_$Date
 ${HADOOP_HOME}/bin/hadoop dfs -rmr $OUTDIR

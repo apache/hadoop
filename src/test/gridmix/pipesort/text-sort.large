@@ -6,7 +6,7 @@ source $GRID_DIR/../gridmix-env
 
 NUM_OF_REDUCERS=$NUM_OF_REDUCERS_FOR_LARGE_JOB
 INDIR=${VARINFLTEXT}
-Date=`date +%F-%H-%M-%S`
+Date=`date +%F-%H-%M-%S-%N`
 
 OUTDIR=perf-out/pipe-out-dir-large_$Date
 ${HADOOP_HOME}/bin/hadoop dfs -rmr $OUTDIR

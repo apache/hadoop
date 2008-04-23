@@ -6,7 +6,7 @@ source $GRID_DIR/../gridmix-env
 
 NUM_OF_REDUCERS=1
 INDIR="${VARCOMPSEQ}/{part-00000,part-00001,part-00002}"
-Date=`date +%F-%H-%M-%S`
+Date=`date +%F-%H-%M-%S-%N`
 
 OUTDIR=perf-out/webdata-scan-out-dir-small_$Date
 ${HADOOP_HOME}/bin/hadoop dfs -rmr $OUTDIR
