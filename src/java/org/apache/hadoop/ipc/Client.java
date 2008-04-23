@@ -40,7 +40,6 @@ import javax.net.SocketFactory;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.dfs.FSConstants;
 import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
@@ -70,7 +69,7 @@ public class Client {
   private Configuration conf;
   private int maxIdleTime; //connections will be culled if it was idle for 
                            //maxIdleTime msecs
-  private int maxRetries; //the max. no. of retries for socket connections
+  final private int maxRetries; //the max. no. of retries for socket connections
   private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
   private Thread connectionCullerThread;
   private SocketFactory socketFactory;           // how to create sockets
@@ -166,33 +165,23 @@ public class Client {
         notify();
         return;
       }
-      short failures = 0;
+      
+      short ioFailures = 0;
+      short timeoutFailures = 0;
       while (true) {
         try {
           this.socket = socketFactory.createSocket();
           this.socket.setTcpNoDelay(tcpNoDelay);
-          this.socket.connect(remoteId.getAddress(), FSConstants.READ_TIMEOUT);
+          // connection time out is 20s
+          this.socket.connect(remoteId.getAddress(), 20000);
           break;
-        } catch (IOException ie) { //SocketTimeoutException is also caught 
-          if (failures == maxRetries) {
-            //reset inUse so that the culler gets a chance to throw this
-            //connection object out of the table. We don't want to increment
-            //inUse to infinity (everytime getConnection is called inUse is
-            //incremented)!
-            inUse = 0;
-            // set socket to null so that the next call to setupIOstreams
-            // can start the process of connect all over again.
-            socket.close();
-            socket = null;
-            throw ie;
-          }
-          failures++;
-          LOG.info("Retrying connect to server: " + remoteId.getAddress() + 
-                   ". Already tried " + failures + " time(s).");
-          try { 
-            Thread.sleep(1000);
-          } catch (InterruptedException iex){
-          }
+        } catch (SocketTimeoutException toe) {
+          /* The max number of retries is 45,
+           * which amounts to 20s*45 = 15 minutes retries.
+           */
+          handleConnectionFailure(timeoutFailures++, 45, toe);
+        } catch (IOException ie) {
+          handleConnectionFailure(ioFailures++, maxRetries, ie);
         }
       }
       socket.setSoTimeout(timeout);
@@ -221,6 +210,48 @@ public class Client {
       notify();
     }
 
+    /* Handle connection failures
+     *
+     * If the current number of retries is equal to the max number of retries,
+     * stop retrying and throw the exception; Otherwise backoff 1 second and
+     * try connecting again.
+     * 
+     * @param curRetries current number of retries
+     * @param maxRetries max number of retries allowed
+     * @param ioe failure reason
+     * @throws IOException if max number of retries is reached
+     */
+    private void handleConnectionFailure(
+        int curRetries, int maxRetries, IOException ioe) throws IOException {
+      // close the current connection
+      try {
+        socket.close();
+      } catch (IOException e) {
+        LOG.warn("Not able to close a socket", e);
+      }
+      // set socket to null so that the next call to setupIOstreams
+      // can start the process of connect all over again.
+      socket = null;
+
+      // throw the exception if the maximum number of retries is reached
+      if (curRetries == maxRetries) {
+        //reset inUse so that the culler gets a chance to throw this
+        //connection object out of the table. We don't want to increment
+        //inUse to infinity (everytime getConnection is called inUse is
+        //incremented)!
+        inUse = 0;
+        throw ioe;
+      }
+
+      // otherwise back off and retry
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException ignored) {}
+      
+      LOG.info("Retrying connect to server: " + remoteId.getAddress() + 
+          ". Already tried " + curRetries + " time(s).");
+    }
+    
     private synchronized void writeHeader() throws IOException {
       out.write(Server.HEADER.array());
       out.write(Server.CURRENT_VERSION);

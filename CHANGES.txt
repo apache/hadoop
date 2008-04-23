@@ -31,6 +31,10 @@ Trunk (unreleased changes)
     HADOOP-3160. Remove deprecated exists() from ClientProtocol and 
     FSNamesystem (Lohit Vjayarenu via rangadi)
 
+    HADOOP-2910. Throttle IPC Clients during bursts of requests or
+    server slowdown. Clients retry connection for up to 15 minutes
+    when socket connection times out. (hairong)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
