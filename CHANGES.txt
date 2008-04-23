@@ -643,6 +643,9 @@ Release 0.17.0 - Unreleased
     HADOOP-3286. Prevent collisions in gridmix output dirs by increasing the
     granularity of the timestamp. (Runping Qi via cdouglas)
 
+    HADOOP-3285. Fix input split locality when the splits align to
+    fs blocks. (omalley)
+
 Release 0.16.3 - 2008-04-16
 
   BUG FIXES
