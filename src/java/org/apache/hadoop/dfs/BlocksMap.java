@@ -297,7 +297,7 @@ class BlocksMap {
     BlockInfo info = map.get(b);
     if (info == null) {
       info = new BlockInfo(b, replication);
-      map.put(b, info);
+      map.put(info, info);
     }
     return info;
   }
