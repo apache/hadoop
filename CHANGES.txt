@@ -61,6 +61,9 @@ Trunk (unreleased changes)
 
     HADOOP-3282. Port issues in TestCheckpoint resolved. (shv)
 
+    HADOOP-3268. file:// URLs issue in TestUrlStreamHandler under Windows.
+    (taton)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

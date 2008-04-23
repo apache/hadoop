@@ -114,9 +114,8 @@ public class TestUrlStreamHandler extends TestCase {
         throw new IOException("Cannot create temporary directory: " + tmpDir);
     }
 
-    String uriStr =
-        String.format("file://%s/thefile", tmpDir.getAbsolutePath());
-    URI uri = new URI(uriStr);
+    File tmpFile = new File(tmpDir, "thefile");
+    URI uri = tmpFile.toURI();
 
     FileSystem fs = FileSystem.get(uri, conf);
 
