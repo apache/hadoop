@@ -279,12 +279,17 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
   protected int getBlockIndex(BlockLocation[] blkLocations, 
                               long offset) {
     for (int i = 0 ; i < blkLocations.length; i++) {
+      // is the offset inside this block?
       if ((blkLocations[i].getOffset() <= offset) &&
-        ((blkLocations[i].getOffset() + blkLocations[i].getLength()) >= 
-        offset))
-          return i;
+          (offset < blkLocations[i].getOffset() + blkLocations[i].getLength())){
+        return i;
+      }
     }
-    return 0;
+    BlockLocation last = blkLocations[blkLocations.length];
+    long fileLength = last.getOffset() + last.getLength() -1;
+    throw new IllegalArgumentException("Offset " + offset + 
+                                       " is outside of file (0.." +
+                                       fileLength + ")");
   }
 
   /**

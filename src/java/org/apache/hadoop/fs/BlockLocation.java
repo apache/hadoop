@@ -177,4 +177,16 @@ public class BlockLocation implements Writable {
       hosts[i] = host.toString();
     }
   }
+  
+  public String toString() {
+    StringBuilder result = new StringBuilder();
+    result.append(offset);
+    result.append(',');
+    result.append(length);
+    for(String h: hosts) {
+      result.append(',');
+      result.append(h);
+    }
+    return result.toString();
+  }
 }
