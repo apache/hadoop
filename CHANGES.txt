@@ -26,7 +26,8 @@ Hbase Change Log
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
    HBASE-596   DemoClient.py (Ivan Begtin via Stack)
-
+   HBASE-581   Allow adding filters to TableInputFormat (At same time, ensure TIF
+               is subclassable) (David Alves via Stack)
 
 Release 0.1.1 - 04/11/2008
 
