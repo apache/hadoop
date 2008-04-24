@@ -559,7 +559,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     if (blocksToDelete != null && blocksToDelete.length > 0)
       return new BlockCommand(DatanodeProtocol.DNA_INVALIDATE, blocksToDelete);
     if (getFSImage().isUpgradeFinalized())
-      return new DatanodeCommand(DatanodeProtocol.DNA_FINALIZE);
+      return DatanodeCommand.FINALIZE;
     return null;
   }
 

@@ -77,6 +77,10 @@ Trunk (unreleased changes)
     HADOOP-3300. Fix locking of explicit locks in NetworkTopology.
     (tomwhite via omalley)
 
+    HADOOP-3270. Constant DatanodeCommands are stored in static final
+    immutable variables for better code clarity.  
+    (Tsz Wo (Nicholas), SZE via dhruba)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

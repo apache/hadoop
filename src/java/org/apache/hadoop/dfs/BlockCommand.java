@@ -20,14 +20,51 @@ package org.apache.hadoop.dfs;
 import java.io.*;
 import org.apache.hadoop.io.*;
 
-class DatanodeCommand implements Writable {
-  protected int action;
+abstract class DatanodeCommand implements Writable {
+  static class Register extends DatanodeCommand {
+    private Register() {super(DatanodeProtocol.DNA_REGISTER);}
+    public void readFields(DataInput in) {}
+    public void write(DataOutput out) {}
+  }
+
+  static class BlockReport extends DatanodeCommand {
+    private BlockReport() {super(DatanodeProtocol.DNA_BLOCKREPORT);}
+    public void readFields(DataInput in) {}
+    public void write(DataOutput out) {}
+  }
+
+  static class Finalize extends DatanodeCommand {
+    private Finalize() {super(DatanodeProtocol.DNA_FINALIZE);}
+    public void readFields(DataInput in) {}
+    public void write(DataOutput out) {}
+  }
+
+  static {                                      // register a ctor
+    WritableFactories.setFactory(Register.class,
+        new WritableFactory() {
+          public Writable newInstance() {return new Register();}
+        });
+    WritableFactories.setFactory(BlockReport.class,
+        new WritableFactory() {
+          public Writable newInstance() {return new BlockReport();}
+        });
+    WritableFactories.setFactory(Finalize.class,
+        new WritableFactory() {
+          public Writable newInstance() {return new Finalize();}
+        });
+  }
+
+  static final DatanodeCommand REGISTER = new Register();
+  static final DatanodeCommand BLOCKREPORT = new BlockReport();
+  static final DatanodeCommand FINALIZE = new Finalize();
+
+  private int action;
   
   public DatanodeCommand() {
     this(DatanodeProtocol.DNA_UNKNOWN);
   }
   
-  public DatanodeCommand(int action) {
+  DatanodeCommand(int action) {
     this.action = action;
   }
 
@@ -38,14 +75,6 @@ class DatanodeCommand implements Writable {
   ///////////////////////////////////////////
   // Writable
   ///////////////////////////////////////////
-  static {                                      // register a ctor
-    WritableFactories.setFactory
-      (BlockCommand.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new DatanodeCommand(); }
-       });
-  }
-
   public void write(DataOutput out) throws IOException {
     out.writeInt(this.action);
   }
@@ -74,27 +103,29 @@ class BlockCommand extends DatanodeCommand {
    * @param blocks    blocks to be transferred 
    * @param targets   nodes to transfer
    */
-  public BlockCommand(Block blocks[], DatanodeInfo targets[][]) {
+  BlockCommand(Block blocks[], DatanodeInfo targets[][]) {
     super( DatanodeProtocol.DNA_TRANSFER);
     this.blocks = blocks;
     this.targets = targets;
   }
 
+  private static final DatanodeInfo[][] EMPTY_TARGET = {};
+
   /**
    * Create BlockCommand for the given action
    * @param blocks blocks related to the action
    */
-  public BlockCommand(int action, Block blocks[]) {
+  BlockCommand(int action, Block blocks[]) {
     super(action);
     this.blocks = blocks;
-    this.targets = new DatanodeInfo[0][];
+    this.targets = EMPTY_TARGET;
   }
 
-  public Block[] getBlocks() {
+  Block[] getBlocks() {
     return blocks;
   }
 
-  public DatanodeInfo[][] getTargets() {
+  DatanodeInfo[][] getTargets() {
     return targets;
   }
 

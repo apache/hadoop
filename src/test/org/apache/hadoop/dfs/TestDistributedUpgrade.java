@@ -174,7 +174,7 @@ class UO_Namenode extends UpgradeObjectNamenode {
 
   synchronized public UpgradeCommand processUpgradeCommand(
                                   UpgradeCommand command) throws IOException {
-    switch(command.action) {
+    switch(command.getAction()) {
       case UpgradeCommand.UC_ACTION_REPORT_STATUS:
         this.status += command.getCurrentStatus()/8;  // 4 reports needed
         break;

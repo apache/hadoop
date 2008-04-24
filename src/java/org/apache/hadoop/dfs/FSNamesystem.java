@@ -2184,7 +2184,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         try {
           nodeinfo = getDatanode(nodeReg);
         } catch(UnregisteredDatanodeException e) {
-          return new DatanodeCommand(DatanodeProtocol.DNA_REGISTER);
+          return DatanodeCommand.REGISTER;
         }
           
         // Check if this datanode should actually be shutdown instead. 
@@ -2194,7 +2194,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         }
 
         if (nodeinfo == null || !nodeinfo.isAlive) {
-          return new DatanodeCommand(DatanodeProtocol.DNA_REGISTER);
+          return DatanodeCommand.REGISTER;
         }
 
         updateStats(nodeinfo, false);
@@ -2220,7 +2220,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       // have any work for that as well
       assert(cmd == null);
       if (isResolved(nodeReg)) {
-        return new DatanodeCommand(DatanodeProtocol.DNA_BLOCKREPORT);
+        return DatanodeCommand.BLOCKREPORT;
       }
     }
     //check distributed upgrade
