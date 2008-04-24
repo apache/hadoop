@@ -660,6 +660,9 @@ Release 0.17.0 - Unreleased
     HADOOP-3285. Fix input split locality when the splits align to
     fs blocks. (omalley)
 
+    HADOOP-3294. Fix distcp to check the destination length and retry the copy
+    if it doesn't match the src length. (Tsz Wo (Nicholas), SZE via cdouglas)
+
 Release 0.16.3 - 2008-04-16
 
   BUG FIXES
