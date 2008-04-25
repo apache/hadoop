@@ -88,6 +88,9 @@ Trunk (unreleased changes)
     HADOOP-2793. Fix broken links for worst performing shuffle tasks in
     the job history page. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3313. Avoid unnecessary calls to System.currentTimeMillis
+    in RPC::Invoker. (cdouglas)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

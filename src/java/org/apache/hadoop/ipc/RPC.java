@@ -208,11 +208,17 @@ public class RPC {
 
     public Object invoke(Object proxy, Method method, Object[] args)
       throws Throwable {
-      long startTime = System.currentTimeMillis();
+      final boolean logDebug = LOG.isDebugEnabled();
+      long startTime = 0;
+      if (logDebug) {
+        startTime = System.currentTimeMillis();
+      }
       ObjectWritable value = (ObjectWritable)
         client.call(new Invocation(method, args), address, ticket);
-      long callTime = System.currentTimeMillis() - startTime;
-      LOG.debug("Call: " + method.getName() + " " + callTime);
+      if (logDebug) {
+        long callTime = System.currentTimeMillis() - startTime;
+        LOG.debug("Call: " + method.getName() + " " + callTime);
+      }
       return value.get();
     }
     
