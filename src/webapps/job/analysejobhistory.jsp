@@ -162,8 +162,8 @@ finished at (relative to the Job launch time):
 %>
     <tr>
     <td><a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=
-        <%=encodedLogFileName%>&taskid=<%=reduceTasks[i].get(Keys.TASKID)%>">
-        <%=reduceTasks[i].get(Keys.TASKID) %></a></td>
+<%=encodedLogFileName%>&taskid=<%=reduceTasks[i].get(Keys.TASKID)%>">
+<%=reduceTasks[i].get(Keys.TASKID) %></a></td>
     <td><%=
            StringUtils.formatTimeDiff(
                        reduceTasks[i].getLong(Keys.SHUFFLE_FINISHED),

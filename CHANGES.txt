@@ -85,6 +85,9 @@ Trunk (unreleased changes)
     immutable variables for better code clarity.  
     (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-2793. Fix broken links for worst performing shuffle tasks in
+    the job history page. (Amareshwari Sriramadasu via ddas)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
