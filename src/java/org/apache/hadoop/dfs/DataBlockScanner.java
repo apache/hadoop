@@ -252,7 +252,13 @@ public class DataBlockScanner implements Runnable {
       delBlockInfo(info);
     }
   }
-  
+
+  /** @return the last scan time */
+  synchronized long getLastScanTime(Block block) {
+    BlockScanInfo info = blockMap.get(block);
+    return info == null? 0: info.lastScanTime;
+  }
+
   /** Deletes blocks from internal structures */
   void deleteBlocks(Block[] blocks) {
     for ( Block b : blocks ) {

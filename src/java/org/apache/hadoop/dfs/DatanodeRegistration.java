@@ -47,15 +47,14 @@ class DatanodeRegistration extends DatanodeID implements Writable {
    * Default constructor.
    */
   public DatanodeRegistration() {
-    super(null, null, -1);
-    this.storageInfo = new StorageInfo();
+    this("");
   }
   
   /**
    * Create DatanodeRegistration
    */
   public DatanodeRegistration(String nodeName) {
-    super(nodeName, "", -1);
+    super(nodeName);
     this.storageInfo = new StorageInfo();
   }
   
@@ -63,6 +62,10 @@ class DatanodeRegistration extends DatanodeID implements Writable {
     this.infoPort = infoPort;
   }
   
+  void setIpcPort(int ipcPort) {
+    this.ipcPort = ipcPort;
+  }
+
   void setStorageInfo(DataStorage storage) {
     this.storageInfo = new StorageInfo(storage);
     this.storageID = storage.getStorageID();
@@ -84,22 +87,36 @@ class DatanodeRegistration extends DatanodeID implements Writable {
     return Storage.getRegistrationID(storageInfo);
   }
 
+  public String toString() {
+    return getClass().getSimpleName()
+      + "(" + name
+      + ", storageID=" + storageID
+      + ", infoPort=" + infoPort
+      + ", ipcPort=" + ipcPort
+      + ")";
+  }
   /////////////////////////////////////////////////
   // Writable
   /////////////////////////////////////////////////
-  /**
-   */
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     super.write(out);
+
+    //TODO: move it to DatanodeID once HADOOP-2797 has been committed
+    out.writeShort(ipcPort);
+
     out.writeInt(storageInfo.getLayoutVersion());
     out.writeInt(storageInfo.getNamespaceID());
     out.writeLong(storageInfo.getCTime());
   }
 
-  /**
-   */
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
+
+    //TODO: move it to DatanodeID once HADOOP-2797 has been committed
+    this.ipcPort = in.readShort() & 0x0000ffff;
+
     storageInfo.layoutVersion = in.readInt();
     storageInfo.namespaceID = in.readInt();
     storageInfo.cTime = in.readLong();

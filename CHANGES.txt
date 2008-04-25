@@ -12,6 +12,11 @@ Trunk (unreleased changes)
     HADOOP-2865. FsShell.ls() printout format changed to print file names
     in the end of the line. (Edward J. Yoon via shv)
 
+    HADOOP-3283. The Datanode has a RPC server. It currently supports
+    two RPCs: the first RPC retrives the metadata about a block and the
+    second RPC sets the generation stamp of an existing block.
+    (Tsz Wo (Nicholas), SZE via dhruba)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,

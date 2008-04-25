@@ -2035,7 +2035,8 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     // update the datanode's name with ip:port
     DatanodeID dnReg = new DatanodeID(dnAddress + ":" + nodeReg.getPort(),
                                       nodeReg.getStorageID(),
-                                      nodeReg.getInfoPort());
+                                      nodeReg.getInfoPort(),
+                                      nodeReg.getIpcPort());
     nodeReg.updateRegInfo(dnReg);
       
     NameNode.stateChangeLog.info(
@@ -3252,7 +3253,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if (listDeadNodes) {
       for (Iterator<String> it = mustList.keySet().iterator(); it.hasNext();) {
         DatanodeDescriptor dn = 
-            new DatanodeDescriptor(new DatanodeID(it.next(), "", 0));
+            new DatanodeDescriptor(new DatanodeID(it.next()));
         dn.setLastUpdate(0);
         nodes.add(dn);
       }

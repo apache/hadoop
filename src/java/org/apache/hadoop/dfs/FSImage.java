@@ -1253,9 +1253,7 @@ class FSImage extends Storage {
      * Datanode to be stored in the fsImage.
      */
     public void write(DataOutput out) throws IOException {
-      DatanodeID id = new DatanodeID(node.getName(), node.getStorageID(),
-                                     node.getInfoPort());
-      id.write(out);
+      new DatanodeID(node).write(out);
       out.writeLong(node.getCapacity());
       out.writeLong(node.getRemaining());
       out.writeLong(node.getLastUpdate());

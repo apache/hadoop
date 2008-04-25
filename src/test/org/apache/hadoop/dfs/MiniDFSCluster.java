@@ -18,11 +18,7 @@
 package org.apache.hadoop.dfs;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.BufferedOutputStream;
-import java.io.PipedOutputStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -355,6 +351,7 @@ public class MiniDFSCluster {
     // Set up the right ports for the datanodes
     conf.set("dfs.datanode.address", "127.0.0.1:0");
     conf.set("dfs.datanode.http.address", "127.0.0.1:0");
+    conf.set("dfs.datanode.ipc.address", "0.0.0.0:0");
     
     String[] args = (operation == null ||
                      operation == StartupOption.FORMAT ||
@@ -505,6 +502,16 @@ public class MiniDFSCluster {
     return list;
   }
   
+  /** @return the datanode having the ipc server listen port */
+  DataNode getDataNode(int ipcPort) {
+    for(DataNode dn : getDataNodes()) {
+      if (dn.ipcServer.getListenerAddress().getPort() == ipcPort) {
+        return dn;
+      }
+    }
+    return null;
+  }
+
   /**
    * Gets the rpc port used by the NameNode, because the caller 
    * supplied port is not necessarily the actual port used.

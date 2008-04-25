@@ -281,10 +281,13 @@ public class DatanodeInfo extends DatanodeID implements Node {
        });
   }
 
-  /**
-   */
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     super.write(out);
+
+    //TODO: move it to DatanodeID once HADOOP-2797 has been committed
+    out.writeShort(ipcPort);
+
     out.writeLong(capacity);
     out.writeLong(dfsUsed);
     out.writeLong(remaining);
@@ -299,10 +302,13 @@ public class DatanodeInfo extends DatanodeID implements Node {
     WritableUtils.writeEnum(out, getAdminState());
   }
 
-  /**
-   */
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
+
+    //TODO: move it to DatanodeID once HADOOP-2797 has been committed
+    this.ipcPort = in.readShort() & 0x0000ffff;
+
     this.capacity = in.readLong();
     this.dfsUsed = in.readLong();
     this.remaining = in.readLong();

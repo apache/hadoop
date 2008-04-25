@@ -23,14 +23,14 @@ import junit.framework.TestCase;
 public class TestHost2NodesMap extends TestCase {
   static private Host2NodesMap map = new Host2NodesMap();
   private final static DatanodeDescriptor dataNodes[] = new DatanodeDescriptor[] {
-    new DatanodeDescriptor(new DatanodeID("h1:5020", "0", -1), "/d1/r1"),
-    new DatanodeDescriptor(new DatanodeID("h2:5020", "0", -1), "/d1/r1"),
-    new DatanodeDescriptor(new DatanodeID("h3:5020", "0", -1), "/d1/r2"),
-    new DatanodeDescriptor(new DatanodeID("h3:5030", "0", -1), "/d1/r2"),
+    new DatanodeDescriptor(new DatanodeID("h1:5020"), "/d1/r1"),
+    new DatanodeDescriptor(new DatanodeID("h2:5020"), "/d1/r1"),
+    new DatanodeDescriptor(new DatanodeID("h3:5020"), "/d1/r2"),
+    new DatanodeDescriptor(new DatanodeID("h3:5030"), "/d1/r2"),
   };
   private final static DatanodeDescriptor NULL_NODE = null; 
   private final static DatanodeDescriptor NODE = 
-    new DatanodeDescriptor(new DatanodeID("h3:5040", "0", -1), "/d1/r4");
+    new DatanodeDescriptor(new DatanodeID("h3:5040"), "/d1/r4");
 
   static {
     for(DatanodeDescriptor node:dataNodes) {

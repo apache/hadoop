@@ -36,13 +36,13 @@ public class DatanodeID implements WritableComparable {
   protected String name;      /// hostname:portNumber
   protected String storageID; /// unique per cluster storageID
   protected int infoPort;     /// the port where the infoserver is running
+  protected int ipcPort;     /// the port where the ipc server is running
 
-  /**
-   * DatanodeID default constructor
-   */
-  public DatanodeID() {
-    this("", "", -1);
-  }
+  /** Equivalent to DatanodeID(""). */
+  public DatanodeID() {this("");}
+
+  /** Equivalent to DatanodeID(nodeName, "", -1, -1). */
+  public DatanodeID(String nodeName) {this(nodeName, "", -1, -1);}
 
   /**
    * DatanodeID copy constructor
@@ -50,19 +50,25 @@ public class DatanodeID implements WritableComparable {
    * @param from
    */
   public DatanodeID(DatanodeID from) {
-    this(from.getName(), from.getStorageID(), from.getInfoPort());
+    this(from.getName(),
+        from.getStorageID(),
+        from.getInfoPort(),
+        from.getIpcPort());
   }
   
   /**
    * Create DatanodeID
-   * 
    * @param nodeName (hostname:portNumber) 
    * @param storageID data storage ID
+   * @param infoPort info server port 
+   * @param ipcPort ipc server port
    */
-  public DatanodeID(String nodeName, String storageID, int infoPort) {
+  public DatanodeID(String nodeName, String storageID,
+      int infoPort, int ipcPort) {
     this.name = nodeName;
     this.storageID = storageID;
     this.infoPort = infoPort;
+    this.ipcPort = ipcPort;
   }
   
   /**
@@ -84,6 +90,13 @@ public class DatanodeID implements WritableComparable {
    */
   public int getInfoPort() {
     return infoPort;
+  }
+
+  /**
+   * @return ipcPort (the port at which the IPC server bound to)
+   */
+  public int getIpcPort() {
+    return ipcPort;
   }
 
   /**
@@ -154,16 +167,14 @@ public class DatanodeID implements WritableComparable {
   /////////////////////////////////////////////////
   // Writable
   /////////////////////////////////////////////////
-  /**
-   */
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     UTF8.writeString(out, name);
     UTF8.writeString(out, storageID);
     out.writeShort(infoPort);
   }
 
-  /**
-   */
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     name = UTF8.readString(in);
     storageID = UTF8.readString(in);
