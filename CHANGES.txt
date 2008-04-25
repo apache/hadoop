@@ -51,7 +51,7 @@ Trunk (unreleased changes)
 
     HADOOP-3164. Reduce DataNode CPU usage by using FileChannel.tranferTo().
     On Linux DataNode takes 5 times less CPU while serving data. Results may
-    vary on other platforms.
+    vary on other platforms. (rangadi)
 
   BUG FIXES
 
