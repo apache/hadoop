@@ -49,6 +49,10 @@ Trunk (unreleased changes)
     HADOOP-1979. Speed up fsck by adding a buffered stream. (Lohit
     Vijaya Renu via omalley)
 
+    HADOOP-3164. Reduce DataNode CPU usage by using FileChannel.tranferTo().
+    On Linux DataNode takes 5 times less CPU while serving data. Results may
+    vary on other platforms.
+
   BUG FIXES
 
     HADOOP-2905. 'fsck -move' triggers NPE in NameNode. 

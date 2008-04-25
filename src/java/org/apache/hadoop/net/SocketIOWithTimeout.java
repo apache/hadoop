@@ -159,22 +159,45 @@ abstract class SocketIOWithTimeout {
       } 
 
       if (count == 0) {
-        
-        String waitingFor = ""+ops;
-        if (ops == SelectionKey.OP_READ) {
-          waitingFor = "read";
-        } else if (ops == SelectionKey.OP_WRITE) {
-          waitingFor = "write";
-        }
-        
-        throw new SocketTimeoutException(timeout + " millis timeout while " +
-                                         "waiting for channel to be ready for "
-                                         + waitingFor + ". ch : " + channel);
+        throw new SocketTimeoutException(timeoutExceptionString(ops));
       }
       // otherwise the socket should be ready for io.
     }
     
     return 0; // does not reach here.
+  }
+  
+  /**
+   * This is similar to {@link #doIO(ByteBuffer, int)} except that it
+   * does not perform any I/O. It just waits for the channel to be ready
+   * for I/O as specified in ops.
+   * 
+   * @param ops Selection Ops used for waiting
+   * 
+   * @throws SocketTimeoutException 
+   *         if select on the channel times out.
+   * @throws IOException
+   *         if any other I/O error occurs. 
+   */
+  void waitForIO(int ops) throws IOException {
+    
+    if (selector.select(channel, ops, timeout) == 0) {
+      throw new SocketTimeoutException(timeoutExceptionString(ops)); 
+    }
+  }
+  
+  private String timeoutExceptionString(int ops) {
+    
+    String waitingFor = "" + ops;
+    if (ops == SelectionKey.OP_READ) {
+      waitingFor = "read";
+    } else if (ops == SelectionKey.OP_WRITE) {
+      waitingFor = "write";
+    }
+    
+    return timeout + " millis timeout while " +
+           "waiting for channel to be ready for " + 
+           waitingFor + ". ch : " + channel;    
   }
   
   /**

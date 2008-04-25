@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.net;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SelectableChannel;
@@ -143,4 +145,75 @@ public class SocketOutputStream extends OutputStream
   public int write(ByteBuffer src) throws IOException {
     return writer.doIO(src, SelectionKey.OP_WRITE);
   }
+  
+  /**
+   * waits for the underlying channel to be ready for writing.
+   * The timeout specified for this stream applies to this wait.
+   *
+   * @throws SocketTimeoutException 
+   *         if select on the channel times out.
+   * @throws IOException
+   *         if any other I/O error occurs. 
+   */
+  public void waitForWritable() throws IOException {
+    writer.waitForIO(SelectionKey.OP_WRITE);
+  }
+  
+  /**
+   * Transfers data from FileChannel using 
+   * {@link FileChannel#transferTo(long, long, WritableByteChannel)}. 
+   * 
+   * Similar to readFully(), this waits till requested amount of 
+   * data is transfered.
+   * 
+   * @param fileCh FileChannel to transfer data from.
+   * @param position position within the channel where the transfer begins
+   * @param count number of bytes to transfer.
+   * 
+   * @throws EOFException 
+   *         If end of input file is reached before requested number of 
+   *         bytes are transfered.
+   *
+   * @throws SocketTimeoutException 
+   *         If this channel blocks transfer longer than timeout for 
+   *         this stream.
+   *          
+   * @throws IOException Includes any exception thrown by 
+   *         {@link FileChannel#transferTo(long, long, WritableByteChannel)}. 
+   */
+  public void transferToFully(FileChannel fileCh, long position, int count) 
+                              throws IOException {
+    
+    while (count > 0) {
+      /* 
+       * Ideally we should wait after transferTo returns 0. But because of
+       * a bug in JRE on Linux (http://bugs.sun.com/view_bug.do?bug_id=5103988),
+       * which throws an exception instead of returning 0, we wait for the
+       * channel to be writable before writing to it. If you ever see 
+       * IOException with message "Resource temporarily unavailable" 
+       * thrown here, please let us know.
+       * 
+       * Once we move to JAVA SE 7, wait should be moved to correct place.
+       */
+      waitForWritable();
+      int nTransfered = (int) fileCh.transferTo(position, count, getChannel());
+      
+      if (nTransfered == 0) {
+        //check if end of file is reached.
+        if (position >= fileCh.size()) {
+          throw new EOFException("EOF Reached. file size is " + fileCh.size() + 
+                                 " and " + count + " more bytes left to be " +
+                                 "transfered.");
+        }
+        //otherwise assume the socket is full.
+        //waitForWritable(); // see comment above.
+      } else if (nTransfered < 0) {
+        throw new IOException("Unexpected return of " + nTransfered + 
+                              " from transferTo()");
+      } else {
+        position += nTransfered;
+        count -= nTransfered;
+      }
+    }
+  }  
 }

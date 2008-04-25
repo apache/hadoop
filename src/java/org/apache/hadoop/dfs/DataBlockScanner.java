@@ -382,7 +382,7 @@ public class DataBlockScanner implements Runnable {
         DataOutputStream out = 
                 new DataOutputStream(new IOUtils.NullOutputStream());
         
-        blockSender.sendBlock(out, throttler);
+        blockSender.sendBlock(out, null, throttler);
 
         LOG.info((second ? "Second " : "") +
                  "Verification succeeded for " + block);

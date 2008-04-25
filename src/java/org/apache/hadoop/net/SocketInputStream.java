@@ -21,6 +21,7 @@ package org.apache.hadoop.net;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
@@ -147,5 +148,18 @@ public class SocketInputStream extends InputStream
     
   public int read(ByteBuffer dst) throws IOException {
     return reader.doIO(dst, SelectionKey.OP_READ);
+  }
+  
+  /**
+   * waits for the underlying channel to be ready for reading.
+   * The timeout specified for this stream applies to this wait.
+   * 
+   * @throws SocketTimeoutException 
+   *         if select on the channel times out.
+   * @throws IOException
+   *         if any other I/O error occurs. 
+   */
+  public void waitForReadable() throws IOException {
+    reader.waitForIO(SelectionKey.OP_READ);
   }
 }

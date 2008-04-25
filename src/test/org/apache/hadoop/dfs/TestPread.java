@@ -161,11 +161,19 @@ public class TestPread extends TestCase {
    * Tests positional read in DFS.
    */
   public void testPreadDFS() throws IOException {
+    dfsPreadTest(false); //normal pread
+    dfsPreadTest(true); //trigger read code path without transferTo.
+  }
+  
+  private void dfsPreadTest(boolean disableTransferTo) throws IOException {
     Configuration conf = new Configuration();
     conf.setLong("dfs.block.size", 4096);
     conf.setLong("dfs.read.prefetch.size", 4096);
     if (simulatedStorage) {
       conf.setBoolean("dfs.datanode.simulateddatastorage", true);
+    }
+    if (disableTransferTo) {
+      conf.setBoolean("dfs.datanode.transferTo.allowed", false);
     }
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
     FileSystem fileSys = cluster.getFileSystem();
