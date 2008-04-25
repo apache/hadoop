@@ -37,9 +37,9 @@ interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 30 : add underConstruction flag to LocatedBlocks
+   * 31: changed the serialization in DatanodeRegistration and DatanodeInfo
    */
-  public static final long versionID = 30L;
+  public static final long versionID = 31L;
   
   ///////////////////////////////////////
   // File contents

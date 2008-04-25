@@ -27,7 +27,10 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * It's used to get part of the name node state
  *****************************************************************************/
 interface NamenodeProtocol extends VersionedProtocol {
-  public static final long versionID = 0L;
+  /**
+   * 1: changed the serialization in DatanodeInfo
+   */
+  public static final long versionID = 1L;
 
   /** Get a list of blocks belonged to <code>datanode</code>
     * whose total size is equal to <code>size</code>

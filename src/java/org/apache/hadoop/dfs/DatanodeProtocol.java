@@ -30,13 +30,10 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  *
  **********************************************************************/
 interface DatanodeProtocol extends VersionedProtocol {
-  /*
-   * 12: removed the rack ID from registration;
-   * 12: added DNA_BLOCKREPORT
-   * 11 : reportBadBlocks() is added.
-   * 11 Block reports as long[]
+  /**
+   * 13: changed the serialization in DatanodeRegistration and DatanodeInfo
    */
-  public static final long versionID = 12L;
+  public static final long versionID = 13L;
   
   // error code
   final static int NOTIFY = 0;
