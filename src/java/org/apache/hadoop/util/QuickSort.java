@@ -21,7 +21,7 @@ package org.apache.hadoop.util;
  * An implementation of the core algorithm of QuickSort.
  * See "Median-of-Three Partitioning" in Sedgewick book.
  */
-public class QuickSort implements IndexedSorter {
+public final class QuickSort implements IndexedSorter {
 
   public QuickSort() { }
 
@@ -39,7 +39,8 @@ public class QuickSort implements IndexedSorter {
    * Same as {@link #sort}, but indicate that we're making progress after
    * each partition.
    */
-  public void sort(IndexedSortable s, int p, int r, Progressable rep) {
+  public void sort(final IndexedSortable s, final int p, final int r,
+      final Progressable rep) {
     if (null != rep) {
       rep.progress();
     }
@@ -60,26 +61,45 @@ public class QuickSort implements IndexedSorter {
     fix(s, p, r-1);
 
     // Divide
-    int x = p;
     int i = p;
     int j = r;
+    int ll = p;
+    int rr = r;
+    int cr;
     while(true) {
-      while (++i < r && s.compare(i, x) < 0) { } // move lindex
-      while (--j > x && s.compare(x, j) < 0) { } // move rindex
+      while (++i < j) {
+        if ((cr = s.compare(i, p)) > 0) break;
+        if (0 == cr && ++ll != i) {
+          s.swap(ll, i);
+        }
+      }
+      while (--j > i) {
+        if ((cr = s.compare(p, j)) > 0) break;
+        if (0 == cr && --rr != j) {
+          s.swap(rr, j);
+        }
+      }
       if (i < j) s.swap(i, j);
       else break;
     }
-    // swap pivot into position
-    s.swap(x, i - 1);
+    j = i;
+    // swap pivot- and all eq values- into position
+    while (ll >= p) {
+      s.swap(ll--, --i);
+    }
+    while (rr < r) {
+      s.swap(rr++, j++);
+    }
 
     // Conquer
     // Recurse on smaller interval first to keep stack shallow
-    if (i - p - 1 < r - i) {
-      sort(s, p, i - 1, rep);
-      sort(s, i, r, rep);
+    assert i != j;
+    if (i - p < r - j) {
+      sort(s, p, i, rep);
+      sort(s, j, r, rep);
     } else {
-      sort(s, i, r, rep);
-      sort(s, p, i - 1, rep);
+      sort(s, j, r, rep);
+      sort(s, p, i, rep);
     }
   }
 

@@ -46,6 +46,9 @@ Trunk (unreleased changes)
     HADOOP-3295. Allow TextOutputFormat to use configurable spearators.
     (Zheng Shao via cdouglas).
 
+    HADOOP-3308. Improve QuickSort by excluding values eq the pivot from the
+    partition. (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

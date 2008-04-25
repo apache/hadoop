@@ -165,18 +165,31 @@ public class TestIndexedSort extends TestCase {
   }
 
   public void testAllEqual() throws Exception {
-    final int SAMPLE = 50;
+    final int SAMPLE = 500;
     int[] values = new int[SAMPLE];
     Arrays.fill(values, 10);
     SampleSortable s = new SampleSortable(values);
     IndexedSorter sorter = new QuickSort();
     sorter.sort(s, 0, SAMPLE);
     int[] check = s.getSorted();
-    assertTrue(Arrays.equals(values, check));
+    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
+        Arrays.toString(check), Arrays.equals(values, check));
+    Random r = new Random();
+    int diff = r.nextInt(SAMPLE);
+    values[diff] = 9;
+    values[(diff + r.nextInt(SAMPLE >>> 1)) % SAMPLE] = 11;
+    s = new SampleSortable(values);
+    sorter.sort(s, 0, SAMPLE);
+    check = s.getSorted();
+    Arrays.sort(values);
+    assertTrue(check[0] == 9);
+    assertTrue(check[SAMPLE - 1] == 11);
+    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
+        Arrays.toString(check), Arrays.equals(values, check));
   }
 
   public void testSorted() throws Exception {
-    final int SAMPLE = 50;
+    final int SAMPLE = 500;
     int[] values = new int[SAMPLE];
     Random r = new Random();
     for (int i = 0; i < SAMPLE; ++i) {
@@ -187,7 +200,22 @@ public class TestIndexedSort extends TestCase {
     IndexedSorter sorter = new QuickSort();
     sorter.sort(s, 0, SAMPLE);
     int[] check = s.getSorted();
-    assertTrue(Arrays.equals(values, check));
+    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
+        Arrays.toString(check), Arrays.equals(values, check));
+  }
+
+  public void testSequential() throws Exception {
+    final int SAMPLE = 500;
+    int[] values = new int[SAMPLE];
+    for (int i = 0; i < SAMPLE; ++i) {
+      values[i] = i;
+    }
+    SampleSortable s = new SampleSortable(values);
+    IndexedSorter sorter = new QuickSort();
+    sorter.sort(s, 0, SAMPLE);
+    int[] check = s.getSorted();
+    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
+        Arrays.toString(check), Arrays.equals(values, check));
   }
 
   public void testSingleRecord() throws Exception {
@@ -198,18 +226,20 @@ public class TestIndexedSort extends TestCase {
     IndexedSorter sorter = new QuickSort();
     sorter.sort(s, 0, SAMPLE);
     int[] check = s.getSorted();
-    assertTrue(Arrays.equals(values, check));
+    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
+        Arrays.toString(check), Arrays.equals(values, check));
   }
 
   public void testQuickSort() throws Exception {
-    final int SAMPLE = 10000;
+    final int SAMPLE = 100000;
     SampleSortable s = new SampleSortable(SAMPLE);
     int[] values = s.getValues();
     Arrays.sort(values);
     IndexedSorter sorter = new QuickSort();
     sorter.sort(s, 0, SAMPLE);
     int[] check = s.getSorted();
-    assertTrue(Arrays.equals(values, check));
+    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
+        Arrays.toString(check), Arrays.equals(values, check));
   }
 
   public void testWritable() throws Exception {
@@ -220,7 +250,8 @@ public class TestIndexedSort extends TestCase {
     IndexedSorter sorter = new QuickSort();
     sorter.sort(s, 0, SAMPLE);
     String[] check = s.getSorted();
-    assertTrue(Arrays.equals(values, check));
+    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
+        Arrays.toString(check), Arrays.equals(values, check));
   }
 
 }
