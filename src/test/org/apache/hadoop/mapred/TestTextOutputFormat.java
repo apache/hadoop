@@ -36,8 +36,8 @@ public class TestTextOutputFormat extends TestCase {
     }
   }
 
-  private static Path workDir = 
-    new Path(new Path(System.getProperty("test.build.data", "."), "data"), 
+  private static Path workDir =
+    new Path(new Path(System.getProperty("test.build.data", "."), "data"),
              "TestTextOutputFormat");
 
   @SuppressWarnings("unchecked")
@@ -49,7 +49,7 @@ public class TestTextOutputFormat extends TestCase {
       fail("Failed to create output directory");
     }
     String file = "test.txt";
-    
+
     // A reporter that does nothing
     Reporter reporter = Reporter.NULL;
 
@@ -76,7 +76,7 @@ public class TestTextOutputFormat extends TestCase {
     } finally {
       theRecordWriter.close(reporter);
     }
-    File expectedFile = new File(new Path(workDir, file).toString()); 
+    File expectedFile = new File(new Path(workDir, file).toString());
     StringBuffer expectedOutput = new StringBuffer();
     expectedOutput.append(key1).append('\t').append(val1).append("\n");
     expectedOutput.append(val1).append("\n");
@@ -86,7 +86,58 @@ public class TestTextOutputFormat extends TestCase {
     expectedOutput.append(key2).append('\t').append(val2).append("\n");
     String output = UtilsForTests.slurp(expectedFile);
     assertEquals(output, expectedOutput.toString());
-    
+
+  }
+
+  @SuppressWarnings("unchecked")
+  public void testFormatWithCustomSeparator() throws Exception {
+    JobConf job = new JobConf();
+    String separator = "\u0001";
+    job.set("mapred.textoutputformat.separator", separator);
+    FileOutputFormat.setWorkOutputPath(job, workDir);
+    FileSystem fs = workDir.getFileSystem(job);
+    if (!fs.mkdirs(workDir)) {
+      fail("Failed to create output directory");
+    }
+    String file = "test.txt";
+
+    // A reporter that does nothing
+    Reporter reporter = Reporter.NULL;
+
+    TextOutputFormat theOutputFormat = new TextOutputFormat();
+    RecordWriter theRecordWriter =
+      theOutputFormat.getRecordWriter(localFs, job, file, reporter);
+
+    Text key1 = new Text("key1");
+    Text key2 = new Text("key2");
+    Text val1 = new Text("val1");
+    Text val2 = new Text("val2");
+    NullWritable nullWritable = NullWritable.get();
+
+    try {
+      theRecordWriter.write(key1, val1);
+      theRecordWriter.write(null, nullWritable);
+      theRecordWriter.write(null, val1);
+      theRecordWriter.write(nullWritable, val2);
+      theRecordWriter.write(key2, nullWritable);
+      theRecordWriter.write(key1, null);
+      theRecordWriter.write(null, null);
+      theRecordWriter.write(key2, val2);
+
+    } finally {
+      theRecordWriter.close(reporter);
+    }
+    File expectedFile = new File(new Path(workDir, file).toString());
+    StringBuffer expectedOutput = new StringBuffer();
+    expectedOutput.append(key1).append(separator).append(val1).append("\n");
+    expectedOutput.append(val1).append("\n");
+    expectedOutput.append(val2).append("\n");
+    expectedOutput.append(key2).append("\n");
+    expectedOutput.append(key1).append("\n");
+    expectedOutput.append(key2).append(separator).append(val2).append("\n");
+    String output = UtilsForTests.slurp(expectedFile);
+    assertEquals(output, expectedOutput.toString());
+
   }
 
   public static void main(String[] args) throws Exception {

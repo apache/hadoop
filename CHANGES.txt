@@ -38,6 +38,9 @@ Trunk (unreleased changes)
     server slowdown. Clients retry connection for up to 15 minutes
     when socket connection times out. (hairong)
 
+    HADOOP-3295. Allow TextOutputFormat to use configurable spearators.
+    (Zheng Shao via cdouglas).
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

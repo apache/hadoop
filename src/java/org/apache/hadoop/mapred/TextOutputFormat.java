@@ -38,23 +38,31 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
   protected static class LineRecordWriter<K, V>
     implements RecordWriter<K, V> {
     private static final String utf8 = "UTF-8";
-    private static final byte[] tab;
     private static final byte[] newline;
     static {
       try {
-        tab = "\t".getBytes(utf8);
         newline = "\n".getBytes(utf8);
       } catch (UnsupportedEncodingException uee) {
         throw new IllegalArgumentException("can't find " + utf8 + " encoding");
       }
     }
-    
+
     private DataOutputStream out;
-    
-    public LineRecordWriter(DataOutputStream out) {
+    private final byte[] keyValueSeparator;
+
+    public LineRecordWriter(DataOutputStream out, String keyValueSeparator) {
       this.out = out;
+      try {
+        this.keyValueSeparator = keyValueSeparator.getBytes(utf8);
+      } catch (UnsupportedEncodingException uee) {
+        throw new IllegalArgumentException("can't find " + utf8 + " encoding");
+      }
     }
-    
+
+    public LineRecordWriter(DataOutputStream out) {
+      this(out, "\t");
+    }
+
     /**
      * Write the object to the byte stream, handling Text as a special
      * case.
@@ -82,7 +90,7 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
         writeObject(key);
       }
       if (!(nullKey || nullValue)) {
-        out.write(tab);
+        out.write(keyValueSeparator);
       }
       if (!nullValue) {
         writeObject(value);
@@ -94,13 +102,14 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
       out.close();
     }
   }
-  
+
   public RecordWriter<K, V> getRecordWriter(FileSystem ignored,
                                                   JobConf job,
                                                   String name,
                                                   Progressable progress)
     throws IOException {
 
+    String keyValueSeparator = job.get("mapred.textoutputformat.separator", "\t");
     Path dir = getWorkOutputPath(job);
     FileSystem fs = dir.getFileSystem(job);
     if (!fs.exists(dir)) {
@@ -109,9 +118,9 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
     boolean isCompressed = getCompressOutput(job);
     if (!isCompressed) {
       FSDataOutputStream fileOut = fs.create(new Path(dir, name), progress);
-      return new LineRecordWriter<K, V>(fileOut);
+      return new LineRecordWriter<K, V>(fileOut, keyValueSeparator);
     } else {
-      Class<? extends CompressionCodec> codecClass = 
+      Class<? extends CompressionCodec> codecClass =
         getOutputCompressorClass(job, GzipCodec.class);
       // create the named codec
       CompressionCodec codec = (CompressionCodec)
@@ -120,8 +129,9 @@ public class TextOutputFormat<K, V> extends FileOutputFormat<K, V> {
       Path filename = new Path(dir, name + codec.getDefaultExtension());
       FSDataOutputStream fileOut = fs.create(filename, progress);
       return new LineRecordWriter<K, V>(new DataOutputStream
-                                        (codec.createOutputStream(fileOut)));
+                                        (codec.createOutputStream(fileOut)),
+                                        keyValueSeparator);
     }
-  }      
+  }
 }
 
