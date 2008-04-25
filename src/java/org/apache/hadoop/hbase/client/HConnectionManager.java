@@ -517,10 +517,6 @@ public class HConnectionManager implements HConstants {
             // signifying that the region we're checking is actually the last 
             // region in the table.
             if (endKey.equals(EMPTY_TEXT) || endKey.compareTo(row) > 0) {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Found possible location for " + row + ", " +
-                  possibleRegion);
-              }
               return possibleRegion;
             }
           }
