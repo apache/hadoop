@@ -22,15 +22,15 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
-import java.util.TreeMap;
-import org.apache.hadoop.io.Text;
+
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
-import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.io.Text;
 
 /**
  * Test batch updates
@@ -68,34 +68,14 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
    * @throws IOException
    */
   public void testBatchUpdate() throws IOException {
-    try {
-      table.commit(-1L);
-      
-    } catch (IllegalStateException e) {
-      // expected
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail();
-    }
+    BatchUpdate bu = new BatchUpdate(new Text("row1"));
+    bu.put(CONTENTS, value);
+    bu.delete(CONTENTS);
+    table.commit(bu);
 
-    long lockid = table.startUpdate(new Text("row1"));
-    
-    try {
-      @SuppressWarnings("unused")
-      long dummy = table.startUpdate(new Text("row2"));
-    } catch (IllegalStateException e) {
-      // expected
-    } catch (Exception e) {
-      e.printStackTrace();
-      fail();
-    }
-    table.put(lockid, CONTENTS, value);
-    table.delete(lockid, CONTENTS);
-    table.commit(lockid);
-
-    lockid = table.startUpdate(new Text("row2"));
-    table.put(lockid, CONTENTS, value);
-    table.commit(lockid);
+    bu = new BatchUpdate(new Text("row2"));
+    bu.put(CONTENTS, value);
+    table.commit(bu);
 
     Text[] columns = { CONTENTS };
     Scanner scanner = table.getScanner(columns, new Text());

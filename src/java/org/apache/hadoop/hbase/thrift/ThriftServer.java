@@ -424,14 +424,8 @@ public class ThriftServer {
         }
         table.commit(batchUpdate);
       } catch (IOException e) {
-        if (lockid != null) {
-          table.abort(lockid);
-        }
         throw new IOError(e.getMessage());
       } catch (IllegalArgumentException e) {
-        if (lockid != null) {
-          table.abort(lockid);
-        }
         throw new IllegalArgument(e.getMessage());
       }
     }

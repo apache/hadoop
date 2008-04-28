@@ -25,34 +25,27 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.NotServingRegionException;
-
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
 /**
  * Used to communicate with a single HBase table
@@ -216,9 +209,8 @@ public class HTable implements HConstants {
           
           if (info.isOffline() || info.isSplit()) {
             continue;
-          } else {
-            keyList.add(info.getStartKey());            
           }
+          keyList.add(info.getStartKey());
         }
         
         // close that remote scanner
@@ -509,106 +501,6 @@ public class HTable implements HConstants {
   }
 
   /** 
-   * Start an atomic row insertion/update.  No changes are committed until the 
-   * call to commit() returns. A call to abort() will abandon any updates in
-   * progress.
-   * 
-   * <p>
-   * Example:
-   * <br>
-   * <pre><span style="font-family: monospace;">
-   * long lockid = table.startUpdate(new Text(article.getName()));
-   * for (File articleInfo: article.listFiles(new NonDirectories())) {
-   *   String article = null;
-   *   try {
-   *     DataInputStream in = new DataInputStream(new FileInputStream(articleInfo));
-   *     article = in.readUTF();
-   *   } catch (IOException e) {
-   *     // Input error - abandon update
-   *     table.abort(lockid);
-   *     throw e;
-   *   }
-   *   try {
-   *     table.put(lockid, columnName(articleInfo.getName()), article.getBytes());
-   *   } catch (RuntimeException e) {
-   *     // Put failed - abandon update
-   *     table.abort(lockid);
-   *     throw e;
-   *   }
-   * }
-   * table.commit(lockid);
-   * </span></pre>
-   *
-   * 
-   * @param row Name of row to start update against.  Note, choose row names
-   * with care.  Rows are sorted lexicographically (comparison is done
-   * using {@link Text#compareTo(Object)}.  If your keys are numeric,
-   * lexicographic sorting means that 46 sorts AFTER 450 (If you want to use
-   * numerics for keys, zero-pad).
-   * @return Row lock id..
-   * @see #commit(long)
-   * @see #commit(long, long)
-   * @see #abort(long)
-   */
-  @Deprecated 
-  public synchronized long startUpdate(final Text row) {
-    updateInProgress(false);
-    batch.set(new BatchUpdate(row));
-    return 1;
-  }
-  
-  /** 
-   * Update a value for the specified column.
-   * Runs {@link #abort(long)} if exception thrown.
-   *
-   * @param lockid lock id returned from startUpdate
-   * @param column column whose value is being set
-   * @param val new value for column.  Cannot be null.
-   */
-  @Deprecated
-  public void put(long lockid, Text column, byte val[]) {
-    if (lockid != 1) {
-      throw new IllegalArgumentException("Invalid lock id!");
-    }
-    if (val == null) {
-      throw new IllegalArgumentException("value cannot be null");
-    }
-    updateInProgress(true);
-    batch.get().put(column, val);
-  }
-  
-  /** 
-   * Update a value for the specified column.
-   * Runs {@link #abort(long)} if exception thrown.
-   *
-   * @param lockid lock id returned from startUpdate
-   * @param column column whose value is being set
-   * @param val new value for column.  Cannot be null.
-   * @throws IOException throws this if the writable can't be
-   * converted into a byte array 
-   */
-  @Deprecated
-  public void put(long lockid, Text column, Writable val) throws IOException {    
-    put(lockid, column, Writables.getBytes(val));
-  }
-  
-  /** 
-   * Delete the value for a column.
-   * Deletes the cell whose row/column/commit-timestamp match those of the
-   * delete.
-   * @param lockid lock id returned from startUpdate
-   * @param column name of column whose value is to be deleted
-   */
-  @Deprecated
-  public void delete(long lockid, Text column) {
-    if (lockid != 1) {
-      throw new IllegalArgumentException("Invalid lock id!");
-    }
-    updateInProgress(true);
-    batch.get().delete(column);
-  }
-  
-  /** 
    * Delete all cells that match the passed row and column.
    * @param row Row to update
    * @param column name of column whose value is to be deleted
@@ -694,66 +586,7 @@ public class HTable implements HConstants {
   public void deleteFamily(final Text row, final Text family) throws IOException{
     deleteFamily(row, family, HConstants.LATEST_TIMESTAMP);
   }
-  
-  /** 
-   * Abort a row mutation.
-   * 
-   * This method should be called only when an update has been started and it
-   * is determined that the update should not be committed.
-   * 
-   * Releases resources being held by the update in progress.
-   *
-   * @param lockid lock id returned from startUpdate
-   */
-  @Deprecated
-  public synchronized void abort(long lockid) {
-    if (lockid != 1) {
-      throw new IllegalArgumentException("Invalid lock id!");
-    }
-    batch.set(null);
-  }
-  
-  /** 
-   * Finalize a row mutation.
-   * 
-   * When this method is specified, we pass the server a value that says use
-   * the 'latest' timestamp.  If we are doing a put, on the server-side, cells
-   * will be given the servers's current timestamp.  If the we are commiting
-   * deletes, then delete removes the most recently modified cell of stipulated
-   * column.
-   * 
-   * @see #commit(long, long)
-   * 
-   * @param lockid lock id returned from startUpdate
-   * @throws IOException
-   */
-  @Deprecated
-  public void commit(long lockid) throws IOException {
-    commit(lockid, LATEST_TIMESTAMP);
-  }
 
-  /** 
-   * Finalize a row mutation and release any resources associated with the update.
-   * 
-   * @param lockid lock id returned from startUpdate
-   * @param timestamp time to associate with the change
-   * @throws IOException
-   */
-  @Deprecated
-  public void commit(long lockid, final long timestamp)
-  throws IOException {
-    updateInProgress(true);
-    if (lockid != 1) {
-      throw new IllegalArgumentException("Invalid lock id!");
-    }
-    try {
-      batch.get().setTimestamp(timestamp);
-      commit(batch.get());
-    } finally {
-      batch.set(null);
-    }
-  }
-  
   /**
    * Commit a BatchUpdate to the table.
    * @param batchUpdate
@@ -778,7 +611,6 @@ public class HTable implements HConstants {
    * through them all.
    */
   protected class ClientScanner implements Scanner {
-    private final Text EMPTY_COLUMN = new Text();
     private Text[] columns;
     private Text startRow;
     private long scanTime;
@@ -949,9 +781,8 @@ public class HTable implements HConstants {
             } catch (IOException e) {
               throw new RuntimeException(e);
             }            
-          } else {
-            return true;
           }
+          return true;
         }
 
         // get the pending next item and advance the iterator. returns null if
@@ -1020,18 +851,16 @@ public class HTable implements HConstants {
               " attempts.\n";
             int i = 1;
             for (IOException e2 : exceptions) {
-              message = message + "Exception " + i + ":\n" + e;
+              message = message + "Exception " + i++ + ":\n" + e2;
             }
             LOG.debug(message);
           }
           throw e;
-        } else {
-          if (LOG.isDebugEnabled()) {
-            exceptions.add(e);
-            LOG.debug("reloading table servers because: " + e.getMessage());
-          }
         }
-
+        if (LOG.isDebugEnabled()) {
+          exceptions.add(e);
+          LOG.debug("reloading table servers because: " + e.getMessage());
+        }
       } catch (Exception e) {
         throw new RuntimeException(e);
       }
@@ -1042,13 +871,5 @@ public class HTable implements HConstants {
       }
     }
     return null;    
-  }
-  
-  /**
-   * Does nothing anymore
-   */
-  @Deprecated
-  public void close() {
-    // do nothing...
   }
 }

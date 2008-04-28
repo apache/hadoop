@@ -3,6 +3,8 @@ Hbase Change Log
   INCOMPATIBLE CHANGES
    HBASE-584   Names in the filter interface are confusing (Clint Morgan via
                Jim Kellerman) (API change for filters)
+   HBASE-601   Just remove deprecated methods in HTable; 0.2 is not backward
+               compatible anyways
    
   BUG FIXES
    HBASE-574   HBase does not load hadoop native libs (Rong-En Fan via Stack)
