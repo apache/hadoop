@@ -64,6 +64,9 @@ Release 0.17.0 - Unreleased
     permissions to update the clusters state file.
     (Vinod Kumar Vavilapalli via yhemanth)
 
+    HADOOP-3304. Fixes the way the logcondense.py utility searches for log
+    files that need to be deleted. (yhemanth)
+
 Release 0.16.2 - 2008-04-02
 
   BUG FIXES

@@ -205,6 +205,22 @@ document.write("Last Published: " + document.lastModified);
 <li>
 <a href="#Running+HOD">Running HOD</a>
 </li>
+<li>
+<a href="#Supporting+Tools+and+Utilities">Supporting Tools and Utilities</a>
+<ul class="minitoc">
+<li>
+<a href="#logcondense.py+-+Tool+for+removing+log+files+uploaded+to+DFS">logcondense.py - Tool for removing log files uploaded to DFS</a>
+<ul class="minitoc">
+<li>
+<a href="#Running+logcondense.py">Running logcondense.py</a>
+</li>
+<li>
+<a href="#Command+Line+Options+for+logcondense.py">Command Line Options for logcondense.py</a>
+</li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </div>
 
@@ -468,6 +484,105 @@ it.</p>
 <div class="section">
 <p>You can now proceed to <a href="hod_user_guide.html">HOD User Guide</a> for information about how to run HOD,
     what are the various features, options and for help in trouble-shooting.</p>
+</div>
+
+  
+<a name="N10134"></a><a name="Supporting+Tools+and+Utilities"></a>
+<h2 class="h3">Supporting Tools and Utilities</h2>
+<div class="section">
+<p>This section describes certain supporting tools and utilities that can be used in managing HOD deployments.</p>
+<a name="N1013D"></a><a name="logcondense.py+-+Tool+for+removing+log+files+uploaded+to+DFS"></a>
+<h3 class="h4">logcondense.py - Tool for removing log files uploaded to DFS</h3>
+<p>As mentioned in 
+         <a href="hod_user_guide.html#Collecting+and+Viewing+Hadoop+Logs">this section</a> of the
+         <a href="hod_user_guide.html">HOD User Guide</a>, HOD can be configured to upload
+         Hadoop logs to a statically configured HDFS. Over time, the number of logs uploaded
+         to DFS could increase. logcondense.py is a tool that helps administrators to clean-up
+         the log files older than a certain number of days. </p>
+<a name="N1014E"></a><a name="Running+logcondense.py"></a>
+<h4>Running logcondense.py</h4>
+<p>logcondense.py is available under hod_install_location/support folder. You can either
+        run it using python, for e.g. <em>python logcondense.py</em>, or give execute permissions 
+        to the file, and directly run it as <em>logcondense.py</em>. logcondense.py needs to be 
+        run by a user who has sufficient permissions to remove files from locations where log 
+        files are uploaded in the DFS, if permissions are enabled. For e.g. as mentioned in the
+        <a href="hod_config_guide.html#3.7+hodring+options">configuration guide</a>, the logs could
+        be configured to come under the user's home directory in HDFS. In that case, the user
+        running logcondense.py should have super user privileges to remove the files from under
+        all user home directories.</p>
+<a name="N10162"></a><a name="Command+Line+Options+for+logcondense.py"></a>
+<h4>Command Line Options for logcondense.py</h4>
+<p>The following command line options are supported for logcondense.py.</p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+            
+<tr>
+              
+<td colspan="1" rowspan="1">Short Option</td>
+              <td colspan="1" rowspan="1">Long option</td>
+              <td colspan="1" rowspan="1">Meaning</td>
+              <td colspan="1" rowspan="1">Example</td>
+            
+</tr>
+            
+<tr>
+              
+<td colspan="1" rowspan="1">-p</td>
+              <td colspan="1" rowspan="1">--package</td>
+              <td colspan="1" rowspan="1">Complete path to the hadoop script. The version of hadoop must be the same as the 
+                  one running HDFS.</td>
+              <td colspan="1" rowspan="1">/usr/bin/hadoop</td>
+            
+</tr>
+            
+<tr>
+              
+<td colspan="1" rowspan="1">-d</td>
+              <td colspan="1" rowspan="1">--days</td>
+              <td colspan="1" rowspan="1">Delete log files older than the specified number of days</td>
+              <td colspan="1" rowspan="1">7</td>
+            
+</tr>
+            
+<tr>
+              
+<td colspan="1" rowspan="1">-c</td>
+              <td colspan="1" rowspan="1">--config</td>
+              <td colspan="1" rowspan="1">Path to the Hadoop configuration directory, under which hadoop-site.xml resides.
+              The hadoop-site.xml must point to the HDFS NameNode from where logs are to be removed.</td>
+              <td colspan="1" rowspan="1">/home/foo/hadoop/conf</td>
+            
+</tr>
+            
+<tr>
+              
+<td colspan="1" rowspan="1">-l</td>
+              <td colspan="1" rowspan="1">--logs</td>
+              <td colspan="1" rowspan="1">A HDFS path, this must be the same HDFS path as specified for the log-destination-uri,
+              as mentioned in the  <a href="hod_config_guide.html#3.7+hodring+options">configuration guide</a>,
+              without the hdfs:// URI string</td>
+              <td colspan="1" rowspan="1">/user</td>
+            
+</tr>
+            
+<tr>
+              
+<td colspan="1" rowspan="1">-n</td>
+              <td colspan="1" rowspan="1">--dynamicdfs</td>
+              <td colspan="1" rowspan="1">If true, this will indicate that the logcondense.py script should delete HDFS logs
+              in addition to Map/Reduce logs. Otherwise, it only deletes Map/Reduce logs, which is also the
+              default if this option is not specified. This option is useful if dynamic DFS installations 
+              are being provisioned by HOD, and the static DFS installation is being used only to collect 
+              logs - a scenario that may be common in test clusters.</td>
+              <td colspan="1" rowspan="1">false</td>
+            
+</tr>
+          
+</table>
+<p>So, for example, to delete all log files older than 7 days using a hadoop-site.xml stored in
+        ~/hadoop-conf, using the hadoop installation under ~/hadoop-0.17.0, you could say:</p>
+<p>
+<em>python logcondense.py -p ~/hadoop-0.17.0/bin/hadoop -d 7 -c ~/hadoop-conf -l /user</em>
+</p>
 </div>
 
 </div>
