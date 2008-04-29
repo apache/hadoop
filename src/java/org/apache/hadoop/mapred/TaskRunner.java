@@ -24,8 +24,10 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.filecache.*;
 import org.apache.hadoop.util.*;
+
 import java.io.*;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 import java.net.URI;
@@ -368,12 +370,22 @@ abstract class TaskRunner extends Thread {
       vargs.add(Integer.toString(address.getPort())); 
       vargs.add(taskid);                      // pass task identifier
 
+      // set memory limit using ulimit if feasible and necessary ...
+      String[] ulimitCmd = Shell.getUlimitMemoryCommand(conf);
+      List<String> setup = null;
+      if (ulimitCmd != null) {
+        setup = new ArrayList<String>();
+        for (String arg : ulimitCmd) {
+          setup.add(arg);
+        }
+      }
+
       // Set up the redirection of the task's stdout and stderr streams
       File stdout = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDOUT);
       File stderr = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDERR);
       stdout.getParentFile().mkdirs();
       List<String> wrappedCommand = 
-        TaskLog.captureOutAndError(vargs, stdout, stderr, logSize);
+        TaskLog.captureOutAndError(setup, vargs, stdout, stderr, logSize);
       
       // Run the task as child of the parent TaskTracker process
       runChild(wrappedCommand, workDir, taskid);

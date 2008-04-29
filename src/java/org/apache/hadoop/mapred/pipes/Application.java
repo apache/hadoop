@@ -84,16 +84,8 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     File stdout = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDOUT);
     File stderr = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDERR);
     long logLength = TaskLog.getTaskLogLength(conf);
-    // set memory limit using ulimit.
-    if (!WINDOWS) {
-      List<String> setup = new ArrayList<String>();
-      setup.add("ulimit");
-      setup.add("-v"); 
-      setup.add(String.valueOf(Runtime.getRuntime().maxMemory() / 1024));
-      cmd = TaskLog.captureOutAndError(setup, cmd, stdout, stderr, logLength);
-    } else {
-      cmd = TaskLog.captureOutAndError(cmd, stdout, stderr, logLength);
-    }
+    cmd = TaskLog.captureOutAndError(cmd, stdout, stderr, logLength);
+
     process = runClient(cmd, env);
     clientSocket = serverSocket.accept();
     handler = new OutputHandler<K2, V2>(output, reporter);

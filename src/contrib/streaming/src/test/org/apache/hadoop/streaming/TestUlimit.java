@@ -41,9 +41,6 @@ import junit.framework.TestCase;
  * is expected to be a failure.  
  */
 public class TestUlimit extends TestCase {
-  private static final Log LOG =
-         LogFactory.getLog(TestUlimit.class.getName());
-  enum RESULT { FAILURE, SUCCESS };
   String input = "the dummy input";
   Path inputPath = new Path("/testing/in");
   Path outputPath = new Path("/testing/out");
@@ -51,6 +48,7 @@ public class TestUlimit extends TestCase {
   MiniDFSCluster dfs = null;
   MiniMRCluster mr = null;
   FileSystem fs = null;
+  private static String SET_MEMORY_LIMIT = "786432"; // 768MB
 
   String[] genArgs(String memLimit) {
     return new String[] {
@@ -59,10 +57,11 @@ public class TestUlimit extends TestCase {
       "-mapper", map,
       "-reducer", "org.apache.hadoop.mapred.lib.IdentityReducer",
       "-numReduceTasks", "0",
-      "-jobconf", "mapred.child.java.opts=" + memLimit,
+      "-jobconf", "mapred.child.ulimit=" + memLimit,
       "-jobconf", "mapred.job.tracker=" + "localhost:" +
                                            mr.getJobTrackerPort(),
-      "-jobconf", "fs.default.name=" + "localhost:" + dfs.getNameNodePort(),
+      "-jobconf", "fs.default.name=" + "hdfs://localhost:" 
+                   + dfs.getNameNodePort(),
       "-jobconf", "stream.tmpdir=" + 
                    System.getProperty("test.build.data","/tmp")
     };
@@ -87,12 +86,10 @@ public class TestUlimit extends TestCase {
       
       mr = new MiniMRCluster(numSlaves, fs.getUri().toString(), 1);
       writeInputFile(fs, inputPath);
-      map = StreamUtil.makeJavaCommand(CatApp.class, new String[]{});  
-      runProgram("-Xmx2048m", RESULT.SUCCESS);
+      map = StreamUtil.makeJavaCommand(UlimitApp.class, new String[]{});  
+      runProgram(SET_MEMORY_LIMIT);
       FileUtil.fullyDelete(fs, outputPath);
       assertFalse("output not cleaned up", fs.exists(outputPath));
-      // 100MB is not sufficient for launching jvm. This launch should fail.
-      runProgram("-Xmx0.5m", RESULT.FAILURE);
       mr.waitUntilIdle();
     } catch(IOException e) {
       fail(e.toString());
@@ -114,24 +111,14 @@ public class TestUlimit extends TestCase {
    * @param result Expected result
    * @throws IOException
    */
-  private void runProgram(String memLimit, RESULT result
-                          ) throws IOException {
+  private void runProgram(String memLimit) throws IOException {
     boolean mayExit = false;
-    int ret = 1;
-    try {
-      StreamJob job = new StreamJob(genArgs(memLimit), mayExit);
-      ret = job.go();
-    } catch (IOException ioe) {
-      LOG.warn("Job Failed! " + StringUtils.stringifyException(ioe));
-      ioe.printStackTrace();
-    }
+    StreamJob job = new StreamJob(genArgs(memLimit), mayExit);
+    job.go();
     String output = TestMiniMRWithDFS.readOutput(outputPath,
                                         mr.createJobConf());
-    if (RESULT.SUCCESS.name().equals(result.name())){
-      assertEquals("output is wrong", input, output.trim());
-    } else {
-      assertTrue("output is correct", !input.equals(output.trim()));
-    }
+    assertEquals("output is wrong", SET_MEMORY_LIMIT,
+                                    output.trim());
   }
   
   public static void main(String[]args) throws Exception

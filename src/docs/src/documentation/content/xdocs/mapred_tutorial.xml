@@ -1065,6 +1065,9 @@
           <code>&lt;/property&gt;</code>
         </p>
         
+        <p>Users/admins can also specify the maximum virtual memory 
+        of the launched child-task using <code>mapred.child.ulimit</code>.</p>
+        
         <p>When the job starts, the localized job directory
         <code> ${mapred.local.dir}/taskTracker/jobcache/$jobid/</code>
         has the following directories: </p>
