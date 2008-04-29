@@ -102,6 +102,9 @@ Trunk (unreleased changes)
     HADOOP-3313. Avoid unnecessary calls to System.currentTimeMillis
     in RPC::Invoker. (cdouglas)
 
+    HADOOP-3318. Recognize "Darwin" as an alias for "Mac OS X" to
+    support Soylatte. (Sam Pullara via omalley)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

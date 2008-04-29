@@ -43,7 +43,7 @@ public class Environment extends Properties {
                || lowerOs.indexOf("freebsd") > -1 || lowerOs.indexOf("sunos") > -1
                || lowerOs.indexOf("solaris") > -1 || lowerOs.indexOf("hp-ux") > -1) {
       command = "env";
-    } else if (lowerOs.startsWith("mac os x")) {
+    } else if (lowerOs.startsWith("mac os x") || lowerOs.startsWith("darwin")) {
       command = "env";
     } else {
       // Add others here
