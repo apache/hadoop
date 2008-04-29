@@ -105,6 +105,9 @@ Trunk (unreleased changes)
     HADOOP-3318. Recognize "Darwin" as an alias for "Mac OS X" to
     support Soylatte. (Sam Pullara via omalley)
 
+    HADOOP-3301. Fix misleading error message when S3 URI hostname
+    contains an underscore. (tomwhite via omalley)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

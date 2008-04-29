@@ -78,6 +78,10 @@ class Jets3tFileSystemStore implements FileSystemStore {
     
     this.conf = conf;
     
+    if (uri.getHost() == null) {
+      throw new IllegalArgumentException("Invalid hostname in URI " + uri); 
+    }
+    
     try {
       String accessKey = null;
       String secretAccessKey = null;
