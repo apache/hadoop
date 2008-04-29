@@ -30,6 +30,8 @@ Hbase Change Log
    HBASE-596   DemoClient.py (Ivan Begtin via Stack)
    HBASE-581   Allow adding filters to TableInputFormat (At same time, ensure TIF
                is subclassable) (David Alves via Stack)
+   HBASE-603   When an exception bubbles out of getRegionServerWithRetries, wrap 
+               the exception with a RetriesExhaustedException
 
 Release 0.1.1 - 04/11/2008
 

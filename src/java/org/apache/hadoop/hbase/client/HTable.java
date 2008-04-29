@@ -835,7 +835,7 @@ public class HTable implements HConstants {
    */
   protected <T> T getRegionServerWithRetries(ServerCallable<T> callable) 
   throws IOException, RuntimeException {
-    List<IOException> exceptions = new ArrayList<IOException>();
+    List<Exception> exceptions = new ArrayList<Exception>();
     for(int tries = 0; tries < numRetries; tries++) {
       try {
         callable.instantiateServer(tries != 0);
@@ -845,20 +845,10 @@ public class HTable implements HConstants {
           e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
         }
         if (tries == numRetries - 1) {
-          if (LOG.isDebugEnabled()) {
-            String message = "Trying to contact region server for row '" + 
-              callable.row + "', but failed after " + (tries + 1)  + 
-              " attempts.\n";
-            int i = 1;
-            for (IOException e2 : exceptions) {
-              message = message + "Exception " + i++ + ":\n" + e2;
-            }
-            LOG.debug(message);
-          }
-          throw e;
+          throw new RetriesExhaustedException(callable.row, tries, exceptions);
         }
+        exceptions.add(e);
         if (LOG.isDebugEnabled()) {
-          exceptions.add(e);
           LOG.debug("reloading table servers because: " + e.getMessage());
         }
       } catch (Exception e) {
