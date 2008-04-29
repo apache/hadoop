@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Random;
 
 import junit.framework.TestCase;
 
@@ -33,6 +34,7 @@ public class TestConfiguration extends TestCase {
   private Configuration conf;
   final static String CONFIG = new File("./test-config.xml").getAbsolutePath();
   final static String CONFIG2 = new File("./test-config2.xml").getAbsolutePath();
+  final static Random RAN = new Random();
 
   @Override
   protected void setUp() throws Exception {
@@ -186,6 +188,30 @@ public class TestConfiguration extends TestCase {
     assertEquals("this  contains a comment", conf.get("my.comment"));
   }
   
+  public void testTrim() throws IOException {
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    String[] whitespaces = {"", " ", "\n", "\t"};
+    String[] name = new String[100];
+    for(int i = 0; i < name.length; i++) {
+      name[i] = "foo" + i;
+      StringBuilder prefix = new StringBuilder(); 
+      StringBuilder postfix = new StringBuilder(); 
+      for(int j = 0; j < 3; j++) {
+        prefix.append(whitespaces[RAN.nextInt(whitespaces.length)]);
+        postfix.append(whitespaces[RAN.nextInt(whitespaces.length)]);
+      }
+      
+      appendProperty(prefix + name[i] + postfix, name[i] + ".value");
+    }
+    endConfig();
+
+    conf.addResource(new Path(CONFIG));
+    for(String n : name) {
+      assertEquals(n + ".value", conf.get(n));
+    }
+  }
+
   public void testToString() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();

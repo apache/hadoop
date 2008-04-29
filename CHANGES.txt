@@ -52,6 +52,9 @@ Trunk (unreleased changes)
     HADOOP-3308. Improve QuickSort by excluding values eq the pivot from the
     partition. (cdouglas)
 
+    HADOOP-2461. Trim property names in configuration.
+    (Tsz Wo (Nicholas), SZE via shv)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

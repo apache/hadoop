@@ -892,7 +892,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
             continue;
           Element field = (Element)fieldNode;
           if ("name".equals(field.getTagName()) && field.hasChildNodes())
-            attr = ((Text)field.getFirstChild()).getData();
+            attr = ((Text)field.getFirstChild()).getData().trim();
           if ("value".equals(field.getTagName()) && field.hasChildNodes())
             value = ((Text)field.getFirstChild()).getData();
           if ("final".equals(field.getTagName()) && field.hasChildNodes())
