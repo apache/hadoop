@@ -205,6 +205,11 @@ Release 0.17.0 - Unreleased
     HADOOP-3266. Removed HOD changes from CHANGES.txt, as they are now inside 
     src/contrib/hod  (Hemanth Yamijala via ddas)
 
+    HADOOP-3280. Separate the configuration of the virtual memory size
+    (mapred.child.ulimit) from the jvm heap size, so that 64 bit
+    streaming applications are supported even when running with 32 bit
+    jvms. (acmurthy via omalley)
+
   NEW FEATURES
 
     HADOOP-1398.  Add HBase in-memory block cache.  (tomwhite)
