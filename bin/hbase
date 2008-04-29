@@ -101,7 +101,7 @@ fi
 IFS=
 
 # CLASSPATH initially contains $HBASE_CONF_DIR
-CLASSPATH="${CLASSPATH}:${HBASE_CONF_DIR}"
+CLASSPATH="${HBASE_CONF_DIR}"
 
 # Add libs to CLASSPATH
 # Do this early so hadoop jar comes before hbase classes; otherwise
