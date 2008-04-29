@@ -285,6 +285,9 @@ jclass globalClassReference(const char *className, JNIEnv *env)
 
 /**
  * getJNIEnv: A helper function to get the JNIEnv* for the given thread.
+ * If no JVM exists, then one will be created. JVM command line arguments
+ * are obtained from the LIBHDFS_OPTS environment variable.
+ *
  * @param: None.
  * @return The JNIEnv* corresponding to the thread.
  */
@@ -315,21 +318,38 @@ JNIEnv* getJNIEnv(void)
           strlen(hadoopClassPathVMArg) + 1;
         char *optHadoopClassPath = malloc(sizeof(char)*optHadoopClassPathLen);
         snprintf(optHadoopClassPath, optHadoopClassPathLen,
-        	"%s%s", hadoopClassPathVMArg, hadoopClassPath);
+                "%s%s", hadoopClassPathVMArg, hadoopClassPath);
+
+        int noArgs = 1;
+        //determine how many arguments were passed as LIBHDFS_OPTS env var
+        char *hadoopJvmArgs = getenv("LIBHDFS_OPTS");
+        char jvmArgDelims[] = " ";
+        if (hadoopJvmArgs != NULL)  {
+                char *result = NULL;
+                result = strtok( hadoopJvmArgs, jvmArgDelims );
+                while( result != NULL ) {
+                        noArgs++;
+        		result = strtok( NULL, jvmArgDelims);
+           	}
+        }
+        JavaVMOption options[noArgs];
+        options[0].optionString = optHadoopClassPath;
+		//fill in any specified arguments
+	if (hadoopJvmArgs != NULL)  {
+            char *result = NULL;
+            result = strtok( hadoopJvmArgs, jvmArgDelims );	
+            int argNum = 1;
+            for(;argNum < noArgs ; argNum++) {
+                options[argNum].optionString = result; //optHadoopArg;
+            }
+        }
 
         //Create the VM
         JavaVMInitArgs vm_args;
-        JavaVMOption options[1];
         JavaVM *vm;
-        
-        // User classes
-        options[0].optionString = optHadoopClassPath;
-        // Print JNI-related messages      
-        //options[2].optionString = "-verbose:jni";
-
         vm_args.version = JNI_VERSION_1_2;
         vm_args.options = options;
-        vm_args.nOptions = 1; 
+        vm_args.nOptions = noArgs; 
         vm_args.ignoreUnrecognized = 1;
 
         rv = JNI_CreateJavaVM(&vm, (void*)&env, &vm_args);

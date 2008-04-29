@@ -82,6 +82,12 @@ jmethodID methodIdFromClass(const char *className, const char *methName,
 
 jclass globalClassReference(const char *className, JNIEnv *env);
 
+/** getJNIEnv: A helper function to get the JNIEnv* for the given thread.
+ * If no JVM exists, then one will be created. JVM command line arguments
+ * are obtained from the LIBHDFS_OPTS environment variable.
+ * @param: None.
+ * @return The JNIEnv* corresponding to the thread.
+ * */
 JNIEnv* getJNIEnv(void);
 
 #endif /*LIBHDFS_JNI_HELPER_H*/

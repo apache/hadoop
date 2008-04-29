@@ -28,6 +28,9 @@ Trunk (unreleased changes)
     HADOOP-3061. Writable types for doubles and bytes. (Andrzej
     Bialecki via omalley)
 
+    HADOOP-2857. Allow libhdfs to set jvm options. (Craig Macdonald
+    via omalley)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().
