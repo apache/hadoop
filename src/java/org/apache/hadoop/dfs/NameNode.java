@@ -599,11 +599,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     return namesystem.processDistributedUpgradeCommand(comm);
   }
 
-  public BlockCrcInfo blockCrcUpgradeGetBlockLocations(Block block) 
-                                                       throws IOException {
-    return namesystem.blockCrcInfo(block, null, true);
-  }
-
   /** 
    * Verify request.
    * 

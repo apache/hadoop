@@ -65,7 +65,7 @@ public class TestDFSStartupVersions extends TestCase {
    *      {pastFsscTime,currentFsscTime,futureFsscTime}
    */
   private StorageInfo[] initializeVersions() throws Exception {
-    int layoutVersionOld = -3;
+    int layoutVersionOld = Storage.LAST_UPGRADABLE_LAYOUT_VERSION;
     int layoutVersionCur = UpgradeUtilities.getCurrentLayoutVersion();
     int layoutVersionNew = Integer.MIN_VALUE;
     int namespaceIdCur = UpgradeUtilities.getCurrentNamespaceID(null);

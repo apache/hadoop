@@ -129,19 +129,6 @@ interface DatanodeProtocol extends VersionedProtocol {
   UpgradeCommand processUpgradeCommand(UpgradeCommand comm) throws IOException;
   
   /**
-   * Get locations for a given block. This is used only during 
-   * Block Level CRC upgrades (HADOOP-1134), when a datanode node
-   * misses the cluster wide distributed upgrade. It uses the same
-   * BlockCrcInfo class, that is also used during distributed upgrade
-   * 
-   * @param block 
-   * @return BlockCrcInfo that contains the block locations.
-   * @throws IOException
-   */
-  public BlockCrcInfo blockCrcUpgradeGetBlockLocations(Block block)
-                                                      throws IOException;  
-
-  /**
    * same as {@link ClientProtocol#reportBadBlocks(LocatedBlock[] blocks)}
    */
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException;

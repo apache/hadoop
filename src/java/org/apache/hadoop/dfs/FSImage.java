@@ -203,10 +203,6 @@ class FSImage extends Storage {
                                                  "storage directory does not exist or is not accessible.");
         case NOT_FORMATTED:
           break;
-        case CONVERT:
-          if (convertLayout(sd)) // need to reformat empty image
-            curState = StorageState.NOT_FORMATTED;
-          break;
         case NORMAL:
           break;
         default:  // recovery is possible
@@ -236,6 +232,9 @@ class FSImage extends Storage {
     if (!isFormatted && startOpt != StartupOption.ROLLBACK 
                      && startOpt != StartupOption.IMPORT)
       throw new IOException("NameNode is not formatted.");
+    if (layoutVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION) {
+      checkVersionUpgradable(layoutVersion);
+    }
     if (startOpt != StartupOption.UPGRADE
           && layoutVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION
           && layoutVersion != FSConstants.LAYOUT_VERSION)
@@ -568,67 +567,9 @@ class FSImage extends Storage {
     } finally {
       oldFile.close();
     }
-    // check consistency of the old storage
-    if (!oldImageDir.isDirectory())
-      throw new InconsistentFSStateException(sd.root,
-                                             oldImageDir + " is not a directory.");
-    if (!oldImageDir.canWrite())
-      throw new InconsistentFSStateException(sd.root,
-                                             oldImageDir + " is not writable.");
     return true;
   }
   
-  private boolean convertLayout(StorageDirectory sd) throws IOException {
-    assert FSConstants.LAYOUT_VERSION < LAST_PRE_UPGRADE_LAYOUT_VERSION :
-      "Bad current layout version: FSConstants.LAYOUT_VERSION should decrease";
-    File oldImageDir = new File(sd.root, "image");
-    assert oldImageDir.exists() : "Old image directory is missing";
-    File oldImage = new File(oldImageDir, "fsimage");
-    
-    LOG.info("Old layout version directory " + oldImageDir
-             + " is found. New layout version is "
-             + FSConstants.LAYOUT_VERSION);
-    LOG.info("Trying to convert ...");
-
-    // we did not use locking for the pre upgrade layout, so we cannot prevent 
-    // old name-nodes from running in the same directory as the new ones
-
-    // check new storage
-    File newImageDir = sd.getCurrentDir();
-    File versionF = sd.getVersionFile();
-    if (versionF.exists())
-      throw new IOException("Version file already exists: " + versionF);
-    if (newImageDir.exists()) // // somebody created current dir manually
-      deleteDir(newImageDir);
-
-    // move old image files into new location
-    rename(oldImageDir, newImageDir);
-    File oldEdits1 = new File(sd.root, "edits");
-    // move old edits into data
-    if (oldEdits1.exists())
-      rename(oldEdits1, getImageFile(sd, NameNodeFile.EDITS));
-    File oldEdits2 = new File(sd.root, "edits.new");
-    if (oldEdits2.exists())
-      rename(oldEdits2, getImageFile(sd, NameNodeFile.EDITS_NEW));
-
-    // Write new layout with 
-    // setting layoutVersion = LAST_PRE_UPGRADE_LAYOUT_VERSION
-    // means the actual version should be obtained from the image file
-    this.layoutVersion = LAST_PRE_UPGRADE_LAYOUT_VERSION;
-    File newImageFile = getImageFile(sd, NameNodeFile.IMAGE);
-    boolean needReformat = false;
-    if (!newImageFile.exists()) {
-      // in pre upgrade versions image file was allowed not to exist
-      // we treat it as non formatted then
-      LOG.info("Old image file " + oldImage + " does not exist. ");
-      needReformat = true;
-    } else {
-      sd.write();
-    }
-    LOG.info("Conversion of " + oldImage + " is complete.");
-    return needReformat;
-  }
-
   //
   // Atomic move sequence, to recover from interrupted checkpoint
   //
@@ -740,25 +681,24 @@ class FSImage extends Storage {
                                                                      new FileInputStream(curFile)));
     try {
       /*
+       * Note: Remove any checks for version earlier than 
+       * Storage.LAST_UPGRADABLE_LAYOUT_VERSION since we should never get 
+       * to here with older images.
+       */
+      
+      /*
        * TODO we need to change format of the image file
        * it should not contain version and namespace fields
        */
       // read image version: first appeared in version -1
       int imgVersion = in.readInt();
       // read namespaceID: first appeared in version -2
-      if (imgVersion <= -2) {
-        this.namespaceID = in.readInt();
-      }
+      this.namespaceID = in.readInt();
+
       // read number of files
       int numFiles = 0;
-      // version 0 does not store version #
-      // starts directly with the number of files
-      if (imgVersion >= 0) {
-        numFiles = imgVersion;
-        imgVersion = 0;
-      } else {
-        numFiles = in.readInt();
-      }
+      numFiles = in.readInt();
+
       this.layoutVersion = imgVersion;
       // read in the last generation stamp.
       if (imgVersion <= -12) {
@@ -775,14 +715,9 @@ class FSImage extends Storage {
         long modificationTime = 0;
         long blockSize = 0;
         name.readFields(in);
-        // version 0 does not support per file replication
-        if (!(imgVersion >= 0)) {
-          replication = in.readShort(); // other versions do
-          replication = FSEditLog.adjustReplication(replication);
-        }
-        if (imgVersion <= -5) {
-          modificationTime = in.readLong();
-        }
+        replication = in.readShort();
+        replication = FSEditLog.adjustReplication(replication);
+        modificationTime = in.readLong();
         if (imgVersion <= -8) {
           blockSize = in.readLong();
         }

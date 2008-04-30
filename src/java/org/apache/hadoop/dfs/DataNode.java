@@ -126,7 +126,6 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
   private Thread dataNodeThread = null;
   String machineName;
   private static String dnThreadName;
-  int defaultBytesPerChecksum = 512;
   private int socketTimeout;
   private int socketWriteTimeout = 0;  
   private boolean transferToAllowed = true;
@@ -214,8 +213,6 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
     InetSocketAddress nameNodeAddr =
       NetUtils.createSocketAddr(FileSystem.getDefaultUri(conf).getAuthority());
     
-    this.defaultBytesPerChecksum = 
-       Math.max(conf.getInt("io.bytes.per.checksum", 512), 1); 
     this.estimateBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     this.socketTimeout =  conf.getInt("dfs.socket.timeout",
                                       FSConstants.READ_TIMEOUT);

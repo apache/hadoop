@@ -110,9 +110,6 @@ class DataStorage extends Storage {
           LOG.info("Storage directory " + dataDir + " does not exist.");
           it.remove();
           continue;
-        case CONVERT:
-          convertLayout(sd, nsInfo);
-          break;
         case NOT_FORMATTED: // format
           LOG.info("Storage directory " + dataDir + " is not formatted.");
           LOG.info("Formatting ...");
@@ -190,88 +187,16 @@ class DataStorage extends Storage {
     FileLock oldLock = oldFile.getChannel().tryLock();
     try {
       oldFile.seek(0);
-      int odlVersion = oldFile.readInt();
-      if (odlVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION)
+      int oldVersion = oldFile.readInt();
+      if (oldVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION)
         return false;
     } finally {
       oldLock.release();
       oldFile.close();
     }
-    // check consistency of the old storage
-    File oldDataDir = new File(sd.root, "data");
-    if (!oldDataDir.exists()) 
-      throw new InconsistentFSStateException(sd.root,
-                                             "Old layout block directory " + oldDataDir + " is missing"); 
-    if (!oldDataDir.isDirectory())
-      throw new InconsistentFSStateException(sd.root,
-                                             oldDataDir + " is not a directory.");
-    if (!oldDataDir.canWrite())
-      throw new InconsistentFSStateException(sd.root,
-                                             oldDataDir + " is not writable.");
     return true;
   }
   
-  /**
-   * Automatic conversion from the old layout version to the new one.
-   * 
-   * @param sd storage directory
-   * @param nsInfo namespace information
-   * @throws IOException
-   */
-  private void convertLayout(StorageDirectory sd,
-                             NamespaceInfo nsInfo 
-                             ) throws IOException {
-    assert FSConstants.LAYOUT_VERSION < LAST_PRE_UPGRADE_LAYOUT_VERSION :
-      "Bad current layout version: FSConstants.LAYOUT_VERSION should decrease";
-    File oldF = new File(sd.root, "storage");
-    File oldDataDir = new File(sd.root, "data");
-    assert oldF.exists() : "Old datanode layout \"storage\" file is missing";
-    assert oldDataDir.exists() : "Old layout block directory \"data\" is missing";
-    LOG.info("Old layout version file " + oldF
-             + " is found. New layout version is "
-             + FSConstants.LAYOUT_VERSION);
-    LOG.info("Converting ...");
-    
-    // Lock and Read old storage file
-    RandomAccessFile oldFile = new RandomAccessFile(oldF, "rws");
-    FileLock oldLock = oldFile.getChannel().tryLock();
-    if (oldLock == null)
-      throw new IOException("Cannot lock file: " + oldF);
-    String odlStorageID = "";
-    try {
-      oldFile.seek(0);
-      int odlVersion = oldFile.readInt();
-      if (odlVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION)
-        throw new IncorrectVersionException(odlVersion, "file " + oldF,
-                                            LAST_PRE_UPGRADE_LAYOUT_VERSION);
-      odlStorageID = org.apache.hadoop.io.UTF8.readString(oldFile);
-  
-      // check new storage
-      File newDataDir = sd.getCurrentDir();
-      File versionF = sd.getVersionFile();
-      if (versionF.exists())
-        throw new IOException("Version file already exists: " + versionF);
-      if (newDataDir.exists()) // somebody created current dir manually
-        deleteDir(newDataDir);
-      // move "data" to "current"
-      rename(oldDataDir, newDataDir);
-      // close and unlock old file
-    } finally {
-      oldLock.release();
-      oldFile.close();
-    }
-    // move old storage file into current dir
-    rename(oldF, new File(sd.getCurrentDir(), "storage"));
-
-    // Write new version file
-    this.layoutVersion = FSConstants.LAYOUT_VERSION;
-    this.namespaceID = nsInfo.getNamespaceID();
-    this.cTime = 0;
-    this.storageID = odlStorageID;
-    sd.write();
-    LOG.info("Conversion of " + oldF + " is complete.");
-  }
-
   /**
    * Analize which and whether a transition of the fs state is required
    * and perform it if necessary.
@@ -292,6 +217,7 @@ class DataStorage extends Storage {
     if (startOpt == StartupOption.ROLLBACK)
       doRollback(sd, nsInfo); // rollback if applicable
     sd.read();
+    checkVersionUpgradable(this.layoutVersion);
     assert this.layoutVersion >= FSConstants.LAYOUT_VERSION :
       "Future version is not allowed";
     if (getNamespaceID() != nsInfo.getNamespaceID())

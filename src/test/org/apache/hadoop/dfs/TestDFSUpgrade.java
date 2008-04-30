@@ -213,6 +213,15 @@ public class TestDFSUpgrade extends TestCase {
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
+      log("NameNode upgrade with old layout version in current", numDirs);
+      baseDirs = UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
+      UpgradeUtilities.createVersionFile(NAME_NODE, baseDirs,
+                                         new StorageInfo(Storage.LAST_UPGRADABLE_LAYOUT_VERSION + 1,
+                                                         UpgradeUtilities.getCurrentNamespaceID(null),
+                                                         UpgradeUtilities.getCurrentFsscTime(null)));
+      startNameNodeShouldFail(StartupOption.UPGRADE);
+      UpgradeUtilities.createEmptyDirs(nameNodeDirs);
+      
       log("NameNode upgrade with future layout version in current", numDirs);
       baseDirs = UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
       UpgradeUtilities.createVersionFile(NAME_NODE, baseDirs,

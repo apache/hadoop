@@ -1,16 +1,14 @@
 #
-# This is a readme for hadoop-12-dir.tgz and hadoop-12-dir.txt.
-#
-# 08/08/2007:
+# This is a readme for hadoop-version-dfs-dir.tgz and hadoop-dfs-dir.txt.
 #
 # See HADOOP-1629 for more info if needed.
 # These two files are used by unit test TestDFSUpgradeFromImage.java 
 # 
-# hadoop-12-dfs-dir.tgz : 
+# hadoop-14-dfs-dir.tgz : 
 # ---------------------
 # This file contains the HDFS directory structure for one namenode and 4 datanodes.
 # The structure is setup similar to the structure used in MiniDFSCluster.
-# The directory was created with Hadoo-0.12.x (svn revision 526216).
+# The directory was created with Hadoo-0.14.x.
 #
 # In the test, this directory is unpacked and MiniDFSCluster is run with 
 # "-upgrade" option. The test waits for the upgrade to complete 
@@ -18,7 +16,7 @@
 # directory structure and file checksums exactly match the information
 # in this file.
 #
-# hadoop-12-dfs-dir.txt :
+# hadoop-dfs-dir.txt :
 # ---------------------
 # Along with this description this file contains the expected files and 
 # checksums or the files in the upgraded DFS.
@@ -27,7 +25,7 @@
 # some recoverable errors (i.e. corrupt or missing .crc files).
 #
 # A similar set of files exist in two different DFS directories. 
-# For e.g. "top-dir-1Mb-12" contains files created with dfs.block.size of 1Mb 
+# For e.g. "top-dir-1Mb-512" contains files created with dfs.block.size of 1Mb 
 # and io.bytes.per.checksum of 512.
 #
 # In the future, when Hadoop project no longer supports upgrade from

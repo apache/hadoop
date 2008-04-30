@@ -17,6 +17,13 @@ Trunk (unreleased changes)
     second RPC sets the generation stamp of an existing block.
     (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-2797. Code related to upgrading to 0.14 (Block CRCs) is 
+    removed. As result, upgrade to 0.18 or later from 0.13 or earlier
+    is not supported. If upgrading from 0.13 or earlier is required,
+    please upgrade to an intermediate version (0.14-0.17) and then
+    to this version. (rangadi)
+ 
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,

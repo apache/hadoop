@@ -39,8 +39,9 @@ import org.apache.commons.logging.LogFactory;
  * various forms of wrong data and verifies that Datanode handles it well.
  * 
  * This test uses the following two file from src/test/.../dfs directory :
- *   1) hadoop-12-dfs-dir.tgz : contains the tar of 
- *   2) hadoop-12-dfs-dir.txt : checksums that are compared in this test.
+ *   1) hadoop-version-dfs-dir.tgz : contains DFS directories.
+ *   2) hadoop-dfs-dir.txt : checksums that are compared in this test.
+ * Please read hadoop-dfs-dir.txt for more information.  
  */
 public class TestDFSUpgradeFromImage extends TestCase {
   
@@ -65,7 +66,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
 
   void unpackStorage() throws IOException {
     String tarFile = System.getProperty("test.cache.data") + 
-                     "/hadoop-12-dfs-dir.tgz";
+                     "/hadoop-14-dfs-dir.tgz";
     String dataDir = System.getProperty("test.build.data");
     File dfsDir = new File(dataDir, "dfs");
     if ( dfsDir.exists() && !FileUtil.fullyDelete(dfsDir) ) {
@@ -81,7 +82,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
     
     BufferedReader reader = new BufferedReader( 
                         new FileReader(System.getProperty("test.cache.data") +
-                                       "/hadoop-12-dfs-dir.txt"));
+                                       "/hadoop-dfs-dir.txt"));
     String line;
     while ( (line = reader.readLine()) != null ) {
       

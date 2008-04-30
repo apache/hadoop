@@ -98,6 +98,10 @@ abstract class Storage extends StorageInfo {
   // last layout version that did not suppot upgrades
   protected static final int LAST_PRE_UPGRADE_LAYOUT_VERSION = -3;
   
+  // this corresponds to Hadoop-0.14.
+  protected static final int LAST_UPGRADABLE_LAYOUT_VERSION = -7;
+  protected static final String LAST_UPGRADABLE_HADOOP_VERSION = "Hadoop-0.14";
+  
   private   static final String STORAGE_FILE_LOCK     = "in_use.lock";
   protected static final String STORAGE_FILE_VERSION  = "VERSION";
   private   static final String STORAGE_DIR_CURRENT   = "current";
@@ -111,7 +115,6 @@ abstract class Storage extends StorageInfo {
   protected enum StorageState {
     NON_EXISTENT,
     NOT_FORMATTED,
-    CONVERT,
     COMPLETE_UPGRADE,
     RECOVER_UPGRADE,
     COMPLETE_FINALIZE,
@@ -294,9 +297,11 @@ abstract class Storage extends StorageInfo {
 
       if (startOpt == StartupOption.FORMAT)
         return StorageState.NOT_FORMATTED;
-      // check whether a conversion is required
-      if (startOpt != StartupOption.IMPORT && isConversionNeeded(this))
-        return StorageState.CONVERT;
+      if (startOpt != StartupOption.IMPORT) {
+        //make sure no conversion is required
+        checkConversionNeeded(this);
+      }
+
       // check whether current directory is valid
       File versionFile = getVersionFile();
       boolean hasCurrent = versionFile.exists();
@@ -509,6 +514,41 @@ abstract class Storage extends StorageInfo {
   }
   
   abstract boolean isConversionNeeded(StorageDirectory sd) throws IOException;
+
+  /*
+   * Coversion is no longer supported. So this should throw exception if
+   * conversion is needed.
+   */
+  private void checkConversionNeeded(StorageDirectory sd) throws IOException {
+    if (isConversionNeeded(sd)) {
+      //throw an exception
+      checkVersionUpgradable(0);
+    }
+  }
+
+  /**
+   * Checks if the upgrade from the given old version is supported. If
+   * no upgrade is supported, it throws IncorrectVersionException.
+   * 
+   * @param oldVersion
+   */
+  static void checkVersionUpgradable(int oldVersion) 
+                                     throws IOException {
+    if (oldVersion > LAST_UPGRADABLE_LAYOUT_VERSION) {
+      String msg = "*********** Upgrade is not supported from this older" +
+                   " version of storage to the current version." + 
+                   " Please upgrade to " + LAST_UPGRADABLE_HADOOP_VERSION +
+                   " or a later version and then upgrade to current" +
+                   " version. Old layout version is " + 
+                   (oldVersion == 0 ? "'too old'" : (""+oldVersion)) +
+                   " and latest layout version this software version can" +
+                   " upgrade from is " + LAST_UPGRADABLE_LAYOUT_VERSION +
+                   ". ************";
+      LOG.error(msg);
+      throw new IOException(msg); 
+    }
+    
+  }
   
   /**
    * Get common storage fields.

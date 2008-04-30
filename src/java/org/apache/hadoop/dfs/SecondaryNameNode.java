@@ -507,9 +507,6 @@ public class SecondaryNameNode implements FSConstants, Runnable {
                   "checkpoint directory does not exist or is not accessible.");
           case NOT_FORMATTED:
             break;  // it's ok since initially there is no current and VERSION
-          case CONVERT:
-            throw new InconsistentFSStateException(sd.root,
-                  "not a checkpoint directory.");
           case NORMAL:
             break;
           default:  // recovery is possible
