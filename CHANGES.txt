@@ -1,5 +1,12 @@
 Hadoop Change Log
 
+Release 0.16.4 - 2008-05-05
+
+  BUG FIXES
+
+    HADOOP-3138. DFS mkdirs() should not throw an exception if the directory
+    already exists. (rangadi via mukund)
+
 Release 0.16.3 - 2008-04-16
 
   BUG FIXES
