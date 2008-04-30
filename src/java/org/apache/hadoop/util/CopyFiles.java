@@ -319,13 +319,11 @@ public class CopyFiles implements Tool {
         checkAndClose(out);
       }
 
-      final boolean success = cbcopied == srcstat.getLen();
-      if (!success) {
-        final String badlen = "ERROR? copied " + bytesString(cbcopied)
-            + " but expected " + bytesString(srcstat.getLen()) 
-            + " from " + srcstat.getPath();
-        LOG.warn(badlen);
-        outc.collect(null, new Text(badlen));
+      if (cbcopied != srcstat.getLen()) {
+        throw new IOException("File size not matched: copied "
+            + bytesString(cbcopied) + " to tmpfile (=" + tmpfile
+            + ") but expected " + bytesString(srcstat.getLen()) 
+            + " from " + srcstat.getPath());        
       }
       else {
         if (totfiles == 1) {
@@ -345,6 +343,15 @@ public class CopyFiles implements Tool {
           throw new IOException("Failed to craete parent dir: " + absdst.getParent());
         }
         rename(destFileSys, tmpfile, absdst);
+
+        FileStatus dststat = destFileSys.getFileStatus(absdst);
+        if (dststat.getLen() != srcstat.getLen()) {
+          destFileSys.delete(absdst);
+          throw new IOException("File size not matched: copied "
+              + bytesString(dststat.getLen()) + " to dst (=" + absdst
+              + ") but expected " + bytesString(srcstat.getLen()) 
+              + " from " + srcstat.getPath());        
+        } 
       }
 
       // report at least once for each file

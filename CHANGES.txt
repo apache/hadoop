@@ -7,6 +7,9 @@ Release 0.16.4 - 2008-05-05
     HADOOP-3138. DFS mkdirs() should not throw an exception if the directory
     already exists. (rangadi via mukund)
 
+    HADOOP-3294. Fix distcp to check the destination length and retry the copy
+    if it doesn't match the src length. (Tsz Wo (Nicholas), SZE via mukund)
+
 Release 0.16.3 - 2008-04-16
 
   BUG FIXES
