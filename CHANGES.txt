@@ -13,6 +13,9 @@ Release 0.16.4 - 2008-05-05
     HADOOP-3304. [HOD] Fixes the way the logcondense.py utility searches for log
     files that need to be deleted. (yhemanth via mukund)
 
+    HADOOP-3186. Fix incorrect permission checkding for mv and renameTo
+    in HDFS. (Tsz Wo (Nicholas), SZE via mukund)
+
 Release 0.16.3 - 2008-04-16
 
   BUG FIXES

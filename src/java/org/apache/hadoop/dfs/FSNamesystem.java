@@ -1438,8 +1438,12 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
 
     if (isPermissionEnabled) {
+      //We should not be doing this.  This is move() not renameTo().
+      //but for now,
+      String actualdst = dir.isDir(dst)?
+          dst + Path.SEPARATOR + new Path(src).getName(): dst;
       checkParentAccess(src, FsAction.WRITE);
-      checkAncestorAccess(dst, FsAction.WRITE);
+      checkAncestorAccess(actualdst, FsAction.WRITE);
     }
 
     return dir.renameTo(src, dst);
