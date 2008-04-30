@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.*;
+import java.io.IOException;
 
 import org.apache.hadoop.ipc.VersionedProtocol;
 
@@ -40,8 +40,9 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * Version 8: HeartbeatResponse is added with the next heartbeat interval.
    * version 9 changes the counter representation for HADOOP-2248
    * version 10 changes the TaskStatus representation for HADOOP-2208
+   * version 11 changes string to JobID in getTaskCompletionEvents().
    */
-  public static final long versionID = 10L;
+  public static final long versionID = 11L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;
@@ -97,8 +98,8 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * @return array of task completion events. 
    * @throws IOException
    */
-  TaskCompletionEvent[] getTaskCompletionEvents(
-                                                String jobid, int fromEventId, int maxEvents) throws IOException;
+  TaskCompletionEvent[] getTaskCompletionEvents(JobID jobid, int fromEventId
+      , int maxEvents) throws IOException;
   
 }
 

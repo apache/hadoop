@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.lang.InterruptedException;
 
 import org.apache.hadoop.ipc.VersionedProtocol;
 
@@ -35,16 +34,20 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    * Changed the version to 4, since we have replaced 
    *         TaskUmbilicalProtocol.progress(String, float, String, 
    *         org.apache.hadoop.mapred.TaskStatus.Phase, Counters) 
-   *         with {@link #statusUpdate(String, TaskStatus)}
+   *         with statusUpdate(String, TaskStatus)
+   * 
    * Version 5 changed counters representation for HADOOP-2248
    * Version 6 changes the TaskStatus representation for HADOOP-2208
    * Version 7 changes the done api (via HADOOP-3140). It now expects whether
    *           or not the task's output needs to be promoted.
+   * Version 8 changes {job|tip|task}id's to use their corresponding 
+   * objects rather than strings.
    * */
-  public static final long versionID = 7L;
+
+  public static final long versionID = 8L;
   
   /** Called when a child task process starts, to get its task.*/
-  Task getTask(String taskid) throws IOException;
+  Task getTask(TaskAttemptID taskid) throws IOException;
 
   /**
    * Report child's progress to parent.
@@ -55,7 +58,7 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    * @throws InterruptedException
    * @return True if the task is known
    */
-  boolean statusUpdate(String taskId, TaskStatus taskStatus) 
+  boolean statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus) 
   throws IOException, InterruptedException;
   
   /** Report error messages back to parent.  Calls should be sparing, since all
@@ -63,25 +66,25 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    *  @param taskid the id of the task involved
    *  @param trace the text to report
    */
-  void reportDiagnosticInfo(String taskid, String trace) throws IOException;
+  void reportDiagnosticInfo(TaskAttemptID taskid, String trace) throws IOException;
 
   /** Periodically called by child to check if parent is still alive. 
    * @return True if the task is known
    */
-  boolean ping(String taskid) throws IOException;
+  boolean ping(TaskAttemptID taskid) throws IOException;
 
   /** Report that the task is successfully completed.  Failure is assumed if
    * the task process exits without calling this.
    * @param taskid task's id
    * @param shouldBePromoted whether to promote the task's output or not 
    */
-  void done(String taskid, boolean shouldBePromoted) throws IOException;
+  void done(TaskAttemptID taskid, boolean shouldBePromoted) throws IOException;
 
   /** Report that a reduce-task couldn't shuffle map-outputs.*/
-  void shuffleError(String taskId, String message) throws IOException;
+  void shuffleError(TaskAttemptID taskId, String message) throws IOException;
   
   /** Report that the task encounted a local filesystem error.*/
-  void fsError(String taskId, String message) throws IOException;
+  void fsError(TaskAttemptID taskId, String message) throws IOException;
 
   /** Called by a reduce task to get the map output locations for finished maps.
    *
@@ -91,7 +94,7 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    * @param maxLocs the max number of locations to fetch
    * @return an array of TaskCompletionEvent
    */
-  TaskCompletionEvent[] getMapCompletionEvents(String jobId, 
+  TaskCompletionEvent[] getMapCompletionEvents(JobID jobId, 
                                                int fromIndex, int maxLocs) throws IOException;
 
 }

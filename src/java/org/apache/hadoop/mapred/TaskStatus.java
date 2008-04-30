@@ -24,7 +24,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 /**************************************************
@@ -43,7 +43,7 @@ abstract class TaskStatus implements Writable, Cloneable {
   public static enum State {RUNNING, SUCCEEDED, FAILED, UNASSIGNED, KILLED, 
                             COMMIT_PENDING}
     
-  private String taskid;
+  private TaskAttemptID taskid;
   private float progress;
   private State runState;
   private String diagnosticInfo;
@@ -59,7 +59,7 @@ abstract class TaskStatus implements Writable, Cloneable {
 
   public TaskStatus() {}
 
-  public TaskStatus(String taskid, float progress,
+  public TaskStatus(TaskAttemptID taskid, float progress,
                     State runState, String diagnosticInfo,
                     String stateString, String taskTracker,
                     Phase phase, Counters counters) {
@@ -74,7 +74,7 @@ abstract class TaskStatus implements Writable, Cloneable {
     this.includeCounters = true;
   }
   
-  public String getTaskId() { return taskid; }
+  public TaskAttemptID getTaskID() { return taskid; }
   public abstract boolean getIsMap();
   public float getProgress() { return progress; }
   public void setProgress(float progress) { this.progress = progress; } 
@@ -211,7 +211,7 @@ abstract class TaskStatus implements Writable, Cloneable {
    * 
    * @return the list of maps from which output-fetches failed.
    */
-  public List<String> getFetchFailedMaps() {
+  public List<TaskAttemptID> getFetchFailedMaps() {
     return null;
   }
   
@@ -220,7 +220,7 @@ abstract class TaskStatus implements Writable, Cloneable {
    *  
    * @param mapTaskId map from which fetch failed
    */
-  synchronized void addFetchFailedMap(String mapTaskId) {}
+  synchronized void addFetchFailedMap(TaskAttemptID mapTaskId) {}
 
   /**
    * Update the status of the task.
@@ -271,6 +271,7 @@ abstract class TaskStatus implements Writable, Cloneable {
     diagnosticInfo = "";
   }
 
+  @Override
   public Object clone() {
     try {
       return super.clone();
@@ -284,11 +285,11 @@ abstract class TaskStatus implements Writable, Cloneable {
   // Writable
   //////////////////////////////////////////////
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString(out, taskid);
+    taskid.write(out);
     out.writeFloat(progress);
     WritableUtils.writeEnum(out, runState);
-    UTF8.writeString(out, diagnosticInfo);
-    UTF8.writeString(out, stateString);
+    Text.writeString(out, diagnosticInfo);
+    Text.writeString(out, stateString);
     WritableUtils.writeEnum(out, phase);
     out.writeLong(startTime);
     out.writeLong(finishTime);
@@ -299,11 +300,11 @@ abstract class TaskStatus implements Writable, Cloneable {
   }
 
   public void readFields(DataInput in) throws IOException {
-    this.taskid = UTF8.readString(in);
+    this.taskid = TaskAttemptID.read(in);
     this.progress = in.readFloat();
     this.runState = WritableUtils.readEnum(in, State.class);
-    this.diagnosticInfo = UTF8.readString(in);
-    this.stateString = UTF8.readString(in);
+    this.diagnosticInfo = Text.readString(in);
+    this.stateString = Text.readString(in);
     this.phase = WritableUtils.readEnum(in, Phase.class); 
     this.startTime = in.readLong(); 
     this.finishTime = in.readLong(); 
@@ -318,7 +319,7 @@ abstract class TaskStatus implements Writable, Cloneable {
   // Factory-like methods to create/read/write appropriate TaskStatus objects
   //////////////////////////////////////////////////////////////////////////////
   
-  static TaskStatus createTaskStatus(DataInput in, String taskId, float progress,
+  static TaskStatus createTaskStatus(DataInput in, TaskAttemptID taskId, float progress,
                                      State runState, String diagnosticInfo,
                                      String stateString, String taskTracker,
                                      Phase phase, Counters counters) 
@@ -328,7 +329,7 @@ abstract class TaskStatus implements Writable, Cloneable {
                           stateString, taskTracker, phase, counters);
   }
   
-  static TaskStatus createTaskStatus(boolean isMap, String taskId, float progress,
+  static TaskStatus createTaskStatus(boolean isMap, TaskAttemptID taskId, float progress,
                                    State runState, String diagnosticInfo,
                                    String stateString, String taskTracker,
                                    Phase phase, Counters counters) { 

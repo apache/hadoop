@@ -36,6 +36,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -80,7 +81,7 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     FileUtil.chmod(executable, "a+x");
     cmd.add(executable);
     // wrap the command in a stdout/stderr capture
-    String taskid = conf.get("mapred.task.id");
+    TaskAttemptID taskid = TaskAttemptID.forName(conf.get("mapred.task.id"));
     File stdout = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDOUT);
     File stderr = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDERR);
     long logLength = TaskLog.getTaskLogLength(conf);

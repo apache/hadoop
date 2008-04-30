@@ -19,7 +19,6 @@ package org.apache.hadoop.mapred;
 
 
 import java.io.IOException;
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -29,8 +28,6 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.mapred.JobClient.RawSplit;
 
 
@@ -53,13 +50,6 @@ class TaskInProgress {
   int maxTaskAttempts = 4;    
   static final double SPECULATIVE_GAP = 0.2;
   static final long SPECULATIVE_LAG = 60 * 1000;
-  static final String MAP_IDENTIFIER = "_m_";
-  static final String REDUCE_IDENTIFIER = "_r_";
-  private static NumberFormat idFormat = NumberFormat.getInstance();
-  static {
-    idFormat.setMinimumIntegerDigits(6);
-    idFormat.setGroupingUsed(false);
-  }
 
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.TaskInProgress");
 
@@ -69,7 +59,7 @@ class TaskInProgress {
   private int numMaps;
   private int partition;
   private JobTracker jobtracker;
-  private String id;
+  private TaskID id;
   private JobInProgress job;
 
   // Status of the TIP
@@ -84,36 +74,33 @@ class TaskInProgress {
   private int completes = 0;
   private boolean failed = false;
   private boolean killed = false;
-
-  // The 'unique' prefix for taskids of this tip
-  String taskIdPrefix;
-    
+   
   // The 'next' usable taskid of this tip
   int nextTaskId = 0;
     
   // The taskid that took this TIP to SUCCESS
-  private String successfulTaskId;
+  private TaskAttemptID successfulTaskId;
   
   // Map from task Id -> TaskTracker Id, contains tasks that are
   // currently runnings
-  private TreeMap<String, String> activeTasks = new TreeMap<String, String>();
+  private TreeMap<TaskAttemptID, String> activeTasks = new TreeMap<TaskAttemptID, String>();
   private JobConf conf;
-  private Map<String,List<String>> taskDiagnosticData =
-    new TreeMap<String,List<String>>();
+  private Map<TaskAttemptID,List<String>> taskDiagnosticData =
+    new TreeMap<TaskAttemptID,List<String>>();
   /**
    * Map from taskId -> TaskStatus
    */
-  private TreeMap<String,TaskStatus> taskStatuses = 
-    new TreeMap<String,TaskStatus>();
+  private TreeMap<TaskAttemptID,TaskStatus> taskStatuses = 
+    new TreeMap<TaskAttemptID,TaskStatus>();
 
   // Map from taskId -> Task
-  private Map<String, Task> tasks = new TreeMap<String, Task>();
+  private Map<TaskAttemptID, Task> tasks = new TreeMap<TaskAttemptID, Task>();
 
   private TreeSet<String> machinesWhereFailed = new TreeSet<String>();
-  private TreeSet<String> tasksReportedClosed = new TreeSet<String>();
+  private TreeSet<TaskAttemptID> tasksReportedClosed = new TreeSet<TaskAttemptID>();
   
   //list of tasks to kill, <taskid> -> <shouldFail> 
-  private TreeMap<String, Boolean> tasksToKill = new TreeMap<String, Boolean>();
+  private TreeMap<TaskAttemptID, Boolean> tasksToKill = new TreeMap<TaskAttemptID, Boolean>();
   
   private Counters counters = new Counters();
   
@@ -121,7 +108,7 @@ class TaskInProgress {
   /**
    * Constructor for MapTask
    */
-  public TaskInProgress(String jobid, String jobFile, 
+  public TaskInProgress(JobID jobid, String jobFile, 
                         RawSplit rawSplit, 
                         JobTracker jobtracker, JobConf conf, 
                         JobInProgress job, int partition) {
@@ -132,13 +119,13 @@ class TaskInProgress {
     this.conf = conf;
     this.partition = partition;
     setMaxTaskAttempts();
-    init(JobTracker.getJobUniqueString(jobid));
+    init(jobid);
   }
         
   /**
    * Constructor for ReduceTask
    */
-  public TaskInProgress(String jobid, String jobFile, 
+  public TaskInProgress(JobID jobid, String jobFile, 
                         int numMaps, 
                         int partition, JobTracker jobtracker, JobConf conf,
                         JobInProgress job) {
@@ -149,7 +136,7 @@ class TaskInProgress {
     this.job = job;
     this.conf = conf;
     setMaxTaskAttempts();
-    init(JobTracker.getJobUniqueString(jobid));
+    init(jobid);
   }
   
   /**
@@ -162,39 +149,10 @@ class TaskInProgress {
       this.maxTaskAttempts = conf.getMaxReduceAttempts();
     }
   }
-  
-  /**
-   * Return true if the tip id represents a map
-   * @param tipId the tip id
-   * @return whether the tip is a map tip or a reduce tip
-   */
-  public static boolean isMapId(String tipId) {
-    if (tipId.contains(MAP_IDENTIFIER))  {
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Make a unique name for this TIP.
-   * @param uniqueBase The unique name of the job
-   * @return The unique string for this tip
-   */
-  private String makeUniqueString(String uniqueBase) {
-    StringBuilder result = new StringBuilder();
-    result.append(uniqueBase);
-    if (isMapTask()) {
-      result.append(MAP_IDENTIFIER);
-    } else {
-      result.append(REDUCE_IDENTIFIER);
-    }
-    result.append(idFormat.format(partition));
-    return result.toString();
-  }
     
   /**
    * Return the index of the tip within the job, so 
-   * "tip_200707121733_1313_0002_m_012345" would return 12345;
+   * "task_200707121733_1313_0002_m_012345" would return 12345;
    * @return int the tip index
    */
   public int idWithinJob() {
@@ -213,10 +171,9 @@ class TaskInProgress {
   /**
    * Initialization common to Map and Reduce
    */
-  void init(String jobUniqueString) {
+  void init(JobID jobId) {
     this.startTime = System.currentTimeMillis();
-    this.taskIdPrefix = makeUniqueString(jobUniqueString);
-    this.id = "tip_" + this.taskIdPrefix;
+    this.id = new TaskID(jobId, isMapTask(), partition);
   }
 
   ////////////////////////////////////
@@ -232,7 +189,7 @@ class TaskInProgress {
   /**
    * Return an ID for this task, not its component taskid-threads
    */
-  public String getTIPId() {
+  public TaskID getTIPId() {
     return this.id;
   }
   /**
@@ -247,7 +204,7 @@ class TaskInProgress {
    * @param taskId
    * @return
    */  
-  public Task getTaskObject(String taskId) {
+  public Task getTask(TaskAttemptID taskId) {
     return tasks.get(taskId);
   }
   
@@ -259,16 +216,16 @@ class TaskInProgress {
     return !activeTasks.isEmpty();
   }
     
-  private String getSuccessfulTaskid() {
+  private TaskAttemptID getSuccessfulTaskid() {
     return successfulTaskId;
   }
   
-  private void setSuccessfulTaskid(String successfulTaskId) {
+  private void setSuccessfulTaskid(TaskAttemptID successfulTaskId) {
     this.successfulTaskId = successfulTaskId; 
   }
   
   private void resetSuccessfulTaskid() {
-    this.successfulTaskId = ""; 
+    this.successfulTaskId = null; 
   }
   
   /**
@@ -286,9 +243,9 @@ class TaskInProgress {
    * @param taskid taskid of attempt to check for completion
    * @return <code>true</code> if taskid is complete, else <code>false</code>
    */
-  public boolean isComplete(String taskid) {
-    return ((completes > 0) && 
-             getSuccessfulTaskid().equals(taskid));
+  public boolean isComplete(TaskAttemptID taskid) {
+    return ((completes > 0) 
+            && taskid.equals(getSuccessfulTaskid()));
   }
 
   /**
@@ -327,12 +284,13 @@ class TaskInProgress {
   public Counters getCounters() {
     return counters;
   }
+
   /**
    * Returns whether a component task-thread should be 
    * closed because the containing JobInProgress has completed
    * or the task is killed by the user
    */
-  public boolean shouldClose(String taskid) {
+  public boolean shouldClose(TaskAttemptID taskid) {
     /**
      * If the task hasn't been closed yet, and it belongs to a completed
      * TaskInProgress close it.
@@ -381,7 +339,7 @@ class TaskInProgress {
    * @param taskId the id of the required task
    * @return the list of diagnostics for that task
    */
-  synchronized List<String> getDiagnosticInfo(String taskId) {
+  synchronized List<String> getDiagnosticInfo(TaskAttemptID taskId) {
     return taskDiagnosticData.get(taskId);
   }
     
@@ -396,7 +354,7 @@ class TaskInProgress {
    * @param taskId id of the task 
    * @param diagInfo diagnostic information for the task
    */
-  public void addDiagnosticInfo(String taskId, String diagInfo) {
+  public void addDiagnosticInfo(TaskAttemptID taskId, String diagInfo) {
     List<String> diagHistory = taskDiagnosticData.get(taskId);
     if (diagHistory == null) {
       diagHistory = new ArrayList<String>();
@@ -412,7 +370,7 @@ class TaskInProgress {
    * @return has the task changed its state noticably?
    */
   synchronized boolean updateStatus(TaskStatus status) {
-    String taskid = status.getTaskId();
+    TaskAttemptID taskid = status.getTaskID();
     String diagInfo = status.getDiagnosticInfo();
     TaskStatus oldStatus = taskStatuses.get(taskid);
     boolean changed = true;
@@ -461,7 +419,7 @@ class TaskInProgress {
    * Indicate that one of the taskids in this TaskInProgress
    * has failed.
    */
-  public void incompleteSubTask(String taskid, String trackerName, 
+  public void incompleteSubTask(TaskAttemptID taskid, String trackerName, 
                                 JobStatus jobStatus) {
     //
     // Note the failure and its location
@@ -529,7 +487,7 @@ class TaskInProgress {
    * @param taskId id of the completed task-attempt
    * @param finalTaskState final {@link TaskStatus.State} of the task-attempt
    */
-  private void completedTask(String taskId, TaskStatus.State finalTaskState) {
+  private void completedTask(TaskAttemptID taskId, TaskStatus.State finalTaskState) {
     TaskStatus status = taskStatuses.get(taskId);
     status.setRunState(finalTaskState);
     activeTasks.remove(taskId);
@@ -540,7 +498,7 @@ class TaskInProgress {
    * TaskInProgress has successfully completed; hence we mark this
    * taskid as {@link TaskStatus.State.KILLED}. 
    */
-  void alreadyCompletedTask(String taskid) {
+  void alreadyCompletedTask(TaskAttemptID taskid) {
     // 'KILL' the task 
     completedTask(taskid, TaskStatus.State.KILLED);
     
@@ -555,7 +513,7 @@ class TaskInProgress {
    * Indicate that one of the taskids in this TaskInProgress
    * has successfully completed!
    */
-  public void completed(String taskid) {
+  public void completed(TaskAttemptID taskid) {
     //
     // Record that this taskid is complete
     //
@@ -594,7 +552,7 @@ class TaskInProgress {
    * @param taskid
    * @return
    */
-  public TaskStatus getTaskStatus(String taskid) {
+  public TaskStatus getTaskStatus(TaskAttemptID taskid) {
     return taskStatuses.get(taskid);
   }
   /**
@@ -620,7 +578,7 @@ class TaskInProgress {
   /**
    * Kill the given task
    */
-  boolean killTask(String taskId, boolean shouldFail) {
+  boolean killTask(TaskAttemptID taskId, boolean shouldFail) {
     TaskStatus st = taskStatuses.get(taskId);
     if(st != null && (st.getRunState() == TaskStatus.State.RUNNING
         || st.getRunState() == TaskStatus.State.COMMIT_PENDING)
@@ -651,8 +609,8 @@ class TaskInProgress {
       double bestProgress = 0;
       String bestState = "";
       Counters bestCounters = new Counters();
-      for (Iterator<String> it = taskStatuses.keySet().iterator(); it.hasNext();) {
-        String taskid = it.next();
+      for (Iterator<TaskAttemptID> it = taskStatuses.keySet().iterator(); it.hasNext();) {
+        TaskAttemptID taskid = it.next();
         TaskStatus status = taskStatuses.get(taskid);
         if (status.getRunState() == TaskStatus.State.SUCCEEDED) {
           bestProgress = 1;
@@ -723,9 +681,9 @@ class TaskInProgress {
     }
 
     // Create the 'taskid'; do not count the 'killed' tasks against the job!
-    String taskid = null;
+    TaskAttemptID taskid = null;
     if (nextTaskId < (MAX_TASK_EXECS + maxTaskAttempts + numKilledTasks)) {
-      taskid = "task_" + taskIdPrefix + "_" + nextTaskId;
+      taskid = new TaskAttemptID( id, nextTaskId);
       ++nextTaskId;
     } else {
       LOG.warn("Exceeded limit of " + (MAX_TASK_EXECS + maxTaskAttempts) +
@@ -733,14 +691,12 @@ class TaskInProgress {
               " attempts for the tip '" + getTIPId() + "'");
       return null;
     }
-        
-    String jobId = job.getProfile().getJobId();
 
     if (isMapTask()) {
-      t = new MapTask(jobId, jobFile, this.id, taskid, partition, 
-                      rawSplit.getClassName(), rawSplit.getBytes());
+      t = new MapTask(jobFile, taskid, partition, 
+          rawSplit.getClassName(), rawSplit.getBytes());
     } else {
-      t = new ReduceTask(jobId, jobFile, this.id, taskid, partition, numMaps);
+      t = new ReduceTask(jobFile, taskid, partition, numMaps);
     }
     t.setConf(conf);
     tasks.put(taskid, t);
@@ -798,12 +754,5 @@ class TaskInProgress {
    */
   public int getSuccessEventNumber() {
     return successEventNumber;
-  }
-  
-  /**
-   * Gets the tip id for the given taskid
-   * */
-  public static String getTipId(String taskId){
-	  return taskId.substring(0, taskId.lastIndexOf('_')).replace("task", "tip");
   }
 }

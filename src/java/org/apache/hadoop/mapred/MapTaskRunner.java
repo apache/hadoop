@@ -32,13 +32,13 @@ class MapTaskRunner extends TaskRunner {
       return false;
     }
     
-    mapOutputFile.removeAll(getTask().getTaskId());
+    mapOutputFile.removeAll(getTask().getTaskID());
     return true;
   }
 
   /** Delete all of the temporary map output files. */
   public void close() throws IOException {
     LOG.info(getTask()+" done; removing files.");
-    mapOutputFile.removeAll(getTask().getTaskId());
+    mapOutputFile.removeAll(getTask().getTaskID());
   }
 }

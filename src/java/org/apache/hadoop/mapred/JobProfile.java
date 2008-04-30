@@ -17,10 +17,15 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.io.*;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.net.URL;
 
-import java.io.*;
-import java.net.*;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableFactory;
 
 /**************************************************
  * A JobProfile is a MapReduce primitive.  Tracks a job,
@@ -38,7 +43,7 @@ public class JobProfile implements Writable {
   }
 
   String user;
-  String jobid;
+  JobID jobid;
   String jobFile;
   String url;
   String name;
@@ -59,7 +64,7 @@ public class JobProfile implements Writable {
    * @param url link to the web-ui for details of the job.
    * @param name user-specified job name.
    */
-  public JobProfile(String user, String jobid, String jobFile, String url,
+  public JobProfile(String user, JobID jobid, String jobFile, String url,
                     String name) {
     this.user = user;
     this.jobid = jobid;
@@ -78,7 +83,7 @@ public class JobProfile implements Writable {
   /**
    * Get the job id.
    */
-  public String getJobId() {
+  public JobID getJobID() {
     return jobid;
   }
 
@@ -111,18 +116,18 @@ public class JobProfile implements Writable {
   // Writable
   ///////////////////////////////////////
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString(out, jobid);
-    UTF8.writeString(out, jobFile);
-    UTF8.writeString(out, url);
-    UTF8.writeString(out, user);
-    UTF8.writeString(out, name);
+    jobid.write(out);
+    Text.writeString(out, jobFile);
+    Text.writeString(out, url);
+    Text.writeString(out, user);
+    Text.writeString(out, name);
   }
   public void readFields(DataInput in) throws IOException {
-    this.jobid = UTF8.readString(in);
-    this.jobFile = UTF8.readString(in);
-    this.url = UTF8.readString(in);
-    this.user = UTF8.readString(in);
-    this.name = UTF8.readString(in);
+    this.jobid = JobID.read(in);
+    this.jobFile = Text.readString(in);
+    this.url = Text.readString(in);
+    this.user = Text.readString(in);
+    this.name = Text.readString(in);
   }
 }
 

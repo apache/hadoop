@@ -18,20 +18,27 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.*;
-import java.util.*;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
+import org.apache.hadoop.examples.WordCount;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.examples.WordCount;
 
 /**
  * A JUnit test to test Mini Map-Reduce Cluster with Mini-DFS.
@@ -174,7 +181,7 @@ public class TestMiniMRWithDFS extends TestCase {
     LOG.info("runWordCount");
     // Run a word count example
     // Keeping tasks that match this pattern
-    jobConf.setKeepTaskFilesPattern("task_[^_]*_[0-9]*_m_000001_.*");
+    jobConf.setKeepTaskFilesPattern(TaskAttemptID.getTaskAttemptIDsPattern(null, null, true, 1, null));
     TestResult result;
     final Path inDir = new Path("./wc/input");
     final Path outDir = new Path("./wc/output");
@@ -182,9 +189,9 @@ public class TestMiniMRWithDFS extends TestCase {
     result = launchWordCount(jobConf, inDir, outDir, input, 3, 1);
     assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
                  "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result.output);
-    String jobid = result.job.getJobID();
-    String taskid = "task_" + jobid.substring(4) + "_m_000001_0";
-    checkTaskDirectories(mr, new String[]{jobid}, new String[]{taskid});
+    JobID jobid = result.job.getID();
+    TaskAttemptID taskid = new TaskAttemptID(new TaskID(jobid, true, 1),0);
+    checkTaskDirectories(mr, new String[]{jobid.toString()}, new String[]{taskid.toString()});
     // test with maps=0
     jobConf = mr.createJobConf();
     input = "owen is oom";

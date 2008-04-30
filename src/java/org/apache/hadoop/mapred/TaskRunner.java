@@ -56,7 +56,7 @@ abstract class TaskRunner extends Thread {
     this.t = t;
     this.tracker = tracker;
     this.conf = conf;
-    this.mapOutputFile = new MapOutputFile(t.getJobId());
+    this.mapOutputFile = new MapOutputFile(t.getJobID());
     this.mapOutputFile.setConf(conf);
   }
 
@@ -88,12 +88,13 @@ abstract class TaskRunner extends Thread {
     return str.toString();
   }
   
+  @Override
   public final void run() {
     try {
       
       //before preparing the job localize 
       //all the archives
-      String taskid = t.getTaskId();
+      TaskAttemptID taskid = t.getTaskID();
       LocalDirAllocator lDirAlloc = new LocalDirAllocator("mapred.local.dir");
       File jobCacheDir = null;
       if (conf.getJar() != null) {
@@ -102,8 +103,8 @@ abstract class TaskRunner extends Thread {
       }
       File workDir = new File(lDirAlloc.getLocalPathToRead(
                                 TaskTracker.getJobCacheSubdir() 
-                                + Path.SEPARATOR + t.getJobId() 
-                                + Path.SEPARATOR + t.getTaskId()
+                                + Path.SEPARATOR + t.getJobID() 
+                                + Path.SEPARATOR + t.getTaskID()
                                 + Path.SEPARATOR + "work",
                                 conf). toString());
 
@@ -293,7 +294,7 @@ abstract class TaskRunner extends Thread {
       //  </property>
       //
       String javaOpts = conf.get("mapred.child.java.opts", "-Xmx200m");
-      javaOpts = replaceAll(javaOpts, "@taskid@", taskid);
+      javaOpts = replaceAll(javaOpts, "@taskid@", taskid.toString());
       String [] javaOptsSplit = javaOpts.split(" ");
       
       // Add java.library.path; necessary for loading native libraries.
@@ -368,7 +369,7 @@ abstract class TaskRunner extends Thread {
       InetSocketAddress address = tracker.getTaskTrackerReportAddress();
       vargs.add(address.getAddress().getHostAddress()); 
       vargs.add(Integer.toString(address.getPort())); 
-      vargs.add(taskid);                      // pass task identifier
+      vargs.add(taskid.toString());                      // pass task identifier
 
       // set memory limit using ulimit if feasible and necessary ...
       String[] ulimitCmd = Shell.getUlimitMemoryCommand(conf);
@@ -393,18 +394,18 @@ abstract class TaskRunner extends Thread {
     } catch (FSError e) {
       LOG.fatal("FSError", e);
       try {
-        tracker.fsError(t.getTaskId(), e.getMessage());
+        tracker.fsError(t.getTaskID(), e.getMessage());
       } catch (IOException ie) {
-        LOG.fatal(t.getTaskId()+" reporting FSError", ie);
+        LOG.fatal(t.getTaskID()+" reporting FSError", ie);
       }
     } catch (Throwable throwable) {
-      LOG.warn(t.getTaskId()+" Child Error", throwable);
+      LOG.warn(t.getTaskID()+" Child Error", throwable);
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       throwable.printStackTrace(new PrintStream(baos));
       try {
-        tracker.reportDiagnosticInfo(t.getTaskId(), baos.toString());
+        tracker.reportDiagnosticInfo(t.getTaskID(), baos.toString());
       } catch (IOException e) {
-        LOG.warn(t.getTaskId()+" Reporting Diagnostics", e);
+        LOG.warn(t.getTaskID()+" Reporting Diagnostics", e);
       }
     } finally {
       try{
@@ -423,7 +424,7 @@ abstract class TaskRunner extends Thread {
       }catch(IOException ie){
         LOG.warn("Error releasing caches : Cache files might not have been cleaned up");
       }
-      tracker.reportTaskFinished(t.getTaskId());
+      tracker.reportTaskFinished(t.getTaskID());
     }
   }
 
@@ -461,7 +462,7 @@ abstract class TaskRunner extends Thread {
    * Run the child process
    */
   private void runChild(List<String> args, File dir,
-                        String taskid) throws IOException {
+                        TaskAttemptID taskid) throws IOException {
 
     try {
       shexec = new ShellCommandExecutor(args.toArray(new String[0]), dir);

@@ -24,34 +24,36 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.io.Text;
 
 
 public class ReduceTaskStatus extends TaskStatus {
 
   private long shuffleFinishTime; 
   private long sortFinishTime; 
-  private List<String> failedFetchTasks = new ArrayList<String>(1);
+  private List<TaskAttemptID> failedFetchTasks = new ArrayList<TaskAttemptID>(1);
   
   public ReduceTaskStatus() {}
 
-  public ReduceTaskStatus(String taskid, float progress, State runState,
+  public ReduceTaskStatus(TaskAttemptID taskid, float progress, State runState,
           String diagnosticInfo, String stateString, String taskTracker,
           Phase phase, Counters counters) {
     super(taskid, progress, runState, diagnosticInfo, stateString, taskTracker,
             phase, counters);
   }
 
+  @Override
   public Object clone() {
     ReduceTaskStatus myClone = (ReduceTaskStatus)super.clone();
-    myClone.failedFetchTasks = new ArrayList<String>(failedFetchTasks);
+    myClone.failedFetchTasks = new ArrayList<TaskAttemptID>(failedFetchTasks);
     return myClone;
   }
 
+  @Override
   public boolean getIsMap() {
     return false;
   }
 
+  @Override
   void setFinishTime(long finishTime) {
     if (shuffleFinishTime == 0) {
       this.shuffleFinishTime = finishTime; 
@@ -62,18 +64,22 @@ public class ReduceTaskStatus extends TaskStatus {
     super.setFinishTime(finishTime);
   }
 
+  @Override
   public long getShuffleFinishTime() {
     return shuffleFinishTime;
   }
 
+  @Override
   void setShuffleFinishTime(long shuffleFinishTime) {
     this.shuffleFinishTime = shuffleFinishTime;
   }
 
+  @Override
   public long getSortFinishTime() {
     return sortFinishTime;
   }
 
+  @Override
   void setSortFinishTime(long sortFinishTime) {
     this.sortFinishTime = sortFinishTime;
     if (0 == this.shuffleFinishTime){
@@ -81,14 +87,17 @@ public class ReduceTaskStatus extends TaskStatus {
     }
   }
 
-  public List<String> getFetchFailedMaps() {
+  @Override
+  public List<TaskAttemptID> getFetchFailedMaps() {
     return failedFetchTasks;
   }
   
-  void addFetchFailedMap(String mapTaskId) {
+  @Override
+  void addFetchFailedMap(TaskAttemptID mapTaskId) {
     failedFetchTasks.add(mapTaskId);
   }
   
+  @Override
   synchronized void statusUpdate(TaskStatus status) {
     super.statusUpdate(status);
     
@@ -100,7 +109,7 @@ public class ReduceTaskStatus extends TaskStatus {
       sortFinishTime = status.getSortFinishTime();
     }
     
-    List<String> newFetchFailedMaps = status.getFetchFailedMaps();
+    List<TaskAttemptID> newFetchFailedMaps = status.getFetchFailedMaps();
     if (failedFetchTasks == null) {
       failedFetchTasks = newFetchFailedMaps;
     } else if (newFetchFailedMaps != null){
@@ -108,29 +117,32 @@ public class ReduceTaskStatus extends TaskStatus {
     }
   }
 
+  @Override
   synchronized void clearStatus() {
     super.clearStatus();
     failedFetchTasks.clear();
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
     shuffleFinishTime = in.readLong(); 
     sortFinishTime = in.readLong();
     int noFailedFetchTasks = in.readInt();
-    failedFetchTasks = new ArrayList<String>(noFailedFetchTasks);
+    failedFetchTasks = new ArrayList<TaskAttemptID>(noFailedFetchTasks);
     for (int i=0; i < noFailedFetchTasks; ++i) {
-      failedFetchTasks.add(Text.readString(in));
+      failedFetchTasks.add(TaskAttemptID.read(in));
     }
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
     out.writeLong(shuffleFinishTime);
     out.writeLong(sortFinishTime);
     out.writeInt(failedFetchTasks.size());
-    for (String taskId : failedFetchTasks) {
-      Text.writeString(out, taskId);
+    for (TaskAttemptID taskId : failedFetchTasks) {
+      taskId.write(out);
     }
   }
   

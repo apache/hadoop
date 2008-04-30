@@ -15,6 +15,10 @@
   String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
   String jobid = request.getParameter("jobid");
+  if (jobid == null) {
+    out.println("<h2>Missing 'jobid'!</h2>");
+    return;
+  }
   String type = request.getParameter("type");
   String pagenum = request.getParameter("pagenum");
   TaskInProgress[] tasks;
@@ -23,7 +27,8 @@
   int pnum = Integer.parseInt(pagenum);
   int next_page = pnum+1;
   int numperpage = 2000;
-  JobInProgress job = (JobInProgress) tracker.getJob(jobid);
+  JobID jobidObj = JobID.forName(jobid);
+  JobInProgress job = (JobInProgress) tracker.getJob(jobidObj);
   JobProfile profile = (job != null) ? (job.getProfile()) : null;
   JobStatus status = (job != null) ? (job.getStatus()) : null;
   TaskReport[] reports = null;
@@ -31,11 +36,11 @@
   int end_index = start_index + numperpage;
   int report_len = 0;
   if ("map".equals(type)){
-     reports = (job != null) ? tracker.getMapTaskReports(jobid) : null;
+     reports = (job != null) ? tracker.getMapTaskReports(jobidObj) : null;
      tasks = (job != null) ? job.getMapTasks() : null;
     }
   else{
-    reports = (job != null) ? tracker.getReduceTaskReports(jobid) : null;
+    reports = (job != null) ? tracker.getReduceTaskReports(jobidObj) : null;
     tasks = (job != null) ? job.getReduceTasks() : null;
   }
 %>
@@ -57,7 +62,7 @@
   }
   // Filtering the reports if some filter is specified
   if (!"all".equals(state)) {
-    List<String> filteredReportsTaskIds = new ArrayList<String>();
+    List<TaskID> filteredReportsTaskIds = new ArrayList<TaskID>();
     List<TaskReport> filteredReports = new ArrayList<TaskReport>();
     for (int i = 0; i < tasks.length; ++i) {
       if (("completed".equals(state) && tasks[i].isComplete()) 
@@ -70,7 +75,7 @@
       }
     }
     for (int i = 0 ; i < reports.length; ++i) {
-      if (filteredReportsTaskIds.contains(reports[i].getTaskId())) {
+      if (filteredReportsTaskIds.contains(reports[i].getTaskID())) {
         filteredReports.add(reports[i]);
       }
     }

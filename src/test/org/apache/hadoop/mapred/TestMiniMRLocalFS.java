@@ -18,19 +18,24 @@
 
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.MRCaching.TestResult;
-import org.apache.hadoop.util.Progressable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.io.File;
+import java.io.IOException;
 import java.util.Iterator;
+
 import junit.framework.TestCase;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.mapred.MRCaching.TestResult;
+import org.apache.hadoop.util.Progressable;
 
 /**
  * A JUnit test to test min map-reduce cluster with local file system.
@@ -64,7 +69,7 @@ public class TestMiniMRLocalFS extends TestCase {
       assertTrue("Failed test archives not matching", ret.isOutputOk);
       // test the task report fetchers
       JobClient client = new JobClient(job);
-      String jobid = ret.job.getJobID();
+      JobID jobid = ret.job.getID();
       TaskReport[] reports = client.getMapTaskReports(jobid);
       assertEquals("number of maps", 1, reports.length);
       reports = client.getReduceTaskReports(jobid);
@@ -247,7 +252,7 @@ public class TestMiniMRLocalFS extends TestCase {
         // expected result
       }
       while (values.hasNext()) {
-        Writable value = (Writable) values.next();
+        Writable value = values.next();
         System.out.println("reduce: " + key + ", " + value);
         output.collect(key, value);
       }

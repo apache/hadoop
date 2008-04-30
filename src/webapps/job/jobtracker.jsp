@@ -33,7 +33,7 @@
           JobInProgress job = (JobInProgress) it.next();
           JobProfile profile = job.getProfile();
           JobStatus status = job.getStatus();
-          String jobid = profile.getJobId();
+          JobID jobid = profile.getJobID();
 
           int desiredMaps = job.desiredMaps();
           int desiredReduces = job.desiredReduces();

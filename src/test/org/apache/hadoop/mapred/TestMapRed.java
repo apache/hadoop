@@ -17,14 +17,25 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.lib.*;
-import junit.framework.TestCase;
-import java.io.*;
-import java.util.*;
+import java.io.BufferedWriter;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.util.EnumSet;
+import java.util.Iterator;
+import java.util.Random;
 
-import static org.apache.hadoop.io.SequenceFile.CompressionType;
+import junit.framework.TestCase;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.mapred.lib.IdentityMapper;
+import org.apache.hadoop.mapred.lib.IdentityReducer;
 
 /**********************************************************
  * MapredLoadTest generates a bunch of work that exercises
@@ -255,15 +266,14 @@ public class TestMapRed extends TestCase {
   private static class MyReduce extends IdentityReducer {
     private JobConf conf;
     private boolean compressInput;
-    private String taskId;
-    private String jobId;
+    private TaskAttemptID taskId;
     private boolean first = true;
       
+    @Override
     public void configure(JobConf conf) {
       this.conf = conf;
       compressInput = conf.getCompressMapOutput();
-      taskId = conf.get("mapred.task.id");
-      jobId = conf.get("mapred.job.id");
+      taskId = TaskAttemptID.forName(conf.get("mapred.task.id"));
     }
       
     public void reduce(WritableComparable key, Iterator values,
@@ -271,7 +281,7 @@ public class TestMapRed extends TestCase {
                        ) throws IOException {
       if (first) {
         first = false;
-        MapOutputFile mapOutputFile = new MapOutputFile(jobId);
+        MapOutputFile mapOutputFile = new MapOutputFile(taskId.getJobID());
         mapOutputFile.setConf(conf);
         Path input = mapOutputFile.getInputFile(0, taskId);
         FileSystem fs = FileSystem.get(conf);

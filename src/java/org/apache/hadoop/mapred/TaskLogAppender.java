@@ -30,7 +30,8 @@ import org.apache.log4j.spi.LoggingEvent;
  * 
  */
 public class TaskLogAppender extends FileAppender {
-  private String taskId;
+  private String taskId; //taskId should be managed as String rather than TaskID object
+  //so that log4j can configure it from the configuration(log4j.properties). 
   private int maxEvents;
   private Queue<LoggingEvent> tail = null;
 
@@ -40,7 +41,7 @@ public class TaskLogAppender extends FileAppender {
       if (maxEvents > 0) {
         tail = new LinkedList<LoggingEvent>();
       }
-      setFile(TaskLog.getTaskLogFile(taskId, 
+      setFile(TaskLog.getTaskLogFile(TaskAttemptID.forName(taskId), 
                                      TaskLog.LogName.SYSLOG).toString());
       setAppend(true);
       super.activateOptions();

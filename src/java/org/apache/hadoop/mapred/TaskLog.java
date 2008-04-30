@@ -18,11 +18,16 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.logging.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 
 /**
@@ -44,8 +49,8 @@ public class TaskLog {
     }
   }
 
-  public static File getTaskLogFile(String taskid, LogName filter) {
-    return new File(new File(LOG_DIR, taskid), filter.toString());
+  public static File getTaskLogFile(TaskAttemptID taskid, LogName filter) {
+    return new File(new File(LOG_DIR, taskid.toString()), filter.toString());
   }
   
   /**
@@ -73,6 +78,7 @@ public class TaskLog {
       this.prefix = prefix;
     }
     
+    @Override
     public String toString() {
       return prefix;
     }
@@ -124,7 +130,7 @@ public class TaskLog {
      * @param end the offset to read upto (negative is relative to tail)
      * @throws IOException
      */
-    public Reader(String taskid, LogName kind, 
+    public Reader(TaskAttemptID taskid, LogName kind, 
                   long start, long end) throws IOException {
       // find the right log file
       File filename = getTaskLogFile(taskid, kind);
@@ -152,6 +158,7 @@ public class TaskLog {
       }
     }
     
+    @Override
     public int read() throws IOException {
       int result = -1;
       if (bytesRemaining > 0) {
@@ -161,6 +168,7 @@ public class TaskLog {
       return result;
     }
     
+    @Override
     public int read(byte[] buffer, int offset, int length) throws IOException {
       length = (int) Math.min(length, bytesRemaining);
       int bytes = file.read(buffer, offset, length);
@@ -170,10 +178,12 @@ public class TaskLog {
       return bytes;
     }
     
+    @Override
     public int available() throws IOException {
       return (int) Math.min(bytesRemaining, file.available());
     }
 
+    @Override
     public void close() throws IOException {
       file.close();
     }

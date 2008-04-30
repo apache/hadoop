@@ -16,18 +16,18 @@
 <%! 
   private void printFailedAttempts(JspWriter out,
                                    JobTracker tracker,
-                                   String jobId,
+                                   JobID jobId,
                                    TaskInProgress tip,
                                    TaskStatus.State failState) throws IOException {
     TaskStatus[] statuses = tip.getTaskStatuses();
-    String tipId = tip.getTIPId();
+    TaskID tipId = tip.getTIPId();
     for(int i=0; i < statuses.length; ++i) {
       TaskStatus.State taskState = statuses[i].getRunState();
       if ((failState == null && (taskState == TaskStatus.State.FAILED || 
           taskState == TaskStatus.State.KILLED)) || taskState == failState) {
         String taskTrackerName = statuses[i].getTaskTracker();
         TaskTrackerStatus taskTracker = tracker.getTaskTracker(taskTrackerName);
-        out.print("<tr><td>" + statuses[i].getTaskId() +
+        out.print("<tr><td>" + statuses[i].getTaskID() +
                   "</td><td><a href=\"taskdetails.jsp?jobid="+ jobId + 
                   "&tipid=" + tipId + "\">" + tipId +
                   "</a></td>");
@@ -41,8 +41,7 @@
         out.print("<td>" + taskState + "</td>");
         out.print("<td><pre>");
         String[] failures = 
-                     tracker.getTaskDiagnostics(jobId, tipId, 
-                                                statuses[i].getTaskId());
+                     tracker.getTaskDiagnostics(statuses[i].getTaskID());
         if (failures == null) {
           out.print("&nbsp;");
         } else {
@@ -59,7 +58,7 @@
         if (taskTracker != null) {
           String taskLogUrl = "http://" + taskTracker.getHost() + ":" +
           	taskTracker.getHttpPort() + "/tasklog?taskid=" + 
-          	statuses[i].getTaskId();
+          	statuses[i].getTaskID();
           String tailFourKBUrl = taskLogUrl + "&start=-4097";
           String tailEightKBUrl = taskLogUrl + "&start=-8193";
           String entireLogUrl = taskLogUrl;
@@ -78,7 +77,7 @@
              
   private void printFailures(JspWriter out, 
                              JobTracker tracker,
-                             String jobId,
+                             JobID jobId,
                              String kind, 
                              String cause) throws IOException {
     JobInProgress job = (JobInProgress) tracker.getJob(jobId);
@@ -140,6 +139,11 @@
 
 <%
     String jobId = request.getParameter("jobid");
+    if (jobId == null) {
+      out.println("<h2>Missing 'jobid'!</h2>");
+      return;
+    }
+    JobID jobIdObj = JobID.forName(jobId);
     String kind = request.getParameter("kind");
     String cause = request.getParameter("cause");
 %>
@@ -151,7 +155,7 @@
 failures on <a href="jobtracker.jsp"><%=trackerName%></a></h1>
 
 <% 
-    printFailures(out, tracker, jobId, kind, cause); 
+    printFailures(out, tracker, jobIdObj, kind, cause); 
 %>
 
 <hr>

@@ -37,7 +37,7 @@
   	  return;
     }
     
-    JobInProgress job = (JobInProgress) tracker.getJob(jobId);
+    JobInProgress job = (JobInProgress) tracker.getJob(JobID.forName(jobId));
     if (job == null) {
       out.print("<b>Job " + jobId + " not found.</b><br>\n");
       return;

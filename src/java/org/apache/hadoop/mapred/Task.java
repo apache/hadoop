@@ -22,32 +22,30 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.net.URI;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.text.NumberFormat;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.dfs.DistributedFileSystem;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.fs.kfs.KosmosFileSystem;
 import org.apache.hadoop.fs.s3.S3FileSystem;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.net.*;
 
 /** Base class for tasks. */
 abstract class Task implements Writable, Configurable {
@@ -98,9 +96,7 @@ abstract class Task implements Writable, Configurable {
   ////////////////////////////////////////////
 
   private String jobFile;                         // job configuration file
-  private String taskId;                          // unique, includes job id
-  private String jobId;                           // unique jobid
-  private String tipId;
+  private TaskAttemptID taskId;                          // unique, includes job id
   private int partition;                          // id within job
   TaskStatus taskStatus; 										      // current status of the task
   private Path taskOutputPath;                    // task-specific output dir
@@ -117,12 +113,10 @@ abstract class Task implements Writable, Configurable {
     taskStatus = TaskStatus.createTaskStatus(isMapTask());
   }
 
-  public Task(String jobId, String jobFile, String tipId, 
-              String taskId, int partition) {
+  public Task(String jobFile, TaskAttemptID taskId, int partition) {
     this.jobFile = jobFile;
     this.taskId = taskId;
-    this.jobId = jobId;
-    this.tipId = tipId; 
+     
     this.partition = partition;
     this.taskStatus = TaskStatus.createTaskStatus(isMapTask(), this.taskId, 
                                                   0.0f, 
@@ -132,7 +126,7 @@ abstract class Task implements Writable, Configurable {
                                                     TaskStatus.Phase.MAP : 
                                                     TaskStatus.Phase.SHUFFLE, 
                                                   counters);
-    this.mapOutputFile.setJobId(jobId);
+    this.mapOutputFile.setJobId(taskId.getJobID());
   }
 
   ////////////////////////////////////////////
@@ -140,16 +134,15 @@ abstract class Task implements Writable, Configurable {
   ////////////////////////////////////////////
   public void setJobFile(String jobFile) { this.jobFile = jobFile; }
   public String getJobFile() { return jobFile; }
-  public String getTaskId() { return taskId; }
-  public String getTipId(){ return tipId; }
+  public TaskAttemptID getTaskID() { return taskId; }
   public Counters getCounters() { return counters; }
   
   /**
    * Get the job name for this task.
    * @return the job name
    */
-  public String getJobId() {
-    return jobId;
+  public JobID getJobID() {
+    return taskId.getJobID();
   }
   
   /**
@@ -180,10 +173,8 @@ abstract class Task implements Writable, Configurable {
   ////////////////////////////////////////////
 
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString(out, jobFile);
-    UTF8.writeString(out, tipId); 
-    UTF8.writeString(out, taskId);
-    UTF8.writeString(out, jobId);
+    Text.writeString(out, jobFile);
+    taskId.write(out);
     out.writeInt(partition);
     if (taskOutputPath != null) {
       Text.writeString(out, taskOutputPath.toString());
@@ -193,10 +184,8 @@ abstract class Task implements Writable, Configurable {
     taskStatus.write(out);
   }
   public void readFields(DataInput in) throws IOException {
-    jobFile = UTF8.readString(in);
-    tipId = UTF8.readString(in);
-    taskId = UTF8.readString(in);
-    jobId = UTF8.readString(in);
+    jobFile = Text.readString(in);
+    taskId = TaskAttemptID.read(in);
     partition = in.readInt();
     String outPath = Text.readString(in);
     if (outPath.length() != 0) {
@@ -205,10 +194,11 @@ abstract class Task implements Writable, Configurable {
       taskOutputPath = null;
     }
     taskStatus.readFields(in);
-    this.mapOutputFile.setJobId(jobId); 
+    this.mapOutputFile.setJobId(taskId.getJobID()); 
   }
 
-  public String toString() { return taskId; }
+  @Override
+  public String toString() { return taskId.toString(); }
 
   private Path getTaskOutputPath(JobConf conf) {
     Path p = new Path(FileOutputFormat.getOutputPath(conf), 
@@ -226,11 +216,11 @@ abstract class Task implements Writable, Configurable {
    * Localize the given JobConf to be specific for this task.
    */
   public void localizeConfiguration(JobConf conf) throws IOException {
-    conf.set("mapred.tip.id", tipId); 
-    conf.set("mapred.task.id", taskId);
+    conf.set("mapred.tip.id", taskId.getTaskID().toString()); 
+    conf.set("mapred.task.id", taskId.toString());
     conf.setBoolean("mapred.task.is.map", isMapTask());
     conf.setInt("mapred.task.partition", partition);
-    conf.set("mapred.job.id", jobId);
+    conf.set("mapred.job.id", taskId.getJobID().toString());
     
     // The task-specific output path
     if (FileOutputFormat.getOutputPath(conf) != null) {
@@ -303,7 +293,7 @@ abstract class Task implements Writable, Configurable {
                 Thread.sleep(PROGRESS_INTERVAL);
               } 
               catch (InterruptedException e) {
-                LOG.debug(getTaskId() + " Progress/ping thread exiting " +
+                LOG.debug(getTaskID() + " Progress/ping thread exiting " +
                                         "since it got interrupted");
                 break;
               }
@@ -345,7 +335,7 @@ abstract class Task implements Writable, Configurable {
       }, "Comm thread for "+taskId);
     thread.setDaemon(true);
     thread.start();
-    LOG.debug(getTaskId() + " Progress/ping thread started");
+    LOG.debug(getTaskID() + " Progress/ping thread started");
   }
 
   
@@ -463,7 +453,7 @@ abstract class Task implements Writable, Configurable {
           taskStatus.statusUpdate(taskProgress.get(), taskProgress.toString(), 
                                   counters);
           try {
-            if (!umbilical.statusUpdate(getTaskId(), taskStatus)) {
+            if (!umbilical.statusUpdate(getTaskID(), taskStatus)) {
               LOG.warn("Parent died.  Exiting "+taskId);
               System.exit(66);
             }
@@ -496,7 +486,7 @@ abstract class Task implements Writable, Configurable {
           shouldBePromoted = true;
         }
         umbilical.done(taskId, shouldBePromoted);
-        LOG.info("Task '" + getTaskId() + "' done.");
+        LOG.info("Task '" + getTaskID() + "' done.");
         return;
       } catch (IOException ie) {
         LOG.warn("Failure signalling completion: " + 
@@ -556,10 +546,10 @@ abstract class Task implements Writable, Configurable {
         // Delete the temporary task-specific output directory
         if (!fs.delete(taskOutputPath, true)) {
           LOG.info("Failed to delete the temporary output directory of task: " + 
-                  getTaskId() + " - " + taskOutputPath);
+                  getTaskID() + " - " + taskOutputPath);
         }
         
-        LOG.info("Saved output of task '" + getTaskId() + "' to " + jobOutputPath);
+        LOG.info("Saved output of task '" + getTaskID() + "' to " + jobOutputPath);
       }
     }
   }
@@ -580,11 +570,11 @@ abstract class Task implements Writable, Configurable {
       if (!fs.rename(taskOutput, finalOutputPath)) {
         if (!fs.delete(finalOutputPath, true)) {
           throw new IOException("Failed to delete earlier output of task: " + 
-                  getTaskId());
+                  getTaskID());
         }
         if (!fs.rename(taskOutput, finalOutputPath)) {
           throw new IOException("Failed to save output of task: " + 
-                  getTaskId());
+                  getTaskID());
         }
       }
       LOG.debug("Moved " + taskOutput + " to " + finalOutputPath);

@@ -23,9 +23,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -42,7 +42,8 @@ import org.apache.hadoop.mapred.JobTracker.JobTrackerMetrics;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.net.*;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.Node;
 
 /*************************************************************
  * JobInProgress maintains all the info for keeping
@@ -126,7 +127,7 @@ class JobInProgress {
   boolean tasksInited = false;
 
   private LocalFileSystem localFs;
-  private String jobId;
+  private JobID jobId;
   private boolean hasSpeculativeMaps;
   private boolean hasSpeculativeReduces;
 
@@ -148,14 +149,14 @@ class JobInProgress {
   private static final int MAX_FETCH_FAILURES_NOTIFICATIONS = 3;
   
   // Map of mapTaskId -> no. of fetch failures
-  private Map<String, Integer> mapTaskIdToFetchFailuresMap =
-    new TreeMap<String, Integer>();
+  private Map<TaskAttemptID, Integer> mapTaskIdToFetchFailuresMap =
+    new TreeMap<TaskAttemptID, Integer>();
   
   /**
    * Create a JobInProgress with the given job file, plus a handle
    * to the tracker.
    */
-  public JobInProgress(String jobid, JobTracker jobtracker, 
+  public JobInProgress(JobID jobid, JobTracker jobtracker, 
                        JobConf default_conf) throws IOException {
     this.jobId = jobid;
     String url = "http://" + jobtracker.getJobTrackerMachine() + ":" 
@@ -199,7 +200,7 @@ class JobInProgress {
     this.jobMetrics.setTag("user", conf.getUser());
     this.jobMetrics.setTag("sessionId", conf.getSessionId());
     this.jobMetrics.setTag("jobName", conf.getJobName());
-    this.jobMetrics.setTag("jobId", jobid);
+    this.jobMetrics.setTag("jobId", jobid.toString());
     hasSpeculativeMaps = conf.getMapSpeculativeExecution();
     hasSpeculativeReduces = conf.getReduceSpeculativeExecution();
     this.maxLevel = jobtracker.getNumTaskCacheLevels();
@@ -218,10 +219,9 @@ class JobInProgress {
     Counters counters = getCounters();
     for (Counters.Group group : counters) {
       jobMetrics.setTag("group", group.getDisplayName());
-          
       for (Counters.Counter counter : group) {
         jobMetrics.setTag("counter", counter.getDisplayName());
-        jobMetrics.setMetric("value", (float) counter.getCounter());
+        jobMetrics.setMetric("value", counter.getCounter());
         jobMetrics.update();
       }
     }
@@ -329,9 +329,9 @@ class JobInProgress {
       status.setReduceProgress(1.0f);
       status.setRunState(JobStatus.SUCCEEDED);
       tasksInited = true;
-      JobHistory.JobInfo.logStarted(profile.getJobId(), 
+      JobHistory.JobInfo.logStarted(profile.getJobID(), 
                                     System.currentTimeMillis(), 0, 0);
-      JobHistory.JobInfo.logFinished(profile.getJobId(), 
+      JobHistory.JobInfo.logFinished(profile.getJobID(), 
                                      System.currentTimeMillis(), 0, 0, 0, 0,
                                      getCounters());
       // Special case because the Job is not queued
@@ -361,10 +361,10 @@ class JobInProgress {
       }
     }
 
-    this.status = new JobStatus(status.getJobId(), 0.0f, 0.0f, JobStatus.RUNNING);
+    this.status = new JobStatus(status.getJobID(), 0.0f, 0.0f, JobStatus.RUNNING);
     tasksInited = true;
         
-    JobHistory.JobInfo.logStarted(profile.getJobId(), System.currentTimeMillis(), numMapTasks, numReduceTasks);
+    JobHistory.JobInfo.logStarted(profile.getJobID(), System.currentTimeMillis(), numMapTasks, numReduceTasks);
   }
 
   /////////////////////////////////////////////////////
@@ -482,7 +482,7 @@ class JobInProgress {
 
       if (state == TaskStatus.State.COMMIT_PENDING) {
         JobWithTaskContext j = new JobWithTaskContext(this, tip, 
-                                                      status.getTaskId(),
+                                                      status.getTaskID(),
                                                       metrics);
         jobtracker.addToCommitQueue(j);
       }
@@ -496,14 +496,14 @@ class JobInProgress {
         }
         httpTaskLogLocation = "http://" + host + ":" + 
           ttStatus.getHttpPort() + "/tasklog?plaintext=true&taskid=" +
-          status.getTaskId();
+          status.getTaskID();
       }
 
       TaskCompletionEvent taskEvent = null;
       if (state == TaskStatus.State.SUCCEEDED) {
         taskEvent = new TaskCompletionEvent(
                                             taskCompletionEventTracker, 
-                                            status.getTaskId(),
+                                            status.getTaskID(),
                                             tip.idWithinJob(),
                                             status.getIsMap(),
                                             TaskCompletionEvent.Status.SUCCEEDED,
@@ -527,12 +527,12 @@ class JobInProgress {
         if ((eventNumber = tip.getSuccessEventNumber()) != -1) {
           TaskCompletionEvent t = 
             this.taskCompletionEvents.get(eventNumber);
-          if (t.getTaskId().equals(status.getTaskId()))
+          if (t.getTaskID().equals(status.getTaskID()))
             t.setTaskStatus(TaskCompletionEvent.Status.OBSOLETE);
         }
         
         // Tell the job to fail the relevant task
-        failedTask(tip, status.getTaskId(), status, status.getTaskTracker(),
+        failedTask(tip, status.getTaskID(), status, status.getTaskTracker(),
                    wasRunning, wasComplete, metrics);
 
         // Did the task failure lead to tip failure?
@@ -544,7 +544,7 @@ class JobInProgress {
           taskCompletionStatus = TaskCompletionEvent.Status.TIPFAILED;
         }
         taskEvent = new TaskCompletionEvent(taskCompletionEventTracker, 
-                                            status.getTaskId(),
+                                            status.getTaskID(),
                                             tip.idWithinJob(),
                                             status.getIsMap(),
                                             taskCompletionStatus, 
@@ -651,11 +651,10 @@ class JobInProgress {
                                             int clusterSize
                                            ) throws IOException {
     if (!tasksInited) {
-      LOG.info("Cannot create task split for " + profile.getJobId());
+      LOG.info("Cannot create task split for " + profile.getJobID());
       return null;
     }
-    
-    
+        
     int target = findNewMapTask(tts, clusterSize, status.mapProgress());
     if (target == -1) {
       return null;
@@ -664,11 +663,9 @@ class JobInProgress {
     Task result = maps[target].getTaskToRun(tts.getTrackerName());
     if (result != null) {
       runningMapTasks += 1;
-
       boolean wasRunning = maps[target].isRunning();
       if (!wasRunning) {
-        JobHistory.Task.logStarted(profile.getJobId(), 
-                                   maps[target].getTIPId(), Values.MAP.name(),
+        JobHistory.Task.logStarted(maps[target].getTIPId(), Values.MAP.name(),
                                    System.currentTimeMillis());
       }
 
@@ -687,7 +684,7 @@ class JobInProgress {
                                                int clusterSize
                                               ) throws IOException {
     if (!tasksInited) {
-      LOG.info("Cannot create task split for " + profile.getJobId());
+      LOG.info("Cannot create task split for " + profile.getJobID());
       return null;
     }
 
@@ -699,11 +696,9 @@ class JobInProgress {
     Task result = reduces[target].getTaskToRun(tts.getTrackerName());
     if (result != null) {
       runningReduceTasks += 1;
-
       boolean wasRunning = reduces[target].isRunning();
       if (!wasRunning) {
-        JobHistory.Task.logStarted(profile.getJobId(), 
-                                   reduces[target].getTIPId(), Values.REDUCE.name(),
+        JobHistory.Task.logStarted(reduces[target].getTIPId(), Values.REDUCE.name(),
                                    System.currentTimeMillis());
       }
 
@@ -1286,7 +1281,7 @@ class JobInProgress {
                                          TaskStatus status,
                                          JobTrackerMetrics metrics) 
   {
-    String taskid = status.getTaskId();
+    TaskAttemptID taskid = status.getTaskID();
         
     // Sanity check: is the TIP already complete? 
     // It _is_ safe to not decrement running{Map|Reduce}Tasks and
@@ -1314,24 +1309,20 @@ class JobInProgress {
     // Update jobhistory 
     String taskTrackerName = status.getTaskTracker();
     if (status.getIsMap()){
-      JobHistory.MapAttempt.logStarted(profile.getJobId(), 
-                                       tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
+      JobHistory.MapAttempt.logStarted(status.getTaskID(), status.getStartTime(), 
                                        taskTrackerName); 
-      JobHistory.MapAttempt.logFinished(profile.getJobId(), 
-                                        tip.getTIPId(), status.getTaskId(), status.getFinishTime(), 
+      JobHistory.MapAttempt.logFinished(status.getTaskID(), status.getFinishTime(), 
                                         taskTrackerName); 
-      JobHistory.Task.logFinished(profile.getJobId(), tip.getTIPId(), 
+      JobHistory.Task.logFinished(tip.getTIPId(), 
                                   Values.MAP.name(), status.getFinishTime(),
                                   status.getCounters()); 
     }else{
-      JobHistory.ReduceAttempt.logStarted(profile.getJobId(), 
-                                          tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
+      JobHistory.ReduceAttempt.logStarted( status.getTaskID(), status.getStartTime(), 
                                           taskTrackerName); 
-      JobHistory.ReduceAttempt.logFinished(profile.getJobId(), 
-                                           tip.getTIPId(), status.getTaskId(), status.getShuffleFinishTime(),
+      JobHistory.ReduceAttempt.logFinished(status.getTaskID(), status.getShuffleFinishTime(),
                                            status.getSortFinishTime(), status.getFinishTime(), 
                                            taskTrackerName); 
-      JobHistory.Task.logFinished(profile.getJobId(), tip.getTIPId(), 
+      JobHistory.Task.logFinished(tip.getTIPId(), 
                                   Values.REDUCE.name(), status.getFinishTime(),
                                   status.getCounters()); 
     }
@@ -1394,9 +1385,9 @@ class JobInProgress {
       this.status.setReduceProgress(1.0f);
       this.finishTime = System.currentTimeMillis();
       garbageCollect();
-      LOG.info("Job " + this.status.getJobId() + 
+      LOG.info("Job " + this.status.getJobID() + 
                " has completed successfully.");
-      JobHistory.JobInfo.logFinished(this.status.getJobId(), finishTime, 
+      JobHistory.JobInfo.logFinished(this.status.getJobID(), finishTime, 
                                      this.finishedMapTasks, 
                                      this.finishedReduceTasks, failedMapTasks, 
                                      failedReduceTasks, getCounters());
@@ -1411,8 +1402,8 @@ class JobInProgress {
    */
   public synchronized void kill() {
     if (status.getRunState() != JobStatus.FAILED) {
-      LOG.info("Killing job '" + this.status.getJobId() + "'");
-      this.status = new JobStatus(status.getJobId(), 1.0f, 1.0f, JobStatus.FAILED);
+      LOG.info("Killing job '" + this.status.getJobID() + "'");
+      this.status = new JobStatus(status.getJobID(), 1.0f, 1.0f, JobStatus.FAILED);
       this.finishTime = System.currentTimeMillis();
       this.runningMapTasks = 0;
       this.runningReduceTasks = 0;
@@ -1425,7 +1416,7 @@ class JobInProgress {
       for (int i = 0; i < reduces.length; i++) {
         reduces[i].kill();
       }
-      JobHistory.JobInfo.logFailed(this.status.getJobId(), finishTime, 
+      JobHistory.JobInfo.logFailed(this.status.getJobID(), finishTime, 
                                    this.finishedMapTasks, this.finishedReduceTasks);
       garbageCollect();
     }
@@ -1443,7 +1434,7 @@ class JobInProgress {
    * we need to schedule reexecution so that downstream reduce tasks can 
    * obtain the map task's output.
    */
-  private void failedTask(TaskInProgress tip, String taskid, 
+  private void failedTask(TaskInProgress tip, TaskAttemptID taskid, 
                           TaskStatus status, String trackerName,
                           boolean wasRunning, boolean wasComplete,
                           JobTrackerMetrics metrics) {
@@ -1495,29 +1486,23 @@ class JobInProgress {
     // update job history
     String taskTrackerName = status.getTaskTracker();
     if (status.getIsMap()) {
-      JobHistory.MapAttempt.logStarted(profile.getJobId(), 
-                tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
+      JobHistory.MapAttempt.logStarted(status.getTaskID(), status.getStartTime(), 
                 taskTrackerName);
       if (status.getRunState() == TaskStatus.State.FAILED) {
-        JobHistory.MapAttempt.logFailed(profile.getJobId(), 
-                tip.getTIPId(), status.getTaskId(), System.currentTimeMillis(),
+        JobHistory.MapAttempt.logFailed(status.getTaskID(), System.currentTimeMillis(),
                 taskTrackerName, status.getDiagnosticInfo());
       } else {
-        JobHistory.MapAttempt.logKilled(profile.getJobId(), 
-                tip.getTIPId(), status.getTaskId(), System.currentTimeMillis(),
+        JobHistory.MapAttempt.logKilled(status.getTaskID(), System.currentTimeMillis(),
                 taskTrackerName, status.getDiagnosticInfo());
       }
     } else {
-      JobHistory.ReduceAttempt.logStarted(profile.getJobId(), 
-                tip.getTIPId(), status.getTaskId(), status.getStartTime(), 
+      JobHistory.ReduceAttempt.logStarted(status.getTaskID(), status.getStartTime(), 
                 taskTrackerName);
       if (status.getRunState() == TaskStatus.State.FAILED) {
-        JobHistory.ReduceAttempt.logFailed(profile.getJobId(), 
-                tip.getTIPId(), status.getTaskId(), System.currentTimeMillis(),
+        JobHistory.ReduceAttempt.logFailed(status.getTaskID(), System.currentTimeMillis(),
                 taskTrackerName, status.getDiagnosticInfo());
       } else {
-        JobHistory.ReduceAttempt.logKilled(profile.getJobId(), 
-                tip.getTIPId(), status.getTaskId(), System.currentTimeMillis(),
+        JobHistory.ReduceAttempt.logKilled(status.getTaskID(), System.currentTimeMillis(),
                 taskTrackerName, status.getDiagnosticInfo());
       }
     }
@@ -1558,14 +1543,14 @@ class JobInProgress {
             ((++failedReduceTIPs*100) > (reduceFailuresPercent*numReduceTasks));
       
       if (killJob) {
-        LOG.info("Aborting job " + profile.getJobId());
-        JobHistory.Task.logFailed(profile.getJobId(), tip.getTIPId(), 
+        LOG.info("Aborting job " + profile.getJobID());
+        JobHistory.Task.logFailed(tip.getTIPId(), 
                                   tip.isMapTask() ? 
                                           Values.MAP.name() : 
                                           Values.REDUCE.name(),  
                                   System.currentTimeMillis(), 
                                   status.getDiagnosticInfo());
-        JobHistory.JobInfo.logFailed(profile.getJobId(), 
+        JobHistory.JobInfo.logFailed(profile.getJobID(), 
                                      System.currentTimeMillis(), 
                                      this.finishedMapTasks, 
                                      this.finishedReduceTasks
@@ -1593,7 +1578,7 @@ class JobInProgress {
    * @param reason The reason that the task failed
    * @param trackerName The task tracker the task failed on
    */
-  public void failedTask(TaskInProgress tip, String taskid, String reason, 
+  public void failedTask(TaskInProgress tip, TaskAttemptID taskid, String reason, 
                          TaskStatus.Phase phase, TaskStatus.State state, 
                          String trackerName, JobTrackerMetrics metrics) {
     TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), 
@@ -1605,7 +1590,7 @@ class JobInProgress {
                                                     trackerName, phase,
                                                     null);
     updateTaskStatus(tip, status, metrics);
-    JobHistory.Task.logFailed(profile.getJobId(), tip.getTIPId(), 
+    JobHistory.Task.logFailed(tip.getTIPId(), 
                               tip.isMapTask() ? Values.MAP.name() : Values.REDUCE.name(), 
                               System.currentTimeMillis(), reason); 
   }
@@ -1638,7 +1623,7 @@ class JobInProgress {
         
       // Delete temp dfs dirs created if any, like in case of 
       // speculative exn of reduces.  
-      Path tempDir = new Path(conf.getSystemDir(), jobId); 
+      Path tempDir = new Path(conf.getSystemDir(), jobId.toString()); 
       fs.delete(tempDir, true); 
 
       // delete the temporary directory in output directory
@@ -1651,7 +1636,7 @@ class JobInProgress {
         }
       }
     } catch (IOException e) {
-      LOG.warn("Error cleaning up "+profile.getJobId()+": "+e);
+      LOG.warn("Error cleaning up "+profile.getJobID()+": "+e);
     }
     
     cleanUpMetrics();
@@ -1665,8 +1650,8 @@ class JobInProgress {
   /**
    * Return the TaskInProgress that matches the tipid.
    */
-  public TaskInProgress getTaskInProgress(String tipid){
-    if (TaskInProgress.isMapId(tipid)) {
+  public TaskInProgress getTaskInProgress(TaskID tipid){
+    if (tipid.isMap()) {
       for (int i = 0; i < maps.length; i++) {
         if (tipid.equals(maps[i].getTIPId())){
           return maps[i];
@@ -1712,7 +1697,7 @@ class JobInProgress {
   }
   
   synchronized void fetchFailureNotification(TaskInProgress tip, 
-                                             String mapTaskId, 
+                                             TaskAttemptID mapTaskId, 
                                              String trackerName, 
                                              JobTrackerMetrics metrics) {
     Integer fetchFailures = mapTaskIdToFetchFailuresMap.get(mapTaskId);
@@ -1743,10 +1728,10 @@ class JobInProgress {
   static class JobWithTaskContext {
     private JobInProgress job;
     private TaskInProgress tip;
-    private String taskId;
+    private TaskAttemptID taskId;
     private JobTrackerMetrics metrics;
     JobWithTaskContext(JobInProgress job, TaskInProgress tip, 
-        String taskId, JobTrackerMetrics metrics) {
+        TaskAttemptID taskId, JobTrackerMetrics metrics) {
       this.job = job;
       this.tip = tip;
       this.taskId = taskId;
@@ -1758,7 +1743,7 @@ class JobInProgress {
     TaskInProgress getTIP() {
       return tip;
     }
-    String getTaskId() {
+    TaskAttemptID getTaskID() {
       return taskId;
     }
     JobTrackerMetrics getJobTrackerMetrics() {

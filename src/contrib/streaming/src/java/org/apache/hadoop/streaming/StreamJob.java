@@ -32,7 +32,12 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.commons.cli2.*; 
+import org.apache.commons.cli2.Argument;
+import org.apache.commons.cli2.CommandLine;
+import org.apache.commons.cli2.Group;
+import org.apache.commons.cli2.Option;
+import org.apache.commons.cli2.OptionException;
+import org.apache.commons.cli2.WriteableCommandLine;
 import org.apache.commons.cli2.builder.ArgumentBuilder;
 import org.apache.commons.cli2.builder.DefaultOptionBuilder;
 import org.apache.commons.cli2.builder.GroupBuilder;
@@ -42,29 +47,28 @@ import org.apache.commons.cli2.resource.ResourceConstants;
 import org.apache.commons.cli2.util.HelpFormatter;
 import org.apache.commons.cli2.validation.InvalidArgumentException;
 import org.apache.commons.cli2.validation.Validator;
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorCombiner;
-import org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorReducer;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.Path;
-
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.InvalidJobConfException;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.KeyValueTextInputFormat;
 import org.apache.hadoop.mapred.RunningJob;
-import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.SequenceFileAsTextInputFormat;
+import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
-import org.apache.hadoop.filecache.*;
-import org.apache.hadoop.util.*;
+import org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorCombiner;
+import org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorReducer;
+import org.apache.hadoop.util.StringUtils;
 
 /** All the client-side work happens here.
  * (Jar packaging, MapRed job submission and monitoring)
@@ -638,7 +642,7 @@ public class StreamJob {
     Iterator it = userJobConfProps_.keySet().iterator();
     while (it.hasNext()) {
       String key = (String) it.next();
-      String val = (String)userJobConfProps_.get(key);
+      String val = userJobConfProps_.get(key);
       boolean earlyName = key.equals("fs.default.name");
       earlyName |= key.equals("stream.shipped.hadoopstreaming");
       if (doEarlyProps == earlyName) {
@@ -919,7 +923,7 @@ public class StreamJob {
     String lastReport = null;
     try {
       running_ = jc_.submitJob(jobConf_);
-      jobId_ = running_.getJobID();
+      jobId_ = running_.getID();
 
       LOG.info("getLocalDirs(): " + Arrays.asList(jobConf_.getLocalDirs()));
       LOG.info("Running job: " + jobId_);
@@ -984,12 +988,14 @@ public class StreamJob {
       this.optionString = optionString;
     }
 
+    @Override
     public boolean canProcess(final WriteableCommandLine commandLine,
                               final String argument) {
       boolean ret = (argument != null) && argument.startsWith(optionString);
         
       return ret;
     }    
+    @Override
     public void process(final WriteableCommandLine commandLine,
                         final ListIterator arguments) throws OptionException {
       final String arg = (String) arguments.next();
@@ -1070,7 +1076,7 @@ public class StreamJob {
   protected long minRecWrittenToEnableSkip_;
 
   protected RunningJob running_;
-  protected String jobId_;
+  protected JobID jobId_;
   protected static String LINK_URI = "You need to specify the uris as hdfs://host:port/#linkname," +
     "Please specify a different link name for all of your caching URIs";
 }

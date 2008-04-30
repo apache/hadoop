@@ -290,9 +290,10 @@ public class StatusHttpServer {
       JobTracker tracker = 
         (JobTracker) getServletContext().getAttribute("job.tracker");
       
-      String jobId = request.getParameter("jobid");
-      if(jobId == null)
+      String jobIdStr = request.getParameter("jobid");
+      if(jobIdStr == null)
         return;
+      JobID jobId = JobID.forName(jobIdStr);
       String typeStr = request.getParameter("type");
       boolean isMap = false;
       if("map".equalsIgnoreCase(typeStr)) {

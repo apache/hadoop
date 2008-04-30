@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.apache.hadoop.mapred.Task.Counter.REDUCE_INPUT_GROUPS;
+import static org.apache.hadoop.mapred.Task.Counter.REDUCE_INPUT_RECORDS;
+import static org.apache.hadoop.mapred.Task.Counter.REDUCE_OUTPUT_RECORDS;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
@@ -28,6 +32,7 @@ import java.net.URLClassLoader;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
@@ -38,19 +43,18 @@ import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedSet;
-import java.util.Comparator;
 import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ChecksumFileSystem;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.InMemoryFileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.ChecksumFileSystem;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.InputBuffer;
 import org.apache.hadoop.io.IntWritable;
@@ -69,8 +73,6 @@ import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-
-import static org.apache.hadoop.mapred.Task.Counter.*;
 
 /** A Reduce task. */
 class ReduceTask extends Task {
@@ -129,16 +131,18 @@ class ReduceTask extends Task {
     super();
   }
 
-  public ReduceTask(String jobId, String jobFile, String tipId, String taskId,
+  public ReduceTask(String jobFile, TaskAttemptID taskId,
                     int partition, int numMaps) {
-    super(jobId, jobFile, tipId, taskId, partition);
+    super(jobFile, taskId, partition);
     this.numMaps = numMaps;
   }
 
+  @Override
   public TaskRunner createRunner(TaskTracker tracker) throws IOException {
     return new ReduceTaskRunner(this, tracker, this.conf);
   }
 
+  @Override
   public boolean isMapTask() {
     return false;
   }
@@ -148,17 +152,20 @@ class ReduceTask extends Task {
   /**
    * Localize the given JobConf to be specific for this task.
    */
+  @Override
   public void localizeConfiguration(JobConf conf) throws IOException {
     super.localizeConfiguration(conf);
     conf.setNumMapTasks(numMaps);
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
 
     out.writeInt(numMaps);                        // write the number of maps
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
 
@@ -172,7 +179,7 @@ class ReduceTask extends Task {
     if (isLocal) {
       // for local jobs
       for(int i = 0; i < numMaps; ++i) {
-        fileList.add(mapOutputFile.getInputFile(i, getTaskId()));
+        fileList.add(mapOutputFile.getInputFile(i, getTaskID()));
       }
     } else {
       // for non local jobs
@@ -306,12 +313,14 @@ class ReduceTask extends Task {
       reducePhase.set(super.in.getProgress().get()); // update progress
       reporter.progress();
     }
+    @Override
     public VALUE next() {
       reduceInputValueCounter.increment(1);
       return super.next();
     }
   }
 
+  @Override
   @SuppressWarnings("unchecked")
   public void run(JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
@@ -326,7 +335,7 @@ class ReduceTask extends Task {
     if (!job.get("mapred.job.tracker", "local").equals("local")) {
       reduceCopier = new ReduceCopier(umbilical, job);
       if (!reduceCopier.fetchOutputs()) {
-        throw new IOException(getTaskId() + "The reduce copier failed");
+        throw new IOException(getTaskID() + "The reduce copier failed");
       }
       isLocal = false;
     }
@@ -336,7 +345,7 @@ class ReduceTask extends Task {
     // get the input files for the reducer to merge
     Path[] mapFiles = getMapFiles(lfs, isLocal);
     
-    Path tempDir = new Path(getTaskId()); 
+    Path tempDir = new Path(getTaskID().toString()); 
 
     SequenceFile.Sorter.RawKeyValueIterator rIter;
  
@@ -538,8 +547,8 @@ class ReduceTask extends Task {
     /** 
      * The set of obsolete map taskids.
      */
-    private Set <String> obsoleteMapIds = 
-      Collections.synchronizedSet(new TreeSet<String>());
+    private Set <TaskAttemptID> obsoleteMapIds = 
+      Collections.synchronizedSet(new TreeSet<TaskAttemptID>());
     
     private Random random = null;
     
@@ -589,8 +598,8 @@ class ReduceTask extends Task {
     /**
      * A map of taskId -> no. of failed fetches
      */
-    Map<String, Integer> mapTaskToFailedFetchesMap = 
-      new HashMap<String, Integer>();    
+    Map<TaskAttemptID, Integer> mapTaskToFailedFetchesMap = 
+      new HashMap<TaskAttemptID, Integer>();    
 
     /**
      * Initial backoff interval (milliseconds)
@@ -615,8 +624,8 @@ class ReduceTask extends Task {
           MetricsUtil.createRecord(metricsContext, "shuffleInput");
         this.shuffleMetrics.setTag("user", conf.getUser());
         this.shuffleMetrics.setTag("jobName", conf.getJobName());
-        this.shuffleMetrics.setTag("jobId", ReduceTask.this.getJobId());
-        this.shuffleMetrics.setTag("taskId", getTaskId());
+        this.shuffleMetrics.setTag("jobId", ReduceTask.this.getJobID().toString());
+        this.shuffleMetrics.setTag("taskId", getTaskID().toString());
         this.shuffleMetrics.setTag("sessionId", conf.getSessionId());
         metricsContext.registerUpdater(this);
       }
@@ -702,7 +711,7 @@ class ReduceTask extends Task {
       private Reporter reporter;
       
       public MapOutputCopier(Reporter reporter) {
-        setName("MapOutputCopier " + reduceTask.getTaskId() + "." + id);
+        setName("MapOutputCopier " + reduceTask.getTaskID() + "." + id);
         LOG.debug(getName() + " created");
         this.reporter = reporter;
       }
@@ -745,6 +754,7 @@ class ReduceTask extends Task {
       /** Loop forever and fetch map outputs as they become available.
        * The thread exits when it is interrupted by {@link ReduceTaskRunner}
        */
+      @Override
       public void run() {
         while (true) {        
           try {
@@ -764,8 +774,8 @@ class ReduceTask extends Task {
               size = copyOutput(loc);
               shuffleClientMetrics.successFetch();
             } catch (IOException e) {
-              LOG.warn(reduceTask.getTaskId() + " copy failed: " +
-                       loc.getMapTaskId() + " from " + loc.getHost());
+              LOG.warn(reduceTask.getTaskID() + " copy failed: " +
+                       loc.getMapTaskID() + " from " + loc.getHost());
               LOG.warn(StringUtils.stringifyException(e));
               shuffleClientMetrics.failedFetch();
               
@@ -794,18 +804,18 @@ class ReduceTask extends Task {
                               ) throws IOException, InterruptedException {
         // check if we still need to copy the output from this location
         if (!neededOutputs.contains(loc.getMapId()) || 
-            obsoleteMapIds.contains(loc.getMapTaskId())) {
+            obsoleteMapIds.contains(loc.getMapTaskID())) {
           return CopyResult.OBSOLETE;
         } 
  
-        String reduceId = reduceTask.getTaskId();
-        LOG.info(reduceId + " Copying " + loc.getMapTaskId() +
+        TaskAttemptID reduceId = reduceTask.getTaskID();
+        LOG.info(reduceId + " Copying " + loc.getMapTaskID() +
                  " output from " + loc.getHost() + ".");
         // a temp filename. If this file gets created in ramfs, we're fine,
         // else, we will check the localFS to find a suitable final location
         // for this path
         Path filename = new Path("/" + TaskTracker.getJobCacheSubdir() +
-                                 Path.SEPARATOR + getJobId() +
+                                 Path.SEPARATOR + getTaskID().getJobID() +
                                  Path.SEPARATOR + reduceId +
                                  Path.SEPARATOR + "output" + "/map_" +
                                  loc.getMapId() + ".out");
@@ -850,7 +860,7 @@ class ReduceTask extends Task {
                                   tmpFilename);
           }
           
-          LOG.info(reduceId + " done copying " + loc.getMapTaskId() +
+          LOG.info(reduceId + " done copying " + loc.getMapTaskID() +
                    " output from " + loc.getHost() + ".");
           //Create a thread to do merges. Synchronize access/update to 
           //mergeInProgress
@@ -955,7 +965,7 @@ class ReduceTask extends Task {
       //append a unique string in the uri for the inmem fs name
       URI uri = URI.create("ramfs://mapoutput" + reduceTask.hashCode());
       inMemFileSys = (InMemoryFileSystem)FileSystem.get(uri, conf);
-      LOG.info(reduceTask.getTaskId() + " Created an InMemoryFileSystem, uri: "
+      LOG.info(reduceTask.getTaskID() + " Created an InMemoryFileSystem, uri: "
                + uri);
       ramfsMergeOutputSize = (long)(MAX_INMEM_FILESYS_USE * 
                                     inMemFileSys.getFSSize());
@@ -1030,7 +1040,7 @@ class ReduceTask extends Task {
         // loop until we get all required outputs
         while (!neededOutputs.isEmpty() && mergeThrowable == null) {
           
-          LOG.info(reduceTask.getTaskId() + " Need another " 
+          LOG.info(reduceTask.getTaskID() + " Need another " 
                    + neededOutputs.size() + " map output(s) where " 
                    + numInFlight + " is already in progress");
           
@@ -1055,7 +1065,7 @@ class ReduceTask extends Task {
               getMapCompletionEvents(fromEventId, knownOutputs);
 
             
-              LOG.info(reduceTask.getTaskId() + ": " +  
+              LOG.info(reduceTask.getTaskID() + ": " +  
                      "Got " + (knownOutputs.size()-currentNumKnownMaps) + 
                      " new map-outputs & " + 
                      (obsoleteMapIds.size()-currentNumObsoleteMapIds) + 
@@ -1071,7 +1081,7 @@ class ReduceTask extends Task {
             retryFetches.clear();
           }
           catch (IOException ie) {
-            LOG.warn(reduceTask.getTaskId() +
+            LOG.warn(reduceTask.getTaskID() +
                     " Problem locating map outputs: " +
                     StringUtils.stringifyException(ie));
           }
@@ -1080,7 +1090,7 @@ class ReduceTask extends Task {
           int numKnown = knownOutputs.size(), numScheduled = 0;
           int numSlow = 0, numDups = 0;
           
-          LOG.info(reduceTask.getTaskId() + " Got " + numKnown + 
+          LOG.info(reduceTask.getTaskID() + " Got " + numKnown + 
                    " known map output location(s); scheduling...");
           
           synchronized (scheduledCopies) {
@@ -1093,10 +1103,10 @@ class ReduceTask extends Task {
             currentTime = System.currentTimeMillis();
             while (locIt.hasNext()) {
               
-              MapOutputLocation loc = (MapOutputLocation)locIt.next();
+              MapOutputLocation loc = locIt.next();
               
               // Do not schedule fetches from OBSOLETE maps
-              if (obsoleteMapIds.contains(loc.getMapTaskId())) {
+              if (obsoleteMapIds.contains(loc.getMapTaskID())) {
                 locIt.remove();
                 continue;
               }
@@ -1120,7 +1130,7 @@ class ReduceTask extends Task {
             }
             scheduledCopies.notifyAll();
           }
-          LOG.info(reduceTask.getTaskId() + " Scheduled " + numScheduled +
+          LOG.info(reduceTask.getTaskID() + " Scheduled " + numScheduled +
                    " of " + numKnown + " known outputs (" + numSlow +
                    " slow hosts and " + numDups + " dup hosts)");
           
@@ -1153,7 +1163,7 @@ class ReduceTask extends Task {
           } catch (InterruptedException e) { } // IGNORE
           
           while (numInFlight > 0 && mergeThrowable == null) {
-            LOG.debug(reduceTask.getTaskId() + " numInFlight = " + 
+            LOG.debug(reduceTask.getTaskID() + " numInFlight = " + 
                       numInFlight);
             CopyResult cr = getCopyResult();
             
@@ -1178,15 +1188,15 @@ class ReduceTask extends Task {
                 fetchFailedMaps.remove(cr.getLocation().getMapId());
               } else if (cr.isObsolete()) {
                 //ignore
-                LOG.info(reduceTask.getTaskId() + 
+                LOG.info(reduceTask.getTaskID() + 
                          " Ignoring obsolete copy result for Map Task: " + 
-                         cr.getLocation().getMapTaskId() + " from host: " + 
+                         cr.getLocation().getMapTaskID() + " from host: " + 
                          cr.getHost());
               } else {
                 retryFetches.add(cr.getLocation());
                 
                 // note the failed-fetch
-                String mapTaskId = cr.getLocation().getMapTaskId();
+                TaskAttemptID mapTaskId = cr.getLocation().getMapTaskID();
                 Integer mapId = cr.getLocation().getMapId();
                 
                 totalFailures++;
@@ -1195,7 +1205,7 @@ class ReduceTask extends Task {
                 noFailedFetches = 
                   (noFailedFetches == null) ? 1 : (noFailedFetches + 1);
                 mapTaskToFailedFetchesMap.put(mapTaskId, noFailedFetches);
-                LOG.info("Task " + getTaskId() + ": Failed fetch #" + 
+                LOG.info("Task " + getTaskID() + ": Failed fetch #" + 
                          noFailedFetches + " from " + mapTaskId);
                 
                 // did the fetch fail too many times?
@@ -1254,8 +1264,8 @@ class ReduceTask extends Task {
                       && (!reducerProgressedEnough || reducerStalled)) { 
                     LOG.fatal("Shuffle failed with too many fetch failures " + 
                               "and insufficient progress!" +
-                              "Killing task " + getTaskId() + ".");
-                    umbilical.shuffleError(getTaskId(), 
+                              "Killing task " + getTaskID() + ".");
+                    umbilical.shuffleError(getTaskID(), 
                                            "Exceeded MAX_FAILED_UNIQUE_FETCHES;"
                                            + " bailing-out.");
                   }
@@ -1269,7 +1279,7 @@ class ReduceTask extends Task {
                                        * (1 << (noFailedFetches - 1)) 
                                      : (this.maxBackoff * 1000 / 2);
                 penaltyBox.put(cr.getHost(), currentTime + currentBackOff);
-                LOG.warn(reduceTask.getTaskId() + " adding host " +
+                LOG.warn(reduceTask.getTaskID() + " adding host " +
                          cr.getHost() + " to penalty box, next contact in " +
                          (currentBackOff/1000) + " seconds");
                 
@@ -1280,7 +1290,7 @@ class ReduceTask extends Task {
                 // polling the tasktracker a few more times
                 Iterator<MapOutputLocation> locIt = knownOutputs.iterator();
                 while (locIt.hasNext()) {
-                  MapOutputLocation loc = (MapOutputLocation)locIt.next();
+                  MapOutputLocation loc = locIt.next();
                   if (cr.getHost().equals(loc.getHost())) {
                     retryFetches.add(loc);
                     locIt.remove();
@@ -1324,7 +1334,7 @@ class ReduceTask extends Task {
             while (mergeInProgress) {
               Thread.sleep(200);
             }
-            LOG.info(reduceTask.getTaskId() + 
+            LOG.info(reduceTask.getTaskID() + 
                      " Copying of all map outputs complete. " + 
                      "Initiating the last merge on the remaining files in " + 
                      inMemFileSys.getUri());
@@ -1336,7 +1346,7 @@ class ReduceTask extends Task {
             //initiate merge
             Path[] inMemClosedFiles = inMemFileSys.getFiles(MAP_OUTPUT_FILTER);
             if (inMemClosedFiles.length == 0) {
-              LOG.info(reduceTask.getTaskId() + "Nothing to merge from " + 
+              LOG.info(reduceTask.getTaskID() + "Nothing to merge from " + 
                        inMemFileSys.getUri());
               return neededOutputs.isEmpty();
             }
@@ -1349,7 +1359,7 @@ class ReduceTask extends Task {
             //in the merge method)
             int mapId = extractMapIdFromPathName(inMemClosedFiles[0]);
             Path outputPath = mapOutputFile.getInputFileForWrite(mapId, 
-                             reduceTask.getTaskId(), ramfsMergeOutputSize);
+                             reduceTask.getTaskID(), ramfsMergeOutputSize);
             SequenceFile.Writer writer = sorter.cloneFileAttributes(
                                                                     inMemFileSys.makeQualified(inMemClosedFiles[0]), 
                                                                     localFileSys.makeQualified(outputPath), null);
@@ -1358,7 +1368,7 @@ class ReduceTask extends Task {
             try {
               rIter = sorter.merge(inMemClosedFiles, true, 
                                    inMemClosedFiles.length, 
-                                   new Path(reduceTask.getTaskId()));
+                                   new Path(reduceTask.getTaskID().toString()));
             } catch (Exception e) { 
               //make sure that we delete the ondisk file that we created earlier
               //when we invoked cloneFileAttributes
@@ -1368,7 +1378,7 @@ class ReduceTask extends Task {
             }
             sorter.writeFile(rIter, writer);
             writer.close();
-            LOG.info(reduceTask.getTaskId() +
+            LOG.info(reduceTask.getTaskID() +
                      " Merge of the " +inMemClosedFiles.length +
                      " files in InMemoryFileSystem complete." +
                      " Local file is " + outputPath);
@@ -1378,7 +1388,7 @@ class ReduceTask extends Task {
               mapOutputFilesOnDisk.add(status);
             }
           } catch (Throwable t) {
-            LOG.warn(reduceTask.getTaskId() +
+            LOG.warn(reduceTask.getTaskID() +
                      " Final merge of the inmemory files threw an exception: " + 
                      StringUtils.stringifyException(t));
             // check if the last merge generated an error
@@ -1452,7 +1462,7 @@ class ReduceTask extends Task {
       }
       
       TaskCompletionEvent events[] = 
-        umbilical.getMapCompletionEvents(reduceTask.getJobId(), 
+        umbilical.getMapCompletionEvents(reduceTask.getJobID(), 
                                          fromEventId.get(), probe_sample_size);
       
       // Note the last successful poll time-stamp
@@ -1474,7 +1484,7 @@ class ReduceTask extends Task {
             URI u = URI.create(event.getTaskTrackerHttp());
             String host = u.getHost();
             int port = u.getPort();
-            String taskId = event.getTaskId();
+            TaskAttemptID taskId = event.getTaskID();
             int mId = event.idWithinJob();
             int duration = event.getTaskRunTime();
             if (duration > maxMapRuntime) {
@@ -1483,24 +1493,23 @@ class ReduceTask extends Task {
               maxFetchRetriesPerMap = 
                   getClosestPowerOf2((maxMapRuntime / BACKOFF_INIT) + 1);
             }
-            knownOutputs.add(new MapOutputLocation(reduceTask.getJobId(),
-                             taskId, mId, host, port));
+            knownOutputs.add(new MapOutputLocation(taskId, mId, host, port));
           }
           break;
           case FAILED:
           case KILLED:
           case OBSOLETE:
           {
-            obsoleteMapIds.add(event.getTaskId());
+            obsoleteMapIds.add(event.getTaskID());
             LOG.info("Ignoring obsolete output of " + event.getTaskStatus() + 
-                     " map-task: '" + event.getTaskId() + "'");
+                     " map-task: '" + event.getTaskID() + "'");
           }
           break;
           case TIPFAILED:
           {
             neededOutputs.remove(event.idWithinJob());
             LOG.info("Ignoring output of failed map TIP: '" +  
-            		 event.getTaskId() + "'");
+            		 event.getTaskID() + "'");
           }
           break;
         }
@@ -1522,13 +1531,14 @@ class ReduceTask extends Task {
         this.sorter = sorter;
       }
 
+      @Override
       public void run() {
         try {
           Path[] mapFiles = new Path[ioSortFactor];
           long approxOutputSize = 0;
           int bytesPerSum = 
             reduceTask.getConf().getInt("io.bytes.per.checksum", 512);
-          LOG.info(reduceTask.getTaskId() 
+          LOG.info(reduceTask.getTaskID() 
                    + " Merging map output files on disk");
           // 1. Prepare the list of files to be merged. This list is prepared
           // using a list of map output files on disk. Currently we merge
@@ -1554,7 +1564,7 @@ class ReduceTask extends Task {
           SequenceFile.Writer writer =
             sorter.cloneFileAttributes(mapFiles[0], outputPath, null);
           SequenceFile.Sorter.RawKeyValueIterator iter  = null;
-          Path tmpDir = new Path(reduceTask.getTaskId());
+          Path tmpDir = new Path(reduceTask.getTaskID().toString());
           try {
             iter = sorter.merge(mapFiles, true, ioSortFactor, tmpDir);
           } catch (Exception e) {
@@ -1569,10 +1579,10 @@ class ReduceTask extends Task {
             mapOutputFilesOnDisk.add(localFileSys.getFileStatus(outputPath));
           }
           
-          LOG.info(reduceTask.getTaskId()
+          LOG.info(reduceTask.getTaskID()
                    + " Finished merging map output files on disk.");
         } catch (Throwable t) {
-          LOG.warn(reduceTask.getTaskId()
+          LOG.warn(reduceTask.getTaskID()
                    + " Merging of the local FS files threw an exception: "
                    + StringUtils.stringifyException(t));
           if (mergeThrowable == null) {
@@ -1595,8 +1605,9 @@ class ReduceTask extends Task {
         this.localFileSys = localFileSys;
         this.sorter = sorter;
       }
+      @Override
       public void run() {
-        LOG.info(reduceTask.getTaskId() + " Thread started: " + getName());
+        LOG.info(reduceTask.getTaskID() + " Thread started: " + getName());
         try {
           Path[] inMemClosedFiles;
           //initiate merge
@@ -1620,7 +1631,7 @@ class ReduceTask extends Task {
             int mapId = extractMapIdFromPathName(inMemClosedFiles[0]);
             
             Path outputPath = mapOutputFile.getInputFileForWrite(mapId, 
-                              reduceTask.getTaskId(), ramfsMergeOutputSize);
+                              reduceTask.getTaskID(), ramfsMergeOutputSize);
 
             SequenceFile.Writer writer = sorter.cloneFileAttributes(
                                                                     inMemFileSys.makeQualified(inMemClosedFiles[0]), 
@@ -1628,7 +1639,7 @@ class ReduceTask extends Task {
             SequenceFile.Sorter.RawKeyValueIterator rIter;
             try {
               rIter = sorter.merge(inMemClosedFiles, true, 
-                                   inMemClosedFiles.length, new Path(reduceTask.getTaskId()));
+                                   inMemClosedFiles.length, new Path(reduceTask.getTaskID().toString()));
             } catch (Exception e) { 
               //make sure that we delete the ondisk file that we created 
               //earlier when we invoked cloneFileAttributes
@@ -1638,7 +1649,7 @@ class ReduceTask extends Task {
             }
             sorter.writeFile(rIter, writer);
             writer.close();
-            LOG.info(reduceTask.getTaskId() + 
+            LOG.info(reduceTask.getTaskID() + 
                      " Merge of the " +inMemClosedFiles.length +
                      " files in InMemoryFileSystem complete." +
                      " Local file is " + outputPath);
@@ -1649,11 +1660,11 @@ class ReduceTask extends Task {
             }
           }
           else {
-            LOG.info(reduceTask.getTaskId() + " Nothing to merge from " + 
+            LOG.info(reduceTask.getTaskID() + " Nothing to merge from " + 
                      inMemFileSys.getUri());
           }
         } catch (Throwable t) {
-          LOG.warn(reduceTask.getTaskId() +
+          LOG.warn(reduceTask.getTaskID() +
                    " Intermediate Merge of the inmemory files threw an exception: "
                    + StringUtils.stringifyException(t));
           ReduceCopier.this.mergeThrowable = t;

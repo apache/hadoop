@@ -35,7 +35,7 @@
      Iterator itr = tracker.getRunningTaskStatuses().iterator();
      while (itr.hasNext()) {
        TaskStatus status = (TaskStatus) itr.next();
-       out.print("<tr><td>" + status.getTaskId());
+       out.print("<tr><td>" + status.getTaskID());
        out.print("</td><td>" + status.getRunState()); 
        out.print("</td><td>" + 
                  StringUtils.formatPercent(status.getProgress(), 2));
@@ -51,7 +51,7 @@
 <tr><td align="center">Task Attempts</td><td>Status</td>
   <%
     for(TaskStatus status: tracker.getNonRunningTasks()) {
-      out.print("<tr><td>" + status.getTaskId() + "</td>");
+      out.print("<tr><td>" + status.getTaskID() + "</td>");
       out.print("<td>" + status.getRunState() + "</td></tr>\n");
     }
   %>

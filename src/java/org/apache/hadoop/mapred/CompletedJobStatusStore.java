@@ -17,12 +17,16 @@
  */  
 package org.apache.hadoop.mapred;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
-
-import java.io.IOException;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 /**
  * Persists and retrieves the Job info of a job into/from DFS.
@@ -118,7 +122,7 @@ public class CompletedJobStatusStore implements Runnable {
     }
   }
 
-  private Path getInfoFilePath(String jobId) {
+  private Path getInfoFilePath(JobID jobId) {
     return new Path(jobInfoDir, jobId + ".info");
   }
   
@@ -129,7 +133,7 @@ public class CompletedJobStatusStore implements Runnable {
    */
   public void store(JobInProgress job) {
     if (active && retainTime > 0) {
-      String jobId = job.getStatus().getJobId();
+      JobID jobId = job.getStatus().getJobID();
       Path jobStatusFile = getInfoFilePath(jobId);
       try {
         FSDataOutputStream dataOut = fs.create(jobStatusFile);
@@ -161,7 +165,7 @@ public class CompletedJobStatusStore implements Runnable {
     }
   }
 
-  private FSDataInputStream getJobInfoFile(String jobId) throws IOException {
+  private FSDataInputStream getJobInfoFile(JobID jobId) throws IOException {
     Path jobStatusFile = getInfoFilePath(jobId);
     return (fs.exists(jobStatusFile)) ? fs.open(jobStatusFile) : null;
   }
@@ -213,7 +217,7 @@ public class CompletedJobStatusStore implements Runnable {
    * @param jobId the jobId for which jobStatus is queried
    * @return JobStatus object, null if not able to retrieve
    */
-  public JobStatus readJobStatus(String jobId) {
+  public JobStatus readJobStatus(JobID jobId) {
     JobStatus jobStatus = null;
     if (active) {
       try {
@@ -236,7 +240,7 @@ public class CompletedJobStatusStore implements Runnable {
    * @param jobId the jobId for which jobProfile is queried
    * @return JobProfile object, null if not able to retrieve
    */
-  public JobProfile readJobProfile(String jobId) {
+  public JobProfile readJobProfile(JobID jobId) {
     JobProfile jobProfile = null;
     if (active) {
       try {
@@ -260,7 +264,7 @@ public class CompletedJobStatusStore implements Runnable {
    * @param jobId the jobId for which Counters is queried
    * @return Counters object, null if not able to retrieve
    */
-  public Counters readCounters(String jobId) {
+  public Counters readCounters(JobID jobId) {
     Counters counters = null;
     if (active) {
       try {
@@ -287,7 +291,7 @@ public class CompletedJobStatusStore implements Runnable {
    * @param maxEvents   max number of events
    * @return TaskCompletionEvent[], empty array if not able to retrieve
    */
-  public TaskCompletionEvent[] readJobTaskCompletionEvents(String jobId,
+  public TaskCompletionEvent[] readJobTaskCompletionEvents(JobID jobId,
                                                                int fromEventId,
                                                                int maxEvents) {
     TaskCompletionEvent[] events = TaskCompletionEvent.EMPTY_ARRAY;

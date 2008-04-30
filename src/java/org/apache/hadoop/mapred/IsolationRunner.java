@@ -44,27 +44,27 @@ public class IsolationRunner {
       return TaskUmbilicalProtocol.versionID;
     }
     
-    public void done(String taskid, boolean shouldPromote) throws IOException {
+    public void done(TaskAttemptID taskid, boolean shouldPromote) throws IOException {
       LOG.info("Task " + taskid + " reporting done.");
     }
 
-    public void fsError(String taskId, String message) throws IOException {
+    public void fsError(TaskAttemptID taskId, String message) throws IOException {
       LOG.info("Task " + taskId + " reporting file system error: " + message);
     }
 
-    public void shuffleError(String taskId, String message) throws IOException {
+    public void shuffleError(TaskAttemptID taskId, String message) throws IOException {
       LOG.info("Task " + taskId + " reporting shuffle error: " + message);
     }
 
-    public Task getTask(String taskid) throws IOException {
+    public Task getTask(TaskAttemptID taskid) throws IOException {
       return null;
     }
 
-    public boolean ping(String taskid) throws IOException {
+    public boolean ping(TaskAttemptID taskid) throws IOException {
       return true;
     }
 
-    public boolean statusUpdate(String taskId, TaskStatus taskStatus) 
+    public boolean statusUpdate(TaskAttemptID taskId, TaskStatus taskStatus) 
     throws IOException, InterruptedException {
       StringBuffer buf = new StringBuffer("Task ");
       buf.append(taskId);
@@ -81,11 +81,11 @@ public class IsolationRunner {
       return true;
     }
 
-    public void reportDiagnosticInfo(String taskid, String trace) throws IOException {
+    public void reportDiagnosticInfo(TaskAttemptID taskid, String trace) throws IOException {
       LOG.info("Task " + taskid + " has problem " + trace);
     }
     
-    public TaskCompletionEvent[] getMapCompletionEvents(String jobId, 
+    public TaskCompletionEvent[] getMapCompletionEvents(JobID jobId, 
                                                         int fromEventId, int maxLocs) throws IOException {
       return TaskCompletionEvent.EMPTY_ARRAY;
     }
@@ -116,14 +116,13 @@ public class IsolationRunner {
    * @param conf the jobconf
    * @throws IOException if something goes wrong writing
    */
-  private static void fillInMissingMapOutputs(FileSystem fs,
-                                              String jobId,
-                                              String taskId,
+  private static void fillInMissingMapOutputs(FileSystem fs, 
+                                              TaskAttemptID taskId,
                                               int numMaps,
                                               JobConf conf) throws IOException {
     Class keyClass = conf.getMapOutputKeyClass();
     Class valueClass = conf.getMapOutputValueClass();
-    MapOutputFile namer = new MapOutputFile(jobId);
+    MapOutputFile namer = new MapOutputFile(taskId.getJobID());
     namer.setConf(conf);
     for(int i=0; i<numMaps; i++) {
       Path f = namer.getInputFile(i, taskId);
@@ -151,9 +150,8 @@ public class IsolationRunner {
       System.exit(1);
     }
     JobConf conf = new JobConf(new Path(jobFilename.toString()));
-    String taskId = conf.get("mapred.task.id");
+    TaskAttemptID taskId = TaskAttemptID.forName(conf.get("mapred.task.id"));
     boolean isMap = conf.getBoolean("mapred.task.is.map", true);
-    String jobId = conf.get("mapred.job.id");
     int partition = conf.getInt("mapred.task.partition", 0);
     
     // setup the local and user working directories
@@ -161,7 +159,7 @@ public class IsolationRunner {
     LocalDirAllocator lDirAlloc = new LocalDirAllocator("mapred.local.dir");
     File workDirName = new File(lDirAlloc.getLocalPathToRead(
                                   TaskTracker.getJobCacheSubdir() 
-                                  + Path.SEPARATOR + jobId 
+                                  + Path.SEPARATOR + taskId.getJobID() 
                                   + Path.SEPARATOR + taskId
                                   + Path.SEPARATOR + "work",
                                   conf). toString());
@@ -182,13 +180,11 @@ public class IsolationRunner {
       BytesWritable split = new BytesWritable();
       split.readFields(splitFile);
       splitFile.close();
-      task = new MapTask(jobId, jobFilename.toString(), conf.get("mapred.tip.id"), 
-                         taskId, partition, splitClass, split);
+      task = new MapTask(jobFilename.toString(), taskId, partition, splitClass, split);
     } else {
       int numMaps = conf.getNumMapTasks();
-      fillInMissingMapOutputs(local, jobId, taskId, numMaps, conf);
-      task = new ReduceTask(jobId, jobFilename.toString(), conf.get("mapred.tip.id"), taskId, 
-                            partition, numMaps);
+      fillInMissingMapOutputs(local, taskId, numMaps, conf);
+      task = new ReduceTask(jobFilename.toString(), taskId, partition, numMaps);
     }
     task.setConf(conf);
     task.run(conf, new FakeUmbilical());

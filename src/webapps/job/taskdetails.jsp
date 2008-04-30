@@ -29,10 +29,14 @@
 <%
     JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
     String jobid = request.getParameter("jobid");
-    JobInProgress job = (JobInProgress) tracker.getJob(jobid);
     String tipid = request.getParameter("tipid");
     String taskid = request.getParameter("taskid");
-
+    JobID jobidObj = JobID.forName(jobid);
+    TaskID tipidObj = TaskID.forName(tipid);
+    TaskAttemptID taskidObj = TaskAttemptID.forName(taskid);
+    
+    JobInProgress job = (JobInProgress) tracker.getJob(jobidObj);
+    
     boolean privateActions = JspHelper.conf.getBoolean(PRIVATE_ACTIONS_KEY,
         false);
     if (privateActions) {
@@ -46,19 +50,19 @@
           return;
         }
         else if (action.equalsIgnoreCase("kill-task")) {
-          tracker.killTask(taskid, false);
+          tracker.killTask(taskidObj, false);
           //redirect again so that refreshing the page will not attempt to rekill the task
           response.sendRedirect("/taskdetails.jsp?" + "&subaction=kill-task"
               + "&jobid=" + jobid + "&tipid=" + tipid);
         }
         else if (action.equalsIgnoreCase("fail-task")) {
-          tracker.killTask(taskid, true);
+          tracker.killTask(taskidObj, true);
           response.sendRedirect("/taskdetails.jsp?" + "&subaction=fail-task"
               + "&jobid=" + jobid + "&tipid=" + tipid);
         }
       }
     }
-    TaskStatus[] ts = (job != null) ? tracker.getTaskStatuses(jobid, tipid)
+    TaskStatus[] ts = (job != null) ? tracker.getTaskStatuses(tipidObj)
         : null;
 %>
 
@@ -97,7 +101,7 @@
       TaskStatus status = ts[i];
       String taskTrackerName = status.getTaskTracker();
       TaskTrackerStatus taskTracker = tracker.getTaskTracker(taskTrackerName);
-      out.print("<tr><td>" + status.getTaskId() + "</td>");
+      out.print("<tr><td>" + status.getTaskID() + "</td>");
       String taskAttemptTracker = null;
       if (taskTracker == null) {
         out.print("<td>" + taskTrackerName + "</td>");
@@ -127,8 +131,7 @@
           .getFinishTime(), status.getStartTime()) + "</td>");
 
         out.print("<td><pre>");
-        String [] failures = tracker.getTaskDiagnostics(jobid, tipid,
-          status.getTaskId());
+        String [] failures = tracker.getTaskDiagnostics(status.getTaskID());
         if (failures == null) {
           out.print("&nbsp;");
         } else {
@@ -145,7 +148,7 @@
           out.print("n/a");
         } else {
           String taskLogUrl = taskAttemptTracker + "/tasklog?taskid="
-            + status.getTaskId();
+            + status.getTaskID();
           String tailFourKBUrl = taskLogUrl + "&start=-4097";
           String tailEightKBUrl = taskLogUrl + "&start=-8193";
           String entireLogUrl = taskLogUrl + "&all=true";
@@ -154,17 +157,17 @@
           out.print("<a href=\"" + entireLogUrl + "\">All</a><br/>");
         }
         out.print("</td><td>" + "<a href=\"/taskstats.jsp?jobid=" + jobid
-          + "&tipid=" + tipid + "&taskid=" + status.getTaskId() + "\">"
+          + "&tipid=" + tipid + "&taskid=" + status.getTaskID() + "\">"
           + ((status.getCounters() != null) ? status.getCounters().size() : 0) + "</a></td>");
         out.print("<td>");
         if (privateActions
           && status.getRunState() == TaskStatus.State.RUNNING) {
         out.print("<a href=\"/taskdetails.jsp?action=confirm"
           + "&subaction=kill-task" + "&jobid=" + jobid + "&tipid="
-          + tipid + "&taskid=" + status.getTaskId() + "\" > Kill </a>");
+          + tipid + "&taskid=" + status.getTaskID() + "\" > Kill </a>");
         out.print("<br><a href=\"/taskdetails.jsp?action=confirm"
           + "&subaction=fail-task" + "&jobid=" + jobid + "&tipid="
-          + tipid + "&taskid=" + status.getTaskId() + "\" > Fail </a>");
+          + tipid + "&taskid=" + status.getTaskID() + "\" > Fail </a>");
         }
         else
           out.print("<pre>&nbsp;</pre>");

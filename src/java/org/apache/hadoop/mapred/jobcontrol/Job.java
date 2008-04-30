@@ -19,17 +19,17 @@
 package org.apache.hadoop.mapred.jobcontrol;
 
 
+import java.io.IOException;
+import java.util.ArrayList;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.RunningJob;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.util.StringUtils;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.io.IOException;
 
 /** This class encapsulates a MapReduce job and its dependency. It monitors 
  *  the states of the depending jobs and updates the state of this job.
@@ -56,7 +56,7 @@ public class Job {
   private JobConf theJobConf;
   private int state;
   private String jobID; 		// assigned and used by JobControl class
-  private String mapredJobID; // the job ID assigned by map/reduce
+  private JobID mapredJobID; // the job ID assigned by map/reduce
   private String jobName;		// external name, assigned/used by client app
   private String message;		// some info for human consumption, 
   // e.g. the reason why the job failed
@@ -74,7 +74,7 @@ public class Job {
     this.dependingJobs = dependingJobs;
     this.state = Job.WAITING;
     this.jobID = "unassigned";
-    this.mapredJobID = "unassigned";
+    this.mapredJobID = null; //not yet assigned 
     this.jobName = "unassigned";
     this.message = "just initialized";
     this.jc = new JobClient(jobConf);
@@ -90,12 +90,14 @@ public class Job {
     this(jobConf, null);
   }
 	
+  @Override
   public String toString() {
     StringBuffer sb = new StringBuffer();
     sb.append("job name:\t").append(this.jobName).append("\n");
     sb.append("job id:\t").append(this.jobID).append("\n");
     sb.append("job state:\t").append(this.state).append("\n");
-    sb.append("job mapred id:\t").append(this.mapredJobID).append("\n");
+    sb.append("job mapred id:\t").append(this.mapredJobID==null ? "unassigned" 
+        : this.mapredJobID).append("\n");
     sb.append("job message:\t").append(this.message).append("\n");
 		
     if (this.dependingJobs == null || this.dependingJobs.size() == 0) {
@@ -104,7 +106,7 @@ public class Job {
       sb.append("job has ").append(this.dependingJobs.size()).append(" dependeng jobs:\n");
       for (int i = 0; i < this.dependingJobs.size(); i++) {
         sb.append("\t depending job ").append(i).append(":\t");
-        sb.append(((Job) this.dependingJobs.get(i)).getJobName()).append("\n");
+        sb.append((this.dependingJobs.get(i)).getJobName()).append("\n");
       }
     }
     return sb.toString();
@@ -126,7 +128,7 @@ public class Job {
   }
 	
   /**
-   * @return the job ID of this job
+   * @return the job ID of this job assigned by JobControl
    */
   public String getJobID() {
     return this.jobID;
@@ -142,19 +144,40 @@ public class Job {
 	
   /**
    * @return the mapred ID of this job
+   * @deprecated use {@link #getAssignedJobID()} instead
    */
+  @Deprecated
   public String getMapredJobID() {
-    return this.mapredJobID;
+    return this.mapredJobID.toString();
   }
 	
   /**
    * Set the mapred ID for this job.
    * @param mapredJobID the mapred job ID for this job.
+   * @deprecated use {@link #setAssignedJobID(JobID)} instead
    */
+  @Deprecated
   public void setMapredJobID(String mapredJobID) {
-    this.jobID = mapredJobID;
+    this.mapredJobID = JobID.forName(mapredJobID);
   }
 	
+  /**
+   * @return the mapred ID of this job as assigned by the 
+   * mapred framework.
+   */
+  public JobID getAssignedJobID() {
+    return this.mapredJobID;
+  }
+  
+  /**
+   * Set the mapred ID for this job as assigned by the 
+   * mapred framework.
+   * @param mapredJobID the mapred job ID for this job.
+   */
+  public void setAssignedJobID(JobID mapredJobID) {
+    this.mapredJobID = mapredJobID;
+  }
+  
   /**
    * @return the mapred job conf of this job
    */
@@ -304,7 +327,7 @@ public class Job {
     Job pred = null;
     int n = this.dependingJobs.size();
     for (int i = 0; i < n; i++) {
-      pred = (Job) this.dependingJobs.get(i);
+      pred = this.dependingJobs.get(i);
       int s = pred.checkState();
       if (s == Job.WAITING || s == Job.READY || s == Job.RUNNING) {
         break; // a pred is still not completed, continue in WAITING
@@ -345,7 +368,7 @@ public class Job {
         }
       }
       RunningJob running = jc.submitJob(theJobConf);
-      this.mapredJobID = running.getJobID();
+      this.mapredJobID = running.getID();
       this.state = Job.RUNNING;
     } catch (IOException ioe) {
       this.state = Job.FAILED;
@@ -353,12 +376,4 @@ public class Job {
     }
   }
 	
-  /**
-   * @param args
-   */
-  public static void main(String[] args) {
-    // TODO Auto-generated method stub
-
-  }
-
 }

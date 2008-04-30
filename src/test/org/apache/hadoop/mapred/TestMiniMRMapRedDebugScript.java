@@ -17,23 +17,25 @@
  */
 package org.apache.hadoop.mapred;
 
-import java.io.*;
-import java.util.*;
-import java.net.URISyntaxException;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
+
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.dfs.MiniDFSCluster;
+import org.apache.hadoop.filecache.DistributedCache;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
-import org.apache.hadoop.filecache.DistributedCache; 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.dfs.MiniDFSCluster;
 
 /**
  * Class to test mapred debug Script
@@ -67,7 +69,7 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
    * @return task log as string
    * @throws IOException
    */
-  public static String readTaskLog(TaskLog.LogName  filter, String taskId)
+  public static String readTaskLog(TaskLog.LogName  filter, TaskAttemptID taskId)
   throws IOException {
     // string buffer to store task log
     StringBuffer result = new StringBuffer();
@@ -161,9 +163,9 @@ public class TestMiniMRMapRedDebugScript extends TestCase {
     	e.printStackTrace();
     }
 
-    String jobId = job.getJobID();
+    JobID jobId = job.getID();
     // construct the task id of first map task of failmap
-    String taskId = "task_" + jobId.substring(4) + "_m_000000_0";
+    TaskAttemptID taskId = new TaskAttemptID(new TaskID(jobId,true, 0), 0);
     // wait for the job to finish.
     while (!job.isComplete()) ;
     

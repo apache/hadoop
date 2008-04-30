@@ -101,7 +101,7 @@ public class JobEndNotifier {
       int retryAttempts = conf.getInt("job.end.retry.attempts", 0) + 1;
       long retryInterval = conf.getInt("job.end.retry.interval", 30000);
       if (uri.contains("$jobId")) {
-        uri = uri.replace("$jobId", status.getJobId());
+        uri = uri.replace("$jobId", status.getJobID().toString());
       }
       if (uri.contains("$jobStatus")) {
         String statusStr =
@@ -214,6 +214,7 @@ public class JobEndNotifier {
       return (int)(delayTime - ((JobEndStatusInfo)d).delayTime);
     }
 
+    @Override
     public boolean equals(Object o) {
       if (!(o instanceof JobEndStatusInfo)) {
         return false;
@@ -224,10 +225,12 @@ public class JobEndNotifier {
       return false;
     }
 
+    @Override
     public int hashCode() {
       return 37 * 17 + (int) (delayTime^(delayTime>>>32));
     }
       
+    @Override
     public String toString() {
       return "URL: " + uri + " remaining retries: " + retryAttempts +
         " interval: " + retryInterval;

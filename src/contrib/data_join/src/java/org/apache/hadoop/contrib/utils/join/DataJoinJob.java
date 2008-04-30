@@ -34,6 +34,7 @@ import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
+import org.apache.hadoop.mapred.JobID;
 
 /**
  * This class implements the main function for creating a map/reduce
@@ -127,7 +128,7 @@ public class DataJoinJob {
     RunningJob running = null;
     try {
       running = jc.submitJob(job);
-      String jobId = running.getJobID();
+      JobID jobId = running.getID();
       System.out.println("Job " + jobId + " is submitted");
       while (!running.isComplete()) {
         System.out.println("Job " + jobId + " is still running.");

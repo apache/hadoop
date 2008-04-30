@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.*;
+import java.io.IOException;
+
 
 /** 
  * <code>RunningJob</code> is the user-interface to query for details on a 
@@ -36,6 +37,12 @@ public interface RunningJob {
    * 
    * @return the job identifier.
    */
+  public JobID getID();
+  
+  /** @deprecated This method is deprecated and will be removed. Applications should 
+   * rather use {@link #getID()}.
+   */
+  @Deprecated
   public String getJobID();
   
   /**
@@ -128,8 +135,12 @@ public interface RunningJob {
    *                   job failure status.  
    * @throws IOException
    */
+  public void killTask(TaskAttemptID taskId, boolean shouldFail) throws IOException;
+  
+  /** @deprecated Applications should rather use {@link #killTask(TaskAttemptID, boolean)}*/
+  @Deprecated
   public void killTask(String taskId, boolean shouldFail) throws IOException;
-    
+  
   /**
    * Gets the counters for this job.
    * 

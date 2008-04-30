@@ -28,7 +28,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * the current system status.
  */ 
 public interface JobSubmissionProtocol extends VersionedProtocol {
-  /*
+  /* 
    *Changing the versionID to 2L since the getTaskCompletionEvents method has
    *changed.
    *Changed to 4 since killTask(String,boolean) is added
@@ -37,22 +37,23 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
    * max_map_tasks and max_reduce_tasks for HADOOP-1274
    * Version 6: change the counters representation for HADOOP-2248
    * Version 7: added getAllJobs for HADOOP-2487
+   * Version 8: change {job|task}id's to use corresponding objects rather that strings.
    */
-  public static final long versionID = 7L;
+  public static final long versionID = 8L;
 
   /**
    * Allocate a name for the job.
    * @return a unique job name for submitting jobs.
    * @throws IOException
    */
-  public String getNewJobId() throws IOException;
+  public JobID getNewJobId() throws IOException;
 
   /**
    * Submit a Job for execution.  Returns the latest profile for
    * that job.
    * The job files should be submitted in <b>system-dir</b>/<b>jobName</b>.
    */
-  public JobStatus submitJob(String jobName) throws IOException;
+  public JobStatus submitJob(JobID jobName) throws IOException;
 
   /**
    * Get the current status of the cluster
@@ -63,7 +64,7 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
   /**
    * Kill the indicated job
    */
-  public void killJob(String jobid) throws IOException;
+  public void killJob(JobID jobid) throws IOException;
 
   /**
    * Kill indicated task attempt.
@@ -71,34 +72,34 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
    * @param shouldFail if true the task is failed and added to failed tasks list, otherwise
    * it is just killed, w/o affecting job failure status.  
    */ 
-  public boolean killTask(String taskId, boolean shouldFail) throws IOException;
+  public boolean killTask(TaskAttemptID taskId, boolean shouldFail) throws IOException;
   
   /**
    * Grab a handle to a job that is already known to the JobTracker.
    * @return Profile of the job, or null if not found. 
    */
-  public JobProfile getJobProfile(String jobid) throws IOException;
+  public JobProfile getJobProfile(JobID jobid) throws IOException;
 
   /**
    * Grab a handle to a job that is already known to the JobTracker.
    * @return Status of the job, or null if not found.
    */
-  public JobStatus getJobStatus(String jobid) throws IOException;
+  public JobStatus getJobStatus(JobID jobid) throws IOException;
 
   /**
    * Grab the current job counters
    */
-  public Counters getJobCounters(String jobid) throws IOException;
+  public Counters getJobCounters(JobID jobid) throws IOException;
     
   /**
    * Grab a bunch of info on the map tasks that make up the job
    */
-  public TaskReport[] getMapTaskReports(String jobid) throws IOException;
+  public TaskReport[] getMapTaskReports(JobID jobid) throws IOException;
 
   /**
    * Grab a bunch of info on the reduce tasks that make up the job
    */
-  public TaskReport[] getReduceTaskReports(String jobid) throws IOException;
+  public TaskReport[] getReduceTaskReports(JobID jobid) throws IOException;
 
   /**
    * A MapReduce system always operates on a single filesystem.  This 
@@ -130,15 +131,15 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
    * @return array of task completion events. 
    * @throws IOException
    */
-  public TaskCompletionEvent[] getTaskCompletionEvents(
-                                                       String jobid, int fromEventId, int maxEvents) throws IOException;
+  public TaskCompletionEvent[] getTaskCompletionEvents(JobID jobid
+      , int fromEventId, int maxEvents) throws IOException;
     
   /**
    * Get the diagnostics for a given task in a given job
-   * @param jobId the id of the job
+   * @param taskId the id of the task
    * @return an array of the diagnostic messages
    */
-  public String[] getTaskDiagnostics(String jobId, String tipId, String taskId) 
+  public String[] getTaskDiagnostics(TaskAttemptID taskId) 
   throws IOException;  
   
 }

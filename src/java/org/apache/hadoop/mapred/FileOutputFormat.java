@@ -157,8 +157,8 @@ public abstract class FileOutputFormat<K, V> implements OutputFormat<K, V> {
    * <p>In such cases there could be issues with 2 instances of the same TIP 
    * (running simultaneously e.g. speculative tasks) trying to open/write-to the
    * same file (path) on HDFS. Hence the application-writer will have to pick 
-   * unique names per task-attempt (e.g. using the taskid, say 
-   * <tt>task_200709221812_0001_m_000000_0</tt>), not just per TIP.</p> 
+   * unique names per task-attempt (e.g. using the attemptid, say 
+   * <tt>attempt_200709221812_0001_m_000000_0</tt>), not just per TIP.</p> 
    * 
    * <p>To get around this the Map-Reduce framework helps the application-writer 
    * out by maintaining a special 

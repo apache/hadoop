@@ -15,17 +15,22 @@
   String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
   String jobid = request.getParameter("jobid");
-  JobInProgress job = (JobInProgress) tracker.getJob(jobid);
   String tipid = request.getParameter("tipid");
   String taskid = request.getParameter("taskid");
+  JobID jobidObj = JobID.forName(jobid);
+  TaskID tipidObj = TaskID.forName(tipid);
+  TaskAttemptID taskidObj = TaskAttemptID.forName(taskid);
+  
+  JobInProgress job = (JobInProgress) tracker.getJob(jobidObj);
+  
   Format decimal = new DecimalFormat();
   Counters counters;
   if (taskid == null) {
-    counters = tracker.getTipCounters(jobid, tipid);
+    counters = tracker.getTipCounters(tipidObj);
     taskid = tipid; // for page title etc
   }
   else {
-    TaskStatus taskStatus = tracker.getTaskStatus(jobid, tipid, taskid);
+    TaskStatus taskStatus = tracker.getTaskStatus(taskidObj);
     counters = taskStatus.getCounters();
   }
 %>

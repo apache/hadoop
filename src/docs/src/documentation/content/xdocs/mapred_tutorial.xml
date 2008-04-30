@@ -1320,7 +1320,7 @@
           example, speculative tasks) trying to open and/or write to the same 
           file (path) on the <code>FileSystem</code>. Hence the 
           application-writer will have to pick unique names per task-attempt 
-          (using the taskid, say <code>task_200709221812_0001_m_000000_0</code>), 
+          (using the attemptid, say <code>attempt_200709221812_0001_m_000000_0</code>), 
           not just per task.</p> 
  
           <p>To avoid these issues the Map-Reduce framework maintains a special 

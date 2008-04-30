@@ -18,19 +18,25 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
+import java.net.URLConnection;
 
-import java.io.*;
-import java.net.*;
-
-import org.apache.hadoop.fs.InMemoryFileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.InMemoryFileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.mapred.ReduceTask.ReduceCopier.ShuffleClientMetrics;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.conf.*;
 
 /** The location of a map output file, as passed to a reduce task via the
  * {@link InterTrackerProtocol}. */ 
@@ -44,11 +50,11 @@ class MapOutputLocation implements Writable, MRConstants {
        });
   }
 
-  private String mapTaskId;
+  private TaskAttemptID mapTaskId;
   private int mapId;
   private String host;
   private int port;
-  private String jobId;
+  
   // basic/unit connection timeout (in milliseconds)
   private final static int UNIT_CONNECT_TIMEOUT = 30 * 1000;
   // default read timeout (in milliseconds)
@@ -59,9 +65,8 @@ class MapOutputLocation implements Writable, MRConstants {
   }
 
   /** Construct a location. */
-  public MapOutputLocation(String jobId, String mapTaskId, int mapId, 
+  public MapOutputLocation(TaskAttemptID mapTaskId, int mapId, 
                            String host, int port) {
-    this.jobId = jobId;
     this.mapTaskId = mapTaskId;
     this.mapId = mapId;
     this.host = host;
@@ -69,7 +74,7 @@ class MapOutputLocation implements Writable, MRConstants {
   }
 
   /** The map task id. */
-  public String getMapTaskId() { return mapTaskId; }
+  public TaskAttemptID getMapTaskID() { return mapTaskId; }
   
   /**
    * Get the map's id number.
@@ -86,23 +91,22 @@ class MapOutputLocation implements Writable, MRConstants {
   public int getPort() { return port; }
 
   public void write(DataOutput out) throws IOException {
-    out.writeUTF(jobId);
-    out.writeUTF(mapTaskId);
+    mapTaskId.write(out);
     out.writeInt(mapId);
-    out.writeUTF(host);
+    Text.writeString(out, host);
     out.writeInt(port);
   }
 
   public void readFields(DataInput in) throws IOException {
-    this.jobId = in.readUTF();
-    this.mapTaskId = in.readUTF();
+    this.mapTaskId = TaskAttemptID.read(in);
     this.mapId = in.readInt();
-    this.host = in.readUTF();
+    this.host = Text.readString(in);
     this.port = in.readInt();
   }
 
+  @Override
   public String toString() {
-    return "http://" + host + ":" + port + "/mapOutput?job=" + jobId +
+    return "http://" + host + ":" + port + "/mapOutput?job=" + mapTaskId.getJobID() +
            "&map=" + mapTaskId;
   }
   

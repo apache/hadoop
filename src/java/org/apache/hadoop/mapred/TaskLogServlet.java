@@ -18,12 +18,14 @@
 package org.apache.hadoop.mapred;
 
 import java.io.File;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 import javax.servlet.ServletException;
-import javax.servlet.http.*;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.util.StringUtils;
 
@@ -31,8 +33,9 @@ import org.apache.hadoop.util.StringUtils;
  * A servlet that is run by the TaskTrackers to provide the task logs via http.
  */
 public class TaskLogServlet extends HttpServlet {
+  private static final long serialVersionUID = -6615764817774487321L;
   
-  private boolean haveTaskLog(String taskId, TaskLog.LogName type) {
+  private boolean haveTaskLog(TaskAttemptID taskId, TaskLog.LogName type) {
     File f = TaskLog.getTaskLogFile(taskId, type);
     return f.canRead();
   }
@@ -86,7 +89,7 @@ public class TaskLogServlet extends HttpServlet {
   }
 
   private void printTaskLog(HttpServletResponse response,
-                            OutputStream out, String taskId, 
+                            OutputStream out, TaskAttemptID taskId, 
                             long start, long end, boolean plainText, 
                             TaskLog.LogName filter) throws IOException {
     if (!plainText) {
@@ -135,6 +138,7 @@ public class TaskLogServlet extends HttpServlet {
   /**
    * Get the logs via http.
    */
+  @Override
   public void doGet(HttpServletRequest request, 
                     HttpServletResponse response
                     ) throws ServletException, IOException {
@@ -143,12 +147,13 @@ public class TaskLogServlet extends HttpServlet {
     boolean plainText = false;
     TaskLog.LogName filter = null;
 
-    String taskId = request.getParameter("taskid");
-    if (taskId == null) {
+    String taskIdStr = request.getParameter("taskid");
+    if (taskIdStr == null) {
       response.sendError(HttpServletResponse.SC_BAD_REQUEST, 
                          "Argument taskid is required");
       return;
     }
+    TaskAttemptID taskId = TaskAttemptID.forName(taskIdStr);
     String logFilter = request.getParameter("filter");
     if (logFilter != null) {
       try {

@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -34,7 +35,7 @@ public class TaskCompletionEvent implements Writable{
   private int eventId; 
   private String taskTrackerHttp;
   private int taskRunTime; // using int since runtime is the time difference
-  private String taskId;
+  private TaskAttemptID taskId;
   Status status; 
   boolean isMap = false;
   private int idWithinJob;
@@ -55,7 +56,7 @@ public class TaskCompletionEvent implements Writable{
    * @param taskTrackerHttp task tracker's host:port for http. 
    */
   public TaskCompletionEvent(int eventId, 
-                             String taskId,
+                             TaskAttemptID taskId,
                              int idWithinJob,
                              boolean isMap,
                              Status status, 
@@ -78,10 +79,21 @@ public class TaskCompletionEvent implements Writable{
   /**
    * Returns task id. 
    * @return task id
+   * @deprecated use {@link #getTaskID()} instead.
    */
+  @Deprecated
   public String getTaskId() {
+    return taskId.toString();
+  }
+  
+  /**
+   * Returns task id. 
+   * @return task id
+   */
+  public TaskAttemptID getTaskID() {
     return taskId;
   }
+  
   /**
    * Returns enum Status.SUCESS or Status.FAILURE.
    * @return task tracker status
@@ -123,11 +135,21 @@ public class TaskCompletionEvent implements Writable{
   /**
    * Sets task id. 
    * @param taskId
+   * @deprecated use {@link #setTaskID(TaskAttemptID)} instead.
    */
-  public void setTaskId(
-                        String taskId) {
+  @Deprecated
+  public void setTaskId(String taskId) {
+    this.taskId = TaskAttemptID.forName(taskId);
+  }
+  
+  /**
+   * Sets task id. 
+   * @param taskId
+   */
+  public void setTaskID(TaskAttemptID taskId) {
     this.taskId = taskId;
   }
+  
   /**
    * Set task status. 
    * @param status
@@ -145,6 +167,7 @@ public class TaskCompletionEvent implements Writable{
     this.taskTrackerHttp = taskTrackerHttp;
   }
     
+  @Override
   public String toString(){
     StringBuffer buf = new StringBuffer(); 
     buf.append("Task Id : "); 
@@ -165,7 +188,7 @@ public class TaskCompletionEvent implements Writable{
   // Writable
   //////////////////////////////////////////////
   public void write(DataOutput out) throws IOException {
-    WritableUtils.writeString(out, taskId); 
+    taskId.write(out); 
     WritableUtils.writeVInt(out, idWithinJob);
     out.writeBoolean(isMap);
     WritableUtils.writeEnum(out, status); 
@@ -174,7 +197,7 @@ public class TaskCompletionEvent implements Writable{
   }
   
   public void readFields(DataInput in) throws IOException {
-    this.taskId = WritableUtils.readString(in); 
+    this.taskId = TaskAttemptID.read(in); 
     this.idWithinJob = WritableUtils.readVInt(in);
     this.isMap = in.readBoolean();
     this.status = WritableUtils.readEnum(in, Status.class);

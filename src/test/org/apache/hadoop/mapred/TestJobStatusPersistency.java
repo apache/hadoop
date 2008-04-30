@@ -17,15 +17,17 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.fs.Path;
-
-import java.io.*;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.util.Properties;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+
 public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
-  private String runJob() throws Exception {
+  private JobID runJob() throws Exception {
     OutputStream os = getFileSystem().create(new Path(getInputDir(), "text.txt"));
     Writer wr = new OutputStreamWriter(os);
     wr.write("hello1\n");
@@ -53,11 +55,11 @@ public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
 
     FileOutputFormat.setOutputPath(conf, getOutputDir());
 
-    return JobClient.runJob(conf).getJobID();
+    return JobClient.runJob(conf).getID();
   }
 
   public void testNonPersistency() throws Exception {
-    String jobId = runJob();
+    JobID jobId = runJob();
     JobClient jc = new JobClient(createJobConf());
     RunningJob rj = jc.getJob(jobId);
     assertNotNull(rj);
@@ -74,7 +76,7 @@ public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
     config.setProperty("mapred.job.tracker.persist.jobstatus.hours", "1");
     stopCluster();
     startCluster(false, config);
-    String jobId = runJob();
+    JobID jobId = runJob();
     JobClient jc = new JobClient(createJobConf());
     RunningJob rj0 = jc.getJob(jobId);
     assertNotNull(rj0);
@@ -96,7 +98,7 @@ public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
     TaskCompletionEvent[] events1 = rj1.getTaskCompletionEvents(0);
     assertEquals(events0.length, events1.length);    
     for (int i = 0; i < events0.length; i++) {
-      assertEquals(events0[i].getTaskId(), events1[i].getTaskId());
+      assertEquals(events0[i].getTaskID(), events1[i].getTaskID());
       assertEquals(events0[i].getTaskStatus(), events1[i].getTaskStatus());
     }
   }

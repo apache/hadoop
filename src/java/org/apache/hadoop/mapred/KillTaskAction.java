@@ -22,7 +22,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.io.Text;
 
 /**
  * Represents a directive from the {@link org.apache.hadoop.mapred.JobTracker} 
@@ -30,26 +29,28 @@ import org.apache.hadoop.io.Text;
  * 
  */
 class KillTaskAction extends TaskTrackerAction {
-  String taskId;
+  TaskAttemptID taskId;
   
   public KillTaskAction() {
     super(ActionType.KILL_TASK);
   }
   
-  public KillTaskAction(String taskId) {
+  public KillTaskAction(TaskAttemptID taskId) {
     super(ActionType.KILL_TASK);
     this.taskId = taskId;
   }
 
-  public String getTaskId() {
+  public TaskAttemptID getTaskID() {
     return taskId;
   }
   
+  @Override
   public void write(DataOutput out) throws IOException {
-    Text.writeString(out, taskId);
+    taskId.write(out);
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
-    taskId = Text.readString(in);
+    taskId = TaskAttemptID.read(in);
   }
 }

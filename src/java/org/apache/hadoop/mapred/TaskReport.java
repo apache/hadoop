@@ -27,7 +27,7 @@ import org.apache.hadoop.io.WritableUtils;
 
 /** A report on the state of a task. */
 public class TaskReport implements Writable {
-  private String taskid;
+  private TaskID taskid;
   private float progress;
   private String state;
   private String[] diagnostics;
@@ -37,7 +37,7 @@ public class TaskReport implements Writable {
 
   public TaskReport() {}
 
-  TaskReport(String taskid, float progress, String state,
+  TaskReport(TaskID taskid, float progress, String state,
              String[] diagnostics, long startTime, long finishTime,
              Counters counters) {
     this.taskid = taskid;
@@ -49,8 +49,11 @@ public class TaskReport implements Writable {
     this.counters = counters;
   }
     
+  /** @deprecated use {@link #getTaskID()} instead */
+  @Deprecated
+  public String getTaskId() { return taskid.toString(); }
   /** The id of the task. */
-  public String getTaskId() { return taskid; }
+  public TaskID getTaskID() { return taskid; }
   /** The amount completed, between zero and one. */
   public float getProgress() { return progress; }
   /** The most recent state, reported by a {@link Reporter}. */
@@ -94,7 +97,7 @@ public class TaskReport implements Writable {
   // Writable
   //////////////////////////////////////////////
   public void write(DataOutput out) throws IOException {
-    Text.writeString(out, taskid);
+    taskid.write(out);
     out.writeFloat(progress);
     Text.writeString(out, state);
     out.writeLong(startTime);
@@ -104,7 +107,7 @@ public class TaskReport implements Writable {
   }
 
   public void readFields(DataInput in) throws IOException {
-    this.taskid = Text.readString(in);
+    this.taskid = TaskID.read(in);
     this.progress = in.readFloat();
     this.state = Text.readString(in);
     this.startTime = in.readLong(); 

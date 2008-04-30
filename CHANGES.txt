@@ -22,7 +22,14 @@ Trunk (unreleased changes)
     is not supported. If upgrading from 0.13 or earlier is required,
     please upgrade to an intermediate version (0.14-0.17) and then
     to this version. (rangadi)
- 
+
+    HADOOP-544. This issue introduces new classes JobID, TaskInProgressID
+    and TaskID, which should be used instead of their string counterparts.
+    Functions in JobClient, TaskReport, RunningJob, jobcontrol.Job and 
+    TaskCompletionEvent that use string arguments are deprecated in favor 
+    of the corresponding ones that use ID objects. Applications can use 
+    xxxID.toString() and xxxID.forName() methods to convert/restore objects 
+    to/from strings. (Enis Soztutar via ddas)
 
   NEW FEATURES
 

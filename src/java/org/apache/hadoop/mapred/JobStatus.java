@@ -21,7 +21,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -46,7 +46,7 @@ public class JobStatus implements Writable {
   public static final int FAILED = 3;
   public static final int PREP = 4;
 
-  private String jobid;
+  private JobID jobid;
   private float mapProgress;
   private float reduceProgress;
   private int runState;
@@ -65,7 +65,7 @@ public class JobStatus implements Writable {
    * @param reduceProgress The progress made on the reduces
    * @param runState The current state of the job
    */
-  public JobStatus(String jobid, float mapProgress, float reduceProgress, int runState) {
+  public JobStatus(JobID jobid, float mapProgress, float reduceProgress, int runState) {
     this.jobid = jobid;
     this.mapProgress = mapProgress;
     this.reduceProgress = reduceProgress;
@@ -76,7 +76,7 @@ public class JobStatus implements Writable {
   /**
    * @return The jobid of the Job
    */
-  public String getJobId() { return jobid; }
+  public JobID getJobID() { return jobid; }
     
   /**
    * @return Percentage of progress in maps 
@@ -141,20 +141,20 @@ public class JobStatus implements Writable {
   // Writable
   ///////////////////////////////////////
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString(out, jobid);
+    jobid.write(out);
     out.writeFloat(mapProgress);
     out.writeFloat(reduceProgress);
     out.writeInt(runState);
     out.writeLong(startTime);
-    UTF8.writeString(out, user);
+    Text.writeString(out, user);
   }
 
   public void readFields(DataInput in) throws IOException {
-    this.jobid = UTF8.readString(in);
+    this.jobid = JobID.read(in);
     this.mapProgress = in.readFloat();
     this.reduceProgress = in.readFloat();
     this.runState = in.readInt();
     this.startTime = in.readLong();
-    this.user = UTF8.readString(in);
+    this.user = Text.readString(in);
   }
 }

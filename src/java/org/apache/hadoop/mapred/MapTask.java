@@ -18,18 +18,23 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.apache.hadoop.mapred.Task.Counter.COMBINE_INPUT_RECORDS;
+import static org.apache.hadoop.mapred.Task.Counter.COMBINE_OUTPUT_RECORDS;
+import static org.apache.hadoop.mapred.Task.Counter.MAP_INPUT_BYTES;
+import static org.apache.hadoop.mapred.Task.Counter.MAP_INPUT_RECORDS;
+import static org.apache.hadoop.mapred.Task.Counter.MAP_OUTPUT_BYTES;
+import static org.apache.hadoop.mapred.Task.Counter.MAP_OUTPUT_RECORDS;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -39,29 +44,25 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.io.SequenceFile.Sorter.RawKeyValueIterator;
-import org.apache.hadoop.io.SequenceFile.Sorter.SegmentDescriptor;
 import org.apache.hadoop.io.SequenceFile.Sorter;
 import org.apache.hadoop.io.SequenceFile.ValueBytes;
 import org.apache.hadoop.io.SequenceFile.Writer;
-import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.SequenceFile.Sorter.RawKeyValueIterator;
+import org.apache.hadoop.io.SequenceFile.Sorter.SegmentDescriptor;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.DefaultCodec;
-import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapred.ReduceTask.ValuesIterator;
 import org.apache.hadoop.util.IndexedSortable;
-import org.apache.hadoop.util.IndexedSorter;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.QuickSort;
 import org.apache.hadoop.util.ReflectionUtils;
-
-import static org.apache.hadoop.mapred.Task.Counter.*;
 
 /** A Map task. */
 class MapTask extends Task {
@@ -81,18 +82,20 @@ class MapTask extends Task {
     super();
   }
 
-  public MapTask(String jobId, String jobFile, String tipId, String taskId, 
+  public MapTask(String jobFile, TaskAttemptID taskId, 
                  int partition, String splitClass, BytesWritable split
                  ) throws IOException {
-    super(jobId, jobFile, tipId, taskId, partition);
+    super(jobFile, taskId, partition);
     this.splitClass = splitClass;
     this.split.set(split);
   }
 
+  @Override
   public boolean isMapTask() {
     return true;
   }
 
+  @Override
   public void localizeConfiguration(JobConf conf) throws IOException {
     super.localizeConfiguration(conf);
     Path localSplit = new Path(new Path(getJobFile()).getParent(), 
@@ -104,22 +107,26 @@ class MapTask extends Task {
     out.close();
   }
   
+  @Override
   public TaskRunner createRunner(TaskTracker tracker) {
     return new MapTaskRunner(this, tracker, this.conf);
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
     Text.writeString(out, splitClass);
     split.write(out);
   }
   
+  @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
     splitClass = Text.readString(in);
     split.readFields(in);
   }
 
+  @Override
   InputSplit getInputSplit() throws UnsupportedOperationException {
     return instantiatedSplit;
   }
@@ -169,6 +176,7 @@ class MapTask extends Task {
     }
   };
 
+  @Override
   @SuppressWarnings("unchecked")
   public void run(final JobConf job, final TaskUmbilicalProtocol umbilical)
     throws IOException {
@@ -570,6 +578,7 @@ class MapTask extends Task {
     public class Buffer extends OutputStream {
       private final byte[] scratch = new byte[1];
 
+      @Override
       public synchronized void write(int v)
           throws IOException {
         scratch[0] = (byte)v;
@@ -583,6 +592,7 @@ class MapTask extends Task {
        * @throws MapBufferTooSmallException if record is too large to
        *    deserialize into the collection buffer.
        */
+      @Override
       public synchronized void write(byte b[], int off, int len)
           throws IOException {
         boolean kvfull = false;
@@ -699,6 +709,7 @@ class MapTask extends Task {
 
     protected class SpillThread extends Thread {
 
+      @Override
       public void run() {
         try {
           sortAndSpill();
@@ -728,12 +739,12 @@ class MapTask extends Task {
       FSDataOutputStream indexOut = null;
       try {
         // create spill file
-        Path filename = mapOutputFile.getSpillFileForWrite(getTaskId(),
+        Path filename = mapOutputFile.getSpillFileForWrite(getTaskID(),
                                       numSpills, size);
         out = localFs.create(filename);
         // create spill index
         Path indexFilename = mapOutputFile.getSpillIndexFileForWrite(
-                             getTaskId(), numSpills, partitions * 16);
+                             getTaskID(), numSpills, partitions * 16);
         indexOut = localFs.create(indexFilename);
         final int endPosition = (kvend > kvstart)
           ? kvend
@@ -811,12 +822,12 @@ class MapTask extends Task {
       final int partition = partitioner.getPartition(key, value, partitions);
       try {
         // create spill file
-        Path filename = mapOutputFile.getSpillFileForWrite(getTaskId(),
+        Path filename = mapOutputFile.getSpillFileForWrite(getTaskID(),
                                       numSpills, size);
         out = localFs.create(filename);
         // create spill index
         Path indexFilename = mapOutputFile.getSpillIndexFileForWrite(
-                             getTaskId(), numSpills, partitions * 16);
+                             getTaskID(), numSpills, partitions * 16);
         indexOut = localFs.create(indexFilename);
         // we don't run the combiner for a single record
         for (int i = 0; i < partitions; ++i) {
@@ -950,6 +961,7 @@ class MapTask extends Task {
         super(in, comparator, keyClass, valClass, conf, reporter);
       }
 
+      @Override
       public VALUE next() {
         combineInputCounter.increment(1);
         return super.next();
@@ -965,8 +977,8 @@ class MapTask extends Task {
       FileSystem localFs = FileSystem.getLocal(job);
       
       for(int i = 0; i < numSpills; i++) {
-        filename[i] = mapOutputFile.getSpillFile(getTaskId(), i);
-        indexFileName[i] = mapOutputFile.getSpillIndexFile(getTaskId(), i);
+        filename[i] = mapOutputFile.getSpillFile(getTaskID(), i);
+        indexFileName[i] = mapOutputFile.getSpillIndexFile(getTaskID(), i);
         finalOutFileSize += localFs.getLength(filename[i]);
       }
       //make correction in the length to include the sequence file header
@@ -975,10 +987,10 @@ class MapTask extends Task {
       
       finalIndexFileSize = partitions * 16;
       
-      Path finalOutputFile = mapOutputFile.getOutputFileForWrite(getTaskId(), 
+      Path finalOutputFile = mapOutputFile.getOutputFileForWrite(getTaskID(), 
                              finalOutFileSize);
       Path finalIndexFile = mapOutputFile.getOutputIndexFileForWrite(
-                            getTaskId(), finalIndexFileSize);
+                            getTaskID(), finalIndexFileSize);
       
       if (numSpills == 1) { //the spill is the final output
         localFs.rename(filename[0], finalOutputFile);
@@ -1033,7 +1045,7 @@ class MapTask extends Task {
             segmentList.add(i, s);
           }
           segmentStart = finalOut.getPos();
-          RawKeyValueIterator kvIter = sorter.merge(segmentList, new Path(getTaskId())); 
+          RawKeyValueIterator kvIter = sorter.merge(segmentList, new Path(getTaskID().toString())); 
           SequenceFile.Writer writer = SequenceFile.createWriter(job, finalOut, 
                                                                  job.getMapOutputKeyClass(), job.getMapOutputValueClass(), 
                                                                  compressionType, codec);

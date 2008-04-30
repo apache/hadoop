@@ -64,8 +64,6 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.mapred.TaskInProgress;
-import org.apache.hadoop.mapred.DefaultJobHistoryParser.*;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -181,7 +179,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      */
     public NetworkedJob(JobStatus job) throws IOException {
       this.status = job;
-      this.profile = jobSubmitClient.getJobProfile(job.getJobId());
+      this.profile = jobSubmitClient.getJobProfile(job.getJobID());
       this.statustime = System.currentTimeMillis();
     }
 
@@ -191,7 +189,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      */
     synchronized void ensureFreshStatus() throws IOException {
       if (System.currentTimeMillis() - statustime > MAX_JOBPROFILE_AGE) {
-        this.status = jobSubmitClient.getJobStatus(profile.getJobId());
+        this.status = jobSubmitClient.getJobStatus(profile.getJobID());
         this.statustime = System.currentTimeMillis();
       }
     }
@@ -199,8 +197,15 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     /**
      * An identifier for the job
      */
+    public JobID getID() {
+      return profile.getJobID();
+    }
+    
+    /** @deprecated This method is deprecated and will be removed. Applications should 
+     * rather use {@link #getID()}.*/
+    @Deprecated
     public String getJobID() {
-      return profile.getJobId();
+      return profile.getJobID().toString();
     }
     
     /**
@@ -275,7 +280,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      * Tells the service to terminate the current job.
      */
     public synchronized void killJob() throws IOException {
-      jobSubmitClient.killJob(getJobID());
+      jobSubmitClient.killJob(getID());
     }
     
     /**
@@ -284,17 +289,23 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      * @param shouldFail if true the task is failed and added to failed tasks list, otherwise
      * it is just killed, w/o affecting job failure status.
      */
-    public synchronized void killTask(String taskId, boolean shouldFail) throws IOException {
+    public synchronized void killTask(TaskAttemptID taskId, boolean shouldFail) throws IOException {
       jobSubmitClient.killTask(taskId, shouldFail);
     }
 
+    /** @deprecated Applications should rather use {@link #killTask(TaskAttemptID, boolean)}*/
+    @Deprecated
+    public synchronized void killTask(String taskId, boolean shouldFail) throws IOException {
+      killTask(TaskAttemptID.forName(taskId), shouldFail);
+    }
+    
     /**
      * Fetch task completion events from jobtracker for this job. 
      */
     public synchronized TaskCompletionEvent[] getTaskCompletionEvents(
                                                                       int startFrom) throws IOException{
       return jobSubmitClient.getTaskCompletionEvents(
-                                                     getJobID(), startFrom, 10); 
+                                                     getID(), startFrom, 10); 
     }
 
     /**
@@ -306,7 +317,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         ensureFreshStatus();
       } catch (IOException e) {
       }
-      return "Job: " + profile.getJobId() + "\n" + 
+      return "Job: " + profile.getJobID() + "\n" + 
         "file: " + profile.getJobFile() + "\n" + 
         "tracking URL: " + profile.getURL() + "\n" + 
         "map() completion: " + status.mapProgress() + "\n" + 
@@ -317,7 +328,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      * Returns the counters for this job
      */
     public Counters getCounters() throws IOException {
-      return jobSubmitClient.getJobCounters(getJobID());
+      return jobSubmitClient.getJobCounters(getID());
     }
   }
 
@@ -693,8 +704,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      * configure the command line options correctly on the submitting dfs
      */
     
-    String jobId = jobSubmitClient.getNewJobId();
-    Path submitJobDir = new Path(job.getSystemDir(), jobId);
+    JobID jobId = jobSubmitClient.getNewJobId();
+    Path submitJobDir = new Path(job.getSystemDir(), jobId.toString());
     Path submitJarFile = new Path(submitJobDir, "job.jar");
     Path submitSplitFile = new Path(submitJobDir, "job.split");
     configureCommandLineOptions(job, submitJobDir, submitJarFile);
@@ -874,7 +885,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    *         <code>jobid</code> doesn't correspond to any known job.
    * @throws IOException
    */
-  public RunningJob getJob(String jobid) throws IOException {
+  public RunningJob getJob(JobID jobid) throws IOException {
     JobStatus status = jobSubmitClient.getJobStatus(jobid);
     if (status != null) {
       return new NetworkedJob(status);
@@ -883,6 +894,13 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     }
   }
 
+  /**@deprecated Applications should rather use {@link #getJob(JobID)}. 
+   */
+  @Deprecated
+  public RunningJob getJob(String jobid) throws IOException {
+    return getJob(JobID.forName(jobid));
+  }
+  
   /**
    * Get the information of the current state of the map tasks of a job.
    * 
@@ -890,10 +908,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    * @return the list of all of the map tips.
    * @throws IOException
    */
-  public TaskReport[] getMapTaskReports(String jobId) throws IOException {
+  public TaskReport[] getMapTaskReports(JobID jobId) throws IOException {
     return jobSubmitClient.getMapTaskReports(jobId);
   }
-    
+  
+  /**@deprecated Applications should rather use {@link #getMapTaskReports(JobID)}*/
+  @Deprecated
+  public TaskReport[] getMapTaskReports(String jobId) throws IOException {
+    return getMapTaskReports(JobID.forName(jobId));
+  }
+  
   /**
    * Get the information of the current state of the reduce tasks of a job.
    * 
@@ -901,10 +925,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    * @return the list of all of the reduce tips.
    * @throws IOException
    */    
-  public TaskReport[] getReduceTaskReports(String jobId) throws IOException {
+  public TaskReport[] getReduceTaskReports(JobID jobId) throws IOException {
     return jobSubmitClient.getReduceTaskReports(jobId);
   }
    
+  /**@deprecated Applications should rather use {@link #getReduceTaskReports(JobID)}*/
+  @Deprecated
+  public TaskReport[] getReduceTaskReports(String jobId) throws IOException {
+    return getReduceTaskReports(JobID.forName(jobId));
+  }
+  
   /**
    * Get status information about the Map-Reduce cluster.
    *  
@@ -933,7 +963,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
                                        "&plaintext=true&filter=profile"
                                        ).openConnection();
     InputStream in = connection.getInputStream();
-    OutputStream out = new FileOutputStream(e.getTaskId() + ".profile");
+    OutputStream out = new FileOutputStream(e.getTaskID() + ".profile");
     IOUtils.copyBytes(in, out, 64 * 1024, true);
   }
 
@@ -971,7 +1001,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     }
     try {
       running = jc.submitJob(job);
-      String jobId = running.getJobID();
+      JobID jobId = running.getID();
       LOG.info("Running job: " + jobId);
       int eventCounter = 0;
       boolean profiling = job.getProfileEnabled();
@@ -1015,7 +1045,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
               if (event.getTaskStatus() == 
                 TaskCompletionEvent.Status.SUCCEEDED){
                 LOG.info(event.toString());
-                displayTaskLogs(event.getTaskId(), event.getTaskTrackerHttp());
+                displayTaskLogs(event.getTaskID(), event.getTaskTrackerHttp());
               }
               break; 
             case FAILED:
@@ -1023,18 +1053,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
                 TaskCompletionEvent.Status.FAILED){
                 LOG.info(event.toString());
                 // Displaying the task diagnostic information
-                String taskId = event.getTaskId();
-                String tipId = TaskInProgress.getTipId(taskId);
+                TaskAttemptID taskId = event.getTaskID();
                 String[] taskDiagnostics = 
-                  jc.jobSubmitClient.getTaskDiagnostics(jobId, tipId, 
-                                                        taskId); 
+                  jc.jobSubmitClient.getTaskDiagnostics(taskId); 
                 if (taskDiagnostics != null) {
                   for(String diagnostics : taskDiagnostics){
                     System.err.println(diagnostics);
                   }
                 }
                 // Displaying the task logs
-                displayTaskLogs(event.getTaskId(), event.getTaskTrackerHttp());
+                displayTaskLogs(event.getTaskID(), event.getTaskTrackerHttp());
               }
               break; 
             case KILLED:
@@ -1044,7 +1072,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
               break; 
             case ALL:
               LOG.info(event.toString());
-              displayTaskLogs(event.getTaskId(), event.getTaskTrackerHttp());
+              displayTaskLogs(event.getTaskID(), event.getTaskTrackerHttp());
               break;
             }
           }
@@ -1073,7 +1101,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     return running;
   }
 
-  private static void displayTaskLogs(String taskId, String baseUrl)
+  private static void displayTaskLogs(TaskAttemptID taskId, String baseUrl)
     throws IOException {
     // The tasktracker for a 'failed/killed' job might not be around...
     if (baseUrl != null) {
@@ -1085,7 +1113,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     }
   }
     
-  private static void getTaskLogs(String taskId, URL taskLogUrl, 
+  private static void getTaskLogs(TaskAttemptID taskId, URL taskLogUrl, 
                                   OutputStream out) {
     try {
       URLConnection connection = taskLogUrl.openConnection();
@@ -1274,10 +1302,10 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     try {
       if (submitJobFile != null) {
         RunningJob job = submitJob(conf);
-        System.out.println("Created job " + job.getJobID());
+        System.out.println("Created job " + job.getID());
         exitCode = 0;
       } else if (getStatus) {
-        RunningJob job = getJob(jobid);
+        RunningJob job = getJob(JobID.forName(jobid));
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else {
@@ -1287,7 +1315,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           exitCode = 0;
         }
       } else if (killJob) {
-        RunningJob job = getJob(jobid);
+        RunningJob job = getJob(JobID.forName(jobid));
         if (job == null) {
           System.out.println("Could not find job " + jobid);
         } else {
@@ -1299,7 +1327,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         viewHistory(outputDir, viewAllHistory);
         exitCode = 0;
       } else if (listEvents) {
-        listEvents(jobid, fromEvent, nEvents);
+        listEvents(JobID.forName(jobid), fromEvent, nEvents);
         exitCode = 0;
       } else if (listJobs) {
         listJobs();
@@ -1308,7 +1336,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           listAllJobs();
           exitCode = 0;
       } else if(killTask) {
-        if(jobSubmitClient.killTask(taskid, false)) {
+        if(jobSubmitClient.killTask(TaskAttemptID.forName(taskid), false)) {
           System.out.println("Killed task " + taskid);
           exitCode = 0;
         } else {
@@ -1316,7 +1344,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           exitCode = -1;
         }
       } else if(failTask) {
-        if(jobSubmitClient.killTask(taskid, true)) {
+        if(jobSubmitClient.killTask(TaskAttemptID.forName(taskid), true)) {
           System.out.println("Killed task " + taskid + " by failing it");
           exitCode = 0;
         } else {
@@ -1342,7 +1370,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    * @param jobId the job id for the job's events to list
    * @throws IOException
    */
-  private void listEvents(String jobId, int fromEventId, int numEvents)
+  private void listEvents(JobID jobId, int fromEventId, int numEvents)
     throws IOException {
     TaskCompletionEvent[] events = 
       jobSubmitClient.getTaskCompletionEvents(jobId, fromEventId, numEvents);
@@ -1350,7 +1378,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     System.out.println("Number of events (from " + fromEventId + 
                        ") are: " + events.length);
     for(TaskCompletionEvent event: events) {
-      System.out.println(event.getTaskStatus() + " " + event.getTaskId() + 
+      System.out.println(event.getTaskStatus() + " " + event.getTaskID() + 
                          " " + event.getTaskTrackerHttp());
     }
   }
@@ -1367,7 +1395,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     System.out.printf("%d jobs currently running\n", jobs.length);
     System.out.printf("JobId\tState\tStartTime\tUserName\n");
     for (JobStatus job : jobs) {
-      System.out.printf("%s\t%d\t%d\t%s\n", job.getJobId(), job.getRunState(),
+      System.out.printf("%s\t%d\t%d\t%s\n", job.getJobID(), job.getRunState(),
           job.getStartTime(), job.getUsername());
     }
   }
@@ -1386,7 +1414,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
                        "\tFailed : 3\tPrep : 4\n");
     System.out.printf("JobId\tState\tStartTime\tUserName\n");
     for (JobStatus job : jobs) {
-      System.out.printf("%s\t%d\t%d\t%s\n", job.getJobId(), job.getRunState(),
+      System.out.printf("%s\t%d\t%d\t%s\n", job.getJobID(), job.getRunState(),
           job.getStartTime(), job.getUsername());
     }
   }

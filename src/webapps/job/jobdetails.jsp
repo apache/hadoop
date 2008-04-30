@@ -104,6 +104,10 @@
 <%   
     String jobId = request.getParameter("jobid"); 
     String refreshParam = request.getParameter("refresh");
+    if (jobId == null) {
+      out.println("<h2>Missing 'jobid'!</h2>");
+      return;
+    }
     
     int refresh = 60; // refresh every 60 seconds by default
     if (refreshParam != null) {
@@ -113,12 +117,12 @@
         catch (NumberFormatException ignored) {
         }
     }
-    
-    JobInProgress job = (JobInProgress) tracker.getJob(jobId);
+    JobID jobIdObj = JobID.forName(jobId);
+    JobInProgress job = (JobInProgress) tracker.getJob(jobIdObj);
     
     String action = request.getParameter("action");
     if("changeprio".equalsIgnoreCase(action)) {
-      tracker.setJobPriority(jobId, 
+      tracker.setJobPriority(jobIdObj, 
                              JobPriority.valueOf(request.getParameter("prio")));
     }
     
@@ -129,7 +133,7 @@
     	    return;
 	    }
   	    else if(action != null && action.equalsIgnoreCase("kill")) {
-	      tracker.killJob(jobId);
+	      tracker.killJob(jobIdObj);
 	    }
     }
 %>
