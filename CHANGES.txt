@@ -69,6 +69,9 @@ Trunk (unreleased changes)
     HADOOP-2461. Trim property names in configuration.
     (Tsz Wo (Nicholas), SZE via shv)
 
+    HADOOP-2799. Deprecate o.a.h.io.Closable in favor of java.io.Closable.
+    (Tsz Wo (Nicholas), SZE via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
