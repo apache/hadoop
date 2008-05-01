@@ -25,6 +25,8 @@ Hbase Change Log
                knows about workings of memcache
    HBASE-588   Still a 'hole' in scanners, even after HBASE-532
    HBASE-604   Don't allow CLASSPATH from environment pollute the hbase CLASSPATH
+   HBASE-608   HRegionServer::getThisIP() checks hadoop config var for dns interface name
+               (Jim R. Wilson via Stack)
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
