@@ -611,9 +611,6 @@ Release 0.17.0 - Unreleased
     HADOOP-3165. -put/-copyFromLocal did not treat input file "-" as stdin.
     (Lohit Vijayarenu via rangadi)
 
-    HADOOP-3138. DFS mkdirs() should not throw an exception if the directory
-    already exists. (rangadi)
-
     HADOOP-3041. Deprecate JobConf.setOutputPath and JobConf.getOutputPath.
     Deprecate OutputFormatBase. Add FileOutputFormat. Existing output formats
     extending OutputFormatBase, now extend FileOutputFormat. Add the following
@@ -703,17 +700,11 @@ Release 0.17.0 - Unreleased
     COMMIT_PENDING status when it fails maps due to lost map.
     (Devaraj Das)
 
-    HADOOP-3186. Fix incorrect permission checkding for mv and renameTo 
-    in HDFS. (Tsz Wo (Nicholas), SZE via rangadi)
-
     HADOOP-3286. Prevent collisions in gridmix output dirs by increasing the
     granularity of the timestamp. (Runping Qi via cdouglas)
 
     HADOOP-3285. Fix input split locality when the splits align to
     fs blocks. (omalley)
-
-    HADOOP-3294. Fix distcp to check the destination length and retry the copy
-    if it doesn't match the src length. (Tsz Wo (Nicholas), SZE via cdouglas)
 
 Release 0.16.4 - 2008-05-05
 
