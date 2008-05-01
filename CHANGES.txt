@@ -716,9 +716,6 @@ Release 0.16.4 - 2008-05-05
     HADOOP-3294. Fix distcp to check the destination length and retry the copy
     if it doesn't match the src length. (Tsz Wo (Nicholas), SZE via mukund)
 
-    HADOOP-3304. [HOD] Fixes the way the logcondense.py utility searches
-    for log files that need to be deleted. (yhemanth via mukund)
-
     HADOOP-3186. Fix incorrect permission checkding for mv and renameTo
     in HDFS. (Tsz Wo (Nicholas), SZE via mukund)
 
