@@ -20,349 +20,101 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.util.ConcurrentModificationException;
-import java.util.Map;
-import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Scanner;
 
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 
 /**
  * Utility class to build a table of multiple regions.
  */
 public class MultiRegionTable extends HBaseClusterTestCase {
-  static final Log LOG = LogFactory.getLog(MultiRegionTable.class.getName());
+  private static final Text[] KEYS = {
+    null,
+    new Text("bbb"),
+    new Text("ccc"),
+    new Text("ddd"),
+    new Text("eee"),
+    new Text("fff"),
+    new Text("ggg"),
+    new Text("hhh"),
+    new Text("iii"),
+    new Text("jjj"),
+    new Text("kkk"),
+    new Text("lll"),
+    new Text("mmm"),
+    new Text("nnn"),
+    new Text("ooo"),
+    new Text("ppp"),
+    new Text("qqq"),
+    new Text("rrr"),
+    new Text("sss"),
+    new Text("ttt"),
+    new Text("uuu"),
+    new Text("vvv"),
+    new Text("www"),
+    new Text("xxx"),
+    new Text("yyy")
+  };
+  
+  protected final String columnName;
+  protected HTableDescriptor desc;
 
   /**
-   * Default constructor
+   * @param columnName the column to populate.
    */
-  public MultiRegionTable() {
+  public MultiRegionTable(final String columnName) {
     super();
+    this.columnName = columnName;
     // These are needed for the new and improved Map/Reduce framework
     System.setProperty("hadoop.log.dir", conf.get("hadoop.log.dir"));
     conf.set("mapred.output.dir", conf.get("hadoop.tmp.dir"));
   }
-
+  
   /**
-   * Make a multi-region table.  Presumption is that table already exists and
-   * that there is only one regionserver. Makes it multi-region by filling with
-   * data and provoking splits. Asserts parent region is cleaned up after its
-   * daughter splits release all references.
-   * @param conf
-   * @param cluster
-   * @param fs
-   * @param tableName
-   * @param columnName
-   * @throws IOException
+   * Run after dfs is ready but before hbase cluster is started up.
    */
-  @SuppressWarnings("null")
-  public static void makeMultiRegionTable(HBaseConfiguration conf,
-      MiniHBaseCluster cluster, FileSystem fs, String tableName,
-      String columnName) throws IOException {  
-    final int retries = 10; 
-    final long waitTime = 20L * 1000L;
-    
-    // This size should make it so we always split using the addContent
-    // below.  After adding all data, the first region is 1.3M. Should
-    // set max filesize to be <= 1M.
-    assertTrue(conf.getLong("hbase.hregion.max.filesize",
-      HConstants.DEFAULT_MAX_FILE_SIZE) <= 1024 * 1024);
-
-    assertNotNull(fs);
-    Path d = fs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
-
-    // Get connection on the meta table and get count of rows.
-    HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
-    int count = count(meta, tableName);
-    HTable t = new HTable(conf, new Text(tableName));
-    // Get the parent region here now.
-    HRegionInfo parent =
-      t.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
-    LOG.info("Parent region " + parent.toString());
-    Path parentDir = HRegion.getRegionDir(new Path(d, tableName),
-      parent.getEncodedName());
-    assertTrue(fs.exists(parentDir));
-    // Now add content.
-    addContent(new HTableIncommon(t), columnName);
-    LOG.info("Finished content loading");
-    
-    // All is running in the one JVM so I should be able to get the single
-    // region instance and bring on a split. Presumption is that there is only
-    // one regionserver.   Of not, the split may already have happened by the
-    // time we got here.  If so, then the region found when we go searching
-    // with EMPTY_START_ROW will be one of the unsplittable daughters.
-    HRegionInfo hri = null;
-    HRegion r = null;
-    HRegionServer server = cluster.getRegionThreads().get(0).getRegionServer(); 
-    for (int i = 0; i < 30; i++) {
-      try {
-        hri = t.getRegionLocation(HConstants.EMPTY_START_ROW).getRegionInfo();
-      } catch (IOException e) {
-        e = RemoteExceptionHandler.checkIOException(e);
-        e.printStackTrace();
-        continue;
-      }
-      LOG.info("Region location: " + hri);
-      r = server.getOnlineRegions().get(hri.getRegionName());
-      if (r != null) {
-        break;
-      }
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-        LOG.warn("Waiting on region to come online", e);
-      }
-    }
-    assertNotNull(r);
-
-    // Flush the cache
-    server.getFlushRequester().request(r);
-
-    // Now, wait until split makes it into the meta table.
-    int oldCount = count;
-    for (int i = 0; i < retries;  i++) {
-      count = count(meta, tableName);
-      if (count > oldCount) {
-        break;
-      }
-      try {
-        Thread.sleep(waitTime);
-      } catch (InterruptedException e) {
-        // continue
-      }
-    }
-    if (count <= oldCount) {
-      throw new IOException("Failed waiting on splits to show up");
-    }
-    
-    // Get info on the parent from the meta table.  Pass in 'hri'. Its the
-    // region we have been dealing with up to this. Its the parent of the
-    // region split.
-    RowResult data = getSplitParentInfo(meta, parent);
-    if (data == null) {
-      // We changed stuff so daughters get cleaned up much faster now.  Can
-      // run so fast, parent has been deleted by time we get to here.
-    } else {
-      parent = Writables.getHRegionInfo(
-        data.get(HConstants.COL_REGIONINFO));
-      LOG.info("Found parent region: " + parent);
-      assertTrue(parent.isOffline());
-      assertTrue(parent.isSplit());
-      HRegionInfo splitA =
-        Writables.getHRegionInfo(data.get(HConstants.COL_SPLITA));
-      HRegionInfo splitB =
-        Writables.getHRegionInfo(data.get(HConstants.COL_SPLITB));
-      assertTrue("parentDir should exist", fs.exists(parentDir));
-      LOG.info("Split happened. Parent is " + parent.getRegionName());
-
-      // Recalibrate will cause us to wait on new regions' deployment
-      recalibrate(t, new Text(columnName), retries, waitTime);
-
-      if (splitA == null) {
-        LOG.info("splitA was already null. Assuming it was previously compacted.");
-      } else {
-        LOG.info("Daughter splitA: " + splitA.getRegionName());
-        // Compact a region at a time so we can test case where one region has
-        // no references but the other still has some
-        compact(cluster, splitA);
-        
-        // Wait till the parent only has reference to remaining split, one that
-        // still has references.
-        while (true) {
-          data = getSplitParentInfo(meta, parent);
-          if (data != null && data.size() == 3) {
-            LOG.info("Waiting for splitA to release reference to parent");
-            try {
-              Thread.sleep(waitTime);
-            } catch (InterruptedException e) {
-              // continue
-            }
-            continue;
-          }
-          break;
-        }
-        if (data != null) {
-          LOG.info("Parent split info returned " + data.keySet().toString());
-        }
-      }
-
-      if (splitB == null) {
-        LOG.info("splitB was already null. Assuming it was previously compacted.");
-      } else {
-        LOG.info("Daughter splitB: " + splitB.getRegionName());
-
-        // Call second split.
-        compact(cluster, splitB);
-      }
-      // Now wait until parent disappears.    
-      LOG.info("Waiting on parent " + parent.getRegionName() + " to disappear");
-      for (int i = 0; i < retries; i++) {
-        if (getSplitParentInfo(meta, parent) == null) {
-          break;
-        }
-        
-        try {
-          Thread.sleep(waitTime);
-        } catch (InterruptedException e) {
-          // continue
-        }
-      }
-      assertNull(getSplitParentInfo(meta, parent));
-    }
-
-    // Assert cleaned up.
-    
-    for (int i = 0; i < retries; i++) {
-      if (!fs.exists(parentDir)) {
-        LOG.info("Parent directory was deleted. tries=" + i);
-        break;
-      }
-      LOG.info("Waiting for parent directory to be deleted. tries=" + i);
-      try {
-        Thread.sleep(waitTime);
-      } catch (InterruptedException e) {
-        // continue
-      }
-    }
-    assertFalse(fs.exists(parentDir));
-  }
-
-  /*
-   * Count of regions in passed meta table.
-   * @param t
-   * @param column
-   * @return
-   * @throws IOException
-   */
-  private static int count(final HTable t, final String tableName)
-    throws IOException {
-    
-    int size = 0;
-    Text [] cols = new Text[] {HConstants.COLUMN_FAMILY};
-    Scanner s = t.getScanner(cols, HConstants.EMPTY_START_ROW,
-      System.currentTimeMillis(), null);
+  @Override
+  protected void preHBaseClusterSetup() throws Exception {
     try {
-      for (RowResult r : s) {
-        HRegionInfo hri = Writables.
-          getHRegionInfo(r.get(HConstants.COL_REGIONINFO));
-        if (hri.getTableDesc().getName().toString().equals(tableName)) {
-          size++;
-        }
-      }
-      return size;
-    } finally {
-      if (s != null) {
-        s.close();
-      }
-    }
-  }
+      // Create a bunch of regions
 
-  /*
-   * @return Return row info for passed in region or null if not found in scan.
-   */
-  private static RowResult getSplitParentInfo(final HTable t,
-      final HRegionInfo parent)
-  throws IOException {  
-    Scanner s = t.getScanner(HConstants.COLUMN_FAMILY_ARRAY,
-        HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
-    try {
-      for (RowResult r : s) {
-        HRegionInfo hri = Writables.
-          getHRegionInfo(r.get(HConstants.COL_REGIONINFO));
-        if (hri == null) {
-          continue;
-        }
-        // Make sure I get the parent.
-        if (hri.getRegionName().equals(parent.getRegionName()) &&
-              hri.getRegionId() == parent.getRegionId()) {
-          return r;
-        }
+      HRegion[] regions = new HRegion[KEYS.length];
+      for (int i = 0; i < regions.length; i++) {
+        int j = (i + 1) % regions.length;
+        regions[i] = createARegion(KEYS[i], KEYS[j]);
       }
-      return null;
-    } finally {
-      s.close();
-    }   
-  }
 
-  /*
-   * Recalibrate passed in HTable.  Run after change in region geography.
-   * Open a scanner on the table. This will force HTable to recalibrate
-   * and in doing so, will force us to wait until the new child regions
-   * come on-line (since they are no longer automatically served by the 
-   * HRegionServer that was serving the parent. In this test they will
-   * end up on the same server (since there is only one), but we have to
-   * wait until the master assigns them. 
-   * @param t
-   * @param retries
-   */
-  private static void recalibrate(final HTable t, final Text column,
-      final int retries, final long waitTime) throws IOException {
-    
-    for (int i = 0; i < retries; i++) {
-      try {
-        Scanner s =
-          t.getScanner(new Text[] {column}, HConstants.EMPTY_START_ROW);
-        try {
-          s.next();
-          break;
-        } finally {
-          s.close();
-        }
-      } catch (NotServingRegionException x) {
-        System.out.println("it's alright");
-        try {
-          Thread.sleep(waitTime);
-        } catch (InterruptedException e) {
-          // continue
-        }
-      }
-    }
-  }
+      // Now create the root and meta regions and insert the data regions
+      // created above into the meta
 
-  /*
-   * Compact the passed in region <code>r</code>. 
-   * @param cluster
-   * @param r
-   * @throws IOException
-   */
-  protected static void compact(final MiniHBaseCluster cluster,
-      final HRegionInfo r) throws IOException {
-    if (r == null) {
-      LOG.debug("Passed region is null");
-      return;
-    }
-    LOG.info("Starting compaction");
-    for (LocalHBaseCluster.RegionServerThread thread:
-        cluster.getRegionThreads()) {
-      Map<Text, HRegion> regions = thread.getRegionServer().getOnlineRegions();
-      
-      // Retry if ConcurrentModification... alternative of sync'ing is not
-      // worth it for sake of unit test.
-      for (int i = 0; i < 10; i++) {
-        try {
-          for (HRegion online: regions.values()) {
-            if (online.getRegionName().equals(r.getRegionName())) {
-              online.compactStores();
-            }
-          }
-          break;
-        } catch (ConcurrentModificationException e) {
-          LOG.warn("Retrying because ..." + e.toString() + " -- one or " +
-          "two should be fine");
-          continue;
-        }
+      HRegion root = HRegion.createHRegion(HRegionInfo.rootRegionInfo,
+          testDir, this.conf);
+      HRegion meta = HRegion.createHRegion(HRegionInfo.firstMetaRegionInfo,
+          testDir, this.conf);
+      HRegion.addRegionToMETA(root, meta);
+
+      for(int i = 0; i < regions.length; i++) {
+        HRegion.addRegionToMETA(meta, regions[i]);
       }
+
+      closeRegionAndDeleteLog(root);
+      closeRegionAndDeleteLog(meta);
+    } catch (Exception e) {
+      StaticTestEnvironment.shutdownDfs(dfsCluster);
+      throw e;
     }
+  } 
+
+  private HRegion createARegion(Text startKey, Text endKey) throws IOException {
+    HRegion region = createNewHRegion(desc, startKey, endKey);
+    addContent(region, this.columnName);
+    closeRegionAndDeleteLog(region);
+    return region;
+  }
+  
+  private void closeRegionAndDeleteLog(HRegion region) throws IOException {
+    region.close();
+    region.getLog().closeAndDelete();
   }
 }

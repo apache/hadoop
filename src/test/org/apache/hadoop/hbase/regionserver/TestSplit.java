@@ -28,7 +28,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.MultiRegionTable;
+import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.io.Cell;
  * {@Link TestHRegion} does a split but this TestCase adds testing of fast
  * split and manufactures odd-ball split scenarios.
  */
-public class TestSplit extends MultiRegionTable {
+public class TestSplit extends HBaseClusterTestCase {
   @SuppressWarnings("hiding")
   static final Log LOG = LogFactory.getLog(TestSplit.class.getName());
   

@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Random;
-import java.util.TreeMap;
 
 import junit.framework.TestSuite;
 import junit.textui.TestRunner;
@@ -34,7 +33,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -75,45 +73,16 @@ public class TestTableIndex extends MultiRegionTable {
     TEXT_OUTPUT_COLUMN
   };
 
-
-  private HTableDescriptor desc;
   private JobConf jobConf = null;
 
   /** default constructor */
   public TestTableIndex() {
-    // Enable DEBUG-level MR logging.
-    Logger.getLogger("org.apache.hadoop.mapred").setLevel(Level.DEBUG);
-    
-    // Make sure the cache gets flushed so we trigger a compaction(s) and
-    // hence splits.
-    conf.setInt("hbase.hregion.memcache.flush.size", 1024 * 1024);
-    
-    // This size should make it so we always split using the addContent
-    // below. After adding all data, the first region is 1.3M
-    conf.setLong("hbase.hregion.max.filesize", 1024 * 1024);
-
-    // Always compact if there is more than one store file.
-    conf.setInt("hbase.hstore.compactionThreshold", 2);
-
+    super(INPUT_COLUMN);
     desc = new HTableDescriptor(TABLE_NAME);
     desc.addFamily(new HColumnDescriptor(INPUT_COLUMN));
     desc.addFamily(new HColumnDescriptor(OUTPUT_COLUMN));
-  }
-
-  /** {@inheritDoc} */
-  @Override
-  protected void postHBaseClusterSetup() throws Exception {
-    // Create a table.
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    admin.createTable(desc);
-    // Populate a table into multiple regions
-    makeMultiRegionTable(conf, cluster, dfsCluster.getFileSystem(), TABLE_NAME,
-      INPUT_COLUMN);
-
-    // Verify table indeed has multiple regions
-    HTable table = new HTable(conf, new Text(TABLE_NAME));
-    Text[] startKeys = table.getStartKeys();
-    assertTrue(startKeys.length > 1);
+    // Enable DEBUG-level MR logging.
+    Logger.getLogger("org.apache.hadoop.mapred").setLevel(Level.DEBUG);
   }
 
   /** {@inheritDoc} */
