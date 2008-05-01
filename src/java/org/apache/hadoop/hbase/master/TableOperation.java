@@ -92,7 +92,7 @@ abstract class TableOperation implements HConstants {
 
       // Open a scanner on the meta region
       long scannerId = server.openScanner(m.getRegionName(),
-          COLUMN_FAMILY_ARRAY, tableName, System.currentTimeMillis(), null);
+          COLUMN_FAMILY_ARRAY, tableName, HConstants.LATEST_TIMESTAMP, null);
 
       List<Text> emptyRows = new ArrayList<Text>();
       try {

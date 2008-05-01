@@ -158,7 +158,7 @@ abstract class BaseScanner extends Chore implements HConstants {
       regionServer = master.connection.getHRegionConnection(region.getServer());
       scannerId =
         regionServer.openScanner(region.getRegionName(), COLUMN_FAMILY_ARRAY,
-            EMPTY_START_ROW, System.currentTimeMillis(), null);
+            EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP, null);
 
       int numberOfRegionsFound = 0;
       while (true) {

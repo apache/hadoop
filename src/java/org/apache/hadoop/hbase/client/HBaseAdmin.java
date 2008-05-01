@@ -198,7 +198,7 @@ public class HBaseAdmin implements HConstants {
       try {
         scannerId =
           server.openScanner(firstMetaServer.getRegionInfo().getRegionName(),
-            COL_REGIONINFO_ARRAY, tableName, System.currentTimeMillis(), null);
+            COL_REGIONINFO_ARRAY, tableName, HConstants.LATEST_TIMESTAMP, null);
         RowResult values = server.next(scannerId);
         if (values == null || values.size() == 0) {
           break;
@@ -278,7 +278,7 @@ public class HBaseAdmin implements HConstants {
       try {
         scannerId =
           server.openScanner(firstMetaServer.getRegionInfo().getRegionName(),
-            COL_REGIONINFO_ARRAY, tableName, System.currentTimeMillis(), null);
+            COL_REGIONINFO_ARRAY, tableName, HConstants.LATEST_TIMESTAMP, null);
         boolean isenabled = false;
         
         while (true) {
@@ -378,7 +378,7 @@ public class HBaseAdmin implements HConstants {
       try {
         scannerId =
           server.openScanner(firstMetaServer.getRegionInfo().getRegionName(),
-            COL_REGIONINFO_ARRAY, tableName, System.currentTimeMillis(), null);
+            COL_REGIONINFO_ARRAY, tableName, HConstants.LATEST_TIMESTAMP, null);
         
         boolean disabled = false;
         while (true) {

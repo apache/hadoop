@@ -218,7 +218,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       }
       long scannerId = server.openScanner(
           HRegionInfo.rootRegionInfo.getRegionName(), COLUMN_FAMILY_ARRAY,
-          EMPTY_START_ROW, System.currentTimeMillis(), null);
+          EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP, null);
       scanMetaRegion(server, scannerId,
           HRegionInfo.rootRegionInfo.getRegionName());
       return true;
@@ -238,7 +238,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       }
       long scannerId =
         server.openScanner(m.getRegionName(), COLUMN_FAMILY_ARRAY,
-        EMPTY_START_ROW, System.currentTimeMillis(), null);
+        EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP, null);
 
         scanMetaRegion(server, scannerId, m.getRegionName());
       return true;

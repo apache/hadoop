@@ -27,6 +27,7 @@ Hbase Change Log
    HBASE-604   Don't allow CLASSPATH from environment pollute the hbase CLASSPATH
    HBASE-608   HRegionServer::getThisIP() checks hadoop config var for dns interface name
                (Jim R. Wilson via Stack)
+   HBASE-609   Master doesn't see regionserver edits because of clock skew
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
