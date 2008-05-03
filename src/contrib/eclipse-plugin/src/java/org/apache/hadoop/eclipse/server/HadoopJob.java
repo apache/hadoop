@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.mapred.RunningJob;
 
@@ -72,7 +73,7 @@ public class HadoopJob {
   /**
    * Unique identifier of this Job
    */
-  final String jobId;
+  final JobID jobId;
 
   /**
    * Status representation of a running job. This actually contains a
@@ -123,7 +124,7 @@ public class HadoopJob {
    * @param running
    * @param status
    */
-  public HadoopJob(HadoopServer location, String id, RunningJob running,
+  public HadoopJob(HadoopServer location, JobID id, RunningJob running,
       JobStatus status) {
 
     this.location = location;
@@ -143,7 +144,7 @@ public class HadoopJob {
     try {
       String jobFile = getJobFile();
       FileSystem fs = location.getDFS();
-      File tmp = File.createTempFile(getJobId(), ".xml");
+      File tmp = File.createTempFile(getJobID().toString(), ".xml");
       if (FileUtil.copy(fs, new Path(jobFile), tmp, false, location
           .getConfiguration())) {
         this.jobConf = new JobConf(tmp.toString());
@@ -211,7 +212,7 @@ public class HadoopJob {
   /**
    * @return
    */
-  public String getJobId() {
+  public JobID getJobID() {
     return this.jobId;
   }
 
@@ -326,8 +327,8 @@ public class HadoopJob {
    * Print this job status (for debugging purpose)
    */
   public void display() {
-    System.out.printf("Job id=%s, name=%s\n", getJobId(), getJobName());
-    System.out.printf("Configuration file: %s\n", getJobId());
+    System.out.printf("Job id=%s, name=%s\n", getJobID(), getJobName());
+    System.out.printf("Configuration file: %s\n", getJobID());
     System.out.printf("Tracking URL: %s\n", getTrackingURL());
 
     System.out.printf("Completion: map: %f reduce %f\n",

@@ -131,6 +131,10 @@ Trunk (unreleased changes)
     HADOOP-3301. Fix misleading error message when S3 URI hostname
     contains an underscore. (tomwhite via omalley)
 
+    HADOOP-3338. Fix Eclipse plugin to compile after HADOOP-544 was
+    committed. Updated all references to use the new JobID representation.
+    (taton via nigel)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

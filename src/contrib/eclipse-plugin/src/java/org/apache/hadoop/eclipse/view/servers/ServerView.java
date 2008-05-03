@@ -106,7 +106,7 @@ public class ServerView extends ViewPart implements ITreeContentProvider,
             // Job is running, kill the job?
             if (MessageDialog.openConfirm(Display.getDefault()
                 .getActiveShell(), "Confirm kill running Job",
-                "Do you really want to kill running Job: " + job.getJobId())) {
+                "Do you really want to kill running Job: " + job.getJobID())) {
               job.kill();
             }
           }
@@ -385,7 +385,7 @@ public class ServerView extends ViewPart implements ITreeContentProvider,
 
       switch (columnIndex) {
         case 0:
-          return job.getJobId();
+          return job.getJobID().toString();
         case 1:
           return "";
         case 2:

@@ -38,6 +38,7 @@ import org.apache.hadoop.eclipse.Activator;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.mapred.RunningJob;
 import org.eclipse.core.runtime.IProgressMonitor;
@@ -110,13 +111,13 @@ public class HadoopServer {
 
       try {
         // Set of all known existing Job IDs we want fresh info of
-        Set<String> missingJobIds =
-            new HashSet<String>(runningJobs.keySet());
+        Set<JobID> missingJobIds =
+            new HashSet<JobID>(runningJobs.keySet());
 
         JobStatus[] jstatus = client.jobsToComplete();
         for (JobStatus status : jstatus) {
 
-          String jobId = status.getJobId();
+          JobID jobId = status.getJobID();
           missingJobIds.remove(jobId);
 
           HadoopJob hJob;
@@ -136,7 +137,7 @@ public class HadoopServer {
         }
 
         // Ask explicitly for fresh info for these Job IDs
-        for (String jobId : missingJobIds) {
+        for (JobID jobId : missingJobIds) {
           HadoopJob hJob = runningJobs.get(jobId);
           if (!hJob.isCompleted())
             updateJob(hJob, null);
@@ -161,7 +162,7 @@ public class HadoopServer {
      * @param data
      */
     private void newJob(final HadoopJob data) {
-      runningJobs.put(data.getJobId(), data);
+      runningJobs.put(data.getJobID(), data);
 
       Display.getDefault().asyncExec(new Runnable() {
         public void run() {
@@ -203,8 +204,8 @@ public class HadoopServer {
   /**
    * Jobs running on this location. The keys of this map are the Job IDs.
    */
-  private transient Map<String, HadoopJob> runningJobs =
-      Collections.synchronizedMap(new TreeMap<String, HadoopJob>());
+  private transient Map<JobID, HadoopJob> runningJobs =
+      Collections.synchronizedMap(new TreeMap<JobID, HadoopJob>());
 
   /**
    * Status updater for this location
@@ -272,7 +273,7 @@ public class HadoopServer {
    * @param job the job to remove
    */
   public void purgeJob(final HadoopJob job) {
-    runningJobs.remove(job.getJobId());
+    runningJobs.remove(job.getJobID());
     Display.getDefault().asyncExec(new Runnable() {
       public void run() {
         fireJobRemoved(job);
