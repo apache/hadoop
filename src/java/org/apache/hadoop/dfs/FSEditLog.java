@@ -18,7 +18,9 @@
 package org.apache.hadoop.dfs;
 
 import java.io.BufferedInputStream;
+import java.io.DataInput;
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.EOFException;
@@ -492,15 +494,12 @@ class FSEditLog {
             if (opcode == OP_ADD && logVersion <= -12) {
               UTF8 uu = new UTF8();
               UTF8 cl = new UTF8();
-              aw = new ArrayWritable(DatanodeDescriptor.class);
               uu.readFields(in);
               cl.readFields(in);
-              aw.readFields(in);
+              lastLocations = readDatanodeDescriptorArray(in);
               clientName = uu.toString();
               clientMachine = cl.toString();
               writables = aw.get();
-              lastLocations = new DatanodeDescriptor[writables.length];
-              System.arraycopy(writables, 0, lastLocations, 0, writables.length);
             } else {
               lastLocations = new DatanodeDescriptor[0];
             }
@@ -855,8 +854,7 @@ class FSEditLog {
    */
   void logOpenFile(String path, INodeFileUnderConstruction newNode) 
                    throws IOException {
-
-    DatanodeDescriptor[] locations = newNode.getLastBlockLocations();
+    final DatanodeDescriptor[] locations = newNode.getLastBlockLocations();
 
     UTF8 nameReplicationPair[] = new UTF8[] { 
       new UTF8(path), 
@@ -869,7 +867,12 @@ class FSEditLog {
             newNode.getPermissionStatus(),
             new UTF8(newNode.getClientName()),
             new UTF8(newNode.getClientMachine()),
-            new ArrayWritable(DatanodeDescriptor.class, locations));
+            new Writable() {
+              public void readFields(DataInput in) {}
+              public void write(DataOutput out) throws IOException {
+                writeDatanodeDescriptorArray(out, locations);
+              }
+    });
   }
 
   /** 
@@ -1065,5 +1068,27 @@ class FSEditLog {
   // sets the initial capacity of the flush buffer.
   static void setBufferCapacity(int size) {
     sizeFlushBuffer = size;
+  }
+
+  /** This method is defined for compatibility reason. */
+  //TODO: remove this class in HADOOP-3329
+  static private void writeDatanodeDescriptorArray(DataOutput out,
+      DatanodeDescriptor[] locations) throws IOException {
+    out.writeInt(locations.length);                 // write values
+    for (int i = 0; i < locations.length; i++) {
+      locations[i].write2FSEditLog(out);
+    }
+  }
+
+  /** This method is defined for compatibility reason. */
+  //TODO: remove this class in HADOOP-3329
+  static private DatanodeDescriptor[] readDatanodeDescriptorArray(DataInput in
+      ) throws IOException {
+    DatanodeDescriptor[] locations = new DatanodeDescriptor[in.readInt()];
+    for (int i = 0; i < locations.length; i++) {
+      locations[i] = new DatanodeDescriptor();
+      locations[i].readFieldsFromFSEditLog(in);
+    }
+    return locations;
   }
 }

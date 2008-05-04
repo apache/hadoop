@@ -17,9 +17,16 @@
  */
 package org.apache.hadoop.dfs;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.*;
 
 import org.apache.hadoop.dfs.BlocksMap.BlockInfo;
+import org.apache.hadoop.dfs.DatanodeInfo.AdminStates;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.WritableUtils;
 
 /**************************************************
  * DatanodeDescriptor tracks stats on a given DataNode,
@@ -364,5 +371,38 @@ public class DatanodeDescriptor extends DatanodeInfo {
     while(it.hasNext())
       toRemove.add(it.next());
     this.removeBlock(delimiter);
+  }
+
+  /** Serialization for FSEditLog */
+  //TODO: remove this method in HADOOP-3329
+  void write2FSEditLog(DataOutput out) throws IOException {
+    UTF8.writeString(out, name);
+    UTF8.writeString(out, storageID);
+    out.writeShort(infoPort);
+    out.writeLong(capacity);
+    out.writeLong(dfsUsed);
+    out.writeLong(remaining);
+    out.writeLong(lastUpdate);
+    out.writeInt(xceiverCount);
+    Text.writeString(out, location);
+    Text.writeString(out, hostName == null? "": hostName);
+    WritableUtils.writeEnum(out, getAdminState());
+  }
+  
+  /** Serialization for FSEditLog */
+  //TODO: remove this method in HADOOP-3329
+  void readFieldsFromFSEditLog(DataInput in) throws IOException {
+    this.name = UTF8.readString(in);
+    this.storageID = UTF8.readString(in);
+    this.infoPort = in.readShort() & 0x0000ffff;
+
+    this.capacity = in.readLong();
+    this.dfsUsed = in.readLong();
+    this.remaining = in.readLong();
+    this.lastUpdate = in.readLong();
+    this.xceiverCount = in.readInt();
+    this.location = Text.readString(in);
+    this.hostName = Text.readString(in);
+    setAdminState(WritableUtils.readEnum(in, AdminStates.class));
   }
 }

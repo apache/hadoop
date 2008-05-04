@@ -24,7 +24,6 @@ import java.util.Date;
 
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -44,12 +43,12 @@ public class DatanodeInfo extends DatanodeID implements Node {
   protected long remaining;
   protected long lastUpdate;
   protected int xceiverCount;
-  private String location = NetworkTopology.UNRESOLVED;
+  protected String location = NetworkTopology.UNRESOLVED;
 
   /** HostName as suplied by the datanode during registration as its 
    * name. Namenode uses datanode IP address as the name.
    */
-  private String hostName = null;
+  protected String hostName = null;
   
   // administrative states of a datanode
   public enum AdminStates {NORMAL, DECOMMISSION_INPROGRESS, DECOMMISSIONED; }
@@ -285,7 +284,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public void write(DataOutput out) throws IOException {
     super.write(out);
 
-    //TODO: move it to DatanodeID once HADOOP-2797 has been committed
+    //TODO: move it to DatanodeID once DatanodeID is not stored in FSImage
     out.writeShort(ipcPort);
 
     out.writeLong(capacity);
@@ -294,11 +293,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     out.writeLong(lastUpdate);
     out.writeInt(xceiverCount);
     Text.writeString(out, location);
-    if (hostName == null) {
-      Text.writeString(out, "");
-    } else {
-      Text.writeString(out, hostName);
-    }
+    Text.writeString(out, hostName == null? "": hostName);
     WritableUtils.writeEnum(out, getAdminState());
   }
 
@@ -306,7 +301,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
 
-    //TODO: move it to DatanodeID once HADOOP-2797 has been committed
+    //TODO: move it to DatanodeID once DatanodeID is not stored in FSImage
     this.ipcPort = in.readShort() & 0x0000ffff;
 
     this.capacity = in.readLong();
@@ -316,8 +311,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.xceiverCount = in.readInt();
     this.location = Text.readString(in);
     this.hostName = Text.readString(in);
-    AdminStates newState = WritableUtils.readEnum(in,
-                                                                AdminStates.class);
-    setAdminState(newState);
+    setAdminState(WritableUtils.readEnum(in, AdminStates.class));
   }
 }

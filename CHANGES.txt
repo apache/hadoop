@@ -138,6 +138,10 @@ Trunk (unreleased changes)
     committed. Updated all references to use the new JobID representation.
     (taton via nigel)
 
+    HADOOP-3337. Loading FSEditLog was broken by HADOOP-3283 since it 
+    changed Writable serialization of DatanodeInfo. This patch handles it.
+    (Tsz Wo (Nicholas), SZE via rangadi)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
