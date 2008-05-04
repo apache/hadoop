@@ -585,10 +585,9 @@ RESULT=$?
 checkTests
 (( RESULT = RESULT + $? ))
 applyPatch
-(( RESULT = RESULT + $? ))
-if [[ $RESULT != 0 ]] ; then
+if [[ $? != 0 ]] ; then
   submitJiraComment 1
-  cleanupAndExit $RESULT
+  cleanupAndExit 1
 fi
 checkJavadocWarnings
 (( RESULT = RESULT + $? ))
