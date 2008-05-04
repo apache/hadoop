@@ -1146,8 +1146,8 @@
   </exec>
 </target>
 
-<target name="hudson-test-patch" depends="patch.check,findbugs.check,forrest.check">
-  <exec executable="sh" failonerror="true">
+<target name="hudson-test-patch" depends="findbugs.check,forrest.check">
+  <exec executable="bash" failonerror="true">
     <arg value="${basedir}/src/test/bin/test-patch.sh"/>
     <arg value="HUDSON"/>
     <arg value="${scratch.dir}"/>
@@ -1160,6 +1160,8 @@
     <arg value="${patch.cmd}"/>
     <arg value="${findbugs.home}"/>
     <arg value="${forrest.home}"/>
+    <arg value="${eclipse.home}"/>
+    <arg value="${python.home}"/>
     <arg value="${basedir}"/>
     <arg value="${trigger.url}"/>
     <arg value="${jira.passwd}"/>

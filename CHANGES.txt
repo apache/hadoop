@@ -72,6 +72,9 @@ Trunk (unreleased changes)
     HADOOP-2799. Deprecate o.a.h.io.Closable in favor of java.io.Closable.
     (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HADOOP-3345. Enhance the hudson-test-patch target to cleanup messages,
+    fix minor defects, and add eclipse plugin and python unit tests. (nigel)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

@@ -12,8 +12,8 @@ parseArgs() {
     HUDSON)
       ### Set HUDSON to true to indicate that this script is being run by Hudson
       HUDSON=true
-      if [[ $# != 14 ]] ; then
-        echo "ERROR: usage $0 HUDSON <PATCH_DIR> <SUPPORT_DIR> <PS_CMD> <WGET_CMD> <JIRACLI> <SVN_CMD> <GREP_CMD> <PATCH_CMD> <FINDBUGS_HOME> <FORREST_HOME> <WORKSPACE_BASEDIR> <TRIGGER_BUILD> <JIRA_PASSWD>"
+      if [[ $# != 16 ]] ; then
+        echo "ERROR: usage $0 HUDSON <PATCH_DIR> <SUPPORT_DIR> <PS_CMD> <WGET_CMD> <JIRACLI> <SVN_CMD> <GREP_CMD> <PATCH_CMD> <FINDBUGS_HOME> <FORREST_HOME> <ECLIPSE_HOME> <PYTHON_HOME> <WORKSPACE_BASEDIR> <TRIGGER_BUILD> <JIRA_PASSWD>"
         cleanupAndExit 0
       fi
       PATCH_DIR=$2
@@ -26,9 +26,11 @@ parseArgs() {
       PATCH=$9
       FINDBUGS_HOME=${10}
       FORREST_HOME=${11}
-      BASEDIR=${12}
-      TRIGGER_BUILD_URL=${13}
-      JIRA_PASSWD=${14}
+      ECLIPSE_HOME=${12}
+      PYTHON_HOME=${13}
+      BASEDIR=${14}
+      TRIGGER_BUILD_URL=${15}
+      JIRA_PASSWD=${16}
       ### Retrieve the defect number
       if [ ! -e $PATCH_DIR/defectNum ] ; then
         echo "Could not determine the patch to test.  Exiting."
@@ -39,6 +41,8 @@ parseArgs() {
         echo "Could not determine the patch to test.  Exiting."
         cleanupAndExit 0
       fi
+      ECLIPSE_PROPERTY="-Declipse.home=$ECLIPSE_HOME"
+      PYTHON_PROPERTY="-Dpython.home=$PYTHON_HOME"
       ;;
     DEVELOPER)
       ### Set HUDSON to false to indicate that this script is being run by a developer
@@ -154,8 +158,16 @@ setup () {
   if [[ $HUDSON == "true" ]] ; then
     $ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= releaseaudit &> $PATCH_DIR/trunkReleaseAuditWarnings.txt
   fi
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" -DHadoopPatchProcess= clean tar &> $PATCH_DIR/trunkJavacWarnings.txt
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -DHadoopPatchProcess= clean tar &> $PATCH_DIR/trunkJavacWarnings.txt
+  if [[ $? != 0 ]] ; then
+    echo "Trunk compilation is broken?"
+    cleanupAndExit 1
+  fi
   $ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -DHadoopPatchProcess= findbugs &> /dev/null
+  if [[ $? != 0 ]] ; then
+    echo "Trunk findbugs is broken?"
+    cleanupAndExit 1
+  fi
   cp $BASEDIR/build/test/findbugs/*.xml $PATCH_DIR/trunkFindbugsWarnings.xml
 }
 
@@ -176,12 +188,12 @@ checkAuthor () {
   if [[ $authorTags != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    @author -1.  The patch appears to contain $authorTags @author tags which the Hadoop community has agreed to not allow in code contributions."
+    -1 @author.  The patch appears to contain $authorTags @author tags which the Hadoop community has agreed to not allow in code contributions."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    @author +1.  The patch does not contain any @author tags."
+    +1 @author.  The patch does not contain any @author tags."
   return 0
 }
 
@@ -202,13 +214,13 @@ checkTests () {
   if [[ $testReferences == 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    tests included -1.  The patch doesn't appear to include any new or modified tests.
+    -1 tests included.  The patch doesn't appear to include any new or modified tests.
                         Please justify why no tests are needed for this patch."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    tests included +1.  The patch appears to include $testReferences new or modified tests."
+    +1 tests included.  The patch appears to include $testReferences new or modified tests."
   return 0
 }
 
@@ -229,7 +241,7 @@ applyPatch () {
     echo "PATCH APPLICATION FAILED"
     JIRA_COMMENT="$JIRA_COMMENT
 
-    patch -1.  The patch command could not apply the patch."
+    -1 patch.  The patch command could not apply the patch."
     return 1
   fi
   return 0
@@ -255,12 +267,12 @@ checkJavadocWarnings () {
   if [[ $javadocWarnings != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    javadoc -1.  The javadoc tool appears to have generated $javadocWarnings warning messages."
+    -1 javadoc.  The javadoc tool appears to have generated $javadocWarnings warning messages."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    javadoc +1.  The javadoc tool did not generate any warning messages."
+    +1 javadoc.  The javadoc tool did not generate any warning messages."
 return 0
 }
 
@@ -276,7 +288,7 @@ checkJavacWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" -DHadoopPatchProcess= tar &> $PATCH_DIR/patchJavacWarnings.txt
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -DHadoopPatchProcess= tar &> $PATCH_DIR/patchJavacWarnings.txt
 
   ### Compare trunk and patch javac warning numbers
   if [[ -f $PATCH_DIR/patchJavacWarnings.txt ]] ; then
@@ -287,14 +299,14 @@ checkJavacWarnings () {
       if [[ $patchJavacWarnings > $trunkJavacWarnings ]] ; then
         JIRA_COMMENT="$JIRA_COMMENT
 
-    javac -1.  The applied patch generated $patchJavacWarnings javac compiler warnings (more than the trunk's current $trunkJavacWarnings warnings)."
+    -1 javac.  The applied patch generated $patchJavacWarnings javac compiler warnings (more than the trunk's current $trunkJavacWarnings warnings)."
         return 1
       fi
     fi
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    javac +1.  The applied patch does not generate any new javac compiler warnings."
+    +1 javac.  The applied patch does not increase the total number of javac compiler warnings."
   return 0
 }
 
@@ -323,7 +335,7 @@ checkReleaseAuditWarnings () {
       if [[ $patchReleaseAuditWarnings > $trunkReleaseAuditWarnings ]] ; then
         JIRA_COMMENT="$JIRA_COMMENT
 
-    release audit -1.  The applied patch generated $patchReleaseAuditWarnings release audit warnings (more than the trunk's current $trunkReleaseAuditWarnings warnings)."
+    -1 release audit.  The applied patch generated $patchReleaseAuditWarnings release audit warnings (more than the trunk's current $trunkReleaseAuditWarnings warnings)."
         $GREP '\!?????' $PATCH_DIR/patchReleaseAuditWarnings.txt > $PATCH_DIR/patchReleaseAuditProblems.txt
         $GREP '\!?????' $PATCH_DIR/trunkReleaseAuditWarnings.txt > $PATCH_DIR/trunkReleaseAuditProblems.txt
         echo "A diff of patched release audit warnings with trunk release audit warnings." > $PATCH_DIR/releaseAuditDiffWarnings.txt
@@ -338,7 +350,7 @@ $JIRA_COMMENT_FOOTER"
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    release audit +1.  The applied patch does not generate any new release audit warnings."
+    +1 release audit.  The applied patch does not increase the total number of release audit warnings."
   return 0
 }
 
@@ -365,12 +377,12 @@ $JIRA_COMMENT_FOOTER"
 #  if [[ $patchStyleErrors != 0 ]] ; then
 #    JIRA_COMMENT="$JIRA_COMMENT
 #
-#    checkstyle -1.  The patch generated $patchStyleErrors code style errors."
+#    -1 checkstyle.  The patch generated $patchStyleErrors code style errors."
 #    return 1
 #  fi
 #  JIRA_COMMENT="$JIRA_COMMENT
 #
-#    checkstyle +1.  The patch generated 0 code style errors."
+#    +1 checkstyle.  The patch generated 0 code style errors."
   return 0
 }
 
@@ -390,7 +402,7 @@ checkFindbugsWarnings () {
   if [ $? != 0 ] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    findbugs -1.  The patch appears to cause Findbugs to fail."
+    -1 findbugs.  The patch appears to cause Findbugs to fail."
     return 1
   fi
 JIRA_COMMENT_FOOTER="Findbugs warnings: http://hudson.zones.apache.org/hudson/job/$JOB_NAME/$BUILD_NUMBER/artifact/trunk/build/test/findbugs/newPatchFindbugsWarnings.html
@@ -413,12 +425,12 @@ $FINDBUGS_HOME/bin/setBugDatabaseInfo -timestamp "01/01/1999" \
   if [[ $findbugsWarnings != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    findbugs -1.  The patch appears to introduce $findbugsWarnings new Findbugs warnings."
+    -1 findbugs.  The patch appears to introduce $findbugsWarnings new Findbugs warnings."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    findbugs +1.  The patch does not introduce any new Findbugs warnings."
+    +1 findbugs.  The patch does not introduce any new Findbugs warnings."
   return 0
 }
 
@@ -442,12 +454,12 @@ runCoreTests () {
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    core tests -1.  The patch failed core unit tests."
+    -1 core tests.  The patch failed core unit tests."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    core tests +1.  The patch passed core unit tests."
+    +1 core tests.  The patch passed core unit tests."
   return 0
 }
 
@@ -467,16 +479,16 @@ runContribTests () {
   ### Kill any rogue build processes from the last attempt
   $PS -auxwww | $GREP HadoopPatchProcess | /usr/bin/nawk '{print $2}' | /usr/bin/xargs -t -I {} /usr/bin/kill -9 {} > /dev/null
 
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes test-contrib
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" $ECLIPSE_PROPERTY $PYTHON_PROPERTY -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes test-contrib
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    contrib tests -1.  The patch failed contrib unit tests."
+    -1 contrib tests.  The patch failed contrib unit tests."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    contrib tests +1.  The patch passed contrib unit tests."
+    +1 contrib tests.  The patch passed contrib unit tests."
   return 0
 }
 
@@ -573,9 +585,10 @@ RESULT=$?
 checkTests
 (( RESULT = RESULT + $? ))
 applyPatch
-if [[ $? != 0 ]] ; then
+(( RESULT = RESULT + $? ))
+if [[ $RESULT != 0 ]] ; then
   submitJiraComment 1
-  cleanupAndExit $?
+  cleanupAndExit $RESULT
 fi
 checkJavadocWarnings
 (( RESULT = RESULT + $? ))
