@@ -145,6 +145,8 @@ Trunk (unreleased changes)
     HADOOP-3101. Prevent JobClient from throwing an exception when printing
     usage. (Edward J. Yoon via cdouglas)
 
+    HADOOP-3031. Fix javac warnings in test classes. (cdouglas)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

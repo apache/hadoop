@@ -87,10 +87,11 @@ public class TestReduceTask extends TestCase {
                                                          Text.class, conf);
     SequenceFile.Sorter.RawKeyValueIterator rawItr = 
       sorter.merge(new Path[]{path}, false, tmpDir);
+    @SuppressWarnings("unchecked") // WritableComparators are not generic
     ReduceTask.ValuesIterator valItr = 
-      new ReduceTask.ValuesIterator(rawItr, WritableComparator.get(Text.class), 
-                                    Text.class, Text.class,
-                                    conf, new NullProgress());
+      new ReduceTask.ValuesIterator<Text,Text>(rawItr,
+          WritableComparator.get(Text.class), Text.class, Text.class,
+          conf, new NullProgress());
     int i = 0;
     while (valItr.more()) {
       Object key = valItr.getKey();
