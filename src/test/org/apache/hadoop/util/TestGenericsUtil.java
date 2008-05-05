@@ -23,6 +23,8 @@ import java.util.List;
 
 import junit.framework.TestCase;
 
+import org.apache.hadoop.conf.Configuration;
+
 public class TestGenericsUtil extends TestCase {
 
   public void testToArray() {
@@ -95,6 +97,12 @@ public class TestGenericsUtil extends TestCase {
       fail("GenericsUtil#toArray() is not working for generic classes");
     }
     
+  }
+  
+  public void testGenericOptionsParser() throws Exception {
+     GenericOptionsParser parser = new GenericOptionsParser(
+        new Configuration(), new String[] {"-jt"});
+    assertEquals(parser.getRemainingArgs().length, 0);
   }
   
   public void testGetClass() {

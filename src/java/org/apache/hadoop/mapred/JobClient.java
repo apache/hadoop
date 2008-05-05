@@ -1199,23 +1199,42 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   /**
    * Display usage of the command-line tool and terminate execution
    */
-  private void displayUsage() {
-    System.out.printf("JobClient <command> <args>\n");
-    System.out.printf("\t-submit\t<job-file>\n");
-    System.out.printf("\t-status\t<job-id>\n");
-    System.out.printf("\t-kill\t<job-id>\n");
-    System.out.printf("\t-events\t<job-id> <from-event-#> <#-of-events>\n");
-    System.out.printf("\t-history\t<jobOutputDir>\n");
-    System.out.printf("\t-list\n");
-    System.out.printf("\t-list\tall\n");
-    System.out.printf("\t-kill-task <task-id>\n");
-    System.out.printf("\t-fail-task <task-id>\n\n");
-    ToolRunner.printGenericCommandUsage(System.out);
-    throw new RuntimeException("JobClient: bad command-line arguments");
+  private void displayUsage(String cmd) {
+    String prefix = "Usage: JobClient ";
+    if("-submit".equals(cmd)) {
+      System.err.println(prefix + "[" + cmd + " <job-file>]");
+    } else if ("-status".equals(cmd) || "-kill".equals(cmd)) {
+      System.err.println(prefix + "[" + cmd + " <job-id>]");
+    } else if ("-events".equals(cmd)) {
+      System.err.println(prefix + "[" + cmd + " <job-id> <from-event-#> <#-of-events>]");
+    } else if ("-history".equals(cmd)) {
+      System.err.println(prefix + "[" + cmd + " <jobOutputDir>]");
+    } else if ("-list".equals(cmd)) {
+      System.err.println(prefix + "[" + cmd + " [all]]");
+    } else if ("-kill-task".equals(cmd) || "-fail-task".equals(cmd)) {
+      System.err.println(prefix + "[" + cmd + " <task-id>]");
+    } else {
+      System.err.printf(prefix + "<command> <args>\n");
+      System.err.printf("\t[-submit <job-file>]\n");
+      System.err.printf("\t[-status <job-id>]\n");
+      System.err.printf("\t[-kill <job-id>]\n");
+      System.err.printf("\t[-events <job-id> <from-event-#> <#-of-events>]\n");
+      System.err.printf("\t[-history <jobOutputDir>]\n");
+      System.err.printf("\t[-list [all]]\n");
+      System.err.printf("\t[-kill-task <task-id>]\n");
+      System.err.printf("\t[-fail-task <task-id>]\n\n");
+      ToolRunner.printGenericCommandUsage(System.out);
+    }
   }
     
   public int run(String[] argv) throws Exception {
+    int exitCode = -1;
+    if (argv.length < 1) {
+      displayUsage("");
+      return exitCode;
+    }    
     // process arguments
+    String cmd = argv[0];
     String submitJobFile = null;
     String jobid = null;
     String taskid = null;
@@ -1231,34 +1250,41 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     boolean listAllJobs = false;
     boolean killTask = false;
     boolean failTask = false;
-    
-    if (argv.length < 1)
-      displayUsage();
 
-    if ("-submit".equals(argv[0])) {
-      if (argv.length != 2)
-        displayUsage();
+    if ("-submit".equals(cmd)) {
+      if (argv.length != 2) {
+        displayUsage(cmd);
+        return exitCode;
+      }
       submitJobFile = argv[1];
-    } else if ("-status".equals(argv[0])) {
-      if (argv.length != 2)
-        displayUsage();
+    } else if ("-status".equals(cmd)) {
+      if (argv.length != 2) {
+        displayUsage(cmd);
+        return exitCode;
+      }
       jobid = argv[1];
       getStatus = true;
-    } else if ("-kill".equals(argv[0])) {
-      if (argv.length != 2)
-        displayUsage();
+    } else if ("-kill".equals(cmd)) {
+      if (argv.length != 2) {
+        displayUsage(cmd);
+        return exitCode;
+      }
       jobid = argv[1];
       killJob = true;
-    } else if ("-events".equals(argv[0])) {
-      if (argv.length != 4)
-        displayUsage();
+    } else if ("-events".equals(cmd)) {
+      if (argv.length != 4) {
+        displayUsage(cmd);
+        return exitCode;
+      }
       jobid = argv[1];
       fromEvent = Integer.parseInt(argv[2]);
       nEvents = Integer.parseInt(argv[3]);
       listEvents = true;
-    } else if ("-history".equals(argv[0])) {
-      if (argv.length != 2 && !(argv.length == 3 && "all".equals(argv[1])))
-         displayUsage();
+    } else if ("-history".equals(cmd)) {
+      if (argv.length != 2 && !(argv.length == 3 && "all".equals(argv[1]))) {
+         displayUsage(cmd);
+         return exitCode;
+      }
       viewHistory = true;
       if (argv.length == 3 && "all".equals(argv[1])) {
          viewAllHistory = true;
@@ -1266,26 +1292,33 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       } else {
          outputDir = argv[1];
       }
-    } else if ("-list".equals(argv[0])) {
-      if (argv.length != 1 && !(argv.length == 2 && "all".equals(argv[1])))
-        displayUsage();
+    } else if ("-list".equals(cmd)) {
+      if (argv.length != 1 && !(argv.length == 2 && "all".equals(argv[1]))) {
+        displayUsage(cmd);
+        return exitCode;
+      }
       if (argv.length == 2 && "all".equals(argv[1])) {
         listAllJobs = true;
       } else {
         listJobs = true;
       }
-    } else if("-kill-task".equals(argv[0])) {
-      if(argv.length != 2)
-        displayUsage();
+    } else if("-kill-task".equals(cmd)) {
+      if(argv.length != 2) {
+        displayUsage(cmd);
+        return exitCode;
+      }
       killTask = true;
       taskid = argv[1];
-    } else if("-fail-task".equals(argv[0])) {
-      if(argv.length != 2)
-        displayUsage();
+    } else if("-fail-task".equals(cmd)) {
+      if(argv.length != 2) {
+        displayUsage(cmd);
+        return exitCode;
+      }
       failTask = true;
       taskid = argv[1];
     } else {
-      displayUsage();
+      displayUsage(cmd);
+      return exitCode;
     }
 
     // initialize JobClient
@@ -1298,7 +1331,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     init(conf);
         
     // Submit the request
-    int exitCode = -1;
     try {
       if (submitJobFile != null) {
         RunningJob job = submitJob(conf);

@@ -123,10 +123,11 @@ public class GenericOptionsParser {
   /**
    * Returns an array of Strings containing only application-specific arguments.
    * 
-   * @return array of <code>String</code>s containing the un-parsed arguments.
+   * @return array of <code>String</code>s containing the un-parsed arguments
+   * or <strong>empty array</strong> if commandLine was not defined.
    */
   public String[] getRemainingArgs() {
-    return commandLine.getArgs();
+    return (commandLine == null) ? new String[]{} : commandLine.getArgs();
   }
 
   /**

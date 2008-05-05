@@ -142,6 +142,9 @@ Trunk (unreleased changes)
     changed Writable serialization of DatanodeInfo. This patch handles it.
     (Tsz Wo (Nicholas), SZE via rangadi)
 
+    HADOOP-3101. Prevent JobClient from throwing an exception when printing
+    usage. (Edward J. Yoon via cdouglas)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
