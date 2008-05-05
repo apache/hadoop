@@ -15,8 +15,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+
+. "$bin"/hadoop-config.sh
 
 # Stop balancer daemon.
 # Run this on the machine where the balancer is running
 
-hadoop-daemon.sh stop balancer
+"$bin"/hadoop-daemon.sh --config $HADOOP_CONF_DIR stop balancer

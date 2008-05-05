@@ -162,6 +162,9 @@ Trunk (unreleased changes)
     HADOOP-3335. Prevent the libhdfs build from deleting the wrong
     files on make clean. (cutting via omalley)
 
+    HADOOP-2930. Make {start,stop}-balancer.sh work even if hadoop-daemon.sh
+    is not in the PATH. (Spiros Papadimitriou via hairong)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

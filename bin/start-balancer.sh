@@ -15,7 +15,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+bin=`dirname "$0"`
+bin=`cd "$bin"; pwd`
+
+. "$bin"/hadoop-config.sh
 
 # Start balancer daemon.
 
-hadoop-daemon.sh start balancer $@
+"$bin"/hadoop-daemon.sh --config $HADOOP_CONF_DIR start balancer $@
