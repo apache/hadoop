@@ -165,6 +165,9 @@ Trunk (unreleased changes)
     HADOOP-2930. Make {start,stop}-balancer.sh work even if hadoop-daemon.sh
     is not in the PATH. (Spiros Papadimitriou via hairong)
 
+    HADOOP-3085. Catch Exception in metrics util classes to ensure that
+    misconfigured metrics don't prevent others from updating. (cdouglas)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

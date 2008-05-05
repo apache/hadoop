@@ -18,6 +18,10 @@
 package org.apache.hadoop.metrics.util;
 
 import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.util.StringUtils;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * The MetricsTimeVaryingRate class is for a rate based metric that
@@ -29,6 +33,9 @@ import org.apache.hadoop.metrics.MetricsRecord;
  *
  */
 public class MetricsTimeVaryingRate {
+
+  protected static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.metrics.util");
 
   static class Metrics {
     int numOperations = 0;
@@ -125,8 +132,13 @@ public class MetricsTimeVaryingRate {
    */
   public synchronized void pushMetric(final MetricsRecord mr) {
     intervalHeartBeat();
-    mr.incrMetric(name + "_num_ops", getPreviousIntervalNumOps());
-    mr.incrMetric(name + "_avg_time", (int)getPreviousIntervalAverageTime());
+    try {
+      mr.incrMetric(name + "_num_ops", getPreviousIntervalNumOps());
+      mr.incrMetric(name + "_avg_time", getPreviousIntervalNumOps());
+    } catch (Exception e) {
+      LOG.info("pushMetric failed for " + name + "\n" +
+          StringUtils.stringifyException(e));
+    }
   }
   
   /**

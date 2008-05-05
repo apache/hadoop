@@ -18,7 +18,10 @@
 package org.apache.hadoop.metrics.util;
 
 import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.util.StringUtils;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * The MetricsIntValue class is for a metric that is not time varied
@@ -28,6 +31,10 @@ import org.apache.hadoop.metrics.MetricsRecord;
  *
  */
 public class MetricsIntValue {  
+
+  protected static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.metrics.util");
+
   private String name;
   private int value;
   private boolean changed;
@@ -69,8 +76,14 @@ public class MetricsIntValue {
    * @param mr
    */
   public synchronized void pushMetric(final MetricsRecord mr) {
-    if (changed) 
-      mr.incrMetric(name, value);
+    if (changed) {
+      try {
+        mr.incrMetric(name, value);
+      } catch (Exception e) {
+        LOG.info("pushMetric failed for " + name + "\n" +
+            StringUtils.stringifyException(e));
+      }
+    }
     changed = false;
   }
 }

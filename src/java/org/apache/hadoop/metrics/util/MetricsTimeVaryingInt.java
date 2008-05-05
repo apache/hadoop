@@ -18,6 +18,10 @@
 package org.apache.hadoop.metrics.util;
 
 import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.util.StringUtils;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * The MetricsTimeVaryingInt class is for a metric that naturally
@@ -30,6 +34,8 @@ import org.apache.hadoop.metrics.MetricsRecord;
  */
 public class MetricsTimeVaryingInt {
 
+  protected static final Log LOG =
+    LogFactory.getLog("org.apache.hadoop.metrics.util");
   
   private String name;
   private int currentValue;
@@ -76,7 +82,12 @@ public class MetricsTimeVaryingInt {
    */
   public synchronized void pushMetric(final MetricsRecord mr) {
     intervalHeartBeat();
-    mr.incrMetric(name, getPreviousIntervalValue());
+    try {
+      mr.incrMetric(name, getPreviousIntervalValue());
+    } catch (Exception e) {
+      LOG.info("pushMetric failed for " + name + "\n" +
+          StringUtils.stringifyException(e));
+    }
   }
   
   
