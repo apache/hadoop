@@ -323,7 +323,7 @@ extern  "C" {
 
     /** 
      * hdfsListDirectory - Get list of files/directories for a given
-     * directory-path. freehdfsFileInfo should be called to deallocate memory. 
+     * directory-path. hdfsFreeFileInfo should be called to deallocate memory. 
      * @param fs The configured filesystem handle.
      * @param path The path of the directory. 
      * @param numEntries Set to the number of files/directories in path.
@@ -336,7 +336,7 @@ extern  "C" {
 
     /** 
      * hdfsGetPathInfo - Get information about a path as a (dynamically
-     * allocated) single hdfsFileInfo struct. freehdfsFileInfo should be
+     * allocated) single hdfsFileInfo struct. hdfsFreeFileInfo should be
      * called when the pointer is no longer needed.
      * @param fs The configured filesystem handle.
      * @param path The path of the file. 

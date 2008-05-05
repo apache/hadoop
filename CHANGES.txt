@@ -150,6 +150,9 @@ Trunk (unreleased changes)
     HADOOP-3119. Update javadoc for Text::getBytes to better describe its
     behavior. (Tim Nelson via cdouglas)
 
+    HADOOP-2294. Fix documentation in libhdfs to refer to the correct free
+    function. (Craig Macdonald via cdouglas)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
