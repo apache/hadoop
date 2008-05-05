@@ -98,20 +98,6 @@ class RpcMgt implements RpcMgtMBean {
   /**
    * @inheritDoc
    */
-  public int getRpcOpsDiscardedOpsNum() {
-    return myMetrics.rpcDiscardedOps.getPreviousIntervalNumOps();
-  }
-
-  /**
-   * @inheritDoc
-   */
-  public long getRpcOpsDiscardedOpsQtime() {
-    return myMetrics.rpcDiscardedOps.getPreviousIntervalAverageTime();
-  }
-  
-  /**
-   * @inheritDoc
-   */
   public int getNumOpenConnections() {
     return myServer.getNumOpenConnections();
   }
@@ -129,6 +115,5 @@ class RpcMgt implements RpcMgtMBean {
   public void resetAllMinMax() {
     myMetrics.rpcProcessingTime.resetMinMax();
     myMetrics.rpcQueueTime.resetMinMax();
-    myMetrics.rpcDiscardedOps.resetMinMax();
   }
 }

@@ -39,7 +39,7 @@ import java.util.*;
  * This class has a number of metrics variables that are publicly accessible;
  * these variables (objects) have methods to update their values;
  * for example:
- *  <p> {@link #rpcDiscardedOps}.inc(time)
+ *  <p> {@link #rpcQueueTime}.inc(time)
  *
  */
 public class RpcMetrics implements Updater {
@@ -71,7 +71,6 @@ public class RpcMetrics implements Updater {
   
   public MetricsTimeVaryingRate rpcQueueTime = new MetricsTimeVaryingRate("RpcQueueTime");
   public MetricsTimeVaryingRate rpcProcessingTime = new MetricsTimeVaryingRate("RpcProcessingTime");
-  public MetricsTimeVaryingRate rpcDiscardedOps = new MetricsTimeVaryingRate("RpcDiscardedOps");
 
   public Map <String, MetricsTimeVaryingRate> metricsList = Collections.synchronizedMap(new HashMap<String, MetricsTimeVaryingRate>());
 
@@ -83,7 +82,6 @@ public class RpcMetrics implements Updater {
   public void doUpdates(MetricsContext context) {
     rpcQueueTime.pushMetric(metricsRecord);
     rpcProcessingTime.pushMetric(metricsRecord);
-    rpcDiscardedOps.pushMetric(metricsRecord);
 
     synchronized (metricsList) {
 	// Iterate through the rpcMetrics hashmap to propogate the different rpc metrics.

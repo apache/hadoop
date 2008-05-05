@@ -71,7 +71,7 @@ public class TestSocketFactory extends TestCase {
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
 
     JobClient client = null;
-
+    MiniMRCluster mr = null;
     try {
       // This will test RPC to the NameNode only.
       // could we test Client-DataNode connections?
@@ -85,7 +85,7 @@ public class TestSocketFactory extends TestCase {
       assertTrue(dfs.exists(filePath));
 
       // This will test TPC to a JobTracker
-      MiniMRCluster mr = new MiniMRCluster(1, fs.getUri().toString(), 1);
+      mr = new MiniMRCluster(1, fs.getUri().toString(), 1);
       final int jobTrackerPort = mr.getJobTrackerPort();
 
       JobConf jconf = new JobConf(cconf);
@@ -127,6 +127,13 @@ public class TestSocketFactory extends TestCase {
       } catch (Exception ignored) {
         // nothing we can do
         ignored.printStackTrace();
+      }
+      if (mr != null) {
+        try {
+          mr.shutdown();
+        } catch (Exception ignored) {
+          ignored.printStackTrace();
+        }
       }
     }
   }

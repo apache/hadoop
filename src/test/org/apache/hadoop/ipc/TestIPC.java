@@ -22,6 +22,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
 
 import java.util.Random;
@@ -36,9 +37,13 @@ import org.apache.hadoop.conf.Configuration;
 public class TestIPC extends TestCase {
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.TestIPC");
-
-  private static Configuration conf = new Configuration();
   
+  final private static Configuration conf = new Configuration();
+  final static private int PING_INTERVAL = 1000;
+  
+  static {
+    Client.setPingInterval(conf, PING_INTERVAL);
+  }
   public TestIPC(String name) { super(name); }
 
   private static final Random RANDOM = new Random();
@@ -51,14 +56,13 @@ public class TestIPC extends TestCase {
     public TestServer(int handlerCount, boolean sleep) 
       throws IOException {
       super(ADDRESS, 0, LongWritable.class, handlerCount, conf);
-      this.setTimeout(1000);
       this.sleep = sleep;
     }
 
     public Writable call(Writable param, long receivedTime) throws IOException {
       if (sleep) {
         try {
-          Thread.sleep(RANDOM.nextInt(200));      // sleep a bit
+          Thread.sleep(RANDOM.nextInt(2*PING_INTERVAL));      // sleep a bit
         } catch (InterruptedException e) {}
       }
       return param;                               // echo param as result
@@ -75,7 +79,6 @@ public class TestIPC extends TestCase {
       this.client = client;
       this.server = server;
       this.count = count;
-      client.setTimeout(1000);
     }
 
     public void run() {
@@ -90,7 +93,7 @@ public class TestIPC extends TestCase {
             break;
           }
         } catch (Exception e) {
-          LOG.fatal("Caught: " + e);
+          LOG.fatal("Caught: " + StringUtils.stringifyException(e));
           failed = true;
         }
       }
@@ -108,7 +111,6 @@ public class TestIPC extends TestCase {
       this.client = client;
       this.addresses = addresses;
       this.count = count;
-      client.setTimeout(1000);
     }
 
     public void run() {
@@ -126,7 +128,7 @@ public class TestIPC extends TestCase {
             }
           }
         } catch (Exception e) {
-          LOG.fatal("Caught: " + e);
+          LOG.fatal("Caught: " + StringUtils.stringifyException(e));
           failed = true;
         }
       }

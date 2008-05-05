@@ -31,6 +31,12 @@ Trunk (unreleased changes)
     xxxID.toString() and xxxID.forName() methods to convert/restore objects 
     to/from strings. (Enis Soztutar via ddas)
 
+    HADOOP-2188. RPC client sends a ping rather than throw timeouts.
+    RPC server does not throw away old RPCs. If clients and the server are on
+    different versions, they are not able to function well. In addition,
+    The property ipc.client.timeout is removed from the default hadoop
+    configuration. It also removes metrics RpcOpsDiscardedOPsNum. (hairong)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,

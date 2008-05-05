@@ -64,7 +64,6 @@ public class TestIPCServerResponder extends TestCase {
     public TestServer(final int handlerCount, final boolean sleep) 
                                               throws IOException {
       super(ADDRESS, 0, BytesWritable.class, handlerCount, conf);
-      this.setTimeout(1000);
       // Set the buffer size to half of the maximum parameter/result size 
       // to force the socket to block
       this.setSocketSendBufSize(BYTE_COUNT / 2);
@@ -95,7 +94,6 @@ public class TestIPCServerResponder extends TestCase {
       this.client = client;
       this.address = address;
       this.count = count;
-      client.setTimeout(1000);
     }
 
     @Override

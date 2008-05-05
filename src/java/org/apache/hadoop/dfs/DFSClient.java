@@ -106,8 +106,6 @@ class DFSClient implements FSConstants {
 
   private static ClientProtocol createNamenode(ClientProtocol rpcNamenode)
     throws IOException {
-    RetryPolicy timeoutPolicy = RetryPolicies.exponentialBackoffRetry(
-        5, 200, TimeUnit.MILLISECONDS);
     RetryPolicy createPolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(
         5, LEASE_SOFTLIMIT_PERIOD, TimeUnit.MILLISECONDS);
     
@@ -120,27 +118,10 @@ class DFSClient implements FSConstants {
     exceptionToPolicyMap.put(RemoteException.class, 
         RetryPolicies.retryByRemoteException(
             RetryPolicies.TRY_ONCE_THEN_FAIL, remoteExceptionToPolicyMap));
-    exceptionToPolicyMap.put(SocketTimeoutException.class, timeoutPolicy);
     RetryPolicy methodPolicy = RetryPolicies.retryByException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
     Map<String,RetryPolicy> methodNameToPolicyMap = new HashMap<String,RetryPolicy>();
     
-    methodNameToPolicyMap.put("open", methodPolicy);
-    methodNameToPolicyMap.put("setReplication", methodPolicy);
-    methodNameToPolicyMap.put("abandonBlock", methodPolicy);
-    methodNameToPolicyMap.put("abandonFileInProgress", methodPolicy);
-    methodNameToPolicyMap.put("reportBadBlocks", methodPolicy);
-    methodNameToPolicyMap.put("isDir", methodPolicy);
-    methodNameToPolicyMap.put("getListing", methodPolicy);
-    methodNameToPolicyMap.put("getHints", methodPolicy);
-    methodNameToPolicyMap.put("getBlockLocations", methodPolicy);
-    methodNameToPolicyMap.put("renewLease", methodPolicy);
-    methodNameToPolicyMap.put("getStats", methodPolicy);
-    methodNameToPolicyMap.put("getDatanodeReport", methodPolicy);
-    methodNameToPolicyMap.put("getPreferredBlockSize", methodPolicy);
-    methodNameToPolicyMap.put("getEditLogSize", methodPolicy);
-    methodNameToPolicyMap.put("complete", methodPolicy);
-    methodNameToPolicyMap.put("getEditLogSize", methodPolicy);
     methodNameToPolicyMap.put("create", methodPolicy);
 
     return (ClientProtocol) RetryProxy.create(ClientProtocol.class,

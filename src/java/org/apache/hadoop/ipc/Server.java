@@ -72,15 +72,8 @@ public abstract class Server {
    */
   public static final ByteBuffer HEADER = ByteBuffer.wrap("hrpc".getBytes());
   
-  // 1 : Ticket is added to connection header
-  public static final byte CURRENT_VERSION = 1;
-  
-  /**
-   * How much time should be allocated for actually running the handler?
-   * Calls that are older than ipc.timeout * MAX_CALL_QUEUE_TIME
-   * are ignored when the handler takes them off the queue.
-   */
-  private static final float MAX_CALL_QUEUE_TIME = 0.6f;
+  // 1 : Introduce ping and server does not throw away RPCs
+  public static final byte CURRENT_VERSION = 2;
   
   /**
    * How many calls/handler are allowed in the queue.
@@ -126,7 +119,7 @@ public abstract class Server {
   private String bindAddress; 
   private int port;                               // port we listen on
   private int handlerCount;                       // number of handler threads
-  private Class paramClass;                       // class of call parameters
+  private Class<?> paramClass;                    // class of call parameters
   private int maxIdleTime;                        // the maximum idle time after 
                                                   // which a client may be disconnected
   private int thresholdIdleConnections;           // the number of idle connections
@@ -141,8 +134,6 @@ public abstract class Server {
   
   private Configuration conf;
 
-  private int timeout;
-  private long maxCallStartAge;
   private int maxQueueSize;
   private int socketSendBufferSize;
   private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
@@ -160,7 +151,7 @@ public abstract class Server {
   private Handler[] handlers = null;
 
   /**
-   * A convience method to bind to a given address and report 
+   * A convenience method to bind to a given address and report 
    * better exceptions if the address is not a valid host.
    * @param socket the socket to bind
    * @param address the address to bind to
@@ -192,14 +183,15 @@ public abstract class Server {
     private int id;                               // the client's call id
     private Writable param;                       // the parameter passed
     private Connection connection;                // connection to client
-    private long receivedTime;                    // the time received
+    private long timestamp;     // the time received when response is null
+                                   // the time served when response is not null
     private ByteBuffer response;                      // the response for this call
 
     public Call(int id, Writable param, Connection connection) {
       this.id = id;
       this.param = param;
       this.connection = connection;
-      this.receivedTime = System.currentTimeMillis();
+      this.timestamp = System.currentTimeMillis();
       this.response = null;
     }
     
@@ -299,10 +291,9 @@ public abstract class Server {
         SelectionKey key = null;
         try {
           selector.select();
-          Iterator iter = selector.selectedKeys().iterator();
-          
+          Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
           while (iter.hasNext()) {
-            key = (SelectionKey)iter.next();
+            key = iter.next();
             iter.remove();
             try {
               if (key.isValid()) {
@@ -439,6 +430,8 @@ public abstract class Server {
   private class Responder extends Thread {
     private Selector writeSelector;
     private int pending;         // connections waiting to register
+    
+    final static int PURGE_INTERVAL = 900000; // 15mins
 
     Responder() throws IOException {
       this.setName("IPC Server Responder");
@@ -456,7 +449,7 @@ public abstract class Server {
       while (running) {
         try {
           waitPending();     // If a channel is being registered, wait.
-          writeSelector.select(maxCallStartAge);
+          writeSelector.select(PURGE_INTERVAL);
           Iterator<SelectionKey> iter = writeSelector.selectedKeys().iterator();
           while (iter.hasNext()) {
             SelectionKey key = iter.next();
@@ -470,7 +463,7 @@ public abstract class Server {
             }
           }
           long now = System.currentTimeMillis();
-          if (now < lastPurgeTime + maxCallStartAge) {
+          if (now < lastPurgeTime + PURGE_INTERVAL) {
             continue;
           }
           lastPurgeTime = now;
@@ -544,33 +537,16 @@ public abstract class Server {
         LOG.info("doPurge: bad channel");
         return;
       }
-      boolean close = false;
       LinkedList<Call> responseQueue = call.connection.responseQueue;
       synchronized (responseQueue) {
         Iterator<Call> iter = responseQueue.listIterator(0);
         while (iter.hasNext()) {
           call = iter.next();
-          if (now > call.receivedTime + maxCallStartAge) {
-            LOG.info(getName() + ", call " + call +
-                     ": response discarded for being too old (" +
-                     (now - call.receivedTime) + ")");
-            iter.remove();
-            if (call.response.position() > 0) {
-              /* We should probably use a different start time 
-               * than receivedTime. receivedTime starts when the RPC
-               * was first read.
-               * We have written a partial response. will close the
-               * connection for now.
-               */
-              close = true;
-              break;
-            }            
+          if (now > call.timestamp + PURGE_INTERVAL) {
+            closeConnection(call.connection);
+            break;
           }
         }
-      }
-      
-      if (close) {
-        closeConnection(call.connection);
       }
     }
 
@@ -627,6 +603,9 @@ public abstract class Server {
             call.connection.responseQueue.addFirst(call);
             
             if (inHandler) {
+              // set the serve time when the response has to be sent later
+              call.timestamp = System.currentTimeMillis();
+              
               incPending();
               try {
                 // Wakeup the thread blocked on select, only then can the call 
@@ -791,6 +770,11 @@ public abstract class Server {
         if (data == null) {
           dataLengthBuffer.flip();
           dataLength = dataLengthBuffer.getInt();
+       
+          if (dataLength == Client.PING_CALL_ID) {
+            dataLengthBuffer.clear();
+            return 0;  //ping message
+          }
           data = ByteBuffer.allocate(dataLength);
         }
         
@@ -868,18 +852,6 @@ public abstract class Server {
         try {
           Call call = callQueue.take(); // pop the queue; maybe blocked here
 
-          // throw the message away if it is too old
-          if (System.currentTimeMillis() - call.receivedTime > 
-              maxCallStartAge) {
-            ReflectionUtils.logThreadInfo(LOG, "Discarding call " + call, 30);
-            int timeInQ = (int) (System.currentTimeMillis() - call.receivedTime);
-            LOG.warn(getName()+", call "+call
-                     +": discarded for being too old (" +
-                     timeInQ + ")");
-            rpcMetrics.rpcDiscardedOps.inc(timeInQ);
-            continue;
-          }
-          
           if (LOG.isDebugEnabled())
             LOG.debug(getName() + ": has #" + call.id + " from " +
                       call.connection);
@@ -892,7 +864,7 @@ public abstract class Server {
           UserGroupInformation previous = UserGroupInformation.getCurrentUGI();
           UserGroupInformation.setCurrentUGI(call.connection.ticket);
           try {
-            value = call(call.param, call.receivedTime);             // make the call
+            value = call(call.param, call.timestamp);             // make the call
           } catch (Throwable e) {
             LOG.info(getName()+", call "+call+": error: " + e, e);
             errorClass = e.getClass().getName();
@@ -939,7 +911,7 @@ public abstract class Server {
    * the number of handler threads that will be used to process calls.
    * 
    */
-  protected Server(String bindAddress, int port, Class paramClass, int handlerCount, Configuration conf,
+  protected Server(String bindAddress, int port, Class<?> paramClass, int handlerCount, Configuration conf,
                   String serverName) 
     throws IOException {
     this.bindAddress = bindAddress;
@@ -947,10 +919,8 @@ public abstract class Server {
     this.port = port;
     this.paramClass = paramClass;
     this.handlerCount = handlerCount;
-    this.timeout = conf.getInt("ipc.client.timeout", 10000);
     this.socketSendBufferSize = 0;
-    maxCallStartAge = (long) (timeout * MAX_CALL_QUEUE_TIME);
-    maxQueueSize = handlerCount * MAX_QUEUE_SIZE_PER_HANDLER;
+    this.maxQueueSize = handlerCount * MAX_QUEUE_SIZE_PER_HANDLER;
     this.callQueue  = new LinkedBlockingQueue<Call>(maxQueueSize); 
     this.maxIdleTime = conf.getInt("ipc.client.maxidletime", 120000);
     this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);
@@ -978,9 +948,6 @@ public abstract class Server {
     }
   }
   
-  /** Sets the timeout used for network i/o. */
-  public void setTimeout(int timeout) { this.timeout = timeout; }
-
   /** Sets the socket buffer size used for responding to RPCs */
   public void setSocketSendBufSize(int size) { this.socketSendBufferSize = size; }
 

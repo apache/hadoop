@@ -86,19 +86,6 @@ public interface RpcMgtMBean {
    */
   long getRpcOpsAvgQueueTimeMax();
   
-  
-  /**
-   * Number of Discarded RPC operations due to timeout in the last interval
-   * @return number of operations
-   */
-  int getRpcOpsDiscardedOpsNum();
-  
-  /**
-   * Average Queued time for Discarded RPC Operations in last interval
-   * @return time in msec
-   */
-  long getRpcOpsDiscardedOpsQtime();
-  
   /**
    * Reset all min max times
    */
