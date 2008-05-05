@@ -82,7 +82,10 @@ public class Text implements WritableComparable {
     set(utf8);
   }
   
-  /** Retuns the raw bytes. */
+  /**
+   * Returns the raw bytes; however, only data up to {@link #getLength()} is
+   * valid.
+   */
   public byte[] getBytes() {
     return bytes;
   }

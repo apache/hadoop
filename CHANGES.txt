@@ -147,6 +147,9 @@ Trunk (unreleased changes)
 
     HADOOP-3031. Fix javac warnings in test classes. (cdouglas)
 
+    HADOOP-3119. Update javadoc for Text::getBytes to better describe its
+    behavior. (Tim Nelson via cdouglas)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
