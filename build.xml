@@ -934,13 +934,6 @@
 		<arg value="test"/>
     </exec>
   </target>
-	
-  <target name="clean-libhdfs">
-    <exec dir="${libhdfs.src}" executable="${make.cmd}">
-      <env key="LIBHDFS_BUILD_DIR" value="${build.libhdfs}"/>
-    	<arg value="clean"/>
-    </exec>
-  </target>
 
   <target name="doc-libhdfs" depends="compile-libhdfs">
 	<exec dir="${libhdfs.src}" executable="${make.cmd}">

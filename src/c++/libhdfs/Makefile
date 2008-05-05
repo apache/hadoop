@@ -68,9 +68,6 @@ $(HDFS_READ_TEST): hdfs_read.c
 $(HDFS_WRITE_TEST): hdfs_write.c
 	$(CC) $(CPPFLAGS) $< -Wl,-rpath,. -L$(LIBHDFS_BUILD_DIR) -l$(LIB_NAME) -o $@
 
-clean:
-	$(RM) $(LIBHDFS_BUILD_DIR)/* 
-
 doc:
 	$(DOXYGEN) docs/Doxyfile
 

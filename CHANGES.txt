@@ -159,6 +159,9 @@ Trunk (unreleased changes)
     HADOOP-2294. Fix documentation in libhdfs to refer to the correct free
     function. (Craig Macdonald via cdouglas)
 
+    HADOOP-3335. Prevent the libhdfs build from deleting the wrong
+    files on make clean. (cutting via omalley)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
