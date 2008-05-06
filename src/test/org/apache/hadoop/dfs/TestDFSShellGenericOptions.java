@@ -100,8 +100,7 @@ public class TestDFSShellGenericOptions extends TestCase {
     FileSystem fs=null;
     try {
       ToolRunner.run(shell, args);
-      fs = new DistributedFileSystem(
-                                     NetUtils.createSocketAddr(namenode), 
+      fs = new DistributedFileSystem(NameNode.getAddress(namenode), 
                                      shell.getConf());
       assertTrue("Directory does not get created", 
                  fs.isDirectory(new Path("/data")));

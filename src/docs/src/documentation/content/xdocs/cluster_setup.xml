@@ -147,12 +147,12 @@
 		    </tr>
   		    <tr>
 		      <td>fs.default.name</td>
-  		      <td>Hostname or IP address of <code>NameNode</code>.</td>
-		      <td><em>host:port</em> pair.</td>
+  		      <td>URI of <code>NameNode</code>.</td>
+		      <td><em>hdfs://hostname/</em></td>
 		    </tr>
 		    <tr>
 		      <td>mapred.job.tracker</td>
-		      <td>Hostname or IP address of <code>JobTracker</code>.</td>
+		      <td>Host or IP and port of <code>JobTracker</code>.</td>
 		      <td><em>host:port</em> pair.</td>
 		    </tr>
 		    <tr>

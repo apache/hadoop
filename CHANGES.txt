@@ -55,6 +55,10 @@ Trunk (unreleased changes)
     HADOOP-2857. Allow libhdfs to set jvm options. (Craig Macdonald
     via omalley)
 
+    HADOOP-3317. Add default port for HDFS namenode.  The port in
+    "hdfs:" URIs now defaults to 8020, so that one may simply use URIs
+    of the form "hdfs://example.com/dir/file".
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().

@@ -210,8 +210,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
                                      conf.get("dfs.datanode.dns.interface","default"),
                                      conf.get("dfs.datanode.dns.nameserver","default"));
     }
-    InetSocketAddress nameNodeAddr =
-      NetUtils.createSocketAddr(FileSystem.getDefaultUri(conf).getAuthority());
+    InetSocketAddress nameNodeAddr = NameNode.getAddress(conf);
     
     this.estimateBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     this.socketTimeout =  conf.getInt("dfs.socket.timeout",

@@ -121,8 +121,8 @@ public class SecondaryNameNode implements FSConstants, Runnable {
     
     // Create connection to the namenode.
     shouldRun = true;
-    nameNodeAddr =
-      NetUtils.createSocketAddr(FileSystem.getDefaultUri(conf).getAuthority());
+    nameNodeAddr = NameNode.getAddress(conf);
+
     this.conf = conf;
     this.namenode =
         (ClientProtocol) RPC.waitForProxy(ClientProtocol.class,

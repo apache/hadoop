@@ -133,7 +133,7 @@ following:
 <ol>
 
 <li>The {@link org.apache.hadoop.dfs.NameNode} (Distributed Filesystem
-master) host and port.  This is specified with the configuration
+master) host.  This is specified with the configuration
 property <tt><a
 href="../hadoop-default.html#fs.default.name">fs.default.name</a></tt>.
 </li>
@@ -158,7 +158,7 @@ way, put the following in conf/hadoop-site.xml:
 
   <property>
     <name>fs.default.name</name>
-    <value>localhost:9000</value>
+    <value>hdfs://localhost/</value>
   </property>
 
   <property>
@@ -173,7 +173,7 @@ way, put the following in conf/hadoop-site.xml:
 
 </configuration></xmp>
 
-<p>(We also set the DFS replication level to 1 in order to
+<p>(We also set the HDFS replication level to 1 in order to
 reduce warnings when running on a single node.)</p>
 
 <p>Now check that the command <br><tt>ssh localhost</tt><br> does not
@@ -198,7 +198,7 @@ command, run on the master node:</p>
 
 <p>Input files are copied into the distributed filesystem as follows:</p>
 
-<p><tt>bin/hadoop dfs -put input input</tt></p>
+<p><tt>bin/hadoop fs -put input input</tt></p>
 
 <h3>Distributed execution</h3>
 
@@ -207,7 +207,7 @@ examine it:</p>
 
 <tt>
 bin/hadoop jar hadoop-*-examples.jar grep input output 'dfs[a-z.]+'<br>
-bin/hadoop dfs -get output output
+bin/hadoop fs -get output output
 cat output/*
 </tt>
 
@@ -215,48 +215,48 @@ cat output/*
 
 <p><tt>bin/stop-all.sh</tt></p>
 
-<h2>Fully-distributed operation</h2>
+<h3>Fully-distributed operation</h3>
 
-<p>Distributed operation is just like the pseudo-distributed operation
-described above, except:</p>
+<p>Fully distributed operation is just like the pseudo-distributed operation
+described above, except, in <tt>conf/hadoop-site.xml</tt>, specify:</p>
 
 <ol>
 
-<li>Specify hostname or IP address of the master server in the values
+<li>The hostname or IP address of your master server in the value
 for <tt><a
-href="../hadoop-default.html#fs.default.name">fs.default.name</a></tt>
-and <tt><a
-href="../hadoop-default.html#mapred.job.tracker">mapred.job.tracker</a></tt>
-in <tt>conf/hadoop-site.xml</tt>.  These are specified as
-<tt><em>host</em>:<em>port</em></tt> pairs.</li>
+href="../hadoop-default.html#fs.default.name">fs.default.name</a></tt>,
+  as <tt><em>hdfs://master.example.com/</em></tt>.</li>
 
-<li>Specify directories for <tt><a
+<li>The host and port of the your master server in the value
+of <tt><a href="../hadoop-default.html#mapred.job.tracker">mapred.job.tracker</a></tt>
+as <tt><em>master.example.com</em>:<em>port</em></tt>.</li>
+
+<li>Directories for <tt><a
 href="../hadoop-default.html#dfs.name.dir">dfs.name.dir</a></tt> and
-<tt><a
-href="../hadoop-default.html#dfs.data.dir">dfs.data.dir</a></tt> in
-<tt>conf/hadoop-site.xml</tt>.  These are used to hold distributed
-filesystem data on the master node and slave nodes respectively.  Note
+<tt><a href="../hadoop-default.html#dfs.data.dir">dfs.data.dir</a>.
+</tt>These are local directories used to hold distributed filesystem
+data on the master node and slave nodes respectively.  Note
 that <tt>dfs.data.dir</tt> may contain a space- or comma-separated
-list of directory names, so that data may be stored on multiple
+list of directory names, so that data may be stored on multiple local
 devices.</li>
 
-<li>Specify <tt><a
-href="../hadoop-default.html#mapred.local.dir">mapred.local.dir</a></tt>
-in <tt>conf/hadoop-site.xml</tt>.  This determines where temporary
-MapReduce data is written.  It also may be a list of directories.</li>
+<li><tt><a href="../hadoop-default.html#mapred.local.dir">mapred.local.dir</a></tt>,
+  the local directory where temporary MapReduce data is stored.  It
+  also may be a list of directories.</li>
 
-<li>Specify <tt><a
+<li><tt><a
 href="../hadoop-default.html#mapred.map.tasks">mapred.map.tasks</a></tt>
 and <tt><a
-href="../hadoop-default.html#mapred.reduce.tasks">mapred.reduce.tasks</a></tt>
-in <tt>conf/hadoop-site.xml</tt>.  As a rule of thumb, use 10x the
+href="../hadoop-default.html#mapred.reduce.tasks">mapred.reduce.tasks</a></tt>.
+As a rule of thumb, use 10x the
 number of slave processors for <tt>mapred.map.tasks</tt>, and 2x the
 number of slave processors for <tt>mapred.reduce.tasks</tt>.</li>
 
-<li>List all slave hostnames or IP addresses in your
-<tt>conf/slaves</tt> file, one per line.</li>
-
 </ol>
+
+<p>Finally, list all slave hostnames or IP addresses in your
+<tt>conf/slaves</tt> file, one per line.  Then format your filesystem
+and start your cluster on your master node, as above.
 
 </body>
 </html>

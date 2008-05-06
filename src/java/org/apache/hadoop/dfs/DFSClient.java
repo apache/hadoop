@@ -81,9 +81,7 @@ class DFSClient implements FSConstants {
     new TreeMap<String, OutputStream>();
  
   static ClientProtocol createNamenode(Configuration conf) throws IOException {
-    return createNamenode(NetUtils.createSocketAddr
-                          (FileSystem.getDefaultUri(conf).getAuthority()),
-                          conf);
+    return createNamenode(NameNode.getAddress(conf), conf);
   }
 
   static ClientProtocol createNamenode( InetSocketAddress nameNodeAddr,
@@ -132,9 +130,7 @@ class DFSClient implements FSConstants {
    * Create a new DFSClient connected to the default namenode.
    */
   public DFSClient(Configuration conf) throws IOException {
-    this(NetUtils.createSocketAddr(FileSystem.getDefaultUri(conf)
-                                   .getAuthority()),
-         conf);
+    this(NameNode.getAddress(conf), conf);
   }
 
   /** 

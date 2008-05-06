@@ -116,21 +116,40 @@ public class NetUtils {
    *   <fs>://<host>:<port>/<path>
    */
   public static InetSocketAddress createSocketAddr(String target) {
+    return createSocketAddr(target, -1);
+  }
+
+  /**
+   * Util method to build socket addr from either:
+   *   <host>
+   *   <host>:<post>
+   *   <fs>://<host>:<port>/<path>
+   */
+  public static InetSocketAddress createSocketAddr(String target,
+                                                   int defaultPort) {
     int colonIndex = target.indexOf(':');
-    if (colonIndex < 0) {
+    if (colonIndex < 0 && defaultPort == -1) {
       throw new RuntimeException("Not a host:port pair: " + target);
     }
     String hostname;
-    int port;
+    int port = -1;
     if (!target.contains("/")) {
-      // must be the old style <host>:<port>
-      hostname = target.substring(0, colonIndex);
-      port = Integer.parseInt(target.substring(colonIndex + 1));
+      if (colonIndex == -1) {
+        hostname = target;
+      } else {
+        // must be the old style <host>:<port>
+        hostname = target.substring(0, colonIndex);
+        port = Integer.parseInt(target.substring(colonIndex + 1));
+      }
     } else {
       // a new uri
       URI addr = new Path(target).toUri();
       hostname = addr.getHost();
       port = addr.getPort();
+    }
+
+    if (port == -1) {
+      port = defaultPort;
     }
   
     if (getStaticResolution(hostname) != null) {

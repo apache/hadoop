@@ -21,17 +21,28 @@
 	</header>
 	<body>
 		<section>
-			<title> DFShell </title>
+			<title> FS Shell </title>
 			<p>
-      The HDFS shell is invoked by 
-      <code>bin/hadoop dfs &lt;args&gt;</code>.
-      All the HDFS shell commands take path URIs as arguments. The URI format is <em>scheme://autority/path</em>. For HDFS the scheme is <em>hdfs</em>, and for the local filesystem the scheme is <em>file</em>. The scheme and authority are optional. If not specified, the default scheme specified in the configuration is used. An HDFS file or directory such as <em>/parent/child</em> can be specified as <em>hdfs://namenode:namenodeport/parent/child</em> or simply as <em>/parent/child</em> (given that your configuration is set to point to <em>namenode:namenodeport</em>). Most of the commands in HDFS shell behave like corresponding Unix commands. Differences are described with each of the commands. Error information is sent to <em>stderr</em> and the output is sent to <em>stdout</em>. 
+      The FileSystem (FS) shell is invoked by 
+      <code>bin/hadoop fs &lt;args&gt;</code>.
+      All the FS shell commands take path URIs as arguments. The URI
+      format is <em>scheme://autority/path</em>. For HDFS the scheme
+      is <em>hdfs</em>, and for the local filesystem the scheme
+      is <em>file</em>. The scheme and authority are optional. If not
+      specified, the default scheme specified in the configuration is
+      used. An HDFS file or directory such as <em>/parent/child</em>
+      can be specified as <em>hdfs://namenodehost/parent/child</em> or
+      simply as <em>/parent/child</em> (given that your configuration
+      is set to point to <em>hdfs://namenodehost</em>). Most of the
+      commands in FS shell behave like corresponding Unix
+      commands. Differences are described with each of the
+      commands. Error information is sent to <em>stderr</em> and the
+      output is sent to <em>stdout</em>.
   </p>
-		</section>
 		<section>
 			<title> cat </title>
 			<p>
-				<code>Usage: hadoop dfs -cat URI [URI &#x2026;]</code>
+				<code>Usage: hadoop fs -cat URI [URI &#x2026;]</code>
 			</p>
 			<p>
 		   Copies source paths to <em>stdout</em>. 
@@ -39,11 +50,11 @@
 			<p>Example:</p>
 			<ul>
 				<li>
-					<code> hadoop dfs -cat hdfs://host1:port1/file1 hdfs://host2:port2/file2 
+					<code> hadoop fs -cat hdfs://nn1.example.com/file1 hdfs://nn2.example.com/file2 
 		   </code>
 				</li>
 				<li>
-					<code>hadoop dfs -cat file:///file3 /user/hadoop/file4 </code>
+					<code>hadoop fs -cat file:///file3 /user/hadoop/file4 </code>
 				</li>
 			</ul>
 			<p>Exit Code:<br/>
@@ -52,7 +63,7 @@
 		<section>
 			<title> chgrp </title>
 			<p>
-				<code>Usage: hadoop dfs -chgrp [-R] GROUP URI [URI &#x2026;]</code>
+				<code>Usage: hadoop fs -chgrp [-R] GROUP URI [URI &#x2026;]</code>
 			</p>
 			<p>
 	    Change group association of files. With <code>-R</code>, make the change recursively through the directory structure. The user must be the owner of files, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
@@ -61,7 +72,7 @@
 		<section>
 			<title> chmod </title>
 			<p>
-				<code>Usage: hadoop dfs -chmod [-R] &lt;MODE[,MODE]... | OCTALMODE&gt; URI [URI &#x2026;]</code>
+				<code>Usage: hadoop fs -chmod [-R] &lt;MODE[,MODE]... | OCTALMODE&gt; URI [URI &#x2026;]</code>
 			</p>
 			<p>
 	    Change the permissions of files. With <code>-R</code>, make the change recursively through the directory structure. The user must be the owner of the file, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
@@ -70,7 +81,7 @@
 		<section>
 			<title> chown </title>
 			<p>
-				<code>Usage: hadoop dfs -chown [-R] [OWNER][:[GROUP]] URI [URI ]</code>
+				<code>Usage: hadoop fs -chown [-R] [OWNER][:[GROUP]] URI [URI ]</code>
 			</p>
 			<p>
 	    Change the owner of files. With <code>-R</code>, make the change recursively through the directory structure. The user must be a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
@@ -79,21 +90,21 @@
 		<section>
 			<title>copyFromLocal</title>
 			<p>
-				<code>Usage: hadoop dfs -copyFromLocal &lt;localsrc&gt; URI</code>
+				<code>Usage: hadoop fs -copyFromLocal &lt;localsrc&gt; URI</code>
 			</p>
 			<p>Similar to <a href="#putlink"><strong>put</strong></a> command, except that the source is restricted to a local file reference. </p>
 		</section>
 		<section>
 			<title> copyToLocal</title>
 			<p>
-				<code>Usage: hadoop dfs -copyToLocal [-ignorecrc] [-crc] URI &lt;localdst&gt;</code>
+				<code>Usage: hadoop fs -copyToLocal [-ignorecrc] [-crc] URI &lt;localdst&gt;</code>
 			</p>
 			<p> Similar to <a href="#getlink"><strong>get</strong></a> command, except that the destination is restricted to a local file reference.</p>
 		</section>
 		<section>
 			<title> cp </title>
 			<p>
-				<code>Usage: hadoop dfs -cp URI [URI &#x2026;] &lt;dest&gt;</code>
+				<code>Usage: hadoop fs -cp URI [URI &#x2026;] &lt;dest&gt;</code>
 			</p>
 			<p>
 	    Copy files from source to destination. This command allows multiple sources as well in which case the destination must be a directory.
@@ -101,10 +112,10 @@
 	    Example:</p>
 			<ul>
 				<li>
-					<code> hadoop dfs -cp /user/hadoop/file1 /user/hadoop/file2</code>
+					<code> hadoop fs -cp /user/hadoop/file1 /user/hadoop/file2</code>
 				</li>
 				<li>
-					<code> hadoop dfs -cp /user/hadoop/file1 /user/hadoop/file2 /user/hadoop/dir </code>
+					<code> hadoop fs -cp /user/hadoop/file1 /user/hadoop/file2 /user/hadoop/dir </code>
 				</li>
 			</ul>
 			<p>Exit Code:</p>
@@ -115,17 +126,17 @@
 		<section>
 			<title>du</title>
 			<p>
-				<code>Usage: hadoop dfs -du URI [URI &#x2026;]</code>
+				<code>Usage: hadoop fs -du URI [URI &#x2026;]</code>
 			</p>
 			<p>
 	     Displays aggregate length of  files contained in the directory or the length of a file in case its just a file.<br/>
-	     Example:<br/><code>hadoop dfs -du /user/hadoop/dir1 /user/hadoop/file1 hdfs://host:port/user/hadoop/dir1</code><br/>
+	     Example:<br/><code>hadoop fs -du /user/hadoop/dir1 /user/hadoop/file1 hdfs://nn.example.com/user/hadoop/dir1</code><br/>
 	     Exit Code:<br/><code> Returns 0 on success and -1 on error. </code><br/></p>
 		</section>
 		<section>
 			<title> dus </title>
 			<p>
-				<code>Usage: hadoop dfs -dus &lt;args&gt;</code>
+				<code>Usage: hadoop fs -dus &lt;args&gt;</code>
 			</p>
 			<p>
 	    Displays a summary of file lengths.
@@ -134,7 +145,7 @@
 		<section>
 			<title> expunge </title>
 			<p>
-				<code>Usage: hadoop dfs -expunge</code>
+				<code>Usage: hadoop fs -expunge</code>
 			</p>
 			<p>Empty the Trash. Refer to <a href="hdfs_design.html">HDFS Design</a> for more information on Trash feature.
 	   </p>
@@ -142,7 +153,7 @@
 		<section>
 			<title id="getlink"> get </title>
 			<p>
-				<code>Usage: hadoop dfs -get [-ignorecrc] [-crc] &lt;src&gt; &lt;localdst&gt;</code>
+				<code>Usage: hadoop fs -get [-ignorecrc] [-crc] &lt;src&gt; &lt;localdst&gt;</code>
 				<br/>
 			</p>
 			<p>
@@ -153,10 +164,10 @@
 			<p>Example:</p>
 			<ul>
 				<li>
-					<code> hadoop dfs -get /user/hadoop/file localfile </code>
+					<code> hadoop fs -get /user/hadoop/file localfile </code>
 				</li>
 				<li>
-					<code> hadoop dfs -get hdfs://host:port/user/hadoop/file localfile</code>
+					<code> hadoop fs -get hdfs://nn.example.com/user/hadoop/file localfile</code>
 				</li>
 			</ul>
 			<p>Exit Code:</p>
@@ -167,7 +178,7 @@
 		<section>
 			<title> getmerge </title>
 			<p>
-				<code>Usage: hadoop dfs -getmerge &lt;src&gt; &lt;localdst&gt; [addnl]</code>
+				<code>Usage: hadoop fs -getmerge &lt;src&gt; &lt;localdst&gt; [addnl]</code>
 			</p>
 			<p>
 	  Takes a source directory and a destination file as input and concatenates files in src into the destination local file. Optionally <code>addnl</code> can be set to enable adding a newline character at the end of each file.  
@@ -176,25 +187,25 @@
 		<section>
 			<title> ls </title>
 			<p>
-				<code>Usage: hadoop dfs -ls &lt;args&gt;</code>
+				<code>Usage: hadoop fs -ls &lt;args&gt;</code>
 			</p>
 			<p>
 		 For a file returns stat on the file with the following format:<br/><code>filename &lt;number of replicas&gt; filesize modification_date modification_time permissions userid groupid</code><br/>
 	         For a directory it returns list of its direct children as in unix.
 	         A directory is listed as: <br/><code>dirname &lt;dir&gt; modification_time modification_time permissions userid groupid</code><br/>
-	         Example:<br/><code>hadoop dfs -ls /user/hadoop/file1 /user/hadoop/file2 hdfs://host:port/user/hadoop/dir1 /nonexistentfile</code><br/>
+	         Example:<br/><code>hadoop fs -ls /user/hadoop/file1 /user/hadoop/file2 hdfs://nn.example.com/user/hadoop/dir1 /nonexistentfile</code><br/>
 	         Exit Code:<br/><code> Returns 0 on success and -1 on error. </code><br/></p>
 		</section>
 		<section>
 			<title>lsr</title>
-			<p><code>Usage: hadoop dfs -lsr &lt;args&gt;</code><br/>
+			<p><code>Usage: hadoop fs -lsr &lt;args&gt;</code><br/>
 	      Recursive version of <code>ls</code>. Similar to Unix <code>ls -R</code>.
 	      </p>
 		</section>
 		<section>
 			<title> mkdir </title>
 			<p>
-				<code>Usage: hadoop dfs -mkdir &lt;paths&gt;</code>
+				<code>Usage: hadoop fs -mkdir &lt;paths&gt;</code>
 				<br/>
 			</p>
 			<p>
@@ -203,10 +214,10 @@
 			<p>Example:</p>
 			<ul>
 				<li>
-					<code>hadoop dfs -mkdir /user/hadoop/dir1 /user/hadoop/dir2 </code>
+					<code>hadoop fs -mkdir /user/hadoop/dir1 /user/hadoop/dir2 </code>
 				</li>
 				<li>
-					<code>hadoop dfs -mkdir hdfs://host1:port1/user/hadoop/dir hdfs://host2:port2/user/hadoop/dir
+					<code>hadoop fs -mkdir hdfs://nn1.example.com/user/hadoop/dir hdfs://nn2.example.com/user/hadoop/dir
 	  </code>
 				</li>
 			</ul>
@@ -226,7 +237,7 @@
 		<section>
 			<title> mv </title>
 			<p>
-				<code>Usage: hadoop dfs -mv URI [URI &#x2026;] &lt;dest&gt;</code>
+				<code>Usage: hadoop fs -mv URI [URI &#x2026;] &lt;dest&gt;</code>
 			</p>
 			<p>
 	    Moves files from source to destination. This command allows multiple sources as well in which case the destination needs to be a directory. Moving files across filesystems is not permitted.
@@ -235,10 +246,10 @@
 	    </p>
 			<ul>
 				<li>
-					<code> hadoop dfs -mv /user/hadoop/file1 /user/hadoop/file2</code>
+					<code> hadoop fs -mv /user/hadoop/file1 /user/hadoop/file2</code>
 				</li>
 				<li>
-					<code> hadoop dfs -mv hdfs://host:port/file1 hdfs://host:port/file2 hdfs://host:port/file3 hdfs://host:port/dir1</code>
+					<code> hadoop fs -mv hdfs://nn.example.com/file1 hdfs://nn.example.com/file2 hdfs://nn.example.com/file3 hdfs://nn.example.com/dir1</code>
 				</li>
 			</ul>
 			<p>Exit Code:</p>
@@ -249,21 +260,21 @@
 		<section>
 			<title id="putlink"> put </title>
 			<p>
-				<code>Usage: hadoop dfs -put &lt;localsrc&gt; ... &lt;dst&gt;</code>
+				<code>Usage: hadoop fs -put &lt;localsrc&gt; ... &lt;dst&gt;</code>
 			</p>
 			<p>Copy single src, or multiple srcs from local file system to the destination filesystem. Also reads input from stdin and writes to destination filesystem.<br/>
 	   </p>
 			<ul>
 				<li>
-					<code> hadoop dfs -put localfile /user/hadoop/hadoopfile</code>
+					<code> hadoop fs -put localfile /user/hadoop/hadoopfile</code>
 				</li>
 				<li>
-					<code> hadoop dfs -put localfile1 localfile2 /user/hadoop/hadoopdir</code>
+					<code> hadoop fs -put localfile1 localfile2 /user/hadoop/hadoopdir</code>
 				</li>
 				<li>
-					<code> hadoop dfs -put localfile hdfs://host:port/hadoop/hadoopfile</code>
+					<code> hadoop fs -put localfile hdfs://nn.example.com/hadoop/hadoopfile</code>
 				</li>
-				<li><code>hadoop dfs -put - hdfs://host:port/hadoop/hadoopfile</code><br/>Reads the input from stdin.</li>
+				<li><code>hadoop fs -put - hdfs://nn.example.com/hadoop/hadoopfile</code><br/>Reads the input from stdin.</li>
 			</ul>
 			<p>Exit Code:</p>
 			<p>
@@ -273,7 +284,7 @@
 		<section>
 			<title> rm </title>
 			<p>
-				<code>Usage: hadoop dfs -rm URI [URI &#x2026;] </code>
+				<code>Usage: hadoop fs -rm URI [URI &#x2026;] </code>
 			</p>
 			<p>
 	   Delete files specified as args. Only deletes non empty directory and files. Refer to rmr for recursive deletes.<br/>
@@ -281,7 +292,7 @@
 	   </p>
 			<ul>
 				<li>
-					<code> hadoop dfs -rm hdfs://host:port/file /user/hadoop/emptydir </code>
+					<code> hadoop fs -rm hdfs://nn.example.com/file /user/hadoop/emptydir </code>
 				</li>
 			</ul>
 			<p>Exit Code:</p>
@@ -292,17 +303,17 @@
 		<section>
 			<title> rmr </title>
 			<p>
-				<code>Usage: hadoop dfs -rmr URI [URI &#x2026;]</code>
+				<code>Usage: hadoop fs -rmr URI [URI &#x2026;]</code>
 			</p>
 			<p>Recursive version of delete.<br/>
 	   Example:
 	   </p>
 			<ul>
 				<li>
-					<code> hadoop dfs -rmr /user/hadoop/dir </code>
+					<code> hadoop fs -rmr /user/hadoop/dir </code>
 				</li>
 				<li>
-					<code> hadoop dfs -rmr hdfs://host:port/user/hadoop/dir </code>
+					<code> hadoop fs -rmr hdfs://nn.example.com/user/hadoop/dir </code>
 				</li>
 			</ul>
 			<p>Exit Code:</p>
@@ -313,7 +324,7 @@
 		<section>
 			<title> setrep </title>
 			<p>
-				<code>Usage: hadoop dfs -setrep [-R] &lt;path&gt;</code>
+				<code>Usage: hadoop fs -setrep [-R] &lt;path&gt;</code>
 			</p>
 			<p>
 	   Changes the replication factor of a file. -R option is for recursively increasing the replication factor of files within a directory.
@@ -321,7 +332,7 @@
 			<p>Example:</p>
 			<ul>
 				<li>
-					<code> hadoop dfs -setrep -w 3 -R /user/hadoop/dir1 </code>
+					<code> hadoop fs -setrep -w 3 -R /user/hadoop/dir1 </code>
 				</li>
 			</ul>
 			<p>Exit Code:</p>
@@ -332,7 +343,7 @@
 		<section>
 			<title> stat </title>
 			<p>
-				<code>Usage: hadoop dfs -stat URI [URI &#x2026;]</code>
+				<code>Usage: hadoop fs -stat URI [URI &#x2026;]</code>
 			</p>
 			<p>
 	   Returns the stat information on the path.
@@ -340,7 +351,7 @@
 			<p>Example:</p>
 			<ul>
 				<li>
-					<code> hadoop dfs -stat path </code>
+					<code> hadoop fs -stat path </code>
 				</li>
 			</ul>
 			<p>Exit Code:<br/>
@@ -349,7 +360,7 @@
 		<section>
 			<title> tail </title>
 			<p>
-				<code>Usage: hadoop dfs -tail [-f] URI </code>
+				<code>Usage: hadoop fs -tail [-f] URI </code>
 			</p>
 			<p>
 	   Displays last kilobyte of the file to stdout. -f option can be used as in Unix.
@@ -357,7 +368,7 @@
 			<p>Example:</p>
 			<ul>
 				<li>
-					<code> hadoop dfs -tail pathname </code>
+					<code> hadoop fs -tail pathname </code>
 				</li>
 			</ul>
 			<p>Exit Code: <br/>
@@ -366,7 +377,7 @@
 		<section>
 			<title> test </title>
 			<p>
-				<code>Usage: hadoop dfs -test -[ezd] URI</code>
+				<code>Usage: hadoop fs -test -[ezd] URI</code>
 			</p>
 			<p>
 	   Options: <br/>
@@ -376,14 +387,14 @@
 			<p>Example:</p>
 			<ul>
 				<li>
-					<code> hadoop dfs -test -e filename </code>
+					<code> hadoop fs -test -e filename </code>
 				</li>
 			</ul>
 		</section>
 		<section>
 			<title> text </title>
 			<p>
-				<code>Usage: hadoop dfs -text &lt;src&gt;</code>
+				<code>Usage: hadoop fs -text &lt;src&gt;</code>
 				<br/>
 			</p>
 			<p>
@@ -393,7 +404,7 @@
 		<section>
 			<title> touchz </title>
 			<p>
-				<code>Usage: hadoop dfs -touchz URI [URI &#x2026;]</code>
+				<code>Usage: hadoop fs -touchz URI [URI &#x2026;]</code>
 				<br/>
 			</p>
 			<p>
@@ -408,5 +419,6 @@
 			<p>Exit Code:<br/>
 	   <code> Returns 0 on success and -1 on error.</code></p>
 		</section>
+        </section>
 	</body>
 </document>

@@ -163,7 +163,7 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
                   -mapper "xargs cat"  \
                   -reducer "cat"  \
                   -output "/user/me/samples/cachefile/out" \  
-                  -cacheArchive 'hdfs://hadoop-nn1.example.com:8020/user/me/samples/cachefile/cachedir.jar#testlink' \  
+                  -cacheArchive 'hdfs://hadoop-nn1.example.com/user/me/samples/cachefile/cachedir.jar#testlink' \  
                   -jobconf mapred.map.tasks=1 \
                   -jobconf mapred.reduce.tasks=1 \ 
                   -jobconf mapred.job.name="Experiment"

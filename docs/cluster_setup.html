@@ -120,10 +120,10 @@ document.write("Last Published: " + document.lastModified);
 <a href="hdfs_user_guide.html">HDFS User Guide</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_shell.html">HDFS Shell Guide</a>
+<a href="hdfs_permissions_guide.html">HDFS Permissions Guide</a>
 </div>
 <div class="menuitem">
-<a href="hdfs_permissions_guide.html">HDFS Permissions Guide</a>
+<a href="hdfs_shell.html">FS Shell Guide</a>
 </div>
 <div class="menuitem">
 <a href="mapred_tutorial.html">Map-Reduce Tutorial</a>
@@ -347,15 +347,15 @@ document.write("Last Published: " + document.lastModified);
 <tr>
 		      
 <td colspan="1" rowspan="1">fs.default.name</td>
-  		      <td colspan="1" rowspan="1">Hostname or IP address of <span class="codefrag">NameNode</span>.</td>
-		      <td colspan="1" rowspan="1"><em>host:port</em> pair.</td>
+  		      <td colspan="1" rowspan="1">URI of <span class="codefrag">NameNode</span>.</td>
+		      <td colspan="1" rowspan="1"><em>hdfs://hostname/</em></td>
 		    
 </tr>
 		    
 <tr>
 		      
 <td colspan="1" rowspan="1">mapred.job.tracker</td>
-		      <td colspan="1" rowspan="1">Hostname or IP address of <span class="codefrag">JobTracker</span>.</td>
+		      <td colspan="1" rowspan="1">Host or IP and port of <span class="codefrag">JobTracker</span>.</td>
 		      <td colspan="1" rowspan="1"><em>host:port</em> pair.</td>
 		    
 </tr>
@@ -454,7 +454,7 @@ document.write("Last Published: " + document.lastModified);
           <a href="api/org/apache/hadoop/conf/Configuration.html#FinalParams">
           final</a> to ensure that they cannot be overriden by user-applications.
           </p>
-<a name="N101BD"></a><a name="Real-World+Cluster+Configurations"></a>
+<a name="N101BC"></a><a name="Real-World+Cluster+Configurations"></a>
 <h5>Real-World Cluster Configurations</h5>
 <p>This section lists some non-default configuration parameters which 
             have been used to run the <em>sort</em> benchmark on very large 
@@ -511,8 +511,7 @@ document.write("Last Published: " + document.lastModified);
 <td colspan="1" rowspan="1">mapred.child.java.opts</td>
                     <td colspan="1" rowspan="1">-Xmx512M</td>
                     <td colspan="1" rowspan="1">
-                      Larger heap-size for child jvms of maps/reduces. Also controls the amount 
-                      of virtual memory that a streaming/pipes task gets.
+                      Larger heap-size for child jvms of maps/reduces. 
                     </td>
                   
 </tr>
@@ -616,7 +615,7 @@ document.write("Last Published: " + document.lastModified);
 </li>
             
 </ul>
-<a name="N102DA"></a><a name="Slaves"></a>
+<a name="N102D9"></a><a name="Slaves"></a>
 <h4>Slaves</h4>
 <p>Typically you choose one machine in the cluster to act as the 
           <span class="codefrag">NameNode</span> and one machine as to act as the 
@@ -625,14 +624,14 @@ document.write("Last Published: " + document.lastModified);
           referred to as <em>slaves</em>.</p>
 <p>List all slave hostnames or IP addresses in your 
           <span class="codefrag">conf/slaves</span> file, one per line.</p>
-<a name="N102F9"></a><a name="Logging"></a>
+<a name="N102F8"></a><a name="Logging"></a>
 <h4>Logging</h4>
 <p>Hadoop uses the <a href="http://logging.apache.org/log4j/">Apache 
           log4j</a> via the <a href="http://commons.apache.org/logging/">Apache 
           Commons Logging</a> framework for logging. Edit the 
           <span class="codefrag">conf/log4j.properties</span> file to customize the Hadoop 
           daemons' logging configuration (log-formats and so on).</p>
-<a name="N1030D"></a><a name="History+Logging"></a>
+<a name="N1030C"></a><a name="History+Logging"></a>
 <h5>History Logging</h5>
 <p> The job history files are stored in central location 
             <span class="codefrag"> hadoop.job.history.location </span> which can be on DFS also,
@@ -666,7 +665,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N10345"></a><a name="Hadoop+Rack+Awareness"></a>
+<a name="N10344"></a><a name="Hadoop+Rack+Awareness"></a>
 <h2 class="h3">Hadoop Rack Awareness</h2>
 <div class="section">
 <p>The HDFS and the Map-Reduce components are rack-aware.</p>
@@ -689,7 +688,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N1036B"></a><a name="Hadoop+Startup"></a>
+<a name="N1036A"></a><a name="Hadoop+Startup"></a>
 <h2 class="h3">Hadoop Startup</h2>
 <div class="section">
 <p>To start a Hadoop cluster you will need to start both the HDFS and 
@@ -724,7 +723,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N103B1"></a><a name="Hadoop+Shutdown"></a>
+<a name="N103B0"></a><a name="Hadoop+Shutdown"></a>
 <h2 class="h3">Hadoop Shutdown</h2>
 <div class="section">
 <p>

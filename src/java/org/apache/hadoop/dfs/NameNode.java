@@ -85,6 +85,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     }
   }
     
+  public static final int DEFAULT_PORT = 8020;
+
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.NameNode");
   public static final Log stateChangeLog = LogFactory.getLog("org.apache.hadoop.dfs.StateChange");
 
@@ -110,7 +112,20 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     return myMetrics;
   }
   
-    
+  static InetSocketAddress getAddress(String address) {
+    return NetUtils.createSocketAddr(address, DEFAULT_PORT);
+  }
+
+  static InetSocketAddress getAddress(Configuration conf) {
+    return getAddress(FileSystem.getDefaultUri(conf).getAuthority());
+  }
+
+  static URI getUri(InetSocketAddress namenode) {
+    int port = namenode.getPort();
+    String portString = port == DEFAULT_PORT ? "" : (":"+port);
+    return URI.create("hdfs://"+ namenode.getHostName()+portString);
+  }
+
   /**
    * Initialize the server
    * 
@@ -118,14 +133,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * @param conf the configuration
    */
   private void initialize(String address, Configuration conf) throws IOException {
-    InetSocketAddress socAddr = NetUtils.createSocketAddr(address);
+    InetSocketAddress socAddr = NameNode.getAddress(address);
     this.handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
     this.server = RPC.getServer(this, socAddr.getHostName(), socAddr.getPort(),
                                 handlerCount, false, conf);
 
     // The rpc-server port can be ephemeral... ensure we have the correct info
     this.nameNodeAddress = this.server.getListenerAddress(); 
-    FileSystem.setDefaultUri(conf, "hdfs://"+nameNodeAddress.getHostName() + ":" + nameNodeAddress.getPort());
+    FileSystem.setDefaultUri(conf, getUri(nameNodeAddress));
     LOG.info("Namenode up at: " + this.nameNodeAddress);
 
     myMetrics = new NameNodeMetrics(conf, this);

@@ -119,11 +119,11 @@ document.write("Last Published: " + document.lastModified);
 <div class="menuitem">
 <a href="hdfs_user_guide.html">HDFS User Guide</a>
 </div>
-<div class="menupage">
-<div class="menupagetitle">HDFS Shell Guide</div>
-</div>
 <div class="menuitem">
 <a href="hdfs_permissions_guide.html">HDFS Permissions Guide</a>
+</div>
+<div class="menupage">
+<div class="menupagetitle">FS Shell Guide</div>
 </div>
 <div class="menuitem">
 <a href="mapred_tutorial.html">Map-Reduce Tutorial</a>
@@ -176,8 +176,8 @@ document.write("Last Published: " + document.lastModified);
 <div id="minitoc-area">
 <ul class="minitoc">
 <li>
-<a href="#DFShell"> DFShell </a>
-</li>
+<a href="#FS+Shell"> FS Shell </a>
+<ul class="minitoc">
 <li>
 <a href="#cat"> cat </a>
 </li>
@@ -257,24 +257,35 @@ document.write("Last Published: " + document.lastModified);
 <a href="#touchz"> touchz </a>
 </li>
 </ul>
+</li>
+</ul>
 </div>
 		
-<a name="N1000D"></a><a name="DFShell"></a>
-<h2 class="h3"> DFShell </h2>
+<a name="N1000D"></a><a name="FS+Shell"></a>
+<h2 class="h3"> FS Shell </h2>
 <div class="section">
 <p>
-      The HDFS shell is invoked by 
-      <span class="codefrag">bin/hadoop dfs &lt;args&gt;</span>.
-      All the HDFS shell commands take path URIs as arguments. The URI format is <em>scheme://autority/path</em>. For HDFS the scheme is <em>hdfs</em>, and for the local filesystem the scheme is <em>file</em>. The scheme and authority are optional. If not specified, the default scheme specified in the configuration is used. An HDFS file or directory such as <em>/parent/child</em> can be specified as <em>hdfs://namenode:namenodeport/parent/child</em> or simply as <em>/parent/child</em> (given that your configuration is set to point to <em>namenode:namenodeport</em>). Most of the commands in HDFS shell behave like corresponding Unix commands. Differences are described with each of the commands. Error information is sent to <em>stderr</em> and the output is sent to <em>stdout</em>. 
+      The FileSystem (FS) shell is invoked by 
+      <span class="codefrag">bin/hadoop fs &lt;args&gt;</span>.
+      All the FS shell commands take path URIs as arguments. The URI
+      format is <em>scheme://autority/path</em>. For HDFS the scheme
+      is <em>hdfs</em>, and for the local filesystem the scheme
+      is <em>file</em>. The scheme and authority are optional. If not
+      specified, the default scheme specified in the configuration is
+      used. An HDFS file or directory such as <em>/parent/child</em>
+      can be specified as <em>hdfs://namenodehost/parent/child</em> or
+      simply as <em>/parent/child</em> (given that your configuration
+      is set to point to <em>hdfs://namenodehost</em>). Most of the
+      commands in FS shell behave like corresponding Unix
+      commands. Differences are described with each of the
+      commands. Error information is sent to <em>stderr</em> and the
+      output is sent to <em>stdout</em>.
   </p>
-</div>
-		
-<a name="N10035"></a><a name="cat"></a>
-<h2 class="h3"> cat </h2>
-<div class="section">
+<a name="N10034"></a><a name="cat"></a>
+<h3 class="h4"> cat </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -cat URI [URI &hellip;]</span>
+<span class="codefrag">Usage: hadoop fs -cat URI [URI &hellip;]</span>
 			
 </p>
 <p>
@@ -285,14 +296,14 @@ document.write("Last Published: " + document.lastModified);
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -cat hdfs://host1:port1/file1 hdfs://host2:port2/file2 
+<span class="codefrag"> hadoop fs -cat hdfs://nn1.example.com/file1 hdfs://nn2.example.com/file2 
 		   </span>
 				
 </li>
 				
 <li>
 					
-<span class="codefrag">hadoop dfs -cat file:///file3 /user/hadoop/file4 </span>
+<span class="codefrag">hadoop fs -cat file:///file3 /user/hadoop/file4 </span>
 				
 </li>
 			
@@ -301,75 +312,57 @@ document.write("Last Published: " + document.lastModified);
 		   
 <span class="codefrag"> Returns 0 on success and -1 on error. </span>
 </p>
-</div>
-		
-<a name="N10061"></a><a name="chgrp"></a>
-<h2 class="h3"> chgrp </h2>
-<div class="section">
+<a name="N10060"></a><a name="chgrp"></a>
+<h3 class="h4"> chgrp </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -chgrp [-R] GROUP URI [URI &hellip;]</span>
+<span class="codefrag">Usage: hadoop fs -chgrp [-R] GROUP URI [URI &hellip;]</span>
 			
 </p>
 <p>
 	    Change group association of files. With <span class="codefrag">-R</span>, make the change recursively through the directory structure. The user must be the owner of files, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
 	    </p>
-</div>
-		
-<a name="N10078"></a><a name="chmod"></a>
-<h2 class="h3"> chmod </h2>
-<div class="section">
+<a name="N10077"></a><a name="chmod"></a>
+<h3 class="h4"> chmod </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -chmod [-R] &lt;MODE[,MODE]... | OCTALMODE&gt; URI [URI &hellip;]</span>
+<span class="codefrag">Usage: hadoop fs -chmod [-R] &lt;MODE[,MODE]... | OCTALMODE&gt; URI [URI &hellip;]</span>
 			
 </p>
 <p>
 	    Change the permissions of files. With <span class="codefrag">-R</span>, make the change recursively through the directory structure. The user must be the owner of the file, or else a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
 	    </p>
-</div>
-		
-<a name="N1008F"></a><a name="chown"></a>
-<h2 class="h3"> chown </h2>
-<div class="section">
+<a name="N1008E"></a><a name="chown"></a>
+<h3 class="h4"> chown </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -chown [-R] [OWNER][:[GROUP]] URI [URI ]</span>
+<span class="codefrag">Usage: hadoop fs -chown [-R] [OWNER][:[GROUP]] URI [URI ]</span>
 			
 </p>
 <p>
 	    Change the owner of files. With <span class="codefrag">-R</span>, make the change recursively through the directory structure. The user must be a super-user. Additional information is in the <a href="hdfs_permissions_guide.html">Permissions User Guide</a>.
 	    </p>
-</div>
-		
-<a name="N100A6"></a><a name="copyFromLocal"></a>
-<h2 class="h3">copyFromLocal</h2>
-<div class="section">
+<a name="N100A5"></a><a name="copyFromLocal"></a>
+<h3 class="h4">copyFromLocal</h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -copyFromLocal &lt;localsrc&gt; URI</span>
+<span class="codefrag">Usage: hadoop fs -copyFromLocal &lt;localsrc&gt; URI</span>
 			
 </p>
 <p>Similar to <a href="#putlink"><strong>put</strong></a> command, except that the source is restricted to a local file reference. </p>
-</div>
-		
-<a name="N100BB"></a><a name="copyToLocal"></a>
-<h2 class="h3"> copyToLocal</h2>
-<div class="section">
+<a name="N100BA"></a><a name="copyToLocal"></a>
+<h3 class="h4"> copyToLocal</h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -copyToLocal [-ignorecrc] [-crc] URI &lt;localdst&gt;</span>
+<span class="codefrag">Usage: hadoop fs -copyToLocal [-ignorecrc] [-crc] URI &lt;localdst&gt;</span>
 			
 </p>
 <p> Similar to <a href="#getlink"><strong>get</strong></a> command, except that the destination is restricted to a local file reference.</p>
-</div>
-		
-<a name="N100D0"></a><a name="cp"></a>
-<h2 class="h3"> cp </h2>
-<div class="section">
+<a name="N100CF"></a><a name="cp"></a>
+<h3 class="h4"> cp </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -cp URI [URI &hellip;] &lt;dest&gt;</span>
+<span class="codefrag">Usage: hadoop fs -cp URI [URI &hellip;] &lt;dest&gt;</span>
 			
 </p>
 <p>
@@ -380,13 +373,13 @@ document.write("Last Published: " + document.lastModified);
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -cp /user/hadoop/file1 /user/hadoop/file2</span>
+<span class="codefrag"> hadoop fs -cp /user/hadoop/file1 /user/hadoop/file2</span>
 				
 </li>
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -cp /user/hadoop/file1 /user/hadoop/file2 /user/hadoop/dir </span>
+<span class="codefrag"> hadoop fs -cp /user/hadoop/file1 /user/hadoop/file2 /user/hadoop/dir </span>
 				
 </li>
 			
@@ -397,58 +390,46 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag"> Returns 0 on success and -1 on error.</span>
 			
 </p>
-</div>
-		
-<a name="N100FA"></a><a name="du"></a>
-<h2 class="h3">du</h2>
-<div class="section">
+<a name="N100F9"></a><a name="du"></a>
+<h3 class="h4">du</h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -du URI [URI &hellip;]</span>
+<span class="codefrag">Usage: hadoop fs -du URI [URI &hellip;]</span>
 			
 </p>
 <p>
 	     Displays aggregate length of  files contained in the directory or the length of a file in case its just a file.<br>
 	     Example:<br>
-<span class="codefrag">hadoop dfs -du /user/hadoop/dir1 /user/hadoop/file1 hdfs://host:port/user/hadoop/dir1</span>
+<span class="codefrag">hadoop fs -du /user/hadoop/dir1 /user/hadoop/file1 hdfs://nn.example.com/user/hadoop/dir1</span>
 <br>
 	     Exit Code:<br>
 <span class="codefrag"> Returns 0 on success and -1 on error. </span>
 <br>
 </p>
-</div>
-		
-<a name="N10115"></a><a name="dus"></a>
-<h2 class="h3"> dus </h2>
-<div class="section">
+<a name="N10114"></a><a name="dus"></a>
+<h3 class="h4"> dus </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -dus &lt;args&gt;</span>
+<span class="codefrag">Usage: hadoop fs -dus &lt;args&gt;</span>
 			
 </p>
 <p>
 	    Displays a summary of file lengths.
 	   </p>
-</div>
-		
-<a name="N10125"></a><a name="expunge"></a>
-<h2 class="h3"> expunge </h2>
-<div class="section">
+<a name="N10124"></a><a name="expunge"></a>
+<h3 class="h4"> expunge </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -expunge</span>
+<span class="codefrag">Usage: hadoop fs -expunge</span>
 			
 </p>
 <p>Empty the Trash. Refer to <a href="hdfs_design.html">HDFS Design</a> for more information on Trash feature.
 	   </p>
-</div>
-		
-<a name="N10139"></a><a name="get"></a>
-<h2 class="h3"> get </h2>
-<div class="section">
+<a name="N10138"></a><a name="get"></a>
+<h3 class="h4"> get </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -get [-ignorecrc] [-crc] &lt;src&gt; &lt;localdst&gt;</span>
+<span class="codefrag">Usage: hadoop fs -get [-ignorecrc] [-crc] &lt;src&gt; &lt;localdst&gt;</span>
 				
 <br>
 			
@@ -463,13 +444,13 @@ document.write("Last Published: " + document.lastModified);
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -get /user/hadoop/file localfile </span>
+<span class="codefrag"> hadoop fs -get /user/hadoop/file localfile </span>
 				
 </li>
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -get hdfs://host:port/user/hadoop/file localfile</span>
+<span class="codefrag"> hadoop fs -get hdfs://nn.example.com/user/hadoop/file localfile</span>
 				
 </li>
 			
@@ -480,27 +461,21 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag"> Returns 0 on success and -1 on error. </span>
 			
 </p>
-</div>
-		
-<a name="N1016D"></a><a name="getmerge"></a>
-<h2 class="h3"> getmerge </h2>
-<div class="section">
+<a name="N1016C"></a><a name="getmerge"></a>
+<h3 class="h4"> getmerge </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -getmerge &lt;src&gt; &lt;localdst&gt; [addnl]</span>
+<span class="codefrag">Usage: hadoop fs -getmerge &lt;src&gt; &lt;localdst&gt; [addnl]</span>
 			
 </p>
 <p>
 	  Takes a source directory and a destination file as input and concatenates files in src into the destination local file. Optionally <span class="codefrag">addnl</span> can be set to enable adding a newline character at the end of each file.  
 	  </p>
-</div>
-		
-<a name="N10180"></a><a name="ls"></a>
-<h2 class="h3"> ls </h2>
-<div class="section">
+<a name="N1017F"></a><a name="ls"></a>
+<h3 class="h4"> ls </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -ls &lt;args&gt;</span>
+<span class="codefrag">Usage: hadoop fs -ls &lt;args&gt;</span>
 			
 </p>
 <p>
@@ -512,30 +487,24 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">dirname &lt;dir&gt; modification_time modification_time permissions userid groupid</span>
 <br>
 	         Example:<br>
-<span class="codefrag">hadoop dfs -ls /user/hadoop/file1 /user/hadoop/file2 hdfs://host:port/user/hadoop/dir1 /nonexistentfile</span>
+<span class="codefrag">hadoop fs -ls /user/hadoop/file1 /user/hadoop/file2 hdfs://nn.example.com/user/hadoop/dir1 /nonexistentfile</span>
 <br>
 	         Exit Code:<br>
 <span class="codefrag"> Returns 0 on success and -1 on error. </span>
 <br>
 </p>
-</div>
-		
-<a name="N101A3"></a><a name="lsr"></a>
-<h2 class="h3">lsr</h2>
-<div class="section">
+<a name="N101A2"></a><a name="lsr"></a>
+<h3 class="h4">lsr</h3>
 <p>
-<span class="codefrag">Usage: hadoop dfs -lsr &lt;args&gt;</span>
+<span class="codefrag">Usage: hadoop fs -lsr &lt;args&gt;</span>
 <br>
 	      Recursive version of <span class="codefrag">ls</span>. Similar to Unix <span class="codefrag">ls -R</span>.
 	      </p>
-</div>
-		
-<a name="N101B6"></a><a name="mkdir"></a>
-<h2 class="h3"> mkdir </h2>
-<div class="section">
+<a name="N101B5"></a><a name="mkdir"></a>
+<h3 class="h4"> mkdir </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -mkdir &lt;paths&gt;</span>
+<span class="codefrag">Usage: hadoop fs -mkdir &lt;paths&gt;</span>
 				
 <br>
 			
@@ -548,13 +517,13 @@ document.write("Last Published: " + document.lastModified);
 				
 <li>
 					
-<span class="codefrag">hadoop dfs -mkdir /user/hadoop/dir1 /user/hadoop/dir2 </span>
+<span class="codefrag">hadoop fs -mkdir /user/hadoop/dir1 /user/hadoop/dir2 </span>
 				
 </li>
 				
 <li>
 					
-<span class="codefrag">hadoop dfs -mkdir hdfs://host1:port1/user/hadoop/dir hdfs://host2:port2/user/hadoop/dir
+<span class="codefrag">hadoop fs -mkdir hdfs://nn1.example.com/user/hadoop/dir hdfs://nn2.example.com/user/hadoop/dir
 	  </span>
 				
 </li>
@@ -566,11 +535,8 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">Returns 0 on success and -1 on error.</span>
 			
 </p>
-</div>
-		
-<a name="N101E3"></a><a name="movefromLocal"></a>
-<h2 class="h3"> movefromLocal </h2>
-<div class="section">
+<a name="N101E2"></a><a name="movefromLocal"></a>
+<h3 class="h4"> movefromLocal </h3>
 <p>
 				
 <span class="codefrag">Usage: dfs -moveFromLocal &lt;src&gt; &lt;dst&gt;</span>
@@ -578,14 +544,11 @@ document.write("Last Published: " + document.lastModified);
 </p>
 <p>Displays a "not implemented" message.
 	   </p>
-</div>
-		
-<a name="N101F3"></a><a name="mv"></a>
-<h2 class="h3"> mv </h2>
-<div class="section">
+<a name="N101F2"></a><a name="mv"></a>
+<h3 class="h4"> mv </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -mv URI [URI &hellip;] &lt;dest&gt;</span>
+<span class="codefrag">Usage: hadoop fs -mv URI [URI &hellip;] &lt;dest&gt;</span>
 			
 </p>
 <p>
@@ -597,13 +560,13 @@ document.write("Last Published: " + document.lastModified);
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -mv /user/hadoop/file1 /user/hadoop/file2</span>
+<span class="codefrag"> hadoop fs -mv /user/hadoop/file1 /user/hadoop/file2</span>
 				
 </li>
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -mv hdfs://host:port/file1 hdfs://host:port/file2 hdfs://host:port/file3 hdfs://host:port/dir1</span>
+<span class="codefrag"> hadoop fs -mv hdfs://nn.example.com/file1 hdfs://nn.example.com/file2 hdfs://nn.example.com/file3 hdfs://nn.example.com/dir1</span>
 				
 </li>
 			
@@ -614,14 +577,11 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag"> Returns 0 on success and -1 on error.</span>
 			
 </p>
-</div>
-		
-<a name="N1021D"></a><a name="put"></a>
-<h2 class="h3"> put </h2>
-<div class="section">
+<a name="N1021C"></a><a name="put"></a>
+<h3 class="h4"> put </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -put &lt;localsrc&gt; ... &lt;dst&gt;</span>
+<span class="codefrag">Usage: hadoop fs -put &lt;localsrc&gt; ... &lt;dst&gt;</span>
 			
 </p>
 <p>Copy single src, or multiple srcs from local file system to the destination filesystem. Also reads input from stdin and writes to destination filesystem.<br>
@@ -631,24 +591,24 @@ document.write("Last Published: " + document.lastModified);
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -put localfile /user/hadoop/hadoopfile</span>
+<span class="codefrag"> hadoop fs -put localfile /user/hadoop/hadoopfile</span>
 				
 </li>
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -put localfile1 localfile2 /user/hadoop/hadoopdir</span>
+<span class="codefrag"> hadoop fs -put localfile1 localfile2 /user/hadoop/hadoopdir</span>
 				
 </li>
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -put localfile hdfs://host:port/hadoop/hadoopfile</span>
+<span class="codefrag"> hadoop fs -put localfile hdfs://nn.example.com/hadoop/hadoopfile</span>
 				
 </li>
 				
 <li>
-<span class="codefrag">hadoop dfs -put - hdfs://host:port/hadoop/hadoopfile</span>
+<span class="codefrag">hadoop fs -put - hdfs://nn.example.com/hadoop/hadoopfile</span>
 <br>Reads the input from stdin.</li>
 			
 </ul>
@@ -658,14 +618,11 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag"> Returns 0 on success and -1 on error. </span>
 			
 </p>
-</div>
-		
-<a name="N10254"></a><a name="rm"></a>
-<h2 class="h3"> rm </h2>
-<div class="section">
+<a name="N10253"></a><a name="rm"></a>
+<h3 class="h4"> rm </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -rm URI [URI &hellip;] </span>
+<span class="codefrag">Usage: hadoop fs -rm URI [URI &hellip;] </span>
 			
 </p>
 <p>
@@ -676,7 +633,7 @@ document.write("Last Published: " + document.lastModified);
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -rm hdfs://host:port/file /user/hadoop/emptydir </span>
+<span class="codefrag"> hadoop fs -rm hdfs://nn.example.com/file /user/hadoop/emptydir </span>
 				
 </li>
 			
@@ -687,14 +644,11 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag"> Returns 0 on success and -1 on error.</span>
 			
 </p>
-</div>
-		
-<a name="N10278"></a><a name="rmr"></a>
-<h2 class="h3"> rmr </h2>
-<div class="section">
+<a name="N10277"></a><a name="rmr"></a>
+<h3 class="h4"> rmr </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -rmr URI [URI &hellip;]</span>
+<span class="codefrag">Usage: hadoop fs -rmr URI [URI &hellip;]</span>
 			
 </p>
 <p>Recursive version of delete.<br>
@@ -704,13 +658,13 @@ document.write("Last Published: " + document.lastModified);
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -rmr /user/hadoop/dir </span>
+<span class="codefrag"> hadoop fs -rmr /user/hadoop/dir </span>
 				
 </li>
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -rmr hdfs://host:port/user/hadoop/dir </span>
+<span class="codefrag"> hadoop fs -rmr hdfs://nn.example.com/user/hadoop/dir </span>
 				
 </li>
 			
@@ -721,14 +675,11 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag"> Returns 0 on success and -1 on error. </span>
 			
 </p>
-</div>
-		
-<a name="N102A2"></a><a name="setrep"></a>
-<h2 class="h3"> setrep </h2>
-<div class="section">
+<a name="N102A1"></a><a name="setrep"></a>
+<h3 class="h4"> setrep </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -setrep [-R] &lt;path&gt;</span>
+<span class="codefrag">Usage: hadoop fs -setrep [-R] &lt;path&gt;</span>
 			
 </p>
 <p>
@@ -739,7 +690,7 @@ document.write("Last Published: " + document.lastModified);
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -setrep -w 3 -R /user/hadoop/dir1 </span>
+<span class="codefrag"> hadoop fs -setrep -w 3 -R /user/hadoop/dir1 </span>
 				
 </li>
 			
@@ -750,14 +701,11 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">Returns 0 on success and -1 on error. </span>
 			
 </p>
-</div>
-		
-<a name="N102C7"></a><a name="stat"></a>
-<h2 class="h3"> stat </h2>
-<div class="section">
+<a name="N102C6"></a><a name="stat"></a>
+<h3 class="h4"> stat </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -stat URI [URI &hellip;]</span>
+<span class="codefrag">Usage: hadoop fs -stat URI [URI &hellip;]</span>
 			
 </p>
 <p>
@@ -768,7 +716,7 @@ document.write("Last Published: " + document.lastModified);
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -stat path </span>
+<span class="codefrag"> hadoop fs -stat path </span>
 				
 </li>
 			
@@ -777,14 +725,11 @@ document.write("Last Published: " + document.lastModified);
 	   
 <span class="codefrag"> Returns 0 on success and -1 on error.</span>
 </p>
-</div>
-		
-<a name="N102EA"></a><a name="tail"></a>
-<h2 class="h3"> tail </h2>
-<div class="section">
+<a name="N102E9"></a><a name="tail"></a>
+<h3 class="h4"> tail </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -tail [-f] URI </span>
+<span class="codefrag">Usage: hadoop fs -tail [-f] URI </span>
 			
 </p>
 <p>
@@ -795,7 +740,7 @@ document.write("Last Published: " + document.lastModified);
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -tail pathname </span>
+<span class="codefrag"> hadoop fs -tail pathname </span>
 				
 </li>
 			
@@ -804,14 +749,11 @@ document.write("Last Published: " + document.lastModified);
 	   
 <span class="codefrag"> Returns 0 on success and -1 on error.</span>
 </p>
-</div>
-		
-<a name="N1030D"></a><a name="test"></a>
-<h2 class="h3"> test </h2>
-<div class="section">
+<a name="N1030C"></a><a name="test"></a>
+<h3 class="h4"> test </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -test -[ezd] URI</span>
+<span class="codefrag">Usage: hadoop fs -test -[ezd] URI</span>
 			
 </p>
 <p>
@@ -825,19 +767,16 @@ document.write("Last Published: " + document.lastModified);
 				
 <li>
 					
-<span class="codefrag"> hadoop dfs -test -e filename </span>
+<span class="codefrag"> hadoop fs -test -e filename </span>
 				
 </li>
 			
 </ul>
-</div>
-		
-<a name="N10330"></a><a name="text"></a>
-<h2 class="h3"> text </h2>
-<div class="section">
+<a name="N1032F"></a><a name="text"></a>
+<h3 class="h4"> text </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -text &lt;src&gt;</span>
+<span class="codefrag">Usage: hadoop fs -text &lt;src&gt;</span>
 				
 <br>
 			
@@ -845,14 +784,11 @@ document.write("Last Published: " + document.lastModified);
 <p>
 	   Takes a source file and outputs the file in text format. The allowed formats are zip and TextRecordInputStream.
 	  </p>
-</div>
-		
-<a name="N10342"></a><a name="touchz"></a>
-<h2 class="h3"> touchz </h2>
-<div class="section">
+<a name="N10341"></a><a name="touchz"></a>
+<h3 class="h4"> touchz </h3>
 <p>
 				
-<span class="codefrag">Usage: hadoop dfs -touchz URI [URI &hellip;]</span>
+<span class="codefrag">Usage: hadoop fs -touchz URI [URI &hellip;]</span>
 				
 <br>
 			

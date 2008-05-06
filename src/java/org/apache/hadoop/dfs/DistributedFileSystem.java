@@ -47,10 +47,7 @@ public class DistributedFileSystem extends FileSystem {
   /** @deprecated */
   public DistributedFileSystem(InetSocketAddress namenode,
     Configuration conf) throws IOException {
-    initialize(URI.create("hdfs://"+
-                          namenode.getHostName()+":"+
-                          namenode.getPort()),
-                          conf);
+    initialize(NameNode.getUri(namenode), conf);
   }
 
   /** @deprecated */
@@ -60,14 +57,15 @@ public class DistributedFileSystem extends FileSystem {
 
   public void initialize(URI uri, Configuration conf) throws IOException {
     setConf(conf);
+
     String host = uri.getHost();
-    int port = uri.getPort();
-    if (host == null || port == -1) {
-      throw new IOException("Incomplete HDFS URI, no host/port: "+ uri);
+    if (host == null) {
+      throw new IOException("Incomplete HDFS URI, no host: "+ uri);
     }
-    this.dfs = new DFSClient(new InetSocketAddress(host, port), conf,
-                             statistics);
-    this.uri = URI.create("hdfs://"+host+":"+port);
+
+    InetSocketAddress namenode = NameNode.getAddress(uri.getAuthority());
+    this.dfs = new DFSClient(namenode, conf, statistics);
+    this.uri = NameNode.getUri(namenode);
     this.workingDir = getHomeDirectory();
   }
 
