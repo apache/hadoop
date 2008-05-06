@@ -162,6 +162,24 @@ public class TestTextInputFormat extends TestCase {
     assertEquals("end of file", 0, in.readLine(out));
   }
   
+  public void testMaxLineLength() throws Exception {
+    LineReader in = makeStream("a\nbb\n\nccc\rdddd\r\neeeee");
+    Text out = new Text();
+    in.readLine(out, 1);
+    assertEquals("line1 length", 1, out.getLength());
+    in.readLine(out, 1);
+    assertEquals("line2 length", 1, out.getLength());
+    in.readLine(out, 1);
+    assertEquals("line3 length", 0, out.getLength());
+    in.readLine(out, 3);
+    assertEquals("line4 length", 3, out.getLength());
+    in.readLine(out, 10);
+    assertEquals("line5 length", 4, out.getLength());
+    in.readLine(out, 8);
+    assertEquals("line5 length", 5, out.getLength());
+    assertEquals("end of file", 0, in.readLine(out));
+  }
+
   private static void writeFile(FileSystem fs, Path name, 
                                 CompressionCodec codec,
                                 String contents) throws IOException {

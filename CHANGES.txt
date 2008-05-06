@@ -85,6 +85,10 @@ Trunk (unreleased changes)
     HADOOP-3345. Enhance the hudson-test-patch target to cleanup messages,
     fix minor defects, and add eclipse plugin and python unit tests. (nigel)
 
+    HADOOP-3144. Improve robustness of LineRecordReader by defining a maximum
+    line length (mapred.linerecordreader.maxlength), thereby avoiding reading
+    too far into the following split. (Zheng Shao via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
