@@ -87,9 +87,7 @@ public class PermissionStatus implements Writable {
 
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
-    Text.writeString(out, username);
-    Text.writeString(out, groupname);
-    permission.write(out);
+    write(out, username, groupname, permission);
   }
 
   /**
@@ -99,6 +97,18 @@ public class PermissionStatus implements Writable {
     PermissionStatus p = new PermissionStatus();
     p.readFields(in);
     return p;
+  }
+
+  /**
+   * Serialize a {@link PermissionStatus} from its base components.
+   */
+  public static void write(DataOutput out,
+                           String username, 
+                           String groupname,
+                           FsPermission permission) throws IOException {
+    Text.writeString(out, username);
+    Text.writeString(out, groupname);
+    permission.write(out);
   }
 
   /** {@inheritDoc} */

@@ -125,6 +125,9 @@ abstract class INode implements Comparable<byte[]> {
     return new FsPermission(
         (short)PermissionStatusFormat.MODE.retrieve(permission));
   }
+  protected short getFsPermissionShort() {
+    return (short)PermissionStatusFormat.MODE.retrieve(permission);
+  }
   /** Set the {@link FsPermission} of this {@link INode} */
   protected void setPermission(FsPermission permission) {
     updatePermissionStatus(PermissionStatusFormat.MODE, permission.toShort());
@@ -153,6 +156,14 @@ abstract class INode implements Comparable<byte[]> {
    */
   String getLocalName() {
     return bytes2String(name);
+  }
+
+  /**
+   * Get local file name
+   * @return local file name
+   */
+  byte[] getLocalNameBytes() {
+    return name;
   }
 
   /**
@@ -564,6 +575,9 @@ class INodeDirectory extends INode {
    */
   List<INode> getChildren() {
     return children==null ? new ArrayList<INode>() : children;
+  }
+  List<INode> getChildrenRaw() {
+    return children;
   }
 
   /**

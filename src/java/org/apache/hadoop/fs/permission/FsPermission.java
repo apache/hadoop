@@ -94,7 +94,7 @@ public class FsPermission implements Writable {
     groupaction = g;
     otheraction = o;
   }
-  private void fromShort(short n) {
+  public void fromShort(short n) {
     FsAction[] v = FsAction.values();
     set(v[(n >>> 6) & 7], v[(n >>> 3) & 7], v[n & 7]);
   }

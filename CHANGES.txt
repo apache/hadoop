@@ -100,6 +100,8 @@ Trunk (unreleased changes)
     On Linux DataNode takes 5 times less CPU while serving data. Results may
     vary on other platforms. (rangadi)
 
+    HADOOP-3248. Optimization of saveFSImage. (Dhruba via shv)
+
   BUG FIXES
 
     HADOOP-2905. 'fsck -move' triggers NPE in NameNode. 
