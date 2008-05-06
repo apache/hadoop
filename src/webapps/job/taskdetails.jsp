@@ -109,7 +109,7 @@
         taskAttemptTracker = "http://" + taskTracker.getHost() + ":"
           + taskTracker.getHttpPort();
         out.print("<td><a href=\"" + taskAttemptTracker + "\">"
-          + taskTracker.getHost() + "</a></td>");
+          + tracker.getNode(taskTracker.getHost()) + "</a></td>");
         }
         out.print("<td>" + status.getRunState() + "</td>");
         out.print("<td>" + StringUtils.formatPercent(status.getProgress(), 2)
@@ -173,10 +173,26 @@
           out.print("<pre>&nbsp;</pre>");
         out.println("</td></tr>");
       }
-    }
   %>
 </table>
 </center>
+
+<%
+      if (ts[0].getIsMap()) {
+%>
+<h3>Input Split Locations</h3>
+<table border=2 cellpadding="5" cellspacing="2">
+<%
+        for (String split: StringUtils.split(tracker.getTip(
+                                         tipidObj).getSplitNodes())) {
+          out.println("<tr><td>" + split + "</td></tr>");
+        }
+%>
+</table>
+<%    
+      }
+    }
+%>
 
 <hr>
 <a href="jobdetails.jsp?jobid=<%=jobid%>">Go back to the job</a><br>

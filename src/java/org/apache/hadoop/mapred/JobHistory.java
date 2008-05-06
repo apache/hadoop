@@ -94,7 +94,7 @@ public class JobHistory {
     LAUNCH_TIME, TOTAL_MAPS, TOTAL_REDUCES, FAILED_MAPS, FAILED_REDUCES, 
     FINISHED_MAPS, FINISHED_REDUCES, JOB_STATUS, TASKID, HOSTNAME, TASK_TYPE, 
     ERROR, TASK_ATTEMPT_ID, TASK_STATUS, COPY_PHASE, SORT_PHASE, REDUCE_PHASE, 
-    SHUFFLE_FINISHED, SORT_FINISHED, COUNTERS
+    SHUFFLE_FINISHED, SORT_FINISHED, COUNTERS, SPLITS
   }
 
   /**
@@ -677,15 +677,18 @@ public class JobHistory {
      * @param startTime startTime of tip. 
      */
     public static void logStarted(TaskID taskId, String taskType, 
-                                  long startTime){
+                                  long startTime, String splitLocations) {
       if (!disableHistory){
         ArrayList<PrintWriter> writer = openJobs.get(JOBTRACKER_UNIQUE_STRING 
                                                      + taskId.getJobID()); 
 
         if (null != writer){
           JobHistory.log(writer, RecordTypes.Task, 
-                         new Keys[]{Keys.TASKID, Keys.TASK_TYPE , Keys.START_TIME}, 
-                         new String[]{taskId.toString(), taskType, String.valueOf(startTime)});
+                         new Keys[]{Keys.TASKID, Keys.TASK_TYPE ,
+                                    Keys.START_TIME, Keys.SPLITS}, 
+                         new String[]{taskId.toString(), taskType,
+                                      String.valueOf(startTime),
+                                      splitLocations});
         }
       }
     }

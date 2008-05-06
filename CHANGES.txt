@@ -37,6 +37,10 @@ Trunk (unreleased changes)
     The property ipc.client.timeout is removed from the default hadoop
     configuration. It also removes metrics RpcOpsDiscardedOPsNum. (hairong)
 
+    HADOOP-2181. This issue adds logging for input splits in Jobtracker log 
+    and jobHistory log. Also adds web UI for viewing input splits in job UI 
+    and history UI. (Amareshwari Sriramadasu via ddas)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,

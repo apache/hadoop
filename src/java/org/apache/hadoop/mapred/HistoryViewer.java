@@ -97,6 +97,7 @@ class HistoryViewer {
     printJobDetails();
     printTaskSummary();
     printJobAnalysis();
+    printSplits();
     printTasks("MAP", "FAILED");
     printTasks("MAP", "KILLED");
     printTasks("REDUCE", "FAILED");
@@ -140,6 +141,24 @@ class HistoryViewer {
     System.out.println(jobDetails.toString());
   }
   
+  private void printSplits() {
+    StringBuffer splits = new StringBuffer();
+    Map<String, JobHistory.Task> tasks = job.getAllTasks();
+    splits.append("\nInput split Locations");
+    splits.append("\nTaskId\tSplits");
+    splits.append("\n====================================================");
+
+    for (JobHistory.Task task : tasks.values()) {
+      if (Values.MAP.name().equals(task.get(Keys.TASK_TYPE))) {
+        splits.append("\n");
+        splits.append(task.get(Keys.TASKID));
+        splits.append("\t"); 
+        splits.append(task.get(Keys.SPLITS));
+      }
+    }
+    System.out.println(splits.toString());
+  }
+
   private void printTasks(String taskType, String taskStatus) {
     Map<String, JobHistory.Task> tasks = job.getAllTasks();
     StringBuffer taskList = new StringBuffer();

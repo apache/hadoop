@@ -1932,7 +1932,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   /**
    * Returns specified TaskInProgress, or null.
    */
-  private TaskInProgress getTip(TaskID tipid) {
+  public TaskInProgress getTip(TaskID tipid) {
     JobInProgress job = jobs.get(tipid.getJobID());
     return (job == null ? null : job.getTaskInProgress(tipid));
   }

@@ -22,6 +22,7 @@
   JobHistory.JobInfo job = (JobHistory.JobInfo)
                               request.getSession().getAttribute("job");
   JobHistory.Task task = job.getAllTasks().get(taskid); 
+  String type = task.get(Keys.TASK_TYPE);
 %>
 <html>
 <body>
@@ -30,7 +31,7 @@
 <table border="2" cellpadding="5" cellspacing="2">
 <tr><td>Task Id</td><td>Start Time</td>
 <%	
-  if (Values.REDUCE.name().equals(task.get(Keys.TASK_TYPE))) {
+  if (Values.REDUCE.name().equals(type)) {
 %>
     <td>Shuffle Finished</td><td>Sort Finished</td>
 <%
@@ -39,10 +40,26 @@
 <td>Finish Time</td><td>Host</td><td>Error</td></tr>
 <%
   for (JobHistory.TaskAttempt attempt : task.getTaskAttempts().values()) {
-    printTaskAttempt(attempt, task.get(Keys.TASK_TYPE), out); 
+    printTaskAttempt(attempt, type, out);
   }
 %>
 </table>
+</center>
+<%	
+  if (Values.MAP.name().equals(type)) {
+%>
+<h3>Input Split Locations</h3>
+<table border="2" cellpadding="5" cellspacing="2">
+<%
+    for (String split : StringUtils.split(task.get(Keys.SPLITS)))
+    {
+      out.println("<tr><td>" + split + "</td></tr>");
+    }
+%>
+</table>    
+<%
+  }
+%>
 <%!
   private void printTaskAttempt(JobHistory.TaskAttempt taskAttempt,
                                 String type, JspWriter out) 
@@ -70,6 +87,5 @@
     out.print("</tr>"); 
   }
 %>
-</center>
 </body>
 </html>

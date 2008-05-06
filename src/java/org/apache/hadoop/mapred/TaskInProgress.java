@@ -20,6 +20,8 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,7 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.JobClient.RawSplit;
+import org.apache.hadoop.net.Node;
 
 
 /*************************************************************
@@ -206,6 +209,15 @@ class TaskInProgress {
    */  
   public Task getTask(TaskAttemptID taskId) {
     return tasks.get(taskId);
+  }
+
+  /**
+   * Is the Task associated with taskid is the first attempt of the tip? 
+   * @param taskId
+   * @return Returns true if the Task is the first attempt of the tip
+   */  
+  public boolean isFirstAttempt(TaskAttemptID taskId) {
+    return (taskId.getId() == 0); 
   }
   
   /**
@@ -755,4 +767,37 @@ class TaskInProgress {
   public int getSuccessEventNumber() {
     return successEventNumber;
   }
+  
+  /** 
+   * Gets the Node list of input split locations sorted in rack order.
+   */ 
+  public String getSplitNodes() {
+    String[] splits = rawSplit.getLocations();
+    Node[] nodes = new Node[splits.length];
+    for (int i = 0; i < splits.length; i++) {
+      nodes[i] = jobtracker.getNode(splits[i]);
+    }
+    // sort nodes on rack location
+    Arrays.sort(nodes, new Comparator<Node>() {
+      public int compare(Node a, Node b) {
+        String left = a.getNetworkLocation();
+        String right = b.getNetworkLocation();
+        return left.compareTo(right);
+      }
+    }); 
+    return nodeToString(nodes);
+  }
+
+  private static String nodeToString(Node[] nodes) {
+    if (nodes == null || nodes.length == 0) {
+      return "";
+    }
+    StringBuffer ret = new StringBuffer(nodes[0].toString());
+    for(int i = 1; i < nodes.length;i++) {
+      ret.append(",");
+      ret.append(nodes[i].toString());
+    }
+    return ret.toString();
+  }
+
 }

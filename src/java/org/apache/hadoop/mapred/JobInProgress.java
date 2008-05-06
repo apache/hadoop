@@ -265,6 +265,7 @@ class JobInProgress {
 
       for(String host: splitLocations) {
         Node node = jobtracker.resolveAndAddToTopology(host);
+        LOG.info("tip:" + maps[i].getTIPId() + " has split on node:" + node);
         for (int j = 0; j < maxLevel; j++) {
           node = JobTracker.getParentNode(node, j);
           List<TaskInProgress> hostMaps = cache.get(node);
@@ -317,6 +318,7 @@ class JobInProgress {
                                    jobtracker, conf, this, i);
     }
     if (numMapTasks > 0) { 
+      LOG.info("Split info for job:" + jobId);
       nonRunningMapCache = createCache(splits, maxLevel);
     }
         
@@ -663,10 +665,10 @@ class JobInProgress {
     Task result = maps[target].getTaskToRun(tts.getTrackerName());
     if (result != null) {
       runningMapTasks += 1;
-      boolean wasRunning = maps[target].isRunning();
-      if (!wasRunning) {
+      if (maps[target].isFirstAttempt(result.getTaskID())) {
         JobHistory.Task.logStarted(maps[target].getTIPId(), Values.MAP.name(),
-                                   System.currentTimeMillis());
+                                   System.currentTimeMillis(),
+                                   maps[target].getSplitNodes());
       }
 
       jobCounters.incrCounter(Counter.TOTAL_LAUNCHED_MAPS, 1);
@@ -696,10 +698,9 @@ class JobInProgress {
     Task result = reduces[target].getTaskToRun(tts.getTrackerName());
     if (result != null) {
       runningReduceTasks += 1;
-      boolean wasRunning = reduces[target].isRunning();
-      if (!wasRunning) {
+      if (reduces[target].isFirstAttempt(result.getTaskID())) {
         JobHistory.Task.logStarted(reduces[target].getTIPId(), Values.REDUCE.name(),
-                                   System.currentTimeMillis());
+                                   System.currentTimeMillis(), "");
       }
 
       jobCounters.incrCounter(Counter.TOTAL_LAUNCHED_REDUCES, 1);
@@ -1307,7 +1308,8 @@ class JobInProgress {
     tip.completed(taskid);
 
     // Update jobhistory 
-    String taskTrackerName = status.getTaskTracker();
+    String taskTrackerName = jobtracker.getNode(jobtracker.getTaskTracker(
+                               status.getTaskTracker()).getHost()).toString();
     if (status.getIsMap()){
       JobHistory.MapAttempt.logStarted(status.getTaskID(), status.getStartTime(), 
                                        taskTrackerName); 
@@ -1484,7 +1486,8 @@ class JobInProgress {
     }
         
     // update job history
-    String taskTrackerName = status.getTaskTracker();
+    String taskTrackerName = jobtracker.getNode(jobtracker.getTaskTracker(
+                               status.getTaskTracker()).getHost()).toString();
     if (status.getIsMap()) {
       JobHistory.MapAttempt.logStarted(status.getTaskID(), status.getStartTime(), 
                 taskTrackerName);
