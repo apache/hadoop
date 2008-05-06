@@ -20,12 +20,14 @@
 package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
-import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapred.JobConf;
@@ -34,28 +36,14 @@ import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
 
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-
-import org.apache.log4j.Logger;
-
 /**
  * Convert Map/Reduce output and write it to an HBase table
  */
-public class TableOutputFormat
-  extends OutputFormatBase<Text, BatchUpdate> {
+public class TableOutputFormat extends OutputFormatBase<Text, BatchUpdate> {
 
   /** JobConf parameter that specifies the output table */
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
-
-  static final Logger LOG = Logger.getLogger(TableOutputFormat.class.getName());
-
-  /** constructor */
-  public TableOutputFormat() {
-    super();
-  }
+  private final Log LOG = LogFactory.getLog(TableOutputFormat.class);
 
   /**
    * Convert Reduce output (key, value) to (HStoreKey, KeyedDataArrayWritable) 
