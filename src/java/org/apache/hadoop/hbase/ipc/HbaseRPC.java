@@ -205,13 +205,24 @@ public class HbaseRPC {
     }
 
     public Object invoke(Object proxy, Method method, Object[] args)
-      throws Throwable {
+      throws IOException {
       long startTime = System.currentTimeMillis();
-      HbaseObjectWritable value = (HbaseObjectWritable)
-        client.call(new Invocation(method, args), address, ticket);
-      long callTime = System.currentTimeMillis() - startTime;
-      LOG.debug("Call: " + method.getName() + " " + callTime);
-      return value.get();
+      try {
+        HbaseObjectWritable value = (HbaseObjectWritable)
+          client.call(new Invocation(method, args), address, ticket);
+        long callTime = System.currentTimeMillis() - startTime;
+        LOG.debug("Call: " + method.getName() + " " + callTime);
+        return value.get();
+      } catch (Throwable t) {
+        IOException e;
+        if (t instanceof IOException) {
+          e = (IOException) t;
+        } else {
+          e = new IOException("error during RPC call");
+          e.initCause(t);
+        }
+        throw e;
+      }
     }
   }
 
