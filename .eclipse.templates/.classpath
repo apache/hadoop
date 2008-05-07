@@ -14,7 +14,7 @@
 	<classpathentry kind="lib" path="lib/commons-httpclient-3.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/commons-logging-1.0.4.jar"/>
 	<classpathentry kind="lib" path="lib/commons-logging-api-1.0.4.jar"/>
-	<classpathentry kind="lib" path="lib/jets3t-0.5.0.jar"/>
+	<classpathentry kind="lib" path="lib/jets3t-0.6.0.jar"/>
 	<classpathentry kind="lib" path="lib/jetty-5.1.4.jar"/>
 	<classpathentry kind="lib" path="lib/jetty-ext/commons-el.jar"/>
 	<classpathentry kind="lib" path="lib/jetty-ext/jasper-compiler.jar"/>
