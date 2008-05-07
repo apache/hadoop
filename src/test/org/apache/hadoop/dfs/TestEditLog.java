@@ -139,12 +139,9 @@ public class TestEditLog extends TestCase {
       File editFile = fsimage.getEditFile(i);
       System.out.println("Verifying file: " + editFile);
       int numEdits = editLog.loadFSEdits(editFile);
-      System.out.println("Number of outstanding leases " +
-                         FSNamesystem.getFSNamesystem().countLease());
-
-      assertTrue("Found " + FSNamesystem.getFSNamesystem().countLease() +
-                 " leases but expected 0",
-                 FSNamesystem.getFSNamesystem().countLease() == 0);
+      int numLeases = FSNamesystem.getFSNamesystem().leaseManager.countLease();
+      System.out.println("Number of outstanding leases " + numLeases);
+      assertEquals(0, numLeases);
       assertTrue("Verification for " + editFile + " failed. " +
                  "Expected " + (numThreads * 2 * numberTransactions) + " transactions. "+
                  "Found " + numEdits + " transactions.",

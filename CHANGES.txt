@@ -93,6 +93,9 @@ Trunk (unreleased changes)
     line length (mapred.linerecordreader.maxlength), thereby avoiding reading
     too far into the following split. (Zheng Shao via cdouglas)
 
+    HADOOP-3334. Move lease handling from FSNamesystem into a seperate class.
+    (Tsz Wo (Nicholas), SZE via rangadi)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

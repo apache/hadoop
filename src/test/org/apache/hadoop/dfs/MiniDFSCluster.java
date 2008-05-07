@@ -763,7 +763,8 @@ public class MiniDFSCluster {
    * Set the softLimit and hardLimit of client lease periods
    */
   void setLeasePeriod(long soft, long hard) {
-    nameNode.namesystem.setLeasePeriod(soft, hard);
+    nameNode.namesystem.leaseManager.setLeasePeriod(soft, hard);
+    nameNode.namesystem.lmthread.interrupt();
   }
 
   /**

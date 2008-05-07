@@ -968,7 +968,7 @@ class FSImage extends Storage {
       }
       INodeFile oldnode = (INodeFile) old;
       fsDir.replaceNode(path, oldnode, cons);
-      fs.addLease(path, cons.getClientName()); 
+      fs.leaseManager.addLease(path, cons.getClientName()); 
     }
   }
 

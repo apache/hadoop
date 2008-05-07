@@ -537,7 +537,7 @@ class FSEditLog {
                                         null,
                                         lastLocations);
               fsDir.replaceNode(path, node, cons);
-              fsNamesys.addLease(path, clientName);
+              fsNamesys.leaseManager.addLease(path, clientName);
             } else if (opcode == OP_CLOSE) {
               //
               // Remove lease if it exists.
@@ -545,7 +545,7 @@ class FSEditLog {
               if (old.isUnderConstruction()) {
                 INodeFileUnderConstruction cons = (INodeFileUnderConstruction)
                                                      old;
-                fsNamesys.removeLease(path, cons.getClientName());
+                fsNamesys.leaseManager.removeLease(path, cons.getClientName());
               }
             }
             break;
@@ -590,10 +590,11 @@ class FSEditLog {
             break;
           }
           case OP_DELETE: {
-            UTF8 src = null;
+            String src = null;
             if (logVersion >= -4) {
-              src = new UTF8();
-              src.readFields(in);
+              UTF8 srcUtf8 = new UTF8();
+              srcUtf8.readFields(in);
+              src = srcUtf8.toString();
             } else {
               ArrayWritable aw = null;
               Writable writables[];
@@ -604,13 +605,13 @@ class FSEditLog {
                 throw new IOException("Incorrect data format. " 
                                       + "delete operation.");
               }
-              src = (UTF8) writables[0];
-              timestamp = Long.parseLong(((UTF8)writables[1]).toString());
+              src = writables[0].toString();
+              timestamp = Long.parseLong(writables[1].toString());
             }
-            old = fsDir.unprotectedDelete(src.toString(), timestamp, null);
+            old = fsDir.unprotectedDelete(src, timestamp, null);
             if (old != null && old.isUnderConstruction()) {
               INodeFileUnderConstruction cons = (INodeFileUnderConstruction)old;
-              fsNamesys.removeLease(src.toString(), cons.getClientName());
+              fsNamesys.leaseManager.removeLease(src, cons.getClientName());
             }
             break;
           }
