@@ -250,6 +250,8 @@ class MapTask extends Task {
 
     private Reporter reporter = null;
 
+    private final Counters.Counter mapOutputRecordCounter;
+
     @SuppressWarnings("unchecked")
     public DirectMapOutputCollector(TaskUmbilicalProtocol umbilical,
         JobConf job, Reporter reporter) throws IOException {
@@ -258,6 +260,9 @@ class MapTask extends Task {
       FileSystem fs = FileSystem.get(job);
 
       out = job.getOutputFormat().getRecordWriter(fs, job, finalName, reporter);
+
+      Counters counters = getCounters();
+      mapOutputRecordCounter = counters.findCounter(MAP_OUTPUT_RECORDS);
     }
 
     public void close() throws IOException {
@@ -272,7 +277,8 @@ class MapTask extends Task {
 
     public void collect(K key, V value) throws IOException {
       reporter.progress();
-      this.out.write(key, value);
+      out.write(key, value);
+      mapOutputRecordCounter.increment(1);
     }
     
   }
@@ -324,6 +330,7 @@ class MapTask extends Task {
     private volatile Throwable sortSpillException = null;
     private final int softRecordLimit;
     private final int softBufferLimit;
+    private final int minSpillsForCombine;
     private final Object spillLock = new Object();
     private final QuickSort sorter = new QuickSort();
     private final BlockingBuffer bb = new BlockingBuffer();
@@ -381,11 +388,12 @@ class MapTask extends Task {
       Counters counters = getCounters();
       mapOutputByteCounter = counters.findCounter(MAP_OUTPUT_BYTES);
       mapOutputRecordCounter = counters.findCounter(MAP_OUTPUT_RECORDS);
-      combineInputCounter = getCounters().findCounter(COMBINE_INPUT_RECORDS);
+      combineInputCounter = counters.findCounter(COMBINE_INPUT_RECORDS);
       combineOutputCounter = counters.findCounter(COMBINE_OUTPUT_RECORDS);
       // combiner and compression
       compressMapOutput = job.getCompressMapOutput();
       combinerClass = job.getCombinerClass();
+      minSpillsForCombine = job.getInt("min.num.spills.for.combine", 3);
       if (compressMapOutput) {
         compressionType = job.getMapOutputCompressionType();
         Class<? extends CompressionCodec> codecClass =
@@ -415,7 +423,7 @@ class MapTask extends Task {
         deflateFilter = null;
       }
       combineCollector = (null != combinerClass)
-        ? new CombineOutputCollector(reporter)
+        ? new CombineOutputCollector(combineOutputCounter)
         : null;
     }
 
@@ -784,11 +792,10 @@ class MapTask extends Task {
               // to remedy this would require us to observe the compression
               // strategy here as we do in collect
               if (spstart != spindex) {
-                Reducer combiner =
-                  (Reducer)ReflectionUtils.newInstance(combinerClass, job);
                 combineCollector.setWriter(writer);
-                combineAndSpill(spstart, spindex, combiner, combineCollector);
-                // combineAndSpill closes combiner
+                RawKeyValueIterator kvIter =
+                  new MRResultIterator(spstart, spindex);
+                combineAndSpill(kvIter, combineInputCounter);
               }
             }
             // we need to close the writer to flush buffered data, obtaining
@@ -873,16 +880,17 @@ class MapTask extends Task {
     }
 
     @SuppressWarnings("unchecked")
-    private void combineAndSpill(int start, int end, Reducer combiner,
-        OutputCollector combineCollector) throws IOException {
+    private void combineAndSpill(RawKeyValueIterator kvIter,
+        Counters.Counter inCounter) throws IOException {
+      Reducer combiner =
+        (Reducer)ReflectionUtils.newInstance(combinerClass, job);
       try {
         CombineValuesIterator values = new CombineValuesIterator(
-            new MRResultIterator(start, end), comparator, keyClass, valClass,
-            job, reporter);
+            kvIter, comparator, keyClass, valClass, job, reporter,
+            inCounter);
         while (values.more()) {
           combiner.reduce(values.getKey(), values, combineCollector, reporter);
           values.nextKey();
-          combineOutputCounter.increment(1);
           // indicate we're making progress
           reporter.progress();
         }
@@ -949,23 +957,6 @@ class MapTask extends Task {
         return null;
       }
       public void close() { }
-    }
-
-    private class CombineValuesIterator<KEY,VALUE>
-        extends ValuesIterator<KEY,VALUE> {
-
-      public CombineValuesIterator(SequenceFile.Sorter.RawKeyValueIterator in,
-          RawComparator<KEY> comparator, Class<KEY> keyClass,
-          Class<VALUE> valClass, Configuration conf, Reporter reporter)
-          throws IOException {
-        super(in, comparator, keyClass, valClass, conf, reporter);
-      }
-
-      @Override
-      public VALUE next() {
-        combineInputCounter.increment(1);
-        return super.next();
-      }
     }
 
     private void mergeParts() throws IOException {
@@ -1049,7 +1040,12 @@ class MapTask extends Task {
           SequenceFile.Writer writer = SequenceFile.createWriter(job, finalOut, 
                                                                  job.getMapOutputKeyClass(), job.getMapOutputValueClass(), 
                                                                  compressionType, codec);
-          sorter.writeFile(kvIter, writer);
+          if (null == combinerClass || numSpills < minSpillsForCombine) {
+            sorter.writeFile(kvIter, writer);
+          } else {
+            combineCollector.setWriter(writer);
+            combineAndSpill(kvIter, combineInputCounter);
+          }
           //close the file - required esp. for block compression to ensure
           //partition data don't span partition boundaries
           writer.close();
@@ -1071,25 +1067,6 @@ class MapTask extends Task {
       }
     }
 
-  }
-
-  /**
-   * OutputCollector for the combiner.
-   */
-  private static class CombineOutputCollector implements OutputCollector {
-    private Reporter reporter;
-    private SequenceFile.Writer writer;
-    public CombineOutputCollector(Reporter reporter) {
-      this.reporter = reporter;
-    }
-    public synchronized void setWriter(SequenceFile.Writer writer) {
-      this.writer = writer;
-    }
-    public synchronized void collect(Object key, Object value)
-        throws IOException {
-        reporter.progress();
-        writer.append(key, value);
-    }
   }
 
   /**

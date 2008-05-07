@@ -41,6 +41,9 @@ Trunk (unreleased changes)
     and jobHistory log. Also adds web UI for viewing input splits in job UI 
     and history UI. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3226. Run combiners multiple times over map outputs as they
+    are merged in both the map and the reduce tasks. (cdouglas via omalley)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,

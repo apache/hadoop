@@ -40,8 +40,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.fs.kfs.KosmosFileSystem;
 import org.apache.hadoop.fs.s3.S3FileSystem;
+import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapred.ReduceTask.ValuesIterator;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -589,4 +592,43 @@ abstract class Task implements Writable, Configurable {
       }
     }
   }
+
+  /**
+   * OutputCollector for the combiner.
+   */
+  protected static class CombineOutputCollector implements OutputCollector {
+    private SequenceFile.Writer writer;
+    private Counters.Counter outCounter;
+    public CombineOutputCollector(Counters.Counter outCounter) {
+      this.outCounter = outCounter;
+    }
+    public synchronized void setWriter(SequenceFile.Writer writer) {
+      this.writer = writer;
+    }
+    public synchronized void collect(Object key, Object value)
+        throws IOException {
+      outCounter.increment(1);
+      writer.append(key, value);
+    }
+  }
+
+  protected static class CombineValuesIterator<KEY,VALUE>
+      extends ValuesIterator<KEY,VALUE> {
+
+    private final Counters.Counter combineInputCounter;
+
+    public CombineValuesIterator(SequenceFile.Sorter.RawKeyValueIterator in,
+        RawComparator<KEY> comparator, Class<KEY> keyClass,
+        Class<VALUE> valClass, Configuration conf, Reporter reporter,
+        Counters.Counter combineInputCounter) throws IOException {
+      super(in, comparator, keyClass, valClass, conf, reporter);
+      this.combineInputCounter = combineInputCounter;
+    }
+
+    public VALUE next() {
+      combineInputCounter.increment(1);
+      return super.next();
+    }
+  }
+
 }

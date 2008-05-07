@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.apache.hadoop.mapred.Task.Counter.REDUCE_INPUT_GROUPS;
-import static org.apache.hadoop.mapred.Task.Counter.REDUCE_INPUT_RECORDS;
-import static org.apache.hadoop.mapred.Task.Counter.REDUCE_OUTPUT_RECORDS;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
@@ -98,12 +94,16 @@ class ReduceTask extends Task {
   private Progress sortPhase  = getProgress().addPhase("sort");
   private Progress reducePhase = getProgress().addPhase("reduce");
   private Counters.Counter reduceInputKeyCounter = 
-    getCounters().findCounter(REDUCE_INPUT_GROUPS);
+    getCounters().findCounter(Counter.REDUCE_INPUT_GROUPS);
   private Counters.Counter reduceInputValueCounter = 
-    getCounters().findCounter(REDUCE_INPUT_RECORDS);
+    getCounters().findCounter(Counter.REDUCE_INPUT_RECORDS);
   private Counters.Counter reduceOutputCounter = 
-    getCounters().findCounter(REDUCE_OUTPUT_RECORDS);
-  
+    getCounters().findCounter(Counter.REDUCE_OUTPUT_RECORDS);
+  private Counters.Counter reduceCombineInputCounter =
+    getCounters().findCounter(Counter.COMBINE_INPUT_RECORDS);
+  private Counters.Counter reduceCombineOutputCounter =
+    getCounters().findCounter(Counter.COMBINE_OUTPUT_RECORDS);
+
   // A custom comparator for map output files. Here the ordering is determined
   // by the file's size and path. In case of files with same size and different
   // file paths, the first parameter is considered smaller than the second one.
@@ -568,6 +568,16 @@ class ReduceTask extends Task {
     private int maxFetchRetriesPerMap;
     
     /**
+     * Combiner class to run during in-memory merge, if defined.
+     */
+    private final Class<? extends Reducer> combinerClass;
+
+    /**
+     * Resettable collector used for combine.
+     */
+    private final CombineOutputCollector combineCollector;
+
+    /**
      * Maximum percent of failed fetch attempt before killing the reduce task.
      */
     private static final float MAX_ALLOWED_FAILED_FETCH_ATTEMPT_PERCENT = 0.5f;
@@ -945,6 +955,10 @@ class ReduceTask extends Task {
       this.copyResults = new ArrayList<CopyResult>(100);    
       this.numCopiers = conf.getInt("mapred.reduce.parallel.copies", 5);
       this.maxBackoff = conf.getInt("mapred.reduce.copy.backoff", 300);
+      this.combinerClass = conf.getCombinerClass();
+      combineCollector = (null != combinerClass)
+        ? new CombineOutputCollector(reduceCombineOutputCounter)
+        : null;
       
       this.ioSortFactor = conf.getInt("io.sort.factor", 10);
       // the exponential backoff formula
@@ -1639,15 +1653,22 @@ class ReduceTask extends Task {
             SequenceFile.Sorter.RawKeyValueIterator rIter;
             try {
               rIter = sorter.merge(inMemClosedFiles, true, 
-                                   inMemClosedFiles.length, new Path(reduceTask.getTaskID().toString()));
+                                   inMemClosedFiles.length, 
+                                   new Path(reduceTask.getTaskID().toString()));
+              if (null == combinerClass) {
+                sorter.writeFile(rIter, writer);
+              } else {
+                combineCollector.setWriter(writer);
+                combineAndSpill(rIter, reduceCombineInputCounter);
+              }
             } catch (Exception e) { 
               //make sure that we delete the ondisk file that we created 
               //earlier when we invoked cloneFileAttributes
               writer.close();
               localFileSys.delete(outputPath, true);
-              throw new IOException (StringUtils.stringifyException(e));
+              throw (IOException)new IOException
+                      ("Intermedate merge failed").initCause(e);
             }
-            sorter.writeFile(rIter, writer);
             writer.close();
             LOG.info(reduceTask.getTaskID() + 
                      " Merge of the " +inMemClosedFiles.length +
@@ -1679,6 +1700,31 @@ class ReduceTask extends Task {
           return file.toString().endsWith(".out");
         }     
       };
+
+    @SuppressWarnings("unchecked")
+    private void combineAndSpill(
+        SequenceFile.Sorter.RawKeyValueIterator kvIter,
+        Counters.Counter inCounter) throws IOException {
+      JobConf job = (JobConf)getConf();
+      Reducer combiner =
+        (Reducer)ReflectionUtils.newInstance(combinerClass, job);
+      Class keyClass = job.getMapOutputKeyClass();
+      Class valClass = job.getMapOutputValueClass();
+      RawComparator comparator = job.getOutputKeyComparator();
+      try {
+        CombineValuesIterator values = new CombineValuesIterator(
+            kvIter, comparator, keyClass, valClass, job, Reporter.NULL,
+            inCounter);
+        while (values.more()) {
+          combiner.reduce(values.getKey(), values, combineCollector,
+              Reporter.NULL);
+          values.nextKey();
+        }
+      } finally {
+        combiner.close();
+      }
+    }
+
   }
 
   private static int getClosestPowerOf2(int value) {
