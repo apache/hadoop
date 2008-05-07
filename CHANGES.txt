@@ -32,6 +32,7 @@ Hbase Change Log
                for regression tests
    HBASE-405   TIF and TOF use log4j directly rather than apache commons-logging
    HBASE-618   We always compact if 2 files, regardless of the compaction threshold setting
+   HBASE-619   Fix 'logs' link in UI
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

@@ -73,7 +73,7 @@ public class InfoServer {
     String appDir = getWebAppsPath();
     
     // Set up the context for "/logs/" if "hadoop.log.dir" property is defined. 
-    String logDir = System.getProperty("hadoop.log.dir");
+    String logDir = System.getProperty("hbase.log.dir");
     if (logDir != null) {
       HttpContext logContext = new HttpContext();
       logContext.setContextPath("/logs/*");
