@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
@@ -737,6 +738,21 @@ public class HStore implements HConstants {
   //////////////////////////////////////////////////////////////////////////////
   // Compaction
   //////////////////////////////////////////////////////////////////////////////
+
+  /*
+   * @param files
+   * @return True if any of the files in <code>files</code> are References.
+   */
+  private boolean hasReferences(Collection<HStoreFile> files) {
+    if (files != null && files.size() > 0) {
+      for (HStoreFile hsf: files) {
+        if (hsf.isReference()) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
   
   /**
    * Compact the back-HStores.  This method may take some time, so the calling 
@@ -763,30 +779,22 @@ public class HStore implements HConstants {
       List<HStoreFile> filesToCompact = null;
       synchronized (storefiles) {
         filesToCompact = new ArrayList<HStoreFile>(this.storefiles.values());
-        if (filesToCompact.size() < 1) {
-          return checkSplit();
-        } else if (filesToCompact.size() == 1) {
-          if (!filesToCompact.get(0).isReference()) {
-            return checkSplit();
-          }
-        } else if (filesToCompact.size() < compactionThreshold) {
+        if (!hasReferences(filesToCompact) &&
+             filesToCompact.size() < compactionThreshold) {
           return checkSplit();
         }
-
         if (!fs.exists(compactionDir) && !fs.mkdirs(compactionDir)) {
           LOG.warn("Mkdir on " + compactionDir.toString() + " failed");
           return checkSplit();
         }
 
-        // Storefiles are keyed by sequence id. The oldest file comes first.
-        // We need to return out of here a List that has the newest file first.
-        Collections.reverse(filesToCompact);
-
         // The max-sequenceID in any of the to-be-compacted TreeMaps is the 
         // last key of storefiles.
-
         maxId = this.storefiles.lastKey().longValue();
       }
+      // Storefiles are keyed by sequence id. The oldest file comes first.
+      // We need to return out of here a List that has the newest file first.
+      Collections.reverse(filesToCompact);
 
       // Step through them, writing to the brand-new MapFile
       HStoreFile compactedOutputFile = new HStoreFile(conf, fs, 

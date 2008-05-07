@@ -31,6 +31,7 @@ Hbase Change Log
    HBASE-607   MultiRegionTable.makeMultiRegionTable is not deterministic enough
                for regression tests
    HBASE-405   TIF and TOF use log4j directly rather than apache commons-logging
+   HBASE-618   We always compact if 2 files, regardless of the compaction threshold setting
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
