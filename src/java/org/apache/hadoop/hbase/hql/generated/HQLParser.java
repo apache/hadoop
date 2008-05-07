@@ -75,7 +75,7 @@ public class HQLParser implements HQLParserConstants {
     case SELECT:
     case ENABLE:
     case DISABLE:
-    case 69:
+    case 70:
       switch ((jj_ntk==-1)?jj_ntk():jj_ntk) {
       case HELP:
       case ALTER:
@@ -100,7 +100,7 @@ public class HQLParser implements HQLParserConstants {
         jj_la1[0] = jj_gen;
         ;
       }
-      jj_consume_token(69);
+      jj_consume_token(70);
       break;
     case 0:
       jj_consume_token(0);
@@ -391,6 +391,7 @@ public class HQLParser implements HQLParserConstants {
       case COMPRESSION:
       case IN_MEMORY:
       case BLOCK_CACHE_ENABLED:
+      case TTL:
       case BLOOMFILTER:
       case VECTOR_SIZE:
       case NUM_HASH:
@@ -444,6 +445,12 @@ public class HQLParser implements HQLParserConstants {
       case BLOCK_CACHE_ENABLED:
         jj_consume_token(BLOCK_CACHE_ENABLED);
       columnSpec.put("BLOCK_CACHE_ENABLED", true);
+        break;
+      case TTL:
+        jj_consume_token(TTL);
+        jj_consume_token(EQUALS);
+        n = number();
+      columnSpec.put("TTL", n);
         break;
       case BLOOMFILTER:
         jj_consume_token(BLOOMFILTER);
@@ -1085,6 +1092,16 @@ public class HQLParser implements HQLParserConstants {
     finally { jj_save(0, xla); }
   }
 
+  final private boolean jj_3R_10() {
+    Token xsp;
+    xsp = jj_scanpos;
+    if (jj_3R_11()) {
+    jj_scanpos = xsp;
+    if (jj_3R_12()) return true;
+    }
+    return false;
+  }
+
   final private boolean jj_3_1() {
     if (jj_scan_token(ADD)) return true;
     if (jj_3R_10()) return true;
@@ -1094,25 +1111,15 @@ public class HQLParser implements HQLParserConstants {
   final private boolean jj_3R_12() {
     Token xsp;
     xsp = jj_scanpos;
-    if (jj_scan_token(67)) {
+    if (jj_scan_token(68)) {
     jj_scanpos = xsp;
-    if (jj_scan_token(68)) return true;
+    if (jj_scan_token(69)) return true;
     }
     return false;
   }
 
   final private boolean jj_3R_11() {
     if (jj_scan_token(ID)) return true;
-    return false;
-  }
-
-  final private boolean jj_3R_10() {
-    Token xsp;
-    xsp = jj_scanpos;
-    if (jj_3R_11()) {
-    jj_scanpos = xsp;
-    if (jj_3R_12()) return true;
-    }
     return false;
   }
 
@@ -1138,10 +1145,10 @@ public class HQLParser implements HQLParserConstants {
       jj_la1_0 = new int[] {0xf3ffe0,0xf3ffe1,0xf3ffe0,0x0,0x0,0x0,0x0,0x33dbc0,0x33dbc0,0x0,0x600,0x0,0x0,0x0,0x0,0x0,0x0,0x1000,0x0,0x80000000,0x0,0x2000000,0x0,0x3000000,0x8000000,0x3000000,0x80000000,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,};
    }
    private static void jj_la1_1() {
-      jj_la1_1 = new int[] {0x0,0x0,0x0,0x80000000,0x80000000,0x80000000,0x80000000,0x80000000,0x80000000,0x80000000,0x0,0xe71c000,0xe0000,0x1c00000,0xe71c000,0x10,0x10,0x30000000,0x0,0x0,0x0,0x0,0xc0002000,0x0,0x0,0x0,0x0,0x1,0x2,0x10,0x0,0x80002000,0x80002000,0x80002000,0x0,0x80002000,0x10,0x10,0x10,0x80000000,0x0,0x80000000,};
+      jj_la1_1 = new int[] {0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x1cf1c000,0xe0000,0x3800000,0x1cf1c000,0x10,0x10,0x60000000,0x0,0x0,0x0,0x0,0x80002000,0x0,0x0,0x0,0x0,0x1,0x2,0x10,0x0,0x2000,0x2000,0x2000,0x0,0x2000,0x10,0x10,0x10,0x0,0x0,0x0,};
    }
    private static void jj_la1_2() {
-      jj_la1_2 = new int[] {0x0,0x20,0x0,0x0,0x3,0x3,0x18,0x0,0x0,0x18,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x18,0x0,0x18,0x0,0x19,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x18,0x1,0x19,0x1,0x18,0x19,0x0,0x0,0x0,0x1,0x18,0x18,};
+      jj_la1_2 = new int[] {0x0,0x40,0x0,0x1,0x7,0x7,0x31,0x1,0x1,0x31,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x30,0x0,0x30,0x0,0x33,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x30,0x3,0x33,0x3,0x30,0x33,0x0,0x0,0x0,0x3,0x30,0x31,};
    }
   final private JJCalls[] jj_2_rtns = new JJCalls[1];
   private boolean jj_rescan = false;
@@ -1318,8 +1325,8 @@ public class HQLParser implements HQLParserConstants {
 
   public ParseException generateParseException() {
     jj_expentries.removeAllElements();
-    boolean[] la1tokens = new boolean[70];
-    for (int i = 0; i < 70; i++) {
+    boolean[] la1tokens = new boolean[71];
+    for (int i = 0; i < 71; i++) {
       la1tokens[i] = false;
     }
     if (jj_kind >= 0) {
@@ -1341,7 +1348,7 @@ public class HQLParser implements HQLParserConstants {
         }
       }
     }
-    for (int i = 0; i < 70; i++) {
+    for (int i = 0; i < 71; i++) {
       if (la1tokens[i]) {
         jj_expentry = new int[1];
         jj_expentry[0] = i;

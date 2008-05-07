@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
@@ -53,6 +53,8 @@ import org.apache.hadoop.io.WritableComparable;
 class Memcache {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   
+  private long ttl;
+
   // Note that since these structures are always accessed with a lock held,
   // so no additional synchronization is required.
   
@@ -66,6 +68,21 @@ class Memcache {
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
+  /**
+   * Default constructor. Used for tests.
+   */
+  public Memcache()
+  {
+    ttl = HConstants.FOREVER;
+  }
+
+  /**
+   * Constructor.
+   * @param ttl The TTL for cache entries, in milliseconds.
+   */
+  public Memcache(long ttl) {
+    this.ttl = ttl;
+  }
 
   /*
    * Utility method.
@@ -229,7 +246,7 @@ class Memcache {
         if (itKey.getRow().compareTo(row) <= 0) {
           continue;
         }
-        // Note: Not suppressing deletes.
+        // Note: Not suppressing deletes or expired cells.
         result = itKey.getRow();
         break;
       }
@@ -268,7 +285,9 @@ class Memcache {
       return;
     }
 
+    List<HStoreKey> victims = new ArrayList<HStoreKey>();
     SortedMap<HStoreKey, byte[]> tailMap = map.tailMap(key);
+    long now = System.currentTimeMillis();
     for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
       HStoreKey itKey = es.getKey();
       Text itCol = itKey.getColumn();
@@ -282,14 +301,27 @@ class Memcache {
               deletes.put(new Text(itCol), Long.valueOf(itKey.getTimestamp()));
             }
           } else if (!(deletes.containsKey(itCol) 
-            && deletes.get(itCol).longValue() >= itKey.getTimestamp())) {
-            results.put(new Text(itCol), new Cell(val, itKey.getTimestamp()));
+              && deletes.get(itCol).longValue() >= itKey.getTimestamp())) {
+            // Skip expired cells
+            if (ttl == HConstants.FOREVER ||
+                  now < itKey.getTimestamp() + ttl) {
+              results.put(new Text(itCol),
+                new Cell(val, itKey.getTimestamp()));
+            } else {
+              victims.add(itKey);
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("internalGetFull: " + itKey + ": expired, skipped");
+              }
+            }
           }
         }
       } else if (key.getRow().compareTo(itKey.getRow()) < 0) {
         break;
       }
     }
+    // Remove expired victims from the map.
+    for (HStoreKey v: victims)
+      map.remove(v);
   }
 
   /**
@@ -323,7 +355,8 @@ class Memcache {
         
     Iterator<HStoreKey> key_iterator = null;
     HStoreKey found_key = null;
-    
+    ArrayList<HStoreKey> victims = new ArrayList<HStoreKey>();
+    long now = System.currentTimeMillis();
     // get all the entries that come equal or after our search key
     SortedMap<HStoreKey, byte []> tailMap = map.tailMap(search_key);
     
@@ -348,8 +381,16 @@ class Memcache {
               }
             }
           } else {
-            candidateKeys.put(strippedKey, 
-              new Long(found_key.getTimestamp()));
+            if (ttl == HConstants.FOREVER ||
+                  now < found_key.getTimestamp() + ttl) {
+              candidateKeys.put(strippedKey, 
+                new Long(found_key.getTimestamp()));
+            } else {
+              victims.add(found_key);
+              if (LOG.isDebugEnabled()) {
+                LOG.debug(":" + found_key + ": expired, skipped");
+              }
+            }
           }
         }
       } while (found_key.getRow().compareTo(key) <= 0 
@@ -385,9 +426,18 @@ class Memcache {
           // take note of the row of this candidate so that we'll know when
           // we cross the row boundary into the previous row.
           if (!HLogEdit.isDeleted(headMap.get(thisKey))) {
-            lastRowFound = thisKey.getRow();
-            candidateKeys.put(stripTimestamp(thisKey), 
-              new Long(thisKey.getTimestamp()));
+            if (ttl == HConstants.FOREVER ||
+                    now < found_key.getTimestamp() + ttl) {
+              lastRowFound = thisKey.getRow();
+              candidateKeys.put(stripTimestamp(thisKey), 
+                new Long(thisKey.getTimestamp()));
+            } else {
+              victims.add(found_key);
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("internalGetRowKeyAtOrBefore: " + found_key +
+                  ": expired, skipped");
+              }
+            }
           }
         }
       } else {
@@ -413,12 +463,24 @@ class Memcache {
               }
             }
           } else {
-            candidateKeys.put(stripTimestamp(found_key), 
-              Long.valueOf(found_key.getTimestamp()));
+            if (ttl == HConstants.FOREVER ||
+                    now < found_key.getTimestamp() + ttl) {
+              candidateKeys.put(stripTimestamp(found_key), 
+                Long.valueOf(found_key.getTimestamp()));
+            } else {
+              victims.add(found_key);
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("internalGetRowKeyAtOrBefore: " + found_key +
+                  ": expired, skipped");
+              }
+            }
           }
         } while (key_iterator.hasNext());
       }
     }
+    // Remove expired victims from the map.
+    for (HStoreKey victim: victims)
+      map.remove(victim);
   }
   
   static HStoreKey stripTimestamp(HStoreKey key) {
@@ -442,21 +504,37 @@ class Memcache {
       final int numVersions) {
 
     ArrayList<Cell> result = new ArrayList<Cell>();
+    
     // TODO: If get is of a particular version -- numVersions == 1 -- we
     // should be able to avoid all of the tailmap creations and iterations
     // below.
+    long now = System.currentTimeMillis();
+    List<HStoreKey> victims = new ArrayList<HStoreKey>();
     SortedMap<HStoreKey, byte []> tailMap = map.tailMap(key);
     for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
       HStoreKey itKey = es.getKey();
       if (itKey.matchesRowCol(key)) {
         if (!HLogEdit.isDeleted(es.getValue())) { 
-          result.add(new Cell(tailMap.get(itKey), itKey.getTimestamp()));
+          // Filter out expired results
+          if (ttl == HConstants.FOREVER ||
+                now < itKey.getTimestamp() + ttl) {
+            result.add(new Cell(tailMap.get(itKey), itKey.getTimestamp()));
+          } else {
+            victims.add(itKey);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("internalGet: " + itKey + ": expired, skipped");
+            }
+          }
         }
       }
       if (numVersions > 0 && result.size() >= numVersions) {
         break;
       }
     }
+    // Remove expired victims from the map.
+    for (HStoreKey v: victims)
+      map.remove(v);
+
     return result;
   }
 
@@ -500,7 +578,9 @@ class Memcache {
   private List<HStoreKey> internalGetKeys(final SortedMap<HStoreKey, byte []> map,
       final HStoreKey origin, final int versions) {
 
+    long now = System.currentTimeMillis();
     List<HStoreKey> result = new ArrayList<HStoreKey>();
+    List<HStoreKey> victims = new ArrayList<HStoreKey>();
     SortedMap<HStoreKey, byte []> tailMap = map.tailMap(origin);
     for (Map.Entry<HStoreKey, byte []> es: tailMap.entrySet()) {
       HStoreKey key = es.getKey();
@@ -525,15 +605,26 @@ class Memcache {
           break;
         }
       }
-
       if (!HLogEdit.isDeleted(es.getValue())) {
-        result.add(key);
+        if (ttl == HConstants.FOREVER || now < key.getTimestamp() + ttl) {
+          result.add(key);
+        } else {
+          victims.add(key);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("internalGetKeys: " + key + ": expired, skipped");
+          }
+        }
         if (versions != HConstants.ALL_VERSIONS && result.size() >= versions) {
           // We have enough results.  Return.
           break;
         }
       }
     }
+
+    // Clean expired victims from the map.
+    for (HStoreKey v: victims)
+       map.remove(v);
+
     return result;
   }
 

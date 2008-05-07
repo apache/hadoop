@@ -87,7 +87,7 @@ public class HelpCommand extends BasicCommand {
             new String[] {
                 "Create tables",
                 "CREATE TABLE table_name (column_family_name [MAX_VERSIONS=n] "
-                    + "[MAX_LENGTH=n] [COMPRESSION=NONE|RECORD|BLOCK] [IN_MEMORY] "
+                    + "[MAX_LENGTH=n] [COMPRESSION=NONE|RECORD|BLOCK] [IN_MEMORY] [TTL=n]"
                     + "[BLOOMFILTER=NONE|BLOOMFILTER|COUNTING_BLOOMFILTER|RETOUCHED_BLOOMFILTER "
                     + "VECTOR_SIZE=n NUM_HASH=n], " + "...)" });
     load.put("DROP", new String[] { "Drop tables",

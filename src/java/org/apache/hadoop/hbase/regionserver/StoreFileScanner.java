@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.SortedMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.MapFile;
@@ -216,6 +217,8 @@ implements ChangedReadersObserver {
     // Find the next viable row label (and timestamp).
     Text viableRow = null;
     long viableTimestamp = -1;
+    long now = System.currentTimeMillis();
+    long ttl = store.ttl;
     for(int i = 0; i < keys.length; i++) {
       if((keys[i] != null)
           && (columnMatch(i))
@@ -224,8 +227,14 @@ implements ChangedReadersObserver {
               || (keys[i].getRow().compareTo(viableRow) < 0)
               || ((keys[i].getRow().compareTo(viableRow) == 0)
                   && (keys[i].getTimestamp() > viableTimestamp)))) {
-        viableRow = new Text(keys[i].getRow());
-        viableTimestamp = keys[i].getTimestamp();
+        if (ttl == HConstants.FOREVER || now < keys[i].getTimestamp() + ttl) {
+          viableRow = new Text(keys[i].getRow());
+          viableTimestamp = keys[i].getTimestamp();
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("getNextViableRow :" + keys[i] + ": expired, skipped");
+          }
+        }
       }
     }
     return new ViableRow(viableRow, viableTimestamp);
@@ -248,6 +257,13 @@ implements ChangedReadersObserver {
       closeSubScanner(i);
       return true;
     }
+    long now = System.currentTimeMillis();
+    long ttl = store.ttl;
+    if (ttl != HConstants.FOREVER && now >= firstKey.getTimestamp() + ttl) {
+      // Didn't find it. Close the scanner and return TRUE
+      closeSubScanner(i);
+      return true;
+    }
     this.vals[i] = ibw.get();
     keys[i].setRow(firstKey.getRow());
     keys[i].setColumn(firstKey.getColumn());
@@ -264,15 +280,23 @@ implements ChangedReadersObserver {
   boolean getNext(int i) throws IOException {
     boolean result = false;
     ImmutableBytesWritable ibw = new ImmutableBytesWritable();
+    long now = System.currentTimeMillis();
+    long ttl = store.ttl;
     while (true) {
       if (!readers[i].next(keys[i], ibw)) {
         closeSubScanner(i);
         break;
       }
       if (keys[i].getTimestamp() <= this.timestamp) {
-        vals[i] = ibw.get();
-        result = true;
-        break;
+        if (ttl == HConstants.FOREVER || now < keys[i].getTimestamp() + ttl) {
+          vals[i] = ibw.get();
+          result = true;
+          break;
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("getNext: " + keys[i] + ": expired, skipped");
+          }
+        }
       }
     }
     return result;

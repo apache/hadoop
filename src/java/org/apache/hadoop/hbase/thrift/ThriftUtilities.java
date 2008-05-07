@@ -59,7 +59,7 @@ public class ThriftUtilities {
     }
     HColumnDescriptor col = new HColumnDescriptor(new Text(in.name),
         in.maxVersions, comp, in.inMemory, in.blockCacheEnabled,
-        in.maxValueLength, bloom);
+        in.maxValueLength, in.timeToLive, bloom);
     return col;
   }
   

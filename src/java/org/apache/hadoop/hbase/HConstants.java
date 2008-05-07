@@ -188,4 +188,9 @@ public interface HConstants {
    * Define for 'return-all-versions'.
    */
   static final int ALL_VERSIONS = -1;
+  
+  /**
+   * Unlimited time-to-live.
+   */
+  static final int FOREVER = -1;
 }

@@ -83,7 +83,8 @@ public class TestTimestamp extends HBaseClusterTestCase {
   private HRegion createRegion() throws IOException {
     HTableDescriptor htd = createTableDescriptor(getName());
     htd.addFamily(new HColumnDescriptor(COLUMN, VERSIONS,
-      CompressionType.NONE, false, false, Integer.MAX_VALUE, null));
+      CompressionType.NONE, false, false, Integer.MAX_VALUE,
+      HConstants.FOREVER, null));
     return createNewHRegion(htd, null, null);
   }
 }

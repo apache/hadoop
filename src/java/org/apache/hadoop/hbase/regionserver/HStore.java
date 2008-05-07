@@ -85,7 +85,7 @@ public class HStore implements HConstants {
   
   private static final String BLOOMFILTER_FILE_NAME = "filter";
 
-  protected final Memcache memcache = new Memcache();
+  protected final Memcache memcache;
   private final Path basedir;
   private final HRegionInfo info;
   private final HColumnDescriptor family;
@@ -94,6 +94,7 @@ public class HStore implements HConstants {
   private final HBaseConfiguration conf;
   private final Path filterDir;
   final Filter bloomFilter;
+  protected long ttl;
 
   private final long desiredMaxFileSize;
   private volatile long storeSize;
@@ -173,7 +174,10 @@ public class HStore implements HConstants {
     this.family = family;
     this.fs = fs;
     this.conf = conf;
-    
+    this.ttl = family.getTimeToLive();
+    if (ttl != HConstants.FOREVER)
+      this.ttl *= 1000;
+    this.memcache = new Memcache(this.ttl);
     this.compactionDir = HRegion.getCompactionDir(basedir);
     this.storeName =
       new Text(this.info.getEncodedName() + "/" + this.family.getFamilyName());
@@ -613,6 +617,7 @@ public class HStore implements HConstants {
     // flush to list of store files.  Add cleanup of anything put on filesystem
     // if we fail.
     synchronized(flushLock) {
+      long now = System.currentTimeMillis();
       // A. Write the Maps out to the disk
       HStoreFile flushedFile = new HStoreFile(conf, fs, basedir,
         info.getEncodedName(),  family.getFamilyName(), -1L, null);
@@ -637,9 +642,17 @@ public class HStore implements HConstants {
           byte[] bytes = es.getValue();
           TextSequence f = HStoreKey.extractFamily(curkey.getColumn());
           if (f.equals(this.family.getFamilyName())) {
-            entries++;
-            out.append(curkey, new ImmutableBytesWritable(bytes));
-            flushed += HRegion.getEntrySize(curkey, bytes);
+            if (ttl == HConstants.FOREVER ||
+                  now < curkey.getTimestamp() + ttl) {
+              entries++;
+              out.append(curkey, new ImmutableBytesWritable(bytes));
+              flushed += HRegion.getEntrySize(curkey, bytes);
+            } else {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("internalFlushCache: " + curkey +
+                  ": expired, skipped");
+              }
+            }
           }
         }
       } finally {
@@ -858,6 +871,7 @@ public class HStore implements HConstants {
         }
       }
 
+      long now = System.currentTimeMillis();
       int timesSeen = 0;
       Text lastRow = new Text();
       Text lastColumn = new Text();
@@ -903,7 +917,13 @@ public class HStore implements HConstants {
           if (sk.getRow().getLength() != 0 && sk.getColumn().getLength() != 0) {
             // Only write out objects which have a non-zero length key and
             // value
-            compactedOut.append(sk, vals[smallestKey]);
+            if (ttl == HConstants.FOREVER || now < sk.getTimestamp() + ttl) {
+              compactedOut.append(sk, vals[smallestKey]);
+            } else {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("compactHStoreFiles: " + sk + ": expired, deleted");
+              }
+            }
           }
         }
 
@@ -1125,6 +1145,8 @@ public class HStore implements HConstants {
     Set<Text> columns, Map<Text, Long> deletes, Map<Text, Cell> results) 
   throws IOException {
     synchronized(map) {
+      long now = System.currentTimeMillis();
+
       // seek back to the beginning
       map.reset();
       
@@ -1159,11 +1181,18 @@ public class HStore implements HConstants {
             // there aren't any pending deletes.
             if (!(deletes.containsKey(readcol) 
               && deletes.get(readcol).longValue() >= readkey.getTimestamp())) {
-              results.put(new Text(readcol), 
-                new Cell(readval.get(), readkey.getTimestamp()));
-              // need to reinstantiate the readval so we can reuse it, 
-              // otherwise next iteration will destroy our result
-              readval = new ImmutableBytesWritable();
+              if (ttl == HConstants.FOREVER ||
+                      now < readkey.getTimestamp() + ttl) {
+                results.put(new Text(readcol), 
+                  new Cell(readval.get(), readkey.getTimestamp()));
+                // need to reinstantiate the readval so we can reuse it, 
+                // otherwise next iteration will destroy our result
+                readval = new ImmutableBytesWritable();
+              } else {
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("getFullFromMapFile: " + readkey + ": expired, skipped");
+                }
+              }
             }
           }
         } else if(key.getRow().compareTo(readkey.getRow()) < 0) {
@@ -1197,6 +1226,7 @@ public class HStore implements HConstants {
     }
     
     this.lock.readLock().lock();
+    long now = System.currentTimeMillis();
     try {
       // Check the memcache
       List<Cell> results = this.memcache.get(key, numVersions);
@@ -1233,7 +1263,14 @@ public class HStore implements HConstants {
             continue;
           }
           if (!isDeleted(readkey, readval.get(), true, deletes)) {
-            results.add(new Cell(readval.get(), readkey.getTimestamp()));
+            if (ttl == HConstants.FOREVER ||
+                    now < readkey.getTimestamp() + ttl) {
+              results.add(new Cell(readval.get(), readkey.getTimestamp()));
+            } else {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("get: " + readkey + ": expired, skipped");
+              }
+            }
             // Perhaps only one version is wanted.  I could let this
             // test happen later in the for loop test but it would cost
             // the allocation of an ImmutableBytesWritable.
@@ -1247,7 +1284,14 @@ public class HStore implements HConstants {
               !hasEnoughVersions(numVersions, results);
               readval = new ImmutableBytesWritable()) {
             if (!isDeleted(readkey, readval.get(), true, deletes)) {
-              results.add(new Cell(readval.get(), readkey.getTimestamp()));
+              if (ttl == HConstants.FOREVER ||
+                    now < readkey.getTimestamp() + ttl) {
+                results.add(new Cell(readval.get(), readkey.getTimestamp()));
+              } else {
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("get: " + readkey + ": expired, skipped");
+                }
+              }
             }
           }
         }
@@ -1292,6 +1336,7 @@ public class HStore implements HConstants {
     
     // This code below is very close to the body of the get method.
     this.lock.readLock().lock();
+    long now = System.currentTimeMillis();
     try {
       MapFile.Reader[] maparray = getReaders();
       for(int i = maparray.length - 1; i >= 0; i--) {
@@ -1319,7 +1364,15 @@ public class HStore implements HConstants {
                 // in the memcache
                 if (!isDeleted(readkey, readval.get(), false, null) &&
                     !keys.contains(readkey)) {
-                  keys.add(new HStoreKey(readkey));
+                  if (ttl == HConstants.FOREVER ||
+                        now < readkey.getTimestamp() + ttl) {
+                    keys.add(new HStoreKey(readkey));
+                  } else {
+                    if (LOG.isDebugEnabled()) {
+                      LOG.debug("getKeys: " + readkey +
+                          ": expired, skipped");
+                    }
+                  }
 
                   // if we've collected enough versions, then exit the loop.
                   if (versions != ALL_VERSIONS && keys.size() >= versions) {
@@ -1397,7 +1450,9 @@ public class HStore implements HConstants {
       if (!map.next(readkey, readval)) {
         return;
       }
-      
+
+      long now = System.currentTimeMillis();
+
       // if there aren't any candidate keys yet, we'll do some things slightly
       // different 
       if (candidateKeys.isEmpty()) {
@@ -1426,8 +1481,16 @@ public class HStore implements HConstants {
           // as a candidate key
           if (readkey.getRow().equals(row)) {
             if (!HLogEdit.isDeleted(readval.get())) {
-              candidateKeys.put(stripTimestamp(readkey), 
-                new Long(readkey.getTimestamp()));
+              if (ttl == HConstants.FOREVER || 
+                    now < readkey.getTimestamp() + ttl) {
+                candidateKeys.put(stripTimestamp(readkey), 
+                  new Long(readkey.getTimestamp()));
+              } else {
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("rowAtOrBeforeFromMapFile:" + readkey +
+                    ": expired, skipped");
+                }
+              }
             }
           } else if (readkey.getRow().compareTo(row) > 0 ) {
             // if the row key we just read is beyond the key we're searching for,
@@ -1438,8 +1501,16 @@ public class HStore implements HConstants {
             // we're seeking yet, so this row is a candidate for closest
             // (assuming that it isn't a delete).
             if (!HLogEdit.isDeleted(readval.get())) {
-              candidateKeys.put(stripTimestamp(readkey), 
-                new Long(readkey.getTimestamp()));
+              if (ttl == HConstants.FOREVER || 
+                      now < readkey.getTimestamp() + ttl) {
+                candidateKeys.put(stripTimestamp(readkey), 
+                  new Long(readkey.getTimestamp()));
+              } else {
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("rowAtOrBeforeFromMapFile:" + readkey +
+                    ": expired, skipped");
+                }
+              }
             }
           }        
         } while(map.next(readkey, readval));
@@ -1490,7 +1561,16 @@ public class HStore implements HConstants {
         if (readkey.getRow().equals(row)) {
           strippedKey = stripTimestamp(readkey);
           if (!HLogEdit.isDeleted(readval.get())) {
-            candidateKeys.put(strippedKey, new Long(readkey.getTimestamp()));
+            if (ttl == HConstants.FOREVER || 
+                    now < readkey.getTimestamp() + ttl) {
+              candidateKeys.put(strippedKey,
+                new Long(readkey.getTimestamp()));
+            } else {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("rowAtOrBeforeFromMapFile: " + readkey +
+                  ": expired, skipped");
+              }
+            }
           } else {
             // if the candidate keys contain any that might match by timestamp,
             // then check for a match and remove it if it's too young to 
@@ -1514,7 +1594,15 @@ public class HStore implements HConstants {
           // we're seeking yet, so this row is a candidate for closest 
           // (assuming that it isn't a delete).
           if (!HLogEdit.isDeleted(readval.get())) {
-            candidateKeys.put(strippedKey, readkey.getTimestamp());
+            if (ttl == HConstants.FOREVER || 
+                    now < readkey.getTimestamp() + ttl) {
+              candidateKeys.put(strippedKey, readkey.getTimestamp());
+            } else {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("rowAtOrBeforeFromMapFile: " + readkey +
+                  ": expired, skipped");
+              }
+            }
           } else {
             // if the candidate keys contain any that might match by timestamp,
             // then check for a match and remove it if it's too young to 

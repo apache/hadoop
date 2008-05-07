@@ -65,7 +65,8 @@ struct ColumnDescriptor {
   6:string bloomFilterType = "NONE",
   7:i32 bloomFilterVectorSize = 0,
   8:i32 bloomFilterNbHashes = 0,
-  9:bool blockCacheEnabled = 0
+  9:bool blockCacheEnabled = 0,
+  10:i32 timeToLive = -1
 }
 
 /**

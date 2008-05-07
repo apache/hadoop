@@ -39,6 +39,8 @@ Hbase Change Log
                is subclassable) (David Alves via Stack)
    HBASE-603   When an exception bubbles out of getRegionServerWithRetries, wrap 
                the exception with a RetriesExhaustedException
+   HBASE-47    Option to set TTL for columns in hbase
+               (Andrew Purtell via Bryan Duxbury and Stack)
 
 Release 0.1.1 - 04/11/2008
 

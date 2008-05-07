@@ -43,6 +43,7 @@ public abstract class SchemaModificationCommand extends BasicCommand {
   protected int vectorSize;
   protected int numHash;
   protected int numEntries;
+  protected int timeToLive;
 
   public SchemaModificationCommand(Writer o) {
     super(o);
@@ -55,6 +56,7 @@ public abstract class SchemaModificationCommand extends BasicCommand {
     inMemory = HColumnDescriptor.DEFAULT_IN_MEMORY;
     blockCacheEnabled = HColumnDescriptor.DEFAULT_BLOCK_CACHE_ENABLED;
     bloomFilterDesc = HColumnDescriptor.DEFAULT_BLOOM_FILTER_DESCRIPTOR;
+    timeToLive = HColumnDescriptor.DEFAULT_TIME_TO_LIVE;
   }
 
   /**
@@ -89,6 +91,8 @@ public abstract class SchemaModificationCommand extends BasicCommand {
         numHash = (Integer) columnSpec.get(spec);
       } else if (spec.equals("NUM_ENTRIES")) {
         numEntries = (Integer) columnSpec.get(spec);
+      } else if (spec.equals("TTL")) {
+        timeToLive = (Integer) columnSpec.get(spec);
       } else {
         throw new IllegalArgumentException("Invalid option: " + spec);
       }
@@ -108,7 +112,7 @@ public abstract class SchemaModificationCommand extends BasicCommand {
 
     HColumnDescriptor columnDesc = new HColumnDescriptor(new Text(column),
         maxVersions, compression, inMemory, blockCacheEnabled,
-        maxLength, bloomFilterDesc);
+        maxLength, timeToLive, bloomFilterDesc);
 
     return columnDesc;
   }

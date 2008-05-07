@@ -44,14 +44,14 @@ public class HTableDescriptor implements WritableComparable {
     new HTableDescriptor(HConstants.ROOT_TABLE_NAME,
         new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
             HColumnDescriptor.CompressionType.NONE, false, false,
-            Integer.MAX_VALUE, null));
+            Integer.MAX_VALUE, HConstants.FOREVER, null));
   
   /** table descriptor for meta table */
   public static final HTableDescriptor metaTableDesc =
     new HTableDescriptor(HConstants.META_TABLE_NAME,
         new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
             HColumnDescriptor.CompressionType.NONE, false, false,
-            Integer.MAX_VALUE, null));
+            Integer.MAX_VALUE, HConstants.FOREVER, null));
   
   private boolean rootregion;
   private boolean metaregion;

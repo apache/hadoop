@@ -186,11 +186,14 @@ public abstract class HBaseTestCase extends TestCase {
       final int versions) {
     HTableDescriptor htd = new HTableDescriptor(name);
     htd.addFamily(new HColumnDescriptor(new Text(COLFAMILY_NAME1), versions,
-      CompressionType.NONE, false, false, Integer.MAX_VALUE, null));
+      CompressionType.NONE, false, false, Integer.MAX_VALUE,
+      HConstants.FOREVER, null));
     htd.addFamily(new HColumnDescriptor(new Text(COLFAMILY_NAME2), versions,
-      CompressionType.NONE, false, false, Integer.MAX_VALUE, null));
+      CompressionType.NONE, false, false, Integer.MAX_VALUE,
+      HConstants.FOREVER, null));
     htd.addFamily(new HColumnDescriptor(new Text(COLFAMILY_NAME3), versions,
-      CompressionType.NONE, false, false, Integer.MAX_VALUE, null));
+      CompressionType.NONE, false, false, Integer.MAX_VALUE, 
+      HConstants.FOREVER, null));
     return htd;
   }
   

@@ -213,6 +213,8 @@ public class AlterCommand extends SchemaModificationCommand {
         numHash = (Integer) columnSpec.get(spec);
       } else if (spec.equals("NUM_ENTRIES")) {
         numEntries = (Integer) columnSpec.get(spec);
+      } else if (spec.equals("TTL")) {
+        timeToLive = (Integer) columnSpec.get(spec);
       } else {
         throw new IllegalArgumentException("Invalid option: " + spec);
       }
@@ -232,7 +234,7 @@ public class AlterCommand extends SchemaModificationCommand {
 
     HColumnDescriptor columnDesc = new HColumnDescriptor(new Text(column),
         maxVersions, compression, inMemory, blockCacheEnabled,
-        maxLength, bloomFilterDesc);
+        maxLength, timeToLive, bloomFilterDesc);
 
     return columnDesc;
   }
@@ -248,5 +250,6 @@ public class AlterCommand extends SchemaModificationCommand {
     inMemory = original.isInMemory();
     blockCacheEnabled = original.isBlockCacheEnabled();
     bloomFilterDesc = original.getBloomFilter();
+    timeToLive = original.getTimeToLive();
   }
 }

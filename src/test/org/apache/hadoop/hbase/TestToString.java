@@ -46,7 +46,7 @@ public class TestToString extends TestCase {
     assertEquals("Table descriptor", "name: -ROOT-, families: {info:={name: " +
       "info, max versions: 1, compression: NONE, in memory: false, " +
       "block cache enabled: false, max length: 2147483647, " +
-      "bloom filter: none}}", htd.toString());
+      "time to live: FOREVER, bloom filter: none}}", htd.toString());
   }
   
   /**
@@ -59,6 +59,7 @@ public class TestToString extends TestCase {
       "regionname: -ROOT-,,0, startKey: <>, endKey: <>, encodedName: 70236052, tableDesc: " +
       "{name: -ROOT-, families: {info:={name: info, max versions: 1, " +
       "compression: NONE, in memory: false, block cache enabled: false, " +
-      "max length: 2147483647, bloom filter: none}}}", hri.toString());
+      "max length: 2147483647, time to live: FOREVER, bloom filter: none}}}",
+      hri.toString());
   }
 }
