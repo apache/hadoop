@@ -35,6 +35,7 @@ Hbase Change Log
    HBASE-619   Fix 'logs' link in UI
    HBASE-478   offlining of table does not run reliably
    HBASE-453   undeclared throwable exception from HTable.get
+   HBASE-620   testmergetool failing in branch and trunk since hbase-618 went in
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
