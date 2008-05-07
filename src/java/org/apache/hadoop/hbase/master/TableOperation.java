@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.io.RowResult;
@@ -46,8 +47,7 @@ import org.apache.hadoop.hbase.util.Sleeper;
 abstract class TableOperation implements HConstants {
   static final Long ZERO_L = Long.valueOf(0L);
   
-  protected static final Log LOG = 
-    LogFactory.getLog(TableOperation.class.getName());
+  protected static final Log LOG = LogFactory.getLog(TableOperation.class);
   
   protected Set<MetaRegion> metaRegions;
   protected Text tableName;
@@ -104,8 +104,8 @@ abstract class TableOperation implements HConstants {
           HRegionInfo info = this.master.getHRegionInfo(values.getRow(), values);
           if (info == null) {
             emptyRows.add(values.getRow());
-            throw new IOException(COL_REGIONINFO + " not found on " +
-                values.getRow());
+            LOG.error(COL_REGIONINFO + " not found on " + values.getRow());
+            continue;
           }
           String serverName = Writables.cellToString(values.get(COL_SERVER));
           long startCode = Writables.cellToLong(values.get(COL_STARTCODE));
@@ -141,7 +141,7 @@ abstract class TableOperation implements HConstants {
       }
 
       if (!tableExists) {
-        throw new IOException(tableName + " does not exist");
+        throw new TableNotFoundException(tableName + " does not exist");
       }
 
       postProcessMeta(m, server);

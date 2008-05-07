@@ -575,8 +575,9 @@ class Memcache {
    * equal or older timestamp.  If no keys, returns an empty List. Does not
    * return null.
    */
-  private List<HStoreKey> internalGetKeys(final SortedMap<HStoreKey, byte []> map,
-      final HStoreKey origin, final int versions) {
+  private List<HStoreKey> internalGetKeys(
+      final SortedMap<HStoreKey, byte []> map, final HStoreKey origin,
+      final int versions) {
 
     long now = System.currentTimeMillis();
     List<HStoreKey> result = new ArrayList<HStoreKey>();
@@ -681,6 +682,7 @@ class Memcache {
       }
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean next(HStoreKey key, SortedMap<Text, byte []> results)
     throws IOException {
@@ -704,7 +706,12 @@ class Memcache {
         }
         key.setRow(this.currentRow);
         key.setVersion(this.timestamp);
-        getFull(key, isWildcardScanner()? null: this.columns, deletes, rowResults);
+        getFull(key, isWildcardScanner() ? null : this.columns, deletes,
+            rowResults);
+        for (Map.Entry<Text, Long> e: deletes.entrySet()) {
+          rowResults.put(e.getKey(),
+              new Cell(HLogEdit.deleteBytes.get(), e.getValue()));
+        }
         for (Map.Entry<Text, Cell> e: rowResults.entrySet()) {
           Text column = e.getKey();
           Cell c = e.getValue();
@@ -722,6 +729,7 @@ class Memcache {
       return results.size() > 0;
     }
 
+    /** {@inheritDoc} */
     public void close() {
       if (!scannerClosed) {
         scannerClosed = true;

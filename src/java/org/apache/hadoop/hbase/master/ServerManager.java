@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -101,10 +102,12 @@ class ServerManager implements HConstants {
     if (load != null) {
       // The startup message was from a known server.
       // Remove stale information about the server's load.
-      Set<String> servers = loadToServers.get(load);
-      if (servers != null) {
-        servers.remove(s);
-        loadToServers.put(load, servers);
+      synchronized (loadToServers) {
+        Set<String> servers = loadToServers.get(load);
+        if (servers != null) {
+          servers.remove(s);
+          loadToServers.put(load, servers);
+        }
       }
     }
 
@@ -124,12 +127,14 @@ class ServerManager implements HConstants {
     serverInfo.setLoad(load);
     serversToServerInfo.put(s, serverInfo);
     serversToLoad.put(s, load);
-    Set<String> servers = loadToServers.get(load);
-    if (servers == null) {
-      servers = new HashSet<String>();
+    synchronized (loadToServers) {
+      Set<String> servers = loadToServers.get(load);
+      if (servers == null) {
+        servers = new HashSet<String>();
+      }
+      servers.add(s);
+      loadToServers.put(load, servers);
     }
-    servers.add(s);
-    loadToServers.put(load, servers);
   }
   
   /**
@@ -247,7 +252,10 @@ class ServerManager implements HConstants {
                 master.regionManager.offlineMetaRegion(info.getStartKey());
               }
 
-              master.regionManager.setUnassigned(info);
+              if (!master.regionManager.isMarkedToClose(
+                  serverName, info.getRegionName())) {
+                master.regionManager.setUnassigned(info);
+              }
             }
           }
         }
@@ -277,24 +285,27 @@ class ServerManager implements HConstants {
     if (load != null && !load.equals(serverInfo.getLoad())) {
       // We have previous information about the load on this server
       // and the load on this server has changed
-      Set<String> servers = loadToServers.get(load);
+      synchronized (loadToServers) {
+        Set<String> servers = loadToServers.get(load);
 
-      // Note that servers should never be null because loadToServers
-      // and serversToLoad are manipulated in pairs
-      servers.remove(serverName);
-      loadToServers.put(load, servers);
+        // Note that servers should never be null because loadToServers
+        // and serversToLoad are manipulated in pairs
+        servers.remove(serverName);
+        loadToServers.put(load, servers);
+      }
     }
 
     // Set the current load information
     load = serverInfo.getLoad();
     serversToLoad.put(serverName, load);
-    Set<String> servers = loadToServers.get(load);
-    if (servers == null) {
-      servers = new HashSet<String>();
+    synchronized (loadToServers) {
+      Set<String> servers = loadToServers.get(load);
+      if (servers == null) {
+        servers = new HashSet<String>();
+      }
+      servers.add(serverName);
+      loadToServers.put(load, servers);
     }
-    servers.add(serverName);
-    loadToServers.put(load, servers);
-
     // Next, process messages for this server
     return processMsgs(serverName, serverInfo, mostLoadedRegions, msgs);
   }
@@ -310,7 +321,7 @@ class ServerManager implements HConstants {
   throws IOException { 
     ArrayList<HMsg> returnMsgs = new ArrayList<HMsg>();
     Map<Text, HRegionInfo> regionsToKill = 
-      master.regionManager.getMarkedToClose(serverName);
+      master.regionManager.removeMarkedToClose(serverName);
 
     // Get reports on what the RegionServer did.
     for (int i = 0; i < incomingMsgs.length; i++) {
@@ -351,7 +362,6 @@ class ServerManager implements HConstants {
         returnMsgs.add(new HMsg(HMsg.MSG_REGION_CLOSE, i));
         // Transition the region from toClose to closing state
         master.regionManager.setClosing(i.getRegionName());
-        master.regionManager.noLongerMarkedToClose(serverName, i.getRegionName());
       }
     }
 
@@ -475,25 +485,17 @@ class ServerManager implements HConstants {
 
     } else {
       boolean reassignRegion = !region.isOffline();
-      boolean deleteRegion = false;
       boolean offlineRegion = false;
-      
+
       // either this region is being closed because it was marked to close, or
       // the region server is going down peacefully. in either case, we should
       // at least try to remove it from the closing list. 
       master.regionManager.noLongerClosing(region.getRegionName());
-      
-      // if the region is marked to be offlined, we don't want to reassign 
-      // it.
+
+      // if the region is marked to be offlined, we don't want to reassign it.
       if (master.regionManager.isMarkedForOffline(region.getRegionName())) {
         reassignRegion = false;
         offlineRegion = true;
-      }
-
-      if (master.regionManager.isMarkedForDeletion(region.getRegionName())) {
-        master.regionManager.regionDeleted(region.getRegionName());
-        reassignRegion = false;
-        deleteRegion = true;
       }
 
       if (region.isMetaTable()) {
@@ -513,10 +515,10 @@ class ServerManager implements HConstants {
         // operations asynchronously, so we'll creating a todo item for that.
         try {
           master.toDoQueue.put(new ProcessRegionClose(master, region, 
-            offlineRegion, deleteRegion));
+              offlineRegion));
         } catch (InterruptedException e) {
           throw new RuntimeException(
-            "Putting into toDoQueue was interrupted.", e);
+              "Putting into toDoQueue was interrupted.", e);
         }
       } else {
         // we are reassigning the region eventually, so set it unassigned
@@ -543,10 +545,12 @@ class ServerManager implements HConstants {
       // update load information
       HServerLoad load = serversToLoad.remove(serverName);
       if (load != null) {
-        Set<String> servers = loadToServers.get(load);
-        if (servers != null) {
-          servers.remove(serverName);
-          loadToServers.put(load, servers);
+        synchronized (loadToServers) {
+          Set<String> servers = loadToServers.get(load);
+          if (servers != null) {
+            servers.remove(serverName);
+            loadToServers.put(load, servers);
+          }
         }
       }
     }
@@ -567,8 +571,8 @@ class ServerManager implements HConstants {
     synchronized (serversToLoad) {
       numServers = serversToLoad.size();
       
-      for (Map.Entry<String, HServerLoad> entry : serversToLoad.entrySet()) {
-        totalLoad += entry.getValue().getNumberOfRegions();
+      for (HServerLoad load : serversToLoad.values()) {
+        totalLoad += load.getNumberOfRegions();
       }
       
       averageLoad = Math.ceil((double)totalLoad / (double)numServers);
@@ -597,21 +601,27 @@ class ServerManager implements HConstants {
    * @return Read-only map of servers to serverinfo.
    */
   public Map<String, HServerInfo> getServersToServerInfo() {
-    return Collections.unmodifiableMap(serversToServerInfo);
+    synchronized (serversToServerInfo) {
+      return new HashMap<String, HServerInfo>(serversToServerInfo);
+    }
   }
 
   /**
    * @return Read-only map of servers to load.
    */
   public Map<String, HServerLoad> getServersToLoad() {
-    return Collections.unmodifiableMap(serversToLoad);
+    synchronized (serversToLoad) {
+      return new HashMap<String, HServerLoad>(serversToLoad);
+    }
   }
 
   /**
    * @return Read-only map of load to servers.
    */
   public Map<HServerLoad, Set<String>> getLoadToServers() {
-    return Collections.unmodifiableMap(loadToServers);
+    synchronized (loadToServers) {
+      return new HashMap<HServerLoad, Set<String>>(loadToServers);
+    }
   }
 
   /**
@@ -670,10 +680,12 @@ class ServerManager implements HConstants {
         String serverName = info.getServerAddress().toString();
         HServerLoad load = serversToLoad.remove(serverName);
         if (load != null) {
-          Set<String> servers = loadToServers.get(load);
-          if (servers != null) {
-            servers.remove(serverName);
-            loadToServers.put(load, servers);
+          synchronized (loadToServers) {
+            Set<String> servers = loadToServers.get(load);
+            if (servers != null) {
+              servers.remove(serverName);
+              loadToServers.put(load, servers);
+            }
           }
         }
         deadServers.add(server);

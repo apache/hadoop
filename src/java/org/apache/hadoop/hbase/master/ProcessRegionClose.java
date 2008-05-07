@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.HRegionInfo;
 
@@ -35,28 +34,25 @@ import org.apache.hadoop.hbase.HRegionInfo;
  */
 class ProcessRegionClose extends ProcessRegionStatusChange {
   protected final  boolean offlineRegion;
-  protected final boolean deleteRegion;
 
   /**
   * @param master
   * @param regionInfo Region to operate on
   * @param offlineRegion if true, set the region to offline in meta
-  * @param deleteRegion if true, delete the region row from meta and then
   * delete the region files from disk.
   */
   public ProcessRegionClose(HMaster master, HRegionInfo regionInfo, 
-   boolean offlineRegion, boolean deleteRegion) {
+   boolean offlineRegion) {
 
    super(master, regionInfo);
    this.offlineRegion = offlineRegion;
-   this.deleteRegion = deleteRegion;
   }
 
   /** {@inheritDoc} */
   @Override
   public String toString() {
     return "ProcessRegionClose of " + this.regionInfo.getRegionName() +
-      ", " + this.offlineRegion + ", " + this.deleteRegion;
+      ", " + this.offlineRegion;
   }
 
   @Override
@@ -76,10 +72,7 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
             return true;
           }
 
-          if (deleteRegion) {
-            HRegion.removeRegionFromMETA(server, metaRegionName,
-                regionInfo.getRegionName());
-          } else if (offlineRegion) {
+          if (offlineRegion) {
             // offline the region in meta and then note that we've offlined the
             // region. 
             HRegion.offlineRegionInMETA(server, metaRegionName,
@@ -90,17 +83,6 @@ class ProcessRegionClose extends ProcessRegionStatusChange {
         }
     }.doWithRetries();
 
-    // now that meta is updated, if we need to delete the region's files, now's
-    // the time.
-    if (deleteRegion) {
-      try {
-        HRegion.deleteRegion(master.fs, master.rootdir, regionInfo);
-      } catch (IOException e) {
-        e = RemoteExceptionHandler.checkIOException(e);
-        LOG.error("failed delete region " + regionInfo.getRegionName(), e);
-        throw e;
-      }
-    }
     return result == null ? true : result;
   }
 }

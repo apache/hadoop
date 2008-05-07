@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.util.Writables;
  * Class to manage assigning regions to servers, state of root and meta, etc.
  */ 
 class RegionManager implements HConstants {
-  protected static final Log LOG = LogFactory.getLog(RegionManager.class.getName());
+  protected static final Log LOG = LogFactory.getLog(RegionManager.class);
   
   private volatile AtomicReference<HServerAddress> rootRegionLocation =
     new AtomicReference<HServerAddress>(null);
@@ -104,13 +104,6 @@ class RegionManager implements HConstants {
     Collections.synchronizedSet(new HashSet<Text>());
 
   /**
-   * 'regionsToDelete' contains regions that need to be deleted, but cannot be
-   * until the region server closes it
-   */
-  private final Set<Text> regionsToDelete =
-    Collections.synchronizedSet(new HashSet<Text>());
-
-  /**
    * Set of regions that, once closed, should be marked as offline so that they
    * are not reassigned.
    */
@@ -119,7 +112,7 @@ class RegionManager implements HConstants {
   // How many regions to assign a server at a time.
   private final int maxAssignInOneGo;
 
-  private HMaster master;  
+  private final HMaster master;  
   
   RegionManager(HMaster master) {
     this.master = master;
@@ -179,7 +172,7 @@ class RegionManager implements HConstants {
       // figure out what regions need to be assigned and aren't currently being
       // worked on elsewhere.
       Set<HRegionInfo> regionsToAssign = regionsAwaitingAssignment();
-      
+
       if (regionsToAssign.size() == 0) {
         // There are no regions waiting to be assigned. This is an opportunity
         // for us to check if this server is overloaded. 
@@ -199,8 +192,8 @@ class RegionManager implements HConstants {
         } else {
           // otherwise, give this server a few regions taking into account the 
           // load of all the other servers.
-          assignRegionsToMultipleServers(thisServersLoad, regionsToAssign, 
-            serverName, returnMsgs);
+         assignRegionsToMultipleServers(thisServersLoad, regionsToAssign, 
+           serverName, returnMsgs);
         }
       }
     }
@@ -320,19 +313,21 @@ class RegionManager implements HConstants {
     
     // Look over the set of regions that aren't currently assigned to 
     // determine which we should assign to this server.
-    for (Map.Entry<HRegionInfo, Long> e: unassignedRegions.entrySet()) {
-      HRegionInfo i = e.getKey();
-      if (numberOfMetaRegions.get() != onlineMetaRegions.size() &&
-        !i.isMetaRegion()) {
-        // Can't assign user regions until all meta regions have been assigned
-        // and are on-line
-        continue;
-      }
-      // If the last attempt to open this region was pretty recent, then we 
-      // don't want to try and assign it.
-      long diff = now - e.getValue().longValue();
-      if (diff > master.maxRegionOpenTime) {
-        regionsToAssign.add(e.getKey());
+    synchronized (unassignedRegions) {          //must synchronize when iterating
+      for (Map.Entry<HRegionInfo, Long> e: unassignedRegions.entrySet()) {
+        HRegionInfo i = e.getKey();
+        if (numberOfMetaRegions.get() != onlineMetaRegions.size() &&
+            !i.isMetaRegion()) {
+          // Can't assign user regions until all meta regions have been assigned
+          // and are on-line
+          continue;
+        }
+        // If the last attempt to open this region was pretty recent, then we 
+        // don't want to try and assign it.
+        long diff = now - e.getValue().longValue();
+        if (diff > master.maxRegionOpenTime) {
+          regionsToAssign.add(e.getKey());
+        }
       }
     }
     return regionsToAssign;
@@ -434,7 +429,9 @@ class RegionManager implements HConstants {
    * @return Read-only map of online regions.
    */
   public Map<Text, MetaRegion> getOnlineMetaRegions() {
-    return Collections.unmodifiableSortedMap(onlineMetaRegions);
+    synchronized (onlineMetaRegions) {
+      return new TreeMap<Text, MetaRegion>(onlineMetaRegions);
+    }
   }
   
   /**
@@ -695,18 +692,27 @@ class RegionManager implements HConstants {
    * @param map map of region names to region infos of regions to close
    */
   public void markToCloseBulk(String serverName, 
-    Map<Text, HRegionInfo> map) {
-    regionsToClose.put(serverName, map);
+      Map<Text, HRegionInfo> map) {
+    synchronized (regionsToClose) {
+      Map<Text, HRegionInfo> regions = regionsToClose.get(serverName);
+      if (regions != null) {
+        regions.putAll(map);
+      } else {
+        regions = map;
+      }
+      regionsToClose.put(serverName, regions);
+    }
   }
   
   /** 
-   * Get a map of region names to region infos waiting to be offlined for a 
-   * given server 
+   * Remove the map of region names to region infos waiting to be offlined for a 
+   * given server
+   *  
    * @param serverName
    * @return map of region names to region infos to close
    */
-  public Map<Text, HRegionInfo> getMarkedToClose(String serverName) {
-    return regionsToClose.get(serverName);
+  public Map<Text, HRegionInfo> removeMarkedToClose(String serverName) {
+    return regionsToClose.remove(serverName);
   }
   
   /**
@@ -737,6 +743,15 @@ class RegionManager implements HConstants {
     }
   }
   
+  /**
+   * Called when all regions for a particular server have been closed
+   * 
+   * @param serverName
+   */
+  public void allRegionsClosed(String serverName) {
+    regionsToClose.remove(serverName);
+  }
+
   /** 
    * Check if a region is closing 
    * @param regionName 
@@ -745,7 +760,7 @@ class RegionManager implements HConstants {
   public boolean isClosing(Text regionName) {
     return closingRegions.contains(regionName);
   }
-  
+
   /** 
    * Set a region as no longer closing (closed?) 
    * @param regionName
@@ -772,22 +787,6 @@ class RegionManager implements HConstants {
   }
   
   /** 
-   * Mark a region as to be deleted 
-   * @param regionName
-   */
-  public void markRegionForDeletion(Text regionName) {
-    regionsToDelete.add(regionName);
-  }
-  
-  /** 
-   * Note that a region to delete has been deleted 
-   * @param regionName
-   */
-  public void regionDeleted(Text regionName) {
-    regionsToDelete.remove(regionName);
-  }
-  
-  /** 
    * Note that a region should be offlined as soon as its closed. 
    * @param regionName
    */
@@ -810,15 +809,6 @@ class RegionManager implements HConstants {
    */
   public void regionOfflined(Text regionName) {
     regionsToOffline.remove(regionName);
-  }
-  
-  /**
-   * Check if a region is marked for deletion 
-   * @param regionName
-   * @return true if marked for deletion, false otherwise
-   */
-  public boolean isMarkedForDeletion(Text regionName) {
-    return regionsToDelete.contains(regionName);
   }
   
   /** 

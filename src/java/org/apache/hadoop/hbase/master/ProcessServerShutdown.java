@@ -52,13 +52,11 @@ class ProcessServerShutdown extends RegionServerOperation {
   private boolean rootRescanned;
 
   private class ToDoEntry {
-    boolean deleteRegion;
     boolean regionOffline;
     Text row;
     HRegionInfo info;
 
     ToDoEntry(Text row, HRegionInfo info) {
-      this.deleteRegion = false;
       this.regionOffline = false;
       this.row = row;
       this.info = info;
@@ -154,22 +152,14 @@ class ProcessServerShutdown extends RegionServerOperation {
         if (master.regionManager.isMarkedToClose(deadServerName, info.getRegionName())) {
           master.regionManager.noLongerMarkedToClose(deadServerName, info.getRegionName());
           master.regionManager.noLongerUnassigned(info);
-          if (master.regionManager.isMarkedForDeletion(info.getRegionName())) {
-            // Delete this region
-            master.regionManager.regionDeleted(info.getRegionName());
-            todo.deleteRegion = true;
-          } else {
-            // Mark region offline
-            todo.regionOffline = true;
-          }
+          // Mark region offline
+          todo.regionOffline = true;
         } else {
           // Get region reassigned
           regions.add(info);
-
-          // If it was pending, remove.
-          // Otherwise will obstruct its getting reassigned.
-          master.regionManager.noLongerPending(info.getRegionName());
         }
+        // If it was pending, remove.
+        master.regionManager.noLongerPending(info.getRegionName());
       }
     } finally {
       if(scannerId != -1L) {
@@ -192,9 +182,7 @@ class ProcessServerShutdown extends RegionServerOperation {
     }
     // Update server in root/meta entries
     for (ToDoEntry e: toDoList) {
-      if (e.deleteRegion) {
-        HRegion.removeRegionFromMETA(server, regionName, e.row);
-      } else if (e.regionOffline) {
+      if (e.regionOffline) {
         HRegion.offlineRegionInMETA(server, regionName, e.info);
       }
     }
@@ -314,6 +302,7 @@ class ProcessServerShutdown extends RegionServerOperation {
             r.getRegionName() + " on " + r.getServer());
       }
     }
+    master.regionManager.allRegionsClosed(deadServerName);
     master.serverManager.removeDeadServer(deadServerName);
     return true;
   }

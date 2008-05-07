@@ -20,42 +20,44 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.util.HashSet;
 
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
 /** 
- * Instantiated to delete a table
- * Note that it extends ChangeTableState, which takes care of disabling
- * the table.
+ * Instantiated to delete a table. Table must be offline.
  */
-class TableDelete extends ChangeTableState {
+class TableDelete extends TableOperation {
 
   TableDelete(final HMaster master, final Text tableName) throws IOException {
-    super(master, tableName, false);
+    super(master, tableName);
+  }
+
+  @Override
+  protected void processScanItem(
+      @SuppressWarnings("unused") String serverName,
+      @SuppressWarnings("unused") long startCode,
+      final HRegionInfo info) throws IOException {
+    
+    if (isEnabled(info)) {
+      throw new TableNotDisabledException(tableName.toString());
+    }
   }
 
   @Override
   protected void postProcessMeta(MetaRegion m, HRegionInterface server)
   throws IOException {
-    // For regions that are being served, mark them for deletion          
-    for (HashSet<HRegionInfo> s: servedRegions.values()) {
-      for (HRegionInfo i: s) {
-        master.regionManager.markRegionForDeletion(i.getRegionName());
-      }
-    }
-
-    // Unserved regions we can delete now
     for (HRegionInfo i: unservedRegions) {
       // Delete the region
       try {
+        HRegion.removeRegionFromMETA(server, m.getRegionName(), i.getRegionName());
         HRegion.deleteRegion(this.master.fs, this.master.rootdir, i);
       
       } catch (IOException e) {
@@ -63,18 +65,9 @@ class TableDelete extends ChangeTableState {
           RemoteExceptionHandler.checkIOException(e));
       }
     }
-    super.postProcessMeta(m, server);
     
     // delete the table's folder from fs.
-    master.fs.delete(new Path(master.rootdir, tableName.toString()));
-  }
-
-  @Override
-  protected void updateRegionInfo(BatchUpdate b,
-    @SuppressWarnings("unused") HRegionInfo info) {
-    for (int i = 0; i < ALL_META_COLUMNS.length; i++) {
-      // Be sure to clean all cells
-      b.delete(ALL_META_COLUMNS[i]);
-    }
+    FileUtil.fullyDelete(master.fs,
+        new Path(master.rootdir, tableName.toString()));
   }
 }

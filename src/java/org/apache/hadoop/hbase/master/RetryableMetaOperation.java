@@ -28,7 +28,10 @@ import java.util.concurrent.Callable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.hbase.InvalidColumnNameException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
 /**
@@ -58,6 +61,11 @@ abstract class RetryableMetaOperation<T> implements Callable<T> {
         this.server = master.connection.getHRegionConnection(m.getServer());
         return this.call();
       } catch (IOException e) {
+        if (e instanceof TableNotFoundException ||
+            e instanceof TableNotDisabledException ||
+            e instanceof InvalidColumnNameException) {
+          throw e;
+        }
         if (e instanceof RemoteException) {
           e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
         }

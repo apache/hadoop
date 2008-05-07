@@ -71,8 +71,8 @@ class ChangeTableState extends TableOperation {
     for (HRegionInfo i: unservedRegions) {
       if (i.isOffline() && i.isSplit()) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Skipping region " + i.toString() + " because it is " +
-              "offline because it has been split");
+          LOG.debug("Skipping region " + i.toString() +
+              " because it is offline because it has been split");
         }
         continue;
       }
@@ -94,6 +94,7 @@ class ChangeTableState extends TableOperation {
 
       if (online) {
         // Bring offline regions on-line
+        master.regionManager.noLongerClosing(i.getRegionName());
         if (!master.regionManager.isUnassigned(i)) {
           master.regionManager.setUnassigned(i);
         }
@@ -119,22 +120,20 @@ class ChangeTableState extends TableOperation {
 
       HashMap<Text, HRegionInfo> localKillList =
         new HashMap<Text, HRegionInfo>();
-        
-      Map<Text, HRegionInfo> killedRegions = 
-        master.regionManager.getMarkedToClose(serverName);
-      if (killedRegions != null) {
-        localKillList.putAll(killedRegions);
-      }
-      
+
       for (HRegionInfo i: e.getValue()) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("adding region " + i.getRegionName() +
-              " to kill list");
+          LOG.debug("adding region " + i.getRegionName() + " to kill list");
         }
         // this marks the regions to be closed
         localKillList.put(i.getRegionName(), i);
         // this marks the regions to be offlined once they are closed
         master.regionManager.markRegionForOffline(i.getRegionName());
+      }
+      Map<Text, HRegionInfo> killedRegions = 
+        master.regionManager.removeMarkedToClose(serverName);
+      if (killedRegions != null) {
+        localKillList.putAll(killedRegions);
       }
       if (localKillList.size() > 0) {
         if (LOG.isDebugEnabled()) {

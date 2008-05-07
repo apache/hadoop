@@ -357,10 +357,10 @@ abstract class BaseScanner extends Chore implements HConstants {
     
     // Skip region - if ...
     if(info.isOffline()                                 // offline
-      || regionManager.isClosing(info.getRegionName()) // queued for offline
-      || regionManager.isMarkedForDeletion(info.getRegionName())) { // queued for delete
+      || regionManager.isClosing(info.getRegionName())) { // queued for offline
 
       regionManager.noLongerUnassigned(info);
+      regionManager.noLongerPending(info.getRegionName());
       return;
     }
     HServerInfo storedInfo = null;

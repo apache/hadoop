@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -73,7 +72,6 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     basic();
     scanner();
     listTables();
-    cleanup();
   }
 
   private static final int FIRST_ROW = 1;
@@ -203,12 +201,5 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     assertEquals(2, families.size());
     assertTrue(families.contains(new Text(CONTENTS)));
     assertTrue(families.contains(new Text(ANCHOR)));
-  }
-  
-  private void cleanup() throws IOException {
-
-    // Delete the table we created
-
-    admin.deleteTable(desc.getName());
   }
 }

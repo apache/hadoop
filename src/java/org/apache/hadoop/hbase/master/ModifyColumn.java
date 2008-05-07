@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 import java.util.Map;
 import java.io.IOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.InvalidColumnNameException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.io.Text;
@@ -51,9 +52,8 @@ class ModifyColumn extends ColumnOperation {
       if (families.get(columnName) != null){
         families.put(columnName, descriptor);
         updateRegionInfo(server, m.getRegionName(), i);          
-      }
-      else{ // otherwise, we have an error.
-        throw new IOException("Column family '" + columnName + 
+      } else{ // otherwise, we have an error.
+        throw new InvalidColumnNameException("Column family '" + columnName + 
           "' doesn't exist, so cannot be modified.");
       }
     }
