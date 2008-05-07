@@ -24,8 +24,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.SortedMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -46,8 +44,6 @@ public class PageRowFilter implements RowFilterInterface {
   private long pageSize = Long.MAX_VALUE;
   private int rowsAccepted = 0;
 
-  static final Log LOG = LogFactory.getLog(PageRowFilter.class);
-  
   /**
    * Default constructor, filters nothing. Required though for RPC
    * deserialization.
@@ -86,10 +82,6 @@ public class PageRowFilter implements RowFilterInterface {
       @SuppressWarnings("unused") Text rowKey) {
     if (!filtered) {
       this.rowsAccepted++;
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("rowProcessed incremented rowsAccepted to " + 
-          this.rowsAccepted);
-      }
     }
   }
 
@@ -106,12 +98,7 @@ public class PageRowFilter implements RowFilterInterface {
    * {@inheritDoc}
    */
   public boolean filterAllRemaining() {
-    boolean result = this.rowsAccepted > this.pageSize;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("filtering decision is " + result + " with rowsAccepted: " + 
-        this.rowsAccepted);
-    }
-    return result;
+    return this.rowsAccepted > this.pageSize;
   }
 
   /**

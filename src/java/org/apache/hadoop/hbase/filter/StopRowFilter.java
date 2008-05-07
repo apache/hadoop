@@ -24,8 +24,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.SortedMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -35,8 +33,6 @@ import org.apache.hadoop.io.Text;
 public class StopRowFilter implements RowFilterInterface {
 
   protected Text stopRowKey;
-  
-  static final Log LOG = LogFactory.getLog(StopRowFilter.class);
   
   /**
    * Default constructor, filters nothing. Required though for RPC
@@ -104,12 +100,7 @@ public class StopRowFilter implements RowFilterInterface {
       }
       return false;
     }
-    boolean result = this.stopRowKey.compareTo(rowKey) <= 0;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Filter result for rowKey: " + rowKey + ".  Result: " + 
-        result);
-    }
-    return result;
+    return this.stopRowKey.compareTo(rowKey) <= 0;
   }
 
   /**

@@ -50,12 +50,7 @@ public class InclusiveStopRowFilter extends StopRowFilter{
       }
       return false;
     }    
-    boolean result = this.stopRowKey.compareTo(rowKey) < 0;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Filter result for rowKey: " + rowKey + ".  Result: " + 
-        result);
-    }
-    return result;
+    return this.stopRowKey.compareTo(rowKey) < 0;
   }
   
 }

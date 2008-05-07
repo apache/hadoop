@@ -26,8 +26,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.SortedMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.io.ObjectWritable;
@@ -52,8 +50,6 @@ public class RowFilterSet implements RowFilterInterface {
   private Operator operator = Operator.MUST_PASS_ALL;
   private Set<RowFilterInterface> filters = new HashSet<RowFilterInterface>();
 
-  static final Log LOG = LogFactory.getLog(RowFilterSet.class);
-  
   /**
    * Default constructor, filters nothing. Required though for RPC
    * deserialization.
@@ -88,10 +84,6 @@ public class RowFilterSet implements RowFilterInterface {
   public void validate(final Text[] columns) {
     for (RowFilterInterface filter : filters) {
       filter.validate(columns);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Validated subfilter of type " + 
-          filter.getClass().getSimpleName());
-      }
     }
   }
 
@@ -99,10 +91,6 @@ public class RowFilterSet implements RowFilterInterface {
   public void reset() {
     for (RowFilterInterface filter : filters) {
       filter.reset();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Reset subfilter of type " + 
-          filter.getClass().getSimpleName());
-      }
     }
   }
 
@@ -110,10 +98,6 @@ public class RowFilterSet implements RowFilterInterface {
   public void rowProcessed(boolean filtered, Text rowKey) {
     for (RowFilterInterface filter : filters) {
       filter.rowProcessed(filtered, rowKey);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Called rowProcessed on subfilter of type " + 
-          filter.getClass().getSimpleName());
-      }
     }
   }
 
@@ -121,10 +105,6 @@ public class RowFilterSet implements RowFilterInterface {
   public boolean processAlways() {
     for (RowFilterInterface filter : filters) {
       if (filter.processAlways()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("processAlways() is true due to subfilter of type " + 
-            filter.getClass().getSimpleName());
-        }
         return true;
       }
     }
@@ -137,24 +117,13 @@ public class RowFilterSet implements RowFilterInterface {
     for (RowFilterInterface filter : filters) {
       if (operator == Operator.MUST_PASS_ALL) {
         if (filter.filterAllRemaining()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("op.MPALL filterAllRemaining returning true due" + 
-              " to subfilter of type " + filter.getClass().getSimpleName());
-          }
           return true;
         }
       } else if (operator == Operator.MUST_PASS_ONE) {
         if (!filter.filterAllRemaining()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("op.MPONE filterAllRemaining returning false due" + 
-              " to subfilter of type " + filter.getClass().getSimpleName());
-          }
           return false;
         }
       }
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("filterAllRemaining default returning " + result);
     }
     return result;
   }
@@ -167,19 +136,11 @@ public class RowFilterSet implements RowFilterInterface {
       if (!resultFound) {
         if (operator == Operator.MUST_PASS_ALL) {
           if (filter.filterAllRemaining() || filter.filterRowKey(rowKey)) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("op.MPALL filter(Text) will return true due" + 
-                " to subfilter of type " + filter.getClass().getSimpleName());
-            }
             result = true;
             resultFound = true;
           }
         } else if (operator == Operator.MUST_PASS_ONE) {
           if (!filter.filterAllRemaining() && !filter.filterRowKey(rowKey)) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("op.MPONE filter(Text) will return false due" + 
-                " to subfilter of type " + filter.getClass().getSimpleName());
-            }
             result = false;
             resultFound = true;
           }
@@ -187,9 +148,6 @@ public class RowFilterSet implements RowFilterInterface {
       } else if (filter.processAlways()) {
         filter.filterRowKey(rowKey);
       }
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("filter(Text) returning " + result);
     }
     return result;
   }
@@ -204,22 +162,12 @@ public class RowFilterSet implements RowFilterInterface {
         if (operator == Operator.MUST_PASS_ALL) {
           if (filter.filterAllRemaining() || 
             filter.filterColumn(rowKey, colKey, data)) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("op.MPALL filter(Text, Text, byte[]) will" + 
-                " return true due to subfilter of type " + 
-                filter.getClass().getSimpleName());
-            }
             result = true;
             resultFound = true;
           }
         } else if (operator == Operator.MUST_PASS_ONE) {
           if (!filter.filterAllRemaining() && 
             !filter.filterColumn(rowKey, colKey, data)) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("op.MPONE filter(Text, Text, byte[]) will" + 
-                " return false due to subfilter of type " + 
-                filter.getClass().getSimpleName());
-            }
             result = false;
             resultFound = true;
           }
@@ -227,9 +175,6 @@ public class RowFilterSet implements RowFilterInterface {
       } else if (filter.processAlways()) {
         filter.filterColumn(rowKey, colKey, data);
       }
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("filter(Text, Text, byte[]) returning " + result);
     }
     return result;
   }
@@ -242,19 +187,11 @@ public class RowFilterSet implements RowFilterInterface {
       if (!resultFound) {
         if (operator == Operator.MUST_PASS_ALL) {
           if (filter.filterAllRemaining() || filter.filterRow(columns)) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("op.MPALL filterNotNull will return true due" + 
-                " to subfilter of type " + filter.getClass().getSimpleName());
-            }
             result = true;
             resultFound = true;
           }
         } else if (operator == Operator.MUST_PASS_ONE) {
           if (!filter.filterAllRemaining() && !filter.filterRow(columns)) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("op.MPONE filterNotNull will return false due" + 
-                " to subfilter of type " + filter.getClass().getSimpleName());
-            }
             result = false;
             resultFound = true;
           }
@@ -262,9 +199,6 @@ public class RowFilterSet implements RowFilterInterface {
       } else if (filter.processAlways()) {
         filter.filterRow(columns);
       }
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("filterNotNull returning " + result);
     }
     return result;
   }
@@ -281,10 +215,6 @@ public class RowFilterSet implements RowFilterInterface {
 	RowFilterInterface filter = (RowFilterInterface) ObjectWritable
 	    .readObject(in, conf);
 	filters.add(filter);
-	if (LOG.isDebugEnabled()) {
-	  LOG.debug("Successfully read in subfilter of type "
-	      + filter.getClass().getSimpleName());
-	}
       }
     }
   }

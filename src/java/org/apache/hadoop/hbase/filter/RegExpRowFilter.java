@@ -31,8 +31,6 @@ import java.util.SortedMap;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.regionserver.HLogEdit;
@@ -50,8 +48,6 @@ public class RegExpRowFilter implements RowFilterInterface {
   private Map<Text, byte[]> equalsMap = new HashMap<Text, byte[]>();
   private Set<Text> nullColumns = new HashSet<Text>();
 
-  static final Log LOG = LogFactory.getLog(RegExpRowFilter.class);
-  
   /**
    * Default constructor, filters nothing. Required though for RPC
    * deserialization.
@@ -147,11 +143,7 @@ public class RegExpRowFilter implements RowFilterInterface {
    */
   public boolean filterRowKey(final Text rowKey) {
     if (filtersByRowKey() && rowKey != null) {
-      boolean result = !getRowKeyPattern().matcher(rowKey.toString()).matches();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("filter returning " + result + " for rowKey: " + rowKey);
-      }
-      return result;
+      return !getRowKeyPattern().matcher(rowKey.toString()).matches();
     }
     return false;
   }
@@ -168,26 +160,13 @@ public class RegExpRowFilter implements RowFilterInterface {
     if (filtersByColumnValue()) {
       byte[] filterValue = equalsMap.get(colKey);
       if (null != filterValue) {
-        boolean result = !Arrays.equals(filterValue, data);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("filter returning " + result + " for rowKey: " + rowKey + 
-            " colKey: " + colKey);
-        }
-        return result;
+        return !Arrays.equals(filterValue, data);
       }
     }
     if (nullColumns.contains(colKey)) {
       if (data != null && !HLogEdit.isDeleted(data)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("filter returning true for rowKey: " + rowKey + 
-            " colKey: " + colKey);
-        }
         return true;
       }
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("filter returning false for rowKey: " + rowKey + " colKey: " + 
-        colKey);
     }
     return false;
   }
@@ -200,24 +179,13 @@ public class RegExpRowFilter implements RowFilterInterface {
     for (Entry<Text, byte[]> col : columns.entrySet()) {
       if (nullColumns.contains(col.getKey())
           && !HLogEdit.isDeleted(col.getValue())) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("filterNotNull returning true for colKey: " + col.getKey()
-            + ", column should be null.");
-        }
         return true;
       }
     }
     for (Text col : equalsMap.keySet()) {
       if (!columns.containsKey(col)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("filterNotNull returning true for colKey: " + col + 
-            ", column not found in given SortedMap<Text, byte[]>.");
-        }
         return true;
       }
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("filterNotNull returning false.");
     }
     return false;
   }

@@ -24,8 +24,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.SortedMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -40,8 +38,6 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   private boolean filterAllRemaining = false;
   private RowFilterInterface filter;
 
-  static final Log LOG = LogFactory.getLog(WhileMatchRowFilter.class);
-  
   /**
    * Default constructor, filters nothing. Required though for RPC
    * deserialization.
@@ -69,9 +65,6 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   
   /** {@inheritDoc} */
   public void reset() {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Resetting.");
-    }
     this.filterAllRemaining = false;
     this.filter.reset();
   }
@@ -95,34 +88,20 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   /** {@inheritDoc} */
   public boolean filterRowKey(final Text rowKey) {
     changeFAR(this.filter.filterRowKey(rowKey));
-    boolean result = filterAllRemaining();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Filter on rowKey:" + rowKey + ".  Result = " + result);
-    }
-    return result;
+    return filterAllRemaining();
   }
   
   /** {@inheritDoc} */
   public boolean filterColumn(final Text rowKey, final Text colKey,
     final byte[] data) {
     changeFAR(this.filter.filterColumn(rowKey, colKey, data));
-    boolean result = filterAllRemaining();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Filter on rowKey:" + rowKey + ", colKey: " + colKey + 
-        ", data: " + data + ".  Result = " + result);
-    }
-    return result;
+    return filterAllRemaining();
   }
   
   /** {@inheritDoc} */
   public boolean filterRow(final SortedMap<Text, byte[]> columns) {
     changeFAR(this.filter.filterRow(columns));
-    boolean result = filterAllRemaining();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("FilterNotNull on cols:" + columns + ".  Result = " + 
-        result);
-    }
-    return result;
+    return filterAllRemaining();
   }
   
   /**
@@ -133,10 +112,6 @@ public class WhileMatchRowFilter implements RowFilterInterface {
    */
   private void changeFAR(boolean value) {
     this.filterAllRemaining = this.filterAllRemaining || value;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("this.filterAllRemaining is now: " + 
-        this.filterAllRemaining);
-    }
   }
 
   /** {@inheritDoc} */
@@ -157,10 +132,6 @@ public class WhileMatchRowFilter implements RowFilterInterface {
       this.filter = (RowFilterInterface)(Class.forName(className).
         newInstance());
       this.filter.readFields(in);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Successfully read a sub-filter of type: " + 
-          className);
-      }
     } catch (InstantiationException e) {
       throw new RuntimeException("Failed to deserialize WhileMatchRowFilter.",
           e);

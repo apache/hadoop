@@ -44,6 +44,7 @@ Hbase Change Log
                the exception with a RetriesExhaustedException
    HBASE-47    Option to set TTL for columns in hbase
                (Andrew Purtell via Bryan Duxbury and Stack)
+   HBASE-600   Filters have excessive DEBUG logging
 
 Release 0.1.1 - 04/11/2008
 
