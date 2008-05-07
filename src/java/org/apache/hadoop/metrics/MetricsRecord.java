@@ -100,6 +100,15 @@ public interface MetricsRecord {
    * @param tagValue new value of the tag
    * @throws MetricsException if the tagName conflicts with the configuration
    */
+  public abstract void setTag(String tagName, long tagValue);
+    
+  /**
+   * Sets the named tag to the specified value.
+   *
+   * @param tagName name of the tag
+   * @param tagValue new value of the tag
+   * @throws MetricsException if the tagName conflicts with the configuration
+   */
   public abstract void setTag(String tagName, short tagValue);
     
   /**
@@ -127,6 +136,16 @@ public interface MetricsRecord {
    * conflicts with the configuration
    */
   public abstract void setMetric(String metricName, int metricValue);
+    
+  /**
+   * Sets the named metric to the specified value.
+   *
+   * @param metricName name of the metric
+   * @param metricValue new value of the metric
+   * @throws MetricsException if the metricName or the type of the metricValue 
+   * conflicts with the configuration
+   */
+  public abstract void setMetric(String metricName, long metricValue);
     
   /**
    * Sets the named metric to the specified value.
@@ -167,6 +186,16 @@ public interface MetricsRecord {
    * conflicts with the configuration
    */
   public abstract void incrMetric(String metricName, int metricValue);
+    
+  /**
+   * Increments the named metric by the specified value.
+   *
+   * @param metricName name of the metric
+   * @param metricValue incremental value
+   * @throws MetricsException if the metricName or the type of the metricValue 
+   * conflicts with the configuration
+   */
+  public abstract void incrMetric(String metricName, long metricValue);
     
   /**
    * Increments the named metric by the specified value.

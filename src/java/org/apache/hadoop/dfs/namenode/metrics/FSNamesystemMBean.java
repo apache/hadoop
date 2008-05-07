@@ -71,6 +71,30 @@ public interface FSNamesystemMBean {
   public long getFilesTotal();
  
   /**
+   * Blocks pending to be replicated
+   * @return -  num of blocks to be replicated
+   */
+  public long getPendingReplicationBlocks();
+ 
+  /**
+   * Blocks under replicated 
+   * @return -  num of blocks under replicated
+   */
+  public long getUnderReplicatedBlocks();
+ 
+  /**
+   * Blocks scheduled for replication
+   * @return -  num of blocks scheduled for replication
+   */
+  public long getScheduledReplicationBlocks();
+
+  /**
+   * Total Load on the FSNamesystem
+   * @return -  total load of FSNamesystem
+   */
+  public int getTotalLoad();
+
+  /**
    * Number of Live data nodes
    * @return number of live data nodes
    */

@@ -374,6 +374,9 @@ public abstract class AbstractMetricsContext implements MetricsContext {
     else if (a instanceof Byte) {
       return new Byte((byte)(a.byteValue() + b.byteValue()));
     }
+    else if (a instanceof Long) {
+      return Long.valueOf((a.longValue() + b.longValue()));
+    }
     else {
       // should never happen
       throw new MetricsException("Invalid number type");

@@ -18,32 +18,25 @@
 package org.apache.hadoop.metrics.util;
 
 import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.util.StringUtils;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
- * The MetricsIntValue class is for a metric that is not time varied
+ * The MetricsLongValue class is for a metric that is not time varied
  * but changes only when it is set. 
  * Each time its value is set, it is published only *once* at the next update
  * call.
  *
  */
-public class MetricsIntValue {  
-
-  protected static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.metrics.util");
-
+public class MetricsLongValue {  
   private String name;
-  private int value;
+  private long value;
   private boolean changed;
   
   /**
    * Constructor - create a new metric
    * @param nam the name of the metrics to be used to publish the metric
    */
-  public MetricsIntValue(final String nam) {
+  public MetricsLongValue(final String nam) {
     name = nam;
     value = 0;
     changed = false;
@@ -53,7 +46,7 @@ public class MetricsIntValue {
    * Set the value
    * @param newValue
    */
-  public synchronized void set(final int newValue) {
+  public synchronized void set(final long newValue) {
     value = newValue;
     changed = true;
   }
@@ -62,15 +55,15 @@ public class MetricsIntValue {
    * Get value
    * @return the value last set
    */
-  public synchronized int get() { 
+  public synchronized long get() { 
     return value;
   } 
-
+  
   /**
    * Inc metrics for incr vlaue
    * @param incr - value to be added
    */
-  public synchronized void inc(final int incr) {
+  public synchronized void inc(final long incr) {
     value += incr;
     changed = true;
   }
@@ -87,7 +80,7 @@ public class MetricsIntValue {
    * Inc metrics for incr vlaue
    * @param decr - value to subtract
    */
-  public synchronized void dec(final int decr) {
+  public synchronized void dec(final long decr) {
     value -= decr;
     if (value < 0)
       value = 0;
@@ -114,14 +107,8 @@ public class MetricsIntValue {
    * @param mr
    */
   public synchronized void pushMetric(final MetricsRecord mr) {
-    if (changed) {
-      try {
-        mr.setMetric(name, value);
-      } catch (Exception e) {
-        LOG.info("pushMetric failed for " + name + "\n" +
-            StringUtils.stringifyException(e));
-      }
-    }
+    if (changed) 
+      mr.setMetric(name, value);
     changed = false;
   }
 }

@@ -72,6 +72,12 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private UserGroupInformation fsOwner;
   private String supergroup;
   private PermissionStatus defaultPermission;
+  // FSNamesystemMetrics counter variables
+  private FSNamesystemMetrics myFSMetrics;
+  private long capacityTotal = 0L, capacityUsed = 0L, capacityRemaining = 0L;
+  private int totalLoad = 0;
+  private long pendingReplicationBlocksCount = 0L, 
+    underReplicatedBlocksCount = 0L, scheduledReplicationBlocksCount = 0L;
 
   //
   // Stores the correct file name hierarchy
@@ -126,15 +132,6 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   //
   private Map<String, Collection<Block>> excessReplicateMap = 
     new TreeMap<String, Collection<Block>>();
-
-  //
-  // Stats on overall usage
-  //
-  long totalCapacity = 0L, totalUsed=0L, totalRemaining = 0L;
-
-  // total number of connections per live datanode
-  int totalLoad = 0;
-
 
   //
   // For the HTTP browsing interface
@@ -254,6 +251,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     this.localMachine = nn.getNameNodeAddress().getHostName();
     this.port = nn.getNameNodeAddress().getPort();
+    this.registerMBean(conf); // register the MBean for the FSNamesystemStutus
     this.dir = new FSDirectory(this, conf);
     StartupOption startOpt = NameNode.getStartupOption(conf);
     this.dir.loadFSImage(getNamespaceDirs(conf), startOpt);
@@ -274,9 +272,6 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     lmthread.start();
     replthread.start();
     resthread.start();
-    
-    this.registerMBean(); // register the MBean for the FSNamesystemStutus
-
 
     this.hostsReader = new HostsFileReader(conf.get("dfs.hosts",""),
                                            conf.get("dfs.hosts.exclude",""));
@@ -342,6 +337,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   FSNamesystem(FSImage fsImage, Configuration conf) throws IOException {
     setConfigurationParameters(conf);
+    this.registerMBean(conf);
     this.dir = new FSDirectory(fsImage, this, conf);
   }
 
@@ -1890,14 +1886,14 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     //
     assert(Thread.holdsLock(heartbeats));
     if (isAdded) {
-      totalCapacity += node.getCapacity();
-      totalUsed += node.getDfsUsed();
-      totalRemaining += node.getRemaining();
+      capacityTotal += node.getCapacity();
+      capacityUsed += node.getDfsUsed();
+      capacityRemaining += node.getRemaining();
       totalLoad += node.getXceiverCount();
     } else {
-      totalCapacity -= node.getCapacity();
-      totalUsed -= node.getDfsUsed();
-      totalRemaining -= node.getRemaining();
+      capacityTotal -= node.getCapacity();
+      capacityUsed -= node.getDfsUsed();
+      capacityRemaining -= node.getRemaining();
       totalLoad -= node.getXceiverCount();
     }
   }
@@ -1972,6 +1968,12 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
 
     workFound = computeReplicationWork(blocksToProcess); 
+    
+    // Update FSNamesystemMetrics counters
+    pendingReplicationBlocksCount = pendingReplications.size();
+    underReplicatedBlocksCount = neededReplications.size();
+    scheduledReplicationBlocksCount = workFound;
+    
     if(workFound == 0)
       workFound = computeInvalidateWork(nodesToProcess);
     return workFound;
@@ -2827,7 +2829,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   public long getCapacityTotal() {
     synchronized (heartbeats) {
-      return totalCapacity;
+      return this.capacityTotal;
     }
   }
 
@@ -2836,7 +2838,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   public long getCapacityUsed() {
     synchronized(heartbeats){
-      return totalUsed;
+      return this.capacityUsed;
     }
   }
   /**
@@ -2844,16 +2846,16 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   public long getCapacityRemaining() {
     synchronized (heartbeats) {
-      return totalRemaining;
+      return this.capacityRemaining;
     }
   }
 
   /**
    * Total number of connections.
    */
-  public int totalLoad() {
+  public int getTotalLoad() {
     synchronized (heartbeats) {
-      return totalLoad;
+      return this.totalLoad;
     }
   }
 
@@ -3876,6 +3878,18 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return this.dir.totalInodes();
   }
 
+  public long getPendingReplicationBlocks() {
+    return pendingReplicationBlocksCount;
+  }
+
+  public long getUnderReplicatedBlocks() {
+    return underReplicatedBlocksCount;
+  }
+
+  public long getScheduledReplicationBlocks() {
+    return scheduledReplicationBlocksCount;
+  }
+
   public String getFSState() {
     return isInSafeMode() ? "safeMode" : "Operational";
   }
@@ -3884,12 +3898,13 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   /**
    * Register the FSNamesystem MBean
    */
-  void registerMBean() {
+  void registerMBean(Configuration conf) {
     // We wrap to bypass standard mbean naming convetion.
     // This wraping can be removed in java 6 as it is more flexible in 
     // package naming for mbeans and their impl.
     StandardMBean bean;
     try {
+      myFSMetrics = new FSNamesystemMetrics(conf, this);
       bean = new StandardMBean(this,FSNamesystemMBean.class);
       mbeanName = MBeanUtil.registerMBean("NameNode", "FSNamesystemStatus", bean);
     } catch (NotCompliantMBeanException e) {
@@ -3898,7 +3913,14 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     LOG.info("Registered FSNamesystemStatusMBean");
   }
-  
+
+  /**
+   * get FSNamesystemMetrics
+   */
+  public FSNamesystemMetrics getFSNamesystemMetrics() {
+    return myFSMetrics;
+  }
+
   /**
    * shutdown FSNamesystem
    */

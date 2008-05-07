@@ -87,6 +87,17 @@ public class MetricsRecordImpl implements MetricsRecord {
    * @param tagValue new value of the tag
    * @throws MetricsException if the tagName conflicts with the configuration
    */
+  public void setTag(String tagName, long tagValue) {
+    tagTable.put(tagName, Long.valueOf(tagValue));
+  }
+    
+  /**
+   * Sets the named tag to the specified value.
+   *
+   * @param tagName name of the tag
+   * @param tagValue new value of the tag
+   * @throws MetricsException if the tagName conflicts with the configuration
+   */
   public void setTag(String tagName, short tagValue) {
     tagTable.put(tagName, new Short(tagValue));
   }
@@ -119,6 +130,18 @@ public class MetricsRecordImpl implements MetricsRecord {
    */
   public void setMetric(String metricName, int metricValue) {
     setAbsolute(metricName, new Integer(metricValue));
+  }
+    
+  /**
+   * Sets the named metric to the specified value.
+   *
+   * @param metricName name of the metric
+   * @param metricValue new value of the metric
+   * @throws MetricsException if the metricName or the type of the metricValue 
+   * conflicts with the configuration
+   */
+  public void setMetric(String metricName, long metricValue) {
+    setAbsolute(metricName, Long.valueOf(metricValue));
   }
     
   /**
@@ -167,6 +190,18 @@ public class MetricsRecordImpl implements MetricsRecord {
    */
   public void incrMetric(String metricName, int metricValue) {
     setIncrement(metricName, new Integer(metricValue));
+  }
+    
+  /**
+   * Increments the named metric by the specified value.
+   *
+   * @param metricName name of the metric
+   * @param metricValue incremental value
+   * @throws MetricsException if the metricName or the type of the metricValue 
+   * conflicts with the configuration
+   */
+  public void incrMetric(String metricName, long metricValue) {
+    setIncrement(metricName, Long.valueOf(metricValue));
   }
     
   /**

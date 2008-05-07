@@ -62,6 +62,9 @@ Trunk (unreleased changes)
     HADOOP-2019. Adds support for .tar, .tgz and .tar.gz files in 
     DistributedCache (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3058. Add FSNamesystem status metrics. 
+    (Lohit Vjayarenu via rangadi)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().

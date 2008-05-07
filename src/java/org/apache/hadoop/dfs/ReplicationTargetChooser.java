@@ -406,7 +406,7 @@ class ReplicationTargetChooser {
       double avgLoad = 0;
       int size = clusterMap.getNumOfLeaves();
       if (size != 0) {
-        avgLoad = (double)fs.totalLoad()/size;
+        avgLoad = (double)fs.getTotalLoad()/size;
       }
       if (node.getXceiverCount() > (2.0 * avgLoad)) {
         logr.debug("Node "+NodeBase.getPath(node)+
