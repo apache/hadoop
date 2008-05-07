@@ -46,6 +46,8 @@ Hbase Change Log
    HBASE-47    Option to set TTL for columns in hbase
                (Andrew Purtell via Bryan Duxbury and Stack)
    HBASE-600   Filters have excessive DEBUG logging
+   HBASE-611   regionserver should do basic health check before reporting
+               alls-well to the master
 
 Release 0.1.1 - 04/11/2008
 

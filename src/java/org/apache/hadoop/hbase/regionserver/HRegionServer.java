@@ -270,7 +270,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       init(reportForDuty(sleeper));
       long lastMsg = 0;
       // Now ask master what it wants us to do and tell it what we have done
-      for (int tries = 0; !stopRequested.get();) {
+      for (int tries = 0; !stopRequested.get() && isHealthy();) {
         long now = System.currentTimeMillis();
         if (lastMsg != 0 && (now - lastMsg) >= serverLeaseTimeout) {
           // It has been way too long since we last reported to the master.
@@ -576,7 +576,26 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         serverInfo.getServerAddress().toString());
   }
 
-  /* Run some housekeeping tasks before we go into 'hibernation' sleeping at
+  /*
+   * Verify that server is healthy
+   */
+  private boolean isHealthy() {
+    if (!fsOk) {
+      // File system problem
+      return false;
+    }
+    // Verify that all threads are alive
+    if (!(leases.isAlive() && compactSplitThread.isAlive() &&
+        cacheFlusher.isAlive() && logRoller.isAlive() &&
+        workerThread.isAlive())) {
+      // One or more threads are no longer alive - shut down
+      stop();
+      return false;
+    }
+    return true;
+  }
+  /*
+   * Run some housekeeping tasks before we go into 'hibernation' sleeping at
    * the end of the main HRegionServer run loop.
    */
   private void housekeeping() {
