@@ -361,6 +361,12 @@ abstract class Task implements Writable, Configurable {
           }
           setProgressFlag();
         }
+        public void incrCounter(String group, String counter, long amount) {
+          if (counters != null) {
+            counters.incrCounter(group, counter, amount);
+          }
+          setProgressFlag();
+        }
         public InputSplit getInputSplit() throws UnsupportedOperationException {
           return Task.this.getInputSplit();
         }

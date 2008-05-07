@@ -26,7 +26,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
@@ -56,6 +55,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    */
   public static class Counter implements Writable {
 
+    private String name;
     private String displayName;
     private long value;
     
@@ -63,7 +63,8 @@ public class Counters implements Writable, Iterable<Counters.Group> {
       value = 0L;
     }
 
-    Counter(String displayName, long value) {
+    Counter(String name, String displayName, long value) {
+      this.name = name;
       this.displayName = displayName;
       this.value = value;
     }
@@ -72,7 +73,12 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      * Read the binary representation of the counter
      */
     public synchronized void readFields(DataInput in) throws IOException {
-      displayName = Text.readString(in);
+      name = Text.readString(in);
+      if (in.readBoolean()) {
+        displayName = Text.readString(in);
+      } else {
+        displayName = name;
+      }
       value = WritableUtils.readVLong(in);
     }
     
@@ -80,15 +86,28 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      * Write the binary representation of the counter
      */
     public synchronized void write(DataOutput out) throws IOException {
-      Text.writeString(out, displayName);
+      Text.writeString(out, name);
+      boolean distinctDisplayName = (! name.equals(displayName));
+      out.writeBoolean(distinctDisplayName);
+      if (distinctDisplayName) {
+        Text.writeString(out, displayName);
+      }
       WritableUtils.writeVLong(out, value);
+    }
+    
+    /**
+     * Get the internal name of the counter.
+     * @return the internal name of the counter
+     */
+    public synchronized String getName() {
+      return name;
     }
     
     /**
      * Get the name of the counter.
      * @return the user facing name of the counter
      */
-    public String getDisplayName() {
+    public synchronized String getDisplayName() {
       return displayName;
     }
     
@@ -119,7 +138,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
   public static class Group implements Writable, Iterable<Counter> {
     private String groupName;
     private String displayName;
-    private ArrayList<Counter> subcounters = new ArrayList<Counter>();
+    private Map<String, Counter> subcounters = new HashMap<String, Counter>();
     
     // Optional ResourceBundle for localization of group and counter names.
     private ResourceBundle bundle = null;    
@@ -166,7 +185,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      * not exist.
      */
     public synchronized long getCounter(String counterName) {
-      for(Counter counter: subcounters) {
+      for(Counter counter: subcounters.values()) {
         if (counter != null && counter.displayName.equals(counterName)) {
           return counter.value;
         }
@@ -179,22 +198,24 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      * @param id the numeric id of the counter within the group
      * @param name the internal counter name
      * @return the counter
+     * @deprecated use {@link #getCounter(String)} instead
      */
+    @Deprecated
     public synchronized Counter getCounter(int id, String name) {
-      Counter result = null;
-      int size = subcounters.size();
-      if (id < size) {
-        result = subcounters.get(id);
-      }
+      return getCounterForName(name);
+    }
+    
+    /**
+     * Get the counter for the given name and create it if it doesn't exist.
+     * @param name the internal counter name
+     * @return the counter
+     */
+    public synchronized Counter getCounterForName(String name) {
+      Counter result = subcounters.get(name);
       if (result == null) {
-        LOG.debug("Adding " + name + " at " + id);
-        result = new Counter(localize(name + ".name", name), 0L);
-        // extend the list
-        subcounters.ensureCapacity(id + 1);
-        for(int i=size; i <= id; ++i) {
-          subcounters.add(null);
-        }
-        subcounters.set(id, result);
+        LOG.debug("Adding " + name);
+        result = new Counter(name, localize(name + ".name", name), 0L);
+        subcounters.put(name, result);
       }
       return result;
     }
@@ -203,13 +224,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      * Returns the number of counters in this group.
      */
     public synchronized int size() {
-      int num = 0;
-      for(Counter counter: subcounters) {
-        if (counter != null) {
-          num += 1;
-        }
-      }
-      return num;
+      return subcounters.size();
     }
     
     /**
@@ -231,13 +246,8 @@ public class Counters implements Writable, Iterable<Counters.Group> {
     public synchronized void write(DataOutput out) throws IOException {
       Text.writeString(out, displayName);
       WritableUtils.writeVInt(out, subcounters.size());
-      for(Counter counter: subcounters) {
-        if (counter == null) {
-          out.writeBoolean(false);
-        } else {
-          out.writeBoolean(true);
-          counter.write(out);
-        }
+      for(Counter counter: subcounters.values()) {
+        counter.write(out);
       }
     }
     
@@ -245,58 +255,15 @@ public class Counters implements Writable, Iterable<Counters.Group> {
       displayName = Text.readString(in);
       subcounters.clear();
       int size = WritableUtils.readVInt(in);
-      subcounters.ensureCapacity(size);
       for(int i=0; i < size; i++) {
-        Counter counter = null;
-        if (in.readBoolean()) {
-          counter = new Counter();
-          counter.readFields(in);
-        }
-        subcounters.add(counter);
-      }
-    }
-    
-    private class CounterIterator implements Iterator<Counter> {
-      private int current = -1;
-
-      CounterIterator() {
-        getNext();
-      }
-
-      private void getNext() {
-        synchronized (Group.this) {
-          int len = subcounters.size();
-          while (++current < len) {
-            if (subcounters.get(current) != null) {
-              return;
-            }
-          }
-        }
-        current = Integer.MAX_VALUE;
-      }
-
-      public boolean hasNext() {
-        synchronized (Group.this) {
-          return current < subcounters.size();
-        }
-      }
-
-      public Counter next() {
-        synchronized (Group.this) {
-          int result = current;
-          getNext();
-          return subcounters.get(result);
-        }
-      }
-      
-      public void remove() {
-        throw new UnsupportedOperationException
-        ("NonNullIterator doesn't support remove");
+        Counter counter = new Counter();
+        counter.readFields(in);
+        subcounters.put(counter.getName(), counter);
       }
     }
 
-    public Iterator<Counter> iterator() {
-      return new CounterIterator();
+    public synchronized Iterator<Counter> iterator() {
+      return new ArrayList<Counter>(subcounters.values()).iterator();
     }
   }
   
@@ -347,7 +314,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
     Counter counter = cache.get(key);
     if (counter == null) {
       Group group = getGroup(key.getDeclaringClass().getName());
-      counter = group.getCounter(key.ordinal(), key.toString());
+      counter = group.getCounterForName(key.toString());
       cache.put(key, counter);
     }
     return counter;    
@@ -359,9 +326,11 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * @param id the id of the counter within the group (0 to N-1)
    * @param name the internal name of the counter
    * @return the counter for that name
+   * @deprecated
    */
+  @Deprecated
   public synchronized Counter findCounter(String group, int id, String name) {
-    return getGroup(group).getCounter(id, name);
+    return getGroup(group).getCounterForName(name);
   }
 
   /**
@@ -373,6 +342,18 @@ public class Counters implements Writable, Iterable<Counters.Group> {
   @SuppressWarnings("unchecked")
   public synchronized void incrCounter(Enum key, long amount) {
     findCounter(key).value += amount;
+  }
+  
+  /**
+   * Increments the specified counter by the specified amount, creating it if
+   * it didn't already exist.
+   * @param group the name of the group
+   * @param counter the internal name of the counter
+   * @param amount amount by which counter is to be incremented
+   */
+  @SuppressWarnings("unchecked")
+  public synchronized void incrCounter(String group, String counter, long amount) {
+    getGroup(group).getCounterForName(counter).value += amount;
   }
   
   /**
@@ -392,12 +373,11 @@ public class Counters implements Writable, Iterable<Counters.Group> {
   public synchronized void incrAllCounters(Counters other) {
     for (Group otherGroup: other) {
       Group group = getGroup(otherGroup.getName());
-      for(int i=0; i < otherGroup.subcounters.size(); ++i) {
-        Counter otherCounter = otherGroup.subcounters.get(i);
-        if (otherCounter != null) {
-          group.getCounter(i, otherCounter.displayName).value += 
-            otherCounter.value;
-        }
+      group.displayName = otherGroup.displayName;
+      for (Counter otherCounter : otherGroup) {
+        Counter counter = group.getCounterForName(otherCounter.getName());
+        counter.displayName = otherCounter.displayName;
+        counter.value += otherCounter.value;
       }
     }
   }
@@ -436,7 +416,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    *
    * where each counter is of the form:
    *
-   *     name value
+   *     name (false | true displayName) value
    */
   public synchronized void write(DataOutput out) throws IOException {
     out.writeInt(counters.size());

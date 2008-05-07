@@ -38,8 +38,9 @@ public interface JobSubmissionProtocol extends VersionedProtocol {
    * Version 6: change the counters representation for HADOOP-2248
    * Version 7: added getAllJobs for HADOOP-2487
    * Version 8: change {job|task}id's to use corresponding objects rather that strings.
+   * Version 9: change the counter representation for HADOOP-1915
    */
-  public static final long versionID = 8L;
+  public static final long versionID = 9L;
 
   /**
    * Allocate a name for the job.

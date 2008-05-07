@@ -41,8 +41,9 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * version 9 changes the counter representation for HADOOP-2248
    * version 10 changes the TaskStatus representation for HADOOP-2208
    * version 11 changes string to JobID in getTaskCompletionEvents().
+   * version 12 changes the counters representation for HADOOP-1915
    */
-  public static final long versionID = 11L;
+  public static final long versionID = 12L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;

@@ -42,9 +42,10 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    *           or not the task's output needs to be promoted.
    * Version 8 changes {job|tip|task}id's to use their corresponding 
    * objects rather than strings.
+   * Version 9 changes the counter representation for HADOOP-1915
    * */
 
-  public static final long versionID = 8L;
+  public static final long versionID = 9L;
   
   /** Called when a child task process starts, to get its task.*/
   Task getTask(TaskAttemptID taskid) throws IOException;

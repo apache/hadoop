@@ -48,6 +48,8 @@ public interface Reporter extends Progressable {
       }
       public void incrCounter(Enum key, long amount) {
       }
+      public void incrCounter(String group, String counter, long amount) {
+      }
       public InputSplit getInputSplit() throws UnsupportedOperationException {
         throw new UnsupportedOperationException("NULL reporter has no input");
       }
@@ -70,6 +72,17 @@ public interface Reporter extends Progressable {
    *               be incremented.
    */
   public abstract void incrCounter(Enum key, long amount);
+  
+  /**
+   * Increments the counter identified by the group and counter name
+   * by the specified amount.
+   * 
+   * @param group name to identify the group of the counter to be incremented.
+   * @param counter name to identify the counter within the group.
+   * @param amount A non-negative amount by which the counter is to 
+   *               be incremented.
+   */
+  public abstract void incrCounter(String group, String counter, long amount);
   
   /**
    * Get the {@link InputSplit} object for a map.

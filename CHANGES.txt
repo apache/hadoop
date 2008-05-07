@@ -68,6 +68,9 @@ Trunk (unreleased changes)
     HADOOP-3058. Add FSNamesystem status metrics. 
     (Lohit Vjayarenu via rangadi)
 
+    HADOOP-1915. Allow users to specify counters via strings instead
+    of enumerations. (tomwhite via omalley)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().
