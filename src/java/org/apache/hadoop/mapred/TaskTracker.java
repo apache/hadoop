@@ -161,12 +161,11 @@ public class TaskTracker
   /**
    * the minimum interval between jobtracker polls
    */
-  private static final int MIN_POLL_INTERVAL = 5000;
   private volatile int heartbeatInterval = HEARTBEAT_INTERVAL_MIN;
   /**
    * Number of maptask completion events locations to poll for at one time
    */  
-  private int probe_sample_size = 50;
+  private int probe_sample_size = 500;
     
   private ShuffleServerMetrics shuffleServerMetrics;
   /** This class contains the methods that should be used for metrics-reporting
@@ -412,9 +411,8 @@ public class TaskTracker
 
     this.minSpaceStart = this.fConf.getLong("mapred.local.dir.minspacestart", 0L);
     this.minSpaceKill = this.fConf.getLong("mapred.local.dir.minspacekill", 0L);
-    int numCopiers = this.fConf.getInt("mapred.reduce.parallel.copies", 5);
     //tweak the probe sample size (make it a function of numCopiers)
-    probe_sample_size = Math.max(numCopiers*5, 50);
+    probe_sample_size = this.fConf.getInt("mapred.tasktracker.events.batchsize", 500);
     
     
     this.myMetrics = new TaskTrackerMetrics();
@@ -530,39 +528,32 @@ public class TaskTracker
           }
           // now fetch all the map task events for all the reduce tasks
           // possibly belonging to different jobs
+          boolean fetchAgain = false; //flag signifying whether we want to fetch
+                                      //immediately again.
           for (FetchStatus f : fList) {
+            long currentTime = System.currentTimeMillis();
             try {
-              f.fetchMapCompletionEvents();
-              long startWait;
-              long endWait;
-              // polling interval is heartbeat interval
-              int waitTime = heartbeatInterval;
-              // Thread will wait for a minumum of MIN_POLL_INTERVAL, 
-              // if it is notified before that, notification will be ignored. 
-              int minWait = MIN_POLL_INTERVAL;
-              synchronized (waitingOn) {
-                try {
-                  while (true) {
-                    startWait = System.currentTimeMillis();
-                    waitingOn.wait(waitTime);
-                    endWait = System.currentTimeMillis();
-                    int diff = (int)(endWait - startWait);
-                    if (diff >= minWait) {
-                      break;
-                    }
-                    minWait = minWait - diff;
-                    waitTime = minWait;
-                  }
-                } catch (InterruptedException ie) {
-                  LOG.info("Shutting down: " + getName());
-                  return;
-                }
+              //the method below will return true when we have not 
+              //fetched all available events yet
+              if (f.fetchMapCompletionEvents(currentTime)) {
+                fetchAgain = true;
               }
             } catch (Exception e) {
               LOG.warn(
                        "Ignoring exception that fetch for map completion" +
                        " events threw for " + f.jobId + " threw: " +
                        StringUtils.stringifyException(e)); 
+            }
+          }
+          synchronized (waitingOn) {
+            try {
+              int waitTime;
+              if (!fetchAgain) {
+                waitingOn.wait(heartbeatInterval);
+              }
+            } catch (InterruptedException ie) {
+              LOG.info("Shutting down: " + getName());
+              return;
             }
           }
         } catch (Exception e) {
@@ -579,6 +570,8 @@ public class TaskTracker
     private List<TaskCompletionEvent> allMapEvents;
     /** What jobid this fetchstatus object is for*/
     private JobID jobId;
+    private long lastFetchTime;
+    private boolean fetchAgain;
      
     public FetchStatus(JobID jobId, int numMaps) {
       this.fromEventId = new IntWritable(0);
@@ -610,12 +603,26 @@ public class TaskTracker
       return mapEvents;
     }
       
-    public void fetchMapCompletionEvents() throws IOException {
+    public boolean fetchMapCompletionEvents(long currTime) throws IOException {
+      if (!fetchAgain && (currTime - lastFetchTime) < heartbeatInterval) {
+        return false;
+      }
+      int currFromEventId = fromEventId.get();
       List <TaskCompletionEvent> recentMapEvents = 
         queryJobTracker(fromEventId, jobId, jobClient);
       synchronized (allMapEvents) {
         allMapEvents.addAll(recentMapEvents);
       }
+      lastFetchTime = currTime;
+      if (fromEventId.get() - currFromEventId >= probe_sample_size) {
+        //return true when we have fetched the full payload, indicating
+        //that we should fetch again immediately (there might be more to
+        //fetch
+        fetchAgain = true;
+        return true;
+      }
+      fetchAgain = false;
+      return false;
     }
   }
 

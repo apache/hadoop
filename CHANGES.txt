@@ -125,6 +125,9 @@ Trunk (unreleased changes)
 
     HADOOP-3248. Optimization of saveFSImage. (Dhruba via shv)
 
+    HADOOP-3297. Fetch more task completion events from the job
+    tracker and task tracker. (ddas via omalley)
+
   BUG FIXES
 
     HADOOP-2905. 'fsck -move' triggers NPE in NameNode. 
