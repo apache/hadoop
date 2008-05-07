@@ -219,7 +219,7 @@ public class HbaseRPC {
           e = (IOException) t;
         } else {
           e = new IOException("error during RPC call");
-          e.initCause(t);
+          e.initCause(t.getCause());
         }
         throw e;
       }
