@@ -165,12 +165,12 @@ public class HRegion implements HConstants {
     
     // Compact each region so we only have one store file per family
     
-    a.compactStores();
+    a.compactStores(true);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Files for region: " + a.getRegionName());
       listPaths(fs, a.getRegionDir());
     }
-    b.compactStores();
+    b.compactStores(true);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Files for region: " + b.getRegionName());
       listPaths(fs, b.getRegionDir());
@@ -845,6 +845,26 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public Text compactStores() throws IOException {
+    return compactStores(false);
+  }
+
+  /**
+   * Called by compaction thread and after region is opened to compact the
+   * HStores if necessary.
+   *
+   * <p>This operation could block for a long time, so don't call it from a 
+   * time-sensitive thread.
+   *
+   * Note that no locking is necessary at this level because compaction only
+   * conflicts with a region split, and that cannot happen because the region
+   * server does them sequentially and not in parallel.
+   * 
+   * @param force True to force a compaction regardless of thresholds (Needed
+   * by merge).
+   * @return mid key if split is needed
+   * @throws IOException
+   */
+  private Text compactStores(final boolean force) throws IOException {
     Text midKey = null;
     if (this.closed.get()) {
       return midKey;
@@ -864,7 +884,7 @@ public class HRegion implements HConstants {
       long startTime = System.currentTimeMillis();
       doRegionCompactionPrep();
       for (HStore store: stores.values()) {
-        Text key = store.compact();
+        Text key = store.compact(force);
         if (key != null && midKey == null) {
           midKey = key;
         }
@@ -1062,7 +1082,6 @@ public class HRegion implements HConstants {
     Cell[] results = get(row, column, Long.MAX_VALUE, 1);
     return (results == null || results.length == 0)? null: results[0];
   }
-  
   /**
    * Fetch multiple versions of a single data item
    * 

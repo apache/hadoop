@@ -770,16 +770,18 @@ public class HStore implements HConstants {
    * We don't want to hold the structureLock for the whole time, as a compact() 
    * can be lengthy and we want to allow cache-flushes during this period.
    * 
+   * @param force True to force a compaction regardless of thresholds (Needed
+   * by merge).
    * @return mid key if a split is needed, null otherwise
    * @throws IOException
    */
-  Text compact() throws IOException {
+  Text compact(final boolean force) throws IOException {
     synchronized (compactLock) {
       long maxId = -1;
       List<HStoreFile> filesToCompact = null;
       synchronized (storefiles) {
         filesToCompact = new ArrayList<HStoreFile>(this.storefiles.values());
-        if (!hasReferences(filesToCompact) &&
+        if (!force && !hasReferences(filesToCompact) &&
              filesToCompact.size() < compactionThreshold) {
           return checkSplit();
         }
