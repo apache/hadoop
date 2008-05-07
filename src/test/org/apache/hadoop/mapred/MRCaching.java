@@ -175,6 +175,9 @@ public class MRCaching {
     Path txtPath = new Path(localPath, new Path("test.txt"));
     Path jarPath = new Path(localPath, new Path("test.jar"));
     Path zipPath = new Path(localPath, new Path("test.zip"));
+    Path tarPath = new Path(localPath, new Path("test.tgz"));
+    Path tarPath1 = new Path(localPath, new Path("test.tar.gz"));
+    Path tarPath2 = new Path(localPath, new Path("test.tar"));
     Path cachePath = new Path(cacheDir);
     fs.delete(cachePath, true);
     if (!fs.mkdirs(cachePath)) {
@@ -183,13 +186,23 @@ public class MRCaching {
     fs.copyFromLocalFile(txtPath, cachePath);
     fs.copyFromLocalFile(jarPath, cachePath);
     fs.copyFromLocalFile(zipPath, cachePath);
+    fs.copyFromLocalFile(tarPath, cachePath);
+    fs.copyFromLocalFile(tarPath1, cachePath);
+    fs.copyFromLocalFile(tarPath2, cachePath);
     // setting the cached archives to zip, jar and simple text files
     URI uri1 = fs.getUri().resolve(cachePath + "/test.jar");
     URI uri2 = fs.getUri().resolve(cachePath + "/test.zip");
     URI uri3 = fs.getUri().resolve(cachePath + "/test.txt");
+    URI uri4 = fs.getUri().resolve(cachePath + "/test.tgz");
+    URI uri5 = fs.getUri().resolve(cachePath + "/test.tar.gz");
+    URI uri6 = fs.getUri().resolve(cachePath + "/test.tar");
+
     DistributedCache.addCacheArchive(uri1, conf);
     DistributedCache.addCacheArchive(uri2, conf);
     DistributedCache.addCacheFile(uri3, conf);
+    DistributedCache.addCacheArchive(uri4, conf);
+    DistributedCache.addCacheArchive(uri5, conf);
+    DistributedCache.addCacheArchive(uri6, conf);
     RunningJob job = JobClient.runJob(conf);
     int count = 0;
     // after the job ran check to see if the the input from the localized cache
@@ -208,7 +221,7 @@ public class MRCaching {
       }
       file.close();
     }
-    if (count != 3)
+    if (count != 6)
       return new TestResult(job, false);
 
     return new TestResult(job, true);

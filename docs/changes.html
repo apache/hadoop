@@ -91,7 +91,7 @@ and history UI.<br />(Amareshwari Sriramadasu via ddas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._new_features_')">  NEW FEATURES
-</a>&nbsp;&nbsp;&nbsp;(4)
+</a>&nbsp;&nbsp;&nbsp;(6)
     <ol id="trunk_(unreleased_changes)_._new_features_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3074">HADOOP-3074</a>. Provides a UrlStreamHandler for DFS and other FS,
 relying on FileSystem<br />(taton)</li>
@@ -101,10 +101,16 @@ accessible via a NFS mount.<br />(shv)</li>
 Bialecki via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2857">HADOOP-2857</a>. Allow libhdfs to set jvm options.<br />(Craig Macdonald
 via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3317">HADOOP-3317</a>. Add default port for HDFS namenode.  The port in
+"hdfs:" URIs now defaults to 8020, so that one may simply use URIs
+of the form "hdfs://example.com/dir/file".
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2019">HADOOP-2019</a>. Adds support for .tar, .tgz and .tar.gz files in
+DistributedCache<br />(Amareshwari Sriramadasu via ddas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(10)
+</a>&nbsp;&nbsp;&nbsp;(11)
     <ol id="trunk_(unreleased_changes)_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2928">HADOOP-2928</a>. Remove deprecated FileSystem.getContentLength().<br />(Lohit Vjayarenu via rangadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3130">HADOOP-3130</a>. Make the connect timeout smaller for getFile.<br />(Amar Ramesh Kamat via ddas)</li>
@@ -129,6 +135,9 @@ fix minor defects, and add eclipse plugin and python unit tests.<br />(nigel)</l
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3144">HADOOP-3144</a>. Improve robustness of LineRecordReader by defining a maximum
 line length (mapred.linerecordreader.maxlength), thereby avoiding reading
 too far into the following split.<br />(Zheng Shao via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3334">HADOOP-3334</a>. Move lease handling from FSNamesystem into a seperate class.
+(Tsz Wo (Nicholas), SZE via rangadi)
+</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS

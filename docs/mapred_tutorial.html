@@ -1872,7 +1872,8 @@ document.write("Last Published: " + document.lastModified);
 <p>
 <span class="codefrag">DistributedCache</span> can be used to distribute simple, 
           read-only data/text files and more complex types such as archives and
-          jars. Archives (zip files) are <em>un-archived</em> at the slave nodes.
+          jars. Archives (zip, tar, tgz and tar.gz files) are 
+          <em>un-archived</em> at the slave nodes.
           Optionally users can also direct the <span class="codefrag">DistributedCache</span> to 
           <em>symlink</em> the cached file(s) into the <span class="codefrag">current working 
           directory</span> of the task via the 

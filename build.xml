@@ -528,6 +528,9 @@
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.txt" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.jar" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.zip" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.tar" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.tgz" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.tar.gz" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/dfs/hadoop-14-dfs-dir.tgz" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/dfs/hadoop-dfs-dir.txt" todir="${test.cache.data}"/>
   </target>

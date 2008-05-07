@@ -59,6 +59,9 @@ Trunk (unreleased changes)
     "hdfs:" URIs now defaults to 8020, so that one may simply use URIs
     of the form "hdfs://example.com/dir/file".
 
+    HADOOP-2019. Adds support for .tar, .tgz and .tar.gz files in 
+    DistributedCache (Amareshwari Sriramadasu via ddas)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().

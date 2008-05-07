@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 /**
  * A collection of file-processing util methods
@@ -453,7 +454,51 @@ public class FileUtil {
       zipFile.close();
     }
   }
-  
+
+  /**
+   * Given a Tar File as input it will untar the file in a the untar directory
+   * passed as the second parameter
+   * 
+   * This utility will untar ".tar" files and ".tar.gz","tgz" files.
+   *  
+   * @param inFile The tar file as input. 
+   * @param untarDir The untar directory where to untar the tar file.
+   * @throws IOException
+   */
+  public static void unTar(File inFile, File untarDir) throws IOException {
+    if (!untarDir.mkdirs()) {           
+      if (!untarDir.isDirectory()) {
+        throw new IOException("Mkdirs failed to create " + untarDir);
+      }
+    }
+
+    StringBuffer untarCommand = new StringBuffer();
+    boolean gzipped = inFile.toString().endsWith("gz");
+    if (gzipped) {
+      untarCommand.append(" gzip -dc '");
+      untarCommand.append(FileUtil.makeShellPath(inFile));
+      untarCommand.append("' | (");
+    } 
+    untarCommand.append("cd '");
+    untarCommand.append(FileUtil.makeShellPath(untarDir)); 
+    untarCommand.append("' ; ");
+    untarCommand.append("tar -xf ");
+    
+    if (gzipped) {
+      untarCommand.append(" -)");
+    } else {
+      untarCommand.append(FileUtil.makeShellPath(inFile));
+    }
+    String[] shellCmd = { "bash", "-c", untarCommand.toString() };
+    ShellCommandExecutor shexec = new ShellCommandExecutor(shellCmd);
+    shexec.execute();
+    int exitcode = shexec.getExitCode();
+    if (exitcode != 0) {
+      throw new IOException("Error untarring file " + inFile + 
+                  ". Tar process exited with exit code " + exitcode);
+    }
+  }
+
   /**
    * Class for creating hardlinks.
    * Supports Unix, Cygwin, WindXP.

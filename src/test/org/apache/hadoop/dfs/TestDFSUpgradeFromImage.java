@@ -27,7 +27,6 @@ import java.util.TreeMap;
 import java.util.zip.CRC32;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.dfs.FSConstants.StartupOption;
@@ -72,12 +71,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
     if ( dfsDir.exists() && !FileUtil.fullyDelete(dfsDir) ) {
       throw new IOException("Could not delete dfs directory '" + dfsDir + "'");
     }
-    String cmd = "gzip -dc '" + FileUtil.makeShellPath(tarFile) + "' | (cd '" +
-                 FileUtil.makeShellPath(dataDir) + "' ; tar -xf -)";
-    LOG.info("Unpacking the tar file. Cmd : " + cmd);
-    String[] shellCmd = { "bash", "-c", cmd };
-    Shell.execCommand(shellCmd);
-    
+    FileUtil.unTar(new File(tarFile), new File(dataDir));
     //Now read the reference info
     
     BufferedReader reader = new BufferedReader( 

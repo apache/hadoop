@@ -1416,7 +1416,8 @@
 
           <p><code>DistributedCache</code> can be used to distribute simple, 
           read-only data/text files and more complex types such as archives and
-          jars. Archives (zip files) are <em>un-archived</em> at the slave nodes.
+          jars. Archives (zip, tar, tgz and tar.gz files) are 
+          <em>un-archived</em> at the slave nodes.
           Optionally users can also direct the <code>DistributedCache</code> to 
           <em>symlink</em> the cached file(s) into the <code>current working 
           directory</code> of the task via the 
