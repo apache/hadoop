@@ -243,4 +243,12 @@ public class TestDatamerge extends TestCase {
   public void testSimpleOverride() throws Exception {
     joinAs("override", OverrideChecker.class);
   }
+
+  public void testConfiguredInputFormat() throws Exception {
+    JobConf conf = new JobConf();
+    conf.set("mapred.join.expr", CompositeInputFormat.compose(
+          ConfigurableInputFormat.class, "/dingos"));
+    CompositeInputFormat cif = new CompositeInputFormat();
+    cif.validateInput(conf);
+  }
 }

@@ -233,7 +233,7 @@ public class Parser {
     protected void setKeyComparator(Class<? extends WritableComparator> cmpcl) {
       this.cmpcl = cmpcl;
     }
-    abstract void parse(List<Token> args) throws IOException;
+    abstract void parse(List<Token> args, JobConf job) throws IOException;
   }
 
   /**
@@ -260,7 +260,7 @@ public class Parser {
      * Let the first actual define the InputFormat and the second define
      * the <tt>mapred.input.dir</tt> property.
      */
-    public void parse(List<Token> ll) throws IOException {
+    public void parse(List<Token> ll, JobConf job) throws IOException {
       StringBuilder sb = new StringBuilder();
       Iterator<Token> i = ll.iterator();
       while (i.hasNext()) {
@@ -269,7 +269,7 @@ public class Parser {
           try {
             inf = (InputFormat)ReflectionUtils.newInstance(
                 Class.forName(sb.toString()).asSubclass(InputFormat.class),
-                null);
+                job);
           } catch (ClassNotFoundException e) {
             throw (IOException)new IOException().initCause(e);
           } catch (IllegalArgumentException e) {
@@ -424,7 +424,7 @@ public class Parser {
     /**
      * Parse a list of comma-separated nodes.
      */
-    public void parse(List<Token> args) throws IOException {
+    public void parse(List<Token> args, JobConf job) throws IOException {
       ListIterator<Token> i = args.listIterator();
       while (i.hasNext()) {
         Token t = i.next();
@@ -447,7 +447,7 @@ public class Parser {
     }
   }
 
-  private static Token reduce(Stack<Token> st) throws IOException {
+  private static Token reduce(Stack<Token> st, JobConf job) throws IOException {
     LinkedList<Token> args = new LinkedList<Token>();
     while (!st.isEmpty() && !TType.LPAREN.equals(st.peek().getType())) {
       args.addFirst(st.pop());
@@ -460,7 +460,7 @@ public class Parser {
       throw new IOException("Identifier expected");
     }
     Node n = Node.forIdent(st.pop().getStr());
-    n.parse(args);
+    n.parse(args, job);
     return new NodeToken(n);
   }
 
@@ -468,17 +468,18 @@ public class Parser {
    * Given an expression and an optional comparator, build a tree of
    * InputFormats using the comparator to sort keys.
    */
-  static Node parse(String expr, Class<? extends WritableComparator> cmpcl)
-      throws IOException {
+  static Node parse(String expr, JobConf job) throws IOException {
     if (null == expr) {
       throw new IOException("Expression is null");
     }
+    Class<? extends WritableComparator> cmpcl =
+      job.getClass("mapred.join.keycomparator", null, WritableComparator.class);
     Lexer lex = new Lexer(expr);
     Stack<Token> st = new Stack<Token>();
     Token tok;
     while ((tok = lex.next()) != null) {
       if (TType.RPAREN.equals(tok.getType())) {
-        st.push(reduce(st));
+        st.push(reduce(st, job));
       } else {
         st.push(tok);
       }

@@ -72,9 +72,7 @@ public class CompositeInputFormat<K extends WritableComparable>
   public void setFormat(JobConf job) throws IOException {
     addDefaults();
     addUserIdentifiers(job);
-    Class<? extends WritableComparator> cmpcl =
-      job.getClass("mapred.join.keycomparator", null, WritableComparator.class);
-    root = Parser.parse(job.get("mapred.join.expr", null), cmpcl);
+    root = Parser.parse(job.get("mapred.join.expr", null), job);
   }
 
   /**

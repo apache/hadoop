@@ -194,6 +194,9 @@ Trunk (unreleased changes)
     HADOOP-3085. Catch Exception in metrics util classes to ensure that
     misconfigured metrics don't prevent others from updating. (cdouglas)
 
+    HADOOP-3299. CompositeInputFormat should configure the sub-input
+    formats. (cdouglas via omalley)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
