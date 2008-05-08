@@ -190,33 +190,11 @@ implements RegionUnavailableListener, HConstants {
   }
   
   /** {@inheritDoc} */
-  public void closing(final Text regionName) {
-    startTime = System.currentTimeMillis();
-    server.getWriteLock().lock();
-    try {
-      // Remove region from regions Map and add it to the Map of retiring
-      // regions.
-      server.setRegionClosing(regionName);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(regionName.toString() + " closing (" +
-          "Adding to retiringRegions)");
-      }
-    } finally {
-      server.getWriteLock().unlock();
-    }
+  public void closing(@SuppressWarnings("unused") final Text regionName) {
   }
   
   /** {@inheritDoc} */
-  public void closed(final Text regionName) {
-    server.getWriteLock().lock();
-    try {
-      server.setRegionClosed(regionName);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(regionName.toString() + " closed");
-      }
-    } finally {
-      server.getWriteLock().unlock();
-    }
+  public void closed(@SuppressWarnings("unused") final Text regionName) {
   }
 
   /**

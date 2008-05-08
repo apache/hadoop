@@ -115,8 +115,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // region name -> HRegion
   protected volatile Map<Text, HRegion> onlineRegions =
     new ConcurrentHashMap<Text, HRegion>();
-  protected volatile Map<Text, HRegion> retiringRegions =
-    new ConcurrentHashMap<Text, HRegion>();
  
   protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private volatile List<HMsg> outboundMsgs =
@@ -1296,42 +1294,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   protected HRegion getRegion(final Text regionName)
   throws NotServingRegionException {
-    return getRegion(regionName, false);
-  }
-  
-  /** Move a region from online to closing. */
-  void setRegionClosing(final Text regionName) {
-    retiringRegions.put(regionName, onlineRegions.remove(regionName));
-  }
-  
-  /** Set a region as closed. */
-  void setRegionClosed(final Text regionName) {
-    retiringRegions.remove(regionName);
-  }
-  
-  /** 
-   * Protected utility method for safely obtaining an HRegion handle.
-   * @param regionName Name of online {@link HRegion} to return
-   * @param checkRetiringRegions Set true if we're to check retiring regions
-   * as well as online regions.
-   * @return {@link HRegion} for <code>regionName</code>
-   * @throws NotServingRegionException
-   */
-  protected HRegion getRegion(final Text regionName,
-    final boolean checkRetiringRegions)
-  throws NotServingRegionException {
     HRegion region = null;
     this.lock.readLock().lock();
     try {
       region = onlineRegions.get(regionName);
-      if (region == null && checkRetiringRegions) {
-        region = this.retiringRegions.get(regionName);
-        if (LOG.isDebugEnabled()) {
-          if (region != null) {
-            LOG.debug("Found region " + regionName + " in retiringRegions");
-          }
-        }
-      }
 
       if (region == null) {
         throw new NotServingRegionException(regionName.toString());
