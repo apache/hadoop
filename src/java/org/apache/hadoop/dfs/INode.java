@@ -86,6 +86,13 @@ abstract class INode implements Comparable<byte[]> {
     setLocalName(name);
   }
 
+  /**
+   * Check whether this is the root inode.
+   */
+  boolean isRoot() {
+    return name.length == 0;
+  }
+
   /** Set the {@link PermissionStatus} */
   protected void setPermissionStatus(PermissionStatus ps) {
     setUser(ps.getUserName());
@@ -519,29 +526,54 @@ class INodeDirectory extends INode {
    * @param newNode INode to be added
    * @param inheritPermission If true, copy the parent's permission to newNode.
    * @return null if the node already exists; inserted INode, otherwise
-   * @throws FileNotFoundException
+   * @throws FileNotFoundException if parent does not exist or 
+   * is not a directory.
    */
   <T extends INode> T addNode(String path, T newNode, boolean inheritPermission
       ) throws FileNotFoundException {
+    if(addToParent(path, newNode, null, inheritPermission) == null)
+      return null;
+    return newNode;
+  }
+
+  /**
+   * Add new inode to the parent if specified.
+   * Optimized version of addNode() if parent is not null.
+   * 
+   * @return  parent INode if new inode is inserted
+   *          or null if it already exists.
+   * @throws  FileNotFoundException if parent does not exist or 
+   *          is not a directory.
+   */
+  <T extends INode> INodeDirectory addToParent(
+                                      String path,
+                                      T newNode,
+                                      INodeDirectory parent,
+                                      boolean inheritPermission
+                                    ) throws FileNotFoundException {
     byte[][] pathComponents = getPathComponents(path);
     assert pathComponents != null : "Incorrect path " + path;
     int pathLen = pathComponents.length;
     if (pathLen < 2)  // add root
       return null;
-    // Gets the parent INode
-    INode[] inode  = new INode[2];
-    getExistingPathINodes(pathComponents, inode);
-    INode node = inode[0];
-    if (node == null) {
-      throw new FileNotFoundException("Parent path does not exist: "+path);
+    if(parent == null) {
+      // Gets the parent INode
+      INode[] inodes  = new INode[2];
+      getExistingPathINodes(pathComponents, inodes);
+      INode inode = inodes[0];
+      if (inode == null) {
+        throw new FileNotFoundException("Parent path does not exist: "+path);
+      }
+      if (!inode.isDirectory()) {
+        throw new FileNotFoundException("Parent path is not a directory: "+path);
+      }
+      parent = (INodeDirectory)inode;
     }
-    if (!node.isDirectory()) {
-      throw new FileNotFoundException("Parent path is not a directory: "+path);
-    }
-
     // insert into the parent children list
     newNode.name = pathComponents[pathLen-1];
-    return ((INodeDirectory)node).addChild(newNode, inheritPermission);
+    if(parent.addChild(newNode, inheritPermission) == null)
+      return null;
+    return parent;
   }
 
   /**
@@ -754,7 +786,6 @@ class INodeFileUnderConstruction extends INodeFile {
   INodeFileUnderConstruction() {
     clientName = null;
     clientMachine = null;
-    clientNode = null;
     clientNode = null;
   }
 

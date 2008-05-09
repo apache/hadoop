@@ -208,6 +208,43 @@ class FSDirectory implements FSConstants {
     }
   }
 
+  INodeDirectory addToParent( String src,
+                              INodeDirectory parentINode,
+                              PermissionStatus permissions,
+                              Block[] blocks, 
+                              short replication,
+                              long modificationTime,
+                              long preferredBlockSize) {
+    // create new inode
+    INode newNode;
+    if (blocks == null)
+      newNode = new INodeDirectory(permissions, modificationTime);
+    else 
+      newNode = new INodeFile(permissions, blocks.length, replication,
+                              modificationTime, preferredBlockSize);
+    // add new node to the parent
+    INodeDirectory newParent = null;
+    synchronized (rootDir) {
+      try {
+        newParent = rootDir.addToParent(src, newNode, parentINode, false);
+      } catch (FileNotFoundException e) {
+        return null;
+      }
+      if(newParent == null)
+        return null;
+      totalInodes++;
+      if(blocks != null) {
+        int nrBlocks = blocks.length;
+        // Add file->block mapping
+        INodeFile newF = (INodeFile)newNode;
+        for (int i = 0; i < nrBlocks; i++) {
+          newF.setBlock(i, namesystem.blocksMap.addINode(blocks[i], newF));
+        }
+      }
+    }
+    return newParent;
+  }
+
   /**
    * Add a block to the file. Returns a reference to the added block.
    */
@@ -248,16 +285,14 @@ class FSDirectory implements FSConstants {
   /**
    * Close file.
    */
-  void closeFile(String path, INode file) throws IOException {
+  void closeFile(String path, INodeFile file) throws IOException {
     waitForReady();
 
     synchronized (rootDir) {
-      INodeFile fileNode = (INodeFile) file;
-
       // file is closed
-      fsImage.getEditLog().logCloseFile(path, fileNode);
+      fsImage.getEditLog().logCloseFile(path, file);
       NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
-                                    +path+" with "+ fileNode.getBlocks().length 
+                                    +path+" with "+ file.getBlocks().length 
                                     +" blocks is persisted to the file system");
     }
   }
@@ -492,7 +527,7 @@ class FSDirectory implements FSConstants {
     synchronized (rootDir) {
       INode targetNode = rootDir.getNode(src);
       if (targetNode == null) {
-        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: "
+        NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
                                      +"failed to remove "+src+" because it does not exist");
         return null;
       } else {
@@ -693,10 +728,10 @@ class FSDirectory implements FSConstants {
   /**
    */
   INode unprotectedMkdir(String src, PermissionStatus permissions,
-      boolean inheritPermission, long timestamp) throws FileNotFoundException {
+                          long timestamp) throws FileNotFoundException {
     synchronized (rootDir) {
-      INode newNode = rootDir.addNode(src, new INodeDirectory(permissions, 
-                                      timestamp), inheritPermission);
+      INode newNode = rootDir.addNode(src,
+                                new INodeDirectory(permissions, timestamp));
       if (newNode != null) {
         totalInodes++;
       }

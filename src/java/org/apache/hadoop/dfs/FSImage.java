@@ -39,6 +39,7 @@ import java.util.Random;
 import java.lang.Math;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.conf.Configuration;
@@ -89,8 +90,8 @@ class FSImage extends Storage {
   /**
    * Used for saving the image to disk
    */
-  static private final FsPermission fileperm = new FsPermission((short)0);
-  static private final byte[] separator = INode.string2Bytes("/");
+  static private final FsPermission FILE_PERM = new FsPermission((short)0);
+  static private final byte[] PATH_SEPARATOR = INode.string2Bytes(Path.SEPARATOR);
   static private byte[] byteStore = null;
 
   /**
@@ -654,12 +655,17 @@ class FSImage extends Storage {
     }
     assert latestSD != null : "Latest storage directory was not determined.";
 
+    long startTime = FSNamesystem.now();
+    long imageSize = getImageFile(latestSD, NameNodeFile.IMAGE).length();
+
     //
     // Load in bits
     //
     latestSD.read();
     needToSave |= loadFSImage(getImageFile(latestSD, NameNodeFile.IMAGE));
 
+    LOG.info("Image file of size " + imageSize + " loaded in " 
+        + (FSNamesystem.now() - startTime)/1000 + " seconds.");
     //
     // read in the editlog from the same directory from
     // which we read in the image
@@ -685,9 +691,8 @@ class FSImage extends Storage {
     // Load in bits
     //
     boolean needToSave = true;
-    DataInputStream in = new DataInputStream(
-                                             new BufferedInputStream(
-                                                                     new FileInputStream(curFile)));
+    DataInputStream in = new DataInputStream(new BufferedInputStream(
+                              new FileInputStream(curFile)));
     try {
       /*
        * Note: Remove any checks for version earlier than 
@@ -719,11 +724,16 @@ class FSImage extends Storage {
 
       // read file info
       short replication = FSNamesystem.getFSNamesystem().getDefaultReplication();
+
+      LOG.info("Number of files = " + numFiles);
+
+      String path;
+      String parentPath = "";
+      INodeDirectory parentINode = fsDir.rootDir;
       for (int i = 0; i < numFiles; i++) {
-        UTF8 name = new UTF8();
         long modificationTime = 0;
         long blockSize = 0;
-        name.readFields(in);
+        path = readString(in);
         replication = in.readShort();
         replication = FSEditLog.adjustReplication(replication);
         modificationTime = in.readLong();
@@ -759,7 +769,13 @@ class FSImage extends Storage {
         if (imgVersion <= -11) {
           permissions = PermissionStatus.read(in);
         }
-        fsDir.unprotectedAddFile(name.toString(), permissions,
+        // check if the new inode belongs to the same parent
+        if(!isParent(path, parentPath)) {
+          parentINode = null;
+          parentPath = getParent(path);
+        }
+        // add new inode
+        parentINode = fsDir.addToParent(path, parentINode, permissions,
             blocks, replication, modificationTime, blockSize);
       }
       
@@ -773,6 +789,19 @@ class FSImage extends Storage {
     }
     
     return needToSave;
+  }
+
+  /**
+   * Return string representing the parent of the given path.
+   */
+  String getParent(String path) {
+    return path.substring(0, path.lastIndexOf(Path.SEPARATOR));
+  }
+
+  private boolean isParent(String path, String parent) {
+    return parent != null && path != null
+          && path.indexOf(parent) == 0
+          && path.lastIndexOf(Path.SEPARATOR) == parent.length();
   }
 
   /**
@@ -797,6 +826,7 @@ class FSImage extends Storage {
   void saveFSImage(File newFile) throws IOException {
     FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
     FSDirectory fsDir = fsNamesys.dir;
+    long startTime = FSNamesystem.now();
     //
     // Write out data
     //
@@ -817,6 +847,9 @@ class FSImage extends Storage {
     } finally {
       out.close();
     }
+
+    LOG.info("Image file of size " + newFile.length() + " saved in " 
+        + (FSNamesystem.now() - startTime)/1000 + " seconds.");
   }
 
   /**
@@ -887,47 +920,55 @@ class FSImage extends Storage {
 
   /**
    * Save file tree image starting from the given root.
+   * This is a recursive procedure, which first saves all children of
+   * a current directory and then moves inside the sub-directories.
    */
-  private static void saveImage(ByteBuffer parentPrefix, 
+  private static void saveImage(ByteBuffer parentPrefix,
                                 int prefixLength,
-                                INode inode, 
+                                INodeDirectory current,
                                 DataOutputStream out) throws IOException {
     int newPrefixLength = prefixLength;
-    if (inode.getParent() != null) {
-      parentPrefix.put(separator).put(inode.getLocalNameBytes());
-      newPrefixLength += separator.length + inode.getLocalNameBytes().length;
+    if (current.getChildrenRaw() == null)
+      return;
+    for(INode child : current.getChildren()) {
+    // print all children first
+      parentPrefix.position(prefixLength);
+      parentPrefix.put(PATH_SEPARATOR).put(child.getLocalNameBytes());
+      newPrefixLength = parentPrefix.position();
       out.writeShort(newPrefixLength);
       out.write(byteStore, 0, newPrefixLength);
-      if (!inode.isDirectory()) {  // write file inode
-        INodeFile fileINode = (INodeFile)inode;
+      if (!child.isDirectory()) {  // write file inode
+        INodeFile fileINode = (INodeFile)child;
         out.writeShort(fileINode.getReplication());
-        out.writeLong(inode.getModificationTime());
+        out.writeLong(fileINode.getModificationTime());
         out.writeLong(fileINode.getPreferredBlockSize());
         Block[] blocks = fileINode.getBlocks();
         out.writeInt(blocks.length);
         for (Block blk : blocks)
           blk.write(out);
-        fileperm.fromShort(fileINode.getFsPermissionShort());
+        FILE_PERM.fromShort(fileINode.getFsPermissionShort());
         PermissionStatus.write(out, fileINode.getUserName(),
                                fileINode.getGroupName(),
-                               fileperm);
-        parentPrefix.position(prefixLength);
-        return;
+                               FILE_PERM);
+        continue;
       }
       // write directory inode
       out.writeShort(0);  // replication
-      out.writeLong(inode.getModificationTime());
+      out.writeLong(child.getModificationTime());
       out.writeLong(0);   // preferred block size
       out.writeInt(-1);    // # of blocks
-      fileperm.fromShort(inode.getFsPermissionShort());
-      PermissionStatus.write(out, inode.getUserName(),
-                             inode.getGroupName(),
-                             fileperm);
+      FILE_PERM.fromShort(child.getFsPermissionShort());
+      PermissionStatus.write(out, child.getUserName(),
+                             child.getGroupName(),
+                             FILE_PERM);
     }
-    if (((INodeDirectory)inode).getChildrenRaw() != null) {
-      for(INode child : ((INodeDirectory)inode).getChildren()) {
-        saveImage(parentPrefix, newPrefixLength, child, out);
-      }
+    for(INode child : current.getChildren()) {
+      if(!child.isDirectory())
+        continue;
+      parentPrefix.position(prefixLength);
+      parentPrefix.put(PATH_SEPARATOR).put(child.getLocalNameBytes());
+      newPrefixLength = parentPrefix.position();
+      saveImage(parentPrefix, newPrefixLength, (INodeDirectory)child, out);
     }
     parentPrefix.position(prefixLength);
   }
@@ -954,6 +995,8 @@ class FSImage extends Storage {
       return;
     int size = in.readInt();
 
+    LOG.info("Number of files under construction = " + size);
+
     for (int i = 0; i < size; i++) {
       INodeFileUnderConstruction cons = readINodeUnderConstruction(in);
 
@@ -977,9 +1020,7 @@ class FSImage extends Storage {
   //
   static INodeFileUnderConstruction readINodeUnderConstruction(
                             DataInputStream in) throws IOException {
-    UTF8 src = new UTF8();
-    src.readFields(in);
-    byte[] name = src.getBytes();
+    byte[] name = readBytes(in);
     short blockReplication = in.readShort();
     long modificationTime = in.readLong();
     long preferredBlockSize = in.readLong();
@@ -991,10 +1032,8 @@ class FSImage extends Storage {
       blocks[i] = new BlockInfo(blk, blockReplication);
     }
     PermissionStatus perm = PermissionStatus.read(in);
-    UTF8 clientName = new UTF8();
-    clientName.readFields(in);
-    UTF8 clientMachine = new UTF8();
-    clientMachine.readFields(in);
+    String clientName = readString(in);
+    String clientMachine = readString(in);
 
     int numLocs = in.readInt();
     DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocs];
@@ -1009,8 +1048,8 @@ class FSImage extends Storage {
                                           preferredBlockSize,
                                           blocks,
                                           perm,
-                                          clientName.toString(),
-                                          clientMachine.toString(),
+                                          clientName,
+                                          clientMachine,
                                           null,
                                           locations);
 
@@ -1023,7 +1062,7 @@ class FSImage extends Storage {
                                            INodeFileUnderConstruction cons,
                                            String path) 
                                            throws IOException {
-    new UTF8(path).write(out);
+    writeString(path, out);
     out.writeShort(cons.getReplication());
     out.writeLong(cons.getModificationTime());
     out.writeLong(cons.getPreferredBlockSize());
@@ -1033,8 +1072,8 @@ class FSImage extends Storage {
       cons.getBlocks()[i].write(out);
     }
     cons.getPermissionStatus().write(out);
-    new UTF8(cons.getClientName()).write(out);
-    new UTF8(cons.getClientMachine()).write(out);
+    writeString(cons.getClientName(), out);
+    writeString(cons.getClientMachine(), out);
 
     int numLocs = cons.getLastBlockLocations().length;
     out.writeInt(numLocs);
@@ -1314,5 +1353,24 @@ class FSImage extends Storage {
       dirs.add(new File(name));
     }
     return dirs;
+  }
+
+  static private final UTF8 U_STR = new UTF8();
+  static String readString(DataInputStream in) throws IOException {
+    U_STR.readFields(in);
+    return U_STR.toString();
+  }
+
+  static byte[] readBytes(DataInputStream in) throws IOException {
+    U_STR.readFields(in);
+    int len = U_STR.getLength();
+    byte[] bytes = new byte[len];
+    System.arraycopy(U_STR.getBytes(), 0, bytes, 0, len);
+    return bytes;
+  }
+
+  static void writeString(String str, DataOutputStream out) throws IOException {
+    U_STR.set(str);
+    U_STR.write(out);
   }
 }

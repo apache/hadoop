@@ -20,6 +20,7 @@ package org.apache.hadoop.dfs;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.*;
+import org.apache.hadoop.dfs.BlocksMap.BlockInfo;
 import org.apache.hadoop.dfs.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.dfs.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.security.UnixUserGroupInformation;
@@ -842,13 +843,13 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                               boolean overwrite,
                                               short replication,
                                               long blockSize
-                                             	) throws IOException {
+                                              ) throws IOException {
     NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: file "
                                   +src+" for "+holder+" at "+clientMachine);
     if (isInSafeMode())
       throw new SafeModeException("Cannot create file" + src, safeMode);
     if (!isValidName(src)) {
-      throw new IOException("Invalid file name: " + src);      	  
+      throw new IOException("Invalid file name: " + src);
     }
     if (isPermissionEnabled) {
       if (overwrite && dir.exists(src)) {
@@ -2459,14 +2460,21 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   synchronized Block addStoredBlock(Block block, 
                                     DatanodeDescriptor node,
                                     DatanodeDescriptor delNodeHint) {
-        
-    INodeFile fileINode = blocksMap.getINode(block);
-    int replication = (fileINode != null) ?  fileINode.getReplication() : 
-      defaultReplication;
-    boolean added = blocksMap.addNode(block, node, replication);
-        
-    Block storedBlock = blocksMap.getStoredBlock(block); //extra look up!
-    if (storedBlock != null && block != storedBlock) {
+    BlockInfo storedBlock = blocksMap.getStoredBlock(block);
+    INodeFile fileINode = null;
+    boolean added = false;
+    if(storedBlock == null) { // block is not in the blocksMaps
+      // add block to the blocksMap and to the data-node
+      added = blocksMap.addNode(block, node, defaultReplication);
+      storedBlock = blocksMap.getStoredBlock(block);
+    } else {
+      // add block to the data-node
+      added = node.addBlock(storedBlock);
+    }
+    assert storedBlock != null : "Block must be stored by now";
+
+    fileINode = storedBlock.getINode();
+    if (block != storedBlock) {
       if (block.getNumBytes() > 0) {
         long cursize = storedBlock.getNumBytes();
         if (cursize == 0) {
@@ -2519,6 +2527,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
       block = storedBlock;
     }
+    assert storedBlock == block : "Block must be stored by now";
         
     int curReplicaDelta = 0;
         
@@ -2552,7 +2561,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
 
     // filter out containingNodes that are marked for decommission.
-    NumberReplicas num = countNodes(block);
+    NumberReplicas num = countNodes(storedBlock);
     int numCurrentReplica = num.liveReplicas()
       + pendingReplications.getNumReplicas(block);
 

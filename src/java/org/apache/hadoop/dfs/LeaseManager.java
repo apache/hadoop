@@ -246,7 +246,7 @@ class LeaseManager {
         // remember new filename
         String newPath = path.replaceFirst(overwrite, replaceBy);
         toAdd.add(new StringBytesWritable(newPath));
-        LOG.info("Modified Lease for file " + path +
+        LOG.debug("Modified Lease for file " + path +
                  " to new path " + newPath);
       }
       // add modified filenames back into lease.
