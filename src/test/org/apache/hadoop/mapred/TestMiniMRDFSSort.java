@@ -80,6 +80,10 @@ public class TestMiniMRDFSSort extends TestCase {
     try {
       Configuration conf = new Configuration();
 
+      // set io.sort.mb and fsinmemory.size.mb to lower value in test
+      conf.setInt("io.sort.mb", 5);
+      conf.setInt("fs.inmemory.size.mb", 20);
+
       // Start the mini-MR and mini-DFS clusters
       dfs = new MiniDFSCluster(conf, NUM_HADOOP_SLAVES, true, null);
       fileSys = dfs.getFileSystem();

@@ -203,6 +203,9 @@ Trunk (unreleased changes)
     HADOOP-3299. CompositeInputFormat should configure the sub-input
     formats. (cdouglas via omalley)
 
+    HADOOP-3309. Lower io.sort.mb and fs.inmemory.size.mb for MiniMRDFSSort
+    unit test so it passes on Windows. (lohit vijayarenu via cdouglas)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
