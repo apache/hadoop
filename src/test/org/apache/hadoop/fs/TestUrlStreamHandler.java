@@ -38,13 +38,6 @@ import org.apache.hadoop.fs.Path;
  */
 public class TestUrlStreamHandler extends TestCase {
 
-  static {
-    // Setup our own factory
-    FsUrlStreamHandlerFactory factory =
-        new org.apache.hadoop.fs.FsUrlStreamHandlerFactory();
-    java.net.URL.setURLStreamHandlerFactory(factory);
-  }
-
   /**
    * Test opening and reading from an InputStream through a hdfs:// URL.
    * <p>
@@ -58,6 +51,14 @@ public class TestUrlStreamHandler extends TestCase {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fs = cluster.getFileSystem();
+
+    // Setup our own factory
+    // setURLSteramHandlerFactor is can be set at most once in the JVM
+    // the new URLStreamHandler is valid for all tests cases 
+    // in TestStreamHandler
+    FsUrlStreamHandlerFactory factory =
+        new org.apache.hadoop.fs.FsUrlStreamHandlerFactory();
+    java.net.URL.setURLStreamHandlerFactory(factory);
 
     Path filePath = new Path("/thefile");
 
@@ -104,7 +105,7 @@ public class TestUrlStreamHandler extends TestCase {
    * @throws URISyntaxException
    */
   public void testFileUrls() throws IOException, URISyntaxException {
-
+    // URLStreamHandler is already set in JVM by testDfsUrls() 
     Configuration conf = new Configuration();
 
     // Locate the test temporary directory.

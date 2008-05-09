@@ -206,6 +206,9 @@ Trunk (unreleased changes)
     HADOOP-3309. Lower io.sort.mb and fs.inmemory.size.mb for MiniMRDFSSort
     unit test so it passes on Windows. (lohit vijayarenu via cdouglas)
 
+    HADOOP-3348. TestUrlStreamHandler should set URLStreamFactory after
+    DataNodes are initialized. (Lohit Vijayarenu via rangadi)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
