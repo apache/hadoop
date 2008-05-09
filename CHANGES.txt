@@ -214,6 +214,9 @@ Trunk (unreleased changes)
     HADOOP-3348. TestUrlStreamHandler should set URLStreamFactory after
     DataNodes are initialized. (Lohit Vijayarenu via rangadi)
 
+    HADOOP-3371. Ignore InstanceAlreadyExistsException from
+    MBeanUtil::registerMBean. (lohit vijayarenu via cdouglas)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

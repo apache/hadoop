@@ -23,6 +23,7 @@ import javax.management.InstanceNotFoundException;
 import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
+import javax.management.InstanceAlreadyExistsException;
 
 
 /**
@@ -51,6 +52,8 @@ public class MBeanUtil {
     try {
       mbs.registerMBean(theMbean, name);
       return name;
+    } catch (InstanceAlreadyExistsException ie) {
+      // Ignore if instance already exists 
     } catch (Exception e) {
       e.printStackTrace();
     }
