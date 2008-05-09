@@ -374,23 +374,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /** Serialization for FSEditLog */
-  //TODO: remove this method in HADOOP-3329
-  void write2FSEditLog(DataOutput out) throws IOException {
-    UTF8.writeString(out, name);
-    UTF8.writeString(out, storageID);
-    out.writeShort(infoPort);
-    out.writeLong(capacity);
-    out.writeLong(dfsUsed);
-    out.writeLong(remaining);
-    out.writeLong(lastUpdate);
-    out.writeInt(xceiverCount);
-    Text.writeString(out, location);
-    Text.writeString(out, hostName == null? "": hostName);
-    WritableUtils.writeEnum(out, getAdminState());
-  }
-  
-  /** Serialization for FSEditLog */
-  //TODO: remove this method in HADOOP-3329
   void readFieldsFromFSEditLog(DataInput in) throws IOException {
     this.name = UTF8.readString(in);
     this.storageID = UTF8.readString(in);

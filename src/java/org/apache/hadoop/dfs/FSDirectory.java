@@ -309,9 +309,6 @@ class FSDirectory implements FSConstants {
       fileNode.removeBlock(block);
       namesystem.blocksMap.removeINode(block);
 
-      // Remove the block locations for the last block.
-      fileNode.setLastBlockLocations(new DatanodeDescriptor[0]);
-
       // write modified block locations to log
       fsImage.getEditLog().logOpenFile(path, fileNode);
       NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "

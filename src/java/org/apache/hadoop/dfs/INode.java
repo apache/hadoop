@@ -781,7 +781,6 @@ class INodeFileUnderConstruction extends INodeFile {
   protected StringBytesWritable clientName;         // lease holder
   protected StringBytesWritable clientMachine;
   protected DatanodeDescriptor clientNode; // if client is a cluster node too.
-  protected DatanodeDescriptor[] targets;  // locations for last block
 
   INodeFileUnderConstruction() {
     clientName = null;
@@ -802,7 +801,6 @@ class INodeFileUnderConstruction extends INodeFile {
     this.clientName = new StringBytesWritable(clientName);
     this.clientMachine = new StringBytesWritable(clientMachine);
     this.clientNode = clientNode;
-    this.targets = new DatanodeDescriptor[0];
   }
 
   INodeFileUnderConstruction(byte[] name,
@@ -813,8 +811,7 @@ class INodeFileUnderConstruction extends INodeFile {
                              PermissionStatus perm,
                              String clientName,
                              String clientMachine,
-                             DatanodeDescriptor clientNode,
-                             DatanodeDescriptor[] targets) 
+                             DatanodeDescriptor clientNode)
                              throws IOException {
     super(perm, blocks, blockReplication, modificationTime, 
           preferredBlockSize);
@@ -822,7 +819,6 @@ class INodeFileUnderConstruction extends INodeFile {
     this.clientName = new StringBytesWritable(clientName);
     this.clientMachine = new StringBytesWritable(clientMachine);
     this.clientNode = clientNode;
-    this.targets = targets;
   }
 
   String getClientName() throws IOException {
@@ -835,14 +831,6 @@ class INodeFileUnderConstruction extends INodeFile {
 
   DatanodeDescriptor getClientNode() {
     return clientNode;
-  }
-
-  void setLastBlockLocations(DatanodeDescriptor[] targets) {
-    this.targets = targets;
-  }
-
-  DatanodeDescriptor[] getLastBlockLocations() {
-    return this.targets;
   }
 
   /**

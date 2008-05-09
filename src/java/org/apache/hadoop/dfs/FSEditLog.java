@@ -384,7 +384,6 @@ class FSEditLog {
     INode old = null;
     String clientName = null;
     String clientMachine = null;
-    DatanodeDescriptor lastLocations[] = null;
     String path = null;
     int numOpAdd = 0, numOpClose = 0, numOpDelete = 0,
         numOpRename = 0, numOpSetRepl = 0, numOpMkDir = 0,
@@ -470,15 +469,15 @@ class FSEditLog {
             }
 
             // clientname, clientMachine and block locations of last block.
-            lastLocations = null;
             if (opcode == OP_ADD && logVersion <= -12) {
               clientName = FSImage.readString(in);
               clientMachine = FSImage.readString(in);
-              lastLocations = readDatanodeDescriptorArray(in);
+              if (-13 <= logVersion) {
+                readDatanodeDescriptorArray(in);
+              }
             } else {
               clientName = "";
               clientMachine = "";
-              lastLocations = EMPTY_ARRAY_DN_DESCRIPTORS;
             }
   
             // The open lease transaction re-creates a file if necessary.
@@ -512,8 +511,7 @@ class FSEditLog {
                                         node.getPermissionStatus(),
                                         clientName, 
                                         clientMachine, 
-                                        null,
-                                        lastLocations);
+                                        null);
               fsDir.replaceNode(path, node, cons);
               fsNamesys.leaseManager.addLease(path, clientName);
             } else if (opcode == OP_CLOSE) {
@@ -800,7 +798,6 @@ class FSEditLog {
    */
   void logOpenFile(String path, INodeFileUnderConstruction newNode) 
                    throws IOException {
-    final DatanodeDescriptor[] locations = newNode.getLastBlockLocations();
 
     UTF8 nameReplicationPair[] = new UTF8[] { 
       new UTF8(path), 
@@ -812,13 +809,7 @@ class FSEditLog {
             new ArrayWritable(Block.class, newNode.getBlocks()),
             newNode.getPermissionStatus(),
             new UTF8(newNode.getClientName()),
-            new UTF8(newNode.getClientMachine()),
-            new Writable() {
-              public void readFields(DataInput in) {}
-              public void write(DataOutput out) throws IOException {
-                writeDatanodeDescriptorArray(out, locations);
-              }
-    });
+            new UTF8(newNode.getClientMachine()));
   }
 
   /** 
@@ -1013,19 +1004,6 @@ class FSEditLog {
   }
 
   /** This method is defined for compatibility reason. */
-  //TODO: remove this class in HADOOP-3329
-  static private void writeDatanodeDescriptorArray(DataOutput out,
-      DatanodeDescriptor[] locations) throws IOException {
-    out.writeInt(locations.length);                 // write values
-    for (int i = 0; i < locations.length; i++) {
-      locations[i].write2FSEditLog(out);
-    }
-  }
-
-  /** This method is defined for compatibility reason. */
-  private static final DatanodeDescriptor[] EMPTY_ARRAY_DN_DESCRIPTORS
-                                                  = new DatanodeDescriptor[0];
-  //TODO: remove this class in HADOOP-3329
   static private DatanodeDescriptor[] readDatanodeDescriptorArray(DataInput in
       ) throws IOException {
     DatanodeDescriptor[] locations = new DatanodeDescriptor[in.readInt()];

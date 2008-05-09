@@ -1015,7 +1015,6 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
       // allocate new block record block locations in INode.
       newBlock = allocateBlock(src, pendingFile);
-      pendingFile.setLastBlockLocations(targets);
     }
         
     // Create next block

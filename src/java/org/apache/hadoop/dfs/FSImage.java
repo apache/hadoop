@@ -1035,6 +1035,7 @@ class FSImage extends Storage {
     String clientName = readString(in);
     String clientMachine = readString(in);
 
+    // These locations are not used at all
     int numLocs = in.readInt();
     DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocs];
     for (int i = 0; i < numLocs; i++) {
@@ -1050,9 +1051,7 @@ class FSImage extends Storage {
                                           perm,
                                           clientName,
                                           clientMachine,
-                                          null,
-                                          locations);
-
+                                          null);
   }
 
   // Helper function that writes an INodeUnderConstruction
@@ -1075,11 +1074,7 @@ class FSImage extends Storage {
     writeString(cons.getClientName(), out);
     writeString(cons.getClientMachine(), out);
 
-    int numLocs = cons.getLastBlockLocations().length;
-    out.writeInt(numLocs);
-    for (int i = 0; i < numLocs; i++) {
-      cons.getLastBlockLocations()[i].write(out);
-    }
+    out.writeInt(0); //  do not store locations of last block
   }
 
   /**

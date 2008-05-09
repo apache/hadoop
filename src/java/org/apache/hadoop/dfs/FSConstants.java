@@ -190,7 +190,7 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -13;
+  public static final int LAYOUT_VERSION = -14;
   // Current version: 
-  // Fix bug introduced by OPEN, CLOSE and GENSTAMP transactions for supporting appends
+  // Remove storing locations of last block of a file in fsimage
 }
