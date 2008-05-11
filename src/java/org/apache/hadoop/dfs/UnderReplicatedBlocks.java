@@ -33,7 +33,16 @@ class UnderReplicatedBlocks implements Iterable<Block> {
       priorityQueues.add(new TreeSet<Block>());
     }
   }
-      
+
+  /**
+   * Empty the queues.
+   */
+  void clear() {
+    for(int i=0; i<LEVEL; i++) {
+      priorityQueues.get(i).clear();
+    }
+  }
+
   /* Return the total number of under replication blocks */
   synchronized int size() {
     int size = 0;

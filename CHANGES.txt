@@ -133,6 +133,8 @@ Trunk (unreleased changes)
 
     HADOOP-3364. Faster image and log edits loading. (shv)
 
+    HADOOP-3369. Fast block processing during name-node startup. (shv)
+
   BUG FIXES
 
     HADOOP-2905. 'fsck -move' triggers NPE in NameNode. 

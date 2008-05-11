@@ -379,4 +379,8 @@ class BlocksMap {
   int size() {
     return map.size();
   }
+
+  Collection<BlockInfo> getBlocks() {
+    return map.values();
+  }
 }
