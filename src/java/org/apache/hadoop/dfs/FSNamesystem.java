@@ -91,6 +91,11 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   // Mapping: Block -> { INode, datanodes, self ref } 
   //
   BlocksMap blocksMap = new BlocksMap();
+
+  //
+  // Store blocks-->datanodedescriptor(s) map of corrupt replicas
+  //
+  CorruptReplicasMap corruptReplicas = new CorruptReplicasMap();
     
   /**
    * Stores the datanode -> block map.  
@@ -718,15 +723,26 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     do {
       // get block locations
       int numNodes = blocksMap.numNodes(blocks[curBlk]);
-      DatanodeDescriptor[] machineSet = new DatanodeDescriptor[numNodes];
-      if (numNodes > 0) {
+      Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(
+                                                      blocks[curBlk]);
+      int numCorruptNodes = (nodesCorrupt == null) ? 0 : nodesCorrupt.size();
+      boolean blockCorrupt = (numCorruptNodes == numNodes);
+      int numMachineSet = blockCorrupt ? numNodes : 
+                            (numNodes - numCorruptNodes);
+      DatanodeDescriptor[] machineSet = new DatanodeDescriptor[numMachineSet];
+      if (numMachineSet > 0) {
         numNodes = 0;
         for(Iterator<DatanodeDescriptor> it = 
             blocksMap.nodeIterator(blocks[curBlk]); it.hasNext();) {
-          machineSet[numNodes++] = it.next();
+          DatanodeDescriptor dn = it.next();
+          boolean replicaCorrupt = ((nodesCorrupt != null) &&
+                                    nodesCorrupt.contains(dn));
+          if (blockCorrupt || (!blockCorrupt && !replicaCorrupt))
+            machineSet[numNodes++] = dn;
         }
       }
-      results.add(new LocatedBlock(blocks[curBlk], machineSet, curPos));
+      results.add(new LocatedBlock(blocks[curBlk], machineSet, curPos,
+                  blockCorrupt));
       curPos += blocks[curBlk].getNumBytes();
       curBlk++;
     } while (curPos < endOff 
@@ -1260,6 +1276,22 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         out.println("");
       }
     }
+  }
+
+  /**
+   * Mark the block belonging to datanode as corrupt
+   * @param blk Block to be marked as corrupt
+   * @param datanode Datanode which holds the corrupt replica
+   */
+  public synchronized void markBlockAsCorrupt(Block blk, DatanodeInfo dn)
+    throws IOException {
+    DatanodeDescriptor node = getDatanode(dn);
+    if (node == null) {
+      throw new IOException("Cannot mark block" + blk.getBlockName() +
+                            " as corrupt because datanode " + dn.getName() +
+                            " does not exist. ");
+    }
+    corruptReplicas.addToCorruptReplicasMap(blk, node);
   }
 
   /**
@@ -2138,14 +2170,22 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     DatanodeDescriptor srcNode = null;
     int live = 0;
     int decommissioned = 0;
+    int corrupt = 0;
     Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(block);
     while(it.hasNext()) {
       DatanodeDescriptor node = it.next();
-      if(!node.isDecommissionInProgress() && !node.isDecommissioned())
+      Collection<DatanodeDescriptor> nodes = corruptReplicas.getNodes(block);
+      if ((nodes != null) && (nodes.contains(node)))
+        corrupt++;
+      else if(!node.isDecommissionInProgress() && !node.isDecommissioned())
         live++;
       else
         decommissioned++;
       containingNodes.add(node);
+      // Check if this replica is corrupt
+      // If so, do not select the node as src node
+      if ((nodes != null) && nodes.contains(node))
+        continue;
       if(node.getNumberOfBlocksToBeReplicated() >= maxReplicationStreams)
         continue; // already reached replication limit
       // the block must not be scheduled for removal on srcNode
@@ -2170,7 +2210,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         srcNode = node;
     }
     if(numReplicas != null)
-      numReplicas.initialize(live, decommissioned);
+      numReplicas.initialize(live, decommissioned, corrupt);
     return srcNode;
   }
 
@@ -2598,6 +2638,11 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if (numCurrentReplica > fileReplication) {
       proccessOverReplicatedBlock(block, fileReplication, node, delNodeHint);
     }
+    // If the file replication has reached desired value
+    // we can remove any corrupt replicas the block may have
+    int corruptReplicasCount = num.corruptReplicas();
+    if ((corruptReplicasCount > 0) && (numCurrentReplica == fileReplication))
+      corruptReplicas.invalidateCorruptReplicas(block);
     return block;
   }
 
@@ -2827,6 +2872,8 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         excessReplicateMap.remove(node.getStorageID());
       }
     }
+    // If block is removed from blocksMap, remove it from corruptReplicas
+    corruptReplicas.removeFromCorruptReplicasMap(block);
   }
 
   /**
@@ -3079,18 +3126,20 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private static class NumberReplicas {
     private int liveReplicas;
     private int decommissionedReplicas;
+    private int corruptReplicas;
 
     NumberReplicas() {
-      initialize(0, 0);
+      initialize(0, 0, 0);
     }
 
-    NumberReplicas(int live, int decommissioned) {
-      initialize(live, decommissioned);
+    NumberReplicas(int live, int decommissioned, int corrupt) {
+      initialize(live, decommissioned, corrupt);
     }
 
-    void initialize(int live, int decommissioned) {
+    void initialize(int live, int decommissioned, int corrupt) {
       liveReplicas = live;
       decommissionedReplicas = decommissioned;
+      corruptReplicas = corrupt;
     }
 
     int liveReplicas() {
@@ -3099,32 +3148,41 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     int decommissionedReplicas() {
       return decommissionedReplicas;
     }
+    int corruptReplicas() {
+      return corruptReplicas;
+    }
   } 
 
   /**
    * Counts the number of nodes in the given list into active and
    * decommissioned counters.
    */
-  private NumberReplicas countNodes(Iterator<DatanodeDescriptor> nodeIter) {
+  private NumberReplicas countNodes(Block b,
+                                    Iterator<DatanodeDescriptor> nodeIter) {
     int count = 0;
     int live = 0;
+    int corrupt = 0;
+    Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(b);
     while ( nodeIter.hasNext() ) {
       DatanodeDescriptor node = nodeIter.next();
-      if (node.isDecommissionInProgress() || node.isDecommissioned()) {
+      if ((nodesCorrupt != null) && (nodesCorrupt.contains(node))) {
+        corrupt++;
+      }
+      else if (node.isDecommissionInProgress() || node.isDecommissioned()) {
         count++;
       }
       else {
         live++;
       }
     }
-    return new NumberReplicas(live, count);
+    return new NumberReplicas(live, count, corrupt);
   }
 
   /**
    * Return the number of nodes that are live and decommissioned.
    */
   private NumberReplicas countNodes(Block b) {
-    return countNodes(blocksMap.nodeIterator(b));
+    return countNodes(b, blocksMap.nodeIterator(b));
   }
 
   /**

@@ -383,4 +383,10 @@ class BlocksMap {
   Collection<BlockInfo> getBlocks() {
     return map.values();
   }
+  /**
+   * Check if the block exists in map
+   */
+  boolean contains(Block block) {
+    return map.containsKey(block);
+  }
 }

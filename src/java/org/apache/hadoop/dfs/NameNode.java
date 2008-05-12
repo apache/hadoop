@@ -351,7 +351,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   /**
    * The client has detected an error on the specified located blocks 
    * and is reporting them to the server.  For now, the namenode will 
-   * delete the blocks from the datanodes.  In the future we might 
+   * mark the block as corrupt.  In the future we might 
    * check the blocks are actually corrupt. 
    */
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
@@ -361,7 +361,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       DatanodeInfo[] nodes = blocks[i].getLocations();
       for (int j = 0; j < nodes.length; j++) {
         DatanodeInfo dn = nodes[j];
-        namesystem.invalidateBlock(blk, dn);
+        namesystem.markBlockAsCorrupt(blk, dn);
       }
     }
   }

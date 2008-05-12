@@ -31,9 +31,9 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 13: changed the serialization in DatanodeRegistration and DatanodeInfo
+   * 14: add corrupt field to LocatedBlock
    */
-  public static final long versionID = 13L;
+  public static final long versionID = 14L;
   
   // error code
   final static int NOTIFY = 0;

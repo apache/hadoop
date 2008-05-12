@@ -74,6 +74,11 @@ Trunk (unreleased changes)
     HADOOP-1915. Allow users to specify counters via strings instead
     of enumerations. (tomwhite via omalley)
 
+    HADOOP-2065. Delay invalidating corrupt replicas of block until its 
+    is removed from under replicated state. If all replicas are found to 
+    be corrupt, retain all copies and mark the block as corrupt.
+    (Lohit Vjayarenu via rangadi)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().

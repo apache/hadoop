@@ -308,6 +308,8 @@ class FSDirectory implements FSConstants {
       // modify file-> block and blocksMap
       fileNode.removeBlock(block);
       namesystem.blocksMap.removeINode(block);
+      // If block is removed from blocksMap remove it from corruptReplicasMap
+      namesystem.corruptReplicas.removeFromCorruptReplicasMap(block);
 
       // write modified block locations to log
       fsImage.getEditLog().logOpenFile(path, fileNode);
@@ -546,6 +548,8 @@ class FSDirectory implements FSConstants {
           totalInodes -= filesRemoved;
           for (Block b : v) {
             namesystem.blocksMap.removeINode(b);
+            // If block is removed from blocksMap remove it from corruptReplicasMap
+            namesystem.corruptReplicas.removeFromCorruptReplicasMap(b);
             if (deletedBlocks != null) {
               deletedBlocks.add(b);
             }
