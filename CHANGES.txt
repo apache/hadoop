@@ -800,6 +800,10 @@ Release 0.17.0 - Unreleased
     HADOOP-3285. Fix input split locality when the splits align to
     fs blocks. (omalley)
 
+    HADOOP-3372. Fix heap management in streaming tests. (Arun Murthy via
+    cdouglas)
+
+
 Release 0.16.4 - 2008-05-05
 
   BUG FIXES
