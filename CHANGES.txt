@@ -190,8 +190,6 @@ Trunk (unreleased changes)
     HADOOP-3101. Prevent JobClient from throwing an exception when printing
     usage. (Edward J. Yoon via cdouglas)
 
-    HADOOP-3031. Fix javac warnings in test classes. (cdouglas)
-
     HADOOP-3119. Update javadoc for Text::getBytes to better describe its
     behavior. (Tim Nelson via cdouglas)
 
@@ -803,6 +801,7 @@ Release 0.17.0 - Unreleased
     HADOOP-3372. Fix heap management in streaming tests. (Arun Murthy via
     cdouglas)
 
+    HADOOP-3031. Fix javac warnings in test classes. (cdouglas)
 
 Release 0.16.4 - 2008-05-05
 
