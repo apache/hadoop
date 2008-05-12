@@ -22,6 +22,8 @@ import java.util.*;
 
 import org.apache.commons.logging.Log;
 
+import org.apache.hadoop.fs.Path;
+
 class LeaseManager {
   static final Log LOG = FSNamesystem.LOG;
 
@@ -109,10 +111,9 @@ class LeaseManager {
     }
   }
 
-  synchronized void handleExpiredSoftLimit(Lease lease) throws IOException {
+  synchronized void removeExpiredLease(Lease lease) throws IOException {
     lease.releaseLocks();
     leases.remove(lease.holder);
-    LOG.info("startFile: Removing lease " + lease);
     if (!sortedLeases.remove(lease)) {
       LOG.error("startFile: Unknown failure trying to remove " + lease + 
                 " from lease set.");
@@ -268,10 +269,11 @@ class LeaseManager {
 
     Map<String, Lease> addTo = new TreeMap<String, Lease>();
     SortedMap<String, Lease> myset = sortedLeasesByPath.tailMap(src);
+    int srclen = src.length();
     for (Iterator<Map.Entry<String, Lease>> iter = myset.entrySet().iterator(); 
          iter.hasNext();) {
-      Map.Entry<String, Lease> value = iter.next();
-      String path = (String)value.getKey();
+      Map.Entry<String, Lease> entry = iter.next();
+      String path = entry.getKey();
       if (!path.startsWith(src)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("changelease comparing " + path +
@@ -279,8 +281,11 @@ class LeaseManager {
         }
         break;
       }
-      Lease lease = (Lease)value.getValue();
+      if (path.length() > srclen && path.charAt(srclen) != Path.SEPARATOR_CHAR){
+        continue;
+      }
 
+      Lease lease = entry.getValue();
       // Fix up all the pathnames in this lease.
       if (LOG.isDebugEnabled()) {
         LOG.debug("changelease comparing " + path +
@@ -314,19 +319,14 @@ class LeaseManager {
       try {
         while (fsnamesystem.fsRunning) {
           synchronized (fsnamesystem) {
-            synchronized (sortedLeases) {
+            synchronized (LeaseManager.this) {
               Lease top;
               while ((sortedLeases.size() > 0) &&
                      ((top = sortedLeases.first()) != null)) {
                 if (top.expiredHardLimit()) {
-                  top.releaseLocks();
-                  leases.remove(top.holder);
-                  LOG.info("Removing lease " + top
+                  LOG.info("Lease Monitor: Removing lease " + top
                       + ", leases remaining: " + sortedLeases.size());
-                  if (!sortedLeases.remove(top)) {
-                    LOG.warn("Unknown failure trying to remove " + top
-                        + " from lease set.");
-                  }
+                  removeExpiredLease(top);
                 } else {
                   break;
                 }

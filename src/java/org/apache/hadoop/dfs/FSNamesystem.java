@@ -895,7 +895,8 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         // to proceed. Otherwise, prevent this request from creating file.
         //
         if (lease.expiredSoftLimit()) {
-          leaseManager.handleExpiredSoftLimit(lease);
+          LOG.info("startFile: Removing lease " + lease);
+          leaseManager.removeExpiredLease(lease);
         } else {
           throw new AlreadyBeingCreatedException(
                                                  "failed to create file " + src + " for " + holder +
