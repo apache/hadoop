@@ -28,7 +28,6 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 
@@ -148,7 +147,7 @@ public class TestDeleteAll extends HBaseTestCase {
   @Override
   protected void tearDown() throws Exception {
     if (this.miniHdfs != null) {
-      StaticTestEnvironment.shutdownDfs(this.miniHdfs);
+      shutdownDfs(this.miniHdfs);
     }
     super.tearDown();
   }

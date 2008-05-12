@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.HLog;
@@ -152,7 +151,7 @@ public class TestMergeTool extends HBaseTestCase {
       meta.getLog().closeAndDelete();
       
     } catch (Exception e) {
-      StaticTestEnvironment.shutdownDfs(dfsCluster);
+      shutdownDfs(dfsCluster);
       throw e;
     }
   }
@@ -161,7 +160,7 @@ public class TestMergeTool extends HBaseTestCase {
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
-    StaticTestEnvironment.shutdownDfs(dfsCluster);
+    shutdownDfs(dfsCluster);
   }
   
   /*

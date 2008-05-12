@@ -33,7 +33,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.io.Cell;
 
 /**
@@ -81,7 +80,7 @@ public class TestCompaction extends HBaseTestCase {
     this.r.close();
     hlog.closeAndDelete();
     if (this.cluster != null) {
-      StaticTestEnvironment.shutdownDfs(cluster);
+      shutdownDfs(cluster);
     }
     super.tearDown();
   }

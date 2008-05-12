@@ -588,7 +588,7 @@ public class PerformanceEvaluation implements HConstants {
     } finally {
       if(this.miniCluster && hbaseMiniCluster != null) {
         hbaseMiniCluster.shutdown();
-        StaticTestEnvironment.shutdownDfs(dfsCluster);
+        HBaseTestCase.shutdownDfs(dfsCluster);
       }
     }
   }

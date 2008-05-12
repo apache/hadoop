@@ -101,7 +101,7 @@ public class MultiRegionTable extends HBaseClusterTestCase {
       closeRegionAndDeleteLog(root);
       closeRegionAndDeleteLog(meta);
     } catch (Exception e) {
-      StaticTestEnvironment.shutdownDfs(dfsCluster);
+      shutdownDfs(dfsCluster);
       throw e;
     }
   } 

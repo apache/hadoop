@@ -31,7 +31,6 @@ import org.apache.hadoop.io.SequenceFile.Reader;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.StaticTestEnvironment;
 
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
@@ -58,7 +57,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     if (this.fs.exists(this.dir)) {
       this.fs.delete(this.dir);
     }
-    StaticTestEnvironment.shutdownDfs(cluster);
+    shutdownDfs(cluster);
     super.tearDown();
   }
  

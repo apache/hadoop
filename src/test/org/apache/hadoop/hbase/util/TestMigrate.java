@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -141,7 +140,7 @@ public class TestMigrate extends HBaseTestCase {
       e.printStackTrace();
     } finally {
       if (dfsCluster != null) {
-        StaticTestEnvironment.shutdownDfs(dfsCluster);
+        shutdownDfs(dfsCluster);
       }
     }
   }

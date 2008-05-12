@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 

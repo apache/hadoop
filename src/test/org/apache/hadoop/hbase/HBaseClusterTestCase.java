@@ -134,7 +134,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
         cluster.shutdown();
       }
       if (dfsCluster != null) {
-        StaticTestEnvironment.shutdownDfs(dfsCluster);
+        shutdownDfs(dfsCluster);
       }
       throw e;
     }
@@ -153,7 +153,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
         }
       }
       if (startDfs) {
-        StaticTestEnvironment.shutdownDfs(dfsCluster);
+        shutdownDfs(dfsCluster);
       }
     } catch (Exception e) {
       LOG.error(e);

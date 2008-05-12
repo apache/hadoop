@@ -36,6 +36,7 @@ Hbase Change Log
    HBASE-478   offlining of table does not run reliably
    HBASE-453   undeclared throwable exception from HTable.get
    HBASE-620   testmergetool failing in branch and trunk since hbase-618 went in
+   HBASE-622   Remove StaticTestEnvironment and put a log4j.properties in src/test
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

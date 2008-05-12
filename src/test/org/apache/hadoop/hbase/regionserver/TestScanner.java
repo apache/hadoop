@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
@@ -258,7 +257,7 @@ public class TestScanner extends HBaseTestCase {
       r.getLog().closeAndDelete();
       
     } finally {
-      StaticTestEnvironment.shutdownDfs(cluster);
+      shutdownDfs(cluster);
     }
   }
 }

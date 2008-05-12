@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.StaticTestEnvironment;
 /**
  * Test HStoreFile
  */
@@ -54,7 +53,7 @@ public class TestHStoreFile extends HBaseTestCase {
         this.cluster.getFileSystem().getHomeDirectory().toString());
       this.dir = new Path(DIR, getName());
     } catch (IOException e) {
-      StaticTestEnvironment.shutdownDfs(cluster);
+      shutdownDfs(cluster);
     }
     super.setUp();
   }
@@ -63,7 +62,7 @@ public class TestHStoreFile extends HBaseTestCase {
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
-    StaticTestEnvironment.shutdownDfs(cluster);
+    shutdownDfs(cluster);
     // ReflectionUtils.printThreadInfo(new PrintWriter(System.out),
     //  "Temporary end-of-test thread dump debugging HADOOP-2040: " + getName());
   }

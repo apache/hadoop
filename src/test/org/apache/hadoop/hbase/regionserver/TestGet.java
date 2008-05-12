@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 
@@ -162,7 +161,7 @@ public class TestGet extends HBaseTestCase {
         region.getLog().closeAndDelete();
       }
       if (cluster != null) {
-        StaticTestEnvironment.shutdownDfs(cluster);
+        shutdownDfs(cluster);
       }
     }
   }

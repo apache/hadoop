@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.log4j.Logger;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.StaticTestEnvironment;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.io.BatchUpdate;
@@ -61,11 +60,11 @@ implements RegionUnavailableListener {
       badPuts();
       basic();
       scan();
-      batchWrite();
+//      batchWrite();
       splitAndMerge();
       read();
     } finally {
-      StaticTestEnvironment.shutdownDfs(cluster);
+      shutdownDfs(cluster);
     }
   }
   
@@ -94,9 +93,7 @@ implements RegionUnavailableListener {
   public void setUp() throws Exception {
     this.conf.set("hbase.hstore.compactionThreshold", "2");
 
-    if (!StaticTestEnvironment.debugging) {
-      conf.setLong("hbase.hregion.max.filesize", 65536);
-    }
+    conf.setLong("hbase.hregion.max.filesize", 65536);
 
     cluster = new MiniDFSCluster(conf, 2, true, (String[])null);
     fs = cluster.getFileSystem();
@@ -519,11 +516,6 @@ implements RegionUnavailableListener {
   // Creates contents:body
   
   private void batchWrite() throws IOException {
-    if(! StaticTestEnvironment.debugging) {
-      LOG.info("batchWrite completed.");
-      return;
-    }
-
     long totalFlush = 0;
     long totalCompact = 0;
     long totalLog = 0;
@@ -740,37 +732,37 @@ implements RegionUnavailableListener {
     
     // Verify testBatchWrite data
 
-    if(StaticTestEnvironment.debugging) {
-      startTime = System.currentTimeMillis();
-      s = r.getScanner(new Text[] { CONTENTS_BODY }, new Text(),
-          System.currentTimeMillis(), null);
-      
-      try {
-        int numFetched = 0;
-        HStoreKey curKey = new HStoreKey();
-        TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
-        int k = 0;
-        while(s.next(curKey, curVals)) {
-          for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
-            Text col = it.next();
-            byte [] val = curVals.get(col);
-            assertTrue(col.compareTo(CONTENTS_BODY) == 0);
-            assertNotNull(val);
-            numFetched++;
-          }
-          curVals.clear();
-          k++;
-        }
-        assertEquals("Inserted " + N_ROWS + " values, but fetched " + numFetched, N_ROWS, numFetched);
-
-        LOG.info("Scanned " + N_ROWS
-            + " rows from disk. Elapsed time: "
-            + ((System.currentTimeMillis() - startTime) / 1000.0));
-        
-      } finally {
-        s.close();
-      }
-    }
+//    if(StaticTestEnvironment.debugging) {
+//      startTime = System.currentTimeMillis();
+//      s = r.getScanner(new Text[] { CONTENTS_BODY }, new Text(),
+//          System.currentTimeMillis(), null);
+//      
+//      try {
+//        int numFetched = 0;
+//        HStoreKey curKey = new HStoreKey();
+//        TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
+//        int k = 0;
+//        while(s.next(curKey, curVals)) {
+//          for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
+//            Text col = it.next();
+//            byte [] val = curVals.get(col);
+//            assertTrue(col.compareTo(CONTENTS_BODY) == 0);
+//            assertNotNull(val);
+//            numFetched++;
+//          }
+//          curVals.clear();
+//          k++;
+//        }
+//        assertEquals("Inserted " + N_ROWS + " values, but fetched " + numFetched, N_ROWS, numFetched);
+//
+//        LOG.info("Scanned " + N_ROWS
+//            + " rows from disk. Elapsed time: "
+//            + ((System.currentTimeMillis() - startTime) / 1000.0));
+//        
+//      } finally {
+//        s.close();
+//      }
+//    }
     
     // Test a scanner which only specifies the column family name
     

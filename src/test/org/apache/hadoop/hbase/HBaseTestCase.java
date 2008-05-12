@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Map;
@@ -28,6 +29,7 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
@@ -46,6 +48,10 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 public abstract class HBaseTestCase extends TestCase {
   private static final Log LOG = LogFactory.getLog(HBaseTestCase.class);
 
+  /** configuration parameter name for test directory */
+  public static final String TEST_DIRECTORY_KEY = "test.build.data";
+  
+
   protected final static String COLFAMILY_NAME1 = "colfamily1:";
   protected final static String COLFAMILY_NAME2 = "colfamily2:";
   protected final static String COLFAMILY_NAME3 = "colfamily3:";
@@ -63,7 +69,7 @@ public abstract class HBaseTestCase extends TestCase {
   protected static final int MAXVERSIONS = 3;
   
   static {
-    StaticTestEnvironment.initialize();
+    initialize();
   }
   
   protected volatile HBaseConfiguration conf;
@@ -142,8 +148,7 @@ public abstract class HBaseTestCase extends TestCase {
 
   protected Path getUnitTestdir(String testName) {
     return new Path(
-        conf.get(StaticTestEnvironment.TEST_DIRECTORY_KEY, "test/build/data"),
-        testName);
+        conf.get(TEST_DIRECTORY_KEY, "test/build/data"), testName);
   }
 
   protected HRegion createNewHRegion(HTableDescriptor desc, Text startKey,
@@ -570,6 +575,50 @@ public abstract class HBaseTestCase extends TestCase {
       if (cell_value != null) {
         assertEquals(column.toString() + " at timestamp " 
             + timestamp, value, new String(cell_value.getValue()));
+      }
+    }
+  }
+  
+  /**
+   * Initializes parameters used in the test environment:
+   * 
+   * Sets the configuration parameter TEST_DIRECTORY_KEY if not already set.
+   * Sets the boolean debugging if "DEBUGGING" is set in the environment.
+   * If debugging is enabled, reconfigures loggin so that the root log level is
+   * set to WARN and the logging level for the package is set to DEBUG.
+   */
+  @SuppressWarnings("unchecked")
+  public static void initialize() {
+    if (System.getProperty(TEST_DIRECTORY_KEY) == null) {
+      System.setProperty(TEST_DIRECTORY_KEY, new File(
+          "build/hbase/test").getAbsolutePath());
+    }
+  }
+
+  /**
+   * Common method to close down a MiniDFSCluster and the associated file system
+   * 
+   * @param cluster
+   */
+  public static void shutdownDfs(MiniDFSCluster cluster) {
+    if (cluster != null) {
+      try {
+        FileSystem fs = cluster.getFileSystem();
+        if (fs != null) {
+          LOG.info("Shutting down FileSystem");
+          fs.close();
+        }
+      } catch (IOException e) {
+        LOG.error("error closing file system", e);
+      }
+
+      LOG.info("Shutting down Mini DFS ");
+      try {
+        cluster.shutdown();
+      } catch (Exception e) {
+        /// Can get a java.lang.reflect.UndeclaredThrowableException thrown
+        // here because of an InterruptedException. Don't let exceptions in
+        // here be cause of test failure.
       }
     }
   }
