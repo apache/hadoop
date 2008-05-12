@@ -385,6 +385,9 @@ public class StreamUtil {
     vargs.add("-classpath");
     vargs.add("\"" + System.getProperty("java.class.path") + "\"");
 
+    // add heap-size limit
+    vargs.add("-Xmx" + Runtime.getRuntime().maxMemory());
+
     // Add main class and its arguments
     vargs.add(main.getName());
     for (int i = 0; i < argv.length; i++) {

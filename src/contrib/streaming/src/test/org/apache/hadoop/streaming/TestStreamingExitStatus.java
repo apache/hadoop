@@ -65,11 +65,6 @@ public class TestStreamingExitStatus extends TestCase
     out.close();
   }
 
-  public void tearDown() {
-    UtilTest.recursiveDelete(INPUT_FILE);
-    UtilTest.recursiveDelete(OUTPUT_DIR);    
-  }
-  
   public void runStreamJob(boolean exitStatusIsFailure, boolean failMap) {
     try {
       boolean mayExit = false;
