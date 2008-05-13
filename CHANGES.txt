@@ -225,6 +225,9 @@ Trunk (unreleased changes)
     HADOOP-3349. A file rename was incorrectly changing the name inside a
     lease record. (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-3365. Removes an unnecessary copy of the key from SegmentDescriptor
+    to MergeQueue. (Devaraj Das)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
