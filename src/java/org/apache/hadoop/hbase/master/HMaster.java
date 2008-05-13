@@ -21,18 +21,14 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -104,7 +100,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   // hosting class
   volatile AtomicBoolean closed = new AtomicBoolean(true);
   volatile boolean shutdownRequested = false;
-  volatile AtomicInteger quiescedMetaServers = new AtomicInteger(0);
   volatile boolean fsOk = true;
   final Path rootdir;
   final HBaseConfiguration conf;
@@ -141,10 +136,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public InfoServer getInfoServer() {
     return infoServer;
   }
-
-  /** Set of tables currently in creation. */
-  private volatile Set<Text> tableInCreation = 
-    Collections.synchronizedSet(new HashSet<Text>());
 
   ServerManager serverManager;
   RegionManager regionManager;

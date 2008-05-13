@@ -306,8 +306,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
             // Queue up the HMaster's instruction stream for processing
             boolean restart = false;
-            for(int i = 0; i < msgs.length && !stopRequested.get() &&
-                !restart; i++) {
+            for(int i = 0;
+                !restart && !stopRequested.get() && i < msgs.length;
+                i++) {
+              
               switch(msgs[i].getMsg()) {
 
               case HMsg.MSG_CALL_SERVER_STARTUP:
@@ -370,12 +372,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 }
               }
             }
-            if (restart || this.stopRequested.get()) {
-              toDo.clear();
-              break;
-            }
             // Reset tries count if we had a successful transaction.
             tries = 0;
+
+            if (restart || this.stopRequested.get()) {
+              toDo.clear();
+              continue;
+            }
           } catch (Exception e) {
             if (e instanceof IOException) {
               e = RemoteExceptionHandler.checkIOException((IOException) e);

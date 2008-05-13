@@ -37,6 +37,8 @@ Hbase Change Log
    HBASE-453   undeclared throwable exception from HTable.get
    HBASE-620   testmergetool failing in branch and trunk since hbase-618 went in
    HBASE-622   Remove StaticTestEnvironment and put a log4j.properties in src/test
+   HBASE-624   Master will shut down if number of active region servers is zero
+               even if shutdown was not requested
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

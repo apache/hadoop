@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Collections;
 
 import org.apache.commons.logging.Log;
@@ -50,6 +51,8 @@ import org.apache.hadoop.io.Text;
 class ServerManager implements HConstants {
   static final Log LOG = LogFactory.getLog(ServerManager.class.getName());
   
+  private final AtomicInteger quiescedServers = new AtomicInteger(0);
+
   /** The map of known server names to server info */
   final Map<String, HServerInfo> serversToServerInfo =
     new ConcurrentHashMap<String, HServerInfo>();
@@ -161,25 +164,27 @@ class ServerManager implements HConstants {
         return new HMsg[0];
       } else if (msgs[0].getMsg() == HMsg.MSG_REPORT_QUIESCED) {
         LOG.info("Region server " + serverName + " quiesced");
-        master.quiescedMetaServers.incrementAndGet();
+        quiescedServers.incrementAndGet();
       }
     }
 
-    if(master.quiescedMetaServers.get() >= serversToServerInfo.size()) {
-      // If the only servers we know about are meta servers, then we can
-      // proceed with shutdown
-      LOG.info("All user tables quiesced. Proceeding with shutdown");
-      master.startShutdown();
-    }
-
-    if (master.shutdownRequested && !master.closed.get()) {
-      if (msgs.length > 0 && msgs[0].getMsg() == HMsg.MSG_REPORT_QUIESCED) {
-        // Server is already quiesced, but we aren't ready to shut down
-        // return empty response
-        return new HMsg[0];
+    if (master.shutdownRequested) {
+      if(quiescedServers.get() >= serversToServerInfo.size()) {
+        // If the only servers we know about are meta servers, then we can
+        // proceed with shutdown
+        LOG.info("All user tables quiesced. Proceeding with shutdown");
+        master.startShutdown();
       }
-      // Tell the server to stop serving any user regions
-      return new HMsg[]{new HMsg(HMsg.MSG_REGIONSERVER_QUIESCE)};
+
+      if (!master.closed.get()) {
+        if (msgs.length > 0 && msgs[0].getMsg() == HMsg.MSG_REPORT_QUIESCED) {
+          // Server is already quiesced, but we aren't ready to shut down
+          // return empty response
+          return new HMsg[0];
+        }
+        // Tell the server to stop serving any user regions
+        return new HMsg[]{new HMsg(HMsg.MSG_REGIONSERVER_QUIESCE)};
+      }
     }
 
     if (master.closed.get()) {
