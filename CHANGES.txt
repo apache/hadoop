@@ -51,6 +51,9 @@ Trunk (unreleased changes)
     Existing blocks get a generation stamp of 0. This is needed to support
     appends. (dhruba)
 
+    HADOOP-3390. Removed deprecated ClientProtocol.abandonFileInProgress().
+    (Tsz Wo (Nicholas), SZE via rangadi)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,

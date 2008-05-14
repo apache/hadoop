@@ -37,9 +37,9 @@ interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 33 : Block generation stamp stored in Block
+   * 34 : remove abandonFileInProgress(...)
    */
-  public static final long versionID = 33L;
+  public static final long versionID = 34L;
   
   ///////////////////////////////////////
   // File contents
@@ -76,9 +76,8 @@ interface ClientProtocol extends VersionedProtocol {
    * <p>
    * Once created, the file is visible and available for read to other clients.
    * Although, other clients cannot {@link #delete(String)}, re-create or 
-   * {@link #rename(String, String)} it until the file is completed or 
-   * abandoned implicitely by {@link #abandonFileInProgress(String, String)}
-   * or explicitely as a result of lease expiration.
+   * {@link #rename(String, String)} it until the file is completed
+   * or explicitly as a result of lease expiration.
    * <p>
    * Blocks have a maximum size.  Clients that intend to
    * create multi-block files must also use {@link #addBlock(String, String)}.
@@ -158,20 +157,6 @@ interface ClientProtocol extends VersionedProtocol {
    * @return LocatedBlock allocated block information.
    */
   public LocatedBlock addBlock(String src, String clientName) throws IOException;
-
-  /**
-   * A client that wants to abandon writing to the current file
-   * should call abandonFileInProgress().  After this call, any
-   * client can call create() to obtain the filename.
-   * <p>
-   * Any blocks that have been written for the file will be 
-   * garbage-collected.
-   * @param src The filename
-   * @param holder The datanode holding the lease
-   */
-  @Deprecated
-  public void abandonFileInProgress(String src, 
-                                    String holder) throws IOException;
 
   /**
    * The client is done writing data to the given filename, and would 

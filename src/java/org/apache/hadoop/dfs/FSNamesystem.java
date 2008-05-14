@@ -1085,16 +1085,6 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   /**
-   * Abandon the entire file in progress
-   */
-  public synchronized void abandonFileInProgress(String src, 
-                                                 String holder
-                                                 ) throws IOException {
-    NameNode.stateChangeLog.debug("DIR* NameSystem.abandonFileInProgress:" + src);
-    leaseManager.abandonLease(src, holder);
-  }
-
-  /**
    * The FSNamesystem will already know the blocks that make up the file.
    * Before we return, we make sure that all the file's blocks have 
    * been reported by datanodes and are replicated correctly.

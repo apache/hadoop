@@ -120,24 +120,6 @@ class LeaseManager {
     }
   }
 
-  synchronized void abandonLease(String src, String holder) throws IOException {
-    // find the lease
-    Lease lease = getLease(holder);
-    if (lease != null) {
-      // remove the file from the lease
-      if (lease.completedCreate(src)) {
-        // if we found the file in the lease, remove it from pendingCreates
-        fsnamesystem.internalReleaseCreate(src, holder);
-      } else {
-        LOG.warn("Attempt by " + holder + 
-                 " to release someone else's create lock on " + src);
-      }
-    } else {
-      LOG.warn("Attempt to release a lock from an unknown lease holder "
-               + holder + " for " + src);
-    }
-  }
-
   /************************************************************
    * A Lease governs all the locks held by a single client.
    * For each client there's a corresponding lease, whose

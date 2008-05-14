@@ -326,16 +326,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       throw new IOException("Cannot abandon block during write to " + src);
     }
   }
-  /**
-   */
-  @Deprecated
-  public void abandonFileInProgress(String src, 
-                                    String holder) throws IOException {
-    stateChangeLog.debug("*DIR* NameNode.abandonFileInProgress:" + src);
-    namesystem.abandonFileInProgress(src, holder);
-  }
-  /**
-   */
+
+  /** {@inheritDoc} */
   public boolean complete(String src, String clientName) throws IOException {
     stateChangeLog.debug("*DIR* NameNode.complete: " + src + " for " + clientName);
     int returnCode = namesystem.completeFile(src, clientName);
