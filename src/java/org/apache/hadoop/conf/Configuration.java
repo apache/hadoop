@@ -332,6 +332,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     if (valueString == null)
       return defaultValue;
     try {
+      String hexString = getHexDigits(valueString);
+      if (hexString != null) {
+        return Integer.parseInt(hexString, 16);
+      }
       return Integer.parseInt(valueString);
     } catch (NumberFormatException e) {
       return defaultValue;
@@ -364,12 +368,34 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
     if (valueString == null)
       return defaultValue;
     try {
+      String hexString = getHexDigits(valueString);
+      if (hexString != null) {
+        return Long.parseLong(hexString, 16);
+      }
       return Long.parseLong(valueString);
     } catch (NumberFormatException e) {
       return defaultValue;
     }
   }
 
+  private String getHexDigits(String value) {
+    boolean negative = false;
+    String str = value;
+    String hexString = null;
+    if (value.startsWith("-")) {
+      negative = true;
+      str = value.substring(1);
+    }
+    if (str.startsWith("0x") || str.startsWith("0X")) {
+      hexString = str.substring(2);
+      if (negative) {
+        hexString = "-" + hexString;
+      }
+      return hexString;
+    }
+    return null;
+  }
+  
   /** 
    * Set the value of the <code>name</code> property to a <code>long</code>.
    * 

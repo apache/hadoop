@@ -123,6 +123,9 @@ Trunk (unreleased changes)
     HADOOP-3332. Reduces the amount of logging in Reducer's shuffle phase.
     (Devaraj Das)
 
+    HADOOP-3355. Enhances Configuration class to accept hex numbers for getInt
+    and getLong. (Amareshwari Sriramadasu via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

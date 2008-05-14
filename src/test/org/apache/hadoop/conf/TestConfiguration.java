@@ -258,6 +258,41 @@ public class TestConfiguration extends TestCase {
     assertEquals(true, range.isIncluded(100000000));
   }
 
+  public void testHexValues() throws IOException{
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.hex1", "0x10");
+    appendProperty("test.hex2", "0xF");
+    appendProperty("test.hex3", "-0x10");
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    assertEquals(16, conf.getInt("test.hex1", 0));
+    assertEquals(16, conf.getLong("test.hex1", 0));
+    assertEquals(15, conf.getInt("test.hex2", 0));
+    assertEquals(15, conf.getLong("test.hex2", 0));
+    assertEquals(-16, conf.getInt("test.hex3", 0));
+    assertEquals(-16, conf.getLong("test.hex3", 0));
+
+  }
+
+  public void testIntegerValues() throws IOException{
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.int1", "20");
+    appendProperty("test.int2", "020");
+    appendProperty("test.int3", "-20");
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    assertEquals(20, conf.getInt("test.int1", 0));
+    assertEquals(20, conf.getLong("test.int1", 0));
+    assertEquals(20, conf.getInt("test.int2", 0));
+    assertEquals(20, conf.getLong("test.int2", 0));
+    assertEquals(-20, conf.getInt("test.int3", 0));
+    assertEquals(-20, conf.getLong("test.int3", 0));
+  }
+	  
   public static void main(String[] argv) throws Exception {
     junit.textui.TestRunner.main(new String[]{
       TestConfiguration.class.getName()
