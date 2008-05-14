@@ -24,25 +24,36 @@ import org.apache.hadoop.io.Text;
  * commit changes) fails after a bunch of retries. 
  */ 
 public class RetriesExhaustedException extends IOException {
+  private static final long serialVersionUID = 1876775844L;
   /** 
    * Create a new RetriesExhaustedException from the list of prior failures.
+   * @param serverName name of HRegionServer
+   * @param regionName name of region
    * @param row The row we were pursuing when we ran out of retries
    * @param numTries The number of tries we made
    * @param exceptions List of exceptions that failed before giving up
    */ 
-  public RetriesExhaustedException(Text row, int numTries, 
-    List<Exception> exceptions) {
-    super(getMessage(row, numTries, exceptions));
+  public RetriesExhaustedException(String serverName, Text regionName, Text row,
+      int numTries, List<Throwable> exceptions) {
+    super(getMessage(serverName, regionName, row, numTries, exceptions));
   }
   
-  private static String getMessage(Text row, int numTries, 
-    List<Exception> exceptions) {
-    String buffer = "Trying to contact region server for row '" + 
-      row + "', but failed after " + (numTries + 1)  + " attempts.\nExceptions:\n";
+  private static String getMessage(String serverName, Text regionName, Text row,
+      int numTries, List<Throwable> exceptions) {
+    StringBuilder buffer = new StringBuilder("Trying to contact region server ");
+    buffer.append(serverName);
+    buffer.append(" for region ");
+    buffer.append(regionName);
+    buffer.append(", row '");
+    buffer.append(row);
+    buffer.append("', but failed after ");
+    buffer.append(numTries + 1);
+    buffer.append(" attempts.\nExceptions:\n");
 
-    for (Exception e : exceptions) {
-      buffer += e.toString() + "\n";
+    for (Throwable t : exceptions) {
+      buffer.append(t.toString());
+      buffer.append("\n");
     }
-    return buffer;
+    return buffer.toString();
   }
 }

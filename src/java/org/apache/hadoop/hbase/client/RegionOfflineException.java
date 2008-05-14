@@ -23,7 +23,8 @@ import java.io.IOException;
 
 /** Thrown when a table can not be located */
 public class RegionOfflineException extends IOException {
-  /** default constructor */
+  private static final long serialVersionUID = 466008402L;
+/** default constructor */
   public RegionOfflineException() {
     super();
   }

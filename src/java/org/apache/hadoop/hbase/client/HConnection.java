@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.SortedMap;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
@@ -69,6 +68,7 @@ public interface HConnection {
    * @param row row key you're trying to find the region of
    * @return HRegionLocation that describes where to find the reigon in 
    * question
+   * @throws IOException
    */
   public HRegionLocation locateRegion(Text tableName, Text row)
   throws IOException;
@@ -80,6 +80,7 @@ public interface HConnection {
    * @param row row key you're trying to find the region of
    * @return HRegionLocation that describes where to find the reigon in 
    * question
+   * @throws IOException
    */
   public HRegionLocation relocateRegion(Text tableName, Text row)
   throws IOException;  
@@ -92,4 +93,29 @@ public interface HConnection {
    */
   public HRegionInterface getHRegionConnection(HServerAddress regionServer)
   throws IOException;
+  
+  /**
+   * Find region location hosting passed row
+   * @param tableName
+   * @param row Row to find.
+   * @param reload If true do not use cache, otherwise bypass.
+   * @return Location of row.
+   * @throws IOException
+   */
+  HRegionLocation getRegionLocation(Text tableName, Text row, boolean reload)
+  throws IOException;
+
+  /**
+   * Pass in a ServerCallable with your particular bit of logic defined and 
+   * this method will manage the process of doing retries with timed waits 
+   * and refinds of missing regions.
+   *
+   * @param <T> the type of the return value
+   * @param callable
+   * @return an object of type T
+   * @throws IOException
+   * @throws RuntimeException
+   */
+  public <T> T getRegionServerWithRetries(ServerCallable<T> callable) 
+  throws IOException, RuntimeException;
 }

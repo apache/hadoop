@@ -20,9 +20,12 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -240,62 +243,46 @@ public class HConnectionManager implements HConstants {
     }
 
     /** {@inheritDoc} */
+    public HRegionLocation getRegionLocation(Text tableName, Text row,
+        boolean reload) throws IOException {
+      return reload ?
+          relocateRegion(tableName, row) :
+            locateRegion(tableName, row);
+    }
+
+    /** {@inheritDoc} */
     public HTableDescriptor[] listTables() throws IOException {
       HashSet<HTableDescriptor> uniqueTables = new HashSet<HTableDescriptor>();
-      long scannerId = -1L;
-      HRegionInterface server = null;
-      
       Text startRow = EMPTY_START_ROW;
-      HRegionLocation metaLocation = null;
 
       // scan over the each meta region
       do {
-        for (int triesSoFar = 0; triesSoFar < numRetries; triesSoFar++) {
-          try{
-            // turn the start row into a location
-            metaLocation = locateRegion(META_TABLE_NAME, startRow);
-
-            // connect to the server hosting the .META. region
-            server = getHRegionConnection(metaLocation.getServerAddress());
-
-            // open a scanner over the meta region
-            scannerId = server.openScanner(
-              metaLocation.getRegionInfo().getRegionName(),
-              new Text[]{COL_REGIONINFO}, startRow, LATEST_TIMESTAMP, null);
-          
-            // iterate through the scanner, accumulating unique table names
-            while (true) {
-              RowResult values = server.next(scannerId);
-              if (values == null || values.size() == 0) {
-                break;
-              }
-            
-              HRegionInfo info = 
-                Writables.getHRegionInfo(values.get(COL_REGIONINFO));
-
-              // Only examine the rows where the startKey is zero length   
-              if (info.getStartKey().getLength() == 0) {
-                uniqueTables.add(info.getTableDesc());
-              }
+        ScannerCallable callable = new ScannerCallable(this, META_TABLE_NAME,
+            COL_REGIONINFO_ARRAY, startRow, LATEST_TIMESTAMP, null);
+        try {
+          // open scanner
+          getRegionServerWithRetries(callable);
+          // iterate through the scanner, accumulating unique table names
+          while (true) {
+            RowResult values = getRegionServerWithRetries(callable);
+            if (values == null || values.size() == 0) {
+              break;
             }
-          
-            server.close(scannerId);
-            scannerId = -1L;
-          
-            // advance the startRow to the end key of the current region
-            startRow = metaLocation.getRegionInfo().getEndKey();
-            // break out of retry loop
-            break;
-          } catch (IOException e) {
-            // Retry once.
-            metaLocation = relocateRegion(META_TABLE_NAME, startRow);
-            continue;
-          }
-          finally {
-            if (scannerId != -1L && server != null) {
-              server.close(scannerId);
+
+            HRegionInfo info = 
+              Writables.getHRegionInfo(values.get(COL_REGIONINFO));
+
+            // Only examine the rows where the startKey is zero length   
+            if (info.getStartKey().getLength() == 0) {
+              uniqueTables.add(info.getTableDesc());
             }
           }
+          // advance the startRow to the end key of the current region
+          startRow = callable.getHRegionInfo().getEndKey();
+        } finally {
+          // close scanner
+          callable.setClose();
+          getRegionServerWithRetries(callable);
         }
       } while (startRow.compareTo(LAST_ROW) != 0);
       
@@ -722,6 +709,39 @@ public class HConnectionManager implements HConstants {
       // return the region location
       return new HRegionLocation(
         HRegionInfo.rootRegionInfo, rootRegionAddress);
+    }
+
+    /** {@inheritDoc} */
+    public <T> T getRegionServerWithRetries(ServerCallable<T> callable) 
+    throws IOException, RuntimeException {
+      List<Throwable> exceptions = new ArrayList<Throwable>();
+      for(int tries = 0; tries < numRetries; tries++) {
+        try {
+          callable.instantiateServer(tries != 0);
+          return callable.call();
+        } catch (Throwable t) {
+          if (t instanceof UndeclaredThrowableException) {
+            t = t.getCause();
+          }
+          if (t instanceof RemoteException) {
+            t = RemoteExceptionHandler.decodeRemoteException((RemoteException) t);
+          }
+          exceptions.add(t);
+          if (tries == numRetries - 1) {
+            throw new RetriesExhaustedException(callable.getServerName(),
+                callable.getRegionName(), callable.getRow(), tries, exceptions);
+          }
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("reloading table servers because: " + t.getMessage());
+          }
+        }
+        try {
+          Thread.sleep(pause);
+        } catch (InterruptedException e) {
+          // continue
+        }
+      }
+      return null;    
     }
   }
 }

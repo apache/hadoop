@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.SortedMap;
-import java.util.Iterator;
 import org.apache.hadoop.hbase.io.RowResult;
 
 /**

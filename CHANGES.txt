@@ -53,6 +53,7 @@ Hbase Change Log
    HBASE-611   regionserver should do basic health check before reporting
                alls-well to the master
    HBASE-614   Retiring regions is not used; exploit or remove
+   HBASE-538   Improve exceptions that come out on client-side
    
 Release 0.1.1 - 04/11/2008
 
