@@ -74,7 +74,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     long lastWarnTime = System.currentTimeMillis();
     long verificationTime = 0;
     
-    String block = DFSTestUtil.getFirstBlock(fs, file).toString();
+    String block = DFSTestUtil.getFirstBlock(fs, file).getBlockName();
     
     while (verificationTime <= 0) {
       String response = urlGet(url);

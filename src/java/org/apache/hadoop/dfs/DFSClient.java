@@ -985,13 +985,14 @@ class DFSClient implements FSConstants {
     }
 
     static BlockReader newBlockReader(Socket sock, String file, long blockId, 
-        long startOffset, long len, int bufferSize) throws IOException {
-      return newBlockReader(sock, file, blockId, startOffset, len, bufferSize,
+        long genStamp, long startOffset, long len, int bufferSize) throws IOException {
+      return newBlockReader(sock, file, blockId, genStamp, startOffset, len, bufferSize,
           true);
     }
 
     /** Java Doc required */
     static BlockReader newBlockReader( Socket sock, String file, long blockId, 
+                                       long genStamp,
                                        long startOffset, long len,
                                        int bufferSize, boolean verifyChecksum)
                                        throws IOException {
@@ -1003,6 +1004,7 @@ class DFSClient implements FSConstants {
       out.writeShort( DATA_TRANSFER_VERSION );
       out.write( OP_READ_BLOCK );
       out.writeLong( blockId );
+      out.writeLong( genStamp );
       out.writeLong( startOffset );
       out.writeLong( len );
       out.flush();
@@ -1268,6 +1270,7 @@ class DFSClient implements FSConstants {
           Block blk = targetBlock.getBlock();
           
           blockReader = BlockReader.newBlockReader(s, src, blk.getBlockId(), 
+              blk.getGenerationStamp(),
               offsetIntoBlock, blk.getNumBytes() - offsetIntoBlock,
               buffersize, verifyChecksum);
           return chosenNode;
@@ -1449,6 +1452,7 @@ class DFSClient implements FSConstants {
               
           reader = BlockReader.newBlockReader(dn, src, 
                                               block.getBlock().getBlockId(),
+                                              block.getBlock().getGenerationStamp(),
                                               start, len, buffersize, 
                                               verifyChecksum);
           int nread = reader.readAll(buf, offset, len);
@@ -2288,6 +2292,7 @@ class DFSClient implements FSConstants {
         out.writeShort( DATA_TRANSFER_VERSION );
         out.write( OP_WRITE_BLOCK );
         out.writeLong( block.getBlockId() );
+        out.writeLong( block.getGenerationStamp() );
         out.writeInt( nodes.length );
         out.writeBoolean( recoveryFlag );       // recovery flag
         Text.writeString( out, client );

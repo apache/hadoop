@@ -30,10 +30,10 @@ public class TestPendingReplication extends TestCase {
     pendingReplications = new PendingReplicationBlocks(timeout * 1000);
 
     //
-    // Add 10 blocks to pendingReplciations.
+    // Add 10 blocks to pendingReplications.
     //
     for (int i = 0; i < 10; i++) {
-      Block block = new Block(i, i);
+      Block block = new Block(i, i, 0);
       pendingReplications.add(block, i);
     }
     assertEquals("Size of pendingReplications ",
@@ -43,7 +43,7 @@ public class TestPendingReplication extends TestCase {
     //
     // remove one item and reinsert it
     //
-    Block blk = new Block(8, 8);
+    Block blk = new Block(8, 8, 0);
     pendingReplications.remove(blk);             // removes one replica
     assertEquals("pendingReplications.getNumReplicas ",
                  7, pendingReplications.getNumReplicas(blk));
@@ -60,7 +60,7 @@ public class TestPendingReplication extends TestCase {
     // are sane.
     //
     for (int i = 0; i < 10; i++) {
-      Block block = new Block(i, i);
+      Block block = new Block(i, i, 0);
       int numReplicas = pendingReplications.getNumReplicas(block);
       assertTrue(numReplicas == i);
     }
@@ -79,7 +79,7 @@ public class TestPendingReplication extends TestCase {
     }
 
     for (int i = 10; i < 15; i++) {
-      Block block = new Block(i, i);
+      Block block = new Block(i, i, 0);
       pendingReplications.add(block, i);
     }
     assertTrue(pendingReplications.size() == 15);

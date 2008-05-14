@@ -35,9 +35,13 @@ class Block implements Writable, Comparable {
        });
   }
 
+  // generation stamp of blocks that pre-date the introduction of
+  // a generation stamp.
+  static final long GRANDFATHER_GENERATION_STAMP = 0;
+
   /**
    */
-  public static boolean isBlockFilename(File f) {
+  static boolean isBlockFilename(File f) {
     String name = f.getName();
     if ( name.startsWith( "blk_" ) && 
         name.indexOf( '.' ) < 0 ) {
@@ -49,19 +53,22 @@ class Block implements Writable, Comparable {
 
   long blkid;
   long len;
+  long generationStamp;
 
   /**
    */
   public Block() {
     this.blkid = 0;
     this.len = 0;
+    this.generationStamp = 0;
   }
 
   /**
    */
-  public Block(final long blkid, final long len) {
+  public Block(final long blkid, final long len, final long generationStamp) {
     this.blkid = blkid;
     this.len = len;
+    this.generationStamp = generationStamp;
   }
 
   /**
@@ -69,21 +76,24 @@ class Block implements Writable, Comparable {
   public Block(Block blk) {
     this.blkid = blk.blkid;
     this.len = blk.len;
+    this.generationStamp = blk.generationStamp;
   }
 
   /**
    * Find the blockid from the given filename
    */
-  public Block(File f, long len) {
+  public Block(File f, long len, long genstamp) {
     String name = f.getName();
     name = name.substring("blk_".length());
     this.blkid = Long.parseLong(name);
     this.len = len;
+    this.generationStamp = genstamp;
   }
 
-  public void set(long blkid, long len) {
+  public void set(long blkid, long len, long genStamp) {
     this.blkid = blkid;
     this.len = len;
+    this.generationStamp = genStamp;
   }
   /**
    */
@@ -106,10 +116,14 @@ class Block implements Writable, Comparable {
     this.len = len;
   }
 
+  long getGenerationStamp() {
+    return generationStamp;
+  }
+
   /**
    */
   public String toString() {
-    return getBlockName();
+    return getBlockName() + "_" + getGenerationStamp();
   }
 
   /////////////////////////////////////
@@ -118,11 +132,13 @@ class Block implements Writable, Comparable {
   public void write(DataOutput out) throws IOException {
     out.writeLong(blkid);
     out.writeLong(len);
+    out.writeLong(generationStamp);
   }
 
   public void readFields(DataInput in) throws IOException {
     this.blkid = in.readLong();
     this.len = in.readLong();
+    this.generationStamp = in.readLong();
     if (len < 0) {
       throw new IOException("Unexpected block size: " + len);
     }
@@ -136,7 +152,13 @@ class Block implements Writable, Comparable {
     if (blkid < b.blkid) {
       return -1;
     } else if (blkid == b.blkid) {
-      return 0;
+      if (generationStamp < b.generationStamp) {
+        return -1;
+      } else if (generationStamp == b.generationStamp) {
+        return 0;
+      } else {
+        return 1;
+      }
     } else {
       return 1;
     }
@@ -145,7 +167,8 @@ class Block implements Writable, Comparable {
     if (!(o instanceof Block)) {
       return false;
     }
-    return blkid == ((Block)o).blkid;
+    return blkid == ((Block)o).blkid &&
+           generationStamp == ((Block)o).generationStamp;
   }
     
   public int hashCode() {

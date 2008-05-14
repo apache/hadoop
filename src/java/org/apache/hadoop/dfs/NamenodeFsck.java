@@ -191,7 +191,7 @@ public class NamenodeFsck {
     int i = 0;
     for (LocatedBlock lBlk : blocks.getLocatedBlocks()) {
       Block block = lBlk.getBlock();
-      String blkName = block.getBlockName();
+      String blkName = block.toString();
       DatanodeInfo[] locs = lBlk.getLocations();
       res.totalReplicas += locs.length;
       short targetFileReplication = file.getReplication();
@@ -208,7 +208,7 @@ public class NamenodeFsck {
         if (!showFiles) {
           out.print("\n" + path + ": ");
         }
-        out.println(" Under replicated " + block.getBlockName() +
+        out.println(" Under replicated " + block +
                     ". Target Replicas is " +
                     targetFileReplication + " but found " +
                     locs.length + " replica(s).");
@@ -225,14 +225,14 @@ public class NamenodeFsck {
           out.print(path + ": ");
         }
         out.println(" Replica placement policy is violated for " + 
-                    block.getBlockName() +
+                    block +
                     ". Block should be additionally replicated on " + 
                     missingRacks + " more rack(s).");
       }
       report.append(i + ". " + blkName + " len=" + block.getNumBytes());
       if (locs.length == 0) {
         report.append(" MISSING!");
-        res.addMissing(block.getBlockName(), block.getNumBytes());
+        res.addMissing(block.toString(), block.getNumBytes());
         missing++;
         missize += block.getNumBytes();
       } else {
@@ -332,7 +332,7 @@ public class NamenodeFsck {
         } catch (Exception e) {
           e.printStackTrace();
           // something went wrong copying this block...
-          LOG.warn(" - could not copy block " + lblock.getBlock().getBlockName() + " to " + target);
+          LOG.warn(" - could not copy block " + lblock.getBlock() + " to " + target);
           fos.flush();
           fos.close();
           fos = null;
@@ -388,7 +388,9 @@ public class NamenodeFsck {
         blockReader = 
           DFSClient.BlockReader.newBlockReader(s, targetAddr.toString() + ":" + 
                                                block.getBlockId(), 
-                                               block.getBlockId(), 0, -1,
+                                               block.getBlockId(), 
+                                               block.getGenerationStamp(), 
+                                               0, -1,
                                                conf.getInt("io.file.buffer.size", 4096));
         
       }  catch (IOException ex) {
@@ -405,7 +407,7 @@ public class NamenodeFsck {
       }
     }
     if (blockReader == null) {
-      throw new Exception("Could not open data stream for " + lblock.getBlock().getBlockName());
+      throw new Exception("Could not open data stream for " + lblock.getBlock());
     }
     byte[] buf = new byte[1024];
     int cnt = 0;
@@ -427,7 +429,7 @@ public class NamenodeFsck {
       try {s.close(); } catch (Exception e1) {}
     }
     if (!success)
-      throw new Exception("Could not copy block data for " + lblock.getBlock().getBlockName());
+      throw new Exception("Could not copy block data for " + lblock.getBlock());
   }
       
   /*

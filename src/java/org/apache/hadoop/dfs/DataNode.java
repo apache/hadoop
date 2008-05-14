@@ -36,6 +36,7 @@ import org.apache.hadoop.dfs.BlockCommand;
 import org.apache.hadoop.dfs.DatanodeProtocol;
 import org.apache.hadoop.dfs.FSDatasetInterface.MetaDataInputStream;
 import org.apache.hadoop.dfs.datanode.metrics.DataNodeMetrics;
+import org.apache.hadoop.dfs.BlockMetadataHeader;
 
 import java.io.*;
 import java.net.*;
@@ -131,8 +132,8 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
   private boolean transferToAllowed = true;
   private int writePacketSize = 0;
   
-  DataBlockScanner blockScanner;
-  Daemon blockScannerThread;
+  DataBlockScanner blockScanner = null;
+  Daemon blockScannerThread = null;
   
   private static final Random R = new Random();
 
@@ -314,12 +315,11 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
     } 
     if ( reason == null ) {
       blockScanner = new DataBlockScanner(this, (FSDataset)data, conf);
-      blockScannerThread = new Daemon(blockScanner);
     } else {
       LOG.info("Periodic Block Verification is disabled because " +
                reason + ".");
     }
-    
+
     //create a servlet to serve full-file content
     String infoAddr = 
       NetUtils.getServerAddress(conf, 
@@ -725,6 +725,14 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
           }
           processCommand(cmd);
         }
+
+        // start block scanner
+        if (blockScanner != null && blockScannerThread == null &&
+            upgradeManager.isUpgradeCompleted()) {
+          LOG.info("Starting Periodic block scanner.");
+          blockScannerThread = new Daemon(blockScanner);
+          blockScannerThread.start();
+        }
             
         //
         // There is no work to do;  sleep until hearbeat timer elapses, 
@@ -1055,7 +1063,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
       // Read in the header
       //
       long blockId = in.readLong();          
-      Block block = new Block( blockId, 0 );
+      Block block = new Block( blockId, 0 , in.readLong());
 
       long startOffset = in.readLong();
       long length = in.readLong();
@@ -1123,7 +1131,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
       //
       // Read in the header
       //
-      Block block = new Block(in.readLong(), estimateBlockSize);
+      Block block = new Block(in.readLong(), estimateBlockSize, in.readLong());
       LOG.info("Receiving block " + block + 
                " src: " + remoteAddress +
                " dest: " + localAddress);
@@ -1184,6 +1192,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
             mirrorOut.writeShort( DATA_TRANSFER_VERSION );
             mirrorOut.write( OP_WRITE_BLOCK );
             mirrorOut.writeLong( block.getBlockId() );
+            mirrorOut.writeLong( block.getGenerationStamp() );
             mirrorOut.writeInt( pipelineSize );
             mirrorOut.writeBoolean( isRecovery );
             Text.writeString( mirrorOut, client );
@@ -1281,7 +1290,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
     void readMetadata(DataInputStream in) throws IOException {
       xceiverCount.incr();
 
-      Block block = new Block( in.readLong(), 0 );
+      Block block = new Block( in.readLong(), 0 , in.readLong());
       MetaDataInputStream checksumIn = null;
       DataOutputStream out = null;
       
@@ -1325,7 +1334,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
     private void copyBlock(DataInputStream in) throws IOException {
       // Read in the header
       long blockId = in.readLong(); // read block id
-      Block block = new Block(blockId, 0);
+      Block block = new Block(blockId, 0, in.readLong());
       String source = Text.readString(in); // read del hint
       DatanodeInfo target = new DatanodeInfo(); // read target
       target.readFields(in);
@@ -1356,6 +1365,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
         targetOut.writeShort(DATA_TRANSFER_VERSION); // transfer version
         targetOut.writeByte(OP_REPLACE_BLOCK); // op code
         targetOut.writeLong(block.getBlockId()); // block id
+        targetOut.writeLong(block.getGenerationStamp()); // block id
         Text.writeString( targetOut, source); // del hint
 
         // then send data
@@ -1401,7 +1411,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
       balancingSem.acquireUninterruptibly();
 
       /* read header */
-      Block block = new Block(in.readLong(), estimateBlockSize); // block id & len
+      Block block = new Block(in.readLong(), estimateBlockSize, in.readLong()); // block id & len
       String sourceID = Text.readString(in);
 
       short opStatus = OP_STATUS_SUCCESS;
@@ -1538,9 +1548,9 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
      +----------------------------------------------+
      
      Processed in readBlock() :
-     +-------------------------------------------------------+
-     | 8 byte Block ID | 8 byte start offset | 8 byte length |
-     +-------------------------------------------------------+
+     +-------------------------------------------------------------------------+
+     | 8 byte Block ID | 8 byte genstamp | 8 byte start offset | 8 byte length |
+     +-------------------------------------------------------------------------+
      
      Client sends optional response only at the end of receiving data.
        
@@ -1648,12 +1658,14 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
                                           BUFFER_SIZE));
 
           // read and handle the common header here. For now just a version
-          short version = checksumIn.readShort();
+         BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);
+         short version = header.getVersion();
+
           if (version != FSDataset.METADATA_VERSION) {
             LOG.warn("Wrong version (" + version + ") for metadata file for "
                 + block + " ignoring ...");
           }
-          checksum = DataChecksum.newDataChecksum(checksumIn);
+          checksum = header.getChecksum();
         } else {
           LOG.warn("Could not find metadata file for " + block);
           // This only decides the buffer size. Use BUFFER_SIZE?
@@ -2597,8 +2609,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
       try {
         // write data chunk header
         if (!finalized) {
-          checksumOut.writeShort(FSDataset.METADATA_VERSION);
-          checksum.writeHeader(checksumOut);
+          BlockMetadataHeader.writeHeader(checksumOut, checksum);
         }
         if (clientName.length() > 0) {
           responder = new Daemon(threadGroup, 
@@ -2690,7 +2701,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
                               " which is not a multiple of bytesPerChecksum " +
                                bytesPerChecksum);
       }
-      long offsetInChecksum = checksum.getChecksumHeaderSize() + 
+      long offsetInChecksum = BlockMetadataHeader.getHeaderSize() +
                               offsetInBlock / bytesPerChecksum * checksumSize;
       if (out != null) {
        out.flush();
@@ -2755,6 +2766,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
         out.writeShort(DATA_TRANSFER_VERSION);
         out.writeByte(OP_WRITE_BLOCK);
         out.writeLong(b.getBlockId());
+        out.writeLong(b.getGenerationStamp());
         out.writeInt(0);           // no pipelining
         out.writeBoolean(false);   // not part of recovery
         Text.writeString(out, ""); // client
@@ -2790,11 +2802,6 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
    */
   public void run() {
     LOG.info(dnRegistration + "In DataNode.run, data = " + data);
-
-    // start block scanner
-    if (blockScannerThread != null) {
-      blockScannerThread.start();
-    }
 
     // start dataXceiveServer
     dataXceiveServer.start();

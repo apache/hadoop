@@ -109,7 +109,7 @@ class DatanodeBlockInfo {
     if (file == null || volume == null) {
       throw new IOException("detachBlock:Block not found. " + block);
     }
-    File meta = FSDataset.getMetaFile(file);
+    File meta = FSDataset.getMetaFile(file, block);
     if (meta == null) {
       throw new IOException("Meta file not found for block " + block);
     }

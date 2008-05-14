@@ -44,8 +44,6 @@ class BlockMetaDataInfo extends Block {
     return info;
   }
 
-  //TODO: remove generationStamp if it is defined in Block
-  private long generationStamp;
   private long lastScanTime;
 
   public BlockMetaDataInfo() {}
@@ -57,14 +55,12 @@ class BlockMetaDataInfo extends Block {
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     super.write(out);
-    out.writeLong(generationStamp);
     out.writeLong(lastScanTime);
   }
 
   /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
-    generationStamp = in.readLong();
     lastScanTime = in.readLong();
   }
 }

@@ -193,8 +193,8 @@ public class DataBlockScanner implements Runnable {
       //still keep 'info.lastScanType' to NONE.
       addBlockInfo(info);
     }
-    
-    /* Pick the first directory that has any existing sanner log.
+
+    /* Pick the first directory that has any existing scanner log.
      * otherwise, pick the first directory.
      */
     File dir = null;
@@ -327,6 +327,7 @@ public class DataBlockScanner implements Runnable {
   static private class LogEntry {
     long blockId = -1;
     long verificationTime = -1;
+    long genStamp = Block.GRANDFATHER_GENERATION_STAMP;
     
     /**
      * The format consists of single line with multiple entries. each 
@@ -340,6 +341,7 @@ public class DataBlockScanner implements Runnable {
     static String newEnry(Block block, long time) {
       return "date=\"" + dateFormat.format(new Date(time)) + "\"\t " +
              "time=\"" + time + "\"\t " +
+             "genstamp=\"" + block.getGenerationStamp() + "\"\t " +
              "id=\"" + block.getBlockId() +"\"";
     }
     
@@ -355,6 +357,8 @@ public class DataBlockScanner implements Runnable {
           entry.blockId = Long.valueOf(value);
         } else if (name.equals("time")) {
           entry.verificationTime = Long.valueOf(value);
+        } else if (name.equals("genstamp")) {
+          entry.genStamp = Long.valueOf(value);
         }
       }
       
@@ -478,7 +482,7 @@ public class DataBlockScanner implements Runnable {
     }
     
     // update verification times from the verificationLog.
-    Block tmpBlock = new Block(0, 0);    
+    Block tmpBlock = new Block();
     while (logReader != null && logReader.hasNext()) {
       if (!datanode.shouldRun || Thread.interrupted()) {
         return false;
@@ -486,7 +490,7 @@ public class DataBlockScanner implements Runnable {
       String line = logReader.next();
       LogEntry entry = LogEntry.parseEntry(line);
       synchronized (this) {
-        tmpBlock.blkid = entry.blockId;
+        tmpBlock.set(entry.blockId, 0, entry.genStamp);
         BlockScanInfo info = blockMap.get(tmpBlock);
         
         if(info != null && entry.verificationTime > 0 && 

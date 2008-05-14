@@ -26,16 +26,19 @@ package org.apache.hadoop.dfs;
  */
 class BlockListAsLongs {
   /**
-   * A block as 2 longs
-   *   block-id and block length
+   * A block as 3 longs
+   *   block-id and block length and generation stamp
    */
-  private static final int LONGS_PER_BLOCK = 2;
+  private static final int LONGS_PER_BLOCK = 3;
   
   private static int index2BlockId(int index) {
     return index*LONGS_PER_BLOCK;
   }
   private static int index2BlockLen(int index) {
     return (index*LONGS_PER_BLOCK) + 1;
+  }
+  private static int index2BlockGenStamp(int index) {
+    return (index*LONGS_PER_BLOCK) + 2;
   }
   
   private long[] blockList;
@@ -101,6 +104,15 @@ class BlockListAsLongs {
   long getBlockLen(final int index)  {
     return blockList[index2BlockLen(index)];
   }
+
+  /**
+   * The generation stamp of the indexTh block
+   * @param index - the block whose block-len is desired
+   * @return - the generation stamp
+   */
+  long getBlockGenStamp(final int index)  {
+    return blockList[index2BlockGenStamp(index)];
+  }
   
   /**
    * Set the indexTh block
@@ -110,5 +122,6 @@ class BlockListAsLongs {
   void setBlock(final int index, final Block b) {
     blockList[index2BlockId(index)] = b.getBlockId();
     blockList[index2BlockLen(index)] = b.getNumBytes();
+    blockList[index2BlockGenStamp(index)] = b.getGenerationStamp();
   }
 }

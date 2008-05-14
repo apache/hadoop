@@ -85,7 +85,7 @@ public class TestBalancer extends TestCase {
       Block[] blocks = new Block[numOfBlocks];
       for(int i=0; i<numOfBlocks; i++) {
         Block b = locatedBlocks.get(i).getBlock();
-        blocks[i] = new Block(b.getBlockId(), b.getNumBytes());
+        blocks[i] = new Block(b.getBlockId(), b.getNumBytes(), b.getGenerationStamp());
       }
 
       return blocks;

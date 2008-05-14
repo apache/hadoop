@@ -352,7 +352,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
     // as part this block report - which why block list is stored as longs
     Block iblk = new Block(); // a fixed new'ed block to be reused with index i
     for (int i = 0; i < newReport.getNumberOfBlocks(); ++i) {
-      iblk.set(newReport.getBlockId(i), newReport.getBlockLen(i));
+      iblk.set(newReport.getBlockId(i), newReport.getBlockLen(i), 
+               newReport.getBlockGenStamp(i));
       BlockInfo storedBlock = blocksMap.getStoredBlock(iblk);
       if(storedBlock == null) { // Brand new block
         toAdd.add(new Block(iblk));

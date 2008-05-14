@@ -615,9 +615,13 @@ public class FileUtil {
           return Integer.parseInt(inpMsg);
         }
       } catch (NumberFormatException e) {
-        throw new IOException(StringUtils.stringifyException(e) + inpMsg + errMsg);
+        throw new IOException(StringUtils.stringifyException(e) + 
+                              inpMsg + errMsg +
+                              " on file:" + fileName);
       } catch (InterruptedException e) {
-        throw new IOException(StringUtils.stringifyException(e) + inpMsg + errMsg);
+        throw new IOException(StringUtils.stringifyException(e) + 
+                              inpMsg + errMsg +
+                              " on file:" + fileName);
       } finally {
         process.destroy();
         if (in != null) in.close();

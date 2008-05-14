@@ -750,7 +750,12 @@ class FSImage extends Storage {
           blocks = new Block[numBlocks];
           for (int j = 0; j < numBlocks; j++) {
             blocks[j] = new Block();
-            blocks[j].readFields(in);
+            if (-14 < imgVersion) {
+              blocks[j].set(in.readLong(), in.readLong(), 
+                            Block.GRANDFATHER_GENERATION_STAMP);
+            } else {
+              blocks[j].readFields(in);
+            }
           }
         }
         // Older versions of HDFS does not store the block size in inode.

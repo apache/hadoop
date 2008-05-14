@@ -344,6 +344,7 @@ public class Balancer implements Tool {
       out.writeShort(FSConstants.DATA_TRANSFER_VERSION);
       out.writeByte(FSConstants.OP_COPY_BLOCK);
       out.writeLong(block.getBlock().getBlockId());
+      out.writeLong(block.getBlock().getGenerationStamp());
       Text.writeString(out, source.getStorageID());
       target.write(out);
       out.flush();

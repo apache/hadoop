@@ -182,7 +182,7 @@ public class ObjectWritable implements Writable, Configurable {
       try {
         declaredClass = conf.getClassByName(className);
       } catch (ClassNotFoundException e) {
-        throw new RuntimeException("readObject can't find class", e);
+        throw new RuntimeException("readObject can't find class " + className, e);
       }
     }    
 
@@ -225,10 +225,12 @@ public class ObjectWritable implements Writable, Configurable {
       instance = Enum.valueOf((Class<? extends Enum>) declaredClass, UTF8.readString(in));
     } else {                                      // Writable
       Class instanceClass = null;
+      String str = "";
       try {
-        instanceClass = conf.getClassByName(UTF8.readString(in));
+        str = UTF8.readString(in);
+        instanceClass = conf.getClassByName(str);
       } catch (ClassNotFoundException e) {
-        throw new RuntimeException("readObject can't find class", e);
+        throw new RuntimeException("readObject can't find class " + str, e);
       }
       
       Writable writable = WritableFactories.newInstance(instanceClass, conf);

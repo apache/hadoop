@@ -28,6 +28,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.util.ArrayList;
 import java.lang.Math;
 import java.nio.channels.FileChannel;
@@ -448,7 +450,19 @@ class FSEditLog {
               blockSize = readLong(in);
             }
             // get blocks
-            Block blocks[] = readBlocks(in);
+            Block blocks[] = null;
+            if (logVersion <= -14) {
+              blocks = readBlocks(in);
+            } else {
+              BlockTwo oldblk = new BlockTwo();
+              int num = in.readInt();
+              blocks = new Block[num];
+              for (int i = 0; i < num; i++) {
+                oldblk.readFields(in);
+                blocks[i] = new Block(oldblk.blkid, oldblk.len, 
+                                      Block.GRANDFATHER_GENERATION_STAMP);
+              }
+            }
 
             // Older versions of HDFS does not store the block size in inode.
             // If the file has more than one block, use the size of the
@@ -1001,6 +1015,41 @@ class FSEditLog {
   // sets the initial capacity of the flush buffer.
   static void setBufferCapacity(int size) {
     sizeFlushBuffer = size;
+  }
+
+  /**
+   * A class to read in blocks stored in the old format. The only two
+   * fields in the block were blockid and length.
+   */
+  static class BlockTwo implements Writable {
+    long blkid;
+    long len;
+
+    static {                                      // register a ctor
+      WritableFactories.setFactory
+        (BlockTwo.class,
+         new WritableFactory() {
+           public Writable newInstance() { return new BlockTwo(); }
+         });
+    }
+
+
+    BlockTwo() {
+      blkid = 0;
+      len = 0;
+    }
+    /////////////////////////////////////
+    // Writable
+    /////////////////////////////////////
+    public void write(DataOutput out) throws IOException {
+      out.writeLong(blkid);
+      out.writeLong(len);
+    }
+
+    public void readFields(DataInput in) throws IOException {
+      this.blkid = in.readLong();
+      this.len = in.readLong();
+    }
   }
 
   /** This method is defined for compatibility reason. */

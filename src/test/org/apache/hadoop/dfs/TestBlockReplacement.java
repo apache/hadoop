@@ -218,6 +218,7 @@ public class TestBlockReplacement extends TestCase {
     out.writeShort(FSConstants.DATA_TRANSFER_VERSION);
     out.writeByte(FSConstants.OP_COPY_BLOCK);
     out.writeLong(block.getBlockId());
+    out.writeLong(block.getGenerationStamp());
     Text.writeString(out, source.getStorageID());
     destination.write(out);
     out.flush();

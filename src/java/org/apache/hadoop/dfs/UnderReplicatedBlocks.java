@@ -105,7 +105,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     if(priLevel != LEVEL && priorityQueues.get(priLevel).add(block)) {
       NameNode.stateChangeLog.debug(
                                     "BLOCK* NameSystem.UnderReplicationBlock.add:"
-                                    + block.getBlockName()
+                                    + block
                                     + " has only "+curReplicas
                                     + " replicas and need " + expectedReplicas
                                     + " replicas so is added to neededReplications"
@@ -132,7 +132,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
         && priorityQueues.get(priLevel).remove(block)) {
       NameNode.stateChangeLog.debug(
                                     "BLOCK* NameSystem.UnderReplicationBlock.remove: "
-                                    + "Removing block " + block.getBlockName()
+                                    + "Removing block " + block
                                     + " from priority queue "+ priLevel);
       return true;
     } else {
@@ -140,7 +140,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
         if(i!=priLevel && priorityQueues.get(i).remove(block)) {
           NameNode.stateChangeLog.debug(
                                         "BLOCK* NameSystem.UnderReplicationBlock.remove: "
-                                        + "Removing block " + block.getBlockName()
+                                        + "Removing block " + block
                                         + " from priority queue "+ i);
           return true;
         }
@@ -173,7 +173,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
         && priorityQueues.get(curPri).add(block)) {
       NameNode.stateChangeLog.debug(
                                     "BLOCK* NameSystem.UnderReplicationBlock.update:"
-                                    + block.getBlockName()
+                                    + block
                                     + " has only "+curReplicas
                                     + " replicas and need " + curExpectedReplicas
                                     + " replicas so is added to neededReplications"

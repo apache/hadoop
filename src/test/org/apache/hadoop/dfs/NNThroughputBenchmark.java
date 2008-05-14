@@ -624,7 +624,7 @@ public class NNThroughputBenchmark implements FSConstants {
     void formBlockReport() {
       // fill remaining slots with blocks that do not exist
       for(int idx = blocks.length-1; idx >= nrBlocks; idx--)
-        blocks[idx] = new Block(blocks.length - idx, 0);
+        blocks[idx] = new Block(blocks.length - idx, 0, 0);
     }
 
     public int compareTo(String name) {

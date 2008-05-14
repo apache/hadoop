@@ -73,6 +73,13 @@ abstract class UpgradeManager {
     return true;
   }
 
+  boolean isUpgradeCompleted() {
+    if (currentUpgrades == null) {
+      return true;
+    }
+    return false;
+  }
+
   abstract FSConstants.NodeType getType();
   abstract boolean startUpgrade() throws IOException;
   abstract void completeUpgrade() throws IOException;

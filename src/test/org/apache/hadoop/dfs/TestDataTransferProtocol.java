@@ -167,6 +167,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_WRITE_BLOCK);
     sendOut.writeLong(newBlockId); // block id
+    sendOut.writeLong(0);          // generation stamp
     sendOut.writeInt(0);           // targets in pipeline 
     sendOut.writeBoolean(false);   // recoveryFlag
     Text.writeString(sendOut, "cl");// clientID
@@ -184,6 +185,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_WRITE_BLOCK);
     sendOut.writeLong(newBlockId);
+    sendOut.writeLong(0);          // generation stamp
     sendOut.writeInt(0);           // targets in pipeline 
     sendOut.writeBoolean(false);   // recoveryFlag
     Text.writeString(sendOut, "cl");// clientID
@@ -198,6 +200,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_WRITE_BLOCK);
     sendOut.writeLong(++newBlockId);
+    sendOut.writeLong(0);          // generation stamp
     sendOut.writeInt(0);           // targets in pipeline 
     sendOut.writeBoolean(false);   // recoveryFlag
     Text.writeString(sendOut, "cl");// clientID
@@ -223,6 +226,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_WRITE_BLOCK);
     sendOut.writeLong(++newBlockId);
+    sendOut.writeLong(0);          // generation stamp
     sendOut.writeInt(0);           // targets in pipeline 
     sendOut.writeBoolean(false);   // recoveryFlag
     Text.writeString(sendOut, "cl");// clientID
@@ -251,6 +255,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
     newBlockId = firstBlock.getBlockId()-1;
     sendOut.writeLong(newBlockId);
+    sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(0L);
     sendOut.writeLong(fileLen);
     recvOut.writeShort((short)FSConstants.OP_STATUS_ERROR);
@@ -261,6 +266,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
     sendOut.writeLong(firstBlock.getBlockId());
+    sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(-1L);
     sendOut.writeLong(fileLen);
     sendRecvData("Negative start-offset for read for block " + 
@@ -271,6 +277,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
     sendOut.writeLong(firstBlock.getBlockId());
+    sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(fileLen);
     sendOut.writeLong(fileLen);
     sendRecvData("Wrong start-offset for reading block " +
@@ -283,6 +290,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
     sendOut.writeLong(firstBlock.getBlockId());
+    sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(0);
     sendOut.writeLong(-1-random.nextInt(oneMil));
     sendRecvData("Negative length for reading block " +
@@ -295,6 +303,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
     sendOut.writeLong(firstBlock.getBlockId());
+    sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(0);
     sendOut.writeLong(fileLen + 1);
     sendRecvData("Wrong length for reading block " +
@@ -305,6 +314,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeShort((short)FSConstants.DATA_TRANSFER_VERSION);
     sendOut.writeByte((byte)FSConstants.OP_READ_BLOCK);
     sendOut.writeLong(firstBlock.getBlockId());
+    sendOut.writeLong(firstBlock.getGenerationStamp());
     sendOut.writeLong(0);
     sendOut.writeLong(fileLen);
     readFile(fileSys, file, fileLen);

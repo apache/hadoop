@@ -47,6 +47,10 @@ Trunk (unreleased changes)
     HADOOP-3329.  DatanodeDescriptor objects should not be stored in the
     fsimage. (dhruba)
 
+    HADOOP-2656.  The Block object has a generation stamp inside it.
+    Existing blocks get a generation stamp of 0. This is needed to support
+    appends. (dhruba)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,

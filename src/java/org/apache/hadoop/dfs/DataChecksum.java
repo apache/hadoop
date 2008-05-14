@@ -205,8 +205,8 @@ public class DataChecksum implements Checksum {
   public int getNumBytesInSum() {
     return inSum;
   }
-  public int getChecksumHeaderSize() {
-    return 2 + 1 + 4; // version: short + type : byte + bytesPerChecksum : int
+  static public int getChecksumHeaderSize() {
+    return 1 + FSConstants.SIZE_OF_INTEGER; // type byte, bytesPerChecksum int
   }
   //Checksum Interface. Just a wrapper around member summer.
   public long getValue() {

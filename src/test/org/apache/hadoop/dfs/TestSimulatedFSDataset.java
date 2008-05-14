@@ -59,7 +59,7 @@ public class TestSimulatedFSDataset extends TestCase {
   int addSomeBlocks() throws IOException {
     int bytesAdded = 0;
     for (int i = 1; i <= NUMBLOCKS; ++i) {
-      Block b = new Block(i, 0); // we pass expected len as zero, - fsdataset should use the sizeof actual data written
+      Block b = new Block(i, 0, 0); // we pass expected len as zero, - fsdataset should use the sizeof actual data written
       OutputStream dataOut  = fsdataset.writeToBlock(b, false).dataOut;
       assertEquals(0, fsdataset.getLength(b));
       for (int j=1; j <= blockIdToLen(i); ++j) {
@@ -76,7 +76,7 @@ public class TestSimulatedFSDataset extends TestCase {
   }
 
   public void testGetMetaData() throws IOException {
-    Block b = new Block(1, 5);
+    Block b = new Block(1, 5, 0);
     try {
       assertFalse(fsdataset.metaFileExists(b));
       assertTrue("Expected an IO exception", false);
@@ -84,7 +84,7 @@ public class TestSimulatedFSDataset extends TestCase {
       // ok - as expected
     }
     addSomeBlocks(); // Only need to add one but ....
-    b = new Block(1, 0);
+    b = new Block(1, 0, 0);
     InputStream metaInput = fsdataset.getMetaDataInputStream(b);
     DataInputStream metaDataInput = new DataInputStream(metaInput);
     short version = metaDataInput.readShort();
@@ -120,7 +120,7 @@ public class TestSimulatedFSDataset extends TestCase {
   public void testWriteRead() throws IOException {
     addSomeBlocks();
     for (int i=1; i <= NUMBLOCKS; ++i) {
-      Block b = new Block(i, 0);
+      Block b = new Block(i, 0, 0);
       assertTrue(fsdataset.isValidBlock(b));
       assertEquals(blockIdToLen(i), fsdataset.getLength(b));
       checkBlockDataAndSize(b, blockIdToLen(i));
@@ -198,12 +198,12 @@ public class TestSimulatedFSDataset extends TestCase {
   }
   
   public void testInValidBlocks() throws IOException {
-    Block b = new Block(1, 5);
+    Block b = new Block(1, 5, 0);
     checkInvalidBlock(b);
     
     // Now check invlaid after adding some blocks
     addSomeBlocks();
-    b = new Block(NUMBLOCKS + 99, 5);
+    b = new Block(NUMBLOCKS + 99, 5, 0);
     checkInvalidBlock(b);
     
   }
@@ -211,8 +211,8 @@ public class TestSimulatedFSDataset extends TestCase {
   public void testInvalidate() throws IOException {
     int bytesAdded = addSomeBlocks();
     Block[] deleteBlocks = new Block[2];
-    deleteBlocks[0] = new Block(1, 0);
-    deleteBlocks[1] = new Block(2, 0);
+    deleteBlocks[0] = new Block(1, 0, 0);
+    deleteBlocks[1] = new Block(2, 0, 0);
     fsdataset.invalidate(deleteBlocks);
     checkInvalidBlock(deleteBlocks[0]);
     checkInvalidBlock(deleteBlocks[1]);
@@ -224,7 +224,7 @@ public class TestSimulatedFSDataset extends TestCase {
     
     // Now make sure the rest of the blocks are valid
     for (int i=3; i <= NUMBLOCKS; ++i) {
-      Block b = new Block(i, 0);
+      Block b = new Block(i, 0, 0);
       assertTrue(fsdataset.isValidBlock(b));
     }
   }

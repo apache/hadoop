@@ -93,8 +93,8 @@ class FSDataset implements FSConstants, FSDatasetInterface {
                           boolean resetIdx) throws IOException {
       if (numBlocks < maxBlocksPerDir) {
         File dest = new File(dir, b.getBlockName());
-        File metaData = getMetaFile( src );
-        if ( ! metaData.renameTo( getMetaFile(dest) ) ||
+        File metaData = getMetaFile( src, b );
+        if ( ! metaData.renameTo( getMetaFile(dest, b) ) ||
             ! src.renameTo( dest ) ) {
           throw new IOException( "could not move files for " + b +
                                  " from tmp to " + 
@@ -139,6 +139,31 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       return children[ lastChildIdx ].addBlock(b, src, true, false); 
     }
 
+    /** Find the metadata file for the specified block file.
+     * Return the generation stamp from the name of the metafile.
+     */
+    long getGenerationStampFromFile(File[] listdir, File blockFile) {
+      String blockName = blockFile.getName();
+      for (int j = 0; j < listdir.length; j++) {
+        String path = listdir[j].getName();
+        if (!path.startsWith(blockName)) {
+          continue;
+        }
+        String[] vals = path.split("_");
+        if (vals.length != 3) {     // blk, blkid, genstamp.meta
+          continue;
+        }
+        String[] str = vals[2].split("\\.");
+        if (str.length != 2) {
+          continue;
+        }
+        return Long.parseLong(str[0]);
+      }
+      DataNode.LOG.warn("Block " + blockFile + 
+                        " does not have a metafile!");
+      return Block.GRANDFATHER_GENERATION_STAMP;
+    }
+
     /**
      * Populate the given blockSet with any child blocks
      * found at this node.
@@ -153,11 +178,11 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       File blockFiles[] = dir.listFiles();
       for (int i = 0; i < blockFiles.length; i++) {
         if (Block.isBlockFilename(blockFiles[i])) {
-          blockSet.add(new Block(blockFiles[i], blockFiles[i].length()));
+          long genStamp = getGenerationStampFromFile(blockFiles, blockFiles[i]);
+          blockSet.add(new Block(blockFiles[i], blockFiles[i].length(), genStamp));
         }
       }
     }
-
 
     void getVolumeMap(HashMap<Block, DatanodeBlockInfo> volumeMap, FSVolume volume) {
       if (children != null) {
@@ -168,9 +193,9 @@ class FSDataset implements FSConstants, FSDatasetInterface {
 
       File blockFiles[] = dir.listFiles();
       for (int i = 0; i < blockFiles.length; i++) {
-        //We are not enforcing presense of metadata file
         if (Block.isBlockFilename(blockFiles[i])) {
-          volumeMap.put(new Block(blockFiles[i], blockFiles[i].length()), 
+          long genStamp = getGenerationStampFromFile(blockFiles, blockFiles[i]);
+          volumeMap.put(new Block(blockFiles[i], blockFiles[i].length(), genStamp), 
                         new DatanodeBlockInfo(volume, blockFiles[i]));
         }
       }
@@ -363,7 +388,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       
     File addBlock(Block b, File f) throws IOException {
       File blockFile = dataDir.addBlock(b, f);
-      File metaFile = getMetaFile( blockFile );
+      File metaFile = getMetaFile( blockFile , b);
       dfsUsage.incDfsUsed(b.getNumBytes()+metaFile.length());
       return blockFile;
     }
@@ -508,9 +533,6 @@ class FSDataset implements FSConstants, FSDatasetInterface {
   public static final String METADATA_EXTENSION = ".meta";
   public static final short METADATA_VERSION = 1;
     
-  static File getMetaFile( File f ) {
-    return new File( f.getAbsolutePath() + METADATA_EXTENSION );
-  }
 
   static class ActiveFile {
     File file;
@@ -525,9 +547,14 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     }
   } 
   
+  static File getMetaFile(File f , Block b) {
+    return new File( f.getAbsolutePath() +
+                     "_" + b.getGenerationStamp() + METADATA_EXTENSION ); 
+  }
   protected File getMetaFile(Block b) throws IOException {
     File blockFile = getBlockFile( b );
-    return getMetaFile(blockFile); 
+    return new File( blockFile.getAbsolutePath() + 
+                     "_" + b.getGenerationStamp() + METADATA_EXTENSION ); 
   }
 
   public boolean metaFileExists(Block b) throws IOException {
@@ -628,9 +655,9 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     return new FileInputStream(blockInFile.getFD());
   }
     
-  BlockWriteStreams createBlockWriteStreams( File f ) throws IOException {
+  private BlockWriteStreams createBlockWriteStreams( File f , File metafile) throws IOException {
       return new BlockWriteStreams(new FileOutputStream(new RandomAccessFile( f , "rw" ).getFD()),
-          new FileOutputStream( new RandomAccessFile( getMetaFile( f ) , "rw" ).getFD() ));
+          new FileOutputStream( new RandomAccessFile( metafile , "rw" ).getFD() ));
 
   }
 
@@ -737,7 +764,8 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     // REMIND - mjc - make this a filter stream that enforces a max
     // block size, so clients can't go crazy
     //
-    return createBlockWriteStreams( f );
+    File metafile = getMetaFile(f, b);
+    return createBlockWriteStreams( f , metafile);
   }
 
   /**
@@ -902,7 +930,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
         v.clearPath(parent);
         volumeMap.remove(invalidBlks[i]);
       }
-      File metaFile = getMetaFile( f );
+      File metaFile = getMetaFile( f, invalidBlks[i] );
       long blockSize = f.length()+metaFile.length();
       if ( !f.delete() || ( !metaFile.delete() && metaFile.exists() ) ) {
         DataNode.LOG.warn("Unexpected error trying to delete block "

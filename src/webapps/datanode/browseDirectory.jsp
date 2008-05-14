@@ -64,6 +64,7 @@
             "/browseBlock.jsp?blockId=" +
             firstBlock.getBlock().getBlockId() +
             "&blockSize=" + firstBlock.getBlock().getNumBytes() +
+            "&genstamp=" + firstBlock.getBlock().getGenerationStamp() +
             "&filename=" + URLEncoder.encode(dir, "UTF-8") + 
             "&datanodePort=" + datanodePort + 
             "&namenodeInfoPort=" + namenodeInfoPort;

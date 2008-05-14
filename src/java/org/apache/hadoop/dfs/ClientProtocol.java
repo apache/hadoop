@@ -37,9 +37,9 @@ interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 32: add corrupt field to LocatedBlock
+   * 33 : Block generation stamp stored in Block
    */
-  public static final long versionID = 32L;
+  public static final long versionID = 33L;
   
   ///////////////////////////////////////
   // File contents

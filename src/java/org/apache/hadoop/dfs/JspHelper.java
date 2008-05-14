@@ -109,7 +109,8 @@ public class JspHelper {
     s.close();
     return chosenNode;
   }
-  public void streamBlockInAscii(InetSocketAddress addr, long blockId, long blockSize, 
+  public void streamBlockInAscii(InetSocketAddress addr, long blockId, 
+                                 long genStamp, long blockSize, 
                                  long offsetIntoBlock, long chunkSizeToView, JspWriter out) 
     throws IOException {
     if (chunkSizeToView == 0) return;
@@ -122,7 +123,7 @@ public class JspHelper {
       // Use the block name for file name. 
       DFSClient.BlockReader blockReader = 
         DFSClient.BlockReader.newBlockReader(s, addr.toString() + ":" + blockId,
-                                             blockId, offsetIntoBlock, 
+                                             blockId, genStamp ,offsetIntoBlock, 
                                              amtToRead, 
                                              conf.getInt("io.file.buffer.size",
                                                          4096));

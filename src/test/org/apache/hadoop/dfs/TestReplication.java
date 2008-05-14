@@ -266,7 +266,7 @@ public class TestReplication extends TestCase {
       // get first block of the file.
       String block = dfsClient.namenode.
                        getBlockLocations(testFile, 0, Long.MAX_VALUE).
-                       get(0).getBlock().toString();
+                       get(0).getBlock().getBlockName();
       
       cluster.shutdown();
       cluster = null;

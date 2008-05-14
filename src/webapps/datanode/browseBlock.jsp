@@ -130,7 +130,7 @@
       blockId = cur.getBlock().getBlockId();
       blockSize = cur.getBlock().getNumBytes();
       String blk = "blk_" + Long.toString(blockId);
-      out.print("<td>"+cur+":</td>");
+      out.print("<td>"+Long.toString(blockId)+":</td>");
       DatanodeInfo[] locs = cur.getLocations();
       for(int j=0; j<locs.length; j++) {
         String datanodeAddr = locs[j].getName();
@@ -186,6 +186,15 @@
     }
     blockId = Long.parseLong(blockIdStr);
 
+    String blockGenStamp = null;
+    long genStamp = 0;
+    blockGenStamp = req.getParameter("genstamp");
+    if (blockGenStamp == null) {
+      out.print("Invalid input (genstamp absent)");
+      return;
+    }
+    genStamp = Long.parseLong(blockGenStamp);
+
     String blockSizeStr;
     long blockSize = 0;
     blockSizeStr = req.getParameter("blockSize"); 
@@ -231,6 +240,7 @@
     long nextStartOffset = 0;
     long nextBlockSize = 0;
     String nextBlockIdStr = null;
+    String nextGenStamp = null;
     String nextHost = req.getServerName();
     int nextPort = req.getServerPort();
     int nextDatanodePort = datanodePort;
@@ -244,6 +254,7 @@
           if (i != blocks.size() - 1) {
             LocatedBlock nextBlock = blocks.get(i+1);
             nextBlockIdStr = Long.toString(nextBlock.getBlock().getBlockId());
+            nextGenStamp = Long.toString(nextBlock.getBlock().getGenerationStamp());
             nextStartOffset = 0;
             nextBlockSize = nextBlock.getBlock().getNumBytes();
             DatanodeInfo d = jspHelper.bestNode(nextBlock);
@@ -263,6 +274,7 @@
       nextBlockIdStr = blockIdStr;
       nextStartOffset = startOffset + chunkSizeToView;
       nextBlockSize = blockSize;
+      nextGenStamp = blockGenStamp;
     }
     String nextUrl = null;
     if (nextBlockIdStr != null) {
@@ -271,6 +283,7 @@
                 "/browseBlock.jsp?blockId=" + nextBlockIdStr +
                 "&blockSize=" + nextBlockSize + "&startOffset=" + 
                 nextStartOffset + 
+                "&genstamp=" + nextGenStamp +
                 "&filename=" + URLEncoder.encode(filename, "UTF-8") +
                 "&chunkSizeToView=" + chunkSizeToView + 
                 "&datanodePort=" + nextDatanodePort +
@@ -279,6 +292,7 @@
     }
     //determine data for the prev link
     String prevBlockIdStr = null;
+    String prevGenStamp = null;
     long prevStartOffset = 0;
     long prevBlockSize = 0;
     String prevHost = req.getServerName();
@@ -292,6 +306,7 @@
           if (i != 0) {
             LocatedBlock prevBlock = blocks.get(i-1);
             prevBlockIdStr = Long.toString(prevBlock.getBlock().getBlockId());
+            prevGenStamp = Long.toString(prevBlock.getBlock().getGenerationStamp());
             prevStartOffset = prevBlock.getBlock().getNumBytes() - chunkSizeToView;
             if (prevStartOffset < 0)
               prevStartOffset = 0;
@@ -314,6 +329,7 @@
       prevStartOffset = startOffset - chunkSizeToView;
       if (prevStartOffset < 0) prevStartOffset = 0;
       prevBlockSize = blockSize;
+      prevGenStamp = blockGenStamp;
     }
 
     String prevUrl = null;
@@ -325,6 +341,7 @@
                 prevStartOffset + 
                 "&filename=" + URLEncoder.encode(filename, "UTF-8") + 
                 "&chunkSizeToView=" + chunkSizeToView +
+                "&genstamp=" + prevGenStamp +
                 "&datanodePort=" + prevDatanodePort +
                 "&namenodeInfoPort=" + namenodeInfoPort;
       out.print("<a href=\"" + prevUrl + "\">View Prev chunk</a>&nbsp;&nbsp;");
@@ -334,7 +351,7 @@
     try {
     jspHelper.streamBlockInAscii(
             new InetSocketAddress(req.getServerName(), datanodePort), blockId, 
-            blockSize, startOffset, chunkSizeToView, out);
+            genStamp, blockSize, startOffset, chunkSizeToView, out);
     } catch (Exception e){
         out.print(e);
     }

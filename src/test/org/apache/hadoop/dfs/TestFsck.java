@@ -124,7 +124,7 @@ public class TestFsck extends TestCase {
                                           cluster.getNameNodePort()), conf);
       String block = dfsClient.namenode.
                       getBlockLocations(fileNames[0], 0, Long.MAX_VALUE).
-                      get(0).getBlock().toString();
+                      get(0).getBlock().getBlockName();
       File baseDir = new File(System.getProperty("test.build.data"),"dfs/data");
       for (int i=0; i<8; i++) {
         File blockFile = new File(baseDir, "data" +(i+1)+ "/current/" + block);
