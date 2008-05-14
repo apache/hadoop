@@ -204,7 +204,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeInt(0);
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
     sendOut.writeInt((int)512);
-    sendOut.writeInt(20);          // size of packet
+    sendOut.writeInt(4);           // size of packet
     sendOut.writeLong(0);          // OffsetInBlock
     sendOut.writeLong(100);        // sequencenumber
     sendOut.writeBoolean(false);   // lastPacketInBlock
@@ -229,7 +229,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeInt(0);
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
     sendOut.writeInt((int)512);    // checksum size
-    sendOut.writeInt(20);          // size of packet
+    sendOut.writeInt(8);           // size of packet
     sendOut.writeLong(0);          // OffsetInBlock
     sendOut.writeLong(100);        // sequencenumber
     sendOut.writeBoolean(true);    // lastPacketInBlock

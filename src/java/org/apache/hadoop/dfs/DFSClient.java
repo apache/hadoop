@@ -39,6 +39,7 @@ import java.util.*;
 import java.util.zip.CRC32;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 
 import javax.net.SocketFactory;
@@ -71,6 +72,7 @@ class DFSClient implements FSConstants {
   private short defaultReplication;
   private SocketFactory socketFactory;
   private int socketTimeout;
+  final int writePacketSize;
   private FileSystem.Statistics stats;
     
   /**
@@ -144,6 +146,8 @@ class DFSClient implements FSConstants {
     this.socketTimeout = conf.getInt("dfs.socket.timeout", 
                                      FSConstants.READ_TIMEOUT);
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
+    // dfs.write.packet.size is an internal config variable
+    this.writePacketSize = conf.getInt("dfs.write.packet.size", 64*1024);
     
     try {
       this.ugi = UnixUserGroupInformation.login(conf, true);
@@ -1683,7 +1687,6 @@ class DFSClient implements FSConstants {
     private DataInputStream blockReplyStream;
     private Block block;
     private long blockSize;
-    private int buffersize;
     private DataChecksum checksum;
     private LinkedList<Packet> dataQueue = new LinkedList<Packet>();
     private LinkedList<Packet> ackQueue = new LinkedList<Packet>();
@@ -1694,10 +1697,8 @@ class DFSClient implements FSConstants {
     private ResponseProcessor response = null;
     private long currentSeqno = 0;
     private long bytesCurBlock = 0; // bytes writen in current block
-    private int packetSize = 0;
+    private int packetSize = 0; // write packet size, including the header.
     private int chunksPerPacket = 0;
-    private int chunksPerBlock = 0;
-    private int chunkSize = 0;
     private DatanodeInfo[] nodes = null; // list of targets for current block
     private volatile boolean hasError = false;
     private volatile int errorIndex = 0;
@@ -1707,56 +1708,95 @@ class DFSClient implements FSConstants {
     private boolean persistBlocks = false; // persist blocks on namenode
 
     private class Packet {
-      ByteBuffer buffer;
+      ByteBuffer buffer;           // only one of buf and buffer is non-null
+      byte[]  buf;
       long    seqno;               // sequencenumber of buffer in block
       long    offsetInBlock;       // offset in block
       boolean lastPacketInBlock;   // is this the last packet in block?
       int     numChunks;           // number of chunks currently in packet
-      int     flushOffsetBuffer;   // last full chunk that was flushed
-      long    flushOffsetBlock;    // block offset of last full chunk flushed
+      int     dataStart;
+      int     dataPos;
+      int     checksumStart;
+      int     checksumPos;      
   
       // create a new packet
-      Packet(int size, long offsetInBlock) {
-        buffer = ByteBuffer.allocate(size);
-        buffer.clear();
+      Packet(int pktSize, int chunksPerPkt, long offsetInBlock) {
         this.lastPacketInBlock = false;
         this.numChunks = 0;
         this.offsetInBlock = offsetInBlock;
         this.seqno = currentSeqno;
-        this.flushOffsetBuffer = 0;
-        this.flushOffsetBlock = 0;
         currentSeqno++;
+        
+        buffer = null;
+        buf = new byte[pktSize];
+        
+        checksumStart = DataNode.PKT_HEADER_LEN + SIZE_OF_INTEGER;
+        checksumPos = checksumStart;
+        dataStart = checksumStart + chunksPerPkt * checksum.getChecksumSize();
+        dataPos = dataStart;
       }
 
-      // create a new Packet with the contents copied from the
-      // specified one. Shares the same buffer.
-      Packet(Packet old) {
-        this.buffer = old.buffer;
-        this.lastPacketInBlock = old.lastPacketInBlock;
-        this.numChunks = old.numChunks;
-        this.offsetInBlock = old.offsetInBlock;
-        this.seqno = old.seqno;
-        this.flushOffsetBuffer = old.flushOffsetBuffer;
-        this.flushOffsetBlock = old.flushOffsetBlock;
-      }
-
-      // writes len bytes from offset off in inarray into
-      // this packet.
-      // 
-      void write(byte[] inarray, int off, int len) {
-        buffer.put(inarray, off, len);
+      void writeData(byte[] inarray, int off, int len) {
+        if ( dataPos + len > buf.length) {
+          throw new BufferOverflowException();
+        }
+        System.arraycopy(inarray, off, buf, dataPos, len);
+        dataPos += len;
       }
   
-      // writes an integer into this packet. 
-      //
-      void  writeInt(int value) {
-       buffer.putInt(value);
+      void  writeChecksum(byte[] inarray, int off, int len) {
+        if (checksumPos + len > dataStart) {
+          throw new BufferOverflowException();
+        }
+        System.arraycopy(inarray, off, buf, checksumPos, len);
+        checksumPos += len;
       }
-
-      // sets the last flush offset of this packet.
-      void setFlushOffset(int bufoff, long blockOff) {
-        this.flushOffsetBuffer = bufoff;;
-        this.flushOffsetBlock = blockOff;
+      
+      /**
+       * Returns ByteBuffer that contains one full packet, including header.
+       */
+      ByteBuffer getBuffer() {
+        /* Once this is called, no more data can be added to the packet.
+         * setting 'buf' to null ensures that.
+         * This is called only when the packet is ready to be sent.
+         */
+        if (buffer != null) {
+          return buffer;
+        }
+        
+        //prepare the header and close any gap between checksum and data.
+        
+        int dataLen = dataPos - dataStart;
+        int checksumLen = checksumPos - checksumStart;
+        
+        if (checksumPos != dataStart) {
+          /* move the checksum to cover the gap.
+           * This can happen for the last packet.
+           */
+          System.arraycopy(buf, checksumStart, buf, 
+                           dataStart - checksumLen , checksumLen); 
+        }
+        
+        int pktLen = SIZE_OF_INTEGER + dataLen + checksumLen;
+        
+        //normally dataStart == checksumPos, i.e., offset is zero.
+        buffer = ByteBuffer.wrap(buf, dataStart - checksumPos,
+                                 DataNode.PKT_HEADER_LEN + pktLen);
+        buf = null;
+        buffer.mark();
+        
+        /* write the header and data length.
+         * The format is described in comment before DataNode.BlockSender
+         */
+        buffer.putInt(pktLen);  // pktSize
+        buffer.putLong(offsetInBlock); 
+        buffer.putLong(seqno);
+        buffer.put((byte) ((lastPacketInBlock) ? 1 : 0));
+        //end of pkt header
+        buffer.putInt(dataLen); // actual data length, excluding checksum.
+        
+        buffer.reset();
+        return buffer;
       }
     }
   
@@ -1807,8 +1847,6 @@ class DFSClient implements FSConstants {
             try {
               // get packet to be sent.
               one = dataQueue.getFirst();
-              int start = 0;
-              int len = one.buffer.limit();
               long offsetInBlock = one.offsetInBlock;
   
               // get new block from namenode.
@@ -1821,16 +1859,6 @@ class DFSClient implements FSConstants {
                 response.start();
               }
 
-              // If we are sending a sub-packet, then determine the offset 
-              // in block.
-              if (one.flushOffsetBuffer != 0) {
-                offsetInBlock += one.flushOffsetBlock;
-                len = len - one.flushOffsetBuffer;
-                start += one.flushOffsetBuffer;
-              }
-
-              // user bytes from 'position' to 'limit'.
-              byte[] arr = one.buffer.array();
               if (offsetInBlock >= blockSize) {
                 throw new IOException("BlockSize " + blockSize +
                                       " is smaller than data size. " +
@@ -1839,6 +1867,8 @@ class DFSClient implements FSConstants {
                                       " Aborting file " + src);
               }
 
+              ByteBuffer buf = one.getBuffer();
+              
               // move packet from dataQueue to ackQueue
               dataQueue.removeFirst();
               dataQueue.notifyAll();
@@ -1846,22 +1876,21 @@ class DFSClient implements FSConstants {
                 ackQueue.addLast(one);
                 ackQueue.notifyAll();
               } 
-  
+              
               // write out data to remote datanode
-              blockStream.writeInt(len); // size of this packet
-              blockStream.writeLong(offsetInBlock); // data offset in block
-              blockStream.writeLong(one.seqno); // sequence num of packet
-              blockStream.writeBoolean(one.lastPacketInBlock); 
-              blockStream.write(arr, start, len);
+              blockStream.write(buf.array(), buf.position(), buf.remaining());
+              
               if (one.lastPacketInBlock) {
                 blockStream.writeInt(0); // indicate end-of-block 
               }
               blockStream.flush();
-              LOG.debug("DataStreamer block " + block +
-                        " wrote packet seqno:" + one.seqno +
-                        " size:" + len + 
-                        " offsetInBlock:" + offsetInBlock +
-                        " lastPacketInBlock:" + one.lastPacketInBlock);
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("DataStreamer block " + block +
+                          " wrote packet seqno:" + one.seqno +
+                          " size:" + buf.remaining() +
+                          " offsetInBlock:" + one.offsetInBlock + 
+                          " lastPacketInBlock:" + one.lastPacketInBlock);
+              }
             } catch (IOException e) {
               LOG.warn("DataStreamer Exception: " + e);
               hasError = true;
@@ -2138,7 +2167,6 @@ class DFSClient implements FSConstants {
       super(new CRC32(), conf.getInt("io.bytes.per.checksum", 512), 4);
       this.src = src;
       this.blockSize = blockSize;
-      this.buffersize = buffersize;
       this.progress = progress;
       if (progress != null) {
         LOG.debug("Set non-null progress callback on DFSOutputStream "+src);
@@ -2154,11 +2182,11 @@ class DFSClient implements FSConstants {
       }
       checksum = DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 
                                               bytesPerChecksum);
-      // A maximum of 128 chunks per packet, i.e. 64K packet size.
-      chunkSize = bytesPerChecksum + 2 * SIZE_OF_INTEGER; // user data & checksum
-      chunksPerBlock = (int)(blockSize / bytesPerChecksum);
-      chunksPerPacket = Math.min(chunksPerBlock, 128);
-      packetSize = chunkSize * chunksPerPacket;
+      int chunkSize = bytesPerChecksum + checksum.getChecksumSize();
+      chunksPerPacket = Math.max((writePacketSize - DataNode.PKT_HEADER_LEN - 
+                                  SIZE_OF_INTEGER + chunkSize-1)/chunkSize, 1);
+      packetSize = DataNode.PKT_HEADER_LEN + SIZE_OF_INTEGER + 
+                   chunkSize * chunksPerPacket; 
 
       try {
         namenode.create(
@@ -2254,7 +2282,7 @@ class DFSClient implements FSConstants {
         //
         DataOutputStream out = new DataOutputStream(
             new BufferedOutputStream(NetUtils.getOutputStream(s, writeTimeout), 
-                                     buffersize));
+                                     DataNode.SMALL_BUFFER_SIZE));
         blockReplyStream = new DataInputStream(NetUtils.getInputStream(s));
 
         out.writeShort( DATA_TRANSFER_VERSION );
@@ -2351,12 +2379,6 @@ class DFSClient implements FSConstants {
                               this.checksum.getChecksumSize() + 
                               " but found to be " + checksum.length);
       }
-      if (len + cklen + SIZE_OF_INTEGER > chunkSize) {
-        throw new IOException("writeChunk() found data of size " +
-                              (len + cklen + 4) +
-                              " that cannot be larger than chukSize " + 
-                              chunkSize);
-      }
 
       synchronized (dataQueue) {
   
@@ -2370,30 +2392,30 @@ class DFSClient implements FSConstants {
         isClosed();
   
         if (currentPacket == null) {
-          currentPacket = new Packet(packetSize, bytesCurBlock);
+          currentPacket = new Packet(packetSize, chunksPerPacket, 
+                                     bytesCurBlock);
           LOG.debug("DFSClient writeChunk allocating new packet " + 
                     currentPacket.seqno);
         }
 
-        currentPacket.writeInt(len);
-        currentPacket.write(checksum, 0, cklen);
-        currentPacket.write(b, offset, len);
+        currentPacket.writeChecksum(checksum, 0, cklen);
+        currentPacket.writeData(b, offset, len);
         currentPacket.numChunks++;
         bytesCurBlock += len;
 
         // If packet is full, enqueue it for transmission
         //
         if (currentPacket.numChunks == chunksPerPacket ||
-            bytesCurBlock == chunksPerBlock * bytesPerChecksum) {
+            bytesCurBlock == blockSize) {
           LOG.debug("DFSClient writeChunk packet full seqno " + currentPacket.seqno);
-          currentPacket.buffer.flip();
           //
           // if we allocated a new packet because we encountered a block
           // boundary, reset bytesCurBlock.
           //
-          if (bytesCurBlock == chunksPerBlock * bytesPerChecksum) {
+          if (bytesCurBlock == blockSize) {
             currentPacket.lastPacketInBlock = true;
             bytesCurBlock = 0;
+            lastFlushOffset = -1;
           }
           dataQueue.addLast(currentPacket);
           dataQueue.notifyAll();
@@ -2410,66 +2432,38 @@ class DFSClient implements FSConstants {
      * datanode. Block allocations are persisted on namenode.
      */
     public synchronized void fsync() throws IOException {
-      Packet savePacket = null;
-      int position = 0;
-      long saveOffset = 0;
-
       try {
-        // Record the state of the current output stream.
-        // This state will be reverted after the flush successfully
-        // finishes. It is necessary to do this so that partial 
-        // checksum chunks are reused by writes that follow this 
-        // flush.
-        if (currentPacket != null) {
-          savePacket = new Packet(currentPacket);
-          position = savePacket.buffer.position();
-        }
-        saveOffset = bytesCurBlock;
+        /* Record current blockOffset. This might be changed inside
+         * flushBuffer() where a partial checksum chunk might be flushed.
+         * After the flush, reset the bytesCurBlock back to its previous value,
+         * any partial checksum chunk will be sent now and in next packet.
+         */
+        long saveOffset = bytesCurBlock;
 
         // flush checksum buffer, but keep checksum buffer intact
         flushBuffer(true);
 
-        LOG.debug("DFSClient flushInternal save position " +  
-                  position +
-                  " cur position " +
-                  ((currentPacket != null) ? currentPacket.buffer.position() : -1) +
-                  " limit " +
-                  ((currentPacket != null) ? currentPacket.buffer.limit() : -1) +
-                   " bytesCurBlock " + bytesCurBlock +
-                   " lastFlushOffset " + lastFlushOffset);
-
-        //
-        // Detect the condition that we have already flushed all
-        // outstanding data.
-        //
-        boolean skipFlush = (lastFlushOffset == bytesCurBlock && 
-                             savePacket != null && currentPacket != null &&
-                             savePacket.seqno == currentPacket.seqno);
+        LOG.debug("DFSClient flush() : saveOffset " + saveOffset +  
+                  " bytesCurBlock " + bytesCurBlock +
+                  " lastFlushOffset " + lastFlushOffset);
         
-        // Do the flush.
-        //
-        if (!skipFlush) {
+        // Flush only if we haven't already flushed till this offset.
+        if (lastFlushOffset != bytesCurBlock) {
 
           // record the valid offset of this flush
           lastFlushOffset = bytesCurBlock;
 
           // wait for all packets to be sent and acknowledged
           flushInternal();
+        } else {
+          // just discard the current packet since it is already been sent.
+          currentPacket = null;
         }
         
         // Restore state of stream. Record the last flush offset 
         // of the last full chunk that was flushed.
         //
         bytesCurBlock = saveOffset;
-        currentPacket = null;
-        if (savePacket != null) {
-          savePacket.buffer.limit(savePacket.buffer.capacity());
-          savePacket.buffer.position(position);
-          savePacket.setFlushOffset(position, 
-                                    savePacket.numChunks * 
-                                    checksum.getBytesPerChecksum());
-          currentPacket = savePacket;
-        }
 
         // If any new blocks were allocated since the last flush, 
         // then persist block locations on namenode. 
@@ -2501,7 +2495,6 @@ class DFSClient implements FSConstants {
           // If there is data in the current buffer, send it across
           //
           if (currentPacket != null) {
-            currentPacket.buffer.flip();
             dataQueue.addLast(currentPacket);
             dataQueue.notifyAll();
             currentPacket = null;
@@ -2594,12 +2587,11 @@ class DFSClient implements FSConstants {
           // packet with empty payload.
           synchronized (dataQueue) {
             if (currentPacket == null && bytesCurBlock != 0) {
-              currentPacket = new Packet(packetSize, bytesCurBlock);
-              currentPacket.writeInt(0); // one chunk with empty contents
+              currentPacket = new Packet(packetSize, chunksPerPacket,
+                                         bytesCurBlock);
             }
             if (currentPacket != null) { 
               currentPacket.lastPacketInBlock = true;
-              currentPacket.setFlushOffset(0, 0); // send whole packet
             }
           }
 
@@ -2649,7 +2641,9 @@ class DFSClient implements FSConstants {
 
     synchronized void setChunksPerPacket(int value) {
       chunksPerPacket = Math.min(chunksPerPacket, value);
-      packetSize = chunkSize * chunksPerPacket;
+      packetSize = DataNode.PKT_HEADER_LEN + SIZE_OF_INTEGER +
+                   (checksum.getBytesPerChecksum() + 
+                    checksum.getChecksumSize()) * chunksPerPacket;
     }
 
     synchronized void setTestFilename(String newname) {

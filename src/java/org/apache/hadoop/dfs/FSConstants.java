@@ -101,12 +101,11 @@ public interface FSConstants {
    * when protocol changes. It is not very obvious. 
    */
   /*
-   * Version 9:
-   *   While reading data from Datanode, each PACKET can consist
-   *   of non-interleaved data (check for for larger amount of data,
-   *   followed by data).
+   * Version 10:
+   *    DFSClient also sends non-interleaved checksum and data while writing
+   *    to DFS.
    */
-  public static final int DATA_TRANSFER_VERSION = 9;
+  public static final int DATA_TRANSFER_VERSION = 10;
 
   // Return codes for file create
   public static final int OPERATION_FAILED = 0;

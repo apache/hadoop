@@ -129,6 +129,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
   private int socketTimeout;
   private int socketWriteTimeout = 0;  
   private boolean transferToAllowed = true;
+  private int writePacketSize = 0;
   
   DataBlockScanner blockScanner;
   Daemon blockScannerThread;
@@ -221,6 +222,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
      * to false on some of them. */
     this.transferToAllowed = conf.getBoolean("dfs.datanode.transferTo.allowed", 
                                              true);
+    this.writePacketSize = conf.getInt("dfs.write.packet.size", 64*1024);
     String address = 
       NetUtils.getServerAddress(conf,
                                 "dfs.datanode.bindAddress", 
@@ -991,7 +993,8 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
       DataInputStream in=null; 
       try {
         in = new DataInputStream(
-            new BufferedInputStream(NetUtils.getInputStream(s), BUFFER_SIZE));
+            new BufferedInputStream(NetUtils.getInputStream(s), 
+                                    SMALL_BUFFER_SIZE));
         short version = in.readShort();
         if ( version != DATA_TRANSFER_VERSION ) {
           throw new IOException( "Version Mismatch" );
@@ -1174,7 +1177,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
             mirrorOut = new DataOutputStream(
                new BufferedOutputStream(
                            NetUtils.getOutputStream(mirrorSock, writeTimeout),
-                           BUFFER_SIZE));
+                           SMALL_BUFFER_SIZE));
             mirrorIn = new DataInputStream(NetUtils.getInputStream(mirrorSock));
 
             // Write header: Copied from DFSClient.java!
@@ -1603,6 +1606,12 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
     
    ************************************************************************ */
   
+  /** Header size for a packet */
+  static final int PKT_HEADER_LEN = ( 4 + /* Packet payload length */
+                                      8 + /* offset in block */
+                                      8 + /* seqno */
+                                      1   /* isLastPacketInBlock */);
+  
   class BlockSender implements java.io.Closeable {
     private Block block; // the block to read from
     private InputStream blockIn; // data stream
@@ -1622,12 +1631,6 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
     private boolean verifyChecksum; //if true, check is verified while reading
     private Throttler throttler;
     
-    static final int PKT_HEADER_LEN = ( 4 + /* PacketLen */
-                                        8 + /* offset in block */
-                                        8 + /* seqno */
-                                        1 + /* isLastPacketInBlock */
-                                        4   /* data len */ );
-       
     BlockSender(Block block, long startOffset, long length,
                 boolean corruptChecksumOk, boolean chunkOffsetOK,
                 boolean verifyChecksum) throws IOException {
@@ -1873,7 +1876,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
         out.flush();
         
         int maxChunksPerPacket;
-        int pktSize;
+        int pktSize = PKT_HEADER_LEN + SIZE_OF_INTEGER;
         
         if (transferToAllowed && !verifyChecksum && 
             baseStream instanceof SocketOutputStream && 
@@ -1891,12 +1894,11 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
                                 + bytesPerChecksum - 1)/bytesPerChecksum;
           
           // allocate smaller buffer while using transferTo(). 
-          pktSize = PKT_HEADER_LEN + checksumSize * maxChunksPerPacket;
+          pktSize += checksumSize * maxChunksPerPacket;
         } else {
           maxChunksPerPacket = Math.max(1,
                    (BUFFER_SIZE + bytesPerChecksum - 1)/bytesPerChecksum);
-          pktSize = PKT_HEADER_LEN + 
-                    (bytesPerChecksum + checksumSize) * maxChunksPerPacket;
+          pktSize += (bytesPerChecksum + checksumSize) * maxChunksPerPacket;
         }
 
         ByteBuffer pktBuf = ByteBuffer.allocate(pktSize);
@@ -2200,39 +2202,6 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
     }
   }
 
-  // this class is a bufferoutputstream that exposes the number of
-  // bytes in the buffer.
-  static private class DFSBufferedOutputStream extends BufferedOutputStream {
-    OutputStream out;
-    DFSBufferedOutputStream(OutputStream out, int capacity) {
-      super(out, capacity);
-      this.out = out;
-    }
-
-    public synchronized void flush() throws IOException {
-      super.flush();
-    }
-
-    /**
-     * Returns true if the channel pointer is already set at the
-     * specified offset. Otherwise returns false.
-     */
-    synchronized boolean samePosition(FSDatasetInterface data, 
-                                      FSDataset.BlockWriteStreams streams,
-                                      Block block,
-                                      long offset) 
-                                      throws IOException {
-      if (data.getChannelPosition(block, streams) + count == offset) {
-        return true;
-      }
-      LOG.debug("samePosition is false. " +
-                " current position " + data.getChannelPosition(block, streams)+
-                " buffered size " + count +
-                " new offset " + offset);
-      return false;
-    }
-  }
-
   /* A class that receives a block and wites to its own disk, meanwhile
    * may copies it to another site. If a throttler is provided,
    * streaming throttling is also supported. 
@@ -2242,13 +2211,13 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
     private boolean finalized;
     private DataInputStream in = null; // from where data are read
     private DataChecksum checksum; // from where chunks of a block can be read
-    private DataOutputStream out = null; // to block file at local disk
+    private OutputStream out = null; // to block file at local disk
     private DataOutputStream checksumOut = null; // to crc file at local disk
-    private DFSBufferedOutputStream bufStream = null;
     private int bytesPerChecksum;
     private int checksumSize;
-    private byte buf[];
-    private byte checksumBuf[];
+    private ByteBuffer buf; // contains one full packet.
+    private int bufRead; //amount of valid data in the buf
+    private int maxPacketReadLen;
     private long offsetInBlock;
     final private String inAddr;
     private String mirrorAddr;
@@ -2272,19 +2241,16 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
         this.checksum = DataChecksum.newDataChecksum(in);
         this.bytesPerChecksum = checksum.getBytesPerChecksum();
         this.checksumSize = checksum.getChecksumSize();
-        this.buf = new byte[bytesPerChecksum + checksumSize];
-        this.checksumBuf = new byte[checksumSize];
         //
         // Open local disk out
         //
         streams = data.writeToBlock(block, isRecovery);
         this.finalized = data.isValidBlock(block);
         if (streams != null) {
-          this.bufStream = new DFSBufferedOutputStream(
-                                          streams.dataOut, BUFFER_SIZE);
-          this.out = new DataOutputStream(bufStream);
+          this.out = streams.dataOut;
           this.checksumOut = new DataOutputStream(new BufferedOutputStream(
-                                          streams.checksumOut, BUFFER_SIZE));
+                                                    streams.checksumOut, 
+                                                    SMALL_BUFFER_SIZE));
         }
       } catch(IOException ioe) {
         IOUtils.closeStream(this);
@@ -2351,174 +2317,249 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
       }
     }
     
-    /* receive a chunk: write it to disk & mirror it to another stream */
-    private void receiveChunk( int len, byte[] checksumBuf, int checksumOff ) 
-                              throws IOException {
-      if (len <= 0 || len > bytesPerChecksum) {
-        throw new IOException("Got wrong length during writeBlock(" + block
-            + ") from " + inAddr + " at offset " + offsetInBlock + ": " + len
-            + " expected <= " + bytesPerChecksum);
-      }
+    /**
+     * Verify multiple CRC chunks. 
+     */
+    private void verifyChunks( byte[] dataBuf, int dataOff, int len, 
+                               byte[] checksumBuf, int checksumOff ) 
+                               throws IOException {
+      while (len > 0) {
+        int chunkLen = Math.min(len, bytesPerChecksum);
+        
+        checksum.update(dataBuf, dataOff, chunkLen);
 
-      in.readFully(buf, 0, len);
-
-      /*
-       * Verification is not included in the initial design. For now, it at
-       * least catches some bugs. Later, we can include this after showing that
-       * it does not affect performance much.
-       */
-      checksum.update(buf, 0, len);
-
-      if (!checksum.compare(checksumBuf, checksumOff)) {
-        throw new IOException("Unexpected checksum mismatch "
-            + "while writing " + block + " from " + inAddr);
-      }
-
-      checksum.reset();
-      offsetInBlock += len;
-
-      // First write to remote node before writing locally.
-      if (mirrorOut != null) {
-        try {
-          mirrorOut.writeInt(len);
-          mirrorOut.write(checksumBuf, checksumOff, checksumSize);
-          mirrorOut.write(buf, 0, len);
-        } catch (IOException ioe) {
-          handleMirrorOutError(ioe);
+        if (!checksum.compare(checksumBuf, checksumOff)) {
+          throw new IOException("Unexpected checksum mismatch " + 
+                                "while writing " + block + " from " + inAddr);
         }
-      }
 
-      try {
-        if (!finalized) {
-          out.write(buf, 0, len);
-          // Write checksum
-          checksumOut.write(checksumBuf, checksumOff, checksumSize);
-          myMetrics.bytesWritten.inc(len);
-        }
-      } catch (IOException iex) {
-        checkDiskError(iex);
-        throw iex;
-      }
-
-      if (throttler != null) { // throttle I/O
-        throttler.throttle(len + checksumSize + 4);
+        checksum.reset();
+        dataOff += chunkLen;
+        checksumOff += checksumSize;
+        len -= chunkLen;
       }
     }
 
-    /* 
-     * Receive and process a packet. It contains many chunks.
+    /**
+     * Makes sure buf.position() is zero without modifying buf.remaining().
+     * It moves the data if position needs to be changed.
      */
-    private void receivePacket(int packetSize) throws IOException {
-      /* TEMP: Currently this handles both interleaved 
-       * and non-interleaved DATA_CHUNKs in side the packet.
-       * non-interleaved is required for HADOOP-2758 and in future.
-       * iterleaved will be removed once extra buffer copies are removed
-       * in write path (HADOOP-1702).
-       * 
-       * Format of Non-interleaved data packets is described in the 
-       * comment before BlockSender.
+    private void shiftBufData() {
+      if (bufRead != buf.limit()) {
+        throw new IllegalStateException("bufRead should be same as " +
+                                        "buf.limit()");
+      }
+      
+      //shift the remaining data on buf to the front
+      if (buf.position() > 0) {
+        int dataLeft = buf.remaining();
+        if (dataLeft > 0) {
+          byte[] b = buf.array();
+          System.arraycopy(b, buf.position(), b, 0, dataLeft);
+        }
+        buf.position(0);
+        bufRead = dataLeft;
+        buf.limit(bufRead);
+      }
+    }
+    
+    /**
+     * reads upto toRead byte to buf at buf.limit() and increments the limit.
+     * throws an IOException if read does not succeed.
+     */
+    private int readToBuf(int toRead) throws IOException {
+      if (toRead < 0) {
+        toRead = (maxPacketReadLen > 0 ? maxPacketReadLen : buf.capacity())
+                 - buf.limit();
+      }
+      
+      int nRead = in.read(buf.array(), buf.limit(), toRead);
+      
+      if (nRead < 0) {
+        throw new EOFException("while trying to read " + toRead + " bytes");
+      }
+      bufRead = buf.limit() + nRead;
+      buf.limit(bufRead);
+      return nRead;
+    }
+    
+    
+    /**
+     * Reads (at least) one packet and returns the packet length.
+     * buf.position() points to the start of the packet and 
+     * buf.limit() point to the end of the packet. There could 
+     * be more data from next packet in buf.<br><br>
+     * 
+     * It tries to read a full packet with single read call.
+     * Consecutinve packets are usually of the same length.
+     */
+    private int readNextPacket() throws IOException {
+      /* This dances around buf a little bit, mainly to read 
+       * full packet with single read and to accept arbitarary size  
+       * for next packet at the same time.
        */
-      offsetInBlock = in.readLong(); // get offset of packet in block
-      long seqno = in.readLong();    // get seqno
-      boolean lastPacketInBlock = in.readBoolean();
-      int curPacketSize = 0;         
-      LOG.debug("Receiving one packet for block " + block +
-                " of size " + packetSize +
-                " seqno " + seqno +
-                " offsetInBlock " + offsetInBlock +
-                " lastPacketInBlock " + lastPacketInBlock);
+      if (buf == null) {
+        /* initialize buffer to the best guess size:
+         * 'chunksPerPacket' calculation here should match the same 
+         * calculation in DFSClient to make the guess accurate.
+         */
+        int chunkSize = bytesPerChecksum + checksumSize;
+        int chunksPerPacket = (writePacketSize - PKT_HEADER_LEN - 
+                               SIZE_OF_INTEGER + chunkSize - 1)/chunkSize;
+        buf = ByteBuffer.allocate(PKT_HEADER_LEN + SIZE_OF_INTEGER +
+                                  Math.max(chunksPerPacket, 1) * chunkSize);
+        buf.limit(0);
+      }
+      
+      // See if there is data left in the buffer :
+      if (bufRead > buf.limit()) {
+        buf.limit(bufRead);
+      }
+      
+      while (buf.remaining() < SIZE_OF_INTEGER) {
+        if (buf.position() > 0) {
+          shiftBufData();
+        }
+        readToBuf(-1);
+      }
+      
+      /* We mostly have the full packet or at least enough for an int
+       */
+      buf.mark();
+      int payloadLen = buf.getInt();
+      buf.reset();
+      
+      if (payloadLen == 0) {
+        //end of stream!
+        buf.limit(buf.position() + SIZE_OF_INTEGER);
+        return 0;
+      }
+      
+      // check corrupt values for pktLen, 100MB upper limit should be ok?
+      if (payloadLen < 0 || payloadLen > (100*1024*1024)) {
+        throw new IOException("Incorrect value for packet payload : " +
+                              payloadLen);
+      }
+      
+      int pktSize = payloadLen + PKT_HEADER_LEN;
+      
+      if (buf.remaining() < pktSize) {
+        //we need to read more data
+        int toRead = pktSize - buf.remaining();
+        
+        // first make sure buf has enough space.        
+        int spaceLeft = buf.capacity() - buf.limit();
+        if (toRead > spaceLeft && buf.position() > 0) {
+          shiftBufData();
+          spaceLeft = buf.capacity() - buf.limit();
+        }
+        if (toRead > spaceLeft) {
+          byte oldBuf[] = buf.array();
+          int toCopy = buf.limit();
+          buf = ByteBuffer.allocate(toCopy + toRead);
+          System.arraycopy(oldBuf, 0, buf.array(), 0, toCopy);
+          buf.limit(toCopy);
+        }
+        
+        //now read:
+        while (toRead > 0) {
+          toRead -= readToBuf(toRead);
+        }
+      }
+      
+      if (buf.remaining() > pktSize) {
+        buf.limit(buf.position() + pktSize);
+      }
+      
+      if (pktSize > maxPacketReadLen) {
+        maxPacketReadLen = pktSize;
+      }
+      
+      return payloadLen;
+    }
+    
+    /** 
+     * Receives and processes a packet. It can contain many chunks.
+     * returns size of the packet.
+     */
+    private int receivePacket() throws IOException {
+      
+      int payloadLen = readNextPacket();
+      
+      if (payloadLen <= 0) {
+        return payloadLen;
+      }
+      
+      buf.mark();
+      //read the header
+      buf.getInt(); // packet length
+      offsetInBlock = buf.getLong(); // get offset of packet in block
+      long seqno = buf.getLong();    // get seqno
+      boolean lastPacketInBlock = (buf.get() != 0);
+      
+      int endOfHeader = buf.position();
+      buf.reset();
+      
+      if (LOG.isDebugEnabled()){
+        LOG.debug("Receiving one packet for block " + block +
+                  " of length " + payloadLen +
+                  " seqno " + seqno +
+                  " offsetInBlock " + offsetInBlock +
+                  " lastPacketInBlock " + lastPacketInBlock);
+      }
+      
       setBlockPosition(offsetInBlock);
       
-      int len = in.readInt();
-      curPacketSize += 4;            // read an integer in previous line
-
-      // send packet header to next datanode in pipeline
+      //First write the packet to the mirror:
       if (mirrorOut != null) {
         try {
-          int mirrorPacketSize = packetSize;
-          if (len > bytesPerChecksum) {
-            /* 
-             * This is a packet with non-interleaved checksum. 
-             * But we are sending interleaving checksums to mirror, 
-             * which changes packet len. Adjust the packet size for mirror.
-             * 
-             * As mentioned above, this is mismatch is 
-             * temporary till HADOOP-1702.
-             */
-            
-            //find out how many chunks are in this patcket :
-            int chunksInPkt = (len + bytesPerChecksum - 1)/bytesPerChecksum;
-            
-            // we send 4 more bytes for for each of the extra 
-            // checksum chunks. so :
-            mirrorPacketSize += (chunksInPkt - 1) * 4;
-          }
-          mirrorOut.writeInt(mirrorPacketSize);
-          mirrorOut.writeLong(offsetInBlock);
-          mirrorOut.writeLong(seqno);
-          mirrorOut.writeBoolean(lastPacketInBlock);
+          mirrorOut.write(buf.array(), buf.position(), buf.remaining());
+          mirrorOut.flush();
         } catch (IOException e) {
           handleMirrorOutError(e);
         }
       }
 
-      if (len == 0) {
-        LOG.info("Receiving empty packet for block " + block);
-        if (mirrorOut != null) {
-          try {
-            mirrorOut.writeInt(len);
-            mirrorOut.flush();
-          } catch (IOException e) {
-            handleMirrorOutError(e);
-          }
-        }
-      }
+      buf.position(endOfHeader);        
+      int len = buf.getInt();
+      
+      if (len < 0) {
+        throw new IOException("Got wrong length during writeBlock(" + block + 
+                              ") from " + inAddr + " at offset " + 
+                              offsetInBlock + ": " + len); 
+      } 
 
-      while (len != 0) {
-        int checksumOff = 0;    
-        if (len > 0) {
-          int checksumLen = (len + bytesPerChecksum - 1)/bytesPerChecksum*
-                            checksumSize;
-          if (checksumBuf.length < checksumLen) {
-            checksumBuf = new byte[checksumLen];
-          }
-          // read the checksum
-          in.readFully(checksumBuf, 0, checksumLen);
+      if (len == 0) {
+        LOG.debug("Receiving empty packet for block " + block);
+      } else {
+        offsetInBlock += len;
+
+        int checksumLen = ((len + bytesPerChecksum - 1)/bytesPerChecksum)*
+                                                              checksumSize;
+
+        if ( buf.remaining() != (checksumLen + len)) {
+          throw new IOException("Data remaining in packet does not match " +
+                                "sum of checksumLen and dataLen");
         }
-        
-        while (len != 0) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Receiving one chunk for block " + block +
-                      " of size " + len);
+        int checksumOff = buf.position();
+        int dataOff = checksumOff + checksumLen;
+        byte pktBuf[] = buf.array();
+
+        buf.position(buf.limit()); // move to the end of the data.
+
+        verifyChunks(pktBuf, dataOff, len, pktBuf, checksumOff);
+
+        try {
+          if (!finalized) {
+            //finally write to the disk :
+            out.write(pktBuf, dataOff, len);
+            checksumOut.write(pktBuf, checksumOff, checksumLen);
+            myMetrics.bytesWritten.inc(len);
           }
-          
-          int toRecv = Math.min(len, bytesPerChecksum);
-          
-          curPacketSize += (toRecv + checksumSize);
-          if (curPacketSize > packetSize) {
-            throw new IOException("Packet size for block " + block +
-                                  " too long " + curPacketSize +
-                                  " was expecting " + packetSize);
-          } 
-          
-          receiveChunk(toRecv, checksumBuf, checksumOff);
-          
-          len -= toRecv;
-          checksumOff += checksumSize;       
+        } catch (IOException iex) {
+          checkDiskError(iex);
+          throw iex;
         }
-        
-        if (curPacketSize == packetSize) {
-          if (mirrorOut != null) {
-            try {
-              mirrorOut.flush();
-            } catch (IOException e) {
-              handleMirrorOutError(e);
-            }
-          }
-          break;
-        }
-        len = in.readInt();
-        curPacketSize += 4;
       }
 
       /// flush entire packet before sending ack
@@ -2529,6 +2570,12 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
         ((PacketResponder)responder.getRunnable()).enqueue(seqno,
                                         lastPacketInBlock); 
       }
+      
+      if (throttler != null) { // throttle I/O
+        throttler.throttle(payloadLen);
+      }
+      
+      return payloadLen;
     }
 
     public void writeChecksumHeader(DataOutputStream mirrorOut) throws IOException {
@@ -2562,13 +2609,9 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
         }
 
         /* 
-         * Skim packet headers. A response is needed for every packet.
+         * Receive until packet length is zero.
          */
-        int len = in.readInt(); // get packet size
-        while (len != 0) {
-          receivePacket(len);
-          len = in.readInt(); // get packet size
-        }
+        while (receivePacket() > 0) {}
 
         // flush the mirror out
         if (mirrorOut != null) {
@@ -2637,8 +2680,9 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
         }
         return;
       }
-      if (bufStream.samePosition(data, streams, block, offsetInBlock)) {
-        return;
+
+      if (data.getChannelPosition(block, streams) == offsetInBlock) {
+        return;                   // nothing to do 
       }
       if (offsetInBlock % bytesPerChecksum != 0) {
         throw new IOException("setBlockPosition trying to set position to " +
