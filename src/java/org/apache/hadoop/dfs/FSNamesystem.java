@@ -1556,6 +1556,17 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       Block last = blocks[blocks.length - 1];
       if (last.getNumBytes() == 0) {
           pendingFile.removeBlock(last);
+          blocksMap.removeINode(last);
+          for (Iterator<DatanodeDescriptor> it = 
+               blocksMap.nodeIterator(last); it.hasNext();) {
+            DatanodeDescriptor node = it.next();
+            addToInvalidates(last, node);
+          }
+          /* What else do we need to do?
+           * removeStoredBlock()? we do different things when a block is 
+           * removed in different contexts. Mostly these should be
+           * same and/or should be in one place.
+           */
       }
     }
 
@@ -1570,9 +1581,9 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     // replicate blocks of this file.
     checkReplicationFactor(newFile);
   
-    NameNode.stateChangeLog.debug("DIR* NameSystem.internalReleaseCreate: " + 
-                                  src + " is no longer written to by " + 
-                                  holder);
+    NameNode.stateChangeLog.info("DIR* NameSystem.internalReleaseCreate: " + 
+                                 src + " is no longer written to by " + 
+                                 holder);
   }
 
   /**

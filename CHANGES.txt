@@ -833,6 +833,8 @@ Release 0.17.0 - Unreleased
 
     HADOOP-3031. Fix javac warnings in test classes. (cdouglas)
 
+    HADOOP-3382. Fix memory leak when files are not cleanly closed (rangadi)
+
 Release 0.16.4 - 2008-05-05
 
   BUG FIXES
