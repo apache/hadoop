@@ -174,7 +174,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     fs = cluster.getFileSystem();
     Path file1 = new Path("/tmp/testBlockVerification/file1");
     DFSTestUtil.createFile(fs, file1, 1024, (short)3, 0);
-    String block = DFSTestUtil.getFirstBlock(fs, file1).toString();
+    String block = DFSTestUtil.getFirstBlock(fs, file1).getBlockName();
     
     dfsClient = new DFSClient(new InetSocketAddress("localhost", 
                                         cluster.getNameNodePort()), conf);

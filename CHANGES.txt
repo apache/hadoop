@@ -235,6 +235,9 @@ Trunk (unreleased changes)
     HADOOP-3365. Removes an unnecessary copy of the key from SegmentDescriptor
     to MergeQueue. (Devaraj Das)
 
+    HADOOP-3388. Fix for TestDatanodeBlockScanner to handle blocks with
+    generation stamps in them.  (dhruba)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES
