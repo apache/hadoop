@@ -241,6 +241,9 @@ Trunk (unreleased changes)
     HADOOP-3388. Fix for TestDatanodeBlockScanner to handle blocks with
     generation stamps in them.  (dhruba)
 
+    HADOOP-3203. Fixes TaskTracker::localizeJob to pass correct file sizes
+    for the jarfile and the jobfile. (Amareshwari Sriramadasu via ddas)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -635,26 +635,18 @@ public class TaskTracker
     Task t = tip.getTask();
     
     JobID jobId = t.getJobID();
-    String jobFile = t.getJobFile();
-    // Get sizes of JobFile and JarFile
-    // sizes are -1 if they are not present.
-    FileSystem fileSystem = FileSystem.get(fConf);
-    FileStatus status[] = fileSystem.listStatus(new Path(jobFile).getParent());
-    long jarFileSize = -1;
+    Path jobFile = new Path(t.getJobFile());
+    // Get size of JobFile.
+    // size is -1 if not present.
+    FileSystem fs = FileSystem.getNamed(jobClient.getFilesystemName(),fConf);
+    FileStatus status = null;
     long jobFileSize = -1;
-    for(FileStatus stat : status) {
-      if (stat.getPath().toString().contains("job.xml")) {
-        jobFileSize = stat.getLen();
-      } else {
-        jobFileSize = -1;
-      }
-      if (stat.getPath().toString().contains("job.jar")) {
-        jarFileSize = stat.getLen();
-      } else {
-        jarFileSize = -1;
-      }
+    try {
+      status = fs.getFileStatus(jobFile);
+      jobFileSize = status.getLen();
+    } catch(FileNotFoundException fe) {
+      jobFileSize = -1;
     }
-
     Path localJobFile = lDirAlloc.getLocalPathForWrite((getJobCacheSubdir()
                                     + Path.SEPARATOR + jobId 
                                     + Path.SEPARATOR + "job.xml"),
@@ -676,8 +668,7 @@ public class TaskTracker
             throw new IOException("Not able to create job directory "
                                   + jobDir.toString());
         }
-        FileSystem fs =FileSystem.getNamed(jobClient.getFilesystemName(),fConf);
-        fs.copyToLocalFile(new Path(jobFile), localJobFile);
+        fs.copyToLocalFile(jobFile, localJobFile);
         JobConf localJobConf = new JobConf(localJobFile);
         
         // create the 'work' directory
@@ -694,7 +685,15 @@ public class TaskTracker
         
         // copy Jar file to the local FS and unjar it.
         String jarFile = localJobConf.getJar();
+        long jarFileSize = -1;
         if (jarFile != null) {
+          Path jarFilePath = new Path(jarFile);
+          try {
+            status = fs.getFileStatus(jarFilePath);
+            jarFileSize = status.getLen();
+          } catch(FileNotFoundException fe) {
+            jarFileSize = -1;
+          }
           // Here we check for and we check five times the size of jarFileSize
           // to accommodate for unjarring the jar file in work directory 
           localJarFile = new Path(lDirAlloc.getLocalPathForWrite(
@@ -705,7 +704,7 @@ public class TaskTracker
           if (!localFs.mkdirs(localJarFile.getParent())) {
             throw new IOException("Mkdirs failed to create jars directory "); 
           }
-          fs.copyToLocalFile(new Path(jarFile), localJarFile);
+          fs.copyToLocalFile(jarFilePath, localJarFile);
           localJobConf.setJar(localJarFile.toString());
           OutputStream out = localFs.create(localJobFile);
           try {
