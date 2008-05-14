@@ -120,6 +120,9 @@ Trunk (unreleased changes)
     HADOOP-3334. Move lease handling from FSNamesystem into a seperate class.
     (Tsz Wo (Nicholas), SZE via rangadi)
 
+    HADOOP-3332. Reduces the amount of logging in Reducer's shuffle phase.
+    (Devaraj Das)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
