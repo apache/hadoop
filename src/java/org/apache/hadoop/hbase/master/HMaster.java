@@ -301,6 +301,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   public Map<String, HServerLoad> getServersToLoad() {
     return serverManager.getServersToLoad();
   }
+  
+  /** @return The average load */
+  public double getAverageLoad() {
+    return serverManager.getAverageLoad();
+  }
 
   /**
    * @return Location of the <code>-ROOT-</code> region.

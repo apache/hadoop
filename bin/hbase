@@ -103,14 +103,6 @@ IFS=
 # CLASSPATH initially contains $HBASE_CONF_DIR
 CLASSPATH="${HBASE_CONF_DIR}"
 
-# Add libs to CLASSPATH
-# Do this early so hadoop jar comes before hbase classes; otherwise
-# complaint because way webapps are loaded, expectation is that
-# loading class is from same jar as webapps themselves (only true
-# if hadoop comes first).
-for f in $HBASE_HOME/lib/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
 
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
@@ -125,7 +117,7 @@ if [ -d "$HBASE_HOME/build/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HBASE_HOME/build
 fi
 
-# for releases, add hbase, hadoop & webapps to CLASSPATH
+# for releases, add hbase & webapps to CLASSPATH
 for f in $HBASE_HOME/hbase*.jar; do
   if [ -f $f ]; then
     CLASSPATH=${CLASSPATH}:$f;
@@ -134,6 +126,11 @@ done
 if [ -d "$HBASE_HOME/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HBASE_HOME
 fi
+
+# Add libs to CLASSPATH
+for f in $HBASE_HOME/lib/*.jar; do
+  CLASSPATH=${CLASSPATH}:$f;
+done
 
 for f in $HBASE_HOME/lib/jetty-ext/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;

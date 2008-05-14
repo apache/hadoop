@@ -15,26 +15,24 @@
   import="org.apache.hadoop.hbase.HTableDescriptor" %><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   HBaseConfiguration conf = master.getConfiguration();
-  TableFormatter formatter = new HtmlTableFormatter(out);
-  ShowCommand show = new ShowCommand(out, formatter, "tables");
   HServerAddress rootLocation = master.getRootRegionLocation();
   Map<Text, MetaRegion> onlineRegions = master.getOnlineMetaRegions();
   Map<String, HServerInfo> serverToServerInfos =
     master.getServersToServerInfo();
-  int interval = conf.getInt("hbase.regionserver.msginterval", 6000)/1000;
+  int interval = conf.getInt("hbase.regionserver.msginterval", 3000)/1000;
 %><?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-<title>HBase Master: <%= master.getMasterAddress()%></title>
+<title>HBase Master: <%= master.getMasterAddress().getHostname()%>:<%= master.getMasterAddress().getPort() %></title>
 <link rel="stylesheet" type="text/css" href="/static/hbase.css" />
 </head>
 
 <body>
 
 <a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
-<h1 id="page_title">Master: <%=master.getMasterAddress()%></h1>
+<h1 id="page_title">Master: <%=master.getMasterAddress().getHostname()%>:<%=master.getMasterAddress().getPort()%></h1>
 <p id="links_menu"><a href="/hql.jsp">HQL</a>, <a href="/logs/">Local logs</a>, <a href="/stacks">Thread Dump</a>, <a href="/logLevel">Log Level</a></p>
 <hr id="head_rule" />
 
@@ -47,54 +45,61 @@
 <tr><td>Hadoop Compiled</td><td><%= org.apache.hadoop.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.util.VersionInfo.getUser() %></td><td>When Hadoop version was compiled and by whom</td></tr>
 <tr><td>Filesystem</td><td><%= conf.get("fs.default.name") %></td><td>Filesystem HBase is running on</td></tr>
 <tr><td>HBase Root Directory</td><td><%= master.getRootDir().toString() %></td><td>Location of HBase home directory</td></tr>
+<tr><td>Load average</td><td><%= master.getAverageLoad() %></td><td>Average load across all region servers. Naive computation.</td></tr>
 </table>
 
-<h2>Online META Regions</h2>
-<% if (rootLocation != null) { %>
+<h2>Catalog Tables</h2>
+<% 
+  if (rootLocation != null) { %>
 <table>
-<tr><th>Name</th><th>Server</th></tr>
-<tr><td><%= HConstants.ROOT_TABLE_NAME.toString() %></td><td><%= rootLocation.toString() %></td></tr>
+<tr><th>Table</th><th>Description</th></tr>
+<tr><td><a href=/table.jsp?name=<%= HConstants.ROOT_TABLE_NAME.toString() %>><%= HConstants.ROOT_TABLE_NAME.toString() %></a></td><td>The -ROOT- table holds references to all .META. regions.</td></tr>
 <%
-  if (onlineRegions != null && onlineRegions.size() > 0) { %>
-  <% for (Map.Entry<Text, MetaRegion> e: onlineRegions.entrySet()) {
-    MetaRegion meta = e.getValue();
-  %>
-  <tr><td><%= meta.getRegionName().toString() %></td><td><%= meta.getServer().toString() %></td></tr>
-  <% }
-  } %>
+    if (onlineRegions != null && onlineRegions.size() > 0) { %>
+<tr><td><a href=/table.jsp?name=<%= HConstants.META_TABLE_NAME.toString() %>><%= HConstants.META_TABLE_NAME.toString() %></a></td><td>The .META. table holds references to all User Table regions</td></tr>
+  
+<%  } %>
+</table>
+<%} %>
+
+<h2>User Tables</h2>
+<% HTableDescriptor[] tables = new HBaseAdmin(conf).listTables(); 
+   if(tables != null && tables.length > 0) { %>
+<table>
+<tr><th>Table</th><th>Description</th></tr>
+<%   for(HTableDescriptor htDesc : tables ) { %>
+<tr><td><a href=/table.jsp?name=<%= htDesc.getName() %>><%= htDesc.getName() %></a> </td><td><%= htDesc.toString() %></td></tr>
+<%   }  %>
+<p> <%= tables.length %> table(s) in set.</p>
 </table>
 <% } %>
 
-<h2>Tables</h2>
-<% ReturnMsg msg = show.execute(conf); %>
-<p><%=msg %></p>
-
 <h2>Region Servers</h2>
 <% if (serverToServerInfos != null && serverToServerInfos.size() > 0) { %>
-<% int totalRegions = 0;
-   int totalRequests = 0; 
+<%   int totalRegions = 0;
+     int totalRequests = 0; 
 %>
 
 <table>
 <tr><th rowspan=<%= serverToServerInfos.size() + 1%>></th><th>Address</th><th>Start Code</th><th>Load</th></tr>
-
-<%   for (Map.Entry<String, HServerInfo> e: serverToServerInfos.entrySet()) {
-       HServerInfo hsi = e.getValue();
+<%   String[] serverNames = serverToServerInfos.keySet().toArray(new String[serverToServerInfos.size()]);
+     Arrays.sort(serverNames);
+     for (String serverName: serverNames) {
+       HServerInfo hsi = serverToServerInfos.get(serverName);
        String url = "http://" +
-         hsi.getServerAddress().getBindAddress().toString() + ":" +
+         hsi.getServerAddress().getHostname().toString() + ":" +
          hsi.getInfoPort() + "/";
-       String load = hsi.getLoad().toString();
+       String hostname = hsi.getServerAddress().getHostname() + ":" + hsi.getServerAddress().getPort();
        totalRegions += hsi.getLoad().getNumberOfRegions();
-       totalRequests += hsi.getLoad().getNumberOfRequests();
+       totalRequests += hsi.getLoad().getNumberOfRequests() / interval;
        long startCode = hsi.getStartCode();
-       String address = hsi.getServerAddress().toString();
 %>
-<tr><td><a href="<%= url %>"><%= address %></a></td><td><%= startCode %></td><td><%= load %></td></tr>
+<tr><td><a href="<%= url %>"><%= hostname %></a></td><td><%= startCode %></td><td><%= hsi.getLoad().toString(interval) %></td></tr>
 <%   } %>
 <tr><th>Total: </th><td>servers: <%= serverToServerInfos.size() %></td><td>&nbsp;</td><td>requests: <%= totalRequests %> regions: <%= totalRegions %></td></tr>
 </table>
 
-<p>Load is requests per <em>hbase.regionsserver.msginterval</em> (<%=interval%> second(s)) and count of regions loaded</p>
+<p>Load is requests per second and count of regions loaded</p>
 <% } %>
 </body>
 </html>

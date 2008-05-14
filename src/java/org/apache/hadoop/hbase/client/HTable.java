@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
@@ -175,13 +177,76 @@ public class HTable implements HConstants {
         throw e;
       }
     } while (startRow.compareTo(EMPTY_START_ROW) != 0);
-
-    Text[] arr = new Text[keyList.size()];
-    for (int i = 0; i < keyList.size(); i++ ){
-      arr[i] = keyList.get(i);
-    }
     
-    return arr;
+    return keyList.toArray(new Text[keyList.size()]);
+  }
+  
+  /**
+   * Get all the regions and their address for this table
+   * @return A map of HRegionInfo with it's server address
+   * @throws IOException
+   */
+  @SuppressWarnings("null")
+  public Map<HRegionInfo, HServerAddress> getRegionsInfo() throws IOException {
+	// TODO This code is a near exact copy of getStartKeys. To be refactored HBASE-626
+    HashMap<HRegionInfo, HServerAddress> regionMap = new HashMap<HRegionInfo, HServerAddress>();
+
+    long scannerId = -1L;
+
+    Text startRow = new Text(tableName.toString() + ",,999999999999999");
+    HRegionLocation metaLocation = null;
+    HRegionInterface server;
+    
+    // scan over the each meta region
+    do {
+      try{
+        // turn the start row into a location
+        metaLocation = 
+          connection.locateRegion(META_TABLE_NAME, startRow);
+
+        // connect to the server hosting the .META. region
+        server = 
+          connection.getHRegionConnection(metaLocation.getServerAddress());
+
+        // open a scanner over the meta region
+        scannerId = server.openScanner(
+          metaLocation.getRegionInfo().getRegionName(),
+          new Text[]{COL_REGIONINFO}, tableName, LATEST_TIMESTAMP,
+          null);
+        
+        // iterate through the scanner, accumulating regions and their regionserver
+        while (true) {
+          RowResult values = server.next(scannerId);
+          if (values == null || values.size() == 0) {
+            break;
+          }
+          
+          HRegionInfo info = new HRegionInfo();
+          info = (HRegionInfo) Writables.getWritable(
+            values.get(COL_REGIONINFO).getValue(), info);
+          
+          if (!info.getTableDesc().getName().equals(this.tableName)) {
+            break;
+          }
+          
+          if (info.isOffline() || info.isSplit()) {
+            continue;
+          }
+          regionMap.put(info, metaLocation.getServerAddress());
+        }
+        
+        // close that remote scanner
+        server.close(scannerId);
+          
+        // advance the startRow to the end key of the current region
+        startRow = metaLocation.getRegionInfo().getEndKey();          
+      } catch (IOException e) {
+        // need retry logic?
+        throw e;
+      }
+    } while (startRow.compareTo(EMPTY_START_ROW) != 0);
+    
+    return regionMap;
   }
   
   /** 

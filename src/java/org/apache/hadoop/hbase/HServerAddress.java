@@ -89,7 +89,7 @@ public class HServerAddress implements WritableComparable {
     stringValue = bindAddress + ":" + port;
   }
 
-  /** @return host name */
+  /** @return bind address */
   public String getBindAddress() {
     return address.getAddress().getHostAddress();
   }
@@ -97,6 +97,11 @@ public class HServerAddress implements WritableComparable {
   /** @return port number */
   public int getPort() {
     return address.getPort();
+  }
+  
+  /** @return host name */
+  public String getHostname() {
+    return address.getHostName();
   }
 
   /** @return the InetSocketAddress */

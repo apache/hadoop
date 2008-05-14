@@ -70,7 +70,16 @@ public class HServerLoad implements WritableComparable {
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return "requests: " + numberOfRequests + " regions: " + numberOfRegions;
+    return toString(1);
+  }
+  
+  /**
+   * Returns toString() with the number of requests divided by the message interval in seconds
+   * @param msgInterval
+   * @return The load as a String
+   */
+  public String toString(int msgInterval) {
+    return "requests: " + numberOfRequests/msgInterval + " regions: " + numberOfRegions;
   }
   
   /** {@inheritDoc} */

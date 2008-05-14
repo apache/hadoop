@@ -1266,6 +1266,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   public boolean isStopRequested() {
     return stopRequested.get();
   }
+  
+  /**
+   * 
+   * @return the configuration
+   */
+  public HBaseConfiguration getConfiguration() {
+    return conf;
+  }
 
   /** @return the write lock for the server */
   ReentrantReadWriteLock.WriteLock getWriteLock() {
