@@ -96,6 +96,7 @@ public class RpcMetrics implements Updater {
 		value.pushMetric(metricsRecord);
 	}
     }
+    metricsRecord.update();
   }
 
   public void shutdown() {

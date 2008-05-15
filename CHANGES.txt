@@ -835,6 +835,9 @@ Release 0.17.0 - Unreleased
 
     HADOOP-3382. Fix memory leak when files are not cleanly closed (rangadi)
 
+    HADOOP-3322. Fix to push MetricsRecord for rpc metrics. (Eric Yang via
+    mukund)
+
 Release 0.16.4 - 2008-05-05
 
   BUG FIXES
