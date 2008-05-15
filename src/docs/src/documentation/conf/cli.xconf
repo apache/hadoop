@@ -212,6 +212,7 @@
    <exclude pattern="**/"/>
    <exclude pattern="api/**"/>
    <exclude pattern="changes.html"/>
+   <exclude pattern="releasenotes.html"/>
 
 <!--
   This is a workaround for FOR-284 "link rewriting broken when
