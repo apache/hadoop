@@ -134,6 +134,9 @@ Trunk (unreleased changes)
     HADOOP-3355. Enhances Configuration class to accept hex numbers for getInt
     and getLong. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3350. Add an argument to distcp to permit the user to limit the
+    number of maps. (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

@@ -27,6 +27,8 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.util.CopyFiles;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -519,4 +521,50 @@ public class TestCopyFiles extends TestCase {
       if (cluster != null) { cluster.shutdown(); }
     }
   }
+
+  public void testMapCount() throws Exception {
+    String namenode = null;
+    MiniDFSCluster dfs = null;
+    MiniMRCluster mr = null;
+    try {
+      Configuration conf = new Configuration();
+      dfs = new MiniDFSCluster(conf, 3, true, null);
+      FileSystem fs = dfs.getFileSystem();
+      namenode = fs.getUri().toString();
+      mr = new MiniMRCluster(3, namenode, 1);
+      MyFile[] files = createFiles(fs.getUri(), "/srcdat");
+      long totsize = 0;
+      for (MyFile f : files) {
+        totsize += f.getSize();
+      }
+      JobConf job = mr.createJobConf();
+      job.setLong("distcp.bytes.per.map", totsize / 3);
+      ToolRunner.run(new CopyFiles(job),
+          new String[] {"-m", "100",
+                        "-log",
+                        namenode+"/logs",
+                        namenode+"/srcdat",
+                        namenode+"/destdat"});
+      assertTrue("Source and destination directories do not match.",
+                 checkFiles(namenode, "/destdat", files));
+      FileStatus[] logs = fs.listStatus(new Path(namenode+"/logs"));
+      // rare case where splits are exact, logs.length can be 4
+      assertTrue("Unexpected map count", logs.length == 5 || logs.length == 4);
+
+      deldir(namenode, "/destdat");
+      deldir(namenode, "/logs");
+      ToolRunner.run(new CopyFiles(job),
+          new String[] {"-m", "1",
+                        "-log",
+                        namenode+"/logs",
+                        namenode+"/srcdat",
+                        namenode+"/destdat"});
+      logs = fs.listStatus(new Path(namenode+"/logs"));
+      assertTrue("Unexpected map count", logs.length == 2);
+    } finally {
+      if (dfs != null) { dfs.shutdown(); }
+      if (mr != null) { mr.shutdown(); }
+    }
+  }
+
 }
