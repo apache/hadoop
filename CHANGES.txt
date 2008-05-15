@@ -137,6 +137,9 @@ Trunk (unreleased changes)
     HADOOP-3350. Add an argument to distcp to permit the user to limit the
     number of maps. (cdouglas)
 
+    HADOOP-3013. Add corrupt block reporting to fsck.
+    (lohit vijayarenu via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

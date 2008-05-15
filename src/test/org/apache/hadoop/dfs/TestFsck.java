@@ -22,6 +22,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.io.File;
+import java.io.RandomAccessFile;
+import java.lang.Exception;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.nio.ByteBuffer;
+import java.util.Random;
 
 import junit.framework.TestCase;
 
@@ -32,6 +38,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * A JUnit test for doing fsck
@@ -205,5 +212,65 @@ public class TestFsck extends TestCase {
       if (fs != null) {try{fs.close();} catch(Exception e){}}
       if (cluster != null) { cluster.shutdown(); }
     }
+  }
+
+  public void testCorruptBlock() throws Exception {
+    Configuration conf = new Configuration();
+    FileSystem fs = null;
+    DFSClient dfsClient = null;
+    LocatedBlocks blocks = null;
+    int replicaCount = 0;
+    Random random = new Random();
+    String outStr = null;
+
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
+    cluster.waitActive();
+    fs = cluster.getFileSystem();
+    Path file1 = new Path("/testCorruptBlock");
+    DFSTestUtil.createFile(fs, file1, 1024, (short)3, 0);
+    String block = DFSTestUtil.getFirstBlock(fs, file1).getBlockName();
+
+    // Make sure filesystem is in healthy state
+    outStr = runFsck(conf, "/");
+    System.out.println(outStr);
+    assertTrue(outStr.contains("HEALTHY"));
+    
+    // corrupt replicas 
+    File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
+    for (int i=0; i < 6; i++) {
+      File blockFile = new File(baseDir, "data" + (i+1) + "/current/" +
+                                block);
+      if (blockFile.exists()) {
+        RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
+        FileChannel channel = raFile.getChannel();
+        String badString = "BADBAD";
+        int rand = random.nextInt((int)channel.size()/2);
+        raFile.seek(rand);
+        raFile.write(badString.getBytes());
+        raFile.close();
+      }
+    }
+    // Read the file to trigger reportBadBlocks
+    try {
+      IOUtils.copyBytes(fs.open(file1), new IOUtils.NullOutputStream(), conf,
+                        true);
+    } catch (IOException ie) {
+      // Ignore exception
+    }
+    dfsClient = new DFSClient(new InetSocketAddress("localhost",
+                               cluster.getNameNodePort()), conf);
+    blocks = dfsClient.namenode.
+               getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
+    replicaCount = blocks.get(0).getLocations().length;
+    assertTrue (replicaCount == 3);
+    assertTrue (blocks.get(0).isCorrupt());
+
+    // Check if fsck reports the same
+    outStr = runFsck(conf, "/");
+    System.out.println(outStr);
+    assertTrue(outStr.contains("CORRUPT"));
+    assertTrue(outStr.contains("testCorruptBlock"));
+
+    cluster.shutdown();
   }
 }

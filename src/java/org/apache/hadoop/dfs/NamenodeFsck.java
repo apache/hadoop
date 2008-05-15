@@ -184,6 +184,7 @@ public class NamenodeFsck {
     }
     if (res.totalFiles % 100 == 0) { out.flush(); }
     int missing = 0;
+    int corrupt = 0;
     long missize = 0;
     int underReplicatedPerFile = 0;
     int misReplicatedPerFile = 0;
@@ -191,6 +192,7 @@ public class NamenodeFsck {
     int i = 0;
     for (LocatedBlock lBlk : blocks.getLocatedBlocks()) {
       Block block = lBlk.getBlock();
+      boolean isCorrupt = lBlk.isCorrupt();
       String blkName = block.toString();
       DatanodeInfo[] locs = lBlk.getLocations();
       res.totalReplicas += locs.length;
@@ -198,6 +200,12 @@ public class NamenodeFsck {
       if (locs.length > targetFileReplication) {
         res.excessiveReplicas += (locs.length - targetFileReplication);
         res.numOverReplicatedBlocks += 1;
+      }
+      // Check if block is Corrupt
+      if (isCorrupt) {
+        corrupt++;
+        res.corruptBlocks++;
+        out.print("\n" + path + ": CORRUPT block " + block.getBlockName()+"\n");
       }
       if (locs.length >= minReplication)
         res.numMinReplicatedBlocks++;
@@ -253,8 +261,8 @@ public class NamenodeFsck {
       report.append('\n');
       i++;
     }
-    if (missing > 0) {
-      if (!showFiles) {
+    if ((missing > 0) || (corrupt > 0)) {
+      if (!showFiles && (missing > 0)) {
         out.print("\n" + path + ": MISSING " + missing
             + " blocks of total size " + missize + " B.");
       }
@@ -493,6 +501,7 @@ public class NamenodeFsck {
     private ArrayList<String> missingIds = new ArrayList<String>();
     private long missingSize = 0L;
     private long corruptFiles = 0L;
+    private long corruptBlocks = 0L;
     private long excessiveReplicas = 0L;
     private long missingReplicas = 0L;
     private long numOverReplicatedBlocks = 0L;
@@ -515,7 +524,7 @@ public class NamenodeFsck {
      * DFS is considered healthy if there are no missing blocks.
      */
     public boolean isHealthy() {
-      return missingIds.size() == 0;
+      return ((missingIds.size() == 0) && (corruptBlocks == 0));
     }
     
     /** Add a missing block name, plus its size. */
@@ -657,11 +666,16 @@ public class NamenodeFsck {
       if (totalOpenFilesBlocks != 0)
         res.append(" (Total open file blocks (not validated): " + 
                    totalOpenFilesBlocks + ")");
-      if (missingSize > 0) {
+      if (corruptFiles > 0) { 
         res.append("\n  ********************************");
         res.append("\n  CORRUPT FILES:\t" + corruptFiles);
-        res.append("\n  MISSING BLOCKS:\t" + missingIds.size());
-        res.append("\n  MISSING SIZE:\t\t" + missingSize + " B");
+        if (missingSize > 0) {
+          res.append("\n  MISSING BLOCKS:\t" + missingIds.size());
+          res.append("\n  MISSING SIZE:\t\t" + missingSize + " B");
+        }
+        if (corruptBlocks > 0) {
+          res.append("\n  CORRUPT BLOCKS: \t" + corruptBlocks);
+        }
         res.append("\n  ********************************");
       }
       res.append("\n Minimally replicated blocks:\t" + numMinReplicatedBlocks);
@@ -674,6 +688,7 @@ public class NamenodeFsck {
       if (totalBlocks > 0)        res.append(" (" + ((float) (numMisReplicatedBlocks * 100) / (float) totalBlocks) + " %)");
       res.append("\n Default replication factor:\t" + replication);
       res.append("\n Average block replication:\t" + getReplicationFactor());
+      res.append("\n Corrupt blocks:\t\t" + corruptBlocks);
       res.append("\n Missing replicas:\t\t" + missingReplicas);
       if (totalReplicas > 0)        res.append(" (" + ((float) (missingReplicas * 100) / (float) totalReplicas) + " %)");
       res.append("\n Number of data-nodes:\t\t" + totalDatanodes);
