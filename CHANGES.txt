@@ -27,7 +27,7 @@ Hbase Change Log
                alls-well to the master
    HBASE-614   Retiring regions is not used; exploit or remove
    HBASE-538   Improve exceptions that come out on client-side
-   
+   HBASE-569   DemoClient.php (Jim R. Wilson via Stack)
 
 Release 0.1.2 - 05/13/2008
    
