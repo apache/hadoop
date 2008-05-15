@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
@@ -29,7 +28,7 @@ import org.apache.hadoop.hbase.util.Writables;
 
 abstract class ColumnOperation extends TableOperation {
   
-  protected ColumnOperation(final HMaster master, final Text tableName) 
+  protected ColumnOperation(final HMaster master, final byte [] tableName) 
   throws IOException {
     super(master, tableName);
   }
@@ -44,7 +43,7 @@ abstract class ColumnOperation extends TableOperation {
     }
   }
 
-  protected void updateRegionInfo(HRegionInterface server, Text regionName,
+  protected void updateRegionInfo(HRegionInterface server, byte [] regionName,
     HRegionInfo i) 
   throws IOException {
     BatchUpdate b = new BatchUpdate(i.getRegionName());

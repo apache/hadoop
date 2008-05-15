@@ -23,7 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -36,20 +36,23 @@ import org.apache.hadoop.io.Writable;
  * @see BatchUpdate 
  */
 public class BatchOperation implements Writable {
-  private Text column;
+  private byte [] column = null;
   
   // A null value defines DELETE operations.
-  private byte[] value;
-
-  /** Default constructor used by Writable */
+  private byte[] value = null;
+  
+  /**
+   * Default constructor
+   */
   public BatchOperation() {
-    this(new Text());
+    this(null);
   }
+
   /**
    * Creates a DELETE batch operation.
    * @param column column name
    */
-  public BatchOperation(final Text column) {
+  public BatchOperation(final byte [] column) {
     this(column, null);
   }
 
@@ -58,7 +61,7 @@ public class BatchOperation implements Writable {
    * @param column column name
    * @param value column value.  If non-null, this is a PUT operation.
    */
-  public BatchOperation(final Text column, final byte [] value) {
+  public BatchOperation(final byte [] column, final byte [] value) {
     this.column = column;
     this.value = value;
   }
@@ -66,7 +69,7 @@ public class BatchOperation implements Writable {
   /**
    * @return the column
    */
-  public Text getColumn() {
+  public byte [] getColumn() {
     return this.column;
   }
 
@@ -90,7 +93,7 @@ public class BatchOperation implements Writable {
   // In Performance Evaluation sequentialWrite, 70% of object allocations are
   // done in here.
   public void readFields(final DataInput in) throws IOException {
-    this.column.readFields(in);
+    this.column = Bytes.readByteArray(in);
     // Is there a value to read?
     if (in.readBoolean()) {
       this.value = new byte[in.readInt()];
@@ -99,7 +102,7 @@ public class BatchOperation implements Writable {
   }
 
   public void write(final DataOutput out) throws IOException {
-    this.column.write(out);
+    Bytes.writeByteArray(out, this.column);
     boolean p = isPut();
     out.writeBoolean(p);
     if (p) {

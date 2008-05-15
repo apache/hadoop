@@ -19,43 +19,44 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.util.Bytes;
 
 
 /** Describes a meta region and its server */
 public class MetaRegion implements Comparable<MetaRegion> {
   private final HServerAddress server;
-  private final Text regionName;
-  private final Text startKey;
+  private final byte [] regionName;
+  private final byte [] startKey;
 
-  MetaRegion(final HServerAddress server, final Text regionName, 
-    final Text startKey) {
+  MetaRegion(final HServerAddress server, final byte [] regionName) {
+    this (server, regionName, HConstants.EMPTY_START_ROW);
+  }
+
+  MetaRegion(final HServerAddress server, final byte [] regionName,
+      final byte [] startKey) {
     if (server == null) {
       throw new IllegalArgumentException("server cannot be null");
     }
     this.server = server;
-    
     if (regionName == null) {
       throw new IllegalArgumentException("regionName cannot be null");
     }
-    this.regionName = new Text(regionName);
-    
-    this.startKey = new Text();
-    if (startKey != null) {
-      this.startKey.set(startKey);
-    }
+    this.regionName = regionName;
+    this.startKey = startKey;
   }
   
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return "{regionname: " + this.regionName.toString() + ", startKey: <" +
-      this.startKey.toString() + ">, server: " + this.server.toString() + "}";
+    return "{regionname: " + Bytes.toString(this.regionName) +
+      ", startKey: <" + Bytes.toString(this.startKey) +
+      ">, server: " + this.server.toString() + "}";
   }
 
   /** @return the regionName */
-  public Text getRegionName() {
+  public byte [] getRegionName() {
     return regionName;
   }
 
@@ -65,7 +66,7 @@ public class MetaRegion implements Comparable<MetaRegion> {
   }
 
   /** @return the startKey */
-  public Text getStartKey() {
+  public byte [] getStartKey() {
     return startKey;
   }
 
@@ -87,9 +88,9 @@ public class MetaRegion implements Comparable<MetaRegion> {
 
   /** {@inheritDoc} */
   public int compareTo(MetaRegion other) {
-    int result = this.regionName.compareTo(other.getRegionName());
+    int result = Bytes.compareTo(this.regionName, other.getRegionName());
     if(result == 0) {
-      result = this.startKey.compareTo(other.getStartKey());
+      result = Bytes.compareTo(this.startKey, other.getStartKey());
       if (result == 0) {
         // Might be on different host?
         result = this.server.compareTo(other.server);
@@ -98,4 +99,3 @@ public class MetaRegion implements Comparable<MetaRegion> {
     return result;
   }
 }
-

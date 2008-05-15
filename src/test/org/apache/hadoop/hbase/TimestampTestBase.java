@@ -21,22 +21,11 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.TreeMap;
 
-import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
-import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.Scanner;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.HBaseTestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Tests user specifiable time stamps putting, getting and scanning.  Also
@@ -53,12 +42,9 @@ public class TimestampTestBase extends HBaseTestCase {
   
   private static final String COLUMN_NAME = "contents:";
   
-  private static final Text COLUMN = new Text(COLUMN_NAME);
-  private static final Text ROW = new Text("row");
-  
-  // When creating column descriptor, how many versions of a cell to allow.
-  private static final int VERSIONS = 3;
-  
+  private static final byte [] COLUMN = Bytes.toBytes(COLUMN_NAME);
+  private static final byte [] ROW = Bytes.toBytes("row");
+
     /*
    * Run test that delete works according to description in <a
    * href="https://issues.apache.org/jira/browse/HADOOP-1784">hadoop-1784</a>.
@@ -115,7 +101,7 @@ public class TimestampTestBase extends HBaseTestCase {
   throws IOException {
     Cell[] cellValues = incommon.get(ROW, COLUMN, 3/*Ask for too much*/);
     assertEquals(1, cellValues.length);
-    long time = Writables.bytesToLong(cellValues[0].getValue());
+    long time = Bytes.toLong(cellValues[0].getValue());
     assertEquals(time, currentTime);
     assertNull(incommon.get(ROW, COLUMN, T1, 3 /*Too many*/));
     assertTrue(assertScanContentTimestamp(incommon, T1) == 0);
@@ -133,19 +119,19 @@ public class TimestampTestBase extends HBaseTestCase {
   throws IOException {
     // Assert that 'latest' is what we expect.
     byte [] bytes = incommon.get(ROW, COLUMN).getValue();
-    assertEquals(Writables.bytesToLong(bytes), tss[0]);
+    assertEquals(Bytes.toLong(bytes), tss[0]);
     // Now assert that if we ask for multiple versions, that they come out in
     // order.
     Cell[] cellValues = incommon.get(ROW, COLUMN, tss.length);
     assertEquals(tss.length, cellValues.length);
     for (int i = 0; i < cellValues.length; i++) {
-      long ts = Writables.bytesToLong(cellValues[i].getValue());
+      long ts = Bytes.toLong(cellValues[i].getValue());
       assertEquals(ts, tss[i]);
     }
     // Specify a timestamp get multiple versions.
     cellValues = incommon.get(ROW, COLUMN, tss[0], cellValues.length - 1);
     for (int i = 1; i < cellValues.length; i++) {
-      long ts = Writables.bytesToLong(cellValues[i].getValue());
+      long ts = Bytes.toLong(cellValues[i].getValue());
       assertEquals(ts, tss[i]);
     }
     // Test scanner returns expected version
@@ -191,12 +177,13 @@ public class TimestampTestBase extends HBaseTestCase {
     int count = 0;
     try {
       HStoreKey key = new HStoreKey();
-      TreeMap<Text, byte []>value = new TreeMap<Text, byte[]>();
+      TreeMap<byte [], byte []>value =
+        new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
       while (scanner.next(key, value)) {
         assertTrue(key.getTimestamp() <= ts);
         // Content matches the key or HConstants.LATEST_TIMESTAMP.
         // (Key does not match content if we 'put' with LATEST_TIMESTAMP).
-        long l = Writables.bytesToLong(value.get(COLUMN));
+        long l = Bytes.toLong(value.get(COLUMN));
         assertTrue(key.getTimestamp() == l ||
           HConstants.LATEST_TIMESTAMP == l);
         count++;
@@ -210,13 +197,13 @@ public class TimestampTestBase extends HBaseTestCase {
   
   public static void put(final Incommon loader, final long ts)
   throws IOException {
-    put(loader, Writables.longToBytes(ts), ts);
+    put(loader, Bytes.toBytes(ts), ts);
   }
   
   public static void put(final Incommon loader)
   throws IOException {
     long ts = HConstants.LATEST_TIMESTAMP;
-    put(loader, Writables.longToBytes(ts), ts);
+    put(loader, Bytes.toBytes(ts), ts);
   }
   
   /*

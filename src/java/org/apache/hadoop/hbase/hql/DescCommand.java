@@ -59,8 +59,7 @@ public class DescCommand extends BasicCommand {
       HColumnDescriptor[] columns = null;
       for (int i = 0; i < tables.length; i++) {
         if (tables[i].getName().equals(tableName)) {
-          columns = tables[i].getFamilies().values().toArray(
-              new HColumnDescriptor[] {});
+          columns = tables[i].getFamilies().toArray(new HColumnDescriptor[] {});
           break;
         }
       }

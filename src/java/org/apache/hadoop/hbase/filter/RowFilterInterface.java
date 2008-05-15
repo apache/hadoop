@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.filter;
 
 import java.util.SortedMap;
 
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -48,7 +47,7 @@ public interface RowFilterInterface extends Writable {
    * @param filtered
    * @param key
    */
-  void rowProcessed(boolean filtered, Text key);
+  void rowProcessed(boolean filtered, byte [] key);
 
   /**
    * Returns whether or not the filter should always be processed in any 
@@ -79,7 +78,7 @@ public interface RowFilterInterface extends Writable {
    * @param rowKey
    * @return true if given row key is filtered and row should not be processed.
    */
-  boolean filterRowKey(final Text rowKey);
+  boolean filterRowKey(final byte [] rowKey);
 
   /**
    * Filters on row key, column name, and column value. This will take individual columns out of a row, 
@@ -90,7 +89,8 @@ public interface RowFilterInterface extends Writable {
    * @param columnValue column value to filter on
    * @return true if row filtered and should not be processed.
    */
-  boolean filterColumn(final Text rowKey, final Text colunmName, final byte[] columnValue);
+  boolean filterColumn(final byte [] rowKey, final byte [] colunmName,
+      final byte[] columnValue);
 
   /**
    * Filter on the fully assembled row. This is the last chance to stop a row. 
@@ -98,7 +98,7 @@ public interface RowFilterInterface extends Writable {
    * @param columns
    * @return true if row filtered and should not be processed.
    */
-  boolean filterRow(final SortedMap<Text, byte[]> columns);
+  boolean filterRow(final SortedMap<byte [], byte[]> columns);
 
   /**
    * Validates that this filter applies only to a subset of the given columns.
@@ -111,5 +111,5 @@ public interface RowFilterInterface extends Writable {
    * 
    * @param columns
    */
-  void validate(final Text[] columns);
+  void validate(final byte [][] columns);
 }

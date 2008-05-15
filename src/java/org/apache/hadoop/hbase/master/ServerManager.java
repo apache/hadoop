@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.LeaseListener;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.io.Text;
 
 /**
  * The ServerManager class manages info about region servers - HServerInfo, 
@@ -153,11 +152,10 @@ class ServerManager implements HConstants {
    * 
    * @throws IOException
    */
-  public HMsg[] regionServerReport(HServerInfo serverInfo, HMsg msgs[], 
+  public HMsg [] regionServerReport(HServerInfo serverInfo, HMsg msgs[], 
     HRegionInfo[] mostLoadedRegions)
   throws IOException {
     String serverName = serverInfo.getServerAddress().toString().trim();
-
     if (msgs.length > 0) {
       if (msgs[0].getMsg() == HMsg.MSG_REPORT_EXITING) {
         processRegionServerExit(serverName, msgs);
@@ -183,7 +181,7 @@ class ServerManager implements HConstants {
           return new HMsg[0];
         }
         // Tell the server to stop serving any user regions
-        return new HMsg[]{new HMsg(HMsg.MSG_REGIONSERVER_QUIESCE)};
+        return new HMsg [] {new HMsg(HMsg.MSG_REGIONSERVER_QUIESCE)};
       }
     }
 
@@ -191,7 +189,7 @@ class ServerManager implements HConstants {
       // Tell server to shut down if we are shutting down.  This should
       // happen after check of MSG_REPORT_EXITING above, since region server
       // will send us one of these messages after it gets MSG_REGIONSERVER_STOP
-      return new HMsg[]{new HMsg(HMsg.MSG_REGIONSERVER_STOP)};
+      return new HMsg [] {new HMsg(HMsg.MSG_REGIONSERVER_STOP)};
     }
 
     HServerInfo storedInfo = serversToServerInfo.get(serverName);
@@ -325,14 +323,13 @@ class ServerManager implements HConstants {
     HRegionInfo[] mostLoadedRegions, HMsg incomingMsgs[])
   throws IOException { 
     ArrayList<HMsg> returnMsgs = new ArrayList<HMsg>();
-    Map<Text, HRegionInfo> regionsToKill = 
+    Map<byte [], HRegionInfo> regionsToKill = 
       master.regionManager.removeMarkedToClose(serverName);
 
     // Get reports on what the RegionServer did.
     for (int i = 0; i < incomingMsgs.length; i++) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Received " + incomingMsgs[i].toString() + " from " +
-            serverName);
+        LOG.debug("Received " + incomingMsgs[i] + " from " + serverName);
       }
       HRegionInfo region = incomingMsgs[i].getRegionInfo();
 
@@ -369,7 +366,6 @@ class ServerManager implements HConstants {
         master.regionManager.setClosing(i.getRegionName());
       }
     }
-
     // Figure out what the RegionServer ought to do, and write back.
     master.regionManager.assignRegions(serverInfo, serverName, 
       mostLoadedRegions, returnMsgs);
@@ -410,7 +406,6 @@ class ServerManager implements HConstants {
     HRegionInfo region, ArrayList<HMsg> returnMsgs) 
   throws IOException {
     boolean duplicateAssignment = false;
-    
     if (!master.regionManager.isUnassigned(region)) {
       if (region.isRootRegion()) {
         // Root region
@@ -448,9 +443,6 @@ class ServerManager implements HConstants {
       // and then try to reopen it elsewhere; that's not what we want.
       returnMsgs.add(new HMsg(HMsg.MSG_REGION_CLOSE_WITHOUT_REPORT, region));
     } else {
-      LOG.info(serverInfo.getServerAddress().toString() + " serving " +
-        region.getRegionName());
-
       // it was assigned, and it's not a duplicate assignment, so take it out 
       // of the unassigned list.
       master.regionManager.noLongerUnassigned(region);
@@ -462,7 +454,6 @@ class ServerManager implements HConstants {
         // Note that the table has been assigned and is waiting for the
         // meta table to be updated.
         master.regionManager.setPending(region.getRegionName());
-
         // Queue up an update to note the region location.
         try {
           master.toDoQueue.put(
@@ -658,7 +649,9 @@ class ServerManager implements HConstants {
           serversToServerInfo.values());
         try {
           serversToServerInfo.wait(master.threadWakeFrequency);
-        } catch (InterruptedException e) {}
+        } catch (InterruptedException e) {
+          // continue
+        }
       }
     }
   }

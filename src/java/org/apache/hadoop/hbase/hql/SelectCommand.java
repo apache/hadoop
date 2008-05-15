@@ -26,24 +26,24 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Shell;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.hql.generated.HQLParser;
-import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.io.Text;
 
 /**
  * Selects values from tables.
@@ -106,8 +106,8 @@ public class SelectCommand extends BasicCommand {
   }
 
   private boolean isMetaTable() {
-    return (tableName.equals(HConstants.ROOT_TABLE_NAME) || tableName
-        .equals(HConstants.META_TABLE_NAME)) ? true : false;
+    return (tableName.equals(new Text(HConstants.ROOT_TABLE_NAME)) ||
+      tableName.equals(new Text(HConstants.META_TABLE_NAME))) ? true : false;
   }
 
   private int compoundWherePrint(HTable table, HBaseAdmin admin) {
@@ -118,14 +118,14 @@ public class SelectCommand extends BasicCommand {
         Cell[] result = null;
         ParsedColumns parsedColumns = getColumns(admin, false);
         boolean multiple = parsedColumns.isMultiple() || version > 1;
-        for (Text column : parsedColumns.getColumns()) {
+        for (byte [] column : parsedColumns.getColumns()) {
           if (count == 0) {
             formatter.header(multiple ? HEADER_COLUMN_CELL : null);
           }
           if (timestamp != 0) {
-            result = table.get(rowKey, column, timestamp, version);
+            result = table.get(rowKey.getBytes(), column, timestamp, version);
           } else {
-            result = table.get(rowKey, column, version);
+            result = table.get(rowKey.getBytes(), column, version);
           }
           for (int ii = 0; result != null && ii < result.length; ii++) {
             if (multiple) {
@@ -138,11 +138,11 @@ public class SelectCommand extends BasicCommand {
           }
         }
       } else {
-        for (Map.Entry<Text, Cell> e : table.getRow(rowKey).entrySet()) {
+        for (Map.Entry<byte [], Cell> e : table.getRow(rowKey).entrySet()) {
           if (count == 0) {
             formatter.header(isMultiple() ? HEADER_COLUMN_CELL : null);
           }
-          Text key = e.getKey();
+          byte [] key = e.getKey();
           String keyStr = key.toString();
           if (!columns.contains(ASTERISK) && !columns.contains(keyStr)) {
             continue;
@@ -167,28 +167,27 @@ public class SelectCommand extends BasicCommand {
     return 1;
   }
 
-  private String toString(final Text columnName, final byte[] cell)
+  private String toString(final byte [] columnName, final byte[] cell)
       throws IOException {
     String result = null;
-    if (columnName.equals(HConstants.COL_REGIONINFO)
-        || columnName.equals(HConstants.COL_SPLITA)
-        || columnName.equals(HConstants.COL_SPLITA)) {
+    if (Bytes.equals(columnName, HConstants.COL_REGIONINFO)
+        || Bytes.equals(columnName, HConstants.COL_SPLITA)
+        || Bytes.equals(columnName, HConstants.COL_SPLITB)) {
       result = Writables.getHRegionInfoOrNull(cell).toString();
-    } else if (columnName.equals(HConstants.COL_STARTCODE)) {
-      result = Long.toString(Writables.bytesToLong(cell));
+    } else if (Bytes.equals(columnName, HConstants.COL_STARTCODE)) {
+      result = Long.toString(Bytes.toLong(cell));
     } else {
-      result = Writables.bytesToString(cell);
+      result = Bytes.toString(cell);
     }
     return result;
   }
 
-  private String toString(final Text columnName, final Cell cell) 
+  private String toString(final byte [] columnName, final Cell cell) 
   throws IOException {
     if (cell == null) {
       return null;
-    } else {
-      return toString(columnName, cell.getValue());
     }
+    return toString(columnName, cell.getValue());
   }
 
   /**
@@ -196,19 +195,19 @@ public class SelectCommand extends BasicCommand {
    * could return more than one column.
    */
   class ParsedColumns {
-    private final List<Text> cols;
+    private final List<byte []> cols;
     private final boolean isMultiple;
 
-    ParsedColumns(final List<Text> columns) {
+    ParsedColumns(final List<byte []> columns) {
       this(columns, true);
     }
 
-    ParsedColumns(final List<Text> columns, final boolean isMultiple) {
+    ParsedColumns(final List<byte []> columns, final boolean isMultiple) {
       this.cols = columns;
       this.isMultiple = isMultiple;
     }
 
-    public List<Text> getColumns() {
+    public List<byte []> getColumns() {
       return this.cols;
     }
 
@@ -226,13 +225,14 @@ public class SelectCommand extends BasicCommand {
       if (timestamp == 0) {
         scan = table.getScanner(cols, rowKey);
       } else {
-        scan = table.getScanner(cols, rowKey, timestamp);
+        scan = table.getScanner(Bytes.toByteArrays(cols), rowKey.getBytes(),
+          timestamp);
       }
 
       if (this.stopRow.toString().length() > 0) {
         RowFilterInterface filter = new WhileMatchRowFilter(new StopRowFilter(
-            stopRow));
-        scan = table.getScanner(cols, rowKey, filter);
+            stopRow.getBytes()));
+        scan = table.getScanner(Bytes.toByteArrays(cols), rowKey.getBytes(), filter);
       }
 
       RowResult results = scan.next();
@@ -243,10 +243,10 @@ public class SelectCommand extends BasicCommand {
           formatter.header((parsedColumns.isMultiple()) ? HEADER : HEADER_ROW_CELL);
         }
 
-        Text r = results.getRow();
+        byte [] r = results.getRow();
 
         if (!countFunction) {
-          for (Text columnKey : results.keySet()) {
+          for (byte [] columnKey : results.keySet()) {
             String cellData = toString(columnKey, results.get(columnKey));
             if (parsedColumns.isMultiple()) {
               formatter.row(new String[] { r.toString(), columnKey.toString(),
@@ -287,23 +287,26 @@ public class SelectCommand extends BasicCommand {
     ParsedColumns result = null;
     try {
       if (columns.contains(ASTERISK)) {
-        if (tableName.equals(HConstants.ROOT_TABLE_NAME)
-            || tableName.equals(HConstants.META_TABLE_NAME)) {
+        if (tableName.equals(new Text(HConstants.ROOT_TABLE_NAME))
+            || tableName.equals(new Text(HConstants.META_TABLE_NAME))) {
           result = new ParsedColumns(Arrays.asList(HConstants.COLUMN_FAMILY_ARRAY));
         } else {
           HTableDescriptor[] tables = admin.listTables();
           for (int i = 0; i < tables.length; i++) {
-            if (tables[i].getName().equals(tableName)) {
-              result = new ParsedColumns(new ArrayList<Text>(tables[i].families()
-                  .keySet()));
+            if (tables[i].getNameAsString().equals(tableName.toString())) {
+              List<byte []> cols = new ArrayList<byte []>();
+              for (HColumnDescriptor h: tables[i].getFamilies()) {
+                cols.add(h.getName());
+              }
+              result = new ParsedColumns(cols);
               break;
             }
           }
         }
       } else {
-        List<Text> tmpList = new ArrayList<Text>();
+        List<byte []> tmpList = new ArrayList<byte []>();
         for (int i = 0; i < columns.size(); i++) {
-          Text column = null;
+          byte [] column = null;
           // Add '$' to column name if we are scanning. Scanners support
           // regex column names. Adding '$', the column becomes a
           // regex that does an explicit match on the supplied column name.
@@ -311,8 +314,8 @@ public class SelectCommand extends BasicCommand {
           // default behavior is to fetch all columns that have a matching
           // column family.
           column = (columns.get(i).contains(":")) ? new Text(columns.get(i)
-              + (scanning ? "$" : "")) : new Text(columns.get(i) + ":"
-              + (scanning ? "$" : ""));
+              + (scanning ? "$" : "")).getBytes() : new Text(columns.get(i) + ":"
+              + (scanning ? "$" : "")).getBytes();
           tmpList.add(column);
         }
         result = new ParsedColumns(tmpList, tmpList.size() > 1);

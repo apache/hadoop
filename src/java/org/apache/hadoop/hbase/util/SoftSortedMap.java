@@ -38,15 +38,22 @@ import org.apache.commons.logging.LogFactory;
  * play well with the GC when in a low-memory situation.
  */
 public class SoftSortedMap<K,V> implements SortedMap<K,V> {
-  protected static final Log LOG = LogFactory.getLog(SoftSortedMap.class);  
-  
-  protected SortedMap<K, SoftValue<K,V>> internalMap = 
-    new TreeMap<K, SoftValue<K,V>>();
-  
-  protected ReferenceQueue referenceQueue = new ReferenceQueue();
+  private static final Log LOG = LogFactory.getLog(SoftSortedMap.class);  
+  private final SortedMap<K, SoftValue<K,V>> internalMap;
+  private ReferenceQueue<K> referenceQueue = new ReferenceQueue<K>();
   
   /** Constructor */
-  public SoftSortedMap() {}
+  public SoftSortedMap() {
+    this(new TreeMap<K, SoftValue<K,V>>());
+  }
+  
+  /**
+   * Constructor
+   * @param c
+   */
+  public SoftSortedMap(final Comparator<K> c) {
+    this(new TreeMap<K, SoftValue<K,V>>(c));
+  }
   
   /** For headMap and tailMap support */
   private SoftSortedMap(SortedMap<K,SoftValue<K,V>> original) {
@@ -61,24 +68,22 @@ public class SoftSortedMap<K,V> implements SortedMap<K,V> {
     return oldValue == null ? null : oldValue.get();
   }
   
-  public void putAll(Map map) {
+  @SuppressWarnings("unchecked")
+  public void putAll(@SuppressWarnings("unused") Map map) {
     throw new RuntimeException("Not implemented");
   }
   
   public V get(Object key) {
     checkReferences();
     SoftValue<K,V> value = internalMap.get(key);
-    
     if (value == null) {
       return null;
-    } else {
-      if (value.get() == null) {
-        internalMap.remove(key);
-        return null;
-      } else {
-        return value.get();
-      }
     }
+    if (value.get() == null) {
+      internalMap.remove(key);
+      return null;
+    }
+    return value.get();
   }
 
   public V remove(Object key) {
@@ -92,7 +97,7 @@ public class SoftSortedMap<K,V> implements SortedMap<K,V> {
     return internalMap.containsKey(key);
   }
   
-  public boolean containsValue(Object value) {
+  public boolean containsValue(@SuppressWarnings("unused") Object value) {
 /*    checkReferences();
     return internalMap.containsValue(value);*/
     throw new UnsupportedOperationException("Don't support containsValue!");
@@ -141,6 +146,7 @@ public class SoftSortedMap<K,V> implements SortedMap<K,V> {
     return internalMap.keySet();
   }
 
+  @SuppressWarnings("unchecked")
   public Comparator comparator() {
     return internalMap.comparator();
   }
@@ -169,11 +175,13 @@ public class SoftSortedMap<K,V> implements SortedMap<K,V> {
    */ 
   private void checkReferences() {
     SoftValue<K,V> sv;
-    while((sv = (SoftValue<K,V>)referenceQueue.poll()) != null) {
+    Object obj;
+    while((obj = referenceQueue.poll()) != null) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Reference for key " + sv.key.toString() + " has been cleared.");
+        LOG.debug("Reference for key " + ((SoftValue<K,V>)obj).key.toString() +
+          " has been cleared.");
       }
-      internalMap.remove(sv.key);
+      internalMap.remove(((SoftValue<K,V>)obj).key);
     }
   }
   

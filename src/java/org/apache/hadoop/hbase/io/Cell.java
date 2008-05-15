@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -69,6 +70,11 @@ public class Cell implements Writable {
     return timestamp;
   }
   
+  @Override
+  public String toString() {
+    return "timestamp=" + this.timestamp + ", value=" +
+      Bytes.toString(this.value);
+  }
   //
   // Writable
   //
@@ -76,15 +82,12 @@ public class Cell implements Writable {
   /** {@inheritDoc} */
   public void readFields(final DataInput in) throws IOException {
     timestamp = in.readLong();
-    int valueSize = in.readInt();
-    value = new byte[valueSize];
-    in.readFully(value, 0, valueSize);
+    this.value = Bytes.readByteArray(in);
   }
 
   /** {@inheritDoc} */
   public void write(final DataOutput out) throws IOException {
     out.writeLong(timestamp);
-    out.writeInt(value.length);
-    out.write(value);
+    Bytes.writeByteArray(out, this.value);
   } 
 }

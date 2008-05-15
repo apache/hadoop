@@ -29,7 +29,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.util.Bytes;
 
 
 import junit.framework.TestCase;
@@ -44,7 +44,7 @@ public class TestRowFilterSet extends TestCase {
   static final int MAX_PAGES = 5;
   final char FIRST_CHAR = 'a';
   final char LAST_CHAR = 'e';
-  TreeMap<Text, byte[]> colvalues;
+  TreeMap<byte [], byte[]> colvalues;
   static byte[] GOOD_BYTES = null;
   static byte[] BAD_BYTES = null;
 
@@ -62,15 +62,15 @@ public class TestRowFilterSet extends TestCase {
   protected void setUp() throws Exception {
     super.setUp();
     
-    colvalues = new TreeMap<Text, byte[]>();
+    colvalues = new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
     for (char c = FIRST_CHAR; c < LAST_CHAR; c++) {
-      colvalues.put(new Text(new String(new char [] {c})), GOOD_BYTES);
+      colvalues.put(new byte [] {(byte)c}, GOOD_BYTES);
     }
     
     Set<RowFilterInterface> filters = new HashSet<RowFilterInterface>();
     filters.add(new PageRowFilter(MAX_PAGES));
     filters.add(new RegExpRowFilter(".*regex.*", colvalues));
-    filters.add(new WhileMatchRowFilter(new StopRowFilter(new Text("yyy"))));
+    filters.add(new WhileMatchRowFilter(new StopRowFilter(Bytes.toBytes("yyy"))));
     filters.add(new WhileMatchRowFilter(new RegExpRowFilter(".*match.*")));
     filterMPALL = new RowFilterSet(RowFilterSet.Operator.MUST_PASS_ALL, 
       filters);
@@ -132,7 +132,7 @@ public class TestRowFilterSet extends TestCase {
     
     // Accept several more rows such that PageRowFilter will exceed its limit.
     for (int i=0; i<=MAX_PAGES-3; i++)
-      filter.rowProcessed(false, new Text("unimportant_key"));
+      filter.rowProcessed(false, Bytes.toBytes("unimportant_key"));
     
     // A row that should cause the RegExpRowFilter to filter this row, making 
     // all the filters return true and thus the RowFilterSet as well.
@@ -163,15 +163,15 @@ public class TestRowFilterSet extends TestCase {
     RFSAssertReset(filter);
     
     // A row that should cause the RegExpRowFilter to fail.
-    boolean filtered = filter.filterColumn(new Text("regex_match"), 
-      new Text(new String(new char[] { FIRST_CHAR })), BAD_BYTES);
+    boolean filtered = filter.filterColumn(Bytes.toBytes("regex_match"), 
+      new byte [] { FIRST_CHAR }, BAD_BYTES);
     assertTrue("Filtering on 'regex_match' and bad column data.", filtered);
-    filterMPALL.rowProcessed(filtered, new Text("regex_match"));
+    filterMPALL.rowProcessed(filtered, Bytes.toBytes("regex_match"));
   }
   
   private void RFSAssertion(RowFilterInterface filter, String toTest, 
     boolean assertTrue) throws Exception {
-    Text testText = new Text(toTest);
+    byte [] testText = Bytes.toBytes(toTest);
     boolean filtered = filter.filterRowKey(testText);
     assertTrue("Filtering on '" + toTest + "'", 
       assertTrue? filtered : !filtered);

@@ -24,9 +24,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 
+import org.apache.hadoop.hbase.util.Bytes;
+
 import junit.framework.TestCase;
 
-import org.apache.hadoop.io.Text;
 
 /**
  * Tests for the while-match filter
@@ -41,7 +42,7 @@ public class TestWhileMatchRowFilter extends TestCase {
   protected void setUp() throws Exception {
     super.setUp();
     wmStopRowFilter = new WhileMatchRowFilter(new StopRowFilter(
-        new Text("s")));
+        Bytes.toBytes("s")));
     wmRegExpRowFilter = new WhileMatchRowFilter(new RegExpRowFilter(
     ".*regex.*"));
   }
@@ -90,14 +91,14 @@ public class TestWhileMatchRowFilter extends TestCase {
     
     // Test cases that should pass the row
     toTest = "apples";
-    assertFalse("filter: '" + toTest + "'", filter.filterRowKey(new Text(toTest)));
-    assertFalse("innerFilter: '" + toTest + "'", innerFilter.filterRowKey(new Text(
+    assertFalse("filter: '" + toTest + "'", filter.filterRowKey(Bytes.toBytes(toTest)));
+    assertFalse("innerFilter: '" + toTest + "'", innerFilter.filterRowKey(Bytes.toBytes(
         toTest)));
     
     // Test cases that should fail the row
     toTest = "tuna";
-    assertTrue("filter: '" + toTest + "'", filter.filterRowKey(new Text(toTest)));
-    assertTrue("innerFilter: '" + toTest + "'", innerFilter.filterRowKey(new Text(
+    assertTrue("filter: '" + toTest + "'", filter.filterRowKey(Bytes.toBytes(toTest)));
+    assertTrue("innerFilter: '" + toTest + "'", innerFilter.filterRowKey(Bytes.toBytes(
         toTest)));
     
     // The difference in switch
@@ -121,14 +122,14 @@ public class TestWhileMatchRowFilter extends TestCase {
     
     // Test cases that should pass the row
     toTest = "regex_match";
-    assertFalse("filter: '" + toTest + "'", filter.filterRowKey(new Text(toTest)));
-    assertFalse("innerFilter: '" + toTest + "'", innerFilter.filterRowKey(new Text(
+    assertFalse("filter: '" + toTest + "'", filter.filterRowKey(Bytes.toBytes(toTest)));
+    assertFalse("innerFilter: '" + toTest + "'", innerFilter.filterRowKey(Bytes.toBytes(
         toTest)));
     
     // Test cases that should fail the row
     toTest = "not_a_match";
-    assertTrue("filter: '" + toTest + "'", filter.filterRowKey(new Text(toTest)));
-    assertTrue("innerFilter: '" + toTest + "'", innerFilter.filterRowKey(new Text(
+    assertTrue("filter: '" + toTest + "'", filter.filterRowKey(Bytes.toBytes(toTest)));
+    assertTrue("innerFilter: '" + toTest + "'", innerFilter.filterRowKey(Bytes.toBytes(
         toTest)));
     
     // The difference in switch
@@ -143,7 +144,7 @@ public class TestWhileMatchRowFilter extends TestCase {
     
     // Test filter(Text, Text, byte[]) for functionality only (no switch-cases)
     toTest = "asdf_regex_hjkl";
-    assertFalse("filter: '" + toTest + "'", filter.filterColumn(new Text(toTest), 
+    assertFalse("filter: '" + toTest + "'", filter.filterColumn(Bytes.toBytes(toTest), 
       null, null));
   }
 }

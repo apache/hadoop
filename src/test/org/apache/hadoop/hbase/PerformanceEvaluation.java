@@ -26,19 +26,21 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
-import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
@@ -48,10 +50,6 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.log4j.Logger;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.Scanner;
-import org.apache.hadoop.hbase.io.BatchUpdate;
 
 
 /**
@@ -77,12 +75,12 @@ public class PerformanceEvaluation implements HConstants {
   private static final int ROW_LENGTH = 1000;
   private static final int ONE_GB = 1024 * 1024 * 1000;
   private static final int ROWS_PER_GB = ONE_GB / ROW_LENGTH;
-  static final Text COLUMN_NAME = new Text(COLUMN_FAMILY + "data");
+  static final byte [] COLUMN_NAME = Bytes.toBytes(COLUMN_FAMILY_STR + "data");
   
   protected static HTableDescriptor tableDescriptor;
   static {
     tableDescriptor = new HTableDescriptor("TestTable");
-    tableDescriptor.addFamily(new HColumnDescriptor(COLUMN_FAMILY.toString()));
+    tableDescriptor.addFamily(new HColumnDescriptor(COLUMN_FAMILY));
   }
   
   private static final String RANDOM_READ = "randomRead";
@@ -388,7 +386,7 @@ public class PerformanceEvaluation implements HConstants {
     
     @Override
     void testRow(@SuppressWarnings("unused") final int i) throws IOException {
-      Text row = getRandomRow(this.rand, this.totalRows);
+      byte [] row = getRandomRow(this.rand, this.totalRows);
       BatchUpdate b = new BatchUpdate(row);
       b.put(COLUMN_NAME, generateValue(this.rand));
       table.commit(b);
@@ -411,7 +409,7 @@ public class PerformanceEvaluation implements HConstants {
     @Override
     void testSetup() throws IOException {
       super.testSetup();
-      this.testScanner = table.getScanner(new Text[] {COLUMN_NAME},
+      this.testScanner = table.getScanner(new byte [][] {COLUMN_NAME},
         format(this.startRow));
     }
     
@@ -473,14 +471,18 @@ public class PerformanceEvaluation implements HConstants {
   
   /*
    * Format passed integer.
-   * This method takes some time and is done inline uploading data.  For
-   * example, doing the mapfile test, generation of the key and value
-   * consumes about 30% of CPU time.
-   * @param i
-   * @return Integer as String zero padded.
+   * @param number
+   * @return Returns zero-prefixed 10-byte wide decimal version of passed
+   * number (Does absolute in case number is negative).
    */
-  static Text format(final int i) {
-    return new Text(String.format("%010d", Integer.valueOf(i)));
+  static byte [] format(final int number) {
+    byte [] b = new byte[10];
+    int d = Math.abs(number);
+    for (int i = b.length - 1; i > 0; i--) {
+      b[i] = (byte)((d % 10) + '0');
+      d /= 10;
+    }
+    return b;
   }
   
   /*
@@ -495,8 +497,8 @@ public class PerformanceEvaluation implements HConstants {
     return b;
   }
   
-  static Text getRandomRow(final Random random, final int totalRows) {
-    return new Text(format(random.nextInt(Integer.MAX_VALUE) % totalRows));
+  static byte [] getRandomRow(final Random random, final int totalRows) {
+    return format(random.nextInt(Integer.MAX_VALUE) % totalRows);
   }
   
   long runOneClient(final String cmd, final int startRow,
@@ -695,7 +697,8 @@ public class PerformanceEvaluation implements HConstants {
    * @param args
    */
   public static void main(final String[] args) {
-    System.exit(new PerformanceEvaluation(new HBaseConfiguration()).
+    HBaseConfiguration c = new HBaseConfiguration();
+    System.exit(new PerformanceEvaluation(c).
       doCommandLine(args));
   }
 }

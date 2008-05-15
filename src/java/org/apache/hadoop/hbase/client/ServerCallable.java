@@ -25,7 +25,6 @@ import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.io.Text;
 
 /**
  * Implements Callable, used to define the particular actions you would
@@ -35,8 +34,8 @@ import org.apache.hadoop.io.Text;
  */
 public abstract class ServerCallable<T> implements Callable<T> {
   protected final HConnection connection;
-  protected final Text tableName;
-  protected final Text row;
+  protected final byte [] tableName;
+  protected final byte [] row;
   protected HRegionLocation location;
   protected HRegionInterface server;
 
@@ -45,7 +44,7 @@ public abstract class ServerCallable<T> implements Callable<T> {
    * @param tableName
    * @param row
    */
-  public ServerCallable(HConnection connection, Text tableName, Text row) {
+  public ServerCallable(HConnection connection, byte [] tableName, byte [] row) {
     this.connection = connection;
     this.tableName = tableName;
     this.row = row;
@@ -67,12 +66,12 @@ public abstract class ServerCallable<T> implements Callable<T> {
   }
   
   /** @return the region name */
-  public Text getRegionName() {
+  public byte [] getRegionName() {
     return location.getRegionInfo().getRegionName();
   }
   
   /** @return the row */
-  public Text getRow() {
+  public byte [] getRow() {
     return row;
   }
 }

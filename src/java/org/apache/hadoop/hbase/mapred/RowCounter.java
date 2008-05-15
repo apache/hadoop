@@ -26,8 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
@@ -41,7 +41,7 @@ import org.apache.hadoop.util.ToolRunner;
  * Map outputs table rows IF the input row has columns that have content.  
  * Uses an {@link IdentityReducer}
  */
-public class RowCounter extends TableMap<Text, RowResult> implements Tool {
+public class RowCounter extends TableMap<ImmutableBytesWritable, RowResult> implements Tool {
   /* Name of this 'program'
    */
   static final String NAME = "rowcounter";
@@ -51,12 +51,12 @@ public class RowCounter extends TableMap<Text, RowResult> implements Tool {
   private static enum Counters {ROWS}
   
   @Override
-  public void map(Text row, RowResult value,
-    OutputCollector<Text, RowResult> output,
+  public void map(ImmutableBytesWritable row, RowResult value,
+    OutputCollector<ImmutableBytesWritable, RowResult> output,
     @SuppressWarnings("unused") Reporter reporter)
   throws IOException {
     boolean content = false;
-    for (Map.Entry<Text, Cell> e: value.entrySet()) {
+    for (Map.Entry<byte [], Cell> e: value.entrySet()) {
       Cell cell = e.getValue();
       if (cell != null && cell.getValue().length > 0) {
         content = true;
@@ -85,8 +85,8 @@ public class RowCounter extends TableMap<Text, RowResult> implements Tool {
       sb.append(args[i]);
     }
     // Second argument is the table name.
-    TableMap.initJob(args[1], sb.toString(), this.getClass(), Text.class,
-      RowResult.class, c);
+    TableMap.initJob(args[1], sb.toString(), this.getClass(),
+      ImmutableBytesWritable.class, RowResult.class, c);
     c.setReducerClass(IdentityReducer.class);
     // First arg is the output directory.
     c.setOutputPath(new Path(args[0]));

@@ -19,16 +19,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.FileNotFoundException;
 import java.io.EOFException;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -39,18 +37,18 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Reader;
-
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
  * HLog stores all the edits to the HStore.
@@ -97,8 +95,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 public class HLog implements HConstants {
   private static final Log LOG = LogFactory.getLog(HLog.class);
   private static final String HLOG_DATFILE = "hlog.dat.";
-  static final Text METACOLUMN = new Text("METACOLUMN:");
-  static final Text METAROW = new Text("METAROW");
+  static final byte [] METACOLUMN = Bytes.toBytes("METACOLUMN:");
+  static final byte [] METAROW = Bytes.toBytes("METAROW");
   final FileSystem fs;
   final Path dir;
   final Configuration conf;
@@ -120,7 +118,8 @@ public class HLog implements HConstants {
   /*
    * Map of region to last sequence/edit id. 
    */
-  final Map<Text, Long> lastSeqWritten = new ConcurrentHashMap<Text, Long>();
+  private final Map<byte [], Long> lastSeqWritten = Collections.
+    synchronizedSortedMap(new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR));
 
   private volatile boolean closed = false;
 
@@ -274,8 +273,8 @@ public class HLog implements HConstants {
             // Now remove old log files (if any)
             if (LOG.isDebugEnabled()) {
               // Find region associated with oldest key -- helps debugging.
-              Text oldestRegion = null;
-              for (Map.Entry<Text, Long> e: this.lastSeqWritten.entrySet()) {
+              byte [] oldestRegion = null;
+              for (Map.Entry<byte [], Long> e: this.lastSeqWritten.entrySet()) {
                 if (e.getValue().longValue() == oldestOutstandingSeqNum.longValue()) {
                   oldestRegion = e.getKey();
                   break;
@@ -370,9 +369,9 @@ public class HLog implements HConstants {
    * @param timestamp
    * @throws IOException
    */
-  void append(Text regionName, Text tableName,
-      TreeMap<HStoreKey, byte[]> edits) throws IOException {
-    
+  void append(byte [] regionName, byte [] tableName,
+      TreeMap<HStoreKey, byte[]> edits)
+  throws IOException {
     if (closed) {
       throw new IOException("Cannot append; log is closed");
     }
@@ -479,7 +478,7 @@ public class HLog implements HConstants {
    * @param logSeqId
    * @throws IOException
    */
-  void completeCacheFlush(final Text regionName, final Text tableName,
+  void completeCacheFlush(final byte [] regionName, final byte [] tableName,
       final long logSeqId) throws IOException {
 
     try {
@@ -535,8 +534,8 @@ public class HLog implements HConstants {
     }
     LOG.info("splitting " + logfiles.length + " log(s) in " +
       srcDir.toString());
-    Map<Text, SequenceFile.Writer> logWriters =
-      new HashMap<Text, SequenceFile.Writer>();
+    Map<byte [], SequenceFile.Writer> logWriters =
+      new TreeMap<byte [], SequenceFile.Writer>(Bytes.BYTES_COMPARATOR);
     try {
       for (int i = 0; i < logfiles.length; i++) {
         if (LOG.isDebugEnabled()) {
@@ -556,17 +555,15 @@ public class HLog implements HConstants {
         try {
           int count = 0;
           for (; in.next(key, val); count++) {
-            Text tableName = key.getTablename();
-            Text regionName = key.getRegionName();
+            byte [] tableName = key.getTablename();
+            byte [] regionName = key.getRegionName();
             SequenceFile.Writer w = logWriters.get(regionName);
             if (w == null) {
               Path logfile = new Path(
-                  HRegion.getRegionDir(
-                      HTableDescriptor.getTableDir(rootDir, tableName),
-                      HRegionInfo.encodeRegionName(regionName)
-                  ),
-                  HREGION_OLDLOGFILE_NAME
-              );
+                HRegion.getRegionDir(
+                  HTableDescriptor.getTableDir(rootDir, tableName),
+                  HRegionInfo.encodeRegionName(regionName)),
+                HREGION_OLDLOGFILE_NAME);
               Path oldlogfile = null;
               SequenceFile.Reader old = null;
               if (fs.exists(logfile)) {
@@ -580,7 +577,7 @@ public class HLog implements HConstants {
                 HLogEdit.class, getCompressionType(conf));
               // Use copy of regionName; regionName object is reused inside in
               // HStoreKey.getRegionName so its content changes as we iterate.
-              logWriters.put(new Text(regionName), w);
+              logWriters.put(regionName, w);
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Creating new log file writer for path " + logfile +
                   " and region " + regionName);

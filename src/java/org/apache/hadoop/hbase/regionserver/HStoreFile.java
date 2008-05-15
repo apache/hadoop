@@ -39,10 +39,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.BlockFSInputStream;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.onelab.filter.Filter;
@@ -50,6 +50,7 @@ import org.onelab.filter.Key;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
 
 /**
@@ -113,8 +114,8 @@ public class HStoreFile implements HConstants {
   private final static Random rand = new Random();
 
   private final Path basedir;
-  private final String encodedRegionName;
-  private final Text colFamily;
+  private final int encodedRegionName;
+  private final byte [] colFamily;
   private final long fileId;
   private final HBaseConfiguration conf;
   private final FileSystem fs;
@@ -131,13 +132,13 @@ public class HStoreFile implements HConstants {
    * @throws IOException
    */
   HStoreFile(HBaseConfiguration conf, FileSystem fs, Path basedir,
-      String encodedRegionName, Text colFamily, long fileId,
+      int encodedRegionName, byte [] colFamily, long fileId,
       final Reference ref) throws IOException {
     this.conf = conf;
     this.fs = fs;
     this.basedir = basedir;
     this.encodedRegionName = encodedRegionName;
-    this.colFamily = new Text(colFamily);
+    this.colFamily = colFamily;
     
     long id = fileId;
     if (id == -1) {
@@ -145,7 +146,7 @@ public class HStoreFile implements HConstants {
       Path testpath = null;
       do {
         id = Math.abs(rand.nextLong());
-        testpath = new Path(mapdir, createHStoreFilename(id, null));
+        testpath = new Path(mapdir, createHStoreFilename(id, -1));
       } while(fs.exists(testpath));
     }
     this.fileId = id;
@@ -165,12 +166,12 @@ public class HStoreFile implements HConstants {
     return reference;
   }
 
-  String getEncodedRegionName() {
-    return encodedRegionName;
+  int getEncodedRegionName() {
+    return this.encodedRegionName;
   }
 
   /** @return the column family */
-  Text getColFamily() {
+  byte [] getColFamily() {
     return colFamily;
   }
 
@@ -187,18 +188,22 @@ public class HStoreFile implements HConstants {
       return getMapFilePath(encodedRegionName, fileId,
           reference.getEncodedRegionName());
     }
-    return getMapFilePath(encodedRegionName, fileId, null);
+    return getMapFilePath(this.encodedRegionName, fileId);
   }
 
   private Path getMapFilePath(final Reference r) {
     if (r == null) {
       return getMapFilePath();
     }
-    return getMapFilePath(r.getEncodedRegionName(), r.getFileId(), null);
+    return getMapFilePath(r.getEncodedRegionName(), r.getFileId());
   }
 
-  private Path getMapFilePath(final String encodedName, final long fid,
-      final String ern) {
+  private Path getMapFilePath(final int encodedName, final long fid) {
+    return getMapFilePath(encodedName, fid, HRegionInfo.NO_HASH);
+  }
+  
+  private Path getMapFilePath(final int encodedName, final long fid,
+      final int ern) {
     return new Path(HStoreFile.getMapDir(basedir, encodedName, colFamily), 
       createHStoreFilename(fid, ern));
   }
@@ -210,11 +215,15 @@ public class HStoreFile implements HConstants {
           reference.getEncodedRegionName());
  
     }
-    return getInfoFilePath(encodedRegionName, fileId, null);
+    return getInfoFilePath(encodedRegionName, fileId);
   }
   
-  private Path getInfoFilePath(final String encodedName, final long fid,
-      final String ern) {
+  private Path getInfoFilePath(final int encodedName, final long fid) {
+    return getInfoFilePath(encodedName, fid, HRegionInfo.NO_HASH);
+  }
+  
+  private Path getInfoFilePath(final int encodedName, final long fid,
+      final int ern) {
     return new Path(HStoreFile.getInfoDir(basedir, encodedName, colFamily), 
       createHStoreFilename(fid, ern));
   }
@@ -293,8 +302,7 @@ public class HStoreFile implements HConstants {
   long loadInfo(FileSystem fs) throws IOException {
     Path p = null;
     if (isReference()) {
-      p = getInfoFilePath(reference.getEncodedRegionName(),
-          reference.getFileId(), null);
+      p = getInfoFilePath(reference.getEncodedRegionName(), reference.getFileId());
     } else {
       p = getInfoFilePath();
     }
@@ -400,7 +408,6 @@ public class HStoreFile implements HConstants {
   public synchronized MapFile.Reader getReader(final FileSystem fs,
       final Filter bloomFilter, final boolean blockCacheEnabled)
   throws IOException {
-    
     if (isReference()) {
       return new HStoreFile.HalfMapFileReader(fs,
           getMapFilePath(reference).toString(), conf, 
@@ -475,55 +482,72 @@ public class HStoreFile implements HConstants {
     return r.equals(Range.top);
   }
 
-  private static String createHStoreFilename(final long fid,
-      final String encodedRegionName) {
-    return Long.toString(fid) +
-      ((encodedRegionName != null) ? "." + encodedRegionName : "");
+  private static String createHStoreFilename(final long fid) {
+    return createHStoreFilename(fid, HRegionInfo.NO_HASH);
   }
-  
+
+  private static String createHStoreFilename(final long fid,
+      final int encodedRegionName) {
+    return Long.toString(fid) + 
+      ((encodedRegionName != HRegionInfo.NO_HASH)?
+        "." + encodedRegionName : "");
+  }
+
   /**
-   * @param dir
-   * @param encodedRegionName
-   * @param colFamily
+   * @param dir Base directory
+   * @param encodedRegionName Encoding of region name.
+   * @param f Column family.
    * @return path for map file directory
    */
-  public static Path getMapDir(Path dir, String encodedRegionName, Text colFamily) {
-    return new Path(dir, new Path(encodedRegionName, 
-        new Path(colFamily.toString(), HSTORE_DATFILE_DIR)));
+  public static Path getMapDir(Path dir, int encodedRegionName,
+      final byte [] f) {
+    return getFamilySubDir(dir, encodedRegionName, f, HSTORE_DATFILE_DIR);
   }
 
   /**
-   * @param dir
-   * @param encodedRegionName
-   * @param colFamily
+   * @param dir Base directory
+   * @param encodedRegionName Encoding of region name.
+   * @param f Column family.
    * @return the info directory path
    */
-  public static Path getInfoDir(Path dir, String encodedRegionName, Text colFamily) {
-    return new Path(dir, new Path(encodedRegionName, 
-        new Path(colFamily.toString(), HSTORE_INFO_DIR)));
+  public static Path getInfoDir(Path dir, int encodedRegionName, byte [] f) {
+    return getFamilySubDir(dir, encodedRegionName, f, HSTORE_INFO_DIR);
   }
 
   /**
-   * @param dir
-   * @param encodedRegionName
-   * @param colFamily
+   * @param dir Base directory
+   * @param encodedRegionName Encoding of region name.
+   * @param f Column family.
    * @return the bloom filter directory path
    */
-  public static Path getFilterDir(Path dir, String encodedRegionName, Text colFamily) {
-    return new Path(dir, new Path(encodedRegionName,
-        new Path(colFamily.toString(), HSTORE_FILTER_DIR)));
+  public static Path getFilterDir(Path dir, int encodedRegionName,
+      final byte [] f) {
+    return getFamilySubDir(dir, encodedRegionName, f, HSTORE_FILTER_DIR);
+  }
+  
+  /*
+   * @param base Base directory
+   * @param encodedRegionName Encoding of region name.
+   * @param f Column family.
+   * @param subdir Subdirectory to create under column family/store directory.
+   * @return
+   */
+  private static Path getFamilySubDir(final Path base,
+      final int encodedRegionName, final byte [] f, final String subdir) {
+    return new Path(base, new Path(Integer.toString(encodedRegionName),
+        new Path(Bytes.toString(f), subdir)));
   }
 
   /*
    * Data structure to hold reference to a store file over in another region.
    */
   static class Reference implements Writable {
-    private String encodedRegionName;
+    private int encodedRegionName;
     private long fileid;
     private Range region;
     private HStoreKey midkey;
     
-    Reference(final String ern, final long fid, final HStoreKey m,
+    Reference(final int ern, final long fid, final HStoreKey m,
         final Range fr) {
       this.encodedRegionName = ern;
       this.fileid = fid;
@@ -532,7 +556,7 @@ public class HStoreFile implements HConstants {
     }
     
     Reference() {
-      this(null, -1, null, Range.bottom);
+      this(-1, -1, null, Range.bottom);
     }
 
     long getFileId() {
@@ -547,8 +571,8 @@ public class HStoreFile implements HConstants {
       return midkey;
     }
     
-    String getEncodedRegionName() {
-      return encodedRegionName;
+    int getEncodedRegionName() {
+      return this.encodedRegionName;
     }
    
     /** {@inheritDoc} */
@@ -561,7 +585,7 @@ public class HStoreFile implements HConstants {
 
     /** {@inheritDoc} */
     public void write(DataOutput out) throws IOException {
-      out.writeUTF(encodedRegionName);
+      out.writeInt(this.encodedRegionName);
       out.writeLong(fileid);
       // Write true if we're doing top of the file.
       out.writeBoolean(isTopFileRegion(region));
@@ -570,7 +594,7 @@ public class HStoreFile implements HConstants {
 
     /** {@inheritDoc} */
     public void readFields(DataInput in) throws IOException {
-      encodedRegionName = in.readUTF();
+      this.encodedRegionName = in.readInt();
       fileid = in.readLong();
       boolean tmp = in.readBoolean();
       // If true, set region to top.

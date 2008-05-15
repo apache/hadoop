@@ -36,13 +36,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MultiRegionTable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
@@ -63,12 +63,12 @@ public class TestTableIndex extends MultiRegionTable {
 
   static final String TABLE_NAME = "moretest";
   static final String INPUT_COLUMN = "contents:";
-  static final Text TEXT_INPUT_COLUMN = new Text(INPUT_COLUMN);
+  static final byte [] TEXT_INPUT_COLUMN = Bytes.toBytes(INPUT_COLUMN);
   static final String OUTPUT_COLUMN = "text:";
-  static final Text TEXT_OUTPUT_COLUMN = new Text(OUTPUT_COLUMN);
+  static final byte [] TEXT_OUTPUT_COLUMN = Bytes.toBytes(OUTPUT_COLUMN);
   static final String ROWKEY_NAME = "key";
   static final String INDEX_DIR = "testindex";
-  private static final Text[] columns = {
+  private static final byte [][] columns = new byte [][] {
     TEXT_INPUT_COLUMN,
     TEXT_OUTPUT_COLUMN
   };
@@ -177,7 +177,7 @@ public class TestTableIndex extends MultiRegionTable {
 
   private void scanTable(boolean printResults)
   throws IOException {
-    HTable table = new HTable(conf, new Text(TABLE_NAME));
+    HTable table = new HTable(conf, TABLE_NAME);
     Scanner scanner = table.getScanner(columns,
         HConstants.EMPTY_START_ROW);
     try {
@@ -185,7 +185,7 @@ public class TestTableIndex extends MultiRegionTable {
         if (printResults) {
           LOG.info("row: " + r.getRow());
         }
-        for (Map.Entry<Text, Cell> e : r.entrySet()) {
+        for (Map.Entry<byte [], Cell> e : r.entrySet()) {
           if (printResults) {
             LOG.info(" column: " + e.getKey() + " value: "
                 + new String(e.getValue().getValue(), HConstants.UTF8_ENCODING));
@@ -201,7 +201,7 @@ public class TestTableIndex extends MultiRegionTable {
     // Force a cache flush for every online region to ensure that when the
     // scanner takes its snapshot, all the updates have made it into the cache.
     for (HRegion r : cluster.getRegionThreads().get(0).getRegionServer().
-        getOnlineRegions().values()) {
+        getOnlineRegions()) {
       HRegionIncommon region = new HRegionIncommon(r);
       region.flushcache();
     }
@@ -228,7 +228,7 @@ public class TestTableIndex extends MultiRegionTable {
         throw new IOException("no index directory found");
       }
 
-      HTable table = new HTable(conf, new Text(TABLE_NAME));
+      HTable table = new HTable(conf, TABLE_NAME);
       scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
 
       IndexConfiguration indexConf = new IndexConfiguration();
@@ -240,7 +240,7 @@ public class TestTableIndex extends MultiRegionTable {
 
       int count = 0;
       for (RowResult r : scanner) {
-        String value = r.getRow().toString();
+        String value = Bytes.toString(r.getRow());
         Term term = new Term(rowkeyName, value);
         int hitCount = searcher.search(new TermQuery(term)).length();
         assertEquals("check row " + value, 1, hitCount);

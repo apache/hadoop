@@ -24,7 +24,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import junit.framework.TestCase;
 
@@ -32,9 +32,9 @@ import junit.framework.TestCase;
  * Tests the inclusive stop row filter
  */
 public class TestInclusiveStopRowFilter extends TestCase {
-  private final Text STOP_ROW = new Text("stop_row");
-  private final Text GOOD_ROW = new Text("good_row");
-  private final Text PAST_STOP_ROW = new Text("zzzzzz");
+  private final byte [] STOP_ROW = Bytes.toBytes("stop_row");
+  private final byte [] GOOD_ROW = Bytes.toBytes("good_row");
+  private final byte [] PAST_STOP_ROW = Bytes.toBytes("zzzzzz");
   
   RowFilterInterface mainFilter;
 

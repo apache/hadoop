@@ -29,9 +29,11 @@ import java.io.IOException;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableComparator;
 
 public class TestHbaseObjectWritable extends TestCase {
 
@@ -49,6 +51,11 @@ public class TestHbaseObjectWritable extends TestCase {
     // Do primitive type
     final int COUNT = 101;
     assertTrue(doType(conf, COUNT, int.class).equals(COUNT));
+    // Do array
+    final byte [] testing = "testing".getBytes();
+    byte [] result = (byte [])doType(conf, testing, testing.getClass());
+    assertTrue(WritableComparator.compareBytes(testing, 0, testing.length,
+       result, 0, result.length) == 0);
     // Do unsupported type.
     boolean exception = false;
     try {
@@ -67,7 +74,7 @@ public class TestHbaseObjectWritable extends TestCase {
     obj = doType(conf, new Text(""), Text.class);
     assertTrue(obj instanceof Text);
     // Try type that should get transferred old fashion way.
-    obj = doType(conf, new StopRowFilter(new Text("")),
+    obj = doType(conf, new StopRowFilter(HConstants.EMPTY_BYTE_ARRAY),
         RowFilterInterface.class);
     assertTrue(obj instanceof StopRowFilter);
   }

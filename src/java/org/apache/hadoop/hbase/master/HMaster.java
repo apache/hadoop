@@ -36,41 +36,39 @@ import org.apache.hadoop.dfs.DistributedFileSystem;
 import org.apache.hadoop.dfs.FSConstants;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HMsg;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.HServerLoad;
+import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.LocalHBaseCluster;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
+import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.HbaseRPC;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
-
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.HMsg;
-import org.apache.hadoop.hbase.LocalHBaseCluster;
-import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
-import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 
 /**
  * HMaster is the "master server" for a HBase.
@@ -193,12 +191,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     this.conf.set(HConstants.HBASE_DIR, this.rootdir.toString());
     this.rand = new Random();
     Path rootRegionDir =
-      HRegion.getRegionDir(rootdir, HRegionInfo.rootRegionInfo);
+      HRegion.getRegionDir(rootdir, HRegionInfo.ROOT_REGIONINFO);
     LOG.info("Root region dir: " + rootRegionDir.toString());
 
     try {
       // Make sure the root directory exists!
-      if(! fs.exists(rootdir)) {
+      if (!fs.exists(rootdir)) {
         fs.mkdirs(rootdir); 
         FSUtils.setVersion(fs, rootdir);
       } else {
@@ -206,11 +204,11 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       }
 
       if (!fs.exists(rootRegionDir)) {
-        LOG.info("bootstrap: creating ROOT and first META regions");
+        LOG.info("BOOTSTRAP: creating ROOT and first META regions");
         try {
-          HRegion root = HRegion.createHRegion(HRegionInfo.rootRegionInfo,
-              this.rootdir, this.conf);
-          HRegion meta = HRegion.createHRegion(HRegionInfo.firstMetaRegionInfo,
+          HRegion root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO,
+            this.rootdir, this.conf);
+          HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
             this.rootdir, this.conf);
 
           // Add first region from the META table to the ROOT region.
@@ -328,7 +326,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   /**
    * @return Read-only map of online regions.
    */
-  public Map<Text, MetaRegion> getOnlineMetaRegions() {
+  public Map<byte [], MetaRegion> getOnlineMetaRegions() {
     return regionManager.getOnlineMetaRegions();
   }
 
@@ -501,9 +499,6 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     if (LOG.isDebugEnabled()) {
       LOG.debug("Started service threads");
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Started service threads");
-    }
   }
 
   /*
@@ -526,11 +521,10 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   /** {@inheritDoc} */
   @SuppressWarnings("unused")
-  public HbaseMapWritable regionServerStartup(HServerInfo serverInfo)
+  public MapWritable regionServerStartup(HServerInfo serverInfo)
   throws IOException {
     // register with server manager
     serverManager.regionServerStartup(serverInfo);
-    
     // send back some config info
     return createConfigurationSubset();
   }
@@ -539,12 +533,12 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * @return Subset of configuration to pass initializing regionservers: e.g.
    * the filesystem to use and root directory to use.
    */
-  protected HbaseMapWritable createConfigurationSubset() {
-    HbaseMapWritable mw = addConfig(new HbaseMapWritable(), HConstants.HBASE_DIR);
+  protected MapWritable createConfigurationSubset() {
+    MapWritable mw = addConfig(new MapWritable(), HConstants.HBASE_DIR);
     return addConfig(mw, "fs.default.name");
   }
 
-  private HbaseMapWritable addConfig(final HbaseMapWritable mw, final String key) {
+  private MapWritable addConfig(final MapWritable mw, final String key) {
     mw.put(new Text(key), new Text(this.conf.get(key)));
     return mw;
   }
@@ -588,7 +582,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
           break;
         }
         createTable(newRegion);
-        LOG.info("created table " + desc.getName());
+        LOG.info("created table " + desc.getNameAsString());
         break;
       } catch (TableExistsException e) {
         throw e;
@@ -603,14 +597,14 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   private synchronized void createTable(final HRegionInfo newRegion) 
   throws IOException {
-    Text tableName = newRegion.getTableDesc().getName();
+    byte [] tableName = newRegion.getTableDesc().getName();
     // 1. Check to see if table already exists. Get meta region where
     // table would sit should it exist. Open scanner on it. If a region
     // for the table we want to create already exists, then table already
     // created. Throw already-exists exception.
     MetaRegion m = regionManager.getFirstMetaRegionForRegion(newRegion);
         
-    Text metaRegionName = m.getRegionName();
+    byte [] metaRegionName = m.getRegionName();
     HRegionInterface srvr = connection.getHRegionConnection(m.getServer());
     long scannerid = srvr.openScanner(metaRegionName, COL_REGIONINFO_ARRAY,
       tableName, LATEST_TIMESTAMP, null);
@@ -621,51 +615,50 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       // does not exist, scanner will return row after where our table would
       // be inserted if it exists so look for exact match on table name.            
       if (data != null && data.size() > 0) {
-        if (HRegionInfo.getTableNameFromRegionName(
-          data.getRow()).equals(tableName)) {
+        byte [] tn = HRegionInfo.getTableNameFromRegionName(data.getRow());
+        if (Bytes.equals(tn, tableName)) {
           // Then a region for this table already exists. Ergo table exists.
-          throw new TableExistsException(tableName.toString());
+          throw new TableExistsException(Bytes.toString(tableName));
         }
       }
     } finally {
       srvr.close(scannerid);
     }
-
     regionManager.createRegion(newRegion, srvr, metaRegionName);
   }
 
   /** {@inheritDoc} */
-  public void deleteTable(Text tableName) throws IOException {
+  public void deleteTable(final byte [] tableName) throws IOException {
     new TableDelete(this, tableName).process();
-    LOG.info("deleted table: " + tableName);
+    LOG.info("deleted table: " + Bytes.toString(tableName));
   }
 
   /** {@inheritDoc} */
-  public void addColumn(Text tableName, HColumnDescriptor column)
+  public void addColumn(byte [] tableName, HColumnDescriptor column)
   throws IOException {    
     new AddColumn(this, tableName, column).process();
   }
 
   /** {@inheritDoc} */
-  public void modifyColumn(Text tableName, Text columnName, 
+  public void modifyColumn(byte [] tableName, byte [] columnName, 
     HColumnDescriptor descriptor)
   throws IOException {
     new ModifyColumn(this, tableName, columnName, descriptor).process();
   }
 
   /** {@inheritDoc} */
-  public void deleteColumn(Text tableName, Text columnName) throws IOException {
-    new DeleteColumn(this, tableName, 
-      HStoreKey.extractFamily(columnName)).process();
+  public void deleteColumn(final byte [] tableName, final byte [] c)
+  throws IOException {
+    new DeleteColumn(this, tableName, HStoreKey.getFamily(c)).process();
   }
 
   /** {@inheritDoc} */
-  public void enableTable(Text tableName) throws IOException {
+  public void enableTable(final byte [] tableName) throws IOException {
     new ChangeTableState(this, tableName, true).process();
   }
 
   /** {@inheritDoc} */
-  public void disableTable(Text tableName) throws IOException {
+  public void disableTable(final byte [] tableName) throws IOException {
     new ChangeTableState(this, tableName, false).process();
   }
 
@@ -694,33 +687,41 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
    * @return Null or found HRegionInfo.
    * @throws IOException
    */
-  HRegionInfo getHRegionInfo(final Text row, final Map<Text, Cell> map)
+  HRegionInfo getHRegionInfo(final byte [] row, final Map<byte [], Cell> map)
   throws IOException {
     Cell regioninfo = map.get(COL_REGIONINFO);
     if (regioninfo == null) {
-      LOG.warn(COL_REGIONINFO.toString() + " is empty for row: " + row +
-          "; has keys: " + map.keySet().toString());
+      StringBuilder sb =  new StringBuilder();
+      for (byte [] e: map.keySet()) {
+        if (sb.length() > 0) {
+          sb.append(", ");
+        }
+        sb.append(Bytes.toString(e));
+      }
+      LOG.warn(Bytes.toString(COL_REGIONINFO) + " is empty for row: " +
+         Bytes.toString(row) + "; has keys: " + sb.toString());
       return null;
     }
-    return (HRegionInfo)Writables.getWritable(regioninfo.getValue(), new HRegionInfo());
+    return Writables.getHRegionInfo(regioninfo.getValue());
   }
 
   /*
    * When we find rows in a meta region that has an empty HRegionInfo, we
    * clean them up here.
    * 
-   * @param server connection to server serving meta region
+   * @param s connection to server serving meta region
    * @param metaRegionName name of the meta region we scanned
    * @param emptyRows the row keys that had empty HRegionInfos
    */
-  protected void deleteEmptyMetaRows(HRegionInterface server, 
-      Text metaRegionName,
-      List<Text> emptyRows) {
-    for (Text regionName: emptyRows) {
+  protected void deleteEmptyMetaRows(HRegionInterface s, 
+      byte [] metaRegionName,
+      List<byte []> emptyRows) {
+    for (byte [] regionName: emptyRows) {
       try {
-        HRegion.removeRegionFromMETA(server, metaRegionName, regionName);
-        LOG.warn("Removed region: " + regionName + " from meta region: " +
-            metaRegionName + " because HRegionInfo was empty");
+        HRegion.removeRegionFromMETA(s, metaRegionName, regionName);
+        LOG.warn("Removed region: " + Bytes.toString(regionName) +
+          " from meta region: " +
+          Bytes.toString(metaRegionName) + " because HRegionInfo was empty");
       } catch (IOException e) {
         LOG.error("deleting region: " + regionName + " from meta region: " +
             metaRegionName, e);

@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.*;
 
 import java.io.*;
@@ -31,14 +32,14 @@ import java.io.*;
  * also sorted.
  */
 public class HLogKey implements WritableComparable {
-  Text regionName = new Text();
-  Text tablename = new Text();
-  Text row = new Text();
-  long logSeqNum = 0L;
+  private byte [] regionName;
+  private byte [] tablename;
+  private byte [] row;
+  private long logSeqNum;
 
   /** Create an empty key useful when deserializing */
   public HLogKey() {
-    super();
+    this(null, null, null, 0L);
   }
   
   /**
@@ -51,11 +52,11 @@ public class HLogKey implements WritableComparable {
    * @param row         - row key
    * @param logSeqNum   - log sequence number
    */
-  public HLogKey(Text regionName, Text tablename, Text row, long logSeqNum) {
-    // TODO: Is this copy of the instances necessary? They are expensive.
-    this.regionName.set(regionName);
-    this.tablename.set(tablename);
-    this.row.set(row);
+  public HLogKey(final byte [] regionName, final byte [] tablename,
+      final byte [] row, long logSeqNum) {
+    this.regionName = regionName;
+    this.tablename = tablename;
+    this.row = row;
     this.logSeqNum = logSeqNum;
   }
 
@@ -63,15 +64,15 @@ public class HLogKey implements WritableComparable {
   // A bunch of accessors
   //////////////////////////////////////////////////////////////////////////////
 
-  Text getRegionName() {
+  byte [] getRegionName() {
     return regionName;
   }
   
-  Text getTablename() {
+  byte [] getTablename() {
     return tablename;
   }
   
-  Text getRow() {
+  byte [] getRow() {
     return row;
   }
   
@@ -84,7 +85,8 @@ public class HLogKey implements WritableComparable {
    */
   @Override
   public String toString() {
-    return tablename + "/" + regionName + "/" + row + "/" + logSeqNum;
+    return Bytes.toString(tablename) + "/" + Bytes.toString(regionName) + "/" +
+      Bytes.toString(row) + "/" + logSeqNum;
   }
   
   /**
@@ -115,10 +117,10 @@ public class HLogKey implements WritableComparable {
    */
   public int compareTo(Object o) {
     HLogKey other = (HLogKey) o;
-    int result = this.regionName.compareTo(other.regionName);
+    int result = Bytes.compareTo(this.regionName, other.regionName);
     
     if(result == 0) {
-      result = this.row.compareTo(other.row);
+      result = Bytes.compareTo(this.row, other.row);
       
       if(result == 0) {
         
@@ -141,9 +143,9 @@ public class HLogKey implements WritableComparable {
    * {@inheritDoc}
    */
   public void write(DataOutput out) throws IOException {
-    this.regionName.write(out);
-    this.tablename.write(out);
-    this.row.write(out);
+    Bytes.writeByteArray(out, this.regionName);
+    Bytes.writeByteArray(out, this.tablename);
+    Bytes.writeByteArray(out, this.row);
     out.writeLong(logSeqNum);
   }
   
@@ -151,9 +153,9 @@ public class HLogKey implements WritableComparable {
    * {@inheritDoc}
    */
   public void readFields(DataInput in) throws IOException {
-    this.regionName.readFields(in);
-    this.tablename.readFields(in);
-    this.row.readFields(in);
+    this.regionName = Bytes.readByteArray(in);
+    this.tablename = Bytes.readByteArray(in);
+    this.row = Bytes.readByteArray(in);
     this.logSeqNum = in.readLong();
   }
 }

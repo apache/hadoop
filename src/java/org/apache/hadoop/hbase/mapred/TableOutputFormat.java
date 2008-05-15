@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapred.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapred.JobConf;
@@ -39,7 +39,7 @@ import org.apache.hadoop.util.Progressable;
 /**
  * Convert Map/Reduce output and write it to an HBase table
  */
-public class TableOutputFormat extends OutputFormatBase<Text, BatchUpdate> {
+public class TableOutputFormat extends OutputFormatBase<ImmutableBytesWritable, BatchUpdate> {
 
   /** JobConf parameter that specifies the output table */
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
@@ -50,7 +50,7 @@ public class TableOutputFormat extends OutputFormatBase<Text, BatchUpdate> {
    * and write to an HBase table
    */
   protected class TableRecordWriter
-    implements RecordWriter<Text, BatchUpdate> {
+    implements RecordWriter<ImmutableBytesWritable, BatchUpdate> {
     private HTable m_table;
 
     /**
@@ -68,7 +68,7 @@ public class TableOutputFormat extends OutputFormatBase<Text, BatchUpdate> {
     }
 
     /** {@inheritDoc} */
-    public void write(Text key, BatchUpdate value) throws IOException {
+    public void write(ImmutableBytesWritable key, BatchUpdate value) throws IOException {
       m_table.commit(value);
     }
   }
@@ -84,7 +84,7 @@ public class TableOutputFormat extends OutputFormatBase<Text, BatchUpdate> {
     
     // expecting exactly one path
     
-    Text tableName = new Text(job.get(OUTPUT_TABLE));
+    String tableName = job.get(OUTPUT_TABLE);
     HTable table = null;
     try {
       table = new HTable(new HBaseConfiguration(job), tableName);

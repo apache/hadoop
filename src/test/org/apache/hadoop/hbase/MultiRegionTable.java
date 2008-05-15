@@ -21,43 +21,42 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-import org.apache.hadoop.io.Text;
-
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Utility class to build a table of multiple regions.
  */
 public class MultiRegionTable extends HBaseClusterTestCase {
-  private static final Text[] KEYS = {
-    null,
-    new Text("bbb"),
-    new Text("ccc"),
-    new Text("ddd"),
-    new Text("eee"),
-    new Text("fff"),
-    new Text("ggg"),
-    new Text("hhh"),
-    new Text("iii"),
-    new Text("jjj"),
-    new Text("kkk"),
-    new Text("lll"),
-    new Text("mmm"),
-    new Text("nnn"),
-    new Text("ooo"),
-    new Text("ppp"),
-    new Text("qqq"),
-    new Text("rrr"),
-    new Text("sss"),
-    new Text("ttt"),
-    new Text("uuu"),
-    new Text("vvv"),
-    new Text("www"),
-    new Text("xxx"),
-    new Text("yyy")
+  private static final byte [][] KEYS = {
+    HConstants.EMPTY_BYTE_ARRAY,
+    Bytes.toBytes("bbb"),
+    Bytes.toBytes("ccc"),
+    Bytes.toBytes("ddd"),
+    Bytes.toBytes("eee"),
+    Bytes.toBytes("fff"),
+    Bytes.toBytes("ggg"),
+    Bytes.toBytes("hhh"),
+    Bytes.toBytes("iii"),
+    Bytes.toBytes("jjj"),
+    Bytes.toBytes("kkk"),
+    Bytes.toBytes("lll"),
+    Bytes.toBytes("mmm"),
+    Bytes.toBytes("nnn"),
+    Bytes.toBytes("ooo"),
+    Bytes.toBytes("ppp"),
+    Bytes.toBytes("qqq"),
+    Bytes.toBytes("rrr"),
+    Bytes.toBytes("sss"),
+    Bytes.toBytes("ttt"),
+    Bytes.toBytes("uuu"),
+    Bytes.toBytes("vvv"),
+    Bytes.toBytes("www"),
+    Bytes.toBytes("xxx"),
+    Bytes.toBytes("yyy")
   };
   
-  protected final String columnName;
+  protected final byte [] columnName;
   protected HTableDescriptor desc;
 
   /**
@@ -65,7 +64,7 @@ public class MultiRegionTable extends HBaseClusterTestCase {
    */
   public MultiRegionTable(final String columnName) {
     super();
-    this.columnName = columnName;
+    this.columnName = Bytes.toBytes(columnName);
     // These are needed for the new and improved Map/Reduce framework
     System.setProperty("hadoop.log.dir", conf.get("hadoop.log.dir"));
     conf.set("mapred.output.dir", conf.get("hadoop.tmp.dir"));
@@ -78,7 +77,6 @@ public class MultiRegionTable extends HBaseClusterTestCase {
   protected void preHBaseClusterSetup() throws Exception {
     try {
       // Create a bunch of regions
-
       HRegion[] regions = new HRegion[KEYS.length];
       for (int i = 0; i < regions.length; i++) {
         int j = (i + 1) % regions.length;
@@ -87,17 +85,14 @@ public class MultiRegionTable extends HBaseClusterTestCase {
 
       // Now create the root and meta regions and insert the data regions
       // created above into the meta
-
-      HRegion root = HRegion.createHRegion(HRegionInfo.rootRegionInfo,
+      HRegion root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO,
           testDir, this.conf);
-      HRegion meta = HRegion.createHRegion(HRegionInfo.firstMetaRegionInfo,
+      HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
           testDir, this.conf);
       HRegion.addRegionToMETA(root, meta);
-
       for(int i = 0; i < regions.length; i++) {
         HRegion.addRegionToMETA(meta, regions[i]);
       }
-
       closeRegionAndDeleteLog(root);
       closeRegionAndDeleteLog(meta);
     } catch (Exception e) {
@@ -106,7 +101,7 @@ public class MultiRegionTable extends HBaseClusterTestCase {
     }
   } 
 
-  private HRegion createARegion(Text startKey, Text endKey) throws IOException {
+  private HRegion createARegion(byte [] startKey, byte [] endKey) throws IOException {
     HRegion region = createNewHRegion(desc, startKey, endKey);
     addContent(region, this.columnName);
     closeRegionAndDeleteLog(region);

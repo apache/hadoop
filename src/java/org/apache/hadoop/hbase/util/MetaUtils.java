@@ -22,9 +22,10 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,7 +41,6 @@ import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.io.Text;
 
 /**
  * Contains utility methods for manipulating HBase meta tables
@@ -54,7 +54,8 @@ public class MetaUtils {
   private Path rootdir;
   private HLog log;
   private HRegion rootRegion;
-  private ConcurrentHashMap<Text, HRegion> metaRegions;
+  private Map<byte [], HRegion> metaRegions = Collections.synchronizedSortedMap(
+    new TreeMap<byte [], HRegion>(Bytes.BYTES_COMPARATOR));
   
   /** Default constructor */
   public MetaUtils() {
@@ -67,7 +68,6 @@ public class MetaUtils {
     conf.setInt("hbase.client.retries.number", 1);
     this.initialized = false;
     this.rootRegion = null;
-    this.metaRegions = new ConcurrentHashMap<Text, HRegion>();
   }
 
   /**
@@ -220,7 +220,8 @@ public class MetaUtils {
 
     try {
       HStoreKey key = new HStoreKey();
-      SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+      SortedMap<byte [], byte[]> results =
+        new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
       while (rootScanner.next(key, results)) {
         HRegionInfo info = Writables.getHRegionInfoOrNull(
             results.get(HConstants.COL_REGIONINFO));
@@ -234,7 +235,6 @@ public class MetaUtils {
         }
         results.clear();
       }
-
     } finally {
       rootScanner.close();
     }
@@ -252,28 +252,38 @@ public class MetaUtils {
    * @throws IOException
    */
   public void scanMetaRegion(HRegionInfo metaRegionInfo,
-      ScannerListener listener) throws IOException {
+    ScannerListener listener)
+  throws IOException {
     if (!initialized) {
       throw new IllegalStateException("Must call initialize method first.");
     }
-    
     // Open meta region so we can scan it
-
     HRegion metaRegion = openMetaRegion(metaRegionInfo);
-
-    InternalScanner metaScanner = metaRegion.getScanner(
-        HConstants.COL_REGIONINFO_ARRAY, HConstants.EMPTY_START_ROW,
-        HConstants.LATEST_TIMESTAMP, null);
-
+    scanMetaRegion(metaRegion, listener);
+  }
+  
+  /**
+   * Scan the passed in metaregion <code>m</code> invoking the passed
+   * <code>listener</code> per row found.
+   * @param m
+   * @param listener
+   * @throws IOException
+   */
+  public void scanMetaRegion(final HRegion m,
+      final ScannerListener listener)
+  throws IOException {
+    InternalScanner metaScanner = m.getScanner(HConstants.COL_REGIONINFO_ARRAY,
+      HConstants.EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP, null);
     try {
       HStoreKey key = new HStoreKey();
-      SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+      SortedMap<byte[], byte[]> results =
+        new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
       while (metaScanner.next(key, results)) {
-        HRegionInfo info = Writables.getHRegionInfoOrNull(
-            results.get(HConstants.COL_REGIONINFO));
+        HRegionInfo info =
+          Writables.getHRegionInfoOrNull(results.get(HConstants.COL_REGIONINFO));
         if (info == null) {
-          LOG.warn("region info is null for row " + key.getRow() +
-              " in table " + HConstants.META_TABLE_NAME);
+          LOG.warn("regioninfo null for row " + key.getRow() + " in table " +
+            Bytes.toString(m.getTableDesc().getName()));
           continue;
         }
         if (!listener.processRow(info)) {
@@ -281,14 +291,13 @@ public class MetaUtils {
         }
         results.clear();
       }
-
     } finally {
       metaScanner.close();
     }
   }
   
   private void openRootRegion() throws IOException {
-    this.rootRegion = HRegion.openHRegion(HRegionInfo.rootRegionInfo,
+    this.rootRegion = HRegion.openHRegion(HRegionInfo.ROOT_REGIONINFO,
         this.rootdir, this.log, this.conf);
     this.rootRegion.compactStores();
   }
@@ -314,7 +323,7 @@ public class MetaUtils {
    * @throws IOException
    */
   public static void changeOnlineStatus (final HBaseConfiguration c,
-      final Text row, final boolean onlineOffline)
+      final byte [] row, final boolean onlineOffline)
   throws IOException {
     HTable t = new HTable(c, HConstants.META_TABLE_NAME);
     Cell cell = t.get(row, HConstants.COL_REGIONINFO);

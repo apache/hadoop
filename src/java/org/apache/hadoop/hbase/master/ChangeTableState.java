@@ -23,12 +23,13 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
 
 /** Instantiated to enable or disable a table */
 class ChangeTableState extends TableOperation {
@@ -39,7 +40,7 @@ class ChangeTableState extends TableOperation {
   
   protected long lockid;
 
-  ChangeTableState(final HMaster master, final Text tableName, 
+  ChangeTableState(final HMaster master, final byte [] tableName, 
     final boolean onLine) 
   throws IOException {
     super(master, tableName);
@@ -118,9 +119,8 @@ class ChangeTableState extends TableOperation {
 
       // Cause regions being served to be taken off-line and disabled
 
-      HashMap<Text, HRegionInfo> localKillList =
-        new HashMap<Text, HRegionInfo>();
-
+      Map<byte [], HRegionInfo> localKillList =
+        new TreeMap<byte [], HRegionInfo>(Bytes.BYTES_COMPARATOR);
       for (HRegionInfo i: e.getValue()) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("adding region " + i.getRegionName() + " to kill list");
@@ -130,7 +130,7 @@ class ChangeTableState extends TableOperation {
         // this marks the regions to be offlined once they are closed
         master.regionManager.markRegionForOffline(i.getRegionName());
       }
-      Map<Text, HRegionInfo> killedRegions = 
+      Map<byte [], HRegionInfo> killedRegions = 
         master.regionManager.removeMarkedToClose(serverName);
       if (killedRegions != null) {
         localKillList.putAll(killedRegions);

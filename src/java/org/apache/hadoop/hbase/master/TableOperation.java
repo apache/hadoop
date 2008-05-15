@@ -33,9 +33,9 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Sleeper;
 
@@ -50,13 +50,13 @@ abstract class TableOperation implements HConstants {
   protected static final Log LOG = LogFactory.getLog(TableOperation.class);
   
   protected Set<MetaRegion> metaRegions;
-  protected Text tableName;
+  protected byte [] tableName;
   protected Set<HRegionInfo> unservedRegions;
   protected HMaster master;
   protected final int numRetries;
   protected final Sleeper sleeper;
   
-  protected TableOperation(final HMaster master, final Text tableName) 
+  protected TableOperation(final HMaster master, final byte [] tableName) 
   throws IOException {
     this.sleeper = master.sleeper;
     this.numRetries = master.numRetries;
@@ -94,7 +94,7 @@ abstract class TableOperation implements HConstants {
       long scannerId = server.openScanner(m.getRegionName(),
           COLUMN_FAMILY_ARRAY, tableName, HConstants.LATEST_TIMESTAMP, null);
 
-      List<Text> emptyRows = new ArrayList<Text>();
+      List<byte []> emptyRows = new ArrayList<byte []>();
       try {
         while (true) {
           RowResult values = server.next(scannerId);
@@ -109,7 +109,7 @@ abstract class TableOperation implements HConstants {
           }
           String serverName = Writables.cellToString(values.get(COL_SERVER));
           long startCode = Writables.cellToLong(values.get(COL_STARTCODE));
-          if (info.getTableDesc().getName().compareTo(tableName) > 0) {
+          if (Bytes.compareTo(info.getTableDesc().getName(), tableName) > 0) {
             break; // Beyond any more entries for this table
           }
 

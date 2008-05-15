@@ -26,7 +26,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.io.Text;
 
 /**
  * A region server that will OOME.
@@ -47,7 +46,7 @@ public class OOMERegionServer extends HRegionServer {
     super(address, conf);
   }
   
-  public void batchUpdate(Text regionName, BatchUpdate b)
+  public void batchUpdate(byte [] regionName, BatchUpdate b)
   throws IOException {
     super.batchUpdate(regionName, b);
     for (int i = 0; i < 30; i++) {

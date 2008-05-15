@@ -26,7 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputFormatBase;
 import org.apache.hadoop.mapred.RecordWriter;
@@ -42,11 +42,11 @@ import org.apache.lucene.search.Similarity;
  * the index, and copy the index to the destination.
  */
 public class IndexOutputFormat extends
-    OutputFormatBase<Text, LuceneDocumentWrapper> {
+    OutputFormatBase<ImmutableBytesWritable, LuceneDocumentWrapper> {
   static final Log LOG = LogFactory.getLog(IndexOutputFormat.class);
 
   @Override
-  public RecordWriter<Text, LuceneDocumentWrapper> getRecordWriter(
+  public RecordWriter<ImmutableBytesWritable, LuceneDocumentWrapper> getRecordWriter(
     final FileSystem fs, JobConf job, String name, final Progressable progress)
   throws IOException {
 
@@ -97,11 +97,11 @@ public class IndexOutputFormat extends
     }
     writer.setUseCompoundFile(indexConf.isUseCompoundFile());
 
-    return new RecordWriter<Text, LuceneDocumentWrapper>() {
+    return new RecordWriter<ImmutableBytesWritable, LuceneDocumentWrapper>() {
       private boolean closed;
       private long docCount = 0;
 
-      public void write(@SuppressWarnings("unused") Text key,
+      public void write(@SuppressWarnings("unused") ImmutableBytesWritable key,
         LuceneDocumentWrapper value)
       throws IOException {
         // unwrap and index doc

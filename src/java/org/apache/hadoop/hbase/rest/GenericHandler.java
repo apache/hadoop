@@ -32,13 +32,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.io.Text;
-import org.mortbay.servlet.MultiPartResponse;
 import org.znerd.xmlenc.LineBreak;
 import org.znerd.xmlenc.XMLOutputter;
 
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * GenericHandler contains some basic common stuff that all the individual
@@ -228,13 +227,12 @@ public abstract class GenericHandler {
    * @throws IOException
    */
   protected void outputColumnsXml(final XMLOutputter outputter,
-    final Map<Text, Cell> m)
+    final Map<byte [], Cell> m)
   throws IllegalStateException, IllegalArgumentException, IOException {
-    for (Map.Entry<Text, Cell> e: m.entrySet()) {
+    for (Map.Entry<byte [], Cell> e: m.entrySet()) {
       outputter.startTag(COLUMN);
       doElement(outputter, "name", 
-        org.apache.hadoop.hbase.util.Base64.encodeBytes(
-          e.getKey().getBytes()));
+        org.apache.hadoop.hbase.util.Base64.encodeBytes(e.getKey()));
       // We don't know String from binary data so we always base64 encode.
       doElement(outputter, "value",
         org.apache.hadoop.hbase.util.Base64.encodeBytes(e.getValue().getValue()));
@@ -259,6 +257,6 @@ public abstract class GenericHandler {
    * Get an HTable instance by it's table name.
    */
   protected HTable getTable(final String tableName) throws IOException {
-    return new HTable(this.conf, new Text(tableName));
+    return new HTable(this.conf, Bytes.toBytes(tableName));
   }
 }

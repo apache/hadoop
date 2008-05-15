@@ -23,39 +23,41 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.HashSet;
-import java.util.Collection;
+import java.util.TreeSet;
 
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Writable;
 
-public class RowResult implements Writable, Map<Text, Cell> {
-  protected Text row;
-  protected HbaseMapWritable cells;
-   
-  /**
-   * Used by Writable
-   */
-  public RowResult () {
-    row = new Text();
-    cells = new HbaseMapWritable();
+/**
+ * Holds row name and then a map of columns to cells.
+ */
+public class RowResult implements Writable, Map<byte [], Cell> {
+  private byte [] row = null;
+  private final HbaseMapWritable<byte [], Cell> cells;
+
+  public RowResult() {
+    this(null, new HbaseMapWritable<byte [], Cell>());
   }
-  
+
   /**
    * Create a RowResult from a row and Cell map
    */
-  public RowResult (final Text row, final HbaseMapWritable hbw) {
+  public RowResult (final byte [] row,
+      final HbaseMapWritable<byte [], Cell> m) {
     this.row = row;
-    this.cells = hbw;
+    this.cells = m;
   }
   
   /**
    * Get the row for this RowResult
    */
-  public Text getRow() {
+  public byte [] getRow() {
     return row;
   }
 
@@ -63,19 +65,21 @@ public class RowResult implements Writable, Map<Text, Cell> {
   // Map interface
   // 
   
-  public Cell put(Text key, Cell value) {
+  public Cell put(@SuppressWarnings("unused") byte [] key,
+    @SuppressWarnings("unused") Cell value) {
     throw new UnsupportedOperationException("RowResult is read-only!");
   }
 
-  public void putAll(Map map) {
+  @SuppressWarnings("unchecked")
+  public void putAll(@SuppressWarnings("unused") Map map) {
     throw new UnsupportedOperationException("RowResult is read-only!");
   }
 
   public Cell get(Object key) {
-    return (Cell)cells.get(key);
+    return (Cell)this.cells.get(key);
   }
 
-  public Cell remove(Object key) {
+  public Cell remove(@SuppressWarnings("unused") Object key) {
     throw new UnsupportedOperationException("RowResult is read-only!");
   }
 
@@ -83,7 +87,7 @@ public class RowResult implements Writable, Map<Text, Cell> {
     return cells.containsKey(key);
   }
 
-  public boolean containsValue(Object value) {
+  public boolean containsValue(@SuppressWarnings("unused") Object value) {
     throw new UnsupportedOperationException("Don't support containsValue!");
   }
 
@@ -99,20 +103,16 @@ public class RowResult implements Writable, Map<Text, Cell> {
     throw new UnsupportedOperationException("RowResult is read-only!");
   }
 
-  public Set<Text> keySet() {
-    Set<Text> result = new HashSet<Text>();
-    for (Writable w : cells.keySet()) {
-      result.add((Text)w);
+  public Set<byte []> keySet() {
+    Set<byte []> result = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
+    for (byte [] w : cells.keySet()) {
+      result.add(w);
     }
     return result;
   }
 
-  public Set<Map.Entry<Text, Cell>> entrySet() {
-    Set<Map.Entry<Text, Cell>> result = new HashSet<Map.Entry<Text, Cell>>();
-    for (Map.Entry<Writable, Writable> e : cells.entrySet()) {
-      result.add(new Entry((Text)e.getKey(), (Cell)e.getValue()));
-    }
-    return result;
+  public Set<Map.Entry<byte [], Cell>> entrySet() {
+    return Collections.unmodifiableSet(this.cells.entrySet());
   }
 
   public Collection<Cell> values() {
@@ -126,25 +126,28 @@ public class RowResult implements Writable, Map<Text, Cell> {
   /**
    * Get the Cell that corresponds to column
    */
-  public Cell get(Text column) {
-    return (Cell)cells.get(column);
+  public Cell get(byte [] column) {
+    return this.cells.get(column);
   }
   
-  public class Entry implements Map.Entry<Text, Cell> {
-    private Text row;
-    private Cell cell;
+  /**
+   * Row entry.
+   */
+  public class Entry implements Map.Entry<byte [], Cell> {
+    private final byte [] column;
+    private final Cell cell;
     
-    Entry(Text row, Cell cell) {
-      this.row = row;
+    Entry(byte [] row, Cell cell) {
+      this.column = row;
       this.cell = cell;
     }
     
-    public Cell setValue(Cell c) {
+    public Cell setValue(@SuppressWarnings("unused") Cell c) {
       throw new UnsupportedOperationException("RowResult is read-only!");
     }
     
-    public Text getKey() {
-      return row;
+    public byte [] getKey() {
+      return column;
     }
     
     public Cell getValue() {
@@ -152,17 +155,51 @@ public class RowResult implements Writable, Map<Text, Cell> {
     }
   }
   
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("row=");
+    sb.append(Bytes.toString(this.row));
+    sb.append(", cells={");
+    boolean moreThanOne = false;
+    for (Map.Entry<byte [], Cell> e: this.cells.entrySet()) {
+      if (moreThanOne) {
+        sb.append(", ");
+      } else {
+        moreThanOne = true;
+      }
+      sb.append("(column=");
+      sb.append(Bytes.toString(e.getKey()));
+      sb.append(", timestamp=");
+      sb.append(Long.toString(e.getValue().getTimestamp()));
+      sb.append(", value=");
+      byte [] v = e.getValue().getValue();
+      if (Bytes.equals(e.getKey(), HConstants.COL_REGIONINFO)) {
+        try {
+          sb.append(Writables.getHRegionInfo(v).toString());
+        } catch (IOException ioe) {
+          sb.append(ioe.toString());
+        }
+      } else {
+        sb.append(v); 
+      }
+      sb.append(")");
+    }
+    sb.append("}");
+    return sb.toString();
+  }
+  
   //
   // Writable
   //
-
+  
   public void readFields(final DataInput in) throws IOException {
-    row.readFields(in);
-    cells.readFields(in);
+    this.row = Bytes.readByteArray(in);
+    this.cells.readFields(in);
   }
 
   public void write(final DataOutput out) throws IOException {
-    row.write(out);
-    cells.write(out);
-  }  
+    Bytes.writeByteArray(out, this.row);
+    this.cells.write(out);
+  }
 }

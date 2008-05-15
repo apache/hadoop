@@ -25,15 +25,14 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.InvalidColumnNameException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.io.Text;
 
 /** Instantiated to modify an existing column family on a table */
 class ModifyColumn extends ColumnOperation {
   private final HColumnDescriptor descriptor;
-  private final Text columnName;
+  private final byte [] columnName;
   
-  ModifyColumn(final HMaster master, final Text tableName, 
-    final Text columnName, HColumnDescriptor descriptor) 
+  ModifyColumn(final HMaster master, final byte [] tableName, 
+    final byte [] columnName, HColumnDescriptor descriptor) 
   throws IOException {
     super(master, tableName);
     this.descriptor = descriptor;
@@ -44,15 +43,10 @@ class ModifyColumn extends ColumnOperation {
   protected void postProcessMeta(MetaRegion m, HRegionInterface server)
   throws IOException {
     for (HRegionInfo i: unservedRegions) {
-      // get the column families map from the table descriptor
-      Map<Text, HColumnDescriptor> families = i.getTableDesc().families();
-      
-      // if the table already has this column, then put the new descriptor 
-      // version.
-      if (families.get(columnName) != null){
-        families.put(columnName, descriptor);
-        updateRegionInfo(server, m.getRegionName(), i);          
-      } else{ // otherwise, we have an error.
+      if (!i.getTableDesc().hasFamily(columnName)) {
+        i.getTableDesc().addFamily(descriptor);
+        updateRegionInfo(server, m.getRegionName(), i);
+      } else { // otherwise, we have an error.
         throw new InvalidColumnNameException("Column family '" + columnName + 
           "' doesn't exist, so cannot be modified.");
       }

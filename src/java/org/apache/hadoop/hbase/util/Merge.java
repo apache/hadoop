@@ -27,7 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
@@ -50,9 +49,9 @@ public class Merge extends Configured implements Tool {
   private final HBaseConfiguration conf;
   private Path rootdir;
   private volatile MetaUtils utils;
-  private Text tableName;               // Name of table
-  private volatile Text region1;        // Name of region 1
-  private volatile Text region2;        // Name of region 2
+  private byte [] tableName;               // Name of table
+  private volatile byte [] region1;        // Name of region 1
+  private volatile byte [] region2;        // Name of region 2
   private volatile boolean isMetaTable;
   private volatile HRegionInfo mergeInfo;
 
@@ -109,7 +108,7 @@ public class Merge extends Configured implements Tool {
       return 0;
     } catch (Exception e) {
       LOG.fatal("Merge failed", e);
-      utils.scanMetaRegion(HRegionInfo.firstMetaRegionInfo,
+      utils.scanMetaRegion(HRegionInfo.FIRST_META_REGIONINFO,
           new MetaUtils.ScannerListener() {
             public boolean processRow(HRegionInfo info) {
               System.err.println(info.toString());
@@ -154,12 +153,12 @@ public class Merge extends Configured implements Tool {
   
   private static class MetaScannerListener
   implements MetaUtils.ScannerListener {
-    private final Text region1;
-    private final Text region2;
+    private final byte [] region1;
+    private final byte [] region2;
     private HRegionInfo meta1 = null;
     private HRegionInfo meta2 = null;
     
-    MetaScannerListener(Text region1, Text region2) {
+    MetaScannerListener(final byte [] region1, final byte [] region2) {
       this.region1 = region1;
       this.region2 = region2;
     }
@@ -214,7 +213,7 @@ public class Merge extends Configured implements Tool {
     }
 
     HRegion metaRegion2 = null;
-    if (meta1.getRegionName().equals(meta2.getRegionName())) {
+    if (Bytes.equals(meta1.getRegionName(), meta2.getRegionName())) {
       metaRegion2 = metaRegion1;
     } else {
       metaRegion2 = utils.getMetaRegion(meta2);
@@ -236,9 +235,9 @@ public class Merge extends Configured implements Tool {
           merged.getRegionName());
     }
     HRegion mergeMeta = null;
-    if (mergedInfo.getRegionName().equals(meta1.getRegionName())) {
+    if (Bytes.equals(mergedInfo.getRegionName(), meta1.getRegionName())) {
       mergeMeta = metaRegion1;
-    } else if (mergedInfo.getRegionName().equals(meta2.getRegionName())) {
+    } else if (Bytes.equals(mergedInfo.getRegionName(), meta2.getRegionName())) {
       mergeMeta = metaRegion2;
     } else {
       mergeMeta = utils.getMetaRegion(mergedInfo);
@@ -330,30 +329,28 @@ public class Merge extends Configured implements Tool {
       usage();
       return -1;
     }
-    tableName = new Text(remainingArgs[0]);
-    isMetaTable = tableName.compareTo(HConstants.META_TABLE_NAME) == 0;
+    tableName = Bytes.toBytes(remainingArgs[0]);
+    isMetaTable = Bytes.compareTo(tableName, HConstants.META_TABLE_NAME) == 0;
     
-    region1 = new Text(remainingArgs[1]);
-    region2 = new Text(remainingArgs[2]);
+    region1 = Bytes.toBytes(remainingArgs[1]);
+    region2 = Bytes.toBytes(remainingArgs[2]);
     int status = 0;
-    // Why we duplicate code here? St.Ack
-    if (WritableComparator.compareBytes(
-        tableName.getBytes(), 0, tableName.getLength(),
-        region1.getBytes(), 0, tableName.getLength()) != 0) {
-      LOG.error("Region " + region1 + " does not belong to table " + tableName);
+    if (notInTable(tableName, region1) || notInTable(tableName, region2)) {
       status = -1;
-    }
-    if (WritableComparator.compareBytes(
-        tableName.getBytes(), 0, tableName.getLength(),
-        region2.getBytes(), 0, tableName.getLength()) != 0) {
-      LOG.error("Region " + region2 + " does not belong to table " + tableName);
-      status = -1;
-    }
-    if (region1.equals(region2)) {
+    } else if (Bytes.equals(region1, region2)) {
       LOG.error("Can't merge a region with itself");
       status = -1;
     }
     return status;
+  }
+  
+  private boolean notInTable(final byte [] tn, final byte [] rn) {
+    if (WritableComparator.compareBytes(tn, 0, tn.length, rn, 0, tn.length) != 0) {
+      LOG.error("Region " + Bytes.toString(rn) + " does not belong to table " +
+        Bytes.toString(tn));
+      return true;
+    }
+    return false;
   }
   
   private void usage() {

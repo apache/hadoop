@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.util.Bytes;
 
 import junit.framework.TestCase;
 
@@ -35,7 +35,7 @@ public class TestCompare extends TestCase {
    */
   public void testHStoreKey() {
     long timestamp = System.currentTimeMillis();
-    Text a = new Text("a");
+    byte [] a = Bytes.toBytes("a");
     HStoreKey past = new HStoreKey(a, a, timestamp - 10);
     HStoreKey now = new HStoreKey(a, a, timestamp);
     HStoreKey future = new HStoreKey(a, a, timestamp + 10);
@@ -52,21 +52,21 @@ public class TestCompare extends TestCase {
     HRegionInfo b = new HRegionInfo(new HTableDescriptor("b"), null, null);
     assertTrue(a.compareTo(b) != 0);
     HTableDescriptor t = new HTableDescriptor("t");
-    Text midway = new Text("midway");
+    byte [] midway = Bytes.toBytes("midway");
     a = new HRegionInfo(t, null, midway);
     b = new HRegionInfo(t, midway, null);
     assertTrue(a.compareTo(b) < 0);
     assertTrue(b.compareTo(a) > 0);
     assertEquals(a, a);
     assertTrue(a.compareTo(a) == 0);
-    a = new HRegionInfo(t, new Text("a"), new Text("d"));
-    b = new HRegionInfo(t, new Text("e"), new Text("g"));
+    a = new HRegionInfo(t, Bytes.toBytes("a"), Bytes.toBytes("d"));
+    b = new HRegionInfo(t, Bytes.toBytes("e"), Bytes.toBytes("g"));
     assertTrue(a.compareTo(b) < 0);
-    a = new HRegionInfo(t, new Text("aaaa"), new Text("dddd"));
-    b = new HRegionInfo(t, new Text("e"), new Text("g"));
+    a = new HRegionInfo(t, Bytes.toBytes("aaaa"), Bytes.toBytes("dddd"));
+    b = new HRegionInfo(t, Bytes.toBytes("e"), Bytes.toBytes("g"));
     assertTrue(a.compareTo(b) < 0);
-    a = new HRegionInfo(t, new Text("aaaa"), new Text("dddd"));
-    b = new HRegionInfo(t, new Text("aaaa"), new Text("eeee"));
+    a = new HRegionInfo(t, Bytes.toBytes("aaaa"), Bytes.toBytes("dddd"));
+    b = new HRegionInfo(t, Bytes.toBytes("aaaa"), Bytes.toBytes("eeee"));
     assertTrue(a.compareTo(b) < 0);
   }
 }

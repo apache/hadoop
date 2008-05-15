@@ -1,14 +1,21 @@
-/*
- * $Id$
+/**
+ * Copyright 2008 The Apache Software Foundation
  *
- * Copyright   Critical Software S.A., All Rights Reserved.
- * (www.criticalsoftware.com)
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * This software is the proprietary information of Critical Software S.A.
- * Use is subject to license terms.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Last changed on : $Date$
- * Last changed by : $Author$
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.apache.hadoop.hbase.mapred;
 
@@ -18,11 +25,13 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Writables;
@@ -36,7 +45,7 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * A Base for {@link TableInputFormat}s. Receives a {@link HTable}, a
  * {@link Text}[] of input columns and optionally a {@link RowFilterInterface}.
- * Subclasses may use other {@link TableRecordReader} implementations.
+ * Subclasses may use other TableRecordReader implementations.
  * <p>
  * An example of a subclass:
  * <code>
@@ -44,11 +53,11 @@ import org.apache.hadoop.mapred.Reporter;
  *
  *     public void configure(JobConf job) {
  *       HTable exampleTable = new HTable(new HBaseConfiguration(job),
- *         new Text("exampleTable"));
+ *         Bytes.toBytes("exampleTable"));
  *       // mandatory
  *       setHTable(exampleTable);
- *       Text[] inputColumns = new Text[] { new Text("columnA"),
- *         new Text("columnB") };
+ *       Text[] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
+ *         Bytes.toBytes("columnB") };
  *       // mandatory
  *       setInputColums(inputColumns);
  *       RowFilterInterface exampleFilter = new RegExpRowFilter("keyPrefix.*");
@@ -62,9 +71,9 @@ import org.apache.hadoop.mapred.Reporter;
  * </code>
  */
 public abstract class TableInputFormatBase
-implements InputFormat<Text, RowResult> {
+implements InputFormat<ImmutableBytesWritable, RowResult> {
   private final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
-  private Text[] inputColumns;
+  private byte [][] inputColumns;
   private HTable table;
   private TableRecordReader tableRecordReader;
   private RowFilterInterface rowFilter;
@@ -72,14 +81,14 @@ implements InputFormat<Text, RowResult> {
   /**
    * Iterate over an HBase table data, return (Text, RowResult) pairs
    */
-  protected class TableRecordReader implements RecordReader<Text, RowResult> {
-
-    private Text startRow;
-    private Text endRow;
+  protected class TableRecordReader
+  implements RecordReader<ImmutableBytesWritable, RowResult> {
+    private byte [] startRow;
+    private byte [] endRow;
     private RowFilterInterface trrRowFilter;
     private Scanner scanner;
     private HTable htable;
-    private Text[] trrInputColumns;
+    private byte [][] trrInputColumns;
 
     /**
      * Build the scanner. Not done in constructor to allow for extension.
@@ -87,7 +96,7 @@ implements InputFormat<Text, RowResult> {
      * @throws IOException
      */
     public void init() throws IOException {
-      if ((endRow != null) && (endRow.getLength() > 0)) {
+      if ((endRow != null) && (endRow.length > 0)) {
         if (trrRowFilter != null) {
           final Set<RowFilterInterface> rowFiltersSet =
             new HashSet<RowFilterInterface>();
@@ -116,14 +125,14 @@ implements InputFormat<Text, RowResult> {
     /**
      * @param inputColumns the columns to be placed in {@link RowResult}.
      */
-    public void setInputColumns(Text[] inputColumns) {
+    public void setInputColumns(final byte [][] inputColumns) {
       this.trrInputColumns = inputColumns;
     }
 
     /**
      * @param startRow the first row in the split
      */
-    public void setStartRow(Text startRow) {
+    public void setStartRow(final byte [] startRow) {
       this.startRow = startRow;
     }
 
@@ -131,7 +140,7 @@ implements InputFormat<Text, RowResult> {
      *
      * @param endRow the last row in the split
      */
-    public void setEndRow(Text endRow) {
+    public void setEndRow(final byte [] endRow) {
       this.endRow = endRow;
     }
 
@@ -148,12 +157,12 @@ implements InputFormat<Text, RowResult> {
     }
 
     /**
-     * @return Text
+     * @return ImmutableBytesWritable
      *
      * @see org.apache.hadoop.mapred.RecordReader#createKey()
      */
-    public Text createKey() {
-      return new Text();
+    public ImmutableBytesWritable createKey() {
+      return new ImmutableBytesWritable();
     }
 
     /**
@@ -188,26 +197,26 @@ implements InputFormat<Text, RowResult> {
      * @throws IOException
      */
     @SuppressWarnings("unchecked")
-    public boolean next(Text key, RowResult value) throws IOException {
+    public boolean next(ImmutableBytesWritable key, RowResult value)
+    throws IOException {
       RowResult result = this.scanner.next();
-      boolean hasMore = result != null;
+      boolean hasMore = result != null && result.size() > 0;
       if (hasMore) {
-        Writables.copyWritable(result.getRow(), key);
+        key.set(result.getRow());
         Writables.copyWritable(result, value);
       }
       return hasMore;
     }
-
   }
 
   /**
-   * Builds a {@link TableRecordReader}. If no {@link TableRecordReader} was
-   * provided uses the default.
+   * Builds a TableRecordReader. If no TableRecordReader was provided, uses
+   * the default.
    *
    * @see org.apache.hadoop.mapred.InputFormat#getRecordReader(InputSplit,
    *      JobConf, Reporter)
    */
-  public RecordReader<Text, RowResult> getRecordReader(InputSplit split,
+  public RecordReader<ImmutableBytesWritable, RowResult> getRecordReader(InputSplit split,
       @SuppressWarnings("unused")
       JobConf job, @SuppressWarnings("unused")
       Reporter reporter)
@@ -245,7 +254,7 @@ implements InputFormat<Text, RowResult> {
    * @see org.apache.hadoop.mapred.InputFormat#getSplits(org.apache.hadoop.mapred.JobConf, int)
    */
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
-    Text[] startKeys = this.table.getStartKeys();
+    byte [][] startKeys = this.table.getStartKeys();
     if (startKeys == null || startKeys.length == 0) {
       throw new IOException("Expecting at least one region");
     }
@@ -265,7 +274,7 @@ implements InputFormat<Text, RowResult> {
       lastPos = startKeys.length % realNumSplits > i ? lastPos + 1 : lastPos;
       splits[i] = new TableSplit(this.table.getTableName(),
           startKeys[startPos], ((i + 1) < realNumSplits) ? startKeys[lastPos]
-              : new Text());
+              : HConstants.EMPTY_START_ROW);
       if (LOG.isDebugEnabled()) {
         LOG.debug("split: " + i + "->" + splits[i]);
       }
@@ -278,7 +287,7 @@ implements InputFormat<Text, RowResult> {
   /**
    * @param inputColumns to be passed in {@link RowResult} to the map task.
    */
-  protected void setInputColums(Text[] inputColumns) {
+  protected void setInputColums(byte [][] inputColumns) {
     this.inputColumns = inputColumns;
   }
 

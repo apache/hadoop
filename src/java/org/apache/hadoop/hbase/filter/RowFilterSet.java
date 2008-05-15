@@ -29,7 +29,6 @@ import java.util.SortedMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.io.ObjectWritable;
-import org.apache.hadoop.io.Text;
 
 /**
  * Implementation of RowFilterInterface that represents a set of RowFilters
@@ -81,7 +80,7 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   /** {@inheritDoc} */
-  public void validate(final Text[] columns) {
+  public void validate(final byte [][] columns) {
     for (RowFilterInterface filter : filters) {
       filter.validate(columns);
     }
@@ -95,7 +94,7 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   /** {@inheritDoc} */
-  public void rowProcessed(boolean filtered, Text rowKey) {
+  public void rowProcessed(boolean filtered, byte [] rowKey) {
     for (RowFilterInterface filter : filters) {
       filter.rowProcessed(filtered, rowKey);
     }
@@ -129,7 +128,7 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   /** {@inheritDoc} */
-  public boolean filterRowKey(final Text rowKey) {
+  public boolean filterRowKey(final byte [] rowKey) {
     boolean resultFound = false;
     boolean result = operator == Operator.MUST_PASS_ONE;
     for (RowFilterInterface filter : filters) {
@@ -153,7 +152,7 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   /** {@inheritDoc} */
-  public boolean filterColumn(final Text rowKey, final Text colKey, 
+  public boolean filterColumn(final byte [] rowKey, final byte [] colKey, 
     final byte[] data) {
     boolean resultFound = false;
     boolean result = operator == Operator.MUST_PASS_ONE;
@@ -180,7 +179,7 @@ public class RowFilterSet implements RowFilterInterface {
   }
 
   /** {@inheritDoc} */
-  public boolean filterRow(final SortedMap<Text, byte[]> columns) {
+  public boolean filterRow(final SortedMap<byte [], byte[]> columns) {
     boolean resultFound = false;
     boolean result = operator == Operator.MUST_PASS_ONE;
     for (RowFilterInterface filter : filters) {

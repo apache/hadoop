@@ -24,8 +24,9 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,6 +36,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -67,16 +69,17 @@ import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.HbaseRPC;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.DNS;
@@ -95,9 +98,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   // of HRegionServer in isolation. We use AtomicBoolean rather than
   // plain boolean so we can pass a reference to Chore threads.  Otherwise,
   // Chore threads need to know about the hosting class.
-  protected volatile AtomicBoolean stopRequested = new AtomicBoolean(false);
+  protected final AtomicBoolean stopRequested = new AtomicBoolean(false);
   
-  protected volatile AtomicBoolean quiesced = new AtomicBoolean(false);
+  protected final AtomicBoolean quiesced = new AtomicBoolean(false);
   
   // Go down hard.  Used if file system becomes unavailable and also in
   // debugging and unit tests.
@@ -111,13 +114,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   private FileSystem fs;
   private Path rootDir;
   private final Random rand = new Random();
-  
-  // region name -> HRegion
-  protected volatile Map<Text, HRegion> onlineRegions =
-    new ConcurrentHashMap<Text, HRegion>();
- 
+
+  // Key is Bytes.hashCode of region name byte array and the value is HRegion
+  // in both of the maps below.  Use Bytes.mapKey(byte []) generating key for
+  // below maps.
+  protected final Map<Integer, HRegion> onlineRegions =
+    new ConcurrentHashMap<Integer, HRegion>();
+
   protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-  private volatile List<HMsg> outboundMsgs =
+  private final List<HMsg> outboundMsgs =
     Collections.synchronizedList(new ArrayList<HMsg>());
 
   final int numRetries;
@@ -173,7 +178,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       instance.join();
       LOG.info("Shutdown thread complete");
     }    
-    
   }
 
   // Compactions
@@ -285,7 +289,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               this.outboundMsgs.toArray(new HMsg[outboundMsgs.size()]);
             this.outboundMsgs.clear();
           }
-
           try {
             this.serverInfo.setLoad(new HServerLoad(requestCount.get(),
                 onlineRegions.size()));
@@ -293,12 +296,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             HMsg msgs[] = hbaseMaster.regionServerReport(
               serverInfo, outboundArray, getMostLoadedRegions());
             lastMsg = System.currentTimeMillis();
-
             if (this.quiesced.get() && onlineRegions.size() == 0) {
               // We've just told the master we're exiting because we aren't
               // serving any regions. So set the stop bit and exit.
               LOG.info("Server quiesced and not serving any regions. " +
-              "Starting shutdown");
+                "Starting shutdown");
               stopRequested.set(true);
               this.outboundMsgs.clear();
               continue;
@@ -310,10 +312,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 !restart && !stopRequested.get() && i < msgs.length;
                 i++) {
               
+              LOG.info(msgs[i].toString());
               switch(msgs[i].getMsg()) {
-
               case HMsg.MSG_CALL_SERVER_STARTUP:
-                LOG.info("Got call server startup message");
                 // We the MSG_CALL_SERVER_STARTUP on startup but we can also
                 // get it when the master is panicing because for instance
                 // the HDFS has been yanked out from under it.  Be wary of
@@ -344,13 +345,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 break;
 
               case HMsg.MSG_REGIONSERVER_STOP:
-                LOG.info("Got regionserver stop message");
                 stopRequested.set(true);
                 break;
 
               case HMsg.MSG_REGIONSERVER_QUIESCE:
                 if (!quiesceRequested) {
-                  LOG.info("Got quiesce server message");
                   try {
                     toDo.put(new ToDoEntry(msgs[i]));
                   } catch (InterruptedException e) {
@@ -449,7 +448,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         exitMsg[0] = new HMsg(HMsg.MSG_REPORT_EXITING);
         // Tell the master what regions we are/were serving
         int i = 1;
-        for(HRegion region: closedRegions) {
+        for (HRegion region: closedRegions) {
           exitMsg[i++] = new HMsg(HMsg.MSG_REPORT_CLOSE,
               region.getRegionInfo());
         }
@@ -472,7 +471,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Run init. Sets up hlog and starts up all server threads.
    * @param c Extra configuration.
    */
-  private void init(final HbaseMapWritable c) throws IOException {
+  private void init(final MapWritable c) throws IOException {
     try {
       for (Map.Entry<Writable, Writable> e: c.entrySet()) {
         String key = e.getKey().toString();
@@ -676,7 +675,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Let the master know we're here
    * Run initialization using parameters passed us by the master.
    */
-  private HbaseMapWritable reportForDuty(final Sleeper sleeper)
+  private MapWritable reportForDuty(final Sleeper sleeper)
   throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Telling master at " +
@@ -687,7 +686,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       HMasterRegionInterface.class, HMasterRegionInterface.versionID,
       new HServerAddress(conf.get(MASTER_ADDRESS)).getInetSocketAddress(),
       this.conf);
-    HbaseMapWritable result = null;
+    MapWritable result = null;
     long lastMsg = 0;
     while(!stopRequested.get()) {
       try {
@@ -695,9 +694,6 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         this.serverInfo.setLoad(new HServerLoad(0, onlineRegions.size()));
         lastMsg = System.currentTimeMillis();
         result = this.hbaseMaster.regionServerStartup(serverInfo);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Done telling master we are up");
-        }
         break;
       } catch (Leases.LeaseStillHeldException e) {
         LOG.info("Lease " + e.getName() + " already held on master. Check " +
@@ -777,7 +773,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             if(e == null || stopRequested.get()) {
               continue;
             }
-            LOG.info(e.msg.toString());
+            LOG.info(e.msg);
             switch(e.msg.getMsg()) {
 
             case HMsg.MSG_REGIONSERVER_QUIESCE:
@@ -837,13 +833,12 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
   
   void openRegion(final HRegionInfo regionInfo) {
-    HRegion region = onlineRegions.get(regionInfo.getRegionName());
+    Integer mapKey = Bytes.mapKey(regionInfo.getRegionName());
+    HRegion region = this.onlineRegions.get(mapKey);
     if(region == null) {
       try {
-        region = new HRegion(
-            HTableDescriptor.getTableDir(rootDir,
-                regionInfo.getTableDesc().getName()
-            ),
+        region = new HRegion(HTableDescriptor.getTableDir(rootDir,
+                regionInfo.getTableDesc().getName()),
             this.log, this.fs, conf, regionInfo, null, this.cacheFlusher,
             new Progressable() {
               public void progress() {
@@ -854,8 +849,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         // Startup a compaction early if one is needed.
         this.compactSplitThread.compactionRequested(region);
       } catch (IOException e) {
-        LOG.error("error opening region " + regionInfo.getRegionName(), e);
-        
+        LOG.error("error opening region " + regionInfo.getRegionNameAsString(), e);
+
         // TODO: add an extra field in HRegionInfo to indicate that there is
         // an error. We can't do that now because that would be an incompatible
         // change that would require a migration
@@ -865,7 +860,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.lock.writeLock().lock();
       try {
         this.log.setSequenceNumber(region.getMinSequenceId());
-        this.onlineRegions.put(region.getRegionName(), region);
+        this.onlineRegions.put(mapKey, region);
       } finally {
         this.lock.writeLock().unlock();
       }
@@ -889,7 +884,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.lock.writeLock().lock();
     HRegion region = null;
     try {
-      region = onlineRegions.remove(hri.getRegionName());
+      region = onlineRegions.remove(Bytes.mapKey(hri.getRegionName()));
     } finally {
       this.lock.writeLock().unlock();
     }
@@ -914,12 +909,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     for(HRegion region: regionsToClose) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("closing region " + region.getRegionName());
+        LOG.debug("closing region " + Bytes.toString(region.getRegionName()));
       }
       try {
         region.close(abortRequested, null);
       } catch (IOException e) {
-        LOG.error("error closing region " + region.getRegionName(),
+        LOG.error("error closing region " +
+            Bytes.toString(region.getRegionName()),
           RemoteExceptionHandler.checkIOException(e));
       }
     }
@@ -932,10 +928,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     this.lock.writeLock().lock();
     try {
       synchronized (onlineRegions) {
-        for (Iterator<Map.Entry<Text, HRegion>> i =
-          onlineRegions.entrySet().iterator();
-        i.hasNext();) {
-          Map.Entry<Text, HRegion> e = i.next();
+        for (Iterator<Map.Entry<Integer, HRegion>> i =
+            onlineRegions.entrySet().iterator(); i.hasNext();) {
+          Map.Entry<Integer, HRegion> e = i.next();
           HRegion r = e.getValue();
           if (!r.getRegionInfo().isMetaRegion()) {
             regionsToClose.add(r);
@@ -970,7 +965,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   //
 
   /** {@inheritDoc} */
-  public HRegionInfo getRegionInfo(final Text regionName)
+  public HRegionInfo getRegionInfo(final byte [] regionName)
     throws NotServingRegionException {
     
     requestCount.incrementAndGet();
@@ -978,7 +973,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public Cell get(final Text regionName, final Text row, final Text column) 
+  public Cell get(final byte [] regionName, final byte [] row,
+    final byte [] column) 
   throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
@@ -991,8 +987,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public Cell[] get(final Text regionName, final Text row,
-    final Text column, final int numVersions) 
+  public Cell[] get(final byte [] regionName, final byte [] row,
+    final byte [] column, final int numVersions) 
   throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
@@ -1005,8 +1001,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public Cell[] get(final Text regionName, final Text row, final Text column, 
-    final long timestamp, final int numVersions) 
+  public Cell[] get(final byte [] regionName, final byte [] row,
+    final byte [] column, final long timestamp, final int numVersions) 
   throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
@@ -1019,35 +1015,37 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public RowResult getRow(final Text regionName, final Text row, final long ts)
+  public RowResult getRow(final byte [] regionName, final byte [] row,
+    final long ts)
   throws IOException {
     return getRow(regionName, row, null, ts);
   }
 
   /** {@inheritDoc} */
-  public RowResult getRow(final Text regionName, final Text row, 
-    final Text[] columns)
+  public RowResult getRow(final byte [] regionName, final byte [] row, 
+    final byte [][] columns)
   throws IOException {
     return getRow(regionName, row, columns, HConstants.LATEST_TIMESTAMP);
   }
 
   /** {@inheritDoc} */
-  public RowResult getRow(final Text regionName, final Text row, 
-    final Text[] columns, final long ts)
+  public RowResult getRow(final byte [] regionName, final byte [] row, 
+    final byte [][] columns, final long ts)
   throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
     try {
       // convert the columns array into a set so it's easy to check later.
-      Set<Text> columnSet = null;
+      Set<byte []> columnSet = null;
       if (columns != null) {
-        columnSet = new HashSet<Text>();
+        columnSet = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
         columnSet.addAll(Arrays.asList(columns));
       }
       
       HRegion region = getRegion(regionName);
-      Map<Text, Cell> map = region.getFull(row, columnSet, ts);
-      HbaseMapWritable result = new HbaseMapWritable();
+      Map<byte [], Cell> map = region.getFull(row, columnSet, ts);
+      HbaseMapWritable<byte [], Cell> result =
+        new HbaseMapWritable<byte [], Cell>();
       result.putAll(map);
       return new RowResult(row, result);
     } catch (IOException e) {
@@ -1057,17 +1055,17 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public RowResult getClosestRowBefore(final Text regionName, 
-    final Text row)
+  public RowResult getClosestRowBefore(final byte [] regionName, 
+    final byte [] row)
   throws IOException {
     checkOpen();
     requestCount.incrementAndGet();
     try {
       // locate the region we're operating on
       HRegion region = getRegion(regionName);
-
       // ask the region for all the data 
-      return region.getClosestRowBefore(row);
+      RowResult rr = region.getClosestRowBefore(row);
+      return rr;
     } catch (IOException e) {
       checkFileSystem();
       throw e;
@@ -1087,15 +1085,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.leases.renewLease(scannerName);
 
       // Collect values to be returned here
-      HbaseMapWritable values = new HbaseMapWritable();
+      HbaseMapWritable<byte [], Cell> values
+        = new HbaseMapWritable<byte [], Cell>();
       HStoreKey key = new HStoreKey();
-      TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
+      TreeMap<byte [], byte []> results =
+        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
       while (s.next(key, results)) {
-        for(Map.Entry<Text, byte []> e: results.entrySet()) {
+        for (Map.Entry<byte [], byte []> e: results.entrySet()) {
           values.put(e.getKey(), new Cell(e.getValue(), key.getTimestamp()));
         }
-
-        if(values.size() > 0) {
+        if (values.size() > 0) {
           // Row has something in it. Return the value.
           break;
         }
@@ -1111,8 +1110,8 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public void batchUpdate(Text regionName, BatchUpdate b)
-    throws IOException {
+  public void batchUpdate(final byte [] regionName, BatchUpdate b)
+  throws IOException {
     checkOpen();
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
@@ -1130,7 +1129,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   //
 
   /** {@inheritDoc} */
-  public long openScanner(Text regionName, Text[] cols, Text firstRow,
+  public long openScanner(byte [] regionName, byte [][] cols, byte [] firstRow,
     final long timestamp, final RowFilterInterface filter)
   throws IOException {
     checkOpen();
@@ -1226,15 +1225,15 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   //
   
   /** {@inheritDoc} */
-  public void deleteAll(final Text regionName, final Text row,
-      final Text column, final long timestamp) 
+  public void deleteAll(final byte [] regionName, final byte [] row,
+      final byte [] column, final long timestamp) 
   throws IOException {
     HRegion region = getRegion(regionName);
     region.deleteAll(row, column, timestamp);
   }
 
   /** {@inheritDoc} */
-  public void deleteAll(final Text regionName, final Text row,
+  public void deleteAll(final byte [] regionName, final byte [] row,
       final long timestamp) 
   throws IOException {
     HRegion region = getRegion(regionName);
@@ -1242,7 +1241,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
 
   /** {@inheritDoc} */
-  public void deleteFamily(Text regionName, Text row, Text family, 
+  public void deleteFamily(byte [] regionName, byte [] row, byte [] family, 
     long timestamp) throws IOException{
     getRegion(regionName).deleteFamily(row, family, timestamp);
   }
@@ -1283,8 +1282,17 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   /**
    * @return Immutable list of this servers regions.
    */
-  public Map<Text, HRegion> getOnlineRegions() {
-    return Collections.unmodifiableMap(onlineRegions);
+  public Collection<HRegion> getOnlineRegions() {
+    return Collections.unmodifiableCollection(onlineRegions.values());
+  }
+  
+  /**
+   * @param regionName
+   * @return HRegion for the passed <code>regionName</code> or null if named
+   * region is not member of the online regions.
+   */
+  public HRegion getOnlineRegion(final byte [] regionName) {
+    return onlineRegions.get(Bytes.mapKey(regionName));
   }
 
   /** @return the request count */
@@ -1303,17 +1311,16 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @return {@link HRegion} for <code>regionName</code>
    * @throws NotServingRegionException
    */
-  protected HRegion getRegion(final Text regionName)
+  protected HRegion getRegion(final byte [] regionName)
   throws NotServingRegionException {
     HRegion region = null;
     this.lock.readLock().lock();
     try {
-      region = onlineRegions.get(regionName);
-
+      Integer key = Integer.valueOf(Bytes.hashCode(regionName));
+      region = onlineRegions.get(key);
       if (region == null) {
-        throw new NotServingRegionException(regionName.toString());
+        throw new NotServingRegionException(regionName);
       }
-      
       return region;
     } finally {
       this.lock.readLock().unlock();
@@ -1329,9 +1336,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   protected HRegionInfo[] getMostLoadedRegions() {
     ArrayList<HRegionInfo> regions = new ArrayList<HRegionInfo>();
     synchronized (onlineRegions) {
-      for (Map.Entry<Text, HRegion> entry : onlineRegions.entrySet()) {
+      for (HRegion r : onlineRegions.values()) {
         if (regions.size() < numRegionsToReport) {
-          regions.add(entry.getValue().getRegionInfo());
+          regions.add(r.getRegionInfo());
         } else {
           break;
         }

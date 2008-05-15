@@ -51,8 +51,8 @@ public class TruncateCommand extends BasicCommand {
       HTableDescriptor[] tables = admin.listTables();
       HColumnDescriptor[] columns = null;
       for (int i = 0; i < tables.length; i++) {
-        if (tables[i].getName().equals(tableName)) {
-          columns = tables[i].getFamilies().values().toArray(
+        if (tables[i].getNameAsString().equals(tableName.toString())) {
+          columns = tables[i].getFamilies().toArray(
               new HColumnDescriptor[] {});
           break;
         }
@@ -60,7 +60,7 @@ public class TruncateCommand extends BasicCommand {
       println("Truncating a '" + tableName + "' table ... Please wait.");
 
       admin.deleteTable(tableName); // delete the table
-      HTableDescriptor tableDesc = new HTableDescriptor(tableName.toString());
+      HTableDescriptor tableDesc = new HTableDescriptor(tableName.getBytes());
       for (int i = 0; i < columns.length; i++) {
         tableDesc.addFamily(columns[i]);
       }

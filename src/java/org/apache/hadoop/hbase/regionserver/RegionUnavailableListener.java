@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.io.Text;
 
 /**
  * Used as a callback mechanism so that an HRegion can notify the HRegionServer
@@ -33,12 +32,12 @@ public interface RegionUnavailableListener {
    * outstanding transactions.
    * @param regionName
    */
-  public void closing(final Text regionName);
+  public void closing(final byte [] regionName);
   
   /**
    * <code>regionName</code> is closed and no longer available.
    * Listener should clean up any references to <code>regionName</code>
    * @param regionName
    */
-  public void closed(final Text regionName);
+  public void closed(final byte [] regionName);
 }

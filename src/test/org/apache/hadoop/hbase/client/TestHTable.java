@@ -21,21 +21,19 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.TreeMap;
-
-import org.apache.hadoop.io.Text;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Text;
 
 /**
  * Tests HTable
@@ -43,13 +41,13 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 public class TestHTable extends HBaseClusterTestCase implements HConstants {
   private static final Log LOG = LogFactory.getLog(TestHTable.class);
   private static final HColumnDescriptor column =
-    new HColumnDescriptor(COLUMN_FAMILY.toString());
+    new HColumnDescriptor(COLUMN_FAMILY);
 
-  private static final Text nosuchTable = new Text("nosuchTable");
-  private static final Text tableAname = new Text("tableA");
-  private static final Text tableBname = new Text("tableB");
+  private static final byte [] nosuchTable = Bytes.toBytes("nosuchTable");
+  private static final byte [] tableAname = Bytes.toBytes("tableA");
+  private static final byte [] tableBname = Bytes.toBytes("tableB");
   
-  private static final Text row = new Text("row");
+  private static final byte [] row = Bytes.toBytes("row");
  
   /**
    * the test
@@ -69,10 +67,10 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
       fail();
     }
     
-    HTableDescriptor tableAdesc = new HTableDescriptor(tableAname.toString());
+    HTableDescriptor tableAdesc = new HTableDescriptor(tableAname);
     tableAdesc.addFamily(column);
     
-    HTableDescriptor tableBdesc = new HTableDescriptor(tableBname.toString());
+    HTableDescriptor tableBdesc = new HTableDescriptor(tableBname);
     tableBdesc.addFamily(column);
 
     // create a couple of tables
@@ -106,7 +104,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     try {
       for (RowResult r : s) {
         batchUpdate = new BatchUpdate(r.getRow());
-        for(Map.Entry<Text, Cell> e: r.entrySet()) {
+        for(Map.Entry<byte [], Cell> e: r.entrySet()) {
           batchUpdate.put(e.getKey(), e.getValue().getValue());
         }
         b.commit(batchUpdate);
@@ -153,7 +151,7 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
   public void testTableNotFoundExceptionWithATable() {
     try {
       HColumnDescriptor column =
-        new HColumnDescriptor(COLUMN_FAMILY.toString());
+        new HColumnDescriptor(COLUMN_FAMILY);
       HBaseAdmin admin = new HBaseAdmin(conf);
       HTableDescriptor testTableADesc =
         new HTableDescriptor("table");

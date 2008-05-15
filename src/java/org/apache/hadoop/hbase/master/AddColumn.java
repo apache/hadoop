@@ -24,13 +24,12 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.io.Text;
 
 /** Instantiated to add a column family to a table */
 class AddColumn extends ColumnOperation {
   private final HColumnDescriptor newColumn;
 
-  AddColumn(final HMaster master, final Text tableName, 
+  AddColumn(final HMaster master, final byte [] tableName, 
     final HColumnDescriptor newColumn) 
   throws IOException {
     super(master, tableName);

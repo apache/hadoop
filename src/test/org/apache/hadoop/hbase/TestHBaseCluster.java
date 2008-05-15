@@ -20,17 +20,17 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Iterator;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scanner;
-import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Test HBase Master and Region servers, client API 
@@ -76,17 +76,19 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
 
   private static final int FIRST_ROW = 1;
   private static final int NUM_VALS = 1000;
-  private static final Text CONTENTS = new Text("contents:");
-  private static final Text CONTENTS_BASIC = new Text("contents:basic");
+  private static final byte [] CONTENTS = Bytes.toBytes("contents:");
+  private static final byte [] CONTENTS_MINUS_COLON = Bytes.toBytes("contents");
+  private static final byte [] CONTENTS_BASIC = Bytes.toBytes("contents:basic");
   private static final String CONTENTSTR = "contentstr";
-  private static final Text ANCHOR = new Text("anchor:");
+  private static final byte [] ANCHOR = Bytes.toBytes("anchor:");
+  private static final byte [] ANCHOR_MINUS_COLON = Bytes.toBytes("anchor");
   private static final String ANCHORNUM = "anchor:anchornum-";
   private static final String ANCHORSTR = "anchorstr";
 
   private void setup() throws IOException {
     desc = new HTableDescriptor("test");
-    desc.addFamily(new HColumnDescriptor(CONTENTS.toString()));
-    desc.addFamily(new HColumnDescriptor(ANCHOR.toString()));
+    desc.addFamily(new HColumnDescriptor(CONTENTS));
+    desc.addFamily(new HColumnDescriptor(ANCHOR));
     admin = new HBaseAdmin(conf);
     admin.createTable(desc);
     table = new HTable(conf, desc.getName());
@@ -100,11 +102,9 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
     // Write out a bunch of values
 
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
-      BatchUpdate b = new BatchUpdate(new Text("row_" + k));
-      b.put(CONTENTS_BASIC,
-          (CONTENTSTR + k).getBytes(HConstants.UTF8_ENCODING));
-      b.put(new Text(ANCHORNUM + k),
-          (ANCHORSTR + k).getBytes(HConstants.UTF8_ENCODING));
+      BatchUpdate b = new BatchUpdate("row_" + k);
+      b.put(CONTENTS_BASIC, Bytes.toBytes(CONTENTSTR + k));
+      b.put(ANCHORNUM + k, Bytes.toBytes(ANCHORSTR + k));
       table.commit(b);
     }
     LOG.info("Write " + NUM_VALS + " rows. Elapsed time: "
@@ -114,9 +114,9 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
 
     startTime = System.currentTimeMillis();
 
-    Text collabel = null;
+    byte [] collabel = null;
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
-      Text rowlabel = new Text("row_" + k);
+      byte [] rowlabel = Bytes.toBytes("row_" + k);
 
       byte bodydata[] = table.get(rowlabel, CONTENTS_BASIC).getValue();
       assertNotNull("no data for row " + rowlabel + "/" + CONTENTS_BASIC,
@@ -127,7 +127,7 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
           CONTENTS_BASIC + "), expected: '" + teststr + "' got: '" +
           bodystr + "'", teststr.compareTo(bodystr) == 0);
       
-      collabel = new Text(ANCHORNUM + k);
+      collabel = Bytes.toBytes(ANCHORNUM + k);
       bodydata = table.get(rowlabel, collabel).getValue();
       assertNotNull("no data for row " + rowlabel + "/" + collabel, bodydata);
       bodystr = new String(bodydata, HConstants.UTF8_ENCODING);
@@ -142,33 +142,30 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
   }
   
   private void scanner() throws IOException {
-    Text[] cols = new Text[] {
-        new Text(ANCHORNUM + "[0-9]+"),
-        new Text(CONTENTS_BASIC)
-    };
+    byte [][] cols = new byte [][] {Bytes.toBytes(ANCHORNUM + "[0-9]+"),
+      CONTENTS_BASIC};
     
     long startTime = System.currentTimeMillis();
     
-    Scanner s = table.getScanner(cols, new Text());
+    Scanner s = table.getScanner(cols, HConstants.EMPTY_BYTE_ARRAY);
     try {
 
       int contentsFetched = 0;
       int anchorFetched = 0;
       int k = 0;
       for (RowResult curVals : s) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
-          Text col = it.next();
+        for (Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
+          byte [] col = it.next();
           byte val[] = curVals.get(col).getValue();
-          String curval = new String(val, HConstants.UTF8_ENCODING).trim();
-
-          if(col.compareTo(CONTENTS_BASIC) == 0) {
+          String curval = Bytes.toString(val);
+          if (Bytes.compareTo(col, CONTENTS_BASIC) == 0) {
             assertTrue("Error at:" + curVals.getRow() 
                 + ", Value for " + col + " should start with: " + CONTENTSTR
                 + ", but was fetched as: " + curval,
                 curval.startsWith(CONTENTSTR));
             contentsFetched++;
             
-          } else if(col.toString().startsWith(ANCHORNUM)) {
+          } else if (Bytes.toString(col).startsWith(ANCHORNUM)) {
             assertTrue("Error at:" + curVals.getRow()
                 + ", Value for " + col + " should start with: " + ANCHORSTR
                 + ", but was fetched as: " + curval,
@@ -176,13 +173,18 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
             anchorFetched++;
             
           } else {
-            LOG.info(col);
+            LOG.info(Bytes.toString(col));
           }
         }
         k++;
       }
-      assertEquals("Expected " + NUM_VALS + " " + CONTENTS_BASIC + " values, but fetched " + contentsFetched, NUM_VALS, contentsFetched);
-      assertEquals("Expected " + NUM_VALS + " " + ANCHORNUM + " values, but fetched " + anchorFetched, NUM_VALS, anchorFetched);
+      assertEquals("Expected " + NUM_VALS + " " +
+        Bytes.toString(CONTENTS_BASIC) + " values, but fetched " +
+        contentsFetched,
+        NUM_VALS, contentsFetched);
+      assertEquals("Expected " + NUM_VALS + " " + ANCHORNUM +
+        " values, but fetched " + anchorFetched,
+        NUM_VALS, anchorFetched);
 
       LOG.info("Scanned " + NUM_VALS
           + " rows. Elapsed time: "
@@ -196,10 +198,10 @@ public class TestHBaseCluster extends HBaseClusterTestCase {
   private void listTables() throws IOException {
     HTableDescriptor[] tables = admin.listTables();
     assertEquals(1, tables.length);
-    assertEquals(desc.getName(), tables[0].getName());
-    Set<Text> families = tables[0].families().keySet();
+    assertTrue(Bytes.equals(desc.getName(), tables[0].getName()));
+    Collection<HColumnDescriptor> families = tables[0].getFamilies();
     assertEquals(2, families.size());
-    assertTrue(families.contains(new Text(CONTENTS)));
-    assertTrue(families.contains(new Text(ANCHOR)));
+    assertTrue(tables[0].hasFamily(CONTENTS));
+    assertTrue(tables[0].hasFamily(ANCHOR));
   }
 }

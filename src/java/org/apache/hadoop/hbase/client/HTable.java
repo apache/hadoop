@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 
@@ -52,7 +53,7 @@ public class HTable implements HConstants {
   protected final Log LOG = LogFactory.getLog(this.getClass());
 
   protected final HConnection connection;
-  protected final Text tableName;
+  protected final byte [] tableName;
   protected final long pause;
   protected final int numRetries;
   protected Random rand;
@@ -68,7 +69,32 @@ public class HTable implements HConstants {
    * @param tableName name of the table
    * @throws IOException
    */
-  public HTable(HBaseConfiguration conf, Text tableName) throws IOException {
+  public HTable(HBaseConfiguration conf, final Text tableName)
+  throws IOException {
+    this(conf, tableName.getBytes());
+  }
+  
+  /**
+   * Creates an object to access a HBase table
+   * 
+   * @param conf configuration object
+   * @param tableName name of the table
+   * @throws IOException
+   */
+  public HTable(HBaseConfiguration conf, final String tableName)
+  throws IOException {
+    this(conf, Bytes.toBytes(tableName));
+  }
+
+  /**
+   * Creates an object to access a HBase table
+   * 
+   * @param conf configuration object
+   * @param tableName name of the table
+   * @throws IOException
+   */
+  public HTable(HBaseConfiguration conf, final byte [] tableName)
+  throws IOException {
     this.connection = HConnectionManager.getConnection(conf);
     this.tableName = tableName;
     this.pause = conf.getLong("hbase.client.pause", 10 * 1000);
@@ -83,10 +109,10 @@ public class HTable implements HConstants {
    * @return Location of row.
    * @throws IOException
    */
-  public HRegionLocation getRegionLocation(Text row) throws IOException {
+  public HRegionLocation getRegionLocation(final byte [] row)
+  throws IOException {
     return connection.getRegionLocation(tableName, row, false);
   }
-
 
   /** @return the connection */
   public HConnection getConnection() {
@@ -94,7 +120,7 @@ public class HTable implements HConstants {
   }
   
   /** @return the table name */
-  public Text getTableName() {
+  public byte [] getTableName() {
     return this.tableName;
   }
 
@@ -106,7 +132,7 @@ public class HTable implements HConstants {
     HTableDescriptor [] metas = this.connection.listTables();
     HTableDescriptor result = null;
     for (int i = 0; i < metas.length; i++) {
-      if (metas[i].getName().equals(this.tableName)) {
+      if (Bytes.equals(metas[i].getName(), this.tableName)) {
         result = metas[i];
         break;
       }
@@ -120,12 +146,12 @@ public class HTable implements HConstants {
    * @throws IOException
    */
   @SuppressWarnings("null")
-  public Text[] getStartKeys() throws IOException {
-    List<Text> keyList = new ArrayList<Text>();
+  public byte [][] getStartKeys() throws IOException {
+    List<byte []> keyList = new ArrayList<byte []>();
 
     long scannerId = -1L;
-
-    Text startRow = new Text(tableName.toString() + ",,999999999999999");
+    byte [] startRow =
+      HRegionInfo.createRegionName(this.tableName, null, NINES);
     HRegionLocation metaLocation = null;
     HRegionInterface server;
     
@@ -143,7 +169,7 @@ public class HTable implements HConstants {
         // open a scanner over the meta region
         scannerId = server.openScanner(
           metaLocation.getRegionInfo().getRegionName(),
-          new Text[]{COL_REGIONINFO}, tableName, LATEST_TIMESTAMP,
+          new byte[][]{COL_REGIONINFO}, tableName, LATEST_TIMESTAMP,
           null);
         
         // iterate through the scanner, accumulating unique region names
@@ -157,7 +183,7 @@ public class HTable implements HConstants {
           info = (HRegionInfo) Writables.getWritable(
             values.get(COL_REGIONINFO).getValue(), info);
           
-          if (!info.getTableDesc().getName().equals(this.tableName)) {
+          if (!Bytes.equals(info.getTableDesc().getName(), this.tableName)) {
             break;
           }
           
@@ -171,14 +197,14 @@ public class HTable implements HConstants {
         server.close(scannerId);
           
         // advance the startRow to the end key of the current region
-        startRow = metaLocation.getRegionInfo().getEndKey();          
+        startRow = metaLocation.getRegionInfo().getEndKey();
       } catch (IOException e) {
         // need retry logic?
         throw e;
       }
-    } while (startRow.compareTo(EMPTY_START_ROW) != 0);
+    } while (Bytes.compareTo(startRow, EMPTY_START_ROW) != 0);
     
-    return keyList.toArray(new Text[keyList.size()]);
+    return keyList.toArray(new byte [keyList.size()][]);
   }
   
   /**
@@ -188,15 +214,15 @@ public class HTable implements HConstants {
    */
   @SuppressWarnings("null")
   public Map<HRegionInfo, HServerAddress> getRegionsInfo() throws IOException {
-	// TODO This code is a near exact copy of getStartKeys. To be refactored HBASE-626
+    // TODO This code is a near exact copy of getStartKeys. To be refactored HBASE-626
     HashMap<HRegionInfo, HServerAddress> regionMap = new HashMap<HRegionInfo, HServerAddress>();
-
+    
     long scannerId = -1L;
-
-    Text startRow = new Text(tableName.toString() + ",,999999999999999");
+    byte [] startRow =
+      HRegionInfo.createRegionName(this.tableName, null, NINES);
     HRegionLocation metaLocation = null;
     HRegionInterface server;
-    
+        
     // scan over the each meta region
     do {
       try{
@@ -211,7 +237,7 @@ public class HTable implements HConstants {
         // open a scanner over the meta region
         scannerId = server.openScanner(
           metaLocation.getRegionInfo().getRegionName(),
-          new Text[]{COL_REGIONINFO}, tableName, LATEST_TIMESTAMP,
+          new byte [][]{COL_REGIONINFO}, tableName, LATEST_TIMESTAMP,
           null);
         
         // iterate through the scanner, accumulating regions and their regionserver
@@ -224,8 +250,8 @@ public class HTable implements HConstants {
           HRegionInfo info = new HRegionInfo();
           info = (HRegionInfo) Writables.getWritable(
             values.get(COL_REGIONINFO).getValue(), info);
-          
-          if (!info.getTableDesc().getName().equals(this.tableName)) {
+
+          if (!Bytes.equals(info.getTableDesc().getName(), this.tableName)) {
             break;
           }
           
@@ -239,14 +265,44 @@ public class HTable implements HConstants {
         server.close(scannerId);
           
         // advance the startRow to the end key of the current region
-        startRow = metaLocation.getRegionInfo().getEndKey();          
+        startRow = metaLocation.getRegionInfo().getEndKey();
+
+        // turn the start row into a location
+        metaLocation = 
+          connection.locateRegion(META_TABLE_NAME, startRow);
       } catch (IOException e) {
         // need retry logic?
         throw e;
       }
-    } while (startRow.compareTo(EMPTY_START_ROW) != 0);
+    } while (Bytes.compareTo(startRow, EMPTY_START_ROW) != 0);
     
     return regionMap;
+  }
+  /** 
+   * Get a single value for the specified row and column
+   *
+   * @param row row key
+   * @param column column name
+   * @return value for specified row/column
+   * @throws IOException
+   */
+  public Cell get(final Text row, final Text column)
+  throws IOException {
+    return get(row.getBytes(), column.getBytes());
+  }
+
+  /** 
+   * Get a single value for the specified row and column
+   *
+   * @param row row key
+   * @param column column name
+   * @param numVersions - number of versions to retrieve
+   * @return value for specified row/column
+   * @throws IOException
+   */
+  public Cell[] get(final Text row, final Text column, int numVersions)
+  throws IOException {
+    return get(row.getBytes(), column.getBytes(), numVersions);
   }
   
   /** 
@@ -257,7 +313,8 @@ public class HTable implements HConstants {
    * @return value for specified row/column
    * @throws IOException
    */
-  public Cell get(final Text row, final Text column) throws IOException {
+  public Cell get(final byte [] row, final byte [] column)
+  throws IOException {
     return connection.getRegionServerWithRetries(
         new ServerCallable<Cell>(connection, tableName, row) {
           public Cell call() throws IOException {
@@ -267,7 +324,7 @@ public class HTable implements HConstants {
         }
     );
   }
-    
+
   /** 
    * Get the specified number of versions of the specified row and column
    * 
@@ -277,10 +334,10 @@ public class HTable implements HConstants {
    * @return            - array byte values
    * @throws IOException
    */
-  public Cell[] get(final Text row, final Text column, final int numVersions) 
+  public Cell[] get(final byte [] row, final byte [] column,
+    final int numVersions) 
   throws IOException {
     Cell[] values = null;
-
     values = connection.getRegionServerWithRetries(
         new ServerCallable<Cell[]>(connection, tableName, row) {
           public Cell[] call() throws IOException {
@@ -311,11 +368,27 @@ public class HTable implements HConstants {
    * @return            - array of values that match the above criteria
    * @throws IOException
    */
-  public Cell[] get(final Text row, final Text column, final long timestamp, 
-    final int numVersions)
+  public Cell[] get(final Text row, final Text column,
+    final long timestamp, final int numVersions)
+  throws IOException {
+    return get(row.getBytes(), column.getBytes(), timestamp, numVersions);
+  }
+  
+  /** 
+   * Get the specified number of versions of the specified row and column with
+   * the specified timestamp.
+   *
+   * @param row         - row key
+   * @param column      - column name
+   * @param timestamp   - timestamp
+   * @param numVersions - number of versions to retrieve
+   * @return            - array of values that match the above criteria
+   * @throws IOException
+   */
+  public Cell[] get(final byte [] row, final byte [] column,
+    final long timestamp, final int numVersions)
   throws IOException {
     Cell[] values = null;
-
     values = connection.getRegionServerWithRetries(
         new ServerCallable<Cell[]>(connection, tableName, row) {
           public Cell[] call() throws IOException {
@@ -334,15 +407,26 @@ public class HTable implements HConstants {
     }
     return null;
   }
-      
+
   /** 
    * Get all the data for the specified row at the latest timestamp
    * 
    * @param row row key
-   * @return Map of columns to values.  Map is empty if row does not exist.
+   * @return RowResult is empty if row does not exist.
    * @throws IOException
    */
-  public Map<Text, Cell> getRow(final Text row) throws IOException {
+  public RowResult getRow(final Text row) throws IOException {
+    return getRow(row.getBytes());
+  }
+
+  /** 
+   * Get all the data for the specified row at the latest timestamp
+   * 
+   * @param row row key
+   * @return RowResult is empty if row does not exist.
+   * @throws IOException
+   */
+  public RowResult getRow(final byte [] row) throws IOException {
     return getRow(row, HConstants.LATEST_TIMESTAMP);
   }
 
@@ -351,10 +435,23 @@ public class HTable implements HConstants {
    * 
    * @param row row key
    * @param ts timestamp
-   * @return Map of columns to values.  Map is empty if row does not exist.
+   * @return RowResult is empty if row does not exist.
    * @throws IOException
    */
-  public Map<Text, Cell> getRow(final Text row, final long ts) 
+  public RowResult getRow(final Text row, final long ts) 
+  throws IOException {
+    return getRow(row.getBytes(), ts);
+  }
+
+  /** 
+   * Get all the data for the specified row at a specified timestamp
+   * 
+   * @param row row key
+   * @param ts timestamp
+   * @return RowResult is empty if row does not exist.
+   * @throws IOException
+   */
+  public RowResult getRow(final byte [] row, final long ts) 
   throws IOException {
     return connection.getRegionServerWithRetries(
         new ServerCallable<RowResult>(connection, tableName, row) {
@@ -365,16 +462,28 @@ public class HTable implements HConstants {
         }
     );
   }
-
   /** 
    * Get selected columns for the specified row at the latest timestamp
    * 
    * @param row row key
    * @param columns Array of column names you want to retrieve.
-   * @return Map of columns to values.  Map is empty if row does not exist.
+   * @return RowResult is empty if row does not exist.
    * @throws IOException
    */
-  public Map<Text, Cell> getRow(final Text row, final Text[] columns) 
+  public RowResult getRow(final Text row, final Text[] columns) 
+  throws IOException {
+    return getRow(row.getBytes(), Bytes.toByteArrays(columns));
+  }
+  
+  /** 
+   * Get selected columns for the specified row at the latest timestamp
+   * 
+   * @param row row key
+   * @param columns Array of column names you want to retrieve.
+   * @return RowResult is empty if row does not exist.
+   * @throws IOException
+   */
+  public RowResult getRow(final byte [] row, final byte [][] columns) 
   throws IOException {
     return getRow(row, columns, HConstants.LATEST_TIMESTAMP);
   }
@@ -385,10 +494,25 @@ public class HTable implements HConstants {
    * @param row row key
    * @param columns Array of column names you want to retrieve.   
    * @param ts timestamp
-   * @return Map of columns to values.  Map is empty if row does not exist.
+   * @return RowResult is empty if row does not exist.
    * @throws IOException
    */
-  public Map<Text, Cell> getRow(final Text row, final Text[] columns, 
+  public RowResult getRow(final Text row, final Text[] columns, 
+    final long ts) 
+  throws IOException {  
+    return getRow(row.getBytes(), Bytes.toByteArrays(columns), ts);
+  }
+  
+  /** 
+   * Get selected columns for the specified row at a specified timestamp
+   * 
+   * @param row row key
+   * @param columns Array of column names you want to retrieve.   
+   * @param ts timestamp
+   * @return RowResult is empty if row does not exist.
+   * @throws IOException
+   */
+  public RowResult getRow(final byte [] row, final byte [][] columns, 
     final long ts) 
   throws IOException {       
     return connection.getRegionServerWithRetries(
@@ -414,7 +538,25 @@ public class HTable implements HConstants {
    * @return scanner
    * @throws IOException
    */
-  public Scanner getScanner(Text[] columns, Text startRow)
+  public Scanner getScanner(final Text [] columns, final Text startRow)
+  throws IOException {
+    return getScanner(Bytes.toByteArrays(columns), startRow.getBytes());
+  }
+  
+  /** 
+   * Get a scanner on the current table starting at the specified row.
+   * Return the specified columns.
+   *
+   * @param columns columns to scan. If column name is a column family, all
+   * columns of the specified column family are returned.  Its also possible
+   * to pass a regex in the column qualifier. A column qualifier is judged to
+   * be a regex if it contains at least one of the following characters:
+   * <code>\+|^&*$[]]}{)(</code>.
+   * @param startRow starting row in table to scan
+   * @return scanner
+   * @throws IOException
+   */
+  public Scanner getScanner(final byte[][] columns, final byte [] startRow)
   throws IOException {
     return getScanner(columns, startRow, HConstants.LATEST_TIMESTAMP, null);
   }
@@ -433,7 +575,7 @@ public class HTable implements HConstants {
    * @return scanner
    * @throws IOException
    */
-  public Scanner getScanner(Text[] columns, Text startRow,
+  public Scanner getScanner(final byte[][] columns, final byte [] startRow,
     long timestamp)
   throws IOException {
     return getScanner(columns, startRow, timestamp, null);
@@ -453,7 +595,7 @@ public class HTable implements HConstants {
    * @return scanner
    * @throws IOException
    */
-  public Scanner getScanner(Text[] columns, Text startRow,
+  public Scanner getScanner(final byte[][] columns, final byte [] startRow,
     RowFilterInterface filter)
   throws IOException { 
     return getScanner(columns, startRow, HConstants.LATEST_TIMESTAMP, filter);
@@ -476,13 +618,13 @@ public class HTable implements HConstants {
    * @return scanner
    * @throws IOException
    */
-  public Scanner getScanner(final Text[] columns,
-    final Text startRow, final Text stopRow)
+  public Scanner getScanner(final byte [][] columns,
+    final byte [] startRow, final byte [] stopRow)
   throws IOException {
     return getScanner(columns, startRow, stopRow,
       HConstants.LATEST_TIMESTAMP);
   }
-  
+
   /** 
    * Get a scanner on the current table starting at the specified row and
    * ending just before <code>stopRow<code>.
@@ -503,6 +645,31 @@ public class HTable implements HConstants {
    */
   public Scanner getScanner(final Text[] columns,
     final Text startRow, final Text stopRow, final long timestamp)
+  throws IOException {
+    return getScanner(Bytes.toByteArrays(columns), startRow.getBytes(),
+      stopRow.getBytes(), timestamp);
+  }
+  
+  /** 
+   * Get a scanner on the current table starting at the specified row and
+   * ending just before <code>stopRow<code>.
+   * Return the specified columns.
+   *
+   * @param columns columns to scan. If column name is a column family, all
+   * columns of the specified column family are returned.  Its also possible
+   * to pass a regex in the column qualifier. A column qualifier is judged to
+   * be a regex if it contains at least one of the following characters:
+   * <code>\+|^&*$[]]}{)(</code>.
+   * @param startRow starting row in table to scan
+   * @param stopRow Row to stop scanning on. Once we hit this row we stop
+   * returning values; i.e. we return the row before this one but not the
+   * <code>stopRow</code> itself.
+   * @param timestamp only return results whose timestamp <= this value
+   * @return scanner
+   * @throws IOException
+   */
+  public Scanner getScanner(final byte [][] columns,
+    final byte [] startRow, final byte [] stopRow, final long timestamp)
   throws IOException {
     return getScanner(columns, startRow, timestamp,
       new WhileMatchRowFilter(new StopRowFilter(stopRow)));
@@ -526,7 +693,62 @@ public class HTable implements HConstants {
   public Scanner getScanner(Text[] columns,
     Text startRow, long timestamp, RowFilterInterface filter)
   throws IOException {
+    return getScanner(Bytes.toByteArrays(columns), startRow.getBytes(),
+      timestamp, filter);
+  }
+  
+  /** 
+   * Get a scanner on the current table starting at the specified row.
+   * Return the specified columns.
+   *
+   * @param columns columns to scan. If column name is a column family, all
+   * columns of the specified column family are returned.  Its also possible
+   * to pass a regex in the column qualifier. A column qualifier is judged to
+   * be a regex if it contains at least one of the following characters:
+   * <code>\+|^&*$[]]}{)(</code>.
+   * @param startRow starting row in table to scan
+   * @param timestamp only return results whose timestamp <= this value
+   * @param filter a row filter using row-key regexp and/or column data filter.
+   * @return scanner
+   * @throws IOException
+   */
+  public Scanner getScanner(final byte [][] columns,
+    final byte [] startRow, long timestamp, RowFilterInterface filter)
+  throws IOException {
     return new ClientScanner(columns, startRow, timestamp, filter);
+  }
+  
+  /**
+   * Completely delete the row's cells.
+   *
+   * @param row Key of the row you want to completely delete.
+   * @throws IOException
+   */
+  public void deleteAll(final byte [] row) throws IOException {
+    deleteAll(row, null);
+  }
+  
+  /**
+   * Completely delete the row's cells.
+   *
+   * @param row Key of the row you want to completely delete.
+   * @throws IOException
+   */
+  public void deleteAll(final byte [] row, final byte [] column)
+  throws IOException {
+    deleteAll(row, column, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Completely delete the row's cells.
+   *
+   * @param row Key of the row you want to completely delete.
+   * @param ts Delete all cells of the same timestamp or older.
+   * @throws IOException
+   */
+  public void deleteAll(final byte [] row, final long ts)
+  throws IOException {
+    deleteAll(row, null, ts);
   }
 
   /** 
@@ -538,7 +760,7 @@ public class HTable implements HConstants {
   public void deleteAll(final Text row, final Text column) throws IOException {
     deleteAll(row, column, LATEST_TIMESTAMP);
   }
-  
+
   /** 
    * Delete all cells that match the passed row and column and whose
    * timestamp is equal-to or older than the passed timestamp.
@@ -549,62 +771,24 @@ public class HTable implements HConstants {
    */
   public void deleteAll(final Text row, final Text column, final long ts)
   throws IOException {
+    deleteAll(row.getBytes(), column.getBytes(), ts);
+  }
+  
+  /** 
+   * Delete all cells that match the passed row and column and whose
+   * timestamp is equal-to or older than the passed timestamp.
+   * @param row Row to update
+   * @param column name of column whose value is to be deleted
+   * @param ts Delete all cells of the same timestamp or older.
+   * @throws IOException 
+   */
+  public void deleteAll(final byte [] row, final byte [] column, final long ts)
+  throws IOException {
     connection.getRegionServerWithRetries(
         new ServerCallable<Boolean>(connection, tableName, row) {
           public Boolean call() throws IOException {
             server.deleteAll(location.getRegionInfo().getRegionName(), row, 
                 column, ts);
-            return null;
-          }
-        }
-    );
-  }
-  
-  /**
-   * Completely delete the row's cells of the same timestamp or older.
-   *
-   * @param row Key of the row you want to completely delete.
-   * @param ts Timestamp of cells to delete
-   * @throws IOException
-   */
-  public void deleteAll(final Text row, final long ts) throws IOException {
-    connection.getRegionServerWithRetries(
-        new ServerCallable<Boolean>(connection, tableName, row) {
-          public Boolean call() throws IOException {
-            server.deleteAll(location.getRegionInfo().getRegionName(), row, ts);
-            return null;
-          }
-        }
-    );
-  }
-      
-  /**
-   * Completely delete the row's cells.
-   *
-   * @param row Key of the row you want to completely delete.
-   * @throws IOException
-   */
-  public void deleteAll(final Text row) throws IOException {
-    deleteAll(row, HConstants.LATEST_TIMESTAMP);
-  }
-  
-  /**
-   * Delete all cells for a row with matching column family with timestamps
-   * less than or equal to <i>timestamp</i>.
-   *
-   * @param row The row to operate on
-   * @param family The column family to match
-   * @param timestamp Timestamp to match
-   * @throws IOException
-   */
-  public void deleteFamily(final Text row, final Text family, 
-    final long timestamp)
-  throws IOException {
-    connection.getRegionServerWithRetries(
-        new ServerCallable<Boolean>(connection, tableName, row) {
-          public Boolean call() throws IOException {
-            server.deleteFamily(location.getRegionInfo().getRegionName(), row, 
-                family, timestamp);
             return null;
           }
         }
@@ -619,7 +803,31 @@ public class HTable implements HConstants {
    * @throws IOException
    */  
   public void deleteFamily(final Text row, final Text family) throws IOException{
-    deleteFamily(row, family, HConstants.LATEST_TIMESTAMP);
+    deleteFamily(row.getBytes(), family.getBytes(),
+      HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Delete all cells for a row with matching column family with timestamps
+   * less than or equal to <i>timestamp</i>.
+   *
+   * @param row The row to operate on
+   * @param family The column family to match
+   * @param timestamp Timestamp to match
+   * @throws IOException
+   */
+  public void deleteFamily(final byte [] row, final byte [] family, 
+    final long timestamp)
+  throws IOException {
+    connection.getRegionServerWithRetries(
+        new ServerCallable<Boolean>(connection, tableName, row) {
+          public Boolean call() throws IOException {
+            server.deleteFamily(location.getRegionInfo().getRegionName(), row, 
+                family, timestamp);
+            return null;
+          }
+        }
+    );
   }
 
   /**
@@ -639,15 +847,15 @@ public class HTable implements HConstants {
       }
     );  
   }
-  
+
   /**
    * Implements the scanner interface for the HBase client.
    * If there are multiple regions in a table, this scanner will iterate
    * through them all.
    */
   private class ClientScanner implements Scanner {
-    protected Text[] columns;
-    private Text startRow;
+    private byte[][] columns;
+    private byte [] startRow;
     protected long scanTime;
     @SuppressWarnings("hiding")
     private boolean closed = false;
@@ -655,15 +863,20 @@ public class HTable implements HConstants {
     private ScannerCallable callable = null;
     protected RowFilterInterface filter;
     
-    protected ClientScanner(Text[] columns, Text startRow, long timestamp,
-      RowFilterInterface filter) 
+    protected ClientScanner(final Text [] columns, final Text startRow,
+        long timestamp, RowFilterInterface filter)
     throws IOException {
+      this(Bytes.toByteArrays(columns), startRow.getBytes(), timestamp,
+        filter);
+    }
 
+    protected ClientScanner(final byte[][] columns, final byte [] startRow,
+        final long timestamp, final RowFilterInterface filter) 
+    throws IOException {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Creating scanner over " + tableName + " starting at key '" +
-            startRow + "'");
+        LOG.debug("Creating scanner over " + Bytes.toString(tableName) +
+          " starting at key '" + startRow + "'");
       }
-
       // save off the simple parameters
       this.columns = columns;
       this.startRow = startRow;
@@ -675,7 +888,6 @@ public class HTable implements HConstants {
       if (filter != null) {
         filter.validate(columns);
       }
-
       nextScanner();
     }
         
@@ -698,15 +910,15 @@ public class HTable implements HConstants {
           LOG.debug("Advancing forward from region " + currentRegion);
         }
 
-        Text endKey = currentRegion.getEndKey();
-        if (endKey == null || endKey.equals(EMPTY_TEXT)) {
+        byte [] endKey = currentRegion.getEndKey();
+        if (endKey == null || Bytes.equals(endKey, EMPTY_BYTE_ARRAY)) {
           close();
           return false;
         }
       } 
       
       HRegionInfo oldRegion = this.currentRegion;
-      Text localStartKey = oldRegion == null ? startRow : oldRegion.getEndKey();
+      byte [] localStartKey = oldRegion == null? startRow: oldRegion.getEndKey();
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Advancing internal scanner to startKey " + localStartKey);

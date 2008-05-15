@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.*"
   import="org.apache.hadoop.io.Text"
+  import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.master.MetaRegion"
@@ -16,7 +17,7 @@
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   HBaseConfiguration conf = master.getConfiguration();
   HServerAddress rootLocation = master.getRootRegionLocation();
-  Map<Text, MetaRegion> onlineRegions = master.getOnlineMetaRegions();
+  Map<byte [], MetaRegion> onlineRegions = master.getOnlineMetaRegions();
   Map<String, HServerInfo> serverToServerInfos =
     master.getServersToServerInfo();
   int interval = conf.getInt("hbase.regionserver.msginterval", 3000)/1000;
@@ -53,10 +54,10 @@
   if (rootLocation != null) { %>
 <table>
 <tr><th>Table</th><th>Description</th></tr>
-<tr><td><a href=/table.jsp?name=<%= HConstants.ROOT_TABLE_NAME.toString() %>><%= HConstants.ROOT_TABLE_NAME.toString() %></a></td><td>The -ROOT- table holds references to all .META. regions.</td></tr>
+<tr><td><a href=/table.jsp?name=<%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %>><%= Bytes.toString(HConstants.ROOT_TABLE_NAME) %></a></td><td>The -ROOT- table holds references to all .META. regions.</td></tr>
 <%
     if (onlineRegions != null && onlineRegions.size() > 0) { %>
-<tr><td><a href=/table.jsp?name=<%= HConstants.META_TABLE_NAME.toString() %>><%= HConstants.META_TABLE_NAME.toString() %></a></td><td>The .META. table holds references to all User Table regions</td></tr>
+<tr><td><a href=/table.jsp?name=<%= Bytes.toString(HConstants.META_TABLE_NAME) %>><%= Bytes.toString(HConstants.META_TABLE_NAME) %></a></td><td>The .META. table holds references to all User Table regions</td></tr>
   
 <%  } %>
 </table>
@@ -68,7 +69,7 @@
 <table>
 <tr><th>Table</th><th>Description</th></tr>
 <%   for(HTableDescriptor htDesc : tables ) { %>
-<tr><td><a href=/table.jsp?name=<%= htDesc.getName() %>><%= htDesc.getName() %></a> </td><td><%= htDesc.toString() %></td></tr>
+<tr><td><a href=/table.jsp?name=<%= htDesc.getNameAsString() %>><%= htDesc.getNameAsString() %></a> </td><td><%= htDesc.toString() %></td></tr>
 <%   }  %>
 <p> <%= tables.length %> table(s) in set.</p>
 </table>

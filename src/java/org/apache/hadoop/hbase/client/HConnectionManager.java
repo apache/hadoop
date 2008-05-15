@@ -31,27 +31,26 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.ipc.HbaseRPC;
-import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
-import org.apache.hadoop.hbase.util.SoftSortedMap;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
-import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NoServerForRegionException;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.HbaseRPC;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.SoftSortedMap;
+import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * A non-instantiable class that manages connections to multiple tables in
@@ -68,7 +67,6 @@ public class HConnectionManager implements HConstants {
   // A Map of master HServerAddress -> connection information for that instance
   // Note that although the Map is synchronized, the objects it contains
   // are mutable and hence require synchronized access to them
-  
   private static final Map<String, TableServers> HBASE_INSTANCES =
     Collections.synchronizedMap(new HashMap<String, TableServers>());
 
@@ -126,9 +124,9 @@ public class HConnectionManager implements HConstants {
 
     private HRegionLocation rootRegionLocation; 
     
-    private Map<Text, SoftSortedMap<Text, HRegionLocation>> 
-      cachedRegionLocations = new ConcurrentHashMap<Text, 
-        SoftSortedMap<Text, HRegionLocation>>();
+    private Map<Integer, SoftSortedMap<byte [], HRegionLocation>> 
+      cachedRegionLocations = Collections.synchronizedMap(
+         new HashMap<Integer, SoftSortedMap<byte [], HRegionLocation>>());
     
     /** 
      * constructor
@@ -221,18 +219,18 @@ public class HConnectionManager implements HConstants {
     }
 
     /** {@inheritDoc} */
-    public boolean tableExists(final Text tableName) {
+    public boolean tableExists(final byte [] tableName) {
       if (tableName == null) {
         throw new IllegalArgumentException("Table name cannot be null");
       }
-      if (tableName.equals(ROOT_TABLE_NAME) || tableName.equals(META_TABLE_NAME)) {
+      if (isMetaTableName(tableName)) {
         return true;
       }
       boolean exists = false;
       try {
         HTableDescriptor[] tables = listTables();
         for (int i = 0; i < tables.length; i++) {
-          if (tables[i].getName().equals(tableName)) {
+          if (Bytes.equals(tables[i].getName(), tableName)) {
             exists = true;
           }
         }
@@ -241,19 +239,28 @@ public class HConnectionManager implements HConstants {
       }
       return exists;
     }
+    
+    /*
+     * @param n
+     * @return Truen if passed tablename <code>n</code> is equal to the name
+     * of a catalog table.
+     */
+    private static boolean isMetaTableName(final byte [] n) {
+      return Bytes.equals(n, ROOT_TABLE_NAME) ||
+        Bytes.equals(n, META_TABLE_NAME);
+    }
 
     /** {@inheritDoc} */
-    public HRegionLocation getRegionLocation(Text tableName, Text row,
-        boolean reload) throws IOException {
-      return reload ?
-          relocateRegion(tableName, row) :
-            locateRegion(tableName, row);
+    public HRegionLocation getRegionLocation(final byte [] name,
+        final byte [] row, boolean reload)
+    throws IOException {
+      return reload? relocateRegion(name, row): locateRegion(name, row);
     }
 
     /** {@inheritDoc} */
     public HTableDescriptor[] listTables() throws IOException {
       HashSet<HTableDescriptor> uniqueTables = new HashSet<HTableDescriptor>();
-      Text startRow = EMPTY_START_ROW;
+      byte [] startRow = EMPTY_START_ROW;
 
       // scan over the each meta region
       do {
@@ -273,7 +280,7 @@ public class HConnectionManager implements HConstants {
               Writables.getHRegionInfo(values.get(COL_REGIONINFO));
 
             // Only examine the rows where the startKey is zero length   
-            if (info.getStartKey().getLength() == 0) {
+            if (info.getStartKey().length == 0) {
               uniqueTables.add(info.getTableDesc());
             }
           }
@@ -284,32 +291,34 @@ public class HConnectionManager implements HConstants {
           callable.setClose();
           getRegionServerWithRetries(callable);
         }
-      } while (startRow.compareTo(LAST_ROW) != 0);
+      } while (Bytes.compareTo(startRow, LAST_ROW) != 0);
       
       return uniqueTables.toArray(new HTableDescriptor[uniqueTables.size()]);
     }
 
     /** {@inheritDoc} */
-    public HRegionLocation locateRegion(Text tableName, Text row)
+    public HRegionLocation locateRegion(final byte [] tableName,
+        final byte [] row)
     throws IOException{
       return locateRegion(tableName, row, true);
     }
 
     /** {@inheritDoc} */
-    public HRegionLocation relocateRegion(Text tableName, Text row)
+    public HRegionLocation relocateRegion(final byte [] tableName,
+        final byte [] row)
     throws IOException{
       return locateRegion(tableName, row, false);
     }
 
-    private HRegionLocation locateRegion(Text tableName, Text row, 
-      boolean useCache)
+    private HRegionLocation locateRegion(final byte [] tableName,
+        final byte [] row, boolean useCache)
     throws IOException{
-      if (tableName == null || tableName.getLength() == 0) {
+      if (tableName == null || tableName.length == 0) {
         throw new IllegalArgumentException(
             "table name cannot be null or zero length");
       }
             
-      if (tableName.equals(ROOT_TABLE_NAME)) {
+      if (Bytes.equals(tableName, ROOT_TABLE_NAME)) {
         synchronized (rootRegionLock) {
           // This block guards against two threads trying to find the root
           // region at the same time. One will go do the find while the 
@@ -320,7 +329,7 @@ public class HConnectionManager implements HConstants {
           }
           return rootRegionLocation;
         }        
-      } else if (tableName.equals(META_TABLE_NAME)) {
+      } else if (Bytes.equals(tableName, META_TABLE_NAME)) {
         synchronized (metaRegionLock) {
           // This block guards against two threads trying to load the meta 
           // region at the same time. The first will load the meta region and
@@ -339,8 +348,8 @@ public class HConnectionManager implements HConstants {
       * Search one of the meta tables (-ROOT- or .META.) for the HRegionLocation
       * info that contains the table and row we're seeking.
       */
-    private HRegionLocation locateRegionInMeta(Text parentTable,
-      Text tableName, Text row, boolean useCache)
+    private HRegionLocation locateRegionInMeta(final byte [] parentTable,
+      final byte [] tableName, final byte [] row, boolean useCache)
     throws IOException{
       HRegionLocation location = null;
       
@@ -359,13 +368,9 @@ public class HConnectionManager implements HConstants {
       // build the key of the meta region we should be looking for.
       // the extra 9's on the end are necessary to allow "exact" matches
       // without knowing the precise region names.
-      Text metaKey = new Text(tableName.toString() + "," 
-        + row.toString() + ",999999999999999");
-
-      int tries = 0;
-      while (true) {
-        tries++;
-        
+      byte [] metaKey = HRegionInfo.createRegionName(tableName, row,
+        HConstants.NINES);
+      for (int tries = 0; true; tries++) {
         if (tries >= numRetries) {
           throw new NoServerForRegionException("Unable to find region for " 
             + row + " after " + numRetries + " tries.");
@@ -382,15 +387,15 @@ public class HConnectionManager implements HConstants {
             metaLocation.getRegionInfo().getRegionName(), metaKey);
 
           if (regionInfoRow == null) {
-            throw new TableNotFoundException("Table '" + tableName + 
-              "' does not exist.");
+            throw new TableNotFoundException("Table '" +
+              Bytes.toString(tableName) + "' does not exist.");
           }
 
           Cell value = regionInfoRow.get(COL_REGIONINFO);
 
           if (value == null || value.getValue().length == 0) {
             throw new IOException("HRegionInfo was null or empty in " + 
-              parentTable);
+              Bytes.toString(parentTable));
           }
 
           // convert the row result into the HRegionLocation we need!
@@ -398,9 +403,9 @@ public class HConnectionManager implements HConstants {
               value.getValue(), new HRegionInfo());
 
           // possible we got a region of a different table...
-          if (!regionInfo.getTableDesc().getName().equals(tableName)) {
+          if (!Bytes.equals(regionInfo.getTableDesc().getName(), tableName)) {
             throw new TableNotFoundException(
-              "Table '" + tableName + "' was not found.");
+              "Table '" + Bytes.toString(tableName) + "' was not found.");
           }
 
           if (regionInfo.isOffline()) {
@@ -412,9 +417,9 @@ public class HConnectionManager implements HConstants {
             Writables.cellToString(regionInfoRow.get(COL_SERVER));
         
           if (serverAddress.equals("")) { 
-            throw new NoServerForRegionException(
-              "No server address listed in " + parentTable + " for region "
-              + regionInfo.getRegionName());
+            throw new NoServerForRegionException("No server address listed " +
+              "in " + Bytes.toString(parentTable) + " for region " +
+              regionInfo.getRegionNameAsString());
           }
         
           // instantiate the location
@@ -452,81 +457,98 @@ public class HConnectionManager implements HConstants {
       }
     }
 
-    /** 
-      * Search the cache for a location that fits our table and row key.
-      * Return null if no suitable region is located. TODO: synchronization note
-      */
-    private HRegionLocation getCachedLocation(Text tableName, Text row) {
+    /*
+     * Search the cache for a location that fits our table and row key.
+     * Return null if no suitable region is located. TODO: synchronization note
+     * 
+     * <p>TODO: This method during writing consumes 15% of CPU doing lookup
+     * into the Soft Reference SortedMap.  Improve.
+     * 
+     * @param tableName
+     * @param row
+     * @return Null or region location found in cache.
+     */
+    private HRegionLocation getCachedLocation(final byte [] tableName,
+        final byte [] row) {
       // find the map of cached locations for this table
-      SoftSortedMap<Text, HRegionLocation> tableLocations = 
-        cachedRegionLocations.get(tableName);
+      Integer key = Bytes.mapKey(tableName);
+      SoftSortedMap<byte [], HRegionLocation> tableLocations =
+        cachedRegionLocations.get(key);
 
       // if tableLocations for this table isn't built yet, make one
       if (tableLocations == null) {
-        tableLocations = new SoftSortedMap<Text, HRegionLocation>();
-        cachedRegionLocations.put(tableName, tableLocations);
+        tableLocations = new SoftSortedMap<byte [],
+          HRegionLocation>(Bytes.BYTES_COMPARATOR);
+        cachedRegionLocations.put(key, tableLocations);
       }
 
       // start to examine the cache. we can only do cache actions
       // if there's something in the cache for this table.
-      if (!tableLocations.isEmpty()) {
-        if (tableLocations.containsKey(row)) {
-          HRegionLocation rl = tableLocations.get(row);
-          if (rl != null && LOG.isDebugEnabled()) {
-            LOG.debug("Cache hit in table locations for row <" +
-              row + "> and tableName " + tableName +
-              ": location server " + rl.getServerAddress() +
-              ", location region name " + rl.getRegionInfo().getRegionName());
-          }
-          return rl;
-        }
-        
-        // cut the cache so that we only get the part that could contain
-        // regions that match our key
-        SoftSortedMap<Text, HRegionLocation> matchingRegions =
-          tableLocations.headMap(row);
+      if (tableLocations.isEmpty()) {
+        return null;
+      }
 
-        // if that portion of the map is empty, then we're done. otherwise,
-        // we need to examine the cached location to verify that it is 
-        // a match by end key as well.
-        if (!matchingRegions.isEmpty()) {
-          HRegionLocation possibleRegion = 
-            matchingRegions.get(matchingRegions.lastKey());
-          
-          // there is a possibility that the reference was garbage collected 
-          // in the instant since we checked isEmpty().
-          if (possibleRegion != null) {
-            Text endKey = possibleRegion.getRegionInfo().getEndKey();
-          
-            // make sure that the end key is greater than the row we're looking 
-            // for, otherwise the row actually belongs in the next region, not 
-            // this one. the exception case is when the endkey is EMPTY_START_ROW,
-            // signifying that the region we're checking is actually the last 
-            // region in the table.
-            if (endKey.equals(EMPTY_TEXT) || endKey.compareTo(row) > 0) {
-              return possibleRegion;
-            }
+      HRegionLocation rl = tableLocations.get(row);
+      if (rl != null) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Cache hit in table locations for row <" + row +
+            "> and tableName " + Bytes.toString(tableName) +
+            ": location server " + rl.getServerAddress() +
+            ", location region name " +
+            rl.getRegionInfo().getRegionNameAsString());
+        }
+        return rl;
+      }
+
+      // Cut the cache so that we only get the part that could contain
+      // regions that match our key
+      SoftSortedMap<byte[], HRegionLocation> matchingRegions =
+        tableLocations.headMap(row);
+
+      // if that portion of the map is empty, then we're done. otherwise,
+      // we need to examine the cached location to verify that it is
+      // a match by end key as well.
+      if (!matchingRegions.isEmpty()) {
+        HRegionLocation possibleRegion =
+          matchingRegions.get(matchingRegions.lastKey());
+
+        // there is a possibility that the reference was garbage collected
+        // in the instant since we checked isEmpty().
+        if (possibleRegion != null) {
+          byte[] endKey = possibleRegion.getRegionInfo().getEndKey();
+
+          // make sure that the end key is greater than the row we're looking
+          // for, otherwise the row actually belongs in the next region, not
+          // this one. the exception case is when the endkey is EMPTY_START_ROW,
+          // signifying that the region we're checking is actually the last
+          // region in the table.
+          if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
+              Bytes.compareTo(endKey, row) > 0) {
+            return possibleRegion;
           }
         }
       }
-      
-      // passed all the way through, so we got nothin - complete cache miss
+
+      // Passed all the way through, so we got nothin - complete cache miss
       return null;
     }
 
     /**
-      * Delete a cached location, if it satisfies the table name and row
-      * requirements.
-      */
-    private void deleteCachedLocation(Text tableName, Text row){
+     * Delete a cached location, if it satisfies the table name and row
+     * requirements.
+     */
+    private void deleteCachedLocation(final byte [] tableName,
+        final byte [] row) {
       // find the map of cached locations for this table
-      SoftSortedMap<Text, HRegionLocation> tableLocations = 
-        cachedRegionLocations.get(tableName);
+      Integer key = Bytes.mapKey(tableName);
+      SoftSortedMap<byte [], HRegionLocation> tableLocations = 
+        cachedRegionLocations.get(key);
 
       // if tableLocations for this table isn't built yet, make one
       if (tableLocations == null) {
-        tableLocations = new SoftSortedMap<Text, HRegionLocation>();
-        cachedRegionLocations.put(tableName, tableLocations);
+        tableLocations =
+          new SoftSortedMap<byte [], HRegionLocation>(Bytes.BYTES_COMPARATOR);
+        cachedRegionLocations.put(key, tableLocations);
       }
 
       // start to examine the cache. we can only do cache actions
@@ -534,7 +556,7 @@ public class HConnectionManager implements HConstants {
       if (!tableLocations.isEmpty()) {
         // cut the cache so that we only get the part that could contain
         // regions that match our key
-        SoftSortedMap<Text, HRegionLocation> matchingRegions =
+        SoftSortedMap<byte [], HRegionLocation> matchingRegions =
           tableLocations.headMap(row);
 
         // if that portion of the map is empty, then we're done. otherwise,
@@ -544,17 +566,17 @@ public class HConnectionManager implements HConstants {
           HRegionLocation possibleRegion = 
             matchingRegions.get(matchingRegions.lastKey());
           
-          Text endKey = possibleRegion.getRegionInfo().getEndKey();
+          byte [] endKey = possibleRegion.getRegionInfo().getEndKey();
           
           // by nature of the map, we know that the start key has to be < 
           // otherwise it wouldn't be in the headMap. 
-          if (endKey.compareTo(row) <= 0) {
+          if (Bytes.compareTo(endKey, row) <= 0) {
             // delete any matching entry
             HRegionLocation rl = 
               tableLocations.remove(matchingRegions.lastKey());
             if (rl != null && LOG.isDebugEnabled()) {
-              LOG.debug("Removed " + rl.getRegionInfo().getRegionName() +
-                " from cache because of " + row);
+              LOG.debug("Removed " + rl.getRegionInfo().getRegionNameAsString() +
+                " from cache because of " + Bytes.toString(row));
             }
           }
         }
@@ -564,17 +586,20 @@ public class HConnectionManager implements HConstants {
     /**
       * Put a newly discovered HRegionLocation into the cache.
       */
-    private void cacheLocation(Text tableName, HRegionLocation location){
-      Text startKey = location.getRegionInfo().getStartKey();
+    private void cacheLocation(final byte [] tableName,
+        final HRegionLocation location){
+      byte [] startKey = location.getRegionInfo().getStartKey();
       
       // find the map of cached locations for this table
-      SoftSortedMap<Text, HRegionLocation> tableLocations = 
-        cachedRegionLocations.get(tableName);
+      Integer key = Bytes.mapKey(tableName);
+      SoftSortedMap<byte [], HRegionLocation> tableLocations = 
+        cachedRegionLocations.get(key);
 
       // if tableLocations for this table isn't built yet, make one
       if (tableLocations == null) {
-        tableLocations = new SoftSortedMap<Text, HRegionLocation>();
-        cachedRegionLocations.put(tableName, tableLocations);
+        tableLocations =
+          new SoftSortedMap<byte [], HRegionLocation>(Bytes.BYTES_COMPARATOR);
+        cachedRegionLocations.put(key, tableLocations);
       }
       
       // save the HRegionLocation under the startKey
@@ -667,9 +692,9 @@ public class HConnectionManager implements HConstants {
         try {
           // if this works, then we're good, and we have an acceptable address,
           // so we can stop doing retries and return the result.
-          server.getRegionInfo(HRegionInfo.rootRegionInfo.getRegionName());
+          server.getRegionInfo(HRegionInfo.ROOT_REGIONINFO.getRegionName());
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Found ROOT " + HRegionInfo.rootRegionInfo);
+            LOG.debug("Found ROOT " + HRegionInfo.ROOT_REGIONINFO);
           }
           break;
         } catch (IOException e) {
@@ -708,7 +733,7 @@ public class HConnectionManager implements HConstants {
       
       // return the region location
       return new HRegionLocation(
-        HRegionInfo.rootRegionInfo, rootRegionAddress);
+        HRegionInfo.ROOT_REGIONINFO, rootRegionAddress);
     }
 
     /** {@inheritDoc} */

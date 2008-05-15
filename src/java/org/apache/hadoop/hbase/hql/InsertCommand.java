@@ -61,8 +61,8 @@ public class InsertCommand extends BasicCommand {
       try {
         HTable table = new HTable(conf, tableName);
         BatchUpdate batchUpdate = timestamp == null ? 
-          new BatchUpdate(getRow()) 
-          : new BatchUpdate(getRow(), Long.parseLong(timestamp));
+          new BatchUpdate(getRow().getBytes()) 
+          : new BatchUpdate(getRow().getBytes(), Long.parseLong(timestamp));
 
         for (int i = 0; i < values.size(); i++) {
           Text column = null;
@@ -70,7 +70,7 @@ public class InsertCommand extends BasicCommand {
             column = getColumn(i);
           else
             column = new Text(getColumn(i) + ":");
-          batchUpdate.put(column, getValue(i));
+          batchUpdate.put(column.getBytes(), getValue(i));
         }
 
         table.commit(batchUpdate);

@@ -26,7 +26,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
 /** 
@@ -83,7 +83,7 @@ implements RegionUnavailableListener, HConstants {
           lock.lock();
           try {
             // Don't interrupt us while we are working
-            Text midKey = r.compactStores();
+            byte [] midKey = r.compactStores();
             if (midKey != null) {
               split(r, midKey);
             }
@@ -119,7 +119,8 @@ implements RegionUnavailableListener, HConstants {
    * @param r HRegion store belongs to
    */
   public synchronized void compactionRequested(HRegion r) {
-    LOG.debug("Compaction requested for region: " + r.getRegionName());
+    LOG.debug("Compaction requested for region: " +
+      Bytes.toString(r.getRegionName()));
     synchronized (regionsInQueue) {
       if (!regionsInQueue.contains(r)) {
         compactionQueue.add(r);
@@ -128,7 +129,7 @@ implements RegionUnavailableListener, HConstants {
     }
   }
   
-  private void split(final HRegion region, final Text midKey)
+  private void split(final HRegion region, final byte [] midKey)
   throws IOException {
     final HRegionInfo oldRegionInfo = region.getRegionInfo();
     final HRegion[] newRegions = region.splitRegion(this, midKey);
@@ -190,11 +191,13 @@ implements RegionUnavailableListener, HConstants {
   }
   
   /** {@inheritDoc} */
-  public void closing(@SuppressWarnings("unused") final Text regionName) {
+  public void closing(@SuppressWarnings("unused") final byte [] regionName) {
+    // continue
   }
   
   /** {@inheritDoc} */
-  public void closed(@SuppressWarnings("unused") final Text regionName) {
+  public void closed(@SuppressWarnings("unused") final byte [] regionName) {
+    // continue
   }
 
   /**

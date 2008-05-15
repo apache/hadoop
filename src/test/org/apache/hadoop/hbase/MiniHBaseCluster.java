@@ -149,7 +149,7 @@ public class MiniHBaseCluster implements HConstants {
   public void flushcache() throws IOException {
     for (LocalHBaseCluster.RegionServerThread t:
         this.hbaseCluster.getRegionServers()) {
-      for(HRegion r: t.getRegionServer().getOnlineRegions().values() ) {
+      for(HRegion r: t.getRegionServer().getOnlineRegions()) {
         r.flushcache();
       }
     }

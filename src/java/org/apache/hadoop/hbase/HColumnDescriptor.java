@@ -22,13 +22,10 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
-
-import org.apache.hadoop.hbase.io.TextSequence;
 
 /**
  * An HColumnDescriptor contains information about a column family such as the
@@ -40,12 +37,11 @@ import org.apache.hadoop.hbase.io.TextSequence;
  * deleted when the column is deleted.
  */
 public class HColumnDescriptor implements WritableComparable {
-  
   // For future backward compatibility
-  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)3;
-  
-  /** Legal family names can only contain 'word characters' and end in a colon. */
-  public static final Pattern LEGAL_FAMILY_NAME = Pattern.compile("\\w+:");
+
+  // Version 3 was when column names becaome byte arrays and when we picked up
+  // Time-to-live feature.  Version 4 was when we moved to byte arrays, HBASE-82.
+  private static final byte COLUMN_DESCRIPTOR_VERSION = (byte)4;
 
   /** 
    * The type of compression.
@@ -65,22 +61,22 @@ public class HColumnDescriptor implements WritableComparable {
    */
   public static final CompressionType DEFAULT_COMPRESSION_TYPE =
     CompressionType.NONE;
-  
+
   /**
    * Default number of versions of a record to keep.
    */
   public static final int DEFAULT_N_VERSIONS = 3;
-  
+
   /**
    * Default setting for whether to serve from memory or not.
    */
   public static final boolean DEFAULT_IN_MEMORY = false;
-  
+
   /**
    * Default setting for whether to use a block cache or not.
    */
   public static final boolean DEFAULT_BLOCK_CACHE_ENABLED = false;
-  
+
   /**
    * Default maximum length of cell contents.
    */
@@ -96,56 +92,71 @@ public class HColumnDescriptor implements WritableComparable {
    */
   public static final BloomFilterDescriptor DEFAULT_BLOOM_FILTER_DESCRIPTOR =
     null;
-  
+
   // Column family name
-  private Text name;
+  private byte [] name;
   // Number of versions to keep
-  private int maxVersions;
+  private int maxVersions = DEFAULT_N_VERSIONS;
   // Compression setting if any
-  private CompressionType compressionType;
+  private CompressionType compressionType = DEFAULT_COMPRESSION_TYPE;
   // Serve reads from in-memory cache
-  private boolean inMemory;
+  private boolean inMemory = DEFAULT_IN_MEMORY;
   // Serve reads from in-memory block cache
-  private boolean blockCacheEnabled;
+  private boolean blockCacheEnabled = DEFAULT_BLOCK_CACHE_ENABLED;
   // Maximum value size
-  private int maxValueLength;
+  private int maxValueLength = Integer.MAX_VALUE;
   // Time to live of cell contents, in seconds from last timestamp
-  private int timeToLive;
+  private int timeToLive = HConstants.FOREVER;
   // True if bloom filter was specified
-  private boolean bloomFilterSpecified;
+  private boolean bloomFilterSpecified = false;
   // Descriptor of bloom filter
-  private BloomFilterDescriptor bloomFilter;
-  // Version number of this class
-  private byte versionNumber;
-  // Family name without the ':'
-  private transient Text familyName = null;
-  
+  private BloomFilterDescriptor bloomFilter = DEFAULT_BLOOM_FILTER_DESCRIPTOR;
+
   /**
    * Default constructor. Must be present for Writable.
    */
   public HColumnDescriptor() {
-    this(null);
+    this.name = null;
   }
-  
+
   /**
    * Construct a column descriptor specifying only the family name 
    * The other attributes are defaulted.
    * 
    * @param columnName - column family name
    */
-  public HColumnDescriptor(String columnName) {
-    this(columnName == null || columnName.length() <= 0?
-      new Text(): new Text(columnName),
+  public HColumnDescriptor(final String columnName) {
+    this(Bytes.toBytes(columnName));
+  }
+
+  /**
+   * Construct a column descriptor specifying only the family name 
+   * The other attributes are defaulted.
+   * 
+   * @param columnName - column family name
+   */
+  public HColumnDescriptor(final Text columnName) {
+    this(columnName.getBytes());
+  }
+  
+  /**
+   * Construct a column descriptor specifying only the family name 
+   * The other attributes are defaulted.
+   * 
+   * @param columnName Column family name.  Must have the ':' ending.
+   */
+  public HColumnDescriptor(final byte [] columnName) {
+    this (columnName == null || columnName.length <= 0?
+      HConstants.EMPTY_BYTE_ARRAY: columnName,
       DEFAULT_N_VERSIONS, DEFAULT_COMPRESSION_TYPE, DEFAULT_IN_MEMORY,
       DEFAULT_BLOCK_CACHE_ENABLED, 
       Integer.MAX_VALUE, DEFAULT_TIME_TO_LIVE,
       DEFAULT_BLOOM_FILTER_DESCRIPTOR);
   }
-  
+
   /**
    * Constructor
-   * Specify all parameters.
-   * @param name Column family name
+   * @param columnName Column family name.  Must have the ':' ending.
    * @param maxVersions Maximum number of versions to keep
    * @param compression Compression type
    * @param inMemory If true, column data should be kept in an HRegionServer's
@@ -161,25 +172,14 @@ public class HColumnDescriptor implements WritableComparable {
    * end in a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
    */
-  public HColumnDescriptor(final Text name, final int maxVersions,
+  public HColumnDescriptor(final byte [] columnName, final int maxVersions,
       final CompressionType compression, final boolean inMemory,
       final boolean blockCacheEnabled,
       final int maxValueLength, final int timeToLive,
       final BloomFilterDescriptor bloomFilter) {
-    String familyStr = name.toString();
-    // Test name if not null (It can be null when deserializing after
-    // construction but before we've read in the fields);
-    if (familyStr.length() > 0) {
-      Matcher m = LEGAL_FAMILY_NAME.matcher(familyStr);
-      if(m == null || !m.matches()) {
-        throw new IllegalArgumentException("Illegal family name <" + name +
-          ">. Family names can only contain " +
-          "'word characters' and must end with a ':'");
-      }
-    }
-    this.name = name;
-
-    if(maxVersions <= 0) {
+    isLegalFamilyName(columnName);
+    this.name = stripColon(columnName);
+    if (maxVersions <= 0) {
       // TODO: Allow maxVersion of 0 to be the way you say "Keep all versions".
       // Until there is support, consider 0 or < 0 -- a configuration error.
       throw new IllegalArgumentException("Maximum versions must be positive");
@@ -191,26 +191,49 @@ public class HColumnDescriptor implements WritableComparable {
     this.timeToLive = timeToLive;
     this.bloomFilter = bloomFilter;
     this.bloomFilterSpecified = this.bloomFilter == null ? false : true;
-    this.versionNumber = COLUMN_DESCRIPTOR_VERSION;
     this.compressionType = compression;
   }
+  
+  private static byte [] stripColon(final byte [] n) {
+    byte [] result = new byte [n.length - 1];
+    // Have the stored family name be absent the colon delimiter
+    System.arraycopy(n, 0, result, 0, n.length - 1);
+    return result;
+  }
+  
+  /**
+   * @param b Family name.
+   * @return <code>b</code>
+   * @throws IllegalArgumentException If not null and not a legitimate family
+   * name: i.e. 'printable' and ends in a ':' (Null passes are allowed because
+   * <code>b</code> can be null when deserializing).
+   */
+  public static byte [] isLegalFamilyName(final byte [] b) {
+    if (b == null) {
+      return b;
+    }
+    if (b[b.length - 1] != ':') {
+      throw new IllegalArgumentException("Family names must end in a colon: " +
+        Bytes.toString(b));
+    }
+    for (int i = 0; i < (b.length - 1); i++) {
+      if (Character.isLetterOrDigit(b[i]) || b[i] == '_' || b[i] == '.') {
+        continue;
+      }
+      throw new IllegalArgumentException("Illegal character <" + b[i] +
+        ">. Family names  can only contain  'word characters' and must end" +
+        "with a colon: " + Bytes.toString(b));
+    }
+    return b;
+  }
 
-  /** @return name of column family */
-  public Text getName() {
+  /**
+   * @return Name of this column family
+   */
+  public byte [] getName() {
     return name;
   }
 
-  /** @return name of column family without trailing ':' */
-  public synchronized Text getFamilyName() {
-    if (name != null) {
-      if (familyName == null) {
-        familyName = new TextSequence(name, 0, name.getLength() - 1).toText();
-      }
-      return familyName;
-    }
-    return null;
-  }
-  
   /** @return compression type being used for the column family */
   public CompressionType getCompression() {
     return this.compressionType;
@@ -266,9 +289,7 @@ public class HColumnDescriptor implements WritableComparable {
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    // Output a name minus ':'.
-    String tmp = name.toString();
-    return "{name: " + tmp.substring(0, tmp.length() - 1) +
+    return "{name: " + Bytes.toString(name) +
       ", max versions: " + maxVersions +
       ", compression: " + this.compressionType + ", in memory: " + inMemory +
       ", block cache enabled: " + blockCacheEnabled +
@@ -290,7 +311,7 @@ public class HColumnDescriptor implements WritableComparable {
   /** {@inheritDoc} */
   @Override
   public int hashCode() {
-    int result = this.name.hashCode();
+    int result = Bytes.hashCode(this.name);
     result ^= Integer.valueOf(this.maxVersions).hashCode();
     result ^= this.compressionType.hashCode();
     result ^= Boolean.valueOf(this.inMemory).hashCode();
@@ -298,8 +319,8 @@ public class HColumnDescriptor implements WritableComparable {
     result ^= Integer.valueOf(this.maxValueLength).hashCode();
     result ^= Integer.valueOf(this.timeToLive).hashCode();
     result ^= Boolean.valueOf(this.bloomFilterSpecified).hashCode();
-    result ^= Byte.valueOf(this.versionNumber).hashCode();
-    if(this.bloomFilterSpecified) {
+    result ^= Byte.valueOf(COLUMN_DESCRIPTOR_VERSION).hashCode();
+    if (this.bloomFilterSpecified) {
       result ^= this.bloomFilter.hashCode();
     }
     return result;
@@ -309,8 +330,14 @@ public class HColumnDescriptor implements WritableComparable {
 
   /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
-    this.versionNumber = in.readByte();
-    this.name.readFields(in);
+    int versionNumber = in.readByte();
+    if (versionNumber <= 2) {
+      Text t = new Text();
+      t.readFields(in);
+      this.name = t.getBytes();
+    } else {
+      this.name = Bytes.readByteArray(in);
+    }
     this.maxVersions = in.readInt();
     int ordinal = in.readInt();
     this.compressionType = CompressionType.values()[ordinal];
@@ -323,19 +350,19 @@ public class HColumnDescriptor implements WritableComparable {
       bloomFilter.readFields(in);
     }
     
-    if (this.versionNumber > 1) {
+    if (versionNumber > 1) {
       this.blockCacheEnabled = in.readBoolean();
     }
 
-    if (this.versionNumber > 2) {
+    if (versionNumber > 2) {
       this.timeToLive = in.readInt();
     }
   }
 
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
-    out.writeByte(this.versionNumber);
-    this.name.write(out);
+    out.writeByte(COLUMN_DESCRIPTOR_VERSION);
+    Bytes.writeByteArray(out, this.name);
     out.writeInt(this.maxVersions);
     out.writeInt(this.compressionType.ordinal());
     out.writeBoolean(this.inMemory);
@@ -345,28 +372,16 @@ public class HColumnDescriptor implements WritableComparable {
     if(bloomFilterSpecified) {
       bloomFilter.write(out);
     }
-
-    if (this.versionNumber > 1) {
-      out.writeBoolean(this.blockCacheEnabled);
-    }
-
-    if (this.versionNumber > 2) {
-      out.writeInt(this.timeToLive);
-    }
+    out.writeBoolean(this.blockCacheEnabled);
+    out.writeInt(this.timeToLive);
   }
 
   // Comparable
 
   /** {@inheritDoc} */
   public int compareTo(Object o) {
-    // NOTE: we don't do anything with the version number yet.
-    // Version numbers will come into play when we introduce an incompatible
-    // change in the future such as the addition of access control lists.
-    
     HColumnDescriptor other = (HColumnDescriptor)o;
-    
-    int result = this.name.compareTo(other.getName());
-    
+    int result = Bytes.compareTo(this.name, other.getName());
     if(result == 0) {
       result = Integer.valueOf(this.maxVersions).compareTo(
           Integer.valueOf(other.maxVersions));

@@ -29,6 +29,7 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HBaseTestCase;
 
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -43,9 +44,9 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 public class TestGet extends HBaseTestCase {
   private static final Log LOG = LogFactory.getLog(TestGet.class.getName());
   
-  private static final Text CONTENTS = new Text("contents:");
-  private static final Text ROW_KEY =
-    new Text(HRegionInfo.rootRegionInfo.getRegionName());
+  private static final byte [] CONTENTS = Bytes.toBytes("contents:");
+  private static final byte [] ROW_KEY =
+    HRegionInfo.ROOT_REGIONINFO.getRegionName();
   private static final String SERVER_ADDRESS = "foo.bar.com:1234";
 
 
@@ -61,12 +62,12 @@ public class TestGet extends HBaseTestCase {
     assertNull(value);
     
     // Find out what getFull returns
-    Map<Text, Cell> values = r.getFull(ROW_KEY);
+    Map<byte [], Cell> values = r.getFull(ROW_KEY);
     
     // assertEquals(4, values.keySet().size());
-    for(Iterator<Text> i = values.keySet().iterator(); i.hasNext(); ) {
-      Text column = i.next();
-      if (column.equals(HConstants.COL_SERVER)) {
+    for(Iterator<byte []> i = values.keySet().iterator(); i.hasNext(); ) {
+      byte [] column = i.next();
+      if (Bytes.equals(column, HConstants.COL_SERVER)) {
         String server = Writables.cellToString(values.get(column));
         assertEquals(expectedServer, server);
         LOG.info(server);
@@ -92,8 +93,8 @@ public class TestGet extends HBaseTestCase {
         cluster.getFileSystem().getHomeDirectory().toString());
       
       HTableDescriptor desc = new HTableDescriptor("test");
-      desc.addFamily(new HColumnDescriptor(CONTENTS.toString()));
-      desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
+      desc.addFamily(new HColumnDescriptor(CONTENTS));
+      desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY));
       
       region = createNewHRegion(desc, null, null);
       HRegionIncommon r = new HRegionIncommon(region);
@@ -102,17 +103,17 @@ public class TestGet extends HBaseTestCase {
 
       BatchUpdate batchUpdate = null;
       batchUpdate = new BatchUpdate(ROW_KEY, System.currentTimeMillis());
-      batchUpdate.put(CONTENTS, Writables.getBytes(CONTENTS));
+      batchUpdate.put(CONTENTS, CONTENTS);
       batchUpdate.put(HConstants.COL_REGIONINFO, 
-          Writables.getBytes(HRegionInfo.rootRegionInfo));
+          Writables.getBytes(HRegionInfo.ROOT_REGIONINFO));
       r.commit(batchUpdate);
       
       batchUpdate = new BatchUpdate(ROW_KEY, System.currentTimeMillis());
       batchUpdate.put(HConstants.COL_SERVER, 
-        Writables.stringToBytes(new HServerAddress(SERVER_ADDRESS).toString()));
-      batchUpdate.put(HConstants.COL_STARTCODE, Writables.longToBytes(12345));
-      batchUpdate.put(new Text(HConstants.COLUMN_FAMILY + "region"), 
-        "region".getBytes(HConstants.UTF8_ENCODING));
+        Bytes.toBytes(new HServerAddress(SERVER_ADDRESS).toString()));
+      batchUpdate.put(HConstants.COL_STARTCODE, Bytes.toBytes(12345));
+      batchUpdate.put(new Text(Bytes.toString(HConstants.COLUMN_FAMILY) +
+        "region"), Bytes.toBytes("region"));
       r.commit(batchUpdate);
       
       // Verify that get works the same from memcache as when reading from disk
@@ -133,12 +134,14 @@ public class TestGet extends HBaseTestCase {
       // Update one family member and add a new one
       
       batchUpdate = new BatchUpdate(ROW_KEY, System.currentTimeMillis());
-      batchUpdate.put(new Text(HConstants.COLUMN_FAMILY + "region"),
+      batchUpdate.put(new Text(Bytes.toString(HConstants.COLUMN_FAMILY) +
+        "region"),
         "region2".getBytes(HConstants.UTF8_ENCODING));
       String otherServerName = "bar.foo.com:4321";
       batchUpdate.put(HConstants.COL_SERVER, 
-        Writables.stringToBytes(new HServerAddress(otherServerName).toString()));
-      batchUpdate.put(new Text(HConstants.COLUMN_FAMILY + "junk"),
+        Bytes.toBytes(new HServerAddress(otherServerName).toString()));
+      batchUpdate.put(new Text(Bytes.toString(HConstants.COLUMN_FAMILY) +
+        "junk"),
         "junk".getBytes(HConstants.UTF8_ENCODING));
       r.commit(batchUpdate);
 

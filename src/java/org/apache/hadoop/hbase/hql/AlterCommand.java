@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.BloomFilterDescriptor;
@@ -57,7 +58,7 @@ public class AlterCommand extends SchemaModificationCommand {
   public ReturnMsg execute(HBaseConfiguration conf) {
     try {
       HConnection conn = HConnectionManager.getConnection(conf);
-      if (!conn.tableExists(new Text(this.tableName))) {
+      if (!conn.tableExists(Bytes.toBytes(this.tableName))) {
         return new ReturnMsg(0, "'" + this.tableName + "'" + TABLE_NOT_FOUND);
       }
 
@@ -95,7 +96,7 @@ public class AlterCommand extends SchemaModificationCommand {
 
           // get the table descriptor so we can get the old column descriptor
           HTableDescriptor tDesc = getTableDescByName(admin, tableName);
-          HColumnDescriptor oldColumnDesc = tDesc.families().get(columnName);
+          HColumnDescriptor oldColumnDesc = tDesc.getFamily(columnName.getBytes());
 
           // combine the options specified in the shell with the options
           // from the exiting descriptor to produce the new descriptor
@@ -168,11 +169,11 @@ public class AlterCommand extends SchemaModificationCommand {
     return CommandType.DDL;
   }
 
-  private HTableDescriptor getTableDescByName(HBaseAdmin admin, String tableName)
+  private HTableDescriptor getTableDescByName(HBaseAdmin admin, String tn)
       throws IOException {
     HTableDescriptor[] tables = admin.listTables();
     for (HTableDescriptor tDesc : tables) {
-      if (tDesc.getName().toString().equals(tableName)) {
+      if (tDesc.getName().toString().equals(tn)) {
         return tDesc;
       }
     }
@@ -184,7 +185,7 @@ public class AlterCommand extends SchemaModificationCommand {
    * instance of HColumnDescriptor representing the column spec, with empty
    * values drawn from the original as defaults
    */
-  protected HColumnDescriptor getColumnDescriptor(String column,
+  protected HColumnDescriptor getColumnDescriptor(String c,
       Map<String, Object> columnSpec, HColumnDescriptor original)
       throws IllegalArgumentException {
     initOptions(original);
@@ -230,9 +231,10 @@ public class AlterCommand extends SchemaModificationCommand {
       }
     }
 
-    column = appendDelimiter(column);
+    c = appendDelimiter(c);
 
-    HColumnDescriptor columnDesc = new HColumnDescriptor(new Text(column),
+    HColumnDescriptor columnDesc =
+      new HColumnDescriptor(Bytes.toBytes(c),
         maxVersions, compression, inMemory, blockCacheEnabled,
         maxLength, timeToLive, bloomFilterDesc);
 

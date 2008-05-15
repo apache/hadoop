@@ -26,39 +26,35 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.filter.RegExpRowFilter;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.Scanner;
-
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * Additional scanner tests.
- * {@link TestScanner} does a custom setup/takedown not conducive
+ * {@link org.apache.hadoop.hbase.regionserver.TestScanner} does a custom
+ * setup/takedown not conducive
  * to addition of extra scanning tests.
  *
  * <p>Temporarily disabled until hudson stabilizes again.
- * @see TestScanner
+ * @see org.apache.hadoop.hbase.regionserver.TestScanner
  */
 public class DisabledTestScanner2 extends HBaseClusterTestCase {
   final Log LOG = LogFactory.getLog(this.getClass().getName());
@@ -90,9 +86,9 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
    */
   public void testScanningMultipleFamiliesOfDifferentVintage()
   throws MasterNotRunningException, IOException {
-    Text tableName = new Text(getName());
-    final Text [] families = createTable(new HBaseAdmin(this.conf), tableName);
-    HTable table = new HTable(this.conf, tableName);
+    final byte [][] families = createTable(new HBaseAdmin(this.conf),
+      getName());
+    HTable table = new HTable(this.conf, getName());
     Scanner scanner = null;
     try {
       long time = System.currentTimeMillis();
@@ -101,20 +97,20 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
         final byte [] lastKey = new byte [] {'a', 'a', (byte)('b' + i)};
         Incommon inc = new HTableIncommon(table);
         addContent(inc, families[i].toString(),
-          START_KEY_BYTES, new Text(lastKey), time + (1000 * i));
+          START_KEY_BYTES, lastKey, time + (1000 * i));
         // Add in to the first store a record that is in excess of the stop
         // row specified below setting up the scanner filter.  Add 'bbb'.
         // Use a stop filter of 'aad'.  The store scanner going to 'bbb' was
         // flipping the switch in StopRowFilter stopping us returning all
         // of the rest of the other store content.
         if (i == 0) {
-          BatchUpdate batchUpdate = new BatchUpdate(new Text("bbb"));
+          BatchUpdate batchUpdate = new BatchUpdate(Bytes.toBytes("bbb"));
           batchUpdate.put(families[0], "bbb".getBytes());
           inc.commit(batchUpdate);
         }
       }
       RowFilterInterface f =
-        new WhileMatchRowFilter(new StopRowFilter(new Text("aad")));
+        new WhileMatchRowFilter(new StopRowFilter(Bytes.toBytes("aad")));
       scanner = table.getScanner(families, HConstants.EMPTY_START_ROW,
         HConstants.LATEST_TIMESTAMP, f);
       int count = 0;
@@ -132,14 +128,14 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
    * @throws Exception
    */
   public void testStopRow() throws Exception {
-    Text tableName = new Text(getName());
-    createTable(new HBaseAdmin(this.conf), tableName);
-    HTable table = new HTable(this.conf, tableName);
+    createTable(new HBaseAdmin(this.conf), getName());
+    HTable table = new HTable(this.conf, getName());
     final String lastKey = "aac";
     addContent(new HTableIncommon(table), FIRST_COLKEY + ":");
-    Scanner scanner =
-      table.getScanner(new Text [] {new Text(FIRST_COLKEY + ":")},
-          HConstants.EMPTY_START_ROW, new Text(lastKey));
+    byte [][] cols = new byte [1][];
+    cols[0] = Bytes.toBytes(FIRST_COLKEY + ":");
+    Scanner scanner = table.getScanner(cols,
+      HConstants.EMPTY_START_ROW, Bytes.toBytes(lastKey));
     for (RowResult e: scanner) {
       if(e.getRow().toString().compareTo(lastKey) >= 0) {
         LOG.info(e.getRow());
@@ -170,16 +166,15 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     HBaseAdmin admin = new HBaseAdmin(conf);
     
     // Setup colkeys to be inserted
-    Text tableName = new Text(getName());
-    createTable(admin, tableName);
-    HTable table = new HTable(this.conf, tableName);
+    createTable(admin, getName());
+    HTable table = new HTable(this.conf, getName());
     // Add a row to columns without qualifiers and then two with.  Make one
     // numbers only so easy to find w/ a regex.
-    BatchUpdate batchUpdate = new BatchUpdate(new Text(getName()));
+    BatchUpdate batchUpdate = new BatchUpdate(getName());
     final String firstColkeyFamily = Character.toString(FIRST_COLKEY) + ":";
-    batchUpdate.put(new Text(firstColkeyFamily + getName()), GOOD_BYTES);
-    batchUpdate.put(new Text(firstColkeyFamily + "22222"), GOOD_BYTES);
-    batchUpdate.put(new Text(firstColkeyFamily), GOOD_BYTES);
+    batchUpdate.put(firstColkeyFamily + getName(), GOOD_BYTES);
+    batchUpdate.put(firstColkeyFamily + "22222", GOOD_BYTES);
+    batchUpdate.put(firstColkeyFamily, GOOD_BYTES);
     table.commit(batchUpdate);
     // Now do a scan using a regex for a column name.
     checkRegexingScanner(table, firstColkeyFamily + "\\d+");
@@ -197,12 +192,12 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
   private void checkRegexingScanner(final HTable table, 
     final String regexColumnname) 
   throws IOException {
-    Text [] regexCol = new Text [] {new Text(regexColumnname)};
-    Scanner scanner =
-      table.getScanner(regexCol, HConstants.EMPTY_START_ROW);
+    byte [][] regexCols = new byte[1][];
+    regexCols[0] = Bytes.toBytes(regexColumnname);
+    Scanner scanner = table.getScanner(regexCols, HConstants.EMPTY_START_ROW);
     int count = 0;
     for (RowResult r : scanner) {
-      for (Text c: r.keySet()) {
+      for (byte [] c: r.keySet()) {
         System.out.println(c);
         assertTrue(c.toString().matches(regexColumnname));
         count++;
@@ -222,14 +217,13 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     HBaseAdmin admin = new HBaseAdmin(conf);
     
     // Setup colkeys to be inserted
-    Text tableName = new Text(getName());
-    Text [] colKeys = createTable(admin, tableName);
+    byte [][] colKeys = createTable(admin, getName());
     assertTrue("Master is running.", admin.isMasterRunning());
     
     // Enter data
-    HTable table = new HTable(conf, tableName);
+    HTable table = new HTable(conf, getName());
     for (char i = FIRST_ROWKEY; i <= LAST_ROWKEY; i++) {
-      Text rowKey = new Text(new String(new char[] { i }));
+      byte [] rowKey = new byte [] { (byte)i };
       BatchUpdate batchUpdate = new BatchUpdate(rowKey);
       for (char j = 0; j < colKeys.length; j++) {
         batchUpdate.put(colKeys[j], (i >= FIRST_BAD_RANGE_ROWKEY && 
@@ -248,14 +242,13 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
    * @return Returns column keys used making table.
    * @throws IOException
    */
-  private Text [] createTable(final HBaseAdmin admin, final Text tableName)
+  private byte [][] createTable(final HBaseAdmin admin, final String tableName)
   throws IOException {
     // Setup colkeys to be inserted
     HTableDescriptor htd = new HTableDescriptor(getName());
-    Text[] colKeys = new Text[(LAST_COLKEY - FIRST_COLKEY) + 1];
+    byte [][] colKeys = new byte[(LAST_COLKEY - FIRST_COLKEY) + 1][];
     for (char i = 0; i < colKeys.length; i++) {
-      colKeys[i] = new Text(new String(new char[] { 
-        (char)(FIRST_COLKEY + i), ':' }));
+      colKeys[i] = new byte [] {(byte)(FIRST_COLKEY + i), ':' };
       htd.addFamily(new HColumnDescriptor(colKeys[i].toString()));
     }
     admin.createTable(htd);
@@ -264,37 +257,38 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     return colKeys;
   }
   
-  private void regExpFilterTest(HTable table, Text[] colKeys) 
+  private void regExpFilterTest(HTable table, byte [][] colKeys) 
     throws Exception {
     // Get the filter.  The RegExpRowFilter used should filter out vowels.
-    Map<Text, byte[]> colCriteria = new TreeMap<Text, byte[]>();
+    Map<byte [], byte[]> colCriteria =
+      new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
     for (int i = 0; i < colKeys.length; i++) {
       colCriteria.put(colKeys[i], GOOD_BYTES);
     }
     RowFilterInterface filter = new RegExpRowFilter("[^aeiou]", colCriteria);
 
     // Create the scanner from the filter.
-    Scanner scanner = table.getScanner(colKeys, new Text(new 
-      String(new char[] { FIRST_ROWKEY })), filter);
+    Scanner scanner = table.getScanner(colKeys, new byte [] { FIRST_ROWKEY },
+      filter);
 
     // Iterate over the scanner, ensuring that results match the passed regex.
     iterateOnScanner(scanner, "[^aei-qu]");
   }
   
-  private void rowFilterSetTest(HTable table, Text[] colKeys) 
+  private void rowFilterSetTest(HTable table, byte [][] colKeys) 
   throws Exception {
     // Get the filter.  The RegExpRowFilter used should filter out vowels and 
     // the WhileMatchRowFilter(StopRowFilter) should filter out all rows 
     // greater than or equal to 'r'.
     Set<RowFilterInterface> filterSet = new HashSet<RowFilterInterface>();
     filterSet.add(new RegExpRowFilter("[^aeiou]"));
-    filterSet.add(new WhileMatchRowFilter(new StopRowFilter(new Text("r"))));
+    filterSet.add(new WhileMatchRowFilter(new StopRowFilter(Bytes.toBytes("r"))));
     RowFilterInterface filter = 
       new RowFilterSet(RowFilterSet.Operator.MUST_PASS_ALL, filterSet);
     
     // Create the scanner from the filter.
-    Scanner scanner = table.getScanner(colKeys, new Text(new 
-        String(new char[] { FIRST_ROWKEY })), filter);
+    Scanner scanner = table.getScanner(colKeys, new byte [] { FIRST_ROWKEY },
+      filter);
     
     // Iterate over the scanner, ensuring that results match the passed regex.
     iterateOnScanner(scanner, "[^aeior-z]");
@@ -327,8 +321,7 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     HTable metaTable = new HTable(conf, HConstants.META_TABLE_NAME);
     // First add a new table.  Its intial region will be added to META region.
     HBaseAdmin admin = new HBaseAdmin(conf);
-    Text tableName = new Text(getName());
-    admin.createTable(new HTableDescriptor(tableName.toString()));
+    admin.createTable(new HTableDescriptor(getName()));
     List<HRegionInfo> regions = scan(metaTable);
     assertEquals("Expected one region", 1, regions.size());
     HRegionInfo region = regions.get(0);
@@ -341,10 +334,10 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     Path homedir = new Path(getName());
     List<HRegion> newRegions = new ArrayList<HRegion>(2);
     newRegions.add(HRegion.createHRegion(
-        new HRegionInfo(desc, null, new Text("midway")),
+        new HRegionInfo(desc, null, Bytes.toBytes("midway")),
         homedir, this.conf));
     newRegions.add(HRegion.createHRegion(
-        new HRegionInfo(desc, new Text("midway"), null),
+        new HRegionInfo(desc, Bytes.toBytes("midway"), null),
         homedir, this.conf));
     try {
       for (HRegion r : newRegions) {
@@ -370,8 +363,8 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
       HRegionLocation rl = t.getRegionLocation(t.getTableName());
       regionServer = t.getConnection().getHRegionConnection(rl.getServerAddress());
       scannerId = regionServer.openScanner(rl.getRegionInfo().getRegionName(),
-          HConstants.COLUMN_FAMILY_ARRAY, new Text(),
-          System.currentTimeMillis(), null);
+          HConstants.COLUMN_FAMILY_ARRAY, HConstants.EMPTY_START_ROW,
+          HConstants.LATEST_TIMESTAMP, null);
       while (true) {
         RowResult values = regionServer.next(scannerId);
         if (values == null || values.size() == 0) {
@@ -414,8 +407,8 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
     batchUpdate.put(HConstants.COL_REGIONINFO,
       Writables.getBytes(region.getRegionInfo()));
     batchUpdate.put(HConstants.COL_SERVER,
-      Writables.stringToBytes(serverAddress.toString()));
-    batchUpdate.put(HConstants.COL_STARTCODE, Writables.longToBytes(startCode));
+      Bytes.toBytes(serverAddress.toString()));
+    batchUpdate.put(HConstants.COL_STARTCODE, Bytes.toBytes(startCode));
     t.commit(batchUpdate);
     // Assert added.
     byte [] bytes = 
@@ -435,7 +428,7 @@ public class DisabledTestScanner2 extends HBaseClusterTestCase {
    * @param regionName Region to remove.
    * @throws IOException
    */
-  private void removeRegionFromMETA(final HTable t, final Text regionName)
+  private void removeRegionFromMETA(final HTable t, final byte [] regionName)
   throws IOException {
     BatchUpdate batchUpdate = new BatchUpdate(regionName);
     batchUpdate.delete(HConstants.COL_REGIONINFO);

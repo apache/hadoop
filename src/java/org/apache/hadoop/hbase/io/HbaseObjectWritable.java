@@ -39,12 +39,14 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.RowFilterSet;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /** 
  * This is a customized version of the polymorphic hadoop
@@ -123,6 +125,7 @@ public class HbaseObjectWritable implements Writable, Configurable {
     }
     addToMap(RowResult.class, code++);
     addToMap(HRegionInfo[].class, code++);
+    addToMap(MapWritable.class, code++);
   }
   
   private Class<?> declaredClass;
@@ -210,17 +213,24 @@ public class HbaseObjectWritable implements Writable, Configurable {
                                  Class declaredClass, 
                                  Configuration conf)
   throws IOException {
+
     if (instance == null) {                       // null
       instance = new NullInstance(declaredClass, conf);
       declaredClass = Writable.class;
     }
     writeClassCode(out, declaredClass);
     if (declaredClass.isArray()) {                // array
-      int length = Array.getLength(instance);
-      out.writeInt(length);
-      for (int i = 0; i < length; i++) {
-        writeObject(out, Array.get(instance, i),
+      // If bytearray, just dump it out -- avoid the recursion and
+      // byte-at-a-time we were previously doing.
+      if (declaredClass.equals(byte [].class)) {
+        Bytes.writeByteArray(out, (byte [])instance);
+      } else {
+        int length = Array.getLength(instance);
+        out.writeInt(length);
+        for (int i = 0; i < length; i++) {
+          writeObject(out, Array.get(instance, i),
                     declaredClass.getComponentType(), conf);
+        }
       }
     } else if (declaredClass == String.class) {   // String
       Text.writeString(out, (String)instance);
@@ -301,10 +311,14 @@ public class HbaseObjectWritable implements Writable, Configurable {
         throw new IllegalArgumentException("Not a primitive: "+declaredClass);
       }
     } else if (declaredClass.isArray()) {              // array
-      int length = in.readInt();
-      instance = Array.newInstance(declaredClass.getComponentType(), length);
-      for (int i = 0; i < length; i++) {
-        Array.set(instance, i, readObject(in, conf));
+      if (declaredClass.equals(byte [].class)) {
+        instance = Bytes.readByteArray(in);
+      } else {
+        int length = in.readInt();
+        instance = Array.newInstance(declaredClass.getComponentType(), length);
+        for (int i = 0; i < length; i++) {
+          Array.set(instance, i, readObject(in, conf));
+        }
       }
     } else if (declaredClass == String.class) {        // String
       instance = Text.readString(in);

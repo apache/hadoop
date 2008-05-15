@@ -24,7 +24,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.SortedMap;
 
-import org.apache.hadoop.io.Text;
 
 /**
  * Implementation of RowFilterInterface that limits results to a specific page
@@ -65,7 +64,7 @@ public class PageRowFilter implements RowFilterInterface {
    * 
    * {@inheritDoc}
    */
-  public void validate(@SuppressWarnings("unused") final Text[] columns) {
+  public void validate(@SuppressWarnings("unused") final byte [][] columns) {
     // Doesn't filter columns
   }
 
@@ -79,7 +78,7 @@ public class PageRowFilter implements RowFilterInterface {
 
   /** {@inheritDoc} */
   public void rowProcessed(boolean filtered,
-      @SuppressWarnings("unused") Text rowKey) {
+      @SuppressWarnings("unused") byte [] rowKey) {
     if (!filtered) {
       this.rowsAccepted++;
     }
@@ -105,7 +104,7 @@ public class PageRowFilter implements RowFilterInterface {
    * 
    * {@inheritDoc}
    */
-  public boolean filterRowKey(@SuppressWarnings("unused") final Text rowKey) {
+  public boolean filterRowKey(@SuppressWarnings("unused") final byte [] r) {
     return filterAllRemaining();
   }
 
@@ -113,8 +112,8 @@ public class PageRowFilter implements RowFilterInterface {
    * 
    * {@inheritDoc}
    */
-  public boolean filterColumn(@SuppressWarnings("unused") final Text rowKey,
-    @SuppressWarnings("unused") final Text colKey,
+  public boolean filterColumn(@SuppressWarnings("unused") final byte [] rowKey,
+    @SuppressWarnings("unused") final byte [] colKey,
     @SuppressWarnings("unused") final byte[] data) {
     return filterAllRemaining();
   }
@@ -124,7 +123,7 @@ public class PageRowFilter implements RowFilterInterface {
    * {@inheritDoc}
    */
   public boolean filterRow(@SuppressWarnings("unused")
-      final SortedMap<Text, byte[]> columns) {
+      final SortedMap<byte [], byte[]> columns) {
     return filterAllRemaining();
   }
 

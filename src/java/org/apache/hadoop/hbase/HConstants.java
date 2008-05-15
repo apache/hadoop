@@ -19,8 +19,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * HConstants holds a bunch of HBase-related constants
@@ -29,6 +29,8 @@ public interface HConstants {
 
   /** long constant for zero */
   static final Long ZERO_L = Long.valueOf(0L);
+  
+  static final String NINES = "99999999999999";
   
   // For migration
 
@@ -117,62 +119,69 @@ public interface HConstants {
   // should go down.
 
   /** The root table's name.*/
-  static final Text ROOT_TABLE_NAME = new Text("-ROOT-");
+  static final byte [] ROOT_TABLE_NAME = Bytes.toBytes("-ROOT-");
 
   /** The META table's name. */
-  static final Text META_TABLE_NAME = new Text(".META.");
+  static final byte [] META_TABLE_NAME = Bytes.toBytes(".META.");
 
   // Defines for the column names used in both ROOT and META HBase 'meta' tables.
   
   /** The ROOT and META column family (string) */
   static final String COLUMN_FAMILY_STR = "info:";
 
-  /** The ROOT and META column family (Text) */
-  static final Text COLUMN_FAMILY = new Text(COLUMN_FAMILY_STR);
+  /** The ROOT and META column family */
+  static final byte [] COLUMN_FAMILY = Bytes.toBytes(COLUMN_FAMILY_STR);
 
   /** Array of meta column names */
-  static final Text [] COLUMN_FAMILY_ARRAY = new Text [] {COLUMN_FAMILY};
+  static final byte[][] COLUMN_FAMILY_ARRAY = new byte[][] {COLUMN_FAMILY};
   
   /** ROOT/META column family member - contains HRegionInfo */
-  static final Text COL_REGIONINFO = new Text(COLUMN_FAMILY + "regioninfo");
+  static final byte [] COL_REGIONINFO =
+    Bytes.toBytes(COLUMN_FAMILY_STR + "regioninfo");
 
   /** Array of column - contains HRegionInfo */
-  static final Text[] COL_REGIONINFO_ARRAY = new Text [] {COL_REGIONINFO};
+  static final byte[][] COL_REGIONINFO_ARRAY = new byte[][] {COL_REGIONINFO};
   
   /** ROOT/META column family member - contains HServerAddress.toString() */
-  static final Text COL_SERVER = new Text(COLUMN_FAMILY + "server");
+  static final byte[] COL_SERVER = Bytes.toBytes(COLUMN_FAMILY_STR + "server");
   
   /** ROOT/META column family member - contains server start code (a long) */
-  static final Text COL_STARTCODE = new Text(COLUMN_FAMILY + "serverstartcode");
+  static final byte [] COL_STARTCODE =
+    Bytes.toBytes(COLUMN_FAMILY_STR + "serverstartcode");
 
   /** the lower half of a split region */
-  static final Text COL_SPLITA = new Text(COLUMN_FAMILY_STR + "splitA");
+  static final byte [] COL_SPLITA = Bytes.toBytes(COLUMN_FAMILY_STR + "splitA");
   
   /** the upper half of a split region */
-  static final Text COL_SPLITB = new Text(COLUMN_FAMILY_STR + "splitB");
+  static final byte [] COL_SPLITB = Bytes.toBytes(COLUMN_FAMILY_STR + "splitB");
   
   /** All the columns in the catalog -ROOT- and .META. tables.
    */
-  static final Text[] ALL_META_COLUMNS = {COL_REGIONINFO, COL_SERVER,
+  static final byte[][] ALL_META_COLUMNS = {COL_REGIONINFO, COL_SERVER,
     COL_STARTCODE, COL_SPLITA, COL_SPLITB};
 
   // Other constants
 
   /**
-   * An empty instance of Text.
+   * An empty instance.
    */
-  static final Text EMPTY_TEXT = new Text();
+  static final byte [] EMPTY_BYTE_ARRAY = new byte [0];
   
   /**
    * Used by scanners, etc when they want to start at the beginning of a region
    */
-  static final Text EMPTY_START_ROW = EMPTY_TEXT;
+  static final byte [] EMPTY_START_ROW = EMPTY_BYTE_ARRAY;
+  
+  /**
+   * Last row in a table.
+   */
+  static final byte [] EMPTY_END_ROW = EMPTY_START_ROW;
 
   /** 
     * Used by scanners and others when they're trying to detect the end of a 
     * table 
     */
-  static final Text LAST_ROW = EMPTY_TEXT;
+  static final byte [] LAST_ROW = EMPTY_BYTE_ARRAY;
   
   /** When we encode strings, we always specify UTF8 encoding */
   static final String UTF8_ENCODING = "UTF-8";

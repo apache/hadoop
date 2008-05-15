@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.*;
 
 import java.io.*;
@@ -62,7 +63,7 @@ public class HLogEdit implements Writable, HConstants {
     return (value == null)? false: deleteBytes.compareTo(value) == 0;
   }
 
-  private Text column = new Text();
+  private byte [] column;
   private byte [] val;
   private long timestamp;
   private static final int MAX_VALUE_LEN = 128;
@@ -76,18 +77,18 @@ public class HLogEdit implements Writable, HConstants {
 
   /**
    * Construct a fully initialized HLogEdit
-   * @param column column name
+   * @param c column name
    * @param bval value
    * @param timestamp timestamp for modification
    */
-  public HLogEdit(Text column, byte [] bval, long timestamp) {
-    this.column.set(column);
+  public HLogEdit(byte [] c, byte [] bval, long timestamp) {
+    this.column = c;
     this.val = bval;
     this.timestamp = timestamp;
   }
 
   /** @return the column */
-  public Text getColumn() {
+  public byte [] getColumn() {
     return this.column;
   }
 
@@ -116,7 +117,7 @@ public class HLogEdit implements Writable, HConstants {
     } catch (UnsupportedEncodingException e) {
       throw new RuntimeException("UTF8 encoding not present?", e);
     }
-    return "(" + getColumn().toString() + "/" + getTimestamp() + "/" +
+    return "(" + Bytes.toString(getColumn()) + "/" + getTimestamp() + "/" +
       value + ")";
   }
   
@@ -124,7 +125,7 @@ public class HLogEdit implements Writable, HConstants {
 
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
-    this.column.write(out);
+    Bytes.writeByteArray(out, this.column);
     out.writeInt(this.val.length);
     out.write(this.val);
     out.writeLong(timestamp);
@@ -132,7 +133,7 @@ public class HLogEdit implements Writable, HConstants {
   
   /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
-    this.column.readFields(in);
+    this.column = Bytes.readByteArray(in);
     this.val = new byte[in.readInt()];
     in.readFully(this.val);
     this.timestamp = in.readLong();

@@ -25,15 +25,15 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.io.MapFile;
-import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Test compactions
@@ -41,11 +41,11 @@ import org.apache.hadoop.hbase.io.Cell;
 public class TestCompaction extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
   private HRegion r = null;
-  private static final String COLUMN_FAMILY = COLFAMILY_NAME1;
-  private final Text STARTROW;
-  private static final Text COLUMN_FAMILY_TEXT = new Text(COLUMN_FAMILY);
-  private static final Text COLUMN_FAMILY_TEXT_MINUS_COLON =
-    new Text(COLUMN_FAMILY.substring(0, COLUMN_FAMILY.length() - 1));
+  private static final byte [] COLUMN_FAMILY = COLFAMILY_NAME1;
+  private final byte [] STARTROW = Bytes.toBytes(START_KEY);
+  private static final byte [] COLUMN_FAMILY_TEXT = COLUMN_FAMILY;
+  private static final byte [] COLUMN_FAMILY_TEXT_MINUS_COLON =
+    Bytes.toBytes(Bytes.toString(COLUMN_FAMILY).substring(0, COLUMN_FAMILY.length - 1));
   private static final int COMPACTION_THRESHOLD = MAXVERSIONS;
 
   private MiniDFSCluster cluster;
@@ -53,7 +53,6 @@ public class TestCompaction extends HBaseTestCase {
   /** constructor */
   public TestCompaction() {
     super();
-    STARTROW = new Text(START_KEY);
     
     // Set cache flush size to 1MB
     conf.setInt("hbase.hregion.memcache.flush.size", 1024*1024);
@@ -99,7 +98,7 @@ public class TestCompaction extends HBaseTestCase {
     // Default is that there only 3 (MAXVERSIONS) versions allowed per column.
     // Assert > 3 and then after compaction, assert that only 3 versions
     // available.
-    addContent(new HRegionIncommon(r), COLUMN_FAMILY);
+    addContent(new HRegionIncommon(r), Bytes.toString(COLUMN_FAMILY));
     Cell[] cellValues = 
       r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);
     // Assert that I can get > 5 versions (Should be at least 5 in there).
@@ -114,9 +113,8 @@ public class TestCompaction extends HBaseTestCase {
     byte [] secondRowBytes = START_KEY.getBytes(HConstants.UTF8_ENCODING);
     // Increment the least significant character so we get to next row.
     secondRowBytes[START_KEY_BYTES.length - 1]++;
-    Text secondRow = new Text(secondRowBytes);
-    cellValues = r.get(secondRow, COLUMN_FAMILY_TEXT, 100/*Too many*/);
-    LOG.info("Count of " + secondRow + ": " + cellValues.length);
+    cellValues = r.get(secondRowBytes, COLUMN_FAMILY_TEXT, 100/*Too many*/);
+    LOG.info("Count of " + Bytes.toString(secondRowBytes) + ": " + cellValues.length);
     // Commented out because fails on an hp+ubuntu single-processor w/ 1G and
     // "Intel(R) Pentium(R) 4 CPU 3.20GHz" though passes on all local
     // machines and even on hudson.  On said machine, its reporting in the
@@ -147,26 +145,26 @@ public class TestCompaction extends HBaseTestCase {
     cellValues = r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);
     assertNull(cellValues);
     // Assert the store files do not have the first record 'aaa' keys in them.
-    for (MapFile.Reader reader:
-        this.r.stores.get(COLUMN_FAMILY_TEXT_MINUS_COLON).getReaders()) {
+    for (MapFile.Reader reader: this.r.stores.
+        get(Bytes.mapKey(COLUMN_FAMILY_TEXT_MINUS_COLON)).getReaders()) {
       reader.reset();
       HStoreKey key = new HStoreKey();
       ImmutableBytesWritable val = new ImmutableBytesWritable();
       while(reader.next(key, val)) {
-        assertFalse(key.getRow().equals(STARTROW));
+        assertFalse(Bytes.equals(key.getRow(), STARTROW));
       }
     }
   }
 
   private void createStoreFile(final HRegion region) throws IOException {
     HRegionIncommon loader = new HRegionIncommon(region);
-    addContent(loader, COLUMN_FAMILY);
+    addContent(loader, Bytes.toString(COLUMN_FAMILY));
     loader.flushcache();
   }
 
   private void createSmallerStoreFile(final HRegion region) throws IOException {
     HRegionIncommon loader = new HRegionIncommon(region); 
-    addContent(loader, COLUMN_FAMILY,
+    addContent(loader, Bytes.toString(COLUMN_FAMILY),
         ("bbb" + PUNCTUATION).getBytes(), null);
     loader.flushcache();
   }

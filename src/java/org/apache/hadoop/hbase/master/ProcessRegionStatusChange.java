@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.io.Text;
 
 /**
  * Abstract class that performs common operations for 
@@ -31,7 +30,7 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
   protected final boolean isMetaTable;
   protected final HRegionInfo regionInfo;
   protected final MetaRegion metaRegion;
-  protected final Text metaRegionName;
+  protected final byte [] metaRegionName;
   
   /**
    * @param master
@@ -42,7 +41,7 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
     this.regionInfo = regionInfo;
     this.isMetaTable = regionInfo.isMetaTable();
     if (isMetaTable) {
-      this.metaRegionName = HRegionInfo.rootRegionInfo.getRegionName();
+      this.metaRegionName = HRegionInfo.ROOT_REGIONINFO.getRegionName();
       this.metaRegion = new MetaRegion(master.getRootRegionLocation(),
           this.metaRegionName, HConstants.EMPTY_START_ROW);
     } else {
@@ -61,7 +60,8 @@ abstract class ProcessRegionStatusChange extends RegionServerOperation {
         available = false;
       }
     } else {
-      if (!master.regionManager.isInitialRootScanComplete() || !metaTableAvailable()) {
+      if (!master.regionManager.isInitialRootScanComplete() ||
+          !metaTableAvailable()) {
         // The root region has not been scanned or the meta table is not
         // available so we can't proceed.
         // Put the operation on the delayedToDoQueue

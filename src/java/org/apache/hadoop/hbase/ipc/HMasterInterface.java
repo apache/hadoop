@@ -19,13 +19,12 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HServerAddress;
-
-import java.io.IOException;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.ipc.VersionedProtocol;
 
 /**
  * Clients interact with the HMasterInterface to gain access to meta-level
@@ -38,8 +37,9 @@ public interface HMasterInterface extends VersionedProtocol {
    * Version was incremented to 2 when we brought the hadoop RPC local to hbase
    * -- HADOOP-2495 and then to 3 when we changed the RPC to send codes instead
    * of actual class names (HADOOP-2519).
+   * <p>Version 4 when we moved to all byte arrays (HBASE-42).
    */
-  public static final long versionID = 3L;
+  public static final long versionID = 4L;
 
   /** @return true if master is available */
   public boolean isMasterRunning();
@@ -58,7 +58,7 @@ public interface HMasterInterface extends VersionedProtocol {
    * @param tableName
    * @throws IOException
    */
-  public void deleteTable(Text tableName) throws IOException;
+  public void deleteTable(final byte [] tableName) throws IOException;
   
   /**
    * Adds a column to the specified table
@@ -66,7 +66,8 @@ public interface HMasterInterface extends VersionedProtocol {
    * @param column column descriptor
    * @throws IOException
    */
-  public void addColumn(Text tableName, HColumnDescriptor column) throws IOException;
+  public void addColumn(final byte [] tableName, HColumnDescriptor column)
+  throws IOException;
 
   /**
    * Modifies an existing column on the specified table
@@ -75,7 +76,7 @@ public interface HMasterInterface extends VersionedProtocol {
    * @param descriptor new column descriptor
    * @throws IOException
    */
-  public void modifyColumn(Text tableName, Text columnName, 
+  public void modifyColumn(final byte [] tableName, final byte [] columnName, 
     HColumnDescriptor descriptor) 
   throws IOException;
 
@@ -86,14 +87,15 @@ public interface HMasterInterface extends VersionedProtocol {
    * @param columnName
    * @throws IOException
    */
-  public void deleteColumn(Text tableName, Text columnName) throws IOException;
+  public void deleteColumn(final byte [] tableName, final byte [] columnName)
+  throws IOException;
   
   /**
    * Puts the table on-line (only needed if table has been previously taken offline)
    * @param tableName
    * @throws IOException
    */
-  public void enableTable(Text tableName) throws IOException;
+  public void enableTable(final byte [] tableName) throws IOException;
   
   /**
    * Take table offline
@@ -101,7 +103,7 @@ public interface HMasterInterface extends VersionedProtocol {
    * @param tableName
    * @throws IOException
    */
-  public void disableTable(Text tableName) throws IOException;
+  public void disableTable(final byte [] tableName) throws IOException;
   
   /**
    * Shutdown an HBase cluster.

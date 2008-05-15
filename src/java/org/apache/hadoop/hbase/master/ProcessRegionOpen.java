@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /** 
  * ProcessRegionOpen is instantiated when a region server reports that it is
@@ -42,12 +42,13 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
    * @param regionInfo
    * @throws IOException
    */
+  @SuppressWarnings("unused")
   public ProcessRegionOpen(HMaster master, HServerInfo info, 
     HRegionInfo regionInfo)
   throws IOException {
     super(master, regionInfo);
     this.serverAddress = info.getServerAddress();
-    this.startCode = Writables.longToBytes(info.getStartCode());
+    this.startCode = Bytes.toBytes(info.getStartCode());
   }
 
   /** {@inheritDoc} */
@@ -61,8 +62,8 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
     Boolean result =
       new RetryableMetaOperation<Boolean>(this.metaRegion, this.master) {
         public Boolean call() throws IOException {
-          LOG.info(regionInfo.toString() + " open on " + serverAddress.toString());
-
+          LOG.info(regionInfo.getRegionNameAsString() + " open on " +
+            serverAddress.toString());
           if (!metaRegionAvailable()) {
             // We can't proceed unless the meta region we are going to update
             // is online. metaRegionAvailable() has put this operation on the
@@ -72,14 +73,12 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
           }
 
           // Register the newly-available Region's location.
-
-          LOG.info("updating row " + regionInfo.getRegionName() + " in table " +
-              metaRegionName + " with startcode " +
-              Writables.bytesToLong(startCode) + " and server " +
+          LOG.info("updating row " + regionInfo.getRegionNameAsString() +
+              " in region " + Bytes.toString(metaRegionName) +
+              " with startcode " + Bytes.toLong(startCode) + " and server " +
               serverAddress.toString());
-
           BatchUpdate b = new BatchUpdate(regionInfo.getRegionName());
-          b.put(COL_SERVER, Writables.stringToBytes(serverAddress.toString()));
+          b.put(COL_SERVER, Bytes.toBytes(serverAddress.toString()));
           b.put(COL_STARTCODE, startCode);
           server.batchUpdate(metaRegionName, b);
           if (isMetaTable) {

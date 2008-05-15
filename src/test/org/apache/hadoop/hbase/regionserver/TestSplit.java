@@ -24,7 +24,6 @@ import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.Text;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.hadoop.hbase.HStoreKey;
@@ -33,6 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * {@Link TestHRegion} does a split but this TestCase adds testing of fast
@@ -87,7 +87,7 @@ public class TestSplit extends HBaseClusterTestCase {
   private void basicSplit(final HRegion region) throws Exception {
     addContent(region, COLFAMILY_NAME3);
     region.flushcache();
-    Text midkey = region.compactStores();
+    byte [] midkey = region.compactStores();
     assertNotNull(midkey);
     HRegion [] regions = split(region, midkey);
     try {
@@ -99,10 +99,11 @@ public class TestSplit extends HBaseClusterTestCase {
       }
       // Assert can get rows out of new regions. Should be able to get first
       // row from first region and the midkey from second region.
-      assertGet(regions[0], COLFAMILY_NAME3, new Text(START_KEY));
+      assertGet(regions[0], COLFAMILY_NAME3, Bytes.toBytes(START_KEY));
       assertGet(regions[1], COLFAMILY_NAME3, midkey);
       // Test I can get scanner and that it starts at right place.
-      assertScan(regions[0], COLFAMILY_NAME3, new Text(START_KEY));
+      assertScan(regions[0], COLFAMILY_NAME3,
+          Bytes.toBytes(START_KEY));
       assertScan(regions[1], COLFAMILY_NAME3, midkey);
       // Now prove can't split regions that have references.
       for (int i = 0; i < regions.length; i++) {
@@ -116,7 +117,7 @@ public class TestSplit extends HBaseClusterTestCase {
         regions[i].flushcache();
       }
 
-      Text[] midkeys = new Text[regions.length];
+      byte [][] midkeys = new byte [regions.length][];
       // To make regions splitable force compaction.
       for (int i = 0; i < regions.length; i++) {
         midkeys[i] = regions[i].compactStores();
@@ -130,7 +131,7 @@ public class TestSplit extends HBaseClusterTestCase {
         if (midkeys[i] != null) {
           rs = split(regions[i], midkeys[i]);
           for (int j = 0; j < rs.length; j++) {
-            sortedMap.put(rs[j].getRegionName().toString(),
+            sortedMap.put(Bytes.toString(rs[j].getRegionName()),
               openClosedRegion(rs[j]));
           }
         }
@@ -139,10 +140,9 @@ public class TestSplit extends HBaseClusterTestCase {
       // The splits should have been even. Test I can get some arbitrary row out
       // of each.
       int interval = (LAST_CHAR - FIRST_CHAR) / 3;
-      byte[] b = START_KEY.getBytes(HConstants.UTF8_ENCODING);
+      byte[] b = Bytes.toBytes(START_KEY);
       for (HRegion r : sortedMap.values()) {
-        assertGet(r, COLFAMILY_NAME3, new Text(new String(b,
-            HConstants.UTF8_ENCODING)));
+        assertGet(r, COLFAMILY_NAME3, b);
         b[0] += interval;
       }
     } finally {
@@ -156,15 +156,14 @@ public class TestSplit extends HBaseClusterTestCase {
     }
   }
   
-  private void assertGet(final HRegion r, final String family, final Text k)
+  private void assertGet(final HRegion r, final byte [] family, final byte [] k)
   throws IOException {
     // Now I have k, get values out and assert they are as expected.
-    Cell[] results = r.get(k, new Text(family),
-      Integer.MAX_VALUE);
+    Cell[] results = r.get(k, family, Integer.MAX_VALUE);
     for (int j = 0; j < results.length; j++) {
-      Text tmp = new Text(results[j].getValue());
+      byte [] tmp = results[j].getValue();
       // Row should be equal to value every time.
-      assertEquals(k.toString(), tmp.toString());
+      assertTrue(Bytes.equals(k, tmp));
     }
   }
   
@@ -175,23 +174,24 @@ public class TestSplit extends HBaseClusterTestCase {
    * @param firstValue
    * @throws IOException
    */
-  private void assertScan(final HRegion r, final String column,
-      final Text firstValue)
+  private void assertScan(final HRegion r, final byte [] column,
+      final byte [] firstValue)
   throws IOException {
-    Text [] cols = new Text[] {new Text(column)};
+    byte [][] cols = {column};
     InternalScanner s = r.getScanner(cols,
       HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
+      TreeMap<byte [], byte []> curVals =
+        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
       boolean first = true;
       OUTER_LOOP: while(s.next(curKey, curVals)) {
-        for(Text col: curVals.keySet()) {
+        for(byte [] col: curVals.keySet()) {
           byte [] val = curVals.get(col);
-          Text curval = new Text(val);
+          byte [] curval = val;
           if (first) {
             first = false;
-            assertTrue(curval.compareTo(firstValue) == 0);
+            assertTrue(Bytes.compareTo(curval, firstValue) == 0);
           } else {
             // Not asserting anything.  Might as well break.
             break OUTER_LOOP;
@@ -203,7 +203,7 @@ public class TestSplit extends HBaseClusterTestCase {
     }
   }
   
-  private HRegion [] split(final HRegion r, final Text midKey)
+  private HRegion [] split(final HRegion r, final byte [] midKey)
   throws IOException {
     // Assert can get mid key from passed region.
     assertGet(r, COLFAMILY_NAME3, midKey);

@@ -24,11 +24,10 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
@@ -43,7 +42,7 @@ import org.apache.lucene.document.Field;
  * to build a Lucene index
  */
 public class IndexTableReduce extends MapReduceBase implements
-    Reducer<Text, RowResult, Text, LuceneDocumentWrapper> {
+    Reducer<ImmutableBytesWritable, RowResult, ImmutableBytesWritable, LuceneDocumentWrapper> {
   private static final Logger LOG = Logger.getLogger(IndexTableReduce.class);
 
   private IndexConfiguration indexConf;
@@ -64,9 +63,10 @@ public class IndexTableReduce extends MapReduceBase implements
     super.close();
   }
 
-  public void reduce(Text key, Iterator<RowResult> values,
-      OutputCollector<Text, LuceneDocumentWrapper> output, Reporter reporter)
-      throws IOException {
+  public void reduce(ImmutableBytesWritable key, Iterator<RowResult> values,
+      OutputCollector<ImmutableBytesWritable, LuceneDocumentWrapper> output,
+      Reporter reporter)
+  throws IOException {
     if (!values.hasNext()) {
       return;
     }
@@ -74,7 +74,8 @@ public class IndexTableReduce extends MapReduceBase implements
     Document doc = new Document();
 
     // index and store row key, row key already UTF-8 encoded
-    Field keyField = new Field(indexConf.getRowkeyName(), key.toString(),
+    Field keyField = new Field(indexConf.getRowkeyName(),
+      Bytes.toString(key.get()),
       Field.Store.YES, Field.Index.UN_TOKENIZED);
     keyField.setOmitNorms(true);
     doc.add(keyField);
@@ -83,7 +84,7 @@ public class IndexTableReduce extends MapReduceBase implements
       RowResult value = values.next();
 
       // each column (name-value pair) is a field (name-value pair)
-      for (Map.Entry<Text, Cell> entry : value.entrySet()) {
+      for (Map.Entry<byte [], Cell> entry : value.entrySet()) {
         // name is already UTF-8 encoded
         String column = entry.getKey().toString();
         byte[] columnValue = entry.getValue().getValue();

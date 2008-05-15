@@ -24,13 +24,19 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 /**
- * lookup3.c, by Bob Jenkins, May 2006, Public Domain.
- * <a href="http://burtleburtle.net/bob/c/lookup3.c">lookup3.c</a>
+ * Produces 32-bit hash for hash table lookup.
+ * 
+ * <pre>lookup3.c, by Bob Jenkins, May 2006, Public Domain.
  *
  * You can use this free for any purpose.  It's in the public domain.
  * It has no warranty.
+ * </pre>
  * 
- * Produces 32-bit hash for hash table lookup.
+ * @see <a href="http://burtleburtle.net/bob/c/lookup3.c">lookup3.c</a>
+ * @see <a href="http://www.ddj.com/184410284">Hash Functions (and how this
+ * function compares to others such as CRC, MD?, etc</a>
+ * @see <a href="http://burtleburtle.net/bob/hash/doobs.html">Has update on the
+ * Dr. Dobbs Article</a>
  */
 public class JenkinsHash {
   private static long INT_MASK  = 0x00000000ffffffffL;
@@ -41,6 +47,16 @@ public class JenkinsHash {
         Long.valueOf(val & INT_MASK).intValue(), pos)).longValue() & INT_MASK;
   }
 
+  /**
+   * Alternate form for hashing an entire byte array
+   * 
+   * @param bytes
+   * @return hash value
+   */
+  public static int hash(byte[] bytes) {
+    return hash(bytes, bytes.length, -1);
+  }
+  
   /**
    * Alternate form for hashing an entire byte array
    * 
@@ -62,18 +78,19 @@ public class JenkinsHash {
    * return value.  Two keys differing by one or two bits will have totally
    * different hash values.
    * 
-   * The best hash table sizes are powers of 2.  There is no need to do mod a
-   * prime (mod is sooo slow!).  If you need less than 32 bits, use a bitmask.
-   * For example, if you need only 10 bits, do h = (h & hashmask(10));
+   * <p>The best hash table sizes are powers of 2.  There is no need to do mod
+   * a prime (mod is sooo slow!).  If you need less than 32 bits, use a bitmask.
+   * For example, if you need only 10 bits, do
+   * <code>h = (h & hashmask(10));</code>
    * In which case, the hash table should have hashsize(10) elements.
    * 
-   * If you are hashing n strings byte[][] k, do it like this:
+   * <p>If you are hashing n strings byte[][] k, do it like this:
    * for (int i = 0, h = 0; i < n; ++i) h = hash( k[i], h);
    * 
-   * By Bob Jenkins, 2006.  bob_jenkins@burtleburtle.net.  You may use this
+   * <p>By Bob Jenkins, 2006.  bob_jenkins@burtleburtle.net.  You may use this
    * code any way you wish, private, educational, or commercial.  It's free.
    * 
-   * Use for hash table lookup, or anything where one collision in 2^^32 is
+   * <p>Use for hash table lookup, or anything where one collision in 2^^32 is
    * acceptable.  Do NOT use for cryptographic purposes.
   */
   public static int hash(byte[] key, int nbytes, int initval) {

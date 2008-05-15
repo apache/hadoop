@@ -24,7 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.SortedMap;
 
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Implementation of RowFilterInterface that filters out rows greater than or 
@@ -32,7 +32,7 @@ import org.apache.hadoop.io.Text;
  */
 public class StopRowFilter implements RowFilterInterface {
 
-  protected Text stopRowKey;
+  private byte [] stopRowKey;
   
   /**
    * Default constructor, filters nothing. Required though for RPC
@@ -47,7 +47,7 @@ public class StopRowFilter implements RowFilterInterface {
    * 
    * @param stopRowKey rowKey to filter on.
    */
-  public StopRowFilter(final Text stopRowKey) {
+  public StopRowFilter(final byte [] stopRowKey) {
     this.stopRowKey = stopRowKey;
   }
   
@@ -56,7 +56,7 @@ public class StopRowFilter implements RowFilterInterface {
    * 
    * @return the filter's stopRowKey
    */
-  public Text getStopRowKey() {
+  public byte [] getStopRowKey() {
     return this.stopRowKey;
   }
 
@@ -64,7 +64,7 @@ public class StopRowFilter implements RowFilterInterface {
    * 
    * {@inheritDoc}
    */
-  public void validate(@SuppressWarnings("unused") final Text[] columns) {
+  public void validate(@SuppressWarnings("unused") final byte [][] columns) {
     // Doesn't filter columns
   }
 
@@ -78,7 +78,7 @@ public class StopRowFilter implements RowFilterInterface {
 
   /** {@inheritDoc} */
   @SuppressWarnings("unused")
-  public void rowProcessed(boolean filtered, Text rowKey) {
+  public void rowProcessed(boolean filtered, byte [] rowKey) {
     // Doesn't care
   }
 
@@ -93,14 +93,14 @@ public class StopRowFilter implements RowFilterInterface {
   }
 
   /** {@inheritDoc} */
-  public boolean filterRowKey(final Text rowKey) {
+  public boolean filterRowKey(final byte [] rowKey) {
     if (rowKey == null) {
       if (this.stopRowKey == null) {
         return true;
       }
       return false;
     }
-    return this.stopRowKey.compareTo(rowKey) <= 0;
+    return Bytes.compareTo(stopRowKey, rowKey) <= 0;
   }
 
   /**
@@ -109,8 +109,8 @@ public class StopRowFilter implements RowFilterInterface {
    * Because StopRowFilter does not examine column information, this method 
    * defaults to calling the rowKey-only version of filter.
    */
-  public boolean filterColumn(@SuppressWarnings("unused") final Text rowKey,
-    @SuppressWarnings("unused") final Text colKey,
+  public boolean filterColumn(@SuppressWarnings("unused") final byte [] rowKey,
+    @SuppressWarnings("unused") final byte [] colKey,
     @SuppressWarnings("unused") final byte[] data) {
     return filterRowKey(rowKey);
   }
@@ -123,17 +123,17 @@ public class StopRowFilter implements RowFilterInterface {
    * @param columns
    */
   public boolean filterRow(@SuppressWarnings("unused")
-      final SortedMap<Text, byte[]> columns) {
+      final SortedMap<byte [], byte[]> columns) {
     return filterAllRemaining();
   }
 
   /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
-    stopRowKey = new Text(in.readUTF());
+    this.stopRowKey = Bytes.readByteArray(in);
   }
 
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
-    out.writeUTF(stopRowKey.toString());
+    Bytes.writeByteArray(out, this.stopRowKey);
   }
 }

@@ -19,19 +19,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HBaseTestCase;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Test the functionality of deleteFamily.
@@ -82,14 +78,14 @@ public class TestDeleteFamily extends HBaseTestCase {
     boolean flush)
   throws Exception{
     // insert a few versions worth of data for a row
-    Text row = new Text("test_row");
+    byte [] row = Bytes.toBytes("test_row");
     long t0 = System.currentTimeMillis();
     long t1 = t0 - 15000;
     long t2 = t1 - 15000;
 
-    Text colA = new Text(COLUMNS[0].toString() + "a");
-    Text colB = new Text(COLUMNS[0].toString() + "b");
-    Text colC = new Text(COLUMNS[1].toString() + "c");
+    byte [] colA = Bytes.toBytes(Bytes.toString(COLUMNS[0]) + "a");
+    byte [] colB = Bytes.toBytes(Bytes.toString(COLUMNS[0]) + "b");
+    byte [] colC = Bytes.toBytes(Bytes.toString(COLUMNS[1]) + "c");
 
     BatchUpdate batchUpdate = null;
     batchUpdate = new BatchUpdate(row, t0);

@@ -22,16 +22,11 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-import java.util.SortedMap;
-import java.util.TreeMap;
-
-import org.apache.hadoop.io.Text;
-
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scanner;
-import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Tests master cleanup of rows in meta table where there is no HRegionInfo
@@ -43,12 +38,14 @@ public class TestEmptyMetaInfo extends HBaseClusterTestCase {
    */
   public void testEmptyMetaInfo() throws IOException {
     HTable t = new HTable(conf, HConstants.META_TABLE_NAME);
-    for (int i = 0; i < 5; i++) {
-      Text regionName = new Text("tablename," + (i == 0 ? "" : (i +",")) + 
-          System.currentTimeMillis());
+    final int COUNT = 5;
+    final byte [] tableName = Bytes.toBytes(getName());
+    for (int i = 0; i < COUNT; i++) {
+      byte [] regionName = HRegionInfo.createRegionName(tableName,
+        Bytes.toBytes(i == 0? "": Integer.toString(i)),
+        Long.toString(System.currentTimeMillis()));
       BatchUpdate b = new BatchUpdate(regionName);
-      b.put(HConstants.COL_SERVER,
-          "localhost:1234".getBytes(HConstants.UTF8_ENCODING));
+      b.put(HConstants.COL_SERVER, Bytes.toBytes("localhost:1234"));
       t.commit(b);
     }
     long sleepTime =
@@ -62,15 +59,13 @@ public class TestEmptyMetaInfo extends HBaseClusterTestCase {
       } catch (InterruptedException e) {
         // ignore
       }
-      Scanner scanner =
-        t.getScanner(HConstants.ALL_META_COLUMNS, new Text("tablename"));
-
+      Scanner scanner = t.getScanner(HConstants.ALL_META_COLUMNS, tableName);
       try {
         count = 0;
-        HStoreKey key = new HStoreKey();
-        SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
-        for (RowResult r : scanner) {
-          count += 1;
+        for (RowResult r: scanner) {
+          if (r.size() > 0) {
+            count += 1;
+          }
         }
       } finally {
         scanner.close();

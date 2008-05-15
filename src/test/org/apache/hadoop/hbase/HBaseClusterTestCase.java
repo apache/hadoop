@@ -30,7 +30,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.io.Text;
 
 /**
  * Abstract base class for HBase cluster junit tests.  Spins up an hbase
@@ -80,6 +79,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
    * Run after dfs is ready but before hbase cluster is started up.
    */
   protected void preHBaseClusterSetup() throws Exception {
+    // continue
   } 
 
   /**
@@ -90,13 +90,14 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     // start the mini cluster
     this.cluster = new MiniHBaseCluster(conf, regionServers);
     // opening the META table ensures that cluster is running
-    HTable meta = new HTable(conf, new Text(".META."));
+    HTable meta = new HTable(conf, ".META.");
   }
   
   /**
    * Run after hbase cluster is started up.
    */
   protected void postHBaseClusterSetup() throws Exception {
+    // continue
   } 
 
   @Override

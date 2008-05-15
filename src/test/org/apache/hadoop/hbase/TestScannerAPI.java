@@ -22,30 +22,30 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Iterator;
+import java.util.Collection;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scanner;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Text;
 
 /** test the scanner API at all levels */
 public class TestScannerAPI extends HBaseClusterTestCase {
-  private final Text[] columns = new Text[] {
+  private final byte [][] columns = Bytes.toByteArrays(new Text[] {
     new Text("a:"),
     new Text("b:")
-  };
-  private final Text startRow = new Text("0");
+  });
+  private final byte [] startRow = Bytes.toBytes("0");
 
-  private final TreeMap<Text, SortedMap<Text, byte[]>> values =
-    new TreeMap<Text, SortedMap<Text, byte[]>>();
+  private final TreeMap<byte [], SortedMap<byte [], byte[]>> values =
+    new TreeMap<byte [], SortedMap<byte [], byte[]>>(Bytes.BYTES_COMPARATOR);
   
   /**
    * @throws Exception
@@ -53,12 +53,13 @@ public class TestScannerAPI extends HBaseClusterTestCase {
   public TestScannerAPI() throws Exception {
     super();
     try {
-      TreeMap<Text, byte[]> columns = new TreeMap<Text, byte[]>();
-      columns.put(new Text("a:1"), "1".getBytes(HConstants.UTF8_ENCODING));
-      values.put(new Text("1"), columns);
-      columns = new TreeMap<Text, byte[]>();
-      columns.put(new Text("a:2"), "2".getBytes(HConstants.UTF8_ENCODING));
-      columns.put(new Text("b:2"), "2".getBytes(HConstants.UTF8_ENCODING));
+      TreeMap<byte [], byte[]> columns =
+        new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
+      columns.put(Bytes.toBytes("a:1"), Bytes.toBytes("1"));
+      values.put(Bytes.toBytes("1"), columns);
+      columns = new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
+      columns.put(Bytes.toBytes("a:2"), Bytes.toBytes("2"));
+      columns.put(Bytes.toBytes("b:2"), Bytes.toBytes("2"));
     } catch (Exception e) {
       e.printStackTrace();
       throw e;
@@ -76,17 +77,17 @@ public class TestScannerAPI extends HBaseClusterTestCase {
     HBaseAdmin admin = new HBaseAdmin(conf);
     HTableDescriptor tableDesc = new HTableDescriptor(tableName);
     for (int i = 0; i < columns.length; i++) {
-      tableDesc.addFamily(new HColumnDescriptor(columns[i].toString()));
+      tableDesc.addFamily(new HColumnDescriptor(columns[i]));
     }
     admin.createTable(tableDesc);
 
     // Insert values
     
-    HTable table = new HTable(conf, new Text(getName()));
+    HTable table = new HTable(conf, getName());
 
-    for (Map.Entry<Text, SortedMap<Text, byte[]>> row: values.entrySet()) {
+    for (Map.Entry<byte [], SortedMap<byte [], byte[]>> row: values.entrySet()) {
       BatchUpdate b = new BatchUpdate(row.getKey());
-      for (Map.Entry<Text, byte[]> val: row.getValue().entrySet()) {
+      for (Map.Entry<byte [], byte[]> val: row.getValue().entrySet()) {
         b.put(val.getKey(), val.getValue());
       }
       table.commit(b);
@@ -94,11 +95,11 @@ public class TestScannerAPI extends HBaseClusterTestCase {
 
     HRegion region = null;
     try {
-      Map<Text, HRegion> regions =
+      Collection<HRegion> regions =
         cluster.getRegionThreads().get(0).getRegionServer().getOnlineRegions();
-      for (Map.Entry<Text, HRegion> e: regions.entrySet()) {
-        if (!e.getValue().getRegionInfo().isMetaRegion()) {
-          region = e.getValue();
+      for (HRegion r: regions) {
+        if (!r.getRegionInfo().isMetaRegion()) {
+          region = r;
         }
       }
     } catch (Exception e) {
@@ -127,10 +128,10 @@ public class TestScannerAPI extends HBaseClusterTestCase {
       for (RowResult r : scanner2) {
         assertTrue("row key", values.containsKey(r.getRow()));
 
-        SortedMap<Text, byte[]> columnValues = values.get(r.getRow());
-        assertEquals(columnValues.size(), r.size());        
-        for (Map.Entry<Text, byte[]> e: columnValues.entrySet()) {
-          Text column = e.getKey();
+        SortedMap<byte [], byte[]> columnValues = values.get(r.getRow());
+        assertEquals(columnValues.size(), r.size());
+        for (Map.Entry<byte [], byte[]> e: columnValues.entrySet()) {
+          byte [] column = e.getKey();
           assertTrue("column", r.containsKey(column));
           assertTrue("value", Arrays.equals(columnValues.get(column),
             r.get(column).getValue()));
@@ -143,15 +144,16 @@ public class TestScannerAPI extends HBaseClusterTestCase {
   
   private void verify(ScannerIncommon scanner) throws IOException {
     HStoreKey key = new HStoreKey();
-    SortedMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+    SortedMap<byte [], byte[]> results =
+      new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
     while (scanner.next(key, results)) {
-      Text row = key.getRow();
+      byte [] row = key.getRow();
       assertTrue("row key", values.containsKey(row));
       
-      SortedMap<Text, byte[]> columnValues = values.get(row);
+      SortedMap<byte [], byte[]> columnValues = values.get(row);
       assertEquals(columnValues.size(), results.size());
-      for (Map.Entry<Text, byte[]> e: columnValues.entrySet()) {
-        Text column = e.getKey();
+      for (Map.Entry<byte [], byte[]> e: columnValues.entrySet()) {
+        byte [] column = e.getKey();
         assertTrue("column", results.containsKey(column));
         assertTrue("value", Arrays.equals(columnValues.get(column),
             results.get(column)));

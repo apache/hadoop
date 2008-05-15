@@ -17,37 +17,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-
+import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 
-/**
- * Thrown by a region server if it is sent a request for a region it is not
- * serving.
- */
-public class NotServingRegionException extends IOException {
-  private static final long serialVersionUID = 1L << 17 - 1L;
-
-  /** default constructor */
-  public NotServingRegionException() {
-    super();
-  }
-
-  /**
-   * Constructor
-   * @param s message
-   */
-  public NotServingRegionException(String s) {
-    super(s);
-  }
-  
-  /**
-   * Constructor
-   * @param s message
-   */
-  public NotServingRegionException(final byte [] s) {
-    super(Bytes.toString(s));
+public class TestHRegionInfo extends HBaseTestCase {
+  public void testCreateHRegionInfoName() throws Exception {
+    String tableName = "tablename";
+    final byte [] tn = Bytes.toBytes(tableName);
+    String startKey = "startkey";
+    final byte [] sk = Bytes.toBytes(startKey);
+    String id = "id";
+    byte [] name = HRegionInfo.createRegionName(tn, sk, id);
+    String nameStr = Bytes.toString(name);
+    assertEquals(nameStr, tableName + "," + startKey + "," + id);
   }
 }

@@ -31,13 +31,13 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.HLogEdit;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Tests for regular expression row filter
  */
 public class TestRegExpRowFilter extends TestCase {
-  TreeMap<Text, byte []> colvalues;
+  TreeMap<byte [], byte []> colvalues;
   RowFilterInterface mainFilter;
   final char FIRST_CHAR = 'a';
   final char LAST_CHAR = 'e';
@@ -55,9 +55,9 @@ public class TestRegExpRowFilter extends TestCase {
   @Override
   protected void setUp() throws Exception {
     super.setUp();
-    this.colvalues = new TreeMap<Text, byte[]>();
+    this.colvalues = new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
     for (char c = FIRST_CHAR; c < LAST_CHAR; c++) {
-      colvalues.put(new Text(new String(new char [] {c})), GOOD_BYTES);
+      colvalues.put(Bytes.toBytes(new String(new char [] {c})), GOOD_BYTES);
     }
     this.mainFilter = new RegExpRowFilter(HOST_PREFIX + ".*", colvalues);
   }
@@ -113,28 +113,28 @@ public class TestRegExpRowFilter extends TestCase {
  
   private void regexRowTests(RowFilterInterface filter) throws Exception {
     for (char c = FIRST_CHAR; c <= LAST_CHAR; c++) {
-      Text t = createRow(c);
+      byte [] t = createRow(c);
       assertFalse("Failed with characer " + c, filter.filterRowKey(t));
     }
     String yahooSite = "com.yahoo.www";
     assertTrue("Failed with character " +
-      yahooSite, filter.filterRowKey(new Text(yahooSite)));
+      yahooSite, filter.filterRowKey(Bytes.toBytes(yahooSite)));
   }
   
   private void regexRowColumnTests(RowFilterInterface filter)
     throws UnsupportedEncodingException {
     
     for (char c = FIRST_CHAR; c <= LAST_CHAR; c++) {
-      Text t = createRow(c);
-      for (Map.Entry<Text, byte []> e: this.colvalues.entrySet()) {
+      byte [] t = createRow(c);
+      for (Map.Entry<byte [], byte []> e: this.colvalues.entrySet()) {
         assertFalse("Failed on " + c,
           filter.filterColumn(t, e.getKey(), e.getValue()));
       }
     }
     // Try a row and column I know will pass.
     char c = 'c';
-    Text r = createRow(c);
-    Text col = new Text(Character.toString(c));
+    byte [] r = createRow(c);
+    byte [] col = Bytes.toBytes(Character.toString(c));
     assertFalse("Failed with character " + c,
       filter.filterColumn(r, col, GOOD_BYTES));
     
@@ -144,24 +144,24 @@ public class TestRegExpRowFilter extends TestCase {
     
     // Do with good bytes but bad column name.  Should not filter out.
     assertFalse("Failed with character " + c,
-      filter.filterColumn(r, new Text("badcolumn"), GOOD_BYTES));
+      filter.filterColumn(r, Bytes.toBytes("badcolumn"), GOOD_BYTES));
     
     // Good column, good bytes but bad row.
     assertTrue("Failed with character " + c,
-      filter.filterColumn(new Text("bad row"), new Text("badcolumn"), GOOD_BYTES));
+      filter.filterColumn(Bytes.toBytes("bad row"),
+        Bytes.toBytes("badcolumn"), GOOD_BYTES));
   }
  
   private void filterNotNullTests(RowFilterInterface filter) throws Exception {
     // Modify the filter to expect certain columns to be null:
     // Expecting a row WITH columnKeys: a-d, WITHOUT columnKey: e
-    ((RegExpRowFilter)filter).setColumnFilter(new Text(new String(new char[] { 
-      LAST_CHAR })), null);
+    ((RegExpRowFilter)filter).setColumnFilter(new byte [] {LAST_CHAR}, null);
     
     char secondToLast = (char)(LAST_CHAR - 1);
     char thirdToLast = (char)(LAST_CHAR - 2);
     
     // Modify the row to be missing an expected columnKey (d)
-    colvalues.remove(new Text(new String(new char[] { secondToLast })));
+    colvalues.remove(new byte [] {(byte)secondToLast});
 
     // Try a row that is missing an expected columnKey.
     // Testing row with columnKeys: a-c
@@ -171,27 +171,26 @@ public class TestRegExpRowFilter extends TestCase {
     // Try a row that has all expected columnKeys, and NO null-expected
     // columnKeys.
     // Testing row with columnKeys: a-d
-    colvalues.put(new Text(new String(new char[] { secondToLast })),
-      GOOD_BYTES);
+    colvalues.put(new byte [] {(byte)secondToLast}, GOOD_BYTES);
     assertFalse("Failed with last columnKey " + secondToLast, filter.
       filterRow(colvalues));
 
     // Try a row that has all expected columnKeys AND a null-expected columnKey.
     // Testing row with columnKeys: a-e
-    colvalues.put(new Text(new String(new char[] { LAST_CHAR })), GOOD_BYTES);
+    colvalues.put(new byte [] {LAST_CHAR}, GOOD_BYTES);
     assertTrue("Failed with last columnKey " + LAST_CHAR, filter.
       filterRow(colvalues));
     
     // Try a row that has all expected columnKeys and a null-expected columnKey 
     // that maps to a null value.
     // Testing row with columnKeys: a-e, e maps to null
-    colvalues.put(new Text(new String(new char[] { LAST_CHAR })), 
+    colvalues.put(new byte [] {LAST_CHAR}, 
       HLogEdit.deleteBytes.get());
     assertFalse("Failed with last columnKey " + LAST_CHAR + " mapping to null.", 
       filter.filterRow(colvalues));
   }
 
-  private Text createRow(final char c) {
-    return new Text(HOST_PREFIX + Character.toString(c));
+  private byte [] createRow(final char c) {
+    return Bytes.toBytes(HOST_PREFIX + Character.toString(c));
   }
 }

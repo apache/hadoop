@@ -22,16 +22,14 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -39,74 +37,98 @@ import org.apache.hadoop.io.WritableComparable;
  * column families.
  */
 public class HTableDescriptor implements WritableComparable {
-  /** table descriptor for root table */
-  public static final HTableDescriptor rootTableDesc =
+  /** Table descriptor for <core>-ROOT-</code> catalog table */
+  public static final HTableDescriptor ROOT_TABLEDESC =
     new HTableDescriptor(HConstants.ROOT_TABLE_NAME,
         new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
             HColumnDescriptor.CompressionType.NONE, false, false,
             Integer.MAX_VALUE, HConstants.FOREVER, null));
   
-  /** table descriptor for meta table */
-  public static final HTableDescriptor metaTableDesc =
+  /** Table descriptor for <code>.META.</code> catalog table */
+  public static final HTableDescriptor META_TABLEDESC =
     new HTableDescriptor(HConstants.META_TABLE_NAME,
         new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
             HColumnDescriptor.CompressionType.NONE, false, false,
             Integer.MAX_VALUE, HConstants.FOREVER, null));
   
-  private boolean rootregion;
-  private boolean metaregion;
-  private Text name;
-  // TODO: Does this need to be a treemap?  Can it be a HashMap?
-  private final TreeMap<Text, HColumnDescriptor> families;
+  private boolean rootregion = false;
+  private boolean metaregion = false;
+  private byte [] name = HConstants.EMPTY_BYTE_ARRAY;
+  private String nameAsString = "";
   
-  /*
-   * Legal table names can only contain 'word characters':
-   * i.e. <code>[a-zA-Z_0-9-.]</code>.
-   * Lets be restrictive until a reason to be otherwise. One reason to limit
-   * characters in table name is to ensure table regions as entries in META
-   * regions can be found (See HADOOP-1581 'HBASE: Un-openable tablename bug').
-   */
-  private static final Pattern LEGAL_TABLE_NAME =
-    Pattern.compile("^[\\w-.]+$");
+  // Key is hash of the family name.
+  private final Map<Integer, HColumnDescriptor> families =
+    new HashMap<Integer, HColumnDescriptor>();
 
-  /** Used to construct the table descriptors for root and meta tables */
-  private HTableDescriptor(Text name, HColumnDescriptor family) {
-    rootregion = name.equals(HConstants.ROOT_TABLE_NAME);
+  /**
+   * Private constructor used internally creating table descriptors for 
+   * catalog tables: e.g. .META. and -ROOT-.
+   */
+  private HTableDescriptor(final byte [] name, HColumnDescriptor family) {
+    this.name = name.clone();
+    this.rootregion = Bytes.equals(name, HConstants.ROOT_TABLE_NAME);
     this.metaregion = true;
-    this.name = new Text(name);
-    this.families = new TreeMap<Text, HColumnDescriptor>();
-    families.put(family.getName(), family);
+    this.families.put(Bytes.mapKey(family.getName()), family);
   }
 
   /**
    * Constructs an empty object.
    * For deserializing an HTableDescriptor instance only.
-   * @see #HTableDescriptor(String)
+   * @see #HTableDescriptor(byte[])
    */
   public HTableDescriptor() {
-    this.name = new Text();
-    this.families = new TreeMap<Text, HColumnDescriptor>();
+    super();
   }
 
   /**
    * Constructor.
    * @param name Table name.
    * @throws IllegalArgumentException if passed a table name
-   * that is made of other than 'word' characters: i.e.
-   * <code>[a-zA-Z_0-9]
+   * that is made of other than 'word' characters, underscore or period: i.e.
+   * <code>[a-zA-Z_0-9.].
+   * @see <a href="HADOOP-1581">HADOOP-1581 HBASE: Un-openable tablename bug</a>
    */
-  public HTableDescriptor(String name) {
-    this();
-    Matcher m = LEGAL_TABLE_NAME.matcher(name);
-    if (m == null || !m.matches()) {
-      throw new IllegalArgumentException(
-          "Table names can only contain 'word characters': i.e. [a-zA-Z_0-9");
-    }
-    this.name.set(name);
-    this.rootregion = false;
-    this.metaregion = false;
+  public HTableDescriptor(final String name) {
+    this(Bytes.toBytes(name));
+  }
+
+  /**
+   * Constructor.
+   * @param name Table name.
+   * @throws IllegalArgumentException if passed a table name
+   * that is made of other than 'word' characters, underscore or period: i.e.
+   * <code>[a-zA-Z_0-9.].
+   * @see <a href="HADOOP-1581">HADOOP-1581 HBASE: Un-openable tablename bug</a>
+   */
+  public HTableDescriptor(final byte [] name) {
+    this.name = isLegalTableName(name);
+    this.nameAsString = Bytes.toString(this.name);
   }
   
+  /**
+   * Check passed buffer is legal user-space table name.
+   * @param b Table name.
+   * @return Returns passed <code>b</code> param
+   * @throws NullPointerException If passed <code>b</code> is null
+   * @throws IllegalArgumentException if passed a table name
+   * that is made of other than 'word' characters or underscores: i.e.
+   * <code>[a-zA-Z_0-9].
+   */
+  public static byte [] isLegalTableName(final byte [] b) {
+    if (b == null || b.length <= 0) {
+      throw new IllegalArgumentException("Name is null or empty");
+    }
+    for (int i = 0; i < b.length; i++) {
+      if (Character.isLetterOrDigit(b[i]) || b[i] == '_') {
+        continue;
+      }
+      throw new IllegalArgumentException("Illegal character <" + b[i] + ">. " +
+        "User-space table names can only contain 'word characters':" +
+        "i.e. [a-zA-Z_0-9]: " + Bytes.toString(b));
+    }
+    return b;
+  }
+
   /** @return true if this is the root region */
   public boolean isRootRegion() {
     return rootregion;
@@ -123,48 +145,47 @@ public class HTableDescriptor implements WritableComparable {
   }
 
   /** @return name of table */
-  public Text getName() {
+  public byte [] getName() {
     return name;
+  }
+
+  /** @return name of table */
+  public String getNameAsString() {
+    return this.nameAsString;
   }
 
   /**
    * Adds a column family.
    * @param family HColumnDescriptor of familyto add.
    */
-  public void addFamily(HColumnDescriptor family) {
-    if (family.getName() == null || family.getName().getLength() <= 0) {
+  public void addFamily(final HColumnDescriptor family) {
+    if (family.getName() == null || family.getName().length <= 0) {
       throw new NullPointerException("Family name cannot be null or empty");
     }
-    families.put(family.getName(), family);
+    this.families.put(Bytes.mapKey(family.getName()), family);
   }
 
   /**
    * Checks to see if this table contains the given column family
-   * 
-   * @param family - family name
+   * @param c Family name or column name.
    * @return true if the table contains the specified family name
    */
-  public boolean hasFamily(Text family) {
-    return families.containsKey(family);
+  public boolean hasFamily(final byte [] c) {
+    int index = HStoreKey.getFamilyDelimiterIndex(c);
+    // If index is -1, then presume we were passed a column family name minus
+    // the colon delimiter.
+    return families.containsKey(Bytes.mapKey(c, index == -1? c.length: index));
   }
 
-  /** 
-   * All the column families in this table.
-   * 
-   *  TODO: What is this used for? Seems Dangerous to let people play with our
-   *  private members.
-   *  
-   *  @return map of family members
+  /**
+   * @return Name of this table and then a map of all of the column family
+   * descriptors.
+   * @see #getNameAsString()
    */
-  public TreeMap<Text, HColumnDescriptor> families() {
-    return families;
-  }
-
-  /** {@inheritDoc} */
-  @Override
   public String toString() {
-    return "name: " + this.name.toString() + ", families: " + this.families;
-      }
+    return "name: " + Bytes.toString(this.name) + ", families: " +
+      this.families.values();
+  }
   
   /** {@inheritDoc} */
   @Override
@@ -176,9 +197,9 @@ public class HTableDescriptor implements WritableComparable {
   @Override
   public int hashCode() {
     // TODO: Cache.
-    int result = this.name.hashCode();
+    int result = Bytes.hashCode(this.name);
     if (this.families != null && this.families.size() > 0) {
-      for (Map.Entry<Text,HColumnDescriptor> e: this.families.entrySet()) {
+      for (HColumnDescriptor e: this.families.values()) {
         result ^= e.hashCode();
       }
     }
@@ -191,7 +212,7 @@ public class HTableDescriptor implements WritableComparable {
   public void write(DataOutput out) throws IOException {
     out.writeBoolean(rootregion);
     out.writeBoolean(metaregion);
-    name.write(out);
+    Bytes.writeByteArray(out, name);
     out.writeInt(families.size());
     for(Iterator<HColumnDescriptor> it = families.values().iterator();
         it.hasNext(); ) {
@@ -203,13 +224,14 @@ public class HTableDescriptor implements WritableComparable {
   public void readFields(DataInput in) throws IOException {
     this.rootregion = in.readBoolean();
     this.metaregion = in.readBoolean();
-    this.name.readFields(in);
+    this.name = Bytes.readByteArray(in);
+    this.nameAsString = Bytes.toString(this.name);
     int numCols = in.readInt();
-    families.clear();
-    for(int i = 0; i < numCols; i++) {
+    this.families.clear();
+    for (int i = 0; i < numCols; i++) {
       HColumnDescriptor c = new HColumnDescriptor();
       c.readFields(in);
-      families.put(c.getName(), c);
+      this.families.put(Bytes.mapKey(c.getName()), c);
     }
   }
 
@@ -218,22 +240,21 @@ public class HTableDescriptor implements WritableComparable {
   /** {@inheritDoc} */
   public int compareTo(Object o) {
     HTableDescriptor other = (HTableDescriptor) o;
-    int result = name.compareTo(other.name);
-    
-    if(result == 0) {
+    int result = Bytes.compareTo(this.name, other.name);
+    if (result == 0) {
       result = families.size() - other.families.size();
     }
     
-    if(result == 0 && families.size() != other.families.size()) {
+    if (result == 0 && families.size() != other.families.size()) {
       result = Integer.valueOf(families.size()).compareTo(
           Integer.valueOf(other.families.size()));
     }
     
-    if(result == 0) {
-      for(Iterator<HColumnDescriptor> it = families.values().iterator(),
+    if (result == 0) {
+      for (Iterator<HColumnDescriptor> it = families.values().iterator(),
           it2 = other.families.values().iterator(); it.hasNext(); ) {
         result = it.next().compareTo(it2.next());
-        if(result != 0) {
+        if (result != 0) {
           break;
         }
       }
@@ -244,8 +265,26 @@ public class HTableDescriptor implements WritableComparable {
   /**
    * @return Immutable sorted map of families.
    */
-  public SortedMap<Text, HColumnDescriptor> getFamilies() {
-    return Collections.unmodifiableSortedMap(this.families);
+  public Collection<HColumnDescriptor> getFamilies() {
+    return Collections.unmodifiableCollection(this.families.values());
+  }
+
+  /**
+   * @param column
+   * @return Column descriptor for the passed family name or the family on
+   * passed in column.
+   */
+  public HColumnDescriptor getFamily(final byte [] column) {
+    return this.families.get(HStoreKey.getFamilyMapKey(column));
+  }
+
+  /**
+   * @param column
+   * @return Column descriptor for the passed family name or the family on
+   * passed in column.
+   */
+  public HColumnDescriptor removeFamily(final byte [] column) {
+    return this.families.remove(HStoreKey.getFamilyMapKey(column));
   }
 
   /**
@@ -253,7 +292,7 @@ public class HTableDescriptor implements WritableComparable {
    * @param tableName name of table
    * @return path for table
    */
-  public static Path getTableDir(Path rootdir, Text tableName) {
-    return new Path(rootdir, tableName.toString());
+  public static Path getTableDir(Path rootdir, final byte [] tableName) {
+    return new Path(rootdir, Bytes.toString(tableName));
   }
 }

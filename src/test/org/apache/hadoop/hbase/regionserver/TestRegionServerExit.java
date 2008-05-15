@@ -22,24 +22,20 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.Text;
-
+import org.apache.hadoop.hbase.HBaseClusterTestCase;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.LocalHBaseCluster;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.Scanner;
-
-import org.apache.hadoop.hbase.HBaseClusterTestCase;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.LocalHBaseCluster;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Tests region server failover when a region server exits both cleanly and
@@ -67,7 +63,7 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
     new HTable(conf, HConstants.META_TABLE_NAME);
     // Create table and add a row.
     final String tableName = getName();
-    Text row = createTableAndAddRow(tableName);
+    byte [] row = createTableAndAddRow(tableName);
     // Start up a new region server to take over serving of root and meta
     // after we shut down the current meta/root host.
     this.cluster.startRegionServer();
@@ -88,7 +84,7 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
     new HTable(this.conf, HConstants.META_TABLE_NAME);
     // Create table and add a row.
     final String tableName = getName();
-    Text row = createTableAndAddRow(tableName);
+    byte [] row = createTableAndAddRow(tableName);
     // Start up a new region server to take over serving of root and meta
     // after we shut down the current meta/root host.
     this.cluster.startRegionServer();
@@ -100,17 +96,17 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
     threadDumpingJoin(t);
   }
   
-  private Text createTableAndAddRow(final String tableName) throws IOException {
+  private byte [] createTableAndAddRow(final String tableName)
+  throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
+    desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY));
     HBaseAdmin admin = new HBaseAdmin(conf);
     admin.createTable(desc);
     // put some values in the table
-    this.table = new HTable(conf, new Text(tableName));
-    final Text row = new Text("row1");
+    this.table = new HTable(conf, tableName);
+    byte [] row = Bytes.toBytes("row1");
     BatchUpdate b = new BatchUpdate(row);
-    b.put(HConstants.COLUMN_FAMILY,
-        tableName.getBytes(HConstants.UTF8_ENCODING));
+    b.put(HConstants.COLUMN_FAMILY, Bytes.toBytes(tableName));
     table.commit(b);
     return row;
   }
@@ -129,9 +125,10 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
     int server = -1;
     for (int i = 0; i < regionThreads.size() && server == -1; i++) {
       HRegionServer s = regionThreads.get(i).getRegionServer();
-      Collection<HRegion> regions = s.getOnlineRegions().values();
+      Collection<HRegion> regions = s.getOnlineRegions();
       for (HRegion r : regions) {
-        if (r.getTableDesc().getName().equals(HConstants.META_TABLE_NAME)) {
+        if (Bytes.equals(r.getTableDesc().getName(),
+            HConstants.META_TABLE_NAME)) {
           server = i;
         }
       }
@@ -159,7 +156,7 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
    * @return Verification thread.  Caller needs to calls start on it.
    */
   private Thread startVerificationThread(final String tableName,
-      final Text row) {
+      final byte [] row) {
     Runnable runnable = new Runnable() {
       public void run() {
         try {
@@ -167,7 +164,8 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
           // meta server comes back up.
           HTable t = new HTable(conf, HConstants.META_TABLE_NAME);
           Scanner s =
-            t.getScanner(HConstants.COLUMN_FAMILY_ARRAY, new Text());
+            t.getScanner(HConstants.COLUMN_FAMILY_ARRAY,
+              HConstants.EMPTY_START_ROW);
           s.close();
           
         } catch (IOException e) {
@@ -179,17 +177,15 @@ public class TestRegionServerExit extends HBaseClusterTestCase {
           // Verify that the client can find the data after the region has moved
           // to a different server
           scanner =
-            table.getScanner(HConstants.COLUMN_FAMILY_ARRAY, new Text());
+            table.getScanner(HConstants.COLUMN_FAMILY_ARRAY,
+               HConstants.EMPTY_START_ROW);
           LOG.info("Obtained scanner " + scanner);
-          HStoreKey key = new HStoreKey();
-          TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
           for (RowResult r : scanner) {
-            assertTrue(r.getRow().equals(row));
+            assertTrue(Bytes.equals(r.getRow(), row));
             assertEquals(1, r.size());
             byte[] bytes = r.get(HConstants.COLUMN_FAMILY).getValue();
             assertNotNull(bytes);
-            assertTrue(tableName.equals(new String(bytes,
-                HConstants.UTF8_ENCODING)));
+            assertTrue(tableName.equals(Bytes.toString(bytes)));
           }
           LOG.info("Success!");
         } catch (Exception e) {

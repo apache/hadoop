@@ -27,8 +27,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.MapFile;
-import org.apache.hadoop.io.Text;
 
 /**
  * A scanner that iterates through HStore files
@@ -50,7 +50,7 @@ implements ChangedReadersObserver {
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   
   public StoreFileScanner(final HStore store, final long timestamp,
-    final Text[] targetCols, final Text firstRow)
+    final byte [][] targetCols, final byte [] firstRow)
   throws IOException {
     super(timestamp, targetCols);
     this.store = store;
@@ -71,7 +71,7 @@ implements ChangedReadersObserver {
    * @param firstRow
    * @throws IOException
    */
-  private void openReaders(final Text firstRow) throws IOException {
+  private void openReaders(final byte [] firstRow) throws IOException {
     if (this.readers != null) {
       for (int i = 0; i < this.readers.length; i++) {
         this.readers[i].close();
@@ -92,7 +92,7 @@ implements ChangedReadersObserver {
     // Advance the readers to the first pos.
     for (i = 0; i < readers.length; i++) {
       keys[i] = new HStoreKey();
-      if (firstRow.getLength() != 0) {
+      if (firstRow != null && firstRow.length != 0) {
         if (findFirstRow(i, firstRow)) {
           continue;
         }
@@ -130,7 +130,7 @@ implements ChangedReadersObserver {
    * @see org.apache.hadoop.hbase.regionserver.InternalScanner#next(org.apache.hadoop.hbase.HStoreKey, java.util.SortedMap)
    */
   @Override
-  public boolean next(HStoreKey key, SortedMap<Text, byte []> results)
+  public boolean next(HStoreKey key, SortedMap<byte [], byte []> results)
   throws IOException {
     if (this.scannerClosed) {
       return false;
@@ -145,12 +145,11 @@ implements ChangedReadersObserver {
       if (viableRow.getRow() != null) {
         key.setRow(viableRow.getRow());
         key.setVersion(viableRow.getTimestamp());
-        key.setColumn(new Text(""));
 
         for (int i = 0; i < keys.length; i++) {
           // Fetch the data
           while ((keys[i] != null)
-              && (keys[i].getRow().compareTo(viableRow.getRow()) == 0)) {
+              && (Bytes.compareTo(keys[i].getRow(), viableRow.getRow()) == 0)) {
 
             // If we are doing a wild card match or there are multiple matchers
             // per column, we need to scan all the older versions of this row
@@ -164,7 +163,7 @@ implements ChangedReadersObserver {
             if(columnMatch(i)) {              
               // We only want the first result for any specific family member
               if(!results.containsKey(keys[i].getColumn())) {
-                results.put(new Text(keys[i].getColumn()), vals[i]);
+                results.put(keys[i].getColumn(), vals[i]);
                 insertedItem = true;
               }
             }
@@ -177,7 +176,7 @@ implements ChangedReadersObserver {
           // Advance the current scanner beyond the chosen row, to
           // a valid timestamp, so we're ready next time.
           while ((keys[i] != null)
-              && ((keys[i].getRow().compareTo(viableRow.getRow()) <= 0)
+              && ((Bytes.compareTo(keys[i].getRow(), viableRow.getRow()) <= 0)
                   || (keys[i].getTimestamp() > this.timestamp)
                   || (! columnMatch(i)))) {
             getNext(i);
@@ -192,19 +191,19 @@ implements ChangedReadersObserver {
   
   // Data stucture to hold next, viable row (and timestamp).
   class ViableRow {
-    private final Text row;
+    private final byte [] row;
     private final long ts;
 
-    ViableRow(final Text r, final long t) {
+    ViableRow(final byte [] r, final long t) {
       this.row = r;
       this.ts = t;
     }
 
-    public Text getRow() {
+    byte [] getRow() {
       return this.row;
     }
 
-    public long getTimestamp() {
+    long getTimestamp() {
       return this.ts;
     }
   }
@@ -215,7 +214,7 @@ implements ChangedReadersObserver {
    */
   private ViableRow getNextViableRow() throws IOException {
     // Find the next viable row label (and timestamp).
-    Text viableRow = null;
+    byte [] viableRow = null;
     long viableTimestamp = -1;
     long now = System.currentTimeMillis();
     long ttl = store.ttl;
@@ -224,11 +223,11 @@ implements ChangedReadersObserver {
           && (columnMatch(i))
           && (keys[i].getTimestamp() <= this.timestamp)
           && ((viableRow == null)
-              || (keys[i].getRow().compareTo(viableRow) < 0)
-              || ((keys[i].getRow().compareTo(viableRow) == 0)
+              || (Bytes.compareTo(keys[i].getRow(), viableRow) < 0)
+              || ((Bytes.compareTo(keys[i].getRow(), viableRow) == 0)
                   && (keys[i].getTimestamp() > viableTimestamp)))) {
         if (ttl == HConstants.FOREVER || now < keys[i].getTimestamp() + ttl) {
-          viableRow = new Text(keys[i].getRow());
+          viableRow = keys[i].getRow();
           viableTimestamp = keys[i].getTimestamp();
         } else {
           if (LOG.isDebugEnabled()) {
@@ -248,7 +247,7 @@ implements ChangedReadersObserver {
    * @param firstRow seek to this row
    * @return true if this is the first row or if the row was not found
    */
-  boolean findFirstRow(int i, Text firstRow) throws IOException {
+  boolean findFirstRow(int i, final byte [] firstRow) throws IOException {
     ImmutableBytesWritable ibw = new ImmutableBytesWritable();
     HStoreKey firstKey
       = (HStoreKey)readers[i].getClosest(new HStoreKey(firstRow), ibw);
@@ -350,7 +349,8 @@ implements ChangedReadersObserver {
       // up so future call to next will start here.
       ViableRow viableRow = getNextViableRow();
       openReaders(viableRow.getRow());
-      LOG.debug("Replaced Scanner Readers at row " + viableRow.getRow());
+      LOG.debug("Replaced Scanner Readers at row " +
+        Bytes.toString(viableRow.getRow()));
     } finally {
       this.lock.writeLock().unlock();
     }

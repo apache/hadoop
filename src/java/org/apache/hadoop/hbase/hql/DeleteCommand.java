@@ -56,9 +56,9 @@ public class DeleteCommand extends BasicCommand {
       HTable hTable = new HTable(conf, tableName);
 
       if (rowKey != null) {
-        BatchUpdate bu = new BatchUpdate(rowKey);
+        BatchUpdate bu = new BatchUpdate(rowKey.getBytes());
         for (Text column : getColumnList(admin, hTable)) {
-          bu.delete(new Text(column));
+          bu.delete(column.getBytes());
         }
         hTable.commit(bu);
       } else {

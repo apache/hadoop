@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.io.HbaseMapWritable;
+import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HMsg;
@@ -32,8 +32,11 @@ import org.apache.hadoop.hbase.HRegionInfo;
  * goings-on and to obtain data-handling instructions from the HMaster.
  */
 public interface HMasterRegionInterface extends VersionedProtocol {
-  /** Interface version number */
-  public static final long versionID = 1L;
+  /** Interface version number.
+   * Version 2 was when the regionServerStartup was changed to return a
+   * MapWritable instead of a HbaseMapWritable.
+   */
+  public static final long versionID = 2L;
   
   /**
    * Called when a region server first starts
@@ -42,7 +45,7 @@ public interface HMasterRegionInterface extends VersionedProtocol {
    * @return Configuration for the regionserver to use: e.g. filesystem,
    * hbase rootdir, etc.
    */
-  public HbaseMapWritable regionServerStartup(HServerInfo info) throws IOException;
+  public MapWritable regionServerStartup(HServerInfo info) throws IOException;
   
   /**
    * Called to renew lease, tell master what the region server is doing and to

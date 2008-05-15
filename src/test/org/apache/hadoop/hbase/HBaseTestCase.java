@@ -34,13 +34,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
 import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Abstract base class for test cases. Performs all static initialization
@@ -50,13 +50,13 @@ public abstract class HBaseTestCase extends TestCase {
 
   /** configuration parameter name for test directory */
   public static final String TEST_DIRECTORY_KEY = "test.build.data";
-  
 
-  protected final static String COLFAMILY_NAME1 = "colfamily1:";
-  protected final static String COLFAMILY_NAME2 = "colfamily2:";
-  protected final static String COLFAMILY_NAME3 = "colfamily3:";
-  protected static Text [] COLUMNS = new Text [] {new Text(COLFAMILY_NAME1),
-    new Text(COLFAMILY_NAME2), new Text(COLFAMILY_NAME3)};
+  protected final static byte [] COLFAMILY_NAME1 = Bytes.toBytes("colfamily1:");
+  protected final static byte [] COLFAMILY_NAME2 = Bytes.toBytes("colfamily2:");
+  protected final static byte [] COLFAMILY_NAME3 = Bytes.toBytes("colfamily3:");
+  protected static final byte [][] COLUMNS = {COLFAMILY_NAME1,
+    COLFAMILY_NAME2, COLFAMILY_NAME3};
+
   private boolean localfs = false;
   protected Path testDir = null;
   protected FileSystem fs = null;
@@ -151,9 +151,9 @@ public abstract class HBaseTestCase extends TestCase {
         conf.get(TEST_DIRECTORY_KEY, "test/build/data"), testName);
   }
 
-  protected HRegion createNewHRegion(HTableDescriptor desc, Text startKey,
-      Text endKey) throws IOException {
-    
+  protected HRegion createNewHRegion(HTableDescriptor desc, byte [] startKey,
+      byte [] endKey)
+  throws IOException {
     FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = filesystem.makeQualified(
         new Path(conf.get(HConstants.HBASE_DIR)));
@@ -190,13 +190,13 @@ public abstract class HBaseTestCase extends TestCase {
   protected HTableDescriptor createTableDescriptor(final String name,
       final int versions) {
     HTableDescriptor htd = new HTableDescriptor(name);
-    htd.addFamily(new HColumnDescriptor(new Text(COLFAMILY_NAME1), versions,
+    htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME1, versions,
       CompressionType.NONE, false, false, Integer.MAX_VALUE,
       HConstants.FOREVER, null));
-    htd.addFamily(new HColumnDescriptor(new Text(COLFAMILY_NAME2), versions,
+    htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME2, versions,
       CompressionType.NONE, false, false, Integer.MAX_VALUE,
       HConstants.FOREVER, null));
-    htd.addFamily(new HColumnDescriptor(new Text(COLFAMILY_NAME3), versions,
+    htd.addFamily(new HColumnDescriptor(COLFAMILY_NAME3, versions,
       CompressionType.NONE, false, false, Integer.MAX_VALUE, 
       HConstants.FOREVER, null));
     return htd;
@@ -210,15 +210,16 @@ public abstract class HBaseTestCase extends TestCase {
    * @param column
    * @throws IOException
    */
-  protected static void addContent(final HRegion r, final String column)
+  protected static void addContent(final HRegion r, final byte [] column)
   throws IOException {
-    Text startKey = r.getRegionInfo().getStartKey();
-    Text endKey = r.getRegionInfo().getEndKey();
-    byte [] startKeyBytes = startKey.getBytes();
+    byte [] startKey = r.getRegionInfo().getStartKey();
+    byte [] endKey = r.getRegionInfo().getEndKey();
+    byte [] startKeyBytes = startKey;
     if (startKeyBytes == null || startKeyBytes.length == 0) {
       startKeyBytes = START_KEY_BYTES;
     }
-    addContent(new HRegionIncommon(r), column, startKeyBytes, endKey, -1);
+    addContent(new HRegionIncommon(r), Bytes.toString(column),
+      startKeyBytes, endKey, -1);
   }
 
   /**
@@ -245,7 +246,7 @@ public abstract class HBaseTestCase extends TestCase {
    * @throws IOException
    */
   protected static void addContent(final Incommon updater, final String column,
-      final byte [] startKeyBytes, final Text endKey)
+      final byte [] startKeyBytes, final byte [] endKey)
   throws IOException {
     addContent(updater, column, startKeyBytes, endKey, -1);
   }
@@ -262,7 +263,7 @@ public abstract class HBaseTestCase extends TestCase {
    * @throws IOException
    */
   protected static void addContent(final Incommon updater, final String column,
-      final byte [] startKeyBytes, final Text endKey, final long ts)
+      final byte [] startKeyBytes, final byte [] endKey, final long ts)
   throws IOException {
     // Add rows of three characters.  The first character starts with the
     // 'a' character and runs up to 'z'.  Per first character, we run the
@@ -274,18 +275,17 @@ public abstract class HBaseTestCase extends TestCase {
       for (char d = secondCharStart; d <= LAST_CHAR; d++) {
         for (char e = thirdCharStart; e <= LAST_CHAR; e++) {
           byte [] bytes = new byte [] {(byte)c, (byte)d, (byte)e};
-          String s = new String(bytes, HConstants.UTF8_ENCODING) + PUNCTUATION;
-          bytes = s.getBytes(HConstants.UTF8_ENCODING);
-          Text t = new Text(s);
-          if (endKey != null && endKey.getLength() > 0
-              && endKey.compareTo(t) <= 0) {
+          String s = Bytes.toString(bytes) + PUNCTUATION;
+          byte [] t = Bytes.toBytes(s);
+          if (endKey != null && endKey.length > 0
+              && Bytes.compareTo(endKey, t) <= 0) {
             break EXIT;
           }
           try {
             BatchUpdate batchUpdate = ts == -1 ? 
               new BatchUpdate(t) : new BatchUpdate(t, ts);
             try {
-              batchUpdate.put(new Text(column), bytes);
+              batchUpdate.put(column, t);
               updater.commit(batchUpdate);
             } catch (RuntimeException ex) {
               ex.printStackTrace();
@@ -332,7 +332,7 @@ public abstract class HBaseTestCase extends TestCase {
      * @return value for row/column pair
      * @throws IOException
      */
-    public Cell get(Text row, Text column) throws IOException;
+    public Cell get(byte [] row, byte [] column) throws IOException;
     /**
      * @param row
      * @param column
@@ -340,7 +340,7 @@ public abstract class HBaseTestCase extends TestCase {
      * @return value for row/column pair for number of versions requested
      * @throws IOException
      */
-    public Cell[] get(Text row, Text column, int versions) throws IOException;
+    public Cell[] get(byte [] row, byte [] column, int versions) throws IOException;
     /**
      * @param row
      * @param column
@@ -349,7 +349,7 @@ public abstract class HBaseTestCase extends TestCase {
      * @return value for row/column/timestamp tuple for number of versions
      * @throws IOException
      */
-    public Cell[] get(Text row, Text column, long ts, int versions)
+    public Cell[] get(byte [] row, byte [] column, long ts, int versions)
     throws IOException;
     /**
      * @param row
@@ -357,7 +357,7 @@ public abstract class HBaseTestCase extends TestCase {
      * @param ts
      * @throws IOException
      */
-    public void deleteAll(Text row, Text column, long ts) throws IOException;
+    public void deleteAll(byte [] row, byte [] column, long ts) throws IOException;
 
     /**
      * @param batchUpdate
@@ -372,7 +372,7 @@ public abstract class HBaseTestCase extends TestCase {
      * @return scanner for specified columns, first row and timestamp
      * @throws IOException
      */
-    public ScannerIncommon getScanner(Text [] columns, Text firstRow,
+    public ScannerIncommon getScanner(byte [] [] columns, byte [] firstRow,
       long ts) throws IOException;
   }
   
@@ -403,29 +403,32 @@ public abstract class HBaseTestCase extends TestCase {
     };
     
     /** {@inheritDoc} */
-    public void deleteAll(Text row, Text column, long ts) throws IOException {
+    public void deleteAll(byte [] row, byte [] column, long ts)
+    throws IOException {
       this.region.deleteAll(row, column, ts);
     }
 
     /** {@inheritDoc} */
-    public ScannerIncommon getScanner(Text [] columns, Text firstRow, long ts) 
+    public ScannerIncommon getScanner(byte [][] columns, byte [] firstRow,
+      long ts) 
     throws IOException {
       return new 
         InternalScannerIncommon(region.getScanner(columns, firstRow, ts, null));
     }
 
     /** {@inheritDoc} */
-    public Cell get(Text row, Text column) throws IOException {
+    public Cell get(byte [] row, byte [] column) throws IOException {
       return this.region.get(row, column);
     }
 
     /** {@inheritDoc} */
-    public Cell[] get(Text row, Text column, int versions) throws IOException {
+    public Cell[] get(byte [] row, byte [] column, int versions)
+    throws IOException {
       return this.region.get(row, column, versions);
     }
 
     /** {@inheritDoc} */
-    public Cell[] get(Text row, Text column, long ts, int versions)
+    public Cell[] get(byte [] row, byte [] column, long ts, int versions)
     throws IOException {
       return this.region.get(row, column, ts, versions);
     }
@@ -435,7 +438,7 @@ public abstract class HBaseTestCase extends TestCase {
      * @return values for each column in the specified row
      * @throws IOException
      */
-    public Map<Text, Cell> getFull(Text row) throws IOException {
+    public Map<byte [], Cell> getFull(byte [] row) throws IOException {
       return region.getFull(row, null, HConstants.LATEST_TIMESTAMP);
     }
 
@@ -473,37 +476,39 @@ public abstract class HBaseTestCase extends TestCase {
     };
     
     /** {@inheritDoc} */
-    public void deleteAll(Text row, Text column, long ts) throws IOException {
+    public void deleteAll(byte [] row, byte [] column, long ts)
+    throws IOException {
       this.table.deleteAll(row, column, ts);
     }
     
     /** {@inheritDoc} */
-    public ScannerIncommon getScanner(Text [] columns, Text firstRow, long ts) 
+    public ScannerIncommon getScanner(byte [][] columns, byte [] firstRow, long ts) 
     throws IOException {
       return new 
         ClientScannerIncommon(table.getScanner(columns, firstRow, ts, null));
     }
     
     /** {@inheritDoc} */
-    public Cell get(Text row, Text column) throws IOException {
+    public Cell get(byte [] row, byte [] column) throws IOException {
       return this.table.get(row, column);
     }
     
     /** {@inheritDoc} */
-    public Cell[] get(Text row, Text column, int versions) throws IOException {
+    public Cell[] get(byte [] row, byte [] column, int versions)
+    throws IOException {
       return this.table.get(row, column, versions);
     }
     
     /** {@inheritDoc} */
-    public Cell[] get(Text row, Text column, long ts, int versions)
+    public Cell[] get(byte [] row, byte [] column, long ts, int versions)
     throws IOException {
       return this.table.get(row, column, ts, versions);
     }
   }
   
   public interface ScannerIncommon 
-  extends Iterable<Map.Entry<HStoreKey, SortedMap<Text, byte[]>>> {
-    public boolean next(HStoreKey key, SortedMap<Text, byte[]> values)
+  extends Iterable<Map.Entry<HStoreKey, SortedMap<byte [], byte[]>>> {
+    public boolean next(HStoreKey key, SortedMap<byte [], byte[]> values)
     throws IOException;
     
     public void close() throws IOException;
@@ -515,19 +520,18 @@ public abstract class HBaseTestCase extends TestCase {
       this.scanner = scanner;
     }
     
-    public boolean next(HStoreKey key, SortedMap<Text, byte[]> values)
+    public boolean next(HStoreKey key, SortedMap<byte [], byte[]> values)
     throws IOException {
       RowResult results = scanner.next();
       if (results == null) {
         return false;
-      } else {
-        key.setRow(results.getRow());
-        values.clear();
-        for (Map.Entry<Text, Cell> entry : results.entrySet()) {
-          values.put(entry.getKey(), entry.getValue().getValue());
-        }
-        return true;
       }
+      key.setRow(results.getRow());
+      values.clear();
+      for (Map.Entry<byte [], Cell> entry : results.entrySet()) {
+        values.put(entry.getKey(), entry.getValue().getValue());
+      }
+      return true;
     }
     
     public void close() throws IOException {
@@ -546,7 +550,7 @@ public abstract class HBaseTestCase extends TestCase {
       this.scanner = scanner;
     }
     
-    public boolean next(HStoreKey key, SortedMap<Text, byte[]> values)
+    public boolean next(HStoreKey key, SortedMap<byte [], byte[]> values)
     throws IOException {
       return scanner.next(key, values);
     }
@@ -560,10 +564,10 @@ public abstract class HBaseTestCase extends TestCase {
     }
   }
   
-  protected void assertCellEquals(final HRegion region, final Text row,
-    final Text column, final long timestamp, final String value)
+  protected void assertCellEquals(final HRegion region, final byte [] row,
+    final byte [] column, final long timestamp, final String value)
   throws IOException {
-    Map<Text, Cell> result = region.getFull(row, null, timestamp);
+    Map<byte [], Cell> result = region.getFull(row, null, timestamp);
     Cell cell_value = result.get(column);
     if(value == null){
       assertEquals(column.toString() + " at timestamp " + timestamp, null, cell_value);

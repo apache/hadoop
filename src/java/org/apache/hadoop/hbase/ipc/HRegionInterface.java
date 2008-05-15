@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -35,8 +34,11 @@ import org.apache.hadoop.hbase.NotServingRegionException;
  * Clients interact with HRegionServers using a handle to the HRegionInterface.
  */
 public interface HRegionInterface extends VersionedProtocol {
-  /** initial version */
-  public static final long versionID = 2L;
+  /**
+   * Protocol version.
+   * Upped to 3 when we went from Text to byte arrays for row and column names.
+   */
+  public static final long versionID = 3L;
 
   /** 
    * Get metainfo about an HRegion
@@ -45,7 +47,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return HRegionInfo object for region
    * @throws NotServingRegionException
    */
-  public HRegionInfo getRegionInfo(final Text regionName)
+  public HRegionInfo getRegionInfo(final byte [] regionName)
   throws NotServingRegionException;
 
   /**
@@ -58,7 +60,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return alue for that region/row/column
    * @throws IOException
    */
-  public Cell get(final Text regionName, final Text row, final Text column)
+  public Cell get(final byte [] regionName, final byte [] row, final byte [] column)
   throws IOException;
 
   /**
@@ -71,8 +73,8 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return array of values
    * @throws IOException
    */
-  public Cell[] get(final Text regionName, final Text row,
-    final Text column, final int numVersions)
+  public Cell[] get(final byte [] regionName, final byte [] row,
+    final byte [] column, final int numVersions)
   throws IOException;
   
   /**
@@ -87,8 +89,8 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return array of values
    * @throws IOException
    */
-  public Cell[] get(final Text regionName, final Text row,
-    final Text column, final long timestamp, final int numVersions)
+  public Cell[] get(final byte [] regionName, final byte [] row,
+    final byte [] column, final long timestamp, final int numVersions)
   throws IOException;
   
   /**
@@ -99,7 +101,8 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return map of values
    * @throws IOException
    */
-  public RowResult getRow(final Text regionName, final Text row, final long ts)
+  public RowResult getRow(final byte [] regionName, final byte [] row,
+    final long ts)
   throws IOException;
 
   /**
@@ -111,7 +114,8 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return map of values
    * @throws IOException
    */
-  public RowResult getClosestRowBefore(final Text regionName, final Text row)
+  public RowResult getClosestRowBefore(final byte [] regionName,
+    final byte [] row)
   throws IOException;
 
   /**
@@ -122,8 +126,8 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return map of values
    * @throws IOException
    */
-  public RowResult getRow(final Text regionName, final Text row, 
-    final Text[] columns, final long ts)
+  public RowResult getRow(final byte [] regionName, final byte [] row, 
+    final byte[][] columns, final long ts)
   throws IOException;
 
   /**
@@ -134,8 +138,8 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return map of values
    * @throws IOException
    */
-  public RowResult getRow(final Text regionName, final Text row, 
-    final Text[] columns)
+  public RowResult getRow(final byte [] regionName, final byte [] row, 
+    final byte[][] columns)
   throws IOException;
 
   /**
@@ -145,7 +149,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param b BatchUpdate
    * @throws IOException
    */
-  public void batchUpdate(Text regionName, BatchUpdate b)
+  public void batchUpdate(final byte [] regionName, final BatchUpdate b)
   throws IOException;
   
   /**
@@ -158,7 +162,8 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param timestamp Delete all entries that have this timestamp or older
    * @throws IOException
    */
-  public void deleteAll(Text regionName, Text row, Text column, long timestamp)
+  public void deleteAll(byte [] regionName, byte [] row, byte [] column,
+    long timestamp)
   throws IOException;
 
   /**
@@ -170,7 +175,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param timestamp Delete all entries that have this timestamp or older
    * @throws IOException
    */
-  public void deleteAll(Text regionName, Text row, long timestamp)
+  public void deleteAll(byte [] regionName, byte [] row, long timestamp)
   throws IOException;
 
   /**
@@ -182,7 +187,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @param family The column family to match
    * @param timestamp Timestamp to match
    */
-  public void deleteFamily(Text regionName, Text row, Text family, 
+  public void deleteFamily(byte [] regionName, byte [] row, byte [] family, 
     long timestamp)
   throws IOException;
 
@@ -207,13 +212,12 @@ public interface HRegionInterface extends VersionedProtocol {
    * @return scannerId scanner identifier used in other calls
    * @throws IOException
    */
-  public long openScanner(Text regionName, Text[] columns, Text startRow,
-      long timestamp, RowFilterInterface filter)
+  public long openScanner(final byte [] regionName, final byte [][] columns,
+      final byte []startRow, long timestamp, RowFilterInterface filter)
   throws IOException;
 
   /**
    * Get the next set of values
-   * 
    * @param scannerId clientId passed to openScanner
    * @return map of values
    * @throws IOException

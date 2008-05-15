@@ -25,7 +25,6 @@ import java.util.ArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.client.HTable;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Test whether region rebalancing works. (HBASE-71)
@@ -48,7 +48,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
   
   final byte[] FIVE_HUNDRED_KBYTES;
   
-  final Text COLUMN_NAME = new Text("col:");
+  final byte [] COLUMN_NAME = Bytes.toBytes("col:");
   
   /** constructor */
   public TestRegionRebalancing() {
@@ -59,7 +59,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     }
     
     desc = new HTableDescriptor("test");
-    desc.addFamily(new HColumnDescriptor(COLUMN_NAME.toString()));
+    desc.addFamily(new HColumnDescriptor(COLUMN_NAME));
   }
   
   /**
@@ -68,10 +68,10 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
   @Override
   public void preHBaseClusterSetup() throws IOException {
     // create a 20-region table by writing directly to disk
-    List<Text> startKeys = new ArrayList<Text>();
+    List<byte []> startKeys = new ArrayList<byte []>();
     startKeys.add(null);
     for (int i = 10; i < 29; i++) {
-      startKeys.add(new Text("row_" + i));
+      startKeys.add(Bytes.toBytes("row_" + i));
     }
     startKeys.add(null);
     LOG.info(startKeys.size() + " start keys generated");
@@ -84,9 +84,9 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
     // Now create the root and meta regions and insert the data regions
     // created above into the meta
     
-    HRegion root = HRegion.createHRegion(HRegionInfo.rootRegionInfo,
+    HRegion root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO,
       testDir, conf);
-    HRegion meta = HRegion.createHRegion(HRegionInfo.firstMetaRegionInfo,
+    HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
       testDir, conf);
     HRegion.addRegionToMETA(root, meta);
     
@@ -105,7 +105,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
    * region servers to see if the assignment or regions is pretty balanced.
    */
   public void testRebalancing() throws IOException {
-    table = new HTable(conf, new Text("test"));
+    table = new HTable(conf, "test");
     assertEquals("Test table should have 20 regions", 
       20, table.getStartKeys().length);
     
@@ -220,12 +220,12 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
    * create a region with the specified start and end key and exactly one row
    * inside. 
    */
-  private HRegion createAregion(Text startKey, Text endKey) 
+  private HRegion createAregion(byte [] startKey, byte [] endKey) 
   throws IOException {
     
     HRegion region = createNewHRegion(desc, startKey, endKey);
     
-    Text keyToWrite = startKey == null ? new Text("row_000") : startKey;
+    byte [] keyToWrite = startKey == null ? Bytes.toBytes("row_000") : startKey;
     
     BatchUpdate bu = new BatchUpdate(keyToWrite);
     bu.put(COLUMN_NAME, "test".getBytes());

@@ -24,7 +24,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.SortedMap;
 
-import org.apache.hadoop.io.Text;
 
 /**
  * WhileMatchRowFilter is a wrapper filter that filters everything after the 
@@ -86,20 +85,20 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   }
   
   /** {@inheritDoc} */
-  public boolean filterRowKey(final Text rowKey) {
+  public boolean filterRowKey(final byte [] rowKey) {
     changeFAR(this.filter.filterRowKey(rowKey));
     return filterAllRemaining();
   }
   
   /** {@inheritDoc} */
-  public boolean filterColumn(final Text rowKey, final Text colKey,
+  public boolean filterColumn(final byte [] rowKey, final byte [] colKey,
     final byte[] data) {
     changeFAR(this.filter.filterColumn(rowKey, colKey, data));
     return filterAllRemaining();
   }
   
   /** {@inheritDoc} */
-  public boolean filterRow(final SortedMap<Text, byte[]> columns) {
+  public boolean filterRow(final SortedMap<byte [], byte[]> columns) {
     changeFAR(this.filter.filterRow(columns));
     return filterAllRemaining();
   }
@@ -115,12 +114,12 @@ public class WhileMatchRowFilter implements RowFilterInterface {
   }
 
   /** {@inheritDoc} */
-  public void rowProcessed(boolean filtered, Text rowKey) {
+  public void rowProcessed(boolean filtered, byte [] rowKey) {
     this.filter.rowProcessed(filtered, rowKey);
   }
   
   /** {@inheritDoc} */
-  public void validate(Text[] columns) {
+  public void validate(final byte [][] columns) {
     this.filter.validate(columns);
   }
   

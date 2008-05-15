@@ -52,11 +52,10 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.TextSequence;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
@@ -104,7 +103,8 @@ public class HStore implements HConstants {
 
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
-  final Text storeName;
+  final byte [] storeName;
+  private final String storeNameStr;
 
   /*
    * Sorted Map of readers keyed by sequence id (Most recent should be last in
@@ -180,8 +180,9 @@ public class HStore implements HConstants {
       this.ttl *= 1000;
     this.memcache = new Memcache(this.ttl);
     this.compactionDir = HRegion.getCompactionDir(basedir);
-    this.storeName =
-      new Text(this.info.getEncodedName() + "/" + this.family.getFamilyName());
+    this.storeName = Bytes.toBytes(this.info.getEncodedName() + "/" +
+      Bytes.toString(this.family.getName()));
+    this.storeNameStr = Bytes.toString(this.storeName);
     
     // By default, we compact if an HStore has more than
     // MIN_COMMITS_FOR_COMPACTION map files
@@ -203,12 +204,12 @@ public class HStore implements HConstants {
     }
     
     Path mapdir = HStoreFile.getMapDir(basedir, info.getEncodedName(),
-        family.getFamilyName());
+        family.getName());
     if (!fs.exists(mapdir)) {
       fs.mkdirs(mapdir);
     }
     Path infodir = HStoreFile.getInfoDir(basedir, info.getEncodedName(),
-        family.getFamilyName());
+        family.getName());
     if (!fs.exists(infodir)) {
       fs.mkdirs(infodir);
     }
@@ -218,7 +219,7 @@ public class HStore implements HConstants {
       this.bloomFilter = null;
     } else {
       this.filterDir = HStoreFile.getFilterDir(basedir, info.getEncodedName(),
-          family.getFamilyName());
+          family.getName());
       if (!fs.exists(filterDir)) {
         fs.mkdirs(filterDir);
       }
@@ -232,9 +233,9 @@ public class HStore implements HConstants {
     // loadHStoreFiles also computes the max sequence id internally.
     this.maxSeqId = -1L;
     this.storefiles.putAll(loadHStoreFiles(infodir, mapdir));
-    if (LOG.isDebugEnabled()) {
+    if (LOG.isDebugEnabled() && this.storefiles.size() > 0) {
       LOG.debug("Loaded " + this.storefiles.size() + " file(s) in hstore " +
-        this.storeName + ", max sequence id " + this.maxSeqId);
+        Bytes.toString(this.storeName) + ", max sequence id " + this.maxSeqId);
     }
     
     try {
@@ -244,7 +245,7 @@ public class HStore implements HConstants {
       // HADOOP-1700; for now keep going but this is probably not what we want
       // long term.  If we got here there has been data-loss
       LOG.warn("Exception processing reconstruction log " + reconstructionLog +
-        " opening " + this.storeName +
+        " opening " + Bytes.toString(this.storeName) +
         " -- continuing.  Probably DATA LOSS!", e);
     }
 
@@ -317,10 +318,10 @@ public class HStore implements HConstants {
         }
         // Check this edit is for me. Also, guard against writing
         // METACOLUMN info such as HBASE::CACHEFLUSH entries
-        Text column = val.getColumn();
-        if (column.equals(HLog.METACOLUMN)
-            || !key.getRegionName().equals(info.getRegionName())
-            || !HStoreKey.extractFamily(column).equals(family.getFamilyName())) {
+        byte [] column = val.getColumn();
+        if (Bytes.equals(column, HLog.METACOLUMN)
+            || !Bytes.equals(key.getRegionName(), info.getRegionName())
+            || !HStoreKey.matchingFamily(family.getName(), column)) {
           continue;
         }
         HStoreKey k = new HStoreKey(key.getRow(), column, val.getTimestamp());
@@ -386,7 +387,7 @@ public class HStore implements HConstants {
         reference = readSplitInfo(p, fs);
       }
       curfile = new HStoreFile(conf, fs, basedir, info.getEncodedName(),
-        family.getFamilyName(), fid, reference);
+        family.getName(), fid, reference);
       storeSize += curfile.length();
       long storeSeqId = -1;
       try {
@@ -450,7 +451,7 @@ public class HStore implements HConstants {
     Filter bloomFilter = null;
     if(fs.exists(filterFile)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("loading bloom filter for " + this.storeName);
+        LOG.debug("loading bloom filter for " + this.storeNameStr);
       }
       
       BloomFilterDescriptor.BloomFilterType type =
@@ -482,7 +483,7 @@ public class HStore implements HConstants {
       }
     } else {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("creating bloom filter for " + this.storeName);
+        LOG.debug("creating bloom filter for " + this.storeNameStr);
       }
 
       BloomFilterDescriptor.BloomFilterType type =
@@ -517,7 +518,7 @@ public class HStore implements HConstants {
    */
   private void flushBloomFilter() throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("flushing bloom filter for " + this.storeName);
+      LOG.debug("flushing bloom filter for " + this.storeNameStr);
     }
     FSDataOutputStream out =
       fs.create(new Path(filterDir, BLOOMFILTER_FILE_NAME));
@@ -527,7 +528,7 @@ public class HStore implements HConstants {
       out.close();
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("flushed bloom filter for " + this.storeName);
+      LOG.debug("flushed bloom filter for " + this.storeNameStr);
     }
   }
   
@@ -568,7 +569,7 @@ public class HStore implements HConstants {
       synchronized (this.storefiles) {
         result = new ArrayList<HStoreFile>(storefiles.values());
       }
-      LOG.debug("closed " + this.storeName);
+      LOG.debug("closed " + this.storeNameStr);
       return result;
     } finally {
       this.lock.writeLock().unlock();
@@ -621,7 +622,7 @@ public class HStore implements HConstants {
       long now = System.currentTimeMillis();
       // A. Write the Maps out to the disk
       HStoreFile flushedFile = new HStoreFile(conf, fs, basedir,
-        info.getEncodedName(),  family.getFamilyName(), -1L, null);
+        info.getEncodedName(),  family.getName(), -1L, null);
       MapFile.Writer out = flushedFile.getWriter(this.fs, this.compression,
         this.bloomFilter);
       
@@ -641,8 +642,7 @@ public class HStore implements HConstants {
         for (Map.Entry<HStoreKey, byte []> es: cache.entrySet()) {
           HStoreKey curkey = es.getKey();
           byte[] bytes = es.getValue();
-          TextSequence f = HStoreKey.extractFamily(curkey.getColumn());
-          if (f.equals(this.family.getFamilyName())) {
+          if (HStoreKey.matchingFamily(this.family.getName(), curkey.getColumn())) {
             if (ttl == HConstants.FOREVER ||
                   now < curkey.getTimestamp() + ttl) {
               entries++;
@@ -775,11 +775,14 @@ public class HStore implements HConstants {
    * @return mid key if a split is needed, null otherwise
    * @throws IOException
    */
-  Text compact(final boolean force) throws IOException {
+  byte [] compact(final boolean force) throws IOException {
     synchronized (compactLock) {
       long maxId = -1;
       List<HStoreFile> filesToCompact = null;
       synchronized (storefiles) {
+        if (this.storefiles.size() <= 0) {
+          return null;
+        }
         filesToCompact = new ArrayList<HStoreFile>(this.storefiles.values());
         if (!force && !hasReferences(filesToCompact) &&
              filesToCompact.size() < compactionThreshold) {
@@ -800,7 +803,7 @@ public class HStore implements HConstants {
 
       // Step through them, writing to the brand-new MapFile
       HStoreFile compactedOutputFile = new HStoreFile(conf, fs, 
-          this.compactionDir, info.getEncodedName(), family.getFamilyName(),
+          this.compactionDir, info.getEncodedName(), family.getName(),
           -1L, null);
       if (LOG.isDebugEnabled()) {
         LOG.debug("started compaction of " + filesToCompact.size() +
@@ -822,7 +825,7 @@ public class HStore implements HConstants {
       completeCompaction(filesToCompact, compactedOutputFile);
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Completed compaction of " + this.storeName +
+        LOG.debug("Completed compaction of " + this.storeNameStr +
             " store size is " + StringUtils.humanReadableInt(storeSize));
       }
     }
@@ -883,10 +886,10 @@ public class HStore implements HConstants {
 
       long now = System.currentTimeMillis();
       int timesSeen = 0;
-      Text lastRow = new Text();
-      Text lastColumn = new Text();
+      byte [] lastRow = null;
+      byte [] lastColumn = null;
       // Map of a row deletes keyed by column with a list of timestamps for value
-      Map<Text, List<Long>> deletes = null;
+      Map<byte [], List<Long>> deletes = null;
       while (numDone < done.length) {
         // Find the reader with the smallest key.  If two files have same key
         // but different values -- i.e. one is delete and other is non-delete
@@ -909,13 +912,13 @@ public class HStore implements HConstants {
 
         // Reflect the current key/val in the output
         HStoreKey sk = keys[smallestKey];
-        if(lastRow.equals(sk.getRow())
-            && lastColumn.equals(sk.getColumn())) {
+        if (Bytes.equals(lastRow, sk.getRow())
+            && Bytes.equals(lastColumn, sk.getColumn())) {
           timesSeen++;
         } else {
-          timesSeen = 1;
+          timesSeen = 0;
           // We are on to a new row.  Create a new deletes list.
-          deletes = new HashMap<Text, List<Long>>();
+          deletes = new TreeMap<byte [], List<Long>>(Bytes.BYTES_COMPARATOR);
         }
 
         byte [] value = (vals[smallestKey] == null)?
@@ -924,7 +927,7 @@ public class HStore implements HConstants {
             timesSeen <= family.getMaxVersions()) {
           // Keep old versions until we have maxVersions worth.
           // Then just skip them.
-          if (sk.getRow().getLength() != 0 && sk.getColumn().getLength() != 0) {
+          if (sk.getRow().length != 0 && sk.getColumn().length != 0) {
             // Only write out objects which have a non-zero length key and
             // value
             if (ttl == HConstants.FOREVER || now < sk.getTimestamp() + ttl) {
@@ -938,8 +941,8 @@ public class HStore implements HConstants {
         }
 
         // Update last-seen items
-        lastRow.set(sk.getRow());
-        lastColumn.set(sk.getColumn());
+        lastRow = sk.getRow();
+        lastColumn = sk.getColumn();
 
         // Advance the smallest key.  If that reader's all finished, then 
         // mark it as done.
@@ -962,7 +965,7 @@ public class HStore implements HConstants {
         try {
           rdrs[i].close();
         } catch (IOException e) {
-          LOG.warn("Exception closing reader for " + this.storeName, e);
+          LOG.warn("Exception closing reader for " + this.storeNameStr, e);
         }
       }
     }
@@ -984,7 +987,7 @@ public class HStore implements HConstants {
    * passed value is HGlobals.deleteBytes.
   */
   private boolean isDeleted(final HStoreKey hsk, final byte [] value,
-      final boolean checkMemcache, final Map<Text, List<Long>> deletes) {
+      final boolean checkMemcache, final Map<byte [], List<Long>> deletes) {
     if (checkMemcache && memcache.isDeleted(hsk)) {
       return true;
     }
@@ -1042,7 +1045,7 @@ public class HStore implements HConstants {
     try {
       // 1. Moving the new MapFile into place.
       HStoreFile finalCompactedFile = new HStoreFile(conf, fs, basedir,
-        info.getEncodedName(), family.getFamilyName(), -1, null);
+        info.getEncodedName(), family.getName(), -1, null);
       if (LOG.isDebugEnabled()) {
         LOG.debug("moving " + FSUtils.getPath(compactedFile.getMapFilePath()) +
           " to " + FSUtils.getPath(finalCompactedFile.getMapFilePath()));
@@ -1093,7 +1096,8 @@ public class HStore implements HConstants {
           }
         } catch (IOException e) {
           e = RemoteExceptionHandler.checkIOException(e);
-          LOG.error("Failed replacing compacted files for " + this.storeName +
+          LOG.error("Failed replacing compacted files for " +
+            this.storeNameStr +
             ". Compacted file is " + finalCompactedFile.toString() +
             ".  Files replaced are " + compactedFiles.toString() +
             " some of which may have been already removed", e);
@@ -1120,10 +1124,12 @@ public class HStore implements HConstants {
    *
    * The returned object should map column names to Cells.
    */
-  void getFull(HStoreKey key, final Set<Text> columns, Map<Text, Cell> results)
+  void getFull(HStoreKey key, final Set<byte []> columns,
+      Map<byte [], Cell> results)
   throws IOException {
-    Map<Text, Long> deletes = new HashMap<Text, Long>();
-    
+    Map<byte [], Long> deletes =
+      new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
+
     // if the key is null, we're not even looking for anything. return.
     if (key == null) {
       return;
@@ -1152,7 +1158,7 @@ public class HStore implements HConstants {
   }
   
   private void getFullFromMapFile(MapFile.Reader map, HStoreKey key, 
-    Set<Text> columns, Map<Text, Long> deletes, Map<Text, Cell> results) 
+    Set<byte []> columns, Map<byte [], Long> deletes, Map<byte [], Cell> results) 
   throws IOException {
     synchronized(map) {
       long now = System.currentTimeMillis();
@@ -1167,7 +1173,7 @@ public class HStore implements HConstants {
         return;
       }
       do {
-        Text readcol = readkey.getColumn();
+        byte [] readcol = readkey.getColumn();
         
         // if we're looking for this column (or all of them), and there isn't 
         // already a value for this column in the results map, and the key we 
@@ -1182,18 +1188,18 @@ public class HStore implements HConstants {
             // recent delete timestamp, record it for later
             if (!deletes.containsKey(readcol) 
               || deletes.get(readcol).longValue() < readkey.getTimestamp()) {
-              deletes.put(new Text(readcol), readkey.getTimestamp());              
+              deletes.put(readcol, readkey.getTimestamp());              
             }
           } else if (!(deletes.containsKey(readcol) 
             && deletes.get(readcol).longValue() >= readkey.getTimestamp()) ) {
             // So the cell itself isn't a delete, but there may be a delete 
             // pending from earlier in our search. Only record this result if
             // there aren't any pending deletes.
-            if (!(deletes.containsKey(readcol) 
-              && deletes.get(readcol).longValue() >= readkey.getTimestamp())) {
+            if (!(deletes.containsKey(readcol) &&
+                deletes.get(readcol).longValue() >= readkey.getTimestamp())) {
               if (ttl == HConstants.FOREVER ||
                       now < readkey.getTimestamp() + ttl) {
-                results.put(new Text(readcol), 
+                results.put(readcol, 
                   new Cell(readval.get(), readkey.getTimestamp()));
                 // need to reinstantiate the readval so we can reuse it, 
                 // otherwise next iteration will destroy our result
@@ -1205,7 +1211,7 @@ public class HStore implements HConstants {
               }
             }
           }
-        } else if(key.getRow().compareTo(readkey.getRow()) < 0) {
+        } else if (Bytes.compareTo(key.getRow(), readkey.getRow()) < 0) {
           // if we've crossed into the next row, then we can just stop 
           // iterating
           break;
@@ -1253,7 +1259,8 @@ public class HStore implements HConstants {
       // This List of deletes should not large since we are only keeping rows
       // and columns that match those set on the scanner and which have delete
       // values.  If memory usage becomes an issue, could redo as bloom filter.
-      Map<Text, List<Long>> deletes = new HashMap<Text, List<Long>>();
+      Map<byte [], List<Long>> deletes =
+        new TreeMap<byte [], List<Long>>(Bytes.BYTES_COMPARATOR);
       // This code below is very close to the body of the getKeys method.
       MapFile.Reader[] maparray = getReaders();
       for(int i = maparray.length - 1; i >= 0; i--) {
@@ -1337,8 +1344,7 @@ public class HStore implements HConstants {
    * @throws IOException
    */
   List<HStoreKey> getKeys(final HStoreKey origin, final int versions)
-    throws IOException {
-    
+  throws IOException {
     List<HStoreKey> keys = this.memcache.getKeys(origin, versions);
     if (versions != ALL_VERSIONS && keys.size() >= versions) {
       return keys;
@@ -1414,13 +1420,13 @@ public class HStore implements HConstants {
    * with stricly increasing timestamps. This method assumes this pattern of 
    * writes in order to make it reasonably performant. 
    */
-  Text getRowKeyAtOrBefore(final Text row)
+  byte [] getRowKeyAtOrBefore(final byte [] row)
   throws IOException{
     // Map of HStoreKeys that are candidates for holding the row key that
     // most closely matches what we're looking for. We'll have to update it 
     // deletes found all over the place as we go along before finally reading
     // the best key out of it at the end.
-    SortedMap<HStoreKey, Long> candidateKeys = new TreeMap<HStoreKey, Long>();    
+    SortedMap<HStoreKey, Long> candidateKeys = new TreeMap<HStoreKey, Long>();
     
     // Obtain read lock
     this.lock.readLock().lock();
@@ -1446,14 +1452,13 @@ public class HStore implements HConstants {
    * Check an individual MapFile for the row at or before a given key 
    * and timestamp
    */
-  private void rowAtOrBeforeFromMapFile(MapFile.Reader map, Text row, 
+  private void rowAtOrBeforeFromMapFile(MapFile.Reader map, final byte [] row, 
     SortedMap<HStoreKey, Long> candidateKeys)
   throws IOException {
     HStoreKey searchKey = null;
     ImmutableBytesWritable readval = new ImmutableBytesWritable();
     HStoreKey readkey = new HStoreKey();
     HStoreKey strippedKey = null;
-    
     synchronized(map) {
       // don't bother with the rest of this if the file is empty
       map.reset();
@@ -1462,7 +1467,6 @@ public class HStore implements HConstants {
       }
 
       long now = System.currentTimeMillis();
-
       // if there aren't any candidate keys yet, we'll do some things slightly
       // different 
       if (candidateKeys.isEmpty()) {
@@ -1472,7 +1476,7 @@ public class HStore implements HConstants {
         // save time and add the last key to the candidates.
         HStoreKey finalKey = new HStoreKey(); 
         map.finalKey(finalKey);
-        if (finalKey.getRow().compareTo(row) < 0) {
+        if (Bytes.compareTo(finalKey.getRow(), row) < 0) {
           candidateKeys.put(stripTimestamp(finalKey), 
             new Long(finalKey.getTimestamp()));
           return;
@@ -1489,7 +1493,7 @@ public class HStore implements HConstants {
         do {
           // if we have an exact match on row, and it's not a delete, save this
           // as a candidate key
-          if (readkey.getRow().equals(row)) {
+          if (Bytes.equals(readkey.getRow(), row)) {
             if (!HLogEdit.isDeleted(readval.get())) {
               if (ttl == HConstants.FOREVER || 
                     now < readkey.getTimestamp() + ttl) {
@@ -1502,7 +1506,7 @@ public class HStore implements HConstants {
                 }
               }
             }
-          } else if (readkey.getRow().compareTo(row) > 0 ) {
+          } else if (Bytes.compareTo(readkey.getRow(), row) > 0 ) {
             // if the row key we just read is beyond the key we're searching for,
             // then we're done. return.
             return;
@@ -1538,7 +1542,7 @@ public class HStore implements HConstants {
         // save time and add the last key to the candidates.
         HStoreKey finalKey = new HStoreKey(); 
         map.finalKey(finalKey);
-        if (finalKey.getRow().compareTo(searchKey.getRow()) < 0) {
+        if (Bytes.compareTo(finalKey.getRow(), searchKey.getRow()) < 0) {
           strippedKey = stripTimestamp(finalKey);
           
           // if the candidate keys has a cell like this one already,
@@ -1568,7 +1572,7 @@ public class HStore implements HConstants {
       do {
         // if we have an exact match on row, and it's not a delete, save this
         // as a candidate key
-        if (readkey.getRow().equals(row)) {
+        if (Bytes.equals(readkey.getRow(), row)) {
           strippedKey = stripTimestamp(readkey);
           if (!HLogEdit.isDeleted(readval.get())) {
             if (ttl == HConstants.FOREVER || 
@@ -1593,7 +1597,7 @@ public class HStore implements HConstants {
               } 
             }
           }
-        } else if (readkey.getRow().compareTo(row) > 0 ) {
+        } else if (Bytes.compareTo(readkey.getRow(), row) > 0 ) {
           // if the row key we just read is beyond the key we're searching for,
           // then we're done. return.
           return;
@@ -1644,9 +1648,9 @@ public class HStore implements HConstants {
    */
   private boolean cellMatches(HStoreKey origin, HStoreKey target){
     // if the origin's column is empty, then we're matching any column
-    if (origin.getColumn().equals(new Text())){
+    if (Bytes.equals(origin.getColumn(), HConstants.EMPTY_BYTE_ARRAY)){
       // if the row matches, then...
-      if (target.getRow().equals(origin.getRow())) {
+      if (Bytes.equals(target.getRow(), origin.getRow())) {
         // check the timestamp
         return target.getTimestamp() <= origin.getTimestamp();
       }
@@ -1665,9 +1669,9 @@ public class HStore implements HConstants {
    */
   private boolean rowMatches(HStoreKey origin, HStoreKey target){
     // if the origin's column is empty, then we're matching any column
-    if (origin.getColumn().equals(new Text())){
+    if (Bytes.equals(origin.getColumn(), HConstants.EMPTY_BYTE_ARRAY)) {
       // if the row matches, then...
-      return target.getRow().equals(origin.getRow());
+      return Bytes.equals(target.getRow(), origin.getRow());
     }
     // otherwise, we want to match on row and column
     return target.matchesRowCol(origin);
@@ -1678,7 +1682,7 @@ public class HStore implements HConstants {
    * 
    * @return midKey if store can be split, null otherwise
    */
-  Text checkSplit() {
+  byte [] checkSplit() {
     if (this.storefiles.size() <= 0) {
       return null;
     }
@@ -1726,14 +1730,14 @@ public class HStore implements HConstants {
       if (mk != null) {
         // if the midkey is the same as the first and last keys, then we cannot
         // (ever) split this region. 
-        if (mk.getRow().equals(firstKey.getRow()) && 
-            mk.getRow().equals(lastKey.getRow())) {
+        if (Bytes.equals(mk.getRow(), firstKey.getRow()) && 
+            Bytes.equals(mk.getRow(), lastKey.getRow())) {
           return null;
         }
         return mk.getRow();
       }
     } catch(IOException e) {
-      LOG.warn("Failed getting store size for " + this.storeName, e);
+      LOG.warn("Failed getting store size for " + this.storeNameStr, e);
     } finally {
       this.lock.readLock().unlock();
     }
@@ -1752,8 +1756,8 @@ public class HStore implements HConstants {
   /**
    * Return a scanner for both the memcache and the HStore files
    */
-  InternalScanner getScanner(long timestamp, Text targetCols[],
-      Text firstRow, RowFilterInterface filter)
+  InternalScanner getScanner(long timestamp, byte [][] targetCols,
+      byte [] firstRow, RowFilterInterface filter)
   throws IOException {
     lock.readLock().lock();
     try {
@@ -1766,7 +1770,7 @@ public class HStore implements HConstants {
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return this.storeName.toString();
+    return this.storeNameStr;
   }
 
   /*

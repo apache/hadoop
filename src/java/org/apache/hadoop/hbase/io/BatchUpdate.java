@@ -25,9 +25,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.hbase.HConstants;
 
 /**
  * A Writable object that contains a series of BatchOperations
@@ -39,16 +40,29 @@ import org.apache.hadoop.hbase.HConstants;
 public class BatchUpdate implements Writable, Iterable<BatchOperation> {
   
   // the row being updated
-  private Text row;
+  private byte [] row = null;
     
   // the batched operations
-  private ArrayList<BatchOperation> operations;
+  private ArrayList<BatchOperation> operations =
+    new ArrayList<BatchOperation>();
   
-  private long timestamp;
+  private long timestamp = HConstants.LATEST_TIMESTAMP;
   
-  /** Default constructor - used by Writable. */
+  /**
+   * Default constructor used serializing.
+   */
   public BatchUpdate() {
-    this(new Text());
+    this ((byte [])null);
+  }
+
+  /**
+   * Initialize a BatchUpdate operation on a row. Timestamp is assumed to be
+   * now.
+   * 
+   * @param row
+   */
+  public BatchUpdate(final Text row) {
+    this(row, HConstants.LATEST_TIMESTAMP);
   }
   
   /**
@@ -57,24 +71,51 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    * 
    * @param row
    */
-  public BatchUpdate(Text row) {
+  public BatchUpdate(final String row) {
+    this(Bytes.toBytes(row), HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Initialize a BatchUpdate operation on a row. Timestamp is assumed to be
+   * now.
+   * 
+   * @param row
+   */
+  public BatchUpdate(final byte [] row) {
     this(row, HConstants.LATEST_TIMESTAMP);
   }
-  
+
   /**
    * Initialize a BatchUpdate operation on a row with a specific timestamp.
    * 
    * @param row
    */
-  public BatchUpdate(Text row, long timestamp){
+  public BatchUpdate(final String row, long timestamp){
+    this(Bytes.toBytes(row), timestamp);
+  }
+
+  /**
+   * Initialize a BatchUpdate operation on a row with a specific timestamp.
+   * 
+   * @param row
+   */
+  public BatchUpdate(final Text row, long timestamp){
+    this(row.getBytes(), timestamp);
+  }
+
+  /**
+   * Initialize a BatchUpdate operation on a row with a specific timestamp.
+   * 
+   * @param row
+   */
+  public BatchUpdate(final byte [] row, long timestamp){
     this.row = row;
     this.timestamp = timestamp;
     this.operations = new ArrayList<BatchOperation>();
   }
 
-  
   /** @return the row */
-  public Text getRow() {
+  public byte [] getRow() {
     return row;
   }
 
@@ -91,7 +132,7 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
   public void setTimestamp(long timestamp) {
     this.timestamp = timestamp;
   }
-  
+
   /** 
    * Change a value for the specified column
    *
@@ -99,20 +140,60 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
    * @param val new value for column.  Cannot be null (can be empty).
    */
   public synchronized void put(final Text column, final byte val[]) {
+    put(column.getBytes(), val);
+  }
+  
+  /** 
+   * Change a value for the specified column
+   *
+   * @param column column whose value is being set
+   * @param val new value for column.  Cannot be null (can be empty).
+   */
+  public synchronized void put(final String column, final byte val[]) {
+    put(Bytes.toBytes(column), val);
+  }
+
+  /** 
+   * Change a value for the specified column
+   *
+   * @param column column whose value is being set
+   * @param val new value for column.  Cannot be null (can be empty).
+   */
+  public synchronized void put(final byte [] column, final byte val[]) {
     if (val == null) {
       // If null, the PUT becomes a DELETE operation.
       throw new IllegalArgumentException("Passed value cannot be null");
     }
     operations.add(new BatchOperation(column, val));
   }
-  
+
   /** 
    * Delete the value for a column
    * Deletes the cell whose row/column/commit-timestamp match those of the
    * delete.
    * @param column name of column whose value is to be deleted
    */
-  public synchronized void delete(final Text column) {
+  public void delete(final Text column) {
+    delete(column.getBytes());
+  }
+ 
+  /** 
+   * Delete the value for a column
+   * Deletes the cell whose row/column/commit-timestamp match those of the
+   * delete.
+   * @param column name of column whose value is to be deleted
+   */
+  public void delete(final String column) {
+    delete(Bytes.toBytes(column));
+  }
+
+  /** 
+   * Delete the value for a column
+   * Deletes the cell whose row/column/commit-timestamp match those of the
+   * delete.
+   * @param column name of column whose value is to be deleted
+   */
+  public synchronized void delete(final byte [] column) {
     operations.add(new BatchOperation(column));
   }
 
@@ -137,18 +218,18 @@ public class BatchUpdate implements Writable, Iterable<BatchOperation> {
     if (this.operations.size() != 0) {
       this.operations.clear();
     }
-    row.readFields(in);
+    this.row = Bytes.readByteArray(in);
     timestamp = in.readLong();
     int nOps = in.readInt();
     for (int i = 0; i < nOps; i++) {
       BatchOperation op = new BatchOperation();
       op.readFields(in);
-      operations.add(op);
+      this.operations.add(op);
     }
   }
 
   public void write(final DataOutput out) throws IOException {
-    row.write(out);
+    Bytes.writeByteArray(out, this.row);
     out.writeLong(timestamp);
     out.writeInt(operations.size());
     for (BatchOperation op: operations) {

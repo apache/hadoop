@@ -97,7 +97,7 @@ class MetaScanner extends BaseScanner {
     MetaRegion region = null;
     while (!master.closed.get() &&
         (region == null && metaRegionsToScan.size() > 0) &&
-        !metaRegionsScanned()) {
+          !metaRegionsScanned()) {
       try {
         region = metaRegionsToScan.poll(master.threadWakeFrequency, 
           TimeUnit.MILLISECONDS);
@@ -146,11 +146,11 @@ class MetaScanner extends BaseScanner {
    */
   synchronized boolean waitForMetaRegionsOrClose() {
     while (!master.closed.get()) {
-      if (regionManager.isInitialRootScanComplete() && 
-        regionManager.numMetaRegions() == regionManager.numOnlineMetaRegions()) {
+      if (regionManager.isInitialRootScanComplete() &&
+          regionManager.numMetaRegions() ==
+            regionManager.numOnlineMetaRegions()) {
         break;
       }
-
       try {
         wait(master.threadWakeFrequency);
       } catch (InterruptedException e) {
@@ -163,7 +163,7 @@ class MetaScanner extends BaseScanner {
   /**
    * Add another meta region to scan to the queue.
    */ 
-  void addMetaRegionToScan(MetaRegion m) throws InterruptedException {
+  void addMetaRegionToScan(MetaRegion m) {
     metaRegionsToScan.add(m);
   }
 }

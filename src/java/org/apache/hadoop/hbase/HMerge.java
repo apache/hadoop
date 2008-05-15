@@ -22,28 +22,25 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Random;
-import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
-
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 
 /** 
@@ -57,7 +54,9 @@ class HMerge implements HConstants {
   /*
    * Not instantiable
    */
-  private HMerge() {}
+  private HMerge() {
+    super();
+  }
   
   /**
    * Scans the table and merges two adjacent regions if they are small. This
@@ -73,13 +72,13 @@ class HMerge implements HConstants {
    * @throws IOException
    */
   public static void merge(HBaseConfiguration conf, FileSystem fs,
-    Text tableName)
+    final byte [] tableName)
   throws IOException {
     HConnection connection = HConnectionManager.getConnection(conf);
     boolean masterIsRunning = connection.isMasterRunning();
     HConnectionManager.deleteConnection(conf);
-    if(tableName.equals(META_TABLE_NAME)) {
-      if(masterIsRunning) {
+    if (Bytes.equals(tableName, META_TABLE_NAME)) {
+      if (masterIsRunning) {
         throw new IllegalStateException(
             "Can not compact META table if instance is on-line");
       }
@@ -101,9 +100,9 @@ class HMerge implements HConstants {
     private final long maxFilesize;
 
     
-    protected Merger(HBaseConfiguration conf, FileSystem fs, Text tableName)
-        throws IOException {
-      
+    protected Merger(HBaseConfiguration conf, FileSystem fs,
+      final byte [] tableName)
+    throws IOException {
       this.conf = conf;
       this.fs = fs;
       this.maxFilesize =
@@ -184,19 +183,21 @@ class HMerge implements HConstants {
     
     protected abstract HRegionInfo[] next() throws IOException;
     
-    protected abstract void updateMeta(Text oldRegion1, Text oldRegion2,
-        HRegion newRegion) throws IOException;
+    protected abstract void updateMeta(final byte [] oldRegion1,
+      final byte [] oldRegion2, HRegion newRegion)
+    throws IOException;
     
   }
 
   /** Instantiated to compact a normal user table */
   private static class OnlineMerger extends Merger {
-    private final Text tableName;
+    private final byte [] tableName;
     private final HTable table;
     private final Scanner metaScanner;
     private HRegionInfo latestRegion;
     
-    OnlineMerger(HBaseConfiguration conf, FileSystem fs, Text tableName)
+    OnlineMerger(HBaseConfiguration conf, FileSystem fs,
+      final byte [] tableName)
     throws IOException {
       super(conf, fs, tableName);
       this.tableName = tableName;
@@ -217,7 +218,7 @@ class HMerge implements HConstants {
             COL_REGIONINFO);
         }
         HRegionInfo region = Writables.getHRegionInfo(regionInfo.getValue());
-        if (!region.getTableDesc().getName().equals(this.tableName)) {
+        if (!Bytes.equals(region.getTableDesc().getName(), this.tableName)) {
           return null;
         }
         checkOfflined(region);
@@ -276,16 +277,16 @@ class HMerge implements HConstants {
     }
 
     @Override
-    protected void updateMeta(Text oldRegion1, Text oldRegion2, 
+    protected void updateMeta(final byte [] oldRegion1,
+        final byte [] oldRegion2, 
       HRegion newRegion)
     throws IOException {
-      Text[] regionsToDelete = {oldRegion1, oldRegion2};
-      for(int r = 0; r < regionsToDelete.length; r++) {
-        if(regionsToDelete[r].equals(latestRegion.getRegionName())) {
+      byte[][] regionsToDelete = {oldRegion1, oldRegion2};
+      for (int r = 0; r < regionsToDelete.length; r++) {
+        if(Bytes.equals(regionsToDelete[r], latestRegion.getRegionName())) {
           latestRegion = null;
         }
         table.deleteAll(regionsToDelete[r]);
-
         if(LOG.isDebugEnabled()) {
           LOG.debug("updated columns in row: " + regionsToDelete[r]);
         }
@@ -321,15 +322,16 @@ class HMerge implements HConstants {
       // Scan root region to find all the meta regions
       
       root = new HRegion(rootTableDir, hlog, fs, conf,
-          HRegionInfo.rootRegionInfo, null, null);
+          HRegionInfo.ROOT_REGIONINFO, null, null);
 
       InternalScanner rootScanner = 
-        root.getScanner(COL_REGIONINFO_ARRAY, new Text(), 
+        root.getScanner(COL_REGIONINFO_ARRAY, HConstants.EMPTY_START_ROW, 
         HConstants.LATEST_TIMESTAMP, null);
       
       try {
         HStoreKey key = new HStoreKey();
-        TreeMap<Text, byte[]> results = new TreeMap<Text, byte[]>();
+        TreeMap<byte [], byte[]> results =
+          new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
         while(rootScanner.next(key, results)) {
           for(byte [] b: results.values()) {
             HRegionInfo info = Writables.getHRegionInfoOrNull(b);
@@ -360,13 +362,10 @@ class HMerge implements HConstants {
     }
 
     @Override
-    protected void updateMeta(Text oldRegion1, Text oldRegion2,
-        HRegion newRegion) throws IOException {
-      
-      Text[] regionsToDelete = {
-          oldRegion1,
-          oldRegion2
-      };
+    protected void updateMeta(final byte [] oldRegion1,
+      final byte [] oldRegion2, HRegion newRegion)
+    throws IOException {
+      byte[][] regionsToDelete = {oldRegion1, oldRegion2};
       for(int r = 0; r < regionsToDelete.length; r++) {
         BatchUpdate b = new BatchUpdate(regionsToDelete[r]);
         b.delete(COL_REGIONINFO);

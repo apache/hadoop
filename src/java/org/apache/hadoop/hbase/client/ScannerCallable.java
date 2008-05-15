@@ -25,7 +25,8 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.io.Text;
+
+
 /**
  * Retryable scanner
  */
@@ -33,12 +34,12 @@ public class ScannerCallable extends ServerCallable<RowResult> {
   private long scannerId = -1L;
   private boolean instantiated = false;
   private boolean closed = false;
-  private final Text[] columns;
+  private final byte [][] columns;
   private final long timestamp;
   private final RowFilterInterface filter;
 
-  ScannerCallable (HConnection connection, Text tableName, Text[] columns,
-      Text startRow, long timestamp, RowFilterInterface filter) {
+  ScannerCallable (HConnection connection, byte [] tableName, byte [][] columns,
+      byte [] startRow, long timestamp, RowFilterInterface filter) {
     super(connection, tableName, startRow);
     this.columns = columns;
     this.timestamp = timestamp;

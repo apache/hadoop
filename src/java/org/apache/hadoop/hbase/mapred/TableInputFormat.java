@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobConfigurable;
@@ -50,14 +51,13 @@ public class TableInputFormat extends TableInputFormatBase implements
     Path[] tableNames = job.getInputPaths();
     String colArg = job.get(COLUMN_LIST);
     String[] colNames = colArg.split(" ");
-    Text[] m_cols = new Text[colNames.length];
+    byte [][] m_cols = new byte[colNames.length][];
     for (int i = 0; i < m_cols.length; i++) {
-      m_cols[i] = new Text(colNames[i]);
+      m_cols[i] = Bytes.toBytes(colNames[i]);
     }
     setInputColums(m_cols);
     try {
-      setHTable(new HTable(new HBaseConfiguration(job), new Text(tableNames[0]
-          .getName())));
+      setHTable(new HTable(new HBaseConfiguration(job), tableNames[0].getName()));
     } catch (Exception e) {
       LOG.error(e);
     }
@@ -66,7 +66,7 @@ public class TableInputFormat extends TableInputFormatBase implements
   /** {@inheritDoc} */
   public void validateInput(JobConf job) throws IOException {
     // expecting exactly one path
-    Path[] tableNames = job.getInputPaths();
+    Path [] tableNames = job.getInputPaths();
     if (tableNames == null || tableNames.length > 1) {
       throw new IOException("expecting one table name");
     }

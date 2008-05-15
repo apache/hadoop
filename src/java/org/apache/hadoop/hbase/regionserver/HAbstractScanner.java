@@ -20,9 +20,10 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.Vector;
 import java.util.Map.Entry;
 import java.util.regex.Pattern;
@@ -30,7 +31,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Abstract base class that implements the InternalScanner.
@@ -64,20 +65,22 @@ public abstract class HAbstractScanner implements InternalScanner {
   private static class ColumnMatcher {
     private boolean wildCardmatch;
     private MATCH_TYPE matchType;
-    private Text family;
+    private byte [] family;
     private Pattern columnMatcher;
-    private Text col;
+    private byte [] col;
   
-    ColumnMatcher(final Text col) throws IOException {
-      Text qualifier = HStoreKey.extractQualifier(col);
+    ColumnMatcher(final byte [] col) throws IOException {
+      byte [][] parse = HStoreKey.parseColumn(col);
+      // First position has family.  Second has qualifier.
+      byte [] qualifier = parse[1];
       try {
-        if (qualifier == null || qualifier.getLength() == 0) {
+        if (qualifier == null || qualifier.length == 0) {
           this.matchType = MATCH_TYPE.FAMILY_ONLY;
-          this.family = HStoreKey.extractFamily(col).toText();
+          this.family = parse[0];
           this.wildCardmatch = true;
-        } else if(isRegexPattern.matcher(qualifier.toString()).matches()) {
+        } else if (isRegexPattern.matcher(Bytes.toString(qualifier)).matches()) {
           this.matchType = MATCH_TYPE.REGEX;
-          this.columnMatcher = Pattern.compile(col.toString());
+          this.columnMatcher = Pattern.compile(Bytes.toString(col));
           this.wildCardmatch = true;
         } else {
           this.matchType = MATCH_TYPE.SIMPLE;
@@ -85,18 +88,19 @@ public abstract class HAbstractScanner implements InternalScanner {
           this.wildCardmatch = false;
         }
       } catch(Exception e) {
-        throw new IOException("Column: " + col + ": " + e.getMessage());
+        throw new IOException("Column: " + Bytes.toString(col) + ": " +
+          e.getMessage());
       }
     }
     
     /** Matching method */
-    boolean matches(Text c) throws IOException {
+    boolean matches(final byte [] c) throws IOException {
       if(this.matchType == MATCH_TYPE.SIMPLE) {
-        return c.equals(this.col);
+        return Bytes.equals(c, this.col);
       } else if(this.matchType == MATCH_TYPE.FAMILY_ONLY) {
-        return HStoreKey.extractFamily(c).equals(this.family);
-      } else if(this.matchType == MATCH_TYPE.REGEX) {
-        return this.columnMatcher.matcher(c.toString()).matches();
+        return HStoreKey.matchingFamily(this.family, c);
+      } else if (this.matchType == MATCH_TYPE.REGEX) {
+        return this.columnMatcher.matcher(Bytes.toString(c)).matches();
       } else {
         throw new IOException("Invalid match type: " + this.matchType);
       }
@@ -107,8 +111,10 @@ public abstract class HAbstractScanner implements InternalScanner {
     }
   }
 
-  // Holds matchers for each column family 
-  protected TreeMap<Text, Vector<ColumnMatcher>> okCols;
+  // Holds matchers for each column family.  Its keyed by the byte [] hashcode
+  // which you can get by calling Bytes.mapKey.
+  private Map<Integer, Vector<ColumnMatcher>> okCols =
+    new HashMap<Integer, Vector<ColumnMatcher>>();
   
   // True when scanning is done
   protected volatile boolean scannerClosed = false;
@@ -120,14 +126,13 @@ public abstract class HAbstractScanner implements InternalScanner {
   private boolean multipleMatchers;
 
   /** Constructor for abstract base class */
-  HAbstractScanner(long timestamp, Text[] targetCols) throws IOException {
+  HAbstractScanner(long timestamp, byte [][] targetCols) throws IOException {
     this.timestamp = timestamp;
     this.wildcardMatch = false;
     this.multipleMatchers = false;
-    this.okCols = new TreeMap<Text, Vector<ColumnMatcher>>();
     for(int i = 0; i < targetCols.length; i++) {
-      Text family = HStoreKey.extractFamily(targetCols[i]).toText();
-      Vector<ColumnMatcher> matchers = okCols.get(family);
+      Integer key = HStoreKey.getFamilyMapKey(targetCols[i]);
+      Vector<ColumnMatcher> matchers = okCols.get(key);
       if (matchers == null) {
         matchers = new Vector<ColumnMatcher>();
       }
@@ -139,7 +144,7 @@ public abstract class HAbstractScanner implements InternalScanner {
       if (matchers.size() > 1) {
         this.multipleMatchers = true;
       }
-      okCols.put(family, matchers);
+      okCols.put(key, matchers);
     }
   }
 
@@ -154,14 +159,14 @@ public abstract class HAbstractScanner implements InternalScanner {
    *                 
    * @throws IOException
    */
-  protected boolean columnMatch(final Text column) throws IOException {
+  protected boolean columnMatch(final byte [] column) throws IOException {
     Vector<ColumnMatcher> matchers =
-      this.okCols.get(HStoreKey.extractFamily(column));
+      this.okCols.get(HStoreKey.getFamilyMapKey(column));
     if (matchers == null) {
       return false;
     }
     for(int m = 0; m < matchers.size(); m++) {
-      if(matchers.get(m).matches(column)) {
+      if (matchers.get(m).matches(column)) {
         return true;
       }
     }
@@ -178,10 +183,11 @@ public abstract class HAbstractScanner implements InternalScanner {
     return this.multipleMatchers;
   }
 
-  public abstract boolean next(HStoreKey key, SortedMap<Text, byte []> results)
+  public abstract boolean next(HStoreKey key,
+    SortedMap<byte [], byte []> results)
   throws IOException;
   
-  public Iterator<Entry<HStoreKey, SortedMap<Text, byte[]>>> iterator() {
+  public Iterator<Entry<HStoreKey, SortedMap<byte [], byte[]>>> iterator() {
     throw new UnsupportedOperationException("Unimplemented serverside. " +
       "next(HStoreKey, StortedMap(...) is more efficient");
   }

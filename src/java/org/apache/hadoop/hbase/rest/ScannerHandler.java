@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
@@ -178,7 +179,7 @@ public class ScannerHandler extends GenericHandler {
     
     // write the row key
     doElement(outputter, "name", 
-      org.apache.hadoop.hbase.util.Base64.encodeBytes(rowResult.getRow().getBytes()));
+      org.apache.hadoop.hbase.util.Base64.encodeBytes(rowResult.getRow()));
     
     outputColumnsXml(outputter, rowResult);
     outputter.endTag();
@@ -244,14 +245,14 @@ public class ScannerHandler extends GenericHandler {
     
     // get the list of columns we're supposed to interact with
     String[] raw_columns = request.getParameterValues(COLUMN);
-    Text [] columns = null;
+    byte [][] columns = null;
     
     if (raw_columns != null) {
-      columns = new Text [raw_columns.length];
+      columns = new byte [raw_columns.length][];
       for (int i = 0; i < raw_columns.length; i++) {
         // I think this decoding is redundant.
         columns[i] =
-          new Text(URLDecoder.decode(raw_columns[i], HConstants.UTF8_ENCODING));
+          Bytes.toBytes(URLDecoder.decode(raw_columns[i], HConstants.UTF8_ENCODING));
       }
     } else {
       // TODO: Need to put into the scanner all of the table's column
@@ -264,14 +265,14 @@ public class ScannerHandler extends GenericHandler {
     String raw_ts = request.getParameter(TIMESTAMP);
 
     // TODO: Are these decodings redundant?
-    Text startRow = request.getParameter(START_ROW) == null?
+    byte [] startRow = request.getParameter(START_ROW) == null?
       HConstants.EMPTY_START_ROW:
-      new Text(URLDecoder.decode(request.getParameter(START_ROW),
+      Bytes.toBytes(URLDecoder.decode(request.getParameter(START_ROW),
         HConstants.UTF8_ENCODING));
     // Empty start row is same value as empty end row.
-    Text endRow = request.getParameter(END_ROW) == null?
+    byte [] endRow = request.getParameter(END_ROW) == null?
       HConstants.EMPTY_START_ROW:
-      new Text(URLDecoder.decode(request.getParameter(END_ROW),
+      Bytes.toBytes(URLDecoder.decode(request.getParameter(END_ROW),
         HConstants.UTF8_ENCODING));
 
     Scanner scanner = (request.getParameter(END_ROW) == null)?

@@ -25,24 +25,24 @@ import java.util.NoSuchElementException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.io.Cell;
-
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
 /**
  * Provides administrative functions for HBase
@@ -50,11 +50,11 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 public class HBaseAdmin implements HConstants {
   protected final Log LOG = LogFactory.getLog(this.getClass().getName());
 
-  protected final HConnection connection;
-  protected final long pause;
-  protected final int numRetries;
-  protected volatile HMasterInterface master;
-  
+  private final HConnection connection;
+  private final long pause;
+  private final int numRetries;
+  private volatile HMasterInterface master;
+
   /**
    * Constructor
    * 
@@ -86,11 +86,31 @@ public class HBaseAdmin implements HConstants {
    * @return True if table exists already.
    * @throws MasterNotRunningException
    */
-  public boolean tableExists(final Text tableName) throws MasterNotRunningException {
+  public boolean tableExists(final String tableName)
+  throws MasterNotRunningException {
+    return tableExists(Bytes.toBytes(tableName));
+  }
+
+  /**
+   * @param tableName Table to check.
+   * @return True if table exists already.
+   * @throws MasterNotRunningException
+   */
+  public boolean tableExists(final Text tableName)
+  throws MasterNotRunningException {
+    return tableExists(tableName.getBytes());
+  }
+  
+  /**
+   * @param tableName Table to check.
+   * @return True if table exists already.
+   * @throws MasterNotRunningException
+   */
+  public boolean tableExists(final byte [] tableName)
+  throws MasterNotRunningException {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    
     return connection.tableExists(tableName);
   }
 
@@ -122,8 +142,8 @@ public class HBaseAdmin implements HConstants {
    */
   public void createTable(HTableDescriptor desc)
   throws IOException {
+    HTableDescriptor.isLegalTableName(desc.getName());
     createTableAsync(desc);
-
     for (int tries = 0; tries < numRetries; tries++) {
       try {
         // Wait for new table to come on-line
@@ -149,7 +169,7 @@ public class HBaseAdmin implements HConstants {
    * 
    * @param desc table descriptor for table
    * 
-   * @throws IllegalArgumentException if the table name is reserved
+   * @throws IllegalArgumentException Bad table name.
    * @throws MasterNotRunningException if master is not running
    * @throws TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence
@@ -161,12 +181,22 @@ public class HBaseAdmin implements HConstants {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    checkReservedTableName(desc.getName());
+    HTableDescriptor.isLegalTableName(desc.getName());
     try {
       this.master.createTable(desc);
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
+  }
+  
+  /**
+   * Deletes a table
+   * 
+   * @param tableName name of table to delete
+   * @throws IOException
+   */
+  public void deleteTable(final Text tableName) throws IOException {
+    deleteTable(tableName.getBytes());
   }
 
   /**
@@ -175,14 +205,12 @@ public class HBaseAdmin implements HConstants {
    * @param tableName name of table to delete
    * @throws IOException
    */
-  public void deleteTable(Text tableName) throws IOException {
+  public void deleteTable(final byte [] tableName) throws IOException {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    
-    checkReservedTableName(tableName);
+    HTableDescriptor.isLegalTableName(tableName);
     HRegionLocation firstMetaServer = getFirstMetaServerForTable(tableName);
-
     try {
       this.master.deleteTable(tableName);
     } catch (RemoteException e) {
@@ -204,12 +232,12 @@ public class HBaseAdmin implements HConstants {
           break;
         }
         boolean found = false;
-        for (Map.Entry<Text, Cell> e: values.entrySet()) {
-          if (e.getKey().equals(COL_REGIONINFO)) {
+        for (Map.Entry<byte [], Cell> e: values.entrySet()) {
+          if (Bytes.equals(e.getKey(), COL_REGIONINFO)) {
             info = (HRegionInfo) Writables.getWritable(
               e.getValue().getValue(), info);
             
-            if (info.getTableDesc().getName().equals(tableName)) {
+            if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
               found = true;
             }
           }
@@ -251,12 +279,21 @@ public class HBaseAdmin implements HConstants {
    * @param tableName name of the table
    * @throws IOException
    */
-  public void enableTable(Text tableName) throws IOException {
+  public void enableTable(final Text tableName) throws IOException {
+    enableTable(tableName.getBytes());
+  }
+  
+  /**
+   * Brings a table on-line (enables it)
+   * 
+   * @param tableName name of the table
+   * @throws IOException
+   */
+  public void enableTable(final byte [] tableName) throws IOException {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    
-    checkReservedTableName(tableName);
+    HTableDescriptor.isLegalTableName(tableName);
     HRegionLocation firstMetaServer = getFirstMetaServerForTable(tableName);
     
     try {
@@ -291,8 +328,8 @@ public class HBaseAdmin implements HConstants {
             break;
           }
           valuesfound += 1;
-          for (Map.Entry<Text, Cell> e: values.entrySet()) {
-            if (e.getKey().equals(COL_REGIONINFO)) {
+          for (Map.Entry<byte [], Cell> e: values.entrySet()) {
+            if (Bytes.equals(e.getKey(), COL_REGIONINFO)) {
               info = (HRegionInfo) Writables.getWritable(
                 e.getValue().getValue(), info);
             
@@ -351,17 +388,25 @@ public class HBaseAdmin implements HConstants {
    * @param tableName name of table
    * @throws IOException
    */
-  public void disableTable(Text tableName) throws IOException {
+  public void disableTable(final Text tableName) throws IOException {
+    disableTable(tableName.getBytes());
+  }
+  
+  /**
+   * Disables a table (takes it off-line) If it is being served, the master
+   * will tell the servers to stop serving it.
+   * 
+   * @param tableName name of table
+   * @throws IOException
+   */
+  public void disableTable(final byte [] tableName) throws IOException {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    
-    checkReservedTableName(tableName);
+    HTableDescriptor.isLegalTableName(tableName);
     HRegionLocation firstMetaServer = getFirstMetaServerForTable(tableName);
-
     try {
       this.master.disableTable(tableName);
-      
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
@@ -379,7 +424,6 @@ public class HBaseAdmin implements HConstants {
         scannerId =
           server.openScanner(firstMetaServer.getRegionInfo().getRegionName(),
             COL_REGIONINFO_ARRAY, tableName, HConstants.LATEST_TIMESTAMP, null);
-        
         boolean disabled = false;
         while (true) {
           RowResult values = server.next(scannerId);
@@ -390,8 +434,8 @@ public class HBaseAdmin implements HConstants {
             break;
           }
           valuesfound += 1;
-          for (Map.Entry<Text, Cell> e: values.entrySet()) {
-            if (e.getKey().equals(COL_REGIONINFO)) {
+          for (Map.Entry<byte [], Cell> e: values.entrySet()) {
+            if (Bytes.equals(e.getKey(), COL_REGIONINFO)) {
               info = (HRegionInfo) Writables.getWritable(
                 e.getValue().getValue(), info);
             
@@ -449,16 +493,26 @@ public class HBaseAdmin implements HConstants {
    * @param column column descriptor of column to be added
    * @throws IOException
    */
-  public void addColumn(Text tableName, HColumnDescriptor column)
+  public void addColumn(final Text tableName, HColumnDescriptor column)
+  throws IOException {
+    addColumn(tableName.getBytes(), column);
+  }
+  
+  /**
+   * Add a column to an existing table
+   * 
+   * @param tableName name of the table to add column to
+   * @param column column descriptor of column to be added
+   * @throws IOException
+   */
+  public void addColumn(final byte [] tableName, HColumnDescriptor column)
   throws IOException {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    
-    checkReservedTableName(tableName);
+    HTableDescriptor.isLegalTableName(tableName);
     try {
       this.master.addColumn(tableName, column);
-      
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
@@ -471,16 +525,26 @@ public class HBaseAdmin implements HConstants {
    * @param columnName name of column to be deleted
    * @throws IOException
    */
-  public void deleteColumn(Text tableName, Text columnName)
+  public void deleteColumn(final Text tableName, final Text columnName)
+  throws IOException {
+    deleteColumn(tableName.getBytes(), columnName.getBytes());
+  }
+  
+  /**
+   * Delete a column from a table
+   * 
+   * @param tableName name of table
+   * @param columnName name of column to be deleted
+   * @throws IOException
+   */
+  public void deleteColumn(final byte [] tableName, final byte [] columnName)
   throws IOException {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    
-    checkReservedTableName(tableName);
+    HTableDescriptor.isLegalTableName(tableName);
     try {
       this.master.deleteColumn(tableName, columnName);
-      
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
@@ -494,17 +558,29 @@ public class HBaseAdmin implements HConstants {
    * @param descriptor new column descriptor to use
    * @throws IOException
    */
-  public void modifyColumn(Text tableName, Text columnName, 
+  public void modifyColumn(final Text tableName, final Text columnName, 
+      HColumnDescriptor descriptor)
+  throws IOException {
+    modifyColumn(tableName.getBytes(), columnName.getBytes(), descriptor);
+  }
+  
+  /**
+   * Modify an existing column family on a table
+   * 
+   * @param tableName name of table
+   * @param columnName name of column to be modified
+   * @param descriptor new column descriptor to use
+   * @throws IOException
+   */
+  public void modifyColumn(final byte [] tableName, final byte [] columnName, 
     HColumnDescriptor descriptor)
   throws IOException {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    
-    checkReservedTableName(tableName);
+    HTableDescriptor.isLegalTableName(tableName);
     try {
       this.master.modifyColumn(tableName, columnName, descriptor);
-      
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
@@ -519,7 +595,6 @@ public class HBaseAdmin implements HConstants {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    
     try {
       this.master.shutdown();
     } catch (RemoteException e) {
@@ -529,28 +604,12 @@ public class HBaseAdmin implements HConstants {
     }
   }
 
-  /*
-   * Verifies that the specified table name is not a reserved name
-   * @param tableName - the table name to be checked
-   * @throws IllegalArgumentException - if the table name is reserved
-   */
-  protected void checkReservedTableName(Text tableName) {
-    if (tableName == null || tableName.getLength() <= 0) {
-      throw new IllegalArgumentException("Null or empty table name");
-    }
-    if(tableName.charAt(0) == '-' ||
-        tableName.charAt(0) == '.' ||
-        tableName.find(",") != -1) {
-      throw new IllegalArgumentException(tableName + " is a reserved table name");
-    }
-  }
-  
-  private HRegionLocation getFirstMetaServerForTable(Text tableName)
+  private HRegionLocation getFirstMetaServerForTable(final byte [] tableName)
   throws IOException {
-    Text tableKey = new Text(tableName.toString() + ",,99999999999999");
-    return connection.locateRegion(META_TABLE_NAME, tableKey);
+    return connection.locateRegion(META_TABLE_NAME,
+      HRegionInfo.createRegionName(tableName, null, NINES));
   }
-  
+
   /**
    * Check to see if HBase is running. Throw an exception if not.
    *

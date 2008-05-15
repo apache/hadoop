@@ -23,22 +23,22 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.InputSplit;
 
 /**
  * A table split corresponds to a key range [low, high)
  */
 public class TableSplit implements InputSplit {
-  private Text m_tableName;
-  private Text m_startRow;
-  private Text m_endRow;
+  private byte [] m_tableName;
+  private byte [] m_startRow;
+  private byte [] m_endRow;
 
   /** default constructor */
   public TableSplit() {
-    m_tableName = new Text();
-    m_startRow = new Text();
-    m_endRow = new Text();
+    this(HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY,
+      HConstants.EMPTY_BYTE_ARRAY);
   }
 
   /**
@@ -47,25 +47,24 @@ public class TableSplit implements InputSplit {
    * @param startRow
    * @param endRow
    */
-  public TableSplit(Text tableName, Text startRow, Text endRow) {
-    this();
-    m_tableName.set(tableName);
-    m_startRow.set(startRow);
-    m_endRow.set(endRow);
+  public TableSplit(byte [] tableName, byte [] startRow, byte [] endRow) {
+    m_tableName = tableName;
+    m_startRow = startRow;
+    m_endRow = endRow;
   }
 
   /** @return table name */
-  public Text getTableName() {
+  public byte [] getTableName() {
     return m_tableName;
   }
 
   /** @return starting row key */
-  public Text getStartRow() {
+  public byte [] getStartRow() {
     return m_startRow;
   }
 
   /** @return end row key */
-  public Text getEndRow() {
+  public byte [] getEndRow() {
     return m_endRow;
   }
 
@@ -83,21 +82,22 @@ public class TableSplit implements InputSplit {
 
   /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
-    m_tableName.readFields(in);
-    m_startRow.readFields(in);
-    m_endRow.readFields(in);
+    this.m_tableName = Bytes.readByteArray(in);
+    this.m_startRow = Bytes.readByteArray(in);
+    this.m_endRow = Bytes.readByteArray(in);
   }
 
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
-    m_tableName.write(out);
-    m_startRow.write(out);
-    m_endRow.write(out);
+    Bytes.writeByteArray(out, this.m_tableName);
+    Bytes.writeByteArray(out, this.m_startRow);
+    Bytes.writeByteArray(out, this.m_endRow);
   }
 
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return m_tableName +"," + m_startRow + "," + m_endRow;
+    return Bytes.toString(m_tableName) +"," + Bytes.toString(m_startRow) +
+      "," + Bytes.toString(m_endRow);
   }
 }

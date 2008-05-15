@@ -27,7 +27,6 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.log4j.Logger;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Basic stand-alone testing of HRegion.
@@ -72,13 +72,13 @@ implements RegionUnavailableListener {
   private static final int FIRST_ROW = 1;
   private static final int N_ROWS = 1000000;
   private static final int NUM_VALS = 1000;
-  private static final Text CONTENTS_BASIC = new Text("contents:basic");
+  private static final byte [] CONTENTS_BASIC = Bytes.toBytes("contents:basic");
   private static final String CONTENTSTR = "contentstr";
   private static final String ANCHORNUM = "anchor:anchornum-";
   private static final String ANCHORSTR = "anchorstr";
-  private static final Text CONTENTS_BODY = new Text("contents:body");
-  private static final Text CONTENTS_FIRSTCOL = new Text("contents:firstcol");
-  private static final Text ANCHOR_SECONDCOL = new Text("anchor:secondcol");
+  private static final byte [] CONTENTS_BODY = Bytes.toBytes("contents:body");
+  private static final byte [] CONTENTS_FIRSTCOL = Bytes.toBytes("contents:firstcol");
+  private static final byte [] ANCHOR_SECONDCOL = Bytes.toBytes("anchor:secondcol");
   
   private MiniDFSCluster cluster = null;
   private HLog log = null;
@@ -126,10 +126,10 @@ implements RegionUnavailableListener {
 
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
       BatchUpdate batchUpdate = 
-        new BatchUpdate(new Text("row_" + k), System.currentTimeMillis());
+        new BatchUpdate(Bytes.toBytes("row_" + k), System.currentTimeMillis());
       batchUpdate.put(CONTENTS_BASIC,
           (CONTENTSTR + k).getBytes(HConstants.UTF8_ENCODING));
-      batchUpdate.put(new Text(ANCHORNUM + k),
+      batchUpdate.put(Bytes.toBytes(ANCHORNUM + k),
           (ANCHORSTR + k).getBytes(HConstants.UTF8_ENCODING));
       region.commit(batchUpdate);
     }
@@ -149,9 +149,9 @@ implements RegionUnavailableListener {
 
     startTime = System.currentTimeMillis();
 
-    Text collabel = null;
+    byte [] collabel = null;
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
-      Text rowlabel = new Text("row_" + k);
+      byte [] rowlabel = Bytes.toBytes("row_" + k);
 
       byte [] bodydata = region.get(rowlabel, CONTENTS_BASIC).getValue();
       assertNotNull(bodydata);
@@ -160,7 +160,7 @@ implements RegionUnavailableListener {
       assertEquals("Incorrect value for key: (" + rowlabel + "," + CONTENTS_BASIC
           + "), expected: '" + teststr + "' got: '" + bodystr + "'",
           bodystr, teststr);
-      collabel = new Text(ANCHORNUM + k);
+      collabel = Bytes.toBytes(ANCHORNUM + k);
       bodydata = region.get(rowlabel, collabel).getValue();
       bodystr = new String(bodydata, HConstants.UTF8_ENCODING).trim();
       teststr = ANCHORSTR + k;
@@ -180,9 +180,9 @@ implements RegionUnavailableListener {
     boolean exceptionThrown = false;
     exceptionThrown = false;
     try {
-      BatchUpdate batchUpdate = new BatchUpdate(new Text("Some old key"));
+      BatchUpdate batchUpdate = new BatchUpdate(Bytes.toBytes("Some old key"));
       String unregisteredColName = "FamilyGroup:FamilyLabel";
-      batchUpdate.put(new Text(unregisteredColName),
+      batchUpdate.put(Bytes.toBytes(unregisteredColName),
         unregisteredColName.getBytes(HConstants.UTF8_ENCODING));
       region.commit(batchUpdate);
     } catch (IOException e) {
@@ -205,11 +205,11 @@ implements RegionUnavailableListener {
       threads.add(new Thread(Integer.toString(i)) {
         @Override
         public void run() {
-          long [] lockids = new long[lockCount];
+          Integer [] lockids = new Integer[lockCount];
           // Get locks.
           for (int i = 0; i < lockCount; i++) {
             try {
-              Text rowid = new Text(Integer.toString(i));
+              byte [] rowid = Bytes.toBytes(Integer.toString(i));
               lockids[i] = r.obtainRowLock(rowid);
               rowid.equals(r.getRowFromLock(lockids[i]));
               LOG.debug(getName() + " locked " + rowid.toString());
@@ -222,7 +222,7 @@ implements RegionUnavailableListener {
           
           // Abort outstanding locks.
           for (int i = lockCount - 1; i >= 0; i--) {
-            r.releaseRowLock(r.getRowFromLock(lockids[i]));
+            r.releaseRowLock(lockids[i]);
             LOG.debug(getName() + " unlocked " + i);
           }
           LOG.debug(getName() + " released " +
@@ -252,7 +252,7 @@ implements RegionUnavailableListener {
   // Test scanners. Writes contents:firstcol and anchor:secondcol
   
   private void scan() throws IOException {
-    Text cols[] = new Text[] {
+    byte [] cols[] = {
         CONTENTS_FIRSTCOL,
         ANCHOR_SECONDCOL
     };
@@ -271,7 +271,7 @@ implements RegionUnavailableListener {
       String kLabel = String.format("%1$03d", k);
 
       BatchUpdate batchUpdate = 
-        new BatchUpdate(new Text("row_vals1_" + kLabel), 
+        new BatchUpdate(Bytes.toBytes("row_vals1_" + kLabel), 
           System.currentTimeMillis());
       batchUpdate.put(cols[0], vals1[k].getBytes(HConstants.UTF8_ENCODING));
       batchUpdate.put(cols[1], vals1[k].getBytes(HConstants.UTF8_ENCODING));
@@ -287,20 +287,21 @@ implements RegionUnavailableListener {
     startTime = System.currentTimeMillis();
 
     InternalScanner s =
-      r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
+      r.getScanner(cols, HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
     int numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
+      TreeMap<byte [], byte []> curVals =
+        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
-          Text col = it.next();
+        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
+          byte [] col = it.next();
           byte [] val = curVals.get(col);
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for(int j = 0; j < cols.length; j++) {
-            if(col.compareTo(cols[j]) == 0) {
+            if (Bytes.compareTo(col, cols[j]) == 0) {
               assertEquals("Error at:" + curKey.getRow() + "/"
                   + curKey.getTimestamp()
                   + ", Value for " + col + " should be: " + k
@@ -334,20 +335,22 @@ implements RegionUnavailableListener {
     
     startTime = System.currentTimeMillis();
     
-    s = r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
+    s = r.getScanner(cols, HConstants.EMPTY_START_ROW,
+      System.currentTimeMillis(), null);
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
+      TreeMap<byte [], byte []> curVals =
+        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
-          Text col = it.next();
+        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
+          byte [] col = it.next();
           byte [] val = curVals.get(col);
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for(int j = 0; j < cols.length; j++) {
-            if(col.compareTo(cols[j]) == 0) {
+            if (Bytes.compareTo(col, cols[j]) == 0) {
               assertEquals("Error at:" + curKey.getRow() + "/"
                   + curKey.getTimestamp()
                   + ", Value for " + col + " should be: " + k
@@ -376,7 +379,7 @@ implements RegionUnavailableListener {
       String kLabel = String.format("%1$03d", k);
       
       BatchUpdate batchUpdate = 
-        new BatchUpdate(new Text("row_vals1_" + kLabel), 
+        new BatchUpdate(Bytes.toBytes("row_vals1_" + kLabel), 
           System.currentTimeMillis());
       batchUpdate.put(cols[0], vals1[k].getBytes(HConstants.UTF8_ENCODING));
       batchUpdate.put(cols[1], vals1[k].getBytes(HConstants.UTF8_ENCODING));
@@ -391,20 +394,22 @@ implements RegionUnavailableListener {
     
     startTime = System.currentTimeMillis();
 
-    s = r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
+    s = r.getScanner(cols, HConstants.EMPTY_START_ROW,
+        System.currentTimeMillis(), null);
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
+      TreeMap<byte [], byte []> curVals =
+        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
-          Text col = it.next();
+        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
+          byte [] col = it.next();
           byte [] val = curVals.get(col);
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for(int j = 0; j < cols.length; j++) {
-            if(col.compareTo(cols[j]) == 0) {
+            if(Bytes.compareTo(col, cols[j]) == 0) {
               assertEquals("Error at:" + curKey.getRow() + "/"
                   + curKey.getTimestamp()
                   + ", Value for " + col + " should be: " + k
@@ -438,20 +443,21 @@ implements RegionUnavailableListener {
     
     startTime = System.currentTimeMillis();
     
-    s = r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
+    s = r.getScanner(cols, HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
+      TreeMap<byte [], byte []> curVals =
+        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
-          Text col = it.next();
+        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
+          byte [] col = it.next();
           byte [] val = curVals.get(col);
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for (int j = 0; j < cols.length; j++) {
-            if (col.compareTo(cols[j]) == 0) {
+            if (Bytes.compareTo(col, cols[j]) == 0) {
               assertEquals("Value for " + col + " should be: " + k
                   + ", but was fetched as: " + curval, curval, k);
               numFetched++;
@@ -474,22 +480,23 @@ implements RegionUnavailableListener {
 
     startTime = System.currentTimeMillis();
     
-    s = r.getScanner(cols, new Text("row_vals1_500"),
+    s = r.getScanner(cols, Bytes.toBytes("row_vals1_500"),
         System.currentTimeMillis(), null);
     
     numFetched = 0;
     try {
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
+      TreeMap<byte [], byte []> curVals =
+        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
       int k = 500;
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
-          Text col = it.next();
+        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
+          byte [] col = it.next();
           byte [] val = curVals.get(col);
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
           for (int j = 0; j < cols.length; j++) {
-            if (col.compareTo(cols[j]) == 0) {
+            if (Bytes.compareTo(col, cols[j]) == 0) {
               assertEquals("Value for " + col + " should be: " + k
                   + ", but was fetched as: " + curval, curval, k);
               numFetched++;
@@ -534,7 +541,7 @@ implements RegionUnavailableListener {
 
       // Write to the HRegion
       BatchUpdate batchUpdate = 
-        new BatchUpdate(new Text("row_" + k), System.currentTimeMillis());
+        new BatchUpdate(Bytes.toBytes("row_" + k), System.currentTimeMillis());
       batchUpdate.put(CONTENTS_BODY,
           buf1.toString().getBytes(HConstants.UTF8_ENCODING));
       region.commit(batchUpdate);
@@ -581,7 +588,7 @@ implements RegionUnavailableListener {
   // NOTE: This test depends on testBatchWrite succeeding
   private void splitAndMerge() throws IOException {
     Path oldRegionPath = r.getRegionDir();
-    Text midKey = r.compactStores();
+    byte [] midKey = r.compactStores();
     assertNotNull(midKey);
     long startTime = System.currentTimeMillis();
     HRegion subregions[] = r.splitRegion(this, midKey);
@@ -615,14 +622,14 @@ implements RegionUnavailableListener {
   /**
    * {@inheritDoc}
    */
-  public void closing(@SuppressWarnings("unused") final Text regionName) {
+  public void closing(@SuppressWarnings("unused") final byte [] regionName) {
     // We don't use this here. It is only for the HRegionServer
   }
   
   /**
    * {@inheritDoc}
    */
-  public void closed(@SuppressWarnings("unused") final Text regionName) {
+  public void closed(@SuppressWarnings("unused") final byte [] regionName) {
     // We don't use this here. It is only for the HRegionServer
   }
   
@@ -632,39 +639,41 @@ implements RegionUnavailableListener {
 
     // First verify the data written by testBasic()
 
-    Text[] cols = new Text[] {
-        new Text(ANCHORNUM + "[0-9]+"),
-        new Text(CONTENTS_BASIC)
+    byte [][] cols = {
+        Bytes.toBytes(ANCHORNUM + "[0-9]+"),
+        CONTENTS_BASIC
     };
     
     long startTime = System.currentTimeMillis();
     
     InternalScanner s =
-      r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
+      r.getScanner(cols, HConstants.EMPTY_START_ROW,
+          System.currentTimeMillis(), null);
 
     try {
 
       int contentsFetched = 0;
       int anchorFetched = 0;
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
+      TreeMap<byte [], byte []> curVals =
+        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
-          Text col = it.next();
+        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
+          byte [] col = it.next();
           byte [] val = curVals.get(col);
-          String curval = new String(val, HConstants.UTF8_ENCODING).trim();
-
-          if(col.compareTo(CONTENTS_BASIC) == 0) {
+          String curval = Bytes.toString(val);
+          if(Bytes.compareTo(col, CONTENTS_BASIC) == 0) {
             assertTrue("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
                 + ", Value for " + col + " should start with: " + CONTENTSTR
                 + ", but was fetched as: " + curval,
                 curval.startsWith(CONTENTSTR));
             contentsFetched++;
             
-          } else if(col.toString().startsWith(ANCHORNUM)) {
+          } else if (Bytes.toString(col).startsWith(ANCHORNUM)) {
             assertTrue("Error at:" + curKey.getRow() + "/" + curKey.getTimestamp()
-                + ", Value for " + col + " should start with: " + ANCHORSTR
+                + ", Value for " + Bytes.toString(col) +
+                " should start with: " + ANCHORSTR
                 + ", but was fetched as: " + curval,
                 curval.startsWith(ANCHORSTR));
             anchorFetched++;
@@ -689,28 +698,27 @@ implements RegionUnavailableListener {
     
     // Verify testScan data
     
-    cols = new Text[] {
-        CONTENTS_FIRSTCOL,
-        ANCHOR_SECONDCOL
-    };
+    cols = new byte [][] {CONTENTS_FIRSTCOL, ANCHOR_SECONDCOL};
     
     startTime = System.currentTimeMillis();
 
-    s = r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
+    s = r.getScanner(cols, HConstants.EMPTY_START_ROW,
+      System.currentTimeMillis(), null);
     try {
       int numFetched = 0;
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
+      TreeMap<byte [], byte []> curVals =
+        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
       int k = 0;
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
-          Text col = it.next();
+        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
+          byte [] col = it.next();
           byte [] val = curVals.get(col);
           int curval =
             Integer.parseInt(new String(val, HConstants.UTF8_ENCODING).trim());
 
           for (int j = 0; j < cols.length; j++) {
-            if (col.compareTo(cols[j]) == 0) {
+            if (Bytes.compareTo(col, cols[j]) == 0) {
               assertEquals("Value for " + col + " should be: " + k
                   + ", but was fetched as: " + curval, curval, k);
               numFetched++;
@@ -730,56 +738,23 @@ implements RegionUnavailableListener {
       s.close();
     }
     
-    // Verify testBatchWrite data
-
-//    if(StaticTestEnvironment.debugging) {
-//      startTime = System.currentTimeMillis();
-//      s = r.getScanner(new Text[] { CONTENTS_BODY }, new Text(),
-//          System.currentTimeMillis(), null);
-//      
-//      try {
-//        int numFetched = 0;
-//        HStoreKey curKey = new HStoreKey();
-//        TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
-//        int k = 0;
-//        while(s.next(curKey, curVals)) {
-//          for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
-//            Text col = it.next();
-//            byte [] val = curVals.get(col);
-//            assertTrue(col.compareTo(CONTENTS_BODY) == 0);
-//            assertNotNull(val);
-//            numFetched++;
-//          }
-//          curVals.clear();
-//          k++;
-//        }
-//        assertEquals("Inserted " + N_ROWS + " values, but fetched " + numFetched, N_ROWS, numFetched);
-//
-//        LOG.info("Scanned " + N_ROWS
-//            + " rows from disk. Elapsed time: "
-//            + ((System.currentTimeMillis() - startTime) / 1000.0));
-//        
-//      } finally {
-//        s.close();
-//      }
-//    }
-    
     // Test a scanner which only specifies the column family name
     
-    cols = new Text[] {
-        new Text("anchor:")
+    cols = new byte [][] {
+        Bytes.toBytes("anchor:")
     };
     
     startTime = System.currentTimeMillis();
     
-    s = r.getScanner(cols, new Text(), System.currentTimeMillis(), null);
+    s = r.getScanner(cols, HConstants.EMPTY_START_ROW, System.currentTimeMillis(), null);
 
     try {
       int fetched = 0;
       HStoreKey curKey = new HStoreKey();
-      TreeMap<Text, byte []> curVals = new TreeMap<Text, byte []>();
+      TreeMap<byte [], byte []> curVals =
+        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
       while(s.next(curKey, curVals)) {
-        for(Iterator<Text> it = curVals.keySet().iterator(); it.hasNext(); ) {
+        for(Iterator<byte []> it = curVals.keySet().iterator(); it.hasNext(); ) {
           it.next();
           fetched++;
         }

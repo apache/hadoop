@@ -110,7 +110,7 @@ public abstract class SchemaModificationCommand extends BasicCommand {
 
     column = appendDelimiter(column);
 
-    HColumnDescriptor columnDesc = new HColumnDescriptor(new Text(column),
+    HColumnDescriptor columnDesc = new HColumnDescriptor(column.getBytes(),
         maxVersions, compression, inMemory, blockCacheEnabled,
         maxLength, timeToLive, bloomFilterDesc);
 

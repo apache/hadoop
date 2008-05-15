@@ -3,12 +3,13 @@
   import="org.apache.hadoop.io.Text"
   import="org.apache.hadoop.hbase.regionserver.HRegionServer"
   import="org.apache.hadoop.hbase.regionserver.HRegion"
+  import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HServerInfo"
   import="org.apache.hadoop.hbase.HRegionInfo" %><%
   HRegionServer regionServer = (HRegionServer)getServletContext().getAttribute(HRegionServer.REGIONSERVER);
   HServerInfo serverInfo = regionServer.getServerInfo();
-  Map<Text, HRegion> onlineRegions = regionServer.getOnlineRegions();
+  Collection<HRegion> onlineRegions = regionServer.getOnlineRegions();
   int interval = regionServer.getConfiguration().getInt("hbase.regionserver.msginterval", 3000)/1000;
 %><?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
@@ -37,9 +38,9 @@
 <% if (onlineRegions != null && onlineRegions.size() > 0) { %>
 <table>
 <tr><th>Region Name</th><th>Encoded Name</th><th>Start Key</th><th>End Key</th></tr>
-<%   for (HRegion r: onlineRegions.values()) { %>
-<tr><td><%= r.getRegionName().toString() %></td><td><%= r.getRegionInfo().getEncodedName() %></td>
-    <td><%= r.getStartKey().toString() %></td><td><%= r.getEndKey().toString() %></td></tr>
+<%   for (HRegion r: onlineRegions) { %>
+<tr><td><%= Bytes.toString(r.getRegionName()) %></td><td><%= r.getRegionInfo().getEncodedName() %></td>
+    <td><%= Bytes.toString(r.getStartKey()) %></td><td><%= Bytes.toString(r.getEndKey()) %></td></tr>
 <%   } %>
 </table>
 <p>Region names are made of the containing table's name, a comma,

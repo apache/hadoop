@@ -15,9 +15,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException; 
+import java.io.IOException;
 import java.util.List;
-import org.apache.hadoop.io.Text;
+
+import org.apache.hadoop.hbase.util.Bytes;
 
 /** 
  * Exception thrown by HTable methods when an attempt to do something (like
@@ -33,23 +34,25 @@ public class RetriesExhaustedException extends IOException {
    * @param numTries The number of tries we made
    * @param exceptions List of exceptions that failed before giving up
    */ 
-  public RetriesExhaustedException(String serverName, Text regionName, Text row,
+  public RetriesExhaustedException(String serverName, final byte [] regionName,
+      final byte []  row,
       int numTries, List<Throwable> exceptions) {
     super(getMessage(serverName, regionName, row, numTries, exceptions));
   }
   
-  private static String getMessage(String serverName, Text regionName, Text row,
+
+  private static String getMessage(String serverName, final byte [] regionName,
+      final byte [] row,
       int numTries, List<Throwable> exceptions) {
     StringBuilder buffer = new StringBuilder("Trying to contact region server ");
     buffer.append(serverName);
     buffer.append(" for region ");
-    buffer.append(regionName);
+    buffer.append(Bytes.toString(regionName));
     buffer.append(", row '");
-    buffer.append(row);
+    buffer.append(Bytes.toString(row));
     buffer.append("', but failed after ");
     buffer.append(numTries + 1);
     buffer.append(" attempts.\nExceptions:\n");
-
     for (Throwable t : exceptions) {
       buffer.append(t.toString());
       buffer.append("\n");

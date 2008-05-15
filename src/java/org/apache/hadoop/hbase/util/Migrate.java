@@ -44,8 +44,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import org.apache.hadoop.io.Text;
-
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -231,7 +229,7 @@ public class Migrate extends Configured implements Tool {
       // find root region
 
       String rootRegion = OLD_PREFIX +
-        HRegionInfo.rootRegionInfo.getEncodedName();
+        HRegionInfo.ROOT_REGIONINFO.getEncodedName();
 
       if (!fs.exists(new Path(rootdir, rootRegion))) {
         throw new IOException("Cannot find root region " + rootRegion);
@@ -264,7 +262,7 @@ public class Migrate extends Configured implements Tool {
   
   private void checkNewRootRegionDirExists() throws IOException {
     Path rootRegionDir =
-      HRegion.getRegionDir(rootdir, HRegionInfo.rootRegionInfo);
+      HRegion.getRegionDir(rootdir, HRegionInfo.ROOT_REGIONINFO);
     newRootRegion = fs.exists(rootRegionDir);
     migrationNeeded = !newRootRegion;
   }
@@ -340,8 +338,8 @@ public class Migrate extends Configured implements Tool {
     }
   }
   
-  void migrateRegionDir(Text tableName, String oldPath)throws IOException {
-
+  void migrateRegionDir(final byte [] tableName, String oldPath)
+  throws IOException {
     // Create directory where table will live
 
     Path tableDir = new Path(rootdir, tableName.toString());

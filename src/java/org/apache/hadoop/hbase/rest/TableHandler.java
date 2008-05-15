@@ -22,10 +22,11 @@ package org.apache.hadoop.hbase.rest;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLDecoder;
-import java.util.HashMap;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -33,17 +34,16 @@ import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.BatchUpdate;
-
-import org.mortbay.servlet.MultiPartResponse;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.Text;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -135,9 +135,9 @@ public class TableHandler extends GenericHandler {
       // They want full row returned. 
 
       // Presumption is that this.table has already been focused on target table.
-      Map<Text, Cell> result = timestampStr == null ? 
-        table.getRow(new Text(row)) 
-        : table.getRow(new Text(row), Long.parseLong(timestampStr));
+      Map<byte [], Cell> result = timestampStr == null ? 
+        table.getRow(Bytes.toBytes(row)) 
+        : table.getRow(Bytes.toBytes(row), Long.parseLong(timestampStr));
         
       if (result == null || result.size() == 0) {
         doNotFound(response, "Row not found!");
@@ -153,7 +153,7 @@ public class TableHandler extends GenericHandler {
         }
       }
     } else {
-      Map<Text, Cell> prefiltered_result = table.getRow(new Text(row));
+      Map<byte [], Cell> prefiltered_result = table.getRow(Bytes.toBytes(row));
     
       if (prefiltered_result == null || prefiltered_result.size() == 0) {
         doNotFound(response, "Row not found!");
@@ -166,16 +166,14 @@ public class TableHandler extends GenericHandler {
         }
   
         // output map that will contain the filtered results
-        Map<Text, Cell> m = new HashMap<Text, Cell>();
+        Map<byte [], Cell> m =
+          new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
 
         // get an array of all the columns retrieved
-        Text[] columns_retrieved = 
-          prefiltered_result.keySet().toArray(
-            new Text[prefiltered_result.keySet().size()]);
+        Set<byte []> columns_retrieved = prefiltered_result.keySet();
 
         // copy over those cells with requested column names
-        for(int i = 0; i < columns_retrieved.length; i++){
-          Text current_column = (Text)columns_retrieved[i];
+        for(byte [] current_column: columns_retrieved) {
           if(requested_columns_set.contains(current_column.toString())){
             m.put(current_column, prefiltered_result.get(current_column));            
           }
@@ -201,7 +199,7 @@ public class TableHandler extends GenericHandler {
    * @throws IOException
    */
   private void outputRowXml(final HttpServletResponse response,
-      final Map<Text, Cell> result)
+      final Map<byte [], Cell> result)
   throws IOException {
     setResponseHeader(response, result.size() > 0? 200: 204,
         ContentType.XML.toString());
@@ -349,7 +347,7 @@ public class TableHandler extends GenericHandler {
     final HttpServletResponse response)
   throws IOException {
     // Presumption is that this.table has already been focused on target table.
-    Text [] startKeys = table.getStartKeys();
+    byte [][] startKeys = table.getStartKeys();
     // Presumption is that this.table has already been set against target table
     switch (ContentType.getContentType(request.getHeader(ACCEPT))) {
       case XML:
@@ -410,18 +408,16 @@ public class TableHandler extends GenericHandler {
         outputter.startTag("table");
         doElement(outputter, "name", descriptor.getName().toString());
         outputter.startTag("columnfamilies");
-        for (Map.Entry<Text, HColumnDescriptor> e:
-            descriptor.getFamilies().entrySet()) {
+        for (HColumnDescriptor e: descriptor.getFamilies()) {
           outputter.startTag("columnfamily");
-          doElement(outputter, "name", e.getKey().toString());
-          HColumnDescriptor hcd = e.getValue();
-          doElement(outputter, "compression", hcd.getCompression().toString());
+          doElement(outputter, "name", Bytes.toString(e.getName()));
+          doElement(outputter, "compression", e.getCompression().toString());
           doElement(outputter, "bloomfilter",
-            hcd.getBloomFilter() == null? "NONE": hcd.getBloomFilter().toString());
+            e.getBloomFilter() == null? "NONE": e.getBloomFilter().toString());
           doElement(outputter, "max-versions",
-            Integer.toString(hcd.getMaxVersions()));
+            Integer.toString(e.getMaxVersions()));
           doElement(outputter, "maximum-cell-size",
-              Integer.toString(hcd.getMaxValueLength()));
+              Integer.toString(e.getMaxValueLength()));
           outputter.endTag();
         }
         outputter.endTag();

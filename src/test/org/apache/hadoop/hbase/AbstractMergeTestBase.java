@@ -23,19 +23,17 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Random;
 
-import org.apache.hadoop.dfs.MiniDFSCluster;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.io.Text;
-import org.apache.log4j.Logger;
-
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.log4j.Logger;
 
 /** Abstract base class for merge tests */
 public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
   static final Logger LOG =
     Logger.getLogger(AbstractMergeTestBase.class.getName());
-  protected static final Text COLUMN_NAME = new Text("contents:");
+  protected static final byte [] COLUMN_NAME = Bytes.toBytes("contents:");
   protected final Random rand = new Random();
   protected HTableDescriptor desc;
   protected ImmutableBytesWritable value;
@@ -65,8 +63,8 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
     } catch (UnsupportedEncodingException e) {
       fail();
     }
-    desc = new HTableDescriptor("test");
-    desc.addFamily(new HColumnDescriptor(COLUMN_NAME.toString()));
+    desc = new HTableDescriptor(Bytes.toBytes("test"));
+    desc.addFamily(new HColumnDescriptor(COLUMN_NAME));
   }
 
   @Override
@@ -90,8 +88,8 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
     // To ensure that the first region is larger than 64MB we need to write at
     // least 65536 rows. We will make certain by writing 70000
 
-    Text row_70001 = new Text("row_70001");
-    Text row_80001 = new Text("row_80001");
+    byte [] row_70001 = Bytes.toBytes("row_70001");
+    byte [] row_80001 = Bytes.toBytes("row_80001");
     
     HRegion[] regions = {
       createAregion(null, row_70001, 1, 70000),
@@ -102,9 +100,9 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
     // Now create the root and meta regions and insert the data regions
     // created above into the meta
     
-    HRegion root = HRegion.createHRegion(HRegionInfo.rootRegionInfo,
+    HRegion root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO,
       testDir, this.conf);
-    HRegion meta = HRegion.createHRegion(HRegionInfo.firstMetaRegionInfo,
+    HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
       testDir, this.conf);
     HRegion.addRegionToMETA(root, meta);
     
@@ -118,16 +116,17 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
     meta.getLog().closeAndDelete();
   }
 
-  private HRegion createAregion(Text startKey, Text endKey, int firstRow,
+  private HRegion createAregion(byte [] startKey, byte [] endKey, int firstRow,
       int nrows) throws IOException {
     
     HRegion region = createNewHRegion(desc, startKey, endKey);
     
-    System.out.println("created region " + region.getRegionName());
+    System.out.println("created region " +
+        Bytes.toString(region.getRegionName()));
 
     HRegionIncommon r = new HRegionIncommon(region);
     for(int i = firstRow; i < firstRow + nrows; i++) {
-      BatchUpdate batchUpdate = new BatchUpdate(new Text("row_"
+      BatchUpdate batchUpdate = new BatchUpdate(Bytes.toBytes("row_"
           + String.format("%1$05d", i)));
 
       batchUpdate.put(COLUMN_NAME, value.get());

@@ -20,12 +20,12 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashSet;
+
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
 
 /**
  * Tests the listTables client API
@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 public class TestListTables extends HBaseClusterTestCase {
   HBaseAdmin admin = null;
   
-  private static final HTableDescriptor[] tables = {
+  private static final HTableDescriptor[] TABLES = {
       new HTableDescriptor("table1"),
       new HTableDescriptor("table2"),
       new HTableDescriptor("table3")
@@ -43,15 +43,12 @@ public class TestListTables extends HBaseClusterTestCase {
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    
     admin = new HBaseAdmin(conf);
-
     HColumnDescriptor family =
       new HColumnDescriptor(HConstants.COLUMN_FAMILY_STR);
-    
-    for (int i = 0; i < tables.length; i++) {
-      tables[i].addFamily(family);
-      admin.createTable(tables[i]);
+    for (int i = 0; i < TABLES.length; i++) {
+      TABLES[i].addFamily(family);
+      admin.createTable(TABLES[i]);
     }
   }
 
@@ -60,13 +57,15 @@ public class TestListTables extends HBaseClusterTestCase {
    * @throws IOException
    */
   public void testListTables() throws IOException {
-    HashSet<HTableDescriptor> result =
-      new HashSet<HTableDescriptor>(Arrays.asList(admin.listTables()));
-    
+    HTableDescriptor [] ts = admin.listTables();
+    HashSet<HTableDescriptor> result = new HashSet<HTableDescriptor>(ts.length);
+    for (int i = 0; i < ts.length; i++) {
+      result.add(ts[i]);
+    }
     int size = result.size();
-    assertEquals(tables.length, size);
-    for (int i = 0; i < tables.length && i < size; i++) {
-      assertTrue(result.contains(tables[i]));
+    assertEquals(TABLES.length, size);
+    for (int i = 0; i < TABLES.length && i < size; i++) {
+      assertTrue(result.contains(TABLES[i]));
     }
   }
 }

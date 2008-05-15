@@ -21,13 +21,13 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Test setting the global memcache size for a region server. When it reaches 
@@ -41,7 +41,7 @@ public class TestGlobalMemcacheLimit extends HBaseClusterTestCase {
   HTable table2;
   HRegionServer server;
   
-  long keySize = (new Text(COLFAMILY_NAME1)).getLength() + 9 + 8;
+  long keySize =  COLFAMILY_NAME1.length + 9 + 8;
   long rowSize = keySize + ONE_KB.length;
   
   /**
@@ -69,13 +69,13 @@ public class TestGlobalMemcacheLimit extends HBaseClusterTestCase {
     HBaseAdmin admin = new HBaseAdmin(conf);
     admin.createTable(desc1);
     admin.createTable(desc2);
-    table1 = new HTable(conf, new Text("testTable1"));
-    table2 = new HTable(conf, new Text("testTable2"));    
+    table1 = new HTable(conf, "testTable1");
+    table2 = new HTable(conf, "testTable2");    
     server = cluster.getRegionServer(0);    
     
     // there is a META region in play, and those are probably still in
     // the memcache for ROOT. flush it out.
-    for (HRegion region : server.getOnlineRegions().values()) {
+    for (HRegion region : server.getOnlineRegions()) {
       region.flushcache();
     }
     // make sure we're starting at 0 so that it's easy to predict what the 
@@ -122,14 +122,15 @@ public class TestGlobalMemcacheLimit extends HBaseClusterTestCase {
     assertTrue("Post-flush memcache size", server.getGlobalMemcacheSize() <= 1024 * 1024);
   }
   
-  private long populate(HTable table, int numRows, int startKey) throws IOException {
+  private long populate(HTable table, int numRows, int startKey)
+  throws IOException {
     long total = 0;
     BatchUpdate batchUpdate = null;
-    Text column = new Text(COLFAMILY_NAME1);
+    byte [] column = COLFAMILY_NAME1;
     for (int i = startKey; i < startKey + numRows; i++) {
-      Text key = new Text("row_" + String.format("%1$5d", i));
-      total += key.getLength();
-      total += column.getLength();
+      byte [] key = Bytes.toBytes("row_" + String.format("%1$5d", i));
+      total += key.length;
+      total += column.length;
       total += 8;
       total += ONE_KB.length;
       batchUpdate = new BatchUpdate(key);

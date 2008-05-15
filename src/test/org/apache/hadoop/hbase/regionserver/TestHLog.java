@@ -25,12 +25,12 @@ import java.util.TreeMap;
 import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.Reader;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /** JUnit test case for HLog */
 public class TestHLog extends HBaseTestCase implements HConstants {
@@ -67,8 +67,8 @@ public class TestHLog extends HBaseTestCase implements HConstants {
    * @throws IOException
    */
   public void testSplit() throws IOException {
-    final Text tableName = new Text(getName());
-    final Text rowName = tableName;
+    final byte [] tableName = Bytes.toBytes(getName());
+    final byte [] rowName = tableName;
     HLog log = new HLog(this.fs, this.dir, this.conf, null);
     // Add edits for three regions.
     try {
@@ -76,11 +76,10 @@ public class TestHLog extends HBaseTestCase implements HConstants {
         for (int i = 0; i < 3; i++) {
           for (int j = 0; j < 3; j++) {
             TreeMap<HStoreKey, byte[]> edit = new TreeMap<HStoreKey, byte[]>();
-            Text column = new Text(Integer.toString(j));
-            edit.put(
-                new HStoreKey(rowName, column, System.currentTimeMillis()),
-                column.getBytes());
-            log.append(new Text(Integer.toString(i)), tableName, edit);
+            byte [] column = Bytes.toBytes(Integer.toString(j));
+            edit.put(new HStoreKey(rowName, column, System.currentTimeMillis()),
+              column);
+            log.append(Bytes.toBytes(Integer.toString(i)), tableName, edit);
           }
         }
         log.rollWriter();
@@ -99,9 +98,9 @@ public class TestHLog extends HBaseTestCase implements HConstants {
    */
   public void testAppend() throws IOException {
     final int COL_COUNT = 10;
-    final Text regionName = new Text("regionname");
-    final Text tableName = new Text("tablename");
-    final Text row = new Text("row");
+    final byte [] regionName = Bytes.toBytes("regionname");
+    final byte [] tableName = Bytes.toBytes("tablename");
+    final byte [] row = Bytes.toBytes("row");
     Reader reader = null;
     HLog log = new HLog(fs, dir, this.conf, null);
     try {
@@ -110,7 +109,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       long timestamp = System.currentTimeMillis();
       TreeMap<HStoreKey, byte []> cols = new TreeMap<HStoreKey, byte []>();
       for (int i = 0; i < COL_COUNT; i++) {
-        cols.put(new HStoreKey(row, new Text(Integer.toString(i)), timestamp),
+        cols.put(new HStoreKey(row, Bytes.toBytes(Integer.toString(i)), timestamp),
             new byte[] { (byte)(i + '0') });
       }
       log.append(regionName, tableName, cols);
@@ -125,18 +124,18 @@ public class TestHLog extends HBaseTestCase implements HConstants {
       HLogEdit val = new HLogEdit();
       for (int i = 0; i < COL_COUNT; i++) {
         reader.next(key, val);
-        assertEquals(regionName, key.getRegionName());
-        assertEquals(tableName, key.getTablename());
-        assertEquals(row, key.getRow());
+        assertTrue(Bytes.equals(regionName, key.getRegionName()));
+        assertTrue(Bytes.equals(tableName, key.getTablename()));
+        assertTrue(Bytes.equals(row, key.getRow()));
         assertEquals((byte)(i + '0'), val.getVal()[0]);
         System.out.println(key + " " + val);
       }
       while (reader.next(key, val)) {
         // Assert only one more row... the meta flushed row.
-        assertEquals(regionName, key.getRegionName());
-        assertEquals(tableName, key.getTablename());
-        assertEquals(HLog.METAROW, key.getRow());
-        assertEquals(HLog.METACOLUMN, val.getColumn());
+        assertTrue(Bytes.equals(regionName, key.getRegionName()));
+        assertTrue(Bytes.equals(tableName, key.getTablename()));
+        assertTrue(Bytes.equals(HLog.METAROW, key.getRow()));
+        assertTrue(Bytes.equals(HLog.METACOLUMN, val.getColumn()));
         assertEquals(0, HLogEdit.completeCacheFlush.compareTo(val.getVal()));
         System.out.println(key + " " + val);
       }

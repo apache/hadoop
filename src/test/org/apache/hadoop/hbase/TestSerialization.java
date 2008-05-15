@@ -19,17 +19,18 @@
  */
 package org.apache.hadoop.hbase;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.HbaseMapWritable;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
 
 /**
  * Test HBase Writables serializations
  */
-public class TestSerialization extends TestCase {
+public class TestSerialization extends HBaseTestCase {
 
   protected void setUp() throws Exception {
     super.setUp();
@@ -39,6 +40,64 @@ public class TestSerialization extends TestCase {
     super.tearDown();
   }
 
+  public void testname() throws Exception {
+    HMsg  m = new HMsg(HMsg.MSG_REGIONSERVER_QUIESCE);
+    byte [] mb = Writables.getBytes(m);
+    HMsg deserializedHMsg = (HMsg)Writables.getWritable(mb, new HMsg());
+    assertTrue(m.getMsg() == deserializedHMsg.getMsg());
+  }
+  
+  public void testTableDescriptor() throws Exception {
+    HTableDescriptor htd = createTableDescriptor(getName());
+    byte [] mb = Writables.getBytes(htd);
+    HTableDescriptor deserializedHtd =
+      (HTableDescriptor)Writables.getWritable(mb, new HTableDescriptor());
+    assertEquals(htd.getNameAsString(), deserializedHtd.getNameAsString());
+  }
+
+  /**
+   * Test RegionInfo serialization
+   * @throws Exception
+   */
+  public void testRowResult() throws Exception {
+    HbaseMapWritable<byte [], Cell> m = new HbaseMapWritable<byte [], Cell>();
+    byte [] b = Bytes.toBytes(getName());
+    m.put(b, new Cell(b, System.currentTimeMillis()));
+    RowResult rr = new RowResult(b, m);
+    byte [] mb = Writables.getBytes(rr);
+    RowResult deserializedRr =
+      (RowResult)Writables.getWritable(mb, new RowResult());
+    assertTrue(Bytes.equals(rr.getRow(), deserializedRr.getRow()));
+    byte [] one = rr.get(b).getValue();
+    byte [] two = deserializedRr.get(b).getValue();
+    assertTrue(Bytes.equals(one, two));
+    Writables.copyWritable(rr, deserializedRr);
+    one = rr.get(b).getValue();
+    two = deserializedRr.get(b).getValue();
+    assertTrue(Bytes.equals(one, two));
+    
+  }
+
+  /**
+   * Test RegionInfo serialization
+   * @throws Exception
+   */
+  public void testRegionInfo() throws Exception {
+    HTableDescriptor htd = new HTableDescriptor(getName());
+    String [] families = new String [] {"info:", "anchor:"};
+    for (int i = 0; i < families.length; i++) {
+      htd.addFamily(new HColumnDescriptor(families[i]));
+    }
+    HRegionInfo hri = new HRegionInfo(htd,
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+    byte [] hrib = Writables.getBytes(hri);
+    HRegionInfo deserializedHri =
+      (HRegionInfo)Writables.getWritable(hrib, new HRegionInfo());
+    assertEquals(hri.getEncodedName(), deserializedHri.getEncodedName());
+    assertEquals(hri.getTableDesc().getFamilies().size(),
+      deserializedHri.getTableDesc().getFamilies().size());
+  }
+  
   /**
    * Test ServerInfo serialization
    * @throws Exception
@@ -57,16 +116,15 @@ public class TestSerialization extends TestCase {
    * @throws Exception
    */
   public void testBatchUpdate() throws Exception {
-    final Text testName = new Text(getName());
     // Add row named 'testName'.
-    BatchUpdate bu = new BatchUpdate(testName);
+    BatchUpdate bu = new BatchUpdate(getName());
     // Add a column named same as row.
-    bu.put(testName, testName.getBytes());
+    bu.put(getName(), getName().getBytes());
     byte [] b = Writables.getBytes(bu);
     BatchUpdate bubu =
       (BatchUpdate)Writables.getWritable(b, new BatchUpdate());
     // Assert rows are same.
-    assertTrue(bu.getRow().equals(bubu.getRow()));
+    assertTrue(Bytes.equals(bu.getRow(), bubu.getRow()));
     // Assert has same number of BatchOperations.
     int firstCount = 0;
     for (BatchOperation bo: bubu) {
@@ -76,7 +134,7 @@ public class TestSerialization extends TestCase {
     // accumulating BatchOperations on each deserialization.
     BatchUpdate bububu = (BatchUpdate)Writables.getWritable(b, bubu);
     // Assert rows are same again.
-    assertTrue(bu.getRow().equals(bububu.getRow()));
+    assertTrue(Bytes.equals(bu.getRow(), bububu.getRow()));
     int secondCount = 0;
     for (BatchOperation bo: bububu) {
       secondCount++;

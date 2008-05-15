@@ -23,7 +23,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor.CompressionType;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
-import org.apache.hadoop.io.Text;
 
 public class ThriftUtilities {
   
@@ -57,7 +56,7 @@ public class ThriftUtilities {
     if (in.name == null || in.name.length <= 0) {
       throw new IllegalArgument("column name is empty");
     }
-    HColumnDescriptor col = new HColumnDescriptor(new Text(in.name),
+    HColumnDescriptor col = new HColumnDescriptor(in.name,
         in.maxVersions, comp, in.inMemory, in.blockCacheEnabled,
         in.maxValueLength, in.timeToLive, bloom);
     return col;
@@ -73,7 +72,7 @@ public class ThriftUtilities {
    */
   static public ColumnDescriptor colDescFromHbase(HColumnDescriptor in) {
     ColumnDescriptor col = new ColumnDescriptor();
-    col.name = in.getName().getBytes();
+    col.name = in.getName();
     col.maxVersions = in.getMaxVersions();
     col.compression = in.getCompression().toString();
     col.inMemory = in.isInMemory();

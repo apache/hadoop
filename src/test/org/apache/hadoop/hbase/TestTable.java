@@ -35,28 +35,28 @@ public class TestTable extends HBaseClusterTestCase {
     final HBaseAdmin admin = new HBaseAdmin(conf);
     String msg = null;
     try {
-      admin.createTable(HTableDescriptor.rootTableDesc);
+      admin.createTable(HTableDescriptor.ROOT_TABLEDESC);
     } catch (IllegalArgumentException e) {
       msg = e.toString();
     }
     assertTrue("Unexcepted exception message " + msg, msg != null &&
       msg.startsWith(IllegalArgumentException.class.getName()) &&
-      msg.contains(HTableDescriptor.rootTableDesc.getName().toString()));
+      msg.contains(HTableDescriptor.ROOT_TABLEDESC.getNameAsString()));
     
     msg = null;
     try {
-      admin.createTable(HTableDescriptor.metaTableDesc);
+      admin.createTable(HTableDescriptor.META_TABLEDESC);
     } catch(IllegalArgumentException e) {
       msg = e.toString();
     }
     assertTrue("Unexcepted exception message " + msg, msg != null &&
       msg.startsWith(IllegalArgumentException.class.getName()) &&
-      msg.contains(HTableDescriptor.metaTableDesc.getName().toString()));
+      msg.contains(HTableDescriptor.META_TABLEDESC.getNameAsString()));
     
     // Try doing a duplicate database create.
     msg = null;
     HTableDescriptor desc = new HTableDescriptor(getName());
-    desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
+    desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY));
     admin.createTable(desc);
     assertTrue("First table creation completed", admin.listTables().length == 1);
     boolean gotException = false;
@@ -72,9 +72,8 @@ public class TestTable extends HBaseClusterTestCase {
     
     // Now try and do concurrent creation with a bunch of threads.
     final HTableDescriptor threadDesc =
-      new HTableDescriptor("threaded-" + getName());
-    threadDesc.addFamily(new HColumnDescriptor(HConstants.
-      COLUMN_FAMILY.toString()));
+      new HTableDescriptor("threaded_" + getName());
+    threadDesc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY));
     int count = 10;
     Thread [] threads = new Thread [count];
     final AtomicInteger successes = new AtomicInteger(0);
@@ -123,6 +122,6 @@ public class TestTable extends HBaseClusterTestCase {
     admin.createTable(new HTableDescriptor(getName()));
     // Before fix, below would fail throwing a NoServerForRegionException.
     @SuppressWarnings("unused")
-    HTable table = new HTable(conf, new Text(getName()));
+    HTable table = new HTable(conf, getName());
   }
 }

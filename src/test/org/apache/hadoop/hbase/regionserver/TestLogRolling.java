@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Test log deletion as logs are rolled.
@@ -62,7 +63,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
       while (v.length() < 1000) {
         v.append(className);
       }
-      value = v.toString().getBytes(HConstants.UTF8_ENCODING);
+      value = Bytes.toBytes(v.toString());
       
     } catch (Exception e) {
       LOG.fatal("error in constructor", e);
@@ -107,10 +108,10 @@ public class TestLogRolling extends HBaseClusterTestCase {
     
     // Create the test table and open it
     HTableDescriptor desc = new HTableDescriptor(tableName);
-    desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY.toString()));
+    desc.addFamily(new HColumnDescriptor(HConstants.COLUMN_FAMILY));
     HBaseAdmin admin = new HBaseAdmin(conf);
     admin.createTable(desc);
-    HTable table = new HTable(conf, new Text(tableName));
+    HTable table = new HTable(conf, tableName);
 
     for (int i = 1; i <= 256; i++) {    // 256 writes should cause 8 log rolls
       BatchUpdate b =
@@ -144,7 +145,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
       // flush all regions
       
       List<HRegion> regions =
-        new ArrayList<HRegion>(server.getOnlineRegions().values());
+        new ArrayList<HRegion>(server.getOnlineRegions());
       for (HRegion r: regions) {
         r.flushcache();
       }

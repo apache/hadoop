@@ -26,34 +26,37 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.ReflectionUtils;
-
-import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.io.Cell;
 
 /**
  * A Writable Map.
  * Like {@link org.apache.hadoop.io.MapWritable} but dumb. It will fail
  * if passed a Writable it has not already been told about. Its also been
- * primed with hbase Writables.
+ * primed with hbase Writables.  Keys are always byte arrays.  Thats other
+ * difference from MapWritable.
+ * TODO: Have generics enforce V is a subclass of Writable and K is a byte []
+ * only.
  */
-public class HbaseMapWritable implements Map<Writable, Writable>, Writable,
-    Configurable {
+public class HbaseMapWritable <K, V>
+implements Map<byte [], V>, Writable, Configurable {
   private AtomicReference<Configuration> conf =
     new AtomicReference<Configuration>();
   
   // Static maps of code to class and vice versa.  Includes types used in hbase
   // only.
-  static final Map<Byte, Class<? extends Writable>> CODE_TO_CLASS =
-    new HashMap<Byte, Class<? extends Writable>>();
-  static final Map<Class<? extends Writable>, Byte> CLASS_TO_CODE =
-    new HashMap<Class<? extends Writable>, Byte>();
+  static final Map<Byte, Class<?>> CODE_TO_CLASS =
+    new HashMap<Byte, Class<?>>();
+  static final Map<Class<?>, Byte> CLASS_TO_CODE =
+    new HashMap<Class<?>, Byte>();
 
   static {
     byte code = 0;
@@ -61,22 +64,18 @@ public class HbaseMapWritable implements Map<Writable, Writable>, Writable,
     addToMap(ImmutableBytesWritable.class, code++);
     addToMap(Text.class, code++);
     addToMap(Cell.class, code++);
+    addToMap(byte [].class, code++);
   }
 
   @SuppressWarnings("boxing")
-  private static void addToMap(final Class<? extends Writable> clazz,
+  private static void addToMap(final Class<?> clazz,
       final byte code) {
     CLASS_TO_CODE.put(clazz, code);
     CODE_TO_CLASS.put(code, clazz);
   }
   
-  private Map<Writable, Writable> instance;
-  
-  /** Default constructor. */
-  public HbaseMapWritable() {
-    super();
-    this.instance = new HashMap<Writable, Writable>();
-  }
+  private Map<byte [], V> instance =
+    new TreeMap<byte [], V>(Bytes.BYTES_COMPARATOR);
 
   /** @return the conf */
   public Configuration getConf() {
@@ -104,12 +103,12 @@ public class HbaseMapWritable implements Map<Writable, Writable>, Writable,
   }
 
   /** {@inheritDoc} */
-  public Set<Map.Entry<Writable, Writable>> entrySet() {
+  public Set<Entry<byte [], V>> entrySet() {
     return instance.entrySet();
   }
 
   /** {@inheritDoc} */
-  public Writable get(Object key) {
+  public V get(Object key) {
     return instance.get(key);
   }
   
@@ -119,34 +118,8 @@ public class HbaseMapWritable implements Map<Writable, Writable>, Writable,
   }
 
   /** {@inheritDoc} */
-  public Set<Writable> keySet() {
+  public Set<byte []> keySet() {
     return instance.keySet();
-  }
-
-  /** {@inheritDoc} */
-  @SuppressWarnings("unchecked")
-  public Writable put(Writable key, Writable value) {
-    if (!CLASS_TO_CODE.containsKey(key.getClass())) {
-      throw new NullPointerException("Unsupported class " + 
-        key.getClass() + " cannot be used as a key.");
-    }
-    if (!CLASS_TO_CODE.containsKey(value.getClass())) {
-      throw new NullPointerException("Unsupported class " + 
-        value.getClass() + " cannot be used as a value.");
-    }
-    return instance.put(key, value);
-  }
-
-  /** {@inheritDoc} */
-  public void putAll(Map<? extends Writable, ? extends Writable> t) {
-    for (Map.Entry<? extends Writable, ? extends Writable> e: t.entrySet()) {
-      instance.put(e.getKey(), e.getValue());
-    }
-  }
-
-  /** {@inheritDoc} */
-  public Writable remove(Object key) {
-    return instance.remove(key);
   }
 
   /** {@inheritDoc} */
@@ -155,7 +128,7 @@ public class HbaseMapWritable implements Map<Writable, Writable>, Writable,
   }
 
   /** {@inheritDoc} */
-  public Collection<Writable> values() {
+  public Collection<V> values() {
     return instance.values();
   }
   
@@ -176,18 +149,22 @@ public class HbaseMapWritable implements Map<Writable, Writable>, Writable,
     }
     return b;
   }
+  
+  @Override
+  public String toString() {
+    return this.instance.toString();
+  }
 
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     // Write out the number of entries in the map
-    out.writeInt(instance.size());
+    out.writeInt(this.instance.size());
 
     // Then write out each key/value pair
-    for (Map.Entry<Writable, Writable> e: instance.entrySet()) {
-      out.writeByte(getId(e.getKey().getClass()));
-      e.getKey().write(out);
+    for (Map.Entry<byte [], V> e: instance.entrySet()) {
+      Bytes.writeByteArray(out, e.getKey());
       out.writeByte(getId(e.getValue().getClass()));
-      e.getValue().write(out);
+      ((Writable)e.getValue()).write(out);
     }
   }
 
@@ -202,16 +179,24 @@ public class HbaseMapWritable implements Map<Writable, Writable>, Writable,
     
     // Then read each key/value pair
     for (int i = 0; i < entries; i++) {
-      Writable key = (Writable) ReflectionUtils.newInstance(getClass(
-          in.readByte()), getConf());
-      
-      key.readFields(in);
-      
-      Writable value = (Writable) ReflectionUtils.newInstance(getClass(
-          in.readByte()), getConf());
-      
+      byte [] key = Bytes.readByteArray(in);
+      Writable value = (Writable)ReflectionUtils.
+        newInstance(getClass(in.readByte()), getConf());
       value.readFields(in);
-      instance.put(key, value);
+      V v = (V)value;
+      this.instance.put(key, v);
     }
+  }
+
+  public void putAll(Map<? extends byte [], ? extends V> m) {
+    this.instance.putAll(m);
+  }
+
+  public V remove(Object key) {
+    return this.instance.remove(key);
+  }
+
+  public V put(byte [] key, V value) {
+    return this.instance.put(key, value);
   }
 }

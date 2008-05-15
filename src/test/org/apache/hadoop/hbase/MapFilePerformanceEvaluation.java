@@ -27,8 +27,9 @@ import org.apache.commons.math.random.RandomDataImpl;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.MapFile;
-import org.apache.hadoop.io.Text;
 import org.apache.log4j.Logger;
 
 /**
@@ -44,10 +45,10 @@ public class MapFilePerformanceEvaluation {
   static final Logger LOG =
     Logger.getLogger(MapFilePerformanceEvaluation.class.getName());
   
-  static Text format(final int i, final Text text) {
+  static ImmutableBytesWritable format(final int i, ImmutableBytesWritable w) {
     String v = Integer.toString(i);
-    text.set("0000000000".substring(v.length()) + v);
-    return text;
+    w.set(Bytes.toBytes("0000000000".substring(v.length()) + v));
+    return w;
   }
 
   private void runBenchmarks() throws Exception {
@@ -84,8 +85,6 @@ public class MapFilePerformanceEvaluation {
     protected final FileSystem fs;
     protected final Path mf;
     protected final int totalRows;
-    protected Text key;
-    protected Text val;
     
     public RowOrientedBenchmark(Configuration conf, FileSystem fs, Path mf,
         int totalRows) {
@@ -93,8 +92,6 @@ public class MapFilePerformanceEvaluation {
       this.fs = fs;
       this.mf = mf;
       this.totalRows = totalRows;
-      this.key = new Text();
-      this.val = new Text();
     }
     
     void setUp() throws Exception {
@@ -141,6 +138,8 @@ public class MapFilePerformanceEvaluation {
     protected MapFile.Writer writer;
     private Random random = new Random();
     private byte[] bytes = new byte[ROW_LENGTH];
+    private ImmutableBytesWritable key = new ImmutableBytesWritable();
+    private ImmutableBytesWritable value = new ImmutableBytesWritable();
     
     public SequentialWriteBenchmark(Configuration conf, FileSystem fs, Path mf,
         int totalRows) {
@@ -150,13 +149,13 @@ public class MapFilePerformanceEvaluation {
     @Override
     void setUp() throws Exception {
       writer = new MapFile.Writer(conf, fs, mf.toString(),
-          Text.class, Text.class);
+        ImmutableBytesWritable.class, ImmutableBytesWritable.class);
     }
     
     @Override
     void doRow(int i) throws Exception {
-      val.set(generateValue());
-      writer.append(format(i, key), val); 
+      value.set(generateValue());
+      writer.append(format(i, key), value); 
     }
     
     private byte[] generateValue() {
@@ -177,6 +176,8 @@ public class MapFilePerformanceEvaluation {
   }
   
   static abstract class ReadBenchmark extends RowOrientedBenchmark {
+    ImmutableBytesWritable key = new ImmutableBytesWritable();
+    ImmutableBytesWritable value = new ImmutableBytesWritable();
     
     protected MapFile.Reader reader;
     
@@ -198,7 +199,7 @@ public class MapFilePerformanceEvaluation {
   }
 
   static class SequentialReadBenchmark extends ReadBenchmark {
-
+    
     public SequentialReadBenchmark(Configuration conf, FileSystem fs,
         Path mf, int totalRows) {
       super(conf, fs, mf, totalRows);
@@ -206,7 +207,7 @@ public class MapFilePerformanceEvaluation {
 
     @Override
     void doRow(@SuppressWarnings("unused") int i) throws Exception {
-      reader.next(key, val);
+      reader.next(key, value);
     }
     
     @Override
@@ -227,10 +228,10 @@ public class MapFilePerformanceEvaluation {
 
     @Override
     void doRow(@SuppressWarnings("unused") int i) throws Exception {
-      reader.get(getRandomRow(), val);
+      reader.get(getRandomRow(), value);
     }
     
-    private Text getRandomRow() {
+    private ImmutableBytesWritable getRandomRow() {
       return format(random.nextInt(totalRows), key);
     }
     
@@ -247,10 +248,10 @@ public class MapFilePerformanceEvaluation {
 
     @Override
     void doRow(@SuppressWarnings("unused") int i) throws Exception {
-      reader.get(getGaussianRandomRow(), val);
+      reader.get(getGaussianRandomRow(), value);
     }
     
-    private Text getGaussianRandomRow() {
+    private ImmutableBytesWritable getGaussianRandomRow() {
       int r = (int) randomData.nextGaussian(totalRows / 2, totalRows / 10);
       return format(r, key);
     }

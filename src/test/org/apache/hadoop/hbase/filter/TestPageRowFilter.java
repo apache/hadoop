@@ -24,7 +24,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.util.Bytes;
+
 
 import junit.framework.TestCase;
 
@@ -82,7 +83,7 @@ public class TestPageRowFilter extends TestCase {
   private void testFiltersBeyondPageSize(final RowFilterInterface filter,
     final int pageSize) {
     for (int i = 0; i < (pageSize * 2); i++) {
-      Text row = new Text(Integer.toString(i));
+      byte [] row = Bytes.toBytes(Integer.toString(i));
       boolean filterOut = filter.filterRowKey(row);
       if (!filterOut) {
         assertFalse("Disagrees with 'filter'", filter.filterAllRemaining());

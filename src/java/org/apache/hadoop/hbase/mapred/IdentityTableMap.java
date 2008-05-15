@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
@@ -30,7 +30,7 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * Pass the given key and record as-is to reduce
  */
-public class IdentityTableMap extends TableMap<Text, RowResult> {
+public class IdentityTableMap extends TableMap<ImmutableBytesWritable, RowResult> {
 
   /** constructor */
   public IdentityTableMap() {
@@ -49,15 +49,16 @@ public class IdentityTableMap extends TableMap<Text, RowResult> {
   @SuppressWarnings("unchecked")
   public static void initJob(String table, String columns,
     Class<? extends TableMap> mapper, JobConf job) {
-    TableMap.initJob(table, columns, mapper, Text.class, RowResult.class, job);
+    TableMap.initJob(table, columns, mapper, ImmutableBytesWritable.class,
+      RowResult.class, job);
   }
 
   /**
    * Pass the key, value to reduce
    */
   @Override
-  public void map(Text key, RowResult value,
-      OutputCollector<Text,RowResult> output,
+  public void map(ImmutableBytesWritable key, RowResult value,
+      OutputCollector<ImmutableBytesWritable,RowResult> output,
       @SuppressWarnings("unused") Reporter reporter) throws IOException {
     
     // convert 

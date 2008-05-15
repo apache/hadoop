@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -29,10 +28,10 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
 /** Instantiated to remove a column family from a table */
 class DeleteColumn extends ColumnOperation {
-  private final Text columnName;
+  private final byte [] columnName;
 
-  DeleteColumn(final HMaster master, final Text tableName, 
-    final Text columnName) 
+  DeleteColumn(final HMaster master, final byte [] tableName, 
+    final byte [] columnName) 
   throws IOException {
     super(master, tableName);
     this.columnName = columnName;
@@ -43,12 +42,10 @@ class DeleteColumn extends ColumnOperation {
   throws IOException {
     Path tabledir = new Path(this.master.rootdir, tableName.toString());
     for (HRegionInfo i: unservedRegions) {
-      i.getTableDesc().families().remove(columnName);
+      i.getTableDesc().removeFamily(columnName);
       updateRegionInfo(server, m.getRegionName(), i);
-
       // Delete the directories used by the column
-
-      String encodedName = i.getEncodedName();
+      int encodedName = i.getEncodedName();
       this.master.fs.delete(
         HStoreFile.getMapDir(tabledir, encodedName, columnName));
       this.master.fs.delete(

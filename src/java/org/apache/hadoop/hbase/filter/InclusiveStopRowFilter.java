@@ -19,7 +19,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Subclass of StopRowFilter that filters rows > the stop row,
@@ -37,20 +37,19 @@ public class InclusiveStopRowFilter extends StopRowFilter{
    * 
    * @param stopRowKey rowKey to filter on.
    */
-  public InclusiveStopRowFilter(final Text stopRowKey) {
+  public InclusiveStopRowFilter(final byte [] stopRowKey) {
     super(stopRowKey);
   }
   
   /** {@inheritDoc} */
   @Override
-  public boolean filterRowKey(final Text rowKey) {
+  public boolean filterRowKey(final byte [] rowKey) {
     if (rowKey == null) {
-      if (this.stopRowKey == null) {
+      if (getStopRowKey() == null) {
         return true;
       }
       return false;
     }    
-    return this.stopRowKey.compareTo(rowKey) < 0;
+    return Bytes.compareTo(getStopRowKey(), rowKey) < 0;
   }
-  
 }

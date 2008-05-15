@@ -5,6 +5,8 @@ Hbase Change Log
                Jim Kellerman) (API change for filters)
    HBASE-601   Just remove deprecated methods in HTable; 0.2 is not backward
                compatible anyways
+   HBASE-82    Row keys should be array of bytes
+   HBASE-76    Purge servers of Text (Done as part of HBASE-82 commit).
 
   BUG FIXES
    HBASE-574   HBase does not load hadoop native libs (Rong-En Fan via Stack)
@@ -28,6 +30,9 @@ Hbase Change Log
    HBASE-614   Retiring regions is not used; exploit or remove
    HBASE-538   Improve exceptions that come out on client-side
    HBASE-569   DemoClient.php (Jim R. Wilson via Stack)
+   HBASE-522   Where new Text(string) might be used in client side method calls,
+               add an overload that takes string (Done as part of HBASE-82)
+   HBASE-570   Remove HQL unit test (Done as part of HBASE-82 commit).
 
 
 Release 0.1.2 - 05/13/2008

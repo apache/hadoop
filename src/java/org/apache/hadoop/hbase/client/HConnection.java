@@ -21,12 +21,11 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
 /**
@@ -47,7 +46,7 @@ public interface HConnection {
    * @param tableName Table to check.
    * @return True if table exists already.
    */
-  public boolean tableExists(final Text tableName);
+  public boolean tableExists(final byte [] tableName);
   
   /**
    * List all the userspace tables.  In other words, scan the META table.
@@ -70,7 +69,8 @@ public interface HConnection {
    * question
    * @throws IOException
    */
-  public HRegionLocation locateRegion(Text tableName, Text row)
+  public HRegionLocation locateRegion(final byte [] tableName,
+      final byte [] row)
   throws IOException;
   
   /**
@@ -82,7 +82,8 @@ public interface HConnection {
    * question
    * @throws IOException
    */
-  public HRegionLocation relocateRegion(Text tableName, Text row)
+  public HRegionLocation relocateRegion(final byte [] tableName,
+      final byte [] row)
   throws IOException;  
   
   /** 
@@ -102,7 +103,8 @@ public interface HConnection {
    * @return Location of row.
    * @throws IOException
    */
-  HRegionLocation getRegionLocation(Text tableName, Text row, boolean reload)
+  HRegionLocation getRegionLocation(byte [] tableName, byte [] row,
+    boolean reload)
   throws IOException;
 
   /**

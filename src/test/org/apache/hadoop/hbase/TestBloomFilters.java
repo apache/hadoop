@@ -22,127 +22,127 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 
 import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /** Tests per-column bloom filters */
 public class TestBloomFilters extends HBaseClusterTestCase {
   static final Log LOG = LogFactory.getLog(TestBloomFilters.class);
 
-  private static final Text CONTENTS = new Text("contents:");
+  private static final byte [] CONTENTS = Bytes.toBytes("contents:");
 
-  private static final Text[] rows = {
-    new Text("wmjwjzyv"),
-    new Text("baietibz"),
-    new Text("guhsgxnv"),
-    new Text("mhnqycto"),
-    new Text("xcyqafgz"),
-    new Text("zidoamgb"),
-    new Text("tftfirzd"),
-    new Text("okapqlrg"),
-    new Text("yccwzwsq"),
-    new Text("qmonufqu"),
-    new Text("wlsctews"),
-    new Text("mksdhqri"),
-    new Text("wxxllokj"),
-    new Text("eviuqpls"),
-    new Text("bavotqmj"),
-    new Text("yibqzhdl"),
-    new Text("csfqmsyr"),
-    new Text("guxliyuh"),
-    new Text("pzicietj"),
-    new Text("qdwgrqwo"),
-    new Text("ujfzecmi"),
-    new Text("dzeqfvfi"),
-    new Text("phoegsij"),
-    new Text("bvudfcou"),
-    new Text("dowzmciz"),
-    new Text("etvhkizp"),
-    new Text("rzurqycg"),
-    new Text("krqfxuge"),
-    new Text("gflcohtd"),
-    new Text("fcrcxtps"),
-    new Text("qrtovxdq"),
-    new Text("aypxwrwi"),
-    new Text("dckpyznr"),
-    new Text("mdaawnpz"),
-    new Text("pakdfvca"),
-    new Text("xjglfbez"),
-    new Text("xdsecofi"),
-    new Text("sjlrfcab"),
-    new Text("ebcjawxv"),
-    new Text("hkafkjmy"),
-    new Text("oimmwaxo"),
-    new Text("qcuzrazo"),
-    new Text("nqydfkwk"),
-    new Text("frybvmlb"),
-    new Text("amxmaqws"),
-    new Text("gtkovkgx"),
-    new Text("vgwxrwss"),
-    new Text("xrhzmcep"),
-    new Text("tafwziil"),
-    new Text("erjmncnv"),
-    new Text("heyzqzrn"),
-    new Text("sowvyhtu"),
-    new Text("heeixgzy"),
-    new Text("ktcahcob"),
-    new Text("ljhbybgg"),
-    new Text("jiqfcksl"),
-    new Text("anjdkjhm"),
-    new Text("uzcgcuxp"),
-    new Text("vzdhjqla"),
-    new Text("svhgwwzq"),
-    new Text("zhswvhbp"),
-    new Text("ueceybwy"),
-    new Text("czkqykcw"),
-    new Text("ctisayir"),
-    new Text("hppbgciu"),
-    new Text("nhzgljfk"),
-    new Text("vaziqllf"),
-    new Text("narvrrij"),
-    new Text("kcevbbqi"),
-    new Text("qymuaqnp"),
-    new Text("pwqpfhsr"),
-    new Text("peyeicuk"),
-    new Text("kudlwihi"),
-    new Text("pkmqejlm"),
-    new Text("ylwzjftl"),
-    new Text("rhqrlqar"),
-    new Text("xmftvzsp"),
-    new Text("iaemtihk"),
-    new Text("ymsbrqcu"),
-    new Text("yfnlcxto"),
-    new Text("nluqopqh"),
-    new Text("wmrzhtox"),
-    new Text("qnffhqbl"),
-    new Text("zypqpnbw"),
-    new Text("oiokhatd"),
-    new Text("mdraddiu"),
-    new Text("zqoatltt"),
-    new Text("ewhulbtm"),
-    new Text("nmswpsdf"),
-    new Text("xsjeteqe"),
-    new Text("ufubcbma"),
-    new Text("phyxvrds"),
-    new Text("vhnfldap"),
-    new Text("zrrlycmg"),
-    new Text("becotcjx"),
-    new Text("wvbubokn"),
-    new Text("avkgiopr"),
-    new Text("mbqqxmrv"),
-    new Text("ibplgvuu"),
-    new Text("dghvpkgc")
+  private static final byte [][] rows = {
+    Bytes.toBytes("wmjwjzyv"),
+    Bytes.toBytes("baietibz"),
+    Bytes.toBytes("guhsgxnv"),
+    Bytes.toBytes("mhnqycto"),
+    Bytes.toBytes("xcyqafgz"),
+    Bytes.toBytes("zidoamgb"),
+    Bytes.toBytes("tftfirzd"),
+    Bytes.toBytes("okapqlrg"),
+    Bytes.toBytes("yccwzwsq"),
+    Bytes.toBytes("qmonufqu"),
+    Bytes.toBytes("wlsctews"),
+    Bytes.toBytes("mksdhqri"),
+    Bytes.toBytes("wxxllokj"),
+    Bytes.toBytes("eviuqpls"),
+    Bytes.toBytes("bavotqmj"),
+    Bytes.toBytes("yibqzhdl"),
+    Bytes.toBytes("csfqmsyr"),
+    Bytes.toBytes("guxliyuh"),
+    Bytes.toBytes("pzicietj"),
+    Bytes.toBytes("qdwgrqwo"),
+    Bytes.toBytes("ujfzecmi"),
+    Bytes.toBytes("dzeqfvfi"),
+    Bytes.toBytes("phoegsij"),
+    Bytes.toBytes("bvudfcou"),
+    Bytes.toBytes("dowzmciz"),
+    Bytes.toBytes("etvhkizp"),
+    Bytes.toBytes("rzurqycg"),
+    Bytes.toBytes("krqfxuge"),
+    Bytes.toBytes("gflcohtd"),
+    Bytes.toBytes("fcrcxtps"),
+    Bytes.toBytes("qrtovxdq"),
+    Bytes.toBytes("aypxwrwi"),
+    Bytes.toBytes("dckpyznr"),
+    Bytes.toBytes("mdaawnpz"),
+    Bytes.toBytes("pakdfvca"),
+    Bytes.toBytes("xjglfbez"),
+    Bytes.toBytes("xdsecofi"),
+    Bytes.toBytes("sjlrfcab"),
+    Bytes.toBytes("ebcjawxv"),
+    Bytes.toBytes("hkafkjmy"),
+    Bytes.toBytes("oimmwaxo"),
+    Bytes.toBytes("qcuzrazo"),
+    Bytes.toBytes("nqydfkwk"),
+    Bytes.toBytes("frybvmlb"),
+    Bytes.toBytes("amxmaqws"),
+    Bytes.toBytes("gtkovkgx"),
+    Bytes.toBytes("vgwxrwss"),
+    Bytes.toBytes("xrhzmcep"),
+    Bytes.toBytes("tafwziil"),
+    Bytes.toBytes("erjmncnv"),
+    Bytes.toBytes("heyzqzrn"),
+    Bytes.toBytes("sowvyhtu"),
+    Bytes.toBytes("heeixgzy"),
+    Bytes.toBytes("ktcahcob"),
+    Bytes.toBytes("ljhbybgg"),
+    Bytes.toBytes("jiqfcksl"),
+    Bytes.toBytes("anjdkjhm"),
+    Bytes.toBytes("uzcgcuxp"),
+    Bytes.toBytes("vzdhjqla"),
+    Bytes.toBytes("svhgwwzq"),
+    Bytes.toBytes("zhswvhbp"),
+    Bytes.toBytes("ueceybwy"),
+    Bytes.toBytes("czkqykcw"),
+    Bytes.toBytes("ctisayir"),
+    Bytes.toBytes("hppbgciu"),
+    Bytes.toBytes("nhzgljfk"),
+    Bytes.toBytes("vaziqllf"),
+    Bytes.toBytes("narvrrij"),
+    Bytes.toBytes("kcevbbqi"),
+    Bytes.toBytes("qymuaqnp"),
+    Bytes.toBytes("pwqpfhsr"),
+    Bytes.toBytes("peyeicuk"),
+    Bytes.toBytes("kudlwihi"),
+    Bytes.toBytes("pkmqejlm"),
+    Bytes.toBytes("ylwzjftl"),
+    Bytes.toBytes("rhqrlqar"),
+    Bytes.toBytes("xmftvzsp"),
+    Bytes.toBytes("iaemtihk"),
+    Bytes.toBytes("ymsbrqcu"),
+    Bytes.toBytes("yfnlcxto"),
+    Bytes.toBytes("nluqopqh"),
+    Bytes.toBytes("wmrzhtox"),
+    Bytes.toBytes("qnffhqbl"),
+    Bytes.toBytes("zypqpnbw"),
+    Bytes.toBytes("oiokhatd"),
+    Bytes.toBytes("mdraddiu"),
+    Bytes.toBytes("zqoatltt"),
+    Bytes.toBytes("ewhulbtm"),
+    Bytes.toBytes("nmswpsdf"),
+    Bytes.toBytes("xsjeteqe"),
+    Bytes.toBytes("ufubcbma"),
+    Bytes.toBytes("phyxvrds"),
+    Bytes.toBytes("vhnfldap"),
+    Bytes.toBytes("zrrlycmg"),
+    Bytes.toBytes("becotcjx"),
+    Bytes.toBytes("wvbubokn"),
+    Bytes.toBytes("avkgiopr"),
+    Bytes.toBytes("mbqqxmrv"),
+    Bytes.toBytes("ibplgvuu"),
+    Bytes.toBytes("dghvpkgc")
   };
 
-  private static final Text[] testKeys = {
-      new Text("abcdefgh"),
-      new Text("ijklmnop"),
-      new Text("qrstuvwx"),
-      new Text("yzabcdef")
+  private static final byte [][] testKeys = {
+      Bytes.toBytes("abcdefgh"),
+      Bytes.toBytes("ijklmnop"),
+      Bytes.toBytes("qrstuvwx"),
+      Bytes.toBytes("yzabcdef")
   };
   
   /** constructor */
@@ -191,7 +191,7 @@ public class TestBloomFilters extends HBaseClusterTestCase {
     // Store some values
 
     for(int i = 0; i < 100; i++) {
-      Text row = rows[i];
+      byte [] row = rows[i];
       String value = row.toString();
       BatchUpdate b = new BatchUpdate(row);
       b.put(CONTENTS, value.getBytes(HConstants.UTF8_ENCODING));
@@ -201,7 +201,6 @@ public class TestBloomFilters extends HBaseClusterTestCase {
       // Give cache flusher and log roller a chance to run
       // Otherwise we'll never hit the bloom filter, just the memcache
       Thread.sleep(conf.getLong(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000) * 2);
-      
     } catch (InterruptedException e) {
       // ignore
     }
@@ -258,7 +257,7 @@ public class TestBloomFilters extends HBaseClusterTestCase {
     // Store some values
 
     for(int i = 0; i < 100; i++) {
-      Text row = rows[i];
+      byte [] row = rows[i];
       String value = row.toString();
       BatchUpdate b = new BatchUpdate(row);
       b.put(CONTENTS, value.getBytes(HConstants.UTF8_ENCODING));

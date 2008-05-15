@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.nio.charset.MalformedInputException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -30,13 +29,17 @@ import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
@@ -46,12 +49,8 @@ import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.NotFound;
 import org.apache.hadoop.hbase.thrift.generated.RegionDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.ScanEntry;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Scanner;
-import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.io.BatchUpdate;
 
 import com.facebook.thrift.TException;
 import com.facebook.thrift.protocol.TBinaryProtocol;
@@ -149,13 +148,13 @@ public class ThriftServer {
      * @throws IllegalArgument
      * @throws IOError     
      */
-    Text getText(byte[] buf) throws IOError {
+    byte [] getText(byte[] buf) throws IOError {
       try {
         Text.validateUTF8(buf);
       } catch (MalformedInputException e) {
         throw new IOError("invalid UTF-8 encoding in row or column name");
       }
-      return new Text(buf);
+      return buf;
     }
     
     //
@@ -183,7 +182,7 @@ public class ThriftServer {
       LOG.debug("getTableRegions: " + new String(tableName));
       try {
         HTable table = getTable(tableName);
-        Text[] startKeys = table.getStartKeys();
+        byte [][] startKeys = table.getStartKeys();
         ArrayList<RegionDescriptor> regions = new ArrayList<RegionDescriptor>();
         for (int i = 0; i < startKeys.length; i++) {
           RegionDescriptor region = new RegionDescriptor();
@@ -276,12 +275,13 @@ public class ThriftServer {
       }
       try {
         HTable table = getTable(tableName);
-        Map<Text, Cell> values = 
+        Map<byte [], Cell> values = 
           table.getRow(getText(row), timestamp);
         // copy the map from type <Text, Cell> to <byte[], byte[]>
-        HashMap<byte[], byte[]> returnValues = new HashMap<byte[], byte[]>();
-        for (Entry<Text, Cell> e : values.entrySet()) {
-          returnValues.put(e.getKey().getBytes(), e.getValue().getValue());
+        TreeMap<byte[], byte[]> returnValues =
+          new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+        for (Entry<byte [], Cell> e : values.entrySet()) {
+          returnValues.put(e.getKey(), e.getValue().getValue());
         }
         return returnValues;
       } catch (IOException e) {
@@ -353,11 +353,11 @@ public class ThriftServer {
         LOG.debug("createTable: table=" + new String(tableName));
       }
       try {
-        Text tableStr = getText(tableName);
+        byte [] tableStr = getText(tableName);
         if (admin.tableExists(tableStr)) {
           throw new AlreadyExists("table name already in use");
         }
-        HTableDescriptor desc = new HTableDescriptor(tableStr.toString());
+        HTableDescriptor desc = new HTableDescriptor(tableStr);
         for (ColumnDescriptor col : columnFamilies) {
           HColumnDescriptor colDesc = ThriftUtilities.colDescFromThrift(col);
           desc.addFamily(colDesc);
@@ -378,7 +378,7 @@ public class ThriftServer {
         LOG.debug("deleteTable: table=" + new String(tableName));
       }
       try {
-        Text tableStr = getText(tableName);
+        byte [] tableStr = getText(tableName);
         if (!admin.tableExists(tableStr)) {
           throw new NotFound();
         }
@@ -460,11 +460,11 @@ public class ThriftServer {
       }
       
       ScanEntry retval = new ScanEntry();
-      retval.row = results.getRow().getBytes();
-      retval.columns = new HashMap<byte[], byte[]>(results.size());
+      retval.row = results.getRow();
+      retval.columns = new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
       
-      for (Map.Entry<Text, Cell> e : results.entrySet()) {
-        retval.columns.put(e.getKey().getBytes(), e.getValue().getValue());
+      for (Map.Entry<byte [], Cell> e : results.entrySet()) {
+        retval.columns.put(e.getKey(), e.getValue().getValue());
       }
       return retval;
     }
@@ -477,7 +477,7 @@ public class ThriftServer {
       }
       try {
         HTable table = getTable(tableName);
-        Text[] columnsText = new Text[columns.size()];
+        byte [][] columnsText = new byte[columns.size()][];
         for (int i = 0; i < columns.size(); ++i) {
           columnsText[i] = getText(columns.get(i));
         }
@@ -498,7 +498,7 @@ public class ThriftServer {
       }
       try {
         HTable table = getTable(tableName);
-        Text[] columnsText = new Text[columns.size()];
+        byte [][] columnsText = new byte[columns.size()][];
         for (int i = 0; i < columns.size(); ++i) {
           columnsText[i] = getText(columns.get(i));
         }
@@ -519,7 +519,7 @@ public class ThriftServer {
       }
       try {
         HTable table = getTable(tableName);
-        Text[] columnsText = new Text[columns.size()];
+        byte [][] columnsText = new byte[columns.size()][];
         for (int i = 0; i < columns.size(); ++i) {
           columnsText[i] = getText(columns.get(i));
         }
@@ -541,7 +541,7 @@ public class ThriftServer {
       }
       try {
         HTable table = getTable(tableName);
-        Text[] columnsText = new Text[columns.size()];
+        byte [][] columnsText = new byte[columns.size()][];
         for (int i = 0; i < columns.size(); ++i) {
           columnsText[i] = getText(columns.get(i));
         }
@@ -559,13 +559,14 @@ public class ThriftServer {
         LOG.debug("getColumnDescriptors: table=" + new String(tableName));
       }
       try {
-        HashMap<byte[], ColumnDescriptor> columns = new HashMap<byte[], ColumnDescriptor>();
+        TreeMap<byte[], ColumnDescriptor> columns =
+          new TreeMap<byte[], ColumnDescriptor>(Bytes.BYTES_COMPARATOR);
         
         HTable table = getTable(tableName);
         HTableDescriptor desc = table.getMetadata();
         
-        for (Entry<Text, HColumnDescriptor> e : desc.families().entrySet()) {
-          ColumnDescriptor col = ThriftUtilities.colDescFromHbase(e.getValue());
+        for (HColumnDescriptor e : desc.getFamilies()) {
+          ColumnDescriptor col = ThriftUtilities.colDescFromHbase(e);
           columns.put(col.name, col);
         }
         return columns;

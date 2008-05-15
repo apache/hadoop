@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.TreeMap;
 
 import org.apache.hadoop.dfs.MiniDFSCluster;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.HBaseTestCase;
@@ -39,19 +40,19 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
  * Test of a long-lived scanner validating as we go.
  */
 public class TestScanner extends HBaseTestCase {
-  private static final Text FIRST_ROW = new Text();
-  private static final Text[] COLS = {
+  private static final byte [] FIRST_ROW = HConstants.EMPTY_START_ROW;
+  private static final byte [][] COLS = {
       HConstants.COLUMN_FAMILY
   };
-  private static final Text[] EXPLICIT_COLS = {
+  private static final byte [][] EXPLICIT_COLS = {
     HConstants.COL_REGIONINFO,
     HConstants.COL_SERVER,
     HConstants.COL_STARTCODE
   };
   
-  private static final Text ROW_KEY =
-    new Text(HRegionInfo.rootRegionInfo.getRegionName());
-  private static final HRegionInfo REGION_INFO = HRegionInfo.rootRegionInfo;
+  private static final byte [] ROW_KEY =
+    HRegionInfo.ROOT_REGIONINFO.getRegionName();
+  private static final HRegionInfo REGION_INFO = HRegionInfo.ROOT_REGIONINFO;
   
   private static final long START_CODE = Long.MAX_VALUE;
 
@@ -76,9 +77,9 @@ public class TestScanner extends HBaseTestCase {
       (HRegionInfo) Writables.getWritable(regionBytes, new HRegionInfo());
     
     assertEquals(REGION_INFO.getRegionId(), info.getRegionId());
-    assertEquals(0, info.getStartKey().getLength());
-    assertEquals(0, info.getEndKey().getLength());
-    assertEquals(0, info.getRegionName().compareTo(REGION_INFO.getRegionName()));
+    assertEquals(0, info.getStartKey().length);
+    assertEquals(0, info.getEndKey().length);
+    assertEquals(0, Bytes.compareTo(info.getRegionName(), REGION_INFO.getRegionName()));
     assertEquals(0, info.getTableDesc().compareTo(REGION_INFO.getTableDesc()));
   }
   
@@ -87,10 +88,11 @@ public class TestScanner extends HBaseTestCase {
       throws IOException {
     
     InternalScanner scanner = null;
-    TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
+    TreeMap<byte [], byte []> results =
+      new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
     HStoreKey key = new HStoreKey();
 
-    Text[][] scanColumns = {
+    byte [][][] scanColumns = {
         COLS,
         EXPLICIT_COLS
     };
@@ -100,7 +102,7 @@ public class TestScanner extends HBaseTestCase {
         scanner = r.getScanner(scanColumns[i], FIRST_ROW,
             System.currentTimeMillis(), null);
         
-        while(scanner.next(key, results)) {
+        while (scanner.next(key, results)) {
           assertTrue(results.containsKey(HConstants.COL_REGIONINFO));
           byte [] val = results.get(HConstants.COL_REGIONINFO); 
           validateRegionInfo(val);
@@ -109,7 +111,7 @@ public class TestScanner extends HBaseTestCase {
             val = results.get(HConstants.COL_STARTCODE);
             assertNotNull(val);
             assertFalse(val.length == 0);
-            long startCode = Writables.bytesToLong(val);
+            long startCode = Bytes.toLong(val);
             assertEquals(START_CODE, startCode);
           }
           
@@ -118,7 +120,7 @@ public class TestScanner extends HBaseTestCase {
             val = results.get(HConstants.COL_SERVER);
             assertNotNull(val);
             assertFalse(val.length == 0);
-            String server = Writables.bytesToString(val);
+            String server = Bytes.toString(val);
             assertEquals(0, server.compareTo(serverName));
           }
           results.clear();
@@ -154,7 +156,7 @@ public class TestScanner extends HBaseTestCase {
 
       ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
       DataOutputStream s = new DataOutputStream(byteStream);
-      HRegionInfo.rootRegionInfo.write(s);
+      HRegionInfo.ROOT_REGIONINFO.write(s);
       batchUpdate.put(HConstants.COL_REGIONINFO, byteStream.toByteArray());
       region.commit(batchUpdate);
 
@@ -181,11 +183,9 @@ public class TestScanner extends HBaseTestCase {
 
       batchUpdate = new BatchUpdate(ROW_KEY, System.currentTimeMillis());
 
-      batchUpdate.put(HConstants.COL_SERVER, 
-        Writables.stringToBytes(address.toString()));
+      batchUpdate.put(HConstants.COL_SERVER,  Bytes.toBytes(address.toString()));
 
-      batchUpdate.put(HConstants.COL_STARTCODE,
-        Writables.longToBytes(START_CODE));
+      batchUpdate.put(HConstants.COL_STARTCODE, Bytes.toBytes(START_CODE));
 
       region.commit(batchUpdate);
       
@@ -222,7 +222,7 @@ public class TestScanner extends HBaseTestCase {
       batchUpdate = new BatchUpdate(ROW_KEY, System.currentTimeMillis());
 
       batchUpdate.put(HConstants.COL_SERVER, 
-        Writables.stringToBytes(address.toString()));
+        Bytes.toBytes(address.toString()));
 
       region.commit(batchUpdate);
       

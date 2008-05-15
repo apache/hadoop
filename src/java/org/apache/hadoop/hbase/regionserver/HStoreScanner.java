@@ -21,19 +21,19 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.TreeMap;
-import java.util.SortedMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
-import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Scanner scans both the memcache and the HStore
@@ -42,7 +42,7 @@ class HStoreScanner implements InternalScanner {
   static final Log LOG = LogFactory.getLog(HStoreScanner.class);
 
   private InternalScanner[] scanners;
-  private TreeMap<Text, byte []>[] resultSets;
+  private TreeMap<byte [], byte []>[] resultSets;
   private HStoreKey[] keys;
   private boolean wildcardMatch = false;
   private boolean multipleMatchers = false;
@@ -51,8 +51,8 @@ class HStoreScanner implements InternalScanner {
   
   /** Create an Scanner with a handle on the memcache and HStore files. */
   @SuppressWarnings("unchecked")
-  HStoreScanner(HStore store, Text[] targetCols, Text firstRow, long timestamp,
-    RowFilterInterface filter) 
+  HStoreScanner(HStore store, byte [][] targetCols, byte [] firstRow,
+    long timestamp, RowFilterInterface filter) 
   throws IOException {
     this.store = store;
     this.dataFilter = filter;
@@ -87,7 +87,7 @@ class HStoreScanner implements InternalScanner {
     // All results will match the required column-set and scanTime.
     for (int i = 0; i < scanners.length; i++) {
       keys[i] = new HStoreKey();
-      resultSets[i] = new TreeMap<Text, byte []>();
+      resultSets[i] = new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
       if(scanners[i] != null && !scanners[i].next(keys[i], resultSets[i])) {
         closeScanner(i);
       }
@@ -105,7 +105,7 @@ class HStoreScanner implements InternalScanner {
   }
 
   /** {@inheritDoc} */
-  public boolean next(HStoreKey key, SortedMap<Text, byte[]> results)
+  public boolean next(HStoreKey key, SortedMap<byte [], byte[]> results)
     throws IOException {
 
     // Filtered flag is set by filters.  If a cell has been 'filtered out'
@@ -114,15 +114,15 @@ class HStoreScanner implements InternalScanner {
     boolean moreToFollow = true;
     while (filtered && moreToFollow) {
       // Find the lowest-possible key.
-      Text chosenRow = null;
+      byte [] chosenRow = null;
       long chosenTimestamp = -1;
       for (int i = 0; i < this.keys.length; i++) {
         if (scanners[i] != null &&
             (chosenRow == null ||
-            (keys[i].getRow().compareTo(chosenRow) < 0) ||
-            ((keys[i].getRow().compareTo(chosenRow) == 0) &&
+            (Bytes.compareTo(keys[i].getRow(), chosenRow) < 0) ||
+            ((Bytes.compareTo(keys[i].getRow(), chosenRow) == 0) &&
             (keys[i].getTimestamp() > chosenTimestamp)))) {
-          chosenRow = new Text(keys[i].getRow());
+          chosenRow = keys[i].getRow();
           chosenTimestamp = keys[i].getTimestamp();
         }
       }
@@ -136,7 +136,7 @@ class HStoreScanner implements InternalScanner {
         // Here we are setting the passed in key with current row+timestamp
         key.setRow(chosenRow);
         key.setVersion(chosenTimestamp);
-        key.setColumn(HConstants.EMPTY_TEXT);
+        key.setColumn(HConstants.EMPTY_BYTE_ARRAY);
         // Keep list of deleted cell keys within this row.  We need this
         // because as we go through scanners, the delete record may be in an
         // early scanner and then the same record with a non-delete, non-null
@@ -150,7 +150,7 @@ class HStoreScanner implements InternalScanner {
           while ((scanners[i] != null
               && !filtered
               && moreToFollow)
-              && (keys[i].getRow().compareTo(chosenRow) == 0)) {
+              && (Bytes.compareTo(keys[i].getRow(), chosenRow) == 0)) {
             // If we are doing a wild card match or there are multiple
             // matchers per column, we need to scan all the older versions of 
             // this row to pick up the rest of the family members
@@ -164,9 +164,9 @@ class HStoreScanner implements InternalScanner {
             // but this had the effect of overwriting newer
             // values with older ones. So now we only insert
             // a result if the map does not contain the key.
-            HStoreKey hsk = new HStoreKey(key.getRow(), HConstants.EMPTY_TEXT,
+            HStoreKey hsk = new HStoreKey(key.getRow(), HConstants.EMPTY_BYTE_ARRAY,
               key.getTimestamp());
-            for (Map.Entry<Text, byte[]> e : resultSets[i].entrySet()) {
+            for (Map.Entry<byte [], byte[]> e : resultSets[i].entrySet()) {
               hsk.setColumn(e.getKey());
               if (HLogEdit.isDeleted(e.getValue())) {
                 if (!deletes.contains(hsk)) {
@@ -202,7 +202,7 @@ class HStoreScanner implements InternalScanner {
         // If the current scanner is non-null AND has a lower-or-equal
         // row label, then its timestamp is bad. We need to advance it.
         while ((scanners[i] != null) &&
-            (keys[i].getRow().compareTo(chosenRow) <= 0)) {
+            (Bytes.compareTo(keys[i].getRow(), chosenRow) <= 0)) {
           resultSets[i].clear();
           if (!scanners[i].next(keys[i], resultSets[i])) {
             closeScanner(i);
@@ -266,7 +266,7 @@ class HStoreScanner implements InternalScanner {
     }
   }
 
-  public Iterator<Map.Entry<HStoreKey, SortedMap<Text, byte[]>>> iterator() {
+  public Iterator<Map.Entry<HStoreKey, SortedMap<byte [], byte[]>>> iterator() {
     throw new UnsupportedOperationException("Unimplemented serverside. " +
       "next(HStoreKey, StortedMap(...) is more efficient");
   }

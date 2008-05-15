@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.io.RowResult;
 
 /** 
@@ -53,10 +52,10 @@ class ProcessServerShutdown extends RegionServerOperation {
 
   private class ToDoEntry {
     boolean regionOffline;
-    Text row;
-    HRegionInfo info;
+    final byte [] row;
+    final HRegionInfo info;
 
-    ToDoEntry(Text row, HRegionInfo info) {
+    ToDoEntry(final byte [] row, final HRegionInfo info) {
       this.regionOffline = false;
       this.row = row;
       this.info = info;
@@ -90,11 +89,11 @@ class ProcessServerShutdown extends RegionServerOperation {
 
   /** Finds regions that the dead region server was serving */
   protected void scanMetaRegion(HRegionInterface server, long scannerId,
-      Text regionName) throws IOException {
+      byte [] regionName) throws IOException {
 
     List<ToDoEntry> toDoList = new ArrayList<ToDoEntry>();
     Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
-    List<Text> emptyRows = new ArrayList<Text>();
+    List<byte []> emptyRows = new ArrayList<byte []>();
     try {
       while (true) {
         RowResult values = null;
@@ -109,7 +108,7 @@ class ProcessServerShutdown extends RegionServerOperation {
           break;
         }
         
-        Text row = values.getRow();
+        byte [] row = values.getRow();
         
         if (LOG.isDebugEnabled() && row != null) {
           LOG.debug("shutdown scanner looking at " + row.toString());
@@ -118,13 +117,7 @@ class ProcessServerShutdown extends RegionServerOperation {
         // Check server name.  If null, be conservative and treat as though
         // region had been on shutdown server (could be null because we
         // missed edits in hlog because hdfs does not do write-append).
-        String serverName;
-        try {
-          serverName = Writables.cellToString(values.get(COL_SERVER));
-        } catch (UnsupportedEncodingException e) {
-          LOG.error("Server name", e);
-          break;
-        }
+        String serverName = Writables.cellToString(values.get(COL_SERVER));
         if (serverName.length() > 0 &&
             deadServerName.compareTo(serverName) != 0) {
           // This isn't the server you're looking for - move along
@@ -205,10 +198,10 @@ class ProcessServerShutdown extends RegionServerOperation {
             master.getRootRegionLocation().getBindAddress());
       }
       long scannerId = server.openScanner(
-          HRegionInfo.rootRegionInfo.getRegionName(), COLUMN_FAMILY_ARRAY,
+          HRegionInfo.ROOT_REGIONINFO.getRegionName(), COLUMN_FAMILY_ARRAY,
           EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP, null);
       scanMetaRegion(server, scannerId,
-          HRegionInfo.rootRegionInfo.getRegionName());
+          HRegionInfo.ROOT_REGIONINFO.getRegionName());
       return true;
     }
   }
@@ -268,7 +261,7 @@ class ProcessServerShutdown extends RegionServerOperation {
       // Scan the ROOT region
       Boolean result = new ScanRootRegion(
           new MetaRegion(master.getRootRegionLocation(),
-              HRegionInfo.rootRegionInfo.getRegionName(),
+              HRegionInfo.ROOT_REGIONINFO.getRegionName(),
               HConstants.EMPTY_START_ROW), this.master).doWithRetries();
         
       if (result == null) {

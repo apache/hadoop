@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * This class creates a single process HBase cluster. One thread is created for
@@ -332,7 +333,9 @@ public class LocalHBaseCluster implements HConstants {
     LocalHBaseCluster cluster = new LocalHBaseCluster(conf);
     cluster.startup();
     HBaseAdmin admin = new HBaseAdmin(conf);
-    admin.createTable(new HTableDescriptor(cluster.getClass().getName()));
+    HTableDescriptor htd =
+      new HTableDescriptor(Bytes.toBytes(cluster.getClass().getName()));
+    admin.createTable(htd);
     cluster.shutdown();
   }
 }

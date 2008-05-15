@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
 
 import junit.framework.Assert;
 
@@ -33,15 +32,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scanner;
 import org.apache.hadoop.hbase.io.BatchUpdate;
-import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.io.RowResult;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /** Test regexp filters HBASE-476 */
 public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
@@ -52,11 +50,11 @@ public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
   static final String TABLE_NAME = "TestTable";
   static final String FAMILY = "C:";
   static final String COLUMN1 = FAMILY + "col1";
-  static final Text TEXT_COLUMN1 = new Text(COLUMN1);
+  static final byte [] TEXT_COLUMN1 = Bytes.toBytes(COLUMN1);
   static final String COLUMN2 = FAMILY + "col2";
-  static final Text TEXT_COLUMN2 = new Text(COLUMN2);
+  static final byte [] TEXT_COLUMN2 = Bytes.toBytes(COLUMN2);
 
-  private static final Text[] columns = {
+  private static final byte [][] columns = {
     TEXT_COLUMN1, TEXT_COLUMN2
   };
 
@@ -120,11 +118,10 @@ public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
     admin.createTable(desc);
 
     // insert some data into the test table
-    HTable table = new HTable(conf, new Text(TABLE_NAME));
+    HTable table = new HTable(conf, TABLE_NAME);
 
     for (int i = 0; i < NUM_ROWS; i++) {
-      BatchUpdate b =
-        new BatchUpdate(new Text("row_" + String.format("%1$05d", i)));
+      BatchUpdate b = new BatchUpdate("row_" + String.format("%1$05d", i));
 
       b.put(TEXT_COLUMN1, VALUE);
       b.put(TEXT_COLUMN2, String.format("%1$05d", i).getBytes());
@@ -139,8 +136,7 @@ public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
     // Do some identity write operations on one column of the data.
     for (int n = 0; n < NUM_REWRITES; n++) {
       for (int i = 0; i < NUM_ROWS; i++) {
-        BatchUpdate b =
-          new BatchUpdate(new Text("row_" + String.format("%1$05d", i)));
+        BatchUpdate b = new BatchUpdate("row_" + String.format("%1$05d", i));
 
         b.put(TEXT_COLUMN2, String.format("%1$05d", i).getBytes());
         table.commit(b);
@@ -155,9 +151,7 @@ public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
 
     // Do another round so to populate the mem cache
     for (int i = 0; i < NUM_ROWS; i++) {
-      BatchUpdate b =
-        new BatchUpdate(new Text("row_" + String.format("%1$05d", i)));
-
+      BatchUpdate b = new BatchUpdate("row_" + String.format("%1$05d", i));
       b.put(TEXT_COLUMN2, String.format("%1$05d", i).getBytes());
       table.commit(b);
     }
@@ -169,7 +163,7 @@ public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
   }
 
   private void scanTable(final String tableName, final boolean printValues) throws IOException {
-    HTable table = new HTable(conf, new Text(tableName));
+    HTable table = new HTable(conf, tableName);
 
     Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
     int numFound = doScan(scanner, printValues);
@@ -177,8 +171,8 @@ public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
   }
 
   private void scanTableWithRowFilter(final String tableName, final boolean printValues) throws IOException {
-    HTable table = new HTable(conf, new Text(tableName));
-    Map<Text, byte[]> columnMap = new HashMap<Text, byte[]>();
+    HTable table = new HTable(conf, tableName);
+    Map<byte [], byte[]> columnMap = new HashMap<byte [], byte[]>();
     columnMap.put(TEXT_COLUMN1, VALUE);
     RegExpRowFilter filter = new RegExpRowFilter(null, columnMap);
     Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW, filter);
@@ -194,8 +188,7 @@ public class TestRowFilterAfterWrite extends HBaseClusterTestCase {
         for (RowResult result : scanner) {
           if (printValues) {
             LOG.info("row: " + result.getRow());
-
-            for (Map.Entry<Text, Cell> e : result.entrySet()) {
+            for (Map.Entry<byte [], Cell> e : result.entrySet()) {
               LOG.info(" column: " + e.getKey() + " value: "
                   + new String(e.getValue().getValue(), HConstants.UTF8_ENCODING));
             }

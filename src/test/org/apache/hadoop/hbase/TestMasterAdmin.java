@@ -21,19 +21,19 @@ package org.apache.hadoop.hbase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /** tests administrative functions */
 public class TestMasterAdmin extends HBaseClusterTestCase {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   
-  private static final Text COLUMN_NAME = new Text("col1:");
+  private static final byte [] COLUMN_NAME = Bytes.toBytes("col1:");
   private static HTableDescriptor testDesc;
   static {
     testDesc = new HTableDescriptor("testadmin1");
-    testDesc.addFamily(new HColumnDescriptor(COLUMN_NAME.toString()));
+    testDesc.addFamily(new HColumnDescriptor(COLUMN_NAME));
   }
   
   private HBaseAdmin admin;
@@ -61,9 +61,9 @@ public class TestMasterAdmin extends HBaseClusterTestCase {
     }
     assertTrue(exception);
     admin.createTable(testDesc);
-    LOG.info("Table " + testDesc.getName().toString() + " created");
+    LOG.info("Table " + testDesc.getNameAsString() + " created");
     admin.disableTable(testDesc.getName());
-    LOG.info("Table " + testDesc.getName().toString() + " disabled");
+    LOG.info("Table " + testDesc.getNameAsString() + " disabled");
     try {
       @SuppressWarnings("unused")
       HTable table = new HTable(conf, testDesc.getName());
@@ -78,13 +78,13 @@ public class TestMasterAdmin extends HBaseClusterTestCase {
     admin.addColumn(testDesc.getName(), new HColumnDescriptor("col2:"));
     admin.enableTable(testDesc.getName());
     try {
-      admin.deleteColumn(testDesc.getName(), new Text("col2:"));
+      admin.deleteColumn(testDesc.getName(), Bytes.toBytes("col2:"));
     } catch(TableNotDisabledException e) {
       // Expected
     }
 
     admin.disableTable(testDesc.getName());
-    admin.deleteColumn(testDesc.getName(), new Text("col2:"));
+    admin.deleteColumn(testDesc.getName(), Bytes.toBytes("col2:"));
     admin.deleteTable(testDesc.getName());
   }
 }

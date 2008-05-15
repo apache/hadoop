@@ -19,14 +19,16 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.hbase.io.TextSequence;
-import org.apache.hadoop.io.*;
 
-import java.io.*;
-import java.nio.ByteBuffer;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
- * A Key for a stored row
+ * A Key for a stored row.
  */
 public class HStoreKey implements WritableComparable {
   /**
@@ -34,14 +36,13 @@ public class HStoreKey implements WritableComparable {
    */
   public static final char COLUMN_FAMILY_DELIMITER = ':';
   
-  private Text row;
-  private Text column;
-  private long timestamp;
-
+  private byte [] row = HConstants.EMPTY_BYTE_ARRAY;
+  private byte [] column = HConstants.EMPTY_BYTE_ARRAY;
+  private long timestamp = Long.MAX_VALUE;
 
   /** Default constructor used in conjunction with Writable interface */
   public HStoreKey() {
-    this(new Text());
+    super();
   }
   
   /**
@@ -51,10 +52,21 @@ public class HStoreKey implements WritableComparable {
    * 
    * @param row - row key
    */
-  public HStoreKey(Text row) {
+  public HStoreKey(final byte [] row) {
     this(row, Long.MAX_VALUE);
   }
-  
+
+  /**
+   * Create an HStoreKey specifying only the row
+   * The column defaults to the empty string and the time stamp defaults to
+   * Long.MAX_VALUE
+   * 
+   * @param row - row key
+   */
+  public HStoreKey(final String row) {
+    this(row, Long.MAX_VALUE);
+  }
+
   /**
    * Create an HStoreKey specifying the row and timestamp
    * The column name defaults to the empty string
@@ -62,10 +74,21 @@ public class HStoreKey implements WritableComparable {
    * @param row row key
    * @param timestamp timestamp value
    */
-  public HStoreKey(Text row, long timestamp) {
-    this(row, new Text(), timestamp);
+  public HStoreKey(final byte [] row, long timestamp) {
+    this(row, HConstants.EMPTY_BYTE_ARRAY, timestamp);
   }
-  
+
+  /**
+   * Create an HStoreKey specifying the row and timestamp
+   * The column name defaults to the empty string
+   * 
+   * @param row row key
+   * @param timestamp timestamp value
+   */
+  public HStoreKey(final String row, long timestamp) {
+    this (row, "", timestamp);
+  }
+
   /**
    * Create an HStoreKey specifying the row and column names
    * The timestamp defaults to LATEST_TIMESTAMP
@@ -73,28 +96,51 @@ public class HStoreKey implements WritableComparable {
    * @param row row key
    * @param column column key
    */
-  public HStoreKey(Text row, Text column) {
+  public HStoreKey(final String row, final String column) {
     this(row, column, HConstants.LATEST_TIMESTAMP);
   }
-  
+
+  /**
+   * Create an HStoreKey specifying the row and column names
+   * The timestamp defaults to LATEST_TIMESTAMP
+   * 
+   * @param row row key
+   * @param column column key
+   */
+  public HStoreKey(final byte [] row, final byte [] column) {
+    this(row, column, HConstants.LATEST_TIMESTAMP);
+  }
+
   /**
    * Create an HStoreKey specifying all the fields
-   * 
+   * Does not make copies of the passed byte arrays. Presumes the passed 
+   * arrays immutable.
    * @param row row key
    * @param column column key
    * @param timestamp timestamp value
    */
-  public HStoreKey(Text row, Text column, long timestamp) {
-    // Make copies by doing 'new Text(arg)'.
-    this.row = new Text(row);
-    this.column = new Text(column);
+  public HStoreKey(final String row, final String column, long timestamp) {
+    this (Bytes.toBytes(row), Bytes.toBytes(column), timestamp);
+  }
+
+  /**
+   * Create an HStoreKey specifying all the fields
+   * Does not make copies of the passed byte arrays. Presumes the passed 
+   * arrays immutable.
+   * @param row row key
+   * @param column column key
+   * @param timestamp timestamp value
+   */
+  public HStoreKey(final byte [] row, final byte [] column, long timestamp) {
+    // Make copies
+    this.row = row;
+    this.column = column;
     this.timestamp = timestamp;
   }
   
   /** @return Approximate size in bytes of this key. */
   public long getSize() {
-    return this.row.getLength() + this.column.getLength() +
-      8 /* There is no sizeof in java. Presume long is 8 (64bit machine)*/;
+    return this.row.length + this.column.length + Bytes.SIZEOF_LONG;
   }
   
   /**
@@ -111,19 +157,19 @@ public class HStoreKey implements WritableComparable {
    * 
    * @param newrow new row key value
    */
-  public void setRow(Text newrow) {
-    this.row.set(newrow);
+  public void setRow(byte [] newrow) {
+    this.row = newrow;
   }
   
   /**
-   * Change the value of the column key
+   * Change the value of the column in this key
    * 
-   * @param newcol new column key value
+   * @param c new column family value
    */
-  public void setColumn(Text newcol) {
-    this.column.set(newcol);
+  public void setColumn(byte [] c) {
+    this.column = c;
   }
-  
+
   /**
    * Change the value of the timestamp field
    * 
@@ -145,18 +191,18 @@ public class HStoreKey implements WritableComparable {
   }
   
   /** @return value of row key */
-  public Text getRow() {
+  public byte [] getRow() {
     return row;
   }
   
-  /** @return value of column key */
-  public Text getColumn() {
-    return column;
+  /** @return value of column */
+  public byte [] getColumn() {
+    return this.column;
   }
-  
+
   /** @return value of timestamp */
   public long getTimestamp() {
-    return timestamp;
+    return this.timestamp;
   }
   
   /**
@@ -167,8 +213,8 @@ public class HStoreKey implements WritableComparable {
    * @see #matchesRowFamily(HStoreKey)
    */ 
   public boolean matchesRowCol(HStoreKey other) {
-    return this.row.compareTo(other.row) == 0
-      && this.column.compareTo(other.column) == 0;
+    return Bytes.equals(this.row, other.row) &&
+      Bytes.equals(column, other.column);
   }
   
   /**
@@ -181,8 +227,8 @@ public class HStoreKey implements WritableComparable {
    * @see #matchesRowFamily(HStoreKey)
    */
   public boolean matchesWithoutColumn(HStoreKey other) {
-    return this.row.compareTo(other.row) == 0
-      && this.timestamp >= other.getTimestamp();
+    return Bytes.equals(this.row, other.row) &&
+      this.timestamp >= other.getTimestamp();
   }
   
   /**
@@ -191,21 +237,21 @@ public class HStoreKey implements WritableComparable {
    * @param that Key to compare against. Compares row and column family
    * 
    * @return true if same row and column family
-   * @throws InvalidColumnNameException 
    * @see #matchesRowCol(HStoreKey)
    * @see #matchesWithoutColumn(HStoreKey)
    */
-  public boolean matchesRowFamily(HStoreKey that)
-  throws InvalidColumnNameException {
-    return this.row.compareTo(that.row) == 0 &&
-      extractFamily(this.column).
-        compareTo(extractFamily(that.getColumn())) == 0;
+  public boolean matchesRowFamily(HStoreKey that) {
+    int delimiterIndex = getFamilyDelimiterIndex(this.column);
+    return Bytes.equals(this.row, that.row) &&
+      Bytes.compareTo(this.column, 0, delimiterIndex, that.column, 0,
+        delimiterIndex) == 0;
   }
   
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return row.toString() + "/" + column.toString() + "/" + timestamp;
+    return Bytes.toString(this.row) + "/" + Bytes.toString(this.column) + "/" +
+      timestamp;
   }
   
   /** {@inheritDoc} */
@@ -228,11 +274,14 @@ public class HStoreKey implements WritableComparable {
   /** {@inheritDoc} */
   public int compareTo(Object o) {
     HStoreKey other = (HStoreKey)o;
-    int result = this.row.compareTo(other.row);
+    int result = Bytes.compareTo(this.row, other.row);
     if (result != 0) {
       return result;
     }
-    result = this.column.compareTo(other.column);
+    result = this.column == null && other.column == null? 0:
+      this.column == null && other.column != null? -1:
+      this.column != null && other.column == null? 1:
+      Bytes.compareTo(this.column, other.column);
     if (result != 0) {
       return result;
     }
@@ -248,108 +297,136 @@ public class HStoreKey implements WritableComparable {
     return result;
   }
 
-  // Writable
-
-  /** {@inheritDoc} */
-  public void write(DataOutput out) throws IOException {
-    row.write(out);
-    column.write(out);
-    out.writeLong(timestamp);
-  }
-
-  /** {@inheritDoc} */
-  public void readFields(DataInput in) throws IOException {
-    row.readFields(in);
-    column.readFields(in);
-    timestamp = in.readLong();
-  }
-  
-  // Statics
-  // TODO: Move these utility methods elsewhere (To a Column class?).
-  
   /**
-   * Extracts the column family name from a column
-   * For example, returns 'info' if the specified column was 'info:server'
-   * @param col name of column
-   * @return column famile as a TextSequence based on the passed
-   * <code>col</code>.  If <code>col</code> is reused, make a new Text of
-   * the result by calling {@link TextSequence#toText()}.
-   * @throws InvalidColumnNameException 
+   * @param column
+   * @return New byte array that holds <code>column</code> family prefix.
+   * @see #parseColumn(byte[])
    */
-  public static TextSequence extractFamily(final Text col)
-  throws InvalidColumnNameException {
-    return extractFamily(col, false);
-  }
-  
-  /**
-   * Extracts the column family name from a column
-   * For example, returns 'info' if the specified column was 'info:server'
-   * @param col name of column
-   * @param withColon set to true if colon separator should be returned
-   * @return column famile as a TextSequence based on the passed
-   * <code>col</code>.  If <code>col</code> is reused, make a new Text of
-   * the result by calling {@link TextSequence#toText()}.
-   * @throws InvalidColumnNameException 
-   */
-  public static TextSequence extractFamily(final Text col,
-    final boolean withColon)
-  throws InvalidColumnNameException {
-    int offset = getColonOffset(col);
-    // Include ':' in copy?
-    offset += (withColon)? 1: 0;
-    if (offset == col.getLength()) {
-      return new TextSequence(col);
+  public static byte [] getFamily(final byte [] column) {
+    int index = getFamilyDelimiterIndex(column);
+    if (index <= 0) {
+      throw new IllegalArgumentException("No ':' delimiter between " +
+        "column family and qualifier in the passed column name <" +
+        Bytes.toString(column) + ">");
     }
-    return new TextSequence(col, 0, offset);
+    byte [] result = new byte[index];
+    System.arraycopy(column, 0, result, 0, index);
+    return result;
   }
   
   /**
-   * Extracts the column qualifier, the portion that follows the colon (':')
-   * family/qualifier separator.
-   * For example, returns 'server' if the specified column was 'info:server'
-   * @param col name of column
-   * @return column qualifier as a TextSequence based on the passed
-   * <code>col</code>.  If <code>col</code> is reused, make a new Text of
-   * the result by calling {@link TextSequence#toText()}.
-   * @throws InvalidColumnNameException 
+   * @param column
+   * @return Return hash of family portion of passed column.
    */
-  public static TextSequence extractQualifier(final Text col)
-  throws InvalidColumnNameException {
-    int offset = getColonOffset(col);
-    if (offset + 1 == col.getLength()) {
-      return null;
-    }
-    return new TextSequence(col, offset + 1);
+  public static Integer getFamilyMapKey(final byte [] column) {
+    int index = getFamilyDelimiterIndex(column);
+    // If index < -1, presume passed column is a family name absent colon
+    // delimiter
+    return Bytes.mapKey(column, index > 0? index: column.length);
   }
   
-  private static int getColonOffset(final Text col)
-  throws InvalidColumnNameException {
-    int offset = -1;
-    ByteBuffer bb = ByteBuffer.wrap(col.getBytes());
-    for (int lastPosition = bb.position(); bb.hasRemaining();
-        lastPosition = bb.position()) {
-      if (Text.bytesToCodePoint(bb) == COLUMN_FAMILY_DELIMITER) {
-        offset = lastPosition;
+  /**
+   * @param family
+   * @param column
+   * @return True if <code>column</code> has a family of <code>family</code>.
+   */
+  public static boolean matchingFamily(final byte [] family,
+      final byte [] column) {
+    // Make sure index of the ':' is at same offset.
+    int index = getFamilyDelimiterIndex(column);
+    if (index != family.length) {
+      return false;
+    }
+    return Bytes.compareTo(family, 0, index, column, 0, index) == 0;
+  }
+  
+  /**
+   * @param family
+   * @return Return <code>family</code> plus the family delimiter.
+   */
+  public static byte [] addDelimiter(final byte [] family) {
+    // Manufacture key by adding delimiter to the passed in colFamily.
+    byte [] familyPlusDelimiter = new byte [family.length + 1];
+    System.arraycopy(family, 0, familyPlusDelimiter, 0, family.length);
+    familyPlusDelimiter[family.length] = HStoreKey.COLUMN_FAMILY_DELIMITER;
+    return familyPlusDelimiter;
+  }
+
+  /**
+   * @param column
+   * @return New byte array that holds <code>column</code> qualifier suffix.
+   * @see #parseColumn(byte[])
+   */
+  public static byte [] getQualifier(final byte [] column) {
+    int index = getFamilyDelimiterIndex(column);
+    int len = column.length - (index + 1);
+    byte [] result = new byte[len];
+    System.arraycopy(column, index + 1, result, 0, len);
+    return result;
+  }
+
+  /**
+   * @param c Column name
+   * @return Return array of size two whose first element has the family
+   * prefix of passed column <code>c</code> and whose second element is the
+   * column qualifier.
+   */
+  public static byte [][] parseColumn(final byte [] c) {
+    byte [][] result = new byte [2][];
+    int index = getFamilyDelimiterIndex(c);
+    if (index == -1) {
+      throw new IllegalArgumentException("Impossible column name: " + c);
+    }
+    result[0] = new byte [index];
+    System.arraycopy(c, 0, result[0], 0, index);
+    int len = c.length - (index + 1);
+    result[1] = new byte[len];
+    System.arraycopy(c, index + 1 /*Skip delimiter*/, result[1], 0,
+      len);
+    return result;
+  }
+  
+  /**
+   * @param b
+   * @return Index of the family-qualifier colon delimiter character in passed
+   * buffer.
+   */
+  public static int getFamilyDelimiterIndex(final byte [] b) {
+    if (b == null) {
+      throw new NullPointerException();
+    }
+    int result = -1;
+    for (int i = 0; i < b.length; i++) {
+      if (b[i] == COLUMN_FAMILY_DELIMITER) {
+        result = i;
         break;
       }
     }
-    if(offset < 0) {
-      throw new InvalidColumnNameException(col + " is missing the colon " +
-        "family/qualifier separator");
-    }
-    return offset;
+    return result;
   }
 
   /**
    * Returns row and column bytes out of an HStoreKey.
    * @param hsk Store key.
    * @return byte array encoding of HStoreKey
-   * @throws UnsupportedEncodingException
    */
-  public static byte[] getBytes(final HStoreKey hsk)
-  throws UnsupportedEncodingException {
-    StringBuilder s = new StringBuilder(hsk.getRow().toString());
-    s.append(hsk.getColumn().toString());
-    return s.toString().getBytes(HConstants.UTF8_ENCODING);
+  public static byte[] getBytes(final HStoreKey hsk) {
+    return Bytes.add(hsk.getRow(), hsk.getColumn());
+  }
+  
+  // Writable
+
+  /** {@inheritDoc} */
+  public void write(DataOutput out) throws IOException {
+    Bytes.writeByteArray(out, this.row);
+    Bytes.writeByteArray(out, this.column);
+    out.writeLong(timestamp);
+  }
+
+  /** {@inheritDoc} */
+  public void readFields(DataInput in) throws IOException {
+    this.row = Bytes.readByteArray(in);
+    this.column = Bytes.readByteArray(in);
+    this.timestamp = in.readLong();
   }
 }

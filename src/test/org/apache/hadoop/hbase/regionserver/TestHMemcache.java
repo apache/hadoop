@@ -29,11 +29,10 @@ import java.util.TreeMap;
 
 import junit.framework.TestCase;
 
-import org.apache.hadoop.io.Text;
-
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /** memcache test case */
 public class TestHMemcache extends TestCase {
@@ -48,7 +47,7 @@ public class TestHMemcache extends TestCase {
 
   private static final int FIRST_ROW = 1;
   private static final int NUM_VALS = 1000;
-  private static final Text CONTENTS_BASIC = new Text("contents:basic");
+  private static final byte [] CONTENTS_BASIC = Bytes.toBytes("contents:basic");
   private static final String CONTENTSTR = "contentstr";
   private static final String ANCHORNUM = "anchor:anchornum-";
   private static final String ANCHORSTR = "anchorstr";
@@ -65,13 +64,13 @@ public class TestHMemcache extends TestCase {
    */
   public void testMemcache() throws UnsupportedEncodingException {
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
-      Text row = new Text("row_" + k);
+      byte [] row = Bytes.toBytes("row_" + k);
       HStoreKey key =
         new HStoreKey(row, CONTENTS_BASIC, System.currentTimeMillis());
       hmemcache.add(key, (CONTENTSTR + k).getBytes(HConstants.UTF8_ENCODING));
       
       key =
-        new HStoreKey(row, new Text(ANCHORNUM + k), System.currentTimeMillis());
+        new HStoreKey(row, Bytes.toBytes(ANCHORNUM + k), System.currentTimeMillis());
       hmemcache.add(key, (ANCHORSTR + k).getBytes(HConstants.UTF8_ENCODING));
     }
 
@@ -79,7 +78,7 @@ public class TestHMemcache extends TestCase {
 
     for (int k = FIRST_ROW; k <= NUM_VALS; k++) {
       List<Cell> results;
-      Text row = new Text("row_" + k);
+      byte [] row = Bytes.toBytes("row_" + k);
       HStoreKey key = new HStoreKey(row, CONTENTS_BASIC, Long.MAX_VALUE);
       results = hmemcache.get(key, 1);
       assertNotNull("no data for " + key.toString(), results);
@@ -91,7 +90,7 @@ public class TestHMemcache extends TestCase {
           "), expected: '" + teststr + "' got: '" +
           bodystr + "'", teststr.compareTo(bodystr) == 0);
       
-      key = new HStoreKey(row, new Text(ANCHORNUM + k), Long.MAX_VALUE);
+      key = new HStoreKey(row, Bytes.toBytes(ANCHORNUM + k), Long.MAX_VALUE);
       results = hmemcache.get(key, 1);
       assertNotNull("no data for " + key.toString(), results);
       assertEquals(1, results.size());
@@ -104,12 +103,12 @@ public class TestHMemcache extends TestCase {
     }
   }
 
-  private Text getRowName(final int index) {
-    return new Text("row" + Integer.toString(index));
+  private byte [] getRowName(final int index) {
+    return Bytes.toBytes("row" + Integer.toString(index));
   }
 
-  private Text getColumnName(final int rowIndex, final int colIndex) {
-    return new Text(COLUMN_FAMILY + ":" + Integer.toString(rowIndex) + ";" +
+  private byte [] getColumnName(final int rowIndex, final int colIndex) {
+    return Bytes.toBytes(COLUMN_FAMILY + ":" + Integer.toString(rowIndex) + ";" +
         Integer.toString(colIndex));
   }
 
@@ -117,15 +116,12 @@ public class TestHMemcache extends TestCase {
    * Adds {@link #ROW_COUNT} rows and {@link #COLUMNS_COUNT}
    * @param hmc Instance to add rows to.
    */
-  private void addRows(final Memcache hmc)
-    throws UnsupportedEncodingException {
-    
+  private void addRows(final Memcache hmc) {
     for (int i = 0; i < ROW_COUNT; i++) {
       long timestamp = System.currentTimeMillis();
       for (int ii = 0; ii < COLUMNS_COUNT; ii++) {
-        Text k = getColumnName(i, ii);
-        hmc.add(new HStoreKey(getRowName(i), k, timestamp),
-            k.toString().getBytes(HConstants.UTF8_ENCODING));
+        byte [] k = getColumnName(i, ii);
+        hmc.add(new HStoreKey(getRowName(i), k, timestamp), k);
       }
     }
   }
@@ -155,27 +151,26 @@ public class TestHMemcache extends TestCase {
     }
   }
   
-  private void isExpectedRowWithoutTimestamps(final int rowIndex, TreeMap<Text, byte[]> row)
-    throws UnsupportedEncodingException {
+  private void isExpectedRowWithoutTimestamps(final int rowIndex, TreeMap<byte [], byte[]> row) {
     int i = 0;
-    for (Text colname: row.keySet()) {
-      String expectedColname = getColumnName(rowIndex, i++).toString();
-      String colnameStr = colname.toString();
+    for (byte [] colname: row.keySet()) {
+      String expectedColname = Bytes.toString(getColumnName(rowIndex, i++));
+      String colnameStr = Bytes.toString(colname);
       assertEquals("Column name", colnameStr, expectedColname);
       // Value is column name as bytes.  Usually result is
       // 100 bytes in size at least. This is the default size
       // for BytesWriteable.  For comparison, comvert bytes to
       // String and trim to remove trailing null bytes.
       byte [] value = row.get(colname);
-      String colvalueStr = new String(value, HConstants.UTF8_ENCODING).trim();
+      String colvalueStr = Bytes.toString(value).trim();
       assertEquals("Content", colnameStr, colvalueStr);
     }
   }
 
-  private void isExpectedRow(final int rowIndex, TreeMap<Text, Cell> row)
-  throws UnsupportedEncodingException {
-    TreeMap<Text, byte[]> converted = new TreeMap<Text, byte[]>();
-    for (Map.Entry<Text, Cell> entry : row.entrySet()) {
+  private void isExpectedRow(final int rowIndex, TreeMap<byte [], Cell> row) {
+    TreeMap<byte [], byte[]> converted =
+      new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
+    for (Map.Entry<byte [], Cell> entry : row.entrySet()) {
       converted.put(entry.getKey(), 
         entry.getValue() == null ? null : entry.getValue().getValue());
     }
@@ -183,49 +178,49 @@ public class TestHMemcache extends TestCase {
   }
   
   /** Test getFull from memcache
-   * @throws UnsupportedEncodingException
    */
-  public void testGetFull() throws UnsupportedEncodingException {
+  public void testGetFull() {
     addRows(this.hmemcache);
     for (int i = 0; i < ROW_COUNT; i++) {
       HStoreKey hsk = new HStoreKey(getRowName(i));
-      TreeMap<Text, Cell> all = new TreeMap<Text, Cell>();
-      TreeMap<Text, Long> deletes = new TreeMap<Text, Long>();
+      TreeMap<byte [], Cell> all =
+        new TreeMap<byte [], Cell>(Bytes.BYTES_COMPARATOR);
+      TreeMap<byte [], Long> deletes =
+        new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
       this.hmemcache.getFull(hsk, null, deletes, all);
       isExpectedRow(i, all);
     }
   }
 
   /** Test getNextRow from memcache
-   * @throws UnsupportedEncodingException 
    */
-  public void testGetNextRow() throws UnsupportedEncodingException {
+  public void testGetNextRow() {
     addRows(this.hmemcache);
-    Text closestToEmpty = this.hmemcache.getNextRow(HConstants.EMPTY_TEXT);
-    assertEquals(closestToEmpty, getRowName(0));
+    byte [] closestToEmpty =
+      this.hmemcache.getNextRow(HConstants.EMPTY_BYTE_ARRAY);
+    assertTrue(Bytes.equals(closestToEmpty, getRowName(0)));
     for (int i = 0; i < ROW_COUNT; i++) {
-      Text nr = this.hmemcache.getNextRow(getRowName(i));
+      byte [] nr = this.hmemcache.getNextRow(getRowName(i));
       if (i + 1 == ROW_COUNT) {
         assertEquals(nr, null);
       } else {
-        assertEquals(nr, getRowName(i + 1));
+        assertTrue(Bytes.equals(nr, getRowName(i + 1)));
       }
     }
   }
 
   /** Test getClosest from memcache
-   * @throws UnsupportedEncodingException 
    */
-  public void testGetClosest() throws UnsupportedEncodingException {
+  public void testGetClosest() {
     addRows(this.hmemcache);
-    Text closestToEmpty = this.hmemcache.getNextRow(HConstants.EMPTY_TEXT);
-    assertEquals(closestToEmpty, getRowName(0));
+    byte [] closestToEmpty = this.hmemcache.getNextRow(HConstants.EMPTY_BYTE_ARRAY);
+    assertTrue(Bytes.equals(closestToEmpty, getRowName(0)));
     for (int i = 0; i < ROW_COUNT; i++) {
-      Text nr = this.hmemcache.getNextRow(getRowName(i));
+      byte [] nr = this.hmemcache.getNextRow(getRowName(i));
       if (i + 1 == ROW_COUNT) {
         assertEquals(nr, null);
       } else {
-        assertEquals(nr, getRowName(i + 1));
+        assertTrue(Bytes.equals(nr, getRowName(i + 1)));
       }
     }
   }
@@ -237,23 +232,25 @@ public class TestHMemcache extends TestCase {
   public void testScanner() throws IOException {
     addRows(this.hmemcache);
     long timestamp = System.currentTimeMillis();
-    Text [] cols = new Text[COLUMNS_COUNT * ROW_COUNT];
+    byte [][] cols = new byte[COLUMNS_COUNT * ROW_COUNT][];
     for (int i = 0; i < ROW_COUNT; i++) {
       for (int ii = 0; ii < COLUMNS_COUNT; ii++) {
         cols[(ii + (i * COLUMNS_COUNT))] = getColumnName(i, ii);
       }
     }
     InternalScanner scanner =
-      this.hmemcache.getScanner(timestamp, cols, new Text());
+      this.hmemcache.getScanner(timestamp, cols, HConstants.EMPTY_START_ROW);
     HStoreKey key = new HStoreKey();
-    TreeMap<Text, byte []> results = new TreeMap<Text, byte []>();
+    TreeMap<byte [], byte []> results =
+      new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
     for (int i = 0; scanner.next(key, results); i++) {
       assertTrue("Row name",
-          key.toString().startsWith(getRowName(i).toString()));
+          key.toString().startsWith(Bytes.toString(getRowName(i))));
       assertEquals("Count of columns", COLUMNS_COUNT,
           results.size());
-      TreeMap<Text, byte []> row = new TreeMap<Text, byte []>();
-      for(Map.Entry<Text, byte []> e: results.entrySet() ) {
+      TreeMap<byte [], byte []> row =
+        new TreeMap<byte [], byte []>(Bytes.BYTES_COMPARATOR);
+      for(Map.Entry<byte [], byte []> e: results.entrySet() ) {
         row.put(e.getKey(), e.getValue());
       }
       isExpectedRowWithoutTimestamps(i, row);
@@ -265,11 +262,11 @@ public class TestHMemcache extends TestCase {
   /** For HBASE-528 */
   public void testGetRowKeyAtOrBefore() {
     // set up some test data
-    Text t10 = new Text("010");
-    Text t20 = new Text("020");
-    Text t30 = new Text("030");
-    Text t35 = new Text("035");
-    Text t40 = new Text("040");
+    byte [] t10 = Bytes.toBytes("010");
+    byte [] t20 = Bytes.toBytes("020");
+    byte [] t30 = Bytes.toBytes("030");
+    byte [] t35 = Bytes.toBytes("035");
+    byte [] t40 = Bytes.toBytes("040");
     
     hmemcache.add(getHSKForRow(t10), "t10 bytes".getBytes());
     hmemcache.add(getHSKForRow(t20), "t20 bytes".getBytes());
@@ -282,7 +279,7 @@ public class TestHMemcache extends TestCase {
     
     // try finding "015"
     results = new TreeMap<HStoreKey, Long>();
-    Text t15 = new Text("015");
+    byte [] t15 = Bytes.toBytes("015");
     hmemcache.getRowKeyAtOrBefore(t15, results);
     assertEquals(t10, results.lastKey().getRow());
     
@@ -293,18 +290,18 @@ public class TestHMemcache extends TestCase {
   
     // try "038", should skip the deleted "035" and give "030"
     results = new TreeMap<HStoreKey, Long>();
-    Text t38 = new Text("038");
+    byte [] t38 = Bytes.toBytes("038");
     hmemcache.getRowKeyAtOrBefore(t38, results);
     assertEquals(t30, results.lastKey().getRow());
   
     // try "050", should get stuff from "040"
     results = new TreeMap<HStoreKey, Long>();
-    Text t50 = new Text("050");
+    byte [] t50 = Bytes.toBytes("050");
     hmemcache.getRowKeyAtOrBefore(t50, results);
     assertEquals(t40, results.lastKey().getRow());
   }
   
-  private HStoreKey getHSKForRow(Text row) {
-    return new HStoreKey(row, new Text("test_col:"), HConstants.LATEST_TIMESTAMP);
+  private HStoreKey getHSKForRow(byte [] row) {
+    return new HStoreKey(row, Bytes.toBytes("test_col:"), HConstants.LATEST_TIMESTAMP);
   }
 }

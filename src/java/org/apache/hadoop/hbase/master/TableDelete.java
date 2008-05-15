@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotDisabledException;
-import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -36,7 +35,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
  */
 class TableDelete extends TableOperation {
 
-  TableDelete(final HMaster master, final Text tableName) throws IOException {
+  TableDelete(final HMaster master, final byte [] tableName) throws IOException {
     super(master, tableName);
   }
 

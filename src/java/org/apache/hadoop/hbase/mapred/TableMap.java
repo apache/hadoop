@@ -22,9 +22,8 @@ package org.apache.hadoop.hbase.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.io.MapWritable;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
@@ -32,8 +31,6 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.io.BatchUpdate;
 
 /**
  * Scan an HBase table to sort by a specified sort column.
@@ -44,7 +41,7 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
  */
 @SuppressWarnings("unchecked")
 public abstract class TableMap<K extends WritableComparable, V extends Writable>
-    extends MapReduceBase implements Mapper<Text, RowResult, K, V> {
+    extends MapReduceBase implements Mapper<ImmutableBytesWritable, RowResult, K, V> {
   /**
    * Use this before submitting a TableMap job. It will
    * appropriately set up the JobConf.
@@ -77,6 +74,6 @@ public abstract class TableMap<K extends WritableComparable, V extends Writable>
    * @param reporter
    * @throws IOException
    */
-  public abstract void map(Text key, RowResult value,
+  public abstract void map(ImmutableBytesWritable key, RowResult value,
       OutputCollector<K, V> output, Reporter reporter) throws IOException;
 }

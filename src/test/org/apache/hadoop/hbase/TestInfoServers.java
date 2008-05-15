@@ -25,7 +25,6 @@ import java.net.URL;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hbase.client.HTable;
 
 /**
@@ -48,8 +47,7 @@ public class TestInfoServers extends HBaseClusterTestCase {
    */
   public void testInfoServersAreUp() throws Exception {
     // give the cluster time to start up
-    HTable table = new HTable(conf, new Text(".META."));
-    
+    new HTable(conf, ".META.");
     int port = cluster.getMaster().getInfoServer().getPort();
     assertHasExpectedContent(new URL("http://localhost:" + port +
       "/index.html"), "Master");

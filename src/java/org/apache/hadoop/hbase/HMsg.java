@@ -188,7 +188,7 @@ public class HMsg implements Writable {
       message.append(") : ");
       break;
     }
-    message.append(info == null ? "null" : info.getRegionName());
+    message.append(info == null ? "null": info.getRegionNameAsString());
     return message.toString();
   }
   

@@ -30,14 +30,14 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Test batch updates
  */
 public class TestBatchUpdate extends HBaseClusterTestCase {
   private static final String CONTENTS_STR = "contents:";
-  private static final Text CONTENTS = new Text(CONTENTS_STR);
+  private static final byte [] CONTENTS = Bytes.toBytes(CONTENTS_STR);
   private byte[] value;
 
   private HTableDescriptor desc = null;
@@ -68,19 +68,19 @@ public class TestBatchUpdate extends HBaseClusterTestCase {
    * @throws IOException
    */
   public void testBatchUpdate() throws IOException {
-    BatchUpdate bu = new BatchUpdate(new Text("row1"));
+    BatchUpdate bu = new BatchUpdate("row1");
     bu.put(CONTENTS, value);
     bu.delete(CONTENTS);
     table.commit(bu);
 
-    bu = new BatchUpdate(new Text("row2"));
+    bu = new BatchUpdate("row2");
     bu.put(CONTENTS, value);
     table.commit(bu);
 
-    Text[] columns = { CONTENTS };
-    Scanner scanner = table.getScanner(columns, new Text());
+    byte [][] columns = { CONTENTS };
+    Scanner scanner = table.getScanner(columns, HConstants.EMPTY_START_ROW);
     for (RowResult r : scanner) {
-      for(Map.Entry<Text, Cell> e: r.entrySet()) {
+      for(Map.Entry<byte [], Cell> e: r.entrySet()) {
         System.out.println(r.getRow() + ": row: " + e.getKey() + " value: " + 
             new String(e.getValue().getValue(), HConstants.UTF8_ENCODING));
       }
