@@ -250,6 +250,8 @@ Trunk (unreleased changes)
     HADOOP-3203. Fixes TaskTracker::localizeJob to pass correct file sizes
     for the jarfile and the jobfile. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3391. Fix a findbugs warning introduced by HADOOP-3248 (rangadi)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

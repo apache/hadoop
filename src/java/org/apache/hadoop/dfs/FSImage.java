@@ -92,7 +92,6 @@ class FSImage extends Storage {
    */
   static private final FsPermission FILE_PERM = new FsPermission((short)0);
   static private final byte[] PATH_SEPARATOR = INode.string2Bytes(Path.SEPARATOR);
-  static private byte[] byteStore = null;
 
   /**
    */
@@ -843,11 +842,10 @@ class FSImage extends Storage {
       out.writeInt(namespaceID);
       out.writeInt(fsDir.rootDir.numItemsInTree() - 1);
       out.writeLong(fsNamesys.getGenerationStamp());
-      byteStore = new byte[4*FSConstants.MAX_PATH_LENGTH];
+      byte[] byteStore = new byte[4*FSConstants.MAX_PATH_LENGTH];
       ByteBuffer strbuf = ByteBuffer.wrap(byteStore);
       saveImage(strbuf, 0, fsDir.rootDir, out);
       fsNamesys.saveFilesUnderConstruction(out);
-      byteStore = null;
       strbuf = null;
     } finally {
       out.close();
@@ -941,7 +939,8 @@ class FSImage extends Storage {
       parentPrefix.put(PATH_SEPARATOR).put(child.getLocalNameBytes());
       newPrefixLength = parentPrefix.position();
       out.writeShort(newPrefixLength);
-      out.write(byteStore, 0, newPrefixLength);
+      out.write(parentPrefix.array(), parentPrefix.arrayOffset(),
+                newPrefixLength);
       if (!child.isDirectory()) {  // write file inode
         INodeFile fileINode = (INodeFile)child;
         out.writeShort(fileINode.getReplication());
