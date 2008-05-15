@@ -60,6 +60,7 @@ Release 0.1.2 - 05/13/2008
    HBASE-453   undeclared throwable exception from HTable.get
    HBASE-620   testmergetool failing in branch and trunk since hbase-618 went in
 
+
 Release 0.1.1 - 04/11/2008
 
   INCOMPATIBLE CHANGES
