@@ -67,6 +67,7 @@
   <property name="javadoc.link.java"
     value="http://java.sun.com/j2se/1.5/docs/api/"/>
   <property name="javadoc.packages" value="org.apache.hadoop.hbase.*"/>
+  <property name="jarfile" value="${build.dir}/${final.name}.jar" />
 
 
   <!--We need to have the hadoop jars ride in front of the hbase classes or we
@@ -135,7 +136,7 @@
      />
   </target>
 
-  <target name="compile" depends="init,jspc,javacc">
+  <target name="compile" depends="init,javacc,jspc">
    <!--Compile whats under src and generated java classes made from jsp-->
    <javac
     encoding="${build.encoding}"
@@ -155,7 +156,7 @@
         <include name="**/*.properties" />
       </fileset>
     </copy>
-    <jar jarfile="${build.dir}/${final.name}.jar"
+    <jar jarfile="${jarfile}"
         basedir="${build.classes}" >
       <fileset file="${basedir}/conf/hbase-default.xml"/>
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
@@ -165,7 +166,10 @@
     </jar>
   </target>
 
-  <target name="jspc" >
+   <!--Conditionally generate the jsp java pages.
+       We do it once per ant invocation.  See hbase-593.
+     -->
+  <target name="jspc" unless="jspc.not.required">
     <path id="jspc.classpath">
       <fileset dir="${basedir}/lib/jetty-ext/">
         <include name="*jar" />
@@ -190,6 +194,8 @@
      package="org.apache.hadoop.hbase.generated.regionserver"
      webxml="${src.webapps}/regionserver/WEB-INF/web.xml">
     </jspcompiler>
+    <property name="jspc.not.required" value="true" />
+    <echo message="Setting jspc.notRequired property. jsp pages generated once per ant session only" />
   </target>
 
   <!-- ================================================================== -->
