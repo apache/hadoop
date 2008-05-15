@@ -257,6 +257,10 @@ Trunk (unreleased changes)
 
     HADOOP-3391. Fix a findbugs warning introduced by HADOOP-3248 (rangadi)
 
+    HADOOP-3393. Fix datanode shutdown to call DataBlockScanner::shutdown and
+    close its log, even if the scanner thread is not running. (lohit vijayarenu
+    via cdouglas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

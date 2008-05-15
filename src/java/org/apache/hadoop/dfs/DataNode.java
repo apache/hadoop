@@ -555,10 +555,10 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
     
     if(upgradeManager != null)
       upgradeManager.shutdownUpgrade();
-    if (blockScannerThread != null) {
+    if (blockScanner != null)
       blockScanner.shutdown();
+    if (blockScannerThread != null) 
       blockScannerThread.interrupt();
-    }
     if (storage != null) {
       try {
         this.storage.unlockAll();
