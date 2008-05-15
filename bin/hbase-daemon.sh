@@ -89,10 +89,21 @@ if [ "$HBASE_IDENT_STRING" = "" ]; then
   export HBASE_IDENT_STRING="$USER"
 fi
 
-# some variables
+# Some variables
+# Work out java location so can print version into log.
+if [ "$JAVA_HOME" != "" ]; then
+  #echo "run java in $JAVA_HOME"
+  JAVA_HOME=$JAVA_HOME
+fi
+if [ "$JAVA_HOME" = "" ]; then
+  echo "Error: JAVA_HOME is not set."
+  exit 1
+fi
+JAVA=$JAVA_HOME/bin/java
 export HBASE_LOGFILE=hbase-$HBASE_IDENT_STRING-$command-$HOSTNAME.log
 export HBASE_ROOT_LOGGER="INFO,DRFA"
-log=$HBASE_LOG_DIR/hbase-$HBASE_IDENT_STRING-$command-$HOSTNAME.out  
+logout=$HBASE_LOG_DIR/hbase-$HBASE_IDENT_STRING-$command-$HOSTNAME.out  
+loglog="${HBASE_LOG_DIR}/${HBASE_LOGFILE}"
 pid=$HBASE_PID_DIR/hbase-$HBASE_IDENT_STRING-$command.pid
 
 # Set default scheduling priority
@@ -111,24 +122,30 @@ case $startStop in
       fi
     fi
 
-    hbase_rotate_log $log
-    echo starting $command, logging to $log
+    hbase_rotate_log $logout
+    echo starting $command, logging to $logout
+    # Add to the command log file vital stats on our environment.
+    echo "`date` Starting $command on `hostname`" >> $loglog
+    $JAVA -version >> $loglog 2>&1
+    echo "ulimit -n `ulimit -n`" >> $loglog 2>&1
     nohup nice -n $HBASE_NICENESS "$HBASE_HOME"/bin/hbase \
         --config "${HBASE_CONF_DIR}" \
-        $command $startStop "$@" > "$log" 2>&1 < /dev/null &
+        $command $startStop "$@" > "$logout" 2>&1 < /dev/null &
     echo $! > $pid
-    sleep 1; head "$log"
+    sleep 1; head "$logout"
     ;;
 
   (stop)
     if [ -f $pid ]; then
       if kill -0 `cat $pid` > /dev/null 2>&1; then
         echo -n stopping $command
+        echo "`date` Stopping $command" >> $loglog
         if [ "$command" = "master" ]; then
           nohup nice -n $HBASE_NICENESS "$HBASE_HOME"/bin/hbase \
               --config "${HBASE_CONF_DIR}" \
-              $command $startStop "$@" > "$log" 2>&1 < /dev/null &
+              $command $startStop "$@" > "$logout" 2>&1 < /dev/null &
         else
+          echo "`date` Killing $command" >> $loglog
           kill `cat $pid` > /dev/null 2>&1
         fi
         while kill -0 `cat $pid` > /dev/null 2>&1; do
