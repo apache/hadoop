@@ -86,6 +86,11 @@ Trunk (unreleased changes)
     be corrupt, retain all copies and mark the block as corrupt.
     (Lohit Vjayarenu via rangadi)
 
+    HADOOP-3221. Adds org.apache.hadoop.mapred.lib.NLineInputFormat, which 
+    splits files into splits each of N lines. N can be specified by 
+    configuration property "mapred.line.input.format.linespermap", which
+    defaults to 1. (Amareshwari Sriramadasu via ddas) 
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().

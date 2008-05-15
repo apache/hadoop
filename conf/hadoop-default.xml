@@ -1057,6 +1057,13 @@ creations/deletions), or "all".</description>
     </description>
   </property>
 
+  <property>
+    <name>mapred.line.input.format.linespermap</name>
+    <value>1</value>
+    <description> Number of lines per split in NLineInputFormat.
+    </description>
+  </property>
+
 <!-- ipc properties -->
 
 <property>
