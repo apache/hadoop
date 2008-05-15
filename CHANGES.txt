@@ -91,6 +91,9 @@ Trunk (unreleased changes)
     configuration property "mapred.line.input.format.linespermap", which
     defaults to 1. (Amareshwari Sriramadasu via ddas) 
 
+    HADOOP-3336. Direct a subset of annotated FSNamesystem calls for audit
+    logging. (cdouglas)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().

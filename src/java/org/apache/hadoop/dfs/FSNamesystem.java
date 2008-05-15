@@ -34,6 +34,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.dfs.LeaseManager.Lease;
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.ipc.Server;
@@ -68,6 +69,15 @@ import javax.security.auth.login.LoginException;
  ***************************************************/
 class FSNamesystem implements FSConstants, FSNamesystemMBean {
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.fs.FSNamesystem");
+  public static final String AUDIT_FORMAT =
+    "ugi=%s\t" +  // ugi
+    "ip=%s\t" +   // remote IP
+    "cmd=%s\t" +  // command
+    "path=%s\t" + // path
+    "perm=%s";    // permissions (optional)
+
+  public static final Log auditLog = LogFactory.getLog(
+      "org.apache.hadoop.fs.FSNamesystem.audit");
 
   private boolean isPermissionEnabled;
   private UserGroupInformation fsOwner;
@@ -625,6 +635,14 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     checkOwner(src);
     dir.setPermission(src, permission);
     getEditLog().logSync();
+    if (auditLog.isInfoEnabled()) {
+      final FileStatus stat = dir.getFileInfo(src);
+      auditLog.info(String.format(AUDIT_FORMAT,
+                    UserGroupInformation.getCurrentUGI(),
+                    Server.getRemoteIp(),
+                    "setPermission", src, stat.getOwner() + ':' +
+                    stat.getGroup() + ':' + stat.getPermission()));
+    }
   }
 
   /**
@@ -645,6 +663,14 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
     dir.setOwner(src, username, group);
     getEditLog().logSync();
+    if (auditLog.isInfoEnabled()) {
+      final FileStatus stat = dir.getFileInfo(src);
+      auditLog.info(String.format(AUDIT_FORMAT,
+                    UserGroupInformation.getCurrentUGI(),
+                    Server.getRemoteIp(),
+                    "setOwner", src, stat.getOwner() + ':' +
+                    stat.getGroup() + ':' + stat.getPermission()));
+    }
   }
 
   /**
@@ -682,8 +708,15 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if (length < 0) {
       throw new IOException("Negative length is not supported. File: " + src );
     }
-    return getBlockLocationsInternal(dir.getFileINode(src), offset, length,
-        Integer.MAX_VALUE);  
+    final LocatedBlocks ret = getBlockLocationsInternal(dir.getFileINode(src),
+        offset, length, Integer.MAX_VALUE);  
+    if (auditLog.isInfoEnabled()) {
+      auditLog.info(String.format(AUDIT_FORMAT,
+                    UserGroupInformation.getCurrentUGI(),
+                    Server.getRemoteIp(),
+                    "open", src, null));
+    }
+    return ret;
   }
 
   private synchronized LocatedBlocks getBlockLocationsInternal(INodeFile inode,
@@ -769,6 +802,12 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
                                 throws IOException {
     boolean status = setReplicationInternal(src, replication);
     getEditLog().logSync();
+    if (auditLog.isInfoEnabled()) {
+      auditLog.info(String.format(AUDIT_FORMAT,
+                    UserGroupInformation.getCurrentUGI(),
+                    Server.getRemoteIp(),
+                    "setReplication", src, null));
+    }
     return status;
   }
 
@@ -850,6 +889,14 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     startFileInternal(src, permissions, holder, clientMachine, overwrite,
                       replication, blockSize);
     getEditLog().logSync();
+    if (auditLog.isInfoEnabled()) {
+      final FileStatus stat = dir.getFileInfo(src);
+      auditLog.info(String.format(AUDIT_FORMAT,
+                    UserGroupInformation.getCurrentUGI(),
+                    Server.getRemoteIp(),
+                    "create", src, stat.getOwner() + ':' +
+                    stat.getGroup() + ':' + stat.getPermission()));
+    }
   }
 
   private synchronized void startFileInternal(String src,
@@ -1381,6 +1428,12 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
       boolean status = deleteInternal(src, true, true);
       getEditLog().logSync();
+      if (auditLog.isInfoEnabled()) {
+        auditLog.info(String.format(AUDIT_FORMAT,
+                      UserGroupInformation.getCurrentUGI(),
+                      Server.getRemoteIp(),
+                      "delete", src, null));
+      }
       return status;
     }
     
@@ -1464,6 +1517,14 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       ) throws IOException {
     boolean status = mkdirsInternal(src, permissions);
     getEditLog().logSync();
+    if (auditLog.isInfoEnabled()) {
+      final FileStatus stat = dir.getFileInfo(src);
+      auditLog.info(String.format(AUDIT_FORMAT,
+                    UserGroupInformation.getCurrentUGI(),
+                    Server.getRemoteIp(),
+                    "mkdirs", src, stat.getOwner() + ':' +
+                    stat.getGroup() + ':' + stat.getPermission()));
+    }
     return status;
   }
     
@@ -1607,6 +1668,12 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       else {
         checkTraverse(src);
       }
+    }
+    if (auditLog.isInfoEnabled()) {
+      auditLog.info(String.format(AUDIT_FORMAT,
+                    UserGroupInformation.getCurrentUGI(),
+                    Server.getRemoteIp(),
+                    "listStatus", src, null));
     }
     return dir.getListing(src);
   }
