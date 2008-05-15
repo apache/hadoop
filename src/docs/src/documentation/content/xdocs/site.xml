@@ -51,7 +51,8 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <wiki      label="Wiki"               href="ext:wiki" />
     <faq       label="FAQ"                href="ext:faq" />
     <lists     label="Mailing Lists"      href="ext:lists" />
-    <changes   label="Release Notes"      href="ext:changes" />
+    <relnotes  label="Release Notes"      href="ext:relnotes" />
+    <changes   label="All Changes"        href="ext:changes" />
   </docs>
 
   <external-refs>
@@ -81,6 +82,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
       <python href="http://www.python.org" />
       <twisted-python href="http://twistedmatrix.com/trac/" />
     </hod>
+    <relnotes href="releasenotes.html" />
     <changes href="changes.html" />
     <api href="api/">
       <index href="index.html" />

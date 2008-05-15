@@ -252,7 +252,7 @@ Trunk (unreleased changes)
 
     HADOOP-3391. Fix a findbugs warning introduced by HADOOP-3248 (rangadi)
 
-Release 0.17.0 - Unreleased
+Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
 
