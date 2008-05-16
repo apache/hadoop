@@ -342,7 +342,7 @@ public class Migrate extends Configured implements Tool {
   throws IOException {
     // Create directory where table will live
 
-    Path tableDir = new Path(rootdir, tableName.toString());
+    Path tableDir = new Path(rootdir, Bytes.toString(tableName));
     fs.mkdirs(tableDir);
 
     // Move the old region directory under the table directory
