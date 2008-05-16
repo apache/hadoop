@@ -207,7 +207,7 @@ public class TestSplit extends HBaseClusterTestCase {
   throws IOException {
     // Assert can get mid key from passed region.
     assertGet(r, COLFAMILY_NAME3, midKey);
-    HRegion [] regions = r.splitRegion(null, midKey);
+    HRegion [] regions = r.splitRegion(midKey);
     assertEquals(regions.length, 2);
     return regions;
   }

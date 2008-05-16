@@ -41,13 +41,11 @@ import org.apache.hadoop.hbase.util.Writables;
 /** 
  * Compact region on request and then run split if appropriate
  */
-class CompactSplitThread extends Thread 
-implements RegionUnavailableListener, HConstants {
+class CompactSplitThread extends Thread implements HConstants {
   static final Log LOG = LogFactory.getLog(CompactSplitThread.class);
   
   private HTable root = null;
   private HTable meta = null;
-  private volatile long startTime;
   private final long frequency;
   private final ReentrantLock lock = new ReentrantLock();
   
@@ -132,7 +130,8 @@ implements RegionUnavailableListener, HConstants {
   private void split(final HRegion region, final byte [] midKey)
   throws IOException {
     final HRegionInfo oldRegionInfo = region.getRegionInfo();
-    final HRegion[] newRegions = region.splitRegion(this, midKey);
+    final long startTime = System.currentTimeMillis();
+    final HRegion[] newRegions = region.splitRegion(midKey);
     if (newRegions == null) {
       // Didn't need to be split
       return;
@@ -190,16 +189,6 @@ implements RegionUnavailableListener, HConstants {
     // Do not serve the new regions. Let the Master assign them.
   }
   
-  /** {@inheritDoc} */
-  public void closing(@SuppressWarnings("unused") final byte [] regionName) {
-    // continue
-  }
-  
-  /** {@inheritDoc} */
-  public void closed(@SuppressWarnings("unused") final byte [] regionName) {
-    // continue
-  }
-
   /**
    * Only interrupt once it's done with a run through the work loop.
    */ 

@@ -42,10 +42,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * A lot of the meta information for an HRegion now lives inside other
  * HRegions or in the HBaseMaster, so only basic testing is possible.
  */
-public class TestHRegion extends HBaseTestCase
-implements RegionUnavailableListener {
-  static final Logger LOG =
-    Logger.getLogger(TestHRegion.class.getName());
+public class TestHRegion extends HBaseTestCase {
+  static final Logger LOG = Logger.getLogger(TestHRegion.class);
   
   /**
    * Since all the "tests" depend on the results of the previous test, they are
@@ -60,7 +58,6 @@ implements RegionUnavailableListener {
       badPuts();
       basic();
       scan();
-//      batchWrite();
       splitAndMerge();
       read();
     } finally {
@@ -70,18 +67,15 @@ implements RegionUnavailableListener {
   
   
   private static final int FIRST_ROW = 1;
-  private static final int N_ROWS = 1000000;
   private static final int NUM_VALS = 1000;
   private static final byte [] CONTENTS_BASIC = Bytes.toBytes("contents:basic");
   private static final String CONTENTSTR = "contentstr";
   private static final String ANCHORNUM = "anchor:anchornum-";
   private static final String ANCHORSTR = "anchorstr";
-  private static final byte [] CONTENTS_BODY = Bytes.toBytes("contents:body");
   private static final byte [] CONTENTS_FIRSTCOL = Bytes.toBytes("contents:firstcol");
   private static final byte [] ANCHOR_SECONDCOL = Bytes.toBytes("anchor:secondcol");
   
   private MiniDFSCluster cluster = null;
-  private HLog log = null;
   private HTableDescriptor desc = null;
   HRegion r = null;
   HRegionIncommon region = null;
@@ -112,7 +106,6 @@ implements RegionUnavailableListener {
     desc.addFamily(new HColumnDescriptor("contents:"));
     desc.addFamily(new HColumnDescriptor("anchor:"));
     r = createNewHRegion(desc, null, null);
-    log = r.getLog();
     region = new HRegionIncommon(r);
     LOG.info("setup completed.");
   }
@@ -518,80 +511,13 @@ implements RegionUnavailableListener {
     LOG.info("scan completed.");
   }
   
-  // Do a large number of writes. Disabled if not debugging because it takes a 
-  // long time to run.
-  // Creates contents:body
-  
-  private void batchWrite() throws IOException {
-    long totalFlush = 0;
-    long totalCompact = 0;
-    long totalLog = 0;
-    long startTime = System.currentTimeMillis();
-
-    // 1M writes
-
-    int valsize = 1000;
-    for (int k = FIRST_ROW; k <= N_ROWS; k++) {
-      // Come up with a random 1000-byte string
-      String randstr1 = "" + System.currentTimeMillis();
-      StringBuffer buf1 = new StringBuffer("val_" + k + "__");
-      while (buf1.length() < valsize) {
-        buf1.append(randstr1);
-      }
-
-      // Write to the HRegion
-      BatchUpdate batchUpdate = 
-        new BatchUpdate(Bytes.toBytes("row_" + k), System.currentTimeMillis());
-      batchUpdate.put(CONTENTS_BODY,
-          buf1.toString().getBytes(HConstants.UTF8_ENCODING));
-      region.commit(batchUpdate);
-      if (k > 0 && k % (N_ROWS / 100) == 0) {
-        LOG.info("Flushing write #" + k);
-
-        long flushStart = System.currentTimeMillis();
-        region.flushcache();
-        long flushEnd = System.currentTimeMillis();
-        totalFlush += (flushEnd - flushStart);
-
-        if (k % (N_ROWS / 10) == 0) {
-          System.err.print("Rolling log...");
-          long logStart = System.currentTimeMillis();
-          log.rollWriter();
-          long logEnd = System.currentTimeMillis();
-          totalLog += (logEnd - logStart);
-          LOG.info("  elapsed time: " + ((logEnd - logStart) / 1000.0));
-        }
-      }
-    }
-    long startCompact = System.currentTimeMillis();
-    r.compactStores();
-    totalCompact = System.currentTimeMillis() - startCompact;
-    LOG.info("Region compacted - elapsedTime: " + (totalCompact / 1000.0));
-    long endTime = System.currentTimeMillis();
-
-    long totalElapsed = (endTime - startTime);
-    LOG.info("");
-    LOG.info("Batch-write complete.");
-    LOG.info("Wrote " + N_ROWS + " rows, each of ~" + valsize + " bytes");
-    LOG.info("Total flush-time: " + (totalFlush / 1000.0));
-    LOG.info("Total compact-time: " + (totalCompact / 1000.0));
-    LOG.info("Total log-time: " + (totalLog / 1000.0));
-    LOG.info("Total time elapsed: " + (totalElapsed / 1000.0));
-    LOG.info("Total time, rows/second: " + (N_ROWS / (totalElapsed / 1000.0)));
-    LOG.info("Adjusted time (not including flush, compact, or log): " + ((totalElapsed - totalFlush - totalCompact - totalLog) / 1000.0));
-    LOG.info("Adjusted time, rows/second: " + (N_ROWS / ((totalElapsed - totalFlush - totalCompact - totalLog) / 1000.0)));
-    LOG.info("");
-
-    LOG.info("batchWrite completed.");
-  }
-
   // NOTE: This test depends on testBatchWrite succeeding
   private void splitAndMerge() throws IOException {
     Path oldRegionPath = r.getRegionDir();
     byte [] midKey = r.compactStores();
     assertNotNull(midKey);
     long startTime = System.currentTimeMillis();
-    HRegion subregions[] = r.splitRegion(this, midKey);
+    HRegion subregions[] = r.splitRegion(midKey);
     if (subregions != null) {
       LOG.info("Split region elapsed time: "
           + ((System.currentTimeMillis() - startTime) / 1000.0));
@@ -619,20 +545,6 @@ implements RegionUnavailableListener {
     LOG.info("splitAndMerge completed.");
   }
 
-  /**
-   * {@inheritDoc}
-   */
-  public void closing(@SuppressWarnings("unused") final byte [] regionName) {
-    // We don't use this here. It is only for the HRegionServer
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public void closed(@SuppressWarnings("unused") final byte [] regionName) {
-    // We don't use this here. It is only for the HRegionServer
-  }
-  
   // This test verifies that everything is still there after splitting and merging
   
   private void read() throws IOException {

@@ -357,7 +357,7 @@ public class HRegion implements HConstants {
     new ReentrantReadWriteLock();
   private final Integer splitLock = new Integer(0);
   private final long minSequenceId;
-  private final AtomicInteger activeScannerCount = new AtomicInteger(0);
+  final AtomicInteger activeScannerCount = new AtomicInteger(0);
 
   //////////////////////////////////////////////////////////////////////////////
   // Constructor
@@ -525,7 +525,7 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public List<HStoreFile> close() throws IOException {
-    return close(false, null);
+    return close(false);
   }
   
   /**
@@ -536,15 +536,13 @@ public class HRegion implements HConstants {
    * time-sensitive thread.
    * 
    * @param abort true if server is aborting (only during testing)
-   * @param listener call back to alert caller on close status
    * @return Vector of all the storage files that the HRegion's component 
    * HStores make use of.  It's a list of HStoreFile objects.  Can be null if
    * we are not to close at this time or we are already closed.
    * 
    * @throws IOException
    */
-  List<HStoreFile> close(boolean abort,
-      final RegionUnavailableListener listener) throws IOException {
+  List<HStoreFile> close(boolean abort) throws IOException {
     if (isClosed()) {
       LOG.warn("region " + this + " already closed");
       return null;
@@ -592,13 +590,6 @@ public class HRegion implements HConstants {
         waitOnRowLocks();
         LOG.debug("No more row locks outstanding on region " + this);
 
-        if (listener != null) {
-          // If there is a listener, let them know that we have now
-          // acquired all the necessary locks and are starting to
-          // do the close
-          listener.closing(getRegionName());
-        }
-        
         // Don't flush the cache if we are aborting
         if (!abort) {
           internalFlushcache();
@@ -609,12 +600,6 @@ public class HRegion implements HConstants {
           result.addAll(store.close());
         }
         this.closed.set(true);
-        
-        if (listener != null) {
-          // If there is a listener, tell them that the region is now 
-          // closed.
-          listener.closed(getRegionName());
-        }
         
         LOG.info("closed " + this);
         return result;
@@ -707,13 +692,11 @@ public class HRegion implements HConstants {
    * current HRegion.  Split should be fast since we don't rewrite store files
    * but instead create new 'reference' store files that read off the top and
    * bottom ranges of parent store files.
-   * @param listener May be null.
    * @param midKey key on which to split region
    * @return two brand-new (and open) HRegions or null if a split is not needed
    * @throws IOException
    */
-  HRegion[] splitRegion(final RegionUnavailableListener listener,
-      final byte [] midKey) throws IOException {
+  HRegion[] splitRegion(final byte [] midKey) throws IOException {
     synchronized (splitLock) {
       if (closed.get()) {
         return null;
@@ -753,16 +736,10 @@ public class HRegion implements HConstants {
       // Now close the HRegion.  Close returns all store files or null if not
       // supposed to close (? What to do in this case? Implement abort of close?)
       // Close also does wait on outstanding rows and calls a flush just-in-case.
-      List<HStoreFile> hstoreFilesToSplit = close(false, listener);
+      List<HStoreFile> hstoreFilesToSplit = close(false);
       if (hstoreFilesToSplit == null) {
         LOG.warn("Close came back null (Implement abort of close?)");
         throw new RuntimeException("close returned empty vector of HStoreFiles");
-      }
-
-      // Tell listener that region is now closed and that they can therefore
-      // clean up any outstanding references.
-      if (listener != null) {
-        listener.closed(this.getRegionName());
       }
 
       // Split each store file.

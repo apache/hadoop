@@ -912,7 +912,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         LOG.debug("closing region " + Bytes.toString(region.getRegionName()));
       }
       try {
-        region.close(abortRequested, null);
+        region.close(abortRequested);
       } catch (IOException e) {
         LOG.error("error closing region " +
             Bytes.toString(region.getRegionName()),
