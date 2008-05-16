@@ -283,7 +283,9 @@ public class Client {
       short ioFailures = 0;
       short timeoutFailures = 0;
       try {
-        LOG.info("Build a connection to "+remoteId.getAddress());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Connecting to "+remoteId.getAddress());
+        }
         while (true) {
           try {
             this.socket = socketFactory.createSocket();

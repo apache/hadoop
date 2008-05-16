@@ -273,6 +273,8 @@ Trunk (unreleased changes)
     close its log, even if the scanner thread is not running. (lohit vijayarenu
     via cdouglas)
 
+    HADOOP-3399. A debug message was logged at info level. (rangadi)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
