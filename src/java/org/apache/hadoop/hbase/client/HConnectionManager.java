@@ -373,7 +373,7 @@ public class HConnectionManager implements HConstants {
       for (int tries = 0; true; tries++) {
         if (tries >= numRetries) {
           throw new NoServerForRegionException("Unable to find region for " 
-            + row + " after " + numRetries + " tries.");
+            + Bytes.toString(row) + " after " + numRetries + " tries.");
         }
 
         try{
@@ -491,7 +491,8 @@ public class HConnectionManager implements HConstants {
       HRegionLocation rl = tableLocations.get(row);
       if (rl != null) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Cache hit in table locations for row <" + row +
+          LOG.debug("Cache hit in table locations for row <" +
+            Bytes.toString(row) +
             "> and tableName " + Bytes.toString(tableName) +
             ": location server " + rl.getServerAddress() +
             ", location region name " +
