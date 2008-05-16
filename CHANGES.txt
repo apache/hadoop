@@ -143,6 +143,9 @@ Trunk (unreleased changes)
     HADOOP-3013. Add corrupt block reporting to fsck.
     (lohit vijayarenu via cdouglas)
 
+    HADOOP-3377. Remove TaskRunner::replaceAll and replace with equivalent
+    String::replace. (Brice Arnould via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

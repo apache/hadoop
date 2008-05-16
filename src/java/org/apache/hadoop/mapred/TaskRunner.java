@@ -294,7 +294,7 @@ abstract class TaskRunner extends Thread {
       //  </property>
       //
       String javaOpts = conf.get("mapred.child.java.opts", "-Xmx200m");
-      javaOpts = replaceAll(javaOpts, "@taskid@", taskid.toString());
+      javaOpts = javaOpts.replace("@taskid@", taskid.toString());
       String [] javaOptsSplit = javaOpts.split(" ");
       
       // Add java.library.path; necessary for loading native libraries.
@@ -426,36 +426,6 @@ abstract class TaskRunner extends Thread {
       }
       tracker.reportTaskFinished(t.getTaskID());
     }
-  }
-
-  /**
-   * Replace <code>toFind</code> with <code>replacement</code>.
-   * When hadoop moves to JDK1.5, replace this method with
-   * String#replace (Of is commons-lang available, replace with
-   * StringUtils#replace). 
-   * @param text String to do replacements in.
-   * @param toFind String to find.
-   * @param replacement String to replace <code>toFind</code> with.
-   * @return A String with all instances of <code>toFind</code>
-   * replaced by <code>replacement</code> (The original
-   * <code>text</code> is returned if <code>toFind</code> is not
-   * found in <code>text<code>).
-   */
-  private static String replaceAll(String text, final String toFind,
-                                   final String replacement) {
-    if (text ==  null || toFind ==  null || replacement ==  null) {
-      throw new IllegalArgumentException("Text " + text + " or toFind " +
-                                         toFind + " or replacement " + replacement + " are null.");
-    }
-    int offset = 0;
-    for (int index = text.indexOf(toFind); index >= 0;
-         index = text.indexOf(toFind, offset)) {
-      offset = index + toFind.length();
-      text = text.substring(0, index) + replacement +
-        text.substring(offset);
-        
-    }
-    return text;
   }
 
   /**
