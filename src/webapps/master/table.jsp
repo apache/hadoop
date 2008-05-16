@@ -61,8 +61,8 @@
           int infoPort = serverToServerInfos.get(hriEntry.getValue().getBindAddress()+":"+hriEntry.getValue().getPort()).getInfoPort();
           String url = "http://" + hriEntry.getValue().getHostname().toString() + ":" + infoPort + "/";  %>
 <tr><td><%= hriEntry.getKey().getRegionNameAsString()%></td><td><a href="<%= url %>"><%= hriEntry.getValue().getHostname() %>:<%= hriEntry.getValue().getPort() %></a></td>
-    <td><%= hriEntry.getKey().getEncodedName()%></td> <td><%= hriEntry.getKey().getStartKey()%></td>
-    <td><%= hriEntry.getKey().getEndKey()%></td></tr>
+    <td><%= hriEntry.getKey().getEncodedName()%></td> <td><%= Bytes.toString(hriEntry.getKey().getStartKey())%></td>
+    <td><%= Bytes.toString(hriEntry.getKey().getEndKey())%></td></tr>
 <%      } %>
 </table>
 <%    } 
