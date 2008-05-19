@@ -384,7 +384,7 @@ public class HStore implements HConstants {
       HStoreFile curfile = null;
       HStoreFile.Reference reference = null;
       if (isReference) {
-        reference = readSplitInfo(p, fs);
+        reference = HStoreFile.readSplitInfo(p, fs);
       }
       curfile = new HStoreFile(conf, fs, basedir, info.getEncodedName(),
         family.getName(), fid, reference);
@@ -1771,21 +1771,6 @@ public class HStore implements HConstants {
   @Override
   public String toString() {
     return this.storeNameStr;
-  }
-
-  /*
-   * @see writeSplitInfo(Path p, HStoreFile hsf, FileSystem fs)
-   */
-  static HStoreFile.Reference readSplitInfo(final Path p, final FileSystem fs)
-  throws IOException {
-    FSDataInputStream in = fs.open(p);
-    try {
-      HStoreFile.Reference r = new HStoreFile.Reference();
-      r.readFields(in);
-      return r;
-    } finally {
-      in.close();
-    }
   }
 
   /**

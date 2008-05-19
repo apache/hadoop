@@ -943,7 +943,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     for(HRegion region: regionsToClose) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("closing region " + region.getRegionName());
+        LOG.debug("closing region " + Bytes.toString(region.getRegionName()));
       }
       try {
         region.close();

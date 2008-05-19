@@ -157,19 +157,16 @@ public class HConnectionManager implements HConstants {
       this.masterChecked = false;
       this.servers = new ConcurrentHashMap<String, HRegionInterface>();
     }
-    
+
     /** {@inheritDoc} */
     public HMasterInterface getMaster() throws MasterNotRunningException {
+      HServerAddress masterLocation = null;
       synchronized (this.masterLock) {
-        for (int tries = 0;
-          !this.closed &&
-          !this.masterChecked && this.master == null &&
-          tries < numRetries;
-        tries++) {
-          
-          HServerAddress masterLocation = new HServerAddress(this.conf.get(
-              MASTER_ADDRESS, DEFAULT_MASTER_ADDRESS));
-
+        for (int tries = 0; !this.closed &&
+            !this.masterChecked && this.master == null && tries < numRetries;
+          tries++) {
+          String m = this.conf.get(MASTER_ADDRESS, DEFAULT_MASTER_ADDRESS);
+          masterLocation = new HServerAddress(m);
           try {
             HMasterInterface tryMaster = (HMasterInterface)HbaseRPC.getProxy(
                 HMasterInterface.class, HMasterInterface.versionID, 
@@ -181,12 +178,12 @@ public class HConnectionManager implements HConstants {
             }
             
           } catch (IOException e) {
-            if(tries == numRetries - 1) {
+            if (tries == numRetries - 1) {
               // This was our last chance - don't bother sleeping
               break;
             }
             LOG.info("Attempt " + tries + " of " + this.numRetries +
-                " failed with <" + e + ">. Retrying after sleep of " + this.pause);
+              " failed with <" + e + ">. Retrying after sleep of " + this.pause);
           }
 
           // We either cannot connect to master or it is not running. Sleep & retry
@@ -200,7 +197,8 @@ public class HConnectionManager implements HConstants {
         this.masterChecked = true;
       }
       if (this.master == null) {
-        throw new MasterNotRunningException();
+        throw new MasterNotRunningException(masterLocation == null? "":
+          masterLocation.toString());
       }
       return this.master;
     }
@@ -323,12 +321,11 @@ public class HConnectionManager implements HConstants {
           // This block guards against two threads trying to find the root
           // region at the same time. One will go do the find while the 
           // second waits. The second thread will not do find.
-          
           if (!useCache || rootRegionLocation == null) {
             return locateRootRegion();
           }
           return rootRegionLocation;
-        }        
+        }
       } else if (Bytes.equals(tableName, META_TABLE_NAME)) {
         synchronized (metaRegionLock) {
           // This block guards against two threads trying to load the meta 
@@ -655,30 +652,29 @@ public class HConnectionManager implements HConstants {
      */
     private HRegionLocation locateRootRegion()
     throws IOException {
-    
       getMaster();
-      
       HServerAddress rootRegionAddress = null;
-      
       for (int tries = 0; tries < numRetries; tries++) {
         int localTimeouts = 0;
-        
-        // ask the master which server has the root region
+        // Ask the master which server has the root region
         while (rootRegionAddress == null && localTimeouts < numRetries) {
           rootRegionAddress = master.findRootRegion();
           if (rootRegionAddress == null) {
-            try {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Sleeping. Waiting for root region.");
+            // Increment and then only sleep if retries left.
+            if (++localTimeouts < numRetries) {
+              try {
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("Sleeping " + pause + "ms. Waiting for root "
+                      + "region. Attempt " + tries + " of " + numRetries);
+                }
+                Thread.sleep(pause);
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("Wake. Retry finding root region.");
+                }
+              } catch (InterruptedException iex) {
+                // continue
               }
-              Thread.sleep(pause);
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Wake. Retry finding root region.");
-              }
-            } catch (InterruptedException iex) {
-              // continue
             }
-            localTimeouts++;
           }
         }
         

@@ -11,6 +11,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.io.WritableUtils;
 
 public class Bytes {
   /**
@@ -40,8 +41,12 @@ public class Bytes {
    */
   public static byte [] readByteArray(final DataInput in)
   throws IOException {
-    byte [] result = new byte[in.readInt()];
-    in.readFully(result, 0, result.length);
+    int len = WritableUtils.readVInt(in);
+    if (len < 0) {
+      throw new NegativeArraySizeException(Integer.toString(len));
+    }
+    byte [] result = new byte[len];
+    in.readFully(result, 0, len);
     return result;
   }
   
@@ -52,7 +57,7 @@ public class Bytes {
    */
   public static void writeByteArray(final DataOutput out, final byte [] b)
   throws IOException {
-    out.writeInt(b.length);
+    WritableUtils.writeVInt(out, b.length);
     out.write(b, 0, b.length);
   }
   

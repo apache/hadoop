@@ -526,6 +526,23 @@ public class HTable implements HConstants {
   }
 
   /** 
+   * Get a scanner on the current table starting at first row.
+   * Return the specified columns.
+   *
+   * @param columns columns to scan. If column name is a column family, all
+   * columns of the specified column family are returned.  Its also possible
+   * to pass a regex in the column qualifier. A column qualifier is judged to
+   * be a regex if it contains at least one of the following characters:
+   * <code>\+|^&*$[]]}{)(</code>.
+   * @return scanner
+   * @throws IOException
+   */
+  public Scanner getScanner(final Text [] columns)
+  throws IOException {
+    return getScanner(Bytes.toByteArrays(columns), HConstants.EMPTY_START_ROW);
+  }
+
+  /** 
    * Get a scanner on the current table starting at the specified row.
    * Return the specified columns.
    *
@@ -542,7 +559,25 @@ public class HTable implements HConstants {
   throws IOException {
     return getScanner(Bytes.toByteArrays(columns), startRow.getBytes());
   }
-  
+
+  /** 
+   * Get a scanner on the current table starting at first row.
+   * Return the specified columns.
+   *
+   * @param columns columns to scan. If column name is a column family, all
+   * columns of the specified column family are returned.  Its also possible
+   * to pass a regex in the column qualifier. A column qualifier is judged to
+   * be a regex if it contains at least one of the following characters:
+   * <code>\+|^&*$[]]}{)(</code>.
+   * @return scanner
+   * @throws IOException
+   */
+  public Scanner getScanner(final byte[][] columns)
+  throws IOException {
+    return getScanner(columns, HConstants.EMPTY_START_ROW,
+      HConstants.LATEST_TIMESTAMP, null);
+  }
+
   /** 
    * Get a scanner on the current table starting at the specified row.
    * Return the specified columns.
@@ -875,7 +910,7 @@ public class HTable implements HConstants {
     throws IOException {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Creating scanner over " + Bytes.toString(tableName) +
-          " starting at key '" + startRow + "'");
+          " starting at key '" + Bytes.toString(startRow) + "'");
       }
       // save off the simple parameters
       this.columns = columns;
@@ -921,7 +956,8 @@ public class HTable implements HConstants {
       byte [] localStartKey = oldRegion == null? startRow: oldRegion.getEndKey();
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Advancing internal scanner to startKey " + localStartKey);
+        LOG.debug("Advancing internal scanner to startKey at " +
+          Bytes.toString(localStartKey));
       }
             
       try {

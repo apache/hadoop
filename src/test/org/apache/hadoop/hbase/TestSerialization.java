@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+
 import org.apache.hadoop.hbase.io.BatchOperation;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
@@ -40,7 +41,7 @@ public class TestSerialization extends HBaseTestCase {
     super.tearDown();
   }
 
-  public void testname() throws Exception {
+  public void testHMsg() throws Exception {
     HMsg  m = new HMsg(HMsg.MSG_REGIONSERVER_QUIESCE);
     byte [] mb = Writables.getBytes(m);
     HMsg deserializedHMsg = (HMsg)Writables.getWritable(mb, new HMsg());

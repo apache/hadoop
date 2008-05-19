@@ -30,6 +30,7 @@
 
   <property name="src.dir"  location="${basedir}/src/java"/>
   <property name="src.test" location="${basedir}/src/test"/>
+  <property name="src.testdata" location="${basedir}/src/testdata"/>
   <property name="src.examples" location="${basedir}/src/examples"/>
   <property name="src.webapps" location="${basedir}/src/webapps"/>
 
@@ -379,6 +380,7 @@
       
       <sysproperty key="test.build.data" value="${build.test}/data"/>
       <sysproperty key="build.test" value="${build.test}"/>
+      <sysproperty key="src.testdata" value="${src.testdata}"/>
       <sysproperty key="contrib.name" value="${name}"/>
       
       <sysproperty key="user.dir" value="${build.test}/data"/>

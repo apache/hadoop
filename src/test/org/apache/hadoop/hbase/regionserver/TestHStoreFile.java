@@ -153,7 +153,7 @@ public class TestHStoreFile extends HBaseTestCase {
     assertTrue(this.fs.exists(refHsf.getMapFilePath()));
     assertTrue(this.fs.exists(refHsf.getInfoFilePath()));
     HStoreFile.Reference otherReference =
-      HStore.readSplitInfo(refHsf.getInfoFilePath(), this.fs);
+      HStoreFile.readSplitInfo(refHsf.getInfoFilePath(), this.fs);
     assertEquals(reference.getEncodedRegionName(),
         otherReference.getEncodedRegionName());
     assertEquals(reference.getFileId(),

@@ -281,7 +281,22 @@ public class HStoreFile implements HConstants {
       out.close();
    }
   }
-  
+
+  /**
+   * @see #writeSplitInfo(FileSystem fs)
+   */
+  static HStoreFile.Reference readSplitInfo(final Path p, final FileSystem fs)
+  throws IOException {
+    FSDataInputStream in = fs.open(p);
+    try {
+      HStoreFile.Reference r = new HStoreFile.Reference();
+      r.readFields(in);
+      return r;
+    } finally {
+      in.close();
+    }
+  }
+
   private void createOrFail(final FileSystem fs, final Path p)
   throws IOException {
     if (fs.exists(p)) {
@@ -585,6 +600,12 @@ public class HStoreFile implements HConstants {
 
     /** {@inheritDoc} */
     public void write(DataOutput out) throws IOException {
+      // Write out the encoded region name as a String.  Doing it as a String
+      // keeps a Reference's serialziation backword compatible with
+      // pre-HBASE-82 serializations.  ALternative is rewriting all
+      // info files in hbase (Serialized References are written into the
+      // 'info' file that accompanies HBase Store files).
+      out.writeUTF(Integer.toString(encodedRegionName));
       out.writeInt(this.encodedRegionName);
       out.writeLong(fileid);
       // Write true if we're doing top of the file.
@@ -594,7 +615,7 @@ public class HStoreFile implements HConstants {
 
     /** {@inheritDoc} */
     public void readFields(DataInput in) throws IOException {
-      this.encodedRegionName = in.readInt();
+      this.encodedRegionName = Integer.parseInt(in.readUTF());
       fileid = in.readLong();
       boolean tmp = in.readBoolean();
       // If true, set region to top.

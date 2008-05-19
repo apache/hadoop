@@ -277,7 +277,7 @@ abstract class BaseScanner extends Chore implements HConstants {
       result = true;
     } else if (LOG.isDebugEnabled()) {
       // If debug, note we checked and current state of daughters.
-      LOG.debug("Checked " + parent.getRegionName() +
+      LOG.debug("Checked " + parent.getRegionNameAsString() +
         " for references: splitA: " + hasReferencesA + ", splitB: "+
         hasReferencesB);
     }

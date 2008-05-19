@@ -335,6 +335,9 @@ public class HColumnDescriptor implements WritableComparable {
       Text t = new Text();
       t.readFields(in);
       this.name = t.getBytes();
+      if (HStoreKey.getFamilyDelimiterIndex(this.name) > 0) {
+        this.name = stripColon(this.name);
+      }
     } else {
       this.name = Bytes.readByteArray(in);
     }

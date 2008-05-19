@@ -202,4 +202,8 @@ public interface HConstants {
    * Unlimited time-to-live.
    */
   static final int FOREVER = -1;
+  
+  public static final String HBASE_CLIENT_RETRIES_NUMBER_KEY =
+    "hbase.client.retries.number";
+  public static final int DEFAULT_CLIENT_RETRIES = 5;
 }

@@ -20,57 +20,50 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
-
-import java.util.zip.ZipInputStream;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.dfs.MiniDFSCluster;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scanner;
+import org.apache.hadoop.hbase.io.RowResult;
 
 /**
  * 
  */
 public class TestMigrate extends HBaseTestCase {
-  static final Log LOG = LogFactory.getLog(TestMigrate.class);
-
-  /**
-   * 
-   */
-  public TestMigrate() {
-    super();
-    Logger.getRootLogger().setLevel(Level.WARN);
-    Logger.getLogger(this.getClass().getPackage().getName()).
-      setLevel(Level.DEBUG);
-  }
-
-  /** {@inheritDoc} */
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
-  }
-
-  /** {@inheritDoc} */
-  @Override
-  protected void tearDown() throws Exception {
-    super.tearDown();
-  }
+  private static final Log LOG = LogFactory.getLog(TestMigrate.class);
   
+  // This is the name of the table that is in the data file.
+  private static final String TABLENAME = "TestUpgrade";
+  
+  // The table has two columns
+  private static final byte [][] TABLENAME_COLUMNS =
+    {Bytes.toBytes("column_a:"), Bytes.toBytes("column_b:")};
+
+  // Expected count of rows in migrated table.
+  private static final int EXPECTED_COUNT = 17576;
+
   /**
+   * @throws IOException 
    * 
    */
-  public void testUpgrade() {
+  public void testUpgrade() throws IOException {
     MiniDFSCluster dfsCluster = null;
     try {
       dfsCluster = new MiniDFSCluster(conf, 2, true, (String[])null);
@@ -81,63 +74,46 @@ public class TestMigrate extends HBaseTestCase {
       Path root = dfs.makeQualified(new Path(conf.get(HConstants.HBASE_DIR)));
       dfs.mkdirs(root);
 
-      /*
-       * First load files from an old style HBase file structure
-       */
-      
-      // Current directory is .../project/build/test/data
-      
       FileSystem localfs = FileSystem.getLocal(conf);
-      
-      // Get path for zip file
-
-      FSDataInputStream hs = localfs.open(new Path(Path.CUR_DIR,
-          
-          // this path is for running test with ant
-          
-          "../../../src/testdata/HADOOP-2478-testdata.zip")
-      
-          // and this path is for when you want to run inside eclipse
-      
-          /*"src/testdata/HADOOP-2478-testdata.zip")*/
-      );
-      
+      // Get path for zip file.  If running this test in eclipse, define
+      // the system property src.testdata for your test run.
+      String srcTestdata = System.getProperty("src.testdata");
+      if (srcTestdata == null) {
+        throw new NullPointerException("Define src.test system property");
+      }
+      Path data = new Path(srcTestdata, "HADOOP-2478-testdata.zip");
+      if (!localfs.exists(data)) {
+        throw new FileNotFoundException(data.toString());
+      }
+      FSDataInputStream hs = localfs.open(data);
       ZipInputStream zip = new ZipInputStream(hs);
-      
       unzip(zip, dfs, root);
-      
       zip.close();
       hs.close();
-      
       listPaths(dfs, root, root.toString().length() + 1);
       
       Migrate u = new Migrate(conf);
       u.run(new String[] {"check"});
-
       listPaths(dfs, root, root.toString().length() + 1);
       
       u = new Migrate(conf);
       u.run(new String[] {"upgrade"});
-
       listPaths(dfs, root, root.toString().length() + 1);
       
       // Remove version file and try again
-      
       dfs.delete(new Path(root, HConstants.VERSION_FILE_NAME));
       u = new Migrate(conf);
       u.run(new String[] {"upgrade"});
-
       listPaths(dfs, root, root.toString().length() + 1);
       
       // Try again. No upgrade should be necessary
-      
       u = new Migrate(conf);
       u.run(new String[] {"check"});
       u = new Migrate(conf);
       u.run(new String[] {"upgrade"});
-
-    } catch (Exception e) {
-      e.printStackTrace();
+      
+      // Now verify that can read contents.
+      verify();
     } finally {
       if (dfsCluster != null) {
         shutdownDfs(dfsCluster);
@@ -145,14 +121,68 @@ public class TestMigrate extends HBaseTestCase {
     }
   }
 
+  /*
+   * Verify can read the migrated table.
+   * @throws IOException
+   */
+  private void verify() throws IOException {
+    // Delete any cached connections.  Need to do this because connection was
+    // created earlier when no master was around.  The fact that there was no
+    // master gets cached.  Need to delete so we go get master afresh.
+    HConnectionManager.deleteConnection(this.conf);
+    LOG.info("Start a cluster against migrated FS");
+    // Up number of retries.  Needed while cluster starts up. Its been set to 1
+    // above.
+    this.conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER_KEY, 3);
+    MiniHBaseCluster cluster = new MiniHBaseCluster(this.conf, 1);
+    try {
+      HBaseAdmin hb = new HBaseAdmin(this.conf);
+      assertTrue(hb.isMasterRunning());
+      HTableDescriptor [] tables = hb.listTables();
+      boolean foundTable = false;
+      for (int i = 0; i < tables.length; i++) {
+        if (Bytes.equals(Bytes.toBytes(TABLENAME), tables[i].getName())) {
+          foundTable = true;
+          break;
+        }
+      }
+      assertTrue(foundTable);
+      LOG.info(TABLENAME + " exists.  Creating an HTable to go against " +
+        TABLENAME + " and master " + this.conf.get(HConstants.MASTER_ADDRESS));
+      HTable t = new HTable(this.conf, TABLENAME);
+      int count = 0;
+      try {
+        Thread.sleep(10000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      LOG.info("OPENING SCANNER");
+      Scanner s = t.getScanner(TABLENAME_COLUMNS);
+      try {
+        for (RowResult r: s) {
+          if (r == null || r.size() == 0) {
+            break;
+          }
+          count++;
+          if (count % 1000 == 0 && count > 0) {
+            LOG.info("Iterated over " + count + " rows.");
+          }
+        }
+        assertEquals(EXPECTED_COUNT, count);
+      } finally {
+        s.close();
+      }
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   private void unzip(ZipInputStream zip, FileSystem dfs, Path root)
   throws IOException {
-
     ZipEntry e = null;
     while ((e = zip.getNextEntry()) != null)  {
       if (e.isDirectory()) {
         dfs.mkdirs(new Path(root, e.getName()));
-        
       } else {
         FSDataOutputStream out = dfs.create(new Path(root, e.getName()));
         byte[] buffer = new byte[4096];
