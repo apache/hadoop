@@ -1731,16 +1731,18 @@ class ReduceTask extends Task {
 
   }
 
+  /**
+   * Return the exponent of the power of two closest to the given
+   * positive value, or zero if value leq 0.
+   * This follows the observation that the msb of a given value is
+   * also the closest power of two, unless the bit following it is
+   * set.
+   */
   private static int getClosestPowerOf2(int value) {
-    int power = 0;
-    int approx = 1;
-    while (approx < value) {
-      ++power;
-      approx = (approx << 1);
-    }
-    if ((value - (approx >> 1)) < (approx - value)) {
-      --power;
-    }
-    return power;
+    if (value <= 0)
+      throw new IllegalArgumentException("Undefined for " + value);
+    final int hob = Integer.highestOneBit(value);
+    return Integer.numberOfTrailingZeros(hob) +
+      (((hob >>> 1) & value) == 0 ? 0 : 1);
   }
 }
