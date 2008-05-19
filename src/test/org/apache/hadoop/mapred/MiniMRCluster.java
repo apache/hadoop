@@ -57,6 +57,10 @@ public class MiniMRCluster {
     
     JobConf jc = null;
         
+    public JobTrackerRunner(JobConf conf) {
+      jc = conf;
+    }
+
     public boolean isUp() {
       return (tracker != null);
     }
@@ -74,7 +78,7 @@ public class MiniMRCluster {
      */
     public void run() {
       try {
-        jc = createJobConf();
+        jc = (jc == null) ? createJobConf() : createJobConf(jc);
         jc.set("mapred.local.dir","build/test/mapred/local");
         jc.setClass("topology.node.switch.mapping.impl", 
             StaticMapping.class, DNSToSwitchMapping.class);
@@ -246,7 +250,11 @@ public class MiniMRCluster {
   }
 
   public JobConf createJobConf() {
-    JobConf result = new JobConf();
+    return createJobConf(new JobConf());
+  }
+
+  public JobConf createJobConf(JobConf conf) {
+    JobConf result = new JobConf(conf);
     FileSystem.setDefaultUri(result, namenode);
     result.set("mapred.job.tracker", "localhost:"+jobTrackerPort);
     result.set("mapred.job.tracker.http.address", 
@@ -273,6 +281,22 @@ public class MiniMRCluster {
     this(0, 0, numTaskTrackers, namenode, numDir, racks, hosts);
   }
   
+  /**
+   * Create the config and the cluster.
+   * @param numTaskTrackers no. of tasktrackers in the cluster
+   * @param namenode the namenode
+   * @param numDir no. of directories
+   * @param racks Array of racks
+   * @param hosts Array of hosts in the corresponding racks
+   * @param conf Default conf for the jobtracker
+   * @throws IOException
+   */
+  public MiniMRCluster(int numTaskTrackers, String namenode, int numDir, 
+                       String[] racks, String[] hosts, JobConf conf) 
+  throws IOException {
+    this(0, 0, numTaskTrackers, namenode, numDir, racks, hosts, null, conf);
+  }
+
   /**
    * Create the config and the cluster.
    * @param numTaskTrackers no. of tasktrackers in the cluster
@@ -319,6 +343,14 @@ public class MiniMRCluster {
       int numTaskTrackers, String namenode, 
       int numDir, String[] racks, String[] hosts, UnixUserGroupInformation ugi
       ) throws IOException {
+    this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode, 
+         numDir, racks, hosts, ugi, null);
+  }
+
+  public MiniMRCluster(int jobTrackerPort, int taskTrackerPort,
+      int numTaskTrackers, String namenode, 
+      int numDir, String[] racks, String[] hosts, UnixUserGroupInformation ugi,
+      JobConf conf) throws IOException {
     if (racks != null && racks.length < numTaskTrackers) {
       LOG.error("Invalid number of racks specified. It should be at least " +
           "equal to the number of tasktrackers");
@@ -344,7 +376,7 @@ public class MiniMRCluster {
     this.ugi = ugi;
 
     // Create the JobTracker
-    jobTracker = new JobTrackerRunner();
+    jobTracker = new JobTrackerRunner(conf);
     jobTrackerThread = new Thread(jobTracker);
         
     jobTrackerThread.start();

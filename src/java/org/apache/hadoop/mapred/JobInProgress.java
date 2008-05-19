@@ -137,6 +137,7 @@ class JobInProgress {
     NUM_FAILED_REDUCES,
     TOTAL_LAUNCHED_MAPS,
     TOTAL_LAUNCHED_REDUCES,
+    OTHER_LOCAL_MAPS,
     DATA_LOCAL_MAPS,
     RACK_LOCAL_MAPS
   }
@@ -267,7 +268,6 @@ class JobInProgress {
         Node node = jobtracker.resolveAndAddToTopology(host);
         LOG.info("tip:" + maps[i].getTIPId() + " has split on node:" + node);
         for (int j = 0; j < maxLevel; j++) {
-          node = JobTracker.getParentNode(node, j);
           List<TaskInProgress> hostMaps = cache.get(node);
           if (hostMaps == null) {
             hostMaps = new ArrayList<TaskInProgress>();
@@ -282,6 +282,7 @@ class JobInProgress {
           if (hostMaps.get(hostMaps.size() - 1) != maps[i]) {
             hostMaps.add(maps[i]);
           }
+          node = node.getParent();
         }
       }
     }
@@ -1090,6 +1091,7 @@ class JobInProgress {
             } else {
               LOG.info("Choosing cached task at level " + level 
                        + tip.getTIPId());
+              jobCounters.incrCounter(Counter.OTHER_LOCAL_MAPS, 1);
             }
 
             return tip.getIdWithinJob();

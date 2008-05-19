@@ -284,6 +284,10 @@ Trunk (unreleased changes)
 
     HADOOP-3409. Namenode should save the root inode into fsimage. (hairong)
 
+    HADOOP-3296. Fix task cache to work for more than two levels in the cache
+    hierarchy. This also adds a new counter to track cache hits at levels
+    greater than two. (Amar Kamat via cdouglas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
