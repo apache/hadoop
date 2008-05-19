@@ -275,6 +275,9 @@ Trunk (unreleased changes)
 
     HADOOP-3399. A debug message was logged at info level. (rangadi)
 
+    HADOOP-3396. TestDatanodeBlockScanner occationally fails. 
+    (Lohit Vijayarenu via rangadi)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

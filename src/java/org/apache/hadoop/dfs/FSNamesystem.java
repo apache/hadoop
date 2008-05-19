@@ -1329,7 +1329,17 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
                             " as corrupt because datanode " + dn.getName() +
                             " does not exist. ");
     }
-    corruptReplicas.addToCorruptReplicasMap(blk, node);
+    // Check if the block is associated with an inode, if not 
+    // ignore the request for now. This could happen when BlockScanner
+    // thread of Datanode reports bad block before Block reports are sent
+    // by the Datanode on startup
+    if (blocksMap.getINode(blk) == null) 
+      NameNode.stateChangeLog.info("BLOCK NameSystem.markBlockAsCorrupt: " +
+                                   "block " + blk + " could not be marked " +
+                                   "as corrupt as it does not exists in " +
+                                   "blocksMap");
+    else 
+      corruptReplicas.addToCorruptReplicasMap(blk, node);
   }
 
   /**
