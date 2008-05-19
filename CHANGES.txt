@@ -282,6 +282,8 @@ Trunk (unreleased changes)
     are not detected properly. This could lead to hard failure of client's
     write operation. (rangadi)
 
+    HADOOP-3409. Namenode should save the root inode into fsimage. (hairong)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
