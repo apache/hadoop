@@ -72,6 +72,7 @@ class DFSClient implements FSConstants {
   private short defaultReplication;
   private SocketFactory socketFactory;
   private int socketTimeout;
+  private int datanodeWriteTimeout;
   final int writePacketSize;
   private FileSystem.Statistics stats;
     
@@ -145,6 +146,8 @@ class DFSClient implements FSConstants {
     this.stats = stats;
     this.socketTimeout = conf.getInt("dfs.socket.timeout", 
                                      FSConstants.READ_TIMEOUT);
+    this.datanodeWriteTimeout = conf.getInt("dfs.datanode.socket.write.timeout",
+                                            FSConstants.WRITE_TIMEOUT);
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     // dfs.write.packet.size is an internal config variable
     this.writePacketSize = conf.getInt("dfs.write.packet.size", 64*1024);
@@ -2279,7 +2282,7 @@ class DFSClient implements FSConstants {
         s.setSendBufferSize(DEFAULT_DATA_SOCKET_SIZE);
         LOG.debug("Send buf size " + s.getSendBufferSize());
         long writeTimeout = WRITE_TIMEOUT_EXTENSION * nodes.length +
-                            WRITE_TIMEOUT;
+                            datanodeWriteTimeout;
 
         //
         // Xmit header info to datanode

@@ -278,6 +278,10 @@ Trunk (unreleased changes)
     HADOOP-3396. TestDatanodeBlockScanner occationally fails. 
     (Lohit Vijayarenu via rangadi)
 
+    HADOOP-3339. Some of the failures on 3rd datanode in DFS write pipelie 
+    are not detected properly. This could lead to hard failure of client's
+    write operation. (rangadi)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

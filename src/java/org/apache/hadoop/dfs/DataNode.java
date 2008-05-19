@@ -2137,12 +2137,23 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
                 LOG.info("PacketResponder " + block + " " + numTargets + 
                          " Exception " + StringUtils.stringifyException(e));
                 running = false;
-                if (!didRead) {
-                  op = OP_STATUS_ERROR;
-                }
               }
             }
 
+            if (Thread.interrupted()) {
+              /* The receiver thread cancelled this thread. 
+               * We could also check any other status updates from the 
+               * receiver thread (e.g. if it is ok to write to replyOut). 
+               */
+              LOG.info("PacketResponder " + block +  " " + numTargets +
+                       " : Thread is interrupted.");
+              running = false;
+            }
+            
+            if (!didRead) {
+              op = OP_STATUS_ERROR;
+            }
+            
             // If this is the last packet in block, then close block
             // file and finalize the block before responding success
             if (lastPacketInBlock && !receiver.finalized) {
