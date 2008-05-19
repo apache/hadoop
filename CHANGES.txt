@@ -291,6 +291,9 @@ Trunk (unreleased changes)
     hierarchy. This also adds a new counter to track cache hits at levels
     greater than two. (Amar Kamat via cdouglas)
 
+    HADOOP-3370. Ensure that the TaskTracker.runningJobs data-structure is
+    correctly cleaned-up on task completion. (Zheng Shao via acmurthy) 
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
