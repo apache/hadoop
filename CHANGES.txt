@@ -16,6 +16,7 @@ Hbase Change Log
                even if shutdown was not requested
    HBASE-629   Split reports incorrect elapsed time
    HBASE-623   Migration script for hbase-82
+   HBASE-630   Default hbase.rootdir is garbage
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
