@@ -606,7 +606,6 @@ public class HStoreFile implements HConstants {
       // info files in hbase (Serialized References are written into the
       // 'info' file that accompanies HBase Store files).
       out.writeUTF(Integer.toString(encodedRegionName));
-      out.writeInt(this.encodedRegionName);
       out.writeLong(fileid);
       // Write true if we're doing top of the file.
       out.writeBoolean(isTopFileRegion(region));
