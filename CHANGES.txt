@@ -36,6 +36,8 @@ Hbase Change Log
    HBASE-522   Where new Text(string) might be used in client side method calls,
                add an overload that takes string (Done as part of HBASE-82)
    HBASE-570   Remove HQL unit test (Done as part of HBASE-82 commit).
+   HBASE-626   Use Visitor pattern in MetaRegion to reduce code clones in HTable
+               and HConnectionManager (Jean-Daniel Cryans via Stack)
 
 
 Release 0.1.2 - 05/13/2008

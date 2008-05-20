@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NoServerForRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
@@ -157,16 +158,19 @@ public class HConnectionManager implements HConstants {
       this.masterChecked = false;
       this.servers = new ConcurrentHashMap<String, HRegionInterface>();
     }
-
+    
     /** {@inheritDoc} */
     public HMasterInterface getMaster() throws MasterNotRunningException {
       HServerAddress masterLocation = null;
       synchronized (this.masterLock) {
-        for (int tries = 0; !this.closed &&
-            !this.masterChecked && this.master == null && tries < numRetries;
-          tries++) {
-          String m = this.conf.get(MASTER_ADDRESS, DEFAULT_MASTER_ADDRESS);
-          masterLocation = new HServerAddress(m);
+        for (int tries = 0;
+          !this.closed &&
+          !this.masterChecked && this.master == null &&
+          tries < numRetries;
+        tries++) {
+          
+          masterLocation = new HServerAddress(this.conf.get(MASTER_ADDRESS,
+            DEFAULT_MASTER_ADDRESS));
           try {
             HMasterInterface tryMaster = (HMasterInterface)HbaseRPC.getProxy(
                 HMasterInterface.class, HMasterInterface.versionID, 
@@ -178,7 +182,7 @@ public class HConnectionManager implements HConstants {
             }
             
           } catch (IOException e) {
-            if (tries == numRetries - 1) {
+            if(tries == numRetries - 1) {
               // This was our last chance - don't bother sleeping
               break;
             }
@@ -197,8 +201,11 @@ public class HConnectionManager implements HConstants {
         this.masterChecked = true;
       }
       if (this.master == null) {
-        throw new MasterNotRunningException(masterLocation == null? "":
-          masterLocation.toString());
+        if (masterLocation == null) {
+          throw new MasterNotRunningException();
+        } else {
+          throw new MasterNotRunningException(masterLocation.toString());
+        }
       }
       return this.master;
     }
@@ -257,40 +264,23 @@ public class HConnectionManager implements HConstants {
 
     /** {@inheritDoc} */
     public HTableDescriptor[] listTables() throws IOException {
-      HashSet<HTableDescriptor> uniqueTables = new HashSet<HTableDescriptor>();
-      byte [] startRow = EMPTY_START_ROW;
+      final HashSet<HTableDescriptor> uniqueTables = new HashSet<HTableDescriptor>();
 
-      // scan over the each meta region
-      do {
-        ScannerCallable callable = new ScannerCallable(this, META_TABLE_NAME,
-            COL_REGIONINFO_ARRAY, startRow, LATEST_TIMESTAMP, null);
-        try {
-          // open scanner
-          getRegionServerWithRetries(callable);
-          // iterate through the scanner, accumulating unique table names
-          while (true) {
-            RowResult values = getRegionServerWithRetries(callable);
-            if (values == null || values.size() == 0) {
-              break;
-            }
+      MetaScannerVisitor visitor = new MetaScannerVisitor() {
 
-            HRegionInfo info = 
-              Writables.getHRegionInfo(values.get(COL_REGIONINFO));
+        public boolean processRow(RowResult rowResult,
+            HRegionLocation metaLocation, HRegionInfo info) throws IOException {
 
-            // Only examine the rows where the startKey is zero length   
-            if (info.getStartKey().length == 0) {
-              uniqueTables.add(info.getTableDesc());
-            }
+          // Only examine the rows where the startKey is zero length
+          if (info.getStartKey().length == 0) {
+            uniqueTables.add(info.getTableDesc());
           }
-          // advance the startRow to the end key of the current region
-          startRow = callable.getHRegionInfo().getEndKey();
-        } finally {
-          // close scanner
-          callable.setClose();
-          getRegionServerWithRetries(callable);
+          return true;
         }
-      } while (Bytes.compareTo(startRow, LAST_ROW) != 0);
-      
+
+      };
+      MetaScanner.metaScan(conf, visitor);
+
       return uniqueTables.toArray(new HTableDescriptor[uniqueTables.size()]);
     }
 
@@ -321,11 +311,12 @@ public class HConnectionManager implements HConstants {
           // This block guards against two threads trying to find the root
           // region at the same time. One will go do the find while the 
           // second waits. The second thread will not do find.
+          
           if (!useCache || rootRegionLocation == null) {
             return locateRootRegion();
           }
           return rootRegionLocation;
-        }
+        }        
       } else if (Bytes.equals(tableName, META_TABLE_NAME)) {
         synchronized (metaRegionLock) {
           // This block guards against two threads trying to load the meta 
@@ -652,29 +643,30 @@ public class HConnectionManager implements HConstants {
      */
     private HRegionLocation locateRootRegion()
     throws IOException {
+    
       getMaster();
+      
       HServerAddress rootRegionAddress = null;
+      
       for (int tries = 0; tries < numRetries; tries++) {
         int localTimeouts = 0;
-        // Ask the master which server has the root region
+        
+        // ask the master which server has the root region
         while (rootRegionAddress == null && localTimeouts < numRetries) {
           rootRegionAddress = master.findRootRegion();
           if (rootRegionAddress == null) {
-            // Increment and then only sleep if retries left.
-            if (++localTimeouts < numRetries) {
-              try {
-                if (LOG.isDebugEnabled()) {
-                  LOG.debug("Sleeping " + pause + "ms. Waiting for root "
-                      + "region. Attempt " + tries + " of " + numRetries);
-                }
-                Thread.sleep(pause);
-                if (LOG.isDebugEnabled()) {
-                  LOG.debug("Wake. Retry finding root region.");
-                }
-              } catch (InterruptedException iex) {
-                // continue
+            try {
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Sleeping. Waiting for root region.");
               }
+              Thread.sleep(pause);
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Wake. Retry finding root region.");
+              }
+            } catch (InterruptedException iex) {
+              // continue
             }
+            localTimeouts++;
           }
         }
         

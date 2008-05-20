@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2008 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -35,15 +35,14 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.filter.StopRowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchRowFilter;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -57,6 +56,7 @@ public class HTable implements HConstants {
   protected final long pause;
   protected final int numRetries;
   protected Random rand;
+  protected HBaseConfiguration configuration;
 
   protected volatile boolean tableDoesNotExist;
   
@@ -96,6 +96,7 @@ public class HTable implements HConstants {
   public HTable(HBaseConfiguration conf, final byte [] tableName)
   throws IOException {
     this.connection = HConnectionManager.getConnection(conf);
+    this.configuration = conf;
     this.tableName = tableName;
     this.pause = conf.getLong("hbase.client.pause", 10 * 1000);
     this.numRetries = conf.getInt("hbase.client.retries.number", 5);
@@ -142,145 +143,64 @@ public class HTable implements HConstants {
 
   /**
    * Gets the starting row key for every region in the currently open table
+   * 
    * @return Array of region starting row keys
    * @throws IOException
    */
   @SuppressWarnings("null")
-  public byte [][] getStartKeys() throws IOException {
-    List<byte []> keyList = new ArrayList<byte []>();
+  public byte[][] getStartKeys() throws IOException {
+    final List<byte[]> keyList = new ArrayList<byte[]>();
 
-    long scannerId = -1L;
-    byte [] startRow =
-      HRegionInfo.createRegionName(this.tableName, null, NINES);
-    HRegionLocation metaLocation = null;
-    HRegionInterface server;
-    
-    // scan over the each meta region
-    do {
-      try{
-        // turn the start row into a location
-        metaLocation = 
-          connection.locateRegion(META_TABLE_NAME, startRow);
-
-        // connect to the server hosting the .META. region
-        server = 
-          connection.getHRegionConnection(metaLocation.getServerAddress());
-
-        // open a scanner over the meta region
-        scannerId = server.openScanner(
-          metaLocation.getRegionInfo().getRegionName(),
-          new byte[][]{COL_REGIONINFO}, tableName, LATEST_TIMESTAMP,
-          null);
-        
-        // iterate through the scanner, accumulating unique region names
-        while (true) {
-          RowResult values = server.next(scannerId);
-          if (values == null || values.size() == 0) {
-            break;
-          }
-          
-          HRegionInfo info = new HRegionInfo();
-          info = (HRegionInfo) Writables.getWritable(
-            values.get(COL_REGIONINFO).getValue(), info);
-          
-          if (!Bytes.equals(info.getTableDesc().getName(), this.tableName)) {
-            break;
-          }
-          
-          if (info.isOffline() || info.isSplit()) {
-            continue;
-          }
+    MetaScannerVisitor visitor = new MetaScannerVisitor() {
+      public boolean processRow(RowResult rowResult,
+          HRegionLocation metaLocation, HRegionInfo info)
+      throws IOException {
+        if (!(Bytes.equals(info.getTableDesc().getName(), tableName))) {
+          return false;
+        }
+        if (!(info.isOffline() || info.isSplit())) {
           keyList.add(info.getStartKey());
         }
-        
-        // close that remote scanner
-        server.close(scannerId);
-          
-        // advance the startRow to the end key of the current region
-        startRow = metaLocation.getRegionInfo().getEndKey();
-      } catch (IOException e) {
-        // need retry logic?
-        throw e;
+        return true;
       }
-    } while (Bytes.compareTo(startRow, EMPTY_START_ROW) != 0);
-    
-    return keyList.toArray(new byte [keyList.size()][]);
+
+    };
+    MetaScanner.metaScan(configuration, visitor, this.tableName);
+    return keyList.toArray(new byte[keyList.size()][]);
   }
-  
+
   /**
    * Get all the regions and their address for this table
+   * 
    * @return A map of HRegionInfo with it's server address
    * @throws IOException
    */
   @SuppressWarnings("null")
   public Map<HRegionInfo, HServerAddress> getRegionsInfo() throws IOException {
-    // TODO This code is a near exact copy of getStartKeys. To be refactored HBASE-626
-    HashMap<HRegionInfo, HServerAddress> regionMap = new HashMap<HRegionInfo, HServerAddress>();
-    
-    long scannerId = -1L;
-    byte [] startRow =
-      HRegionInfo.createRegionName(this.tableName, null, NINES);
-    HRegionLocation metaLocation = null;
-    HRegionInterface server;
-        
-    // scan over the each meta region
-    do {
-      try{
-        // turn the start row into a location
-        metaLocation = 
-          connection.locateRegion(META_TABLE_NAME, startRow);
+    final HashMap<HRegionInfo, HServerAddress> regionMap =
+      new HashMap<HRegionInfo, HServerAddress>();
 
-        // connect to the server hosting the .META. region
-        server = 
-          connection.getHRegionConnection(metaLocation.getServerAddress());
-
-        // open a scanner over the meta region
-        scannerId = server.openScanner(
-          metaLocation.getRegionInfo().getRegionName(),
-          new byte [][]{COL_REGIONINFO}, tableName, LATEST_TIMESTAMP,
-          null);
-        
-        // iterate through the scanner, accumulating regions and their regionserver
-        while (true) {
-          RowResult values = server.next(scannerId);
-          if (values == null || values.size() == 0) {
-            break;
-          }
-          
-          HRegionInfo info = new HRegionInfo();
-          info = (HRegionInfo) Writables.getWritable(
-            values.get(COL_REGIONINFO).getValue(), info);
-
-          if (!Bytes.equals(info.getTableDesc().getName(), this.tableName)) {
-            break;
-          }
-          
-          if (info.isOffline() || info.isSplit()) {
-            continue;
-          }
+    MetaScannerVisitor visitor = new MetaScannerVisitor() {
+      public boolean processRow(RowResult rowResult,
+          HRegionLocation metaLocation, HRegionInfo info)
+      throws IOException {
+        if (!(Bytes.equals(info.getTableDesc().getName(), tableName))) {
+          return false;
+        }
+        if (!(info.isOffline() || info.isSplit())) {
           regionMap.put(info, metaLocation.getServerAddress());
         }
-        
-        // close that remote scanner
-        server.close(scannerId);
-          
-        // advance the startRow to the end key of the current region
-        startRow = metaLocation.getRegionInfo().getEndKey();
-
-        // turn the start row into a location
-        metaLocation = 
-          connection.locateRegion(META_TABLE_NAME, startRow);
-      } catch (IOException e) {
-        // need retry logic?
-        throw e;
+        return true;
       }
-    } while (Bytes.compareTo(startRow, EMPTY_START_ROW) != 0);
-    
+
+    };
+    MetaScanner.metaScan(configuration, visitor, tableName);
     return regionMap;
   }
-  /** 
+  
+  /**
    * Get a single value for the specified row and column
-   *
+   * 
    * @param row row key
    * @param column column name
    * @return value for specified row/column
