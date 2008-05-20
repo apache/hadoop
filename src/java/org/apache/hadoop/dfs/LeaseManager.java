@@ -54,6 +54,9 @@ class LeaseManager {
   
   SortedSet<Lease> getSortedLeases() {return sortedLeases;}
 
+  /** @return the lease containing src */
+  Lease getLeaseByPath(String src) {return sortedLeasesByPath.get(src);}
+
   /** @return the number of leases currently in the system */
   synchronized int countLease() {return sortedLeases.size();}
 
@@ -91,10 +94,11 @@ class LeaseManager {
     Lease lease = getLease(holder);
     if (lease != null) {
       lease.completedCreate(src);
+      sortedLeasesByPath.remove(src);
+
       if (!lease.hasPath()) {
         leases.remove(new StringBytesWritable(holder));
         sortedLeases.remove(lease);
-        sortedLeasesByPath.remove(src);
       }
     }
   }
@@ -112,11 +116,17 @@ class LeaseManager {
   }
 
   synchronized void removeExpiredLease(Lease lease) throws IOException {
-    lease.releaseLocks();
+    String holder = lease.holder.getString();
+    for(StringBytesWritable sbw : lease.paths) {
+      String p = sbw.getString();
+      fsnamesystem.internalReleaseCreate(p, holder);
+      sortedLeasesByPath.remove(p);
+    }
+    lease.paths.clear();
+    
     leases.remove(lease.holder);
     if (!sortedLeases.remove(lease)) {
-      LOG.error("startFile: Unknown failure trying to remove " + lease + 
-                " from lease set.");
+      LOG.error("removeExpiredLease: " + lease + " not found in sortedLeases");
     }
   }
 
@@ -160,14 +170,6 @@ class LeaseManager {
 
     boolean hasPath() {return !paths.isEmpty();}
 
-    void releaseLocks() throws IOException {
-      String holderStr = holder.getString();
-      for(StringBytesWritable s : paths) {
-        fsnamesystem.internalReleaseCreate(s.getString(), holderStr);
-      }
-      paths.clear();
-    }
-  
     /** {@inheritDoc} */
     public String toString() {
       return "[Lease.  Holder: " + holder
