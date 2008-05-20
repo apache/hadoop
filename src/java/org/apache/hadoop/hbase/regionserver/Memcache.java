@@ -610,7 +610,7 @@ class Memcache {
             LOG.debug("internalGetKeys: " + key + ": expired, skipped");
           }
         }
-        if (versions != HConstants.ALL_VERSIONS && result.size() >= versions) {
+        if (result.size() >= versions) {
           // We have enough results.  Return.
           break;
         }

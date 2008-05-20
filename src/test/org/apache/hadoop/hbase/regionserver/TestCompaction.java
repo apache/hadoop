@@ -101,8 +101,8 @@ public class TestCompaction extends HBaseTestCase {
     addContent(new HRegionIncommon(r), Bytes.toString(COLUMN_FAMILY));
     Cell[] cellValues = 
       r.get(STARTROW, COLUMN_FAMILY_TEXT, 100 /*Too many*/);
-    // Assert that I can get > 5 versions (Should be at least 5 in there).
-    assertTrue(cellValues.length >= 5);
+    // Assert that I can get 3 versions since it is the max I should get
+    assertTrue(cellValues.length == 3);
     r.flushcache();
     r.compactStores();
     // Now assert that there are 4 versions of a record only: thats the

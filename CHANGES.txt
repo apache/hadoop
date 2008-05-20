@@ -40,6 +40,9 @@ Hbase Change Log
                and HConnectionManager (Jean-Daniel Cryans via Stack)
    HBASE-23    UI listing regions should be sorted by address and show additional
                region state (Jean-Daniel Cryans via Stack)
+   HBASE-621   Make MAX_VERSIONS work like TTL: In scans and gets, check
+               MAX_VERSIONs setting and return that many only rather than wait on
+               compaction (Jean-Daniel Cryans via Stack)
 
 Release 0.1.2 - 05/13/2008
    

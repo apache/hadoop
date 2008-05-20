@@ -196,7 +196,7 @@ public interface HConstants {
   /**
    * Define for 'return-all-versions'.
    */
-  static final int ALL_VERSIONS = -1;
+  static final int ALL_VERSIONS = Integer.MAX_VALUE;
   
   /**
    * Unlimited time-to-live.

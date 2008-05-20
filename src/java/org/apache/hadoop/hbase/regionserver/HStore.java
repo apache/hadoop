@@ -1230,7 +1230,7 @@ public class HStore implements HConstants {
    * Get the value for the indicated HStoreKey.  Grab the target value and the 
    * previous 'numVersions-1' values, as well.
    *
-   * If 'numVersions' is negative, the method returns all available versions.
+   * Use {@link HConstants.ALL_VERSIONS} to retrieve all versions.
    * @param key
    * @param numVersions Number of versions to fetch.  Must be > 0.
    * @return values for the specified versions
@@ -1246,7 +1246,7 @@ public class HStore implements HConstants {
     try {
       // Check the memcache
       List<Cell> results = this.memcache.get(key, numVersions);
-      // If we got sufficient versions from memcache, return.
+      // If we got sufficient versions from memcache, return. 
       if (results.size() == numVersions) {
         return results.toArray(new Cell[results.size()]);
       }
@@ -1323,9 +1323,18 @@ public class HStore implements HConstants {
     }
   }
   
+  /**
+   * Small method to check if we are over the max number of versions
+   * or we acheived this family max versions. 
+   * The later happens when we have the situation described in HBASE-621.
+   * @param numVersions
+   * @param results
+   * @return 
+   */
   private boolean hasEnoughVersions(final int numVersions,
       final List<Cell> results) {
-    return numVersions > 0 && results.size() >= numVersions;
+    return (results.size() >= numVersions || results.size() >= family
+            .getMaxVersions());
   }
 
   /**
@@ -1345,8 +1354,9 @@ public class HStore implements HConstants {
    */
   List<HStoreKey> getKeys(final HStoreKey origin, final int versions)
   throws IOException {
+      
     List<HStoreKey> keys = this.memcache.getKeys(origin, versions);
-    if (versions != ALL_VERSIONS && keys.size() >= versions) {
+    if (keys.size() >= versions) {
       return keys;
     }
     
@@ -1391,7 +1401,7 @@ public class HStore implements HConstants {
                   }
 
                   // if we've collected enough versions, then exit the loop.
-                  if (versions != ALL_VERSIONS && keys.size() >= versions) {
+                  if (keys.size() >= versions) {
                     break;
                   }
                 }
