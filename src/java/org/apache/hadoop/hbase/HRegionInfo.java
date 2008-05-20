@@ -51,7 +51,7 @@ public class HRegionInfo implements WritableComparable {
   /** HRegionInfo for first meta region */
   public static final HRegionInfo FIRST_META_REGIONINFO =
     new HRegionInfo(1L, HTableDescriptor.META_TABLEDESC);
-  
+
   /**
    * Extracts table name prefix from a region name.
    * Presumes region names are ASCII characters only.
@@ -352,6 +352,9 @@ public class HRegionInfo implements WritableComparable {
    */
   public int compareTo(Object o) {
     HRegionInfo other = (HRegionInfo) o;
+    if (other == null) {
+      return 1;
+    }
     
     // Are regions of same table?
     int result = this.tableDesc.compareTo(other.tableDesc);

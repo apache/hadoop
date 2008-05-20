@@ -24,107 +24,156 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
-/*******************************************************************************
+/**
  * HMsg is for communicating instructions between the HMaster and the 
  * HRegionServers.
- ******************************************************************************/
+ * 
+ * Most of the time the messages are simple but some messages are accompanied
+ * by the region affected.  HMsg may also carry optional message.
+ */
+@SuppressWarnings("serial")
 public class HMsg implements Writable {
-  
-  // Messages sent from master to region server
-  
-  /** Start serving the specified region */
-  public static final byte MSG_REGION_OPEN = 1;
-  
-  /** Stop serving the specified region */
-  public static final byte MSG_REGION_CLOSE = 2;
-
-  /** Region server is unknown to master. Restart */
-  public static final byte MSG_CALL_SERVER_STARTUP = 4;
-  
-  /** Master tells region server to stop */
-  public static final byte MSG_REGIONSERVER_STOP = 5;
-
-  /** Stop serving the specified region and don't report back that it's closed */
-  public static final byte MSG_REGION_CLOSE_WITHOUT_REPORT = 6;
-  
-  /** Stop serving user regions */
-  public static final byte MSG_REGIONSERVER_QUIESCE = 7;
-
-  // Messages sent from the region server to the master
-  
-  /** region server is now serving the specified region */
-  public static final byte MSG_REPORT_OPEN = 100;
-  
-  /** region server is no longer serving the specified region */
-  public static final byte MSG_REPORT_CLOSE = 101;
-  
-  /** region server is processing open request */
-  public static final byte MSG_REPORT_PROCESS_OPEN = 102;
-
   /**
-   * region server split the region associated with this message.
-   * 
-   * note that this message is immediately followed by two MSG_REPORT_OPEN
-   * messages, one for each of the new regions resulting from the split
+   * Message types sent between master and regionservers
    */
-  public static final byte MSG_REPORT_SPLIT = 103;
+  public static enum Type {
+    MSG_NONE,
+    
+    // Message types sent from master to region server
+    /** Start serving the specified region */
+    MSG_REGION_OPEN,
+    
+    /** Stop serving the specified region */
+    MSG_REGION_CLOSE,
+    
+    /** Region server is unknown to master. Restart */
+    MSG_CALL_SERVER_STARTUP,
+    
+    /** Master tells region server to stop */
+    MSG_REGIONSERVER_STOP,
+    
+    /** Stop serving the specified region and don't report back that it's
+     * closed
+     */
+    MSG_REGION_CLOSE_WITHOUT_REPORT,
   
-  /**
-   * region server is shutting down
-   * 
-   * note that this message is followed by MSG_REPORT_CLOSE messages for each
-   * region the region server was serving, unless it was told to quiesce.
-   */
-  public static final byte MSG_REPORT_EXITING = 104;
-  
-  /** region server has closed all user regions but is still serving meta regions */
-  public static final byte MSG_REPORT_QUIESCED = 105;
+    /** Stop serving user regions */
+    MSG_REGIONSERVER_QUIESCE,
 
-  byte msg;
-  HRegionInfo info;
+    // Message types sent from the region server to the master
+    /** region server is now serving the specified region */
+    MSG_REPORT_OPEN,
+    
+    /** region server is no longer serving the specified region */
+    MSG_REPORT_CLOSE,
+
+    /** region server is processing open request */
+    MSG_REPORT_PROCESS_OPEN,
+
+    /**
+     * Region server split the region associated with this message.
+     * 
+     * Note that this message is immediately followed by two MSG_REPORT_OPEN
+     * messages, one for each of the new regions resulting from the split
+     */
+    MSG_REPORT_SPLIT,
+
+    /**
+     * Region server is shutting down
+     * 
+     * Note that this message is followed by MSG_REPORT_CLOSE messages for each
+     * region the region server was serving, unless it was told to quiesce.
+     */
+    MSG_REPORT_EXITING,
+
+    /** Region server has closed all user regions but is still serving meta
+     * regions
+     */
+    MSG_REPORT_QUIESCED,
+  }
+
+  private Type type = null;
+  private HRegionInfo info = null;
+  private Text message = null;
+
+  // Some useful statics.  Use these rather than create a new HMsg each time.
+  public static final HMsg REPORT_EXITING = new HMsg(Type.MSG_REPORT_EXITING);
+  public static final HMsg REPORT_QUIESCED = new HMsg(Type.MSG_REPORT_QUIESCED);
+  public static final HMsg REGIONSERVER_QUIESCE =
+    new HMsg(Type.MSG_REGIONSERVER_QUIESCE);
+  public static final HMsg REGIONSERVER_STOP =
+    new HMsg(Type.MSG_REGIONSERVER_STOP);
+  public static final HMsg CALL_SERVER_STARTUP =
+    new HMsg(Type.MSG_CALL_SERVER_STARTUP);
+  public static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg[0];
+  
 
   /** Default constructor. Used during deserialization */
   public HMsg() {
-    this.info = new HRegionInfo();
+    this(Type.MSG_NONE);
   }
 
   /**
-   * Construct a message with an empty HRegionInfo
-   * 
-   * @param msg - message code
+   * Construct a message with the specified message and HRegionInfo
+   * @param type Message type
    */
-  public HMsg(byte msg) {
-    this.msg = msg;
-    this.info = new HRegionInfo();
+  public HMsg(final HMsg.Type type) {
+    this(type, new HRegionInfo(), null);
   }
   
   /**
-   * Construct a message with the specified message code and HRegionInfo
+   * Construct a message with the specified message and HRegionInfo
+   * @param type Message type
+   * @param hri Region to which message <code>type</code> applies
+   */
+  public HMsg(final HMsg.Type type, final HRegionInfo hri) {
+    this(type, hri, null);
+  }
+  
+  /**
+   * Construct a message with the specified message and HRegionInfo
    * 
-   * @param msg - message code
-   * @param info - HRegionInfo
+   * @param type Message type
+   * @param hri Region to which message <code>type</code> applies.  Cannot be
+   * null.  If no info associated, used other Constructor.
+   * @param msg Optional message (Stringified exception, etc.)
    */
-  public HMsg(byte msg, HRegionInfo info) {
-    this.msg = msg;
-    this.info = info;
+  public HMsg(final HMsg.Type type, final HRegionInfo hri, final Text msg) {
+    if (type == null) {
+      throw new NullPointerException("Message type cannot be null");
+    }
+    this.type = type;
+    if (hri == null) {
+      throw new NullPointerException("Region cannot be null");
+    }
+    this.info = hri;
+    this.message = msg;
   }
 
   /**
-   * Accessor
-   * @return message code
-   */
-  public byte getMsg() {
-    return msg;
-  }
-
-  /**
-   * Accessor
-   * @return HRegionInfo
+   * @return Region info or null if none associated with this message type.
    */
   public HRegionInfo getRegionInfo() {
-    return info;
+    return this.info;
+  }
+
+  public Type getType() {
+    return this.type;
+  }
+  
+  /**
+   * @param other Message type to compare to
+   * @return True if we are of same message type as <code>other</code>
+   */
+  public boolean isType(final HMsg.Type other) {
+    return this.type.equals(other);
+  }
+  
+  public Text getMessage() {
+    return this.message;
   }
 
   /**
@@ -132,67 +181,37 @@ public class HMsg implements Writable {
    */
   @Override
   public String toString() {
-    StringBuilder message = new StringBuilder();
-    switch(msg) {
-    case MSG_REGION_OPEN:
-      message.append("MSG_REGION_OPEN : ");
-      break;
-      
-    case MSG_REGION_CLOSE:
-      message.append("MSG_REGION_CLOSE : ");
-      break;
-      
-    case MSG_CALL_SERVER_STARTUP:
-      message.append("MSG_CALL_SERVER_STARTUP : ");
-      break;
-      
-    case MSG_REGIONSERVER_STOP:
-      message.append("MSG_REGIONSERVER_STOP : ");
-      break;
-      
-    case MSG_REGION_CLOSE_WITHOUT_REPORT:
-      message.append("MSG_REGION_CLOSE_WITHOUT_REPORT : ");
-      break;
-      
-    case MSG_REGIONSERVER_QUIESCE:
-      message.append("MSG_REGIONSERVER_QUIESCE : ");
-      break;
-      
-    case MSG_REPORT_PROCESS_OPEN:
-      message.append("MSG_REPORT_PROCESS_OPEN : ");
-      break;
-      
-    case MSG_REPORT_OPEN:
-      message.append("MSG_REPORT_OPEN : ");
-      break;
-      
-    case MSG_REPORT_CLOSE:
-      message.append("MSG_REPORT_CLOSE : ");
-      break;
-      
-    case MSG_REPORT_SPLIT:
-      message.append("MSG_REGION_SPLIT : ");
-      break;
-      
-    case MSG_REPORT_EXITING:
-      message.append("MSG_REPORT_EXITING : ");
-      break;
-      
-    case MSG_REPORT_QUIESCED:
-      message.append("MSG_REPORT_QUIESCED : ");
-      break;
-      
-    default:
-      message.append("unknown message code (");
-      message.append(msg);
-      message.append(") : ");
-      break;
+    StringBuilder sb = new StringBuilder();
+    sb.append(this.type.toString());
+    // If null or empty region, don't bother printing it out.
+    if (this.info != null && this.info.getRegionName().length > 0) {
+      sb.append(": ");
+      sb.append(this.info.getRegionNameAsString());
     }
-    message.append(info == null ? "null": info.getRegionNameAsString());
-    return message.toString();
+    if (this.message != null && this.message.getLength() > 0) {
+      sb.append(": " + this.message);
+    }
+    return sb.toString();
   }
   
-  //////////////////////////////////////////////////////////////////////////////
+  @Override
+  public boolean equals(Object obj) {
+    HMsg that = (HMsg)obj;
+    return this.type.equals(that.type) &&
+      (this.info != null)? this.info.equals(that.info):
+        that.info == null;
+  }
+  
+  @Override
+  public int hashCode() {
+    int result = this.type.hashCode();
+    if (this.info != null) {
+      result ^= this.info.hashCode();
+    }
+    return result;
+  }
+  
+  // ////////////////////////////////////////////////////////////////////////////
   // Writable
   //////////////////////////////////////////////////////////////////////////////
 
@@ -200,15 +219,29 @@ public class HMsg implements Writable {
    * {@inheritDoc}
    */
   public void write(DataOutput out) throws IOException {
-     out.writeByte(msg);
-     info.write(out);
+     out.writeInt(this.type.ordinal());
+     this.info.write(out);
+     if (this.message == null || this.message.getLength() == 0) {
+       out.writeBoolean(false);
+     } else {
+       out.writeBoolean(true);
+       this.message.write(out);
+     }
    }
 
   /**
    * {@inheritDoc}
    */
   public void readFields(DataInput in) throws IOException {
-     this.msg = in.readByte();
+     int ordinal = in.readInt();
+     this.type = HMsg.Type.values()[ordinal];
      this.info.readFields(in);
+     boolean hasMessage = in.readBoolean();
+     if (hasMessage) {
+       if (this.message == null) {
+         this.message = new Text();
+       }
+       this.message.readFields(in);
+     }
    }
 }

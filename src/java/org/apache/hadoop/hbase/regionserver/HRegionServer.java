@@ -80,6 +80,7 @@ import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.DNS;
@@ -311,10 +312,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
             for(int i = 0;
                 !restart && !stopRequested.get() && i < msgs.length;
                 i++) {
-              
               LOG.info(msgs[i].toString());
-              switch(msgs[i].getMsg()) {
-              case HMsg.MSG_CALL_SERVER_STARTUP:
+              switch(msgs[i].getType()) {
+              case MSG_CALL_SERVER_STARTUP:
                 // We the MSG_CALL_SERVER_STARTUP on startup but we can also
                 // get it when the master is panicing because for instance
                 // the HDFS has been yanked out from under it.  Be wary of
@@ -344,11 +344,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
                 }
                 break;
 
-              case HMsg.MSG_REGIONSERVER_STOP:
+              case MSG_REGIONSERVER_STOP:
                 stopRequested.set(true);
                 break;
 
-              case HMsg.MSG_REGIONSERVER_QUIESCE:
+              case MSG_REGIONSERVER_QUIESCE:
                 if (!quiesceRequested) {
                   try {
                     toDo.put(new ToDoEntry(msgs[i]));
@@ -445,11 +445,11 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
       try {
         HMsg[] exitMsg = new HMsg[closedRegions.size() + 1];
-        exitMsg[0] = new HMsg(HMsg.MSG_REPORT_EXITING);
+        exitMsg[0] = HMsg.REPORT_EXITING;
         // Tell the master what regions we are/were serving
         int i = 1;
         for (HRegion region: closedRegions) {
-          exitMsg[i++] = new HMsg(HMsg.MSG_REPORT_CLOSE,
+          exitMsg[i++] = new HMsg(HMsg.Type.MSG_REPORT_CLOSE,
               region.getRegionInfo());
         }
 
@@ -608,7 +608,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     // This iterator is 'safe'.  We are guaranteed a view on state of the
     // queue at time iterator was taken out.  Apparently goes from oldest.
     for (ToDoEntry e: this.toDo) {
-      if (e.msg.getMsg() == HMsg.MSG_REGION_OPEN) {
+      if (e.msg.isType(HMsg.Type.MSG_REGION_OPEN)) {
         addProcessingMessage(e.msg.getRegionInfo());
       }
     }
@@ -710,15 +710,21 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     return result;
   }
 
-  /** Add to the outbound message buffer */
+  /* Add to the outbound message buffer */
   private void reportOpen(HRegionInfo region) {
-    outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_OPEN, region));
+    outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_OPEN, region));
   }
 
-  /** Add to the outbound message buffer */
+  /* Add to the outbound message buffer */
   private void reportClose(HRegionInfo region) {
-    outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_CLOSE, region));
+    reportClose(region, null);
   }
+
+  /* Add to the outbound message buffer */
+  private void reportClose(final HRegionInfo region, final Text message) {
+    outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_CLOSE, region, message));
+  }
+
   
   /**
    * Add to the outbound message buffer
@@ -733,18 +739,24 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   void reportSplit(HRegionInfo oldRegion, HRegionInfo newRegionA,
       HRegionInfo newRegionB) {
 
-    outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_SPLIT, oldRegion));
-    outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_OPEN, newRegionA));
-    outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_OPEN, newRegionB));
+    outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_SPLIT, oldRegion,
+      new Text(oldRegion.getRegionNameAsString() + " split; daughters: " +
+        newRegionA.getRegionNameAsString() + ", " +
+        newRegionB.getRegionNameAsString())));
+    outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_OPEN, newRegionA));
+    outboundMsgs.add(new HMsg(HMsg.Type.MSG_REPORT_OPEN, newRegionB));
   }
 
   //////////////////////////////////////////////////////////////////////////////
   // HMaster-given operations
   //////////////////////////////////////////////////////////////////////////////
 
+  /*
+   * Data structure to hold a HMsg and retries count.
+   */
   private static class ToDoEntry {
-    int tries;
-    HMsg msg;
+    private int tries;
+    private final HMsg msg;
     ToDoEntry(HMsg msg) {
       this.tries = 0;
       this.msg = msg;
@@ -774,23 +786,23 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
               continue;
             }
             LOG.info(e.msg);
-            switch(e.msg.getMsg()) {
+            switch(e.msg.getType()) {
 
-            case HMsg.MSG_REGIONSERVER_QUIESCE:
+            case MSG_REGIONSERVER_QUIESCE:
               closeUserRegions();
               break;
 
-            case HMsg.MSG_REGION_OPEN:
+            case MSG_REGION_OPEN:
               // Open a region
               openRegion(e.msg.getRegionInfo());
               break;
 
-            case HMsg.MSG_REGION_CLOSE:
+            case MSG_REGION_CLOSE:
               // Close a region
               closeRegion(e.msg.getRegionInfo(), true);
               break;
 
-            case HMsg.MSG_REGION_CLOSE_WITHOUT_REPORT:
+            case MSG_REGION_CLOSE_WITHOUT_REPORT:
               // Close a region, don't reply
               closeRegion(e.msg.getRegionInfo(), false);
               break;
@@ -854,7 +866,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         // TODO: add an extra field in HRegionInfo to indicate that there is
         // an error. We can't do that now because that would be an incompatible
         // change that would require a migration
-        reportClose(regionInfo);
+        reportClose(regionInfo, new Text(StringUtils.stringifyException(e)));
         return;
       }
       this.lock.writeLock().lock();
@@ -876,7 +888,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @param hri Region to add the message for
    */
   protected void addProcessingMessage(final HRegionInfo hri) {
-    getOutboundMsgs().add(new HMsg(HMsg.MSG_REPORT_PROCESS_OPEN, hri));
+    getOutboundMsgs().add(new HMsg(HMsg.Type.MSG_REPORT_PROCESS_OPEN, hri));
   }
 
   void closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted)
@@ -889,7 +901,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       this.lock.writeLock().unlock();
     }
       
-    if(region != null) {
+    if (region != null) {
       region.close();
       if(reportWhenCompleted) {
         reportClose(hri);
@@ -954,9 +966,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     this.quiesced.set(true);
     if (onlineRegions.size() == 0) {
-      outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_EXITING));
+      outboundMsgs.add(HMsg.REPORT_EXITING);
     } else {
-      outboundMsgs.add(new HMsg(HMsg.MSG_REPORT_QUIESCED));
+      outboundMsgs.add(HMsg.REPORT_QUIESCED);
     }
   }
 

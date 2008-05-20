@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.io.Text;
 
 /**
  * Class to manage assigning regions to servers, state of root and meta, etc.
@@ -71,6 +72,8 @@ class RegionManager implements HConstants {
   private final SortedMap<byte [], MetaRegion> onlineMetaRegions =
     Collections.synchronizedSortedMap(new TreeMap<byte [],
       MetaRegion>(Bytes.BYTES_COMPARATOR));
+
+  private static final Text OVERLOADED = new Text("Overloaded");
 
   /**
    * The 'unassignedRegions' table maps from a HRegionInfo to a timestamp that
@@ -255,7 +258,7 @@ class RegionManager implements HConstants {
           Bytes.toString(regionInfo.getRegionName())+
           " to server " + serverName);
         unassignedRegions.put(regionInfo, Long.valueOf(now));
-        returnMsgs.add(new HMsg(HMsg.MSG_REGION_OPEN, regionInfo));
+        returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, regionInfo));
         if (--nregions <= 0) {
           break;
         }
@@ -380,7 +383,7 @@ class RegionManager implements HConstants {
           Bytes.toString(regionInfo.getRegionName()) +
           " to the only server " + serverName);
       unassignedRegions.put(regionInfo, Long.valueOf(now));
-      returnMsgs.add(new HMsg(HMsg.MSG_REGION_OPEN, regionInfo));
+      returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, regionInfo));
     }
   }
   
@@ -418,7 +421,8 @@ class RegionManager implements HConstants {
       LOG.debug("Going to close region " + currentRegion.getRegionName());
       
       // make a message to close the region
-      returnMsgs.add(new HMsg(HMsg.MSG_REGION_CLOSE, currentRegion));
+      returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, currentRegion,
+        OVERLOADED));
       // mark the region as closing
       setClosing(currentRegion.getRegionName());
       // increment the count of regions we've marked

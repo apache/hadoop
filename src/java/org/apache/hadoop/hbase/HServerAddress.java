@@ -178,7 +178,11 @@ public class HServerAddress implements WritableComparable {
    * {@inheritDoc}
    */
   public int compareTo(Object o) {
-    HServerAddress other = (HServerAddress) o;
-    return this.toString().compareTo(other.toString());
+    HServerAddress that = (HServerAddress)o;
+    // Addresses as Strings may not compare though address is for the one
+    // server with only difference being that one address has hostname
+    // resolved whereas other only has IP.
+    if (this.address.equals(that.address)) return 0;
+    return this.toString().compareTo(that.toString());
   }
 }

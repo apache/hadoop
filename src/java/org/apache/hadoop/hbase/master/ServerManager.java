@@ -42,13 +42,15 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.LeaseListener;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.io.Text;
 
 /**
  * The ServerManager class manages info about region servers - HServerInfo, 
  * load numbers, dying servers, etc.
  */
 class ServerManager implements HConstants {
-  static final Log LOG = LogFactory.getLog(ServerManager.class.getName());
+  private static final Log LOG =
+    LogFactory.getLog(ServerManager.class.getName());
   
   private final AtomicInteger quiescedServers = new AtomicInteger(0);
 
@@ -68,10 +70,9 @@ class ServerManager implements HConstants {
   final Map<String, HServerLoad> serversToLoad =
     new ConcurrentHashMap<String, HServerLoad>();  
   
-  HMaster master;
-  
+  private HMaster master;
   private final Leases serverLeases;
-    
+
   /**
    * @param master
    */
@@ -83,15 +84,13 @@ class ServerManager implements HConstants {
   
   /**
    * Let the server manager know a new regionserver has come online
-   * 
    * @param serverInfo
    */
   public void regionServerStartup(HServerInfo serverInfo) {
     String s = serverInfo.getServerAddress().toString().trim();
-    LOG.info("received start message from: " + s);
+    LOG.info("Received start message from: " + s);
     // Do the lease check up here. There might already be one out on this
-    // server expecially if it just shutdown and came back up near-immediately
-    // after.
+    // server expecially if it just shutdown and came back up near-immediately.
     if (!master.closed.get()) {
       try {
         serverLeases.createLease(s, new ServerExpirer(s));
@@ -152,15 +151,15 @@ class ServerManager implements HConstants {
    * 
    * @throws IOException
    */
-  public HMsg [] regionServerReport(HServerInfo serverInfo, HMsg msgs[], 
-    HRegionInfo[] mostLoadedRegions)
+  public HMsg [] regionServerReport(final HServerInfo serverInfo,
+    final HMsg msgs[], final HRegionInfo[] mostLoadedRegions)
   throws IOException {
     String serverName = serverInfo.getServerAddress().toString().trim();
     if (msgs.length > 0) {
-      if (msgs[0].getMsg() == HMsg.MSG_REPORT_EXITING) {
+      if (msgs[0].isType(HMsg.Type.MSG_REPORT_EXITING)) {
         processRegionServerExit(serverName, msgs);
-        return new HMsg[0];
-      } else if (msgs[0].getMsg() == HMsg.MSG_REPORT_QUIESCED) {
+        return HMsg.EMPTY_HMSG_ARRAY;
+      } else if (msgs[0].isType(HMsg.Type.MSG_REPORT_QUIESCED)) {
         LOG.info("Region server " + serverName + " quiesced");
         quiescedServers.incrementAndGet();
       }
@@ -175,13 +174,14 @@ class ServerManager implements HConstants {
       }
 
       if (!master.closed.get()) {
-        if (msgs.length > 0 && msgs[0].getMsg() == HMsg.MSG_REPORT_QUIESCED) {
+        if (msgs.length > 0 &&
+            msgs[0].isType(HMsg.Type.MSG_REPORT_QUIESCED)) {
           // Server is already quiesced, but we aren't ready to shut down
           // return empty response
-          return new HMsg[0];
+          return HMsg.EMPTY_HMSG_ARRAY;
         }
         // Tell the server to stop serving any user regions
-        return new HMsg [] {new HMsg(HMsg.MSG_REGIONSERVER_QUIESCE)};
+        return new HMsg [] {HMsg.REGIONSERVER_QUIESCE};
       }
     }
 
@@ -189,7 +189,7 @@ class ServerManager implements HConstants {
       // Tell server to shut down if we are shutting down.  This should
       // happen after check of MSG_REPORT_EXITING above, since region server
       // will send us one of these messages after it gets MSG_REGIONSERVER_STOP
-      return new HMsg [] {new HMsg(HMsg.MSG_REGIONSERVER_STOP)};
+      return new HMsg [] {HMsg.REGIONSERVER_STOP};
     }
 
     HServerInfo storedInfo = serversToServerInfo.get(serverName);
@@ -200,7 +200,7 @@ class ServerManager implements HConstants {
 
       // The HBaseMaster may have been restarted.
       // Tell the RegionServer to start over and call regionServerStartup()
-      return new HMsg[]{new HMsg(HMsg.MSG_CALL_SERVER_STARTUP)};
+      return new HMsg[]{HMsg.CALL_SERVER_STARTUP};
     } else if (storedInfo.getStartCode() != serverInfo.getStartCode()) {
       // This state is reachable if:
       //
@@ -220,7 +220,7 @@ class ServerManager implements HConstants {
         serversToServerInfo.notifyAll();
       }
       
-      return new HMsg[]{new HMsg(HMsg.MSG_REGIONSERVER_STOP)};
+      return new HMsg[]{HMsg.REGIONSERVER_STOP};
     } else {
       return processRegionServerAllsWell(serverName, serverInfo, 
         mostLoadedRegions, msgs);
@@ -234,11 +234,6 @@ class ServerManager implements HConstants {
         // HRegionServer is shutting down. Cancel the server's lease.
         // Note that canceling the server's lease takes care of updating
         // serversToServerInfo, etc.
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Region server " + serverName +
-          ": MSG_REPORT_EXITING -- cancelling lease");
-        }
-
         if (cancelLease(serverName)) {
           // Only process the exit message if the server still has a lease.
           // Otherwise we could end up processing the server exit twice.
@@ -248,13 +243,13 @@ class ServerManager implements HConstants {
           // (if we are not shutting down).
           if (!master.closed.get()) {
             for (int i = 1; i < msgs.length; i++) {
+              LOG.info("Processing " + msgs[i] + " from " + serverName);
               HRegionInfo info = msgs[i].getRegionInfo();
               if (info.isRootRegion()) {
                 master.regionManager.unassignRootRegion();
               } else if (info.isMetaTable()) {
                 master.regionManager.offlineMetaRegion(info.getStartKey());
               }
-
               if (!master.regionManager.isMarkedToClose(
                   serverName, info.getRegionName())) {
                 master.regionManager.setUnassigned(info);
@@ -262,10 +257,8 @@ class ServerManager implements HConstants {
             }
           }
         }
-
         // We don't need to return anything to the server because it isn't
         // going to do any more work.
-/*        return new HMsg[0];*/
       } finally {
         serversToServerInfo.notifyAll();
       }
@@ -328,40 +321,37 @@ class ServerManager implements HConstants {
 
     // Get reports on what the RegionServer did.
     for (int i = 0; i < incomingMsgs.length; i++) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Received " + incomingMsgs[i] + " from " + serverName);
-      }
       HRegionInfo region = incomingMsgs[i].getRegionInfo();
-
-      switch (incomingMsgs[i].getMsg()) {
-        case HMsg.MSG_REPORT_PROCESS_OPEN:
+      LOG.info("Received " + incomingMsgs[i] + " from " + serverName);
+      switch (incomingMsgs[i].getType()) {
+        case MSG_REPORT_PROCESS_OPEN:
           master.regionManager.updateAssignmentDeadline(region);
           break;
         
-        case HMsg.MSG_REPORT_OPEN:
+        case MSG_REPORT_OPEN:
           processRegionOpen(serverName, serverInfo, region, returnMsgs);
           break;
 
-        case HMsg.MSG_REPORT_CLOSE:
+        case MSG_REPORT_CLOSE:
           processRegionClose(serverInfo, region);
           break;
 
-        case HMsg.MSG_REPORT_SPLIT:
+        case MSG_REPORT_SPLIT:
           processSplitRegion(serverName, serverInfo, region, incomingMsgs[++i], 
             incomingMsgs[++i], returnMsgs);
           break;
 
         default:
           throw new IOException(
-            "Impossible state during msg processing.  Instruction: " +
-            incomingMsgs[i].getMsg());
+            "Impossible state during message processing. Instruction: " +
+            incomingMsgs[i].getType());
       }
     }
 
     // Tell the region server to close regions that we have marked for closing.
     if (regionsToKill != null) {
       for (HRegionInfo i: regionsToKill.values()) {
-        returnMsgs.add(new HMsg(HMsg.MSG_REGION_CLOSE, i));
+        returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE, i));
         // Transition the region from toClose to closing state
         master.regionManager.setClosing(i.getRegionName());
       }
@@ -390,9 +380,6 @@ class ServerManager implements HConstants {
 
     HRegionInfo newRegionB = splitB.getRegionInfo();
     master.regionManager.setUnassigned(newRegionB);
-
-    LOG.info("Region " + region.getRegionName() + " split; new regions: " +
-      newRegionA.getRegionName() + ", " + newRegionB.getRegionName());
 
     if (region.isMetaTable()) {
       // A meta region has split.
@@ -441,7 +428,8 @@ class ServerManager implements HConstants {
       // Ask the server to shut it down, but don't report it as closed.  
       // Otherwise the HMaster will think the Region was closed on purpose, 
       // and then try to reopen it elsewhere; that's not what we want.
-      returnMsgs.add(new HMsg(HMsg.MSG_REGION_CLOSE_WITHOUT_REPORT, region));
+      returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_CLOSE_WITHOUT_REPORT,
+        region, new Text("Duplicate assignment")));
     } else {
       // it was assigned, and it's not a duplicate assignment, so take it out 
       // of the unassigned list.
@@ -467,9 +455,6 @@ class ServerManager implements HConstants {
   }
   
   private void processRegionClose(HServerInfo serverInfo, HRegionInfo region) {
-    LOG.info(serverInfo.getServerAddress().toString() + " no longer serving " +
-        region);
-
     if (region.isRootRegion()) {
       // Root region
       if (region.isOffline()) {

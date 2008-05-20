@@ -23,7 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 
 /**
@@ -33,7 +33,7 @@ import org.apache.hadoop.io.Writable;
  * In the future it will contain information about the source machine and
  * load statistics.
  */
-public class HServerInfo implements Writable {
+public class HServerInfo implements WritableComparable {
   private HServerAddress serverAddress;
   private long startCode;
   private HServerLoad load;
@@ -116,20 +116,7 @@ public class HServerInfo implements Writable {
 
   @Override
   public boolean equals(Object obj) {
-    if (!(obj instanceof HServerInfo)) {
-      return false;
-    }
-    HServerInfo that = (HServerInfo)obj;
-    if (!this.serverAddress.equals(that.serverAddress)) {
-      return false;
-    }
-    if (this.infoPort != that.infoPort) {
-      return false;
-    }
-    if (this.startCode != that.startCode) {
-      return false;
-    }
-    return true;
+    return compareTo(obj) == 0;
   }
 
   @Override
@@ -154,5 +141,21 @@ public class HServerInfo implements Writable {
     out.writeLong(this.startCode);
     this.load.write(out);
     out.writeInt(this.infoPort);
+  }
+
+  public int compareTo(Object o) {
+    HServerInfo that = (HServerInfo)o;
+    int result = getServerAddress().compareTo(that.getServerAddress());
+    if (result != 0) {
+      return result;
+    }
+    if (this.infoPort != that.infoPort) {
+      return this.infoPort - that.infoPort;
+    }
+    if (getStartCode() == that.getStartCode()) {
+      return 0;
+    }
+    // Startcodes are timestamps.
+    return (int)(getStartCode() - that.getStartCode());
   }
 }

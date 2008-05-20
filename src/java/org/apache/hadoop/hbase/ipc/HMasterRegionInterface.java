@@ -32,12 +32,15 @@ import org.apache.hadoop.hbase.HRegionInfo;
  * goings-on and to obtain data-handling instructions from the HMaster.
  */
 public interface HMasterRegionInterface extends VersionedProtocol {
-  /** Interface version number.
+  /**
+   * Interface version number.
    * Version 2 was when the regionServerStartup was changed to return a
-   * MapWritable instead of a HbaseMapWritable.
+   * MapWritable instead of a HbaseMapWritable as part of HBASE-82 changes.
+   * Version 3 was when HMsg was refactored so it could carry optional
+   * messages (HBASE-504).
    */
-  public static final long versionID = 2L;
-  
+  public static final long versionID = 3L;
+
   /**
    * Called when a region server first starts
    * @param info
@@ -46,7 +49,7 @@ public interface HMasterRegionInterface extends VersionedProtocol {
    * hbase rootdir, etc.
    */
   public MapWritable regionServerStartup(HServerInfo info) throws IOException;
-  
+
   /**
    * Called to renew lease, tell master what the region server is doing and to
    * receive new instructions from the master

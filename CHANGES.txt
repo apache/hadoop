@@ -43,6 +43,8 @@ Hbase Change Log
    HBASE-621   Make MAX_VERSIONS work like TTL: In scans and gets, check
                MAX_VERSIONs setting and return that many only rather than wait on
                compaction (Jean-Daniel Cryans via Stack)
+   HBASE-504   Allow HMsg's carry a payload: e.g. exception that happened over
+               on the remote side.
 
 Release 0.1.2 - 05/13/2008
    
