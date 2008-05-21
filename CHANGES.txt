@@ -149,6 +149,9 @@ Trunk (unreleased changes)
     HADOOP-3398. Minor improvement to a utility function in that participates
     in backoff calculation. (cdouglas)
 
+    HADOOP-3381. Clear referenced when directories are deleted so that 
+    effect of memory leaks are not multiplied. (rangadi)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

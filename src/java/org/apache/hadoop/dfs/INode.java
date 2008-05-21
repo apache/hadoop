@@ -144,7 +144,12 @@ abstract class INode implements Comparable<byte[]> {
    * Check whether it's a directory
    */
   abstract boolean isDirectory();
-  abstract int collectSubtreeBlocks(List<Block> v);
+  /**
+   * Collect all the blocks in all children of this INode.
+   * Count and return the number of files in the sub tree.
+   * Also clears references since this INode is deleted.
+   */
+  abstract int collectSubtreeBlocksAndClear(List<Block> v);
 
   /** Compute {@link ContentSummary}. */
   final ContentSummary computeContentSummary() {
@@ -264,6 +269,7 @@ abstract class INode implements Comparable<byte[]> {
     } else {
       
       parent.removeChild(this);
+      parent = null;
       return true;
     }
   }
@@ -612,18 +618,16 @@ class INodeDirectory extends INode {
     return children;
   }
 
-  /**
-   * Collect all the blocks in all children of this INode.
-   * Count and return the number of files in the sub tree.
-   */
-  int collectSubtreeBlocks(List<Block> v) {
+  int collectSubtreeBlocksAndClear(List<Block> v) {
     int total = 1;
     if (children == null) {
       return total;
     }
     for (INode child : children) {
-      total += child.collectSubtreeBlocks(v);
+      total += child.collectSubtreeBlocksAndClear(v);
     }
+    parent = null;
+    children = null;
     return total;
   }
 }
@@ -736,14 +740,12 @@ class INodeFile extends INode {
     this.blocks[idx] = blk;
   }
 
-  /**
-   * Collect all the blocks in this INode.
-   * Return the number of files in the sub tree.
-   */
-  int collectSubtreeBlocks(List<Block> v) {
+  int collectSubtreeBlocksAndClear(List<Block> v) {
+    parent = null;
     for (Block blk : blocks) {
       v.add(blk);
     }
+    blocks = null;
     return 1;
   }
 

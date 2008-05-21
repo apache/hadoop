@@ -534,16 +534,17 @@ class FSDirectory implements FSConstants {
         // Remove the node from the namespace and GC all
         // the blocks underneath the node.
         //
-        if (!targetNode.removeNode()) {
+        if (targetNode.getParent() == null) {
           NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: "
                                        +"failed to remove "+src+" because it does not have a parent");
           return null;
         } else {
+          targetNode.getParent().setModificationTime(modificationTime);
+          targetNode.removeNode();
           NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
                                         +src+" is removed");
-          targetNode.getParent().setModificationTime(modificationTime);
           ArrayList<Block> v = new ArrayList<Block>();
-          int filesRemoved = targetNode.collectSubtreeBlocks(v);
+          int filesRemoved = targetNode.collectSubtreeBlocksAndClear(v);
           incrDeletedFileCount(filesRemoved);
           totalInodes -= filesRemoved;
           for (Block b : v) {
