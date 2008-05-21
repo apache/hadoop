@@ -301,6 +301,10 @@ Trunk (unreleased changes)
     make sure they are in the range 0 to #reduces - 1 (cdouglas via
     omalley)
 
+    HADOOP-3408. Change FSNamesystem to send its metrics as integers to
+    accommodate collectors that don't support long values. (lohit vijayarenu
+    via cdouglas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
