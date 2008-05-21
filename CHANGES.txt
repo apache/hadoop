@@ -297,6 +297,10 @@ Trunk (unreleased changes)
     HADOOP-3375. Lease paths were sometimes not removed from 
     LeaseManager.sortedLeasesByPath. (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-3424. Values returned by getPartition should be checked to
+    make sure they are in the range 0 to #reduces - 1 (cdouglas via
+    omalley)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

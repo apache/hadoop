@@ -475,6 +475,10 @@ class MapTask extends Task {
               : (bufvoid - keystart) + valend);
         }
         int partition = partitioner.getPartition(key, value, partitions);
+        if (partition < 0 || partition >= partitions) {
+          throw new IOException("Illegal partition for " + key + " (" +
+              partition + ")");
+        }
 
         mapOutputRecordCounter.increment(1);
 
