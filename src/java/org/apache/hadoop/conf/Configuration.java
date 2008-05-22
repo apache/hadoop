@@ -244,7 +244,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>> {
       }
       String var = match.group();
       var = var.substring(2, var.length()-1); // remove ${ .. }
-      String val = System.getProperty(var);
+      String val = null;
+      try {
+        val = System.getProperty(var);
+      } catch(SecurityException se) {
+        LOG.warn("Unexpected SecurityException in Configuration", se);
+      }
       if (val == null) {
         val = getRaw(var);
       }

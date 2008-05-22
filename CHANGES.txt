@@ -327,6 +327,9 @@ Trunk (unreleased changes)
     checking results to make the test more reliable. (Lohit Vijaya
     Renu via omalley)
 
+    HADOOP-3259. Makes failure to read system properties due to a
+    security manager non-fatal. (Edward Yoon via omalley)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
