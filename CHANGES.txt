@@ -317,6 +317,9 @@ Trunk (unreleased changes)
     HADOOP-1318. Completed maps are not failed if the number of reducers are
     zero. (Amareshwari Sriramadasu via ddas).
 
+    HADOOP-3351. Fixes the history viewer tool to not do huge StringBuffer
+    allocations. (Amareshwari Sriramadasu via ddas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

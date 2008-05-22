@@ -27,8 +27,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -42,8 +40,6 @@ import org.apache.hadoop.util.StringUtils;
  * This class is to view job history files.
  */
 class HistoryViewer {
-  private static final Log LOG = LogFactory.getLog(
-                                   "org.apache.hadoop.mapred.HistoryViewer");
   private static SimpleDateFormat dateFormat = new SimpleDateFormat(
                                              "d-MMM-yyyy HH:mm:ss");
   private FileSystem fs;
@@ -97,7 +93,6 @@ class HistoryViewer {
     printJobDetails();
     printTaskSummary();
     printJobAnalysis();
-    printSplits();
     printTasks("MAP", "FAILED");
     printTasks("MAP", "KILLED");
     printTasks("REDUCE", "FAILED");
@@ -141,49 +136,35 @@ class HistoryViewer {
     System.out.println(jobDetails.toString());
   }
   
-  private void printSplits() {
-    StringBuffer splits = new StringBuffer();
-    Map<String, JobHistory.Task> tasks = job.getAllTasks();
-    splits.append("\nInput split Locations");
-    splits.append("\nTaskId\tSplits");
-    splits.append("\n====================================================");
-
-    for (JobHistory.Task task : tasks.values()) {
-      if (Values.MAP.name().equals(task.get(Keys.TASK_TYPE))) {
-        splits.append("\n");
-        splits.append(task.get(Keys.TASKID));
-        splits.append("\t"); 
-        splits.append(task.get(Keys.SPLITS));
-      }
-    }
-    System.out.println(splits.toString());
-  }
-
   private void printTasks(String taskType, String taskStatus) {
     Map<String, JobHistory.Task> tasks = job.getAllTasks();
     StringBuffer taskList = new StringBuffer();
     taskList.append("\n").append(taskStatus).append(" ");
     taskList.append(taskType).append(" task list for ").append(jobId);
     taskList.append("\nTaskId\t\tStartTime\tFinishTime\tError");
+    if (Values.MAP.name().equals(taskType)) {
+      taskList.append("\tInputSplits");
+    }
     taskList.append("\n====================================================");
+    System.out.println(taskList.toString());
     for (JobHistory.Task task : tasks.values()) {
-      if (taskType.equals(task.get(Keys.TASK_TYPE))){
-        Map <String, TaskAttempt> taskAttempts = task.getTaskAttempts();
-        for (JobHistory.TaskAttempt attempt : taskAttempts.values()) {
-          if (taskStatus.equals(attempt.get(Keys.TASK_STATUS))
-              || taskStatus.equals("all")){
-            taskList.append("\n").append(attempt.get(Keys.TASKID));
-            taskList.append("\t").append(StringUtils.getFormattedTimeWithDiff(
-                       dateFormat, attempt.getLong(Keys.START_TIME), 0));
-            taskList.append("\t").append(StringUtils.getFormattedTimeWithDiff(
-                       dateFormat, attempt.getLong(Keys.FINISH_TIME),
-                       task.getLong(Keys.START_TIME))); 
-            taskList.append("\t").append(attempt.get(Keys.ERROR));
-          }
+      if (taskType.equals(task.get(Keys.TASK_TYPE)) &&
+         (taskStatus.equals(task.get(Keys.TASK_STATUS))
+          || taskStatus.equals("all"))) {
+        taskList.setLength(0);
+        taskList.append(task.get(Keys.TASKID));
+        taskList.append("\t").append(StringUtils.getFormattedTimeWithDiff(
+                   dateFormat, task.getLong(Keys.START_TIME), 0));
+        taskList.append("\t").append(StringUtils.getFormattedTimeWithDiff(
+                   dateFormat, task.getLong(Keys.FINISH_TIME),
+                   task.getLong(Keys.START_TIME))); 
+        taskList.append("\t").append(task.get(Keys.ERROR));
+        if (Values.MAP.name().equals(taskType)) {
+          taskList.append("\t").append(task.get(Keys.SPLITS));
         }
+        System.out.println(taskList.toString());
       }
     }
-    System.out.println(taskList.toString());
   }
   
   private void printAllTaskAttempts(String taskType) {
@@ -197,10 +178,11 @@ class HistoryViewer {
     }
     taskList.append("\tFinishTime\tHostName\tError");
     taskList.append("\n====================================================");
+    System.out.println(taskList.toString());
     for (JobHistory.Task task : tasks.values()) {
       for (JobHistory.TaskAttempt attempt : task.getTaskAttempts().values()) {
         if (taskType.equals(task.get(Keys.TASK_TYPE))){
-          taskList.append("\n"); 
+          taskList.setLength(0); 
           taskList.append(attempt.get(Keys.TASK_ATTEMPT_ID)).append("\t");
           taskList.append(StringUtils.getFormattedTimeWithDiff(dateFormat,
                           attempt.getLong(Keys.START_TIME), 0)).append("\t");
@@ -220,11 +202,10 @@ class HistoryViewer {
           taskList.append("\t"); 
           taskList.append(attempt.get(Keys.HOSTNAME)).append("\t");
           taskList.append(attempt.get(Keys.ERROR));
+          System.out.println(taskList.toString());
         }
       }
     }
-    taskList.append("\n");
-    System.out.println(taskList.toString());
   }
   
   private void printTaskSummary() {
@@ -315,16 +296,18 @@ class HistoryViewer {
       attempts.append(" task attempts by nodes");
       attempts.append("\nHostname\tFailedTasks");
       attempts.append("\n===============================");
+      System.out.println(attempts.toString());
       for (Map.Entry<String, Set<String>> entry : badNodes.entrySet()) {
         String node = entry.getKey();
         Set<String> failedTasks = entry.getValue();
-        attempts.append("\n").append(node).append("\t");
+        attempts.setLength(0);
+        attempts.append(node).append("\t");
         for (String t : failedTasks) {
           attempts.append(t).append(", ");
         }
+        System.out.println(attempts.toString());
       }
     }
-    System.out.println(attempts.toString());
   }
   
   private void printJobAnalysis() {
@@ -436,8 +419,10 @@ class HistoryViewer {
     details.append("\nWorse performing ");
     details.append(taskType).append(" tasks: ");
     details.append("\nTaskId\t\tTimetaken");
+    System.out.println(details.toString());
     for (int i = 0; i < showTasks && i < tasks.length; i++) {
-      details.append("\n").append(tasks[i].get(Keys.TASKID)).append(" ");
+      details.setLength(0);
+      details.append(tasks[i].get(Keys.TASKID)).append(" ");
       if ("map".equals(taskType)) {
         details.append(StringUtils.formatTimeDiff(
                        tasks[i].getLong(Keys.FINISH_TIME),
@@ -451,8 +436,8 @@ class HistoryViewer {
                        tasks[i].getLong(Keys.FINISH_TIME),
                        tasks[i].getLong(Keys.SHUFFLE_FINISHED)));
       }
+      System.out.println(details.toString());
     }
-    System.out.println(details.toString());
   }
   
   private Comparator<JobHistory.Task> cMap = 
