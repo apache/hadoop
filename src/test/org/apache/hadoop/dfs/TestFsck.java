@@ -66,6 +66,7 @@ public class TestFsck extends TestCase {
       cluster = new MiniDFSCluster(conf, 4, true, null);
       fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
+      util.waitReplication(fs, "/srcdat", (short)3);
       String outStr = runFsck(conf, "/");
       assertTrue(-1 != outStr.indexOf("HEALTHY"));
       System.out.println(outStr);
@@ -100,6 +101,7 @@ public class TestFsck extends TestCase {
       cluster = new MiniDFSCluster(conf, 4, true, null);
       fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
+      util.waitReplication(fs, "/srcdat", (short)3);
       String outStr = runFsck(conf, "/non-existent");
       assertEquals(-1, outStr.indexOf("HEALTHY"));
       System.out.println(outStr);
@@ -122,6 +124,7 @@ public class TestFsck extends TestCase {
       fs = cluster.getFileSystem();
       cluster.waitActive();
       util.createFiles(fs, topDir);
+      util.waitReplication(fs, topDir, (short)3);
       String outStr = runFsck(conf, "/");
       assertTrue(outStr.contains("HEALTHY"));
       
@@ -140,15 +143,15 @@ public class TestFsck extends TestCase {
         }
       }
 
-      //Sleep for a while until block reports are sent to discover corruption
-      try {
-        Thread.sleep(5000);
-      } catch (InterruptedException e) {
-      }
-      
       // We excpect the filesystem to be corrupted
       outStr = runFsck(conf, "/");
-      assertTrue(outStr.contains("CORRUPT"));
+      while (!outStr.contains("CORRUPT")) {
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException ignore) {
+        }
+        outStr = runFsck(conf, "/");
+      } 
       
       // Fix the filesystem by moving corrupted files to lost+found
       outStr = runFsck(conf, "/", "-move");
@@ -178,6 +181,7 @@ public class TestFsck extends TestCase {
       fs = cluster.getFileSystem();
       cluster.waitActive();
       util.createFiles(fs, topDir);
+      util.waitReplication(fs, topDir, (short)3);
       String outStr = runFsck(conf, "/");
       assertTrue(outStr.contains("HEALTHY"));
       // Open a file for writing and do not close for now
@@ -216,6 +220,7 @@ public class TestFsck extends TestCase {
 
   public void testCorruptBlock() throws Exception {
     Configuration conf = new Configuration();
+    conf.setLong("dfs.blockreport.intervalMsec", 1000);
     FileSystem fs = null;
     DFSClient dfsClient = null;
     LocatedBlocks blocks = null;
@@ -228,6 +233,8 @@ public class TestFsck extends TestCase {
     fs = cluster.getFileSystem();
     Path file1 = new Path("/testCorruptBlock");
     DFSTestUtil.createFile(fs, file1, 1024, (short)3, 0);
+    // Wait until file replication has completed
+    DFSTestUtil.waitReplication(fs, file1, (short)3);
     String block = DFSTestUtil.getFirstBlock(fs, file1).getBlockName();
 
     // Make sure filesystem is in healthy state
@@ -257,12 +264,21 @@ public class TestFsck extends TestCase {
     } catch (IOException ie) {
       // Ignore exception
     }
+
     dfsClient = new DFSClient(new InetSocketAddress("localhost",
                                cluster.getNameNodePort()), conf);
     blocks = dfsClient.namenode.
                getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
     replicaCount = blocks.get(0).getLocations().length;
-    assertTrue (replicaCount == 3);
+    while (replicaCount != 3) {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException ignore) {
+      }
+      blocks = dfsClient.namenode.
+                getBlockLocations(file1.toString(), 0, Long.MAX_VALUE);
+      replicaCount = blocks.get(0).getLocations().length;
+    }
     assertTrue (blocks.get(0).isCorrupt());
 
     // Check if fsck reports the same

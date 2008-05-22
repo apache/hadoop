@@ -323,6 +323,10 @@ Trunk (unreleased changes)
     HADOOP-3351. Fixes the history viewer tool to not do huge StringBuffer
     allocations. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3419. Fixes TestFsck to wait for updates to happen before
+    checking results to make the test more reliable. (Lohit Vijaya
+    Renu via omalley)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
