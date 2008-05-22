@@ -203,6 +203,71 @@ public class TestFileCreation extends TestCase {
   }
 
   /**
+   * Test deleteOnExit
+   */
+  public void testDeleteOnExit() throws IOException {
+    Configuration conf = new Configuration();
+    if (simulatedStorage) {
+      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+    }
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    FileSystem fs = cluster.getFileSystem();
+    FileSystem localfs = FileSystem.getLocal(conf);
+
+    try {
+
+      // Creates files in HDFS and local file system.
+      //
+      Path file1 = new Path("filestatus.dat");
+      Path file2 = new Path("filestatus2.dat");
+      Path file3 = new Path("filestatus3.dat");
+      FSDataOutputStream stm1 = createFile(fs, file1, 1);
+      FSDataOutputStream stm2 = createFile(fs, file2, 1);
+      FSDataOutputStream stm3 = createFile(localfs, file3, 1);
+      System.out.println("DeleteOnExit: Created files.");
+
+      // write to files and close. Purposely, do not close file2.
+      writeFile(stm1);
+      writeFile(stm3);
+      stm1.close();
+      stm3.close();
+
+      // set delete on exit flag on files.
+      fs.deleteOnExit(file1);
+      fs.deleteOnExit(file2);
+      localfs.deleteOnExit(file3);
+
+      // close the file system. This should make the above files
+      // disappear.
+      fs.close();
+      localfs.close();
+      fs = null;
+      localfs = null;
+
+      // reopen file system and verify that file does not exist.
+      fs = cluster.getFileSystem();
+      localfs = FileSystem.getLocal(conf);
+
+      assertTrue(file1 + " still exists inspite of deletOnExit set.",
+                 !fs.exists(file1));
+      assertTrue(file2 + " still exists inspite of deletOnExit set.",
+                 !fs.exists(file2));
+      assertTrue(file3 + " still exists inspite of deletOnExit set.",
+                 !localfs.exists(file3));
+      System.out.println("DeleteOnExit successful.");
+
+    } finally {
+      if (fs != null) {
+        fs.close();
+      }
+      if (localfs != null) {
+        localfs.close();
+      }
+      cluster.shutdown();
+    }
+  }
+
+  /**
    * Test that file data does not become corrupted even in the face of errors.
    */
   public void testFileCreationError1() throws IOException {

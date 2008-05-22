@@ -69,6 +69,12 @@ public abstract class FileSystem extends Configured implements Closeable {
    * The statistics for this file system.
    */
   protected final Statistics statistics;
+
+  /**
+   * A cache of files that should be deleted when filsystem is closed
+   * or the JVM is exited.
+   */
+  private Set<Path> deleteOnExit = new TreeSet<Path>();
   
   /**
    * Parse the cmd-line args, starting at i.  Remove consumed args
@@ -591,6 +597,41 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @throws IOException
    */
   public abstract boolean delete(Path f, boolean recursive) throws IOException;
+
+  /** Mark a path to be deleted when FileSystem is closed or JVM exits.
+   *  The path has to exist in the file system.
+   *
+   * @param f the path to delete.
+   * @return  true if deleteOnExit is successful, otherwise false.
+   * @throws IOException
+   */
+  public boolean deleteOnExit(Path f) throws IOException {
+    if (!exists(f)) {
+      return false;
+    }
+    synchronized (deleteOnExit) {
+      deleteOnExit.add(f);
+    }
+    return true;
+  }
+
+  // Delete all files that were marked as delete-on-exit. This recursively
+  // deletes all files in the specified paths.
+  //
+  protected void processDeleteOnExit() {
+    synchronized (deleteOnExit) {
+      for (Iterator<Path> iter = deleteOnExit.iterator(); iter.hasNext();) {
+        Path path = iter.next();
+        try {
+          delete(path, true);
+        }
+        catch (IOException e) {
+          LOG.info("Ignoring failure to deleteOnExit for path " + path);
+        }
+        iter.remove();
+      }
+    }
+  }
   
   /** Check if exists.
    * @param f source file
@@ -1172,6 +1213,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * release any held locks.
    */
   public void close() throws IOException {
+    // delete all files that were marked as delete-on-exit.
+    processDeleteOnExit();
     CACHE.remove(new Cache.Key(this), this);
   }
 

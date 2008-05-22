@@ -94,6 +94,9 @@ Trunk (unreleased changes)
     HADOOP-3336. Direct a subset of annotated FSNamesystem calls for audit
     logging. (cdouglas)
 
+    HADOOP-3400. A new API FileSystem.deleteOnExit() that facilitates
+    handling of temporary files in HDFS. (dhruba)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().
