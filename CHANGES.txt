@@ -19,6 +19,7 @@ Hbase Change Log
    HBASE-630   Default hbase.rootdir is garbage
    HBASE-589   Remove references to deprecated methods in Hadoop once
                hadoop-0.17.0 is released
+   HBASE-638   Purge \r from src
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
