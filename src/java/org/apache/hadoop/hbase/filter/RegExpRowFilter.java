@@ -47,8 +47,10 @@ public class RegExpRowFilter implements RowFilterInterface {
   private Pattern rowKeyPattern = null;
   private String rowKeyRegExp = null;
 
+  @Deprecated
   private Map<byte [], byte[]> equalsMap =
     new TreeMap<byte [], byte[]>(Bytes.BYTES_COMPARATOR);
+  @Deprecated
   private Set<byte []> nullColumns =
     new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
 
@@ -199,6 +201,7 @@ public class RegExpRowFilter implements RowFilterInterface {
     return false;
   }
 
+  @Deprecated
   private boolean filtersByColumnValue() {
     return equalsMap != null && equalsMap.size() > 0;
   }
@@ -277,6 +280,7 @@ public class RegExpRowFilter implements RowFilterInterface {
     }
   }
 
+  @Deprecated
   private Set<byte []> getFilterColumns() {
     Set<byte []> cols = new TreeSet<byte []>(Bytes.BYTES_COMPARATOR);
     cols.addAll(equalsMap.keySet());

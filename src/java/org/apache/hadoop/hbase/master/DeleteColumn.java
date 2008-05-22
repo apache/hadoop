@@ -47,9 +47,9 @@ class DeleteColumn extends ColumnOperation {
       // Delete the directories used by the column
       int encodedName = i.getEncodedName();
       this.master.fs.delete(
-        HStoreFile.getMapDir(tabledir, encodedName, columnName));
+        HStoreFile.getMapDir(tabledir, encodedName, columnName), true);
       this.master.fs.delete(
-        HStoreFile.getInfoDir(tabledir, encodedName, columnName));
+        HStoreFile.getInfoDir(tabledir, encodedName, columnName), true);
     }
   }
 }

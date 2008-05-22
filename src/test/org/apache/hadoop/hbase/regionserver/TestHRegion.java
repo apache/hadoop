@@ -538,9 +538,9 @@ public class TestHRegion extends HBaseTestCase {
       region = new HRegionIncommon(r);
       LOG.info("Merge regions elapsed time: "
           + ((System.currentTimeMillis() - startTime) / 1000.0));
-      fs.delete(oldRegion1);
-      fs.delete(oldRegion2);
-      fs.delete(oldRegionPath);
+      fs.delete(oldRegion1, true);
+      fs.delete(oldRegion2, true);
+      fs.delete(oldRegionPath, true);
     }
     LOG.info("splitAndMerge completed.");
   }

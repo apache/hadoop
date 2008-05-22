@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -66,7 +65,6 @@ class TableDelete extends TableOperation {
     }
     
     // delete the table's folder from fs.
-    FileUtil.fullyDelete(master.fs,
-        new Path(master.rootdir, tableName.toString()));
+    master.fs.delete(new Path(master.rootdir, tableName.toString()), true);
   }
 }

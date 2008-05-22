@@ -355,7 +355,8 @@
        srcdir="${src.test}" 
        includes="**/*.java" 
        destdir="${build.test}" 
-       debug="${javac.debug}"> 
+       debug="${javac.debug}"
+       deprecation="${javac.deprecation}"> 
     <classpath refid="test.classpath"/> 
     </javac>
     <jar jarfile="${build.dir}/${final.name}-test.jar" >

@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobConfigurable;
 
@@ -48,7 +48,7 @@ public class TableInputFormat extends TableInputFormatBase implements
 
   /** {@inheritDoc} */
   public void configure(JobConf job) {
-    Path[] tableNames = job.getInputPaths();
+    Path[] tableNames = FileInputFormat.getInputPaths(job);
     String colArg = job.get(COLUMN_LIST);
     String[] colNames = colArg.split(" ");
     byte [][] m_cols = new byte[colNames.length][];
@@ -66,7 +66,7 @@ public class TableInputFormat extends TableInputFormatBase implements
   /** {@inheritDoc} */
   public void validateInput(JobConf job) throws IOException {
     // expecting exactly one path
-    Path [] tableNames = job.getInputPaths();
+    Path [] tableNames = FileInputFormat.getInputPaths(job);
     if (tableNames == null || tableNames.length > 1) {
       throw new IOException("expecting one table name");
     }

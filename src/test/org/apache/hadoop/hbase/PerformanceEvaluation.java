@@ -41,6 +41,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
@@ -230,7 +232,7 @@ public class PerformanceEvaluation implements HConstants {
     Path inputDir = writeInputFile(this.conf);
     this.conf.set(EvaluationMapTask.CMD_KEY, cmd);
     JobConf job = new JobConf(this.conf, this.getClass());
-    job.setInputPath(inputDir);
+    FileInputFormat.setInputPaths(job, inputDir);
     job.setInputFormat(TextInputFormat.class);
     job.setJobName("HBase Performance Evaluation");
     job.setMapperClass(EvaluationMapTask.class);
@@ -239,7 +241,7 @@ public class PerformanceEvaluation implements HConstants {
     job.setNumMapTasks(this.N * 10); // Ten maps per client.
     job.setNumReduceTasks(1);
     job.setOutputFormat(TextOutputFormat.class);
-    job.setOutputPath(new Path(inputDir, "outputs"));
+    FileOutputFormat.setOutputPath(job, new Path(inputDir, "outputs"));
     JobClient.runJob(job);
   }
   
@@ -569,7 +571,7 @@ public class PerformanceEvaluation implements HConstants {
       // mangle the conf so that the fs parameter points to the minidfs we
       // just started up
       FileSystem fs = dfsCluster.getFileSystem();
-      conf.set("fs.default.name", fs.getName());      
+      conf.set("fs.default.name", fs.getUri().toString());      
       Path parentdir = fs.getHomeDirectory();
       conf.set(HConstants.HBASE_DIR, parentdir.toString());
       fs.mkdirs(parentdir);

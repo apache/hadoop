@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.OutputFormatBase;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
@@ -42,22 +42,24 @@ import org.apache.lucene.search.Similarity;
  * the index, and copy the index to the destination.
  */
 public class IndexOutputFormat extends
-    OutputFormatBase<ImmutableBytesWritable, LuceneDocumentWrapper> {
+    FileOutputFormat<ImmutableBytesWritable, LuceneDocumentWrapper> {
   static final Log LOG = LogFactory.getLog(IndexOutputFormat.class);
 
+  /** {@inheritDoc} */
   @Override
-  public RecordWriter<ImmutableBytesWritable, LuceneDocumentWrapper> getRecordWriter(
-    final FileSystem fs, JobConf job, String name, final Progressable progress)
+  public RecordWriter<ImmutableBytesWritable, LuceneDocumentWrapper>
+  getRecordWriter(final FileSystem fs, JobConf job, String name,
+      final Progressable progress)
   throws IOException {
 
-    final Path perm = new Path(job.getOutputPath(), name);
+    final Path perm = new Path(FileOutputFormat.getOutputPath(job), name);
     final Path temp = job.getLocalPath("index/_"
         + Integer.toString(new Random().nextInt()));
 
     LOG.info("To index into " + perm);
 
     // delete old, if any
-    fs.delete(perm);
+    fs.delete(perm, true);
 
     final IndexConfiguration indexConf = new IndexConfiguration();
     String content = job.get("hbase.index.conf");
@@ -68,7 +70,7 @@ public class IndexOutputFormat extends
     String analyzerName = indexConf.getAnalyzerName();
     Analyzer analyzer;
     try {
-      Class analyzerClass = Class.forName(analyzerName);
+      Class<?> analyzerClass = Class.forName(analyzerName);
       analyzer = (Analyzer) analyzerClass.newInstance();
     } catch (Exception e) {
       throw new IOException("Error in creating an analyzer object "
@@ -87,7 +89,7 @@ public class IndexOutputFormat extends
     String similarityName = indexConf.getSimilarityName();
     if (similarityName != null) {
       try {
-        Class similarityClass = Class.forName(similarityName);
+        Class<?> similarityClass = Class.forName(similarityName);
         Similarity similarity = (Similarity) similarityClass.newInstance();
         writer.setSimilarity(similarity);
       } catch (Exception e) {
@@ -98,7 +100,7 @@ public class IndexOutputFormat extends
     writer.setUseCompoundFile(indexConf.isUseCompoundFile());
 
     return new RecordWriter<ImmutableBytesWritable, LuceneDocumentWrapper>() {
-      private boolean closed;
+      boolean closed;
       private long docCount = 0;
 
       public void write(@SuppressWarnings("unused") ImmutableBytesWritable key,
@@ -114,6 +116,7 @@ public class IndexOutputFormat extends
       public void close(final Reporter reporter) throws IOException {
         // spawn a thread to give progress heartbeats
         Thread prog = new Thread() {
+          @Override
           public void run() {
             while (!closed) {
               try {

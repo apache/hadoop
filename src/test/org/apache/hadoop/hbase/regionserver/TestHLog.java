@@ -47,7 +47,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
     super.setUp();
     this.dir = new Path("/hbase", getName());
     if (fs.exists(dir)) {
-      fs.delete(dir);
+      fs.delete(dir, true);
     }
   }
 
@@ -55,7 +55,7 @@ public class TestHLog extends HBaseTestCase implements HConstants {
   @Override
   public void tearDown() throws Exception {
     if (this.fs.exists(this.dir)) {
-      this.fs.delete(this.dir);
+      this.fs.delete(this.dir, true);
     }
     shutdownDfs(cluster);
     super.tearDown();

@@ -82,13 +82,13 @@ public class ColumnValueFilter implements RowFilterInterface {
   }
 
   /** {@inheritDoc} */
-  public boolean filterRowKey(final byte[] rowKey) {
+  public boolean filterRowKey(@SuppressWarnings("unused") final byte[] rowKey) {
     return false;
   }
 
   /** {@inheritDoc} */
-  public boolean filterColumn(final byte[] rowKey, final byte[] colKey,
-      final byte[] data) {
+  public boolean filterColumn(@SuppressWarnings("unused") final byte[] rowKey,
+      final byte[] colKey, final byte[] data) {
     if (!Arrays.equals(colKey, columnName)) {
       return false;
     }
@@ -150,12 +150,14 @@ public class ColumnValueFilter implements RowFilterInterface {
     // Nothing.
   }
 
-  public void rowProcessed(final boolean filtered, final byte[] key) {
+  /** {@inheritDoc} */
+  public void rowProcessed(@SuppressWarnings("unused") final boolean filtered,
+      @SuppressWarnings("unused") final byte[] key) {
     // Nothing
   }
 
   /** {@inheritDoc} */
-  public void validate(final byte[][] columns) {
+  public void validate(@SuppressWarnings("unused") final byte[][] columns) {
     // Nothing
   }
 

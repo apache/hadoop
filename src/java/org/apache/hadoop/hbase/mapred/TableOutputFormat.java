@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapred.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.OutputFormatBase;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
@@ -39,7 +39,8 @@ import org.apache.hadoop.util.Progressable;
 /**
  * Convert Map/Reduce output and write it to an HBase table
  */
-public class TableOutputFormat extends OutputFormatBase<ImmutableBytesWritable, BatchUpdate> {
+public class TableOutputFormat extends
+FileOutputFormat<ImmutableBytesWritable, BatchUpdate> {
 
   /** JobConf parameter that specifies the output table */
   public static final String OUTPUT_TABLE = "hbase.mapred.outputtable";
@@ -68,7 +69,8 @@ public class TableOutputFormat extends OutputFormatBase<ImmutableBytesWritable, 
     }
 
     /** {@inheritDoc} */
-    public void write(ImmutableBytesWritable key, BatchUpdate value) throws IOException {
+    public void write(@SuppressWarnings("unused") ImmutableBytesWritable key,
+        BatchUpdate value) throws IOException {
       m_table.commit(value);
     }
   }

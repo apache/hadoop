@@ -405,7 +405,7 @@ public class HStore implements HConstants {
 
       Path mapfile = curfile.getMapFilePath();
       if (!fs.exists(mapfile)) {
-        fs.delete(curfile.getInfoFilePath());
+        fs.delete(curfile.getInfoFilePath(), false);
         LOG.warn("Mapfile " + mapfile.toString() + " does not exist. " +
           "Cleaned up info file.  Continuing...");
         continue;
@@ -431,7 +431,7 @@ public class HStore implements HConstants {
       Path p = datfiles[i].getPath();
       // If does not have sympathetic info file, delete.
       if (!mapfiles.contains(fs.makeQualified(p))) {
-        fs.delete(p);
+        fs.delete(p, false);
       }
     }
     return results;

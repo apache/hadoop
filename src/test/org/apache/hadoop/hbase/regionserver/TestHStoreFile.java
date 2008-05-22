@@ -319,7 +319,7 @@ public class TestHStoreFile extends HBaseTestCase {
       if (bottom != null) {
         bottom.close();
       }
-      fs.delete(p);
+      fs.delete(p, true);
     }
   }
   
@@ -385,10 +385,10 @@ public class TestHStoreFile extends HBaseTestCase {
         if (bottom != null) {
           bottom.close();
         }
-        fs.delete(p);
+        fs.delete(p, true);
       }
     } finally {
-      this.fs.delete(p);
+      this.fs.delete(p, true);
     }
   }
 }

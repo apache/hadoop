@@ -356,8 +356,8 @@ public class HStoreFile implements HConstants {
    * @throws IOException 
    */
   public void delete() throws IOException {
-    fs.delete(getMapFilePath());
-    fs.delete(getInfoFilePath());
+    fs.delete(getMapFilePath(), true);
+    fs.delete(getInfoFilePath(), true);
   }
   
   /**
@@ -495,10 +495,6 @@ public class HStoreFile implements HConstants {
 
   static boolean isTopFileRegion(final Range r) {
     return r.equals(Range.top);
-  }
-
-  private static String createHStoreFilename(final long fid) {
-    return createHStoreFilename(fid, HRegionInfo.NO_HASH);
   }
 
   private static String createHStoreFilename(final long fid,

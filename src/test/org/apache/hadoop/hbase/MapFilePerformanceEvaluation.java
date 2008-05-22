@@ -56,7 +56,7 @@ public class MapFilePerformanceEvaluation {
     FileSystem fs = FileSystem.get(conf);
     Path mf = fs.makeQualified(new Path("performanceevaluation.mapfile"));
     if (fs.exists(mf)) {
-      fs.delete(mf);
+      fs.delete(mf, true);
     }
 
     runBenchmark(new SequentialWriteBenchmark(conf, fs, mf, ROW_COUNT),

@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MultiRegionTable;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
@@ -124,7 +125,7 @@ public class TestTableIndex extends MultiRegionTable {
 
       // use IndexTableReduce to build a Lucene index
       jobConf.setReducerClass(IndexTableReduce.class);
-      jobConf.setOutputPath(new Path(INDEX_DIR));
+      FileOutputFormat.setOutputPath(jobConf, new Path(INDEX_DIR));
       jobConf.setOutputFormat(IndexOutputFormat.class);
 
       JobClient.runJob(jobConf);

@@ -101,7 +101,7 @@ public class TestMigrate extends HBaseTestCase {
       listPaths(dfs, root, root.toString().length() + 1);
       
       // Remove version file and try again
-      dfs.delete(new Path(root, HConstants.VERSION_FILE_NAME));
+      dfs.delete(new Path(root, HConstants.VERSION_FILE_NAME), false);
       u = new Migrate(conf);
       u.run(new String[] {"upgrade"});
       listPaths(dfs, root, root.toString().length() + 1);

@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 
@@ -61,10 +62,15 @@ public class BuildTableIndex {
     System.exit(-1);
   }
 
+  /** default constructor */
   public BuildTableIndex() {
     super();
   }
 
+  /**
+   * @param args
+   * @throws IOException
+   */
   public void run(String[] args) throws IOException {
     if (args.length < 6) {
       printUsage("Too few arguments");
@@ -115,11 +121,22 @@ public class BuildTableIndex {
       conf.set("hbase.index.conf", content);
     }
 
-    JobConf jobConf = createJob(conf, numMapTasks, numReduceTasks, indexDir,
-      tableName, columnNames.toString());
-    JobClient.runJob(jobConf);
+    if (columnNames != null) {
+      JobConf jobConf = createJob(conf, numMapTasks, numReduceTasks, indexDir,
+          tableName, columnNames.toString());
+      JobClient.runJob(jobConf);
+    }
   }
 
+  /**
+   * @param conf
+   * @param numMapTasks
+   * @param numReduceTasks
+   * @param indexDir
+   * @param tableName
+   * @param columnNames
+   * @return JobConf
+   */
   public JobConf createJob(Configuration conf, int numMapTasks,
       int numReduceTasks, String indexDir, String tableName,
       String columnNames) {
@@ -135,7 +152,7 @@ public class BuildTableIndex {
 
     // use IndexTableReduce to build a Lucene index
     jobConf.setReducerClass(IndexTableReduce.class);
-    jobConf.setOutputPath(new Path(indexDir));
+    FileOutputFormat.setOutputPath(jobConf, new Path(indexDir));
     jobConf.setOutputFormat(IndexOutputFormat.class);
 
     return jobConf;
@@ -177,6 +194,10 @@ public class BuildTableIndex {
     return new String(bytes, 0, bytesRead, HConstants.UTF8_ENCODING);
   }
 
+  /**
+   * @param args
+   * @throws IOException
+   */
   public static void main(String[] args) throws IOException {
     BuildTableIndex build = new BuildTableIndex();
     build.run(args);

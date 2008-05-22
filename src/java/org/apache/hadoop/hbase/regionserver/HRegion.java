@@ -41,7 +41,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -458,7 +457,7 @@ public class HRegion implements HConstants {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Deleting old log file: " + oldLogFile);
       }
-      fs.delete(oldLogFile);
+      fs.delete(oldLogFile, false);
     }
     
     // Add one to the current maximum sequence id so new edits are beyond.
@@ -472,11 +471,11 @@ public class HRegion implements HConstants {
     // Get rid of any splits or merges that were lost in-progress
     Path splits = new Path(regiondir, SPLITDIR);
     if (fs.exists(splits)) {
-      fs.delete(splits);
+      fs.delete(splits, true);
     }
     Path merges = new Path(regiondir, MERGEDIR);
     if (fs.exists(merges)) {
-      fs.delete(merges);
+      fs.delete(merges, true);
     }
 
     // By default, we flush the cache when 64M.
@@ -770,7 +769,7 @@ public class HRegion implements HConstants {
       regionB.close();
 
       // Cleanup
-      boolean deleted = fs.delete(splits);    // Get rid of splits directory
+      boolean deleted = fs.delete(splits, true); // Get rid of splits directory
       if (LOG.isDebugEnabled()) {
         LOG.debug("Cleaned up " + FSUtils.getPath(splits) + " " + deleted);
       }
@@ -802,7 +801,7 @@ public class HRegion implements HConstants {
    */
   private void doRegionCompactionCleanup() throws IOException {
     if (this.fs.exists(this.regionCompactionDir)) {
-      FileUtil.fullyDelete(this.fs, this.regionCompactionDir);
+      this.fs.delete(this.regionCompactionDir, true);
     }
   }
 
@@ -1864,6 +1863,9 @@ public class HRegion implements HConstants {
       }
     }
 
+    /**
+     * @return an iterator for the scanner
+     */
     public Iterator<Entry<HStoreKey, SortedMap<Text, byte[]>>> iterator() {
       throw new UnsupportedOperationException("Unimplemented serverside. " +
         "next(HStoreKey, StortedMap(...) is more efficient");
@@ -2018,7 +2020,7 @@ public class HRegion implements HConstants {
     if (LOG.isDebugEnabled()) {
       LOG.debug("DELETING region " + regiondir.toString());
     }
-    FileUtil.fullyDelete(fs, regiondir);
+    fs.delete(regiondir, true);
   }
 
   /**

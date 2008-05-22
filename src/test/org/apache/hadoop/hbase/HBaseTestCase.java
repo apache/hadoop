@@ -119,7 +119,7 @@ public abstract class HBaseTestCase extends TestCase {
       if (localfs) {
         this.testDir = getUnitTestdir(getName());
         if (fs.exists(testDir)) {
-          fs.delete(testDir);
+          fs.delete(testDir, true);
         }
       } else {
         this.testDir =
@@ -137,7 +137,7 @@ public abstract class HBaseTestCase extends TestCase {
     try {
       if (localfs) {
         if (this.fs.exists(testDir)) {
-          this.fs.delete(testDir);
+          this.fs.delete(testDir, true);
         }
       }
     } catch (Exception e) {

@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase.mapred;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
@@ -60,7 +60,7 @@ public abstract class TableMap<K extends WritableComparable, V extends Writable>
     job.setMapOutputValueClass(outputValueClass);
     job.setMapOutputKeyClass(outputKeyClass);
     job.setMapperClass(mapper);
-    job.setInputPath(new Path(table));
+    FileInputFormat.addInputPaths(job, table);
     job.set(TableInputFormat.COLUMN_LIST, columns);
   }
 

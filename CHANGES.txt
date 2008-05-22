@@ -17,6 +17,8 @@ Hbase Change Log
    HBASE-629   Split reports incorrect elapsed time
    HBASE-623   Migration script for hbase-82
    HBASE-630   Default hbase.rootdir is garbage
+   HBASE-589   Remove references to deprecated methods in Hadoop once
+               hadoop-0.17.0 is released
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
@@ -48,6 +50,7 @@ Hbase Change Log
    HBASE-583   RangeRowFilter/ColumnValueFilter to allow choice of rows based on
                a (lexicographic) comparison to column's values
                (Clint Morgan via Stack)
+   HBASE-579   Add hadoop 0.17.x
 
 Release 0.1.2 - 05/13/2008
    
