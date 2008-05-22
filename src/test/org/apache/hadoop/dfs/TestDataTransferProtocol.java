@@ -171,6 +171,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeInt(0);           // targets in pipeline 
     sendOut.writeBoolean(false);   // recoveryFlag
     Text.writeString(sendOut, "cl");// clientID
+    sendOut.writeBoolean(false); // no src node info
     sendOut.writeInt(0);           // number of downstream targets
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
     
@@ -189,6 +190,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeInt(0);           // targets in pipeline 
     sendOut.writeBoolean(false);   // recoveryFlag
     Text.writeString(sendOut, "cl");// clientID
+    sendOut.writeBoolean(false); // no src node info
 
     // bad number of targets
     sendOut.writeInt(-1-random.nextInt(oneMil));
@@ -204,6 +206,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeInt(0);           // targets in pipeline 
     sendOut.writeBoolean(false);   // recoveryFlag
     Text.writeString(sendOut, "cl");// clientID
+    sendOut.writeBoolean(false); // no src node info
     sendOut.writeInt(0);
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
     sendOut.writeInt((int)512);
@@ -230,6 +233,7 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeInt(0);           // targets in pipeline 
     sendOut.writeBoolean(false);   // recoveryFlag
     Text.writeString(sendOut, "cl");// clientID
+    sendOut.writeBoolean(false); // no src node info
     sendOut.writeInt(0);
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
     sendOut.writeInt((int)512);    // checksum size

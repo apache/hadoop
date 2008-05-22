@@ -166,6 +166,10 @@ Trunk (unreleased changes)
     that it does not block user. DataNode misses heartbeats in large
     nodes otherwise. (Johan Oskarsson via rangadi)
 
+    HADOOP-3035. During block transfers between datanodes, the receiving
+    datanode, now can report corrupt replicas received from src node to
+    the namenode. (Lohit Vijayarenu via rangadi)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

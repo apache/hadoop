@@ -22,6 +22,10 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.nio.channels.FileChannel;
+import java.nio.ByteBuffer;
+import java.util.Random;
+import java.io.RandomAccessFile;
 
 import javax.security.auth.login.LoginException;
 
@@ -544,6 +548,41 @@ public class MiniDFSCluster {
       dn.shutdown();
       numDataNodes--;
     }
+  }
+
+  /*
+   * Corrupt a block on all datanode
+   */
+  void corruptBlockOnDataNodes(String blockName) throws Exception{
+    for (int i=0; i < dataNodes.size(); i++)
+      corruptBlockOnDataNode(i,blockName);
+  }
+
+  /*
+   * Corrupt a block on a particular datanode
+   */
+  boolean corruptBlockOnDataNode(int i, String blockName) throws Exception {
+    Random random = new Random();
+    boolean corrupted = false;
+    File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
+    if (i < 0 || i >= dataNodes.size())
+      return false;
+    for (int dn = i*2; dn < i*2+2; dn++) {
+      File blockFile = new File(baseDir, "data" + (dn+1) + "/current/" +
+                                blockName);
+      if (blockFile.exists()) {
+        // Corrupt replica by writing random bytes into replica
+        RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
+        FileChannel channel = raFile.getChannel();
+        String badString = "BADBAD";
+        int rand = random.nextInt((int)channel.size()/2);
+        raFile.seek(rand);
+        raFile.write(badString.getBytes());
+        raFile.close();
+      }
+      corrupted = true;
+    }
+    return corrupted;
   }
 
   /*

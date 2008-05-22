@@ -101,11 +101,11 @@ public interface FSConstants {
    * when protocol changes. It is not very obvious. 
    */
   /*
-   * Version 10:
-   *    DFSClient also sends non-interleaved checksum and data while writing
-   *    to DFS.
+   * Version 11:
+   *    OP_WRITE_BLOCK sends a boolean. If its value is true, an additonal 
+   *    DatanodeInfo of client requesting transfer is also sent. 
    */
-  public static final int DATA_TRANSFER_VERSION = 10;
+  public static final int DATA_TRANSFER_VERSION = 11;
 
   // Return codes for file create
   public static final int OPERATION_FAILED = 0;

@@ -2299,6 +2299,7 @@ class DFSClient implements FSConstants {
         out.writeInt( nodes.length );
         out.writeBoolean( recoveryFlag );       // recovery flag
         Text.writeString( out, client );
+        out.writeBoolean(false); // Not sending src node information
         out.writeInt( nodes.length - 1 );
         for (int i = 1; i < nodes.length; i++) {
           nodes[i].write(out);
