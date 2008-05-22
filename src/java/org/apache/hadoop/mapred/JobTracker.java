@@ -2069,11 +2069,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       Set<JobInProgress> jobsWithFailures = new HashSet<JobInProgress>(); 
       for (TaskAttemptID taskId : lostTasks) {
         TaskInProgress tip = taskidToTIPMap.get(taskId);
+        JobInProgress job = tip.getJob();
 
         // Completed reduce tasks never need to be failed, because 
         // their outputs go to dfs
-        if (tip.isMapTask() || !tip.isComplete()) {
-          JobInProgress job = tip.getJob();
+        // And completed maps with zero reducers of the job 
+        // never need to be failed. 
+        if (!tip.isComplete() || 
+            (tip.isMapTask() && job.desiredReduces() != 0)) {
           // if the job is done, we don't want to change anything
           if (job.getStatus().getRunState() == JobStatus.RUNNING) {
             job.failedTask(tip, taskId, ("Lost task tracker: " + trackerName), 
@@ -2083,8 +2086,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                            TaskStatus.State.KILLED, trackerName, myMetrics);
             jobsWithFailures.add(job);
           }
-        } else if (!tip.isMapTask() && tip.isComplete()) {
-          // Completed 'reduce' task, not failed;
+        } else {
+          // Completed 'reduce' task and completed 'maps' with zero 
+          // reducers of the job, not failed;
           // only removed from data-structures.
           markCompletedTaskAttempt(trackerName, taskId);
         }

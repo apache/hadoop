@@ -314,6 +314,9 @@ Trunk (unreleased changes)
     HADOOP-3403. Fixes a problem in the JobTracker to do with handling of lost
     tasktrackers. (Arun Murthy via ddas)
 
+    HADOOP-1318. Completed maps are not failed if the number of reducers are
+    zero. (Amareshwari Sriramadasu via ddas).
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
