@@ -36,8 +36,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Implementation of RowFilterInterface that can filter by rowkey regular
- * expression and/or individual column values (equals comparison only).
- * Multiple column filters imply an implicit conjunction of filter criteria.
+ * expression and/or individual column values (equals comparison only). Multiple
+ * column filters imply an implicit conjunction of filter criteria.
+ * 
+ * Note that column value filtering in this interface has been replaced by
+ * {@link ColumnValueFilter}.
  */
 public class RegExpRowFilter implements RowFilterInterface {
 
@@ -67,11 +70,13 @@ public class RegExpRowFilter implements RowFilterInterface {
   }
 
   /**
+   * @deprecated Column filtering has been replaced by {@link ColumnValueFilter}
    * Constructor that takes a row key regular expression to filter on.
    * 
    * @param rowKeyRegExp
    * @param columnFilter
    */
+  @Deprecated
   public RegExpRowFilter(final String rowKeyRegExp,
       final Map<byte [], byte[]> columnFilter) {
     this.rowKeyRegExp = rowKeyRegExp;
@@ -90,6 +95,7 @@ public class RegExpRowFilter implements RowFilterInterface {
   }
   
   /**
+   * @deprecated Column filtering has been replaced by {@link ColumnValueFilter}
    * Specify a value that must be matched for the given column.
    * 
    * @param colKey
@@ -97,6 +103,7 @@ public class RegExpRowFilter implements RowFilterInterface {
    * @param value
    *          the value that must equal the stored value.
    */
+  @Deprecated
   public void setColumnFilter(final byte [] colKey, final byte[] value) {
     if (value == null) {
       nullColumns.add(colKey);
@@ -106,11 +113,13 @@ public class RegExpRowFilter implements RowFilterInterface {
   }
 
   /**
+   * @deprecated Column filtering has been replaced by {@link ColumnValueFilter}
    * Set column filters for a number of columns.
    * 
    * @param columnFilter
    *          Map of columns with value criteria.
    */
+  @Deprecated
   public void setColumnFilters(final Map<byte [], byte[]> columnFilter) {
     if (null == columnFilter) {
       nullColumns.clear();

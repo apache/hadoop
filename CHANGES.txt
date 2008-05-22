@@ -45,6 +45,9 @@ Hbase Change Log
                compaction (Jean-Daniel Cryans via Stack)
    HBASE-504   Allow HMsg's carry a payload: e.g. exception that happened over
                on the remote side.
+   HBASE-583   RangeRowFilter/ColumnValueFilter to allow choice of rows based on
+               a (lexicographic) comparison to column's values
+               (Clint Morgan via Stack)
 
 Release 0.1.2 - 05/13/2008
    
