@@ -26,7 +26,7 @@ import java.util.List;
 
 
 
-public class ReduceTaskStatus extends TaskStatus {
+class ReduceTaskStatus extends TaskStatus {
 
   private long shuffleFinishTime; 
   private long sortFinishTime; 

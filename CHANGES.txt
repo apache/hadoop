@@ -54,6 +54,10 @@ Trunk (unreleased changes)
     HADOOP-3390. Removed deprecated ClientProtocol.abandonFileInProgress().
     (Tsz Wo (Nicholas), SZE via rangadi)
 
+    HADOOP-3405. Made some map/reduce internal classes non-public:
+    MapTaskStatus, ReduceTaskStatus, JobSubmissionProtocol, 
+    CompletedJobStatusStore. (enis via omaley)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,

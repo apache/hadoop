@@ -74,6 +74,12 @@ public class JobStatus implements Writable {
   }
 
   /**
+   * @deprecated use getJobID instead
+   */
+  @Deprecated
+  public String getJobId() { return jobid.toString(); }
+  
+  /**
    * @return The jobid of the Job
    */
   public JobID getJobID() { return jobid; }

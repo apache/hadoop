@@ -27,7 +27,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * JobClient can use these methods to submit a Job for execution, and learn about
  * the current system status.
  */ 
-public interface JobSubmissionProtocol extends VersionedProtocol {
+interface JobSubmissionProtocol extends VersionedProtocol {
   /* 
    *Changing the versionID to 2L since the getTaskCompletionEvents method has
    *changed.

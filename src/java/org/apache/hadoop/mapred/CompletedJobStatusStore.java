@@ -38,7 +38,7 @@ import org.apache.hadoop.fs.Path;
  * The retain time can be set with the 'persist.jobstatus.hours'
  * configuration variable (it is in hours).
  */
-public class CompletedJobStatusStore implements Runnable {
+class CompletedJobStatusStore implements Runnable {
   private boolean active;
   private String jobInfoDir;
   private long retainTime;

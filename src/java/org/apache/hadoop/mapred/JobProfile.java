@@ -74,6 +74,15 @@ public class JobProfile implements Writable {
   }
 
   /**
+   * @deprecated use JobProfile(String, JobID, String, String, String) instead
+   */
+  @Deprecated
+  public JobProfile(String user, String jobid, String jobFile, String url,
+      String name) {
+    this(user, JobID.forName(jobid), jobFile, url, name);
+  }
+  
+  /**
    * Get the user id.
    */
   public String getUser() {
@@ -87,6 +96,14 @@ public class JobProfile implements Writable {
     return jobid;
   }
 
+  /**
+   * @deprecated use getJobID() instead
+   */
+  @Deprecated
+  public String getJobId() {
+    return jobid.toString();
+  }
+  
   /**
    * Get the configuration file for the job.
    */
