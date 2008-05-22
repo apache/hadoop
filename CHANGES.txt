@@ -162,6 +162,10 @@ Trunk (unreleased changes)
     HADOOP-2867. Adds the task's CWD to its LD_LIBRARY_PATH. 
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3232. DU class runs the 'du' command in a seperate thread so
+    that it does not block user. DataNode misses heartbeats in large
+    nodes otherwise. (Johan Oskarsson via rangadi)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

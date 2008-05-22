@@ -316,6 +316,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       }
       this.usage = new DF(parent, conf);
       this.dfsUsage = new DU(parent, conf);
+      this.dfsUsage.start();
     }
 
     void decDfsUsed(long value) {
@@ -1006,6 +1007,14 @@ class FSDataset implements FSConstants, FSDatasetInterface {
   public void shutdown() {
     if (mbeanName != null)
       MBeanUtil.unregisterMBean(mbeanName);
+    
+    if(volumes != null) {
+      for (FSVolume volume : volumes.volumes) {
+        if(volume != null) {
+          volume.dfsUsage.shutdown();
+        }
+      }
+    }
   }
 
   public String getStorageInfo() {

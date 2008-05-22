@@ -71,9 +71,25 @@ public class TestDU extends TestCase {
 
     Thread.sleep(5000); // let the metadata updater catch up
     
-    DU du = new DU(file, 0);
+    DU du = new DU(file, 10000);
+    du.start();
     long duSize = du.getUsed();
+    du.shutdown();
 
     assertEquals(writtenSize, duSize);
+    
+    //test with 0 interval, will not launch thread 
+    du = new DU(file, 0);
+    du.start();
+    duSize = du.getUsed();
+    du.shutdown();
+    
+    assertEquals(writtenSize, duSize);  
+    
+    //test without launching thread 
+    du = new DU(file, 10000);
+    duSize = du.getUsed();
+    
+    assertEquals(writtenSize, duSize);     
   }
 }
