@@ -152,6 +152,9 @@ Trunk (unreleased changes)
     HADOOP-3381. Clear referenced when directories are deleted so that 
     effect of memory leaks are not multiplied. (rangadi)
 
+    HADOOP-2867. Adds the task's CWD to its LD_LIBRARY_PATH. 
+    (Amareshwari Sriramadasu via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

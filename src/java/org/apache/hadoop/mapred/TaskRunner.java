@@ -28,7 +28,9 @@ import org.apache.hadoop.util.*;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 import java.net.URI;
 
@@ -387,9 +389,18 @@ abstract class TaskRunner extends Thread {
       stdout.getParentFile().mkdirs();
       List<String> wrappedCommand = 
         TaskLog.captureOutAndError(setup, vargs, stdout, stderr, logSize);
-      
+      Map<String, String> env = new HashMap<String, String>();
+      StringBuffer ldLibraryPath = new StringBuffer();
+      ldLibraryPath.append(workDir.toString());
+      String oldLdLibraryPath = null;
+      oldLdLibraryPath = System.getenv("LD_LIBRARY_PATH");
+      if (oldLdLibraryPath != null) {
+        ldLibraryPath.append(sep);
+        ldLibraryPath.append(oldLdLibraryPath);
+      }
+      env.put("LD_LIBRARY_PATH", ldLibraryPath.toString());
       // Run the task as child of the parent TaskTracker process
-      runChild(wrappedCommand, workDir, taskid);
+      runChild(wrappedCommand, workDir, env, taskid);
 
     } catch (FSError e) {
       LOG.fatal("FSError", e);
@@ -432,10 +443,11 @@ abstract class TaskRunner extends Thread {
    * Run the child process
    */
   private void runChild(List<String> args, File dir,
+                        Map<String, String> env,
                         TaskAttemptID taskid) throws IOException {
 
     try {
-      shexec = new ShellCommandExecutor(args.toArray(new String[0]), dir);
+      shexec = new ShellCommandExecutor(args.toArray(new String[0]), dir, env);
       shexec.execute();
     } catch (IOException ioe) {
       // do nothing

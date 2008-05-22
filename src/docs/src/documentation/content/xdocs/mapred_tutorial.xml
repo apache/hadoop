@@ -1109,7 +1109,8 @@
         the working directory of the task can be used to distribute native 
         libraries and load them. The underlying detail is that child-jvm always 
         has its <em>current working directory</em> added to the
-        <code>java.library.path</code> and hence the cached libraries can be 
+        <code>java.library.path</code> and <code>LD_LIBRARY_PATH</code>. 
+        And hence the cached libraries can be 
         loaded via <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/lang/System.html#loadLibrary(java.lang.String)">
         System.loadLibrary</a> or <a href="http://java.sun.com/j2se/1.5.0/docs/api/java/lang/System.html#load(java.lang.String)">
         System.load</a>.</p>
