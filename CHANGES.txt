@@ -308,6 +308,9 @@ Trunk (unreleased changes)
     accommodate collectors that don't support long values. (lohit vijayarenu
     via cdouglas)
 
+    HADOOP-3403. Fixes a problem in the JobTracker to do with handling of lost
+    tasktrackers. (Arun Murthy via ddas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

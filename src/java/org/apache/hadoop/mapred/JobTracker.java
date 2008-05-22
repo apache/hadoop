@@ -296,9 +296,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                   // tracker has already been destroyed.
                   if (newProfile != null) {
                     if (now - newProfile.getLastSeen() > TASKTRACKER_EXPIRY_INTERVAL) {
-                      // Remove completely
-                      updateTaskTrackerStatus(trackerName, null);
+                      // Remove completely after marking the tasks as 'KILLED'
                       lostTaskTracker(leastRecent.getTrackerName());
+                      updateTaskTrackerStatus(trackerName, null);
                     } else {
                       // Update time by inserting latest profile
                       trackerExpiryQueue.add(newProfile);
