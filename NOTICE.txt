@@ -5,8 +5,6 @@ In addition, this product includes software developed by:
 
 European Commission project OneLab (http://www.one-lab.org)
 
-Udanax (http://www.udanax.org)
-
 Facebook, Inc. (http://developers.facebook.com/thrift/ -- Page includes the Thrift Software License)
 
 JUnit (http://www.junit.org/)
