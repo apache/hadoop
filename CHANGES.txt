@@ -58,6 +58,9 @@ Trunk (unreleased changes)
     MapTaskStatus, ReduceTaskStatus, JobSubmissionProtocol, 
     CompletedJobStatusStore. (enis via omaley)
 
+    HADOOP-3265. Removed depcrecated API getFileCacheHints().
+    (Lohit Vijayarenu via rangadi)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,

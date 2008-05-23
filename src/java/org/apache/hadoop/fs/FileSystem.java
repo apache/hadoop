@@ -318,35 +318,6 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * @deprecated Use getFileBlockLocations() instead
-   *
-   * Return a 2D array of size 1x1 or greater, containing hostnames 
-   * where portions of the given file can be found.  For a nonexistent 
-   * file or regions, null will be returned.
-   *
-   * This call is most helpful with DFS, where it returns 
-   * hostnames of machines that contain the given file.
-   *
-   * The FileSystem will simply return an elt containing 'localhost'.
-   */
-  @Deprecated
-  public String[][] getFileCacheHints(Path f, long start, long len)
-      throws IOException {
-    BlockLocation[] blkLocations = getFileBlockLocations(f, start, len);
-    if ((blkLocations == null) || (blkLocations.length == 0)) {
-      return new String[0][];
-    }
-    int blkCount = blkLocations.length;
-    String[][] hints = new String[blkCount][];
-    for (int i=0; i < blkCount; i++) {
-      String[] hosts = blkLocations[i].getHosts();
-      hints[i] = new String[hosts.length];
-      hints[i] = hosts;
-    }
-    return hints;
-  }
-
-  /**
    * Return an array containing hostnames, offset and size of 
    * portions of the given file.  For a nonexistent 
    * file or regions, null will be returned.
