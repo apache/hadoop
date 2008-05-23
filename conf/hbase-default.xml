@@ -283,12 +283,6 @@
   	</description>
   </property>  
   <property>
- 	<name>hbaseshell.formatter</name>
-  	<value>org.apache.hadoop.hbase.hql.formatter.AsciiTableFormatter</value>
-  	<description>TableFormatter to use outputting HQL result sets.
-  	</description>
-  </property>  
-  <property>
     <name>hbase.regionserver.globalMemcacheLimit</name>
     <value>536870912</value>
     <description>Maximum size of all memcaches in a region server before new 

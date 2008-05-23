@@ -7,6 +7,8 @@ Hbase Change Log
                compatible anyways
    HBASE-82    Row keys should be array of bytes
    HBASE-76    Purge servers of Text (Done as part of HBASE-82 commit).
+   HBASE-487   Replace hql w/ a hbase-friendly jirb or jython shell
+               Part 1: purge of hql and added raw jirb in its place.
 
   BUG FIXES
    HBASE-574   HBase does not load hadoop native libs (Rong-En Fan via Stack)

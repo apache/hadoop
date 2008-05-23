@@ -133,13 +133,9 @@ ${HBASE_HOME}/bin/start-hbase.sh
 </pre>
 <p>
 Once HBase has started, enter <code>${HBASE_HOME}/bin/hbase shell</code> to obtain a 
-shell against HBase from which you can execute HQL commands (HQL is a severe subset of SQL).  
-In the HBase shell, type <code>help;</code> to see a list of supported HQL commands.  Note
-that all commands in the HBase 
-shell must end with <code>;</code>.  Test your installation by creating, viewing, and dropping 
-a table, as per the help instructions.  Be patient with the <code>create</code> and 
-<code>drop</code> operations as they may each take 10 seconds or more.  To stop HBase, exit the 
-HBase shell and enter:
+shell against HBase from which you can execute commands.  
+Test your installation by creating, viewing, and dropping 
+To stop HBase, exit the HBase shell and enter:
 </p>
 <pre>
 ${HBASE_HOME}/bin/stop-hbase.sh

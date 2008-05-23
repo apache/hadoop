@@ -183,7 +183,7 @@ unset IFS
 
 # figure out which class to run
 if [ "$COMMAND" = "shell" ] ; then
-  CLASS='org.apache.hadoop.hbase.Shell'
+  CLASS='org.jruby.Main --command irb'
 elif [ "$COMMAND" = "master" ] ; then
   CLASS='org.apache.hadoop.hbase.master.HMaster'
 elif [ "$COMMAND" = "regionserver" ] ; then
