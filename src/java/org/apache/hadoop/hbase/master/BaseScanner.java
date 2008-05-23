@@ -240,7 +240,8 @@ abstract class BaseScanner extends Chore implements HConstants {
       return false;
     }
     if (!info.isOffline()) {
-      LOG.warn("Region is split but not offline: " + info.getRegionName());
+      LOG.warn("Region is split but not offline: " +
+        info.getRegionNameAsString());
     }
     return true;
   }
@@ -268,7 +269,7 @@ abstract class BaseScanner extends Chore implements HConstants {
         parent.getRegionName(), rowContent, COL_SPLITB);
     
     if (!hasReferencesA && !hasReferencesB) {
-      LOG.info("Deleting region " + parent.getRegionName() +
+      LOG.info("Deleting region " + parent.getRegionNameAsString() +
         " because daughter splits no longer hold references");
       HRegion.deleteRegion(master.fs, master.rootdir, parent);
       
@@ -334,8 +335,8 @@ abstract class BaseScanner extends Chore implements HConstants {
     }
     
     if (LOG.isDebugEnabled()) {
-      LOG.debug(split.getRegionName().toString()
-          +" no longer has references to " + parent.toString());
+      LOG.debug(split.getRegionNameAsString() +
+        " no longer has references to " + parent.toString());
     }
     
     BatchUpdate b = new BatchUpdate(parent);
@@ -365,7 +366,7 @@ abstract class BaseScanner extends Chore implements HConstants {
         // Skip if region is on kill list
         if(LOG.isDebugEnabled()) {
           LOG.debug("not assigning region (on kill list): " +
-            info.getRegionName());
+            info.getRegionNameAsString());
         }
         return;
       }
@@ -385,7 +386,7 @@ abstract class BaseScanner extends Chore implements HConstants {
       // The current assignment is invalid
       if (LOG.isDebugEnabled()) {
         LOG.debug("Current assignment of " +
-          Bytes.toString(info.getRegionName()) +
+          info.getRegionNameAsString() +
           " is not valid: serverInfo: " + storedInfo + ", passed startCode: " +
           startCode + ", storedInfo.startCode: " +
           ((storedInfo != null)? storedInfo.getStartCode(): -1) +

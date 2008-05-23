@@ -470,7 +470,7 @@ public class HStoreFile implements HConstants {
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return encodedRegionName + "/" + colFamily + "/" + fileId +
+    return encodedRegionName + "/" + Bytes.toString(colFamily) + "/" + fileId +
       (isReference()? "-" + reference.toString(): "");
   }
   
