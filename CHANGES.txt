@@ -24,6 +24,8 @@ Hbase Change Log
    HBASE-638   Purge \r from src
    HBASE-644   DroppedSnapshotException but RegionServer doesn't restart
    HBASE-641   Improve master split logging
+   HBASE-642   Splitting log in a hostile environment -- bad hdfs -- we drop
+               write-ahead-log edits
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

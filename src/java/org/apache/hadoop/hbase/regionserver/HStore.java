@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -240,30 +241,53 @@ public class HStore implements HConstants {
     
     try {
       doReconstructionLog(reconstructionLog, maxSeqId, reporter);
-    } catch (IOException e) {
-      // Presume we got here because of some HDFS issue or because of a lack of
-      // HADOOP-1700; for now keep going but this is probably not what we want
-      // long term.  If we got here there has been data-loss
+    } catch (EOFException e) {
+      // Presume we got here because of lack of HADOOP-1700; for now keep going
+      // but this is probably not what we want long term.  If we got here there
+      // has been data-loss
       LOG.warn("Exception processing reconstruction log " + reconstructionLog +
-        " opening " + Bytes.toString(this.storeName) +
-        " -- continuing.  Probably DATA LOSS!", e);
+        " opening " + this.storeName +
+        " -- continuing.  Probably lack-of-HADOOP-1700 causing DATA LOSS!", e);
+    } catch (IOException e) {
+      // Presume we got here because of some HDFS issue. Don't just keep going.
+      // Fail to open the HStore.  Probably means we'll fail over and over
+      // again until human intervention but alternative has us skipping logs
+      // and losing edits: HBASE-642.
+      LOG.warn("Exception processing reconstruction log " + reconstructionLog +
+        " opening " + this.storeName, e);
+      throw e;
     }
 
     // Finally, start up all the map readers! (There could be more than one
     // since we haven't compacted yet.)
     boolean first = true;
     for(Map.Entry<Long, HStoreFile> e: this.storefiles.entrySet()) {
-      if (first) {
-        // Use a block cache (if configured) for the first reader only
-        // so as to control memory usage.
-        this.readers.put(e.getKey(),
-            e.getValue().getReader(this.fs, this.bloomFilter,
-                family.isBlockCacheEnabled()));
-        first = false;
-      } else {
-        this.readers.put(e.getKey(),
-            e.getValue().getReader(this.fs, this.bloomFilter));
+      MapFile.Reader r = null;
+      try {
+        if (first) {
+          // Use a block cache (if configured) for the first reader only
+          // so as to control memory usage.
+          r = e.getValue().getReader(this.fs, this.bloomFilter,
+            family.isBlockCacheEnabled());
+          first = false;
+        } else {
+          r = e.getValue().getReader(this.fs, this.bloomFilter);
+        }
+      } catch (EOFException eofe) {
+        LOG.warn("Failed open of reader " + e.toString() + "; attempting fix",
+          eofe);
+        try {
+          // Try fixing this file.. if we can.  
+          MapFile.fix(this.fs, e.getValue().getMapFilePath(),
+            HStoreFile.HbaseMapFile.KEY_CLASS,
+            HStoreFile.HbaseMapFile.VALUE_CLASS, false, this.conf);
+        } catch (Exception fixe) {
+          LOG.warn("Failed fix of " + e.toString() +
+            "...continuing; Probable DATA LOSS!!!", fixe);
+          continue;
+        }
       }
+      this.readers.put(e.getKey(), r);
     }
   }
 
@@ -407,7 +431,7 @@ public class HStore implements HConstants {
       if (!fs.exists(mapfile)) {
         fs.delete(curfile.getInfoFilePath(), false);
         LOG.warn("Mapfile " + mapfile.toString() + " does not exist. " +
-          "Cleaned up info file.  Continuing...");
+          "Cleaned up info file.  Continuing...Probable DATA LOSS!!!");
         continue;
       }
       

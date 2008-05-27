@@ -401,7 +401,6 @@ public class HStoreFile implements HConstants {
   public synchronized MapFile.Reader getReader(final FileSystem fs,
       final Filter bloomFilter)
   throws IOException {
-    
     if (isReference()) {
       return new HStoreFile.HalfMapFileReader(fs,
           getMapFilePath(reference).toString(), conf, 
@@ -452,8 +451,7 @@ public class HStoreFile implements HConstants {
         "HStoreFile reference");
     }
     return new BloomFilterMapFile.Writer(conf, fs,
-      getMapFilePath().toString(), HStoreKey.class,
-      ImmutableBytesWritable.class, compression, bloomFilter);
+      getMapFilePath().toString(), compression, bloomFilter);
   }
 
   /**
@@ -624,6 +622,8 @@ public class HStoreFile implements HConstants {
    * Hbase customizations of MapFile.
    */
   static class HbaseMapFile extends MapFile {
+    static final Class KEY_CLASS = HStoreKey.class;
+    static final Class VALUE_CLASS = ImmutableBytesWritable.class;
 
     /**
      * A reader capable of reading and caching blocks of the data file.
@@ -702,10 +702,9 @@ public class HStoreFile implements HConstants {
        * @throws IOException
        */
       public HbaseWriter(Configuration conf, FileSystem fs, String dirName,
-          Class<Writable> keyClass, Class<Writable> valClass,
           SequenceFile.CompressionType compression)
       throws IOException {
-        super(conf, fs, dirName, keyClass, valClass, compression);
+        super(conf, fs, dirName, KEY_CLASS, VALUE_CLASS, compression);
         // Default for mapfiles is 128.  Makes random reads faster if we
         // have more keys indexed and we're not 'next'-ing around in the
         // mapfile.
@@ -807,10 +806,9 @@ public class HStoreFile implements HConstants {
        */
       @SuppressWarnings("unchecked")
       public Writer(Configuration conf, FileSystem fs, String dirName,
-          Class keyClass, Class valClass,
-          SequenceFile.CompressionType compression, final Filter filter)
+        SequenceFile.CompressionType compression, final Filter filter)
       throws IOException {
-        super(conf, fs, dirName, keyClass, valClass, compression);
+        super(conf, fs, dirName, compression);
         bloomFilter = filter;
       }
 
