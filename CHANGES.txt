@@ -23,6 +23,7 @@ Hbase Change Log
                hadoop-0.17.0 is released
    HBASE-638   Purge \r from src
    HBASE-644   DroppedSnapshotException but RegionServer doesn't restart
+   HBASE-641   Improve master split logging
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
