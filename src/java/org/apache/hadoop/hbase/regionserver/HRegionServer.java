@@ -631,12 +631,13 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /**
    * Sets a flag that will cause all the HRegionServer threads to shut down
-   * in an orderly fashion.  Used by unit tests and called by Flusher
-   * if it judges server needs to be restarted.
+   * in an orderly fashion.  Used by unit tests.
    */
-  public synchronized void stop() {
+  public void stop() {
     this.stopRequested.set(true);
-    notifyAll();                        // Wakes run() if it is sleeping
+    synchronized(this) {
+      notifyAll(); // Wakes run() if it is sleeping
+    }
   }
   
   /**
@@ -645,7 +646,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Used unit testing and on catastrophic events such as HDFS is yanked out
    * from under hbase or we OOME.
    */
-  public synchronized void abort() {
+  public void abort() {
     this.abortRequested = true;
     stop();
   }
@@ -1385,8 +1386,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
         FSUtils.checkFileSystemAvailable(fs);
       } catch (IOException e) {
         LOG.fatal("Shutting down HRegionServer: file system not available", e);
-        this.abortRequested = true;
-        this.stopRequested.set(true);
+        abort();
         fsOk = false;
       }
     }

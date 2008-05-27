@@ -170,12 +170,10 @@ class Flusher extends Thread implements FlushRequester {
         // Cache flush can fail in a few places.  If it fails in a critical
         // section, we get a DroppedSnapshotException and a replay of hlog
         // is required. Currently the only way to do this is a restart of
-        // the server.
+        // the server.  Abort because hdfs is probably bad (HBASE-644 is a case
+        // where hdfs was bad but passed the hdfs check).
         LOG.fatal("Replay of hlog required. Forcing server restart", ex);
-        if (!server.checkFileSystem()) {
-          return false;
-        }
-        server.stop();
+        server.abort();
         return false;
       } catch (IOException ex) {
         LOG.error("Cache flush failed" +
