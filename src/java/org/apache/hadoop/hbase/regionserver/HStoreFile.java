@@ -622,8 +622,9 @@ public class HStoreFile implements HConstants {
    * Hbase customizations of MapFile.
    */
   static class HbaseMapFile extends MapFile {
-    static final Class KEY_CLASS = HStoreKey.class;
-    static final Class VALUE_CLASS = ImmutableBytesWritable.class;
+    static final Class<? extends Writable>  KEY_CLASS = HStoreKey.class;
+    static final Class<? extends Writable>  VALUE_CLASS =
+      ImmutableBytesWritable.class;
 
     /**
      * A reader capable of reading and caching blocks of the data file.
@@ -696,8 +697,6 @@ public class HStoreFile implements HConstants {
        * @param conf
        * @param fs
        * @param dirName
-       * @param keyClass
-       * @param valClass
        * @param compression
        * @throws IOException
        */
