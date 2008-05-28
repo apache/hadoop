@@ -1704,7 +1704,7 @@ public class HRegion implements HConstants {
             filter != null ?
               (RowFilterInterface)WritableUtils.clone(filter, conf) : filter);
         }
-      } catch(IOException e) {
+      } catch (IOException e) {
         for (int i = 0; i < this.scanners.length; i++) {
           if(scanners[i] != null) {
             closeScanner(i);
@@ -1828,12 +1828,17 @@ public class HRegion implements HConstants {
         try {
           scanners[i].close();
         } catch (IOException e) {
-          LOG.warn("Failed closeing scanner " + i, e);
+          LOG.warn("Failed closing scanner " + i, e);
         }
       } finally {
         scanners[i] = null;
-        resultSets[i] = null;
-        keys[i] = null;
+        // These data members can be null if exception in constructor
+        if (resultSets != null) {
+          resultSets[i] = null;
+        }
+        if (keys != null) {
+          keys[i] = null;
+        }
       }
     }
 
