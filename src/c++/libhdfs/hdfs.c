@@ -25,6 +25,7 @@
 #define HADOOP_PATH     "org/apache/hadoop/fs/Path"
 #define HADOOP_LOCALFS  "org/apache/hadoop/fs/LocalFileSystem"
 #define HADOOP_FS       "org/apache/hadoop/fs/FileSystem"
+#define HADOOP_BLK_LOC  "org/apache/hadoop/fs/BlockLocation"
 #define HADOOP_DFS      "org/apache/hadoop/dfs/DistributedFileSystem"
 #define HADOOP_ISTRM    "org/apache/hadoop/fs/FSDataInputStream"
 #define HADOOP_OSTRM    "org/apache/hadoop/fs/FSDataOutputStream"
@@ -1118,7 +1119,7 @@ char***
 hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
 {
     // JAVA EQUIVALENT:
-    //  fs.getFileCacheHints(new Path(path), start, length);
+    //  fs.getFileBlockLoctions(new Path(path), start, length);
 
     //Get the JNIEnv* corresponding to current thread
     JNIEnv* env = getJNIEnv();
@@ -1131,25 +1132,26 @@ hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
         return NULL;
     }
 
-    //org.apache.hadoop.fs.FileSystem::getFileCacheHints
+    //org.apache.hadoop.fs.FileSystem::getFileBlockLocations
     char*** blockHosts = NULL;
-    jobjectArray jFileCacheHints;
+    jobjectArray jBlockLocations;;
     jvalue jVal;
     if (invokeMethod(env, &jVal, INSTANCE, jFS,
-                     HADOOP_FS, "getFileCacheHints", 
-                     "(Lorg/apache/hadoop/fs/Path;JJ)[[Ljava/lang/String;",
+                     HADOOP_FS, "getFileBlockLocations", 
+                     "(Lorg/apache/hadoop/fs/Path;JJ)"
+                     "[Lorg/apache/hadoop/fs/BlockLocation;",
                      jPath, start, length) != 0) {
         fprintf(stderr, "Call to org.apache.hadoop.fs."
-                "FileSystem::getFileCacheHints failed!\n");
+                "FileSystem::getFileBlockLocations failed!\n");
         errno = EINTERNAL;
         destroyLocalReference(env, jPath);
         return NULL;
     }
-    jFileCacheHints = jVal.l;
+    jBlockLocations = jVal.l;
 
-    //Figure out no of entries in jFileCacheHints 
+    //Figure out no of entries in jBlockLocations
     //Allocate memory and add NULL at the end
-    jsize jNumFileBlocks = (*env)->GetArrayLength(env, jFileCacheHints);
+    jsize jNumFileBlocks = (*env)->GetArrayLength(env, jBlockLocations);
 
     blockHosts = malloc(sizeof(char**) * (jNumFileBlocks+1));
     if (blockHosts == NULL) {
@@ -1165,10 +1167,24 @@ hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
     //Now parse each block to get hostnames
     int i = 0;
     for (i=0; i < jNumFileBlocks; ++i) {
-        jobjectArray jFileBlockHosts =
-            (*env)->GetObjectArrayElement(env, jFileCacheHints, i);
-
-        //Figure out no of entries in jFileCacheHints 
+        jobject jFileBlock =
+            (*env)->GetObjectArrayElement(env, jBlockLocations, i);
+        
+        jvalue jVal;
+        jobjectArray jFileBlockHosts;
+        if (invokeMethod(env, &jVal, INSTANCE, jFileBlock, HADOOP_BLK_LOC,
+                         "getHosts", "()[Ljava/lang/String;") ||
+                jVal.l == NULL) {
+            fprintf(stderr, "Call to org.apache.hadoop.fs.BlockLocation::"
+                    "getHosts failed!\n");
+            errno = EINTERNAL;
+            destroyLocalReference(env, jPath);
+            destroyLocalReference(env, jBlockLocations);
+            return NULL;
+        }
+        
+        jFileBlockHosts = jVal.l;
+        //Figure out no of hosts in jFileBlockHosts
         //Allocate memory and add NULL at the end
         jsize jNumBlockHosts = (*env)->GetArrayLength(env, jFileBlockHosts);
         blockHosts[i] = malloc(sizeof(char*) * (jNumBlockHosts+1));
@@ -1205,7 +1221,7 @@ hdfsGetHosts(hdfsFS fs, const char* path, tOffset start, tOffset length)
 
     //Delete unnecessary local references
     destroyLocalReference(env, jPath);
-    destroyLocalReference(env, jFileCacheHints);
+    destroyLocalReference(env, jBlockLocations);
 
     return blockHosts;
 }

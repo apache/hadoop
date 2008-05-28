@@ -345,6 +345,9 @@ Trunk (unreleased changes)
     HADOOP-3259. Makes failure to read system properties due to a
     security manager non-fatal. (Edward Yoon via omalley)
 
+    HADOOP-3451. Update libhdfs to use FileSystem::getFileBlockLocations
+    instead of removed getFileCacheHints. (lohit vijayarenu via cdouglas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
