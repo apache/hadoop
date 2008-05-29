@@ -29,6 +29,8 @@ Hbase Change Log
    HBASE-646   EOFException opening HStoreFile info file (spin on HBASE-645and 550)
    HBASE-648   If mapfile index is empty, run repair
    HBASE-640   TestMigrate failing on hudson
+   HASE-651    Table.commit should throw NoSuchColumnFamilyException if column
+               family doesn't exist
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

@@ -1556,17 +1556,18 @@ public class HRegion implements HConstants {
     }
   }
   
-  /**
+  /*
    * Make sure this is a valid column for the current table
    * @param columnName
-   * @throws IOException
+   * @throws NoSuchColumnFamilyException
    */
-  private void checkColumn(final byte [] columnName) throws IOException {
+  private void checkColumn(final byte [] columnName)
+  throws NoSuchColumnFamilyException {
     if (columnName == null) {
       return;
     }
     if (!regionInfo.getTableDesc().hasFamily(columnName)) {
-      throw new IOException("Column family on " +
+      throw new NoSuchColumnFamilyException("Column family on " +
         Bytes.toString(columnName) + " does not exist in region " + this
           + " in table " + regionInfo.getTableDesc());
     }
