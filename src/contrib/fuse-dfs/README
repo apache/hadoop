@@ -1,0 +1,98 @@
+# Copyright 2005 The Apache Software Foundation Licensed under the
+# Apache License, Version 2.0 (the "License"); you may not use this
+# file except in compliance with the License.  You may obtain a copy
+# of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless
+# required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.  See the License for the specific language governing
+# permissions and limitations under the License.
+
+This is a FUSE module for Hadoop's HDFS.
+
+It allows one to mount HDFS as a Unix filesystem and optionally export
+that mount point to other machines.
+
+For now, writes are disabled as this requires Hadoop-1700 - file
+appends which I guess won't be ready till 0.18 ish ??.
+
+rmdir, mv, mkdir, rm are all supported. just not cp, touch, ...
+
+BUILDING:
+
+
+Requirements:
+
+   1. a Linux kernel > 2.6.9 or a kernel module from FUSE - i.e., you
+   compile it yourself and then modprobe it. Better off with the
+   former option if possible.  (Note for now if you use the kernel
+   with fuse included, it doesn't allow you to export this through NFS
+   so be warned. See the FUSE email list for more about this.)
+
+   2. FUSE should be installed in /usr/local or FUSE_HOME ant
+   environment variable
+
+To build:
+
+   1. in HADOOP_HOME: ant compile-contrib -Dcompile.c++=1 -Dfusedfs=1
+
+
+NOTE: for amd64 architecture, libhdfs will not compile unless you edit
+the Makefile in src/c++/libhdfs/Makefile and set OS_ARCH=amd64
+(probably the same for others too).
+
+--------------------------------------------------------------------------------
+
+CONFIGURING:
+
+Look at all the paths in fuse_dfs_wrapper.sh and either correct them
+or set them in your environment before running. (note for automount
+and mount as root, you probably cannnot control the environment, so
+best to set them in the wrapper)
+
+INSTALLING:
+
+1. mkdir /mnt/dfs (or wherever you want to mount it)
+
+2. fuse_dfs_wrapper.sh dfs://hadoop_server1.foo.com:9000 /mnt/dfs -d
+; and from another terminal, try ls /mnt/dfs
+
+If 2 works, try again dropping the debug mode, i.e., -d
+
+(note - common problems are that you don't have libhdfs.so or
+libjvm.so or libfuse.so on your LD_LIBRARY_PATH, and your CLASSPATH
+does not contain hadoop and other required jars.)
+
+--------------------------------------------------------------------------------
+
+
+DEPLOYING:
+
+in a root shell do the following:
+
+1. add the following to /etc/fstab -
+  fuse_dfs#dfs://hadoop_server.foo.com:9000 /mnt/dfs fuse
+  allow_other,rw 0 0
+
+2. mount /mnt/dfs Expect problems with not finding fuse_dfs. You will
+   need to probably add this to /sbin and then problems finding the
+   above 3 libraries. Add these using ldconfig.
+
+--------------------------------------------------------------------------------
+
+
+EXPORTING:
+
+Add the following to /etc/exports:
+
+  /mnt/hdfs *.foo.com(no_root_squash,rw,fsid=1,sync)
+
+NOTE - you cannot export this with a FUSE module built into the kernel
+- e.g., kernel 2.6.17. For info on this, refer to the FUSE wiki.
+--------------------------------------------------------------------------------
+
+ADVANCED:
+
+you may want to ensure certain directories cannot be deleted from the
+shell until the FS has permissions. You can set this in the build.xml
+file in src/contrib/fuse-dfs/build.xml

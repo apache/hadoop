@@ -104,6 +104,10 @@ Trunk (unreleased changes)
     HADOOP-3400. A new API FileSystem.deleteOnExit() that facilitates
     handling of temporary files in HDFS. (dhruba)
 
+    HADOOP-4.  Add fuse-dfs to contrib, permitting one to mount an
+    HDFS filesystem on systems that support FUSE, e.g., Linux.
+    (Pete Wyckoff via cutting)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().

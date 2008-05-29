@@ -367,7 +367,7 @@
           depends="clover,compile-core-classes,compile-core-native,compile-c++" description="Compile core only">
   </target>
 
-  <target name="compile-contrib" depends="compile-core">
+  <target name="compile-contrib" depends="compile-core,compile-libhdfs">
      <subant target="compile">
         <property name="version" value="${version}"/>
         <fileset file="${contrib.dir}/build.xml"/>
@@ -759,7 +759,8 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="jar, javadoc, examples, jar-test, ant-tasks" description="Build distribution">
+  <target name="package" depends="compile, jar, javadoc, examples, jar-test, ant-tasks, package-libhdfs"
+	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
     <mkdir dir="${dist.dir}/contrib"/>
@@ -910,7 +911,7 @@
   <!-- ================================================================== -->
   <!-- libhdfs targets.                                                   -->
   <!-- ================================================================== -->
-  <target name="compile-libhdfs" depends="init">
+  <target name="compile-libhdfs" depends="init" if="libhdfs">
     <mkdir dir="${build.libhdfs}"/>
     <exec dir="${libhdfs.src}" executable="${make.cmd}" failonerror="true">
       <env key="OS_NAME" value="${os.name}"/>
@@ -944,7 +945,9 @@
 	</exec>
   </target>
 	
-  <target name="package-libhdfs" depends="compile-libhdfs, doc-libhdfs, package">
+  <target name="package-libhdfs"
+	  depends="compile-libhdfs, doc-libhdfs"
+	  if="libhdfs">
   	<mkdir dir="${dist.dir}/libhdfs"/>
   	<copy todir="${dist.dir}/libhdfs">
   	  <fileset dir="${build.libhdfs}" 
