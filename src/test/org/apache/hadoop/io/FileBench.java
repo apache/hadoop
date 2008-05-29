@@ -108,6 +108,7 @@ public class FileBench extends Configured implements Tool {
 
     final String fn = conf.get("test.filebench.name", "");
     final Path outd = FileOutputFormat.getOutputPath(conf);
+    conf.set("mapred.work.output.dir", outd.toString());
     OutputFormat outf = conf.getOutputFormat();
     RecordWriter<Text,Text> rw =
       outf.getRecordWriter(outd.getFileSystem(conf), conf, fn,
@@ -191,7 +192,9 @@ public class FileBench extends Configured implements Tool {
       }
     }
     if (null == root) {
-      throw new IOException("Missing -dir param");
+      System.out.println("Missing -dir param");
+      printUsage();
+      return -1;
     }
 
     fillBlocks(job);
