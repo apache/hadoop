@@ -108,6 +108,8 @@ Trunk (unreleased changes)
     HDFS filesystem on systems that support FUSE, e.g., Linux.
     (Pete Wyckoff via cutting)
 
+    HADOOP-3246. Add FTPFileSystem.  (Ankur Goel via cutting)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().

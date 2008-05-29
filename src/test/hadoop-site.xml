@@ -27,4 +27,18 @@
   <description>Size of a block in bytes.</description>
 </property>
 
+<property>
+  <name>fs.ftp.user.localhost</name>
+  <value>user</value>
+  <description>The username for connecting to FTP server running on localhost. 
+  This is required by FTPFileSystem</description>
+</property>
+
+<property>
+  <name>fs.ftp.password.localhost</name>
+  <value>password</value>
+  <description>The password for connecting to FTP server running on localhost.
+   This is required by FTPFileSystem</description>
+</property>
+
 </configuration>

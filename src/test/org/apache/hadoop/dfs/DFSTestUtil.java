@@ -94,7 +94,7 @@ public class DFSTestUtil extends TestCase {
     long getSeed() { return seed; }
   }
 
-  void createFiles(FileSystem fs, String topdir) throws IOException {
+  public void createFiles(FileSystem fs, String topdir) throws IOException {
     createFiles(fs, topdir, (short)3);
   }
   
@@ -138,7 +138,7 @@ public class DFSTestUtil extends TestCase {
   }
   
   /** check if the files have been copied correctly. */
-  boolean checkFiles(FileSystem fs, String topdir) throws IOException {
+  public boolean checkFiles(FileSystem fs, String topdir) throws IOException {
     
     //Configuration conf = new Configuration();
     Path root = new Path(topdir);

@@ -75,6 +75,7 @@
             value="${build.dir}/c++-examples/${build.platform}"/>
 
   <property name="test.src.dir" value="${basedir}/src/test"/>
+  <property name="test.lib.dir" value="${basedir}/src/test/lib"/>
   <property name="test.build.dir" value="${build.dir}/test"/>
   <property name="test.generated.dir" value="${test.build.dir}/src"/>
   <property name="test.build.data" value="${test.build.dir}/data"/>
@@ -148,6 +149,10 @@
     <pathelement location="${test.src.dir}"/>
     <pathelement location="${build.dir}"/>
     <pathelement location="${build.examples}"/>
+    <fileset dir="${test.lib.dir}">
+      <include name="**/*.jar" />
+      <exclude name="**/excluded/" />
+    </fileset>
     <path refid="classpath"/>
   </path>
 
