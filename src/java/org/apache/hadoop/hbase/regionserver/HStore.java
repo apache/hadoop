@@ -1307,7 +1307,7 @@ public class HStore implements HConstants {
 
   /**
    * Get the value for the indicated HStoreKey.  Grab the target value and the 
-   * previous 'numVersions-1' values, as well.
+   * previous <code>numVersions - 1</code> values, as well.
    *
    * Use {@link HConstants.ALL_VERSIONS} to retrieve all versions.
    * @param key

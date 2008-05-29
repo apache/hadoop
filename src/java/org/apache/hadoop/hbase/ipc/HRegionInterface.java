@@ -92,7 +92,7 @@ public interface HRegionInterface extends VersionedProtocol {
   public Cell[] get(final byte [] regionName, final byte [] row,
     final byte [] column, final long timestamp, final int numVersions)
   throws IOException;
-  
+
   /**
    * Get all the data for the specified row at a given timestamp
    * 
@@ -213,7 +213,7 @@ public interface HRegionInterface extends VersionedProtocol {
    * @throws IOException
    */
   public long openScanner(final byte [] regionName, final byte [][] columns,
-      final byte []startRow, long timestamp, RowFilterInterface filter)
+      final byte [] startRow, long timestamp, RowFilterInterface filter)
   throws IOException;
 
   /**

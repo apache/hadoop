@@ -69,7 +69,7 @@ public class HConnectionManager implements HConstants {
   // Note that although the Map is synchronized, the objects it contains
   // are mutable and hence require synchronized access to them
   private static final Map<String, TableServers> HBASE_INSTANCES =
-    Collections.synchronizedMap(new HashMap<String, TableServers>());
+    new ConcurrentHashMap<String, TableServers>();
 
   /**
    * Get the connection object for the instance specified by the configuration
@@ -81,9 +81,7 @@ public class HConnectionManager implements HConstants {
     TableServers connection;
     synchronized (HBASE_INSTANCES) {
       String instanceName = conf.get(HBASE_DIR);
-
       connection = HBASE_INSTANCES.get(instanceName);
-
       if (connection == null) {
         connection = new TableServers(conf);
         HBASE_INSTANCES.put(instanceName, connection);
@@ -121,11 +119,12 @@ public class HConnectionManager implements HConstants {
     private volatile HBaseConfiguration conf;
     
     // Known region HServerAddress.toString() -> HRegionInterface 
-    private Map<String, HRegionInterface> servers;
+    private final Map<String, HRegionInterface> servers =
+      new ConcurrentHashMap<String, HRegionInterface>();
 
     private HRegionLocation rootRegionLocation; 
     
-    private Map<Integer, SoftSortedMap<byte [], HRegionLocation>> 
+    private final Map<Integer, SoftSortedMap<byte [], HRegionLocation>> 
       cachedRegionLocations = Collections.synchronizedMap(
          new HashMap<Integer, SoftSortedMap<byte [], HRegionLocation>>());
     
@@ -156,7 +155,6 @@ public class HConnectionManager implements HConstants {
       
       this.master = null;
       this.masterChecked = false;
-      this.servers = new ConcurrentHashMap<String, HRegionInterface>();
     }
     
     /** {@inheritDoc} */
@@ -596,15 +594,12 @@ public class HConnectionManager implements HConstants {
     }
     
     /** {@inheritDoc} */
-    public HRegionInterface getHRegionConnection(
-      HServerAddress regionServer) 
+    public HRegionInterface getHRegionConnection(HServerAddress regionServer) 
     throws IOException {
-
       HRegionInterface server;
       synchronized (this.servers) {
         // See if we already have a connection
         server = this.servers.get(regionServer.toString());
-
         if (server == null) { // Get a connection
           long versionId = 0;
           try {
@@ -643,11 +638,8 @@ public class HConnectionManager implements HConstants {
      */
     private HRegionLocation locateRootRegion()
     throws IOException {
-    
       getMaster();
-      
       HServerAddress rootRegionAddress = null;
-      
       for (int tries = 0; tries < numRetries; tries++) {
         int localTimeouts = 0;
         
@@ -669,12 +661,12 @@ public class HConnectionManager implements HConstants {
             localTimeouts++;
           }
         }
-        
+
         if (rootRegionAddress == null) {
           throw new NoServerForRegionException(
               "Timed out trying to locate root region");
         }
-        
+
         // get a connection to the region server
         HRegionInterface server = getHRegionConnection(rootRegionAddress);
 

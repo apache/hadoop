@@ -130,10 +130,13 @@ public class TestMigrate extends HBaseTestCase {
     // created earlier when no master was around.  The fact that there was no
     // master gets cached.  Need to delete so we go get master afresh.
     HConnectionManager.deleteConnection(this.conf);
+    
     LOG.info("Start a cluster against migrated FS");
     // Up number of retries.  Needed while cluster starts up. Its been set to 1
     // above.
-    this.conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER_KEY, 3);
+    final int retries = 5;
+    this.conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER_KEY, retries);
+    
     MiniHBaseCluster cluster = new MiniHBaseCluster(this.conf, 1);
     try {
       HBaseAdmin hb = new HBaseAdmin(this.conf);
@@ -147,15 +150,11 @@ public class TestMigrate extends HBaseTestCase {
         }
       }
       assertTrue(foundTable);
-      LOG.info(TABLENAME + " exists.  Creating an HTable to go against " +
-        TABLENAME + " and master " + this.conf.get(HConstants.MASTER_ADDRESS));
+      LOG.info(TABLENAME + " exists.  Now waiting till startcode " +
+        "changes before opening a scanner");
+      waitOnStartCodeChange(retries);
       HTable t = new HTable(this.conf, TABLENAME);
       int count = 0;
-      try {
-        Thread.sleep(10000);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
       LOG.info("OPENING SCANNER");
       Scanner s = t.getScanner(TABLENAME_COLUMNS);
       try {
@@ -174,6 +173,45 @@ public class TestMigrate extends HBaseTestCase {
       }
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  /*
+   * Wait till the startcode changes before we put up a scanner.  Otherwise
+   * we tend to hang, at least on hudson and I've had it time to time on
+   * my laptop.  The hang is down in RPC Client doing its call.  It
+   * never returns though the socket has a read timeout of 60 seconds by
+   * default. St.Ack
+   * @param retries How many retries to run.
+   * @throws IOException
+   */
+  private void waitOnStartCodeChange(final int retries) throws IOException {
+    HTable m = new HTable(this.conf, HConstants.META_TABLE_NAME);
+    // This is the start code that is in the old data.
+    long oldStartCode = 1199736332062L;
+    // This is the first row for the TestTable that is in the old data.
+    byte [] row = Bytes.toBytes("TestUpgrade,,1199736362468");
+    long pause = conf.getLong("hbase.client.pause", 5 * 1000);
+    long startcode = -1;
+    boolean changed = false;
+    for (int i = 0; i < retries; i++) {
+      startcode = Writables.cellToLong(m.get(row, HConstants.COL_STARTCODE));
+      if (startcode != oldStartCode) {
+        changed = true;
+        break;
+      }
+      if ((i + 1) != retries) {
+        try {
+          Thread.sleep(pause);
+        } catch (InterruptedException e) {
+          // continue
+        }
+      }
+    }
+    // If after all attempts startcode has not changed, fail.
+    if (!changed) {
+      throw new IOException("Startcode didn't change after " + retries +
+        " attempts");
     }
   }
 
