@@ -165,12 +165,13 @@ public class Leases extends Thread {
    * Renew a lease
    * 
    * @param leaseName name of lease
+   * @throws LeaseException 
    */
-  public void renewLease(final String leaseName) {
+  public void renewLease(final String leaseName) throws LeaseException {
     synchronized (leaseQueue) {
       Lease lease = leases.get(leaseName);
       if (lease == null) {
-        throw new IllegalArgumentException("lease '" + leaseName +
+        throw new LeaseException("lease '" + leaseName +
             "' does not exist");
       }
       leaseQueue.remove(lease);
@@ -183,13 +184,13 @@ public class Leases extends Thread {
    * Client explicitly cancels a lease.
    * 
    * @param leaseName name of lease
+   * @throws LeaseException 
    */
-  public void cancelLease(final String leaseName) {
+  public void cancelLease(final String leaseName) throws LeaseException {
     synchronized (leaseQueue) {
       Lease lease = leases.remove(leaseName);
       if (lease == null) {
-        throw new IllegalArgumentException("lease '" + leaseName +
-            "' does not exist");
+        throw new LeaseException("lease '" + leaseName + "' does not exist");
       }
       leaseQueue.remove(lease);
     }

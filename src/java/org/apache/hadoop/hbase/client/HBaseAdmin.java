@@ -47,9 +47,8 @@ import org.apache.hadoop.ipc.RemoteException;
 /**
  * Provides administrative functions for HBase
  */
-public class HBaseAdmin implements HConstants {
-  protected final Log LOG = LogFactory.getLog(this.getClass().getName());
-
+public class HBaseAdmin {
+  private final Log LOG = LogFactory.getLog(this.getClass().getName());
   private final HConnection connection;
   private final long pause;
   private final int numRetries;
@@ -86,9 +85,9 @@ public class HBaseAdmin implements HConstants {
    * @return True if table exists already.
    * @throws MasterNotRunningException
    */
-  public boolean tableExists(final String tableName)
+  public boolean tableExists(final Text tableName)
   throws MasterNotRunningException {
-    return tableExists(Bytes.toBytes(tableName));
+    return tableExists(tableName.getBytes());
   }
 
   /**
@@ -96,11 +95,11 @@ public class HBaseAdmin implements HConstants {
    * @return True if table exists already.
    * @throws MasterNotRunningException
    */
-  public boolean tableExists(final Text tableName)
+  public boolean tableExists(final String tableName)
   throws MasterNotRunningException {
-    return tableExists(tableName.getBytes());
+    return tableExists(Bytes.toBytes(tableName));
   }
-  
+
   /**
    * @param tableName Table to check.
    * @return True if table exists already.
@@ -147,7 +146,7 @@ public class HBaseAdmin implements HConstants {
     for (int tries = 0; tries < numRetries; tries++) {
       try {
         // Wait for new table to come on-line
-        connection.locateRegion(desc.getName(), EMPTY_START_ROW);
+        connection.locateRegion(desc.getName(), HConstants.EMPTY_START_ROW);
         break;
         
       } catch (TableNotFoundException e) {
@@ -205,6 +204,16 @@ public class HBaseAdmin implements HConstants {
    * @param tableName name of table to delete
    * @throws IOException
    */
+  public void deleteTable(final String tableName) throws IOException {
+    deleteTable(Bytes.toBytes(tableName));
+  }
+
+  /**
+   * Deletes a table
+   * 
+   * @param tableName name of table to delete
+   * @throws IOException
+   */
   public void deleteTable(final byte [] tableName) throws IOException {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
@@ -226,14 +235,15 @@ public class HBaseAdmin implements HConstants {
       try {
         scannerId =
           server.openScanner(firstMetaServer.getRegionInfo().getRegionName(),
-            COL_REGIONINFO_ARRAY, tableName, HConstants.LATEST_TIMESTAMP, null);
+            HConstants.COL_REGIONINFO_ARRAY, tableName,
+            HConstants.LATEST_TIMESTAMP, null);
         RowResult values = server.next(scannerId);
         if (values == null || values.size() == 0) {
           break;
         }
         boolean found = false;
         for (Map.Entry<byte [], Cell> e: values.entrySet()) {
-          if (Bytes.equals(e.getKey(), COL_REGIONINFO)) {
+          if (Bytes.equals(e.getKey(), HConstants.COL_REGIONINFO)) {
             info = (HRegionInfo) Writables.getWritable(
               e.getValue().getValue(), info);
             
@@ -282,7 +292,17 @@ public class HBaseAdmin implements HConstants {
   public void enableTable(final Text tableName) throws IOException {
     enableTable(tableName.getBytes());
   }
-  
+
+  /**
+   * Brings a table on-line (enables it)
+   * 
+   * @param tableName name of the table
+   * @throws IOException
+   */
+  public void enableTable(final String tableName) throws IOException {
+    enableTable(Bytes.toBytes(tableName));
+  }
+
   /**
    * Brings a table on-line (enables it)
    * 
@@ -315,7 +335,8 @@ public class HBaseAdmin implements HConstants {
       try {
         scannerId =
           server.openScanner(firstMetaServer.getRegionInfo().getRegionName(),
-            COL_REGIONINFO_ARRAY, tableName, HConstants.LATEST_TIMESTAMP, null);
+            HConstants.COL_REGIONINFO_ARRAY, tableName,
+            HConstants.LATEST_TIMESTAMP, null);
         boolean isenabled = false;
         
         while (true) {
@@ -329,7 +350,7 @@ public class HBaseAdmin implements HConstants {
           }
           valuesfound += 1;
           for (Map.Entry<byte [], Cell> e: values.entrySet()) {
-            if (Bytes.equals(e.getKey(), COL_REGIONINFO)) {
+            if (Bytes.equals(e.getKey(), HConstants.COL_REGIONINFO)) {
               info = (HRegionInfo) Writables.getWritable(
                 e.getValue().getValue(), info);
             
@@ -391,7 +412,18 @@ public class HBaseAdmin implements HConstants {
   public void disableTable(final Text tableName) throws IOException {
     disableTable(tableName.getBytes());
   }
-  
+
+  /**
+   * Disables a table (takes it off-line) If it is being served, the master
+   * will tell the servers to stop serving it.
+   * 
+   * @param tableName name of table
+   * @throws IOException
+   */
+  public void disableTable(final String tableName) throws IOException {
+    disableTable(Bytes.toBytes(tableName));
+  }
+
   /**
    * Disables a table (takes it off-line) If it is being served, the master
    * will tell the servers to stop serving it.
@@ -423,7 +455,8 @@ public class HBaseAdmin implements HConstants {
       try {
         scannerId =
           server.openScanner(firstMetaServer.getRegionInfo().getRegionName(),
-            COL_REGIONINFO_ARRAY, tableName, HConstants.LATEST_TIMESTAMP, null);
+              HConstants.COL_REGIONINFO_ARRAY, tableName,
+              HConstants.LATEST_TIMESTAMP, null);
         boolean disabled = false;
         while (true) {
           RowResult values = server.next(scannerId);
@@ -435,7 +468,7 @@ public class HBaseAdmin implements HConstants {
           }
           valuesfound += 1;
           for (Map.Entry<byte [], Cell> e: values.entrySet()) {
-            if (Bytes.equals(e.getKey(), COL_REGIONINFO)) {
+            if (Bytes.equals(e.getKey(), HConstants.COL_REGIONINFO)) {
               info = (HRegionInfo) Writables.getWritable(
                 e.getValue().getValue(), info);
             
@@ -497,7 +530,19 @@ public class HBaseAdmin implements HConstants {
   throws IOException {
     addColumn(tableName.getBytes(), column);
   }
-  
+
+  /**
+   * Add a column to an existing table
+   * 
+   * @param tableName name of the table to add column to
+   * @param column column descriptor of column to be added
+   * @throws IOException
+   */
+  public void addColumn(final String tableName, HColumnDescriptor column)
+  throws IOException {
+    addColumn(Bytes.toBytes(tableName), column);
+  }
+
   /**
    * Add a column to an existing table
    * 
@@ -529,7 +574,19 @@ public class HBaseAdmin implements HConstants {
   throws IOException {
     deleteColumn(tableName.getBytes(), columnName.getBytes());
   }
-  
+
+  /**
+   * Delete a column from a table
+   * 
+   * @param tableName name of table
+   * @param columnName name of column to be deleted
+   * @throws IOException
+   */
+  public void deleteColumn(final String tableName, final String columnName)
+  throws IOException {
+    deleteColumn(Bytes.toBytes(tableName), Bytes.toBytes(columnName));
+  }
+
   /**
    * Delete a column from a table
    * 
@@ -563,7 +620,22 @@ public class HBaseAdmin implements HConstants {
   throws IOException {
     modifyColumn(tableName.getBytes(), columnName.getBytes(), descriptor);
   }
-  
+
+  /**
+   * Modify an existing column family on a table
+   * 
+   * @param tableName name of table
+   * @param columnName name of column to be modified
+   * @param descriptor new column descriptor to use
+   * @throws IOException
+   */
+  public void modifyColumn(final String tableName, final String columnName, 
+      HColumnDescriptor descriptor)
+  throws IOException {
+    modifyColumn(Bytes.toBytes(tableName), Bytes.toBytes(columnName),
+      descriptor);
+  }
+
   /**
    * Modify an existing column family on a table
    * 
@@ -606,8 +678,8 @@ public class HBaseAdmin implements HConstants {
 
   private HRegionLocation getFirstMetaServerForTable(final byte [] tableName)
   throws IOException {
-    return connection.locateRegion(META_TABLE_NAME,
-      HRegionInfo.createRegionName(tableName, null, NINES));
+    return connection.locateRegion(HConstants.META_TABLE_NAME,
+      HRegionInfo.createRegionName(tableName, null, HConstants.NINES));
   }
 
   /**

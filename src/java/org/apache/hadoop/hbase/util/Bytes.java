@@ -251,7 +251,19 @@ public class Bytes {
     }
     return result;
   }
-  
+
+  /**
+   * @param t
+   * @return Array of byte arrays made from passed array of Text
+   */
+  public static byte [][] toByteArrays(final String [] t) {
+    byte [][] result = new byte[t.length][];
+    for (int i = 0; i < t.length; i++) {
+      result[i] = Bytes.toBytes(t[i]);
+    }
+    return result;
+  }
+
   /**
    * @param column
    * @return A byte array of a byte array where first and only entry is

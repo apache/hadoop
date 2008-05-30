@@ -1,5 +1,5 @@
 /**
- * Copyright 2007 The Apache Software Foundation
+ * Copyright 2008 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,23 +19,18 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
 
 /**
- * Thrown if a region server is passed an unknown scanner id
+ * Subclass if exception is not meant to be retried: e.g.
+ * {@link UnknownScannerException}
  */
-public class UnknownScannerException extends DoNotRetryIOException {
-  private static final long serialVersionUID = 993179627856392526L;
-
-  /** constructor */
-  public UnknownScannerException() {
+public class DoNotRetryIOException extends IOException {
+  public DoNotRetryIOException() {
     super();
   }
 
-  /**
-   * Constructor
-   * @param s message
-   */
-  public UnknownScannerException(String s) {
-    super(s);
+  public DoNotRetryIOException(String message) {
+    super(message);
   }
 }

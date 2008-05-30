@@ -29,8 +29,11 @@ Hbase Change Log
    HBASE-646   EOFException opening HStoreFile info file (spin on HBASE-645and 550)
    HBASE-648   If mapfile index is empty, run repair
    HBASE-640   TestMigrate failing on hudson
-   HASE-651    Table.commit should throw NoSuchColumnFamilyException if column
+   HBASE-651   Table.commit should throw NoSuchColumnFamilyException if column
                family doesn't exist
+   HBASE-649   API polluted with default and protected access data members and methods
+   HBASE-650   Add String versions of get, scanner, put in HTable
+   HBASE-656   Do not retry exceptions such as unknown scanner or illegal argument
 
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

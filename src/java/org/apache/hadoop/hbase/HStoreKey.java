@@ -300,12 +300,14 @@ public class HStoreKey implements WritableComparable {
   /**
    * @param column
    * @return New byte array that holds <code>column</code> family prefix.
+   * @throws ColumnNameParseException 
    * @see #parseColumn(byte[])
    */
-  public static byte [] getFamily(final byte [] column) {
+  public static byte [] getFamily(final byte [] column)
+  throws ColumnNameParseException {
     int index = getFamilyDelimiterIndex(column);
     if (index <= 0) {
-      throw new IllegalArgumentException("No ':' delimiter between " +
+      throw new ColumnNameParseException("No ':' delimiter between " +
         "column family and qualifier in the passed column name <" +
         Bytes.toString(column) + ">");
     }
@@ -370,12 +372,14 @@ public class HStoreKey implements WritableComparable {
    * @return Return array of size two whose first element has the family
    * prefix of passed column <code>c</code> and whose second element is the
    * column qualifier.
+   * @throws ColumnNameParseException 
    */
-  public static byte [][] parseColumn(final byte [] c) {
+  public static byte [][] parseColumn(final byte [] c)
+  throws ColumnNameParseException {
     byte [][] result = new byte [2][];
     int index = getFamilyDelimiterIndex(c);
     if (index == -1) {
-      throw new IllegalArgumentException("Impossible column name: " + c);
+      throw new ColumnNameParseException("Impossible column name: " + c);
     }
     result[0] = new byte [index];
     System.arraycopy(c, 0, result[0], 0, index);

@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.LeaseException;
 import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.LeaseListener;
 import org.apache.hadoop.hbase.HConstants;
@@ -520,7 +521,14 @@ class ServerManager implements HConstants {
         master.regionManager.unassignRootRegion();
       }
       LOG.info("Cancelling lease for " + serverName);
-      serverLeases.cancelLease(serverName);
+      try {
+        serverLeases.cancelLease(serverName);
+      } catch (LeaseException e) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Cancelling " + serverName + " got " + e.getMessage() +
+            "...continuing");
+        }
+      }
       leaseCancelled = true;
 
       // update load information

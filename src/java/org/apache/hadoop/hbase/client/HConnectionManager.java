@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -731,6 +732,9 @@ public class HConnectionManager implements HConstants {
           }
           if (t instanceof RemoteException) {
             t = RemoteExceptionHandler.decodeRemoteException((RemoteException) t);
+          }
+          if (t instanceof DoNotRetryIOException) {
+            throw (DoNotRetryIOException)t;
           }
           exceptions.add(t);
           if (tries == numRetries - 1) {
