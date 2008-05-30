@@ -165,7 +165,10 @@ public abstract class Server {
     try {
       socket.bind(address, backlog);
     } catch (BindException e) {
-      throw new BindException("Problem binding to " + address);
+      BindException bindException = new BindException("Problem binding to " + address
+                                                      + " : " + e.getMessage());
+      bindException.initCause(e);
+      throw bindException;
     } catch (SocketException e) {
       // If they try to bind to a different host's address, give a better
       // error message.

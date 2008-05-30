@@ -179,6 +179,9 @@ Trunk (unreleased changes)
     datanode, now can report corrupt replicas received from src node to
     the namenode. (Lohit Vijayarenu via rangadi)
 
+    HADOOP-3434. Retain the cause of the bind failure in Server::bind.
+    (Steve Loughran via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
