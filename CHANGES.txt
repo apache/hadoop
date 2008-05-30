@@ -359,6 +359,9 @@ Trunk (unreleased changes)
 
     HADOOP-3401. Update FileBench to set the new
     "mapred.work.output.dir" property to work post-3041. (cdouglas via omalley)
+
+    HADOOP-2159 Namenode stuck in safemode. The counter blockSafe should
+    not be decremented for invalid blocks. (hairong)
  
 Release 0.17.0 - 2008-05-18
 

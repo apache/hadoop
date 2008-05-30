@@ -2926,7 +2926,6 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       return;
     }
         
-    decrementSafeBlockCount(block);
     //
     // It's possible that the block was removed because of a datanode
     // failure.  If the block is still valid, check if replication is
@@ -2935,6 +2934,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     //
     INode fileINode = blocksMap.getINode(block);
     if (fileINode != null) {
+      decrementSafeBlockCount(block);
       updateNeededReplications(block, -1, 0);
     }
 
