@@ -1,6 +1,13 @@
 Hadoop Change Log
 
 
+Release 0.17.1
+
+  BUG FIXES
+
+    HADOOP-2159 Namenode stuck in safemode. The counter blockSafe should
+    not be decremented for invalid blocks. (hairong)
+ 
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
