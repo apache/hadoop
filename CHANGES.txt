@@ -362,6 +362,8 @@ Trunk (unreleased changes)
 
     HADOOP-2159 Namenode stuck in safemode. The counter blockSafe should
     not be decremented for invalid blocks. (hairong)
+
+    HADOOP-2669. DFSClient locks pendingCreates appropriately. (dhruba)
  
 Release 0.17.0 - 2008-05-18
 

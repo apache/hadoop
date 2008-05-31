@@ -732,8 +732,10 @@ class DFSClient implements FSConstants {
       while (clientRunning) {
         if (System.currentTimeMillis() - lastRenewed > (LEASE_SOFTLIMIT_PERIOD / 2)) {
           try {
-            if (pendingCreates.size() > 0)
-              namenode.renewLease(clientName);
+            synchronized (pendingCreates) {
+              if (pendingCreates.size() > 0)
+                namenode.renewLease(clientName);
+            }
             lastRenewed = System.currentTimeMillis();
           } catch (IOException ie) {
             String err = StringUtils.stringifyException(ie);
