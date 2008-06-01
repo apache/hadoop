@@ -74,7 +74,9 @@ implements ChangedReadersObserver {
   private void openReaders(final byte [] firstRow) throws IOException {
     if (this.readers != null) {
       for (int i = 0; i < this.readers.length; i++) {
-        this.readers[i].close();
+        if (this.readers[i] != null) {
+          this.readers[i].close();
+        }
       }
     }
     // Open our own copies of the Readers here inside in the scanner.
@@ -247,7 +249,7 @@ implements ChangedReadersObserver {
    * @param firstRow seek to this row
    * @return true if this is the first row or if the row was not found
    */
-  boolean findFirstRow(int i, final byte [] firstRow) throws IOException {
+  private boolean findFirstRow(int i, final byte [] firstRow) throws IOException {
     ImmutableBytesWritable ibw = new ImmutableBytesWritable();
     HStoreKey firstKey
       = (HStoreKey)readers[i].getClosest(new HStoreKey(firstRow), ibw);
@@ -276,7 +278,7 @@ implements ChangedReadersObserver {
    * @param i which reader to fetch next value from
    * @return true if there is more data available
    */
-  boolean getNext(int i) throws IOException {
+  private boolean getNext(int i) throws IOException {
     boolean result = false;
     ImmutableBytesWritable ibw = new ImmutableBytesWritable();
     long now = System.currentTimeMillis();
@@ -302,7 +304,7 @@ implements ChangedReadersObserver {
   }
   
   /** Close down the indicated reader. */
-  void closeSubScanner(int i) {
+  private void closeSubScanner(int i) {
     try {
       if(readers[i] != null) {
         try {

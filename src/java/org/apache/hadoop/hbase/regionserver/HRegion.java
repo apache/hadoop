@@ -1009,12 +1009,17 @@ public class HRegion implements HConstants {
            this.memcacheSize.set(0);
         }
       }
-    } catch (IOException e) {
+    } catch (Throwable t) {
       // An exception here means that the snapshot was not persisted.
       // The hlog needs to be replayed so its content is restored to memcache.
       // Currently, only a server restart will do this.
+      // We used to only catch IOEs but its possible that we'd get other
+      // exceptions -- e.g. HBASE-659 was about an NPE -- so now we catch
+      // all and sundry.
       this.log.abortCacheFlush();
-      throw new DroppedSnapshotException(e.getMessage());
+      DroppedSnapshotException dse = new DroppedSnapshotException();
+      dse.initCause(t);
+      throw dse;
     }
 
     // If we get to here, the HStores have been written. If we get an
