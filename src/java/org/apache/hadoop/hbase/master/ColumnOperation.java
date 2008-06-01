@@ -20,9 +20,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
@@ -30,7 +27,6 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.util.Writables;
 
 abstract class ColumnOperation extends TableOperation {
-  private final Log LOG = LogFactory.getLog(this.getClass());
   
   protected ColumnOperation(final HMaster master, final byte [] tableName) 
   throws IOException {

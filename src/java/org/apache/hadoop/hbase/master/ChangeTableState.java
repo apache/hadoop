@@ -25,8 +25,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
@@ -35,7 +33,6 @@ import org.apache.hadoop.hbase.util.Writables;
 
 /** Instantiated to enable or disable a table */
 class ChangeTableState extends TableOperation {
-  private final Log LOG = LogFactory.getLog(this.getClass());
   private boolean online;
 
   protected final Map<String, HashSet<HRegionInfo>> servedRegions =

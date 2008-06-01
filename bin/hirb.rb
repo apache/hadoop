@@ -11,9 +11,9 @@
 
 # Run the java magic include and import basic HBase types.
 include Java
+import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.HTable
 import org.apache.hadoop.hbase.client.HBaseAdmin
-import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.HColumnDescriptor
 import org.apache.hadoop.hbase.HConstants
 import org.apache.hadoop.hbase.HTableDescriptor
@@ -30,17 +30,14 @@ def hbase
   puts ' version   Output HBase version'
 end
 
-def versionstr
-  "Version: #{org.apache.hadoop.hbase.util.VersionInfo.getVersion()},\
+def version
+  puts "Version: #{org.apache.hadoop.hbase.util.VersionInfo.getVersion()},\
  r#{org.apache.hadoop.hbase.util.VersionInfo.getRevision()},\
  #{org.apache.hadoop.hbase.util.VersionInfo.getDate()}"
-end 
-
-def version
-  puts versionstr()
 end
 
 # Output a banner message that tells users where to go for help
 # TODO: Test that we're in irb context.  For now presume it.
-puts "HBase Shell; " + versionstr()
-puts "+ Type 'hbase<RETURN>' for list of HBase commands"
+# TODO: Test that we are in shell context.
+puts "HBase Shell; type 'hbase<RETURN>' for the list of supported HBase commands"
+version

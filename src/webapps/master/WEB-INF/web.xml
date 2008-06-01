@@ -10,11 +10,6 @@ Automatically created by Tomcat JspC.
 
 
     <servlet>
-        <servlet-name>org.apache.hadoop.hbase.generated.master.loader_jsp</servlet-name>
-        <servlet-class>org.apache.hadoop.hbase.generated.master.loader_jsp</servlet-class>
-    </servlet>
-
-    <servlet>
         <servlet-name>org.apache.hadoop.hbase.generated.master.master_jsp</servlet-name>
         <servlet-class>org.apache.hadoop.hbase.generated.master.master_jsp</servlet-class>
     </servlet>
@@ -23,11 +18,6 @@ Automatically created by Tomcat JspC.
         <servlet-name>org.apache.hadoop.hbase.generated.master.table_jsp</servlet-name>
         <servlet-class>org.apache.hadoop.hbase.generated.master.table_jsp</servlet-class>
     </servlet>
-
-    <servlet-mapping>
-        <servlet-name>org.apache.hadoop.hbase.generated.master.loader_jsp</servlet-name>
-        <url-pattern>/loader.jsp</url-pattern>
-    </servlet-mapping>
 
     <servlet-mapping>
         <servlet-name>org.apache.hadoop.hbase.generated.master.master_jsp</servlet-name>

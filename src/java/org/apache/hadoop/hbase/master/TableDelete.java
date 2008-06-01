@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -35,7 +33,6 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
  * Instantiated to delete a table. Table must be offline.
  */
 class TableDelete extends TableOperation {
-  private final Log LOG = LogFactory.getLog(this.getClass());
 
   TableDelete(final HMaster master, final byte [] tableName) throws IOException {
     super(master, tableName);
