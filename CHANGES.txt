@@ -385,6 +385,9 @@ Trunk (unreleased changes)
     /bin/bash and fix the test patch to require bash instead of sh.
     (Brice Arnould via omalley)
 
+    HADOOP-3471. Fix spurious errors from TestIndexedSort and add additional
+    logging to let failures be reproducible. (cdouglas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

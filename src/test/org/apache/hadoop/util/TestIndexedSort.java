@@ -35,6 +35,7 @@ public class TestIndexedSort extends TestCase {
     private int[] valindex;
     private int[] valindirect;
     private int[] values;
+    private final long seed;
 
     public SampleSortable() {
       this(50);
@@ -42,6 +43,8 @@ public class TestIndexedSort extends TestCase {
 
     public SampleSortable(int j) {
       Random r = new Random();
+      seed = r.nextLong();
+      r.setSeed(seed);
       values = new int[j];
       valindex = new int[j];
       valindirect = new int[j];
@@ -58,6 +61,11 @@ public class TestIndexedSort extends TestCase {
       for (int i = 0; i < values.length; ++i) {
         valindex[i] = valindirect[i] = i;
       }
+      seed = 0;
+    }
+
+    public long getSeed() {
+      return seed;
     }
 
     public int compare(int i, int j) {
@@ -97,12 +105,15 @@ public class TestIndexedSort extends TestCase {
     private final byte[] bytes;
     private final WritableComparator comparator;
     private final String[] check;
+    private final long seed;
 
     public WritableSortable() throws IOException {
       this(100);
     }
 
     public WritableSortable(int j) throws IOException {
+      seed = r.nextLong();
+      r.setSeed(seed);
       Text t = new Text();
       StringBuffer sb = new StringBuffer();
       indices = new int[j];
@@ -119,6 +130,10 @@ public class TestIndexedSort extends TestCase {
       eob = dob.getLength();
       bytes = dob.getData();
       comparator = WritableComparator.get(Text.class);
+    }
+
+    public long getSeed() {
+      return seed;
     }
 
     private static void genRandom(Text t, int len, StringBuffer sb) {
@@ -174,10 +189,13 @@ public class TestIndexedSort extends TestCase {
     int[] check = s.getSorted();
     assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
         Arrays.toString(check), Arrays.equals(values, check));
+    // Set random min/max, re-sort.
     Random r = new Random();
-    int diff = r.nextInt(SAMPLE);
-    values[diff] = 9;
-    values[(diff + r.nextInt(SAMPLE >>> 1)) % SAMPLE] = 11;
+    int min = r.nextInt(SAMPLE);
+    int max = (min + 1 + r.nextInt(SAMPLE - 2)) % SAMPLE;
+    values[min] = 9;
+    values[max] = 11;
+    System.out.println("testAllEqual setting min/max at " + min + "/" + max);
     s = new SampleSortable(values);
     sorter.sort(s, 0, SAMPLE);
     check = s.getSorted();
@@ -192,6 +210,9 @@ public class TestIndexedSort extends TestCase {
     final int SAMPLE = 500;
     int[] values = new int[SAMPLE];
     Random r = new Random();
+    long seed = r.nextLong();
+    r.setSeed(seed);
+    System.out.println("testSorted seed: " + seed);
     for (int i = 0; i < SAMPLE; ++i) {
       values[i] = r.nextInt(100);
     }
@@ -222,7 +243,6 @@ public class TestIndexedSort extends TestCase {
     final int SAMPLE = 1;
     SampleSortable s = new SampleSortable(SAMPLE);
     int[] values = s.getValues();
-    Arrays.sort(values);
     IndexedSorter sorter = new QuickSort();
     sorter.sort(s, 0, SAMPLE);
     int[] check = s.getSorted();
@@ -233,6 +253,7 @@ public class TestIndexedSort extends TestCase {
   public void testQuickSort() throws Exception {
     final int SAMPLE = 100000;
     SampleSortable s = new SampleSortable(SAMPLE);
+    System.out.println("testQuickSort seed: " + s.getSeed());
     int[] values = s.getValues();
     Arrays.sort(values);
     IndexedSorter sorter = new QuickSort();
@@ -245,6 +266,7 @@ public class TestIndexedSort extends TestCase {
   public void testWritable() throws Exception {
     final int SAMPLE = 1000;
     WritableSortable s = new WritableSortable(SAMPLE);
+    System.out.println("testWritable seed: " + s.getSeed());
     String[] values = s.getValues();
     Arrays.sort(values);
     IndexedSorter sorter = new QuickSort();
