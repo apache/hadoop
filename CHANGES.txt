@@ -378,6 +378,8 @@ Trunk (unreleased changes)
     HADOOP-3410. Fix KFS implemenation to return correct file
     modification time.  (Sriram Rao via cutting)
 
+    HADOOP-3340. Fix DFS metrics for BlocksReplicated, HeartbeatsNum, and
+    BlockReportsAverageTime. (lohit vijayarenu via cdouglas)
 
 Release 0.17.0 - 2008-05-18
 

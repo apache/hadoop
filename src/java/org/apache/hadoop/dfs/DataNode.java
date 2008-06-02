@@ -778,6 +778,7 @@ public class DataNode extends Configured
     case DatanodeProtocol.DNA_TRANSFER:
       // Send a copy of a block to another datanode
       transferBlocks(bcmd.getBlocks(), bcmd.getTargets());
+      myMetrics.blocksReplicated.inc(bcmd.getBlocks().length);
       break;
     case DatanodeProtocol.DNA_INVALIDATE:
       //

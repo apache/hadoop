@@ -132,6 +132,8 @@ public class DataNodeMetrics implements Updater {
       readMetadataOp.pushMetric(metricsRecord);
       copyBlockOp.pushMetric(metricsRecord);
       replaceBlockOp.pushMetric(metricsRecord);
+      heartbeats.pushMetric(metricsRecord);
+      blockReports.pushMetric(metricsRecord);
     }
     metricsRecord.update();
   }
@@ -141,5 +143,7 @@ public class DataNodeMetrics implements Updater {
     readMetadataOp.resetMinMax();
     copyBlockOp.resetMinMax();
     replaceBlockOp.resetMinMax();
+    heartbeats.resetMinMax();
+    blockReports.resetMinMax();
   }
 }
