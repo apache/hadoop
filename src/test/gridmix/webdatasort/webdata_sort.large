@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 GRID_DIR=`dirname "$0"`
 GRID_DIR=`cd "$GRID_DIR"; pwd`

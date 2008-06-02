@@ -1137,7 +1137,7 @@
 </target>
 
 <target name="test-patch" depends="patch.check,findbugs.check,forrest.check">
-  <exec executable="sh" failonerror="true">
+  <exec executable="bash" failonerror="true">
     <arg value="${basedir}/src/test/bin/test-patch.sh"/>
     <arg value="DEVELOPER"/>
     <arg value="${patch.file}"/>

@@ -381,6 +381,10 @@ Trunk (unreleased changes)
     HADOOP-3340. Fix DFS metrics for BlocksReplicated, HeartbeatsNum, and
     BlockReportsAverageTime. (lohit vijayarenu via cdouglas)
 
+    HADOOP-3435. Remove the assuption in the scripts that bash is at
+    /bin/bash and fix the test patch to require bash instead of sh.
+    (Brice Arnould via omalley)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

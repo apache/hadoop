@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 sleep 1
 for ((java_process=$((`ps -ef|grep java|wc -l`-1)); \
