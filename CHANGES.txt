@@ -368,6 +368,9 @@ Trunk (unreleased changes)
     HADOOP-3477. Fix build to not package contrib/*/bin twice in
     distributions.  (Adam Heath via cutting)
 
+    HADOOP-3410. Fix KFS implemenation to return correct file
+    modification time.  (Sriram Rao via cutting)
+
 
 Release 0.17.0 - 2008-05-18
 

@@ -92,10 +92,7 @@ class KFSImpl implements IFSImpl {
     }
 
     public long getModificationTime(String path) throws IOException {
-        // Supporting this API requires changes to the Java-side of
-        // the KFS client API.  For now, return 0; in the next rev of
-        // KFS, we'll update the Java API.
-        return 0;
+        return kfsAccess.kfs_getModificationTime(path);
     }
 
     public FSDataOutputStream create(String path, short replication, int bufferSize) throws IOException {
