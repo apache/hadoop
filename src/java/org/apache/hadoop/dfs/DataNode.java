@@ -19,7 +19,6 @@ package org.apache.hadoop.dfs;
 
 import org.apache.commons.logging.*;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -80,7 +79,8 @@ import java.security.SecureRandom;
  * information to clients or other DataNodes that might be interested.
  *
  **********************************************************/
-public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
+public class DataNode extends Configured 
+    implements InterDatanodeProtocol, ClientDatanodeProtocol, FSConstants, Runnable {
   public static final Log LOG = LogFactory.getLog("org.apache.hadoop.dfs.DataNode");
 
   /**
@@ -178,7 +178,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
    */
   DataNode(Configuration conf, 
            AbstractList<File> dataDirs) throws IOException {
-      
+    super(conf);
     datanodeObject = this;
 
     try {
@@ -772,12 +772,11 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
   private boolean processCommand(DatanodeCommand cmd) throws IOException {
     if (cmd == null)
       return true;
+    final BlockCommand bcmd = cmd instanceof BlockCommand? (BlockCommand)cmd: null;
+
     switch(cmd.getAction()) {
     case DatanodeProtocol.DNA_TRANSFER:
-      //
       // Send a copy of a block to another datanode
-      //
-      BlockCommand bcmd = (BlockCommand)cmd;
       transferBlocks(bcmd.getBlocks(), bcmd.getTargets());
       break;
     case DatanodeProtocol.DNA_INVALIDATE:
@@ -785,7 +784,7 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
       // Some local block(s) are obsolete and can be 
       // safely garbage-collected.
       //
-      Block toDelete[] = ((BlockCommand)cmd).getBlocks();
+      Block toDelete[] = bcmd.getBlocks();
       try {
         if (blockScanner != null) {
           blockScanner.deleteBlocks(toDelete);
@@ -820,6 +819,9 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
         // random short delay - helps scatter the BR from all DNs
         scheduleBlockReport(initialBlockReportDelay);
       }
+      break;
+    case DatanodeProtocol.DNA_RECOVERBLOCK:
+      recoverBlocks(bcmd.getBlocks(), bcmd.getTargets());
       break;
     default:
       LOG.warn("Unknown DatanodeCommand action: " + cmd.getAction());
@@ -3046,16 +3048,27 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
     if (LOG.isDebugEnabled()) {
       LOG.debug("block=" + block);
     }
-    return BlockMetaDataInfo.getBlockMetaDataInfo(block, data, blockScanner);
+    Block stored = data.getStoredBlock(block.blkid);
+    return stored == null?
+        null: new BlockMetaDataInfo(stored, blockScanner.getLastScanTime(stored));
+  }
+
+  Daemon recoverBlocks(final Block[] blocks, final DatanodeInfo[][] targets) {
+    Daemon d = new Daemon(threadGroup, new Runnable() {
+      public void run() {
+        LeaseManager.recoverBlocks(blocks, targets, namenode, getConf());
+      }
+    });
+    d.start();
+    return d;
   }
 
   /** {@inheritDoc} */
-  public boolean updateGenerationStamp(Block block, GenerationStamp generationstamp) {
+  public void updateBlock(Block oldblock, Block newblock) throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("block=" + block + ", generationstamp=" + generationstamp);
+      LOG.debug("oldblock=" + oldblock + ", newblock=" + newblock);
     }
-    //TODO: update generation stamp here
-    return false;
+    data.updateBlock(oldblock, newblock);
   }
 
   /** {@inheritDoc} */
@@ -3063,8 +3076,21 @@ public class DataNode implements InterDatanodeProtocol, FSConstants, Runnable {
       ) throws IOException {
     if (protocol.equals(InterDatanodeProtocol.class.getName())) {
       return InterDatanodeProtocol.versionID; 
-    } else {
-      throw new IOException("Unknown protocol to name node: " + protocol);
+    } else if (protocol.equals(ClientDatanodeProtocol.class.getName())) {
+      return ClientDatanodeProtocol.versionID; 
     }
+    throw new IOException("Unknown protocol to " + getClass().getSimpleName()
+        + ": " + protocol);
+  }
+
+  // ClientDataNodeProtocol implementation
+  /** {@inheritDoc} */
+  public Block recoverBlock(Block block, DatanodeInfo[] targets
+      ) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("recoverBlock for block " + block);
+    }
+    return LeaseManager.recoverBlock(block, targets, namenode, 
+                                     getConf(), false);
   }
 }

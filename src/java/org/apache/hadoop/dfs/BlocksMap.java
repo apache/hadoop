@@ -138,6 +138,23 @@ class BlocksMap {
       return 0;
     }
 
+    /** Update this object */
+    void update(long newgenerationstamp, long newlength,
+        DatanodeDescriptor[] newtargets) {
+      //remove all nodes  
+      for(int n = numNodes(); n >= 0; ) {
+        removeNode(--n);
+      }
+
+      //add all targets  
+      for(DatanodeDescriptor d : newtargets) {
+        addNode(d);
+      }
+
+      generationStamp = newgenerationstamp;
+      len = newlength;
+    }
+
     /**
      * Add data-node this block belongs to.
      */
@@ -156,7 +173,11 @@ class BlocksMap {
      * Remove data-node from the block.
      */
     boolean removeNode(DatanodeDescriptor node) {
-      int dnIndex = this.findDatanode(node);
+      return removeNode(findDatanode(node));
+    }
+
+    /** Remove the indexed datanode from the block. */
+    boolean removeNode(int dnIndex) {
       if(dnIndex < 0) // the node is not found
         return false;
       assert getPrevious(dnIndex) == null && getNext(dnIndex) == null : 

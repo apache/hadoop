@@ -32,25 +32,16 @@ class BlockMetaDataInfo extends Block {
     WritableFactories.setFactory(BlockMetaDataInfo.class, FACTORY);
   }
 
-  /** get BlockMetaDataInfo from the data set and the block scanner */
-  static BlockMetaDataInfo getBlockMetaDataInfo(Block b,
-      FSDatasetInterface dataset, DataBlockScanner blockscanner
-      ) throws IOException {
-    BlockMetaDataInfo info = new BlockMetaDataInfo();
-    info.blkid = b.getBlockId();
-    info.lastScanTime = blockscanner.getLastScanTime(b);
-    info.len = dataset.getLength(b);
-    //TODO: get generation stamp here
-    return info;
-  }
-
   private long lastScanTime;
 
   public BlockMetaDataInfo() {}
 
-  long getLastScanTime() {return lastScanTime;}
+  BlockMetaDataInfo(Block b, long lastScanTime) {
+    super(b);
+    this.lastScanTime = lastScanTime;
+  }
 
-  long getGenerationStamp() {return generationStamp;}
+  long getLastScanTime() {return lastScanTime;}
 
   /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {

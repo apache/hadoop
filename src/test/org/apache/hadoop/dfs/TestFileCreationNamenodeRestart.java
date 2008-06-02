@@ -15,32 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.dfs;
 
-import java.io.IOException;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.ipc.VersionedProtocol;
-
-/** An inter-datanode protocol for updating generation stamp
- */
-interface InterDatanodeProtocol extends VersionedProtocol {
-  public static final Log LOG = LogFactory.getLog(InterDatanodeProtocol.class);
-
-  /**
-   * 2: change updateGenerationStamp to updataBlock
-   */
-  public static final long versionID = 2L;
-
-  /** @return the BlockMetaDataInfo of a block;
-   *  null if the block is not found 
-   */
-  BlockMetaDataInfo getBlockMetaDataInfo(Block block) throws IOException;
-
-  /**
-   * Update the block to the new generation stamp and length.  
-   */
-  void updateBlock(Block oldblock, Block newblock) throws IOException;
+public class TestFileCreationNamenodeRestart extends junit.framework.TestCase {
+  public void testFileCreationNamenodeRestart() throws Exception {
+    new TestFileCreation().xxxtestFileCreationNamenodeRestart();
+  }
 }

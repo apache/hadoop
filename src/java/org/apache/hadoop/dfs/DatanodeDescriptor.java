@@ -18,12 +18,10 @@
 package org.apache.hadoop.dfs;
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.*;
 
 import org.apache.hadoop.dfs.BlocksMap.BlockInfo;
-import org.apache.hadoop.dfs.DatanodeInfo.AdminStates;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.WritableUtils;
@@ -40,28 +38,63 @@ import org.apache.hadoop.io.WritableUtils;
 
  **************************************************/
 public class DatanodeDescriptor extends DatanodeInfo {
+  /** Block and targets pair */
+  static class BlockTargetPair {
+    final Block block;
+    final DatanodeDescriptor[] targets;    
+
+    BlockTargetPair(Block block, DatanodeDescriptor[] targets) {
+      this.block = block;
+      this.targets = targets;
+    }
+  }
+
+  /** A BlockTargetPair queue. */
+  private static class BlockQueue {
+    private final Queue<BlockTargetPair> blockq = new LinkedList<BlockTargetPair>();
+
+    /** Size of the queue */
+    synchronized int size() {return blockq.size();}
+
+    /** Enqueue */
+    synchronized boolean offer(Block block, DatanodeDescriptor[] targets) { 
+      return blockq.offer(new BlockTargetPair(block, targets));
+    }
+
+    /** Dequeue */
+    synchronized List<BlockTargetPair> poll(int numTargets) {
+      if (numTargets <= 0 || blockq.isEmpty()) {
+        return null;
+      }
+      else {
+        List<BlockTargetPair> results = new ArrayList<BlockTargetPair>();
+        for(; !blockq.isEmpty() && numTargets > 0; ) {
+          numTargets -= blockq.peek().targets.length; 
+          if (numTargets >= 0) {
+            results.add(blockq.poll());
+          }
+        }
+        return results;
+      }
+    }
+  }
 
   private volatile BlockInfo blockList = null;
   // isAlive == heartbeats.contains(this)
   // This is an optimization, because contains takes O(n) time on Arraylist
   protected boolean isAlive = false;
 
-  //
-  // List of blocks to be replicated by this datanode
-  // Also, a list of datanodes per block to indicate the target
-  // datanode of this replication.
-  //
-  List<Block> replicateBlocks;
-  List<DatanodeDescriptor[]> replicateTargetSets;
-  Set<Block> invalidateBlocks;
-  boolean processedBlockReport = false;
+  /** A queue of blocks to be replicated by this datanode */
+  private BlockQueue replicateBlocks = new BlockQueue();
+  /** A queue of blocks to be recovered by this datanode */
+  private BlockQueue recoverBlocks = new BlockQueue();
+  /** A set of blocks to be invalidated by this datanode */
+  private Set<Block> invalidateBlocks = new TreeSet<Block>();
 
+  boolean processedBlockReport = false;
   
   /** Default constructor */
-  public DatanodeDescriptor() {
-    super();
-    initWorkLists();
-  }
+  public DatanodeDescriptor() {}
   
   /** DatanodeDescriptor constructor
    * @param nodeID id of the data node
@@ -107,7 +140,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
                             int xceiverCount) {
     super(nodeID);
     updateHeartbeat(capacity, dfsUsed, remaining, xceiverCount);
-    initWorkLists();
   }
 
   /** DatanodeDescriptor constructor
@@ -128,16 +160,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
                             int xceiverCount) {
     super(nodeID, networkLocation, hostName);
     updateHeartbeat(capacity, dfsUsed, remaining, xceiverCount);
-    initWorkLists();
-  }
-
-  /*
-   * initialize list of blocks that store work for the datanodes
-   */
-  private void initWorkLists() {
-    replicateBlocks = new ArrayList<Block>();
-    replicateTargetSets = new ArrayList<DatanodeDescriptor[]>();
-    invalidateBlocks = new TreeSet<Block>();
   }
 
   /**
@@ -227,10 +249,15 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   void addBlockToBeReplicated(Block block, DatanodeDescriptor[] targets) {
     assert(block != null && targets != null && targets.length > 0);
-    synchronized (replicateBlocks) {
-      replicateBlocks.add(block);
-      replicateTargetSets.add(targets);
-    }
+    replicateBlocks.offer(block, targets);
+  }
+
+  /**
+   * Store block recovery work.
+   */
+  void addBlockToBeRecovered(Block block, DatanodeDescriptor[] targets) {
+    assert(block != null && targets != null && targets.length > 0);
+    recoverBlocks.offer(block, targets);
   }
 
   /**
@@ -245,16 +272,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
 
-  /*
+  /**
    * The number of work items that are pending to be replicated
    */
   int getNumberOfBlocksToBeReplicated() {
-    synchronized (replicateBlocks) {
-      return replicateBlocks.size();
-    }
+    return replicateBlocks.size();
   }
 
-  /*
+  /**
    * The number of block invalidation items that are pending to 
    * be sent to the datanode
    */
@@ -279,36 +304,16 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return processedBlockReport;
   }
 
-  /**
-   * Remove the specified number of target sets
-   */
-  BlockCommand getReplicationCommand(int maxNumTransfers) {
-    synchronized (replicateBlocks) {
-      assert(replicateBlocks.size() == replicateTargetSets.size());
+  BlockCommand getReplicationCommand(int maxTransfers) {
+    List<BlockTargetPair> blocktargetlist = replicateBlocks.poll(maxTransfers);
+    return blocktargetlist == null? null:
+        new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blocktargetlist);
+  }
 
-      if (maxNumTransfers <= 0 || replicateBlocks.size() == 0) {
-        return null;
-      }
-      int numTransfers = 0;
-      int numBlocks = 0;
-      int i;
-      for (i = 0; i < replicateTargetSets.size() && 
-             numTransfers < maxNumTransfers; i++) {
-        numTransfers += replicateTargetSets.get(i).length;
-      }
-      numBlocks = i;
-      Block[] blocklist = new Block[numBlocks];
-      DatanodeDescriptor targets[][] = new DatanodeDescriptor[numBlocks][];
-
-      for (i = 0; i < numBlocks; i++) {
-        blocklist[i] = replicateBlocks.get(0);
-        targets[i] = replicateTargetSets.get(0);
-        replicateBlocks.remove(0);
-        replicateTargetSets.remove(0);
-      }
-      assert(blocklist.length > 0 && targets.length > 0);
-      return new BlockCommand(blocklist, targets);
-    }
+  BlockCommand getLeaseRecoveryCommand(int maxTransfers) {
+    List<BlockTargetPair> blocktargetlist = recoverBlocks.poll(maxTransfers);
+    return blocktargetlist == null? null:
+        new BlockCommand(DatanodeProtocol.DNA_RECOVERBLOCK, blocktargetlist);
   }
 
   /**

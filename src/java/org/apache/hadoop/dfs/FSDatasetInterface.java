@@ -89,7 +89,12 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @throws IOException
    */
   public long getLength(Block b) throws IOException;
-     
+
+  /**
+   * @return the generation stamp stored with the block.
+   */
+  public Block getStoredBlock(long blkid) throws IOException;
+
   /**
    * Returns an input stream to read the contents of the specified block
    * @param b
@@ -135,6 +140,11 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    */
   public BlockWriteStreams writeToBlock(Block b, boolean isRecovery) throws IOException;
 
+  /**
+   * Update the block to the new generation stamp and length.  
+   */
+  public void updateBlock(Block oldblock, Block newblock) throws IOException;
+  
   /**
    * Finalizes the block previously opened for writing using writeToBlock.
    * The block size is what is in the parameter b and it must match the amount

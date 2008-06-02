@@ -32,6 +32,7 @@ import org.apache.hadoop.io.WritableComparable;
  * 
  */
 public class DatanodeID implements WritableComparable {
+  static final DatanodeID[] EMPTY_ARRAY = {}; 
 
   protected String name;      /// hostname:portNumber
   protected String storageID; /// unique per cluster storageID

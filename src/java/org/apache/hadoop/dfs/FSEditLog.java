@@ -527,7 +527,7 @@ class FSEditLog {
                                         clientMachine, 
                                         null);
               fsDir.replaceNode(path, node, cons);
-              fsNamesys.leaseManager.addLease(path, clientName);
+              fsNamesys.leaseManager.addLease(cons.clientName, path);
             } else if (opcode == OP_CLOSE) {
               //
               // Remove lease if it exists.
@@ -535,7 +535,7 @@ class FSEditLog {
               if (old.isUnderConstruction()) {
                 INodeFileUnderConstruction cons = (INodeFileUnderConstruction)
                                                      old;
-                fsNamesys.leaseManager.removeLease(path, cons.getClientName());
+                fsNamesys.leaseManager.removeLease(cons.clientName, path);
               }
             }
             break;
@@ -573,7 +573,7 @@ class FSEditLog {
             old = fsDir.unprotectedDelete(path, timestamp, null);
             if (old != null && old.isUnderConstruction()) {
               INodeFileUnderConstruction cons = (INodeFileUnderConstruction)old;
-              fsNamesys.leaseManager.removeLease(path, cons.getClientName());
+              fsNamesys.leaseManager.removeLease(cons.clientName, path);
             }
             break;
           }

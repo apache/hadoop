@@ -25,7 +25,7 @@ import org.apache.hadoop.io.*;
  * long.
  *
  **************************************************/
-class Block implements Writable, Comparable {
+class Block implements Writable, Comparable<Block> {
 
   static {                                      // register a ctor
     WritableFactories.setFactory
@@ -51,43 +51,29 @@ class Block implements Writable, Comparable {
     }
   }
 
+  static long filename2id(String name) {
+    return Long.parseLong(name.substring("blk_".length()));
+  }
+
   long blkid;
   long len;
   long generationStamp;
 
-  /**
-   */
-  public Block() {
-    this.blkid = 0;
-    this.len = 0;
-    this.generationStamp = 0;
+  Block() {this(0, 0, 0);}
+
+  Block(final long blkid, final long len, final long generationStamp) {
+    set(blkid, len, generationStamp);
   }
 
-  /**
-   */
-  public Block(final long blkid, final long len, final long generationStamp) {
-    this.blkid = blkid;
-    this.len = len;
-    this.generationStamp = generationStamp;
-  }
+  Block(final long blkid) {this(blkid, 0, GenerationStamp.WILDCARD_STAMP);}
 
-  /**
-   */
-  public Block(Block blk) {
-    this.blkid = blk.blkid;
-    this.len = blk.len;
-    this.generationStamp = blk.generationStamp;
-  }
+  Block(Block blk) {this(blk.blkid, blk.len, blk.generationStamp);}
 
   /**
    * Find the blockid from the given filename
    */
   public Block(File f, long len, long genstamp) {
-    String name = f.getName();
-    name = name.substring("blk_".length());
-    this.blkid = Long.parseLong(name);
-    this.len = len;
-    this.generationStamp = genstamp;
+    this(filename2id(f.getName()), len, genstamp);
   }
 
   public void set(long blkid, long len, long genStamp) {
@@ -147,31 +133,43 @@ class Block implements Writable, Comparable {
   /////////////////////////////////////
   // Comparable
   /////////////////////////////////////
-  public int compareTo(Object o) {
-    Block b = (Block) o;
+  static void validateGenerationStamp(long generationstamp) {
+    if (generationstamp == GenerationStamp.WILDCARD_STAMP) {
+      throw new IllegalStateException("generationStamp (=" + generationstamp
+          + ") == GenerationStamp.WILDCARD_STAMP");
+    }    
+  }
+
+  /** {@inheritDoc} */
+  public int compareTo(Block b) {
+    //Wildcard generationStamp is NOT ALLOWED here
+    validateGenerationStamp(this.generationStamp);
+    validateGenerationStamp(b.generationStamp);
+
     if (blkid < b.blkid) {
       return -1;
     } else if (blkid == b.blkid) {
-      if (generationStamp < b.generationStamp) {
-        return -1;
-      } else if (generationStamp == b.generationStamp) {
-        return 0;
-      } else {
-        return 1;
-      }
+      return GenerationStamp.compare(generationStamp, b.generationStamp);
     } else {
       return 1;
     }
   }
+
+  /** {@inheritDoc} */
   public boolean equals(Object o) {
     if (!(o instanceof Block)) {
       return false;
     }
-    return blkid == ((Block)o).blkid &&
-           generationStamp == ((Block)o).generationStamp;
+    final Block that = (Block)o;
+    //Wildcard generationStamp is ALLOWED here
+    return this.blkid == that.blkid
+      && GenerationStamp.equalsWithWildcard(
+          this.generationStamp, that.generationStamp);
   }
-    
+
+  /** {@inheritDoc} */
   public int hashCode() {
+    //GenerationStamp is IRRELEVANT and should not be used here
     return 37 * 17 + (int) (blkid^(blkid>>>32));
   }
 }

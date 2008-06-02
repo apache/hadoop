@@ -288,6 +288,20 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     myMetrics.numFilesCreated.inc();
   }
 
+  /** Coming in a future release.... */
+  void append(String src, String clientName) throws IOException {
+    String clientMachine = getClientMachine();
+    if (stateChangeLog.isDebugEnabled()) {
+      stateChangeLog.debug("*DIR* NameNode.append: file "
+          +src+" for "+clientName+" at "+clientMachine);
+    }
+    //TODO: add namesystem.appendFile(...), which calls appendFileInternal(...)
+    namesystem.appendFileInternal(src, clientName, clientMachine);
+
+    //TODO: inc myMetrics;
+  }
+
+  /** {@inheritDoc} */
   public boolean setReplication(String src, 
                                 short replication
                                 ) throws IOException {
@@ -358,6 +372,20 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     }
   }
 
+  /** {@inheritDoc} */
+  public long nextGenerationStamp() {
+    return namesystem.nextGenerationStamp();
+  }
+
+  /** {@inheritDoc} */
+  public void commitBlockSynchronization(Block block,
+      long newgenerationstamp, long newlength,
+      boolean closeFile, boolean deleteblock, DatanodeID[] newtargets
+      ) throws IOException {
+    namesystem.commitBlockSynchronization(block,
+        newgenerationstamp, newlength, closeFile, deleteblock, newtargets);
+  }
+  
   public long getPreferredBlockSize(String filename) throws IOException {
     return namesystem.getPreferredBlockSize(filename);
   }

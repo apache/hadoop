@@ -546,6 +546,11 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       }
       threads.add(Thread.currentThread());
     }
+    
+    public String toString() {
+      return getClass().getSimpleName() + "(file=" + file
+          + ", threads=" + threads + ")";
+    }
   } 
   
   static File getMetaFile(File f , Block b) {
@@ -553,9 +558,75 @@ class FSDataset implements FSConstants, FSDatasetInterface {
                      "_" + b.getGenerationStamp() + METADATA_EXTENSION ); 
   }
   protected File getMetaFile(Block b) throws IOException {
-    File blockFile = getBlockFile( b );
-    return new File( blockFile.getAbsolutePath() + 
-                     "_" + b.getGenerationStamp() + METADATA_EXTENSION ); 
+    return getMetaFile(getBlockFile(b), b);
+  }
+
+  /** Find the corresponding meta data file from a given block file */
+  private static File findMetaFile(final File blockFile) throws IOException {
+    final String prefix = blockFile.getName() + "_";
+    final File parent = blockFile.getParentFile();
+    File[] matches = parent.listFiles(new FilenameFilter() {
+      public boolean accept(File dir, String name) {
+        return dir.equals(parent)
+            && name.startsWith(prefix) && name.endsWith(METADATA_EXTENSION);
+      }
+    });
+
+    if (matches == null || matches.length == 0) {
+      throw new IOException("Meta file not found, blockFile=" + blockFile);
+    }
+    else if (matches.length > 1) {
+      throw new IOException("Found more than one meta files: " 
+          + Arrays.asList(matches));
+    }
+    return matches[0];
+  }
+  
+  /** Find the corresponding meta data file from a given block file */
+  private static long parseGenerationStamp(File blockFile, File metaFile
+      ) throws IOException {
+    String metaname = metaFile.getName();
+    String gs = metaname.substring(blockFile.getName().length() + 1,
+        metaname.length() - METADATA_EXTENSION.length());
+    try {
+      return Long.parseLong(gs);
+    } catch(NumberFormatException nfe) {
+      throw (IOException)new IOException("blockFile=" + blockFile
+          + ", metaFile=" + metaFile).initCause(nfe);
+    }
+  }
+
+  File findBlockFile(Block b) {
+    assert b.generationStamp == GenerationStamp.WILDCARD_STAMP;
+
+    File blockfile = null;
+    ActiveFile activefile = ongoingCreates.get(b);
+    if (activefile != null) {
+      blockfile = activefile.file;
+    }
+    if (blockfile == null) {
+      blockfile = getFile(b);
+    }
+    if (blockfile == null) {
+      if (DataNode.LOG.isDebugEnabled()) {
+        DataNode.LOG.debug("ongoingCreates=" + ongoingCreates);
+        DataNode.LOG.debug("volumeMap=" + volumeMap);
+      }
+    }
+    return blockfile;
+  }
+
+  /** {@inheritDoc} */
+  public Block getStoredBlock(long blkid) throws IOException {
+    Block b = new Block(blkid);
+    File blockfile = findBlockFile(b);
+    if (blockfile == null) {
+      return null;
+    }
+    File metafile = findMetaFile(blockfile);
+    b.generationStamp = parseGenerationStamp(blockfile, metafile);
+    b.len = blockfile.length();
+    return b;
   }
 
   public boolean metaFileExists(Block b) throws IOException {
@@ -624,11 +695,7 @@ class FSDataset implements FSConstants, FSDatasetInterface {
    * Find the block's on-disk length
    */
   public long getLength(Block b) throws IOException {
-    File f = validateBlockFile(b);
-    if(f == null) {
-      throw new IOException("Block " + b + " is not valid.");
-    }
-    return f.length();
+    return getBlockFile(b).length();
   }
 
   /**
@@ -637,6 +704,9 @@ class FSDataset implements FSConstants, FSDatasetInterface {
   protected synchronized File getBlockFile(Block b) throws IOException {
     File f = validateBlockFile(b);
     if(f == null) {
+      if (InterDatanodeProtocol.LOG.isDebugEnabled()) {
+        InterDatanodeProtocol.LOG.debug("b=" + b + ", volumeMap=" + volumeMap);
+      }
       throw new IOException("Block " + b + " is not valid.");
     }
     return f;
@@ -678,6 +748,126 @@ class FSDataset implements FSConstants, FSDatasetInterface {
       info = volumeMap.get(block);
     }
     return info.detachBlock(block, numLinks);
+  }
+
+  static private <T> void updateBlockMap(Map<Block, T> blockmap,
+      Block oldblock, Block newblock) throws IOException {
+    if (blockmap.containsKey(oldblock)) {
+      T value = blockmap.remove(oldblock);
+      blockmap.put(newblock, value);
+    }
+  }
+
+  /** interrupt and wait for all ongoing create threads */
+  private synchronized void interruptOngoingCreates(Block b) {
+    //remove ongoingCreates threads
+    ActiveFile activefile = ongoingCreates.get(b);
+    if (activefile != null) {
+      for(Thread t : activefile.threads) {
+        t.interrupt();
+      }
+      for(Thread t : activefile.threads) {
+        try {
+          t.join();
+        } catch (InterruptedException e) {
+          DataNode.LOG.warn("interruptOngoingCreates: b=" + b
+              + ", activeFile=" + activefile + ", t=" + t, e);
+        }
+      }
+      activefile.threads.clear();
+    }
+  }
+  /** {@inheritDoc} */
+  public synchronized void updateBlock(Block oldblock, Block newblock
+      ) throws IOException {
+    if (oldblock.getBlockId() != newblock.getBlockId()) {
+      throw new IOException("Cannot update oldblock (=" + oldblock
+          + ") to newblock (=" + newblock + ").");
+    }
+
+    File blockFile = findBlockFile(oldblock);
+    interruptOngoingCreates(oldblock);
+    
+    File oldMetaFile = getMetaFile(blockFile, oldblock);
+    long oldgs = parseGenerationStamp(blockFile, oldMetaFile);
+    
+    //rename meta file to a tmp file
+    File tmpMetaFile = new File(oldMetaFile.getParent(),
+        oldMetaFile.getName()+"_tmp");
+    if (!oldMetaFile.renameTo(tmpMetaFile)){
+      throw new IOException("Cannot rename block meta file to " + tmpMetaFile);
+    }
+
+    //update generation stamp
+    if (oldgs > newblock.generationStamp) {
+      throw new IOException("Cannot update block (id=" + newblock.blkid
+          + ") generation stamp from " + oldgs
+          + " to " + newblock.generationStamp);
+    }
+    
+    //update length
+    if (newblock.len > oldblock.len) {
+      throw new IOException("Cannot update block file (=" + blockFile
+          + ") length from " + oldblock.len + " to " + newblock.len);
+    }
+    if (newblock.len < oldblock.len) {
+      truncateBlock(blockFile, tmpMetaFile, oldblock.len, newblock.len);
+    }
+
+    //rename the tmp file to the new meta file (with new generation stamp)
+    File newMetaFile = getMetaFile(blockFile, newblock);
+    if (!tmpMetaFile.renameTo(newMetaFile)) {
+      throw new IOException("Cannot rename tmp meta file to " + newMetaFile);
+    }
+
+    updateBlockMap(ongoingCreates, oldblock, newblock);
+    updateBlockMap(volumeMap, oldblock, newblock);
+  }
+
+  static private void truncateBlock(File blockFile, File metaFile,
+      long oldlen, long newlen) throws IOException {
+    if (newlen == oldlen) {
+      return;
+    }
+    if (newlen > oldlen) {
+      throw new IOException("Cannout truncate block to from oldlen (=" + oldlen
+          + ") to newlen (=" + newlen + ")");
+    }
+
+    DataChecksum dcs = BlockMetadataHeader.readHeader(metaFile).getChecksum(); 
+    int checksumsize = dcs.getChecksumSize();
+    int bpc = dcs.getBytesPerChecksum();
+    long n = (newlen - 1)/bpc + 1;
+    long newmetalen = BlockMetadataHeader.getHeaderSize() + n*checksumsize;
+    long lastchunkoffset = (n - 1)*bpc;
+    int lastchunksize = (int)(newlen - lastchunkoffset); 
+    byte[] b = new byte[Math.max(lastchunksize, checksumsize)]; 
+
+    RandomAccessFile blockRAF = new RandomAccessFile(blockFile, "rw");
+    try {
+      //truncate blockFile 
+      blockRAF.setLength(newlen);
+ 
+      //read last chunk
+      blockRAF.seek(lastchunkoffset);
+      blockRAF.readFully(b, 0, lastchunksize);
+    } finally {
+      blockRAF.close();
+    }
+
+    //compute checksum
+    dcs.update(b, 0, lastchunksize);
+    dcs.writeValue(b, 0, false);
+
+    //update metaFile 
+    RandomAccessFile metaRAF = new RandomAccessFile(metaFile, "rw");
+    try {
+      metaRAF.setLength(newmetalen);
+      metaRAF.seek(newmetalen - checksumsize);
+      metaRAF.write(b, 0, checksumsize);
+    } finally {
+      metaRAF.close();
+    }
   }
 
   /**
@@ -880,6 +1070,9 @@ class FSDataset implements FSConstants, FSDatasetInterface {
     File f = getFile(b);
     if(f != null && f.exists())
       return f;
+    if (InterDatanodeProtocol.LOG.isDebugEnabled()) {
+      InterDatanodeProtocol.LOG.debug("b=" + b + ", f=" + f);
+    }
     return null;
   }
 
@@ -1019,13 +1212,5 @@ class FSDataset implements FSConstants, FSDatasetInterface {
 
   public String getStorageInfo() {
     return toString();
-  }
-  
-  /**
-   *  A duplicate of {@link #getLength()}
-   */
-  @Deprecated
-  public long getBlockSize(Block b) {
-    return getFile(b).length();
   }
 }

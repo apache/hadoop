@@ -46,6 +46,15 @@ class StringBytesWritable extends BytesWritable {
     return new String(get(),"UTF8");
   }
 
+  /** {@inheritDoc} */
+  public String toString() {
+    try {
+      return getString();
+    } catch (IOException e) {
+      throw (RuntimeException)new RuntimeException().initCause(e);
+    }
+  }
+
   /**
    * Compare to a String.
    */

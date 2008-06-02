@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.dfs;
 
 import java.io.IOException;
@@ -24,23 +23,23 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ipc.VersionedProtocol;
 
-/** An inter-datanode protocol for updating generation stamp
+/** An client-datanode protocol for block recovery
  */
-interface InterDatanodeProtocol extends VersionedProtocol {
-  public static final Log LOG = LogFactory.getLog(InterDatanodeProtocol.class);
+interface ClientDatanodeProtocol extends VersionedProtocol {
+  public static final Log LOG = LogFactory.getLog(ClientDatanodeProtocol.class);
 
   /**
-   * 2: change updateGenerationStamp to updataBlock
+   * 1: start of time
    */
-  public static final long versionID = 2L;
+  public static final long versionID = 1L;
 
-  /** @return the BlockMetaDataInfo of a block;
-   *  null if the block is not found 
+  /** Start generation-stamp recovery for specified block
+   * @param block the specified block
+   * @param DatanodeInfo the list of possible locations of specified block
+   * @return the new blockid if recovery successful and the generation stamp
+   * got updated as part of the recovery, else returns null if the block id
+   * not have any data and the block was deleted.
+   * @throws IOException
    */
-  BlockMetaDataInfo getBlockMetaDataInfo(Block block) throws IOException;
-
-  /**
-   * Update the block to the new generation stamp and length.  
-   */
-  void updateBlock(Block oldblock, Block newblock) throws IOException;
+  Block recoverBlock(Block block, DatanodeInfo[] targets) throws IOException;
 }

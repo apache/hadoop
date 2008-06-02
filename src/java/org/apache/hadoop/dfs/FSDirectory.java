@@ -127,7 +127,7 @@ class FSDirectory implements FSConstants {
   /**
    * Add the given filename to the fs.
    */
-  INode addFile(String path, 
+  INodeFileUnderConstruction addFile(String path, 
                 PermissionStatus permissions,
                 short replication,
                 long preferredBlockSize,
@@ -166,7 +166,6 @@ class FSDirectory implements FSConstants {
     }
     // add create file record to log, record new generation stamp
     fsImage.getEditLog().logOpenFile(path, newNode);
-    fsImage.getEditLog().logGenerationStamp(generationStamp);
 
     NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
                                   +path+" is added to the file system");
@@ -287,13 +286,14 @@ class FSDirectory implements FSConstants {
    */
   void closeFile(String path, INodeFile file) throws IOException {
     waitForReady();
-
     synchronized (rootDir) {
       // file is closed
       fsImage.getEditLog().logCloseFile(path, file);
-      NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
+      if (NameNode.stateChangeLog.isDebugEnabled()) {
+        NameNode.stateChangeLog.debug("DIR* FSDirectory.closeFile: "
                                     +path+" with "+ file.getBlocks().length 
                                     +" blocks is persisted to the file system");
+      }
     }
   }
 

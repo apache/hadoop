@@ -31,9 +31,9 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 14: add corrupt field to LocatedBlock
+   * 15: added DNA_RECOVERBLOCK, nextGenerationStamp and commitBlockSynchronization
    */
-  public static final long versionID = 14L;
+  public static final long versionID = 15L;
   
   // error code
   final static int NOTIFY = 0;
@@ -51,6 +51,7 @@ interface DatanodeProtocol extends VersionedProtocol {
   final static int DNA_REGISTER = 4;   // re-register
   final static int DNA_FINALIZE = 5;   // finalize previous upgrade
   final static int DNA_BLOCKREPORT = 6;   // request a block report
+  final static int DNA_RECOVERBLOCK = 7;  // request a block recovery
 
   /** 
    * Register Datanode.
@@ -132,4 +133,17 @@ interface DatanodeProtocol extends VersionedProtocol {
    * same as {@link ClientProtocol#reportBadBlocks(LocatedBlock[] blocks)}
    */
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException;
+  
+  /**
+   * @return the next GenerationStamp
+   */
+  public long nextGenerationStamp() throws IOException;
+
+  /**
+   * Commit block synchronization in lease recovery
+   */
+  public void commitBlockSynchronization(Block block,
+      long newgenerationstamp, long newlength,
+      boolean closeFile, boolean deleteblock, DatanodeID[] newtargets
+      ) throws IOException;
 }

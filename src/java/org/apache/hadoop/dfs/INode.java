@@ -713,27 +713,6 @@ class INodeFile extends INode {
   }
 
   /**
-   * remove a block from the block list. This block should be
-   * the last one on the list.
-   */
-  void removeBlock(Block oldblock) throws IOException {
-    if (this.blocks == null) {
-      throw new IOException("Trying to delete non-existant block " +
-                            oldblock);
-    }
-    int size = this.blocks.length;
-    if (!this.blocks[size-1].equals(oldblock)) {
-      throw new IOException("Trying to delete non-existant block " +
-                            oldblock);
-    }
-    BlockInfo[] newlist = new BlockInfo[size - 1];
-    for (int i = 0; i < size-1; i++) {
-        newlist[i] = this.blocks[i];
-    }
-    this.blocks = newlist;
-  }
-
-  /**
    * Set file block
    */
   void setBlock(int idx, BlockInfo blk) {
@@ -777,18 +756,29 @@ class INodeFile extends INode {
     }
     return blocks[blocks.length - 2];
   }
+
+  INodeFileUnderConstruction toINodeFileUnderConstruction(
+      String clientName, String clientMachine, DatanodeDescriptor clientNode
+      ) throws IOException {
+    if (isUnderConstruction()) {
+      return (INodeFileUnderConstruction)this;
+    }
+    return new INodeFileUnderConstruction(name,
+        blockReplication, modificationTime, preferredBlockSize,
+        blocks, getPermissionStatus(),
+        clientName, clientMachine, clientNode);
+  }
 }
 
 class INodeFileUnderConstruction extends INodeFile {
-  protected StringBytesWritable clientName;         // lease holder
-  protected StringBytesWritable clientMachine;
-  protected DatanodeDescriptor clientNode; // if client is a cluster node too.
+  StringBytesWritable clientName = null;         // lease holder
+  StringBytesWritable clientMachine = null;
+  DatanodeDescriptor clientNode = null; // if client is a cluster node too.
 
-  INodeFileUnderConstruction() {
-    clientName = null;
-    clientMachine = null;
-    clientNode = null;
-  }
+  private int primaryNodeIndex = -1; //the node working on lease recovery
+  DatanodeDescriptor[] targets = null;   //locations for last block
+  
+  INodeFileUnderConstruction() {}
 
   INodeFileUnderConstruction(PermissionStatus permissions,
                              short replication,
@@ -854,5 +844,50 @@ class INodeFileUnderConstruction extends INodeFile {
                                   getPreferredBlockSize());
     return obj;
     
+  }
+
+  /**
+   * remove a block from the block list. This block should be
+   * the last one on the list.
+   */
+  void removeBlock(Block oldblock) throws IOException {
+    if (blocks == null) {
+      throw new IOException("Trying to delete non-existant block " + oldblock);
+    }
+    int size_1 = blocks.length - 1;
+    if (!blocks[size_1].equals(oldblock)) {
+      throw new IOException("Trying to delete non-last block " + oldblock);
+    }
+
+    //copy to a new list
+    BlockInfo[] newlist = new BlockInfo[size_1];
+    System.arraycopy(blocks, 0, newlist, 0, size_1);
+    blocks = newlist;
+    
+    // Remove the block locations for the last block.
+    targets = null;
+  }
+
+  /**
+   * Initialize lease recovery for this object
+   * @return the chosen primary datanode
+   */
+  void assignPrimaryDatanode() {
+    //assign the first alive datanode as the primary datanode
+    if (targets.length == 0) {
+      NameNode.stateChangeLog.warn("BLOCK*"
+          + " INodeFileUnderConstruction.initLeaseRecovery:"
+          + " all targets are not alive.");
+    }
+
+    int previous = primaryNodeIndex;
+    //find an alive datanode beginning from previous
+    for(int i = 1; i <= targets.length; i++) {
+      int j = (previous + i)%targets.length;
+      if (targets[j].isAlive) {
+        DatanodeDescriptor primary = targets[primaryNodeIndex = j]; 
+        primary.addBlockToBeRecovered(blocks[blocks.length - 1], targets);
+      }
+    }
   }
 }

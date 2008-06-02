@@ -18,14 +18,39 @@
 package org.apache.hadoop.dfs;
 
 import java.io.IOException;
+import java.io.FileNotFoundException;
 import java.util.*;
 
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
+/**
+ * LeaseManager does the lease housekeeping for writing on files.   
+ * This class also provides useful static methods for lease recovery.
+ * 
+ * Lease Recovery Algorithm
+ * 1) Namenode retrieves lease information
+ * 2) For each file f in the lease, consider the last block b of f
+ * 2.1) Get the datanodes which contains b
+ * 2.2) Assign one of the datanodes as the primary datanode p
+
+ * 2.3) p obtains a new generation stamp form the namenode
+ * 2.4) p get the block info from each datanode
+ * 2.5) p computes the minimum block length
+ * 2.6) p updates the datanodes, which have a valid generation stamp,
+ *      with the new generation stamp and the minimum block length 
+ * 2.7) p acknowledges the namenode the update results
+
+ * 2.8) Namenode updates the BlockInfo
+ * 2.9) Namenode removes f from the lease
+ *      and removes the lease once all files have been removed
+ * 2.10) Namenode commit changes to edit log
+ */
 class LeaseManager {
-  static final Log LOG = FSNamesystem.LOG;
+  static final Log LOG = LogFactory.getLog(LeaseManager.class);
 
   private final FSNamesystem fsnamesystem;
 
@@ -48,8 +73,8 @@ class LeaseManager {
 
   LeaseManager(FSNamesystem fsnamesystem) {this.fsnamesystem = fsnamesystem;}
 
-  Lease getLease(String holder) throws IOException {
-    return leases.get(new StringBytesWritable(holder));
+  Lease getLease(StringBytesWritable holder) throws IOException {
+    return leases.get(holder);
   }
   
   SortedSet<Lease> getSortedLeases() {return sortedLeases;}
@@ -72,61 +97,72 @@ class LeaseManager {
   /**
    * Adds (or re-adds) the lease for the specified file.
    */
-  synchronized void addLease(String src, String holder) throws IOException {
+  synchronized void addLease(StringBytesWritable holder, String src
+      ) throws IOException {
     Lease lease = getLease(holder);
     if (lease == null) {
       lease = new Lease(holder);
-      leases.put(new StringBytesWritable(holder), lease);
+      leases.put(holder, lease);
       sortedLeases.add(lease);
     } else {
-      sortedLeases.remove(lease);
-      lease.renew();
-      sortedLeases.add(lease);
+      renewLease(lease);
     }
     sortedLeasesByPath.put(src, lease);
-    lease.startedCreate(src);
+    lease.paths.add(new StringBytesWritable(src));
   }
 
   /**
-   * deletes the lease for the specified file
+   * Remove the specified lease and src.
    */
-  synchronized void removeLease(String src, String holder) throws IOException {
-    Lease lease = getLease(holder);
-    if (lease != null) {
-      lease.completedCreate(src);
-      sortedLeasesByPath.remove(src);
+  synchronized void removeLease(Lease lease, String src) throws IOException {
+    sortedLeasesByPath.remove(src);
+    if (!lease.paths.remove(new StringBytesWritable(src))) {
+      LOG.error(src + " not found in lease.paths (=" + lease.paths + ")");
+    }
 
-      if (!lease.hasPath()) {
-        leases.remove(new StringBytesWritable(holder));
-        sortedLeases.remove(lease);
+    if (!lease.hasPath()) {
+      leases.remove(lease.holder);
+      if (!sortedLeases.remove(lease)) {
+        LOG.error(lease + " not found in sortedLeases");
       }
     }
+  }
+
+  /**
+   * Remove the lease for the specified holder and src
+   */
+  synchronized void removeLease(StringBytesWritable holder, String src
+      ) throws IOException {
+    removeLease(getLease(holder), src);
+  }
+
+  /**
+   * Finds the pathname for the specified pendingFile
+   */
+  synchronized String findPath(INodeFileUnderConstruction pendingFile
+      ) throws IOException {
+    Lease lease = getLease(pendingFile.clientName);
+    if (lease != null) {
+      String src = lease.findPath(pendingFile);
+      if (src != null) {
+        return src;
+      }
+    }
+    throw new IOException("pendingFile (=" + pendingFile + ") not found."
+        + "(lease=" + lease + ")");
   }
 
   /**
    * Renew the lease(s) held by the given client
    */
   synchronized void renewLease(String holder) throws IOException {
-    Lease lease = getLease(holder);
+    renewLease(getLease(new StringBytesWritable(holder)));
+  }
+  synchronized void renewLease(Lease lease) {
     if (lease != null) {
       sortedLeases.remove(lease);
       lease.renew();
       sortedLeases.add(lease);
-    }
-  }
-
-  synchronized void removeExpiredLease(Lease lease) throws IOException {
-    String holder = lease.holder.getString();
-    for(StringBytesWritable sbw : lease.paths) {
-      String p = sbw.getString();
-      fsnamesystem.internalReleaseCreate(p, holder);
-      sortedLeasesByPath.remove(p);
-    }
-    lease.paths.clear();
-    
-    leases.remove(lease.holder);
-    if (!sortedLeases.remove(lease)) {
-      LOG.error("removeExpiredLease: " + lease + " not found in sortedLeases");
     }
   }
 
@@ -142,11 +178,13 @@ class LeaseManager {
     private long lastUpdate;
     private Collection<StringBytesWritable> paths = new TreeSet<StringBytesWritable>();
   
-    public Lease(String holder) throws IOException {
-      this.holder = new StringBytesWritable(holder);
+    /** Only LeaseManager object can create a lease */
+    private Lease(StringBytesWritable holder) throws IOException {
+      this.holder = holder;
       renew();
     }
-    public void renew() {
+    /** Only LeaseManager object can renew a lease */
+    private void renew() {
       this.lastUpdate = FSNamesystem.now();
     }
 
@@ -160,14 +198,20 @@ class LeaseManager {
       return FSNamesystem.now() - lastUpdate > softLimit;
     }
 
-    void startedCreate(String src) throws IOException {
-      paths.add(new StringBytesWritable(src));
+    /**
+     * @return the path associated with the pendingFile and null if not found.
+     */
+    private String findPath(INodeFileUnderConstruction pendingFile) {
+      for(Iterator<StringBytesWritable> i = paths.iterator(); i.hasNext(); ) {
+        String src = i.next().toString();
+        if (fsnamesystem.dir.getFileINode(src) == pendingFile) {
+          return src;
+        }
+      }
+      return null;
     }
 
-    boolean completedCreate(String src) throws IOException {
-      return paths.remove(new StringBytesWritable(src));
-    }
-
+    /** Does this lease contain any path? */
     boolean hasPath() {return !paths.isEmpty();}
 
     /** {@inheritDoc} */
@@ -309,8 +353,11 @@ class LeaseManager {
                      ((top = sortedLeases.first()) != null)) {
                 if (top.expiredHardLimit()) {
                   LOG.info("Lease Monitor: Removing lease " + top
-                      + ", leases remaining: " + sortedLeases.size());
-                  removeExpiredLease(top);
+                      + ", sortedLeases.size()=: " + sortedLeases.size());
+                  for(StringBytesWritable s : top.paths) {
+                    fsnamesystem.internalReleaseLease(top, s.getString());
+                  }
+                  renewLease(top);
                 } else {
                   break;
                 }
@@ -329,5 +376,120 @@ class LeaseManager {
         LOG.error("In " + getClass().getName(), e);
       }
     }
+  }
+
+  /*
+   * The following codes provides useful static methods for lease recovery.
+   */
+  /** A convenient class used in lease recovery */
+  private static class BlockRecord { 
+    final DatanodeID id;
+    final InterDatanodeProtocol datanode;
+    final Block block;
+    
+    BlockRecord(DatanodeID id, InterDatanodeProtocol datanode, Block block) {
+      this.id = id;
+      this.datanode = datanode;
+      this.block = block;
+    }
+
+    public String toString() {
+      return "block:" + block + " node:" + id;
+    }
+  }
+
+  /**
+   * Recover a list of blocks.
+   * This method is invoked by the primary datanode.
+   */
+  static void recoverBlocks(Block[] blocks, DatanodeID[][] targets,
+      DatanodeProtocol namenode, Configuration conf) {
+    for(int i = 0; i < blocks.length; i++) {
+      try {
+        recoverBlock(blocks[i], targets[i], namenode, conf, true);
+      } catch (IOException e) {
+        LOG.warn("recoverBlocks, i=" + i, e);
+      }
+    }
+  }
+
+  /** Recover a block */
+  static Block recoverBlock(Block block, DatanodeID[] datanodeids,
+      DatanodeProtocol namenode, Configuration conf,
+      boolean closeFile) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("block=" + block
+          + ", datanodeids=" + Arrays.asList(datanodeids));
+    }
+    List<BlockRecord> syncList = new ArrayList<BlockRecord>();
+    long minlength = Long.MAX_VALUE;
+    int errorCount = 0;
+
+    //check generation stamps
+    for(DatanodeID id : datanodeids) {
+      try {
+        InterDatanodeProtocol datanode
+            = DataNode.createInterDataNodeProtocolProxy(id, conf);
+        BlockMetaDataInfo info = datanode.getBlockMetaDataInfo(block);
+        if (info != null && info.getGenerationStamp() >= block.generationStamp) {
+          syncList.add(new BlockRecord(id, datanode, new Block(info)));
+          if (info.len < minlength) {
+            minlength = info.len;
+          }
+        }
+      } catch (IOException e) {
+        ++errorCount;
+        InterDatanodeProtocol.LOG.warn(
+            "Failed to getBlockMetaDataInfo for block (=" + block 
+            + ") from datanode (=" + id + ")", e);
+      }
+    }
+
+    if (syncList.isEmpty() && errorCount > 0) {
+      throw new IOException("All datanodes failed: block=" + block
+          + ", datanodeids=" + Arrays.asList(datanodeids));
+    }
+    return syncBlock(block, minlength, syncList, namenode, closeFile);
+  }
+
+  /** Block synchronization */
+  private static Block syncBlock(Block block, long minlength,
+      List<BlockRecord> syncList, DatanodeProtocol namenode,
+      boolean closeFile) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("block=" + block + ", minlength=" + minlength
+          + ", syncList=" + syncList + ", closeFile=" + closeFile);
+    }
+
+    //syncList.isEmpty() that all datanodes do not have the block
+    //so the block can be deleted.
+    if (syncList.isEmpty()) {
+      namenode.commitBlockSynchronization(block, 0, 0, closeFile, true,
+          DatanodeID.EMPTY_ARRAY);
+      return null;
+    }
+
+    List<DatanodeID> successList = new ArrayList<DatanodeID>();
+
+    long generationstamp = namenode.nextGenerationStamp();
+    Block newblock = new Block(block.blkid, minlength, generationstamp);
+
+    for(BlockRecord r : syncList) {
+      try {
+        r.datanode.updateBlock(r.block, newblock);
+        successList.add(r.id);
+      } catch (IOException e) {
+        InterDatanodeProtocol.LOG.warn("Failed to updateBlock (newblock="
+            + newblock + ", datanode=" + r.id + ")", e);
+      }
+    }
+
+    if (!successList.isEmpty()) {
+      namenode.commitBlockSynchronization(block,
+          newblock.generationStamp, newblock.len, closeFile, false,
+          successList.toArray(new DatanodeID[successList.size()]));
+      return newblock; // success
+    }
+    return null; // failed
   }
 }

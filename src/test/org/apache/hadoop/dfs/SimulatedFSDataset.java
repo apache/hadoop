@@ -97,6 +97,15 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
         oStream = null;
       }
     }
+
+    synchronized long getGenerationStamp() {
+      return theBlock.getGenerationStamp();
+    }
+
+    synchronized void updateBlock(Block b) {
+      theBlock.generationStamp = b.generationStamp;
+      setlength(b.len);
+    }
     
     synchronized long getlength() {
       if (!finalized) {
@@ -290,6 +299,27 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       throw new IOException("Finalizing a non existing block " + b);
     }
     return binfo.getlength();
+  }
+
+  /** {@inheritDoc} */
+  public Block getStoredBlock(long blkid) throws IOException {
+    Block b = new Block(blkid);
+    BInfo binfo = blockMap.get(b);
+    if (binfo == null) {
+      return null;
+    }
+    b.generationStamp = binfo.getGenerationStamp();
+    b.len = binfo.getlength();
+    return b;
+  }
+
+  /** {@inheritDoc} */
+  public void updateBlock(Block oldblock, Block newblock) throws IOException {
+    BInfo binfo = blockMap.get(newblock);
+    if (binfo == null) {
+      throw new IOException("BInfo not found, b=" + newblock);
+    }
+    binfo.updateBlock(newblock);
   }
 
   public synchronized void invalidate(Block[] invalidBlks) throws IOException {
@@ -586,5 +616,4 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   public String getStorageInfo() {
     return "Simulated FSDataset-" + storageId;
   }
-
 }

@@ -18,6 +18,9 @@
 package org.apache.hadoop.dfs;
 
 import java.io.*;
+import java.util.List;
+
+import org.apache.hadoop.dfs.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.io.*;
 
 abstract class DatanodeCommand implements Writable {
@@ -101,12 +104,17 @@ class BlockCommand extends DatanodeCommand {
   /**
    * Create BlockCommand for transferring blocks to another datanode
    * @param blocks    blocks to be transferred 
-   * @param targets   nodes to transfer
    */
-  BlockCommand(Block blocks[], DatanodeInfo targets[][]) {
-    super( DatanodeProtocol.DNA_TRANSFER);
-    this.blocks = blocks;
-    this.targets = targets;
+  BlockCommand(int action, List<BlockTargetPair> blocktargetlist) {
+    super(action);
+
+    blocks = new Block[blocktargetlist.size()]; 
+    targets = new DatanodeInfo[blocks.length][];
+    for(int i = 0; i < blocks.length; i++) {
+      BlockTargetPair p = blocktargetlist.get(i);
+      blocks[i] = p.block;
+      targets[i] = p.targets;
+    }
   }
 
   private static final DatanodeInfo[][] EMPTY_TARGET = {};

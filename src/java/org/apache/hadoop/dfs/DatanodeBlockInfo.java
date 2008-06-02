@@ -124,4 +124,9 @@ class DatanodeBlockInfo {
     setDetached();
     return true;
   }
+  
+  public String toString() {
+    return getClass().getSimpleName() + "(volume=" + volume
+        + ", file=" + file + ", detached=" + detached + ")";
+  }
 }

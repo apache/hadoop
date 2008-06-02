@@ -17,25 +17,31 @@
  */
 package org.apache.hadoop.dfs;
 
-import junit.framework.TestCase;
 import java.io.*;
-import java.net.*;
+import java.net.InetSocketAddress;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.dfs.FSConstants.DatanodeReportType;
-import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.IOUtils;
+
+import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.log4j.Level;
 
 
 /**
  * This class tests that a file need not be closed before its
  * data can be read by another client.
  */
-public class TestFileCreation extends TestCase {
+public class TestFileCreation extends junit.framework.TestCase {
+  static final String DIR = "/" + TestFileCreation.class.getSimpleName() + "/";
+
+  {
+    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
+  }
+
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
   static final int numBlocks = 2;
@@ -46,11 +52,10 @@ public class TestFileCreation extends TestCase {
   // entire file is written, the first two blocks definitely get flushed to
   // the datanodes.
 
-  //
   // creates a file but does not close it
-  //
-  private FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
+  static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
+    System.out.println("createFile: Created " + name + " with " + repl + " replica.");
     FSDataOutputStream stm = fileSys.create(name, true,
                                             fileSys.getConf().getInt("io.file.buffer.size", 4096),
                                             (short)repl, (long)blockSize);
@@ -151,7 +156,6 @@ public class TestFileCreation extends TestCase {
       //
       Path path = new Path("/");
       System.out.println("Path : \"" + path.toString() + "\"");
-      System.out.println(fs.isDirectory(path));
       System.out.println(fs.getFileStatus(path).isDir()); 
       assertTrue("/ should be a directory", 
                  fs.getFileStatus(path).isDir() == true);
@@ -160,8 +164,6 @@ public class TestFileCreation extends TestCase {
       //
       Path file1 = new Path("filestatus.dat");
       FSDataOutputStream stm = createFile(fs, file1, 1);
-      System.out.println("Created file filestatus.dat with one "
-                         + " replicas.");
 
       // verify that file exists in FS namespace
       assertTrue(file1 + " should be a file", 
@@ -230,6 +232,7 @@ public class TestFileCreation extends TestCase {
       writeFile(stm1);
       writeFile(stm3);
       stm1.close();
+      stm2.close();
       stm3.close();
 
       // set delete on exit flag on files.
@@ -257,12 +260,8 @@ public class TestFileCreation extends TestCase {
       System.out.println("DeleteOnExit successful.");
 
     } finally {
-      if (fs != null) {
-        fs.close();
-      }
-      if (localfs != null) {
-        localfs.close();
-      }
+      IOUtils.closeStream(fs);
+      IOUtils.closeStream(localfs);
       cluster.shutdown();
     }
   }
@@ -291,9 +290,6 @@ public class TestFileCreation extends TestCase {
       //
       Path file1 = new Path("/filestatus.dat");
       FSDataOutputStream stm = createFile(fs, file1, 1);
-      System.out.println("testFileCreationError1: "
-                         + "Created file filestatus.dat with one "
-                         + " replicas.");
 
       // verify that file exists in FS namespace
       assertTrue(file1 + " should be a file", 
@@ -305,7 +301,8 @@ public class TestFileCreation extends TestCase {
 
       // wait for the datanode to be declared dead
       while (true) {
-        DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
+        DatanodeInfo[] info = client.datanodeReport(
+            FSConstants.DatanodeReportType.LIVE);
         if (info.length == 0) {
           break;
         }
@@ -358,36 +355,35 @@ public class TestFileCreation extends TestCase {
     }
     // create cluster
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
-    FileSystem fs = cluster.getFileSystem();
-    cluster.waitActive();
-    InetSocketAddress addr = new InetSocketAddress("localhost",
-                                                   cluster.getNameNodePort());
-    DFSClient client = new DFSClient(addr, conf);
-
+    DistributedFileSystem dfs = null;
     try {
+      cluster.waitActive();
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
+      DFSClient client = dfs.dfs;
 
       // create a new file.
       //
       Path file1 = new Path("/filestatus.dat");
-      createFile(fs, file1, 1);
+      createFile(dfs, file1, 1);
       System.out.println("testFileCreationError2: "
-                         + "Created file filestatus.dat with one "
-                         + " replicas.");
+                         + "Created file filestatus.dat with one replicas.");
 
       LocatedBlocks locations = client.namenode.getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
-      System.out.println("The file has " + locations.locatedBlockCount() +
-                         " blocks.");
+      System.out.println("testFileCreationError2: "
+          + "The file has " + locations.locatedBlockCount() + " blocks.");
 
       // add another block to the file
       LocatedBlock location = client.namenode.addBlock(file1.toString(), 
-                                                       null);
-      System.out.println("Added block " + location.getBlock());
+          client.clientName);
+      System.out.println("testFileCreationError2: "
+          + "Added block " + location.getBlock());
 
       locations = client.namenode.getBlockLocations(file1.toString(), 
                                                     0, Long.MAX_VALUE);
-      System.out.println("The file now has " + locations.locatedBlockCount() +
-                         " blocks.");
+      int count = locations.locatedBlockCount();
+      System.out.println("testFileCreationError2: "
+          + "The file now has " + count + " blocks.");
       
       // set the soft and hard limit to be 1 second so that the
       // namenode triggers lease recovery
@@ -399,20 +395,16 @@ public class TestFileCreation extends TestCase {
       } catch (InterruptedException e) {
       }
 
-      // verify that the last block was cleaned up.
+      // verify that the last block was synchronized.
       locations = client.namenode.getBlockLocations(file1.toString(), 
                                                     0, Long.MAX_VALUE);
-      System.out.println("locations = " + locations.locatedBlockCount());
-      assertTrue("Error blocks were not cleaned up",
-                 locations.locatedBlockCount() == 0);
+      System.out.println("testFileCreationError2: "
+          + "locations = " + locations.locatedBlockCount());
+      assertEquals(0, locations.locatedBlockCount());
       System.out.println("testFileCreationError2 successful");
     } finally {
-      try {
-        fs.close();
-      } catch (Exception e) {
-      }
+      IOUtils.closeStream(dfs);
       cluster.shutdown();
-      client.close();
     }
   }
 
@@ -421,7 +413,7 @@ public class TestFileCreation extends TestCase {
    * This test is currently not triggered because more HDFS work is 
    * is needed to handle persistent leases.
    */
-  public void testFileCreationNamenodeRestart() throws IOException {
+  public void xxxtestFileCreationNamenodeRestart() throws IOException {
     Configuration conf = new Configuration();
     final int MAX_IDLE_TIME = 2000; // 2s
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
@@ -430,18 +422,16 @@ public class TestFileCreation extends TestCase {
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
+
     // create cluster
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
-    FileSystem fs = cluster.getFileSystem();
-    cluster.waitActive();
-    int nnport = cluster.getNameNodePort();
-    InetSocketAddress addr = new InetSocketAddress("localhost", nnport);
-
-    DFSClient client = null;
+    FileSystem fs = null;
     try {
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
+      final int nnport = cluster.getNameNodePort();
 
       // create a new file.
-      //
       Path file1 = new Path("/filestatus.dat");
       FSDataOutputStream stm = createFile(fs, file1, 1);
       System.out.println("testFileCreationNamenodeRestart: "
@@ -510,6 +500,7 @@ public class TestFileCreation extends TestCase {
       cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
                                    null, null, null);
       cluster.waitActive();
+      fs = cluster.getFileSystem();
 
       // instruct the dfsclient to use a new filename when it requests
       // new blocks for files that were renamed.
@@ -534,7 +525,7 @@ public class TestFileCreation extends TestCase {
       stm4.close();
 
       // verify that new block is associated with this file
-      client = new DFSClient(addr, conf);
+      DFSClient client = ((DistributedFileSystem)fs).dfs;
       LocatedBlocks locations = client.namenode.getBlockLocations(
                                   file1.toString(), 0, Long.MAX_VALUE);
       System.out.println("locations = " + locations.locatedBlockCount());
@@ -548,9 +539,8 @@ public class TestFileCreation extends TestCase {
       assertTrue("Error blocks were not cleaned up for file " + file2,
                  locations.locatedBlockCount() == 1);
     } finally {
-      fs.close();
+      IOUtils.closeStream(fs);
       cluster.shutdown();
-      if (client != null)  client.close();
     }
   }
 
@@ -609,4 +599,97 @@ public class TestFileCreation extends TestCase {
     simulatedStorage = false;
   }
 
+  /**
+   * Test creating two files at the same time. 
+   */
+  public void testConcurrentFileCreation() throws IOException {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+
+    try {
+      FileSystem fs = cluster.getFileSystem();
+      
+      Path[] p = {new Path("/foo"), new Path("/bar")};
+      
+      //write 2 files at the same time
+      FSDataOutputStream[] out = {fs.create(p[0]), fs.create(p[1])};
+      int i = 0;
+      for(; i < 100; i++) {
+        out[0].write(i);
+        out[1].write(i);
+      }
+      out[0].close();
+      for(; i < 200; i++) {out[1].write(i);}
+      out[1].close();
+
+      //verify
+      FSDataInputStream[] in = {fs.open(p[0]), fs.open(p[1])};  
+      for(i = 0; i < 100; i++) {assertEquals(i, in[0].read());}
+      for(i = 0; i < 200; i++) {assertEquals(i, in[1].read());}
+    } finally {
+      if (cluster != null) {cluster.shutdown();}
+    }
+  }
+
+  /**
+   * Create a file, write something, fsync but not close.
+   * Then change lease period and wait for lease recovery.
+   * Finally, read the block directly from each Datanode and verify the content.
+   */
+  public void testLeaseExpireHardLimit() throws Exception {
+    System.out.println("testLeaseExpireHardLimit start");
+    final long leasePeriod = 1000;
+    final int DATANODE_NUM = 3;
+
+    Configuration conf = new Configuration();
+    conf.setInt("heartbeat.recheck.interval", 1000);
+    conf.setInt("dfs.heartbeat.interval", 1);
+
+    // create cluster
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, DATANODE_NUM, true, null);
+    DistributedFileSystem dfs = null;
+    try {
+      cluster.waitActive();
+      dfs = (DistributedFileSystem)cluster.getFileSystem();
+
+      // create a new file.
+      final String f = DIR + "foo";
+      final Path fpath = new Path(f);
+      FSDataOutputStream out = TestFileCreation.createFile(dfs, fpath, DATANODE_NUM);
+      out.write("something".getBytes());
+      ((DFSClient.DFSOutputStream)out.getWrappedStream()).fsync();
+
+      // set the soft and hard limit to be 1 second so that the
+      // namenode triggers lease recovery
+      cluster.setLeasePeriod(leasePeriod, leasePeriod);
+      // wait for the lease to expire
+      try {Thread.sleep(5 * leasePeriod);} catch (InterruptedException e) {}
+
+      LocatedBlocks locations = dfs.dfs.namenode.getBlockLocations(
+          f, 0, Long.MAX_VALUE);
+      assertEquals(1, locations.locatedBlockCount());
+      LocatedBlock locatedblock = locations.getLocatedBlocks().get(0);
+      int successcount = 0;
+      for(DatanodeInfo datanodeinfo: locatedblock.getLocations()) {
+        DataNode datanode = cluster.getDataNode(datanodeinfo.ipcPort);
+        FSDataset dataset = (FSDataset)datanode.data;
+        Block b = dataset.getStoredBlock(locatedblock.getBlock().blkid);
+        File blockfile = dataset.findBlockFile(b);
+        System.out.println("blockfile=" + blockfile);
+        if (blockfile != null) {
+          BufferedReader in = new BufferedReader(new FileReader(blockfile));
+          assertEquals("something", in.readLine());
+          in.close();
+          successcount++;
+        }
+      }
+      System.out.println("successcount=" + successcount);
+      assertTrue(successcount > 0); 
+    } finally {
+      IOUtils.closeStream(dfs);
+      cluster.shutdown();
+    }
+
+    System.out.println("testLeaseExpireHardLimit successful");
+  }
 }

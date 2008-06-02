@@ -182,6 +182,10 @@ Trunk (unreleased changes)
     HADOOP-3434. Retain the cause of the bind failure in Server::bind.
     (Steve Loughran via cdouglas)
 
+    HADOOP-3310. The namenode instructs the primary datanode to do lease
+    recovery. The block gets a new  generation stamp.
+    (Tsz Wo (Nicholas), SZE via dhruba)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

@@ -128,6 +128,18 @@ class DFSClient implements FSConstants {
     return (ClientProtocol) RetryProxy.create(ClientProtocol.class,
         rpcNamenode, methodNameToPolicyMap);
   }
+
+  static ClientDatanodeProtocol createClientDatanodeProtocolProxy (
+      DatanodeID datanodeid, Configuration conf) throws IOException {
+    InetSocketAddress addr = NetUtils.createSocketAddr(
+      datanodeid.getHost() + ":" + datanodeid.getIpcPort());
+    if (ClientDatanodeProtocol.LOG.isDebugEnabled()) {
+      ClientDatanodeProtocol.LOG.info("ClientDatanodeProtocol addr=" + addr);
+    }
+    return (ClientDatanodeProtocol)RPC.waitForProxy(ClientDatanodeProtocol.class
+,
+        ClientDatanodeProtocol.versionID, addr, conf);
+  }
         
   /** 
    * Create a new DFSClient connected to the default namenode.
@@ -1715,6 +1727,8 @@ class DFSClient implements FSConstants {
     private long artificialSlowdown = 0;
     private long lastFlushOffset = -1; // offset when flush was invoked
     private boolean persistBlocks = false; // persist blocks on namenode
+    private int recoveryErrorCount = 0; // number of times block recovery failed
+    private int maxRecoveryErrorCount = 5; // try block recovery 5 times
 
     private class Packet {
       ByteBuffer buffer;           // only one of buf and buffer is non-null
@@ -1839,15 +1853,16 @@ class DFSClient implements FSConstants {
           synchronized (dataQueue) {
 
             // process IO errors if any
-            processDatanodeError();
+            boolean doSleep = processDatanodeError();
 
             // wait for a packet to be sent.
-            while (!closed && !hasError && clientRunning 
-                   && dataQueue.size() == 0) {
+            while ((!closed && !hasError && clientRunning 
+                   && dataQueue.size() == 0) || doSleep) {
               try {
                 dataQueue.wait(1000);
               } catch (InterruptedException  e) {
               }
+              doSleep = false;
             }
             if (closed || hasError || dataQueue.size() == 0 || !clientRunning) {
               continue;
@@ -2053,16 +2068,17 @@ class DFSClient implements FSConstants {
     }
 
     // If this stream has encountered any errors so far, shutdown 
-    // threads and mark stream as closed.
+    // threads and mark stream as closed. Returns true if we should
+    // sleep for a while after returning from this call.
     //
-    private void processDatanodeError() {
+    private boolean processDatanodeError() {
       if (!hasError) {
-        return;
+        return false;
       }
       if (response != null) {
         LOG.info("Error Recovery for block " + block +
                  " waiting for responder to exit. ");
-        return;
+        return true;
       }
       String msg = "Error Recovery for block " + block +
                    " bad datanode[" + errorIndex + "]";
@@ -2094,7 +2110,7 @@ class DFSClient implements FSConstants {
                                           "Aborting...");
           closed = true;
           streamer.close();
-          return;
+          return false;
         }
         StringBuilder pipelineMsg = new StringBuilder();
         for (int j = 0; j < nodes.length; j++) {
@@ -2109,7 +2125,7 @@ class DFSClient implements FSConstants {
                                           pipeline + " are bad. Aborting...");
           closed = true;
           streamer.close();
-          return;
+          return false;
         }
         LOG.warn("Error Recovery for block " + block +
                  " in pipeline " + pipeline + 
@@ -2124,9 +2140,47 @@ class DFSClient implements FSConstants {
         for (int i = errorIndex; i < (nodes.length-1); i++) {
           newnodes[i] = nodes[i+1];
         }
-        nodes = newnodes;
+
+        // Tell the primary datanode to do error recovery 
+        // by stamping appropriate generation stamps.
+        //
+        Block newBlock = null;
+        ClientDatanodeProtocol datanodeRPC =  null;
+        try {
+          datanodeRPC = createClientDatanodeProtocolProxy(newnodes[0], conf);
+          newBlock = datanodeRPC.recoverBlock(block, newnodes);
+        } catch (IOException e) {
+          recoveryErrorCount++;
+          if (recoveryErrorCount > maxRecoveryErrorCount) {
+            String emsg = "Error Recovery for block " + block + " failed " +
+                          " because recovery from primary datanode " +
+                          newnodes[0] + " failed " + recoveryErrorCount + 
+                          " times. Aborting...";
+            LOG.warn(emsg);
+            lastException = new IOException(emsg);
+            closed = true;
+            streamer.close();
+            return false;       // abort with IOexception
+          } 
+          LOG.warn("Error Recovery for block " + block + " failed " +
+                   " because recovery from primary datanode " +
+                   newnodes[0] + " failed " + recoveryErrorCount +
+                   " times. Will retry...");
+          return true;          // sleep when we return from here
+        } finally {
+          RPC.stopProxy(datanodeRPC);
+        }
+        recoveryErrorCount = 0; // block recovery successful
+
+        // If the block recovery generated a new generation stamp, use that
+        // from now on.
+        //
+        if (newBlock != null) {
+          block = newBlock;
+        }
 
         // setup new pipeline
+        nodes = newnodes;
         hasError = false;
         errorIndex = 0;
         success = createBlockOutputStream(nodes, src, true);
@@ -2134,6 +2188,7 @@ class DFSClient implements FSConstants {
 
       response = new ResponseProcessor(nodes);
       response.start();
+      return false; // do not sleep, continue processing
     }
 
     private void isClosed() throws IOException {
