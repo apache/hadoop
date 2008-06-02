@@ -179,6 +179,12 @@ public class S3FileSystem extends FileSystem {
     return ret.toArray(new FileStatus[0]);
   }
 
+  /** This optional operation is not yet supported. */
+  public FSDataOutputStream append(Path f, int bufferSize,
+      Progressable progress) throws IOException {
+    throw new IOException("Not supported");
+  }
+
   /**
    * @param permission Currently ignored.
    */

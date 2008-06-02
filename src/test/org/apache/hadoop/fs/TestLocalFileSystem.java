@@ -29,12 +29,26 @@ public class TestLocalFileSystem extends TestCase {
     = System.getProperty("test.build.data","build/test/data/work-dir/localfs");
 
 
-  private void writeFile(FileSystem fs, Path name) throws IOException {
+  static void writeFile(FileSystem fs, Path name) throws IOException {
     FSDataOutputStream stm = fs.create(name);
     stm.writeBytes("42\n");
     stm.close();
   }
   
+  static String readFile(FileSystem fs, Path name) throws IOException {
+    byte[] b = new byte[1024];
+    int offset = 0;
+    FSDataInputStream in = fs.open(name);
+    for(int remaining, n;
+        (remaining = b.length - offset) > 0 && (n = in.read(b, offset, remaining)) != -1;
+        offset += n); 
+    in.close();
+
+    String s = new String(b, 0, offset);
+    System.out.println("s=" + s);
+    return s;
+  }
+
   private void cleanupFile(FileSystem fs, Path name) throws IOException {
     assertTrue(fs.exists(name));
     fs.delete(name, true);
@@ -140,4 +154,54 @@ public class TestLocalFileSystem extends TestCase {
     cleanupFile(fs, path);
   }
 
+  public void testAppend() throws IOException {
+    Configuration conf = new Configuration();
+    final String dir = TEST_ROOT_DIR + "/append";
+    LocalFileSystem fs = FileSystem.getLocal(conf);
+
+    //normal case
+    {
+      Path f = new Path(dir, "f");
+      FSDataOutputStream out = fs.create(f);
+      out.writeBytes("something");
+      out.close();
+      assertEquals("something", readFile(fs, f));
+  
+      out = fs.append(f);
+      out.writeBytes(" more");
+      out.close();
+      assertEquals("something more", readFile(fs, f));
+  
+      out = fs.append(f);
+      out.writeBytes(" and more");
+      out.close();
+      assertEquals("something more and more", readFile(fs, f));
+
+      cleanupFile(fs, f);
+    }
+
+    //file not found case
+    {
+      Path f = new Path(dir, "fileNotFound");
+      try {
+        fs.append(f);
+        assertTrue(false);
+      }
+      catch(FileNotFoundException e) {
+        System.out.println("good: " + e);
+      }
+    }
+
+    //append to dir case
+    {
+      Path f = new Path(dir);
+      try {
+        fs.append(f);
+        assertTrue(false);
+      }
+      catch(IOException e) {
+        System.out.println("good: " + e);
+      }
+    }
+  }
 }

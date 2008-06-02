@@ -243,6 +243,12 @@ public class FTPFileSystem extends FileSystem {
     return fos;
   }
 
+  /** This optional operation is not yet supported. */
+  public FSDataOutputStream append(Path f, int bufferSize,
+      Progressable progress) throws IOException {
+    throw new IOException("Not supported");
+  }
+  
   /**
    * Convenience method, so that we don't open a new connection when using this
    * method from within another method. Otherwise every API invocation incurs

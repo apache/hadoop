@@ -522,6 +522,36 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
+   * Append to an existing file (optional operation).
+   * Same as append(f, getConf().getInt("io.file.buffer.size", 4096), null)
+   * @param f the existing file to be appended.
+   * @throws IOException
+   */
+  public FSDataOutputStream append(Path f) throws IOException {
+    return append(f, getConf().getInt("io.file.buffer.size", 4096), null);
+  }
+  /**
+   * Append to an existing file (optional operation).
+   * Same as append(f, bufferSize, null).
+   * @param f the existing file to be appended.
+   * @param bufferSize the size of the buffer to be used.
+   * @throws IOException
+   */
+  public FSDataOutputStream append(Path f, int bufferSize) throws IOException {
+    return append(f, bufferSize, null);
+  }
+
+  /**
+   * Append to an existing file (optional operation).
+   * @param f the existing file to be appended.
+   * @param bufferSize the size of the buffer to be used.
+   * @param progress for reporting progress if it is not null.
+   * @throws IOException
+   */
+  public abstract FSDataOutputStream append(Path f, int bufferSize,
+      Progressable progress) throws IOException;
+  
+  /**
    * Get replication.
    * 
    * @deprecated Use getFileStatus() instead

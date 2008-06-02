@@ -104,7 +104,13 @@ public class FilterFileSystem extends FileSystem {
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     return fs.open(f, bufferSize);
   }
-  
+
+  /** {@inheritDoc} */
+  public FSDataOutputStream append(Path f, int bufferSize,
+      Progressable progress) throws IOException {
+    return fs.append(f, bufferSize, progress);
+  }
+
   /** {@inheritDoc} */
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,

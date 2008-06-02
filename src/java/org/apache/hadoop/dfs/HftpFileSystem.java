@@ -228,6 +228,12 @@ public class HftpFileSystem extends FileSystem {
   @Override
   public void setWorkingDirectory(Path f) { }
 
+  /** This optional operation is not yet supported. */
+  public FSDataOutputStream append(Path f, int bufferSize,
+      Progressable progress) throws IOException {
+    throw new IOException("Not supported");
+  }
+
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
                                    boolean overwrite, int bufferSize,

@@ -114,6 +114,9 @@ Trunk (unreleased changes)
 
     HADOOP-3246. Add FTPFileSystem.  (Ankur Goel via cutting)
 
+    HADOOP-3250. Extend FileSystem API to allow appending to files.
+    (Tsz Wo (Nicholas), SZE via cdouglas)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().

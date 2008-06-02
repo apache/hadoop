@@ -128,6 +128,12 @@ public class DistributedFileSystem extends FileSystem {
           dfs.open(getPathName(f), bufferSize, verifyChecksum, statistics));
   }
 
+  /** This optional operation is not yet supported. */
+  public FSDataOutputStream append(Path f, int bufferSize,
+      Progressable progress) throws IOException {
+    throw new IOException("Not supported");
+  }
+
   public FSDataOutputStream create(Path f, FsPermission permission,
     boolean overwrite,
     int bufferSize, short replication, long blockSize,

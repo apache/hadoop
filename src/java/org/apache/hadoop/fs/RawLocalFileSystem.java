@@ -183,8 +183,8 @@ public class RawLocalFileSystem extends FileSystem {
   class LocalFSFileOutputStream extends OutputStream {
     FileOutputStream fos;
     
-    public LocalFSFileOutputStream(Path f) throws IOException {
-      this.fos = new FileOutputStream(pathToFile(f));
+    private LocalFSFileOutputStream(Path f, boolean append) throws IOException {
+      this.fos = new FileOutputStream(pathToFile(f), append);
     }
     
     /*
@@ -209,6 +209,20 @@ public class RawLocalFileSystem extends FileSystem {
     }
   }
   
+  /** {@inheritDoc} */
+  public FSDataOutputStream append(Path f, int bufferSize,
+      Progressable progress) throws IOException {
+    if (!exists(f)) {
+      throw new FileNotFoundException("File " + f + " not found.");
+    }
+    if (getFileStatus(f).isDir()) {
+      throw new IOException("Cannot append to a diretory (=" + f + " ).");
+    }
+    return new FSDataOutputStream(new BufferedOutputStream(
+        new LocalFSFileOutputStream(f, true), bufferSize), statistics);
+  }
+
+  /** {@inheritDoc} */
   public FSDataOutputStream create(Path f, boolean overwrite, int bufferSize,
                                    short replication, long blockSize, Progressable progress)
     throws IOException {
@@ -219,9 +233,8 @@ public class RawLocalFileSystem extends FileSystem {
     if (parent != null && !mkdirs(parent)) {
       throw new IOException("Mkdirs failed to create " + parent.toString());
     }
-    return new FSDataOutputStream(
-        new BufferedOutputStream(new LocalFSFileOutputStream(f), bufferSize),
-        statistics);
+    return new FSDataOutputStream(new BufferedOutputStream(
+        new LocalFSFileOutputStream(f, false), bufferSize), statistics);
   }
 
   /** {@inheritDoc} */

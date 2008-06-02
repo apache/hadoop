@@ -183,6 +183,12 @@ public class KosmosFileSystem extends FileSystem {
         }
     }
     
+    /** This optional operation is not yet supported. */
+    public FSDataOutputStream append(Path f, int bufferSize,
+        Progressable progress) throws IOException {
+      throw new IOException("Not supported");
+    }
+
     public FSDataOutputStream create(Path file, FsPermission permission,
                                      boolean overwrite, int bufferSize,
 				     short replication, long blockSize, Progressable progress)
