@@ -854,6 +854,7 @@
       <param.listofitems>
         <tarfileset dir="${build.dir}" mode="664">
           <exclude name="${final.name}/bin/*" />
+          <exclude name="${final.name}/contrib/*/bin/*" />
           <exclude name="${final.name}/src/contrib/ec2/bin/*" />
           <exclude name="${final.name}/src/contrib/ec2/bin/image/*" />
           <include name="${final.name}/**" />

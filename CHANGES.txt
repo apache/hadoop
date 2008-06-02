@@ -365,6 +365,10 @@ Trunk (unreleased changes)
 
     HADOOP-2669. DFSClient locks pendingCreates appropriately. (dhruba)
  
+    HADOOP-3477. Fix build to not package contrib/*/bin twice in
+    distributions.  (Adam Heath via cutting)
+
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
