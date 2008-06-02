@@ -86,7 +86,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
    * Actually start the MiniHBase instance.
    */
   @SuppressWarnings("unused")
-  protected void HBaseClusterSetup() throws Exception {
+  protected void hBaseClusterSetup() throws Exception {
     // start the mini cluster
     this.cluster = new MiniHBaseCluster(conf, regionServers);
     // opening the META table ensures that cluster is running
@@ -125,7 +125,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
       preHBaseClusterSetup();    
     
       // start the instance
-      HBaseClusterSetup();
+      hBaseClusterSetup();
       
       // run post-cluster setup
       postHBaseClusterSetup();

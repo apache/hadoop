@@ -299,7 +299,8 @@ public class HStoreKey implements WritableComparable {
 
   /**
    * @param column
-   * @return New byte array that holds <code>column</code> family prefix.
+   * @return New byte array that holds <code>column</code> family prefix only
+   * (Does not include the colon DELIMITER).
    * @throws ColumnNameParseException 
    * @see #parseColumn(byte[])
    */

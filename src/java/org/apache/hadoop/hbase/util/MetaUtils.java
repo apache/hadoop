@@ -22,28 +22,36 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 
 /**
- * Contains utility methods for manipulating HBase meta tables
+ * Contains utility methods for manipulating HBase meta tables.
+ * Be sure to call {@link #shutdown()} when done with this class so it closes
+ * resources opened during meta processing (ROOT, META, etc.).
  */
 public class MetaUtils {
   private static final Log LOG = LogFactory.getLog(MetaUtils.class);
@@ -150,7 +158,11 @@ public class MetaUtils {
     return meta;
   }
   
-  /** Closes root region if open. Also closes and deletes the HLog. */
+  /**
+   * Closes catalog regions if open. Also closes and deletes the HLog. You
+   * must call this method if you want to persist changes made during a
+   * MetaUtils edit session.
+   */
   public void shutdown() {
     if (this.rootRegion != null) {
       try {
@@ -209,7 +221,6 @@ public class MetaUtils {
     }
     
     // Open root region so we can scan it
-
     if (this.rootRegion == null) {
       openRootRegion();
     }
@@ -261,7 +272,7 @@ public class MetaUtils {
     HRegion metaRegion = openMetaRegion(metaRegionInfo);
     scanMetaRegion(metaRegion, listener);
   }
-  
+
   /**
    * Scan the passed in metaregion <code>m</code> invoking the passed
    * <code>listener</code> per row found.
@@ -269,8 +280,7 @@ public class MetaUtils {
    * @param listener
    * @throws IOException
    */
-  public void scanMetaRegion(final HRegion m,
-      final ScannerListener listener)
+  public void scanMetaRegion(final HRegion m, final ScannerListener listener)
   throws IOException {
     InternalScanner metaScanner = m.getScanner(HConstants.COL_REGIONINFO_ARRAY,
       HConstants.EMPTY_START_ROW, HConstants.LATEST_TIMESTAMP, null);
@@ -295,13 +305,13 @@ public class MetaUtils {
       metaScanner.close();
     }
   }
-  
+
   private void openRootRegion() throws IOException {
     this.rootRegion = HRegion.openHRegion(HRegionInfo.ROOT_REGIONINFO,
         this.rootdir, this.log, this.conf);
     this.rootRegion.compactStores();
   }
-  
+
   private HRegion openMetaRegion(HRegionInfo metaInfo) throws IOException {
     HRegion meta =
       HRegion.openHRegion(metaInfo, this.rootdir, this.log, this.conf);
@@ -338,5 +348,118 @@ public class MetaUtils {
     b.delete(HConstants.COL_SERVER);
     b.delete(HConstants.COL_STARTCODE);
     t.commit(b);
+  }
+  
+  /**
+   * Offline version of the online TableOperation,
+   * org.apache.hadoop.hbase.master.AddColumn.
+   * @param tableName
+   * @param hcd Add this column to <code>tableName</code>
+   * @throws IOException 
+   */
+  public void addColumn(final byte [] tableName,
+      final HColumnDescriptor hcd)
+  throws IOException {
+    List<HRegionInfo> metas = getMETARowsInROOT();
+    for (HRegionInfo hri: metas) {
+      final HRegion m = getMetaRegion(hri);
+      scanMetaRegion(m, new ScannerListener() {
+        private boolean inTable = true;
+        
+        @SuppressWarnings("synthetic-access")
+        public boolean processRow(HRegionInfo info) throws IOException {
+          LOG.debug("Testing " + Bytes.toString(tableName) + " against " +
+            Bytes.toString(info.getTableDesc().getName()));
+          if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
+            this.inTable = false;
+            info.getTableDesc().addFamily(hcd);
+            updateMETARegionInfo(m, info);
+            return true;
+          }
+          // If we got here and we have not yet encountered the table yet,
+          // inTable will be false.  Otherwise, we've passed out the table.
+          // Stop the scanner.
+          return this.inTable;
+        }});
+    }
+  }
+  
+  /**
+   * Offline version of the online TableOperation,
+   * org.apache.hadoop.hbase.master.DeleteColumn.
+   * @param tableName
+   * @param columnFamily Name of column name to remove.
+   * @throws IOException
+   */
+  public void deleteColumn(final byte [] tableName,
+      final byte [] columnFamily) throws IOException {
+    List<HRegionInfo> metas = getMETARowsInROOT();
+    final Path tabledir = new Path(rootdir, Bytes.toString(tableName));
+    for (HRegionInfo hri: metas) {
+      final HRegion m = getMetaRegion(hri);
+      scanMetaRegion(m, new ScannerListener() {
+        private boolean inTable = true;
+        
+        @SuppressWarnings("synthetic-access")
+        public boolean processRow(HRegionInfo info) throws IOException {
+          if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
+            this.inTable = false;
+            info.getTableDesc().removeFamily(columnFamily);
+            updateMETARegionInfo(m, info);
+            FSUtils.deleteColumnFamily(fs, tabledir, info.getEncodedName(),
+              HStoreKey.getFamily(columnFamily));
+            return false;
+          }
+          // If we got here and we have not yet encountered the table yet,
+          // inTable will be false.  Otherwise, we've passed out the table.
+          // Stop the scanner.
+          return this.inTable;
+        }});
+    }
+  }
+  
+  private void updateMETARegionInfo(HRegion r, final HRegionInfo hri) 
+  throws IOException {
+    if (LOG.isDebugEnabled()) {
+      HRegionInfo h = Writables.getHRegionInfoOrNull(
+        r.get(hri.getRegionName(), HConstants.COL_REGIONINFO).getValue());
+      LOG.debug("Old " + Bytes.toString(HConstants.COL_REGIONINFO) +
+        " for " + hri.toString() + " in " + r.toString() + " is: " +
+        h.toString());
+    }
+    BatchUpdate b = new BatchUpdate(hri.getRegionName());
+    b.put(HConstants.COL_REGIONINFO, Writables.getBytes(hri));
+    r.batchUpdate(b);
+    if (LOG.isDebugEnabled()) {
+      HRegionInfo h = Writables.getHRegionInfoOrNull(
+          r.get(hri.getRegionName(), HConstants.COL_REGIONINFO).getValue());
+        LOG.debug("New " + Bytes.toString(HConstants.COL_REGIONINFO) +
+          " for " + hri.toString() + " in " + r.toString() + " is: " +
+          h.toString());
+    }
+  }
+
+  /**
+   * @return List of <code>.META.<code> {@link HRegionInfo} found in the
+   * <code>-ROOT-</code> table.
+   * @throws IOException
+   * @see #getMetaRegion(HRegionInfo)
+   */
+  public List<HRegionInfo> getMETARowsInROOT() throws IOException {
+    if (!initialized) {
+      throw new IllegalStateException("Must call initialize method first.");
+    }
+    final List<HRegionInfo> result = new ArrayList<HRegionInfo>();
+    scanRootRegion(new ScannerListener() {
+      @SuppressWarnings("unused")
+      public boolean processRow(HRegionInfo info) throws IOException {
+        if (Bytes.equals(info.getTableDesc().getName(),
+            HConstants.META_TABLE_NAME)) {
+          result.add(info);
+          return false;
+        }
+        return true;
+      }});
+    return result;
   }
 }

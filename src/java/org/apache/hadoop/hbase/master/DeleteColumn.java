@@ -22,8 +22,10 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
 /** Instantiated to remove a column family from a table */
@@ -45,11 +47,8 @@ class DeleteColumn extends ColumnOperation {
       i.getTableDesc().removeFamily(columnName);
       updateRegionInfo(server, m.getRegionName(), i);
       // Delete the directories used by the column
-      int encodedName = i.getEncodedName();
-      this.master.fs.delete(
-        HStoreFile.getMapDir(tabledir, encodedName, columnName), true);
-      this.master.fs.delete(
-        HStoreFile.getInfoDir(tabledir, encodedName, columnName), true);
+      FSUtils.deleteColumnFamily(this.master.fs, tabledir, i.getEncodedName(),
+        this.columnName);
     }
   }
 }

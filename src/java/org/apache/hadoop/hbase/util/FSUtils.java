@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.FileSystemVersionException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -176,5 +177,20 @@ public class FSUtils {
    */
   public static String getPath(Path p) {
     return p.toUri().getPath();
+  }
+
+  /**
+   * Delete the directories used by the column family under the passed region.
+   * @param fs Filesystem to use.
+   * @param tabledir The directory under hbase.rootdir for this table.
+   * @param encodedRegionName The region name encoded.
+   * @param family Family to delete.
+   * @throws IOException
+   */
+  public static void deleteColumnFamily(final FileSystem fs,
+    final Path tabledir, final int encodedRegionName, final byte [] family)
+  throws IOException {
+    fs.delete(HStoreFile.getMapDir(tabledir, encodedRegionName, family), true);
+    fs.delete(HStoreFile.getInfoDir(tabledir, encodedRegionName, family), true);
   }
 }

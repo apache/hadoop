@@ -68,9 +68,9 @@ public abstract class AbstractMergeTestBase extends HBaseClusterTestCase {
   }
 
   @Override
-  protected void HBaseClusterSetup() throws Exception {
+  protected void hBaseClusterSetup() throws Exception {
     if (startMiniHBase) {
-      super.HBaseClusterSetup();
+      super.hBaseClusterSetup();
     }
   }
 

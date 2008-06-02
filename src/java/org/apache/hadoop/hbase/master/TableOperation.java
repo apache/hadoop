@@ -25,59 +25,42 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.io.RowResult;
-import org.apache.hadoop.hbase.util.Sleeper;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 
 /**
  * Abstract base class for operations that need to examine all HRegionInfo 
- * objects that make up a table. (For a table, operate on each of its rows
- * in .META.) To gain the 
+ * objects in a table. (For a table, operate on each of its rows
+ * in .META.).
  */
 abstract class TableOperation implements HConstants {
-  static final Long ZERO_L = Long.valueOf(0L);
-  
-  protected static final Log LOG = LogFactory.getLog(TableOperation.class);
-  
-  protected Set<MetaRegion> metaRegions;
-  protected byte [] tableName;
-  protected Set<HRegionInfo> unservedRegions;
+  private final Set<MetaRegion> metaRegions;
+  protected final byte [] tableName;
+  protected final Set<HRegionInfo> unservedRegions = new HashSet<HRegionInfo>();
   protected HMaster master;
-  protected final int numRetries;
-  protected final Sleeper sleeper;
-  
-  protected TableOperation(final HMaster master, final byte [] tableName) 
+
+  protected TableOperation(final HMaster master, final byte [] tableName)
   throws IOException {
-    this.sleeper = master.sleeper;
-    this.numRetries = master.numRetries;
-    
     this.master = master;
-    
     if (!this.master.isMasterRunning()) {
       throw new MasterNotRunningException();
     }
-
     this.tableName = tableName;
-    this.unservedRegions = new HashSet<HRegionInfo>();
 
     // We can not access any meta region if they have not already been
     // assigned and scanned.
-
     if (master.regionManager.metaScannerThread.waitForMetaRegionsOrClose()) {
       // We're shutting down. Forget it.
       throw new MasterNotRunningException(); 
     }
-
     this.metaRegions = master.regionManager.getMetaRegionsForTable(tableName);
   }
 
@@ -147,7 +130,7 @@ abstract class TableOperation implements HConstants {
       postProcessMeta(m, server);
       unservedRegions.clear();
 
-      return true;
+      return Boolean.TRUE;
     }
   }
 
