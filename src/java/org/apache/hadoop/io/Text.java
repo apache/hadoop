@@ -126,7 +126,7 @@ public class Text implements WritableComparable {
    */
   public int find(String what, int start) {
     try {
-      ByteBuffer src = ByteBuffer.wrap(this.bytes);
+      ByteBuffer src = ByteBuffer.wrap(this.bytes,0,this.length);
       ByteBuffer tgt = encode(what);
       byte b = tgt.get();
       src.position(start);
