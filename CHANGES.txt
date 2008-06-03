@@ -65,6 +65,12 @@ Trunk (unreleased changes)
     recovery. The block gets a new  generation stamp.
     (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-2909. Improve IPC idle connection management. Property
+    ipc.client.maxidletime is removed from the default configuration,
+    instead it is defined as twice of the ipc.client.connection.maxidletime.
+    A connection with outstanding requests won't be treated as idle.
+    (hairong)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,

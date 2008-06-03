@@ -1081,14 +1081,6 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>ipc.client.maxidletime</name>
-  <value>120000</value>
-  <description>Defines the maximum idle time in msec for a connected client after 
-               which it may be disconnected.
-  </description>
-</property>
-
-<property>
   <name>ipc.client.kill.max</name>
   <value>10</value>
   <description>Defines the maximum number of clients to disconnect in one go.
