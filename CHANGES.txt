@@ -405,6 +405,7 @@ Trunk (unreleased changes)
     Thus removes the class org.apache.hadoop.mapred.JobShell.
     (Amareshwari Sriramadasu via ddas) 
 
+    HADOOP-2132. Only RUNNING/PREP jobs can be killed. (Jothi Padmanabhan via ddas)
 
 Release 0.17.0 - 2008-05-18
 

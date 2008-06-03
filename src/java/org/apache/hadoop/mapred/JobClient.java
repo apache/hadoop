@@ -182,9 +182,17 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      */
     synchronized void ensureFreshStatus() throws IOException {
       if (System.currentTimeMillis() - statustime > MAX_JOBPROFILE_AGE) {
-        this.status = jobSubmitClient.getJobStatus(profile.getJobID());
-        this.statustime = System.currentTimeMillis();
+        updateStatus();
       }
+    }
+    
+    /** Some methods need to update status immediately. So, refresh
+     * immediately
+     * @throws IOException
+     */
+    synchronized void updateStatus() throws IOException {
+      this.status = jobSubmitClient.getJobStatus(profile.getJobID());
+      this.statustime = System.currentTimeMillis();
     }
 
     /**
@@ -244,7 +252,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      * Returns immediately whether the whole job is done yet or not.
      */
     public synchronized boolean isComplete() throws IOException {
-      ensureFreshStatus();
+      updateStatus();
       return (status.getRunState() == JobStatus.SUCCEEDED ||
               status.getRunState() == JobStatus.FAILED);
     }
@@ -253,7 +261,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      * True iff job completed successfully.
      */
     public synchronized boolean isSuccessful() throws IOException {
-      ensureFreshStatus();
+      updateStatus();
       return status.getRunState() == JobStatus.SUCCEEDED;
     }
 
@@ -307,7 +315,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     @Override
     public String toString() {
       try {
-        ensureFreshStatus();
+        updateStatus();
       } catch (IOException e) {
       }
       return "Job: " + profile.getJobID() + "\n" + 
