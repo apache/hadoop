@@ -438,7 +438,7 @@ public class HStore implements HConstants {
         try {
           // Try fixing this file.. if we can.  Use the hbase version of fix.
           // Need to remove the old index file first else fix won't go ahead.
-          this.fs.delete(new Path(mapfile, MapFile.INDEX_FILE_NAME));
+          this.fs.delete(new Path(mapfile, MapFile.INDEX_FILE_NAME), false);
           long count = MapFile.fix(this.fs, mapfile, HStoreFile.HbaseMapFile.KEY_CLASS,
             HStoreFile.HbaseMapFile.VALUE_CLASS, false, this.conf);
           if (LOG.isDebugEnabled()) {

@@ -42,13 +42,13 @@ import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.io.RowResult;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 
 /**
  * Used to communicate with a single HBase table
  */
 public class HTable {
-  private final Log LOG = LogFactory.getLog(this.getClass());
   private final HConnection connection;
   private final byte [] tableName;
   private HBaseConfiguration configuration;
@@ -125,6 +125,174 @@ public class HTable {
     this.connection.locateRegion(tableName, HConstants.EMPTY_START_ROW);
   }
 
+  /**
+   * @param tableName name of table to check
+   * @return true if table is on-line
+   * @throws IOException
+   */
+  public static boolean isTableOnline(Text tableName) throws IOException {
+    return isTableOnline(tableName.getBytes());
+  }
+  /**
+   * @param tableName name of table to check
+   * @return true if table is on-line
+   * @throws IOException
+   */
+  public static boolean isTableOnline(String tableName) throws IOException {
+    return isTableOnline(Bytes.toBytes(tableName));
+  }
+  /**
+   * @param tableName name of table to check
+   * @return true if table is on-line
+   * @throws IOException
+   */
+  public static boolean isTableOnline(byte[] tableName) throws IOException {
+    return isTableOnline(new HBaseConfiguration(), tableName);
+  }
+  
+  /**
+   * @param conf HBaseConfiguration object
+   * @param tableName name of table to check
+   * @return true if table is on-line
+   * @throws IOException
+   */
+  public static boolean isTableOnline(HBaseConfiguration conf, Text tableName)
+  throws IOException {
+    return isTableOnline(conf, tableName.getBytes());
+  }
+  
+  /**
+   * @param conf HBaseConfiguration object
+   * @param tableName name of table to check
+   * @return true if table is on-line
+   * @throws IOException
+   */
+  public static boolean isTableOnline(HBaseConfiguration conf, String tableName)
+  throws IOException {
+    return isTableOnline(conf, Bytes.toBytes(tableName));
+  }
+
+  /**
+   * @param conf HBaseConfiguration object
+   * @param tableName name of table to check
+   * @return true if table is on-line
+   * @throws IOException
+   */
+  public static boolean isTableOnline(HBaseConfiguration conf, byte[] tableName)
+  throws IOException {
+    boolean online = true;
+    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
+      // The root region is always on-line
+      return true;
+    }
+    HTable meta = new HTable(conf,
+        Bytes.equals(tableName, HConstants.META_TABLE_NAME) ?
+            HConstants.ROOT_TABLE_NAME : HConstants.META_TABLE_NAME);
+    Scanner s = meta.getScanner(HConstants.COL_REGIONINFO_ARRAY,
+        HRegionInfo.createRegionName(tableName, null, HConstants.NINES));
+    try {
+      RowResult r = null;
+      while ((r = s.next()) != null) {
+        Cell c = r.get(HConstants.COL_REGIONINFO);
+        if (c != null) {
+          HRegionInfo info = Writables.getHRegionInfoOrNull(c.getValue());
+          if (info != null) {
+            if (info.isOffline()) {
+              online = false;
+              break;
+            }
+          }
+        }
+      }
+    } finally {
+      s.close();
+    }
+    return online;
+  }
+  
+  /**
+   * @param tableName name of table to check
+   * @return true if table is on-line
+   * @throws IOException
+   */
+  public static boolean isTableOffline(Text tableName) throws IOException {
+    return isTableOffline(tableName.getBytes());
+  }
+  /**
+   * @param tableName name of table to check
+   * @return true if table is on-line
+   * @throws IOException
+   */
+  public static boolean isTableOffline(String tableName) throws IOException {
+    return isTableOffline(Bytes.toBytes(tableName));
+  }
+  /**
+   * @param tableName name of table to check
+   * @return true if table is on-line
+   * @throws IOException
+   */
+  public static boolean isTableOffline(byte[] tableName) throws IOException {
+    return isTableOffline(new HBaseConfiguration(), tableName);
+  }
+  
+  /**
+   * @param conf HBaseConfiguration object
+   * @param tableName name of table to check
+   * @return true if table is on-line
+   * @throws IOException
+   */
+  public static boolean isTableOffline(HBaseConfiguration conf, Text tableName)
+  throws IOException {
+    return isTableOffline(conf, tableName.getBytes());
+  }
+  
+  /**
+   * @param conf HBaseConfiguration object
+   * @param tableName name of table to check
+   * @return true if table is on-line
+   * @throws IOException
+   */
+  public static boolean isTableOffline(HBaseConfiguration conf, String tableName)
+  throws IOException {
+    return isTableOffline(conf, Bytes.toBytes(tableName));
+  }
+
+  /**
+   * @param conf HBaseConfiguration object
+   * @param tableName name of table to check
+   * @return true if table is off-line
+   * @throws IOException
+   */
+  public static boolean isTableOffline(HBaseConfiguration conf, byte[] tableName)
+  throws IOException {
+    boolean offline = true;
+    if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
+      // The root region is always online
+      return false;
+    }
+    HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+    Scanner s = meta.getScanner(HConstants.COL_REGIONINFO_ARRAY,
+        HRegionInfo.createRegionName(tableName, null, HConstants.NINES));
+    try {
+      RowResult r = null;
+      while ((r = s.next()) != null) {
+        Cell c = r.get(HConstants.COL_REGIONINFO);
+        if (c != null) {
+          HRegionInfo info = Writables.getHRegionInfoOrNull(c.getValue());
+          if (info != null) {
+            if (!info.isOffline()) {
+              offline = false;
+              break;
+            }
+          }
+        }
+      }
+    } finally {
+      s.close();
+    }
+    return offline;
+  }
+  
   /**
    * Find region location hosting passed row using cached info
    * @param row Row to find.
@@ -912,6 +1080,7 @@ public class HTable {
    * Completely delete the row's cells.
    *
    * @param row Key of the row you want to completely delete.
+   * @param column column to be deleted
    * @throws IOException
    */
   public void deleteAll(final byte [] row, final byte [] column)

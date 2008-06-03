@@ -629,6 +629,9 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   /** {@inheritDoc} */
   public void deleteTable(final byte [] tableName) throws IOException {
+    if (Bytes.equals(tableName, ROOT_TABLE_NAME)) {
+      throw new IOException("Can't delete root table");
+    }
     new TableDelete(this, tableName).process();
     LOG.info("deleted table: " + Bytes.toString(tableName));
   }
@@ -654,11 +657,17 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
 
   /** {@inheritDoc} */
   public void enableTable(final byte [] tableName) throws IOException {
+    if (Bytes.equals(tableName, ROOT_TABLE_NAME)) {
+      throw new IOException("Can't enable root table");
+    }
     new ChangeTableState(this, tableName, true).process();
   }
 
   /** {@inheritDoc} */
   public void disableTable(final byte [] tableName) throws IOException {
+    if (Bytes.equals(tableName, ROOT_TABLE_NAME)) {
+      throw new IOException("Can't disable root table");
+    }
     new ChangeTableState(this, tableName, false).process();
   }
 
