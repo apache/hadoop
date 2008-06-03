@@ -104,6 +104,27 @@
                            specified as key-value pairs. These will be used to
                            generate a hadoop-site.xml on the submit node that 
                            should be used for running MapReduce jobs.</li>
+          <li>job-feasibility-attr: A regular expression string that specifies
+                           whether and how to check job feasibility - resource
+                           manager or scheduler limits. The current
+                           implementation corresponds to the torque job
+                           attribute 'comment' and by default is disabled.
+                           When set, HOD uses it to decide what type
+                           of limit violation is triggered and either
+                           deallocates the cluster or stays in queued state
+                           according as the request is beyond maximum limits or
+                           the cumulative usage has crossed maxumum limits. 
+                           The torque comment attribute may be updated
+                           periodically by an external mechanism. For e.g.,
+                           comment attribute can be updated by running <a href=
+"hod_admin_guide.html#checklimits.sh+-+Tool+to+update+torque+comment+field+reflecting+resource+limits">
+                           checklimits.sh</a> script in hod/support directory,
+                           and then setting job-feasibility-attr equal to the
+                           value TORQUE_USER_LIMITS_COMMENT_FIELD i.e
+                           "User-limits exceeded. Requested:([0-9]*)
+                           Used:([0-9]*) MaxLimit:([0-9]*)" will make HOD
+                           behave accordingly.
+                           </li>
          </ul>
       </section>
       

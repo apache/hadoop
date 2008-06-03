@@ -34,7 +34,7 @@ reEmailDelimit = re.compile("@")
 reComma = re.compile("\s*,\s*")
 reDot = re.compile("\.")
 reCommentHack = re.compile("^.*?\s+#|;.*", flags=re.S)
-reCommentNewline = re.compile("\W$")
+reCommentNewline = re.compile("\n|\r$")
 reKeyVal = r"(?<!\\)="
 reKeyVal = re.compile(reKeyVal)
 reKeyValList = r"(?<!\\),"

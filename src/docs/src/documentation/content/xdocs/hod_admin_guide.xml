@@ -313,6 +313,32 @@ it.</p>
         <p><em>python logcondense.py -p ~/hadoop-0.17.0/bin/hadoop -d 7 -c ~/hadoop-conf -l /user</em></p>
       </section>
     </section>
+    <section>
+      <title>checklimits.sh - Tool to update torque comment field reflecting resource limits</title>
+      <p>checklimits is a HOD tool specific to torque/maui environment. It
+      updates torque comment field when newly submitted job(s) violate/cross
+      over user limits set up in maui scheduler. It uses qstat, does one pass
+      over torque job list to find out queued or unfinished jobs, runs maui
+      tool checkjob on each job to see if user limits are violated and then
+      runs torque's qalter utility to update job attribute 'comment'. Currently
+      it updates the comment as <em>User-limits exceeded. Requested:([0-9]*)
+      Used:([0-9]*) MaxLimit:([0-9]*)</em> for those jobs that violate limits.
+      This comment field is then used by HOD to behave accordingly depending on
+      the type of violation.</p>
+      <section>
+        <title>Running checklimits.sh</title>
+        <p>checklimits.sh is available under hod_install_location/support
+        folder. This is a shell script and can be run directly as <em>sh
+        checklimits.sh </em>or as <em>./checklimits.sh</em> after enabling
+        execute permissions. In order for this tool to be able to update
+        comment field of jobs from different users, it has to be run with
+        torque administrative privileges. This tool has to be run repeatedly
+        after specific intervals of time to frequently update jobs violating
+        constraints, for e.g. via cron. Please note that the resource manager
+        and scheduler commands used in this script can be expensive and so
+        it is better not to run this inside a tight loop without sleeping.</p>
+      </section>
+    </section>
   </section>
 </body>
 </document>

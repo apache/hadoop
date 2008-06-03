@@ -49,7 +49,8 @@ from hodlib.Common.setup import *
 from hodlib.Common.descGenerator import *
 from hodlib.Common.util import local_fqdn, need_to_allocate, filter_warnings,\
     get_exception_error_string, hodInterrupt, \
-    HOD_INTERRUPTED_MESG, HOD_INTERRUPTED_CODE
+    HOD_INTERRUPTED_MESG, HOD_INTERRUPTED_CODE,\
+    TORQUE_USER_LIMITS_COMMENT_FIELD
 from hodlib.Common.tcp import tcpError, tcpSocket
 from hodlib.Hod.hod import hodHelp
 
@@ -144,6 +145,9 @@ defList = { 'hod' : (
 
              ('update-worker-info', 'bool', 'Specifies whether to update Worker Info after allocation',
               False, False, False, True),
+
+             ('job-feasibility-attr', 'string', 'Specifies whether to check job feasibility - resource manager and/or scheduler limits, also gives the attribute value',
+              False, None, False, True),
 
              ('title', 'string', 'Title for the current HOD allocation.',
                True, "HOD", False, True, 'N'),

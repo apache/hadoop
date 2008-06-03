@@ -24,6 +24,10 @@ reEscapeSeq = re.compile(reEscapeSeq)
 
 HOD_INTERRUPTED_CODE = 127
 HOD_INTERRUPTED_MESG = "Hod interrupted. Cleaning up and exiting"
+TORQUE_USER_LIMITS_COMMENT_FIELD = "User-limits exceeded. " + \
+        "Requested:([0-9]*) Used:([0-9]*) MaxLimit:([0-9]*)"
+TORQUE_USER_LIMITS_EXCEEDED_MSG = "Requested number of nodes exceeded " + \
+                                  "maximum user limits. "
 
 class AlarmException(Exception):
     def __init__(self, msg=''):

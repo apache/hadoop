@@ -8,6 +8,10 @@ Trunk (unreleased changes)
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HADOOP-3376: Provide a mechanism to detect and handle violations to 
+    resource manager limits. (Vinod Kumar Vavilapalli via ddas)
+
  
   BUG FIXES
 

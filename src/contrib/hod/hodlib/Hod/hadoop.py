@@ -186,11 +186,14 @@ class hadoopCluster:
     count = 0
     status = False
     state = 'Q'
+    userLimitsFirstFlag = True
+
     while state == 'Q':
       if hodInterrupt.isSet():
         raise HodInterruptException()
 
-      state = self.__nodePool.getJobState()
+      jobInfo = self.__nodePool.getJobInfo()
+      state = jobInfo['job_state']
       if (state==False) or (state!='Q'):
         break
       count = count + 1
@@ -198,11 +201,28 @@ class hadoopCluster:
         time.sleep(0.5)
       else:
         time.sleep(10)
-    
+
+      if self.__cfg['hod'].has_key('job-feasibility-attr') and \
+                      self.__cfg['hod']['job-feasibility-attr']:
+        (status, msg) = self.__isJobFeasible()
+        if status == "Never":
+          self.__log.critical(TORQUE_USER_LIMITS_EXCEEDED_MSG + msg + \
+                "This cluster cannot be allocated now.")
+          return -1
+        elif status == False:
+          if userLimitsFirstFlag:
+            self.__log.critical(TORQUE_USER_LIMITS_EXCEEDED_MSG + msg + \
+                "This cluster allocation will succeed only after other " + \
+                "clusters are deallocated.")
+            userLimitsFirstFlag = False
+   
     if state and state != 'C':
       status = True
     
     return status
+
+  def __isJobFeasible(self):
+    return self.__nodePool.isJobFeasible()
   
   def __get_ringmaster_client(self):
     ringmasterXRS = None
@@ -434,13 +454,19 @@ class hadoopCluster:
         walltime = self.__cfg['hod']['walltime']
       self.jobId, exitCode = self.__nodePool.submitNodeSet(nodeSet, walltime)
       if self.jobId:
+        jobStatus = None
         try:
           jobStatus = self.__check_job_status()
         except HodInterruptException, h:
           self.__log.info(HOD_INTERRUPTED_MESG)
           self.delete_job(self.jobId)
-          self.__log.info("Job %s removed from queue." % self.jobId)
+          self.__log.info("Cluster %s removed from queue." % self.jobId)
           raise h
+        else:
+          if jobStatus == -1:
+            self.delete_job(self.jobId);
+            status = 4
+            return status
 
         if jobStatus:
           self.__log.info("Cluster Id %s" \
@@ -545,13 +571,13 @@ class hadoopCluster:
               self.__log.debug("Calling rm.stop()")
               ringClient.stopRM()
               self.__log.debug("Returning from rm.stop()")
-              self.__log.info("Job Shutdown by informing ringmaster.")
+              self.__log.info("Cluster Shutdown by informing ringmaster.")
             else:
               self.delete_job(self.jobId)
-              self.__log.info("Job %s removed from queue directly." % self.jobId)
+              self.__log.info("Cluster %s removed from queue directly." % self.jobId)
             raise h
         else:
-          self.__log.critical("No job found, ringmaster failed to run.")
+          self.__log.critical("No cluster found, ringmaster failed to run.")
           status = 5 
 
       elif self.jobId == False:

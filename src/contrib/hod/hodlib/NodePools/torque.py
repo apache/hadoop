@@ -21,7 +21,8 @@ import os, sys, csv, socket, time, re, pprint
 from hodlib.Hod.nodePool import *
 from hodlib.Schedulers.torque import torqueInterface
 from hodlib.Common.threads import simpleCommand
-from hodlib.Common.util import get_exception_string, args_to_string, local_fqdn
+from hodlib.Common.util import get_exception_string, args_to_string, local_fqdn, \
+                        TORQUE_USER_LIMITS_COMMENT_FIELD
 
 class TorqueNodeSet(NodeSet):
   def __init__(self, id, numNodes, preferredList, isPreemptee):
@@ -201,6 +202,7 @@ class TorquePool(NodePool):
     
     jobId, exitCode = self.__torque.qsub(argList, stdinList)
     
+    ## UNUSED CODE: LINE ##
     nodeSet.qsubId = jobId
 
     return jobId, exitCode
@@ -224,6 +226,7 @@ class TorquePool(NodePool):
       
     return status
     
+  ## UNUSED METHOD ?? ##
   def getWorkers(self):
     hosts = []
     
@@ -233,6 +236,7 @@ class TorquePool(NodePool):
     
     return hosts
  
+  ## UNUSED METHOD ?? ##
   def pollNodeSet(self, nodeSet):
     status = NodeSet.COMPLETE  
     nodeSet = self.nodeSetDict[0] 
@@ -264,17 +268,17 @@ class TorquePool(NodePool):
       
     return id
 
-  def getJobState(self):
+  def getJobInfo(self):
     #torque error code when credentials fail, a temporary condition sometimes.
     credFailureErrorCode = 171 
     credFailureRetries = 10
     i = 0
-    jobState = False
+    self.__jobInfo = None
     
     while i < credFailureRetries:
       qstatInfo, exitCode = self.__torque.qstat(self.getServiceId())
       if exitCode == 0:
-        jobState = qstatInfo['job_state'] 
+        self.__jobInfo = qstatInfo
         break
       else:
         if exitCode == credFailureErrorCode:
@@ -282,11 +286,35 @@ class TorquePool(NodePool):
           i = i+1
         else:
           break
-    return jobState
+    return self.__jobInfo
 
   def deleteJob(self, jobId):
     exitCode = self.__torque.qdel(jobId)
     return exitCode
+
+  def isJobFeasible(self):
+    comment = None
+    msg = None
+    if self.__jobInfo.has_key('comment'):
+      comment = self.__jobInfo['comment']
+    try:
+      if comment:
+        commentField = re.compile(self._cfg['hod']['job-feasibility-attr'])
+        match = commentField.search(comment)
+        if match:
+          reqUsage = int(match.group(1))
+          currentUsage = int(match.group(2))
+          maxUsage = int(match.group(3))
+          msg = "Current Usage:%s, Requested:%s, Maximum Limit:%s " % \
+                                  (currentUsage, reqUsage, maxUsage)
+          if reqUsage > maxUsage:
+            return "Never", msg
+          if reqUsage + currentUsage > maxUsage:
+            return False, msg
+    except Exception, e:
+      self._log.error("Error in isJobFeasible : %s" %e)
+      raise Exception(e)
+    return True, msg
     
   def runWorkers(self, args):
     return self.__torque.pbsdsh(args)

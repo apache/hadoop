@@ -404,7 +404,8 @@
         <td> 4 </td>
         <td> Scheduler failure </td>
         <td> 1. Requested more resources than available. Run <code>checknodes cluster_name</code> to see if enough nodes are available. <br />
-          2. Torque is misconfigured, the path to Torque binaries is misconfigured, or other Torque problems. Contact system administrator. </td>
+          2. Requested resources exceed resource manager limits. <br />
+          3. Torque is misconfigured, the path to Torque binaries is misconfigured, or other Torque problems. Contact system administrator. </td>
       </tr>
       <tr>
         <td> 5 </td>

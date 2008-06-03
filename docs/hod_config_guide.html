@@ -320,9 +320,30 @@ document.write("Last Published: " + document.lastModified);
                            specified as key-value pairs. These will be used to
                            generate a hadoop-site.xml on the submit node that 
                            should be used for running MapReduce jobs.</li>
+          
+<li>job-feasibility-attr: A regular expression string that specifies
+                           whether and how to check job feasibility - resource
+                           manager or scheduler limits. The current
+                           implementation corresponds to the torque job
+                           attribute 'comment' and by default is disabled.
+                           When set, HOD uses it to decide what type
+                           of limit violation is triggered and either
+                           deallocates the cluster or stays in queued state
+                           according as the request is beyond maximum limits or
+                           the cumulative usage has crossed maxumum limits. 
+                           The torque comment attribute may be updated
+                           periodically by an external mechanism. For e.g.,
+                           comment attribute can be updated by running <a href="hod_admin_guide.html#checklimits.sh+-+Tool+to+update+torque+comment+field+reflecting+resource+limits">
+                           checklimits.sh</a> script in hod/support directory,
+                           and then setting job-feasibility-attr equal to the
+                           value TORQUE_USER_LIMITS_COMMENT_FIELD i.e
+                           "User-limits exceeded. Requested:([0-9]*)
+                           Used:([0-9]*) MaxLimit:([0-9]*)" will make HOD
+                           behave accordingly.
+                           </li>
          
 </ul>
-<a name="N1007E"></a><a name="3.3+resource_manager+options"></a>
+<a name="N10085"></a><a name="3.3+resource_manager+options"></a>
 <h3 class="h4">3.3 resource_manager options</h3>
 <ul>
           
@@ -345,7 +366,7 @@ document.write("Last Published: " + document.lastModified);
                       can then use this variable.</li>
         
 </ul>
-<a name="N10091"></a><a name="3.4+ringmaster+options"></a>
+<a name="N10098"></a><a name="3.4+ringmaster+options"></a>
 <h3 class="h4">3.4 ringmaster options</h3>
 <ul>
           
@@ -358,7 +379,7 @@ document.write("Last Published: " + document.lastModified);
                        and notes for the temp-dir variable apply here too.</li>
         
 </ul>
-<a name="N1009E"></a><a name="3.5+gridservice-hdfs+options"></a>
+<a name="N100A5"></a><a name="3.5+gridservice-hdfs+options"></a>
 <h3 class="h4">3.5 gridservice-hdfs options</h3>
 <ul>
           
@@ -399,7 +420,7 @@ document.write("Last Published: " + document.lastModified);
 <li>final-server-params: Same as above, except they will be marked final.</li>
         
 </ul>
-<a name="N100BD"></a><a name="3.6+gridservice-mapred+options"></a>
+<a name="N100C4"></a><a name="3.6+gridservice-mapred+options"></a>
 <h3 class="h4">3.6 gridservice-mapred options</h3>
 <ul>
           
@@ -432,7 +453,7 @@ document.write("Last Published: " + document.lastModified);
 <li>final-server-params: Same as above, except they will be marked final.</li>
         
 </ul>
-<a name="N100DC"></a><a name="3.7+hodring+options"></a>
+<a name="N100E3"></a><a name="3.7+hodring+options"></a>
 <h3 class="h4">3.7 hodring options</h3>
 <ul>
           

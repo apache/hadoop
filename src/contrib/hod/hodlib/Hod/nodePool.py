@@ -101,11 +101,15 @@ class NodePool:
   def getServiceId(self):
     raise NotImplementedError
  
-  def getJobState(self):
+  def getJobInfo(self):
     raise NotImplementedError
 
   def deleteJob(self, jobId):
     """Delete a job, given it's id"""
+    raise NotImplementedError
+
+  def isJobFeasible(self):
+    """Check if job can run by looking at any user/job limits"""
     raise NotImplementedError
 
   def updateWorkerInfo(self, workerInfoMap):
