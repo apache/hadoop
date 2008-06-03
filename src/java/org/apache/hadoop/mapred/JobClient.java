@@ -30,7 +30,6 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -38,8 +37,6 @@ import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 
 import javax.security.auth.login.LoginException;
@@ -60,9 +57,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
@@ -157,7 +151,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   private static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobClient");
   public static enum TaskStatusFilter { NONE, KILLED, FAILED, SUCCEEDED, ALL }
   private TaskStatusFilter taskOutputFilter = TaskStatusFilter.FAILED; 
-  private static Configuration commandLineConfig;
   static long MAX_JOBPROFILE_AGE = 1000 * 2;
 
   /**
@@ -357,23 +350,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   }
   
   /**
-   * set the command line config in the jobclient. these are
-   * parameters paassed from the command line and stored in 
-   * conf
-   * @param conf the configuration object to set.
-   */
-  static void setCommandLineConfig(Configuration conf) {
-    commandLineConfig = conf;
-  }
-  
-  /**
-   * return the command line configuration
-   */
-  public static Configuration getCommandLineConfig() {
-    return commandLineConfig;
-  }
-  
-  /**
    * Connect to the default {@link JobTracker}.
    * @param conf the job configuration.
    * @throws IOException
@@ -499,15 +475,12 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     throws IOException {
     // get all the command line arguments into the 
     // jobconf passed in by the user conf
-    Configuration commandConf = JobClient.getCommandLineConfig();
     String files = null;
     String libjars = null;
     String archives = null;
-    if (commandConf != null) {
-      files = commandConf.get("tmpfiles");
-      libjars = commandConf.get("tmpjars");
-      archives = commandConf.get("tmparchives");
-    }
+    files = job.get("tmpfiles");
+    libjars = job.get("tmpjars");
+    archives = job.get("tmparchives");
     /*
      * set this user's id in job configuration, so later job files can be
      * accessed using this user's id

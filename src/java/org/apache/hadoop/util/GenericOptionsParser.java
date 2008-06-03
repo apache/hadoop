@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.util;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.PrintStream;
+import java.net.URI;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -49,6 +52,13 @@ import org.apache.hadoop.fs.FileSystem;
  *     -D &lt;property=value&gt;            use value for given property
  *     -fs &lt;local|namenode:port&gt;      specify a namenode
  *     -jt &lt;local|jobtracker:port&gt;    specify a job tracker
+ *     -files &lt;comma separated list of files&gt;    specify comma separated
+ *                            files to be copied to the map reduce cluster
+ *     -libjars &lt;comma separated list of jars&gt;   specify comma separated
+ *                            jar files to include in the classpath.
+ *     -archives &lt;comma separated list of archives&gt;    specify comma
+ *             separated archives to be unarchived on the compute machines.
+
  * </pre></blockquote></p>
  * 
  * <p>The general command line syntax is:</p>
@@ -80,6 +90,10 @@ import org.apache.hadoop.fs.FileSystem;
  *     
  * $ bin/hadoop job -jt local -submit job.xml
  * submit a job to local runner
+ * 
+ * $ bin/hadoop jar -libjars testlib.jar 
+ * -archives test.tgz -files file.txt inputjar args
+ * job submission with libjars, files and archives
  * </pre></blockquote></p>
  *
  * @see Tool
@@ -167,12 +181,29 @@ public class GenericOptionsParser {
     .withArgPattern("=", 1)
     .withDescription("use value for given property")
     .create('D');
+    Option libjars = OptionBuilder.withArgName("paths")
+    .hasArg()
+    .withDescription("comma separated jar files to include in the classpath.")
+    .create("libjars");
+    Option files = OptionBuilder.withArgName("paths")
+    .hasArg()
+    .withDescription("comma separated files to be copied to the " +
+           "map reduce cluster")
+    .create("files");
+    Option archives = OptionBuilder.withArgName("paths")
+    .hasArg()
+    .withDescription("comma separated archives to be unarchived" +
+                     " on the compute machines.")
+    .create("archives");
 
     opts.addOption(fs);
     opts.addOption(jt);
     opts.addOption(oconf);
     opts.addOption(property);
-    
+    opts.addOption(libjars);
+    opts.addOption(files);
+    opts.addOption(archives);
+
     return opts;
   }
 
@@ -193,6 +224,22 @@ public class GenericOptionsParser {
     if (line.hasOption("conf")) {
       conf.addResource(new Path(line.getOptionValue("conf")));
     }
+    try {
+      if (line.hasOption("libjars")) {
+        conf.set("tmpjars", 
+                 validateFiles(line.getOptionValue("libjars"), conf));
+      }
+      if (line.hasOption("files")) {
+        conf.set("tmpfiles", 
+                 validateFiles(line.getOptionValue("files"), conf));
+      }
+      if (line.hasOption("archives")) {
+        conf.set("tmparchives", 
+                  validateFiles(line.getOptionValue("archives"), conf));
+      }
+    } catch (IOException ioe) {
+      System.err.println(StringUtils.stringifyException(ioe));
+    }
     if (line.hasOption('D')) {
       String[] property = line.getOptionValues('D');
       for(int i=0; i<property.length-1; i=i+2) {
@@ -201,6 +248,55 @@ public class GenericOptionsParser {
       }
     }
   }
+
+  /**
+   * takes input as a comma separated list of files
+   * and verifies if they exist. It defaults for file:///
+   * if the files specified do not have a scheme.
+   * it returns the paths uri converted defaulting to file:///.
+   * So an input of  /home/user/file1,/home/user/file2 would return
+   * file:///home/user/file1,file:///home/user/file2
+   * @param files
+   * @return
+   */
+  private String validateFiles(String files, Configuration conf) throws IOException  {
+    if (files == null) 
+      return null;
+    String[] fileArr = files.split(",");
+    String[] finalArr = new String[fileArr.length];
+    for (int i =0; i < fileArr.length; i++) {
+      String tmp = fileArr[i];
+      String finalPath;
+      Path path = new Path(tmp);
+      URI pathURI =  path.toUri();
+      FileSystem localFs = FileSystem.getLocal(conf);
+      if (pathURI.getScheme() == null) {
+        //default to the local file system
+        //check if the file exists or not first
+        if (!localFs.exists(path)) {
+          throw new FileNotFoundException("File " + tmp + " does not exist.");
+        }
+        finalPath = path.makeQualified(localFs).toString();
+      }
+      else {
+        // check if the file exists in this file system
+        // we need to recreate this filesystem object to copy
+        // these files to the file system jobtracker is running
+        // on.
+        FileSystem fs = path.getFileSystem(conf);
+        if (!fs.exists(path)) {
+          throw new FileNotFoundException("File " + tmp + " does not exist.");
+        }
+        finalPath = path.makeQualified(fs).toString();
+        try {
+          fs.close();
+        } catch(IOException e){};
+      }
+      finalArr[i] = finalPath;
+    }
+    return StringUtils.arrayToString(finalArr);
+  }
+  
 
   /**
    * Parse the user-specified options, get the generic options, and modify
@@ -236,7 +332,14 @@ public class GenericOptionsParser {
     out.println("-conf <configuration file>     specify an application configuration file");
     out.println("-D <property=value>            use value for given property");
     out.println("-fs <local|namenode:port>      specify a namenod");
-    out.println("-jt <local|jobtracker:port>    specify a job tracker\n");
+    out.println("-jt <local|jobtracker:port>    specify a job tracker");
+    out.println("-files <comma separated list of fiels>    " + 
+      "specify comma separated files to be copied to the map reduce cluster");
+    out.println("-libjars <comma seperated list of jars>    " +
+      "specify comma separated jar files to include in the classpath.");
+    out.println("-archives <comma separated list of archives>    " +
+                "specify comma separated archives to be unarchived" +
+                " on the compute machines.\n");
     out.println("The general command line syntax is");
     out.println("bin/hadoop command [genericOptions] [commandOptions]\n");
   }

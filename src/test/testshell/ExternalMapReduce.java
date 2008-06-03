@@ -18,11 +18,11 @@
 
 package testshell;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
@@ -31,20 +31,19 @@ import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * will be in an external jar and used for 
  * test in TestJobShell.java.
  */
-public class ExternalMapReduce
-  implements Mapper<WritableComparable, Writable,
-                    WritableComparable, IntWritable>,
-             Reducer<WritableComparable, Writable,
-                     WritableComparable, IntWritable> {
+public class ExternalMapReduce extends Configured implements Tool {
 
   public void configure(JobConf job) {
     // do nothing
@@ -55,58 +54,69 @@ public class ExternalMapReduce
 
   }
 
-  public void map(WritableComparable key, Writable value,
-                  OutputCollector<WritableComparable, IntWritable> output,
-                  Reporter reporter)
-    throws IOException {
-    //check for classpath
-    String classpath = System.getProperty("java.class.path");
-    if (classpath.indexOf("testjob.jar") == -1) {
-      throw new IOException("failed to find in the library " + classpath);
+  public static class MapClass extends MapReduceBase 
+    implements Mapper<WritableComparable, Writable,
+                      WritableComparable, IntWritable> {
+    public void map(WritableComparable key, Writable value,
+                    OutputCollector<WritableComparable, IntWritable> output,
+                    Reporter reporter)
+      throws IOException {
+      //check for classpath
+      String classpath = System.getProperty("java.class.path");
+      if (classpath.indexOf("testjob.jar") == -1) {
+        throw new IOException("failed to find in the library " + classpath);
+      }
+      //fork off ls to see if the file exists.
+      // java file.exists() will not work on 
+      // cygwin since it is a symlink
+      String[] argv = new String[2];
+      argv[0] = "ls";
+      argv[1] = "files_tmp";
+      Process p = Runtime.getRuntime().exec(argv);
+      int ret = -1;
+      try {
+        ret = p.waitFor();
+      } catch(InterruptedException ie) {
+        //do nothing here.
+      }
+      if (ret != 0) {
+        throw new IOException("files_tmp does not exist");
+      }
     }
-    //fork off ls to see if the file exists.
-    // java file.exists() will not work on 
-    // cygwin since it is a symlink
-    String[] argv = new String[2];
-    argv[0] = "ls";
-    argv[1] = "files_tmp";
-    Process p = Runtime.getRuntime().exec(argv);
-    int ret = -1;
-    try {
-      ret = p.waitFor();
-    } catch(InterruptedException ie) {
-      //do nothing here.
-    }
-    if (ret != 0) {
-      throw new IOException("files_tmp does not exist");
-    }
-    
-    //check for files 
   }
 
-  public void reduce(WritableComparable key, Iterator<Writable> values,
-                     OutputCollector<WritableComparable, IntWritable> output,
-                     Reporter reporter)
-    throws IOException {
-   //do nothing
+  public static class Reduce extends MapReduceBase
+    implements Reducer<WritableComparable, Writable,
+                       WritableComparable, IntWritable> {
+    public void reduce(WritableComparable key, Iterator<Writable> values,
+                       OutputCollector<WritableComparable, IntWritable> output,
+                       Reporter reporter)
+      throws IOException {
+     //do nothing
+    }
   }
   
-  public static int main(String[] argv) throws IOException {
+  public int run(String[] argv) throws IOException {
     if (argv.length < 2) {
       System.out.println("ExternalMapReduce <input> <output>");
       return -1;
     }
     Path outDir = new Path(argv[1]);
     Path input = new Path(argv[0]);
-    Configuration commandConf = JobClient.getCommandLineConfig();
-    JobConf testConf = new JobConf(commandConf, ExternalMapReduce.class);
+    JobConf testConf = new JobConf(getConf(), ExternalMapReduce.class);
     testConf.setJobName("external job");
     FileInputFormat.setInputPaths(testConf, input);
     FileOutputFormat.setOutputPath(testConf, outDir);
-    testConf.setMapperClass(ExternalMapReduce.class);
-    testConf.setReducerClass(ExternalMapReduce.class);
+    testConf.setMapperClass(MapClass.class);
+    testConf.setReducerClass(Reduce.class);
     testConf.setNumReduceTasks(1);
     JobClient.runJob(testConf);
     return 0;
+  }
+  
+  public static void main(String[] args) throws Exception {
+    int res = ToolRunner.run(new Configuration(),
+                             new ExternalMapReduce(), args);
+    System.exit(res);
   }
 }

@@ -397,6 +397,12 @@ Trunk (unreleased changes)
     HADOOP-3454. Fix Text::find to search only valid byte ranges. (Chad Whipkey
     via cdouglas)
 
+    HADOOP-3417. Removes the static configuration variable, commandLineConfig from 
+    JobClient. Moves the cli parsing from JobShell to GenericOptionsParser. 
+    Thus removes the class org.apache.hadoop.mapred.JobShell.
+    (Amareshwari Sriramadasu via ddas) 
+
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
