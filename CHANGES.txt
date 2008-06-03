@@ -67,6 +67,7 @@ Hbase Change Log
                a (lexicographic) comparison to column's values
                (Clint Morgan via Stack)
    HBASE-579   Add hadoop 0.17.x
+   HBASE-660   [Migration] addColumn/deleteColumn functionality in MetaUtils
 
 Release 0.1.2 - 05/13/2008
    
