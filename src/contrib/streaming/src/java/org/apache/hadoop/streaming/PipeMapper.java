@@ -89,7 +89,6 @@ public class PipeMapper extends PipeMapRed implements Mapper {
         }
         write(value);
         clientOut_.write('\n');
-        clientOut_.flush();
       } else {
         numRecSkipped_++;
       }

@@ -189,6 +189,9 @@ Trunk (unreleased changes)
     HADOOP-3434. Retain the cause of the bind failure in Server::bind.
     (Steve Loughran via cdouglas)
 
+    HADOOP-3429. Increases the size of the buffers used for the communication
+    for Streaming jobs. (Amareshwari Sriramadasu via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

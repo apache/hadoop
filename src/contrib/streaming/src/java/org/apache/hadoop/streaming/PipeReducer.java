@@ -78,7 +78,6 @@ public class PipeReducer extends PipeMapRed implements Reducer {
           clientOut_.write('\t');
           write(val);
           clientOut_.write('\n');
-          clientOut_.flush();
         } else {
           // "identity reduce"
           output.collect(key, val);

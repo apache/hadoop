@@ -22,7 +22,6 @@ import java.io.*;
 import java.nio.charset.CharacterCodingException;
 import java.io.IOException;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import java.util.Iterator;
 import java.util.Arrays;
@@ -35,9 +34,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.mapred.LineRecordReader.LineReader;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.io.Text;
@@ -65,6 +62,8 @@ public abstract class PipeMapRed {
   final static int OUTSIDE = 1;
   final static int SINGLEQ = 2;
   final static int DOUBLEQ = 3;
+  
+  private final static int BUFFER_SIZE = 128 * 1024;
 
   static String[] splitArgs(String args) {
     ArrayList argList = new ArrayList();
@@ -172,8 +171,12 @@ public abstract class PipeMapRed {
       builder.environment().putAll(childEnv.toMap());
       sim = builder.start();
 
-      clientOut_ = new DataOutputStream(new BufferedOutputStream(sim.getOutputStream()));
-      clientIn_ = new DataInputStream(new BufferedInputStream(sim.getInputStream()));
+      clientOut_ = new DataOutputStream(new BufferedOutputStream(
+                                              sim.getOutputStream(),
+                                              BUFFER_SIZE));
+      clientIn_ = new DataInputStream(new BufferedInputStream(
+                                              sim.getInputStream(),
+                                              BUFFER_SIZE));
       clientErr_ = new DataInputStream(new BufferedInputStream(sim.getErrorStream()));
       startTime_ = System.currentTimeMillis();
 
@@ -457,6 +460,7 @@ public abstract class PipeMapRed {
       if (!doPipe_) return;
       try {
         if (clientOut_ != null) {
+          clientOut_.flush();
           clientOut_.close();
         }
       } catch (IOException io) {
