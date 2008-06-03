@@ -980,15 +980,16 @@ public class HRegion implements HConstants {
     // to do this for a moment.  Its quick.  The subsequent sequence id that
     // goes into the HLog after we've flushed all these snapshots also goes
     // into the info file that sits beside the flushed files.
+    long sequenceId = -1L;
     this.updatesLock.writeLock().lock();
     try {
       for (HStore s: stores.values()) {
         s.snapshot();
       }
+      sequenceId = log.startCacheFlush();
     } finally {
       this.updatesLock.writeLock().unlock();
     }
-    long sequenceId = log.startCacheFlush();
 
     // Any failure from here on out will be catastrophic requiring server
     // restart so hlog content can be replayed and put back into the memcache.

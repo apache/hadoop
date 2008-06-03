@@ -35,7 +35,8 @@ Hbase Change Log
    HBASE-650   Add String versions of get, scanner, put in HTable
    HBASE-656   Do not retry exceptions such as unknown scanner or illegal argument
    HBASE-659   HLog#cacheFlushLock not cleared; hangs a region
-
+   HBASE-663   Incorrect sequence number for cache flush
+   
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
    HBASE-596   DemoClient.py (Ivan Begtin via Stack)
