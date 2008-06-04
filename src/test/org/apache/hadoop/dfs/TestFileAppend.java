@@ -63,12 +63,6 @@ public class TestFileAppend extends TestCase {
     return stm;
   }
 
-  private void flushFile(FSDataOutputStream stm) throws IOException {
-    DFSClient.DFSOutputStream dfstream = (DFSClient.DFSOutputStream)
-                                            (stm.getWrappedStream());
-    dfstream.fsync();
-  }
-
   //
   // writes to file but does not close it
   //
@@ -234,14 +228,14 @@ public class TestFileAppend extends TestCase {
       // write to file
       int mid = fileSize/2;
       stm.write(fileContents, 0, mid);
-      flushFile(stm);
+      stm.sync();
       System.out.println("Wrote and Flushed first part of file.");
 
       // write the remainder of the file
       stm.write(fileContents, mid, fileSize - mid);
       System.out.println("Written second part of file");
-      flushFile(stm);
-      flushFile(stm); // two consecutive flushes is being tested here.
+      stm.sync();
+      stm.sync();
       System.out.println("Wrote and Flushed second part of file.");
 
       // verify that full blocks are sane
@@ -287,7 +281,7 @@ public class TestFileAppend extends TestCase {
       int start = 0;
       for (start = 0; (start + 29) < fileSize; ) {
         stm.write(fileContents, start, 29);
-        flushFile(stm);
+        stm.sync();
         start += 29;
       }
       stm.write(fileContents, start, fileSize-start);

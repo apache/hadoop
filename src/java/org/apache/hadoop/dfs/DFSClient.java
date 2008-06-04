@@ -1699,7 +1699,7 @@ class DFSClient implements FSConstants {
    * datanode from the original pipeline. The DataStreamer now
    * starts sending packets from the dataQueue.
   ****************************************************************/
-  class DFSOutputStream extends FSOutputSummer {
+  class DFSOutputStream extends FSOutputSummer implements Syncable {
     private Socket s;
     boolean closed = false;
   
@@ -2497,7 +2497,7 @@ class DFSClient implements FSConstants {
      * that data has been flushed to persistent store on the 
      * datanode. Block allocations are persisted on namenode.
      */
-    public synchronized void fsync() throws IOException {
+    public synchronized void sync() throws IOException {
       try {
         /* Record current blockOffset. This might be changed inside
          * flushBuffer() where a partial checksum chunk might be flushed.

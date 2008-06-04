@@ -126,6 +126,9 @@ Trunk (unreleased changes)
     HADOOP-3250. Extend FileSystem API to allow appending to files.
     (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HADOOP-3177. Implement Syncable interface for FileSystem.
+    (Tsz Wo (Nicholas), SZE via dhruba)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().

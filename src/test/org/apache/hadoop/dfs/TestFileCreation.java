@@ -62,12 +62,6 @@ public class TestFileCreation extends junit.framework.TestCase {
     return stm;
   }
 
-  private void flushFile(FSDataOutputStream stm) throws IOException {
-    DFSClient.DFSOutputStream dfstream = (DFSClient.DFSOutputStream)
-                                            (stm.getWrappedStream());
-    dfstream.fsync();
-  }
-
   //
   // writes to file but does not close it
   //
@@ -439,7 +433,7 @@ public class TestFileCreation extends junit.framework.TestCase {
 
       // write two full blocks.
       writeFile(stm, numBlocks * blockSize);
-      flushFile(stm);
+      stm.sync();
 
       // rename file wile keeping it open.
       Path fileRenamed = new Path("/filestatusRenamed.dat");
@@ -657,7 +651,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       final Path fpath = new Path(f);
       FSDataOutputStream out = TestFileCreation.createFile(dfs, fpath, DATANODE_NUM);
       out.write("something".getBytes());
-      ((DFSClient.DFSOutputStream)out.getWrappedStream()).fsync();
+      out.sync();
 
       // set the soft and hard limit to be 1 second so that the
       // namenode triggers lease recovery

@@ -24,7 +24,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.net.NetUtils;
 
 public class TestAbandonBlock extends junit.framework.TestCase {
   public static final Log LOG = LogFactory.getLog(TestAbandonBlock.class);
@@ -32,12 +31,6 @@ public class TestAbandonBlock extends junit.framework.TestCase {
   private static final Configuration CONF = new Configuration();
   static final String FILE_NAME_PREFIX
       = "/" + TestAbandonBlock.class.getSimpleName() + "_"; 
-
-  private void flushFile(FSDataOutputStream stm) throws IOException {
-    DFSClient.DFSOutputStream dfstream = (DFSClient.DFSOutputStream)
-                                            (stm.getWrappedStream());
-    dfstream.fsync();
-  }
 
   public void testAbandonBlock() throws IOException {
     MiniDFSCluster cluster = new MiniDFSCluster(CONF, 2, true, null);
@@ -51,7 +44,7 @@ public class TestAbandonBlock extends junit.framework.TestCase {
       for(int i = 0; i < 1024; i++) {
         fout.write(123);
       }
-      flushFile(fout);
+      fout.sync();
   
       //try reading the block by someone
       DFSClient dfsclient = new DFSClient(CONF);

@@ -180,7 +180,7 @@ public class RawLocalFileSystem extends FileSystem {
   /*********************************************************
    * For create()'s FSOutputStream.
    *********************************************************/
-  class LocalFSFileOutputStream extends OutputStream {
+  class LocalFSFileOutputStream extends OutputStream implements Syncable {
     FileOutputStream fos;
     
     private LocalFSFileOutputStream(Path f, boolean append) throws IOException {
@@ -206,6 +206,11 @@ public class RawLocalFileSystem extends FileSystem {
       } catch (IOException e) {              // unexpected exception
         throw new FSError(e);                // assume native fs error
       }
+    }
+
+    /** {@inheritDoc} */
+    public void sync() throws IOException {
+      fos.getFD().sync();      
     }
   }
   

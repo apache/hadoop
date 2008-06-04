@@ -22,7 +22,7 @@ import java.io.*;
 /** Utility that wraps a {@link OutputStream} in a {@link DataOutputStream},
  * buffers output through a {@link BufferedOutputStream} and creates a checksum
  * file. */
-public class FSDataOutputStream extends DataOutputStream {
+public class FSDataOutputStream extends DataOutputStream implements Syncable {
   private OutputStream wrappedStream;
 
   private static class PositionCache extends FilterOutputStream {
@@ -82,5 +82,12 @@ public class FSDataOutputStream extends DataOutputStream {
   // Returns the underlying output stream. This is used by unit tests.
   public OutputStream getWrappedStream() {
     return wrappedStream;
+  }
+
+  /** {@inheritDoc} */
+  public void sync() throws IOException {
+    if (wrappedStream instanceof Syncable) {
+      ((Syncable)wrappedStream).sync();
+    }
   }
 }
