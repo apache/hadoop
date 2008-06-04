@@ -416,6 +416,9 @@ Trunk (unreleased changes)
 
     HADOOP-2132. Only RUNNING/PREP jobs can be killed. (Jothi Padmanabhan via ddas)
 
+    HADOOP-3472 MapFile.Reader getClosest() function returns incorrect results
+    when before is true (Todd Lipcon via Stack)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
