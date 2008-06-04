@@ -453,19 +453,36 @@ public class MapFile {
       
       if (nextKey == null)
         nextKey = comparator.newKey();
-      long oldPosition = -1;
-      if (before) {
-        oldPosition = data.getPosition();
-      }
+     
+      // If we're looking for the key before, we need to keep track
+      // of the position we got the current key as well as the position
+      // of the key before it.
+      long prevPosition = -1;
+      long curPosition = seekPosition;
+
       while (data.next(nextKey)) {
         int c = comparator.compare(key, nextKey);
         if (c <= 0) {                             // at or beyond desired
           if (before && c != 0) {
-            // Need to back up to previous record.
-            data.seek(oldPosition);
-            data.next(nextKey);
+            if (prevPosition == -1) {
+              // We're on the first record of this index block
+              // and we've already passed the search key. Therefore
+              // we must be at the beginning of the file, so seek
+              // to the beginning of this block and return c
+              data.seek(curPosition);
+            } else {
+              // We have a previous record to back up to
+              data.seek(prevPosition);
+              data.next(nextKey);
+              // now that we've rewound, the search key must be greater than this key
+              return 1;
+            }
           }
           return c;
+        }
+        if (before) {
+          prevPosition = curPosition;
+          curPosition = data.getPosition();
         }
       }
 
@@ -537,10 +554,17 @@ public class MapFile {
     public synchronized WritableComparable getClosest(WritableComparable key,
         Writable val, final boolean before)
       throws IOException {
-      
-      if (seekInternal(key, before) > 0) {
+     
+      int c = seekInternal(key, before);
+
+      // If we didn't get an exact match, and we ended up in the wrong
+      // direction relative to the query key, return null since we
+      // must be at the beginning or end of the file.
+      if ((!before && c > 0) ||
+          (before && c < 0)) {
         return null;
       }
+
       data.getCurrentValue(val);
       return nextKey;
     }
