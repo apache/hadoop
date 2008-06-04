@@ -46,9 +46,11 @@ sys.path.append(libDirectory)
 from hodlib.RingMaster.ringMaster import main
 from hodlib.Common.setup import *
 from hodlib.Common.descGenerator import *
-from hodlib.Common.util import local_fqdn, filter_warnings
+from hodlib.Common.util import local_fqdn, filter_warnings, to_http_url, \
+                        get_exception_string, get_exception_error_string
 from hodlib.Common.logger import getLogger, ensureLogDir
-from hodlib.Common.util import get_exception_string, get_exception_error_string
+from hodlib.Common.xmlrpc import hodXRClient
+import logging
 
 filter_warnings()
 
@@ -275,9 +277,16 @@ if __name__ == '__main__':
   confDef = definition()
   confDef.add_defs(defList, defOrder)
   ringMasterOptions = options(confDef, "./%s [OPTIONS]" % myName, VERSION)
-  log = None
+  log = logging.getLogger()
 
   try:
+
+    # Set up logging before anything else.
+    ensureLogDir(ringMasterOptions.normalizeValue('ringmaster', 'log-dir'))
+    log = getLogger(ringMasterOptions['ringmaster'],'ringmaster')
+    # End of setting up logging
+
+    # Verify and process options
     statusMsgs = []
     # Conditional validation
     if not ringMasterOptions['ringmaster'].has_key('hadoop-tar-ball') or \
@@ -291,21 +300,42 @@ if __name__ == '__main__':
                                                   'gridservice-mapred', 'pkgs'))
 
     if len(statusMsgs) != 0:
-      raise Exception("%s" % statusMsgs)
+      # format status messages into a single string
+      errStr = ''
+      for msg in statusMsgs:
+        errStr = "%s%s\n" % (errStr, msg)
+      raise Exception("%s" % errStr)
     # End of conditional validation
 
     (status, statusMsgs) = ringMasterOptions.verify()
     if not status:
-      raise Exception("%s" % statusMsgs)
+      # format status messages into a single string
+      errStr = ''
+      for msg in statusMsgs:
+        errStr = "%s%s\n" % (errStr, msg)
+      raise Exception("%s" % errStr)
+
     ringMasterOptions.replace_escape_seqs()
     ringMasterOptions['ringmaster']['base-dir'] = rootDirectory 
+    # End of option processing
 
-    ensureLogDir(ringMasterOptions['ringmaster']['log-dir'])
-    log = getLogger(ringMasterOptions['ringmaster'],'ringmaster')
     ret = main(ringMasterOptions,log)
     sys.exit(ret)
   except Exception, e:
-    if log:
-      log.error("bin/ringmaster failed to start.%s. Stack trace follows:\n%s" % (get_exception_error_string(),get_exception_string()))
+    log.error("bin/ringmaster failed to start.%s. Stack trace follows:\n%s" % (get_exception_error_string(),get_exception_string()))
+
+    # Report errors to the client if possible
+    try:
+      serviceAddr = to_http_url(ringMasterOptions.normalizeValue( \
+                                     'ringmaster', 'svcrgy-addr'))
+      serviceClient = hodXRClient(serviceAddr)
+      if serviceClient is not None:
+        serviceClient.setRMError([str(e),get_exception_string()])
+        log.info("Reported errors to service registry at %s" % serviceAddr)
+    except Exception, e:
+      log.error("Failed to report errors to service registry.")
+      log.error("Reason : %s" % get_exception_string())
+    # End of reporting errors to the client
+
     # Ringmaster failing to start is a ringmaster error. Exit with the appropriate exit code.
     sys.exit(6)

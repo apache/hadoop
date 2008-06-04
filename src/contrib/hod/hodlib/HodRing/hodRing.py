@@ -234,6 +234,7 @@ class HadoopCommand:
     self._createHadoopSiteXml()
     self._createHadoopLogDir()
     self.__hadoopThread = None
+    self.stdErrContents = "" # store list of contents for returning to user
 
   def _createWorkDirs(self):
     for dir in self.workdirs:
@@ -443,6 +444,18 @@ class HadoopCommand:
     if status == False:
       self.log.error('hadoop error: %s' % (
                        self.__hadoopThread.exit_status_string()))
+      # read the contents of redirected stderr to print information back to user
+      if os.path.exists(self.err):
+        f = None
+        try:
+          f = open(self.err)
+          lines = f.readlines()
+          # format
+          for line in lines:
+            self.stdErrContents = "%s%s" % (self.stdErrContents, line)
+        finally:
+          if f is not None:
+            f.close()
       self.log.error('See %s.out and/or %s.err for details. They are ' % \
                      (self.name, self.name) + \
                      'located at subdirectories under either ' + \
@@ -607,9 +620,12 @@ class HodRing(hodBaseService):
 
         self.log.debug('This is the packcage dir %s ' % (pkgdir))
         if not cmd.run(pkgdir):
-          raise ValueError, "Can't launch command: %s" % pkgdir
+          addnInfo = ""
+          if cmd.stdErrContents is not "":
+            addnInfo = " Information from stderr of the command:\n%s" % (cmd.stdErrContents)
+          raise Exception("Could not launch the %s using %s/bin/hadoop.%s" % (desc.getName(), pkgdir, addnInfo))
       except Exception, e:
-        print get_exception_string()
+        self.log.debug("Exception running hadoop command: %s\n%s" % (get_exception_error_string(), get_exception_string()))
         self.__running[id] = cmd
         raise Exception(e)
 

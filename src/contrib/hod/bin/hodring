@@ -46,8 +46,11 @@ sys.path.append(libDirectory)
 
 from hodlib.HodRing.hodRing import HodRing
 from hodlib.Common.setup import *
-from hodlib.Common.util import filter_warnings,get_exception_string, get_exception_error_string, getMapredSystemDirectory
+from hodlib.Common.util import filter_warnings, get_exception_string, \
+                get_exception_error_string, getMapredSystemDirectory, \
+                to_http_url, local_fqdn
 from hodlib.Common.logger import getLogger, ensureLogDir
+from hodlib.Common.xmlrpc import hodXRClient
 
 filter_warnings()
 
@@ -255,10 +258,30 @@ if __name__ == '__main__':
       log.critical("exec failed")
       os._exit(1)
 
-  except Exception:
+  except Exception, e:
     if service:
       if service.log:
         log = service.log
     else:
       log = getLogger(hodRingOptions['hodring'], 'hodring')
     log.error("Error in bin/hodring %s. \nStack trace:\n%s" %(get_exception_error_string(),get_exception_string()))
+    
+    log.info("now trying informing to ringmaster")
+    log.info(hodRingOptions['hodring']['ringmaster-xrs-addr'])
+    log.info(hodRingOptions.normalizeValue('hodring', 'ringmaster-xrs-addr'))
+    log.info(to_http_url(hodRingOptions.normalizeValue( \
+            'hodring', 'ringmaster-xrs-addr')))
+    # Report errors to the Ringmaster if possible
+    try:
+      ringXRAddress = to_http_url(hodRingOptions.normalizeValue( \
+                                     'hodring', 'ringmaster-xrs-addr'))
+      log.debug("Creating ringmaster XML-RPC client.")
+      ringClient = hodXRClient(ringXRAddress)    
+      if ringClient is not None:
+        addr = local_fqdn() + "_" + str(os.getpid())
+        ringClient.setHodRingErrors(addr, str(e))
+        log.info("Reported errors to ringmaster at %s" % ringXRAddress)
+    except Exception, e:
+      log.error("Failed to report errors to ringmaster at %s" % ringXRAddress)
+      log.error("Reason : %s" % get_exception_string())
+    # End of reporting errors to the client

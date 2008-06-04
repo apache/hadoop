@@ -85,17 +85,14 @@ class JobTrackerMonitor:
   def getJobTrackerURL(self):
     """This method periodically checks the service info provider for the JT URL"""
     self.__jobTrackerURL = self.__serviceInfoProvider.getServiceAddr('mapred')
-    while not self.__stopFlag and \
-          (self.__jobTrackerURL is None or \
-            self.__jobTrackerURL == 'not found'):
+    while not self.__stopFlag and not self.__isValidJobTrackerURL():
       time.sleep(10)
       if not self.__stopFlag:
         self.__jobTrackerURL = self.__serviceInfoProvider.getServiceAddr('mapred')
       else:
         break
 
-    if (self.__jobTrackerURL != None) and \
-          (self.__jobTrackerURL != 'not found'):
+    if self.__isValidJobTrackerURL():
       self.__log.debug('Got URL %s. Starting monitoring' % self.__jobTrackerURL)
       self.__jtMonitorThread.start()
 
@@ -128,6 +125,12 @@ class JobTrackerMonitor:
     except:
       self.__log.debug('Exception while getting job statuses. %s' % get_exception_string())
     return jobStatusList
+
+  def __isValidJobTrackerURL(self):
+    """This method checks that the passed in URL is not one of the special case strings
+       returned by the getServiceAddr API"""
+    return ((self.__jobTrackerURL != None) and (self.__jobTrackerURL != 'not found') \
+              and (not self.__jobTrackerURL.startswith('Error')))
 
   def __extractJobStatus(self, line):
     """This method parses an output line from the job status command and creates

@@ -421,7 +421,7 @@ class _LogMasterSources:
     hodring to update any parameters
     its changed for the commands it was
     running"""
-    self.log.debug('Comment: adding master params')
+    self.log.debug('Comment: adding master params from %s' % addr)
     self.log.debug(pformat(vals))
     lock = self.masterParamLock
     lock.acquire()
@@ -431,13 +431,33 @@ class _LogMasterSources:
           if (v.getMasterAddress() == addr):
             v.setMasterParams(vals)
             v.setMasterInitialized()
-
     except:
       self.log.debug(get_exception_string())
       pass
     lock.release()
             
     return addr
+
+  def setHodRingErrors(self, addr, errors):
+    """This method is called by the hodrings to update errors 
+      it encountered while starting up"""
+    self.log.critical("Hodring at %s failed with following errors:\n%s" % (addr, errors))
+    lock = self.masterParamLock
+    lock.acquire()
+    try:
+      for v in self.serviceDict.itervalues():
+        if v.isMasterLaunched():
+          if (v.getMasterAddress() == addr):
+            # strip the PID part.
+            idx = addr.rfind('_')
+            if idx is not -1:
+              addr = addr[:idx]
+            v.setMasterFailed("Hodring at %s failed with following errors:\n%s" % (addr, errors))
+    except:
+      self.log.debug(get_exception_string())
+      pass
+    lock.release()
+    return True
 
   def getKeys(self):
     lock= self.masterParamLock
@@ -458,7 +478,10 @@ class _LogMasterSources:
       pass
     else:
       self.log.debug("getServiceAddr service: %s" % service)
-      if (service.isMasterInitialized()):
+      err = service.getMasterFailed()
+      if err is not None:
+        addr = "Error: " + err
+      elif (service.isMasterInitialized()):
         addr = service.getMasterAddrs()[0]
       else:
         addr = 'not found'
@@ -563,7 +586,10 @@ class RingMaster:
       # Determine hadoop Version
       hadoopVers = hadoopVersion(self.__getHadoopDir(), \
                                 self.cfg['hodring']['java-home'], self.log)
-      
+     
+      if (hadoopVers['major']==None) or (hadoopVers['minor']==None):
+        raise Exception('Could not retrive the version of Hadoop.'
+                        + ' Check the Hadoop installation or the value of the hodring.java-home variable.')
       if hdfsDesc.isExternal():
         hdfs = HdfsExternal(hdfsDesc, workDirs, version=int(hadoopVers['minor']))
         hdfs.setMasterParams( self.cfg['gridservice-hdfs'] )
@@ -888,9 +914,11 @@ class RingMaster:
   def __findExitCode(self):
     """Determine the exit code based on the status of the cluster or jobs run on them"""
     xmlrpcServer = ringMasterServer.instance.logMasterSources
-    if xmlrpcServer.getServiceAddr('hdfs') == 'not found':
+    if xmlrpcServer.getServiceAddr('hdfs') == 'not found' or \
+        xmlrpcServer.getServiceAddr('hdfs').startswith("Error: "):
       self.__exitCode = 7
-    elif xmlrpcServer.getServiceAddr('mapred') == 'not found':
+    elif xmlrpcServer.getServiceAddr('mapred') == 'not found' or \
+        xmlrpcServer.getServiceAddr('mapred').startswith("Error: "):
       self.__exitCode = 8
     else:
       clusterStatus = get_cluster_status(xmlrpcServer.getServiceAddr('hdfs'),

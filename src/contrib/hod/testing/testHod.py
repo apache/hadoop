@@ -131,7 +131,7 @@ class test_InvalidArgsOperations(unittest.TestCase):
   def testInfoNonExistentDirectory(self):
     clusterDir = '/tmp/hod/testInfoNonExistentDirectory'
     self.client._op_info(['info', clusterDir])
-    self.assertTrue(self.log.hasMessage("'%s' is not a valid cluster directory." % (clusterDir), 'critical'))
+    self.assertTrue(self.log.hasMessage("Invalid hod.clusterdir(--hod.clusterdir or -d). %s : No such directory" % (clusterDir), 'critical'))
 
   # Test that deallocation works on a deleted cluster directory
   # by clearing the job, and removing the state
@@ -174,7 +174,7 @@ class test_InvalidArgsOperations(unittest.TestCase):
     self.client._op_deallocate(['deallocate', clusterDir])
     # there should be no call..
     self.assertFalse(self.cluster.wasOperationPerformed('delete_job', None))
-    self.assertTrue(self.log.hasMessage("'%s' is not a valid cluster directory." % (clusterDir), 'critical'))
+    self.assertTrue(self.log.hasMessage("Invalid hod.clusterdir(--hod.clusterdir or -d). %s : No such directory" % (clusterDir), 'critical'))
 
   # Test that allocation on an previously deleted directory fails.    
   def testAllocateOnDeletedDirectory(self):

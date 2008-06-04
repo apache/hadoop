@@ -260,7 +260,6 @@ class hadoopCluster:
           if (count % 10 == 0):
             if not self.__check_job_status():
               break
-
     return ringmasterXRS
  
   def __init_hadoop_service(self, serviceName, xmlrpcClient):
@@ -295,6 +294,11 @@ class hadoopCluster:
     if serviceAddress == 'not found' or not serviceAddress:
       self.__log.critical("Failed to retrieve '%s' service address." % 
                           serviceName)
+      status = False
+    elif serviceAddress.startswith("Error: "):
+      errs = serviceAddress[len("Error: "):]
+      self.__log.critical("Cluster could not be allocated because of the following errors.\n%s" % \
+                             errs)
       status = False
     else:
       try:
@@ -556,7 +560,7 @@ class hadoopCluster:
             else:
               status = 6
             if status != 0:
-              self.__log.info("Cleaning up cluster id %s, as cluster could not be allocated." % self.jobId)
+              self.__log.debug("Cleaning up cluster id %s, as cluster could not be allocated." % self.jobId)
               if ringClient is None:
                 self.delete_job(self.jobId)
               else:
@@ -590,6 +594,12 @@ class hadoopCluster:
         self.__log.critical("Scheduler failure, allocation failed.\n\n")        
         status = 4
     
+    if status == 5 or status == 6:
+      ringMasterErrors = self.__svcrgyClient.getRMError()
+      if ringMasterErrors:
+        self.__log.critical("Cluster could not be allocated because of the following errors on the ringmaster host.\n%s" % \
+                               (ringMasterErrors[0]))
+        self.__log.debug("Stack trace on ringmaster: %s" % ringMasterErrors[1])
     return status
 
   def __isRingMasterAlive(self, rmAddr):

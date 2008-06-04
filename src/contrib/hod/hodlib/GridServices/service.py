@@ -65,6 +65,7 @@ class MasterSlave(Service):
     self.masterInitialized = False
     self.masterAddress = 'none'
     self.requiredNode = requiredNode
+    self.failedMsg = None
 
   def getRequiredNode(self):
     return self.requiredNode
@@ -149,6 +150,12 @@ class MasterSlave(Service):
 
   def isExternal(self):
     return self.serviceDesc.isExternal()
+
+  def setMasterFailed(self, err):
+    self.failedMsg = err
+
+  def getMasterFailed(self):
+    return self.failedMsg
   
 class NodeRequest:
   """ A class to define 
@@ -191,15 +198,16 @@ class ServiceUtil:
       if log: log.debug("Trying to see if port %s is available"% n)
       try:
         s.bind((h, n))
+        if log: log.debug("Yes, port %s is available" % n)
+        avail = True
       except socket.error,e:
         if log: log.debug("Could not bind to the port %s. Reason %s" % (n,e))
         retry -= 1
         pass
-      else:
-        if log: log.debug("Yes, port %s is available" % n)
-        avail = True
-      finally:
-        s.close()
+      # The earlier code that used to be here had syntax errors. The code path
+      # couldn't be followd anytime, so the error remained uncaught.
+      # This time I stumbled upon the error
+      s.close()
 
       if avail:
         ServiceUtil.localPortUsed[n] = True
@@ -229,15 +237,13 @@ class ServiceUtil:
       if log: log.debug("Trying to see if port %s is available"% n)
       try:
         s.bind((h, n))
+        if log: log.debug("Yes, port %s is available" % n)
+        avail = True
       except socket.error,e:
         if log: log.debug("Could not bind to the port %s. Reason %s" % (n,e))
         retry -= 1
         pass
-      else:
-        if log: log.debug("Yes, port %s is available" % n)
-        avail = True
-      finally:
-        s.close()
+      s.close()
 
       if avail:
         ServiceUtil.localPortUsed[n] = True

@@ -19,9 +19,10 @@ from hodlib.Common.hodsvc import hodBaseService
 from hodlib.Common.threads import loop
 from hodlib.Common.tcp import tcpSocket
 from hodlib.Common.util import get_exception_string
+import logging
 
 class svcrgy(hodBaseService):
-    def __init__(self, config):
+    def __init__(self, config, log=None):
         hodBaseService.__init__(self, 'serviceRegistry', config)
         
         self.__serviceDict = {}
@@ -30,6 +31,10 @@ class svcrgy(hodBaseService):
         self.__locked = {}
         
         self.__serviceDictLock = threading.Lock()
+        self.RMErrorMsgs = None # Ringmaster error messages
+        self.log = log
+        if self.log is None:
+          self.log = logging.getLogger()
     
     def __get_job_key(self, userid, job):
         return "%s-%s" % (userid, job)
@@ -40,7 +45,20 @@ class svcrgy(hodBaseService):
     def _xr_method_getServiceInfo(self, userid=None, job=None, name=None, 
                                   type=None):
         return self.getServiceInfo(userid, job, name, type)
-        
+
+    def _xr_method_setRMError(self, args):
+        self.log.debug("setRMError called with %s" % args)
+        self.RMErrorMsgs = args
+        return True
+
+    def _xr_method_getRMError(self):
+        self.log.debug("getRMError called")
+        if self.RMErrorMsgs is not None:
+          return self.RMErrorMsgs
+        else:
+          self.log.debug("no Ringmaster error messages")
+          return False
+
     def registerService(self, userid, job, host, name, type, dict):
         """Method thats called upon by
         the ringmaster to register to the

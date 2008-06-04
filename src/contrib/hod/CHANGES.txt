@@ -15,6 +15,9 @@ Trunk (unreleased changes)
     HADOOP-3151. Improves error messages when reporting failures due to 
     incorrect parameters passed to HOD. (Vinod Kumar Vavilapalli via ddas)
 
+    HADOOP-3464. Implemented a mechanism to transfer HOD errors that occur on
+    compute nodes to the submit node running the HOD client, so users have good
+    feedback on why an allocation failed. (Vinod Kumar Vavilapalli via mukund)
  
   BUG FIXES
 

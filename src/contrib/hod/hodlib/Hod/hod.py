@@ -186,7 +186,7 @@ class hodRunner:
   def __setup_service_registry(self):
     cfg = self.__cfg['hod'].copy()
     cfg['debug'] = 0
-    self.__registry = svcrgy(cfg)
+    self.__registry = svcrgy(cfg, self.__log)
     self.__registry.start()
     self.__log.debug(self.__registry.getXMLRPCAddr())
     self.__cfg['hod']['xrs-address'] = self.__registry.getXMLRPCAddr()
