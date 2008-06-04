@@ -44,13 +44,17 @@ import org.apache.hadoop.io.IOUtils;
  * A JUnit test for doing fsck
  */
 public class TestFsck extends TestCase {
-  static String runFsck(Configuration conf, String... path) throws Exception {
+  static String runFsck(Configuration conf, int expectedErrCode, 
+                        boolean checkErrorCode,String... path) 
+                        throws Exception {
     PrintStream oldOut = System.out;
     ByteArrayOutputStream bStream = new ByteArrayOutputStream();
     PrintStream newOut = new PrintStream(bStream, true);
     System.setOut(newOut);
     ((Log4JLogger)PermissionChecker.LOG).getLogger().setLevel(Level.ALL);
-    assertEquals(0, ToolRunner.run(new DFSck(conf), path));
+    int errCode = ToolRunner.run(new DFSck(conf), path);
+    if (checkErrorCode)
+      assertEquals(expectedErrCode, errCode);
     ((Log4JLogger)PermissionChecker.LOG).getLogger().setLevel(Level.INFO);
     System.setOut(oldOut);
     return bStream.toString();
@@ -67,7 +71,7 @@ public class TestFsck extends TestCase {
       fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
       util.waitReplication(fs, "/srcdat", (short)3);
-      String outStr = runFsck(conf, "/");
+      String outStr = runFsck(conf, 0, true, "/");
       assertTrue(-1 != outStr.indexOf("HEALTHY"));
       System.out.println(outStr);
       if (fs != null) {try{fs.close();} catch(Exception e){}}
@@ -75,7 +79,7 @@ public class TestFsck extends TestCase {
       
       // restart the cluster; bring up namenode but not the data nodes
       cluster = new MiniDFSCluster(conf, 0, false, null);
-      outStr = runFsck(conf, "/");
+      outStr = runFsck(conf, 1, true, "/");
       // expect the result is corrupt
       assertTrue(outStr.contains("CORRUPT"));
       System.out.println(outStr);
@@ -102,7 +106,7 @@ public class TestFsck extends TestCase {
       fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
       util.waitReplication(fs, "/srcdat", (short)3);
-      String outStr = runFsck(conf, "/non-existent");
+      String outStr = runFsck(conf, 0, true, "/non-existent");
       assertEquals(-1, outStr.indexOf("HEALTHY"));
       System.out.println(outStr);
       util.cleanup(fs, "/srcdat");
@@ -125,7 +129,7 @@ public class TestFsck extends TestCase {
       cluster.waitActive();
       util.createFiles(fs, topDir);
       util.waitReplication(fs, topDir, (short)3);
-      String outStr = runFsck(conf, "/");
+      String outStr = runFsck(conf, 0, true, "/");
       assertTrue(outStr.contains("HEALTHY"));
       
       // Corrupt a block by deleting it
@@ -144,21 +148,21 @@ public class TestFsck extends TestCase {
       }
 
       // We excpect the filesystem to be corrupted
-      outStr = runFsck(conf, "/");
+      outStr = runFsck(conf, 1, false, "/");
       while (!outStr.contains("CORRUPT")) {
         try {
           Thread.sleep(100);
         } catch (InterruptedException ignore) {
         }
-        outStr = runFsck(conf, "/");
+        outStr = runFsck(conf, 1, false, "/");
       } 
       
       // Fix the filesystem by moving corrupted files to lost+found
-      outStr = runFsck(conf, "/", "-move");
+      outStr = runFsck(conf, 1, true, "/", "-move");
       assertTrue(outStr.contains("CORRUPT"));
       
       // Check to make sure we have healthy filesystem
-      outStr = runFsck(conf, "/");
+      outStr = runFsck(conf, 0, true, "/");
       assertTrue(outStr.contains("HEALTHY")); 
       util.cleanup(fs, topDir);
       if (fs != null) {try{fs.close();} catch(Exception e){}}
@@ -182,7 +186,7 @@ public class TestFsck extends TestCase {
       cluster.waitActive();
       util.createFiles(fs, topDir);
       util.waitReplication(fs, topDir, (short)3);
-      String outStr = runFsck(conf, "/");
+      String outStr = runFsck(conf, 0, true, "/");
       assertTrue(outStr.contains("HEALTHY"));
       // Open a file for writing and do not close for now
       Path openFile = new Path(topDir + "/openFile");
@@ -193,19 +197,19 @@ public class TestFsck extends TestCase {
         writeCount++;                  
       }
       // We expect the filesystem to be HEALTHY and show one open file
-      outStr = runFsck(conf, topDir);
+      outStr = runFsck(conf, 0, true, topDir);
       System.out.println(outStr);
       assertTrue(outStr.contains("HEALTHY"));
       assertFalse(outStr.contains("OPENFORWRITE")); 
       // Use -openforwrite option to list open files
-      outStr = runFsck(conf, topDir, "-openforwrite");
+      outStr = runFsck(conf, 0, true, topDir, "-openforwrite");
       System.out.println(outStr);
       assertTrue(outStr.contains("OPENFORWRITE"));
       assertTrue(outStr.contains("openFile"));
       // Close the file
       out.close(); 
       // Now, fsck should show HEALTHY fs and should not show any open files
-      outStr = runFsck(conf, topDir);
+      outStr = runFsck(conf, 0, true, topDir);
       System.out.println(outStr);
       assertTrue(outStr.contains("HEALTHY"));
       assertFalse(outStr.contains("OPENFORWRITE"));
@@ -238,7 +242,7 @@ public class TestFsck extends TestCase {
     String block = DFSTestUtil.getFirstBlock(fs, file1).getBlockName();
 
     // Make sure filesystem is in healthy state
-    outStr = runFsck(conf, "/");
+    outStr = runFsck(conf, 0, true, "/");
     System.out.println(outStr);
     assertTrue(outStr.contains("HEALTHY"));
     
@@ -282,7 +286,7 @@ public class TestFsck extends TestCase {
     assertTrue (blocks.get(0).isCorrupt());
 
     // Check if fsck reports the same
-    outStr = runFsck(conf, "/");
+    outStr = runFsck(conf, 1, true, "/");
     System.out.println(outStr);
     assertTrue(outStr.contains("CORRUPT"));
     assertTrue(outStr.contains("testCorruptBlock"));

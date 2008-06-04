@@ -128,6 +128,9 @@ public class NamenodeFsck {
           check(files[i], res);
         }
         out.println(res);
+        // DFSck client scans for the string HEALTHY/CORRUPT to check the status
+        // of file system and return appropriate code. Changing the output string
+        // might break testcases. 
         if (res.isHealthy()) {
           out.println("\n\nThe filesystem under path '" + path + "' is HEALTHY");
         }  else {
@@ -182,7 +185,7 @@ public class NamenodeFsck {
     } else {
       out.print('.');
     }
-    if (res.totalFiles % 100 == 0) { out.flush(); }
+    if (res.totalFiles % 100 == 0) { out.println(); out.flush(); }
     int missing = 0;
     int corrupt = 0;
     long missize = 0;

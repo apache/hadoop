@@ -117,14 +117,20 @@ public class DFSck extends Configured implements Tool {
     BufferedReader input = new BufferedReader(new InputStreamReader(
                                               stream, "UTF-8"));
     String line = null;
+    int errCode = 0;
+    // errCode returned indicating the status of Filesystem (HEALTHY/CORRUPT)
+    // depends on the format of the string. Changing the script might break
+    // fsck related testcases. For now, we scan for "is CORRUPT" as it unique.
     try {
       while ((line = input.readLine()) != null) {
         System.out.println(line);
+        if (line.contains("is CORRUPT"))
+          errCode = 1;
       }
     } finally {
       input.close();
     }
-    return 0;
+    return errCode;
   }
 
   public static void main(String[] args) throws Exception {

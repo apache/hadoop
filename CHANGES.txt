@@ -78,6 +78,9 @@ Trunk (unreleased changes)
     moves blocks in the tmp directory to the real block directory on a datanode-restart.
     (dhruba)
 
+    HADOOP-3452. Change fsck to return non-zero status for a corrupt
+    FileSystem. (lohit vijayarenu via cdouglas)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,
