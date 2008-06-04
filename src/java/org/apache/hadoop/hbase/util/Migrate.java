@@ -21,55 +21,73 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.IOException;
-
+import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HStore;
-
 /**
- * Perform a file system upgrade to convert older file layouts to that
- * supported by HADOOP-2478, and then to the form supported by HBASE-69
+ * Perform a file system upgrade to convert older file layouts.
+ * HBase keeps a file in hdfs named hbase.version just under the hbase.rootdir.
+ * This file holds the version of the hbase data in the Filesystem.  When the
+ * software changes in a manner incompatible with the data in the Filesystem,
+ * it updates its internal version number,
+ * {@link HConstants#FILE_SYSTEM_VERSION}.  This wrapper script manages moving
+ * the filesystem across versions until there's a match with current software's
+ * version number.
+ * 
+ * <p>This wrapper script comprises a set of migration steps.  Which steps
+ * are run depends on the span between the version of the hbase data in the
+ * Filesystem and the version of the current softare.
+ * 
+ * <p>A migration script must accompany any patch that changes data formats.
+ * 
+ * <p>This script has a 'check' and 'excecute' mode.  Adding migration steps,
+ * its important to keep this in mind.  Testing if migration needs to be run,
+ * be careful not to make presumptions about the current state of the data in
+ * the filesystem.  It may have a format from many versions previous with
+ * layout not as expected or keys and values of a format not expected.  Tools
+ * such as {@link MetaUtils} may not work as expected when running against
+ * old formats -- or, worse, fail in ways that are hard to figure (One such is
+ * edits made by previous migration steps not being apparent in later migration
+ * steps).  The upshot is always verify presumptions migrating.
  */
 public class Migrate extends Configured implements Tool {
-  static final Log LOG = LogFactory.getLog(Migrate.class);
+  private static final Log LOG = LogFactory.getLog(Migrate.class);
 
   private static final String OLD_PREFIX = "hregion_";
 
   private final HBaseConfiguration conf;
-  FileSystem fs;
-  Path rootdir;
-  MetaUtils utils;
+  private FileSystem fs;
+  
+  // Gets set by migration methods if we are in readOnly mode.
+  private boolean migrationNeeded = false;
 
   /** Action to take when an extra file or unrecoverd log file is found */
   private static String ACTIONS = "abort|ignore|delete|prompt";
@@ -95,8 +113,6 @@ public class Migrate extends Configured implements Tool {
   }
 
   private boolean readOnly = false;
-  private boolean migrationNeeded = false;
-  private boolean newRootRegion = false;
   private ACTION otherFiles = ACTION.IGNORE;
 
   private BufferedReader reader = null;
@@ -116,14 +132,12 @@ public class Migrate extends Configured implements Tool {
     this.conf = conf;
   }
   
-  /** {@inheritDoc} */
-  public int run(String[] args) {
-    if (parseArgs(args) != 0) {
-      return -1;
-    }
-
+  /*
+   * Sets the hbase rootdir as fs.default.name.
+   * @return True if succeeded.
+   */
+  private boolean setFsDefaultName() {
     // Validate root directory path
-    
     Path rd = new Path(conf.get(HConstants.HBASE_DIR));
     try {
       // Validate root directory path
@@ -132,69 +146,95 @@ public class Migrate extends Configured implements Tool {
       LOG.fatal("Not starting migration because the root directory path '" +
           rd.toString() + "' is not valid. Check the setting of the" +
           " configuration parameter '" + HConstants.HBASE_DIR + "'", e);
-      return -1;
+      return false;
     }
     this.conf.set("fs.default.name", rd.toString());
+    return true;
+  }
 
+  /*
+   * @return True if succeeded verifying filesystem.
+   */
+  private boolean verifyFilesystem() {
     try {
       // Verify file system is up.
       fs = FileSystem.get(conf);                        // get DFS handle
       LOG.info("Verifying that file system is available...");
       FSUtils.checkFileSystemAvailable(fs);
+      return true;
     } catch (IOException e) {
       LOG.fatal("File system is not available", e);
-      return -1;
+      return false;
     }
-    
+  }
+  
+  private boolean notRunning() {
     // Verify HBase is down
     LOG.info("Verifying that HBase is not running...");
     try {
       HBaseAdmin.checkHBaseAvailable(conf);
       LOG.fatal("HBase cluster must be off-line.");
-      return -1;
+      return false;
     } catch (MasterNotRunningException e) {
-      // Expected. Ignore.
+      return true;
     }
-    
-    try {
-       
-      // Initialize MetaUtils and and get the root of the HBase installation
-      
-      this.utils = new MetaUtils(conf);
-      this.rootdir = utils.initialize();
+  }
+  
+  /** {@inheritDoc} */
+  public int run(String[] args) {
+    if (parseArgs(args) != 0) {
+      return -1;
+    }
+    if (!setFsDefaultName()) {
+      return -2;
+    }
+    if (!verifyFilesystem()) {
+      return -3;
+    }
+    if (!notRunning()) {
+      return -4;
+    }
 
+    try {
       LOG.info("Starting upgrade" + (readOnly ? " check" : ""));
 
       // See if there is a file system version file
-
-      String version = FSUtils.getVersion(fs, rootdir);
+      String version = FSUtils.getVersion(fs, FSUtils.getRootDir(this.conf));
       if (version != null && 
           version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0) {
         LOG.info("No upgrade necessary.");
         return 0;
       }
 
-      // Get contents of root directory
-      
-      FileStatus[] rootFiles = getRootDirFiles();
-
+      // Dependent on which which version hbase is at, run appropriate
+      // migrations.  Be consious that scripts can be run in readOnly -- i.e.
+      // check if migration is needed -- and then in actual migrate mode.  Be
+      // careful when writing your scripts that you do not make presumption
+      // about state of the FileSystem.  For example, in script that migrates
+      // between 2 and 3, it should not presume the layout is that of v2.  If
+      // readOnly mode, the pre-v2 scripts may not have been run yet.
       if (version == null) {
+        FileStatus[] rootFiles = getRootDirFiles();
         migrateFromNoVersion(rootFiles);
         migrateToV2(rootFiles);
+        migrateToV3();
       } else if (version.compareTo("0.1") == 0) {
-        migrateToV2(rootFiles);
+        migrateToV2(getRootDirFiles());
+        migrateToV3();
       } else if (version.compareTo("2") == 0) {
-        // Nothing to do (yet)
+        migrateToV3();
+      } else if (version.compareTo("3") == 0) {
+        // Nothing to do.
       } else {
         throw new IOException("Unrecognized version: " + version);
       }
-      
+
       if (!readOnly) {
-        // set file system version
+        // Set file system version
         LOG.info("Setting file system version.");
-        FSUtils.setVersion(fs, rootdir);
+        FSUtils.setVersion(fs, FSUtils.getRootDir(this.conf));
         LOG.info("Upgrade successful.");
-      } else if (migrationNeeded) {
+      } else if (this.migrationNeeded) {
         LOG.info("Upgrade needed.");
       }
       return 0;
@@ -202,36 +242,31 @@ public class Migrate extends Configured implements Tool {
       LOG.fatal("Upgrade" +  (readOnly ? " check" : "") + " failed", e);
       return -1;
       
-    } finally {
-      if (utils != null && utils.isInitialized()) {
-        utils.shutdown();
-      }
     }
   }
 
   private void migrateFromNoVersion(FileStatus[] rootFiles) throws IOException {
-    LOG.info("No file system version found. Checking to see if file system " +
-        "is at revision 0.1");
-    
-    // check to see if new root region dir exists
+    LOG.info("No file system version found. Checking to see if hbase in " +
+      "Filesystem is at revision 0.1");
 
-    checkNewRootRegionDirExists();
-    
-    // check for unrecovered region server log files
+    // Check to see if new root region dir exists
+    boolean newRootRegion = checkNewRootRegionDirExists();
+    if (this.readOnly &&  !newRootRegion) {
+      this.migrationNeeded = true;
+      return;
+    }
 
+    // Check for unrecovered region server log files
     checkForUnrecoveredLogFiles(rootFiles);
 
-    // check for "extra" files and for old upgradable regions
-
+    // Check for "extra" files and for old upgradable regions
     extraFiles(rootFiles);
 
     if (!newRootRegion) {
       // find root region
-
       String rootRegion = OLD_PREFIX +
         HRegionInfo.ROOT_REGIONINFO.getEncodedName();
-
-      if (!fs.exists(new Path(rootdir, rootRegion))) {
+      if (!fs.exists(new Path(FSUtils.getRootDir(this.conf), rootRegion))) {
         throw new IOException("Cannot find root region " + rootRegion);
       } else if (readOnly) {
         migrationNeeded = true;
@@ -240,31 +275,36 @@ public class Migrate extends Configured implements Tool {
         scanRootRegion();
 
         // scan for left over regions
-
         extraRegions();
       }
     }
   }
   
   private void migrateToV2(FileStatus[] rootFiles) throws IOException {
-    LOG.info("Checking to see if file system is at revision 2.");
+    LOG.info("Checking to see if hbase in Filesystem is at version 2.");
     checkForUnrecoveredLogFiles(rootFiles);
   }
 
+  private void migrateToV3() throws IOException {
+    LOG.info("Checking to see if hbase in Filesystem is at version 3.");
+    addHistorianFamilyToMeta();
+  }
+
   private FileStatus[] getRootDirFiles() throws IOException {
-    FileStatus[] stats = fs.listStatus(rootdir);
+    FileStatus[] stats = fs.listStatus(FSUtils.getRootDir(this.conf));
     if (stats == null || stats.length == 0) {
       throw new IOException("No files found under root directory " +
-          rootdir.toString());
+        FSUtils.getRootDir(this.conf).toString());
     }
     return stats;
   }
   
-  private void checkNewRootRegionDirExists() throws IOException {
-    Path rootRegionDir =
-      HRegion.getRegionDir(rootdir, HRegionInfo.ROOT_REGIONINFO);
-    newRootRegion = fs.exists(rootRegionDir);
-    migrationNeeded = !newRootRegion;
+  private boolean checkNewRootRegionDirExists() throws IOException {
+    Path rootRegionDir =  HRegion.getRegionDir(FSUtils.getRootDir(this.conf),
+      HRegionInfo.ROOT_REGIONINFO);
+    boolean newRootRegion = fs.exists(rootRegionDir);
+    this.migrationNeeded = !newRootRegion;
+    return newRootRegion;
   }
 
   private void checkForUnrecoveredLogFiles(FileStatus[] rootFiles)
@@ -289,6 +329,7 @@ public class Migrate extends Configured implements Tool {
   private void extraFiles(FileStatus[] stats) throws IOException {
     for (int i = 0; i < stats.length; i++) {
       String name = stats[i].getPath().getName();
+      boolean newRootRegion = checkNewRootRegionDirExists();
       if (name.startsWith(OLD_PREFIX)) {
         if (!newRootRegion) {
           // We need to migrate if the new root region directory doesn't exist
@@ -296,7 +337,6 @@ public class Migrate extends Configured implements Tool {
           String regionName = name.substring(OLD_PREFIX.length());
           try {
             Integer.parseInt(regionName);
-
           } catch (NumberFormatException e) {
             extraFile(otherFiles, "Old region format can not be upgraded: " +
                 name, stats[i].getPath());
@@ -341,7 +381,7 @@ public class Migrate extends Configured implements Tool {
   void migrateRegionDir(final byte [] tableName, String oldPath)
   throws IOException {
     // Create directory where table will live
-
+    Path rootdir = FSUtils.getRootDir(this.conf);
     Path tableDir = new Path(rootdir, Bytes.toString(tableName));
     fs.mkdirs(tableDir);
 
@@ -384,35 +424,33 @@ public class Migrate extends Configured implements Tool {
   }
   
   private void scanRootRegion() throws IOException {
-    utils.scanRootRegion(
-      new MetaUtils.ScannerListener() {
+    final MetaUtils utils = new MetaUtils(this.conf);
+    try {
+      utils.scanRootRegion(new MetaUtils.ScannerListener() {
         public boolean processRow(HRegionInfo info) throws IOException {
           // First move the meta region to where it should be and rename
           // subdirectories as necessary
-
-          migrateRegionDir(HConstants.META_TABLE_NAME,
-              OLD_PREFIX + info.getEncodedName());
-
-          utils.scanMetaRegion(info,
-            new MetaUtils.ScannerListener() {
-              public boolean processRow(HRegionInfo tableInfo)
-              throws IOException {
-                // Move the region to where it should be and rename
-                // subdirectories as necessary
-
-                migrateRegionDir(tableInfo.getTableDesc().getName(),
-                    OLD_PREFIX + tableInfo.getEncodedName());
-                return true;
-              }
+          migrateRegionDir(HConstants.META_TABLE_NAME, OLD_PREFIX
+              + info.getEncodedName());
+          utils.scanMetaRegion(info, new MetaUtils.ScannerListener() {
+            public boolean processRow(HRegionInfo tableInfo) throws IOException {
+              // Move the region to where it should be and rename
+              // subdirectories as necessary
+              migrateRegionDir(tableInfo.getTableDesc().getName(), OLD_PREFIX
+                  + tableInfo.getEncodedName());
+              return true;
             }
-          );
+          });
           return true;
         }
-      }
-    );
+      });
+    } finally {
+      utils.shutdown();
+    }
   }
-  
+
   private void extraRegions() throws IOException {
+    Path rootdir = FSUtils.getRootDir(this.conf);
     FileStatus[] stats = fs.listStatus(rootdir);
     if (stats == null || stats.length == 0) {
       throw new IOException("No files found under root directory " +
@@ -426,7 +464,6 @@ public class Migrate extends Configured implements Tool {
         if (references.contains(encodedName)) {
           message =
             "Region not in meta table but other regions reference it " + name;
-
         } else {
           message = 
             "Region not in meta table and no other regions reference it " + name;
@@ -436,6 +473,38 @@ public class Migrate extends Configured implements Tool {
     }
   }
   
+  private void addHistorianFamilyToMeta() throws IOException {
+    if (this.migrationNeeded) {
+      // Be careful. We cannot use MetAutils if current hbase in the
+      // Filesystem has not been migrated.
+      return;
+    }
+    boolean needed = false;
+    MetaUtils utils = new MetaUtils(this.conf);
+    try {
+      List<HRegionInfo> metas = utils.getMETARows(HConstants.META_TABLE_NAME);
+      for (HRegionInfo meta : metas) {
+        if (meta.getTableDesc().
+            getFamily(HConstants.COLUMN_FAMILY_HISTORIAN) == null) {
+          needed = true;
+          break;
+        }
+      }
+      if (needed && this.readOnly) {
+        this.migrationNeeded = true;
+      } else {
+        utils.addColumn(HConstants.META_TABLE_NAME,
+          new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,
+            HConstants.ALL_VERSIONS, HColumnDescriptor.CompressionType.NONE,
+            false, false, Integer.MAX_VALUE, HConstants.FOREVER, null));
+        LOG.info("Historian family added to .META.");
+        // Flush out the meta edits.
+      }
+    } finally {
+      utils.shutdown();
+    }
+  }
+
   @SuppressWarnings("static-access")
   private int parseArgs(String[] args) {
     Options opts = new Options();

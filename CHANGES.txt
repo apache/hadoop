@@ -47,8 +47,6 @@ Hbase Change Log
                is subclassable) (David Alves via Stack)
    HBASE-603   When an exception bubbles out of getRegionServerWithRetries, wrap 
                the exception with a RetriesExhaustedException
-   HBASE-47    Option to set TTL for columns in hbase
-               (Andrew Purtell via Bryan Duxbury and Stack)
    HBASE-600   Filters have excessive DEBUG logging
    HBASE-611   regionserver should do basic health check before reporting
                alls-well to the master
@@ -56,12 +54,10 @@ Hbase Change Log
    HBASE-538   Improve exceptions that come out on client-side
    HBASE-569   DemoClient.php (Jim R. Wilson via Stack)
    HBASE-522   Where new Text(string) might be used in client side method calls,
-               add an overload that takes string (Done as part of HBASE-82)
+               add an overload that takes String (Done as part of HBASE-82)
    HBASE-570   Remove HQL unit test (Done as part of HBASE-82 commit).
    HBASE-626   Use Visitor pattern in MetaRegion to reduce code clones in HTable
                and HConnectionManager (Jean-Daniel Cryans via Stack)
-   HBASE-23    UI listing regions should be sorted by address and show additional
-               region state (Jean-Daniel Cryans via Stack)
    HBASE-621   Make MAX_VERSIONS work like TTL: In scans and gets, check
                MAX_VERSIONs setting and return that many only rather than wait on
                compaction (Jean-Daniel Cryans via Stack)
@@ -75,7 +71,12 @@ Hbase Change Log
    HBASE-632   HTable.getMetadata is very inefficient
 
   NEW FEATURES
+   HBASE-47    Option to set TTL for columns in hbase
+               (Andrew Purtell via Bryan Duxbury and Stack)
+   HBASE-23    UI listing regions should be sorted by address and show additional
+               region state (Jean-Daniel Cryans via Stack)
    HBASE-639   Add HBaseAdmin.getTableDescriptor function
+   HBASE-533   Region Historian
    
 Release 0.1.2 - 05/13/2008
    

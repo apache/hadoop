@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.HMsg;
@@ -258,6 +259,7 @@ class RegionManager implements HConstants {
           Bytes.toString(regionInfo.getRegionName())+
           " to server " + serverName);
         unassignedRegions.put(regionInfo, Long.valueOf(now));
+        RegionHistorian.addRegionAssignment(regionInfo, serverName);
         returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, regionInfo));
         if (--nregions <= 0) {
           break;
@@ -383,6 +385,7 @@ class RegionManager implements HConstants {
           Bytes.toString(regionInfo.getRegionName()) +
           " to the only server " + serverName);
       unassignedRegions.put(regionInfo, Long.valueOf(now));
+      RegionHistorian.addRegionAssignment(regionInfo, serverName);
       returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, regionInfo));
     }
   }

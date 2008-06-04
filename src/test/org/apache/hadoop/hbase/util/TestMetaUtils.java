@@ -40,7 +40,6 @@ public class TestMetaUtils extends HBaseClusterTestCase {
     this.cluster.shutdown();
     this.cluster = null;
     MetaUtils utils = new MetaUtils(this.conf);
-    utils.initialize();
     // Add a new column to the third table, getName() + '2', and remove the old.
     final byte [] editTable = Bytes.toBytes(getName() + 2);
     final byte [] newColumn = Bytes.toBytes("newcolumn:");

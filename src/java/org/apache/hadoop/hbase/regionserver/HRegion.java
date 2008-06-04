@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.WrongRegionException;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchOperation;
@@ -433,6 +434,7 @@ public class HRegion implements HConstants {
       LOG.debug("Opening region " + this + "/" +
         this.regionInfo.getEncodedName());
     }
+    
     this.regionCompactionDir =
       new Path(getCompactionDir(basedir), encodedNameStr);
 
@@ -774,6 +776,10 @@ public class HRegion implements HConstants {
         LOG.debug("Cleaned up " + FSUtils.getPath(splits) + " " + deleted);
       }
       HRegion regions[] = new HRegion [] {regionA, regionB};
+      
+      RegionHistorian.addRegionSplit(this.regionInfo,
+          regionA.getRegionInfo(), regionB.getRegionInfo());
+      
       return regions;
     }
   }
@@ -865,8 +871,11 @@ public class HRegion implements HConstants {
         }
       }
       doRegionCompactionCleanup();
-      LOG.info("compaction completed on region " + this + " in " +
-        StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
+      String timeTaken = StringUtils.formatTimeDiff(System.currentTimeMillis(), 
+          startTime);
+      LOG.info("compaction completed on region " + this + " in " + timeTaken);
+      
+      RegionHistorian.addRegionCompaction(regionInfo, timeTaken);
     } finally {
       synchronized (writestate) {
         writestate.compacting = false;
@@ -1040,10 +1049,14 @@ public class HRegion implements HConstants {
     }
     
     if (LOG.isDebugEnabled()) {
+      String timeTaken = StringUtils.formatTimeDiff(System.currentTimeMillis(), 
+          startTime);
       LOG.debug("Finished memcache flush for region " + this +
         " in " +
           (System.currentTimeMillis() - startTime) + "ms, sequence id=" +
           sequenceId);
+      if (!regionInfo.isMetaRegion())
+        RegionHistorian.addRegionFlush(regionInfo, timeTaken);
     }
     return true;
   }
@@ -1916,6 +1929,8 @@ public class HRegion implements HConstants {
     Path regionDir = HRegion.getRegionDir(tableDir, info.getEncodedName());
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
+    if (!info.isMetaRegion())
+      RegionHistorian.addRegionCreation(info);
     return new HRegion(tableDir,
       new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf, null),
       fs, conf, info, null, null);

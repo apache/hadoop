@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -81,6 +82,7 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
           b.put(COL_SERVER, Bytes.toBytes(serverAddress.toString()));
           b.put(COL_STARTCODE, startCode);
           server.batchUpdate(metaRegionName, b);
+          RegionHistorian.addRegionOpen(regionInfo, serverAddress);
           if (isMetaTable) {
             // It's a meta region.
             MetaRegion m = new MetaRegion(serverAddress,

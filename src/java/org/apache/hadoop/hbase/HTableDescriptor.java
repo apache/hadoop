@@ -38,18 +38,21 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public class HTableDescriptor implements WritableComparable {
   /** Table descriptor for <core>-ROOT-</code> catalog table */
-  public static final HTableDescriptor ROOT_TABLEDESC =
-    new HTableDescriptor(HConstants.ROOT_TABLE_NAME,
-        new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
-            HColumnDescriptor.CompressionType.NONE, false, false,
-            Integer.MAX_VALUE, HConstants.FOREVER, null));
+  public static final HTableDescriptor ROOT_TABLEDESC = new HTableDescriptor(
+      HConstants.ROOT_TABLE_NAME,
+      new HColumnDescriptor[] { new HColumnDescriptor(HConstants.COLUMN_FAMILY,
+          1, HColumnDescriptor.CompressionType.NONE, false, false,
+          Integer.MAX_VALUE, HConstants.FOREVER, null) });
   
   /** Table descriptor for <code>.META.</code> catalog table */
-  public static final HTableDescriptor META_TABLEDESC =
-    new HTableDescriptor(HConstants.META_TABLE_NAME,
-        new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
-            HColumnDescriptor.CompressionType.NONE, false, false,
-            Integer.MAX_VALUE, HConstants.FOREVER, null));
+  public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
+      HConstants.META_TABLE_NAME, new HColumnDescriptor[] {
+          new HColumnDescriptor(HConstants.COLUMN_FAMILY, 1,
+              HColumnDescriptor.CompressionType.NONE, false, false,
+              Integer.MAX_VALUE, HConstants.FOREVER, null),
+          new HColumnDescriptor(HConstants.COLUMN_FAMILY_HISTORIAN,
+              HConstants.ALL_VERSIONS, HColumnDescriptor.CompressionType.NONE,
+              false, false, Integer.MAX_VALUE, HConstants.FOREVER, null) });
   
   private boolean rootregion = false;
   private boolean metaregion = false;
@@ -64,11 +67,13 @@ public class HTableDescriptor implements WritableComparable {
    * Private constructor used internally creating table descriptors for 
    * catalog tables: e.g. .META. and -ROOT-.
    */
-  private HTableDescriptor(final byte [] name, HColumnDescriptor family) {
+  private HTableDescriptor(final byte [] name, HColumnDescriptor[] families) {
     this.name = name.clone();
     this.rootregion = Bytes.equals(name, HConstants.ROOT_TABLE_NAME);
     this.metaregion = true;
-    this.families.put(Bytes.mapKey(family.getName()), family);
+    for(HColumnDescriptor descriptor : families) {
+      this.families.put(Bytes.mapKey(descriptor.getName()), descriptor);
+    }
   }
 
   /**

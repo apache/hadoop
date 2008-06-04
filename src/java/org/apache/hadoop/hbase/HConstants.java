@@ -38,8 +38,11 @@ public interface HConstants {
   /** name of version file */
   static final String VERSION_FILE_NAME = "hbase.version";
   
-  /** version of file system */
-  static final String FILE_SYSTEM_VERSION = "2";
+  /**
+   * Current version of file system
+   * Version 3 added 'historian' family to .META.
+   */
+  public static final String FILE_SYSTEM_VERSION = "3";
   
   // Configuration parameters
   
@@ -129,9 +132,15 @@ public interface HConstants {
   
   /** The ROOT and META column family (string) */
   static final String COLUMN_FAMILY_STR = "info:";
+  
+  /** The META historian column family (string) */
+  static final String COLUMN_FAMILY_HISTORIAN_STR = "historian:";
 
   /** The ROOT and META column family */
   static final byte [] COLUMN_FAMILY = Bytes.toBytes(COLUMN_FAMILY_STR);
+  
+  /** The META historian column family */
+  static final byte [] COLUMN_FAMILY_HISTORIAN = Bytes.toBytes(COLUMN_FAMILY_HISTORIAN_STR);
 
   /** Array of meta column names */
   static final byte[][] COLUMN_FAMILY_ARRAY = new byte[][] {COLUMN_FAMILY};
@@ -207,4 +216,5 @@ public interface HConstants {
   public static final String HBASE_CLIENT_RETRIES_NUMBER_KEY =
     "hbase.client.retries.number";
   public static final int DEFAULT_CLIENT_RETRIES = 5;
+  
 }

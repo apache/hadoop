@@ -45,7 +45,9 @@
     for (MetaRegion meta: onlineRegions.values()) {
       int infoPort = serverToServerInfos.get(meta.getServer().getBindAddress()+":"+meta.getServer().getPort()).getInfoPort();
       String url = "http://" + meta.getServer().getHostname() + ":" + infoPort + "/";%> 
-<tr><td><%= meta.getRegionName() %></td><td><a href="<%= url %>"><%= meta.getServer().getHostname() %>:<%= meta.getServer().getPort() %></a></td><td>-</td><td><%= meta.getStartKey() %></td><td>-</td></tr>
+<tr><td><%= Bytes.toString(meta.getRegionName()) %></td>
+    <td><a href="<%= url %>"><%= meta.getServer().getHostname() %>:<%= meta.getServer().getPort() %></a></td>
+    <td>-</td><td><%= meta.getStartKey() %></td><td>-</td></tr>
 <%  } %>
 </table>
 <%} else { %>
@@ -56,11 +58,11 @@
       if(regions != null && regions.size() > 0) { %>
 <%=     tableHeader %>
 <%      for(Map.Entry<HRegionInfo, HServerAddress> hriEntry : regions.entrySet()) { %>
-<%        System.out.println(serverToServerInfos.keySet().toArray()[0].toString());
-          System.out.println(hriEntry.getValue().getHostname()+":"+hriEntry.getValue().getPort());
-          int infoPort = serverToServerInfos.get(hriEntry.getValue().getBindAddress()+":"+hriEntry.getValue().getPort()).getInfoPort();
-          String url = "http://" + hriEntry.getValue().getHostname().toString() + ":" + infoPort + "/";  %>
-<tr><td><%= hriEntry.getKey().getRegionNameAsString()%></td><td><a href="<%= url %>"><%= hriEntry.getValue().getHostname() %>:<%= hriEntry.getValue().getPort() %></a></td>
+<%        int infoPort = serverToServerInfos.get(hriEntry.getValue().getBindAddress()+":"+hriEntry.getValue().getPort()).getInfoPort();
+          String urlRegionHistorian = "/regionhistorian.jsp?regionname="+hriEntry.getKey().getRegionNameAsString();
+          String urlRegionServer = "http://" + hriEntry.getValue().getHostname().toString() + ":" + infoPort + "/";  %>
+<tr><td><a href="<%= urlRegionHistorian %>"><%= hriEntry.getKey().getRegionNameAsString()%></a></td>
+    <td><a href="<%= urlRegionServer %>"><%= hriEntry.getValue().getHostname() %>:<%= hriEntry.getValue().getPort() %></a></td>
     <td><%= hriEntry.getKey().getEncodedName()%></td> <td><%= Bytes.toString(hriEntry.getKey().getStartKey())%></td>
     <td><%= Bytes.toString(hriEntry.getKey().getEndKey())%></td></tr>
 <%      } %>

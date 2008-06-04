@@ -98,7 +98,7 @@ public class Merge extends Configured implements Tool {
     // Initialize MetaUtils and and get the root of the HBase installation
     
     this.utils = new MetaUtils(conf);
-    this.rootdir = utils.initialize();
+    this.rootdir = FSUtils.getRootDir(this.conf);
     try {
       if (isMetaTable) {
         mergeTwoMetaRegions();
@@ -120,7 +120,7 @@ public class Merge extends Configured implements Tool {
       return -1;
     
     } finally {
-      if (this.utils != null && this.utils.isInitialized()) {
+      if (this.utils != null) {
         this.utils.shutdown();
       }
     }

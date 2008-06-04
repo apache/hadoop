@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.DataInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -34,6 +35,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.hbase.FileSystemVersionException;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -192,5 +194,24 @@ public class FSUtils {
   throws IOException {
     fs.delete(HStoreFile.getMapDir(tabledir, encodedRegionName, family), true);
     fs.delete(HStoreFile.getInfoDir(tabledir, encodedRegionName, family), true);
+  }
+  
+  /**
+   * @param c
+   * @return Path to hbase root directory: i.e. <code>hbase.rootdir</code> as a
+   * Path.
+   * @throws IOException 
+   */
+  public static Path getRootDir(final HBaseConfiguration c) throws IOException {
+    FileSystem fs = FileSystem.get(c);
+    // Get root directory of HBase installation
+    Path rootdir = fs.makeQualified(new Path(c.get(HConstants.HBASE_DIR)));
+    if (!fs.exists(rootdir)) {
+      String message = "HBase root directory " + rootdir.toString() +
+        " does not exist.";
+      LOG.error(message);
+      throw new FileNotFoundException(message);
+    }
+    return rootdir;
   }
 }

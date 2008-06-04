@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,11 +38,9 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HStoreKey;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.HLog;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -51,13 +48,13 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 /**
  * Contains utility methods for manipulating HBase meta tables.
  * Be sure to call {@link #shutdown()} when done with this class so it closes
- * resources opened during meta processing (ROOT, META, etc.).
+ * resources opened during meta processing (ROOT, META, etc.).  Be careful
+ * how you use this class.  If used during migrations, be careful when using
+ * this class to check whether migration is needed.
  */
 public class MetaUtils {
   private static final Log LOG = LogFactory.getLog(MetaUtils.class);
-  
   private final HBaseConfiguration conf;
-  boolean initialized;
   private FileSystem fs;
   private Path rootdir;
   private HLog log;
@@ -65,62 +62,44 @@ public class MetaUtils {
   private Map<byte [], HRegion> metaRegions = Collections.synchronizedSortedMap(
     new TreeMap<byte [], HRegion>(Bytes.BYTES_COMPARATOR));
   
-  /** Default constructor */
-  public MetaUtils() {
+  /** Default constructor 
+   * @throws IOException */
+  public MetaUtils() throws IOException {
     this(new HBaseConfiguration());
   }
   
-  /** @param conf HBaseConfiguration */
-  public MetaUtils(HBaseConfiguration conf) {
+  /** @param conf HBaseConfiguration 
+   * @throws IOException */
+  public MetaUtils(HBaseConfiguration conf) throws IOException {
     this.conf = conf;
     conf.setInt("hbase.client.retries.number", 1);
-    this.initialized = false;
     this.rootRegion = null;
+    initialize();
   }
 
   /**
    * Verifies that DFS is available and that HBase is off-line.
-   * 
-   * @return Path of root directory of HBase installation
    * @throws IOException
    */
-  public Path initialize() throws IOException {
-    if (!initialized) {
-      this.fs = FileSystem.get(this.conf);              // get DFS handle
-
-      // Get root directory of HBase installation
-
-      this.rootdir =
-        fs.makeQualified(new Path(this.conf.get(HConstants.HBASE_DIR)));
-
-      if (!fs.exists(rootdir)) {
-        String message = "HBase root directory " + rootdir.toString() +
+  private void initialize() throws IOException {
+    this.fs = FileSystem.get(this.conf);              // get DFS handle
+    // Get root directory of HBase installation
+    this.rootdir = fs.makeQualified(new Path(this.conf.get(HConstants.HBASE_DIR)));
+    if (!fs.exists(rootdir)) {
+      String message = "HBase root directory " + rootdir.toString() +
         " does not exist.";
-        LOG.error(message);
-        throw new FileNotFoundException(message);
-      }
-
-      this.log = new HLog(this.fs, 
-          new Path(this.fs.getHomeDirectory(),
-              HConstants.HREGION_LOGDIR_NAME + "_" + System.currentTimeMillis()
-          ),
-          this.conf, null
-      );
-
-      this.initialized = true;
+      LOG.error(message);
+      throw new FileNotFoundException(message);
     }
-    return this.rootdir;
   }
-  
-  /** @return true if initialization completed successfully */
-  public boolean isInitialized() {
-    return this.initialized;
-  }
-  
-  /** @return the HLog */
-  public HLog getLog() {
-    if (!initialized) {
-      throw new IllegalStateException("Must call initialize method first.");
+
+  /** @return the HLog 
+   * @throws IOException */
+  public synchronized HLog getLog() throws IOException {
+    if (this.log == null) {
+      Path logdir = new Path(this.fs.getHomeDirectory(),
+          HConstants.HREGION_LOGDIR_NAME + "_" + System.currentTimeMillis());
+      this.log = new HLog(this.fs, logdir, this.conf, null);
     }
     return this.log;
   }
@@ -130,9 +109,6 @@ public class MetaUtils {
    * @throws IOException
    */
   public HRegion getRootRegion() throws IOException {
-    if (!initialized) {
-      throw new IllegalStateException("Must call initialize method first.");
-    }
     if (this.rootRegion == null) {
       openRootRegion();
     }
@@ -147,9 +123,6 @@ public class MetaUtils {
    * @throws IOException
    */
   public HRegion getMetaRegion(HRegionInfo metaInfo) throws IOException {
-    if (!initialized) {
-      throw new IllegalStateException("Must call initialize method first.");
-    }
     HRegion meta = metaRegions.get(metaInfo.getRegionName());
     if (meta == null) {
       meta = openMetaRegion(metaInfo);
@@ -183,14 +156,15 @@ public class MetaUtils {
       metaRegions.clear();
     }
     try {
-      this.log.rollWriter();
-      this.log.closeAndDelete();
+      if (this.log != null) {
+        this.log.rollWriter();
+        this.log.closeAndDelete();
+      }
     } catch (IOException e) {
       LOG.error("closing HLog", e);
     } finally {
       this.log = null;
     }
-    this.initialized = false;
   }
 
   /**
@@ -216,10 +190,6 @@ public class MetaUtils {
    * @throws IOException
    */
   public void scanRootRegion(ScannerListener listener) throws IOException {
-    if (!initialized) {
-      throw new IllegalStateException("Must call initialize method first.");
-    }
-    
     // Open root region so we can scan it
     if (this.rootRegion == null) {
       openRootRegion();
@@ -265,9 +235,6 @@ public class MetaUtils {
   public void scanMetaRegion(HRegionInfo metaRegionInfo,
     ScannerListener listener)
   throws IOException {
-    if (!initialized) {
-      throw new IllegalStateException("Must call initialize method first.");
-    }
     // Open meta region so we can scan it
     HRegion metaRegion = openMetaRegion(metaRegionInfo);
     scanMetaRegion(metaRegion, listener);
@@ -306,15 +273,19 @@ public class MetaUtils {
     }
   }
 
-  private void openRootRegion() throws IOException {
+  private synchronized HRegion openRootRegion() throws IOException {
+    if (this.rootRegion != null) {
+      return this.rootRegion;
+    }
     this.rootRegion = HRegion.openHRegion(HRegionInfo.ROOT_REGIONINFO,
-        this.rootdir, this.log, this.conf);
+      this.rootdir, getLog(), this.conf);
     this.rootRegion.compactStores();
+    return this.rootRegion;
   }
 
   private HRegion openMetaRegion(HRegionInfo metaInfo) throws IOException {
     HRegion meta =
-      HRegion.openHRegion(metaInfo, this.rootdir, this.log, this.conf);
+      HRegion.openHRegion(metaInfo, this.rootdir, getLog(), this.conf);
     meta.compactStores();
     return meta;
   }
@@ -360,7 +331,7 @@ public class MetaUtils {
   public void addColumn(final byte [] tableName,
       final HColumnDescriptor hcd)
   throws IOException {
-    List<HRegionInfo> metas = getMETARowsInROOT();
+    List<HRegionInfo> metas = getMETARows(tableName);
     for (HRegionInfo hri: metas) {
       final HRegion m = getMetaRegion(hri);
       scanMetaRegion(m, new ScannerListener() {
@@ -393,7 +364,7 @@ public class MetaUtils {
    */
   public void deleteColumn(final byte [] tableName,
       final byte [] columnFamily) throws IOException {
-    List<HRegionInfo> metas = getMETARowsInROOT();
+    List<HRegionInfo> metas = getMETARows(tableName);
     final Path tabledir = new Path(rootdir, Bytes.toString(tableName));
     for (HRegionInfo hri: metas) {
       final HRegion m = getMetaRegion(hri);
@@ -440,19 +411,27 @@ public class MetaUtils {
   }
 
   /**
-   * @return List of <code>.META.<code> {@link HRegionInfo} found in the
-   * <code>-ROOT-</code> table.
+   * @return List of {@link HRegionInfo} rows found in the ROOT or META
+   * catalog table.
+   * @param tableName Name of table to go looking for.
    * @throws IOException
    * @see #getMetaRegion(HRegionInfo)
    */
-  public List<HRegionInfo> getMETARowsInROOT() throws IOException {
-    if (!initialized) {
-      throw new IllegalStateException("Must call initialize method first.");
-    }
+  public List<HRegionInfo> getMETARows(final byte [] tableName)
+  throws IOException {
     final List<HRegionInfo> result = new ArrayList<HRegionInfo>();
+    // If passed table name is META, then  return the root region.
+    if (Bytes.equals(HConstants.META_TABLE_NAME, tableName)) {
+      result.add(openRootRegion().getRegionInfo());
+      return result;
+    }
+    // Return all meta regions that contain the passed tablename.
     scanRootRegion(new ScannerListener() {
+      private final Log SL_LOG = LogFactory.getLog(this.getClass());
+      
       @SuppressWarnings("unused")
       public boolean processRow(HRegionInfo info) throws IOException {
+        SL_LOG.debug("Testing " + info);
         if (Bytes.equals(info.getTableDesc().getName(),
             HConstants.META_TABLE_NAME)) {
           result.add(info);
