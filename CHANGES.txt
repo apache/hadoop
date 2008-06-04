@@ -433,6 +433,9 @@ Trunk (unreleased changes)
     HADOOP-3472 MapFile.Reader getClosest() function returns incorrect results
     when before is true (Todd Lipcon via Stack)
 
+    HADOOP-3476. Code cleanup in fuse-dfs.
+    (Peter Wyckoff via dhruba)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

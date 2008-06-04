@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-AC_DEFUN([FB_INITIALIZE],
+AC_DEFUN([FUSE_DFS_INITIALIZE],
 [
 AM_INIT_AUTOMAKE([ foreign 1.9.5 no-define ])
 if test "x$1" = "xlocalinstall"; then
@@ -35,12 +35,12 @@ AC_PATH_PROGS(ANT, ant)
 PRODUCT_MK=""
 ])
 
-AC_DEFUN([FB_WITH_EXTERNAL_PATH],
+AC_DEFUN([FUSE_DFS_WITH_EXTERNAL_PATH],
 [
 cdir=`pwd`
 AC_MSG_CHECKING([Checking EXTERNAL_PATH set to])
 AC_ARG_WITH([externalpath],
-  [ --with-externalpath=DIR User specified path to external facebook components.],
+  [ --with-externalpath=DIR User specified path to external fuse dfs components.],
   [
     if test "x${EXTERNAL_PATH}" != "x"; then
        echo ""
@@ -77,7 +77,7 @@ AC_SUBST(GLOBAL_FOOTER_MK)
 ])
 
 # Set option to enable shared mode. Set DEBUG and OPT for use in Makefile.am.
-AC_DEFUN([FB_ENABLE_DEFAULT_OPT_BUILD],
+AC_DEFUN([FUSE_DFS_ENABLE_DEFAULT_OPT_BUILD],
 [
 AC_MSG_CHECKING([whether to enable optimized build])
 AC_ARG_ENABLE([opt],
@@ -103,7 +103,7 @@ AM_CONDITIONAL([DEBUG], [test "$ENABLED_OPT" = no])
 ])
 
 # Set option to enable debug mode. Set DEBUG and OPT for use in Makefile.am.
-AC_DEFUN([FB_ENABLE_DEFAULT_DEBUG_BUILD],
+AC_DEFUN([FUSE_DFS_ENABLE_DEFAULT_DEBUG_BUILD],
 [
 AC_MSG_CHECKING([whether to enable debug build])
 AC_ARG_ENABLE([debug],
@@ -129,7 +129,7 @@ AM_CONDITIONAL([OPT], [test "$ENABLED_DEBUG" = no])
 ])
 
 # Set option to enable static libs.
-AC_DEFUN([FB_ENABLE_DEFAULT_STATIC],
+AC_DEFUN([FUSE_DFS_ENABLE_DEFAULT_STATIC],
 [
 SHARED=""
 STATIC=""
@@ -162,7 +162,7 @@ AM_CONDITIONAL([SHARED], [test "$ENABLED_STATIC" = no])
 ])
 
 # Set option to enable shared libs.
-AC_DEFUN([FB_ENABLE_DEFAULT_SHARED],
+AC_DEFUN([FUSE_DFS_ENABLE_DEFAULT_SHARED],
 [
 SHARED=""
 STATIC=""
@@ -196,7 +196,7 @@ AM_CONDITIONAL([STATIC], [test "$ENABLED_SHARED" = no])
 
 # Generates define flags and conditionals as specified by user.
 # This gets enabled *only* if user selects --enable-<FEATURE> otion.
-AC_DEFUN([FB_ENABLE_FEATURE],
+AC_DEFUN([FUSE_DFS_ENABLE_FEATURE],
 [
 ENABLE=""
 flag="$1"
@@ -226,7 +226,7 @@ AC_MSG_RESULT($ENABLE)
 
 
 # can also use eval $2=$withval;AC_SUBST($2)
-AC_DEFUN([FB_WITH_PATH],
+AC_DEFUN([FUSE_DFS_WITH_PATH],
 [
 USRFLAG=""
 USRFLAG=$1
@@ -246,7 +246,7 @@ AC_SUBST([$1])
 AC_MSG_RESULT($LOC)
 ])
 
-AC_DEFUN([FB_SET_FLAG_VALUE],
+AC_DEFUN([FUSE_DFS_SET_FLAG_VALUE],
 [
 SETFLAG=""
 AC_MSG_CHECKING([Checking $1 set to])
