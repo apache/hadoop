@@ -397,7 +397,8 @@ public class DataNode extends Configured
       throw new IOException( errorMsg );
     }
     assert FSConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
-      "Data-node and name-node layout versions must be the same.";
+      "Data-node and name-node layout versions must be the same."
+      + "Expected: "+ FSConstants.LAYOUT_VERSION + " actual "+ nsInfo.getLayoutVersion();
     return nsInfo;
   }
 

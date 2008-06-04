@@ -204,6 +204,10 @@ Trunk (unreleased changes)
     HADOOP-3486. Change default for initial block report to 0 seconds
     and document it. (Sanjay Radia via omalley)
 
+    HADOOP-3448. Improve the text in the assertion making sure the
+    layout versions are consistent in the data node. (Steve Loughran
+    via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
