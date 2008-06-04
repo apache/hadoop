@@ -26,7 +26,8 @@ import sys, os, re, pprint
 from ConfigParser import SafeConfigParser
 from optparse import OptionParser, IndentedHelpFormatter, OptionGroup
 from util import get_perms, replace_escapes
-from types import typeValidator, is_valid_type, typeToString
+from types import typeValidator, typeValidatorInstance, is_valid_type, \
+                  typeToString
 from hodlib.Hod.hod import hodHelp
 
 reEmailAddress = re.compile("^.*@.*$")
@@ -224,7 +225,7 @@ class baseConfig:
             
         return status
 
-    # 'private' method which prints an configuration error messages
+    # Prints configuration error messages
     def var_error(self, section, option, *addData):
         errorStrings = []  
         if not self._dict[section].has_key(option):
@@ -392,6 +393,24 @@ class baseConfig:
           os.chdir(oldDir)
 
         return status,statusMsgs
+
+    def normalizeValue(self, section, option)  :
+      return typeValidatorInstance.normalize(
+                                  self._configDef[section][option]['type'],
+                                  self[section][option])
+
+    def validateValue(self, section, option):
+      # Validates a section.option and exits on error
+      valueInfo = typeValidatorInstance.verify(
+                                  self._configDef[section][option]['type'],
+                                  self[section][option])
+      if valueInfo['isValid'] == 1:
+        return []
+      else:
+        if valueInfo['errorData']:
+          return self.var_error(section, option, valueInfo['errorData'])
+        else:
+          return self.var_error(section, option)
 
 class config(SafeConfigParser, baseConfig):
     def __init__(self, configFile, configDef=None, originalDir=None, 

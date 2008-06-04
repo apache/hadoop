@@ -15,6 +15,9 @@ Trunk (unreleased changes)
  
   BUG FIXES
 
+    HADOOP-2961: Avoids unnecessary checks for some configuration parameters
+    related to service configuration. (Vinod Kumar Vavilapalli via ddas)
+
 Release 0.17.0 - Unreleased
 
   INCOMPATIBLE CHANGES

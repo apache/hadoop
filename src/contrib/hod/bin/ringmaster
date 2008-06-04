@@ -164,7 +164,7 @@ defList = { 'ringmaster' : (
               False, None, False, False),
               
              ('pkgs', 'directory', "directory where the package is installed",
-              False, None, False, True)), 
+              False, None, False, False)), 
                
                
             'gridservice-hdfs' : (
@@ -193,7 +193,7 @@ defList = { 'ringmaster' : (
               False, None, False, False),
 
              ('pkgs', 'directory', "directory where the package is installed",
-              False, None, False, True)),          
+              False, None, False, False)),          
              
              
             'hodring' : (
@@ -278,6 +278,22 @@ if __name__ == '__main__':
   log = None
 
   try:
+    statusMsgs = []
+    # Conditional validation
+    if not ringMasterOptions['ringmaster'].has_key('hadoop-tar-ball') or \
+        not ringMasterOptions['ringmaster']['hadoop-tar-ball']:
+      # If tarball is not used
+      if not ringMasterOptions.normalizeValue('gridservice-hdfs', 'external'):
+        # And if hdfs is not external, validate gridservice-hdfs.pkgs
+        statusMsgs.extend(ringMasterOptions.validateValue(
+                                                  'gridservice-hdfs', 'pkgs'))
+      statusMsgs.extend(ringMasterOptions.validateValue(
+                                                  'gridservice-mapred', 'pkgs'))
+
+    if len(statusMsgs) != 0:
+      raise Exception("%s" % statusMsgs)
+    # End of conditional validation
+
     (status, statusMsgs) = ringMasterOptions.verify()
     if not status:
       raise Exception("%s" % statusMsgs)

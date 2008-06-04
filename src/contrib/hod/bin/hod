@@ -232,13 +232,13 @@ defList = { 'hod' : (
               False, False, True, True),
               
              ('host', 'hostname', 'Mapred hostname.', 
-              False, 'localhost', False, True),
+              False, 'localhost', False, False),
 
              ('info_port', 'pos_int', 'Mapred info port.',
-              False, None, True, True), 
+              False, None, False, False),
              
              ('tracker_port', 'pos_int', 'Mapred job tracker port.',
-              False, None, True, True),
+              False, None, False, False),
                         
              ('cmdline-params', 'keyval', 'Hadoop cmdline key/value list.',
               False, None, False, False),
@@ -261,13 +261,13 @@ defList = { 'hod' : (
               False, False, True, True),
              
              ('host', 'hostname', 'HDFS hostname.', 
-              False, 'localhost', False, True),
+              False, 'localhost', False, False),
              
              ('fs_port', 'pos_int', 'HDFS port.',
-              False, None, True, True),
+              False, None, False, False),
               
              ('info_port', 'pos_int', 'HDFS info port.',
-              False, None, True, True), 
+              False, None, False, False), 
              
              ('cmdline-params', 'keyval', 'Hadoop cmdline key/value list.',
               False, None, False, False),
@@ -388,6 +388,38 @@ if __name__ == '__main__':
       print >>sys.stderr,"error: %s not found. Specify the path to the HOD configuration file, or define the environment variable %s under which a file named hodrc can be found." % (hodOptions['config'], 'HOD_CONF_DIR')
       sys.exit(1)
   
+    # Conditional validation
+    statusMsgs = []
+
+    if hodConfig.normalizeValue('gridservice-hdfs', 'external'):
+      # For external HDFS
+      statusMsgs.extend(hodConfig.validateValue('gridservice-hdfs',
+                                                'fs_port'))
+      statusMsgs.extend(hodConfig.validateValue('gridservice-hdfs',
+                                                'info_port'))
+      statusMsgs.extend(hodConfig.validateValue('gridservice-hdfs',
+                                                'host'))
+    else:
+      hodConfig['gridservice-hdfs']['fs_port'] = 0 # Dummy
+      hodConfig['gridservice-hdfs']['info_port'] = 0 # Not used at all
+
+    if hodConfig.normalizeValue('gridservice-mapred', 'external'):
+      statusMsgs.extend(hodConfig.validateValue('gridservice-mapred',
+                                                'tracker_port'))
+      statusMsgs.extend(hodConfig.validateValue('gridservice-mapred',
+                                                'info_port'))
+      statusMsgs.extend(hodConfig.validateValue('gridservice-mapred',
+                                                'host'))
+    else:
+      hodConfig['gridservice-mapred']['tracker_port'] = 0 # Dummy
+      hodConfig['gridservice-mapred']['info_port'] = 0 # Not used at all
+
+    if len(statusMsgs) != 0:
+      for msg in statusMsgs:
+        print >>sys.stderr, msg
+      sys.exit(1)
+    # End of conditional validation
+
     status = True
     statusMsgs = []
   
