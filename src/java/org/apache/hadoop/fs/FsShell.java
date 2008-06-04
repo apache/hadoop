@@ -652,13 +652,16 @@ public class FsShell extends Configured implements Tool {
         FileStatus stat = items[i];
         Path cur = stat.getPath();
         String mdate = dateForm.format(new Date(stat.getModificationTime()));
-        System.out.printf("%-"+ (maxReplication + BORDER)
-            +"s", (!stat.isDir() ? stat.getReplication() : ""));
-        System.out.printf("%-"+ (maxLen + BORDER) +"d", stat.getLen());
-        System.out.print(mdate + "  " 
-            + (stat.isDir() ? "d" : "-") + stat.getPermission() + "  ");
-        System.out.printf("%-"+ (maxOwner + BORDER) +"s", stat.getOwner());
-        System.out.printf("%-"+ (maxGroup + BORDER) +"s", stat.getGroup());
+        
+        System.out.print((stat.isDir() ? "d" : "-") + 
+          stat.getPermission() + " ");
+        System.out.printf("%"+ maxReplication + 
+          "s ", (!stat.isDir() ? stat.getReplication() : "-"));
+        System.out.printf("%-"+ maxOwner +
+          "s ", stat.getOwner());
+        System.out.printf("%-"+ maxGroup +"s ", stat.getGroup());
+        System.out.printf("%"+ maxLen + "d ", stat.getLen());
+        System.out.print(mdate + " ");
         System.out.println(cur.toUri().getPath());
         if (recursive && stat.isDir()) {
           ls(cur,srcFs, recursive, printHeader);

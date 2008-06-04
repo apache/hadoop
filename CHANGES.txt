@@ -71,6 +71,9 @@ Trunk (unreleased changes)
     A connection with outstanding requests won't be treated as idle.
     (hairong)
 
+    HADOOP-3459. Change in the output format of dfs -ls to more closely match
+    /bin/ls. New format is: perm repl owner group size date name (Mukund Madhugiri via omally)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,
