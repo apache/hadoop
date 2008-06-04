@@ -724,7 +724,7 @@ class options(OptionParser, baseConfig):
               numNodes = getattr(self.__parsedOptions, 'hod.nodecount')
  
               if not clusterDir or not numNodes:
-                print getattr(hodhelp, "help_%s" % cmdstr)()
+                print hodhelp.usage(cmdstr)
                 sys.exit(3)
 
               cmdstr = cmdstr + ' ' + clusterDir + ' ' + numNodes
@@ -735,7 +735,7 @@ class options(OptionParser, baseConfig):
               clusterDir = getattr(self.__parsedOptions, 'hod.clusterdir')
 
               if not clusterDir:
-                print getattr(hodhelp, "help_%s" % cmdstr)()
+                print hodhelp.usage(cmdstr)
                 sys.exit(3)
  
               cmdstr = cmdstr + ' ' + clusterDir
@@ -753,7 +753,7 @@ class options(OptionParser, baseConfig):
                 self.remove_exit_code_file(originalDir, clusterDir)
 
               if not _script or not clusterDir or not numNodes:
-                print getattr(hodhelp, "help_%s" % cmdstr)()
+                print hodhelp.usage(cmdstr)
                 sys.exit(3)
               pass
 

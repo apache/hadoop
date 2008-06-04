@@ -239,14 +239,21 @@ class hodRunner:
       nodes = args[2]
       clusterDir = self.__norm_cluster_dir(args[1])
 
-      if not os.path.isdir(clusterDir):
+      if not os.path.exists(clusterDir):
         errorFlag = True
-        errorMsgs.append("Invalid cluster directory(--hod.clusterdir or -d) "+\
-                          "'%s' specified." % clusterDir)
+        errorMsgs.append( \
+                    "Invalid cluster directory (--hod.clusterdir or -d) : " + \
+                    clusterDir + " : No such directory")
+      elif not os.path.isdir(clusterDir):
+        errorFlag = True
+        errorMsgs.append( \
+                    "Invalid cluster directory (--hod.clusterdir or -d) : " + \
+                         clusterDir + " : Not a directory")
+        
       if int(nodes) < 3 :
         errorFlag = True
-        errorMsgs.append("hod.nodecount(--hod.nodecount or -n) must be >= 3."+\
-                          " Given nodes: %s" % nodes)
+        errorMsgs.append("Invalid nodecount (--hod.nodecount or -n) : " + \
+                         "Must be >= 3. Given nodes: %s" % nodes)
       if errorFlag:
         for msg in errorMsgs:
           self.__log.critical(msg)
@@ -277,7 +284,7 @@ class hodRunner:
           min = nodes
           max = nodes
         except ValueError:
-          print self.__hodhelp.help_allocate()
+          print self.__hodhelp.help(operation)
           self.__log.critical(
           "%s operation requires a pos_int value for n(nodecount)." % 
           operation)
@@ -337,7 +344,7 @@ class hodRunner:
           if self.__opCode > 0 and self.__opCode != 15:
             self.__log.critical("Cannot allocate cluster %s" % clusterDir)
     else:
-      print self.__hodhelp.help_allocate()
+      print self.__hodhelp.help(operation)
       self.__log.critical("%s operation requires two arguments. "  % operation
                         + "A cluster directory and a nodecount.")
       self.__opCode = 3
@@ -375,12 +382,13 @@ class hodRunner:
       else:
         self.__handle_invalid_cluster_directory(clusterDir, cleanUp=True)
     else:
-      print self.__hodhelp.help_deallocate()
+      print self.__hodhelp.help(operation)
       self.__log.critical("%s operation requires one argument. "  % operation
                         + "A cluster path.")
       self.__opCode = 3
             
   def _op_list(self, args):
+    operation = 'list'
     clusterList = self.__userState.read(CLUSTER_DATA_FILE)
     for path in clusterList.keys():
       if not os.path.isdir(path):
@@ -436,7 +444,7 @@ class hodRunner:
       else:
         self.__handle_invalid_cluster_directory(clusterDir)
     else:
-      print self.__hodhelp.help_info()
+      print self.__hodhelp.help(operation)
       self.__log.critical("%s operation requires one argument. "  % operation
                         + "A cluster path.")
       self.__opCode = 3      
@@ -463,7 +471,18 @@ class hodRunner:
         self.__remove_cluster(clusterDir)
       self.__opCode = 3
     else:
-      self.__log.critical("'%s' is not a valid cluster directory." % (clusterDir))
+      if not os.path.exists(clusterDir):
+        self.__log.critical(  \
+                  "Invalid hod.clusterdir(--hod.clusterdir or -d). " + \
+                  clusterDir + " : No such directory")
+      elif not os.path.isdir(clusterDir):
+        self.__log.critical( \
+                  "Invalid hod.clusterdir(--hod.clusterdir or -d). " + \
+                  clusterDir + " : Not a directory")
+      else:
+        self.__log.critical( \
+                  "Invalid hod.clusterdir(--hod.clusterdir or -d). " + \
+                  clusterDir + " : Not tied to any allocated cluster.")
       self.__opCode = 15
     
   def __print_cluster_info(self, clusterInfo):
@@ -489,13 +508,13 @@ class hodRunner:
     if arg == None or arg.__len__() != 2:
       print "hod commands:\n"
       for op in self.__ops:
-        print getattr(self.__hodhelp, "help_%s" % op)()      
+        print self.__hodhelp.help(op)
     else:
       if arg[1] not in self.__ops:
-        print self.__hodhelp.help_help()
+        print self.__hodhelp.help('help')
         self.__log.critical("Help requested for invalid operation : %s"%arg[1])
         self.__opCode = 3
-      else: print getattr(self.__hodhelp, "help_%s" % arg[1])()
+      else: print self.__hodhelp.help(arg[1])
 
   def operation(self):  
     operation = self.__cfg['hod']['operation']
@@ -532,24 +551,36 @@ class hodRunner:
     nodes = self.__cfg['hod']['nodecount']
     clusterDir = self.__cfg['hod']['clusterdir']
     
-    if not os.path.isfile(script):
+    if not os.path.exists(script):
       errorFlag = True
-      errorMsgs.append("Invalid script file (--hod.script or -s) " + \
-                       "specified : %s" % script)
+      errorMsgs.append("Invalid script file (--hod.script or -s) : " + \
+                       script + " : No such file")
+    elif not os.path.isfile(script):
+      errorFlag = True
+      errorMsgs.append("Invalid script file (--hod.script or -s) : " + \
+                       script + " : Not a file.")
     else:
       isExecutable = os.access(script, os.X_OK)
       if not isExecutable:
         errorFlag = True
-        errorMsgs.append('Script %s is not an executable.' % \
-                                  self.__cfg['hod']['script'])
-    if not os.path.isdir(self.__cfg['hod']['clusterdir']):
+        errorMsgs.append("Invalid script file (--hod.script or -s) : " + \
+                         script + " : Not an executable.")
+
+    if not os.path.exists(clusterDir):
       errorFlag = True
-      errorMsgs.append("Invalid cluster directory (--hod.clusterdir or -d) " +\
-                        "'%s' specified." % self.__cfg['hod']['clusterdir'])
+      errorMsgs.append( \
+                  "Invalid cluster directory (--hod.clusterdir or -d) : " + \
+                  clusterDir + " : No such directory")
+    elif not os.path.isdir(clusterDir):
+      errorFlag = True
+      errorMsgs.append( \
+                  "Invalid cluster directory (--hod.clusterdir or -d) : " + \
+                       clusterDir + " : Not a directory")
+
     if int(self.__cfg['hod']['nodecount']) < 3 :
       errorFlag = True
-      errorMsgs.append("nodecount(--hod.nodecount or -n) must be >= 3. " + \
-                       "Given nodes: %s" %   self.__cfg['hod']['nodecount'])
+      errorMsgs.append("Invalid nodecount (--hod.nodecount or -n) : " + \
+                       "Must be >= 3. Given nodes: %s" % nodes)
 
     if errorFlag:
       for msg in errorMsgs:
@@ -612,53 +643,55 @@ class hodRunner:
 class hodHelp:
   def __init__(self):
     self.ops = ['allocate', 'deallocate', 'info', 'list','script',  'help']
-  
-  def help_allocate(self):
-    return \
-    "Usage       : hod allocate -d <clusterdir> -n <nodecount> [OPTIONS]\n" + \
-      "Description : Allocates a cluster of n nodes using the specified \n" + \
+
+    self.usage_strings = \
+      {
+        'allocate'   : 'hod allocate -d <clusterdir> -n <nodecount> [OPTIONS]',
+        'deallocate' : 'hod deallocate -d <clusterdir> [OPTIONS]',
+        'list'       : 'hod list [OPTIONS]',
+        'info'       : 'hod info -d <clusterdir> [OPTIONS]',
+        'script'     :
+              'hod script -d <clusterdir> -n <nodecount> -s <script> [OPTIONS]',
+        'help'       : 'hod help <OPERATION>',
+        }
+
+    self.description_strings = \
+      {
+       'allocate' : "Allocates a cluster of n nodes using the specified \n" + \
       "              cluster directory to store cluster state \n" + \
       "              information. The Hadoop site XML is also stored \n" + \
-      "              in this location.\n" + \
-      "For all options : hod help options.\n"
+      "              in this location.\n",
 
-  def help_deallocate(self):
-    return "Usage       : hod deallocate -d <clusterdir> [OPTIONS]\n" + \
-      "Description : Deallocates a cluster using the specified \n" + \
+       'deallocate' : "Deallocates a cluster using the specified \n" + \
       "             cluster directory.  This operation is also \n" + \
-      "             required to clean up a dead cluster.\n" + \
-      "For all options : hod help options.\n"
+      "             required to clean up a dead cluster.\n",
 
-  def help_list(self):
-    return "Usage       : hod list [OPTIONS]\n" + \
-      "Description : List all clusters currently allocated by a user, \n" + \
+       'list' : "List all clusters currently allocated by a user, \n" + \
       "              along with limited status information and the \n" + \
-      "              cluster ID.\n" + \
-      "For all options : hod help options.\n"
+      "              cluster ID.\n",
 
-  def help_info(self):
-    return "Usage       : hod info -d <clusterdir> [OPTIONS]\n" + \
-      "Description : Provide detailed information on an allocated cluster.\n" + \
-      "For all options : hod help options.\n"
+       'info' : "Provide detailed information on an allocated cluster.\n",
 
-  def help_script(self):
-    return "Usage       : hod script -d <clusterdir> -n <nodecount> " + \
-                                        "-s <script> [OPTIONS]\n" + \
-           "Description : Allocates a cluster of n nodes with the given \n" +\
+       'script' : "Allocates a cluster of n nodes with the given \n" +\
            "              cluster directory, runs the specified script \n" + \
            "              using the allocated cluster, and then \n" + \
-           "              deallocates the cluster.\n" + \
-           "For all options : hod help options.\n"
+           "              deallocates the cluster.\n",
  
-  def help_help(self):
-    return "Usage       : hod help <OPERATION>\n" + \
-      "Description : Print help for the operation and exit.\n" + \
-      "Available operations : %s.\n" % self.ops + \
-      "For all options : hod help options.\n"
+       'help' : "Print help for the operation and exit.\n" + \
+                "Available operations : %s.\n" % self.ops,
+       }
 
-  def help(self):
-    return  "hod <operation> [ARGS] [OPTIONS]\n" + \
-            "Available operations : %s\n" % self.ops + \
-            "For help on a particular operation : hod help <operation>.\n" + \
-            "For all options : hod help options."
+  def usage(self, op):
+    return "Usage       : " + self.usage_strings[op] + "\n" + \
+           "For full description: hod help " + op + ".\n"
 
+  def help(self, op=None):
+    if op is None:
+      return "hod <operation> [ARGS] [OPTIONS]\n" + \
+             "Available operations : %s\n" % self.ops + \
+             "For help on a particular operation : hod help <operation>.\n" + \
+             "For all options : hod help options."
+    else:
+      return "Usage       : " + self.usage_strings[op] + "\n" + \
+             "Description : " + self.description_strings[op] + \
+             "For all options : hod help options.\n"
