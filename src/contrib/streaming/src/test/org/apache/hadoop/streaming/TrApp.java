@@ -91,6 +91,7 @@ public class TrApp
     while ((line = in.readLine()) != null) {
       String out = line.replace(find, replace);
       System.out.println(out);
+      System.err.println("reporter:counter:UserCounters,InputLines,1");
     }
   }
 

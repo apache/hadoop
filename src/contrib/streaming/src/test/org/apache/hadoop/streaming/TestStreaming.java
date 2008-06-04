@@ -20,10 +20,6 @@ package org.apache.hadoop.streaming;
 
 import junit.framework.TestCase;
 import java.io.*;
-import java.util.*;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 
 /**
  * This class tests hadoopStreaming in MapReduce local mode.
@@ -73,7 +69,7 @@ public class TestStreaming extends TestCase
     };
   }
   
-  public void testCommandLine()
+  public void testCommandLine() throws IOException
   {
     try {
       try {
@@ -94,21 +90,12 @@ public class TestStreaming extends TestCase
       System.err.println("outEx1=" + outputExpect);
       System.err.println("  out1=" + output);
       assertEquals(outputExpect, output);
-    } catch(Exception e) {
-      failTrace(e);
     } finally {
       File outFileCRC = new File(OUTPUT_DIR, ".part-00000.crc").getAbsoluteFile();
       INPUT_FILE.delete();
       outFileCRC.delete();
       OUTPUT_DIR.getAbsoluteFile().delete();
     }
-  }
-
-  private void failTrace(Exception e)
-  {
-    StringWriter sw = new StringWriter();
-    e.printStackTrace(new PrintWriter(sw));
-    fail(sw.toString());
   }
 
   public static void main(String[]args) throws Exception

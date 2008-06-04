@@ -405,6 +405,9 @@ public abstract class PipeMapRed {
   class MRErrorThread extends Thread {
 
     public MRErrorThread() {
+      this.reporterPrefix = job_.get("stream.stderr.reporter.prefix", "reporter:");
+      this.counterPrefix = reporterPrefix + "counter:";
+      this.statusPrefix = reporterPrefix + "status:";
       setDaemon(true);
     }
     
@@ -418,7 +421,18 @@ public abstract class PipeMapRed {
       try {
         lineReader = new LineReader((InputStream)clientErr_, job_);
         while (lineReader.readLine(line) > 0) {
-          System.err.println(line.toString());
+          String lineStr = line.toString();
+          if (matchesReporter(lineStr)) {
+            if (matchesCounter(lineStr)) {
+              incrCounter(lineStr);
+            } else if (matchesStatus(lineStr)) {
+              setStatus(lineStr);
+            } else {
+              LOG.warn("Cannot parse reporter line: " + lineStr);
+            }
+          } else {
+            System.err.println(lineStr);
+          }
           long now = System.currentTimeMillis(); 
           if (reporter != null && now-lastStderrReport > reporterErrDelay_) {
             lastStderrReport = now;
@@ -450,8 +464,44 @@ public abstract class PipeMapRed {
         }
       }
     }
+    
+    private boolean matchesReporter(String line) {
+      return line.startsWith(reporterPrefix);
+    }
+
+    private boolean matchesCounter(String line) {
+      return line.startsWith(counterPrefix);
+    }
+
+    private boolean matchesStatus(String line) {
+      return line.startsWith(statusPrefix);
+    }
+
+    private void incrCounter(String line) {
+      String trimmedLine = line.substring(counterPrefix.length()).trim();
+      String[] columns = trimmedLine.split(",");
+      if (columns.length == 3) {
+        try {
+          reporter.incrCounter(columns[0], columns[1],
+              Long.parseLong(columns[2]));
+        } catch (NumberFormatException e) {
+          LOG.warn("Cannot parse counter increment '" + columns[2] +
+              "' from line: " + line);
+        }
+      } else {
+        LOG.warn("Cannot parse counter line: " + line);
+      }
+    }
+
+    private void setStatus(String line) {
+      reporter.setStatus(line.substring(statusPrefix.length()).trim());
+    }
+    
     long lastStderrReport = 0;
     volatile Reporter reporter;
+    private final String reporterPrefix;
+    private final String counterPrefix;
+    private final String statusPrefix;
   }
 
   public void mapRedFinished() {

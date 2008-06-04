@@ -136,6 +136,9 @@ Trunk (unreleased changes)
     HADOOP-3177. Implement Syncable interface for FileSystem.
     (Tsz Wo (Nicholas), SZE via dhruba)
 
+    HADOOP-1328. Implement user counters in streaming. (tomwhite via
+    omalley)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().
