@@ -202,9 +202,8 @@ public class HConnectionManager implements HConstants {
       if (this.master == null) {
         if (masterLocation == null) {
           throw new MasterNotRunningException();
-        } else {
-          throw new MasterNotRunningException(masterLocation.toString());
         }
+        throw new MasterNotRunningException(masterLocation.toString());
       }
       return this.master;
     }
@@ -267,8 +266,11 @@ public class HConnectionManager implements HConstants {
 
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
 
-        public boolean processRow(RowResult rowResult,
-            HRegionLocation metaLocation, HRegionInfo info) throws IOException {
+        /** {@inheritDoc} */
+        public boolean processRow(
+            @SuppressWarnings("unused") RowResult rowResult,
+            @SuppressWarnings("unused") HRegionLocation metaLocation,
+            HRegionInfo info) {
 
           // Only examine the rows where the startKey is zero length
           if (info.getStartKey().length == 0) {
@@ -281,6 +283,40 @@ public class HConnectionManager implements HConstants {
       MetaScanner.metaScan(conf, visitor);
 
       return uniqueTables.toArray(new HTableDescriptor[uniqueTables.size()]);
+    }
+
+    /**
+     * @param tableName
+     * @return table metadata 
+     * @throws IOException
+     */
+    public HTableDescriptor getHTableDescriptor(byte[] tableName)
+    throws IOException {
+      if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
+        return new UnmodifyableHTableDescriptor(HTableDescriptor.ROOT_TABLEDESC);
+      }
+      HTable meta = new HTable(conf,
+          Bytes.equals(tableName, HConstants.META_TABLE_NAME) ?
+              HConstants.ROOT_TABLE_NAME : HConstants.META_TABLE_NAME);
+      Scanner s = meta.getScanner(HConstants.COL_REGIONINFO_ARRAY,
+          HRegionInfo.createRegionName(tableName, null, HConstants.ZEROES));
+      try {
+        RowResult r = null;
+        while ((r = s.next()) != null) {
+          Cell c = r.get(HConstants.COL_REGIONINFO);
+          if (c != null) {
+            HRegionInfo info = Writables.getHRegionInfoOrNull(c.getValue());
+            if (info != null) {
+              if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
+                return new UnmodifyableHTableDescriptor(info.getTableDesc());
+              }
+            }
+          }
+        }
+        return null;
+      } finally {
+        s.close();
+      }
     }
 
     /** {@inheritDoc} */

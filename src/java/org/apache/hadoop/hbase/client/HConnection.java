@@ -61,6 +61,14 @@ public interface HConnection {
   public HTableDescriptor[] listTables() throws IOException;
   
   /**
+   * @param tableName
+   * @return table metadata 
+   * @throws IOException
+   */
+  public HTableDescriptor getHTableDescriptor(byte[] tableName)
+  throws IOException;
+  
+  /**
    * Find the location of the region of <i>tableName</i> that <i>row</i>
    * lives in.
    * @param tableName name of the table <i>row</i> is in

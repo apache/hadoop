@@ -89,6 +89,7 @@ class MetaScanner implements HConstants {
      * 
      * @param rowResult
      * @param metaLocation
+     * @param info
      * @return A boolean to know if it should continue to loop in the region
      * @throws IOException
      */

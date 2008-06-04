@@ -38,6 +38,7 @@ Hbase Change Log
    HBASE-663   Incorrect sequence number for cache flush
    HBASE-655   Need programmatic way to add column family: need programmatic way
                to enable/disable table
+   HBASE-654   API HTable.getMetadata().addFamily shouldn't be exposed to user
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
@@ -71,7 +72,11 @@ Hbase Change Log
                (Clint Morgan via Stack)
    HBASE-579   Add hadoop 0.17.x
    HBASE-660   [Migration] addColumn/deleteColumn functionality in MetaUtils
+   HBASE-632   HTable.getMetadata is very inefficient
 
+  NEW FEATURES
+   HBASE-639   Add HBaseAdmin.getTableDescriptor function
+   
 Release 0.1.2 - 05/13/2008
    
   BUG FIXES

@@ -270,7 +270,9 @@ public class HTable {
       // The root region is always online
       return false;
     }
-    HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+    HTable meta = new HTable(conf,
+        Bytes.equals(tableName, HConstants.META_TABLE_NAME) ?
+            HConstants.ROOT_TABLE_NAME : HConstants.META_TABLE_NAME);
     Scanner s = meta.getScanner(HConstants.COL_REGIONINFO_ARRAY,
         HRegionInfo.createRegionName(tableName, null, HConstants.NINES));
     try {
@@ -336,20 +338,12 @@ public class HTable {
   }
 
   /**
-   * TODO: Make the return read-only.
    * @return table metadata 
    * @throws IOException
    */
+  @Deprecated
   public HTableDescriptor getMetadata() throws IOException {
-    HTableDescriptor [] metas = this.connection.listTables();
-    HTableDescriptor result = null;
-    for (int i = 0; i < metas.length; i++) {
-      if (Bytes.equals(metas[i].getName(), this.tableName)) {
-        result = metas[i];
-        break;
-      }
-    }
-    return result;
+    return this.connection.getHTableDescriptor(this.tableName);
   }
 
   /**
@@ -388,16 +382,15 @@ public class HTable {
    * @return A map of HRegionInfo with it's server address
    * @throws IOException
    */
-  @SuppressWarnings("null")
   public Map<HRegionInfo, HServerAddress> getRegionsInfo() throws IOException {
     final HashMap<HRegionInfo, HServerAddress> regionMap =
       new HashMap<HRegionInfo, HServerAddress>();
 
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
-      @SuppressWarnings("unused")
       public boolean processRow(@SuppressWarnings("unused") RowResult rowResult,
-          HRegionLocation metaLocation, HRegionInfo info)
-      throws IOException {
+          HRegionLocation metaLocation, HRegionInfo hri) {
+        
+        HRegionInfo info = new UnmodifyableHRegionInfo(hri); 
         if (!(Bytes.equals(info.getTableDesc().getName(), getTableName()))) {
           return false;
         }

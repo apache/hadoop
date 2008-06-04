@@ -31,6 +31,7 @@ public interface HConstants {
   static final Long ZERO_L = Long.valueOf(0L);
   
   static final String NINES = "99999999999999";
+  static final String ZEROES = "00000000000000";
   
   // For migration
 

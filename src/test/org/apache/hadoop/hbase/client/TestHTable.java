@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,7 +37,6 @@ import org.apache.hadoop.io.Text;
  * Tests HTable
  */
 public class TestHTable extends HBaseClusterTestCase implements HConstants {
-  private static final Log LOG = LogFactory.getLog(TestHTable.class);
   private static final HColumnDescriptor column =
     new HColumnDescriptor(COLUMN_FAMILY);
 
@@ -84,7 +81,8 @@ public class TestHTable extends HBaseClusterTestCase implements HConstants {
     HTable a = new HTable(conf, tableAname);
     
     // Assert the metadata is good.
-    HTableDescriptor meta = a.getMetadata();
+    HTableDescriptor meta =
+      a.getConnection().getHTableDescriptor(tableAdesc.getName());
     assertTrue(meta.equals(tableAdesc));
     
     BatchUpdate batchUpdate = new BatchUpdate(row);

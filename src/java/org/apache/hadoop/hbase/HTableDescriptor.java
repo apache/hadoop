@@ -182,6 +182,7 @@ public class HTableDescriptor implements WritableComparable {
    * descriptors.
    * @see #getNameAsString()
    */
+  @Override
   public String toString() {
     return "name: " + Bytes.toString(this.name) + ", families: " +
       this.families.values();
