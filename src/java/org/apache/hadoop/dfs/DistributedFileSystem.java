@@ -114,9 +114,12 @@ public class DistributedFileSystem extends FileSystem {
   }
   
 
-  public BlockLocation[] getFileBlockLocations(Path f, long start,
+  public BlockLocation[] getFileBlockLocations(FileStatus file, long start,
       long len) throws IOException {
-    return dfs.getBlockLocations(getPathName(f), start, len);
+    if (file == null) {
+      return null;
+    }
+    return dfs.getBlockLocations(getPathName(file.getPath()), start, len);
   }
 
   public void setVerifyChecksum(boolean verifyChecksum) {
@@ -352,11 +355,15 @@ public class DistributedFileSystem extends FileSystem {
       DfsPath p = (DfsPath) f;
       return p.info;
     }
-    FileStatus fs = dfs.getFileInfo(getPathName(f));
-    if (fs != null)
-      return fs;
-    else
+    DFSFileInfo fi = dfs.getFileInfo(getPathName(f));
+    if (fi != null) {
+      return new FileStatus(fi.getLen(), fi.isDir(), fi.getReplication(),
+          fi.getBlockSize(), fi.getModificationTime(),
+          fi.getPermission(), fi.getOwner(), fi.getGroup(),
+          new DfsPath(fi, this)); // fully-qualify path;
+    } else {
       throw new FileNotFoundException("File does not exist: " + f);
+    }
   }
 
   /** {@inheritDoc }*/

@@ -173,13 +173,14 @@ public class KosmosFileSystem extends FileSystem {
         }
         if (kfsImpl.isDirectory(srep)) {
             // System.out.println("Status of path: " + path + " is dir");
-            return new FileStatus(0, true, 1, 0, 0, path);
+            return new FileStatus(0, true, 1, 0, 0, path.makeQualified(this));
         } else {
             // System.out.println("Status of path: " + path + " is file");
             return new FileStatus(kfsImpl.filesize(srep), false, 
                                   kfsImpl.getReplication(srep),
                                   getDefaultBlockSize(),
-                                  kfsImpl.getModificationTime(srep), path);
+                                  kfsImpl.getModificationTime(srep),
+                                  path.makeQualified(this));
         }
     }
     
@@ -308,12 +309,14 @@ public class KosmosFileSystem extends FileSystem {
      * Return null if the file doesn't exist; otherwise, get the
      * locations of the various chunks of the file file from KFS.
      */
-    public BlockLocation[] getBlockLocations(Path f, long start, long len
-                                             ) throws IOException {
-      if (!exists(f)) {
+    @Override
+    public BlockLocation[] getFileBlockLocations(FileStatus file, long start,
+        long len) throws IOException {
+
+      if (file == null) {
         return null;
       }
-      String srep = makeAbsolute(f).toUri().getPath();
+      String srep = makeAbsolute(file.getPath()).toUri().getPath();
       String[][] hints = kfsImpl.getDataLocation(srep, start, len);
       BlockLocation[] result = new BlockLocation[hints.length];
       long blockSize = getDefaultBlockSize();

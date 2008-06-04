@@ -96,6 +96,11 @@ public class FilterFileSystem extends FileSystem {
       return fs.getFileBlockLocations(f, start, len);
   }
 
+  public BlockLocation[] getFileBlockLocations(FileStatus file, long start,
+    long len) throws IOException {
+      return fs.getFileBlockLocations(file, start, len);
+  }
+  
   /**
    * Opens an FSDataInputStream at the indicated Path.
    * @param f the file name to open

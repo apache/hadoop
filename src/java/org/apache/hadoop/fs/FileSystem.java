@@ -326,21 +326,35 @@ public abstract class FileSystem extends Configured implements Closeable {
    * hostnames of machines that contain the given file.
    *
    * The FileSystem will simply return an elt containing 'localhost'.
+   * @deprecated use {@link #getFileBlockLocations(FileStatus, long, long)}
    */
+  @Deprecated
   public BlockLocation[] getFileBlockLocations(Path f, 
     long start, long len) throws IOException {
-    if (!exists(f)) {
-      return null;
-    } else {
-      BlockLocation result[] = new BlockLocation[1];
-      String[] name = new String[1];
-      name[0] = "localhost:50010";
-      String[] host = new String[1];
-      host[0] = "localhost";
-      result[0] = new BlockLocation(name, host, 0, len);
-      return result;
-    }
+  
+    return getFileBlockLocations(getFileStatus(f), start, len);
   }
+  
+  /**
+   * Return an array containing hostnames, offset and size of 
+   * portions of the given file.  For a nonexistent 
+   * file or regions, null will be returned.
+   *
+   * This call is most helpful with DFS, where it returns 
+   * hostnames of machines that contain the given file.
+   *
+   * The FileSystem will simply return an elt containing 'localhost'.
+   */
+  public BlockLocation[] getFileBlockLocations(FileStatus file, 
+      long start, long len) throws IOException {
+    if (file == null) {
+      return null;
+    }
+    String[] name = { "localhost:50010" };
+    String[] host = { "localhost" };
+    return new BlockLocation[] { new BlockLocation(name, host, 0, len) };
+  }
+  
   /**
    * Opens an FSDataInputStream at the indicated Path.
    * @param f the file name to open

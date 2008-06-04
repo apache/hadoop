@@ -81,30 +81,6 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
       return uri;
     }
 
-    /**
-     * Return an array containing hostnames, offset and size.
-     *
-     * This call is most helpful with DFS, where it returns
-     * hostnames for machines that contain the given file.
-     
-     * The InMemoryFileSystem will simply return an elt 
-     * containing 'inmemory'
-     */ 
-    public BlockLocation[] getFileBlockLocations (Path f, 
-      long start, long len) throws IOException {
-      if (!exists(f)) {
-        return null;
-      } else {
-        BlockLocation result[] = new BlockLocation[1];
-        String[] name = new String[1];
-        name[0] = "inmemory:50010";
-        String[] host = new String[1];
-        host[0] = "inmemory";
-        result[0] = new BlockLocation(name, host, 0, len);
-        return result;
-      }
-    }
-    
     private class InMemoryInputStream extends FSInputStream {
       private DataInputBuffer din = new DataInputBuffer();
       private FileAttributes fAttr;
@@ -309,7 +285,7 @@ public class InMemoryFileSystem extends ChecksumFileSystem {
         if (attr==null) {
           throw new FileNotFoundException("File " + f + " does not exist.");
         }
-        return new InMemoryFileStatus(f, attr);
+        return new InMemoryFileStatus(f.makeQualified(this), attr);
       }
     }
   

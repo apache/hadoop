@@ -170,7 +170,9 @@ public class S3FileSystem extends FileSystem {
       return null;
     }
     if (inode.isFile()) {
-      return new FileStatus[] { new S3FileStatus(f, inode) };
+      return new FileStatus[] {
+        new S3FileStatus(f.makeQualified(this), inode)
+      };
     }
     ArrayList<FileStatus> ret = new ArrayList<FileStatus>();
     for (Path p : store.listSubPaths(absolutePath)) {
@@ -314,7 +316,7 @@ public class S3FileSystem extends FileSystem {
     if (inode == null) {
       throw new FileNotFoundException(f + ": No such file or directory.");
     }
-    return new S3FileStatus(f, inode);
+    return new S3FileStatus(f.makeQualified(this), inode);
   }
 
   // diagnostic methods

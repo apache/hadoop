@@ -248,6 +248,10 @@ Trunk (unreleased changes)
     HADOOP-1702. Reduce buffer copies when data is written to DFS. 
     DataNodes take 30% less CPU while writing data. (rangadi)
 
+    HADOOP-3095. Speed up split generation in the FileInputSplit,
+    especially for non-HDFS file systems. Deprecates
+    InputFormat.validateInput. (tomwhite via omalley)
+
   BUG FIXES
 
     HADOOP-2905. 'fsck -move' triggers NPE in NameNode. 

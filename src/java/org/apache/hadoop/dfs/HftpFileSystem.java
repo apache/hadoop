@@ -161,11 +161,13 @@ public class HftpFileSystem extends FileSystem {
               Long.valueOf(attrs.getValue("blocksize")).longValue(),
               modif, FsPermission.valueOf(attrs.getValue("permission")),
               attrs.getValue("owner"), attrs.getValue("group"),
-              new Path(getUri().toString(), attrs.getValue("path")))
+              new Path(getUri().toString(), attrs.getValue("path"))
+                .makeQualified(HftpFileSystem.this))
         : new FileStatus(0L, true, 0, 0L,
               modif, FsPermission.valueOf(attrs.getValue("permission")),
               attrs.getValue("owner"), attrs.getValue("group"),
-              new Path(getUri().toString(), attrs.getValue("path")));
+              new Path(getUri().toString(), attrs.getValue("path"))
+                .makeQualified(HftpFileSystem.this));
       fslist.add(fs);
     }
 

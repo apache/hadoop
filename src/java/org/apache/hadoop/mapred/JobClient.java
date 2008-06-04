@@ -672,7 +672,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     
     
     // Check the input specification 
-    job.getInputFormat().validateInput(job);
+    InputFormat inFormat = job.getInputFormat();
+    inFormat.validateInput(job);
 
     // Check the output specification
     job.getOutputFormat().checkOutputSpecs(fs, job);
@@ -680,7 +681,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     // Create the splits for the job
     LOG.debug("Creating splits at " + fs.makeQualified(submitSplitFile));
     InputSplit[] splits = 
-      job.getInputFormat().getSplits(job, job.getNumMapTasks());
+      inFormat.getSplits(job, job.getNumMapTasks());
     // sort the splits into order based on size, so that the biggest
     // go first
     Arrays.sort(splits, new Comparator<InputSplit>() {

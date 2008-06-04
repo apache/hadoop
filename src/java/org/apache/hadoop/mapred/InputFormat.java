@@ -74,6 +74,8 @@ public interface InputFormat<K, V> {
    * 
    * @param job job configuration.
    * @throws InvalidInputException if the job does not have valid input
+   * @deprecated getSplits is called in the client and can perform any
+   * necessary validation of the input 
    */
   void validateInput(JobConf job) throws IOException;
   
