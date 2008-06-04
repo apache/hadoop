@@ -1118,7 +1118,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
       // allocate new block record block locations in INode.
       newBlock = allocateBlock(src, pendingFile);
-      pendingFile.targets = targets;
+      pendingFile.setTargets(targets);
     }
         
     // Create next block
@@ -1638,8 +1638,31 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) iFile;
 
-    // Initialize lease recovery for pendingFile
+    // Initialize lease recovery for pendingFile. If there are no blocks 
+    // associated with this file, then reap lease immediately. Otherwise 
+    // renew the lease and trigger lease recovery.
+    if (pendingFile.getTargets().length == 0) {
+      if (pendingFile.getBlocks().length == 0) {
+        finalizeINodeFileUnderConstruction(src, pendingFile);
+        NameNode.stateChangeLog.warn("BLOCK*"
+          + " internalReleaseLease: No blocks found, lease removed.");
+        return;
+      }
+      // setup the Inode.targets for the last block from the blocksMap
+      //
+      Block[] blocks = pendingFile.getBlocks();
+      Block last = blocks[blocks.length-1];
+      DatanodeDescriptor[] targets = 
+         new DatanodeDescriptor[blocksMap.numNodes(last)];
+      Iterator<DatanodeDescriptor> it = blocksMap.nodeIterator(last);
+      for (int i = 0; it != null && it.hasNext(); i++) {
+        targets[i] = it.next();
+      }
+      pendingFile.setTargets(targets);
+    }
+    // start lease recovery of the last block for this file.
     pendingFile.assignPrimaryDatanode();
+    leaseManager.renewLease(lease);
   }
 
   private void finalizeINodeFileUnderConstruction(String src,

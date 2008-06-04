@@ -776,7 +776,7 @@ class INodeFileUnderConstruction extends INodeFile {
   DatanodeDescriptor clientNode = null; // if client is a cluster node too.
 
   private int primaryNodeIndex = -1; //the node working on lease recovery
-  DatanodeDescriptor[] targets = null;   //locations for last block
+  private DatanodeDescriptor[] targets = null;   //locations for last block
   
   INodeFileUnderConstruction() {}
 
@@ -833,6 +833,15 @@ class INodeFileUnderConstruction extends INodeFile {
     return true;
   }
 
+  DatanodeDescriptor[] getTargets() {
+    return targets;
+  }
+
+  void setTargets(DatanodeDescriptor[] targets) {
+    this.targets = targets;
+    this.primaryNodeIndex = -1;
+  }
+
   //
   // converts a INodeFileUnderConstruction into a INodeFile
   //
@@ -870,14 +879,14 @@ class INodeFileUnderConstruction extends INodeFile {
 
   /**
    * Initialize lease recovery for this object
-   * @return the chosen primary datanode
    */
   void assignPrimaryDatanode() {
     //assign the first alive datanode as the primary datanode
+
     if (targets.length == 0) {
       NameNode.stateChangeLog.warn("BLOCK*"
-          + " INodeFileUnderConstruction.initLeaseRecovery:"
-          + " all targets are not alive.");
+        + " INodeFileUnderConstruction.initLeaseRecovery:"
+        + " No blocks found, lease removed.");
     }
 
     int previous = primaryNodeIndex;

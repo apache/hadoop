@@ -357,7 +357,6 @@ class LeaseManager {
                   for(StringBytesWritable s : top.paths) {
                     fsnamesystem.internalReleaseLease(top, s.getString());
                   }
-                  renewLease(top);
                 } else {
                   break;
                 }
@@ -476,7 +475,7 @@ class LeaseManager {
 
     for(BlockRecord r : syncList) {
       try {
-        r.datanode.updateBlock(r.block, newblock);
+        r.datanode.updateBlock(r.block, newblock, closeFile);
         successList.add(r.id);
       } catch (IOException e) {
         InterDatanodeProtocol.LOG.warn("Failed to updateBlock (newblock="

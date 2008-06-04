@@ -91,7 +91,7 @@ public class TestInterDatanodeProtocol extends junit.framework.TestCase {
       //verify updateBlock
       Block newblock = new Block(
           b.getBlockId(), b.getNumBytes()/2, b.getGenerationStamp()+1);
-      idp.updateBlock(b, newblock);
+      idp.updateBlock(b, newblock, false);
       checkMetaInfo(newblock, idp, datanode.blockScanner);
     }
     finally {

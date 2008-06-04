@@ -100,7 +100,7 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
       for(int i = 0; i < REPLICATION_NUM; i++) {
         newblocks[i] = new Block(lastblock.getBlockId(), newblocksizes[i],
             lastblock.getGenerationStamp());
-        idps[i].updateBlock(lastblock, newblocks[i]);
+        idps[i].updateBlock(lastblock, newblocks[i], false);
         checkMetaInfo(newblocks[i], idps[i]);
       }
 

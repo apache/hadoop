@@ -74,6 +74,10 @@ Trunk (unreleased changes)
     HADOOP-3459. Change in the output format of dfs -ls to more closely match
     /bin/ls. New format is: perm repl owner group size date name (Mukund Madhugiri via omally)
 
+    HADOOP-3113. An fsync invoked on a HDFS file really really persists data! The datanode
+    moves blocks in the tmp directory to the real block directory on a datanode-restart.
+    (dhruba)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,

@@ -3066,11 +3066,19 @@ public class DataNode extends Configured
   }
 
   /** {@inheritDoc} */
-  public void updateBlock(Block oldblock, Block newblock) throws IOException {
+  public void updateBlock(Block oldblock, Block newblock, boolean finalize) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("oldblock=" + oldblock + ", newblock=" + newblock);
     }
     data.updateBlock(oldblock, newblock);
+    if (finalize) {
+      data.finalizeBlock(newblock);
+      myMetrics.blocksWritten.inc(); 
+      notifyNamenodeReceivedBlock(newblock, EMPTY_DEL_HINT);
+      LOG.info("Received block " + newblock +
+                " of size " + newblock.getNumBytes() +
+                " as part of lease recovery.");
+    }
   }
 
   /** {@inheritDoc} */

@@ -30,9 +30,9 @@ interface InterDatanodeProtocol extends VersionedProtocol {
   public static final Log LOG = LogFactory.getLog(InterDatanodeProtocol.class);
 
   /**
-   * 2: change updateGenerationStamp to updataBlock
+   * 3: added a finalize parameter to updateBlock
    */
-  public static final long versionID = 2L;
+  public static final long versionID = 3L;
 
   /** @return the BlockMetaDataInfo of a block;
    *  null if the block is not found 
@@ -42,5 +42,5 @@ interface InterDatanodeProtocol extends VersionedProtocol {
   /**
    * Update the block to the new generation stamp and length.  
    */
-  void updateBlock(Block oldblock, Block newblock) throws IOException;
+  void updateBlock(Block oldblock, Block newblock, boolean finalize) throws IOException;
 }
