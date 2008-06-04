@@ -24,49 +24,14 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 
 class UnmodifyableHRegionInfo extends HRegionInfo {
-  /* Default constructor - creates empty object */
-  UnmodifyableHRegionInfo() {
-    super(new UnmodifyableHTableDescriptor(), null, null);
-  }
-  
-  /*
-   * Construct HRegionInfo with explicit parameters
-   * 
-   * @param tableDesc the table descriptor
-   * @param startKey first key in region
-   * @param endKey end of key range
-   * @throws IllegalArgumentException
-   */
-  UnmodifyableHRegionInfo(final HTableDescriptor tableDesc,
-      final byte [] startKey, final byte [] endKey)
-  throws IllegalArgumentException {
-    super(new UnmodifyableHTableDescriptor(tableDesc), startKey, endKey, false);
-  }
-
-  /*
-   * Construct HRegionInfo with explicit parameters
-   * 
-   * @param tableDesc the table descriptor
-   * @param startKey first key in region
-   * @param endKey end of key range
-   * @param split true if this region has split and we have daughter regions
-   * regions that may or may not hold references to this region.
-   * @throws IllegalArgumentException
-   */
-  UnmodifyableHRegionInfo(HTableDescriptor tableDesc,
-      final byte [] startKey, final byte [] endKey, final boolean split)
-  throws IllegalArgumentException {
-    super(new UnmodifyableHTableDescriptor(tableDesc), startKey, endKey, split);
-  }
-  
   /*
    * Creates an unmodifyable copy of an HRegionInfo
    * 
    * @param info
    */
   UnmodifyableHRegionInfo(HRegionInfo info) {
-    super(new UnmodifyableHTableDescriptor(info.getTableDesc()),
-        info.getStartKey(), info.getEndKey(), info.isSplit());
+    super(info);
+    this.tableDesc = new UnmodifyableHTableDescriptor(info.getTableDesc());
   }
   
   /**

@@ -82,7 +82,7 @@ public class HRegionInfo implements WritableComparable {
   private String regionNameStr = "";
   private boolean split = false;
   private byte [] startKey = HConstants.EMPTY_BYTE_ARRAY;
-  private HTableDescriptor tableDesc = null;
+  protected HTableDescriptor tableDesc = null;
   private int hashCode = -1;
   public static final int NO_HASH = -1;
   private volatile int encodedName = NO_HASH;
@@ -154,6 +154,24 @@ public class HRegionInfo implements WritableComparable {
       HConstants.EMPTY_START_ROW: startKey.clone();
     this.tableDesc = tableDesc;
     setHashCode();
+  }
+  
+  /**
+   * Costruct a copy of another HRegionInfo
+   * 
+   * @param other
+   */
+  public HRegionInfo(HRegionInfo other) {
+    this.endKey = other.getEndKey();
+    this.offLine = other.isOffline();
+    this.regionId = other.getRegionId();
+    this.regionName = other.getRegionName();
+    this.regionNameStr = Bytes.toString(this.regionName);
+    this.split = other.isSplit();
+    this.startKey = other.getStartKey();
+    this.tableDesc = other.getTableDesc();
+    this.hashCode = other.hashCode();
+    this.encodedName = other.getEncodedName();
   }
   
   private static byte [] createRegionName(final byte [] tableName,

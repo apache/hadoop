@@ -39,6 +39,7 @@ Hbase Change Log
    HBASE-655   Need programmatic way to add column family: need programmatic way
                to enable/disable table
    HBASE-654   API HTable.getMetadata().addFamily shouldn't be exposed to user
+   HBASE-666   UnmodifyableHRegionInfo gives the wrong encoded name
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
