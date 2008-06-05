@@ -165,14 +165,11 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
         + " regions. Load Average: " + avg);
 
       for (HRegionServer server : servers) {
-        LOG.debug(server.hashCode() + " Avg: " + avg + " actual: " 
-          + server.getOnlineRegions().size());
-
         int serverLoad = server.getOnlineRegions().size();
+        LOG.debug(server.hashCode() + " Avg: " + avg + " actual: " + serverLoad);
         if (!(serverLoad <= avg + 2 && serverLoad >= avg - 2)) {
           success = false;
         }
-        
       }
       
       if (!success) {

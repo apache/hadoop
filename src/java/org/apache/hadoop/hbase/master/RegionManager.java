@@ -118,12 +118,14 @@ class RegionManager implements HConstants {
   // How many regions to assign a server at a time.
   private final int maxAssignInOneGo;
 
-  private final HMaster master;  
+  private final HMaster master;
+  
+  private final RegionHistorian historian;
   
   RegionManager(HMaster master) {
     this.master = master;
-
-    this.maxAssignInOneGo = this.master.conf.
+    this.historian = RegionHistorian.getInstance();
+    this.maxAssignInOneGo = this.master.getConfiguration().
       getInt("hbase.regions.percheckin", 10);
     
     // The root region
@@ -259,7 +261,7 @@ class RegionManager implements HConstants {
           Bytes.toString(regionInfo.getRegionName())+
           " to server " + serverName);
         unassignedRegions.put(regionInfo, Long.valueOf(now));
-        RegionHistorian.addRegionAssignment(regionInfo, serverName);
+        this.historian.addRegionAssignment(regionInfo, serverName);
         returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, regionInfo));
         if (--nregions <= 0) {
           break;
@@ -385,7 +387,7 @@ class RegionManager implements HConstants {
           Bytes.toString(regionInfo.getRegionName()) +
           " to the only server " + serverName);
       unassignedRegions.put(regionInfo, Long.valueOf(now));
-      RegionHistorian.addRegionAssignment(regionInfo, serverName);
+      this.historian.addRegionAssignment(regionInfo, serverName);
       returnMsgs.add(new HMsg(HMsg.Type.MSG_REGION_OPEN, regionInfo));
     }
   }
@@ -544,8 +546,8 @@ class RegionManager implements HConstants {
       byte [] metaRegionName) 
   throws IOException {
     // 2. Create the HRegion
-    HRegion region = 
-      HRegion.createHRegion(newRegion, master.rootdir, master.conf);
+    HRegion region = HRegion.createHRegion(newRegion, master.rootdir,
+      master.getConfiguration());
 
     // 3. Insert into meta
     HRegionInfo info = region.getRegionInfo();

@@ -80,7 +80,8 @@ class ServerManager implements HConstants {
   public ServerManager(HMaster master) {
     this.master = master;
     serverLeases = new Leases(master.leaseTimeout, 
-      master.conf.getInt("hbase.master.lease.thread.wakefrequency", 15 * 1000));
+      master.getConfiguration().getInt("hbase.master.lease.thread.wakefrequency",
+        15 * 1000));
   }
   
   /**

@@ -62,6 +62,8 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
   protected boolean process() throws IOException {
     Boolean result =
       new RetryableMetaOperation<Boolean>(this.metaRegion, this.master) {
+        private final RegionHistorian historian = RegionHistorian.getInstance();
+      
         public Boolean call() throws IOException {
           LOG.info(regionInfo.getRegionNameAsString() + " open on " +
             serverAddress.toString());
@@ -82,7 +84,13 @@ class ProcessRegionOpen extends ProcessRegionStatusChange {
           b.put(COL_SERVER, Bytes.toBytes(serverAddress.toString()));
           b.put(COL_STARTCODE, startCode);
           server.batchUpdate(metaRegionName, b);
-          RegionHistorian.addRegionOpen(regionInfo, serverAddress);
+          if (!this.historian.isOnline()) {
+            // This is safest place to do the onlining of the historian in
+            // the master.  When we get to here, we know there is a .META.
+            // for the historian to go against.
+            this.historian.online(this.master.getConfiguration());
+          }
+          this.historian.addRegionOpen(regionInfo, serverAddress);
           if (isMetaTable) {
             // It's a meta region.
             MetaRegion m = new MetaRegion(serverAddress,

@@ -242,7 +242,8 @@ class ProcessServerShutdown extends RegionServerOperation {
           return false;
         }
         try {
-          HLog.splitLog(master.rootdir, oldLogDir, master.fs, master.conf);
+          HLog.splitLog(master.rootdir, oldLogDir, master.fs,
+            master.getConfiguration());
         } finally {
           master.regionManager.splitLogLock.unlock();
         }

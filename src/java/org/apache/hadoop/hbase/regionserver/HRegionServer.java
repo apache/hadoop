@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.LeaseListener;
 import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.RegionServerRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -403,6 +404,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       LOG.fatal("Unhandled exception. Aborting...", t);
       abort();
     }
+    RegionHistorian.getInstance().offline();
     this.leases.closeAfterLeasesExpire();
     this.worker.stop();
     this.server.stop();
@@ -846,9 +848,14 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
   }
   
   void openRegion(final HRegionInfo regionInfo) {
+    // If historian is not online and this is not a meta region, online it.
+    if (!regionInfo.isMetaRegion() &&
+        !RegionHistorian.getInstance().isOnline()) {
+      RegionHistorian.getInstance().online(this.conf);
+    }
     Integer mapKey = Bytes.mapKey(regionInfo.getRegionName());
     HRegion region = this.onlineRegions.get(mapKey);
-    if(region == null) {
+    if (region == null) {
       try {
         region = new HRegion(HTableDescriptor.getTableDir(rootDir,
                 regionInfo.getTableDesc().getName()),

@@ -33,15 +33,18 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
 import org.apache.hadoop.hbase.util.Bytes;
+
 /**
  * The Region Historian task is to keep track of every modification a region
- * has to go trought. Public methods are used to update the information in the
- * .META. table and to retreive it.
+ * has to go through. Public methods are used to update the information in the
+ * <code>.META.</code> table and to retrieve it.  This is a Singleton.  By
+ * default, the Historian is offline; it will not log.  Its enabled in the
+ * regionserver and master down in their guts after there's some certainty the
+ * .META. has been deployed.
  */
 public class RegionHistorian implements HConstants {
-
-  static final Log LOG = LogFactory.getLog(RegionHistorian.class);
-
+  private static final Log LOG = LogFactory.getLog(RegionHistorian.class);
+  
   private HTable metaTable;
 
   private GregorianCalendar cal = new GregorianCalendar();
@@ -69,23 +72,20 @@ public class RegionHistorian implements HConstants {
   } 
 
   /**
-   * Default constructor. Initializes reference to .META. table
-   *
+   * Default constructor. Initializes reference to .META. table.  Inaccessible.
+   * Use {@link #getInstance(HBaseConfiguration)} to obtain the Singleton
+   * instance of this class.
    */
   private RegionHistorian() {
-    HBaseConfiguration conf = new HBaseConfiguration();
-
-    try {
-      metaTable = new HTable(conf, META_TABLE_NAME);
-      LOG.debug("Region historian is ready.");
-    } catch (IOException ioe) {
-      LOG.warn("Unable to create RegionHistorian", ioe);
-    }
+    super();
   }
 
   /**
-   * Singleton method
-   * 
+   * Get the RegionHistorian Singleton instance.
+   * @param c Configuration to use.  Used to create an {@link HTable} homed
+   * on <code>.META.</code>.  The HTable instance is lazily instantiated to 
+   * allow for the getting and storing aside of an Historian instance even
+   * in the case where <code>.META.</code> has not yet deployed.
    * @return The region historian
    */
   public static RegionHistorian getInstance() {
@@ -98,15 +98,16 @@ public class RegionHistorian implements HConstants {
   /**
    * Returns, for a given region name, an ordered list by timestamp of all
    * values in the historian column of the .META. table.
-   * 
    * @param regionName
    *          Region name as a string
-   * @return List of RegionHistoryInformation
+   * @return List of RegionHistoryInformation or null if we're offline.
    */
-  public static List<RegionHistoryInformation> getRegionHistory(
-      String regionName) {
-    getInstance();
-    List<RegionHistoryInformation> informations = new ArrayList<RegionHistoryInformation>();
+  public List<RegionHistoryInformation> getRegionHistory(String regionName) {
+    if (!isOnline()) {
+      return null;
+    }
+    List<RegionHistoryInformation> informations =
+      new ArrayList<RegionHistoryInformation>();
     try {
       /*
        * TODO REGION_HISTORIAN_KEYS is used because there is no other for the
@@ -115,7 +116,7 @@ public class RegionHistorian implements HConstants {
        */
       for (HistorianColumnKey keyEnu : HistorianColumnKey.values()) {
         byte[] columnKey = keyEnu.key;
-        Cell[] cells = historian.metaTable.get(Bytes.toBytes(regionName),
+        Cell[] cells = this.metaTable.get(Bytes.toBytes(regionName),
             columnKey, ALL_VERSIONS);
         if (cells != null) {
           for (Cell cell : cells) {
@@ -134,33 +135,27 @@ public class RegionHistorian implements HConstants {
   
   /**
    * Method to add a creation event to the row in the .META table
-   * 
    * @param info
    */
-  public static void addRegionAssignment(HRegionInfo info, String serverName) {
-
+  public void addRegionAssignment(HRegionInfo info, String serverName) {
     add(HistorianColumnKey.REGION_ASSIGNMENT.key, "Region assigned to server "
         + serverName, info);
   }
 
   /**
    * Method to add a creation event to the row in the .META table
-   * 
    * @param info
    */
-  public static void addRegionCreation(HRegionInfo info) {
-
+  public void addRegionCreation(HRegionInfo info) {
     add(HistorianColumnKey.REGION_CREATION.key, "Region creation", info);
   }
 
   /**
    * Method to add a opening event to the row in the .META table
-   * 
    * @param info
    * @param address
    */
-  public static void addRegionOpen(HRegionInfo info, HServerAddress address) {
-
+  public void addRegionOpen(HRegionInfo info, HServerAddress address) {
     add(HistorianColumnKey.REGION_OPEN.key, "Region opened on server : "
         + address.getHostname(), info);
   }
@@ -172,9 +167,8 @@ public class RegionHistorian implements HConstants {
    * @param newInfo1 
    * @param newInfo2
    */
-  public static void addRegionSplit(HRegionInfo oldInfo, HRegionInfo newInfo1,
-      HRegionInfo newInfo2) {
-
+  public void addRegionSplit(HRegionInfo oldInfo, HRegionInfo newInfo1,
+     HRegionInfo newInfo2) {
     HRegionInfo[] infos = new HRegionInfo[] { newInfo1, newInfo2 };
     for (HRegionInfo info : infos) {
       add(HistorianColumnKey.REGION_SPLIT.key, "Region split from  : "
@@ -184,10 +178,9 @@ public class RegionHistorian implements HConstants {
 
   /**
    * Method to add a compaction event to the row in the .META table
-   * 
    * @param info
    */
-  public static void addRegionCompaction(HRegionInfo info, String timeTaken) {
+  public void addRegionCompaction(HRegionInfo info, String timeTaken) {
     if (LOG.isDebugEnabled()) {
       add(HistorianColumnKey.REGION_COMPACTION.key,
           "Region compaction completed in " + timeTaken, info);
@@ -196,10 +189,9 @@ public class RegionHistorian implements HConstants {
 
   /**
    * Method to add a flush event to the row in the .META table
-   * 
    * @param info
    */
-  public static void addRegionFlush(HRegionInfo info, String timeTaken) {
+  public void addRegionFlush(HRegionInfo info, String timeTaken) {
     if (LOG.isDebugEnabled()) {
       add(HistorianColumnKey.REGION_FLUSH.key, "Region flush completed in "
           + timeTaken, info);
@@ -212,7 +204,8 @@ public class RegionHistorian implements HConstants {
    * @param text
    * @param info
    */
-  private static void add(byte[] column, String text, HRegionInfo info) {
+  private void add(byte[] column,
+      String text, HRegionInfo info) {
     add(column, text, info, LATEST_TIMESTAMP);
   }
 
@@ -223,14 +216,18 @@ public class RegionHistorian implements HConstants {
    * @param info
    * @param timestamp
    */
-  private static void add(byte[] column, String text, HRegionInfo info, long timestamp) {
+  private void add(byte[] column,
+      String text, HRegionInfo info, long timestamp) {
+    if (!isOnline()) {
+      // Its a noop
+      return;
+    }
     if (!info.isMetaRegion()) {
-      getInstance();
       BatchUpdate batch = new BatchUpdate(info.getRegionName());
       batch.setTimestamp(timestamp);
       batch.put(column, Bytes.toBytes(text));
       try {
-        historian.metaTable.commit(batch);
+        this.metaTable.commit(batch);
       } catch (IOException ioe) {
         LOG.warn("Unable to '" + text + "'", ioe);
       }
@@ -277,15 +274,38 @@ public class RegionHistorian implements HConstants {
     }
 
     /**
-     * Returns the value of the timestamp processed
-     * with the date formater.
-     * @return
+     * @return The value of the timestamp processed with the date formater.
      */
     public String getTimestampAsString() {
       cal.setTimeInMillis(timestamp);
       return dateFormat.format(cal.getTime());
     }
-
   }
 
+  /**
+   * @return True if the historian is online. When offline, will not add
+   * updates to the .META. table.
+   */
+  public boolean isOnline() {
+    return this.metaTable != null;
+  }
+
+  /**
+   * @param c Online the historian.  Invoke after cluster has spun up.
+   */
+  public void online(final HBaseConfiguration c) {
+    try {
+      this.metaTable = new HTable(c, META_TABLE_NAME);
+    } catch (IOException ioe) {
+      LOG.error("Unable to create RegionHistorian", ioe);
+    }
+  }
+  
+  /**
+   * Offlines the historian.
+   * @see #online(HBaseConfiguration)
+   */
+  public void offline() {
+    this.metaTable = null;
+  }
 }

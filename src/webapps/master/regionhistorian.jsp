@@ -1,10 +1,12 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.List"
   import="org.apache.hadoop.hbase.RegionHistorian"
+  import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.RegionHistorian.RegionHistoryInformation"
   import="org.apache.hadoop.hbase.HConstants"%><%
   String regionName = request.getParameter("regionname");
-  List<RegionHistoryInformation> informations = RegionHistorian.getRegionHistory(regionName);
+  HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
+  List<RegionHistoryInformation> informations = RegionHistorian.getInstance().getRegionHistory(regionName);
 %><?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 

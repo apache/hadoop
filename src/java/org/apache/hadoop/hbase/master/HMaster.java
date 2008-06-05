@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.HStoreKey;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -100,7 +101,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
   volatile boolean shutdownRequested = false;
   volatile boolean fsOk = true;
   final Path rootdir;
-  final HBaseConfiguration conf;
+  private final HBaseConfiguration conf;
   final FileSystem fs;
   final Random rand;
   final int threadWakeFrequency; 
@@ -204,24 +205,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       }
 
       if (!fs.exists(rootRegionDir)) {
-        LOG.info("BOOTSTRAP: creating ROOT and first META regions");
-        try {
-          HRegion root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO,
-            this.rootdir, this.conf);
-          HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
-            this.rootdir, this.conf);
-
-          // Add first region from the META table to the ROOT region.
-          HRegion.addRegionToMETA(root, meta);
-          root.close();
-          root.getLog().closeAndDelete();
-          meta.close();
-          meta.getLog().closeAndDelete();
-        } catch (IOException e) {
-          e = RemoteExceptionHandler.checkIOException(e);
-          LOG.error("bootstrap", e);
-          throw e;
-        }
+        bootstrap();
       }
     } catch (IOException e) {
       LOG.fatal("Not starting HMaster because:", e);
@@ -247,13 +231,34 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
       conf.getInt("hbase.master.meta.thread.rescanfrequency", 60 * 1000);
 
     this.sleeper = new Sleeper(this.threadWakeFrequency, this.closed);
-    
+
     serverManager = new ServerManager(this);
     regionManager = new RegionManager(this);
-    
+
     // We're almost open for business
     this.closed.set(false);
     LOG.info("HMaster initialized on " + this.address.toString());
+  }
+
+  private void bootstrap() throws IOException {
+    LOG.info("BOOTSTRAP: creating ROOT and first META regions");
+    try {
+      HRegion root = HRegion.createHRegion(HRegionInfo.ROOT_REGIONINFO,
+        this.rootdir, this.conf);
+      HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO,
+        this.rootdir, this.conf);
+
+      // Add first region from the META table to the ROOT region.
+      HRegion.addRegionToMETA(root, meta);
+      root.close();
+      root.getLog().closeAndDelete();
+      meta.close();
+      meta.getLog().closeAndDelete();
+    } catch (IOException e) {
+      e = RemoteExceptionHandler.checkIOException(e);
+      LOG.error("bootstrap", e);
+      throw e;
+    }
   }
 
   /**
@@ -363,6 +368,7 @@ public class HMaster extends Thread implements HConstants, HMasterInterface,
     /*
      * Clean up and close up shop
      */
+    RegionHistorian.getInstance().offline();
     if (this.infoServer != null) {
       LOG.info("Stopping infoServer");
       try {

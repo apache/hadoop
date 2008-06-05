@@ -109,6 +109,7 @@ public class HRegion implements HConstants {
   static final Random rand = new Random();
   static final Log LOG = LogFactory.getLog(HRegion.class);
   final AtomicBoolean closed = new AtomicBoolean(false);
+  private final RegionHistorian historian;
 
   /**
    * Merge two HRegions.  The regions must be adjacent andmust not overlap.
@@ -429,6 +430,7 @@ public class HRegion implements HConstants {
     String encodedNameStr = Integer.toString(this.regionInfo.getEncodedName());
     this.regiondir = new Path(basedir, encodedNameStr);
     Path oldLogFile = new Path(regiondir, HREGION_OLDLOGFILE_NAME);
+    this.historian = RegionHistorian.getInstance();
     
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region " + this + "/" +
@@ -777,8 +779,8 @@ public class HRegion implements HConstants {
       }
       HRegion regions[] = new HRegion [] {regionA, regionB};
       
-      RegionHistorian.addRegionSplit(this.regionInfo,
-          regionA.getRegionInfo(), regionB.getRegionInfo());
+      this.historian.addRegionSplit(this.regionInfo,
+        regionA.getRegionInfo(), regionB.getRegionInfo());
       
       return regions;
     }
@@ -875,7 +877,7 @@ public class HRegion implements HConstants {
           startTime);
       LOG.info("compaction completed on region " + this + " in " + timeTaken);
       
-      RegionHistorian.addRegionCompaction(regionInfo, timeTaken);
+      this.historian.addRegionCompaction(regionInfo, timeTaken);
     } finally {
       synchronized (writestate) {
         writestate.compacting = false;
@@ -1055,8 +1057,9 @@ public class HRegion implements HConstants {
         " in " +
           (System.currentTimeMillis() - startTime) + "ms, sequence id=" +
           sequenceId);
-      if (!regionInfo.isMetaRegion())
-        RegionHistorian.addRegionFlush(regionInfo, timeTaken);
+      if (!regionInfo.isMetaRegion()) {
+        this.historian.addRegionFlush(regionInfo, timeTaken);
+      }
     }
     return true;
   }
@@ -1923,14 +1926,17 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public static HRegion createHRegion(final HRegionInfo info, final Path rootDir,
-      final HBaseConfiguration conf) throws IOException {
+    final HBaseConfiguration conf)
+  throws IOException {
     Path tableDir =
       HTableDescriptor.getTableDir(rootDir, info.getTableDesc().getName());
     Path regionDir = HRegion.getRegionDir(tableDir, info.getEncodedName());
     FileSystem fs = FileSystem.get(conf);
     fs.mkdirs(regionDir);
-    if (!info.isMetaRegion())
-      RegionHistorian.addRegionCreation(info);
+    // Note in historian the creation of new region.
+    if (!info.isMetaRegion()) {
+      RegionHistorian.getInstance().addRegionCreation(info);
+    }
     return new HRegion(tableDir,
       new HLog(fs, new Path(regionDir, HREGION_LOGDIR_NAME), conf, null),
       fs, conf, info, null, null);
@@ -1950,7 +1956,8 @@ public class HRegion implements HConstants {
    * @throws IOException
    */
   public static HRegion openHRegion(final HRegionInfo info, final Path rootDir,
-      final HLog log, final HBaseConfiguration conf) throws IOException {
+    final HLog log, final HBaseConfiguration conf)
+  throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region: " + info);
     }

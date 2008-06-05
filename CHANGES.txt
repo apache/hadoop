@@ -40,6 +40,7 @@ Hbase Change Log
                to enable/disable table
    HBASE-654   API HTable.getMetadata().addFamily shouldn't be exposed to user
    HBASE-666   UnmodifyableHRegionInfo gives the wrong encoded name
+   HBASE-668   HBASE-533 broke build
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

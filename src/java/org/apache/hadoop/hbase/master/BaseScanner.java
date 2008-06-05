@@ -407,7 +407,8 @@ abstract class BaseScanner extends Chore implements HConstants {
           if (master.fs.exists(logDir)) {
             regionManager.splitLogLock.lock();
             try {
-              HLog.splitLog(master.rootdir, logDir, master.fs, master.conf);
+              HLog.splitLog(master.rootdir, logDir, master.fs,
+                master.getConfiguration());
             } finally {
               regionManager.splitLogLock.unlock();
             }

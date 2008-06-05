@@ -78,9 +78,9 @@ public class TestGlobalMemcacheLimit extends HBaseClusterTestCase {
     for (HRegion region : server.getOnlineRegions()) {
       region.flushcache();
     }
-    // make sure we're starting at 0 so that it's easy to predict what the 
-    // results of our tests should be.
-    assertEquals("Starting memcache size", 0, server.getGlobalMemcacheSize());
+    // We used to assert that the memsize here was zero but with the addition
+    // of region historian, its no longer true; an entry is added for the
+    // flushes run above.
   }
   
   /**
@@ -93,8 +93,11 @@ public class TestGlobalMemcacheLimit extends HBaseClusterTestCase {
     
     // make sure the region server says it is using as much memory as we think
     // it is.
-    assertEquals("Global memcache size", dataSize, 
-      server.getGlobalMemcacheSize());
+    // Global cache size is now polluted by region historian data.  We used
+    // to be able to do direct compare of global memcache and the data added
+    // but not since HBASE-533 went in.  Compare has to be a bit sloppy.
+    assertTrue("Global memcache size",
+      dataSize <= server.getGlobalMemcacheSize());
   }
   
   /**
@@ -115,8 +118,11 @@ public class TestGlobalMemcacheLimit extends HBaseClusterTestCase {
     int preFlushRows = (int)Math.floor(numRows);
   
     long dataAdded = populate(table1, preFlushRows, 500);
-    assertEquals("Expected memcache size", dataAdded + startingDataSize, 
-      server.getGlobalMemcacheSize());
+    // Global cache size is now polluted by region historian data.  We used
+    // to be able to do direct compare of global memcache and the data added
+    // but not since HBASE-533 went in.
+    long cacheSize = server.getGlobalMemcacheSize();
+    assertTrue("Expected memcache size", (dataAdded + startingDataSize) <= cacheSize);
         
     populate(table1, 2, preFlushRows + 500);
     assertTrue("Post-flush memcache size", server.getGlobalMemcacheSize() <= 1024 * 1024);
