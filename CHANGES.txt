@@ -141,6 +141,8 @@ Trunk (unreleased changes)
 
     HADOOP-3187. Quotas for namespace management. (Hairong Kuang via ddas)
 
+    HADOOP-3307. Support for Archives in Hadoop. (Mahadev Konar via ddas)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().

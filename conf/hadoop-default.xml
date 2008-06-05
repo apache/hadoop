@@ -210,6 +210,12 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>fs.har.impl</name>
+  <value>org.apache.hadoop.fs.HarFileSystem</value>
+  <description>The filesystem for Hadoop archives. </description>
+</property>
+
+<property>
   <name>fs.inmemory.size.mb</name>
   <value>75</value>
   <description>The size of the in-memory filsystem instance in MB</description>

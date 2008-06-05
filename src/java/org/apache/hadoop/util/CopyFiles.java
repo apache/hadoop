@@ -851,7 +851,7 @@ public class CopyFiles implements Tool {
   }
 
   private static final Random RANDOM = new Random();
-  private static String getRandomId() {
+  public static String getRandomId() {
     return Integer.toString(RANDOM.nextInt(Integer.MAX_VALUE), 36);
   }
 

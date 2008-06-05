@@ -44,6 +44,12 @@ public class FilterFileSystem extends FileSystem {
   
   protected FileSystem fs;
   
+  /*
+   * so that extending classes can define it
+   */
+  public FilterFileSystem() {
+  }
+  
   public FilterFileSystem(FileSystem fs) {
     this.fs = fs;
   }
