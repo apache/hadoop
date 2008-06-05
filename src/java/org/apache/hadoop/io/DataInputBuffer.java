@@ -20,7 +20,6 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 
-
 /** A reusable {@link DataInput} implementation that reads from an in-memory
  * buffer.
  *
@@ -40,7 +39,6 @@ import java.io.*;
  *  
  */
 public class DataInputBuffer extends DataInputStream {
-
   private static class Buffer extends ByteArrayInputStream {
     public Buffer() {
       super(new byte[] {});
@@ -53,6 +51,7 @@ public class DataInputBuffer extends DataInputStream {
       this.pos = start;
     }
 
+    public byte[] getData() { return buf; }
     public int getPosition() { return pos; }
     public int getLength() { return count; }
   }
@@ -77,6 +76,10 @@ public class DataInputBuffer extends DataInputStream {
   /** Resets the data that the buffer reads. */
   public void reset(byte[] input, int start, int length) {
     buffer.reset(input, start, length);
+  }
+  
+  public byte[] getData() {
+    return buffer.getData();
   }
 
   /** Returns the current position in the input. */

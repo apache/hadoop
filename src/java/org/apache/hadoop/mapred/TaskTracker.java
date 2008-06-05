@@ -2346,18 +2346,24 @@ public class TaskTracker
         indexIn = fileSys.open(indexFileName);
 
         //seek to the correct offset for the given reduce
-        indexIn.seek(reduce * 16);
+        indexIn.seek(reduce * MapTask.MAP_OUTPUT_INDEX_RECORD_LENGTH);
           
         //read the offset and length of the partition data
         long startOffset = indexIn.readLong();
+        long rawPartLength = indexIn.readLong();
         long partLength = indexIn.readLong();
 
         indexIn.close();
         indexIn = null;
           
+        //set the custom "Raw-Map-Output-Length" http header to 
+        //the raw (decompressed) length
+        response.setHeader(RAW_MAP_OUTPUT_LENGTH, Long.toString(rawPartLength));
+
         //set the custom "Map-Output-Length" http header to 
         //the actual number of bytes being transferred
-        response.setHeader(MAP_OUTPUT_LENGTH, Long.toString(partLength));
+        response.setHeader(MAP_OUTPUT_LENGTH, 
+                           Long.toString(partLength));
 
         //use the same buffersize as used for reading the data from disk
         response.setBufferSize(MAX_BYTES_TO_READ);
@@ -2390,6 +2396,10 @@ public class TaskTracker
                                  (partLength - totalRead) < MAX_BYTES_TO_READ
                                  ? (int)(partLength - totalRead) : MAX_BYTES_TO_READ);
         }
+        
+        LOG.info("Sent out " + totalRead + " bytes for reduce: " + reduce + 
+                 " from map: " + mapId + " given " + partLength + "/" + 
+                 rawPartLength);
       } catch (IOException ie) {
         TaskTracker tracker = 
           (TaskTracker) context.getAttribute("task.tracker");

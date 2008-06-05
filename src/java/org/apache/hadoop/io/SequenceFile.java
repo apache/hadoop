@@ -24,6 +24,7 @@ import java.rmi.server.UID;
 import java.security.MessageDigest;
 import org.apache.commons.logging.*;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
@@ -778,13 +779,6 @@ public class SequenceFile {
   
   /** Write key/value pairs to a sequence-format file. */
   public static class Writer implements java.io.Closeable {
-    /**
-     * A global compressor pool used to save the expensive 
-     * construction/destruction of (possibly native) compression codecs.
-     */
-    private static final CodecPool<Compressor> compressorPool = 
-      new CodecPool<Compressor>();
-    
     Configuration conf;
     FSDataOutputStream out;
     boolean ownOutputStream = true;
@@ -919,10 +913,7 @@ public class SequenceFile {
       this.uncompressedValSerializer.open(buffer);
       if (this.codec != null) {
         ReflectionUtils.setConf(this.codec, this.conf);
-        compressor = compressorPool.getCodec(this.codec.getCompressorType());
-        if (compressor == null) {
-          compressor = this.codec.createCompressor();
-        }
+        this.compressor = CodecPool.getCompressor(this.codec);
         this.deflateFilter = this.codec.createOutputStream(buffer, compressor);
         this.deflateOut = 
           new DataOutputStream(new BufferedOutputStream(deflateFilter));
@@ -954,7 +945,7 @@ public class SequenceFile {
     
     /** Close the file. */
     public synchronized void close() throws IOException {
-      compressorPool.returnCodec(compressor);
+      CodecPool.returnCompressor(compressor);
       
       keySerializer.close();
       uncompressedValSerializer.close();
@@ -1361,13 +1352,6 @@ public class SequenceFile {
   
   /** Reads key/value pairs from a sequence-format file. */
   public static class Reader implements java.io.Closeable {
-    /**
-     * A global decompressor pool used to save the expensive 
-     * construction/destruction of (possibly native) decompression codecs.
-     */
-    private static final CodecPool<Decompressor> decompressorPool = 
-      new CodecPool<Decompressor>();
-    
     private Path file;
     private FSDataInputStream in;
     private DataOutputBuffer outBuf = new DataOutputBuffer();
@@ -1451,16 +1435,6 @@ public class SequenceFile {
       return fs.open(file, bufferSize);
     }
     
-    private Decompressor getPooledOrNewDecompressor() {
-      Decompressor decompressor = null;
-      decompressor = decompressorPool.getCodec(codec.getDecompressorType());
-      if (decompressor == null) {
-        decompressor = codec.createDecompressor();
-      }
-      return decompressor;
-    }
-    
-
     /**
      * Initialize the {@link Reader}
      * @param tmpReader <code>true</code> if we are constructing a temporary
@@ -1540,7 +1514,7 @@ public class SequenceFile {
       if (!tempReader) {
         valBuffer = new DataInputBuffer();
         if (decompress) {
-          valDecompressor = getPooledOrNewDecompressor();
+          valDecompressor = CodecPool.getDecompressor(codec);
           valInFilter = codec.createInputStream(valBuffer, valDecompressor);
           valIn = new DataInputStream(valInFilter);
         } else {
@@ -1552,16 +1526,16 @@ public class SequenceFile {
           keyBuffer = new DataInputBuffer();
           valLenBuffer = new DataInputBuffer();
 
-          keyLenDecompressor = getPooledOrNewDecompressor();
+          keyLenDecompressor = CodecPool.getDecompressor(codec);
           keyLenInFilter = codec.createInputStream(keyLenBuffer, 
                                                    keyLenDecompressor);
           keyLenIn = new DataInputStream(keyLenInFilter);
 
-          keyDecompressor = getPooledOrNewDecompressor();
+          keyDecompressor = CodecPool.getDecompressor(codec);
           keyInFilter = codec.createInputStream(keyBuffer, keyDecompressor);
           keyIn = new DataInputStream(keyInFilter);
 
-          valLenDecompressor = getPooledOrNewDecompressor();
+          valLenDecompressor = CodecPool.getDecompressor(codec);
           valLenInFilter = codec.createInputStream(valLenBuffer, 
                                                    valLenDecompressor);
           valLenIn = new DataInputStream(valLenInFilter);
@@ -1572,10 +1546,10 @@ public class SequenceFile {
     /** Close the file. */
     public synchronized void close() throws IOException {
       // Return the decompressors to the pool
-      decompressorPool.returnCodec(keyLenDecompressor);
-      decompressorPool.returnCodec(keyDecompressor);
-      decompressorPool.returnCodec(valLenDecompressor);
-      decompressorPool.returnCodec(valDecompressor);
+      CodecPool.returnDecompressor(keyLenDecompressor);
+      CodecPool.returnDecompressor(keyDecompressor);
+      CodecPool.returnDecompressor(valLenDecompressor);
+      CodecPool.returnDecompressor(valDecompressor);
       
       // Close the input-stream
       in.close();
@@ -2100,49 +2074,6 @@ public class SequenceFile {
 
   }
 
-  private static class CodecPool<T> {
-
-    private Map<Class, List<T>> pool = new HashMap<Class, List<T>>();
-    
-    public T getCodec(Class codecClass) {
-      T codec = null;
-      
-      // Check if an appropriate codec is available
-      synchronized (pool) {
-        if (pool.containsKey(codecClass)) {
-          List<T> codecList = pool.get(codecClass);
-          
-          if (codecList != null) {
-            synchronized (codecList) {
-              if (!codecList.isEmpty()) {
-                codec = codecList.remove(0);
-              }
-            }
-          }
-        }
-      }
-      
-      return codec;
-    }
-
-    public void returnCodec(T codec) {
-      if (codec != null) {
-        Class codecClass = codec.getClass();
-        synchronized (pool) {
-          if (!pool.containsKey(codecClass)) {
-            pool.put(codecClass, new ArrayList<T>());
-          }
-
-          List<T> codecList = pool.get(codecClass);
-          synchronized (codecList) {
-            codecList.add(codec);
-          }
-        }
-      }
-    }
-
-  }
-  
   /** Sorts key/value pairs in a sequence-format file.
    *
    * <p>For best performance, applications should make sure that the {@link

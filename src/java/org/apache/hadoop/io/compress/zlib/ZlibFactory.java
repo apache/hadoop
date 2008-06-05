@@ -67,7 +67,8 @@ public class ZlibFactory {
    * @param conf configuration
    * @return the appropriate type of the zlib compressor.
    */
-  public static Class getZlibCompressorType(Configuration conf) {
+  public static Class<? extends Compressor> 
+  getZlibCompressorType(Configuration conf) {
     return (isNativeZlibLoaded(conf)) ? 
             ZlibCompressor.class : BuiltInZlibDeflater.class;
   }
@@ -89,7 +90,8 @@ public class ZlibFactory {
    * @param conf configuration
    * @return the appropriate type of the zlib decompressor.
    */
-  public static Class getZlibDecompressorType(Configuration conf) {
+  public static Class<? extends Decompressor> 
+  getZlibDecompressorType(Configuration conf) {
     return (isNativeZlibLoaded(conf)) ? 
             ZlibDecompressor.class : BuiltInZlibInflater.class;
   }

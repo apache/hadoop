@@ -461,21 +461,31 @@ public class JobConf extends Configuration {
    * 
    * @param style the {@link CompressionType} to control how the map outputs  
    *              are compressed.
+   * @deprecated {@link CompressionType} is no longer valid for intermediate
+   *             map-outputs. 
    */
+  @Deprecated
   public void setMapOutputCompressionType(CompressionType style) {
     setCompressMapOutput(true);
     set("mapred.map.output.compression.type", style.toString());
+    LOG.warn("SequenceFile compression is no longer valid for intermediate " +
+    		     "map-outputs!");
   }
   
   /**
    * Get the {@link CompressionType} for the map outputs.
    * 
    * @return the {@link CompressionType} for map outputs, defaulting to 
-   *         {@link CompressionType#RECORD}. 
+   *         {@link CompressionType#RECORD}.
+   * @deprecated {@link CompressionType} is no longer valid for intermediate
+   *             map-outputs. 
    */
+  @Deprecated
   public CompressionType getMapOutputCompressionType() {
     String val = get("mapred.map.output.compression.type", 
                      CompressionType.RECORD.toString());
+    LOG.warn("SequenceFile compression is no longer valid for intermediate " +
+    "map-outputs!");
     return CompressionType.valueOf(val);
   }
 

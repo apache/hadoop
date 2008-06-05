@@ -46,6 +46,14 @@ public class DataOutputBuffer extends DataOutputStream {
     public int getLength() { return count; }
     public void reset() { count = 0; }
 
+    public Buffer() {
+      super();
+    }
+    
+    public Buffer(int size) {
+      super(size);
+    }
+    
     public void write(DataInput in, int len) throws IOException {
       int newcount = count + len;
       if (newcount > buf.length) {
@@ -63,6 +71,10 @@ public class DataOutputBuffer extends DataOutputStream {
   /** Constructs a new empty buffer. */
   public DataOutputBuffer() {
     this(new Buffer());
+  }
+  
+  public DataOutputBuffer(int size) {
+    this(new Buffer(size));
   }
   
   private DataOutputBuffer(Buffer buffer) {

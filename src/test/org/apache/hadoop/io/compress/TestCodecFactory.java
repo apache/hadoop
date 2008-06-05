@@ -45,7 +45,7 @@ public class TestCodecFactory extends TestCase {
       return null;
     }
     
-    public Class getCompressorType() {
+    public Class<? extends Compressor> getCompressorType() {
       return null;
     }
 
@@ -70,7 +70,7 @@ public class TestCodecFactory extends TestCase {
       return null;
     }
 
-    public Class getDecompressorType() {
+    public Class<? extends Decompressor> getDecompressorType() {
       return null;
     }
 

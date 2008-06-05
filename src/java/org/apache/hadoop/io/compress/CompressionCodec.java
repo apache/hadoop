@@ -56,7 +56,7 @@ public interface CompressionCodec {
    * 
    * @return the type of compressor needed by this codec.
    */
-  Class getCompressorType();
+  Class<? extends Compressor> getCompressorType();
   
   /**
    * Create a new {@link Compressor} for use by this {@link CompressionCodec}.
@@ -93,7 +93,7 @@ public interface CompressionCodec {
    * 
    * @return the type of decompressor needed by this codec.
    */
-  Class getDecompressorType();
+  Class<? extends Decompressor> getDecompressorType();
   
   /**
    * Create a new {@link Decompressor} for use by this {@link CompressionCodec}.

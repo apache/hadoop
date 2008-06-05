@@ -171,6 +171,17 @@ public class ReflectionUtils {
     }
   }
 
+  /**
+   * Return the correctly-typed {@link Class} of the given object.
+   *  
+   * @param o object whose correctly-typed <code>Class</code> is to be obtained
+   * @return the correctly typed <code>Class</code> of the given object.
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> Class<T> getClass(T o) {
+    return (Class<T>)o.getClass();
+  }
+  
   // methods to support testing
   static void clearCache() {
     CONSTRUCTOR_CACHE.clear();

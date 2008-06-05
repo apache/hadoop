@@ -76,17 +76,18 @@ public class TestReduceTask extends TestCase {
                                Configuration conf) throws IOException {
     FileSystem fs = tmpDir.getFileSystem(conf);
     Path path = new Path(tmpDir, "data.in");
-    SequenceFile.Writer writer = new SequenceFile.Writer(fs, conf, path,
-                                                         Text.class, 
-                                                         Text.class);
+    IFile.Writer<Text, Text> writer = 
+      new IFile.Writer<Text, Text>(conf, fs, path, Text.class, Text.class, null);
     for(Pair p: vals) {
       writer.append(new Text(p.key), new Text(p.value));
     }
     writer.close();
-    SequenceFile.Sorter sorter = new SequenceFile.Sorter(fs, Text.class, 
-                                                         Text.class, conf);
-    SequenceFile.Sorter.RawKeyValueIterator rawItr = 
-      sorter.merge(new Path[]{path}, false, tmpDir);
+    
+    @SuppressWarnings("unchecked")
+    RawKeyValueIterator rawItr = 
+      Merger.merge(conf, fs, Text.class, Text.class, null, new Path[]{path}, 
+                   false, conf.getInt("io.sort.factor", 100), tmpDir, 
+                   new Text.Comparator(), new NullProgress());
     @SuppressWarnings("unchecked") // WritableComparators are not generic
     ReduceTask.ValuesIterator valItr = 
       new ReduceTask.ValuesIterator<Text,Text>(rawItr,

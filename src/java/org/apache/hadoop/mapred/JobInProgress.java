@@ -497,9 +497,8 @@ class JobInProgress {
         } else {
           host = ttStatus.getHost();
         }
-        httpTaskLogLocation = "http://" + host + ":" + 
-          ttStatus.getHttpPort() + "/tasklog?plaintext=true&taskid=" +
-          status.getTaskID();
+        httpTaskLogLocation = "http://" + host + ":" + ttStatus.getHttpPort(); 
+           //+ "/tasklog?plaintext=true&taskid=" + status.getTaskID();
       }
 
       TaskCompletionEvent taskEvent = null;
@@ -530,7 +529,7 @@ class JobInProgress {
         if ((eventNumber = tip.getSuccessEventNumber()) != -1) {
           TaskCompletionEvent t = 
             this.taskCompletionEvents.get(eventNumber);
-          if (t.getTaskID().equals(status.getTaskID()))
+          if (t.getTaskAttemptId().equals(status.getTaskID()))
             t.setTaskStatus(TaskCompletionEvent.Status.OBSOLETE);
         }
         

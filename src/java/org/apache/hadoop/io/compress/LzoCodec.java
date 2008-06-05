@@ -124,7 +124,7 @@ public class LzoCodec implements Configurable, CompressionCodec {
                                      compressionOverhead);
   }
 
-  public Class getCompressorType() {
+  public Class<? extends Compressor> getCompressorType() {
     // Ensure native-lzo library is loaded & initialized
     if (!isNativeLzoLoaded(conf)) {
       throw new RuntimeException("native-lzo library not available");
@@ -164,7 +164,7 @@ public class LzoCodec implements Configurable, CompressionCodec {
         conf.getInt("io.compression.codec.lzo.buffersize", 64*1024));
   }
 
-  public Class getDecompressorType() {
+  public Class<? extends Decompressor> getDecompressorType() {
     // Ensure native-lzo library is loaded & initialized
     if (!isNativeLzoLoaded(conf)) {
       throw new RuntimeException("native-lzo library not available");

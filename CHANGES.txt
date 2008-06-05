@@ -221,6 +221,16 @@ Trunk (unreleased changes)
     layout versions are consistent in the data node. (Steve Loughran
     via omalley)
 
+    HADOOP-2095. Improve the Map-Reduce shuffle/merge by cutting down
+    buffer-copies; changed intermediate sort/merge to use the new IFile format
+    rather than SequenceFiles and compression of map-outputs is now
+    implemented by compressing the entire file rather than SequenceFile
+    compression. Shuffle also has been changed to use a simple byte-buffer
+    manager rather than the InMemoryFileSystem. 
+    Configuration changes to hadoop-default.xml:
+      deprecated mapred.map.output.compression.type 
+    (acmurthy)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

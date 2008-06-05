@@ -921,14 +921,6 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>mapred.map.output.compression.type</name>
-  <value>RECORD</value>
-  <description>If the map outputs are to compressed, how should they
-               be compressed? Should be one of NONE, RECORD or BLOCK.
-  </description>
-</property>
-
-<property>
   <name>mapred.map.output.compression.codec</name>
   <value>org.apache.hadoop.io.compress.DefaultCodec</value>
   <description>If the map outputs are compressed, how should they be 

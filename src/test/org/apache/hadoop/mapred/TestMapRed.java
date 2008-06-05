@@ -329,9 +329,8 @@ public class TestMapRed extends TestCase {
     // partition too low
     conf.setBoolean("test.testmapred.badpartition", true);
     boolean pass = true;
-    RunningJob rj = null;
     try {
-      rj = JobClient.runJob(conf);
+      JobClient.runJob(conf);
     } catch (IOException e) {
       pass = false;
     }
@@ -341,14 +340,14 @@ public class TestMapRed extends TestCase {
     conf.setBoolean("test.testmapred.badpartition", false);
     pass = true;
     try {
-      rj = JobClient.runJob(conf);
+      JobClient.runJob(conf);
     } catch (IOException e) {
       pass = false;
     }
     assertFalse("should fail for partition >= numPartitions", pass);
   }
     
-  private void checkCompression(CompressionType mapCompression,
+  private void checkCompression(boolean compressMapOutputs,
                                 CompressionType redCompression,
                                 boolean includeCombine
                                 ) throws Exception {
@@ -368,8 +367,7 @@ public class TestMapRed extends TestCase {
     if (includeCombine) {
       conf.setCombinerClass(IdentityReducer.class);
     }
-    conf.setMapOutputCompressionType(mapCompression);
-    conf.setCompressMapOutput(mapCompression != CompressionType.NONE);
+    conf.setCompressMapOutput(compressMapOutputs);
     SequenceFileOutputFormat.setOutputCompressionType(conf, redCompression);
     try {
       if (!fs.mkdirs(testdir)) {
@@ -404,12 +402,10 @@ public class TestMapRed extends TestCase {
   public void testCompression() throws Exception {
     EnumSet<SequenceFile.CompressionType> seq =
       EnumSet.allOf(SequenceFile.CompressionType.class);
-    for (CompressionType mapCompression : seq) {
-      for (CompressionType redCompression : seq) {
-        for(int combine=0; combine < 2; ++combine) {
-          checkCompression(mapCompression, redCompression,
-                           combine == 1);
-        }
+    for (CompressionType redCompression : seq) {
+      for(int combine=0; combine < 2; ++combine) {
+        checkCompression(false, redCompression, combine == 1);
+        checkCompression(true, redCompression, combine == 1);
       }
     }
   }

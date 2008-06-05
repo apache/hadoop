@@ -36,6 +36,7 @@ interface MRConstants {
    * Constant denoting when a merge of in memory files will be triggered 
    */
   public static final float MAX_INMEM_FILESYS_USE = 0.5f;
+  
   /**
    * Constant denoting the max size (in terms of the fraction of the total 
    * size of the filesys) of a map output file that we will try
@@ -54,6 +55,11 @@ interface MRConstants {
    * The custom http header used for the map output length.
    */
   public static final String MAP_OUTPUT_LENGTH = "Map-Output-Length";
+
+  /**
+   * The custom http header used for the "raw" map output length.
+   */
+  public static final String RAW_MAP_OUTPUT_LENGTH = "Raw-Map-Output-Length";
 
   /**
    * Temporary directory name 

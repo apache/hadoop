@@ -153,12 +153,14 @@ class MapOutputFile {
    * @param reduceTaskId a reduce task id
    * @param size the size of the file
    */
-  public Path getInputFileForWrite(int mapId, TaskAttemptID reduceTaskId, long size)
+  public Path getInputFileForWrite(TaskID mapId, TaskAttemptID reduceTaskId, 
+                                   long size)
     throws IOException {
     // TODO *oom* should use a format here
     return lDirAlloc.getLocalPathForWrite(jobDir + Path.SEPARATOR +
                                           reduceTaskId + Path.SEPARATOR +
-                                          "output" + "/map_" + mapId + ".out",
+                                          ("output" + "/map_" + mapId.getId() + 
+                                           ".out"), 
                                           size, conf);
   }
 

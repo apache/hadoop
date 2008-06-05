@@ -161,7 +161,7 @@ public class GzipCodec extends DefaultCodec {
                null;
   }
 
-  public Class getCompressorType() {
+  public Class<? extends Compressor> getCompressorType() {
     return ZlibFactory.getZlibCompressorType(conf);
   }
 
@@ -191,7 +191,7 @@ public class GzipCodec extends DefaultCodec {
                null;                               
   }
 
-  public Class getDecompressorType() {
+  public Class<? extends Decompressor> getDecompressorType() {
     return ZlibFactory.getZlibDecompressorType(conf);
   }
 

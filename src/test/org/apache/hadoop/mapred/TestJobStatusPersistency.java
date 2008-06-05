@@ -98,7 +98,7 @@ public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
     TaskCompletionEvent[] events1 = rj1.getTaskCompletionEvents(0);
     assertEquals(events0.length, events1.length);    
     for (int i = 0; i < events0.length; i++) {
-      assertEquals(events0[i].getTaskID(), events1[i].getTaskID());
+      assertEquals(events0[i].getTaskAttemptId(), events1[i].getTaskAttemptId());
       assertEquals(events0[i].getTaskStatus(), events1[i].getTaskStatus());
     }
   }

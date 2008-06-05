@@ -51,7 +51,7 @@ public class DefaultCodec implements Configurable, CompressionCodec {
                                 conf.getInt("io.file.buffer.size", 4*1024));
   }
 
-  public Class getCompressorType() {
+  public Class<? extends Compressor> getCompressorType() {
     return ZlibFactory.getZlibCompressorType(conf);
   }
 
@@ -72,7 +72,7 @@ public class DefaultCodec implements Configurable, CompressionCodec {
                                   conf.getInt("io.file.buffer.size", 4*1024));
   }
 
-  public Class getDecompressorType() {
+  public Class<? extends Decompressor> getDecompressorType() {
     return ZlibFactory.getZlibDecompressorType(conf);
   }
 

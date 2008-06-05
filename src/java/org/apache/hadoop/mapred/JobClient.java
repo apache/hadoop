@@ -919,11 +919,11 @@ public class JobClient extends Configured implements MRConstants, Tool  {
 
   private static void downloadProfile(TaskCompletionEvent e
                                       ) throws IOException  {
-    URLConnection connection = new URL(e.getTaskTrackerHttp() + 
-                                       "&plaintext=true&filter=profile"
-                                       ).openConnection();
+    URLConnection connection = 
+      new URL(getTaskLogURL(e.getTaskAttemptId(), e.getTaskTrackerHttp()) + 
+              "&filter=profile").openConnection();
     InputStream in = connection.getInputStream();
-    OutputStream out = new FileOutputStream(e.getTaskID() + ".profile");
+    OutputStream out = new FileOutputStream(e.getTaskAttemptId() + ".profile");
     IOUtils.copyBytes(in, out, 64 * 1024, true);
   }
 
@@ -1005,7 +1005,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
               if (event.getTaskStatus() == 
                 TaskCompletionEvent.Status.SUCCEEDED){
                 LOG.info(event.toString());
-                displayTaskLogs(event.getTaskID(), event.getTaskTrackerHttp());
+                displayTaskLogs(event.getTaskAttemptId(), event.getTaskTrackerHttp());
               }
               break; 
             case FAILED:
@@ -1013,7 +1013,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
                 TaskCompletionEvent.Status.FAILED){
                 LOG.info(event.toString());
                 // Displaying the task diagnostic information
-                TaskAttemptID taskId = event.getTaskID();
+                TaskAttemptID taskId = event.getTaskAttemptId();
                 String[] taskDiagnostics = 
                   jc.jobSubmitClient.getTaskDiagnostics(taskId); 
                 if (taskDiagnostics != null) {
@@ -1022,7 +1022,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
                   }
                 }
                 // Displaying the task logs
-                displayTaskLogs(event.getTaskID(), event.getTaskTrackerHttp());
+                displayTaskLogs(event.getTaskAttemptId(), event.getTaskTrackerHttp());
               }
               break; 
             case KILLED:
@@ -1032,7 +1032,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
               break; 
             case ALL:
               LOG.info(event.toString());
-              displayTaskLogs(event.getTaskID(), event.getTaskTrackerHttp());
+              displayTaskLogs(event.getTaskAttemptId(), event.getTaskTrackerHttp());
               break;
             }
           }
@@ -1061,15 +1061,22 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     return running;
   }
 
+  static String getTaskLogURL(TaskAttemptID taskId, String baseUrl) {
+    return (baseUrl + "/tasklog?plaintext=true&taskid=" + taskId); 
+  }
+  
   private static void displayTaskLogs(TaskAttemptID taskId, String baseUrl)
     throws IOException {
     // The tasktracker for a 'failed/killed' job might not be around...
     if (baseUrl != null) {
+      // Construct the url for the tasklogs
+      String taskLogUrl = getTaskLogURL(taskId, baseUrl);
+      
       // Copy tasks's stdout of the JobClient
-      getTaskLogs(taskId, new URL(baseUrl+"&filter=stdout"), System.out);
+      getTaskLogs(taskId, new URL(taskLogUrl+"&filter=stdout"), System.out);
         
       // Copy task's stderr to stderr of the JobClient 
-      getTaskLogs(taskId, new URL(baseUrl+"&filter=stderr"), System.err);
+      getTaskLogs(taskId, new URL(taskLogUrl+"&filter=stderr"), System.err);
     }
   }
     
@@ -1370,8 +1377,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     System.out.println("Number of events (from " + fromEventId + 
                        ") are: " + events.length);
     for(TaskCompletionEvent event: events) {
-      System.out.println(event.getTaskStatus() + " " + event.getTaskID() + 
-                         " " + event.getTaskTrackerHttp());
+      System.out.println(event.getTaskStatus() + " " + event.getTaskAttemptId() + " " + 
+                         getTaskLogURL(event.getTaskAttemptId(), 
+                                       event.getTaskTrackerHttp()));
     }
   }
 
