@@ -268,15 +268,18 @@ class TorquePool(NodePool):
       
     return id
 
-  def getJobInfo(self):
+  def getJobInfo(self, jobId=None):
     #torque error code when credentials fail, a temporary condition sometimes.
     credFailureErrorCode = 171 
     credFailureRetries = 10
     i = 0
     self.__jobInfo = None
     
+    if jobId == None:
+      jobId = self.getServiceId()
+
     while i < credFailureRetries:
-      qstatInfo, exitCode = self.__torque.qstat(self.getServiceId())
+      qstatInfo, exitCode = self.__torque.qstat(jobId)
       if exitCode == 0:
         self.__jobInfo = qstatInfo
         break

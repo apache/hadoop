@@ -240,10 +240,12 @@ class hodRunner:
       clusterDir = self.__norm_cluster_dir(args[1])
 
       if not os.path.exists(clusterDir):
-        errorFlag = True
-        errorMsgs.append( \
-                    "Invalid cluster directory (--hod.clusterdir or -d) : " + \
-                    clusterDir + " : No such directory")
+        try:
+          os.makedirs(clusterDir)
+        except OSError, err:
+          errorFlag = True
+          errorMsgs.append("Could not create cluster directory. %s" \
+                            % (str(err)))
       elif not os.path.isdir(clusterDir):
         errorFlag = True
         errorMsgs.append( \
@@ -269,9 +271,20 @@ class hodRunner:
 
       clusterList = self.__userState.read(CLUSTER_DATA_FILE)
       if clusterDir in clusterList.keys():
-        self.__log.critical("Found a previously allocated cluster at cluster directory '%s'. Deallocate the cluster first." % (clusterDir))
-        self.__opCode = 12
-        return
+        self.__setup_cluster_state(clusterDir)
+        clusterInfo = self.__clusterState.read()
+        # Check if the job is not running. Only then can we safely
+        # allocate another cluster. Otherwise the user would need
+        # to deallocate and free up resources himself.
+        if clusterInfo.has_key('jobid') and \
+            self.__cluster.is_cluster_deallocated(clusterInfo['jobid']):
+          self.__log.warn("Found a dead cluster at cluster directory '%s'. Deallocating it to allocate a new one." % (clusterDir))
+          self.__remove_cluster(clusterDir)
+          self.__clusterState.clear()
+        else:
+          self.__log.critical("Found a previously allocated cluster at cluster directory '%s'. Deallocate the cluster first." % (clusterDir))
+          self.__opCode = 12
+          return
  
       self.__setup_cluster_logger(clusterDir)
       if re.match('\d+-\d+', nodes):

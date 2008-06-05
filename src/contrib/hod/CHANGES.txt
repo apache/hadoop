@@ -5,6 +5,10 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-3483. Modified HOD to create a cluster directory if one does not
+    exist and to auto-deallocate a cluster while reallocating it, if it is
+    already dead. (Hemanth Yamijala via mukund)
+
   NEW FEATURES
 
   IMPROVEMENTS

@@ -101,7 +101,7 @@ class NodePool:
   def getServiceId(self):
     raise NotImplementedError
  
-  def getJobInfo(self):
+  def getJobInfo(self, jobId=None):
     raise NotImplementedError
 
   def deleteJob(self, jobId):

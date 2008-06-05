@@ -98,7 +98,10 @@ class MockHadoopCluster:
   
   def delete_job(self, jobid):
     self.__operations['delete_job'] = [jobid]
-  
+ 
+  def is_cluster_deallocated(self, dummy):
+    return False
+ 
   def wasOperationPerformed(self, operation, args):
     if self.__operations.has_key(operation):
       actualArgs = self.__operations[operation]
