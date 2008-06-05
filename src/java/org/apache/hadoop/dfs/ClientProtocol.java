@@ -37,9 +37,10 @@ interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 34 : remove abandonFileInProgress(...)
+   * 35 : Quota-related RPCs are introduced: getQuota, clearQuota;
+   * Besides, getContentSummary also returns the quota of the directory.
    */
-  public static final long versionID = 34L;
+  public static final long versionID = 35L;
   
   ///////////////////////////////////////
   // File contents
@@ -93,6 +94,8 @@ interface ClientProtocol extends VersionedProtocol {
    * @throws AccessControlException if permission to create file is 
    * denied by the system. As usually on the client side the exception will 
    * be wrapped into {@link org.apache.hadoop.ipc.RemoteException}.
+   * @throws QuotaExceededException if the file creation violates 
+   *                                any quota restriction
    * @throws IOException if other errors occur.
    */
   public void create(String src, 
@@ -190,6 +193,8 @@ interface ClientProtocol extends VersionedProtocol {
    * @return true if successful, or false if the old name does not exist
    * or if the new name already belongs to the namespace.
    * @throws IOException if the new name is invalid.
+   * @throws QuotaExceededException if the rename would violate 
+   *                                any quota restriction
    */
   public boolean rename(String src, String dst) throws IOException;
 
@@ -227,6 +232,8 @@ interface ClientProtocol extends VersionedProtocol {
    * @throws {@link AccessControlException} if permission to create file is 
    * denied by the system. As usually on the client side the exception will 
    * be wraped into {@link org.apache.hadoop.ipc.RemoteException}.
+   * @throws QuotaExceededException if the operation would violate 
+   *                                any quota restriction.
    */
   public boolean mkdirs(String src, FsPermission masked) throws IOException;
 
@@ -410,6 +417,25 @@ interface ClientProtocol extends VersionedProtocol {
    */
   public ContentSummary getContentSummary(String path) throws IOException;
 
+  /**
+   * Set the quota for a directory.
+   * @param path  The string representation of the path to the directory
+   * @param quota The limit of the number of names in the tree rooted 
+   *              at the directory
+   * @throws FileNotFoundException if the path is a file or 
+   *                               does not exist 
+   * @throws QuotaExceededException if the directory size 
+   *                                is greater than the given quota
+   */
+  public void setQuota(String path, long quota) throws IOException;
+  
+  /**
+   * Remove the quota for a directory
+   * @param path The string representation of the path to the directory
+   * @throws FileNotFoundException if the path is not a directory
+   */
+  public void clearQuota(String path) throws IOException;
+  
   /**
    * Write all metadata for this file into persistent storage.
    * The file must be currently open for writing.

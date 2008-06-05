@@ -139,6 +139,8 @@ Trunk (unreleased changes)
     HADOOP-1328. Implement user counters in streaming. (tomwhite via
     omalley)
 
+    HADOOP-3187. Quotas for namespace management. (hairong)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().

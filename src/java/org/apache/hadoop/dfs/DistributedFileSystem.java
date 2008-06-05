@@ -182,6 +182,24 @@ public class DistributedFileSystem extends FileSystem {
     return dfs.getContentSummary(getPathName(f));
   }
 
+  /** Clear a directory's quota
+   * @see ClientProtocol#clearQuota(String)
+   */
+  void clearQuota(Path src) throws IOException {
+    dfs.clearQuota(getPathName(src));
+  }
+  
+  /** Set a directory's quota
+   * @see ClientProtocol#setQuota(String, long) 
+   */
+  void setQuota(Path src, long quota) throws IOException {
+    if (quota <= 0) {
+      throw new IllegalArgumentException("Quota should be a positive number: "
+          + quota);
+    }
+    dfs.setQuota(getPathName(src), quota);
+  }
+  
   public FileStatus[] listStatus(Path p) throws IOException {
     DFSFileInfo[] infos = dfs.listPaths(getPathName(p));
     if (infos == null) return null;

@@ -30,6 +30,7 @@ import java.util.zip.GZIPInputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.fs.shell.Count;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -175,8 +176,8 @@ public class FsShell extends Configured implements Tool {
       System.err.println("Usage: java FsShell " + GET_SHORT_USAGE);
       throw iae;
     }
-    final boolean copyCrc = cf.options.get("crc");
-    final boolean verifyChecksum = !cf.options.get("ignoreCrc");
+    final boolean copyCrc = cf.getOpt("crc");
+    final boolean verifyChecksum = !cf.getOpt("ignoreCrc");
 
     if (dststr.equals("-")) {
       if (copyCrc) {
@@ -421,42 +422,6 @@ public class FsShell extends Configured implements Tool {
   }
 
   /**
-   * Parse the args of a command and check the format of args.
-   */
-  static class CommandFormat {
-    final String name;
-    final int minPar, maxPar;
-    final Map<String, Boolean> options = new HashMap<String, Boolean>();
-
-    CommandFormat(String n, int min, int max, String ... possibleOpt) {
-      name = n;
-      minPar = min;
-      maxPar = max;
-      for(String opt : possibleOpt)
-        options.put(opt, Boolean.FALSE);
-    }
-
-    List<String> parse(String[] args, int pos) {
-      List<String> parameters = new ArrayList<String>();
-      for(; pos < args.length; pos++) {
-        if (args[pos].charAt(0) == '-' && args[pos].length() > 1) {
-          String opt = args[pos].substring(1);
-          if (options.containsKey(opt))
-            options.put(opt, Boolean.TRUE);
-          else
-            throw new IllegalArgumentException("Illegal option " + args[pos]);
-        }
-        else
-          parameters.add(args[pos]);
-      }
-      int psize = parameters.size();
-      if (psize < minPar || psize > maxPar)
-        throw new IllegalArgumentException("Illegal number of arguments");
-      return parameters;
-    }
-  }
-
-  /**
    * Parse the incoming command string
    * @param cmd
    * @param pos ignore anything before this pos in cmd
@@ -485,8 +450,8 @@ public class FsShell extends Configured implements Tool {
       throw new IllegalArgumentException("replication must be >= 1");
     }
 
-    List<Path> waitList = c.options.get("w")? new ArrayList<Path>(): null;
-    setReplication(rep, dst, c.options.get("R"), waitList);
+    List<Path> waitList = c.getOpt("w")? new ArrayList<Path>(): null;
+    setReplication(rep, dst, c.getOpt("R"), waitList);
 
     if (waitList != null) {
       waitForReplication(waitList, rep);
@@ -1117,7 +1082,7 @@ public class FsShell extends Configured implements Tool {
       System.err.println("Usage: java FsShell " + TAIL_USAGE);
       throw iae;
     }
-    boolean foption = c.options.get("f") ? true: false;
+    boolean foption = c.getOpt("f") ? true: false;
     path = new Path(src);
     FileSystem srcFs = path.getFileSystem(getConf());
     if (srcFs.isDirectory(path)) {
@@ -1493,7 +1458,7 @@ public class FsShell extends Configured implements Tool {
       System.out.println(chown);
     } else if ("chgrp".equals(cmd)) {
       System.out.println(chgrp);
-    } else if (Count.NAME.equals(cmd)) {
+    } else if (Count.matches(cmd)) {
       System.out.println(Count.DESCRIPTION);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
@@ -1532,8 +1497,7 @@ public class FsShell extends Configured implements Tool {
    * Apply operation specified by 'cmd' on all parameters
    * starting from argv[startindex].
    */
-  private int doall(String cmd, String argv[], Configuration conf, 
-                    int startindex) {
+  private int doall(String cmd, String argv[], int startindex) {
     int exitCode = 0;
     int i = startindex;
     //
@@ -1557,7 +1521,7 @@ public class FsShell extends Configured implements Tool {
         } else if ("-dus".equals(cmd)) {
           dus(argv[i]);
         } else if (Count.matches(cmd)) {
-          Count.count(argv[i], getConf(), System.out);
+          new Count(argv, i, fs).runAll();
         } else if ("-ls".equals(cmd)) {
           ls(argv[i], false);
         } else if ("-lsr".equals(cmd)) {
@@ -1602,7 +1566,7 @@ public class FsShell extends Configured implements Tool {
    * Displays format of commands.
    * 
    */
-  void printUsage(String cmd) {
+  private static void printUsage(String cmd) {
     String prefix = "Usage: java " + FsShell.class.getSimpleName();
     if ("-fs".equals(cmd)) {
       System.err.println("Usage: java FsShell" + 
@@ -1761,9 +1725,9 @@ public class FsShell extends Configured implements Tool {
         else
           copyMergeToLocal(argv[i++], new Path(argv[i++]));
       } else if ("-cat".equals(cmd)) {
-        exitCode = doall(cmd, argv, getConf(), i);
+        exitCode = doall(cmd, argv, i);
       } else if ("-text".equals(cmd)) {
-        exitCode = doall(cmd, argv, getConf(), i);
+        exitCode = doall(cmd, argv, i);
       } else if ("-moveToLocal".equals(cmd)) {
         moveToLocal(argv[i++], new Path(argv[i++]));
       } else if ("-setrep".equals(cmd)) {
@@ -1774,13 +1738,13 @@ public class FsShell extends Configured implements Tool {
         FsShellPermissions.changePermissions(fs, cmd, argv, i, this);
       } else if ("-ls".equals(cmd)) {
         if (i < argv.length) {
-          exitCode = doall(cmd, argv, getConf(), i);
+          exitCode = doall(cmd, argv, i);
         } else {
           ls(Path.CUR_DIR, false);
         } 
       } else if ("-lsr".equals(cmd)) {
         if (i < argv.length) {
-          exitCode = doall(cmd, argv, getConf(), i);
+          exitCode = doall(cmd, argv, i);
         } else {
           ls(Path.CUR_DIR, true);
         } 
@@ -1789,33 +1753,29 @@ public class FsShell extends Configured implements Tool {
       } else if ("-cp".equals(cmd)) {
         exitCode = copy(argv, getConf());
       } else if ("-rm".equals(cmd)) {
-        exitCode = doall(cmd, argv, getConf(), i);
+        exitCode = doall(cmd, argv, i);
       } else if ("-rmr".equals(cmd)) {
-        exitCode = doall(cmd, argv, getConf(), i);
+        exitCode = doall(cmd, argv, i);
       } else if ("-expunge".equals(cmd)) {
         expunge();
       } else if ("-du".equals(cmd)) {
         if (i < argv.length) {
-          exitCode = doall(cmd, argv, getConf(), i);
+          exitCode = doall(cmd, argv, i);
         } else {
           du(".");
         }
       } else if ("-dus".equals(cmd)) {
         if (i < argv.length) {
-          exitCode = doall(cmd, argv, getConf(), i);
+          exitCode = doall(cmd, argv, i);
         } else {
           dus(".");
         }         
       } else if (Count.matches(cmd)) {
-        if (i < argv.length) {
-          exitCode = doall(cmd, argv, getConf(), i);
-        } else {
-          Count.count(".", getConf(), System.out);
-        }         
+        exitCode = new Count(argv, i, fs).runAll();
       } else if ("-mkdir".equals(cmd)) {
-        exitCode = doall(cmd, argv, getConf(), i);
+        exitCode = doall(cmd, argv, i);
       } else if ("-touchz".equals(cmd)) {
-        exitCode = doall(cmd, argv, getConf(), i);
+        exitCode = doall(cmd, argv, i);
       } else if ("-test".equals(cmd)) {
         exitCode = test(argv, i);
       } else if ("-stat".equals(cmd)) {
@@ -1837,6 +1797,10 @@ public class FsShell extends Configured implements Tool {
         System.err.println(cmd.substring(1) + ": Unknown command");
         printUsage("");
       }
+    } catch (IllegalArgumentException arge) {
+      exitCode = -1;
+      System.err.println(cmd.substring(1) + ": " + arge.getLocalizedMessage());
+      printUsage(cmd);
     } catch (RemoteException e) {
       //
       // This is a error returned by hadoop server. Print
@@ -1858,7 +1822,7 @@ public class FsShell extends Configured implements Tool {
       exitCode = -1;
       System.err.println(cmd.substring(1) + ": " + 
                          e.getLocalizedMessage());  
-    } catch (RuntimeException re) {
+    } catch (Exception re) {
       exitCode = -1;
       System.err.println(cmd.substring(1) + ": " + re.getLocalizedMessage());  
     } finally {

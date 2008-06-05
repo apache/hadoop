@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.shell.*;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
@@ -669,10 +670,10 @@ public class TestDFSShell extends TestCase {
       String root = createTree(dfs, "count");
 
       // Verify the counts
-      runCount(root, 2, 4, conf);
-      runCount(root + "2", 2, 1, conf);
-      runCount(root + "2/f1", 0, 1, conf);
-      runCount(root + "2/sub", 1, 0, conf);
+      runCount(root, 2, 4, dfs);
+      runCount(root + "2", 2, 1, dfs);
+      runCount(root + "2/f1", 0, 1, dfs);
+      runCount(root + "2/sub", 1, 0, dfs);
     } finally {
       try {
         dfs.close();
@@ -681,18 +682,25 @@ public class TestDFSShell extends TestCase {
       cluster.shutdown();
     }
   }
-  private void runCount(String path, long dirs, long files, Configuration conf
-      ) throws IOException {
+  private void runCount(String path, long dirs, long files, FileSystem fs
+    ) throws IOException {
     ByteArrayOutputStream bytes = new ByteArrayOutputStream(); 
     PrintStream out = new PrintStream(bytes);
-    Count.count(path, conf, out);
-    String results = bytes.toString();
-    System.out.println(results);
-    Scanner in = new Scanner(results);
-    assertEquals(dirs, in.nextLong());
-    assertEquals(files, in.nextLong());
-    in.close();
-    out.close();
+    PrintStream oldOut = System.out;
+    System.setOut(out);
+    Scanner in = null;
+    try {
+      new Count(new String[]{path}, 0, fs).runAll();
+      String results = bytes.toString();
+      System.out.println(results);
+      in = new Scanner(results);
+      assertEquals(dirs, in.nextLong());
+      assertEquals(files, in.nextLong());
+    } finally {
+      if (in!=null) in.close();
+      IOUtils.closeStream(out);
+      System.setOut(oldOut);
+    }
   }
 
   //throws IOException instead of Exception as shell.run() does.

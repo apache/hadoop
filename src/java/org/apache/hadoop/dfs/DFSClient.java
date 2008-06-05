@@ -505,7 +505,8 @@ class DFSClient implements FSConstants {
     try {
       return namenode.rename(src, dst);
     } catch(RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class);
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     QuotaExceededException.class);
     }
   }
 
@@ -702,7 +703,8 @@ class DFSClient implements FSConstants {
     try {
       return namenode.mkdirs(src, masked);
     } catch(RemoteException re) {
-      throw re.unwrapRemoteException(AccessControlException.class);
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     QuotaExceededException.class);
     }
   }
 
@@ -715,6 +717,39 @@ class DFSClient implements FSConstants {
     }
   }
 
+  /**
+   * Remove the quota for a directory
+   * @param path The string representation of the path to the directory
+   * @throws FileNotFoundException if the path is not a directory
+   */
+  void clearQuota(String src) throws IOException {
+    try {
+      namenode.clearQuota(src);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class);
+    }
+  }
+  
+  /**
+   * Set the quota for a directory.
+   * @param path  The string representation of the path to the directory
+   * @param quota The limit of the number of names in the tree rooted 
+   *              at the directory
+   * @throws FileNotFoundException if the path is a file or 
+   *                               does not exist 
+   * @throws QuotaExceededException if the directory size 
+   *                                is greater than the given quota
+   */
+  void setQuota(String src, long quota) throws IOException {
+    try {
+      namenode.setQuota(src, quota);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class,
+                                     QuotaExceededException.class);
+    }
+  }
   /**
    * Pick the best node from which to stream the data.
    * Entries in <i>nodes</i> are already in the priority order
@@ -2256,7 +2291,8 @@ class DFSClient implements FSConstants {
         namenode.create(
             src, masked, clientName, overwrite, replication, blockSize);
       } catch(RemoteException re) {
-        throw re.unwrapRemoteException(AccessControlException.class);
+        throw re.unwrapRemoteException(AccessControlException.class,
+                                       QuotaExceededException.class);
       }
       streamer = new DataStreamer();
       streamer.setDaemon(true);
