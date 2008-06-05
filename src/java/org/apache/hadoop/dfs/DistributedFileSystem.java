@@ -200,16 +200,19 @@ public class DistributedFileSystem extends FileSystem {
     dfs.setQuota(getPathName(src), quota);
   }
   
+  private FileStatus makeQualified(FileStatus f) {
+    return new FileStatus(f.getLen(), f.isDir(), f.getReplication(),
+        f.getBlockSize(), f.getModificationTime(),
+        f.getPermission(), f.getOwner(), f.getGroup(),
+        f.getPath().makeQualified(this)); // fully-qualify path
+  }
+
   public FileStatus[] listStatus(Path p) throws IOException {
     DFSFileInfo[] infos = dfs.listPaths(getPathName(p));
     if (infos == null) return null;
     FileStatus[] stats = new FileStatus[infos.length];
     for (int i = 0; i < infos.length; i++) {
-      DFSFileInfo f = (DFSFileInfo)infos[i];
-      stats[i] = new FileStatus(f.getLen(), f.isDir(), f.getReplication(),
-                                f.getBlockSize(), f.getModificationTime(),
-                                f.getPermission(), f.getOwner(), f.getGroup(),
-                                new DfsPath(f, this)); // fully-qualify path
+      stats[i] = makeQualified(infos[i]);
     }
     return stats;
   }
@@ -369,16 +372,9 @@ public class DistributedFileSystem extends FileSystem {
    * @throws FileNotFoundException if the file does not exist.
    */
   public FileStatus getFileStatus(Path f) throws IOException {
-    if (f instanceof DfsPath) {
-      DfsPath p = (DfsPath) f;
-      return p.info;
-    }
     DFSFileInfo fi = dfs.getFileInfo(getPathName(f));
     if (fi != null) {
-      return new FileStatus(fi.getLen(), fi.isDir(), fi.getReplication(),
-          fi.getBlockSize(), fi.getModificationTime(),
-          fi.getPermission(), fi.getOwner(), fi.getGroup(),
-          new DfsPath(fi, this)); // fully-qualify path;
+      return makeQualified(fi);
     } else {
       throw new FileNotFoundException("File does not exist: " + f);
     }

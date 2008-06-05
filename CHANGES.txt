@@ -463,6 +463,9 @@ Trunk (unreleased changes)
     HADOOP-2427. Ensure that the cwd of completed tasks is cleaned-up
     correctly on task-completion. (Amareshwari Sri Ramadasu via acmurthy) 
 
+    HADOOP-2565. Remove DFSPath cache of FileStatus. 
+    (Tsz Wo (Nicholas), SZE via hairong)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
