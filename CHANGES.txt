@@ -466,6 +466,10 @@ Trunk (unreleased changes)
     HADOOP-2565. Remove DFSPath cache of FileStatus. 
     (Tsz Wo (Nicholas), SZE via hairong)
 
+    HADOOP-3326. Cleanup the local-fs and in-memory merge in the ReduceTask by
+    spawing only one thread each for the on-disk and in-memory merge.
+    (Sharad Agarwal via acmurthy)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
