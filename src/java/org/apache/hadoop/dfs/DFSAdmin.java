@@ -18,16 +18,11 @@
 package org.apache.hadoop.dfs;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.dfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.dfs.FSConstants.UpgradeAction;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.shell.Command;
-import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.ToolRunner;
@@ -37,106 +32,6 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class DFSAdmin extends FsShell {
 
-  /**
-   * An abstract class for the execution of a file system command
-   */
-  abstract private static class DFSAdminCommand extends Command {
-    /** Constructor */
-    public DFSAdminCommand(FileSystem fs) {
-      super(fs);
-      if (!(fs instanceof DistributedFileSystem)) {
-        throw new IllegalArgumentException("FileSystem " + fs.getUri() + 
-            " is not a distributed file system");
-      }
-    }
-  }
-  
-  /** A class that supports command clearQuota */
-  private static class ClearQuotaCommand extends DFSAdminCommand {
-    private static final String NAME = "clrQuota";
-    private static final String USAGE = "-"+NAME+" <dirname>...<dirname>";
-    private static final String DESCRIPTION = USAGE + ": " +
-    "\tClear the quota for each directory <dirName>.\n" +
-    "\t\tBest effort for the directory. with fault reported if\n" +
-    "\t\t1. the directory does not exist or is a file, or\n" +
-    "\t\t2. user is not an administrator.\n" +
-    "\t\tIt does not fault if the directory has no quota.";
-    
-    /** Constructor */
-    ClearQuotaCommand(String[] args, int pos, FileSystem fs) {
-      super(fs);
-      CommandFormat c = new CommandFormat(NAME, 1, Integer.MAX_VALUE);
-      List<String> parameters = c.parse(args, pos);
-      this.args = parameters.toArray(new String[parameters.size()]);
-    }
-    
-    /** Check if a command is the clrQuota command
-     * 
-     * @param cmd A string representation of a command starting with "-"
-     * @return true if this is a clrQuota command; false otherwise
-     */
-    public static boolean matches(String cmd) {
-      return ("-"+NAME).equals(cmd); 
-    }
-
-    @Override
-    public String getCommandName() {
-      return NAME;
-    }
-
-    @Override
-    public void run(Path path) throws IOException {
-      ((DistributedFileSystem)fs).clearQuota(path);
-    }
-  }
-  
-  /** A class that supports command setQuota */
-  private static class SetQuotaCommand extends DFSAdminCommand {
-    private static final String NAME = "setQuota";
-    private static final String USAGE =
-      "-"+NAME+" <quota> <dirname>...<dirname>";
-    private static final String DESCRIPTION = 
-      "-setQuota <quota> <dirname>...<dirname>: " +
-      "\tSet the quota <quota> for each directory <dirName>.\n" + 
-      "\t\tThe directory quota is a long integer that puts a hard limit " +
-      "on the number of names in the directory tree\n" +
-      "\t\tBest effort for the directory, with faults reported if\n" +
-      "\t\t1. N is not a positive integer, or\n" +
-      "\t\t2. user is not an administrator, or\n" +
-      "\t\t3. the directory does not exist or is a file, or\n" +
-      "\t\t4. the directory would immediately exceed the new quota.";
-    
-    private final long quota; // the quota to be set
-    
-    /** Constructor */
-    SetQuotaCommand(String[] args, int pos, FileSystem fs) {
-      super(fs);
-      CommandFormat c = new CommandFormat(NAME, 2, Integer.MAX_VALUE);
-      List<String> parameters = c.parse(args, pos);
-      this.quota = Long.parseLong(parameters.remove(0));
-      this.args = parameters.toArray(new String[parameters.size()]);
-    }
-    
-    /** Check if a command is the setQuota command
-     * 
-     * @param cmd A string representation of a command starting with "-"
-     * @return true if this is a count command; false otherwise
-     */
-    public static boolean matches(String cmd) {
-      return ("-"+NAME).equals(cmd); 
-    }
-
-    @Override
-    public String getCommandName() {
-      return NAME;
-    }
-
-    @Override
-    public void run(Path path) throws IOException {
-      ((DistributedFileSystem)fs).setQuota(path, quota);
-    }
-  }
-  
   /**
    * Construct a DFSAdmin object.
    */
@@ -277,10 +172,7 @@ public class DFSAdmin extends FsShell {
     String summary = "hadoop dfsadmin is the command to execute DFS administrative commands.\n" +
       "The full syntax is: \n\n" +
       "hadoop dfsadmin [-report] [-safemode <enter | leave | get | wait>]\n" +
-      "\t[-refreshNodes]\n" +
-      "\t[" + SetQuotaCommand.USAGE + "]\n" +
-      "\t[" + ClearQuotaCommand.USAGE +"]\n" +
-      "\t[-help [cmd]]\n";
+      "\t[-refreshNodes] [-help [cmd]]\n";
 
     String report ="-report: \tReports basic filesystem information and statistics.\n";
         
@@ -330,10 +222,6 @@ public class DFSAdmin extends FsShell {
       System.out.println(upgradeProgress);
     } else if ("metasave".equals(cmd)) {
       System.out.println(metaSave);
-    } else if (SetQuotaCommand.matches(cmd)) {
-      System.out.println(SetQuotaCommand.DESCRIPTION);
-    } else if (ClearQuotaCommand.matches(cmd)) {
-      System.out.println(ClearQuotaCommand.DESCRIPTION);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -344,8 +232,6 @@ public class DFSAdmin extends FsShell {
       System.out.println(finalizeUpgrade);
       System.out.println(upgradeProgress);
       System.out.println(metaSave);
-      System.out.println(SetQuotaCommand.DESCRIPTION);
-      System.out.println(ClearQuotaCommand.DESCRIPTION);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -433,7 +319,7 @@ public class DFSAdmin extends FsShell {
    * Displays format of commands.
    * @param cmd The command that is being executed.
    */
-  private static void printUsage(String cmd) {
+  public void printUsage(String cmd) {
     if ("-report".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-report]");
@@ -452,12 +338,6 @@ public class DFSAdmin extends FsShell {
     } else if ("-metasave".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-metasave filename]");
-    } else if (SetQuotaCommand.matches(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
-                         + " [" + SetQuotaCommand.USAGE+"]");
-    } else if (ClearQuotaCommand.matches(cmd)) {
-      System.err.println("Usage: java DFSAdmin"
-                         + " ["+ClearQuotaCommand.USAGE+"]");
     } else {
       System.err.println("Usage: java DFSAdmin");
       System.err.println("           [-report]");
@@ -466,8 +346,6 @@ public class DFSAdmin extends FsShell {
       System.err.println("           [-finalizeUpgrade]");
       System.err.println("           [-upgradeProgress status | details | force]");
       System.err.println("           [-metasave filename]");
-      System.err.println("           ["+SetQuotaCommand.USAGE+"]");
-      System.err.println("           ["+ClearQuotaCommand.USAGE+"]");
       System.err.println("           [-help [cmd]]");
       System.err.println();
       ToolRunner.printGenericCommandUsage(System.err);
@@ -525,7 +403,8 @@ public class DFSAdmin extends FsShell {
         return exitCode;
       }
     }
-    
+
+
     // initialize DFSAdmin
     try {
       init();
@@ -552,10 +431,6 @@ public class DFSAdmin extends FsShell {
         exitCode = upgradeProgress(argv, i);
       } else if ("-metasave".equals(cmd)) {
         exitCode = metaSave(argv, i);
-      } else if (ClearQuotaCommand.matches(cmd)) {
-        exitCode = new ClearQuotaCommand(argv, i, fs).runAll();
-      } else if (SetQuotaCommand.matches(cmd)) {
-        exitCode = new SetQuotaCommand(argv, i, fs).runAll();
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
@@ -567,10 +442,6 @@ public class DFSAdmin extends FsShell {
         System.err.println(cmd.substring(1) + ": Unknown command");
         printUsage("");
       }
-    } catch (IllegalArgumentException arge) {
-      exitCode = -1;
-      System.err.println(cmd.substring(1) + ": " + arge.getLocalizedMessage());
-      printUsage(cmd);
     } catch (RemoteException e) {
       //
       // This is a error returned by hadoop server. Print
@@ -585,11 +456,16 @@ public class DFSAdmin extends FsShell {
         System.err.println(cmd.substring(1) + ": "
                            + ex.getLocalizedMessage());
       }
-    } catch (Exception e) {
+    } catch (IOException e) {
+      //
+      // IO exception encountered locally.
+      //
       exitCode = -1;
       System.err.println(cmd.substring(1) + ": "
                          + e.getLocalizedMessage());
-    } 
+    } finally {
+      fs.close();
+    }
     return exitCode;
   }
 

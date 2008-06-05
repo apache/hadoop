@@ -1590,36 +1590,6 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return dir.getContentSummary(src);
   }
 
-  /**
-   * Set the quota for a directory.
-   * @param path The string representation of the path to the directory
-   * @param quota The limit of the number of names in or below the directory
-   * @throws IOException if the path is not a directory or the number of
-   * existing names in or below the directory is greater than the given quota
-   */
-  void setQuota(String path, long quota) throws IOException {
-    if (isPermissionEnabled) {
-      checkSuperuserPrivilege();
-    }
-    
-    dir.setQuota(path, quota);
-    getEditLog().logSync();
-  }
-  
-  /**
-   * Remove the quota for a directory
-   * @param path The string representation of the path to the directory
-   * @throws IOException if the path is not a directory
-   */
-  void clearQuota(String path) throws IOException {
-    if (isPermissionEnabled) {
-      checkSuperuserPrivilege();
-    }
-    
-    dir.clearQuota(path);
-    getEditLog().logSync();
-  }
-  
   /** Persist all metadata about this file.
    * @param src The string representation of the path
    * @param clientName The string representation of the client

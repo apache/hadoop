@@ -85,17 +85,6 @@ abstract class INode implements Comparable<byte[]> {
     this(permissions, 0L);
     setLocalName(name);
   }
-  
-  /** copy constructor
-   * 
-   * @param other Other node to be copied
-   */
-  INode(INode other) {
-    setLocalName(other.getLocalName());
-    this.parent = other.getParent();
-    setPermissionStatus(other.getPermissionStatus());
-    setModificationTime(other.getModificationTime());
-  }
 
   /**
    * Check whether this is the root inode.
@@ -165,31 +154,14 @@ abstract class INode implements Comparable<byte[]> {
   /** Compute {@link ContentSummary}. */
   final ContentSummary computeContentSummary() {
     long[] a = computeContentSummary(new long[]{0,0,0});
-    return new ContentSummary(a[0], a[1], a[2], getQuota());
+    return new ContentSummary(a[0], a[1], a[2]);
   }
   /**
    * @return an array of three longs. 
    * 0: length, 1: file count, 2: directory count
    */
   abstract long[] computeContentSummary(long[] summary);
-  
-  /**
-   * Get the quota set for this inode
-   * @return the quota if it is set; -1 otherwise
-   */
-  long getQuota() {
-    return -1;
-  }
 
-  /**
-   * Get the total number of names in the tree
-   * rooted at this inode including the root
-   * @return The total number of names in this tree
-   */
-  long numItemsInTree() {
-    return 1;
-  }
-    
   /**
    * Get local file name
    * @return local file name
@@ -389,21 +361,6 @@ class INodeDirectory extends INode {
     this.children = null;
   }
 
-  /** constructor */
-  INodeDirectory(byte[] localName, PermissionStatus permissions, long mTime) {
-    this(permissions, mTime);
-    this.name = localName;
-  }
-  
-  /** copy constructor
-   * 
-   * @param other
-   */
-  INodeDirectory(INodeDirectory other) {
-    super(other);
-    this.children = other.getChildren();
-  }
-  
   /**
    * Check whether it's a directory
    */
@@ -411,32 +368,14 @@ class INodeDirectory extends INode {
     return true;
   }
 
-  INode removeChild(INode node) {
+  void removeChild(INode node) {
     assert children != null;
     int low = Collections.binarySearch(children, node.name);
     if (low >= 0) {
-      return children.remove(low);
-    } else {
-      return null;
+      children.remove(low);
     }
   }
 
-  /** Replace a child that has the same name as newChild by newChild.
-   * 
-   * @param newChild Child node to be added
-   */
-  void replaceChild(INode newChild) {
-    if ( children == null ) {
-      throw new IllegalArgumentException("The directory is empty");
-    }
-    int low = Collections.binarySearch(children, newChild.name);
-    if (low>=0) { // an old child exists so replace by the newChild
-      children.set(low, newChild);
-    } else {
-      throw new IllegalArgumentException("No child exists to be replaced");
-    }
-  }
-  
   INode getChild(String name) {
     return getChildINode(string2Bytes(name));
   }
@@ -645,13 +584,16 @@ class INodeDirectory extends INode {
 
   /**
    */
-  long numItemsInTree() {
-    long total = 1L;
+  int numItemsInTree() {
+    int total = 1;
     if (children == null) {
       return total;
     }
     for (INode child : children) {
-      total += child.numItemsInTree();
+      if(!child.isDirectory())
+        total++;
+      else
+        total += ((INodeDirectory)child).numItemsInTree();
     }
     return total;
   }
@@ -687,100 +629,6 @@ class INodeDirectory extends INode {
     parent = null;
     children = null;
     return total;
-  }
-}
-
-/**
- * Directory INode class that has a quota restriction
- */
-class INodeDirectoryWithQuota extends INodeDirectory {
-  private long quota;
-  private long count;
-  
-  /** Convert an existing directory inode to one with the given quota
-   * 
-   * @param quota Quota to be assigned to this inode
-   * @param other The other inode from which all other properties are copied
-   */
-  INodeDirectoryWithQuota(long quota, INodeDirectory other)
-  throws QuotaExceededException {
-    super(other);
-    this.count = other.numItemsInTree();
-    setQuota(quota);
-  }
-  
-  /** constructor with no quota verification */
-  INodeDirectoryWithQuota(
-      PermissionStatus permissions, long modificationTime, long quota)
-  {
-    super(permissions, modificationTime);
-    this.quota = quota;
-  }
-  
-  /** constructor with no quota verification */
-  INodeDirectoryWithQuota(String name, PermissionStatus permissions, long quota)
-  {
-    super(name, permissions);
-    this.quota = quota;
-  }
-  
-  /** Get this directory's quota
-   * @return this directory's quota
-   */
-  long getQuota() {
-    return quota;
-  }
-  
-  /** Set this directory's quota
-   * 
-   * @param quota Quota to be set
-   * @throws QuotaExceededException if the given quota is less than 
-   *                                the size of the tree
-   */
-  void setQuota(long quota) throws QuotaExceededException {
-    verifyQuota(quota, this.count);
-    this.quota = quota;
-  }
-  
-  /** Get the number of names in the subtree rooted at this directory
-   * @return the size of the subtree rooted at this directory
-   */
-  long numItemsInTree() {
-    return count;
-  }
-  
-  /** Update the size of the tree
-   * 
-   * @param delta the change of the tree size
-   * @throws QuotaExceededException if the changed size is greater 
-   *                                than the quota
-   */
-  void updateNumItemsInTree(long delta) throws QuotaExceededException {
-    long newCount = this.count + delta;
-    if (delta>0) {
-      verifyQuota(this.quota, newCount);
-    }
-    this.count = newCount;
-  }
-  
-  /** Set the size of the tree rooted at this directory
-   * 
-   * @param count size of the directory to be set
-   * @throws QuotaExceededException if the given count is greater than quota
-   */
-  void setCount(long count) throws QuotaExceededException {
-    verifyQuota(this.quota, count);
-    this.count = count;
-  }
-  
-  /** Verify if the count satisfies the quota restriction 
-   * @throws QuotaExceededException if the given quota is less than the count
-   */
-  private static void verifyQuota(long quota, long count)
-  throws QuotaExceededException {
-    if (quota < count) {
-      throw new QuotaExceededException(quota, count);
-    }
   }
 }
 

@@ -189,7 +189,7 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -16;
+  public static final int LAYOUT_VERSION = -15;
   // Current version: 
-  // Change edit log and fsimage to support quotas
+  // Store generation stamp with each Block
 }

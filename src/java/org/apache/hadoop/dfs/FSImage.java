@@ -709,12 +709,8 @@ class FSImage extends Storage {
       this.namespaceID = in.readInt();
 
       // read number of files
-      long numFiles;
-      if (imgVersion <= -16) {
-        numFiles = in.readLong();
-      } else {
-        numFiles = in.readInt();
-      }
+      int numFiles = 0;
+      numFiles = in.readInt();
 
       this.layoutVersion = imgVersion;
       // read in the last generation stamp.
@@ -733,7 +729,7 @@ class FSImage extends Storage {
       String path;
       String parentPath = "";
       INodeDirectory parentINode = fsDir.rootDir;
-      for (long i = 0; i < numFiles; i++) {
+      for (int i = 0; i < numFiles; i++) {
         long modificationTime = 0;
         long blockSize = 0;
         path = readString(in);
@@ -773,20 +769,13 @@ class FSImage extends Storage {
             blockSize = Math.max(fsNamesys.getDefaultBlockSize(), first);
           }
         }
-        
-        // get quota only when the node is a directory
-        long quota = -1L;
-        if (imgVersion <= -16 && blocks == null) {
-          quota = in.readLong();
-        }
-        
         PermissionStatus permissions = fsNamesys.getUpgradePermission();
         if (imgVersion <= -11) {
           permissions = PermissionStatus.read(in);
         }
-        if (path.length() == 0) { // it is the root
+        // check if this is a root node
+        if (path.length() == 0) {
           // update the root's attributes
-          fsDir.rootDir.setQuota(quota);
           fsDir.rootDir.setModificationTime(modificationTime);
           fsDir.rootDir.setPermissionStatus(permissions);
           continue;
@@ -798,7 +787,7 @@ class FSImage extends Storage {
         }
         // add new inode
         parentINode = fsDir.addToParent(path, parentINode, permissions,
-            blocks, replication, modificationTime, quota, blockSize);
+            blocks, replication, modificationTime, blockSize);
       }
       
       // load datanode info
@@ -806,9 +795,6 @@ class FSImage extends Storage {
 
       // load Files Under Construction
       this.loadFilesUnderConstruction(imgVersion, in, fsNamesys);
-      
-      // update the count of each directory with quota
-      fsDir.updateCountForINodeWithQuota();
     } finally {
       in.close();
     }
@@ -861,7 +847,7 @@ class FSImage extends Storage {
     try {
       out.writeInt(FSConstants.LAYOUT_VERSION);
       out.writeInt(namespaceID);
-      out.writeLong(fsDir.rootDir.numItemsInTree());
+      out.writeInt(fsDir.rootDir.numItemsInTree());
       out.writeLong(fsNamesys.getGenerationStamp());
       byte[] byteStore = new byte[4*FSConstants.MAX_PATH_LENGTH];
       ByteBuffer strbuf = ByteBuffer.wrap(byteStore);
@@ -972,7 +958,6 @@ class FSImage extends Storage {
       out.writeLong(node.getModificationTime());
       out.writeLong(0);   // preferred block size
       out.writeInt(-1);    // # of blocks
-      out.writeLong(node.getQuota());
       FILE_PERM.fromShort(node.getFsPermissionShort());
       PermissionStatus.write(out, node.getUserName(),
                              node.getGroupName(),

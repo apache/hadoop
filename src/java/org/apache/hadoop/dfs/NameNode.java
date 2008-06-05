@@ -550,16 +550,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   /** {@inheritDoc} */
-  public void setQuota(String path, long quota) throws IOException {
-    namesystem.setQuota(path, quota);
-  }
-  
-  /** {@inheritDoc} */
-  public void clearQuota(String path) throws IOException {
-    namesystem.clearQuota(path);
-  }
-  
-  /** {@inheritDoc} */
   public void fsync(String src, String clientName) throws IOException {
     namesystem.fsync(src, clientName);
   }
