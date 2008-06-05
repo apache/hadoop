@@ -107,7 +107,7 @@ abstract class TaskRunner extends Thread {
                                 TaskTracker.getJobCacheSubdir() 
                                 + Path.SEPARATOR + t.getJobID() 
                                 + Path.SEPARATOR + t.getTaskID()
-                                + Path.SEPARATOR + "work",
+                                + Path.SEPARATOR + MRConstants.WORKDIR,
                                 conf). toString());
 
       URI[] archives = DistributedCache.getCacheArchives(conf);

@@ -456,6 +456,9 @@ Trunk (unreleased changes)
     HADOOP-3476. Code cleanup in fuse-dfs.
     (Peter Wyckoff via dhruba)
 
+    HADOOP-2427. Ensure that the cwd of completed tasks is cleaned-up
+    correctly on task-completion. (Amareshwari Sri Ramadasu via acmurthy) 
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
