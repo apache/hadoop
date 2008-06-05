@@ -28,8 +28,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.util.ArrayList;
 import java.lang.Math;
 import java.nio.channels.FileChannel;
@@ -54,6 +52,8 @@ class FSEditLog {
   private static final byte OP_SET_OWNER = 8;
   private static final byte OP_CLOSE = 9;    // close after write
   private static final byte OP_SET_GENSTAMP = 10;    // store genstamp
+  private static final byte OP_SET_QUOTA = 11; // set a directory's quota
+  private static final byte OP_CLEAR_QUOTA = 12; // clear a directory's quota
   private static int sizeFlushBuffer = 512*1024;
 
   private ArrayList<EditLogOutputStream> editStreams = null;
@@ -632,6 +632,23 @@ class FSEditLog {
                 FSImage.readString(in), FSImage.readString(in));
             break;
           }
+          case OP_SET_QUOTA: {
+            if (logVersion > -16) {
+              throw new IOException("Unexpected opcode " + opcode
+                  + " for version " + logVersion);
+            }
+            fsDir.unprotectedSetQuota(FSImage.readString(in), 
+                readLongWritable(in) );
+            break;
+          }
+          case OP_CLEAR_QUOTA: {
+            if (logVersion > -16) {
+              throw new IOException("Unexpected opcode " + opcode
+                  + " for version " + logVersion);
+            }
+            fsDir.unprotectedClearQuota(FSImage.readString(in));
+            break;
+          }
           default: {
             throw new IOException("Never seen opcode " + opcode);
           }
@@ -660,6 +677,17 @@ class FSEditLog {
     return numEdits;
   }
 
+  // a place holder for reading a long
+  private static final LongWritable longWritable = new LongWritable();
+
+  /** Read an integer from an input stream */
+  private static long readLongWritable(DataInputStream in) throws IOException {
+    synchronized (longWritable) {
+      longWritable.readFields(in);
+      return longWritable.get();
+    }
+  }
+  
   static short adjustReplication(short replication) {
     FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
     short minReplication = fsNamesys.getMinReplication();
@@ -872,6 +900,23 @@ class FSEditLog {
     logEdit(OP_SET_REPLICATION, 
             new UTF8(src), 
             FSEditLog.toLogReplication(replication));
+  }
+  
+  /** Add set quota record to edit log
+   * 
+   * @param src the string representation of the path to a directory
+   * @param quota the directory size limit
+   */
+  void logSetQuota(String src, long quota) {
+    logEdit(OP_SET_QUOTA, new UTF8(src), new LongWritable(quota));
+  }
+
+  /** Add clear quota record to edit log
+   * 
+   * @param src the string representation of the path to a directory
+   */
+  void logClearQuota(String src) {
+    logEdit(OP_CLEAR_QUOTA, new UTF8(src));
   }
   
   /**  Add set permissions record to edit log */
