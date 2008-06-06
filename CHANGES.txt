@@ -524,6 +524,8 @@ Trunk (unreleased changes)
 
     HADOOP-3463. Hadoop-daemons script should cd to $HADOOP_HOME. (omalley)
 
+    HADOOP-3489. Fix NPE in SafeModeMonitor. (Lohit Vijayarenu via shv)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
