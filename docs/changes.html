@@ -56,7 +56,7 @@
 </a></h2>
 <ul id="trunk_(unreleased_changes)_">
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(14)
+</a>&nbsp;&nbsp;&nbsp;(18)
     <ol id="trunk_(unreleased_changes)_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2703">HADOOP-2703</a>.  The default options to fsck skips checking files
 that are being written to. The output of fsck is incompatible
@@ -106,10 +106,20 @@ CompletedJobStatusStore.<br />(enis via omaley)</li>
 recovery. The block gets a new  generation stamp.
 (Tsz Wo (Nicholas), SZE via dhruba)
 </li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2909">HADOOP-2909</a>. Improve IPC idle connection management. Property
+ipc.client.maxidletime is removed from the default configuration,
+instead it is defined as twice of the ipc.client.connection.maxidletime.
+A connection with outstanding requests won't be treated as idle.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3459">HADOOP-3459</a>. Change in the output format of dfs -ls to more closely match
+/bin/ls. New format is: perm repl owner group size date name<br />(Mukund Madhugiri via omally)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3113">HADOOP-3113</a>. An fsync invoked on a HDFS file really really persists data! The datanode
+moves blocks in the tmp directory to the real block directory on a datanode-restart.<br />(dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3452">HADOOP-3452</a>. Change fsck to return non-zero status for a corrupt
+FileSystem.<br />(lohit vijayarenu via cdouglas)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._new_features_')">  NEW FEATURES
-</a>&nbsp;&nbsp;&nbsp;(15)
+</a>&nbsp;&nbsp;&nbsp;(22)
     <ol id="trunk_(unreleased_changes)_._new_features_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3074">HADOOP-3074</a>. Provides a UrlStreamHandler for DFS and other FS,
 relying on FileSystem<br />(taton)</li>
@@ -145,10 +155,22 @@ HDFS filesystem on systems that support FUSE, e.g., Linux.<br />(Pete Wyckoff vi
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3250">HADOOP-3250</a>. Extend FileSystem API to allow appending to files.
 (Tsz Wo (Nicholas), SZE via cdouglas)
 </li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3177">HADOOP-3177</a>. Implement Syncable interface for FileSystem.
+(Tsz Wo (Nicholas), SZE via dhruba)
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-1328">HADOOP-1328</a>. Implement user counters in streaming.<br />(tomwhite via
+omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3187">HADOOP-3187</a>. Quotas for namespace management.<br />(Hairong Kuang via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3307">HADOOP-3307</a>. Support for Archives in Hadoop.<br />(Mahadev Konar via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3460">HADOOP-3460</a>. Add SequenceFileAsBinaryOutputFormat to permit direct
+writes of serialized data.<br />(Koji Noguchi via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3230">HADOOP-3230</a>. Add ability to get counter values from command
+line.<br />(tomwhite via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-930">HADOOP-930</a>. Add support for native S3 files.<br />(tomwhite via cutting)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(22)
+</a>&nbsp;&nbsp;&nbsp;(30)
     <ol id="trunk_(unreleased_changes)_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2928">HADOOP-2928</a>. Remove deprecated FileSystem.getContentLength().<br />(Lohit Vjayarenu via rangadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3130">HADOOP-3130</a>. Make the connect timeout smaller for getFile.<br />(Amar Ramesh Kamat via ddas)</li>
@@ -196,10 +218,32 @@ nodes otherwise.<br />(Johan Oskarsson via rangadi)</li>
 datanode, now can report corrupt replicas received from src node to
 the namenode.<br />(Lohit Vijayarenu via rangadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3434">HADOOP-3434</a>. Retain the cause of the bind failure in Server::bind.<br />(Steve Loughran via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3429">HADOOP-3429</a>. Increases the size of the buffers used for the communication
+for Streaming jobs.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3486">HADOOP-3486</a>. Change default for initial block report to 0 seconds
+and document it.<br />(Sanjay Radia via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3448">HADOOP-3448</a>. Improve the text in the assertion making sure the
+layout versions are consistent in the data node.<br />(Steve Loughran
+via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2095">HADOOP-2095</a>. Improve the Map-Reduce shuffle/merge by cutting down
+buffer-copies; changed intermediate sort/merge to use the new IFile format
+rather than SequenceFiles and compression of map-outputs is now
+implemented by compressing the entire file rather than SequenceFile
+compression. Shuffle also has been changed to use a simple byte-buffer
+manager rather than the InMemoryFileSystem.
+Configuration changes to hadoop-default.xml:
+  deprecated mapred.map.output.compression.type<br />(acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-236">HADOOP-236</a>. JobTacker now refuses connection from a task tracker with a
+different version number.<br />(Sharad Agarwal via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3427">HADOOP-3427</a>. Improves the shuffle scheduler. It now waits for notifications
+from shuffle threads when it has scheduled enough, before scheduling more.<br />(ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2393">HADOOP-2393</a>. Moves the handling of dir deletions in the tasktracker to
+a separate thread.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3501">HADOOP-3501</a>. Deprecate InMemoryFileSystem.<br />(cutting via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
-</a>&nbsp;&nbsp;&nbsp;(9)
+</a>&nbsp;&nbsp;&nbsp;(10)
     <ol id="trunk_(unreleased_changes)_._optimizations_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3274">HADOOP-3274</a>. The default constructor of BytesWritable creates empty
 byte array. (Tsz Wo (Nicholas), SZE via shv)
@@ -217,10 +261,13 @@ tracker and task tracker.<br />(ddas via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3369">HADOOP-3369</a>. Fast block processing during name-node startup.<br />(shv)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-1702">HADOOP-1702</a>. Reduce buffer copies when data is written to DFS.
 DataNodes take 30% less CPU while writing data.<br />(rangadi)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3095">HADOOP-3095</a>. Speed up split generation in the FileInputSplit,
+especially for non-HDFS file systems. Deprecates
+InputFormat.validateInput.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(58)
+</a>&nbsp;&nbsp;&nbsp;(72)
     <ol id="trunk_(unreleased_changes)_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2905">HADOOP-2905</a>. 'fsck -move' triggers NPE in NameNode.<br />(Lohit Vjayarenu via rangadi)</li>
       <li>Increment ClientProtocol.versionID missed by <a href="http://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a>.<br />(shv)</li>
@@ -343,6 +390,35 @@ io.sort.mb.<br />(cdouglas)</li>
 single spill.<br />(omalley via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3454">HADOOP-3454</a>. Fix Text::find to search only valid byte ranges.<br />(Chad Whipkey
 via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3417">HADOOP-3417</a>. Removes the static configuration variable, commandLineConfig from
+JobClient. Moves the cli parsing from JobShell to GenericOptionsParser.
+Thus removes the class org.apache.hadoop.mapred.JobShell.<br />(Amareshwari Sriramadasu via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2132">HADOOP-2132</a>. Only RUNNING/PREP jobs can be killed.<br />(Jothi Padmanabhan via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3472">HADOOP-3472</a> MapFile.Reader getClosest() function returns incorrect results
+when before is true<br />(Todd Lipcon via Stack)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3476">HADOOP-3476</a>. Code cleanup in fuse-dfs.<br />(Peter Wyckoff via dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2427">HADOOP-2427</a>. Ensure that the cwd of completed tasks is cleaned-up
+correctly on task-completion.<br />(Amareshwari Sri Ramadasu via acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2565">HADOOP-2565</a>. Remove DFSPath cache of FileStatus.
+(Tsz Wo (Nicholas), SZE via hairong)
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3326">HADOOP-3326</a>. Cleanup the local-fs and in-memory merge in the ReduceTask by
+spawing only one thread each for the on-disk and in-memory merge.<br />(Sharad Agarwal via acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3493">HADOOP-3493</a>. Fix TestStreamingFailure to use FileUtil.fullyDelete to
+ensure correct cleanup.<br />(Lohit Vijayarenu via acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3455">HADOOP-3455</a>. Fix NPE in ipc.Client in case of connection failure and
+improve its synchronization.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3240">HADOOP-3240</a>. Fix a testcase to not create files in the current directory.
+Instead the file is created in the test directory<br />(Mahadev Konar via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3496">HADOOP-3496</a>.  Fix failure in TestHarFileSystem.testArchives due to change
+in <a href="http://issues.apache.org/jira/browse/HADOOP-3095">HADOOP-3095</a>.<br />(tomwhite)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3135">HADOOP-3135</a>. Get the system directory from the JobTracker instead of from
+the conf.<br />(Subramaniam Krishnan via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3503">HADOOP-3503</a>. Fix a race condition when client and namenode start simultaneous
+recovery of the same block.  (dhruba &amp; Tsz Wo (Nicholas), SZE)
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3440">HADOOP-3440</a>. Fixes DistributedCache to not create symlinks for paths which
+don't have fragments even when createSymLink is true.<br />(Abhijit Bagri via ddas)</li>
     </ol>
   </li>
 </ul>

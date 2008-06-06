@@ -5,8 +5,8 @@
 <meta content="Apache Forrest" name="Generator">
 <meta name="Forrest-version" content="0.8">
 <meta name="Forrest-skin-name" content="pelt">
-<title> 
-      Hadoop On Demand
+<title>
+      Hadoop DFS Name Space Quotas Administrator Guide
     </title>
 <link type="text/css" href="skin/basic.css" rel="stylesheet">
 <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
@@ -124,8 +124,8 @@ document.write("Last Published: " + document.lastModified);
 <div class="menuitem">
 <a href="hdfs_permissions_guide.html">HDFS Permissions Guide</a>
 </div>
-<div class="menuitem">
-<a href="hdfs_quota_admin_guide.html">HDFS Quotas Administrator Guide</a>
+<div class="menupage">
+<div class="menupagetitle">HDFS Quotas Administrator Guide</div>
 </div>
 <div class="menuitem">
 <a href="hdfs_shell.html">FS Shell Guide</a>
@@ -139,8 +139,8 @@ document.write("Last Published: " + document.lastModified);
 <div class="menuitem">
 <a href="streaming.html">Streaming</a>
 </div>
-<div class="menupage">
-<div class="menupagetitle">Hadoop On Demand</div>
+<div class="menuitem">
+<a href="hod.html">Hadoop On Demand</a>
 </div>
 <div class="menuitem">
 <a href="api/index.html">API Docs</a>
@@ -177,49 +177,80 @@ document.write("Last Published: " + document.lastModified);
     +-->
 <div id="content">
 <div title="Portable Document Format" class="pdflink">
-<a class="dida" href="hod.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
+<a class="dida" href="hdfs_quota_admin_guide.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
         PDF</a>
 </div>
-<h1> 
-      Hadoop On Demand
+<h1>
+      Hadoop DFS Name Space Quotas Administrator Guide
     </h1>
-<div id="minitoc-area">
-<ul class="minitoc">
-<li>
-<a href="#Introduction"> Introduction </a>
-</li>
-<li>
-<a href="#Documentation">Documentation</a>
-</li>
-</ul>
-</div>
-    
-<a name="N1000D"></a><a name="Introduction"></a>
-<h2 class="h3"> Introduction </h2>
-<div class="section">
+      
 <p>
-Hadoop On Demand (HOD) is a system for provisioning virtual Hadoop clusters over a large physical cluster. It uses the Torque resource manager to do node allocation. On the allocated nodes, it can start Hadoop Map/Reduce and HDFS daemons. It automatically generates the appropriate configuration files (hadoop-site.xml) for the Hadoop daemons and client. HOD also has the capability to distribute Hadoop to the nodes in the virtual cluster that it allocates. In short, HOD makes it easy for administrators and users to quickly setup and use Hadoop. It is also a very useful tool for Hadoop developers and testers who need to share a physical cluster for testing their own Hadoop versions.
+      HDFS allows the administrator to set quotas on individual directories. 
+      Newly created directories have no associated quota. 
+      The largest quota is Long.Max_Value. A quota of one forces a directory 
+      to remain empty.
       </p>
-</div>
+
       
-<a name="N10017"></a><a name="Documentation"></a>
-<h2 class="h3">Documentation</h2>
-<div class="section">
-<p>Please go through the following to know more about using HOD</p>
+<p>
+      The directory quota is a hard limit on the number of names in the tree 
+      rooted at that directory. File/directory creations fault if the quota 
+      would be exceeded. Quotas stick to renamed directories; the rename 
+      operation faults if operation would result in a quota violation. 
+      The attempt to set a quota faults if the directory would be in violation 
+      of the new quota.
+      </p>
+
+      
+<p>
+      Quotas are persistent with the fsimage. When starting, if the fsimage 
+      is immediately in violation of aquota (perhaps the fsimage was 
+      surreptitiously modified), startup operation fails with an error report. 
+      Setting/removing a quota creates a journal entry.
+      </p> 
+
+      
+<p>
+      The following new commands or new options are added to support quotas. 
+      The first two are administration commands.
+      </p>
+
+      
 <ul>
-        
+      
 <li>
-<a href="hod_admin_guide.html">Hod Admin Guide</a> : This guide will walk you through an overview of architecture of HOD, prerequisites, installing various components and dependent software, and configuring HOD to get it up and running.</li>
-        
+      
+<strong><em>dfsadmin -setquota &lt;N&gt; &lt;directory&gt;...&lt;directory&gt;</em></strong> 
+      
+<br>
+      Set the quota <em></em> for each directory. Best effort for each directory,
+      with faults reported if <em>N</em> is not a positive long integer, 
+      the directory does not exist or it is a file, or the directory would 
+      immediately exceed the new quota.
+      </li>
+  
+      
 <li>
-<a href="hod_user_guide.html">Hod User Guide</a> : This guide will let you know about how to get started on running hod, its various features, command line options and help on troubleshooting in detail.</li>
-        
+      
+<strong><em>dfsadmin -clrquota &lt;directory&gt;...&lt;director&gt;</em></strong>
+<br> 
+      Remove any quota for each directory. Best effort for each directory, 
+      with faults reported if the directory does not exist or it is a file. 
+      It is not a fault if the directory has no quota.
+      </li>
+  
+      
 <li>
-<a href="hod_config_guide.html">Hod Configuration Guide</a> : This guide discusses about onfiguring HOD, describing various configuration sections, parameters and their purpose in detail.</li>
+      
+<strong><em>fs -count -q &lt;directory&gt;...&lt;directory&gt;</em></strong>
+<br>
+      With the <em>-q</em> option, also report the quota value set for each 
+      directory, and the available quota remaining. If the directory does not have 
+      a quota set, the reported values are <em>none</em> and <em>inf</em>.
+      </li>
       
 </ul>
-</div>
-  
+   
 </div>
 <!--+
     |end content

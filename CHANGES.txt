@@ -151,6 +151,8 @@ Trunk (unreleased changes)
 
     HADOOP-930. Add support for native S3 files.  (tomwhite via cutting)
 
+    HADOOP-3502. Quota API needs documentation in Forrest. (hairong)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().
