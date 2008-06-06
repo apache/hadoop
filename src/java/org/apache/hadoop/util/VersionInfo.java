@@ -80,6 +80,17 @@ public class VersionInfo {
     return version != null ? version.url() : "Unknown";
   }
   
+  /**
+   * Returns the buildVersion which includes version, 
+   * revision, user and date. 
+   */
+  public static String getBuildVersion(){
+    return VersionInfo.getVersion() + 
+    " from " + VersionInfo.getRevision() +
+    " by " + VersionInfo.getUser() + 
+    " on " + VersionInfo.getDate();
+  }
+  
   public static void main(String[] args) {
     System.out.println("Hadoop " + getVersion());
     System.out.println("Subversion " + getUrl() + " -r " + getRevision());

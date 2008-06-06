@@ -75,6 +75,7 @@ import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.log4j.LogManager;
@@ -899,6 +900,23 @@ public class TaskTracker
           }
         }
 
+        //verify the buildVersion if justStarted
+        if(justStarted){
+          String jobTrackerBV = jobClient.getBuildVersion();
+          if(!VersionInfo.getBuildVersion().equals(jobTrackerBV)) {
+            String msg = "Shutting down. Incompatible buildVersion." +
+            "\nJobTracker's: " + jobTrackerBV + 
+            "\nTaskTracker's: "+ VersionInfo.getBuildVersion();
+            LOG.error(msg);
+            try {
+              jobClient.reportTaskTrackerError(taskTrackerName, null, msg);
+            } catch(Exception e ) {
+              LOG.info("Problem reporting to jobtracker: " + e);
+            }
+            return State.DENIED;
+          }
+        }
+        
         // Send the heartbeat and process the jobtracker's directives
         HeartbeatResponse heartbeatResponse = transmitHeartBeat();
         TaskTrackerAction[] actions = heartbeatResponse.getActions();

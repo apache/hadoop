@@ -65,6 +65,7 @@ import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.VersionInfo;
 
 /*******************************************************
  * JobTracker is the central location for submitting and 
@@ -1224,6 +1225,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   ////////////////////////////////////////////////////
   // InterTrackerProtocol
   ////////////////////////////////////////////////////
+  
+  public String getBuildVersion() throws IOException{
+    return VersionInfo.getBuildVersion();
+  }
 
   /**
    * The periodic heartbeat mechanism between the {@link TaskTracker} and

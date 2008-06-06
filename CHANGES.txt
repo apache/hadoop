@@ -235,6 +235,10 @@ Trunk (unreleased changes)
       deprecated mapred.map.output.compression.type 
     (acmurthy)
 
+    HADOOP-236. JobTacker now refuses connection from a task tracker with a 
+    different version number. (Sharad Agarwal via ddas)
+
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
