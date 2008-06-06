@@ -238,6 +238,9 @@ Trunk (unreleased changes)
     HADOOP-236. JobTacker now refuses connection from a task tracker with a 
     different version number. (Sharad Agarwal via ddas)
 
+    HADOOP-3427. Improves the shuffle scheduler. It now waits for notifications
+    from shuffle threads when it has scheduled enough, before scheduling more.
+    (ddas)
 
   OPTIMIZATIONS
 
