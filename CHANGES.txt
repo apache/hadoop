@@ -522,6 +522,8 @@ Trunk (unreleased changes)
     don't have fragments even when createSymLink is true. 
     (Abhijit Bagri via ddas) 
 
+    HADOOP-3463. Hadoop-daemons script should cd to $HADOOP_HOME. (omalley)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

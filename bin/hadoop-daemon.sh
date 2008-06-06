@@ -113,6 +113,7 @@ case $startStop in
 
     hadoop_rotate_log $log
     echo starting $command, logging to $log
+    cd "$HADOOP_HOME"
     nohup nice -n $HADOOP_NICENESS "$HADOOP_HOME"/bin/hadoop --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid
     sleep 1; head "$log"
