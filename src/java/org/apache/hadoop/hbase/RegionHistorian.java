@@ -180,22 +180,22 @@ public class RegionHistorian implements HConstants {
    * Method to add a compaction event to the row in the .META table
    * @param info
    */
-  public void addRegionCompaction(HRegionInfo info, String timeTaken) {
-    if (LOG.isDebugEnabled()) {
-      add(HistorianColumnKey.REGION_COMPACTION.key,
-          "Region compaction completed in " + timeTaken, info);
-    }
+  public void addRegionCompaction(HRegionInfo info,
+    @SuppressWarnings("unused") String timeTaken) {
+    // Disabled.  Noop.  If this regionserver is hosting the .META. AND is
+    // holding the reclaimMemcacheMemory global lock, we deadlock.  For now,
+    // just disable logging of flushes and compactions.
   }
 
   /**
    * Method to add a flush event to the row in the .META table
    * @param info
    */
-  public void addRegionFlush(HRegionInfo info, String timeTaken) {
-    if (LOG.isDebugEnabled()) {
-      add(HistorianColumnKey.REGION_FLUSH.key, "Region flush completed in "
-          + timeTaken, info);
-    }
+  public void addRegionFlush(HRegionInfo info,
+    @SuppressWarnings("unused") String timeTaken) {
+    // Disabled.  Noop.  If this regionserver is hosting the .META. AND is
+    // holding the reclaimMemcacheMemory global lock, we deadlock.  For now,
+    // just disable logging of flushes and compactions.
   }
 
   /**
@@ -296,6 +296,9 @@ public class RegionHistorian implements HConstants {
   public void online(final HBaseConfiguration c) {
     try {
       this.metaTable = new HTable(c, META_TABLE_NAME);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Onlined");
+      }
     } catch (IOException ioe) {
       LOG.error("Unable to create RegionHistorian", ioe);
     }
@@ -307,5 +310,8 @@ public class RegionHistorian implements HConstants {
    */
   public void offline() {
     this.metaTable = null;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Offlined");
+    }
   }
 }

@@ -41,6 +41,8 @@ Hbase Change Log
    HBASE-654   API HTable.getMetadata().addFamily shouldn't be exposed to user
    HBASE-666   UnmodifyableHRegionInfo gives the wrong encoded name
    HBASE-668   HBASE-533 broke build
+   HBASE-670   Historian deadlocks if regionserver is at global memory boundary
+               and is hosting .META.
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
