@@ -483,6 +483,9 @@ Trunk (unreleased changes)
     HADOOP-3455. Fix NPE in ipc.Client in case of connection failure and
     improve its synchronization. (hairong)
 
+    HADOOP-3240. Fix a testcase to not create files in the current directory.
+    Instead the file is created in the test directory (Mahadev Konar via ddas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

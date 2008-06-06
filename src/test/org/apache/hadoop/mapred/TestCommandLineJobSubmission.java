@@ -38,6 +38,7 @@ public class TestCommandLineJobSubmission extends TestCase {
   // params 
   static final Path input = new Path("/test/input/");
   static final Path output = new Path("/test/output");
+  File buildDir = new File(System.getProperty("test.build.data", "/tmp"));
   public void testJobShell() throws Exception {
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
@@ -52,13 +53,15 @@ public class TestCommandLineJobSubmission extends TestCase {
       stream.write("teststring".getBytes());
       stream.close();
       mr = new MiniMRCluster(2, fs.getUri().toString(), 1);
-      File f = new File("files_tmp");
+      File thisbuildDir = new File(buildDir, "jobCommand");
+      assertTrue("create build dir", thisbuildDir.mkdirs()); 
+      File f = new File(thisbuildDir, "files_tmp");
       FileOutputStream fstream = new FileOutputStream(f);
       fstream.write("somestrings".getBytes());
       fstream.close();
       String[] args = new String[6];
       args[0] = "-files";
-      args[1] = "files_tmp";
+      args[1] = f.toString();
       args[2] = "-libjars";
       // the testjob.jar as a temporary jar file 
       // rather than creating its own
@@ -68,6 +71,8 @@ public class TestCommandLineJobSubmission extends TestCase {
       int ret = ToolRunner.run(mr.createJobConf(),
                                new testshell.ExternalMapReduce(), args);
       assertTrue("not failed ", ret != -1);
+      f.delete();
+      thisbuildDir.delete();
     } finally {
       if (dfs != null) {dfs.shutdown();};
       if (mr != null) {mr.shutdown();};
