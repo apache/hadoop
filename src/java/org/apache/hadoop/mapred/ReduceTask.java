@@ -397,9 +397,8 @@ class ReduceTask extends Task {
     private long lastPollTime;
     
     /**
-     * A reference to the in memory file system for writing the map outputs to.
+     * A reference to the RamManager for writing the map outputs to.
      */
-    //private InMemoryFileSystem inMemFileSys;
     
     private RamManager ramManager;
     

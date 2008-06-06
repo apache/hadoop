@@ -35,6 +35,7 @@ import org.apache.hadoop.util.Progressable;
  * the API for reserving space in the FS. The uri of this filesystem starts with
  * ramfs:// .
  */
+@Deprecated
 public class InMemoryFileSystem extends ChecksumFileSystem {
   private static class RawInMemoryFileSystem extends FileSystem {
     private URI uri;

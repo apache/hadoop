@@ -251,6 +251,8 @@ Trunk (unreleased changes)
     HADOOP-2393. Moves the handling of dir deletions in the tasktracker to
     a separate thread. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3501. Deprecate InMemoryFileSystem. (cutting via omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
