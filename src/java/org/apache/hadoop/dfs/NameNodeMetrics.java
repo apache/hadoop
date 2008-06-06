@@ -57,6 +57,7 @@ public class NameNodeMetrics implements Updater {
     public MetricsIntValue safeModeTime = new MetricsIntValue("SafemodeTime");
     public MetricsIntValue fsImageLoadTime = 
                                         new MetricsIntValue("fsImageLoadTime");
+    public MetricsIntValue numBlocksCorrupted = new MetricsIntValue("BlocksCorrupted");
 
       
     NameNodeMetrics(Configuration conf, NameNode nameNode) {
@@ -101,6 +102,7 @@ public class NameNodeMetrics implements Updater {
         blockReport.pushMetric(metricsRecord);
         safeModeTime.pushMetric(metricsRecord);
         fsImageLoadTime.pushMetric(metricsRecord);
+        numBlocksCorrupted.pushMetric(metricsRecord);
       }
       metricsRecord.update();
     }

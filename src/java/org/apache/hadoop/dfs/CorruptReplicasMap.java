@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.dfs;
 
+import org.apache.hadoop.ipc.Server;
+
 import java.util.*;
 import java.io.IOException;
 
@@ -50,13 +52,17 @@ class CorruptReplicasMap{
       nodes.add(dn);
       NameNode.stateChangeLog.info("BLOCK NameSystem.addToCorruptReplicasMap: "+
                                    blk.getBlockName() +
-                                   " added as corrupt on " + dn.getName());
+                                   " added as corrupt on " + dn.getName() +
+                                   " by " + Server.getRemoteIp());
     } else {
       NameNode.stateChangeLog.info("BLOCK NameSystem.addToCorruptReplicasMap: "+
                                    "duplicate requested for " + 
                                    blk.getBlockName() + " to add as corrupt " +
-                                   "on " + dn.getName());
+                                   "on " + dn.getName() +
+                                   " by " + Server.getRemoteIp());
     }
+    NameNode.getNameNodeMetrics().numBlocksCorrupted.set(
+        corruptReplicasMap.size());
   }
 
   /**
@@ -68,8 +74,11 @@ class CorruptReplicasMap{
     FSNamesystem fsNamesystem = FSNamesystem.getFSNamesystem();
     if (fsNamesystem.blocksMap.contains(blk))
       return;
-    if (corruptReplicasMap != null)
+    if (corruptReplicasMap != null) {
       corruptReplicasMap.remove(blk);
+      NameNode.getNameNodeMetrics().numBlocksCorrupted.set(
+          corruptReplicasMap.size());
+    }
   }
 
   /**

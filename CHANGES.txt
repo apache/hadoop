@@ -81,6 +81,10 @@ Trunk (unreleased changes)
     HADOOP-3452. Change fsck to return non-zero status for a corrupt
     FileSystem. (lohit vijayarenu via cdouglas)
 
+    HADOOP-3193. Include the address of the client that found the corrupted
+    block in the log. Also include a CorruptedBlocks metric to track the size
+    of the corrupted block map. (cdouglas)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,
