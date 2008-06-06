@@ -242,6 +242,9 @@ Trunk (unreleased changes)
     from shuffle threads when it has scheduled enough, before scheduling more.
     (ddas)
 
+    HADOOP-2393. Moves the handling of dir deletions in the tasktracker to
+    a separate thread. (Amareshwari Sriramadasu via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
