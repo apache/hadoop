@@ -43,8 +43,9 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * version 11 changes string to JobID in getTaskCompletionEvents().
    * version 12 changes the counters representation for HADOOP-1915
    * version 13 added call getBuildVersion() for HADOOP-236
+   * Version 14: replaced getFilesystemName with getSystemDir for HADOOP-3135
    */
-  public static final long versionID = 13L;
+  public static final long versionID = 14L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;
@@ -73,13 +74,13 @@ interface InterTrackerProtocol extends VersionedProtocol {
   HeartbeatResponse heartbeat(TaskTrackerStatus status, 
                               boolean initialContact, boolean acceptNewTasks, short responseId)
     throws IOException;
-
+  
   /**
    * The task tracker calls this once, to discern where it can find
    * files referred to by the JobTracker
    */
   public String getFilesystemName() throws IOException;
-  
+
   /**
    * Report a problem to the job tracker.
    * @param taskTracker the name of the task tracker
@@ -102,6 +103,13 @@ interface InterTrackerProtocol extends VersionedProtocol {
    */
   TaskCompletionEvent[] getTaskCompletionEvents(JobID jobid, int fromEventId
       , int maxEvents) throws IOException;
+
+  /**
+   * Grab the jobtracker system directory path where job-specific files are to be placed.
+   * 
+   * @return the system directory where job-specific files are to be placed.
+   */
+  public String getSystemDir();
   
   
   /**
@@ -109,5 +117,3 @@ interface InterTrackerProtocol extends VersionedProtocol {
    */
   public String getBuildVersion() throws IOException;
 }
-
-

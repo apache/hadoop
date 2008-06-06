@@ -172,8 +172,9 @@ class JobInProgress {
                                                       +"/"+jobid + ".xml");
     this.localJarFile = default_job_conf.getLocalPath(JobTracker.SUBDIR
                                                       +"/"+ jobid + ".jar");
-    FileSystem fs = FileSystem.get(default_conf);
-    Path jobFile = new Path(default_conf.getSystemDir(), jobid + "/job.xml");
+    Path sysDir = new Path(this.jobtracker.getSystemDir());
+    FileSystem fs = sysDir.getFileSystem(default_conf);
+    Path jobFile = new Path(sysDir, jobid + "/job.xml");
     fs.copyToLocalFile(jobFile, localJobFile);
     conf = new JobConf(localJobFile);
     this.priority = conf.getJobPriority();
@@ -302,7 +303,8 @@ class JobInProgress {
     //
     String jobFile = profile.getJobFile();
 
-    FileSystem fs = FileSystem.get(conf);
+    Path sysDir = new Path(this.jobtracker.getSystemDir());
+    FileSystem fs = sysDir.getFileSystem(conf);
     DataInputStream splitFile =
       fs.open(new Path(conf.get("mapred.job.split.file")));
     JobClient.RawSplit[] splits;
@@ -1623,12 +1625,10 @@ class JobInProgress {
 
       // JobClient always creates a new directory with job files
       // so we remove that directory to cleanup
-      FileSystem fs = FileSystem.get(conf);
-      fs.delete(new Path(profile.getJobFile()).getParent(), true);
-        
       // Delete temp dfs dirs created if any, like in case of 
       // speculative exn of reduces.  
-      Path tempDir = new Path(conf.getSystemDir(), jobId.toString()); 
+      Path tempDir = new Path(jobtracker.getSystemDir(), jobId.toString());
+      FileSystem fs = tempDir.getFileSystem(conf);
       fs.delete(tempDir, true); 
 
       // delete the temporary directory in output directory

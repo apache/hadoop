@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.BlockLocation;
@@ -89,10 +90,12 @@ public class MultiFileSplit implements InputSplit {
 
   public String[] getLocations() throws IOException {
     HashSet<String> hostSet = new HashSet<String>();
+    JobClient jClient = new JobClient(job);
+    FileSystem fs = jClient.getFs();
     for (Path file : paths) {
-      BlockLocation[] blkLocations = FileSystem.get(job)
-        .getFileBlockLocations(file, 0, FileSystem.get(job)
-        .getFileStatus(file).getLen());
+      FileStatus status = fs.getFileStatus(file);
+      BlockLocation[] blkLocations = fs.getFileBlockLocations(status,
+                                          0, status.getLen());
       if (blkLocations != null && blkLocations.length > 0) {
         addToSet(hostSet, blkLocations[0].getHosts());
       }

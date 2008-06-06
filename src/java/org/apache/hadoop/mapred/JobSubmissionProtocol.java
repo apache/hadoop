@@ -39,8 +39,9 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * Version 7: added getAllJobs for HADOOP-2487
    * Version 8: change {job|task}id's to use corresponding objects rather that strings.
    * Version 9: change the counter representation for HADOOP-1915
+   * Version 10: added getSystemDir for HADOOP-3135
    */
-  public static final long versionID = 9L;
+  public static final long versionID = 10L;
 
   /**
    * Allocate a name for the job.
@@ -141,6 +142,13 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * @return an array of the diagnostic messages
    */
   public String[] getTaskDiagnostics(TaskAttemptID taskId) 
-  throws IOException;  
-  
+  throws IOException;
+
+  /**
+   * Grab the jobtracker system directory path where job-specific files are to be placed.
+   * 
+   * @return the system directory where job-specific files are to be placed.
+   */
+  public String getSystemDir();  
+
 }

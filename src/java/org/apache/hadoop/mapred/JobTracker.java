@@ -698,8 +698,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     this.conf.set("mapred.job.tracker.http.address", 
         infoBindAddress + ":" + this.infoPort); 
     LOG.info("JobTracker webserver: " + this.infoServer.getPort());
-    this.systemDir = jobConf.getSystemDir();
-
+    
     while (true) {
       try {
         // if we haven't contacted the namenode go ahead and do it
@@ -708,6 +707,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
         }
         // clean up the system dir, which will only work if hdfs is out of 
         // safe mode
+        if(systemDir == null) {
+          systemDir = new Path(getSystemDir());    
+        }
         fs.delete(systemDir, true);
         if (FileSystem.mkdirs(fs, systemDir, 
             new FsPermission(SYSTEM_DIR_PERMISSION))) {
@@ -747,7 +749,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
 
     //initializes the job status store
-    completedJobStatusStore = new CompletedJobStatusStore(conf);
+    completedJobStatusStore = new CompletedJobStatusStore(conf,fs);
 
     LOG.info("Starting RUNNING");
   }
@@ -1990,6 +1992,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     return v.toArray(new JobStatus[v.size()]);
   }
     
+  /**
+   * @see org.apache.hadoop.mapred.JobSubmissionProtocol#getSystemDir()
+   */
+  public String getSystemDir() {
+    Path sysDir = new Path(conf.get("mapred.system.dir", "/tmp/hadoop/mapred/system"));  
+    return fs.makeQualified(sysDir).toString();
+  }
+  
   ///////////////////////////////////////////////////////////////
   // JobTracker methods
   ///////////////////////////////////////////////////////////////
@@ -2322,4 +2332,5 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       System.exit(-1);
     }
   }
+
 }

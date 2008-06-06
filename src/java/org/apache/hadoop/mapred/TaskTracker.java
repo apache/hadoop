@@ -641,9 +641,10 @@ public class TaskTracker
     
     JobID jobId = t.getJobID();
     Path jobFile = new Path(t.getJobFile());
-    // Get size of JobFile.
-    // size is -1 if not present.
-    FileSystem fs = FileSystem.getNamed(jobClient.getFilesystemName(),fConf);
+    // Get sizes of JobFile and JarFile
+    // sizes are -1 if they are not present.
+    Path systemDir = new Path(jobClient.getSystemDir());
+    FileSystem fs = systemDir.getFileSystem(fConf);
     FileStatus status = null;
     long jobFileSize = -1;
     try {

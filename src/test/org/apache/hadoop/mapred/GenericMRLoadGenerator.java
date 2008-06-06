@@ -38,22 +38,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.mapred.ClusterStatus;
-import org.apache.hadoop.mapred.FileSplit;
-import org.apache.hadoop.mapred.InputFormat;
-import org.apache.hadoop.mapred.InputFormat;
-import org.apache.hadoop.mapred.InputSplit;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.Mapper;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.OutputFormat;
-import org.apache.hadoop.mapred.RecordReader;
-import org.apache.hadoop.mapred.Reducer;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.SequenceFileInputFormat;
-import org.apache.hadoop.mapred.SequenceFileRecordReader;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -151,9 +135,10 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
       confRandom(job);
     } else if (null != job.getClass("mapred.indirect.input.format", null)) {
       // specified IndirectInputFormat? Build src list
-      Path sysdir = job.getSystemDir();
+      JobClient jClient = new JobClient(job);  
+      Path sysdir = jClient.getSystemDir();
       Random r = new Random();
-      Path indirInputFile = new Path(job.getSystemDir(),
+      Path indirInputFile = new Path(sysdir,
           Integer.toString(r.nextInt(Integer.MAX_VALUE), 36) + "_files");
       job.set("mapred.indirect.input.file", indirInputFile.toString());
       SequenceFile.Writer writer = SequenceFile.createWriter(

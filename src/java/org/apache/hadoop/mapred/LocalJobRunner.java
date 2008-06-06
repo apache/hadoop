@@ -75,7 +75,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     }
     
     public Job(JobID jobid, JobConf conf) throws IOException {
-      this.file = new Path(conf.getSystemDir(), jobid + "/job.xml");
+      this.file = new Path(getSystemDir(), jobid + "/job.xml");
       this.id = jobid;
       this.mapoutputFile = new MapOutputFile(jobid);
       this.mapoutputFile.setConf(conf);
@@ -149,6 +149,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
                                    + " doesnt exist " );
             }
           }
+          map.setJobFile(localFile.toString());
           map.localizeConfiguration(localConf);
           map.setConf(localConf);
           map_tasks += 1;
@@ -192,6 +193,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
                                        + " doesnt exist ");
                 }
               }
+              reduce.setJobFile(localFile.toString());
               reduce.localizeConfiguration(localConf);
               reduce.setConf(localConf);
               reduce_tasks += 1;
@@ -387,4 +389,13 @@ class LocalJobRunner implements JobSubmissionProtocol {
   		throws IOException{
 	  return new String [0];
   }
+
+  /**
+   * @see org.apache.hadoop.mapred.JobSubmissionProtocol#getSystemDir()
+   */
+  public String getSystemDir() {
+    Path sysDir = new Path(conf.get("mapred.system.dir", "/tmp/hadoop/mapred/system"));  
+    return fs.makeQualified(sysDir).toString();
+  }
+
 }

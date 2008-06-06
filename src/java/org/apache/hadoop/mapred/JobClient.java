@@ -334,6 +334,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   }
 
   JobSubmissionProtocol jobSubmitClient;
+  Path sysDir = null;
   
   FileSystem fs = null;
 
@@ -406,8 +407,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    */
   public synchronized FileSystem getFs() throws IOException {
     if (this.fs == null) {
-      String fsName = jobSubmitClient.getFilesystemName();
-      this.fs = FileSystem.getNamed(fsName, getConf());
+      Path sysDir = getSystemDir();
+      this.fs = sysDir.getFileSystem(getConf());
     }
     return fs;
   }
@@ -664,7 +665,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      */
     
     JobID jobId = jobSubmitClient.getNewJobId();
-    Path submitJobDir = new Path(job.getSystemDir(), jobId.toString());
+    Path submitJobDir = new Path(getSystemDir(), jobId.toString());
     Path submitJarFile = new Path(submitJobDir, "job.jar");
     Path submitSplitFile = new Path(submitJobDir, "job.split");
     configureCommandLineOptions(job, submitJobDir, submitJarFile);
@@ -1417,6 +1418,38 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       System.out.printf("%s\t%d\t%d\t%s\n", job.getJobID(), job.getRunState(),
           job.getStartTime(), job.getUsername());
     }
+  }
+
+  /**
+   * Get status information about the max available Maps in the cluster.
+   *  
+   * @return the max available Maps in the cluster
+   * @throws IOException
+   */
+  public int getDefaultMaps() throws IOException {
+    return getClusterStatus().getMaxMapTasks();
+  }
+
+  /**
+   * Get status information about the max available Reduces in the cluster.
+   *  
+   * @return the max available Reduces in the cluster
+   * @throws IOException
+   */
+  public int getDefaultReduces() throws IOException {
+    return getClusterStatus().getMaxReduceTasks();
+  }
+
+  /**
+   * Grab the jobtracker system directory path where job-specific files are to be placed.
+   * 
+   * @return the system directory where job-specific files are to be placed.
+   */
+  public Path getSystemDir() {
+    if (sysDir == null) {
+      sysDir = new Path(jobSubmitClient.getSystemDir());
+    }
+    return sysDir;
   }
 
   /**

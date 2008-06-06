@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.util;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
@@ -54,11 +52,9 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.RecordReader;
-import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.SequenceFileRecordReader;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
 
 
@@ -315,7 +311,8 @@ public class HadoopArchives implements Tool {
     FileOutputFormat.setOutputPath(conf, outputPath);
     conf.set(DST_DIR_LABEL, outputPath.toString());
     final String randomId = CopyFiles.getRandomId();
-    Path jobDirectory = new Path(conf.getSystemDir(), NAME + "_" + randomId);
+    Path jobDirectory = new Path(new JobClient().getSystemDir(),
+                          NAME + "_" + randomId);
     conf.set(JOB_DIR_LABEL, jobDirectory.toString());
     //get a tmp directory for input splits
     FileSystem jobfs = jobDirectory.getFileSystem(conf);

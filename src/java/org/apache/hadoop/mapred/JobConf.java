@@ -186,10 +186,12 @@ public class JobConf extends Configuration {
   }
 
   /**
+   * @deprecated Use {@link JobClient#getSystemDir()} instead.
    * Get the system directory where job-specific files are to be placed.
    * 
    * @return the system directory where job-specific files are to be placed.
    */
+  @Deprecated
   public Path getSystemDir() {
     return new Path(get("mapred.system.dir", "/tmp/hadoop/mapred/system"));
   }

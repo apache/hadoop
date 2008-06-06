@@ -492,6 +492,9 @@ Trunk (unreleased changes)
     HADOOP-3496.  Fix failure in TestHarFileSystem.testArchives due to change
     in HADOOP-3095.  (tomwhite)
 
+    HADOOP-3135. Get the system directory from the JobTracker instead of from
+    the conf. (Subramaniam Krishnan via ddas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

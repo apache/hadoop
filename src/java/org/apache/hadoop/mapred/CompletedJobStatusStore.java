@@ -51,12 +51,12 @@ class CompletedJobStatusStore implements Runnable {
   private static long HOUR = 1000 * 60 * 60;
   private static long SLEEP_TIME = 1 * HOUR;
 
-  CompletedJobStatusStore(Configuration conf) throws IOException {
+  CompletedJobStatusStore(Configuration conf, FileSystem fs) throws IOException {
     active =
       conf.getBoolean("mapred.job.tracker.persist.jobstatus.active", false);
 
     if (active) {
-      fs = FileSystem.get(conf);
+      this.fs = fs;
       retainTime =
         conf.getInt("mapred.job.tracker.persist.jobstatus.hours", 0) * HOUR;
 

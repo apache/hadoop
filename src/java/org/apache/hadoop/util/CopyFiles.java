@@ -23,7 +23,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Stack;
+import java.util.StringTokenizer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -884,7 +889,8 @@ public class CopyFiles implements Tool {
     final boolean updateORoverwrite = setBooleans(jobConf, flags);
 
     final String randomId = getRandomId();
-    Path jobDirectory = new Path(jobConf.getSystemDir(), NAME + "_" + randomId);
+    JobClient jClient = new JobClient(jobConf);
+    Path jobDirectory = new Path(jClient.getSystemDir(), NAME + "_" + randomId);
     jobConf.set(JOB_DIR_LABEL, jobDirectory.toString());
 
     FileSystem dstfs = destPath.getFileSystem(conf);
