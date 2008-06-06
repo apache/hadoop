@@ -15,22 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.fs.s3;
 
-import java.net.URI;
+import java.io.IOException;
 
-import junit.framework.TestCase;
+public class Jets3tS3FileSystemContractTest
+  extends S3FileSystemContractBaseTest {
 
-import org.apache.hadoop.conf.Configuration;
-
-public class TestS3Uri extends TestCase {
-  public void testInvalidHostnameWithUnderscores() throws Exception {
-    FileSystemStore store = new Jets3tFileSystemStore();
-    try {
-      store.initialize(new URI("s3://a:b@c_d"), new Configuration());
-      fail("Should throw IllegalArgumentException");
-    } catch (IllegalArgumentException e) {
-      assertEquals("Invalid hostname in URI s3://a:b@c_d", e.getMessage());
-    }
+  @Override
+  FileSystemStore getFileSystemStore() throws IOException {
+    return new Jets3tFileSystemStore();
   }
+  
 }

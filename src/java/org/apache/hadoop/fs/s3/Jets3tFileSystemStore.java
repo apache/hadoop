@@ -78,49 +78,12 @@ class Jets3tFileSystemStore implements FileSystemStore {
     
     this.conf = conf;
     
-    if (uri.getHost() == null) {
-      throw new IllegalArgumentException("Invalid hostname in URI " + uri); 
-    }
-    
+    S3Credentials s3Credentials = new S3Credentials();
+    s3Credentials.initialize(uri, conf);
     try {
-      String accessKey = null;
-      String secretAccessKey = null;
-      String userInfo = uri.getUserInfo();
-      if (userInfo != null) {
-        int index = userInfo.indexOf(':');
-        if (index != -1) {
-          accessKey = userInfo.substring(0, index);
-          secretAccessKey = userInfo.substring(index + 1);
-        } else {
-          accessKey = userInfo;
-        }
-      }
-      if (accessKey == null) {
-        accessKey = conf.get("fs.s3.awsAccessKeyId");
-      }
-      if (secretAccessKey == null) {
-        secretAccessKey = conf.get("fs.s3.awsSecretAccessKey");
-      }
-      if (accessKey == null && secretAccessKey == null) {
-        throw new IllegalArgumentException("AWS " +
-                                           "Access Key ID and Secret Access Key " +
-                                           "must be specified as the username " +
-                                           "or password (respectively) of a s3 URL, " +
-                                           "or by setting the " +
-                                           "fs.s3.awsAccessKeyId or " +    	  		
-                                           "fs.s3.awsSecretAccessKey properties (respectively).");
-      } else if (accessKey == null) {
-        throw new IllegalArgumentException("AWS " +
-                                           "Access Key ID must be specified " +
-                                           "as the username of a s3 URL, or by setting the " +
-                                           "fs.s3.awsAccessKeyId property.");
-      } else if (secretAccessKey == null) {
-        throw new IllegalArgumentException("AWS " +
-                                           "Secret Access Key must be specified " +
-                                           "as the password of a s3 URL, or by setting the " +
-                                           "fs.s3.awsSecretAccessKey property.");    	  
-      }
-      AWSCredentials awsCredentials = new AWSCredentials(accessKey, secretAccessKey);
+      AWSCredentials awsCredentials =
+        new AWSCredentials(s3Credentials.getAccessKey(),
+            s3Credentials.getSecretAccessKey());
       this.s3Service = new RestS3Service(awsCredentials);
     } catch (S3ServiceException e) {
       if (e.getCause() instanceof IOException) {

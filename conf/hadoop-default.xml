@@ -182,6 +182,12 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>fs.s3n.impl</name>
+  <value>org.apache.hadoop.fs.s3native.NativeS3FileSystem</value>
+  <description>The FileSystem for s3n: (Native S3) uris.</description>
+</property>
+
+<property>
   <name>fs.kfs.impl</name>
   <value>org.apache.hadoop.fs.kfs.KosmosFileSystem</value>
   <description>The FileSystem for kfs: uris.</description>
@@ -558,15 +564,15 @@ creations/deletions), or "all".</description>
   <name>fs.s3.buffer.dir</name>
   <value>${hadoop.tmp.dir}/s3</value>
   <description>Determines where on the local filesystem the S3 filesystem
-  should store its blocks before it sends them to S3
-  or after it retrieves them from S3.
+  should store files before sending them to S3
+  (or after retrieving them from S3).
   </description>
 </property>
 
 <property>
   <name>fs.s3.maxRetries</name>
   <value>4</value>
-  <description>The maximum number of retries for reading or writing blocks to S3, 
+  <description>The maximum number of retries for reading or writing files to S3, 
   before we signal failure to the application.
   </description>
 </property>

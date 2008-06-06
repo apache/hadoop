@@ -23,19 +23,18 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.s3native.NativeS3FileSystem;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
@@ -43,20 +42,18 @@ import org.apache.hadoop.util.Progressable;
 
 /**
  * <p>
- * A {@link FileSystem} backed by <a href="http://aws.amazon.com/s3">Amazon S3</a>.
+ * A block-based {@link FileSystem} backed by
+ * <a href="http://aws.amazon.com/s3">Amazon S3</a>.
  * </p>
+ * @see NativeS3FileSystem
  */
 public class S3FileSystem extends FileSystem {
 
-  private static final long DEFAULT_BLOCK_SIZE = 64 * 1024 * 1024;
-  
   private URI uri;
 
   private FileSystemStore store;
 
-  private FileSystem localFs;
-
-  private Path workingDir = new Path("/user", System.getProperty("user.name"));
+  private Path workingDir;
 
   public S3FileSystem() {
     // set store in initialize()
@@ -79,7 +76,8 @@ public class S3FileSystem extends FileSystem {
     store.initialize(uri, conf);
     setConf(conf);
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());    
-    this.localFs = get(URI.create("file:///"), conf);
+    this.workingDir =
+      new Path("/user", System.getProperty("user.name")).makeQualified(this);
   }  
 
   private static FileSystemStore createDefaultStore(Configuration conf) {
@@ -131,15 +129,30 @@ public class S3FileSystem extends FileSystem {
   @Override
   public boolean mkdirs(Path path, FsPermission permission) throws IOException {
     Path absolutePath = makeAbsolute(path);
+    List<Path> paths = new ArrayList<Path>();
+    do {
+      paths.add(0, absolutePath);
+      absolutePath = absolutePath.getParent();
+    } while (absolutePath != null);
+    
+    boolean result = true;
+    for (Path p : paths) {
+      result &= mkdir(p);
+    }
+    return result;
+  }
+  
+  private boolean mkdir(Path path) throws IOException {
+    Path absolutePath = makeAbsolute(path);
     INode inode = store.retrieveINode(absolutePath);
     if (inode == null) {
       store.storeINode(absolutePath, INode.DIRECTORY_INODE);
     } else if (inode.isFile()) {
       throw new IOException(String.format(
-                                          "Can't make directory for path %s since it is a file.", absolutePath));
+          "Can't make directory for path %s since it is a file.",
+          absolutePath));
     }
-    Path parent = absolutePath.getParent();
-    return (parent == null || mkdirs(parent));
+    return true;
   }
 
   @Override
@@ -263,7 +276,10 @@ public class S3FileSystem extends FileSystem {
         if (inode == null) {
           return false;
         }
-        Path newDst = new Path(oldSrc.toString().replaceFirst(src.toString(), dst.toString()));
+        String oldSrcPath = oldSrc.toUri().getPath();
+        String srcPath = src.toUri().getPath();
+        String dstPath = dst.toUri().getPath();
+        Path newDst = new Path(oldSrcPath.replaceFirst(srcPath, dstPath));
         store.storeINode(newDst, inode);
         store.deleteINode(oldSrc);
       }

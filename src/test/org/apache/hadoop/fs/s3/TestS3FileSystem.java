@@ -21,15 +21,12 @@ package org.apache.hadoop.fs.s3;
 import java.io.IOException;
 import java.net.URI;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
 
-public class TestInMemoryS3FileSystem extends S3FileSystemBaseTest {
+public class TestS3FileSystem extends TestCase {
 
-  @Override
-  public FileSystemStore getFileSystemStore() throws IOException {
-    return new InMemoryFileSystemStore();
-  }
-  
   public void testInitialization() throws IOException {
     initializationTest("s3://a:b@c", "s3://a:b@c");
     initializationTest("s3://a:b@c/", "s3://a:b@c");
@@ -42,8 +39,10 @@ public class TestInMemoryS3FileSystem extends S3FileSystemBaseTest {
     initializationTest("s3://c/path", "s3://c");
   }
   
-  private void initializationTest(String initializationUri, String expectedUri) throws IOException {
-    S3FileSystem fs = new S3FileSystem(getFileSystemStore());
+  private void initializationTest(String initializationUri, String expectedUri)
+    throws IOException {
+    
+    S3FileSystem fs = new S3FileSystem(new InMemoryFileSystemStore());
     fs.initialize(URI.create(initializationUri), new Configuration());
     assertEquals(URI.create(expectedUri), fs.getUri());
   }

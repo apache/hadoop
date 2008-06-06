@@ -149,6 +149,8 @@ Trunk (unreleased changes)
     HADOOP-3230. Add ability to get counter values from command
     line. (tomwhite via omalley)
 
+    HADOOP-930. Add support for native S3 files.  (tomwhite via cutting)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().
