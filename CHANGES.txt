@@ -73,6 +73,7 @@ Hbase Change Log
    HBASE-579   Add hadoop 0.17.x
    HBASE-660   [Migration] addColumn/deleteColumn functionality in MetaUtils
    HBASE-632   HTable.getMetadata is very inefficient
+   HBASE-671   New UI page displaying all regions in a table should be sorted
 
   NEW FEATURES
    HBASE-47    Option to set TTL for columns in hbase

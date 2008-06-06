@@ -21,10 +21,12 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -383,8 +385,8 @@ public class HTable {
    * @throws IOException
    */
   public Map<HRegionInfo, HServerAddress> getRegionsInfo() throws IOException {
-    final HashMap<HRegionInfo, HServerAddress> regionMap =
-      new HashMap<HRegionInfo, HServerAddress>();
+    final Map<HRegionInfo, HServerAddress> regionMap =
+      new TreeMap<HRegionInfo, HServerAddress>();
 
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
       public boolean processRow(@SuppressWarnings("unused") RowResult rowResult,
