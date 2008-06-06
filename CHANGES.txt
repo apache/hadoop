@@ -146,6 +146,9 @@ Trunk (unreleased changes)
     HADOOP-3460. Add SequenceFileAsBinaryOutputFormat to permit direct
     writes of serialized data. (Koji Noguchi via cdouglas)
 
+    HADOOP-3230. Add ability to get counter values from command
+    line. (tomwhite via omalley)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().

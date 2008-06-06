@@ -58,6 +58,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.mapred.Counters.Counter;
+import org.apache.hadoop.mapred.Counters.Group;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -1173,6 +1175,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       System.err.println(prefix + "[" + cmd + " <job-file>]");
     } else if ("-status".equals(cmd) || "-kill".equals(cmd)) {
       System.err.println(prefix + "[" + cmd + " <job-id>]");
+    } else if ("-counter".equals(cmd)) {
+      System.err.println(prefix + "[" + cmd + " <job-id> <group-name> <counter-name>]");
     } else if ("-events".equals(cmd)) {
       System.err.println(prefix + "[" + cmd + " <job-id> <from-event-#> <#-of-events>]");
     } else if ("-history".equals(cmd)) {
@@ -1185,6 +1189,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       System.err.printf(prefix + "<command> <args>\n");
       System.err.printf("\t[-submit <job-file>]\n");
       System.err.printf("\t[-status <job-id>]\n");
+      System.err.printf("\t[-counter <job-id> <group-name> <counter-name>]\n");
       System.err.printf("\t[-kill <job-id>]\n");
       System.err.printf("\t[-events <job-id> <from-event-#> <#-of-events>]\n");
       System.err.printf("\t[-history <jobOutputDir>]\n");
@@ -1207,9 +1212,12 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     String jobid = null;
     String taskid = null;
     String outputDir = null;
+    String counterGroupName = null;
+    String counterName = null;
     int fromEvent = 0;
     int nEvents = 0;
     boolean getStatus = false;
+    boolean getCounter = false;
     boolean killJob = false;
     boolean listEvents = false;
     boolean viewHistory = false;
@@ -1232,6 +1240,15 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       }
       jobid = argv[1];
       getStatus = true;
+    } else if("-counter".equals(cmd)) {
+      if (argv.length != 4) {
+        displayUsage(cmd);
+        return exitCode;
+      }
+      getCounter = true;
+      jobid = argv[1];
+      counterGroupName = argv[2];
+      counterName = argv[3];
     } else if ("-kill".equals(cmd)) {
       if (argv.length != 2) {
         displayUsage(cmd);
@@ -1312,6 +1329,17 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           System.out.println();
           System.out.println(job);
           System.out.println(job.getCounters());
+          exitCode = 0;
+        }
+      } else if (getCounter) {
+        RunningJob job = getJob(JobID.forName(jobid));
+        if (job == null) {
+          System.out.println("Could not find job " + jobid);
+        } else {
+          Counters counters = job.getCounters();
+          Group group = counters.getGroup(counterGroupName);
+          Counter counter = group.getCounterForName(counterName);
+          System.out.println(counter.getCounter());
           exitCode = 0;
         }
       } else if (killJob) {
