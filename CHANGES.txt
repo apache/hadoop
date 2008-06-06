@@ -473,6 +473,9 @@ Trunk (unreleased changes)
     HADOOP-3493. Fix TestStreamingFailure to use FileUtil.fullyDelete to
     ensure correct cleanup. (Lohit Vijayarenu via acmurthy) 
 
+    HADOOP-3455. Fix NPE in ipc.Client in case of connection failure and
+    improve its synchronization. (hairong)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

@@ -208,6 +208,19 @@ public class TestIPC extends TestCase {
     }
   }
 	
+  public void testStandAloneClient() throws Exception {
+    testParallel(10, false, 2, 4, 2, 4, 100);
+    Client client = new Client(LongWritable.class, conf);
+    boolean hasException = false;
+    try {
+      client.call(new LongWritable(RANDOM.nextLong()), 
+          new InetSocketAddress("127.0.0.1", 10));
+    } catch (IOException e) {
+      hasException = true;
+    }
+    assertTrue (hasException);
+  }
+
   public static void main(String[] args) throws Exception {
 
     //new TestIPC("test").testSerial(5, false, 2, 10, 1000);
