@@ -504,6 +504,10 @@ Trunk (unreleased changes)
     HADOOP-3503. Fix a race condition when client and namenode start simultaneous
     recovery of the same block.  (dhruba & Tsz Wo (Nicholas), SZE)
 
+    HADOOP-3440. Fixes DistributedCache to not create symlinks for paths which
+    don't have fragments even when createSymLink is true. 
+    (Abhijit Bagri via ddas) 
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

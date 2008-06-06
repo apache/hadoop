@@ -297,6 +297,9 @@ public class DistributedCache {
                                     Path currentWorkDir) 
   throws IOException {
     boolean doSymlink = getSymlink(conf);
+    if(cache.getFragment() == null) {
+    	doSymlink = false;
+    }
     FileSystem fs = getFileSystem(cache, conf);
     String link = currentWorkDir.toString() + Path.SEPARATOR + cache.getFragment();
     File flink = new File(link);
