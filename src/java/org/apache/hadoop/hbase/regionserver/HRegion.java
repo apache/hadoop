@@ -1822,7 +1822,11 @@ public class HRegion implements HConstants {
         }
         
         filtered = filter == null ? false : filter.filterRow(results);
-
+        
+        if (filter != null && filter.filterAllRemaining()) {
+          moreToFollow = false;
+        }
+        
         if (moreToFollow) {
           if (filter != null) {
             filter.rowProcessed(filtered, key.getRow());
