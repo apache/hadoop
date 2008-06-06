@@ -1816,29 +1816,34 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     public void run() {
       try {
         while (fsRunning) {
-          List <DatanodeDescriptor> datanodes = 
-            new ArrayList<DatanodeDescriptor>(resolutionQueue.size());
-          // Block if the queue is empty
-          datanodes.add(resolutionQueue.take());
-          resolutionQueue.drainTo(datanodes);
-          List<String> dnHosts = new ArrayList<String>(datanodes.size());
-          for (DatanodeDescriptor d : datanodes) {
-            dnHosts.add(d.getName());
-          }
-          List<String> rName = dnsToSwitchMapping.resolve(dnHosts);
-          if (rName == null) {
-            LOG.error("The resolve call returned null! Using " + 
-                NetworkTopology.DEFAULT_RACK + " for some hosts");
-            rName = new ArrayList<String>(dnHosts.size());
-            for (int i = 0; i < dnHosts.size(); i++) {
-              rName.add(NetworkTopology.DEFAULT_RACK);
+          try {
+            List <DatanodeDescriptor> datanodes = 
+              new ArrayList<DatanodeDescriptor>(resolutionQueue.size());
+            // Block if the queue is empty
+            datanodes.add(resolutionQueue.take());
+            resolutionQueue.drainTo(datanodes);
+            List<String> dnHosts = new ArrayList<String>(datanodes.size());
+            for (DatanodeDescriptor d : datanodes) {
+              dnHosts.add(d.getName());
             }
-          }
-          int i = 0;
-          for (String m : rName) {
-            DatanodeDescriptor d = datanodes.get(i++); 
-            d.setNetworkLocation(m);
-            clusterMap.add(d);
+            List<String> rName = dnsToSwitchMapping.resolve(dnHosts);
+            if (rName == null) {
+              LOG.error("The resolve call returned null! Using " + 
+                  NetworkTopology.DEFAULT_RACK + " for some hosts");
+              rName = new ArrayList<String>(dnHosts.size());
+              for (int i = 0; i < dnHosts.size(); i++) {
+                rName.add(NetworkTopology.DEFAULT_RACK);
+              }
+            }
+            int i = 0;
+            for (String m : rName) {
+              DatanodeDescriptor d = datanodes.get(i++); 
+              d.setNetworkLocation(m);
+              clusterMap.add(d);
+            }
+          } catch (InterruptedException e) {
+              FSNamesystem.LOG.debug("ResolutionMonitor thread received " +
+                                     "InterruptException. " + e);
           }
         }
       } catch (Exception e) {

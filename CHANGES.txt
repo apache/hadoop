@@ -528,6 +528,9 @@ Trunk (unreleased changes)
 
     HADOOP-3509. Fix NPE in FSNamesystem.close. (Tsz Wo (Nicholas), SZE via shv)
 
+    HADOOP-3491. Name-node shutdown causes InterruptedException in 
+    ResolutionMonitor. (Lohit Vijayarenu via shv)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
