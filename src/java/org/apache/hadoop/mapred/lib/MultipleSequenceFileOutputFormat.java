@@ -38,6 +38,7 @@ extends MultipleOutputFormat<WritableComparable, Writable> {
   private SequenceFileOutputFormat theSequenceFileOutputFormat = null;
   
   @Override
+  @SuppressWarnings("unchecked") 
   protected RecordWriter<WritableComparable, Writable> getBaseRecordWriter(
                                                          FileSystem fs,
                                                          JobConf job,

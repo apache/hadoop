@@ -35,10 +35,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.*;
 
 /** An {@link OutputFormat} that writes {@link SequenceFile}s. */
-public class SequenceFileOutputFormat 
-extends FileOutputFormat<WritableComparable, Writable> {
+public class SequenceFileOutputFormat <K extends WritableComparable,
+                                       V extends Writable>
+extends FileOutputFormat<K, V> {
 
-  public RecordWriter<WritableComparable, Writable> getRecordWriter(
+  public RecordWriter<K, V> getRecordWriter(
                                           FileSystem ignored, JobConf job,
                                           String name, Progressable progress)
     throws IOException {
@@ -68,9 +69,9 @@ extends FileOutputFormat<WritableComparable, Writable> {
                                 codec,
                                 progress);
 
-    return new RecordWriter<WritableComparable, Writable>() {
+    return new RecordWriter<K, V>() {
 
-        public void write(WritableComparable key, Writable value)
+        public void write(K key, V value)
           throws IOException {
 
           out.append(key, value);

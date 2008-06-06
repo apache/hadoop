@@ -143,6 +143,9 @@ Trunk (unreleased changes)
 
     HADOOP-3307. Support for Archives in Hadoop. (Mahadev Konar via ddas)
 
+    HADOOP-3460. Add SequenceFileAsBinaryOutputFormat to permit direct
+    writes of serialized data. (Koji Noguchi via cdouglas)
+
   IMPROVEMENTS
    
     HADOOP-2928. Remove deprecated FileSystem.getContentLength().
