@@ -373,8 +373,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   /** {@inheritDoc} */
-  public long nextGenerationStamp() {
-    return namesystem.nextGenerationStamp();
+  public long nextGenerationStamp(Block block) throws IOException{
+    return namesystem.nextGenerationStampForBlock(block);
   }
 
   /** {@inheritDoc} */

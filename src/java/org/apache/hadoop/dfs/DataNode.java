@@ -3067,9 +3067,7 @@ public class DataNode extends Configured
 
   /** {@inheritDoc} */
   public void updateBlock(Block oldblock, Block newblock, boolean finalize) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("oldblock=" + oldblock + ", newblock=" + newblock);
-    }
+    LOG.info("oldblock=" + oldblock + ", newblock=" + newblock);
     data.updateBlock(oldblock, newblock);
     if (finalize) {
       data.finalizeBlock(newblock);
@@ -3097,9 +3095,7 @@ public class DataNode extends Configured
   /** {@inheritDoc} */
   public Block recoverBlock(Block block, DatanodeInfo[] targets
       ) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("recoverBlock for block " + block);
-    }
+    LOG.info("Client invoking recoverBlock for block " + block);
     return LeaseManager.recoverBlock(block, targets, namenode, 
                                      getConf(), false);
   }

@@ -33,7 +33,7 @@ class BlocksMap {
     private INodeFile          inode;
 
     /**
-     * This array contains trpilets of references.
+     * This array contains triplets of references.
      * For each i-th data-node the block belongs to
      * triplets[3*i] is the reference to the DatanodeDescriptor
      * and triplets[3*i+1] and triplets[3*i+2] are references 
@@ -136,23 +136,6 @@ class BlocksMap {
           return idx+1;
       }
       return 0;
-    }
-
-    /** Update this object */
-    void update(long newgenerationstamp, long newlength,
-        DatanodeDescriptor[] newtargets) {
-      //remove all nodes  
-      for(int n = numNodes(); n >= 0; ) {
-        removeNode(--n);
-      }
-
-      //add all targets  
-      for(DatanodeDescriptor d : newtargets) {
-        addNode(d);
-      }
-
-      generationStamp = newgenerationstamp;
-      len = newlength;
     }
 
     /**
@@ -339,15 +322,30 @@ class BlocksMap {
 
   /**
    * Remove INode reference from block b.
-   * Remove the block from the block map
-   * only if it does not belong to any file and data-nodes.
+   * If it does not belong to any file and data-nodes,
+   * then remove the block from the block map.
    */
-  public void removeINode(Block b) {
+  void removeINode(Block b) {
     BlockInfo info = map.get(b);
     if (info != null) {
       info.inode = null;
       if (info.getDatanode(0) == null) {  // no datanodes left
         map.remove(b);  // remove block from the map
+      }
+    }
+  }
+
+  /**
+   * Remove the block from the block map.
+   * If the mapped BlockInfo is not null,
+   * it also removes the datanodes associated with the BlockInfo. 
+   */
+  void remove(Block b) {
+    BlockInfo info = map.remove(b);
+    if (info != null) {
+      info.inode = null;
+      for(int n = info.numNodes(); n >= 0; ) {
+        info.removeNode(--n);
       }
     }
   }

@@ -495,6 +495,9 @@ Trunk (unreleased changes)
     HADOOP-3135. Get the system directory from the JobTracker instead of from
     the conf. (Subramaniam Krishnan via ddas)
 
+    HADOOP-3503. Fix a race condition when client and namenode start simultaneous
+    recovery of the same block.  (dhruba & Tsz Wo (Nicholas), SZE)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

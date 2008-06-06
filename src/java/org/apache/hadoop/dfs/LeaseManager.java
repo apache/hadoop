@@ -82,6 +82,10 @@ class LeaseManager {
   /** @return the lease containing src */
   Lease getLeaseByPath(String src) {return sortedLeasesByPath.get(src);}
 
+  /** list of blocks being recovered */
+  private static Map<Block, Block> ongoingRecovery = new HashMap<Block, Block>();
+
+
   /** @return the number of leases currently in the system */
   synchronized int countLease() {return sortedLeases.size();}
 
@@ -416,39 +420,60 @@ class LeaseManager {
   static Block recoverBlock(Block block, DatanodeID[] datanodeids,
       DatanodeProtocol namenode, Configuration conf,
       boolean closeFile) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("block=" + block
-          + ", datanodeids=" + Arrays.asList(datanodeids));
-    }
-    List<BlockRecord> syncList = new ArrayList<BlockRecord>();
-    long minlength = Long.MAX_VALUE;
-    int errorCount = 0;
 
-    //check generation stamps
-    for(DatanodeID id : datanodeids) {
-      try {
-        InterDatanodeProtocol datanode
-            = DataNode.createInterDataNodeProtocolProxy(id, conf);
-        BlockMetaDataInfo info = datanode.getBlockMetaDataInfo(block);
-        if (info != null && info.getGenerationStamp() >= block.generationStamp) {
-          syncList.add(new BlockRecord(id, datanode, new Block(info)));
-          if (info.len < minlength) {
-            minlength = info.len;
+    // If the block is already being recovered, then skip recovering it.
+    // This can happen if the namenode and client start recovering the same
+    // file at the same time.
+    synchronized (ongoingRecovery) {
+      Block tmp = new Block();
+      tmp.set(block.blkid, block.len, GenerationStamp.WILDCARD_STAMP);
+      if (ongoingRecovery.get(tmp) != null) {
+        String msg = "Block " + block + " is already being recovered, " +
+                     " ignoring this request to recover it.";
+        LOG.info(msg);
+        throw new IOException(msg);
+      }
+      ongoingRecovery.put(block, block);
+    }
+    try {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("block=" + block
+            + ", datanodeids=" + Arrays.asList(datanodeids));
+      }
+      List<BlockRecord> syncList = new ArrayList<BlockRecord>();
+      long minlength = Long.MAX_VALUE;
+      int errorCount = 0;
+
+      //check generation stamps
+      for(DatanodeID id : datanodeids) {
+        try {
+          InterDatanodeProtocol datanode
+              = DataNode.createInterDataNodeProtocolProxy(id, conf);
+          BlockMetaDataInfo info = datanode.getBlockMetaDataInfo(block);
+          if (info != null && info.getGenerationStamp() >= block.generationStamp) {
+            syncList.add(new BlockRecord(id, datanode, new Block(info)));
+            if (info.len < minlength) {
+              minlength = info.len;
+            }
           }
+        } catch (IOException e) {
+          ++errorCount;
+          InterDatanodeProtocol.LOG.warn(
+              "Failed to getBlockMetaDataInfo for block (=" + block 
+              + ") from datanode (=" + id + ")", e);
         }
-      } catch (IOException e) {
-        ++errorCount;
-        InterDatanodeProtocol.LOG.warn(
-            "Failed to getBlockMetaDataInfo for block (=" + block 
-            + ") from datanode (=" + id + ")", e);
+      }
+
+      if (syncList.isEmpty() && errorCount > 0) {
+        throw new IOException("All datanodes failed: block=" + block
+            + ", datanodeids=" + Arrays.asList(datanodeids));
+      }
+      return syncBlock(block, minlength, syncList, namenode, closeFile);
+    } finally {
+      synchronized (ongoingRecovery) {
+        ongoingRecovery.remove(block);
       }
     }
-
-    if (syncList.isEmpty() && errorCount > 0) {
-      throw new IOException("All datanodes failed: block=" + block
-          + ", datanodeids=" + Arrays.asList(datanodeids));
-    }
-    return syncBlock(block, minlength, syncList, namenode, closeFile);
   }
 
   /** Block synchronization */
@@ -470,7 +495,7 @@ class LeaseManager {
 
     List<DatanodeID> successList = new ArrayList<DatanodeID>();
 
-    long generationstamp = namenode.nextGenerationStamp();
+    long generationstamp = namenode.nextGenerationStamp(block);
     Block newblock = new Block(block.blkid, minlength, generationstamp);
 
     for(BlockRecord r : syncList) {

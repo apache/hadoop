@@ -31,7 +31,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 15: added DNA_RECOVERBLOCK, nextGenerationStamp and commitBlockSynchronization
+   * 16: Block parameter added to nextGenerationStamp().
    */
   public static final long versionID = 15L;
   
@@ -135,9 +135,10 @@ interface DatanodeProtocol extends VersionedProtocol {
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException;
   
   /**
-   * @return the next GenerationStamp
+   * @return the next GenerationStamp to be associated with the specified
+   * block. 
    */
-  public long nextGenerationStamp() throws IOException;
+  public long nextGenerationStamp(Block block) throws IOException;
 
   /**
    * Commit block synchronization in lease recovery

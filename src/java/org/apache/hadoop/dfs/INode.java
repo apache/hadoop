@@ -1029,6 +1029,16 @@ class INodeFileUnderConstruction extends INodeFile {
     targets = null;
   }
 
+  void setLastBlock(BlockInfo newblock, DatanodeDescriptor[] newtargets
+      ) throws IOException {
+    if (blocks == null) {
+      throw new IOException("Trying to update non-existant block (newblock="
+          + newblock + ")");
+    }
+    blocks[blocks.length - 1] = newblock;
+    setTargets(newtargets);
+  }
+
   /**
    * Initialize lease recovery for this object
    */
@@ -1048,6 +1058,8 @@ class INodeFileUnderConstruction extends INodeFile {
       if (targets[j].isAlive) {
         DatanodeDescriptor primary = targets[primaryNodeIndex = j]; 
         primary.addBlockToBeRecovered(blocks[blocks.length - 1], targets);
+        NameNode.stateChangeLog.info("BLOCK* " + blocks[blocks.length - 1]
+          + " recovery started.");
       }
     }
   }
