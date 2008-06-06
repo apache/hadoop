@@ -486,6 +486,9 @@ Trunk (unreleased changes)
     HADOOP-3240. Fix a testcase to not create files in the current directory.
     Instead the file is created in the test directory (Mahadev Konar via ddas)
 
+    HADOOP-3496.  Fix failure in TestHarFileSystem.testArchives due to change
+    in HADOOP-3095.  (tomwhite)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

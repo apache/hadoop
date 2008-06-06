@@ -318,29 +318,32 @@ public class HarFileSystem extends FilterFileSystem {
   
   /**
    * get block locations from the underlying fs
-   * @param f the input path for the blocks
+   * @param file the input filestatus to get block locations
    * @param start the start in the file
    * @param len the length in the file
    * @return block locations for this segment of file
    * @throws IOException
    */
   @Override
-  public BlockLocation[] getFileBlockLocations(Path f, long start,
+  public BlockLocation[] getFileBlockLocations(FileStatus file, long start,
       long len) throws IOException {
     // need to look up the file in the underlying fs
     // look up the index 
     
     // make sure this is a prt of this har filesystem
-    Path p = makeQualified(f);
+    Path p = makeQualified(file.getPath());
     Path harPath = getPathInHar(p);
     String line = fileStatusInIndex(harPath);
     if (line == null)  {
-      throw new FileNotFoundException("File " + f + " not found");
+      throw new FileNotFoundException("File " + file.getPath() + " not found");
     }
     HarStatus harStatus = new HarStatus(line);
-    if (harStatus.isDir()) 
+    if (harStatus.isDir()) {
       return new BlockLocation[0];
-    return fs.getFileBlockLocations(new Path(archivePath, harStatus.getPartName()), 
+    }
+    FileStatus fsFile = fs.getFileStatus(new Path(archivePath,
+        harStatus.getPartName()));
+    return fs.getFileBlockLocations(fsFile, 
         harStatus.getStartIndex(), harStatus.getLength());
   }
   
