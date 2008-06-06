@@ -38,7 +38,7 @@ import org.apache.hadoop.dfs.BlocksMap.BlockInfo;
  * and logged to disk.
  * 
  *************************************************/
-class FSDirectory implements FSConstants {
+class FSDirectory implements FSConstants, Closeable {
 
   FSNamesystem namesystem = null;
   final INodeDirectoryWithQuota rootDir;

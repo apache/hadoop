@@ -21,6 +21,8 @@ package org.apache.hadoop.io;
 import java.io.*;
 import java.net.Socket;
 
+import org.apache.commons.logging.Log;
+
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -121,17 +123,30 @@ public class IOUtils {
   }
   
   /**
+   * Close the Closeable objects.
+   * Log {@link IOException} if there is any. 
+   * @param closeables the objects to close
+   */
+  public static void close(Log log, java.io.Closeable... closeables) {
+    for(java.io.Closeable c : closeables) {
+      if (c != null) {
+        try {
+          c.close();
+        } catch(IOException e) {
+          if (log != null && log.isDebugEnabled()) {
+            log.debug("Exception in closing " + c, e);
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Closes the stream ignoring {@link IOException} 
    * @param stream the Stream to close
    */
   public static void closeStream( java.io.Closeable stream ) {
-    // avoids try { close() } dance
-    if ( stream != null ) {
-      try {
-        stream.close();
-      } catch ( IOException ignored ) {
-      }
-    }
+    close(null, stream);
   }
   
   /**

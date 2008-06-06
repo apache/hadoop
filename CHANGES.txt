@@ -526,6 +526,8 @@ Trunk (unreleased changes)
 
     HADOOP-3489. Fix NPE in SafeModeMonitor. (Lohit Vijayarenu via shv)
 
+    HADOOP-3509. Fix NPE in FSNamesystem.close. (Tsz Wo (Nicholas), SZE via shv)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

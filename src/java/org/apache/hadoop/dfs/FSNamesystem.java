@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.io.IOUtils;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -250,6 +251,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
     try {
       initialize(nn, conf);
     } catch(IOException e) {
+      LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
       throw e;
     }
@@ -461,11 +463,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         }
       } catch (InterruptedException ie) {
       } finally {
-        try {
-          dir.close();
-        } catch (IOException ex) {
-          // do nothing
-        }
+        IOUtils.close(LOG, dir);
       }
     }
   }
