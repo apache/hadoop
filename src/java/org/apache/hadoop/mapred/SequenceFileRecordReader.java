@@ -28,9 +28,7 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** An {@link RecordReader} for {@link SequenceFile}s. */
-public class SequenceFileRecordReader<K extends WritableComparable,
-                                      V extends Writable>
-  implements RecordReader<K, V> {
+public class SequenceFileRecordReader<K, V> implements RecordReader<K, V> {
   
   private SequenceFile.Reader in;
   private long start;
@@ -55,11 +53,11 @@ public class SequenceFileRecordReader<K extends WritableComparable,
 
 
   /** The class of key that must be passed to {@link
-   * #next(WritableComparable,Writable)}.. */
+   * #next(Object, Object)}.. */
   public Class getKeyClass() { return in.getKeyClass(); }
 
   /** The class of value that must be passed to {@link
-   * #next(WritableComparable,Writable)}.. */
+   * #next(Object, Object)}.. */
   public Class getValueClass() { return in.getValueClass(); }
   
   @SuppressWarnings("unchecked")
@@ -76,11 +74,14 @@ public class SequenceFileRecordReader<K extends WritableComparable,
   public synchronized boolean next(K key, V value) throws IOException {
     if (!more) return false;
     long pos = in.getPosition();
-    boolean eof = in.next(key, value);
+    boolean remaining = (in.next(key) != null);
+    if (remaining) {
+      getCurrentValue(value);
+    }
     if (pos >= end && in.syncSeen()) {
       more = false;
     } else {
-      more = eof;
+      more = remaining;
     }
     return more;
   }
@@ -89,11 +90,11 @@ public class SequenceFileRecordReader<K extends WritableComparable,
     throws IOException {
     if (!more) return false;
     long pos = in.getPosition();
-    boolean eof = in.next(key);
+    boolean remaining = (in.next(key) != null);
     if (pos >= end && in.syncSeen()) {
       more = false;
     } else {
-      more = eof;
+      more = remaining;
     }
     return more;
   }

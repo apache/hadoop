@@ -19,8 +19,6 @@
 package org.apache.hadoop.mapred.lib;
 
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.MapRunnable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Mapper;
@@ -49,10 +47,7 @@ import java.util.concurrent.*;
  * value is 10 threads.
  * <p>
  */
-public class MultithreadedMapRunner<K1 extends WritableComparable,
-                                    V1 extends Writable,
-                                    K2 extends WritableComparable,
-                                    V2 extends Writable>
+public class MultithreadedMapRunner<K1, V1, K2, V2>
     implements MapRunnable<K1, V1, K2, V2> {
 
   private static final Log LOG =

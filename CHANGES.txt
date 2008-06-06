@@ -72,11 +72,12 @@ Trunk (unreleased changes)
     (hairong)
 
     HADOOP-3459. Change in the output format of dfs -ls to more closely match
-    /bin/ls. New format is: perm repl owner group size date name (Mukund Madhugiri via omally)
+    /bin/ls. New format is: perm repl owner group size date name
+    (Mukund Madhugiri via omally)
 
-    HADOOP-3113. An fsync invoked on a HDFS file really really persists data! The datanode
-    moves blocks in the tmp directory to the real block directory on a datanode-restart.
-    (dhruba)
+    HADOOP-3113. An fsync invoked on a HDFS file really really
+    persists data! The datanode moves blocks in the tmp directory to 
+    the real block directory on a datanode-restart. (dhruba)
 
     HADOOP-3452. Change fsck to return non-zero status for a corrupt
     FileSystem. (lohit vijayarenu via cdouglas)
@@ -156,6 +157,9 @@ Trunk (unreleased changes)
     HADOOP-930. Add support for native S3 files.  (tomwhite via cutting)
 
     HADOOP-3502. Quota API needs documentation in Forrest. (hairong)
+
+    HADOOP-3413. Allow SequenceFile.Reader to use serialization
+    framework. (tomwhite via omalley)
 
   IMPROVEMENTS
    

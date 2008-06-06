@@ -26,8 +26,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileUtil;
 
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
@@ -35,9 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.*;
 
 /** An {@link OutputFormat} that writes {@link SequenceFile}s. */
-public class SequenceFileOutputFormat <K extends WritableComparable,
-                                       V extends Writable>
-extends FileOutputFormat<K, V> {
+public class SequenceFileOutputFormat <K,V> extends FileOutputFormat<K, V> {
 
   public RecordWriter<K, V> getRecordWriter(
                                           FileSystem ignored, JobConf job,

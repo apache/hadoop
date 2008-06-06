@@ -24,8 +24,6 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.RecordWriter;
@@ -39,10 +37,10 @@ import org.apache.hadoop.util.Progressable;
  * 
  * Case one: This class is used for a map reduce job with at least one reducer.
  * The reducer wants to write data to different files depending on the actual
- * keys. It is assumed that a key (or value) enocodes the actual key (value)
+ * keys. It is assumed that a key (or value) encodes the actual key (value)
  * and the desired location for the actual key (value).
  * 
- * Case two: Tis class is used for a map only job. The job wants to use an
+ * Case two: This class is used for a map only job. The job wants to use an
  * output file name that is either a part of the input file name of the input
  * data, or some derivation of it.
  * 
@@ -50,8 +48,7 @@ import org.apache.hadoop.util.Progressable;
  * output file name that depends on both the keys and the input file name,
  * 
  */
-public abstract class MultipleOutputFormat<K extends WritableComparable,
-                                           V extends Writable>
+public abstract class MultipleOutputFormat<K, V>
 extends FileOutputFormat<K, V> {
 
   /**

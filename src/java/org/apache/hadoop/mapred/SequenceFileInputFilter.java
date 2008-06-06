@@ -20,7 +20,6 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
 import java.security.DigestException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -29,11 +28,8 @@ import java.util.regex.PatternSyntaxException;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -42,8 +38,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  * 
  */
 
-public class SequenceFileInputFilter<K extends WritableComparable,
-                                     V extends Writable>
+public class SequenceFileInputFilter<K, V>
   extends SequenceFileInputFormat<K, V> {
   
   final private static String FILTER_CLASS = "sequencefile.filter.class";
@@ -89,11 +84,11 @@ public class SequenceFileInputFilter<K extends WritableComparable,
      * @param key record key
      * @return true if a record is accepted; return false otherwise
      */
-    public abstract boolean accept(Writable key);
+    public abstract boolean accept(Object key);
   }
     
   /**
-   * base calss for Filters
+   * base class for Filters
    */
   public static abstract class FilterBase implements Filter {
     Configuration conf;
@@ -136,9 +131,9 @@ public class SequenceFileInputFilter<K extends WritableComparable,
 
     /** Filtering method
      * If key matches the regex, return true; otherwise return false
-     * @see org.apache.hadoop.mapred.SequenceFileInputFilter.Filter#accept(org.apache.hadoop.io.Writable)
+     * @see org.apache.hadoop.mapred.SequenceFileInputFilter.Filter#accept(Object)
      */
-    public boolean accept(Writable key) {
+    public boolean accept(Object key) {
       return p.matcher(key.toString()).matches();
     }
   }
@@ -180,9 +175,9 @@ public class SequenceFileInputFilter<K extends WritableComparable,
 
     /** Filtering method
      * If record# % frequency==0, return true; otherwise return false
-     * @see org.apache.hadoop.mapred.SequenceFileInputFilter.Filter#accept(org.apache.hadoop.io.Writable)
+     * @see org.apache.hadoop.mapred.SequenceFileInputFilter.Filter#accept(Object)
      */
-    public boolean accept(Writable key) {
+    public boolean accept(Object key) {
       boolean accepted = false;
       if (count == 0)
         accepted = true;
@@ -241,9 +236,9 @@ public class SequenceFileInputFilter<K extends WritableComparable,
 
     /** Filtering method
      * If MD5(key) % frequency==0, return true; otherwise return false
-     * @see org.apache.hadoop.mapred.SequenceFileInputFilter.Filter#accept(org.apache.hadoop.io.Writable)
+     * @see org.apache.hadoop.mapred.SequenceFileInputFilter.Filter#accept(Object)
      */
-    public boolean accept(Writable key) {
+    public boolean accept(Object key) {
       try {
         long hashcode;
         if (key instanceof Text) {
@@ -282,8 +277,7 @@ public class SequenceFileInputFilter<K extends WritableComparable,
     }
   }
     
-  private static class FilterRecordReader<K extends WritableComparable,
-                                          V extends Writable>
+  private static class FilterRecordReader<K, V>
     extends SequenceFileRecordReader<K, V> {
     
     private Filter filter;

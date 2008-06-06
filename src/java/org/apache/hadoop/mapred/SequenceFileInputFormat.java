@@ -24,13 +24,9 @@ import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.MapFile;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /** An {@link InputFormat} for {@link SequenceFile}s. */
-public class SequenceFileInputFormat<K extends WritableComparable,
-                                     V extends Writable>
-  extends FileInputFormat<K, V> {
+public class SequenceFileInputFormat<K, V> extends FileInputFormat<K, V> {
 
   public SequenceFileInputFormat() {
     setMinSplitSize(SequenceFile.SYNC_INTERVAL);

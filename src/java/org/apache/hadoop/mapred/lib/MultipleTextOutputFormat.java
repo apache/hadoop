@@ -21,8 +21,6 @@ package org.apache.hadoop.mapred.lib;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.TextOutputFormat;
@@ -32,7 +30,7 @@ import org.apache.hadoop.util.Progressable;
  * This class extends the MultipleOutputFormat, allowing to write the output
  * data to different output files in Text output format.
  */
-public class MultipleTextOutputFormat<K extends WritableComparable, V extends Writable>
+public class MultipleTextOutputFormat<K, V>
     extends MultipleOutputFormat<K, V> {
 
   private TextOutputFormat<K, V> theTextOutputFormat = null;

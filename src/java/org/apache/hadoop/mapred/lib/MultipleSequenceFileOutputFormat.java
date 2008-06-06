@@ -32,21 +32,20 @@ import org.apache.hadoop.util.Progressable;
  * This class extends the MultipleOutputFormat, allowing to write the output data 
  * to different output files in sequence file output format. 
  */
-public class MultipleSequenceFileOutputFormat 
-extends MultipleOutputFormat<WritableComparable, Writable> {
+public class MultipleSequenceFileOutputFormat <K,V>
+extends MultipleOutputFormat<K, V> {
 
-  private SequenceFileOutputFormat theSequenceFileOutputFormat = null;
+    private SequenceFileOutputFormat<K,V> theSequenceFileOutputFormat = null;
   
   @Override
   @SuppressWarnings("unchecked") 
-  protected RecordWriter<WritableComparable, Writable> getBaseRecordWriter(
-                                                         FileSystem fs,
-                                                         JobConf job,
-                                                         String name,
-                                                         Progressable arg3) 
+  protected RecordWriter<K, V> getBaseRecordWriter(FileSystem fs,
+                                                   JobConf job,
+                                                   String name,
+                                                   Progressable arg3) 
   throws IOException {
     if (theSequenceFileOutputFormat == null) {
-      theSequenceFileOutputFormat = new SequenceFileOutputFormat();
+      theSequenceFileOutputFormat = new SequenceFileOutputFormat<K,V>();
     }
     return theSequenceFileOutputFormat.getRecordWriter(fs, job, name, arg3);
   }
