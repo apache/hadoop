@@ -66,6 +66,7 @@ class MasterSlave(Service):
     self.masterAddress = 'none'
     self.requiredNode = requiredNode
     self.failedMsg = None
+    self.masterFailureCount = 0
 
   def getRequiredNode(self):
     return self.requiredNode
@@ -136,6 +137,9 @@ class MasterSlave(Service):
     """ set the master initialized to
     true. """
     self.masterInitialized = True
+    # Reset failure related variables, as master is initialized successfully.
+    self.masterFailureCount = 0
+    self.failedMsg = None
 
   def getMasterAddress(self):
     """ it needs to change to reflect 
@@ -152,11 +156,19 @@ class MasterSlave(Service):
     return self.serviceDesc.isExternal()
 
   def setMasterFailed(self, err):
+    """Sets variables related to Master failure"""
+    self.masterFailureCount += 1
     self.failedMsg = err
+    # When command is sent to HodRings, this would have been set to True.
+    # Reset it to reflect the correct status.
+    self.launchedMaster = False
 
   def getMasterFailed(self):
     return self.failedMsg
-  
+ 
+  def getMasterFailureCount(self):
+    return self.masterFailureCount
+ 
 class NodeRequest:
   """ A class to define 
   a node request. """

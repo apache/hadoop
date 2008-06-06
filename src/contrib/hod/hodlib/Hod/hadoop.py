@@ -604,9 +604,11 @@ class hadoopCluster:
     if status == 5 or status == 6:
       ringMasterErrors = self.__svcrgyClient.getRMError()
       if ringMasterErrors:
-        self.__log.critical("Cluster could not be allocated because of the following errors on the ringmaster host.\n%s" % \
-                               (ringMasterErrors[0]))
-        self.__log.debug("Stack trace on ringmaster: %s" % ringMasterErrors[1])
+        self.__log.critical("Cluster could not be allocated because" \
+                            " of the following errors on the "\
+                            "ringmaster host %s.\n%s" % \
+                               (ringMasterErrors[0], ringMasterErrors[1]))
+        self.__log.debug("Stack trace on ringmaster: %s" % ringMasterErrors[2])
     return status
 
   def __isRingMasterAlive(self, rmAddr):

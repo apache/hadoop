@@ -113,7 +113,11 @@ defList = { 'ringmaster' : (
              False, 120, False, True),
 
              ('idleness-limit', 'pos_int', 'Limit after which to deallocate the cluster',
-             False, 3600, False, True)),
+             False, 3600, False, True),
+
+             ('max-master-failures', 'pos_int', 
+              'Defines how many times a master can fail before' \
+              ' failing cluster allocation', False, 5, True, True)),
 
             'resource_manager' : (
              ('id', 'string', 'Batch scheduler ID: torque|condor.',
@@ -330,7 +334,8 @@ if __name__ == '__main__':
                                      'ringmaster', 'svcrgy-addr'))
       serviceClient = hodXRClient(serviceAddr)
       if serviceClient is not None:
-        serviceClient.setRMError([str(e),get_exception_string()])
+        serviceClient.setRMError([local_fqdn(), str(e), \
+                                    get_exception_string()])
         log.info("Reported errors to service registry at %s" % serviceAddr)
     except Exception, e:
       log.error("Failed to report errors to service registry.")

@@ -227,6 +227,31 @@ class hodRunner:
          
     return opList 
   
+  def __adjustMasterFailureCountConfig(self, nodeCount):
+    # This method adjusts the ringmaster.max-master-failures variable
+    # to a value that is bounded by the a function of the number of
+    # nodes.
+
+    maxFailures = self.__cfg['ringmaster']['max-master-failures']
+    # Count number of masters required - depends on which services
+    # are external
+    masters = 0
+    if not self.__cfg['gridservice-hdfs']['external']:
+      masters += 1
+    if not self.__cfg['gridservice-mapred']['external']:
+      masters += 1
+
+    # So, if there are n nodes and m masters, we look atleast for
+    # all masters to come up. Therefore, atleast m nodes should be
+    # good, which means a maximum of n-m master nodes can fail.
+    maxFailedNodes = nodeCount - masters
+
+    # The configured max number of failures is now bounded by this
+    # number.
+    self.__cfg['ringmaster']['max-master-failures'] = \
+                              min(maxFailures, maxFailedNodes)
+
+    
   def _op_allocate(self, args):
     operation = "allocate"
     argLength = len(args)
@@ -312,6 +337,9 @@ class hodRunner:
               self.__cleanup()
               raise HodInterruptException()
             self.__log.debug("Service Registry started.")
+
+            self.__adjustMasterFailureCountConfig(nodes)
+            
             try:
               allocateStatus = self.__cluster.allocate(clusterDir, min, max)    
             except HodInterruptException, h:

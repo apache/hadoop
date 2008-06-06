@@ -370,7 +370,12 @@ class _LogMasterSources:
         for v in self.serviceDict.itervalues():
           if (not v.isExternal()):
             if v.isLaunchable(self.serviceDict):
-              if not v.isMasterLaunched():
+              # If a master is still not launched, or the number of 
+              # retries for launching master is not reached, 
+              # launch master
+              if not v.isMasterLaunched() and \
+                  (v.getMasterFailureCount() <= \
+                      self.cfg['ringmaster']['max-master-failures']):
                 cmdList = v.getMasterCommands(self.serviceDict)
                 v.setlaunchedMaster()
                 v.setMasterAddress(addr)
@@ -441,7 +446,8 @@ class _LogMasterSources:
   def setHodRingErrors(self, addr, errors):
     """This method is called by the hodrings to update errors 
       it encountered while starting up"""
-    self.log.critical("Hodring at %s failed with following errors:\n%s" % (addr, errors))
+    self.log.critical("Hodring at %s failed with following errors:\n%s" \
+                        % (addr, errors))
     lock = self.masterParamLock
     lock.acquire()
     try:
@@ -452,7 +458,8 @@ class _LogMasterSources:
             idx = addr.rfind('_')
             if idx is not -1:
               addr = addr[:idx]
-            v.setMasterFailed("Hodring at %s failed with following errors:\n%s" % (addr, errors))
+            v.setMasterFailed("Hodring at %s failed with following" \
+                                " errors:\n%s" % (addr, errors))
     except:
       self.log.debug(get_exception_string())
       pass
@@ -478,8 +485,16 @@ class _LogMasterSources:
       pass
     else:
       self.log.debug("getServiceAddr service: %s" % service)
+      # Check if we should give up ! If the limit on max failures is hit, 
+      # give up.
       err = service.getMasterFailed()
-      if err is not None:
+      if (err is not None) and \
+            (service.getMasterFailureCount() > \
+                      self.cfg['ringmaster']['max-master-failures']):
+        self.log.critical("Detected errors (%s) beyond allowed number"\
+                            " of failures (%s). Flagging error to client" \
+                            % (service.getMasterFailureCount(), \
+                              self.cfg['ringmaster']['max-master-failures']))
         addr = "Error: " + err
       elif (service.isMasterInitialized()):
         addr = service.getMasterAddrs()[0]

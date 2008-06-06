@@ -9,6 +9,10 @@ Trunk (unreleased changes)
     exist and to auto-deallocate a cluster while reallocating it, if it is
     already dead. (Hemanth Yamijala via mukund)
 
+    HADOOP-3184. Modified HOD to handle master failures on bad nodes by trying 
+    to bring them up on another node in the ring. (Hemanth Yamijala via ddas)
+
+
   NEW FEATURES
 
   IMPROVEMENTS
