@@ -9,7 +9,7 @@
   import="org.apache.hadoop.hbase.HRegionInfo" %><%
   HRegionServer regionServer = (HRegionServer)getServletContext().getAttribute(HRegionServer.REGIONSERVER);
   HServerInfo serverInfo = regionServer.getServerInfo();
-  Collection<HRegion> onlineRegions = regionServer.getOnlineRegions();
+  Collection<HRegionInfo> onlineRegions = regionServer.getSortedOnlineRegionInfos();
   int interval = regionServer.getConfiguration().getInt("hbase.regionserver.msginterval", 3000)/1000;
 %><?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
@@ -38,8 +38,8 @@
 <% if (onlineRegions != null && onlineRegions.size() > 0) { %>
 <table>
 <tr><th>Region Name</th><th>Encoded Name</th><th>Start Key</th><th>End Key</th></tr>
-<%   for (HRegion r: onlineRegions) { %>
-<tr><td><%= Bytes.toString(r.getRegionName()) %></td><td><%= r.getRegionInfo().getEncodedName() %></td>
+<%   for (HRegionInfo r: onlineRegions) { %>
+<tr><td><%= r.getRegionNameAsString() %></td><td><%= r.getEncodedName() %></td>
     <td><%= Bytes.toString(r.getStartKey()) %></td><td><%= Bytes.toString(r.getEndKey()) %></td></tr>
 <%   } %>
 </table>

@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
@@ -1306,6 +1307,19 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   public Collection<HRegion> getOnlineRegions() {
     return Collections.unmodifiableCollection(onlineRegions.values());
+  }
+
+  /**
+   * @return The HRegionInfos from online regions sorted
+   */
+  public SortedSet<HRegionInfo> getSortedOnlineRegionInfos() {
+    SortedSet<HRegionInfo> result = new TreeSet<HRegionInfo>();
+    synchronized(this.onlineRegions) {
+      for (HRegion r: this.onlineRegions.values()) {
+        result.add(r.getRegionInfo());
+      }
+    }
+    return result;
   }
 
   /**
