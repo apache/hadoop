@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -35,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
@@ -1304,6 +1306,27 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    */
   public Collection<HRegion> getOnlineRegions() {
     return Collections.unmodifiableCollection(onlineRegions.values());
+  }
+
+  /**
+   * @return A new Map of online regions sorted by region size with the first
+   * entry being the biggest.
+   */
+  public SortedMap<Long, HRegion> getCopyOfOnlineRegionsSortedBySize() {
+    // we'll sort the regions in reverse
+    SortedMap<Long, HRegion> sortedRegions = new TreeMap<Long, HRegion>(
+        new Comparator<Long>() {
+          public int compare(Long a, Long b) {
+            return -1 * a.compareTo(b);
+          }
+        });
+    // Copy over all regions. Regions are sorted by size with biggest first.
+    synchronized (this.onlineRegions) {
+      for (HRegion region : this.onlineRegions.values()) {
+        sortedRegions.put(region.memcacheSize.get(), region);
+      }
+    }
+    return sortedRegions;
   }
   
   /**

@@ -180,11 +180,16 @@ public class RegionHistorian implements HConstants {
    * Method to add a compaction event to the row in the .META table
    * @param info
    */
-  public void addRegionCompaction(HRegionInfo info,
-    @SuppressWarnings("unused") String timeTaken) {
-    // Disabled.  Noop.  If this regionserver is hosting the .META. AND is
-    // holding the reclaimMemcacheMemory global lock, we deadlock.  For now,
-    // just disable logging of flushes and compactions.
+  public void addRegionCompaction(final HRegionInfo info,
+      final String timeTaken) {
+    // While historian can not log flushes because it could deadlock the
+    // regionserver -- see the note in addRegionFlush -- there should be no
+    // such danger compacting; compactions are not allowed when
+    // Flusher#flushSomeRegions is run.
+    if (LOG.isDebugEnabled()) {
+      add(HistorianColumnKey.REGION_COMPACTION.key,
+        "Region compaction completed in " + timeTaken, info);
+    }
   }
 
   /**
@@ -194,8 +199,9 @@ public class RegionHistorian implements HConstants {
   public void addRegionFlush(HRegionInfo info,
     @SuppressWarnings("unused") String timeTaken) {
     // Disabled.  Noop.  If this regionserver is hosting the .META. AND is
-    // holding the reclaimMemcacheMemory global lock, we deadlock.  For now,
-    // just disable logging of flushes and compactions.
+    // holding the reclaimMemcacheMemory global lock --
+    // see Flusher#flushSomeRegions --  we deadlock.  For now, just disable
+    // logging of flushes.
   }
 
   /**

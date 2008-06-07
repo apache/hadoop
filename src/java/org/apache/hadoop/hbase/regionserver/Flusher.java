@@ -53,7 +53,6 @@ class Flusher extends Thread implements FlushRequester {
   private final long optionalFlushPeriod;
   private final HRegionServer server;
   private final ReentrantLock lock = new ReentrantLock();
-  private final Integer memcacheSizeLock = new Integer(0);  
   private long lastOptionalCheck = System.currentTimeMillis();
 
   protected final long globalMemcacheLimit;
@@ -126,23 +125,30 @@ class Flusher extends Thread implements FlushRequester {
     }
   }
   
-  /**
-   * Flush a region right away, while respecting concurrency with the async
-   * flushing that is always going on.
+  /*
+   * Flush a region.
    * 
    * @param region the region to be flushed
-   * @param removeFromQueue true if the region needs to be removed from the
-   * flush queue. False if called from the main run loop and true if called from
-   * flushSomeRegions to relieve memory pressure from the region server.
+   * @param removeFromQueue True if the region needs to be removed from the
+   * flush queue. False if called from the main flusher run loop and true if
+   * called from flushSomeRegions to relieve memory pressure from the region
+   * server.  If <code>true</code>, we are in a state of emergency; we are not
+   * taking on updates regionserver-wide, not until memory is flushed.  In this
+   * case, do not let a compaction run inline with blocked updates. Compactions
+   * can take a long time. Stopping compactions, there is a danger that number
+   * of flushes will overwhelm compaction on a busy server; we'll have to see.
+   * That compactions do not run when called out of flushSomeRegions means that
+   * compactions can be reported by the historian without danger of deadlock
+   * (HBASE-670).
    * 
    * <p>In the main run loop, regions have already been removed from the flush
    * queue, and if this method is called for the relief of memory pressure,
    * this may not be necessarily true. We want to avoid trying to remove 
-   * region from the queue because if it has already been removed, it reqires a
+   * region from the queue because if it has already been removed, it requires a
    * sequential scan of the queue to determine that it is not in the queue.
    * 
    * <p>If called from flushSomeRegions, the region may be in the queue but
-   * it may have been determined that the region had a significant amout of 
+   * it may have been determined that the region had a significant amount of 
    * memory in use and needed to be flushed to relieve memory pressure. In this
    * case, its flush may preempt the pending request in the queue, and if so,
    * it needs to be removed from the queue to avoid flushing the region multiple
@@ -163,7 +169,9 @@ class Flusher extends Thread implements FlushRequester {
       }
       lock.lock();
       try {
-        if (region.flushcache()) {
+        // See javadoc comment above for removeFromQueue on why we do not
+        // compact if removeFromQueue is true.
+        if (region.flushcache() && !removeFromQueue) {
           server.compactSplitThread.compactionRequested(region);
         }
       } catch (DroppedSnapshotException ex) {
@@ -242,38 +250,26 @@ class Flusher extends Thread implements FlushRequester {
    * amount of memcache consumption.
    */
   public void reclaimMemcacheMemory() {
-    synchronized (memcacheSizeLock) {
-      if (server.getGlobalMemcacheSize() >= globalMemcacheLimit) {
-        flushSomeRegions();
-      }
+    if (server.getGlobalMemcacheSize() >= globalMemcacheLimit) {
+      flushSomeRegions();
     }
   }
-  
-  private void flushSomeRegions() {
-    // we'll sort the regions in reverse
-    SortedMap<Long, HRegion> sortedRegions = new TreeMap<Long, HRegion>(
-      new Comparator<Long>() {
-        public int compare(Long a, Long b) {
-          return -1 * a.compareTo(b);
-        }
-      }
-    );
-    
-    // copy over all the regions
-    for (HRegion region : server.onlineRegions.values()) {
-      sortedRegions.put(region.memcacheSize.get(), region);
-    }
-    
+
+  /*
+   * Emergency!  Need to flush memory.  While running this method all updates
+   * to this regionserver are blocked.
+   */
+  private synchronized void flushSomeRegions() {
+    SortedMap<Long, HRegion> m =
+      this.server.getCopyOfOnlineRegionsSortedBySize();
     // keep flushing until we hit the low water mark
     while (server.getGlobalMemcacheSize() >= globalMemcacheLimitLowMark) {
       // flush the region with the biggest memcache
-      HRegion biggestMemcacheRegion = 
-        sortedRegions.remove(sortedRegions.firstKey());
+      HRegion biggestMemcacheRegion = m.remove(m.firstKey());
       if (!flushRegion(biggestMemcacheRegion, true)) {
         // Something bad happened - give up.
         break;
       }
     }
   }
-  
 }
