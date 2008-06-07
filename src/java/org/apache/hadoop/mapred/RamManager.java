@@ -17,49 +17,26 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.conf.Configuration;
+import java.io.InputStream;
 
-class RamManager {
-  volatile private int numReserved = 0;
-  volatile private int size = 0;
-  private final int maxSize;
+/**
+ * <code>RamManager</code> manages a memory pool of a configured limit.
+ */
+interface RamManager {
+  /**
+   * Reserve memory for data coming through the given input-stream.
+   * 
+   * @param requestedSize size of memory requested
+   * @param in input stream
+   * @return <code>true</code> if memory was allocated immediately, 
+   *         else <code>false</code>
+   */
+  boolean reserve(int requestedSize, InputStream in);
   
-  public RamManager(Configuration conf) {
-    maxSize = conf.getInt("fs.inmemory.size.mb", 100) * 1024 * 1024;
-  }
-  
-  synchronized boolean reserve(long requestedSize) {
-    if (requestedSize > Integer.MAX_VALUE || 
-        (size + requestedSize) > Integer.MAX_VALUE) {
-      return false;
-    }
-    
-    if ((size + requestedSize) < maxSize) {
-      size += requestedSize;
-      ++numReserved;
-      return true;
-    }
-    return false;
-  }
-  
-  synchronized void unreserve(int requestedSize) {
-    size -= requestedSize;
-    --numReserved;
-  }
-  
-  int getUsedMemory() {
-    return size;
-  }
-  
-  float getPercentUsed() {
-    return (float)size/maxSize;
-  }
-  
-  int getReservedFiles() {
-    return numReserved;
-  }
-  
-  int getMemoryLimit() {
-    return maxSize;
-  }
+  /**
+   * Return memory to the pool.
+   * 
+   * @param requestedSize size of memory returned to the pool
+   */
+  void unreserve(int requestedSize);
 }

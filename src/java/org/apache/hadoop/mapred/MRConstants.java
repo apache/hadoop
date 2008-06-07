@@ -35,7 +35,7 @@ interface MRConstants {
   /**
    * Constant denoting when a merge of in memory files will be triggered 
    */
-  public static final float MAX_INMEM_FILESYS_USE = 0.5f;
+  public static final float MAX_INMEM_FILESYS_USE = 0.66f;
   
   /**
    * Constant denoting the max size (in terms of the fraction of the total 
