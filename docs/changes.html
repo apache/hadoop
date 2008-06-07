@@ -36,7 +36,7 @@
     function collapse() {
       for (var i = 0; i < document.getElementsByTagName("ul").length; i++) {
         var list = document.getElementsByTagName("ul")[i];
-        if (list.id != 'trunk_(unreleased_changes)_' && list.id != 'release_0.17.0_-_2008-05-18_') {
+        if (list.id != 'release_0.18.0_-_unreleased_' && list.id != 'release_0.17.0_-_2008-05-18_') {
           list.style.display = "none";
         }
       }
@@ -52,12 +52,12 @@
 <a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
 <h1>Hadoop Change Log</h1>
 
-<h2><a href="javascript:toggleList('trunk_(unreleased_changes)_')">Trunk (unreleased changes)
+<h2><a href="javascript:toggleList('release_0.18.0_-_unreleased_')">Release 0.18.0 - Unreleased
 </a></h2>
-<ul id="trunk_(unreleased_changes)_">
-  <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._incompatible_changes_')">  INCOMPATIBLE CHANGES
-</a>&nbsp;&nbsp;&nbsp;(18)
-    <ol id="trunk_(unreleased_changes)_._incompatible_changes_">
+<ul id="release_0.18.0_-_unreleased_">
+  <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._incompatible_changes_')">  INCOMPATIBLE CHANGES
+</a>&nbsp;&nbsp;&nbsp;(20)
+    <ol id="release_0.18.0_-_unreleased_._incompatible_changes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2703">HADOOP-2703</a>.  The default options to fsck skips checking files
 that are being written to. The output of fsck is incompatible
 with previous release.<br />(lohit vijayarenu via dhruba)</li>
@@ -112,15 +112,20 @@ instead it is defined as twice of the ipc.client.connection.maxidletime.
 A connection with outstanding requests won't be treated as idle.<br />(hairong)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3459">HADOOP-3459</a>. Change in the output format of dfs -ls to more closely match
 /bin/ls. New format is: perm repl owner group size date name<br />(Mukund Madhugiri via omally)</li>
-      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3113">HADOOP-3113</a>. An fsync invoked on a HDFS file really really persists data! The datanode
-moves blocks in the tmp directory to the real block directory on a datanode-restart.<br />(dhruba)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3113">HADOOP-3113</a>. An fsync invoked on a HDFS file really really
+persists data! The datanode moves blocks in the tmp directory to
+the real block directory on a datanode-restart.<br />(dhruba)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3452">HADOOP-3452</a>. Change fsck to return non-zero status for a corrupt
 FileSystem.<br />(lohit vijayarenu via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3193">HADOOP-3193</a>. Include the address of the client that found the corrupted
+block in the log. Also include a CorruptedBlocks metric to track the size
+of the corrupted block map.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3512">HADOOP-3512</a>. Separate out the tools into a tools jar.<br />(omalley)</li>
     </ol>
   </li>
-  <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._new_features_')">  NEW FEATURES
-</a>&nbsp;&nbsp;&nbsp;(22)
-    <ol id="trunk_(unreleased_changes)_._new_features_">
+  <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._new_features_')">  NEW FEATURES
+</a>&nbsp;&nbsp;&nbsp;(24)
+    <ol id="release_0.18.0_-_unreleased_._new_features_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3074">HADOOP-3074</a>. Provides a UrlStreamHandler for DFS and other FS,
 relying on FileSystem<br />(taton)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a>. Name-node imports namespace data from a recent checkpoint
@@ -167,11 +172,14 @@ writes of serialized data.<br />(Koji Noguchi via cdouglas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3230">HADOOP-3230</a>. Add ability to get counter values from command
 line.<br />(tomwhite via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-930">HADOOP-930</a>. Add support for native S3 files.<br />(tomwhite via cutting)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3502">HADOOP-3502</a>. Quota API needs documentation in Forrest.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3413">HADOOP-3413</a>. Allow SequenceFile.Reader to use serialization
+framework.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
-  <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(30)
-    <ol id="trunk_(unreleased_changes)_._improvements_">
+  <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._improvements_')">  IMPROVEMENTS
+</a>&nbsp;&nbsp;&nbsp;(32)
+    <ol id="release_0.18.0_-_unreleased_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2928">HADOOP-2928</a>. Remove deprecated FileSystem.getContentLength().<br />(Lohit Vjayarenu via rangadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3130">HADOOP-3130</a>. Make the connect timeout smaller for getFile.<br />(Amar Ramesh Kamat via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3160">HADOOP-3160</a>. Remove deprecated exists() from ClientProtocol and
@@ -240,11 +248,13 @@ from shuffle threads when it has scheduled enough, before scheduling more.<br />
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2393">HADOOP-2393</a>. Moves the handling of dir deletions in the tasktracker to
 a separate thread.<br />(Amareshwari Sriramadasu via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3501">HADOOP-3501</a>. Deprecate InMemoryFileSystem.<br />(cutting via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3366">HADOOP-3366</a>. Stall the shuffle while in-memory merge is in progress.<br />(acmurthy)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2916">HADOOP-2916</a>. Refactor src structure, but leave package structure alone.<br />(Raghu Angadi via mukund)</li>
     </ol>
   </li>
-  <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
+  <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._optimizations_')">  OPTIMIZATIONS
 </a>&nbsp;&nbsp;&nbsp;(10)
-    <ol id="trunk_(unreleased_changes)_._optimizations_">
+    <ol id="release_0.18.0_-_unreleased_._optimizations_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3274">HADOOP-3274</a>. The default constructor of BytesWritable creates empty
 byte array. (Tsz Wo (Nicholas), SZE via shv)
 </li>
@@ -266,9 +276,9 @@ especially for non-HDFS file systems. Deprecates
 InputFormat.validateInput.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
-  <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(72)
-    <ol id="trunk_(unreleased_changes)_._bug_fixes_">
+  <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._bug_fixes_')">  BUG FIXES
+</a>&nbsp;&nbsp;&nbsp;(77)
+    <ol id="release_0.18.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2905">HADOOP-2905</a>. 'fsck -move' triggers NPE in NameNode.<br />(Lohit Vjayarenu via rangadi)</li>
       <li>Increment ClientProtocol.versionID missed by <a href="http://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a>.<br />(shv)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3254">HADOOP-3254</a>. Restructure internal namenode methods that process
@@ -419,6 +429,14 @@ recovery of the same block.  (dhruba &amp; Tsz Wo (Nicholas), SZE)
 </li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3440">HADOOP-3440</a>. Fixes DistributedCache to not create symlinks for paths which
 don't have fragments even when createSymLink is true.<br />(Abhijit Bagri via ddas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3463">HADOOP-3463</a>. Hadoop-daemons script should cd to $HADOOP_HOME.<br />(omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3489">HADOOP-3489</a>. Fix NPE in SafeModeMonitor.<br />(Lohit Vijayarenu via shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3509">HADOOP-3509</a>. Fix NPE in FSNamesystem.close. (Tsz Wo (Nicholas), SZE via shv)
+</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3491">HADOOP-3491</a>. Name-node shutdown causes InterruptedException in
+ResolutionMonitor.<br />(Lohit Vijayarenu via shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3511">HADOOP-3511</a>. Fixes namenode image to not set the root's quota to an
+invalid value when the quota was not saved in the image.<br />(hairong)</li>
     </ol>
   </li>
 </ul>
