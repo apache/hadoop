@@ -46,7 +46,6 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
-import org.apache.hadoop.util.CopyFiles;
 
 /**
  * Logalyzer: A utility tool for archiving and analyzing hadoop logs.
@@ -184,7 +183,7 @@ public class Logalyzer {
     throws IOException
   {
     String destURL = FileSystem.getDefaultUri(fsConfig) + archiveDirectory;
-    CopyFiles.copy(fsConfig, logListURI, destURL, null, true, false);
+    DistCp.copy(new JobConf(fsConfig), logListURI, destURL, null, true, false);
   }
   
   /**

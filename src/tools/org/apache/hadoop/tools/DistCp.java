@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.util;
+package org.apache.hadoop.tools;
 
 import java.io.BufferedReader;
 import java.io.DataInput;
@@ -57,13 +57,16 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileRecordReader;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * A Map-reduce program to recursively copy directories between
  * different file-systems.
  */
-public class CopyFiles implements Tool {
-  private static final Log LOG = LogFactory.getLog(CopyFiles.class);
+public class DistCp implements Tool {
+  private static final Log LOG = LogFactory.getLog(DistCp.class);
 
   private static final String NAME = "distcp";
 
@@ -168,7 +171,7 @@ public class CopyFiles implements Tool {
     return conf;
   }
 
-  public CopyFiles(Configuration conf) {
+  public DistCp(Configuration conf) {
     setConf(conf);
   }
 
@@ -452,7 +455,7 @@ public class CopyFiles implements Tool {
     private void updatePermissions(FileStatus src, FileStatus dst
         ) throws IOException {
       if (preserve_status) {
-        CopyFiles.updatePermissions(src, dst, preseved, destFileSys);
+        DistCp.updatePermissions(src, dst, preseved, destFileSys);
       }
     }
 
@@ -776,8 +779,8 @@ public class CopyFiles implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    JobConf job = new JobConf(CopyFiles.class);
-    CopyFiles distcp = new CopyFiles(job);
+    JobConf job = new JobConf(DistCp.class);
+    DistCp distcp = new DistCp(job);
     int res = ToolRunner.run(distcp, args);
     System.exit(res);
   }
@@ -839,7 +842,7 @@ public class CopyFiles implements Tool {
 
   //Job configuration
   private static JobConf createJobConf(Configuration conf) {
-    JobConf jobconf = new JobConf(conf, CopyFiles.class);
+    JobConf jobconf = new JobConf(conf, DistCp.class);
     jobconf.setJobName(NAME);
 
     // turn off speculative execution, because DFS doesn't handle

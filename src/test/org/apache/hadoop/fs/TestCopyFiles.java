@@ -29,7 +29,7 @@ import org.apache.hadoop.dfs.MiniDFSCluster;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.hadoop.util.CopyFiles;
+import org.apache.hadoop.tools.DistCp;
 import org.apache.hadoop.util.ToolRunner;
 
 
@@ -224,7 +224,7 @@ public class TestCopyFiles extends TestCase {
   /** copy files from local file system to local file system */
   public void testCopyFromLocalToLocal() throws Exception {
     MyFile[] files = createFiles(LOCAL_FS, TEST_ROOT_DIR+"/srcdat");
-    ToolRunner.run(new CopyFiles(new Configuration()),
+    ToolRunner.run(new DistCp(new Configuration()),
                            new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
                                          "file:///"+TEST_ROOT_DIR+"/destdat"});
     assertTrue("Source and destination directories do not match.",
@@ -243,7 +243,7 @@ public class TestCopyFiles extends TestCase {
       namenode = FileSystem.getDefaultUri(conf).toString();
       if (namenode.startsWith("hdfs://")) {
         MyFile[] files = createFiles(URI.create(namenode), "/srcdat");
-        ToolRunner.run(new CopyFiles(conf), new String[] {
+        ToolRunner.run(new DistCp(conf), new String[] {
                                          "-log",
                                          namenode+"/logs",
                                          namenode+"/srcdat",
@@ -272,7 +272,7 @@ public class TestCopyFiles extends TestCase {
       namenode = FileSystem.getDefaultUri(conf).toString();
       if (namenode.startsWith("hdfs://")) {
         MyFile[] files = createFiles(LOCAL_FS, TEST_ROOT_DIR+"/srcdat");
-        ToolRunner.run(new CopyFiles(conf), new String[] {
+        ToolRunner.run(new DistCp(conf), new String[] {
                                          "-log",
                                          namenode+"/logs",
                                          "file:///"+TEST_ROOT_DIR+"/srcdat",
@@ -301,7 +301,7 @@ public class TestCopyFiles extends TestCase {
       namenode = FileSystem.getDefaultUri(conf).toString();
       if (namenode.startsWith("hdfs://")) {
         MyFile[] files = createFiles(URI.create(namenode), "/srcdat");
-        ToolRunner.run(new CopyFiles(conf), new String[] {
+        ToolRunner.run(new DistCp(conf), new String[] {
                                          "-log",
                                          "/logs",
                                          namenode+"/srcdat",
@@ -329,7 +329,7 @@ public class TestCopyFiles extends TestCase {
       namenode = FileSystem.getDefaultUri(conf).toString();
       if (namenode.startsWith("hdfs://")) {
         MyFile[] files = createFiles(URI.create(namenode), "/srcdat");
-        ToolRunner.run(new CopyFiles(conf), new String[] {
+        ToolRunner.run(new DistCp(conf), new String[] {
                                          "-p",
                                          "-log",
                                          namenode+"/logs",
@@ -346,7 +346,7 @@ public class TestCopyFiles extends TestCase {
         updateFiles(namenode, "/srcdat", files, nupdate);
         deldir(namenode, "/logs");
 
-        ToolRunner.run(new CopyFiles(conf), new String[] {
+        ToolRunner.run(new DistCp(conf), new String[] {
                                          "-p",
                                          "-update",
                                          "-log",
@@ -359,7 +359,7 @@ public class TestCopyFiles extends TestCase {
                  checkUpdate(dchkpoint, namenode, "/destdat", files, nupdate));
 
         deldir(namenode, "/logs");
-        ToolRunner.run(new CopyFiles(conf), new String[] {
+        ToolRunner.run(new DistCp(conf), new String[] {
                                          "-p",
                                          "-overwrite",
                                          "-log",
@@ -383,14 +383,14 @@ public class TestCopyFiles extends TestCase {
   public void testCopyDuplication() throws Exception {
     try {    
       MyFile[] files = createFiles(LOCAL_FS, TEST_ROOT_DIR+"/srcdat");
-      ToolRunner.run(new CopyFiles(new Configuration()),
+      ToolRunner.run(new DistCp(new Configuration()),
           new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
                         "file:///"+TEST_ROOT_DIR+"/src2/srcdat"});
       assertTrue("Source and destination directories do not match.",
                  checkFiles("file:///", TEST_ROOT_DIR+"/src2/srcdat", files));
   
-      assertEquals(CopyFiles.DuplicationException.ERROR_CODE,
-          ToolRunner.run(new CopyFiles(new Configuration()),
+      assertEquals(DistCp.DuplicationException.ERROR_CODE,
+          ToolRunner.run(new DistCp(new Configuration()),
           new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
                         "file:///"+TEST_ROOT_DIR+"/src2/srcdat",
                         "file:///"+TEST_ROOT_DIR+"/destdat",}));
@@ -408,7 +408,7 @@ public class TestCopyFiles extends TestCase {
     try {    
       MyFile[] files = {createFile(root, fs)};
       //copy a dir with a single file
-      ToolRunner.run(new CopyFiles(new Configuration()),
+      ToolRunner.run(new DistCp(new Configuration()),
           new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat",
                         "file:///"+TEST_ROOT_DIR+"/destdat"});
       assertTrue("Source and destination directories do not match.",
@@ -418,7 +418,7 @@ public class TestCopyFiles extends TestCase {
       String fname = files[0].getName();
       Path p = new Path(root, fname);
       FileSystem.LOG.info("fname=" + fname + ", exists? " + fs.exists(p));
-      ToolRunner.run(new CopyFiles(new Configuration()),
+      ToolRunner.run(new DistCp(new Configuration()),
           new String[] {"file:///"+TEST_ROOT_DIR+"/srcdat/"+fname,
                         "file:///"+TEST_ROOT_DIR+"/dest2/"+fname});
       assertTrue("Source and destination directories do not match.",
@@ -428,7 +428,7 @@ public class TestCopyFiles extends TestCase {
       fs.mkdirs(new Path(TEST_ROOT_DIR+"/dest2"));
       MyFile[] files2 = {createFile(root, fs, 0)};
       String sname = files2[0].getName();
-      ToolRunner.run(new CopyFiles(new Configuration()),
+      ToolRunner.run(new DistCp(new Configuration()),
           new String[] {"-update",
                         "file:///"+TEST_ROOT_DIR+"/srcdat/"+sname,
                         "file:///"+TEST_ROOT_DIR+"/dest2/"});
@@ -436,7 +436,7 @@ public class TestCopyFiles extends TestCase {
           checkFiles("file:///", TEST_ROOT_DIR+"/dest2", files2));     
       updateFiles("file:///", TEST_ROOT_DIR+"/srcdat", files2, 1);
       //copy single file to existing dir w/ dst name conflict
-      ToolRunner.run(new CopyFiles(new Configuration()),
+      ToolRunner.run(new DistCp(new Configuration()),
           new String[] {"-update",
                         "file:///"+TEST_ROOT_DIR+"/srcdat/"+sname,
                         "file:///"+TEST_ROOT_DIR+"/dest2/"});
@@ -464,7 +464,7 @@ public class TestCopyFiles extends TestCase {
         for(int i = 0; i < srcstat.length; i++) {
           fs.setOwner(srcstat[i].getPath(), "u" + i, null);
         }
-        ToolRunner.run(new CopyFiles(conf),
+        ToolRunner.run(new DistCp(conf),
             new String[]{"-pu", nnUri+"/srcdat", nnUri+"/destdat"});
         assertTrue("Source and destination directories do not match.",
                    checkFiles(nnUri, "/destdat", files));
@@ -483,7 +483,7 @@ public class TestCopyFiles extends TestCase {
         for(int i = 0; i < srcstat.length; i++) {
           fs.setOwner(srcstat[i].getPath(), null, "g" + i);
         }
-        ToolRunner.run(new CopyFiles(conf),
+        ToolRunner.run(new DistCp(conf),
             new String[]{"-pg", nnUri+"/srcdat", nnUri+"/destdat"});
         assertTrue("Source and destination directories do not match.",
                    checkFiles(nnUri, "/destdat", files));
@@ -505,7 +505,7 @@ public class TestCopyFiles extends TestCase {
           fs.setPermission(srcstat[i].getPath(), permissions[i]);
         }
 
-        ToolRunner.run(new CopyFiles(conf),
+        ToolRunner.run(new DistCp(conf),
             new String[]{"-pp", nnUri+"/srcdat", nnUri+"/destdat"});
         assertTrue("Source and destination directories do not match.",
                    checkFiles(nnUri, "/destdat", files));
@@ -539,7 +539,7 @@ public class TestCopyFiles extends TestCase {
       }
       JobConf job = mr.createJobConf();
       job.setLong("distcp.bytes.per.map", totsize / 3);
-      ToolRunner.run(new CopyFiles(job),
+      ToolRunner.run(new DistCp(job),
           new String[] {"-m", "100",
                         "-log",
                         namenode+"/logs",
@@ -553,7 +553,7 @@ public class TestCopyFiles extends TestCase {
 
       deldir(namenode, "/destdat");
       deldir(namenode, "/logs");
-      ToolRunner.run(new CopyFiles(job),
+      ToolRunner.run(new DistCp(job),
           new String[] {"-m", "1",
                         "-log",
                         namenode+"/logs",

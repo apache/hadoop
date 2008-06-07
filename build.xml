@@ -46,10 +46,12 @@
   <property name="c++.pipes.src" value="${c++.src}/pipes"/>
   <property name="c++.examples.pipes.src" value="${examples.dir}/pipes"/>
   <property name="libhdfs.src" value="${c++.src}/libhdfs"/>
+  <property name="tools.src" value="${basedir}/src/tools"/>
 
   <property name="build.dir" value="${basedir}/build"/>
   <property name="build.classes" value="${build.dir}/classes"/>
   <property name="build.src" value="${build.dir}/src"/>
+  <property name="build.tools" value="${build.dir}/tools"/>
   <property name="build.webapps" value="${build.dir}/webapps"/>
   <property name="build.examples" value="${build.dir}/examples"/>
   <property name="build.anttasks" value="${build.dir}/ant"/>
@@ -149,6 +151,7 @@
     <pathelement location="${test.src.dir}"/>
     <pathelement location="${build.dir}"/>
     <pathelement location="${build.examples}"/>
+    <pathelement location="${build.tools}"/>
     <fileset dir="${test.lib.dir}">
       <include name="**/*.jar" />
       <exclude name="**/excluded/" />
@@ -187,6 +190,7 @@
   <target name="init">
     <mkdir dir="${build.dir}"/>
     <mkdir dir="${build.classes}"/>
+    <mkdir dir="${build.tools}"/>
     <mkdir dir="${build.src}"/>
     <mkdir dir="${build.webapps}/task/WEB-INF"/>
     <mkdir dir="${build.webapps}/job/WEB-INF"/>
@@ -320,6 +324,29 @@
 
     </target>
 
+  <target name="compile-tools" depends="init">
+    <javac 
+     encoding="${build.encoding}" 
+     srcdir="${tools.src}"
+     includes="org/apache/hadoop/**/*.java"
+     destdir="${build.tools}"
+     debug="${javac.debug}"
+     optimize="${javac.optimize}"
+     target="${javac.version}"
+     source="${javac.version}"
+     deprecation="${javac.deprecation}">
+      <compilerarg line="${javac.args} ${javac.args.warnings}" />
+      <classpath refid="classpath"/>
+    </javac>   
+  	
+    <copy todir="${build.tools}">
+      <fileset 
+        dir="${tools.src}" 
+        includes="**/*.properties"
+      />
+    </copy>
+  </target>
+
   <target name="compile-core-native" depends="compile-core-classes"
           if="compile.native">
   	
@@ -379,7 +406,7 @@
      </subant>  	
   </target>
   
-  <target name="compile" depends="compile-core, compile-contrib, compile-ant-tasks" description="Compile core, contrib">
+  <target name="compile" depends="compile-core, compile-contrib, compile-ant-tasks, compile-tools" description="Compile core, contrib">
   </target>
 
   <target name="compile-examples" 
@@ -440,6 +467,17 @@
     </jar>
   </target>
 
+  <target name="tools-jar" depends="jar, compile-tools" 
+          description="Make the Hadoop tools jar.">
+    <jar jarfile="${build.dir}/${final.name}-tools.jar"
+         basedir="${build.tools}">
+      <manifest>
+        <attribute name="Main-Class" 
+                   value="org/apache/hadoop/examples/ExampleDriver"/>
+      </manifest>
+    </jar>
+  </target>
+
   <!-- ================================================================== -->
   <!-- Make the Hadoop metrics jar. (for use outside Hadoop)              -->
   <!-- ================================================================== -->
@@ -463,7 +501,7 @@
   <!-- ================================================================== -->
   <!-- Compile test code                                                  --> 
   <!-- ================================================================== -->
-  <target name="compile-core-test" depends="compile-examples, generate-test-records">
+  <target name="compile-core-test" depends="compile-examples, compile-tools, generate-test-records">
     <javac 
      encoding="${build.encoding}" 
      srcdir="${test.generated.dir}"
@@ -764,7 +802,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="compile, jar, javadoc, examples, jar-test, ant-tasks, package-libhdfs"
+  <target name="package" depends="compile, jar, javadoc, examples, tools-jar, jar-test, ant-tasks, package-libhdfs"
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>

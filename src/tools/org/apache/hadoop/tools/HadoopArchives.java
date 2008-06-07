@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.util;
+package org.apache.hadoop.tools;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -56,7 +56,8 @@ import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.SequenceFileRecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
-
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * a archive creation utility.
@@ -310,7 +311,7 @@ public class HadoopArchives implements Tool {
     Path outputPath = new Path(dest, archiveName);
     FileOutputFormat.setOutputPath(conf, outputPath);
     conf.set(DST_DIR_LABEL, outputPath.toString());
-    final String randomId = CopyFiles.getRandomId();
+    final String randomId = DistCp.getRandomId();
     Path jobDirectory = new Path(new JobClient().getSystemDir(),
                           NAME + "_" + randomId);
     conf.set(JOB_DIR_LABEL, jobDirectory.toString());

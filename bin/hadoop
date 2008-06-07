@@ -141,6 +141,13 @@ for f in $HADOOP_HOME/lib/jetty-ext/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
+for f in $HADOOP_HOME/hadoop-*-tools.jar; do
+  TOOL_PATH=${TOOL_PATH}:$f;
+done
+for f in $HADOOP_HOME/build/hadoop-*-tools.jar; do
+  TOOL_PATH=${TOOL_PATH}:$f;
+done
+
 # add user-specified CLASSPATH last
 if [ "$HADOOP_CLASSPATH" != "" ]; then
   CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
@@ -159,6 +166,7 @@ if $cygwin; then
   CLASSPATH=`cygpath -p -w "$CLASSPATH"`
   HADOOP_HOME=`cygpath -d "$HADOOP_HOME"`
   HADOOP_LOG_DIR=`cygpath -d "$HADOOP_LOG_DIR"`
+  TOOL_PATH=`cygpath -d "$TOOL_PATH"`
 fi
 # setup 'java.library.path' for native-hadoop code if necessary
 JAVA_LIBRARY_PATH=''
@@ -228,13 +236,15 @@ elif [ "$COMMAND" = "version" ] ; then
 elif [ "$COMMAND" = "jar" ] ; then
   CLASS=org.apache.hadoop.util.RunJar
 elif [ "$COMMAND" = "distcp" ] ; then
-  CLASS=org.apache.hadoop.util.CopyFiles
+  CLASS=org.apache.hadoop.tools.DistCp
+  CLASSPATH=${CLASSPATH}:${TOOL_PATH}
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "daemonlog" ] ; then
   CLASS=org.apache.hadoop.log.LogLevel
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "archive" ] ; then
-  CLASS=org.apache.hadoop.util.HadoopArchives
+  CLASS=org.apache.hadoop.tools.HadoopArchives
+  CLASSPATH=${CLASSPATH}:${TOOL_PATH}
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 else
   CLASS=$COMMAND

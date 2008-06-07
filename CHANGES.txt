@@ -86,6 +86,8 @@ Trunk (unreleased changes)
     block in the log. Also include a CorruptedBlocks metric to track the size
     of the corrupted block map. (cdouglas)
 
+    HADOOP-3512. Separate out the tools into a tools jar. (omalley)
+
   NEW FEATURES
 
     HADOOP-3074. Provides a UrlStreamHandler for DFS and other FS,
