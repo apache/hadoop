@@ -531,6 +531,9 @@ Trunk (unreleased changes)
     HADOOP-3491. Name-node shutdown causes InterruptedException in 
     ResolutionMonitor. (Lohit Vijayarenu via shv)
 
+    HADOOP-3511. Fixes namenode image to not set the root's quota to an
+    invalid value when the quota was not saved in the image. (hairong)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

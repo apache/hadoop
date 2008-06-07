@@ -786,7 +786,9 @@ class FSImage extends Storage {
         }
         if (path.length() == 0) { // it is the root
           // update the root's attributes
-          fsDir.rootDir.setQuota(quota);
+          if (quota != -1) {
+            fsDir.rootDir.setQuota(quota);
+          }
           fsDir.rootDir.setModificationTime(modificationTime);
           fsDir.rootDir.setPermissionStatus(permissions);
           continue;

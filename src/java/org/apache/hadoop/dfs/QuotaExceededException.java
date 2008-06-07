@@ -46,7 +46,7 @@ public final class QuotaExceededException extends IOException {
   public String getMessage() {
     String msg = super.getMessage();
     if (msg == null) {
-      return "The quota" + pathName==null?"":(" of " + pathName) + 
+      return "The quota" + (pathName==null?"":(" of " + pathName)) + 
           " is exceeded: quota=" + quota + " count=" + count;
     } else {
       return msg;
