@@ -31,7 +31,10 @@
   <property name="year" value="2006"/>
   <property name="libhdfs.version" value="1"/>
 
-  <property name="src.dir" value="${basedir}/src/java"/>
+  <property name="src.dir" value="${basedir}/src"/>  	
+  <property name="core.src.dir" value="${src.dir}/core"/>
+  <property name="mapred.src.dir" value="${src.dir}/mapred"/> 
+  <property name="hdfs.src.dir" value="${src.dir}/hdfs"/>
   <property name="native.src.dir" value="${basedir}/src/native"/>
   <property name="examples.dir" value="${basedir}/src/examples"/>
   <property name="anttasks.dir" value="${basedir}/src/ant"/>
@@ -242,8 +245,8 @@
 
   <target name="record-parser" depends="init" if="javacc.home">
       <javacc
-          target="${src.dir}/org/apache/hadoop/record/compiler/generated/rcc.jj"
-          outputdirectory="${src.dir}/org/apache/hadoop/record/compiler/generated"
+          target="${core.src.dir}/org/apache/hadoop/record/compiler/generated/rcc.jj"
+          outputdirectory="${core.src.dir}/org/apache/hadoop/record/compiler/generated"
           javacchome="${javacc.home}"
       />
   </target>
@@ -251,7 +254,7 @@
   <target name="compile-rcc-compiler" depends="init, record-parser">
     <javac 
         encoding="${build.encoding}" 
-        srcdir="${src.dir}"
+        srcdir="${core.src.dir}"
         includes="org/apache/hadoop/record/compiler/**/*.java"
         destdir="${build.classes}"
         debug="${javac.debug}"
@@ -267,7 +270,6 @@
       <classpath refid="classpath" />
     </taskdef>
   </target>
-  
   
   <target name="compile-core-classes" depends="init, compile-rcc-compiler">
 
@@ -302,7 +304,7 @@
     <!-- Compile Java files (excluding JSPs) checking warnings -->
     <javac 
      encoding="${build.encoding}" 
-     srcdir="${src.dir};${build.src}"
+     srcdir="${core.src.dir};${mapred.src.dir};${hdfs.src.dir};${build.src}"
      includes="org/apache/hadoop/**/*.java"
      destdir="${build.classes}"
      debug="${javac.debug}"
@@ -315,10 +317,9 @@
     </javac>   
   	
     <copy todir="${build.classes}">
-      <fileset 
-        dir="${src.dir}" 
-        includes="**/*.properties"
-      />
+      <fileset dir="${core.src.dir}" includes="**/*.properties"/>
+      <fileset dir="${mapred.src.dir}" includes="**/*.properties"/>
+      <fileset dir="${hdfs.src.dir}" includes="**/*.properties"/>  		
     </copy>
      
 
@@ -673,7 +674,9 @@
   	
   	<checkstyle config="${test.src.dir}/checkstyle.xml"
   		failOnViolation="false">
-      <fileset dir="${src.dir}" includes="**/*.java" excludes="**/generated/**"/>
+      <fileset dir="${core.src.dir}" includes="**/*.java" excludes="**/generated/**"/>
+      <fileset dir="${mapred.src.dir}" includes="**/*.java" excludes="**/generated/**"/>
+      <fileset dir="${hdfs.src.dir}" includes="**/*.java" excludes="**/generated/**"/>  		
       <formatter type="xml" toFile="${test.build.dir}/checkstyle-errors.xml"/>
   	</checkstyle>
   	
@@ -711,7 +714,9 @@
           <include name="**/*.jar"/>
         </fileset>
       </auxClasspath>
-      <sourcePath path="${src.dir}" />
+      <sourcePath path="${core.src.dir}"/>
+      <sourcePath path="${mapred.src.dir}"/>
+      <sourcePath path="${hdfs.src.dir}"/>  	
       <sourcePath path="${examples.dir}" />
       <sourcePath path="${basedir}/src/contrib/streaming/src/java" />
       <class location="${basedir}/build/hadoop-${version}-core.jar" />
@@ -750,7 +755,7 @@
   <target name="javadoc" description="Generate javadoc">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
-      overview="${src.dir}/overview.html"
+      overview="${core.src.dir}/overview.html"
       packagenames="org.apache.hadoop.*"
       destdir="${build.javadoc}"
       author="true"
@@ -760,7 +765,9 @@
       doctitle="${Name} ${version} API"
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
       >
-    	<packageset dir="${src.dir}"/>
+        <packageset dir="${core.src.dir}"/>
+        <packageset dir="${mapred.src.dir}"/>
+        <packageset dir="${hdfs.src.dir}"/>        	
     	<packageset dir="${examples.dir}"/>
 
     	<packageset dir="src/contrib/streaming/src/java"/>

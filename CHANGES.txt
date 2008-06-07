@@ -270,6 +270,9 @@ Trunk (unreleased changes)
     HADOOP-3366. Stall the shuffle while in-memory merge is in progress.
     (acmurthy) 
 
+    HADOOP-2916. Refactor src structure, but leave package structure alone.
+    (Raghu Angadi via mukund) 
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
