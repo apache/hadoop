@@ -312,7 +312,7 @@ public class HadoopArchives implements Tool {
     FileOutputFormat.setOutputPath(conf, outputPath);
     conf.set(DST_DIR_LABEL, outputPath.toString());
     final String randomId = DistCp.getRandomId();
-    Path jobDirectory = new Path(new JobClient().getSystemDir(),
+    Path jobDirectory = new Path(new JobClient(conf).getSystemDir(),
                           NAME + "_" + randomId);
     conf.set(JOB_DIR_LABEL, jobDirectory.toString());
     //get a tmp directory for input splits
