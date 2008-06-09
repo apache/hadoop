@@ -1056,7 +1056,8 @@ public class HRegion implements HConstants {
       LOG.debug("Finished memcache flush for region " + this +
         " in " +
           (System.currentTimeMillis() - startTime) + "ms, sequence id=" +
-          sequenceId);
+          sequenceId + ", " +
+          StringUtils.humanReadableInt(this.memcacheSize.get()));
       if (!regionInfo.isMetaRegion()) {
         this.historian.addRegionFlush(regionInfo, timeTaken);
       }
@@ -1365,7 +1366,7 @@ public class HRegion implements HConstants {
     while (this.memcacheSize.get() >= this.blockingMemcacheSize) {
       if (!blocked) {
         LOG.info("Blocking updates for '" + Thread.currentThread().getName() +
-            "': Memcache size " +
+            "' on region " + Bytes.toString(getRegionName()) + ": Memcache size " +
             StringUtils.humanReadableInt(this.memcacheSize.get()) +
             " is >= than blocking " +
             StringUtils.humanReadableInt(this.blockingMemcacheSize) + " size");

@@ -43,6 +43,7 @@ Hbase Change Log
    HBASE-668   HBASE-533 broke build
    HBASE-670   Historian deadlocks if regionserver is at global memory boundary
                and is hosting .META.
+   HBASE-665   Server side scanner doesn't honor stop row
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

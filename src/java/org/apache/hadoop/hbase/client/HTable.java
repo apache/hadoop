@@ -1276,7 +1276,7 @@ public class HTable {
      * Returns false if there are no more scanners.
      */
     private boolean nextScanner() throws IOException {
-      // close the previous scanner if it's open
+      // Close the previous scanner if it's open
       if (this.callable != null) {
         this.callable.setClose();
         getConnection().getRegionServerWithRetries(callable);
@@ -1285,13 +1285,15 @@ public class HTable {
 
       // if we're at the end of the table, then close and return false
       // to stop iterating
-      if (currentRegion != null){
+      if (currentRegion != null) {
         if (CLIENT_LOG.isDebugEnabled()) {
           CLIENT_LOG.debug("Advancing forward from region " + currentRegion);
         }
 
         byte [] endKey = currentRegion.getEndKey();
-        if (endKey == null || Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY)) {
+        if (endKey == null ||
+            Bytes.equals(endKey, HConstants.EMPTY_BYTE_ARRAY) ||
+            filterSaysStop(endKey)) {
           close();
           return false;
         }
@@ -1319,12 +1321,25 @@ public class HTable {
       return true;
     }
 
+    /**
+     * @param endKey
+     * @return Returns true if the passed region endkey is judged beyond
+     * filter.
+     */
+    private boolean filterSaysStop(final byte [] endKey) {
+      if (this.filter == null) {
+        return false;
+      }
+      // Let the filter see current row.
+      this.filter.filterRowKey(endKey);
+      return this.filter.filterAllRemaining();
+    }
+
     /** {@inheritDoc} */
     public RowResult next() throws IOException {
       if (this.closed) {
         return null;
       }
-      
       RowResult values = null;
       do {
         values = getConnection().getRegionServerWithRetries(callable);
@@ -1333,7 +1348,6 @@ public class HTable {
       if (values != null && values.size() != 0) {
         return values;
       }
-      
       return null;
     }
 
