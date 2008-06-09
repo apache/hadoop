@@ -553,6 +553,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3511. Fixes namenode image to not set the root's quota to an
     invalid value when the quota was not saved in the image. (hairong)
 
+    HADOOP-3516. Ensure the JobClient in HadoopArchives is initialized
+    with a configuration. (Subramaniam Krishnan via omalley)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
