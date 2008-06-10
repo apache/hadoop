@@ -44,6 +44,8 @@ Hbase Change Log
    HBASE-670   Historian deadlocks if regionserver is at global memory boundary
                and is hosting .META.
    HBASE-665   Server side scanner doesn't honor stop row
+   HBASE-662   UI in table.jsp gives META locations, not the table's regions
+               location (Jean-Daniel Cryans via Stack)
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

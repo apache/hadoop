@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JenkinsHash;
@@ -53,12 +55,22 @@ public class HRegionInfo implements WritableComparable {
     new HRegionInfo(1L, HTableDescriptor.META_TABLEDESC);
 
   /**
-   * Extracts table name prefix from a region name.
-   * Presumes region names are ASCII characters only.
-   * @param regionName A region name.
+   * Extracts table name prefix from a metaregion row name.
+   * @param regionName A metaregion row name.
    * @return The table prefix of a region name.
    */
   public static byte [] getTableNameFromRegionName(final byte [] regionName) {
+    return parseMetaRegionRow(regionName).get(0);
+  }
+
+  /**
+   * Parses passed metaregion row into its constituent parts.
+   * Presumes region names are ASCII characters only.
+   * @param regionName A metaregion row name.
+   * @return A list where first element is the tablename, second the row
+   * portion, and the third the id.
+   */
+  public static List<byte []> parseMetaRegionRow(final byte [] regionName) {
     int offset = -1;
     for (int i = 0; i < regionName.length; i++) {
       if (regionName[i] == DELIMITER) {
@@ -72,7 +84,30 @@ public class HRegionInfo implements WritableComparable {
     }
     byte [] tableName = new byte[offset];
     System.arraycopy(regionName, 0, tableName, 0, offset);
-    return tableName;
+    // Now move in from the tail till we hit DELIMITER to find the id
+    offset = -1;
+    for (int i = regionName.length - 1; i > tableName.length; i--) {
+      if (regionName[i] == DELIMITER) {
+        offset = i;
+        break;
+      }
+    }
+    if (offset == -1) {
+      throw new IllegalArgumentException(Bytes.toString(regionName) +
+          " does not have parseable tail");
+    }
+    byte [] row = new byte[offset - (tableName.length + 1)];
+    System.arraycopy(regionName, tableName.length + 1, row, 0,
+      offset - (tableName.length + 1));
+    byte [] id = new byte[regionName.length - (offset + 1)];
+    System.arraycopy(regionName, offset + 1, id, 0,
+      regionName.length - (offset + 1));
+    // Now make up an array to hold the three parse pieces.
+    List<byte []> result = new ArrayList<byte []>(3);
+    result.add(tableName);
+    result.add(row);
+    result.add(id);
+    return result;
   }
 
   private byte [] endKey = HConstants.EMPTY_BYTE_ARRAY;

@@ -19,11 +19,25 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.List;
+
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestHRegionInfo extends HBaseTestCase {
+  public void testParse() throws Exception {
+    String tableName = getName();
+    String row = getName();
+    long id = 12345;
+    List<byte []> parse =
+      HRegionInfo.parseMetaRegionRow(Bytes.toBytes(tableName + "," + row +
+        "," + Long.toString(id)));
+    assertEquals(Bytes.toString(parse.get(0)), tableName);
+    assertEquals(Bytes.toString(parse.get(1)), row);
+    assertEquals(Long.parseLong(Bytes.toString(parse.get(2))), id);
+  }
+  
   public void testCreateHRegionInfoName() throws Exception {
     String tableName = "tablename";
     final byte [] tn = Bytes.toBytes(tableName);

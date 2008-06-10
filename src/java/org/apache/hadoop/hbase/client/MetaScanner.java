@@ -1,6 +1,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -44,12 +45,11 @@ class MetaScanner implements HConstants {
       MetaScannerVisitor visitor, byte[] tableName)
   throws IOException {
     HConnection connection = HConnectionManager.getConnection(configuration);
-    HRegionLocation metaLocation = null;
     boolean toContinue = true;
     byte [] startRow = Bytes.equals(tableName, EMPTY_START_ROW)? tableName:
       HRegionInfo.createRegionName(tableName, null, NINES);
       
-    // Scan over the each meta region
+    // Scan over each meta region
     do {
       ScannerCallable callable = new ScannerCallable(connection,
         META_TABLE_NAME, COL_REGIONINFO_ARRAY, tableName, LATEST_TIMESTAMP,
@@ -57,15 +57,17 @@ class MetaScanner implements HConstants {
       try {
         // Open scanner
         connection.getRegionServerWithRetries(callable);
-        metaLocation = connection.locateRegion(META_TABLE_NAME, startRow);
         while (toContinue) {
           RowResult rowResult = connection.getRegionServerWithRetries(callable);
           if (rowResult == null || rowResult.size() == 0) {
             break;
           }
-          HRegionInfo info = Writables.
-            getHRegionInfo(rowResult.get(COL_REGIONINFO));
-          toContinue = visitor.processRow(rowResult, metaLocation, info);
+          HRegionInfo info = Writables.getHRegionInfo(rowResult
+              .get(COL_REGIONINFO));
+          List<byte []> parse = HRegionInfo.parseMetaRegionRow(info.getRegionName());
+          HRegionLocation regionLocation =
+            connection.locateRegion(parse.get(0), parse.get(1));
+          toContinue = visitor.processRow(rowResult, regionLocation, info);
         }
         // Advance the startRow to the end key of the current region
         startRow = callable.getHRegionInfo().getEndKey();
@@ -88,12 +90,12 @@ class MetaScanner implements HConstants {
      * unnecessary for some reason.
      * 
      * @param rowResult
-     * @param metaLocation
+     * @param regionLocation
      * @param info
      * @return A boolean to know if it should continue to loop in the region
      * @throws IOException
      */
     public boolean processRow(RowResult rowResult,
-        HRegionLocation metaLocation, HRegionInfo info) throws IOException;
+        HRegionLocation regionLocation, HRegionInfo info) throws IOException;
   }
 }

@@ -359,7 +359,7 @@ public class HTable {
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
       @SuppressWarnings("unused")
       public boolean processRow(@SuppressWarnings("unused") RowResult rowResult,
-          @SuppressWarnings("unused") HRegionLocation metaLocation,
+          @SuppressWarnings("unused") HRegionLocation regionLocation,
           HRegionInfo info)
       throws IOException {
         if (!(Bytes.equals(info.getTableDesc().getName(), getTableName()))) {
@@ -388,14 +388,14 @@ public class HTable {
 
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
       public boolean processRow(@SuppressWarnings("unused") RowResult rowResult,
-          HRegionLocation metaLocation, HRegionInfo hri) {
+          HRegionLocation regionLocation, HRegionInfo hri) {
         
         HRegionInfo info = new UnmodifyableHRegionInfo(hri); 
         if (!(Bytes.equals(info.getTableDesc().getName(), getTableName()))) {
           return false;
         }
         if (!(info.isOffline() || info.isSplit())) {
-          regionMap.put(info, metaLocation.getServerAddress());
+          regionMap.put(info, regionLocation.getServerAddress());
         }
         return true;
       }

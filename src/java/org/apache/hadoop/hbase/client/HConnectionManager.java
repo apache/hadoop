@@ -269,7 +269,7 @@ public class HConnectionManager implements HConstants {
         /** {@inheritDoc} */
         public boolean processRow(
             @SuppressWarnings("unused") RowResult rowResult,
-            @SuppressWarnings("unused") HRegionLocation metaLocation,
+            @SuppressWarnings("unused") HRegionLocation regionLocation,
             HRegionInfo info) {
 
           // Only examine the rows where the startKey is zero length
