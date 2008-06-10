@@ -5,7 +5,7 @@
 <meta content="Apache Forrest" name="Generator">
 <meta name="Forrest-version" content="0.8">
 <meta name="Forrest-skin-name" content="pelt">
-<title>Hadoop Documentation</title>
+<title>Hadoop Archives</title>
 <link type="text/css" href="skin/basic.css" rel="stylesheet">
 <link media="screen" type="text/css" href="skin/screen.css" rel="stylesheet">
 <link media="print" type="text/css" href="skin/print.css" rel="stylesheet">
@@ -104,8 +104,8 @@ document.write("Last Published: " + document.lastModified);
 <div id="menu">
 <div onclick="SwitchMenu('menu_selected_1.1', 'skin/')" id="menu_selected_1.1Title" class="menutitle" style="background-image: url('skin/images/chapter_open.gif');">Documentation</div>
 <div id="menu_selected_1.1" class="selectedmenuitemgroup" style="display: block;">
-<div class="menupage">
-<div class="menupagetitle">Overview</div>
+<div class="menuitem">
+<a href="index.html">Overview</a>
 </div>
 <div class="menuitem">
 <a href="quickstart.html">Quickstart</a>
@@ -137,8 +137,8 @@ document.write("Last Published: " + document.lastModified);
 <div class="menuitem">
 <a href="streaming.html">Streaming</a>
 </div>
-<div class="menuitem">
-<a href="hadoop_archives.html">Hadoop Archives</a>
+<div class="menupage">
+<div class="menupagetitle">Hadoop Archives</div>
 </div>
 <div class="menuitem">
 <a href="hod.html">Hadoop On Demand</a>
@@ -162,10 +162,7 @@ document.write("Last Published: " + document.lastModified);
 <a href="changes.html">All Changes</a>
 </div>
 </div>
-<div id="credit">
-<hr>
-<a href="http://forrest.apache.org/"><img border="0" title="Built with Apache Forrest" alt="Built with Apache Forrest - logo" src="images/built-with-forrest-button.png" style="width: 88px;height: 31px;"></a>
-</div>
+<div id="credit"></div>
 <div id="roundbottom">
 <img style="display: none" class="corner" height="15" width="15" alt="" src="skin/images/rc-b-l-15-1body-2menu-3menu.png"></div>
 <!--+
@@ -181,53 +178,84 @@ document.write("Last Published: " + document.lastModified);
     +-->
 <div id="content">
 <div title="Portable Document Format" class="pdflink">
-<a class="dida" href="index.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
+<a class="dida" href="hadoop_archives.pdf"><img alt="PDF -icon" src="skin/images/pdfdoc.gif" class="skin"><br>
         PDF</a>
 </div>
-<h1>Hadoop Documentation</h1>
-    
-<p>
-    The following documents provide concepts and procedures that will help you 
-    get started using Hadoop. If you have more questions, you can ask the 
-    <a href="http://hadoop.apache.org/core/mailing_lists.html">mailing list</a> or browse the archives.
-    </p>
-    
-<ul>
-      
+<h1>Hadoop Archives</h1>
+<div id="minitoc-area">
+<ul class="minitoc">
 <li>
-<a href="quickstart.html">Hadoop Quickstart</a>
+<a href="#What+are+Hadoop+archives%3F"> What are Hadoop archives? </a>
 </li>
-      
 <li>
-<a href="cluster_setup.html">Hadoop Cluster Setup</a>
+<a href="#How+to+create+an+archive%3F"> How to create an archive? </a>
 </li>
-      
 <li>
-<a href="hdfs_design.html">Hadoop Distributed File System</a>
+<a href="#How+to+look+up+files+in+archives%3F"> How to look up files in archives? </a>
 </li>
-      
-<li>
-<a href="mapred_tutorial.html">Hadoop Map-Reduce Tutorial</a>
-</li>
-      
-<li>
-<a href="native_libraries.html">Native Hadoop Libraries</a>
-</li>
-      
-<li>
-<a href="api/index.html">API Docs</a>
-</li>
-      
-<li>
-<a href="http://wiki.apache.org/hadoop/">Wiki</a>
-</li>
-      
-<li>
-<a href="http://wiki.apache.org/hadoop/FAQ">FAQ</a>
-</li>
-    
 </ul>
-  
+</div>
+        
+<a name="N1000D"></a><a name="What+are+Hadoop+archives%3F"></a>
+<h2 class="h3"> What are Hadoop archives? </h2>
+<div class="section">
+<p>
+        Hadoop archives are special format archives. A Hadoop archive
+        maps to a FileSystem directory. A Hadoop archive always has a *.har
+        extension. A Hadoop archive directory contains metadata (in the form 
+        of _index and _masterindex) and data (part-*) files. The _index file contains
+        the name of the files that are part of the archive and there location
+        within the part files. 
+        </p>
+</div>
+        
+<a name="N10017"></a><a name="How+to+create+an+archive%3F"></a>
+<h2 class="h3"> How to create an archive? </h2>
+<div class="section">
+<p>
+        
+<span class="codefrag">Usage: hadoop archive -archiveName name &lt;src&gt;* &lt;dest&gt;</span>
+        
+</p>
+<p>
+        -archiveName is the name of the archive you would like to create. An example would be 
+        foo.har. The name should have a *.har extension. The inputs are filesystem pathnames which 
+        work as usual with regular expressions. The destination directory would contain the archive.
+        Note that this is a Map Reduce job that creates the archives. You would need a map reduce cluster
+        to run this. The following is an example:</p>
+<p>
+        
+<span class="codefrag">hadoop -archiveName foo.har /user/hadoop/dir1 /user/hadoop/dir2 /user/zoo/</span>
+        
+</p>
+<p>
+        In the above example /user/hadoop/dir1 and /user/hadoop/dir2 will be archived in the following
+        filesystem directory -- /user/zoo/foo.har. The sources are not changed or removed when an archive
+        is created.
+        </p>
+</div>
+        
+<a name="N1002F"></a><a name="How+to+look+up+files+in+archives%3F"></a>
+<h2 class="h3"> How to look up files in archives? </h2>
+<div class="section">
+<p>
+        The archives exposes itself as a filesystem layer. So all the fs shell commands in the archives work but 
+        with a different URI. Also, note that archives are immutable. So, rename's, deletes and creates return an error. 
+        URI for Hadoop Archives is 
+        </p>
+<p>
+<span class="codefrag">har://scheme-hostname:port/archivepath/fileinarchive</span>
+</p>
+<p>
+        If no scheme is provided it assumes the underlying filesystem. 
+        In that case the URI would look like 
+        </p>
+<p>
+<span class="codefrag">
+        har:///archivepath/fileinarchive</span>
+</p>
+</div>
+	
 </div>
 <!--+
     |end content
@@ -247,7 +275,6 @@ document.write("Last Published: " + document.lastModified);
         Copyright &copy;
          2007 <a href="http://www.apache.org/licenses/">The Apache Software Foundation.</a>
 </div>
-<div id="logos"></div>
 <!--+
     |end bottomstrip
     +-->

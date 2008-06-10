@@ -7,6 +7,8 @@ Trunk (unreleased changes)
   NEW FEATURES
 
   IMPROVEMENTS
+    HADOOP-3492. Add forrest documentation for user archives.
+    (Mahadev Konar via hairong)
 
   OPTIMIZATIONS
 

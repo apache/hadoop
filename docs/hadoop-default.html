@@ -105,6 +105,9 @@ creations/deletions), or "all".</td>
 <td><a name="fs.s3.impl">fs.s3.impl</a></td><td>org.apache.hadoop.fs.s3.S3FileSystem</td><td>The FileSystem for s3: uris.</td>
 </tr>
 <tr>
+<td><a name="fs.s3n.impl">fs.s3n.impl</a></td><td>org.apache.hadoop.fs.s3native.NativeS3FileSystem</td><td>The FileSystem for s3n: (Native S3) uris.</td>
+</tr>
+<tr>
 <td><a name="fs.kfs.impl">fs.kfs.impl</a></td><td>org.apache.hadoop.fs.kfs.KosmosFileSystem</td><td>The FileSystem for kfs: uris.</td>
 </tr>
 <tr>
@@ -118,6 +121,9 @@ creations/deletions), or "all".</td>
 </tr>
 <tr>
 <td><a name="fs.ramfs.impl">fs.ramfs.impl</a></td><td>org.apache.hadoop.fs.InMemoryFileSystem</td><td>The FileSystem for ramfs: uris.</td>
+</tr>
+<tr>
+<td><a name="fs.har.impl">fs.har.impl</a></td><td>org.apache.hadoop.fs.HarFileSystem</td><td>The filesystem for Hadoop archives. </td>
 </tr>
 <tr>
 <td><a name="fs.inmemory.size.mb">fs.inmemory.size.mb</a></td><td>75</td><td>The size of the in-memory filsystem instance in MB</td>
@@ -274,6 +280,9 @@ creations/deletions), or "all".</td>
 <td><a name="dfs.blockreport.intervalMsec">dfs.blockreport.intervalMsec</a></td><td>3600000</td><td>Determines block reporting interval in milliseconds.</td>
 </tr>
 <tr>
+<td><a name="dfs.blockreport.initialDelay">dfs.blockreport.initialDelay</a></td><td>0</td><td>Delay for first block report in seconds.</td>
+</tr>
+<tr>
 <td><a name="dfs.heartbeat.interval">dfs.heartbeat.interval</a></td><td>3</td><td>Determines datanode heartbeat interval in seconds.</td>
 </tr>
 <tr>
@@ -329,12 +338,12 @@ creations/deletions), or "all".</td>
 </tr>
 <tr>
 <td><a name="fs.s3.buffer.dir">fs.s3.buffer.dir</a></td><td>${hadoop.tmp.dir}/s3</td><td>Determines where on the local filesystem the S3 filesystem
-  should store its blocks before it sends them to S3
-  or after it retrieves them from S3.
+  should store files before sending them to S3
+  (or after retrieving them from S3).
   </td>
 </tr>
 <tr>
-<td><a name="fs.s3.maxRetries">fs.s3.maxRetries</a></td><td>4</td><td>The maximum number of retries for reading or writing blocks to S3, 
+<td><a name="fs.s3.maxRetries">fs.s3.maxRetries</a></td><td>4</td><td>The maximum number of retries for reading or writing files to S3, 
   before we signal failure to the application.
   </td>
 </tr>
@@ -565,11 +574,6 @@ creations/deletions), or "all".</td>
   </td>
 </tr>
 <tr>
-<td><a name="mapred.map.output.compression.type">mapred.map.output.compression.type</a></td><td>RECORD</td><td>If the map outputs are to compressed, how should they
-               be compressed? Should be one of NONE, RECORD or BLOCK.
-  </td>
-</tr>
-<tr>
 <td><a name="mapred.map.output.compression.codec">mapred.map.output.compression.codec</a></td><td>org.apache.hadoop.io.compress.DefaultCodec</td><td>If the map outputs are compressed, how should they be 
                compressed?
   </td>
@@ -665,11 +669,6 @@ creations/deletions), or "all".</td>
 <tr>
 <td><a name="ipc.client.idlethreshold">ipc.client.idlethreshold</a></td><td>4000</td><td>Defines the threshold number of connections after which
                connections will be inspected for idleness.
-  </td>
-</tr>
-<tr>
-<td><a name="ipc.client.maxidletime">ipc.client.maxidletime</a></td><td>120000</td><td>Defines the maximum idle time in msec for a connected client after 
-               which it may be disconnected.
   </td>
 </tr>
 <tr>

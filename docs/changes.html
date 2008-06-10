@@ -36,7 +36,7 @@
     function collapse() {
       for (var i = 0; i < document.getElementsByTagName("ul").length; i++) {
         var list = document.getElementsByTagName("ul")[i];
-        if (list.id != 'release_0.18.0_-_unreleased_' && list.id != 'release_0.17.0_-_2008-05-18_') {
+        if (list.id != 'trunk_(unreleased_changes)_' && list.id != 'release_0.18.0_-_unreleased_') {
           list.style.display = "none";
         }
       }
@@ -52,6 +52,35 @@
 <a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
 <h1>Hadoop Change Log</h1>
 
+<h2><a href="javascript:toggleList('trunk_(unreleased_changes)_')">Trunk (unreleased changes)
+</a></h2>
+<ul id="trunk_(unreleased_changes)_">
+  <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._incompatible_changes_')">  INCOMPATIBLE CHANGES
+</a>&nbsp;&nbsp;&nbsp;(none)
+    <ol id="trunk_(unreleased_changes)_._incompatible_changes_">
+    </ol>
+  </li>
+  <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._new_features_')">  NEW FEATURES
+</a>&nbsp;&nbsp;&nbsp;(none)
+    <ol id="trunk_(unreleased_changes)_._new_features_">
+    </ol>
+  </li>
+  <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._improvements_')">  IMPROVEMENTS
+</a>&nbsp;&nbsp;&nbsp;(none)
+    <ol id="trunk_(unreleased_changes)_._improvements_">
+    </ol>
+  </li>
+  <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._optimizations_')">  OPTIMIZATIONS
+</a>&nbsp;&nbsp;&nbsp;(none)
+    <ol id="trunk_(unreleased_changes)_._optimizations_">
+    </ol>
+  </li>
+  <li><a href="javascript:toggleList('trunk_(unreleased_changes)_._bug_fixes_')">  BUG FIXES
+</a>&nbsp;&nbsp;&nbsp;(none)
+    <ol id="trunk_(unreleased_changes)_._bug_fixes_">
+    </ol>
+  </li>
+</ul>
 <h2><a href="javascript:toggleList('release_0.18.0_-_unreleased_')">Release 0.18.0 - Unreleased
 </a></h2>
 <ul id="release_0.18.0_-_unreleased_">
@@ -277,7 +306,7 @@ InputFormat.validateInput.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(77)
+</a>&nbsp;&nbsp;&nbsp;(80)
     <ol id="release_0.18.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2905">HADOOP-2905</a>. 'fsck -move' triggers NPE in NameNode.<br />(Lohit Vjayarenu via rangadi)</li>
       <li>Increment ClientProtocol.versionID missed by <a href="http://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a>.<br />(shv)</li>
@@ -437,11 +466,17 @@ don't have fragments even when createSymLink is true.<br />(Abhijit Bagri via dd
 ResolutionMonitor.<br />(Lohit Vijayarenu via shv)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3511">HADOOP-3511</a>. Fixes namenode image to not set the root's quota to an
 invalid value when the quota was not saved in the image.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3516">HADOOP-3516</a>. Ensure the JobClient in HadoopArchives is initialized
+with a configuration.<br />(Subramaniam Krishnan via omalley)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3513">HADOOP-3513</a>. Improve NNThroughputBenchmark log messages.<br />(shv)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3519">HADOOP-3519</a>.  Fix NPE in DFS FileSystem rename.<br />(hairong via tomwhite)</li>
     </ol>
   </li>
 </ul>
-<h2><a href="javascript:toggleList('release_0.17.0_-_2008-05-18_')">Release 0.17.0 - 2008-05-18
-</a></h2>
+<h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
+<ul id="older">
+<h3><a href="javascript:toggleList('release_0.17.0_-_2008-05-18_')">Release 0.17.0 - 2008-05-18
+</a></h3>
 <ul id="release_0.17.0_-_2008-05-18_">
   <li><a href="javascript:toggleList('release_0.17.0_-_2008-05-18_._incompatible_changes_')">  INCOMPATIBLE CHANGES
 </a>&nbsp;&nbsp;&nbsp;(26)
@@ -809,8 +844,6 @@ mukund)</li>
     </ol>
   </li>
 </ul>
-<h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
-<ul id="older">
 <h3><a href="javascript:toggleList('release_0.16.4_-_2008-05-05_')">Release 0.16.4 - 2008-05-05
 </a></h3>
 <ul id="release_0.16.4_-_2008-05-05_">

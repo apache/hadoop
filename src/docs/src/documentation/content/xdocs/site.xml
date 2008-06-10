@@ -43,6 +43,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <mapred    label="Map-Reduce Tutorial" href="mapred_tutorial.html" />
     <mapred    label="Native Hadoop Libraries" href="native_libraries.html" />
     <streaming label="Streaming"          href="streaming.html" />
+    <archives label="Hadoop Archives"     href="hadoop_archives.html"/>
     <hod       label="Hadoop On Demand" href="hod.html">
       <hod-user-guide href="hod_user_guide.html"/>
       <hod-admin-guide href="hod_admin_guide.html"/>
