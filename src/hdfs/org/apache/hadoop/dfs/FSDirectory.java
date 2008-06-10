@@ -363,10 +363,16 @@ class FSDirectory implements FSConstants, Closeable {
       INode[] dstInodes = new INode[dstComponents.length];
       rootDir.getExistingPathINodes(dstComponents, dstInodes);
       
-      // check the existence of the destination
-      if (dstInodes[dstInodes.length-1] != null) {
+      // check the validity of the destination
+      if (dstInodes[dstInodes.length-1] != null) { //check if destination exists
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-                                     +"failed to rename "+src+" to "+dst+ " because destination exists");
+                                     +"failed to rename "+src+" to "+dst+ 
+                                     " because destination exists");
+        return false;
+      } else if (dstInodes[dstInodes.length-2] == null) { // check if its parent exists
+        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            +"failed to rename "+src+" to "+dst+ 
+            " because destination's parent does not exists");
         return false;
       }
       
