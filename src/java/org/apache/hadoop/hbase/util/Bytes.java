@@ -133,9 +133,9 @@ public class Bytes {
    * @param bytes
    * @return the long value
    */
-  public static long toInt(byte[] bytes) {
+  public static int toInt(byte[] bytes) {
     if (bytes == null || bytes.length == 0) {
-      return -1L;
+      return -1;
     }
     return ByteBuffer.wrap(bytes).getInt();
   }
