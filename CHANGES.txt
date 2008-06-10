@@ -273,6 +273,9 @@ Release 0.18.0 - Unreleased
     HADOOP-2916. Refactor src structure, but leave package structure alone.
     (Raghu Angadi via mukund) 
 
+    HADOOP-3492. Add forrest documentation for user archives.
+    (Mahadev Konar via hairong)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
