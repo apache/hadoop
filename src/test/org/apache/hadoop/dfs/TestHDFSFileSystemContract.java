@@ -38,10 +38,4 @@ public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
     cluster.shutdown();
   }
   
-  @Override
-  protected boolean renameSupported() {
-    // disable for the moment as rename tests are not working on HDFS yet
-    return false;
-  }
-
 }

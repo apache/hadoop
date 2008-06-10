@@ -71,6 +71,11 @@ public class TestDFSRename extends junit.framework.TestCase {
       //should not have any lease
       assertEquals(0, countLease(cluster)); 
 
+      // test non-existent destination
+      Path dstPath = new Path("/c/d");
+      assertFalse(fs.exists(dstPath));
+      assertFalse(fs.rename(dir, dstPath));
+      
       fs.delete(dir, true);
     } finally {
       if (cluster != null) {cluster.shutdown();}

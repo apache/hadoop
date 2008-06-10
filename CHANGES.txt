@@ -558,6 +558,8 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3513. Improve NNThroughputBenchmark log messages. (shv)
 
+    HADOOP-3519.  Fix NPE in DFS FileSystem rename.  (hairong via tomwhite)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
