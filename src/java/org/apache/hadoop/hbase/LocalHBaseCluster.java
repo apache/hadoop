@@ -65,6 +65,7 @@ public class LocalHBaseCluster implements HConstants {
   /** 'local:' */
   public static final String LOCAL_COLON = LOCAL + ":";
   private final HBaseConfiguration conf;
+  private final Class<? extends HRegionServer> regionServerClass;
 
   /**
    * Constructor.
@@ -98,6 +99,7 @@ public class LocalHBaseCluster implements HConstants {
     // start/stop ports at different times during the life of the test.
     conf.set(REGIONSERVER_ADDRESS, DEFAULT_HOST + ":0");
     this.regionThreads = new ArrayList<RegionServerThread>();
+    regionServerClass = (Class<? extends HRegionServer>) conf.getClass(HConstants.REGION_SERVER_IMPL, HRegionServer.class);
     for (int i = 0; i < noRegionServers; i++) {
       addRegionServer();
     }
@@ -112,7 +114,15 @@ public class LocalHBaseCluster implements HConstants {
    */
   public RegionServerThread addRegionServer() throws IOException {
     synchronized (regionThreads) {
-      RegionServerThread t = new RegionServerThread(new HRegionServer(conf),
+      HRegionServer server; 
+      try {
+        server = regionServerClass.getConstructor(HBaseConfiguration.class).newInstance(conf);
+      } catch (Exception e) {
+        IOException ioe = new IOException();
+        ioe.initCause(e);
+        throw ioe;
+      }
+      RegionServerThread t = new RegionServerThread(server,
           this.regionThreads.size());
       this.regionThreads.add(t);
       return t;

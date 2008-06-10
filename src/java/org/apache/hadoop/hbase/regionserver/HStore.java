@@ -167,7 +167,7 @@ public class HStore implements HConstants {
    * failed.  Can be null.
    * @throws IOException
    */
-  HStore(Path basedir, HRegionInfo info, HColumnDescriptor family,
+  protected HStore(Path basedir, HRegionInfo info, HColumnDescriptor family,
       FileSystem fs, Path reconstructionLog, HBaseConfiguration conf,
       final Progressable reporter)
   throws IOException {  
@@ -621,7 +621,7 @@ public class HStore implements HConstants {
    * @param key
    * @param value
    */
-  void add(HStoreKey key, byte[] value) {
+  protected void add(HStoreKey key, byte[] value) {
     lock.readLock().lock();
     try {
       this.memcache.add(key, value);
@@ -1845,7 +1845,7 @@ public class HStore implements HConstants {
   /**
    * Return a scanner for both the memcache and the HStore files
    */
-  InternalScanner getScanner(long timestamp, byte [][] targetCols,
+  protected InternalScanner getScanner(long timestamp, byte [][] targetCols,
       byte [] firstRow, RowFilterInterface filter)
   throws IOException {
     lock.readLock().lock();

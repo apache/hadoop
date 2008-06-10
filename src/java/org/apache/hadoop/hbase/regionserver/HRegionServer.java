@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.RegionHistorian;
 import org.apache.hadoop.hbase.RegionServerRunningException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.io.Cell;
@@ -476,7 +477,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * Run init. Sets up hlog and starts up all server threads.
    * @param c Extra configuration.
    */
-  private void init(final MapWritable c) throws IOException {
+  protected void init(final MapWritable c) throws IOException {
     try {
       for (Map.Entry<Writable, Writable> e: c.entrySet()) {
         String key = e.getKey().toString();
@@ -860,15 +861,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     HRegion region = this.onlineRegions.get(mapKey);
     if (region == null) {
       try {
-        region = new HRegion(HTableDescriptor.getTableDir(rootDir,
-                regionInfo.getTableDesc().getName()),
-            this.log, this.fs, conf, regionInfo, null, this.cacheFlusher,
-            new Progressable() {
-              public void progress() {
-                addProcessingMessage(regionInfo);
-              }
-            }
-        );
+        region = instantiateRegion(regionInfo);
         // Startup a compaction early if one is needed.
         this.compactSplitThread.compactionRequested(region);
       } catch (IOException e) {
@@ -889,6 +882,17 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       }
     }
     reportOpen(regionInfo); 
+  }
+  
+  protected HRegion instantiateRegion(final HRegionInfo regionInfo)
+      throws IOException {
+    return new HRegion(HTableDescriptor.getTableDir(rootDir, regionInfo
+        .getTableDesc().getName()), this.log, this.fs, conf, regionInfo, null,
+        this.cacheFlusher, new Progressable() {
+          public void progress() {
+            addProcessingMessage(regionInfo);
+          }
+        });
   }
   
   /*
@@ -1172,16 +1176,9 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     requestCount.incrementAndGet();
     try {
       HRegion r = getRegion(regionName);
-      long scannerId = -1L;
       InternalScanner s =
         r.getScanner(cols, firstRow, timestamp, filter);
-      scannerId = rand.nextLong();
-      String scannerName = String.valueOf(scannerId);
-      synchronized(scanners) {
-        scanners.put(scannerName, s);
-      }
-      this.leases.
-        createLease(scannerName, new ScannerListener(scannerName));
+      long scannerId = addScanner(s);
       return scannerId;
     } catch (IOException e) {
       LOG.error("Error opening scanner (fsOk: " + this.fsOk + ")",
@@ -1189,6 +1186,18 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
       checkFileSystem();
       throw e;
     }
+  }
+  
+  protected long addScanner(InternalScanner s) throws LeaseStillHeldException {
+    long scannerId = -1L;
+    scannerId = rand.nextLong();
+    String scannerName = String.valueOf(scannerId);
+    synchronized(scanners) {
+      scanners.put(scannerName, s);
+    }
+    this.leases.
+      createLease(scannerName, new ScannerListener(scannerName));
+    return scannerId;
   }
   
   /** {@inheritDoc} */
@@ -1409,7 +1418,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * 
    * @throws IOException
    */
-  private void checkOpen() throws IOException {
+  protected void checkOpen() throws IOException {
     if (this.stopRequested.get() || this.abortRequested) {
       throw new IOException("Server not running");
     }
@@ -1490,7 +1499,28 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     }
     return total;
   }
-  
+
+  /**
+   * @return Return the leases.
+   */
+  protected Leases getLeases() {
+    return leases;
+  }
+
+  /**
+   * @return Return the rootDir.
+   */
+  protected Path getRootDir() {
+    return rootDir;
+  }
+
+  /**
+   * @return Return the fs.
+   */
+  protected FileSystem getFileSystem() {
+    return fs;
+  }
+
   //
   // Main program and support routines
   //
@@ -1567,6 +1597,10 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
    * @param args
    */
   public static void main(String [] args) {
-    doMain(args, HRegionServer.class);
+    Configuration conf = new HBaseConfiguration();
+    @SuppressWarnings("unchecked")
+    Class<? extends HRegionServer> regionServerClass = (Class<? extends HRegionServer>) conf
+        .getClass(HConstants.REGION_SERVER_IMPL, HRegionServer.class);
+    doMain(args, regionServerClass);
   }
 }

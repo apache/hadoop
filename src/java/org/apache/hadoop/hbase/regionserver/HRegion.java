@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -449,14 +450,16 @@ public class HRegion implements HConstants {
     // Load in all the HStores.
     long maxSeqId = -1;
     for (HColumnDescriptor c : this.regionInfo.getTableDesc().getFamilies()) {
-      HStore store = new HStore(this.basedir, this.regionInfo, c, this.fs,
-        oldLogFile, this.conf, reporter);
+      HStore store = instantiateHStore(this.basedir, c, oldLogFile, reporter);
       stores.put(Bytes.mapKey(c.getName()), store);
       long storeSeqId = store.getMaxSequenceId();
       if (storeSeqId > maxSeqId) {
         maxSeqId = storeSeqId;
       }
     }
+    
+    doReconstructionLog(oldLogFile, maxSeqId, reporter);
+    
     if (fs.exists(oldLogFile)) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Deleting old log file: " + oldLogFile);
@@ -1542,12 +1545,27 @@ public class HRegion implements HConstants {
     }
   }
   
+  // Do any reconstruction needed from the log
+  @SuppressWarnings("unused")
+  protected void doReconstructionLog(Path oldLogFile, long maxSeqId,
+    Progressable reporter)
+  throws UnsupportedEncodingException, IOException {
+    // Nothing to do (Replaying is done in HStores)
+  }
+
+  protected HStore instantiateHStore(Path baseDir, 
+    HColumnDescriptor c, Path oldLogFile, Progressable reporter)
+  throws IOException {
+    return new HStore(baseDir, this.regionInfo, c, this.fs, oldLogFile,
+      this.conf, reporter);
+  }
+
   /*
    * @param column
    * @return Store that goes with the family on passed <code>column</code>.
    * TODO: Make this lookup faster.
    */
-  private HStore getStore(final byte [] column) {
+  protected HStore getStore(final byte [] column) {
     return this.stores.get(HStoreKey.getFamilyMapKey(column)); 
   }
   

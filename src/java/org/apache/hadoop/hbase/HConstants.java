@@ -84,6 +84,9 @@ public interface HConstants {
   /** Parameter name for what region server interface to use. */
   static final String REGION_SERVER_CLASS = "hbase.regionserver.class";
   
+  /** Parameter name for what region server implementation to use. */
+  static final String REGION_SERVER_IMPL= "hbase.regionserver.impl";
+  
   /** Default region server interface class name. */
   static final String DEFAULT_REGION_SERVER_CLASS = HRegionInterface.class.getName();
 

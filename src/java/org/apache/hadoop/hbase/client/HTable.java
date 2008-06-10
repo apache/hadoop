@@ -333,7 +333,7 @@ public class HTable {
     return this.tableName;
   }
   
-  protected HConnection getConnection() {
+  public HConnection getConnection() {
     return this.connection;
   }
 
@@ -1221,7 +1221,7 @@ public class HTable {
    * If there are multiple regions in a table, this scanner will iterate
    * through them all.
    */
-  private class ClientScanner implements Scanner {
+  protected class ClientScanner implements Scanner {
     private final Log CLIENT_LOG = LogFactory.getLog(this.getClass());
     private byte[][] columns;
     private byte [] startRow;
@@ -1258,6 +1258,18 @@ public class HTable {
         filter.validate(columns);
       }
       nextScanner();
+    }
+    
+    protected byte[][] getColumns() {
+      return columns;
+    }
+    
+    protected long getTimestamp() {
+      return scanTime;
+    }
+    
+    protected RowFilterInterface getFilter() {
+      return filter;
     }
         
     /*
@@ -1297,8 +1309,7 @@ public class HTable {
       }
             
       try {
-        callable = new ScannerCallable(getConnection(), getTableName(), columns, 
-            localStartKey, scanTime, filter);
+        callable = getScannerCallable(localStartKey);
         // open a scanner on the region server starting at the 
         // beginning of the region
         getConnection().getRegionServerWithRetries(callable);
@@ -1308,6 +1319,11 @@ public class HTable {
         throw e;
       }
       return true;
+    }
+    
+    protected ScannerCallable getScannerCallable(byte [] localStartKey) {
+      return new ScannerCallable(getConnection(), getTableName(), columns, 
+          localStartKey, scanTime, filter);
     }
 
     /**

@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.RowResult;
 
@@ -38,7 +39,7 @@ public class ScannerCallable extends ServerCallable<RowResult> {
   private final long timestamp;
   private final RowFilterInterface filter;
 
-  ScannerCallable (HConnection connection, byte [] tableName, byte [][] columns,
+  protected ScannerCallable (HConnection connection, byte [] tableName, byte [][] columns,
       byte [] startRow, long timestamp, RowFilterInterface filter) {
     super(connection, tableName, startRow);
     this.columns = columns;
@@ -65,13 +66,29 @@ public class ScannerCallable extends ServerCallable<RowResult> {
       scannerId = -1L;
     } else if (scannerId == -1L && !closed) {
       // open the scanner
-      scannerId = server.openScanner(
-          this.location.getRegionInfo().getRegionName(), columns, row,
-          timestamp, filter);
+      scannerId = openScanner();
     } else {
       return server.next(scannerId);
     }
     return null;
+  }
+  
+  protected long openScanner() throws IOException {
+    return server.openScanner(
+        this.location.getRegionInfo().getRegionName(), columns, row,
+        timestamp, filter);
+  }
+  
+  protected byte [][] getColumns() {
+    return columns;
+  }
+  
+  protected long getTimestamp() {
+    return timestamp;
+  }
+  
+  protected RowFilterInterface getFilter() {
+    return filter;
   }
   
   /**
