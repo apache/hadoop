@@ -481,18 +481,16 @@ public class HTable {
 
   /** 
    * Get the specified number of versions of the specified row and column
-   * 
-   * @param row         - row key
-   * @param column      - column name
-   * @param numVersions - number of versions to retrieve
-   * @return            - array byte values
+   * @param row row key
+   * @param column column name
+   * @param numVersions number of versions to retrieve
+   * @return Array of Cells.
    * @throws IOException
    */
   public Cell[] get(final byte [] row, final byte [] column,
     final int numVersions) 
   throws IOException {
-    Cell[] values = null;
-    values = connection.getRegionServerWithRetries(
+    return connection.getRegionServerWithRetries(
         new ServerCallable<Cell[]>(connection, tableName, row) {
           public Cell[] call() throws IOException {
             return server.get(location.getRegionInfo().getRegionName(), row, 
@@ -500,15 +498,6 @@ public class HTable {
           }
         }
     );
-
-    if (values != null) {
-      ArrayList<Cell> cellValues = new ArrayList<Cell>();
-      for (int i = 0 ; i < values.length; i++) {
-        cellValues.add(values[i]);
-      }
-      return cellValues.toArray(new Cell[values.length]);
-    }
-    return null;
   }
 
   /** 
