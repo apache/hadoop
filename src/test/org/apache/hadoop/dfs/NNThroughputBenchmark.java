@@ -463,6 +463,7 @@ public class NNThroughputBenchmark implements FSConstants {
       assert opsPerThread.length == numThreads : "Error opsPerThread.length"; 
       nameNode.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
       // int generatedFileIdx = 0;
+      LOG.info("Generate " + numOpsRequired + " intputs for " + getOpName());
       fileNames = new String[numThreads][];
       for(int idx=0; idx < numThreads; idx++) {
         int threadOps = opsPerThread[idx];
@@ -536,6 +537,7 @@ public class NNThroughputBenchmark implements FSConstants {
               "-filesPerDir", String.valueOf(nameGenerator.filesPerDirectory)};
       CreateFileStats opCreate =  new CreateFileStats(createArgs);
       opCreate.benchmark();
+      LOG.info("Created " + numOpsRequired + " files.");
       nameNode.rename(opCreate.getBaseDir(), getBaseDir());
       // use the same files for open
       super.generateInputs(opsPerThread);
@@ -608,7 +610,7 @@ public class NNThroughputBenchmark implements FSConstants {
       DatanodeCommand cmd = nameNode.sendHeartbeat(
           dnRegistration, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, 0, 0);
       if(cmd != null)
-        LOG.info("sendHeartbeat Name-node reply: " + cmd.getAction());
+        LOG.debug("sendHeartbeat Name-node reply: " + cmd.getAction());
     }
 
     boolean addBlock(Block blk) {
@@ -765,9 +767,11 @@ public class NNThroughputBenchmark implements FSConstants {
       } while (numResolved != nrDatanodes);
 
       // create files 
+      LOG.info("Creating " + nrFiles + " with " + blocksPerFile + " blocks each.");
       FileGenerator nameGenerator;
       nameGenerator = new FileGenerator(getBaseDir(), 100);
       String clientName = getClientName(007);
+      nameNode.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
       for(int idx=0; idx < nrFiles; idx++) {
         String fileName = nameGenerator.getNextFileName();
         nameNode.create(fileName, FsPermission.getDefault(),
