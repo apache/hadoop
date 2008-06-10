@@ -28,10 +28,7 @@
 <%  } %>
 </table>
 <p>
-Master is the source of following events : 
-creation,open,assignment. 
-Regions are the source of following events :
-split,compaction, flush
+Master is the source of following events: creation, open, and assignment.  Regions are the source of following events: split, compaction, and flush.
 </p>
 <%} else {%>
 <p>
