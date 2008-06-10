@@ -556,6 +556,8 @@ Release 0.18.0 - Unreleased
     HADOOP-3516. Ensure the JobClient in HadoopArchives is initialized
     with a configuration. (Subramaniam Krishnan via omalley)
 
+    HADOOP-3513. Improve NNThroughputBenchmark log messages. (shv)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
