@@ -14,6 +14,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+   HADOOP-3528. Metrics FilesCreated and files_deleted metrics 
+   do not match.
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
