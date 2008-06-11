@@ -613,9 +613,15 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public abstract boolean delete(Path f, boolean recursive) throws IOException;
 
-  /** Mark a path to be deleted when FileSystem is closed or JVM exits.
-   *  The path has to exist in the file system.
+  /**
+   * Mark a path to be deleted when FileSystem is closed.
+   * When the JVM shuts down,
+   * all FileSystem objects will be closed automatically.
+   * Then,
+   * the marked path will be deleted as a result of closing the FileSystem.
    *
+   * The path has to exist in the file system.
+   * 
    * @param f the path to delete.
    * @return  true if deleteOnExit is successful, otherwise false.
    * @throws IOException
@@ -630,9 +636,10 @@ public abstract class FileSystem extends Configured implements Closeable {
     return true;
   }
 
-  // Delete all files that were marked as delete-on-exit. This recursively
-  // deletes all files in the specified paths.
-  //
+  /**
+   * Delete all files that were marked as delete-on-exit. This recursively
+   * deletes all files in the specified paths.
+   */
   protected void processDeleteOnExit() {
     synchronized (deleteOnExit) {
       for (Iterator<Path> iter = deleteOnExit.iterator(); iter.hasNext();) {

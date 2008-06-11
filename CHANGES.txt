@@ -287,6 +287,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3492. Add forrest documentation for user archives.
     (Mahadev Konar via hairong)
 
+    HADOOP-3467. Improve documentation for FileSystem::deleteOnExit.
+    (Tsz Wo (Nicholas), SZE via cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
