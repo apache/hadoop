@@ -7,15 +7,10 @@ Trunk (unreleased changes)
   NEW FEATURES
 
   IMPROVEMENTS
-    HADOOP-3492. Add forrest documentation for user archives.
-    (Mahadev Konar via hairong)
 
   OPTIMIZATIONS
 
   BUG FIXES
-
-   HADOOP-3528. Metrics FilesCreated and files_deleted metrics 
-   do not match.
 
 Release 0.18.0 - Unreleased
 
@@ -288,6 +283,9 @@ Release 0.18.0 - Unreleased
 
     HADOOP-2916. Refactor src structure, but leave package structure alone.
     (Raghu Angadi via mukund) 
+
+    HADOOP-3492. Add forrest documentation for user archives.
+    (Mahadev Konar via hairong)
 
   OPTIMIZATIONS
 
@@ -564,6 +562,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3513. Improve NNThroughputBenchmark log messages. (shv)
 
     HADOOP-3519.  Fix NPE in DFS FileSystem rename.  (hairong via tomwhite)
+    
+    HADOOP-3528. Metrics FilesCreated and files_deleted metrics
+    do not match.
 
 Release 0.17.0 - 2008-05-18
 
