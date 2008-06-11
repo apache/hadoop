@@ -43,6 +43,7 @@ public class QuickSort implements IndexedSorter {
     if (null != rep) {
       rep.progress();
     }
+    while (true) {
     if (r-p < 13) {
       for (int i = p; i < r; ++i) {
         for (int j = i; j > p; --j) {
@@ -76,10 +77,11 @@ public class QuickSort implements IndexedSorter {
     // Recurse on smaller interval first to keep stack shallow
     if (i - p - 1 < r - i) {
       sort(s, p, i - 1, rep);
-      sort(s, i, r, rep);
+      p = i;
     } else {
       sort(s, i, r, rep);
-      sort(s, p, i - 1, rep);
+      r = i - 1;
+    }
     }
   }
 
