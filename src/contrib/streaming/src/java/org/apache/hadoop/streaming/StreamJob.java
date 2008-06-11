@@ -521,8 +521,8 @@ public class StreamJob {
     System.out.println("  -jobconf mapred.local.dir=/tmp/local");
     System.out.println("  -jobconf mapred.system.dir=/tmp/system");
     System.out.println("  -jobconf mapred.temp.dir=/tmp/temp");
-    System.out.println("To treat tasks with non-zero exit status as FAILED:");    
-    System.out.println("  -jobconf stream.non.zero.exit.is.failure=true");
+    System.out.println("To treat tasks with non-zero exit status as SUCCEDED:");    
+    System.out.println("  -jobconf stream.non.zero.exit.is.failure=false");
     System.out.println("Use a custom hadoopStreaming build along a standard hadoop install:");
     System.out.println("  $HADOOP_HOME/bin/hadoop jar /path/my-hadoop-streaming.jar [...]\\");
     System.out

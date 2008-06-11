@@ -65,6 +65,12 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
     -mapper org.apache.hadoop.mapred.lib.IdentityMapper \
     -reducer /bin/wc
 </source>
+<p>User can specify <code>stream.non.zero.exit.is.failure</code> as 
+<code>true</code> or <code>false</code> to make a streaming task that exits 
+with a non-zero status to be <code>Failure</code> 
+or <code>Success</code> respectively. By default, streaming tasks exiting 
+with non-zero status are considered to be failed tasks.</p>
+
 </section>
 
 <section>
