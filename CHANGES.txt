@@ -14,6 +14,10 @@ Release 0.17.1
     HADOOP-3442. Limit recursion depth in QuickSort to avoid
     StackOverflowErrors. (cdouglas)
 
+    HADOOP-3477. Fix build to not package contrib/*/bin twice in
+    distributions.  (Adam Heath via cutting)
+
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
