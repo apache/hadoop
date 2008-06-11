@@ -167,6 +167,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <setmapoutputcompressiontype href="#setMapOutputCompressionType(org.apache.hadoop.io.SequenceFile.CompressionType)" />
                 <setmapoutputcompressorclass href="#setMapOutputCompressorClass(java.lang.Class)" />
                 <getjoblocaldir href="#getJobLocalDir()" />
+                <getjar href="#getJar()" />
               </jobconf>
               <jobconfigurable href="JobConfigurable.html">
                 <configure href="#configure(org.apache.hadoop.mapred.JobConf)" />
