@@ -207,7 +207,7 @@ framework.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._improvements_')">  IMPROVEMENTS
-</a>&nbsp;&nbsp;&nbsp;(32)
+</a>&nbsp;&nbsp;&nbsp;(34)
     <ol id="release_0.18.0_-_unreleased_._improvements_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2928">HADOOP-2928</a>. Remove deprecated FileSystem.getContentLength().<br />(Lohit Vjayarenu via rangadi)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3130">HADOOP-3130</a>. Make the connect timeout smaller for getFile.<br />(Amar Ramesh Kamat via ddas)</li>
@@ -279,6 +279,10 @@ a separate thread.<br />(Amareshwari Sriramadasu via ddas)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3501">HADOOP-3501</a>. Deprecate InMemoryFileSystem.<br />(cutting via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3366">HADOOP-3366</a>. Stall the shuffle while in-memory merge is in progress.<br />(acmurthy)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2916">HADOOP-2916</a>. Refactor src structure, but leave package structure alone.<br />(Raghu Angadi via mukund)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3492">HADOOP-3492</a>. Add forrest documentation for user archives.<br />(Mahadev Konar via hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3467">HADOOP-3467</a>. Improve documentation for FileSystem::deleteOnExit.
+(Tsz Wo (Nicholas), SZE via cdouglas)
+</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._optimizations_')">  OPTIMIZATIONS
@@ -306,7 +310,7 @@ InputFormat.validateInput.<br />(tomwhite via omalley)</li>
     </ol>
   </li>
   <li><a href="javascript:toggleList('release_0.18.0_-_unreleased_._bug_fixes_')">  BUG FIXES
-</a>&nbsp;&nbsp;&nbsp;(80)
+</a>&nbsp;&nbsp;&nbsp;(83)
     <ol id="release_0.18.0_-_unreleased_._bug_fixes_">
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-2905">HADOOP-2905</a>. 'fsck -move' triggers NPE in NameNode.<br />(Lohit Vjayarenu via rangadi)</li>
       <li>Increment ClientProtocol.versionID missed by <a href="http://issues.apache.org/jira/browse/HADOOP-2585">HADOOP-2585</a>.<br />(shv)</li>
@@ -470,6 +474,14 @@ invalid value when the quota was not saved in the image.<br />(hairong)</li>
 with a configuration.<br />(Subramaniam Krishnan via omalley)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3513">HADOOP-3513</a>. Improve NNThroughputBenchmark log messages.<br />(shv)</li>
       <li><a href="http://issues.apache.org/jira/browse/HADOOP-3519">HADOOP-3519</a>.  Fix NPE in DFS FileSystem rename.<br />(hairong via tomwhite)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3528">HADOOP-3528</a>. Metrics FilesCreated and files_deleted metrics
+do not match.<br />(Lohit via Mahadev)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3442">HADOOP-3442</a>. Limit recursion depth on the stack for QuickSort to prevent
+StackOverflowErrors. To avoid O(n*n) cases, when partitioning depth exceeds
+a multiple of log(n), change to HeapSort.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3418">HADOOP-3418</a>. When a directory is deleted, any leases that point to files
+in the subdirectory are removed. ((Tsz Wo (Nicholas), SZE via dhruba)
+</li>
     </ol>
   </li>
 </ul>

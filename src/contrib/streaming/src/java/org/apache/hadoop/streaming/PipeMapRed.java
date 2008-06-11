@@ -127,7 +127,7 @@ public abstract class PipeMapRed {
       this.numOfMapOutputKeyFields = job_.getInt("stream.num.map.output.key.fields", 1);
       this.numOfReduceOutputKeyFields = job_.getInt("stream.num.reduce.output.key.fields", 1);
 
-      nonZeroExitIsFailure_ = job_.getBoolean("stream.non.zero.exit.is.failure", false);
+      nonZeroExitIsFailure_ = job_.getBoolean("stream.non.zero.exit.is.failure", true);
       
       doPipe_ = getDoPipe();
       if (!doPipe_) return;
