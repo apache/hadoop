@@ -40,7 +40,7 @@ import org.apache.hadoop.dfs.BlocksMap.BlockInfo;
  *************************************************/
 class FSDirectory implements FSConstants, Closeable {
 
-  FSNamesystem namesystem = null;
+  final FSNamesystem namesystem;
   final INodeDirectoryWithQuota rootDir;
   FSImage fsImage;  
   boolean ready = false;
@@ -535,12 +535,13 @@ class FSDirectory implements FSConstants, Closeable {
   /**
    * Remove the file from management, return blocks
    */
-  public INode delete(String src, Collection<Block> deletedBlocks) {
-    NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: "
-                                  +src);
+  public INode delete(String src) {
+    if (NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: "+src);
+    }
     waitForReady();
     long now = FSNamesystem.now();
-    INode deletedNode = unprotectedDelete(src, now, deletedBlocks);
+    INode deletedNode = unprotectedDelete(src, now);
     if (deletedNode != null) {
       fsImage.getEditLog().logDelete(src, now);
     }
@@ -571,8 +572,7 @@ class FSDirectory implements FSConstants, Closeable {
    * @param deletedBlocks the place holder for the blocks to be removed
    * @return if the deletion succeeds
    */ 
-  INode unprotectedDelete(String src, long modificationTime, 
-                          Collection<Block> deletedBlocks) {
+  INode unprotectedDelete(String src, long modificationTime) {
     src = normalizePath(src);
     String[] names = INode.getPathNames(src);
     byte[][] components = INode.getPathComponents(names);
@@ -601,16 +601,11 @@ class FSDirectory implements FSConstants, Closeable {
           ArrayList<Block> v = new ArrayList<Block>();
           int filesRemoved = targetNode.collectSubtreeBlocksAndClear(v);
           incrDeletedFileCount(filesRemoved);
-          for (Block b : v) {
-            namesystem.blocksMap.removeINode(b);
-            // remove the block from corruptReplicasMap
-            namesystem.corruptReplicas.removeFromCorruptReplicasMap(b);
-            if (deletedBlocks != null) {
-              deletedBlocks.add(b);
-            }
-          }
-          NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
+          namesystem.removePathAndBlocks(src, v);
+          if (NameNode.stateChangeLog.isDebugEnabled()) {
+            NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
               +src+" is removed");
+          }
           return targetNode;
         } catch (IOException e) {
           NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: " +

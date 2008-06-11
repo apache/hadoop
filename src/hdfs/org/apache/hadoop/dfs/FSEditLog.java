@@ -503,7 +503,7 @@ class FSEditLog {
                                      " clientMachine " + clientMachine);
             }
 
-            old = fsDir.unprotectedDelete(path, mtime, null);
+            old = fsDir.unprotectedDelete(path, mtime);
 
             // add to the file tree
             INodeFile node = (INodeFile)fsDir.unprotectedAddFile(
@@ -570,7 +570,7 @@ class FSEditLog {
             }
             path = FSImage.readString(in);
             timestamp = readLong(in);
-            old = fsDir.unprotectedDelete(path, timestamp, null);
+            old = fsDir.unprotectedDelete(path, timestamp);
             if (old != null && old.isUnderConstruction()) {
               INodeFileUnderConstruction cons = (INodeFileUnderConstruction)old;
               fsNamesys.leaseManager.removeLease(cons.clientName, path);

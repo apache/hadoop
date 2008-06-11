@@ -75,7 +75,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   //
   // writes specified bytes to file.
   //
-  private void writeFile(FSDataOutputStream stm, int size) throws IOException {
+  static void writeFile(FSDataOutputStream stm, int size) throws IOException {
     byte[] buffer = new byte[fileSize];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);

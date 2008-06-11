@@ -573,6 +573,9 @@ Release 0.18.0 - Unreleased
     StackOverflowErrors. To avoid O(n*n) cases, when partitioning depth exceeds
     a multiple of log(n), change to HeapSort. (cdouglas)
 
+    HADOOP-3418. When a directory is deleted, any leases that point to files
+    in the subdirectory are removed. ((Tsz Wo (Nicholas), SZE via dhruba)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
