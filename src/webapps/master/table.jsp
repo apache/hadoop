@@ -47,7 +47,7 @@
       String url = "http://" + meta.getServer().getHostname() + ":" + infoPort + "/";%> 
 <tr><td><%= Bytes.toString(meta.getRegionName()) %></td>
     <td><a href="<%= url %>"><%= meta.getServer().getHostname() %>:<%= meta.getServer().getPort() %></a></td>
-    <td>-</td><td><%= meta.getStartKey() %></td><td>-</td></tr>
+    <td>-</td><td><%= Bytes.toString(meta.getStartKey()) %></td><td>-</td></tr>
 <%  } %>
 </table>
 <%} else { %>
