@@ -51,6 +51,7 @@ import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapred.IFile.Reader;
 import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.util.IndexedSortable;
+import org.apache.hadoop.util.IndexedSorter;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.QuickSort;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -323,8 +324,8 @@ class MapTask extends Task {
     private final int softRecordLimit;
     private final int softBufferLimit;
     private final int minSpillsForCombine;
+    private final IndexedSorter sorter;
     private final Object spillLock = new Object();
-    private final QuickSort sorter = new QuickSort();
     private final BlockingBuffer bb = new BlockingBuffer();
 
     private final FileSystem localFs;
@@ -356,6 +357,9 @@ class MapTask extends Task {
       if ((sortmb & 0x7FF) != sortmb) {
         throw new IOException("Invalid \"io.sort.mb\": " + sortmb);
       }
+      sorter = (IndexedSorter)
+        ReflectionUtils.newInstance(
+            job.getClass("map.sort.class", QuickSort.class), job);
       LOG.info("io.sort.mb = " + sortmb);
       // buffers and accounting
       int maxMemUsage = sortmb << 20;

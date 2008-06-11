@@ -566,6 +566,10 @@ Release 0.18.0 - Unreleased
     HADOOP-3528. Metrics FilesCreated and files_deleted metrics
     do not match.
 
+    HADOOP-3442. Limit recursion depth on the stack for QuickSort to prevent
+    StackOverflowErrors. To avoid O(n*n) cases, when partitioning depth exceeds
+    a multiple of log(n), change to HeapSort. (cdouglas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

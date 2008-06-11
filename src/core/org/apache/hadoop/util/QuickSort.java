@@ -19,39 +19,64 @@ package org.apache.hadoop.util;
 
 /**
  * An implementation of the core algorithm of QuickSort.
- * See "Median-of-Three Partitioning" in Sedgewick book.
  */
 public final class QuickSort implements IndexedSorter {
 
+  private static final IndexedSorter alt = new HeapSort();
+
   public QuickSort() { }
 
-  private void fix(IndexedSortable s, int p, int r) {
+  private static void fix(IndexedSortable s, int p, int r) {
     if (s.compare(p, r) > 0) {
       s.swap(p, r);
     }
   }
 
+  /**
+   * Deepest recursion before giving up and doing a heapsort.
+   * Returns 2 * ceil(log(n)).
+   */
+  protected static int getMaxDepth(int x) {
+    if (x <= 0)
+      throw new IllegalArgumentException("Undefined for " + x);
+    return (32 - Integer.numberOfLeadingZeros(x - 1)) << 2;
+  }
+
+  /**
+   * Sort the given range of items using quick sort.
+   * {@inheritDoc} If the recursion depth falls below {@link #getMaxDepth},
+   * then switch to {@link HeapSort}.
+   */
   public void sort(IndexedSortable s, int p, int r) {
     sort(s, p, r, null);
   }
 
   /**
-   * Same as {@link #sort}, but indicate that we're making progress after
-   * each partition.
+   * {@inheritDoc}
    */
-  public void sort(final IndexedSortable s, final int p, final int r,
+  public void sort(final IndexedSortable s, int p, int r,
       final Progressable rep) {
+    sortInternal(s, p, r, rep, getMaxDepth(r - p));
+  }
+
+  private static void sortInternal(final IndexedSortable s, int p, int r,
+      final Progressable rep, int depth) {
     if (null != rep) {
       rep.progress();
     }
+    while (true) {
     if (r-p < 13) {
       for (int i = p; i < r; ++i) {
-        for (int j = i; j > p; --j) {
-          if (s.compare(j-1, j) > 0) {
-            s.swap(j, j-1);
-          }
+        for (int j = i; j > p && s.compare(j-1, j) > 0; --j) {
+          s.swap(j, j-1);
         }
       }
+      return;
+    }
+    if (--depth < 0) {
+      // give up
+      System.out.print("H");
+      alt.sort(s, p, r, rep);
       return;
     }
 
@@ -95,11 +120,12 @@ public final class QuickSort implements IndexedSorter {
     // Recurse on smaller interval first to keep stack shallow
     assert i != j;
     if (i - p < r - j) {
-      sort(s, p, i, rep);
-      sort(s, j, r, rep);
+      sortInternal(s, p, i, rep, depth);
+      p = j;
     } else {
-      sort(s, j, r, rep);
-      sort(s, p, i, rep);
+      sortInternal(s, j, r, rep, depth);
+      r = i;
+    }
     }
   }
 
