@@ -970,7 +970,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
       if (!dir.isValidToCreate(src)) {
         if (overwrite) {
-          delete(src);
+          delete(src, true);
         } else {
           throw new IOException("failed to create file " + src 
                                 +" on client " + clientMachine
@@ -1425,15 +1425,6 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   /**
-   * Remove the indicated filename from the namespace.  This may
-   * invalidate some blocks that make up the file.
-   */
-  @Deprecated
-  public boolean delete(String src) throws IOException {
-    return delete(src, true);
-  }
-
-  /**
    * Remove the indicated filename from namespace. If the filename 
    * is a directory (non empty) and recursive is set to false then throw exception.
    */
@@ -1466,26 +1457,25 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   synchronized boolean deleteInternal(String src, 
       boolean enforceSafeMode, boolean enforcePermission) throws IOException {
-    NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
+    if (NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
+    }
     if (enforceSafeMode && isInSafeMode())
       throw new SafeModeException("Cannot delete " + src, safeMode);
     if (enforcePermission && isPermissionEnabled) {
       checkPermission(src, false, null, FsAction.WRITE, null, FsAction.ALL);
     }
 
-    ArrayList<Block> deletedBlocks = new ArrayList<Block>();
-    INode old = dir.delete(src, deletedBlocks);
-    if (old == null) {
-      return false;
-    }
-    for (Block b : deletedBlocks) {
+    return dir.delete(src) != null;
+  }
+
+  void removePathAndBlocks(String src, List<Block> blocks) throws IOException {
+    leaseManager.removeLeaseWithPrefixPath(src);
+    for(Block b : blocks) {
+      blocksMap.removeINode(b);
+      corruptReplicas.removeFromCorruptReplicasMap(b);
       addToInvalidates(b);
     }
-    if (old.isUnderConstruction()) {
-      INodeFileUnderConstruction cons = (INodeFileUnderConstruction) old;
-      leaseManager.removeLease(cons.clientName, src);
-    }
-    return true;
   }
 
   /** Get the file info for a specific file.

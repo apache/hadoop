@@ -18,7 +18,6 @@
 package org.apache.hadoop.dfs;
 
 import java.io.IOException;
-import java.io.FileNotFoundException;
 import java.util.*;
 
 import org.apache.commons.logging.Log;
@@ -120,7 +119,7 @@ class LeaseManager {
    */
   synchronized void removeLease(Lease lease, String src) throws IOException {
     sortedLeasesByPath.remove(src);
-    if (!lease.paths.remove(new StringBytesWritable(src))) {
+    if (!lease.removePath(src)) {
       LOG.error(src + " not found in lease.paths (=" + lease.paths + ")");
     }
 
@@ -137,7 +136,10 @@ class LeaseManager {
    */
   synchronized void removeLease(StringBytesWritable holder, String src
       ) throws IOException {
-    removeLease(getLease(holder), src);
+    Lease lease = getLease(holder);
+    if (lease != null) {
+      removeLease(lease, src);
+    }
   }
 
   /**
@@ -218,6 +220,10 @@ class LeaseManager {
     /** Does this lease contain any path? */
     boolean hasPath() {return !paths.isEmpty();}
 
+    boolean removePath(String src) throws IOException {
+      return paths.remove(new StringBytesWritable(src));
+    }
+
     /** {@inheritDoc} */
     public String toString() {
       return "[Lease.  Holder: " + holder
@@ -260,79 +266,64 @@ class LeaseManager {
     Collection<StringBytesWritable> getPaths() {
       return paths;
     }
-  
-    // If a file with the specified prefix exists, then replace 
-    // it with the new prefix.
-    //
-    void replacePrefix(String src, String overwrite, 
-                       String replaceBy) throws IOException {
-      List<StringBytesWritable> toAdd = new ArrayList<StringBytesWritable>();
-      for (Iterator<StringBytesWritable> f = paths.iterator(); 
-           f.hasNext();){
-        String path = f.next().getString();
-        if (!path.startsWith(src)) {
-          continue;
-        }
-        // remove this filename from this lease.
-        f.remove();
-  
-        // remember new filename
-        String newPath = path.replaceFirst(overwrite, replaceBy);
-        toAdd.add(new StringBytesWritable(newPath));
-        LOG.debug("Modified Lease for file " + path +
-                 " to new path " + newPath);
-      }
-      // add modified filenames back into lease.
-      for (Iterator<StringBytesWritable> f = toAdd.iterator(); 
-           f.hasNext();) {
-        paths.add(f.next());
-      }
+    
+    void replacePath(String oldpath, String newpath) throws IOException {
+      paths.remove(new StringBytesWritable(oldpath));
+      paths.add(new StringBytesWritable(newpath));
     }
   }
 
   synchronized void changeLease(String src, String dst,
       String overwrite, String replaceBy) throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug(getClass().getName() + ".changelease: " +
+      LOG.debug(getClass().getSimpleName() + ".changelease: " +
                " src=" + src + ", dest=" + dst + 
                ", overwrite=" + overwrite +
                ", replaceBy=" + replaceBy);
     }
 
-    Map<String, Lease> addTo = new TreeMap<String, Lease>();
-    SortedMap<String, Lease> myset = sortedLeasesByPath.tailMap(src);
-    int srclen = src.length();
-    for (Iterator<Map.Entry<String, Lease>> iter = myset.entrySet().iterator(); 
-         iter.hasNext();) {
-      Map.Entry<String, Lease> entry = iter.next();
-      String path = entry.getKey();
-      if (!path.startsWith(src)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("changelease comparing " + path +
-                   " with " + src + " and terminating.");
-        }
-        break;
-      }
-      if (path.length() > srclen && path.charAt(srclen) != Path.SEPARATOR_CHAR){
-        continue;
-      }
-
-      Lease lease = entry.getValue();
-      // Fix up all the pathnames in this lease.
+    for(Map.Entry<String, Lease> entry : findLeaseWithPrefixPath(src, sortedLeasesByPath)) {
+      final String oldpath = entry.getKey();
+      final Lease lease = entry.getValue();
+      final String newpath = oldpath.replaceFirst(overwrite, replaceBy);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("changelease comparing " + path +
-                  " with " + src + " and replacing ");
+        LOG.debug("changeLease: replacing " + oldpath + " with " + newpath);
       }
-      lease.replacePrefix(src, overwrite, replaceBy);
-
-      // Remove this lease from sortedLeasesByPath because the 
-      // pathname has changed.
-      String newPath = path.replaceFirst(overwrite, replaceBy);
-      addTo.put(newPath, lease);
-      iter.remove();
+      lease.replacePath(oldpath, newpath);
+      sortedLeasesByPath.remove(oldpath);
+      sortedLeasesByPath.put(newpath, lease);
     }
-    // re-add entries back in sortedLeasesByPath
-    sortedLeasesByPath.putAll(addTo);
+  }
+
+  synchronized void removeLeaseWithPrefixPath(String prefix) throws IOException {
+    for(Map.Entry<String, Lease> entry : findLeaseWithPrefixPath(prefix, sortedLeasesByPath)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(LeaseManager.class.getSimpleName()
+            + ".removeLeaseWithPrefixPath: entry=" + entry);
+      }
+      removeLease(entry.getValue(), entry.getKey());    
+    }
+  }
+
+  static private List<Map.Entry<String, Lease>> findLeaseWithPrefixPath(
+      String prefix, SortedMap<String, Lease> path2lease) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(LeaseManager.class.getSimpleName() + ".findLease: prefix=" + prefix);
+    }
+
+    List<Map.Entry<String, Lease>> entries = new ArrayList<Map.Entry<String, Lease>>();
+    final int srclen = prefix.length();
+
+    for(Map.Entry<String, Lease> entry : path2lease.tailMap(prefix).entrySet()) {
+      final String p = entry.getKey();
+      if (!p.startsWith(prefix)) {
+        return entries;
+      }
+      if (p.length() == srclen || p.charAt(srclen) == Path.SEPARATOR_CHAR) {
+        entries.add(entry);
+      }
+    }
+    return entries;
   }
 
   void setLeasePeriod(long softLimit, long hardLimit) {
@@ -379,6 +370,15 @@ class LeaseManager {
         LOG.error("In " + getClass().getName(), e);
       }
     }
+  }
+
+  /** {@inheritDoc} */
+  public String toString() {
+    return getClass().getSimpleName() + "= {"
+        + "\n leases=" + leases
+        + "\n sortedLeases=" + sortedLeases
+        + "\n sortedLeasesByPath=" + sortedLeasesByPath
+        + "\n}";
   }
 
   /*
