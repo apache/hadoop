@@ -552,6 +552,9 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3519.  Fix NPE in DFS FileSystem rename.  (hairong via tomwhite)
 
+    HADOOP-3528. Metrics FilesCreated and files_deleted metrics 
+    do not match. (Lohit via Mahadev)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

@@ -835,6 +835,10 @@ class FSDirectory implements FSConstants, Closeable {
         if (inodes[i] == null) {
           return false;
         }
+        // Directory creation also count towards FilesCreated
+        // to match count of files_deleted metric. 
+        if (namesystem != null)
+          NameNode.getNameNodeMetrics().numFilesCreated.inc();
         fsImage.getEditLog().logMkDir(cur, inodes[i]);
         NameNode.stateChangeLog.debug(
             "DIR* FSDirectory.mkdirs: created directory " + cur);
