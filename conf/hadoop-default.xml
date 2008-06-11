@@ -966,7 +966,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>map.sort.class</name>
-  <value>org.apache.hadoop.mapred.MergeSorter</value>
+  <value>org.apache.hadoop.util.QuickSort</value>
   <description>The default sort class for sorting keys.
   </description>
 </property>

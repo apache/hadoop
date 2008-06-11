@@ -35,4 +35,12 @@ public interface IndexedSorter {
    * @see IndexedSortable#swap
    */
   void sort(IndexedSortable s, int l, int r);
+
+  /**
+   * Same as {@link #sort(IndexedSortable,int,int)}, but indicate progress
+   * periodically.
+   * @see #sort(IndexedSortable,int,int)
+   */
+  void sort(IndexedSortable s, int l, int r, Progressable rep);
+
 }

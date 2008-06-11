@@ -31,6 +31,146 @@ import org.apache.hadoop.io.WritableComparator;
 
 public class TestIndexedSort extends TestCase {
 
+  public void sortAllEqual(IndexedSorter sorter) throws Exception {
+    final int SAMPLE = 500;
+    int[] values = new int[SAMPLE];
+    Arrays.fill(values, 10);
+    SampleSortable s = new SampleSortable(values);
+    sorter.sort(s, 0, SAMPLE);
+    int[] check = s.getSorted();
+    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
+        Arrays.toString(check), Arrays.equals(values, check));
+    // Set random min/max, re-sort.
+    Random r = new Random();
+    int min = r.nextInt(SAMPLE);
+    int max = (min + 1 + r.nextInt(SAMPLE - 2)) % SAMPLE;
+    values[min] = 9;
+    values[max] = 11;
+    System.out.println("testAllEqual setting min/max at " + min + "/" + max +
+        "(" + sorter.getClass().getName() + ")");
+    s = new SampleSortable(values);
+    sorter.sort(s, 0, SAMPLE);
+    check = s.getSorted();
+    Arrays.sort(values);
+    assertTrue(check[0] == 9);
+    assertTrue(check[SAMPLE - 1] == 11);
+    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
+        Arrays.toString(check), Arrays.equals(values, check));
+  }
+
+  public void sortSorted(IndexedSorter sorter) throws Exception {
+    final int SAMPLE = 500;
+    int[] values = new int[SAMPLE];
+    Random r = new Random();
+    long seed = r.nextLong();
+    r.setSeed(seed);
+    System.out.println("testSorted seed: " + seed +
+        "(" + sorter.getClass().getName() + ")");
+    for (int i = 0; i < SAMPLE; ++i) {
+      values[i] = r.nextInt(100);
+    }
+    Arrays.sort(values);
+    SampleSortable s = new SampleSortable(values);
+    sorter.sort(s, 0, SAMPLE);
+    int[] check = s.getSorted();
+    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
+        Arrays.toString(check), Arrays.equals(values, check));
+  }
+
+  public void sortSequential(IndexedSorter sorter) throws Exception {
+    final int SAMPLE = 500;
+    int[] values = new int[SAMPLE];
+    for (int i = 0; i < SAMPLE; ++i) {
+      values[i] = i;
+    }
+    SampleSortable s = new SampleSortable(values);
+    sorter.sort(s, 0, SAMPLE);
+    int[] check = s.getSorted();
+    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
+        Arrays.toString(check), Arrays.equals(values, check));
+  }
+
+  public void sortSingleRecord(IndexedSorter sorter) throws Exception {
+    final int SAMPLE = 1;
+    SampleSortable s = new SampleSortable(SAMPLE);
+    int[] values = s.getValues();
+    sorter.sort(s, 0, SAMPLE);
+    int[] check = s.getSorted();
+    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
+        Arrays.toString(check), Arrays.equals(values, check));
+  }
+
+  public void sortRandom(IndexedSorter sorter) throws Exception {
+    final int SAMPLE = 256 * 1024;
+    SampleSortable s = new SampleSortable(SAMPLE);
+    long seed = s.getSeed();
+    System.out.println("sortRandom seed: " + seed +
+        "(" + sorter.getClass().getName() + ")");
+    int[] values = s.getValues();
+    Arrays.sort(values);
+    sorter.sort(s, 0, SAMPLE);
+    int[] check = s.getSorted();
+    assertTrue("seed: " + seed + "\ndoesn't match\n",
+               Arrays.equals(values, check));
+  }
+
+  public void sortWritable(IndexedSorter sorter) throws Exception {
+    final int SAMPLE = 1000;
+    WritableSortable s = new WritableSortable(SAMPLE);
+    long seed = s.getSeed();
+    System.out.println("sortWritable seed: " + seed +
+        "(" + sorter.getClass().getName() + ")");
+    String[] values = s.getValues();
+    Arrays.sort(values);
+    sorter.sort(s, 0, SAMPLE);
+    String[] check = s.getSorted();
+    assertTrue("seed: " + seed + "\ndoesn't match",
+               Arrays.equals(values, check));
+  }
+
+
+  public void testQuickSort() throws Exception {
+    QuickSort sorter = new QuickSort();
+    sortRandom(sorter);
+    sortSingleRecord(sorter);
+    sortSequential(sorter);
+    sortSorted(sorter);
+    sortAllEqual(sorter);
+    sortWritable(sorter);
+
+    // test degenerate case for median-of-three partitioning
+    // a_n, a_1, a_2, ..., a_{n-1}
+    final int DSAMPLE = 500;
+    int[] values = new int[DSAMPLE];
+    for (int i = 0; i < DSAMPLE; ++i) { values[i] = i; }
+    values[0] = values[DSAMPLE - 1] + 1;
+    SampleSortable s = new SampleSortable(values);
+    values = s.getValues();
+    final int DSS = (DSAMPLE / 2) * (DSAMPLE / 2);
+    // Worst case is (N/2)^2 comparisons, not including those effecting
+    // the median-of-three partitioning; impl should handle this case
+    MeasuredSortable m = new MeasuredSortable(s, DSS);
+    sorter.sort(m, 0, DSAMPLE);
+    System.out.println("QuickSort degen cmp/swp: " +
+        m.getCmp() + "/" + m.getSwp() +
+        "(" + sorter.getClass().getName() + ")");
+    Arrays.sort(values);
+    int[] check = s.getSorted();
+    assertTrue(Arrays.equals(values, check));
+  }
+
+  public void testHeapSort() throws Exception {
+    HeapSort sorter = new HeapSort();
+    sortRandom(sorter);
+    sortSingleRecord(sorter);
+    sortSequential(sorter);
+    sortSorted(sorter);
+    sortAllEqual(sorter);
+    sortWritable(sorter);
+  }
+
+  // Sortables //
+
   private static class SampleSortable implements IndexedSortable {
     private int[] valindex;
     private int[] valindirect;
@@ -92,6 +232,45 @@ public class TestIndexedSort extends TestCase {
       int[] ret = new int[values.length];
       System.arraycopy(values, 0, ret, 0, values.length);
       return ret;
+    }
+
+  }
+
+  public static class MeasuredSortable implements IndexedSortable {
+
+    private int comparisions;
+    private int swaps;
+    private final int maxcmp;
+    private final int maxswp;
+    private IndexedSortable s;
+
+    public MeasuredSortable(IndexedSortable s) {
+      this(s, Integer.MAX_VALUE);
+    }
+
+    public MeasuredSortable(IndexedSortable s, int maxcmp) {
+      this(s, maxcmp, Integer.MAX_VALUE);
+    }
+
+    public MeasuredSortable(IndexedSortable s, int maxcmp, int maxswp) {
+      this.s = s;
+      this.maxcmp = maxcmp;
+      this.maxswp = maxswp;
+    }
+
+    public int getCmp() { return comparisions; }
+    public int getSwp() { return swaps; }
+
+    public int compare(int i, int j) {
+      assertTrue("Expected fewer than " + maxcmp + " comparisons",
+                 ++comparisions < maxcmp);
+      return s.compare(i, j);
+    }
+
+    public void swap(int i, int j) {
+      assertTrue("Expected fewer than " + maxswp + " swaps",
+                 ++swaps < maxswp);
+      s.swap(i, j);
     }
 
   }
@@ -177,103 +356,6 @@ public class TestIndexedSort extends TestCase {
       return ret;
     }
 
-  }
-
-  public void testAllEqual() throws Exception {
-    final int SAMPLE = 500;
-    int[] values = new int[SAMPLE];
-    Arrays.fill(values, 10);
-    SampleSortable s = new SampleSortable(values);
-    IndexedSorter sorter = new QuickSort();
-    sorter.sort(s, 0, SAMPLE);
-    int[] check = s.getSorted();
-    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
-        Arrays.toString(check), Arrays.equals(values, check));
-    // Set random min/max, re-sort.
-    Random r = new Random();
-    int min = r.nextInt(SAMPLE);
-    int max = (min + 1 + r.nextInt(SAMPLE - 2)) % SAMPLE;
-    values[min] = 9;
-    values[max] = 11;
-    System.out.println("testAllEqual setting min/max at " + min + "/" + max);
-    s = new SampleSortable(values);
-    sorter.sort(s, 0, SAMPLE);
-    check = s.getSorted();
-    Arrays.sort(values);
-    assertTrue(check[0] == 9);
-    assertTrue(check[SAMPLE - 1] == 11);
-    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
-        Arrays.toString(check), Arrays.equals(values, check));
-  }
-
-  public void testSorted() throws Exception {
-    final int SAMPLE = 500;
-    int[] values = new int[SAMPLE];
-    Random r = new Random();
-    long seed = r.nextLong();
-    r.setSeed(seed);
-    System.out.println("testSorted seed: " + seed);
-    for (int i = 0; i < SAMPLE; ++i) {
-      values[i] = r.nextInt(100);
-    }
-    Arrays.sort(values);
-    SampleSortable s = new SampleSortable(values);
-    IndexedSorter sorter = new QuickSort();
-    sorter.sort(s, 0, SAMPLE);
-    int[] check = s.getSorted();
-    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
-        Arrays.toString(check), Arrays.equals(values, check));
-  }
-
-  public void testSequential() throws Exception {
-    final int SAMPLE = 500;
-    int[] values = new int[SAMPLE];
-    for (int i = 0; i < SAMPLE; ++i) {
-      values[i] = i;
-    }
-    SampleSortable s = new SampleSortable(values);
-    IndexedSorter sorter = new QuickSort();
-    sorter.sort(s, 0, SAMPLE);
-    int[] check = s.getSorted();
-    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
-        Arrays.toString(check), Arrays.equals(values, check));
-  }
-
-  public void testSingleRecord() throws Exception {
-    final int SAMPLE = 1;
-    SampleSortable s = new SampleSortable(SAMPLE);
-    int[] values = s.getValues();
-    IndexedSorter sorter = new QuickSort();
-    sorter.sort(s, 0, SAMPLE);
-    int[] check = s.getSorted();
-    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
-        Arrays.toString(check), Arrays.equals(values, check));
-  }
-
-  public void testQuickSort() throws Exception {
-    final int SAMPLE = 100000;
-    SampleSortable s = new SampleSortable(SAMPLE);
-    System.out.println("testQuickSort seed: " + s.getSeed());
-    int[] values = s.getValues();
-    Arrays.sort(values);
-    IndexedSorter sorter = new QuickSort();
-    sorter.sort(s, 0, SAMPLE);
-    int[] check = s.getSorted();
-    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
-        Arrays.toString(check), Arrays.equals(values, check));
-  }
-
-  public void testWritable() throws Exception {
-    final int SAMPLE = 1000;
-    WritableSortable s = new WritableSortable(SAMPLE);
-    System.out.println("testWritable seed: " + s.getSeed());
-    String[] values = s.getValues();
-    Arrays.sort(values);
-    IndexedSorter sorter = new QuickSort();
-    sorter.sort(s, 0, SAMPLE);
-    String[] check = s.getSorted();
-    assertTrue(Arrays.toString(values) + "\ndoesn't match\n" +
-        Arrays.toString(check), Arrays.equals(values, check));
   }
 
 }
