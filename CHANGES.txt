@@ -293,6 +293,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3379. Documents stream.non.zero.exit.status.is.failure for Streaming.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3096. Improves documentation about the Task Execution Environment in 
+    the Map-Reduce tutorial. (Amareshwari Sriramadasu via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
