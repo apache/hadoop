@@ -70,6 +70,7 @@ if [ $# = 0 ]; then
   echo "  version              print the version"
   echo "  jar <jar>            run a jar file"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
+  echo "  archive -archiveName NAME <src>* <dest> create a hadoop archive"
   echo "  daemonlog            get/set the log level for each daemon"
   echo " or"
   echo "  CLASSNAME            run the class named CLASSNAME"
