@@ -280,7 +280,7 @@ public class HBaseAdmin {
         // continue
       }
     }
-    LOG.info("table " + tableName + " deleted");
+    LOG.info("Deleted " + Bytes.toString(tableName));
   }
 
   /**
@@ -344,7 +344,7 @@ public class HBaseAdmin {
           if (values == null || values.size() == 0) {
             if (valuesfound == 0) {
               throw new NoSuchElementException(
-                  "table " + tableName + " not found");
+                  "table " + Bytes.toString(tableName) + " not found");
             }
             break;
           }
@@ -386,7 +386,7 @@ public class HBaseAdmin {
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Sleep. Waiting for first region to be enabled from " +
-            tableName);
+          Bytes.toString(tableName));
       }
       try {
         Thread.sleep(pause);
@@ -396,10 +396,10 @@ public class HBaseAdmin {
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Wake. Waiting for first region to be enabled from " +
-            tableName);
+          Bytes.toString(tableName));
       }
     }
-    LOG.info("Enabled table " + tableName);
+    LOG.info("Enabled table " + Bytes.toString(tableName));
   }
 
   /**
@@ -462,7 +462,8 @@ public class HBaseAdmin {
           RowResult values = server.next(scannerId);
           if (values == null || values.size() == 0) {
             if (valuesfound == 0) {
-              throw new NoSuchElementException("table " + tableName + " not found");
+              throw new NoSuchElementException("table " +
+                Bytes.toString(tableName) + " not found");
             }
             break;
           }
@@ -504,7 +505,7 @@ public class HBaseAdmin {
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Sleep. Waiting for first region to be disabled from " +
-            tableName);
+          Bytes.toString(tableName));
       }
       try {
         Thread.sleep(pause);
@@ -516,7 +517,7 @@ public class HBaseAdmin {
             tableName);
       }
     }
-    LOG.info("Disabled table " + tableName);
+    LOG.info("Disabled " + Bytes.toString(tableName));
   }
   
   /**
