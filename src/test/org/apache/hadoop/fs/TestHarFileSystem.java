@@ -139,6 +139,7 @@ public class TestHarFileSystem extends TestCase {
     Path harPath = new Path("har://" + filePath.toUri().getPath());
     assertTrue(fs.exists(new Path(finalPath, "_index")));
     assertTrue(fs.exists(new Path(finalPath, "_masterindex")));
+    assertTrue(!fs.exists(new Path(finalPath, "_logs")));
     //creation tested
     //check if the archive is same
     // do ls and cat on all the files
