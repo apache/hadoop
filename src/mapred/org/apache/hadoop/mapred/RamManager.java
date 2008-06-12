@@ -28,10 +28,12 @@ interface RamManager {
    * 
    * @param requestedSize size of memory requested
    * @param in input stream
+   * @throws InterruptedException
    * @return <code>true</code> if memory was allocated immediately, 
    *         else <code>false</code>
    */
-  boolean reserve(int requestedSize, InputStream in);
+  boolean reserve(int requestedSize, InputStream in) 
+  throws InterruptedException;
   
   /**
    * Return memory to the pool.

@@ -164,7 +164,6 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <setmaxreducetaskfailurespercent href="#setMaxReduceTaskFailuresPercent(int)" />
                 <setjobendnotificationuri href="#setJobEndNotificationURI(java.lang.String)" />
                 <setcompressmapoutput href="#setCompressMapOutput(boolean)" />
-                <setmapoutputcompressiontype href="#setMapOutputCompressionType(org.apache.hadoop.io.SequenceFile.CompressionType)" />
                 <setmapoutputcompressorclass href="#setMapOutputCompressorClass(java.lang.Class)" />
                 <getjoblocaldir href="#getJobLocalDir()" />
                 <getjar href="#getJar()" />
