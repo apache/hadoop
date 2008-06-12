@@ -93,7 +93,7 @@ class torqueInterface:
     
     exitCode = qstatProcess.exit_code()
     if exitCode > 0:
-      self.__log.error('qstat error: %s' % qstatProcess.exit_status_string())
+      self.__log.warn('qstat error: %s' % qstatProcess.exit_status_string())
     else:
       qstatInfo = {}
       for line in qstatProcess.output():

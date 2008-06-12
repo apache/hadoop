@@ -68,7 +68,8 @@ class test_GetCommand(unittest.TestCase):
                             'batch-home': '/home/y/'
                           }, 
        'ringmaster': {
-                      'max-connect' : 2
+                      'max-connect' : 2,
+                      'max-master-failures' : 5
                      }, 
        'hodring': {
                   }, 

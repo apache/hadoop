@@ -431,7 +431,9 @@ class hadoopCluster:
     """Returns True if the JobId that represents this cluster
        is in the Completed or exiting state."""
     jobInfo = self.__nodePool.getJobInfo(jobId)
-    state = jobInfo['job_state']
+    state = None
+    if jobInfo is not None and jobInfo.has_key('job_state'):
+      state = jobInfo['job_state']
     return ((state == 'C') or (state == 'E'))
 
   def cleanup(self):

@@ -1,7 +1,18 @@
 HOD Change Log
 
-
 Trunk (unreleased changes)
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
 
@@ -29,10 +40,13 @@ Trunk (unreleased changes)
  
   BUG FIXES
 
-    HADOOP-2961: Avoids unnecessary checks for some configuration parameters
+    HADOOP-2961. Avoids unnecessary checks for some configuration parameters
     related to service configuration. (Vinod Kumar Vavilapalli via ddas)
 
-Release 0.17.0 - Unreleased
+    HADOOP-3523. Fixes auto-deallocation of cluster if job id is not found in
+    Torque's job list (Hemanth Yamijala via ddas)
+
+Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
 

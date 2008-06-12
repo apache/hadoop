@@ -307,7 +307,7 @@ class hodRunner:
           self.__remove_cluster(clusterDir)
           self.__clusterState.clear()
         else:
-          self.__log.critical("Found a previously allocated cluster at cluster directory '%s'. Deallocate the cluster first." % (clusterDir))
+          self.__log.critical("Found a previously allocated cluster at cluster directory '%s'. HOD cannot determine if this cluster can be automatically deallocated. Deallocate the cluster if it is unused." % (clusterDir))
           self.__opCode = 12
           return
  
