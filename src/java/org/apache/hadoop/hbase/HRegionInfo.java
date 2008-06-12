@@ -339,12 +339,14 @@ public class HRegionInfo implements WritableComparable {
    */
   @Override
   public String toString() {
-    return "regionname: " + this.regionNameStr + ", startKey: <" +
-      Bytes.toString(this.startKey) + ">, endKey: <" +
+    return "REGION => {" + HColumnDescriptor.NAME + " => '" +
+      this.regionNameStr +
+      "', STARTKEY => '" +
+      Bytes.toString(this.startKey) + "', ENDKEY => '" +
       Bytes.toString(this.endKey) + 
-      ">, encodedName: " + getEncodedName() + "," +
-      (isOffline()? " offline: true,": "") + (isSplit()? " split: true,": "") +
-      " tableDesc: {" + this.tableDesc.toString() + "}";
+      "', ENCODED => " + getEncodedName() + "," +
+      (isOffline()? " OFFLINE => true,": "") + (isSplit()? " SPLIT => true,": "") +
+      " TABLE => {" + this.tableDesc.toString() + "}";
   }
     
   /**
