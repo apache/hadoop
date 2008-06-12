@@ -1665,19 +1665,7 @@
             JobConf.setCompressMapOutput(boolean)</a> api and the 
             <code>CompressionCodec</code> to be used via the
             <a href="ext:api/org/apache/hadoop/mapred/jobconf/setmapoutputcompressorclass">
-            JobConf.setMapOutputCompressorClass(Class)</a> api. Since 
-            the intermediate map-outputs are always stored in the 
-            <a href="ext:api/org/apache/hadoop/io/sequencefile">SequenceFile</a>
-            format, the
-            <a href="ext:api/org/apache/hadoop/io/sequencefilecompressiontype">
-            SequenceFile.CompressionType</a> (i.e.
-            <a href="ext:api/org/apache/hadoop/io/sequencefilecompressiontype/record">
-            RECORD</a> / 
-            <a href="ext:api/org/apache/hadoop/io/sequencefilecompressiontype/block">
-            BLOCK</a> - defaults to <code>RECORD</code>) can be specified via the
-            <a href="ext:api/org/apache/hadoop/mapred/jobconf/setmapoutputcompressiontype">
-            JobConf.setMapOutputCompressionType(SequenceFile.CompressionType)</a> 
-            api.</p>
+            JobConf.setMapOutputCompressorClass(Class)</a> api.</p>
           </section>
           
           <section>
@@ -1694,8 +1682,8 @@
             <a href="ext:api/org/apache/hadoop/mapred/sequencefileoutputformat">
             SequenceFileOutputFormat</a>, the required
             <code>SequenceFile.CompressionType</code> (i.e. <code>RECORD</code> / 
-            <code>BLOCK</code> - defaults to <code>RECORD</code>)can be specified 
-            via the 
+            <code>BLOCK</code> - defaults to <code>RECORD</code>) can be 
+            specified via the 
             <a href="ext:api/org/apache/hadoop/mapred/sequencefileoutputformat/setoutputcompressiontype">
             SequenceFileOutputFormat.setOutputCompressionType(JobConf, 
             SequenceFile.CompressionType)</a> api.</p>

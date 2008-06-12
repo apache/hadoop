@@ -301,7 +301,7 @@ document.write("Last Published: " + document.lastModified);
 <a href="#Example%3A+WordCount+v2.0">Example: WordCount v2.0</a>
 <ul class="minitoc">
 <li>
-<a href="#Source+Code-N10D77">Source Code</a>
+<a href="#Source+Code-N10D60">Source Code</a>
 </li>
 <li>
 <a href="#Sample+Runs">Sample Runs</a>
@@ -2172,20 +2172,8 @@ document.write("Last Published: " + document.lastModified);
             JobConf.setCompressMapOutput(boolean)</a> api and the 
             <span class="codefrag">CompressionCodec</span> to be used via the
             <a href="api/org/apache/hadoop/mapred/JobConf.html#setMapOutputCompressorClass(java.lang.Class)">
-            JobConf.setMapOutputCompressorClass(Class)</a> api. Since 
-            the intermediate map-outputs are always stored in the 
-            <a href="api/org/apache/hadoop/io/SequenceFile.html">SequenceFile</a>
-            format, the
-            <a href="api/org/apache/hadoop/io/SequenceFile.CompressionType.html">
-            SequenceFile.CompressionType</a> (i.e.
-            <a href="api/org/apache/hadoop/io/SequenceFile.CompressionType.html#RECORD">
-            RECORD</a> / 
-            <a href="api/org/apache/hadoop/io/SequenceFile.CompressionType.html#BLOCK">
-            BLOCK</a> - defaults to <span class="codefrag">RECORD</span>) can be specified via the
-            <a href="api/org/apache/hadoop/mapred/JobConf.html#setMapOutputCompressionType(org.apache.hadoop.io.SequenceFile.CompressionType)">
-            JobConf.setMapOutputCompressionType(SequenceFile.CompressionType)</a> 
-            api.</p>
-<a name="N10D2E"></a><a name="Job+Outputs"></a>
+            JobConf.setMapOutputCompressorClass(Class)</a> api.</p>
+<a name="N10D17"></a><a name="Job+Outputs"></a>
 <h5>Job Outputs</h5>
 <p>Applications can control compression of job-outputs via the
             <a href="api/org/apache/hadoop/mapred/OutputFormatBase.html#setCompressOutput(org.apache.hadoop.mapred.JobConf,%20boolean)">
@@ -2197,15 +2185,15 @@ document.write("Last Published: " + document.lastModified);
             <a href="api/org/apache/hadoop/mapred/SequenceFileOutputFormat.html">
             SequenceFileOutputFormat</a>, the required
             <span class="codefrag">SequenceFile.CompressionType</span> (i.e. <span class="codefrag">RECORD</span> / 
-            <span class="codefrag">BLOCK</span> - defaults to <span class="codefrag">RECORD</span>)can be specified 
-            via the 
+            <span class="codefrag">BLOCK</span> - defaults to <span class="codefrag">RECORD</span>) can be 
+            specified via the 
             <a href="api/org/apache/hadoop/mapred/SequenceFileOutputFormat.html#setOutputCompressionType(org.apache.hadoop.mapred.JobConf,%20org.apache.hadoop.io.SequenceFile.CompressionType)">
             SequenceFileOutputFormat.setOutputCompressionType(JobConf, 
             SequenceFile.CompressionType)</a> api.</p>
 </div>
 
     
-<a name="N10D5D"></a><a name="Example%3A+WordCount+v2.0"></a>
+<a name="N10D46"></a><a name="Example%3A+WordCount+v2.0"></a>
 <h2 class="h3">Example: WordCount v2.0</h2>
 <div class="section">
 <p>Here is a more complete <span class="codefrag">WordCount</span> which uses many of the
@@ -2215,7 +2203,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="quickstart.html#SingleNodeSetup">pseudo-distributed</a> or
       <a href="quickstart.html#Fully-Distributed+Operation">fully-distributed</a> 
       Hadoop installation.</p>
-<a name="N10D77"></a><a name="Source+Code-N10D77"></a>
+<a name="N10D60"></a><a name="Source+Code-N10D60"></a>
 <h3 class="h4">Source Code</h3>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
           
@@ -3425,7 +3413,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
         
 </table>
-<a name="N114D9"></a><a name="Sample+Runs"></a>
+<a name="N114C2"></a><a name="Sample+Runs"></a>
 <h3 class="h4">Sample Runs</h3>
 <p>Sample text-files as input:</p>
 <p>
@@ -3593,7 +3581,7 @@ document.write("Last Published: " + document.lastModified);
 <br>
         
 </p>
-<a name="N115AD"></a><a name="Highlights"></a>
+<a name="N11596"></a><a name="Highlights"></a>
 <h3 class="h4">Highlights</h3>
 <p>The second version of <span class="codefrag">WordCount</span> improves upon the 
         previous one by using some features offered by the Map-Reduce framework:

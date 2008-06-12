@@ -43,7 +43,11 @@ class Merger {
   private static final Log LOG = LogFactory.getLog(Merger.class);
   
   private static final long PROGRESS_BAR = 10000;
-  
+
+  // Local directories
+  private static LocalDirAllocator lDirAlloc = 
+    new LocalDirAllocator("mapred.local.dir");
+
   public static <K extends Object, V extends Object>
   RawKeyValueIterator merge(Configuration conf, FileSystem fs,
                             Class<K> keyClass, Class<V> valueClass, 
@@ -275,7 +279,6 @@ class Merger {
       int numSegments = segments.size();
       int origFactor = factor;
       int passNo = 1;
-      LocalDirAllocator lDirAlloc = new LocalDirAllocator("mapred.local.dir");
       do {
         //get the factor for this pass of merge
         factor = getPassFactor(factor, passNo, numSegments);
