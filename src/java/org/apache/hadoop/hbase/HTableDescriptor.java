@@ -59,6 +59,8 @@ public class HTableDescriptor implements WritableComparable {
   private byte [] name = HConstants.EMPTY_BYTE_ARRAY;
   private String nameAsString = "";
   
+  public static final String FAMILIES = "FAMILIES";
+  
   // Key is hash of the family name.
   private final Map<Integer, HColumnDescriptor> families =
     new HashMap<Integer, HColumnDescriptor>();
@@ -189,8 +191,8 @@ public class HTableDescriptor implements WritableComparable {
    */
   @Override
   public String toString() {
-    return "name: " + Bytes.toString(this.name) + ", families: " +
-      this.families.values();
+    return HColumnDescriptor.NAME + " => '" + Bytes.toString(this.name) +
+      "', " + FAMILIES + " => " + this.families.values();
   }
   
   /** {@inheritDoc} */

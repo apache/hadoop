@@ -36,30 +36,4 @@ public class TestToString extends TestCase {
     assertEquals("HServerInfo", "address: " + hostport + ", startcode: -1" +
         ", load: (requests: 0 regions: 0)", info.toString());
   }
-
-  /**
-   * Test HTableDescriptor.toString();
-   */
-  public void testHTableDescriptor() {
-    HTableDescriptor htd = HTableDescriptor.ROOT_TABLEDESC;
-    System. out.println(htd.toString());
-    assertEquals("Table descriptor", "name: -ROOT-, families: [{name: " +
-      "info, max versions: 1, compression: NONE, in memory: false, " +
-      "block cache enabled: false, max length: 2147483647, " +
-      "time to live: FOREVER, bloom filter: none}]", htd.toString());
-  }
-  
-  /**
-   * Tests HRegionInfo.toString()
-   */
-  public void testHRegionInfo() {
-    HRegionInfo hri = HRegionInfo.ROOT_REGIONINFO;
-    System.out.println(hri.toString());
-    assertEquals("HRegionInfo", 
-      "regionname: -ROOT-,,0, startKey: <>, endKey: <>, encodedName: 70236052, tableDesc: " +
-      "{name: -ROOT-, families: [{name: info, max versions: 1, " +
-      "compression: NONE, in memory: false, block cache enabled: false, " +
-      "max length: 2147483647, time to live: FOREVER, bloom filter: none}]}",
-      hri.toString());
-  }
 }

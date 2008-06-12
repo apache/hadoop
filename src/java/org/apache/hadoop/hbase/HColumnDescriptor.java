@@ -93,6 +93,17 @@ public class HColumnDescriptor implements WritableComparable {
   public static final BloomFilterDescriptor DEFAULT_BLOOM_FILTER_DESCRIPTOR =
     null;
 
+  // Defines for jruby/shell
+  public static final String NAME = "NAME";
+  public static final String MAX_VERSIONS = "MAX_VERSIONS";
+  public static final String COMPRESSION = "COMPRESSION";
+  public static final String IN_MEMORY = "IN_MEMORY";
+  public static final String BLOCKCACHE = "BLOCKCACHE";
+  public static final String MAX_LENGTH = "MAX_LENGTH";
+  public static final String TTL = "TTL";
+  public static final String BLOOMFILTER = "BLOOMFILTER";
+  public static final String FOREVER = "FOREVER";
+
   // Column family name
   private byte [] name;
   // Number of versions to keep
@@ -289,16 +300,17 @@ public class HColumnDescriptor implements WritableComparable {
   /** {@inheritDoc} */
   @Override
   public String toString() {
-    return "{name: " + Bytes.toString(name) +
-      ", max versions: " + maxVersions +
-      ", compression: " + this.compressionType + ", in memory: " + inMemory +
-      ", block cache enabled: " + blockCacheEnabled +
-      ", max length: " + maxValueLength +
-      ", time to live: " +
+    return "{" + NAME + " => '" + Bytes.toString(name) +
+      "', " + MAX_VERSIONS + " => " + maxVersions +
+      ", " + COMPRESSION + " => " + this.compressionType +
+      ", " + IN_MEMORY + " => " + inMemory +
+      ", " + BLOCKCACHE + " => " + blockCacheEnabled +
+      ", " + MAX_LENGTH + " => " + maxValueLength +
+      ", " + TTL + " => " +
           (timeToLive == HConstants.FOREVER ? "FOREVER" : 
               Integer.toString(timeToLive)) +
-      ", bloom filter: " +
-          (bloomFilterSpecified ? bloomFilter.toString() : "none") +
+      ", " + BLOOMFILTER + " => " +
+        (bloomFilterSpecified ? bloomFilter.toString() : CompressionType.NONE) +
       "}";
   }
   

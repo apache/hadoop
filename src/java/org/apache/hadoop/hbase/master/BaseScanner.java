@@ -172,9 +172,9 @@ abstract class BaseScanner extends Chore implements HConstants {
         String serverName = Writables.cellToString(values.get(COL_SERVER));
         long startCode = Writables.cellToLong(values.get(COL_STARTCODE));
         if (LOG.isDebugEnabled()) {
-          LOG.debug(Thread.currentThread().getName() + " regioninfo: {" +
-            info.toString() + "}, server: " + serverName + ", startCode: " +
-            startCode);
+          LOG.debug(Thread.currentThread().getName() + " {" +
+            info.toString() + "}, SERVER => '" + serverName +
+            "', STARTCODE => " + startCode);
         }
 
         // Note Region has been assigned.
