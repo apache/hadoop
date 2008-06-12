@@ -43,7 +43,7 @@
         Note that this is a Map Reduce job that creates the archives. You would need a map reduce cluster
         to run this. The following is an example:</p>
         <p>
-        <code>hadoop -archiveName foo.har /user/hadoop/dir1 /user/hadoop/dir2 /user/zoo/</code>
+        <code>hadoop archive -archiveName foo.har /user/hadoop/dir1 /user/hadoop/dir2 /user/zoo/</code>
         </p><p>
         In the above example /user/hadoop/dir1 and /user/hadoop/dir2 will be archived in the following
         filesystem directory -- /user/zoo/foo.har. The sources are not changed or removed when an archive
