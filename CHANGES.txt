@@ -47,6 +47,8 @@ Hbase Change Log
    HBASE-662   UI in table.jsp gives META locations, not the table's regions
                location (Jean-Daniel Cryans via Stack)
    HBASE-676   Bytes.getInt returns a long (Clint Morgan via Stack)
+   HBASE-680   config parameter hbase.io.index.interval  should be
+               hbase.index.interval, according to HBaseMapFile.HbaseWriter
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
