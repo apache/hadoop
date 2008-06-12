@@ -585,6 +585,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3542. Diables the creation of _logs directory for the archives
     directory. (Mahadev Konar via ddas)
 
+    HADOOP-3544. Fixes a documentation issue for hadoop archives.
+    (Mahadev Konar via ddas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
