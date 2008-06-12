@@ -185,7 +185,10 @@ class test_InvalidArgsOperations(unittest.TestCase):
     userState = { clusterDir : jobid }
     self.__setupClusterState(userState, False)
     self.client._op_allocate(['allocate', clusterDir, '3'])
-    self.assertTrue(self.log.hasMessage("Found a previously allocated cluster at cluster directory '%s'. Deallocate the cluster first." % (clusterDir), 'critical'))
+    self.assertTrue(self.log.hasMessage("Found a previously allocated cluster at "\
+                      "cluster directory '%s'. HOD cannot determine if this cluster "\
+                      "can be automatically deallocated. Deallocate the cluster if it "\
+                      "is unused." % (clusterDir), 'critical'))
     os.rmdir(clusterDir)
 
   def __setupClusterState(self, clusterStateMap, verifyDirIsAbsent=True):
