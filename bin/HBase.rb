@@ -1,15 +1,5 @@
 # HBase ruby classes
-
 module HBase
-  # Constants needed as keys creating tables, etc.
-  NAME = "NAME"
-  MAX_VERSIONS = "MAX_VERSIONS"
-  MAX_LENGTH = "MAX_LENGTH"
-  TTL = "TTL"
-  BLOOMFILTER = "BLOOMFILTER"
-  COMPRESSION_TYPE = "COMPRESSION_TYPE"
-  # TODO: Add table options here.
-
   class Admin
     def initialize(configuration, formatter)
       @admin = HBaseAdmin.new(configuration)
@@ -25,10 +15,26 @@ module HBase
       @formatter.footer(now)
     end
 
+    def describe(tableName)
+      now = Time.now 
+      @formatter.header()
+      found = false
+      for t in @admin.listTables()
+        if t.getNameAsString() == tableName
+          @formatter.row([t.to_s])
+          found = true
+        end
+      end
+      if not found
+        raise new ArgumentError.new("Failed to find table named " + tableName)
+      end
+      @formatter.footer(now)
+    end
+
     def exists(tableName)
       now = Time.now 
       @formatter.header()
-      @formatter.row([@admin.tableExists(tableName)])
+      @formatter.row([@admin.tableExists(tableName).to_s])
       @formatter.footer(now)
     end
 
@@ -52,7 +58,6 @@ module HBase
       now = Time.now 
       @admin.deleteTable(tableName)
       @formatter.header()
-      @formatter.row(["Deleted %s" % tableName])
       @formatter.footer(now)
     end
 
@@ -83,7 +88,6 @@ module HBase
       end
       @admin.createTable(htd)
       @formatter.header()
-      @formatter.row(["Created %s" % tableName])
       @formatter.footer(now)
     end
   end

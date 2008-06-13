@@ -1,11 +1,13 @@
-# Command passed to org.jruby.Main.  Pollutes jirb with hbase imports and hbase
-# commands and then loads jirb.  Outputs a banner that tells user where to find
-# help, shell version, etc.
+# File passed to org.jruby.Main by bin/hbase.  Pollutes jirb with hbase imports
+# and hbase  commands and then loads jirb.  Outputs a banner that tells user
+# where to find help, shell version, and loads up a custom hirb.
 
-# TODO: Process command-line arguments: e.g. --master= or -Dhbase.etc and --formatter
-# or read hbase shell configurations from irbrc
-
-# TODO: Write a base class for formatters with ascii, xhtml, and json subclasses.
+# TODO: Add 'debug' support (client-side logs show in shell).  Add it as
+# command-line option and as command.
+# TODO: Interrupt a table creation or a connection to a bad master.  Currently
+# has to time out.
+# TODO: Add support for listing and manipulating catalog tables, etc.
+# TODO: Fix 'irb: warn: can't alias help from irb_help.' in banner message
 
 # Run the java magic include and import basic HBase types that will help ease
 # hbase hacking.
@@ -21,21 +23,20 @@ import org.apache.hadoop.hbase.io.BatchUpdate
 # Some goodies for hirb. Should these be left up to the user's discretion?
 require 'irb/completion'
 
-# Add the $HBASE_HOME/bin directory, the presumed location of this script,
-# to the ruby load path so I can load up my HBase ruby modules
+# Add the $HBASE_HOME/bin directory, the location of this script, to the ruby
+# load path so I can load up my HBase ruby modules
 $LOAD_PATH.unshift File.dirname($PROGRAM_NAME)
+# Require formatter and hbase
 require 'Formatter'
 require 'HBase'
 
-# A HERE document used outputting shell command-line options.
-@cmdline_help = <<HERE
+# See if there are args for this shell. If any, read and then strip from ARGV
+# so they don't go through to irb.  Output shell 'usage' if user types '--help'
+cmdline_help = <<HERE # HERE document output as shell usage
 HBase Shell command-line options:
- format   Formatter outputting results: console | html.  Default: console.
- master   HBase master shell should connect to: e.g --master=example:60000.
+ format  Formatter for outputting results: console | html. Default: console
+ master  HBase master shell should connect to: e.g --master=example:60000
 HERE
-
-# See if there are args for us.  If any, read and then strip from ARGV
-# so they don't go through to irb.
 master = nil
 @formatter = Formatter::Console.new(STDOUT)
 found = []
@@ -53,7 +54,7 @@ for arg in ARGV
       raise ArgumentError.new("Unsupported format " + arg)
     end
   elsif arg == '-h' || arg == '--help'
-    puts @cmdline_help
+    puts cmdline_help
     exit
   end
 end
@@ -64,54 +65,78 @@ end
 # Setup the HBase module.  Create a configuration.  If a master, set it.
 @configuration = HBaseConfiguration.new()
 @configuration.set("hbase.master", master) if master
-# Do lazy create of admin.  If we are pointed at bad master, will hang
+# Do lazy create of admin because if we are pointed at bad master, it will hang
 # shell on startup trying to connect.
 @admin = nil
 
-# Promote all HBase constants to be constants of this module.
-for c in HBase.constants
-  if c == c.upcase
-    eval("%s = \"%s\"" % [c, c])
+# Promote hbase constants to be constants of this module so can
+# be used bare as keys in 'create', 'alter', etc. To see constants
+# in IRB, type 'Object.constants'.
+def promoteConstants(constants)
+  # The constants to import are all in uppercase
+  for c in constants
+    if c == c.upcase
+      eval("%s = \"%s\"" % [c, c])
+    end
   end
-end 
+end
+promoteConstants(HColumnDescriptor.constants)
+promoteConstants(HTableDescriptor.constants)
 
-# TODO: Add table options here.
+# Start of the hbase shell commands.
 
-# General Shell Commands: help and version
+# General shell methods
+
 def help
-  # Format is command name and then short description
-  # TODO: Can't do 'help COMMAND'.  Interpreter runs help and then the command
-  commands = {'version' => 'Output HBase version',
-    'list' => 'List all tables',
-    # The help string in the below is carefully formatted to wrap nicely in
-    # our dumb Console formatter
-    'create' => "Create table; pass a table name, a dictionary of \
-specifications per   column family, and optionally, named parameters of table \
-options.     Dictionaries are specified with curly-brackets, uppercase keys, a '=>'\
-key/value delimiter and then a value. Named parameters are like dict- \
-ionary elements with uppercase names and a '=>' delimiter.  E.g. To   \
-create a table named 'table1' with an alternate maximum region size   \
-and a single family named 'family1' with an alternate maximum cells:  \
-create 'table1' {NAME =>'family1', MAX_NUM_VERSIONS => 5}, REGION_SIZE => 12345",
-    'enable' => "Enable named table",
-    'disable' => "Disable named table",
-    'exists' => "Does named table exist",
-    }
-  @formatter.header(["HBase Shell Commands:"])
-  # TODO: Add general note that all names must be quoted and a general
-  # description of dictionary so create doesn't have to be so long.
-  for k, v in commands.sort
-    @formatter.row([k, v])
-  end
-  @formatter.footer()
+  # Output help.  Help used to be a dictionary of name to short and long
+  # descriptions emitted using Formatters but awkward getting it to show
+  # nicely on console; instead use a HERE document.  Means we can't
+  # output help other than on console but not an issue at the moment.
+  # TODO: Add help to the commands themselves rather than keep it distinct
+  h  = <<HERE
+HBASE SHELL COMMANDS:
+ create    Create table; pass a table name, a dictionary of specifications per
+           column family, and optionally, named parameters of table options.
+           Dictionaries are described below in the GENERAL NOTES section. Named
+           parameters are like dictionary elements with uppercase names
+           (constants) as keys and a '=>' key/value delimiter.  Parameters are
+           comma-delimited.  For example, to create a table named 't1' with an
+           alternate maximum region size and a single family named 'f1' with an
+           alternate maximum number of cells, type:
+
+             create 't1' {NAME => 'f1', MAX_VERSIONS => 5}, REGION_SIZE => 123
+
+ describe  Describe the named table. Outputs the table and family descriptors
+ drop      Drop the named table.  Table must first be disabled
+ disable   Disable the named table: e.g. "disable 't1'<RETURN>"
+ enable    Enable the named table
+ exists    Does the named table exist? e.g. "exists 't1'<RETURN>"
+ exit      Exit the shell
+ list      List all tables
+ version   Output this HBase version
+
+GENERAL NOTES:
+Quote all names in the hbase shell such as table and column names.  Don't
+forget commas delimiting command parameters. Dictionaries of configuration used
+in the creation and alteration of tables are ruby-style Hashes. They look like
+this:
+
+  { 'key1' => 'value1', 'key2' => 'value2', ...}
+
+They are opened and closed with curley-braces.  Key/values are delimited by
+the '=>' character combination.  Usually keys are predefined constants that
+do not need to be quoted such as NAME, MAX_VERSIONS, MAX_LENGTH, TTL, etc.
+Type 'Object.constants' to see a (messy) list of all constants in the
+environment.
+HERE
+  puts h
 end
 
 def version
-  @formatter.header()
-  @formatter.row(["Version: #{org.apache.hadoop.hbase.util.VersionInfo.getVersion()},\
+  # Output version.
+  puts "Version: #{org.apache.hadoop.hbase.util.VersionInfo.getVersion()},\
  r#{org.apache.hadoop.hbase.util.VersionInfo.getRevision()},\
- #{org.apache.hadoop.hbase.util.VersionInfo.getDate()}"])
-  @formatter.footer()
+ #{org.apache.hadoop.hbase.util.VersionInfo.getDate()}"
 end
 
 # DDL
@@ -135,6 +160,11 @@ end
 def list
   @admin = HBase::Admin.new(@configuration, @formatter) unless @admin
   @admin.list()
+end
+
+def describe(table_name)
+  @admin = HBase::Admin.new(@configuration, @formatter) unless @admin
+  @admin.describe(table_name)
 end
   
 def enable(table_name)
@@ -171,9 +201,7 @@ def delete(table_name, row_key, *args)
 end
 
 # Output a banner message that tells users where to go for help
-# TODO: Test that we're in irb context.  For now presume it.
-# TODO: Test that we are in shell context.
-puts "HBase Shell; type 'hbase<RETURN>' for the list of supported HBase commands"
+puts "HBase Shell; type 'help<RETURN>' for the list of supported HBase commands"
 version
 
 require "irb"
