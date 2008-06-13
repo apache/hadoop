@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
 /** 
@@ -48,7 +49,7 @@ class TableDelete extends TableOperation {
       final HRegionInfo info) throws IOException {
     
     if (isEnabled(info)) {
-      throw new TableNotDisabledException(tableName.toString());
+      throw new TableNotDisabledException(tableName);
     }
   }
 

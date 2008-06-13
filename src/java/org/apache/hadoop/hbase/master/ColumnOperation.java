@@ -24,9 +24,9 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
-import org.apache.hadoop.hbase.io.BatchUpdate;
 import org.apache.hadoop.hbase.TableNotDisabledException;
+import org.apache.hadoop.hbase.io.BatchUpdate;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Writables;
 
 abstract class ColumnOperation extends TableOperation {
@@ -43,7 +43,7 @@ abstract class ColumnOperation extends TableOperation {
     @SuppressWarnings("unused") long startCode, final HRegionInfo info) 
   throws IOException {
     if (isEnabled(info)) {
-      throw new TableNotDisabledException(tableName.toString());
+      throw new TableNotDisabledException(tableName);
     }
   }
 

@@ -234,8 +234,8 @@ class HMerge implements HConstants {
     protected void checkOfflined(final HRegionInfo hri)
     throws TableNotDisabledException {
       if (!hri.isOffline()) {
-        throw new TableNotDisabledException("region " +
-          hri.getRegionName() + " is not disabled");
+        throw new TableNotDisabledException("Region " +
+          hri.getRegionNameAsString() + " is not disabled");
       }
     }
     
