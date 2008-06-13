@@ -843,12 +843,10 @@
       <fileset dir="${build.webapps}"/>
     </copy>
 
-    <copy file="${build.dir}/${final.name}-core.jar" todir="${dist.dir}"/>
-
-    <copy file="${build.dir}/${final.name}-examples.jar" todir="${dist.dir}"/>
+    <copy todir="${dist.dir}"> 
+      <fileset file="${build.dir}/${final.name}-*.jar"/>
+    </copy>
     
-    <copy file="${build.dir}/${final.name}-test.jar" todir="${dist.dir}"/>
-
     <copy todir="${dist.dir}/bin">
       <fileset dir="bin"/>
     </copy>
