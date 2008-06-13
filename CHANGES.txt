@@ -591,6 +591,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3517. Fixes a problem in the reducer due to which the last InMemory
     merge may be missed. (Arun Murthy via ddas)
 
+    HADOOP-3548. Fixes build.xml to copy all *.jar files to the dist.
+    (Owen O'Malley via ddas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
