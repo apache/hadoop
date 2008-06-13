@@ -514,6 +514,9 @@ class Memcache {
           if (ttl == HConstants.FOREVER ||
                 now < itKey.getTimestamp() + ttl) {
             result.add(new Cell(tailMap.get(itKey), itKey.getTimestamp()));
+            if (numVersions > 0 && result.size() >= numVersions) {
+              break;
+            }
           } else {
             victims.add(itKey);
             if (LOG.isDebugEnabled()) {
@@ -521,15 +524,15 @@ class Memcache {
             }
           }
         }
-      }
-      if (numVersions > 0 && result.size() >= numVersions) {
+      } else {
+        // By L.N. HBASE-684, map is sorted, so we can't find match any more.
         break;
       }
     }
     // Remove expired victims from the map.
-    for (HStoreKey v: victims)
+    for (HStoreKey v: victims) {
       map.remove(v);
-
+    }
     return result;
   }
 
