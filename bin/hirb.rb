@@ -71,12 +71,13 @@ end
 
 # Promote hbase constants to be constants of this module so can
 # be used bare as keys in 'create', 'alter', etc. To see constants
-# in IRB, type 'Object.constants'.
+# in IRB, type 'Object.constants'. Don't promote defaults because
+# flattens all types to String.  Can be confusing.
 def promoteConstants(constants)
   # The constants to import are all in uppercase
   for c in constants
     if c == c.upcase
-      eval("%s = \"%s\"" % [c, c])
+      eval("%s = \"%s\"" % [c, c]) unless c =~ /DEFAULT_.*/
     end
   end
 end
@@ -95,6 +96,15 @@ def help
   # TODO: Add help to the commands themselves rather than keep it distinct
   h  = <<HERE
 HBASE SHELL COMMANDS:
+ alter     Alter column family schema in a table.  Pass table name and a
+           dictionary specifying the new column family schema. Dictionaries
+           are described below in the GENERAL NOTES section.  Dictionary must
+           include name of column family to alter.  For example, to change
+           the 'f1' column family in table 't1' to have a MAX_VERSIONS of 5,
+           do:
+
+           hbase> alter 't1', {NAME => 'f1', MAX_VERSIONS => 5}
+
  create    Create table; pass a table name, a dictionary of specifications per
            column family, and optionally, named parameters of table options.
            Dictionaries are described below in the GENERAL NOTES section. Named
@@ -102,9 +112,12 @@ HBASE SHELL COMMANDS:
            (constants) as keys and a '=>' key/value delimiter.  Parameters are
            comma-delimited.  For example, to create a table named 't1' with an
            alternate maximum region size and a single family named 'f1' with an
-           alternate maximum number of cells, type:
+           alternate maximum number of cells and 'record' compression, type:
 
-             create 't1' {NAME => 'f1', MAX_VERSIONS => 5}, REGION_SIZE => 123
+           hbase> create 't1' {NAME => 'f1', MAX_VERSIONS => 5, \
+               COMPRESSION => 'RECORD'}, REGION_SIZE => 1024
+
+           For compression types, pass one of 'NONE', 'RECORD', or 'BLOCK'
 
  describe  Describe the named table. Outputs the table and family descriptors
  drop      Drop the named table.  Table must first be disabled
@@ -119,15 +132,12 @@ GENERAL NOTES:
 Quote all names in the hbase shell such as table and column names.  Don't
 forget commas delimiting command parameters. Dictionaries of configuration used
 in the creation and alteration of tables are ruby-style Hashes. They look like
-this:
-
-  { 'key1' => 'value1', 'key2' => 'value2', ...}
-
-They are opened and closed with curley-braces.  Key/values are delimited by
-the '=>' character combination.  Usually keys are predefined constants that
-do not need to be quoted such as NAME, MAX_VERSIONS, MAX_LENGTH, TTL, etc.
-Type 'Object.constants' to see a (messy) list of all constants in the
-environment.
+this: { 'key1' => 'value1', 'key2' => 'value2', ...}.  They are opened and
+closed with curley-braces.  Key/values are delimited by the '=>' character
+combination.  Usually keys are predefined constants such as NAME, MAX_VERSIONS,
+COMPRESSION, MAX_LENGTH, TTL, etc.  Constants do not need to be quoted.  Type
+'Object.constants' to see a (messy) list of all constants in the environment.
+See http://wiki.apache.org/hadoop/Hbase/Shell for more on the HBase Shell.
 HERE
   puts h
 end
@@ -141,45 +151,43 @@ end
 
 # DDL
 
-def create(table_name, *args)
+def admin()
   @admin = HBase::Admin.new(@configuration, @formatter) unless @admin
-  @admin.create(table_name, args)
+  @admin
+end
+
+def create(table_name, *args)
+  admin().create(table_name, args)
 end
 
 def drop(table_name)
-  @admin = HBase::Admin.new(@configuration, @formatter) unless @admin
-  @admin.drop(table_name)
+  admin().drop(table_name)
 end
 
-def alter(table_name, *args)
-  puts "Not implemented yet"
+def alter(table_name, args)
+  admin().alter(table_name, args) 
 end
 
 # Administration
 
 def list
-  @admin = HBase::Admin.new(@configuration, @formatter) unless @admin
-  @admin.list()
+  admin().list()
 end
 
 def describe(table_name)
-  @admin = HBase::Admin.new(@configuration, @formatter) unless @admin
-  @admin.describe(table_name)
+  admin().describe(table_name)
 end
   
 def enable(table_name)
-  @admin = HBase::Admin.new(@configuration, @formatter) unless @admin
-  @admin.enable(table_name)
+  admin().enable(table_name)
 end
 
 def disable(table_name)
-  @admin = HBase::Admin.new(@configuration, @formatter) unless @admin
-  @admin.disable(table_name)
+  admin().disable(table_name)
 end
 
 def exists(table_name)
-  @admin = HBase::Admin.new(@configuration, @formatter) unless @admin
-  @admin.exists(table_name)
+  admin().exists(table_name)
 end
   
 # CRUD
@@ -201,7 +209,9 @@ def delete(table_name, row_key, *args)
 end
 
 # Output a banner message that tells users where to go for help
-puts "HBase Shell; type 'help<RETURN>' for the list of supported HBase commands"
+puts <<HERE
+HBase Shell; enter 'help<RETURN>' for list of supported commands.
+HERE
 version
 
 require "irb"

@@ -73,22 +73,53 @@ module HBase
       for arg in args
         raise TypeError.new(arg.class.to_s + " of " + arg.to_s + " is not of Hash type") \
           unless arg.instance_of? Hash
-        name = arg[NAME]
-        raise ArgumentError.new("Column family " + arg + " must have a name at least") \
-          unless name
-        # TODO: Process all other parameters for column family
-        # Check the family name for colon.  Add it if missing.
-        index = name.index(':')
-        if not index
-          # Add a colon.  If already a colon, its in the right place,
-          # or an exception will come up out of the addFamily
-          name << ':'
-        end
-        htd.addFamily(HColumnDescriptor.new(name))
+        htd.addFamily(hcd(arg))
       end
       @admin.createTable(htd)
       @formatter.header()
       @formatter.footer(now)
+    end
+
+    def alter(tableName, args)
+      now = Time.now 
+      raise TypeError.new("Table name must be of type String") \
+        unless tableName.instance_of? String
+      descriptor = hcd(args)
+      @admin.modifyColumn(tableName, descriptor.getNameAsString(), descriptor);
+      @formatter.header()
+      @formatter.footer(now)
+    end
+
+    def hcd(arg)
+      # Return a new HColumnDescriptor made of passed args
+      # TODO: This is brittle code.
+      # Here is current HCD constructor:
+      # public HColumnDescriptor(final byte [] columnName, final int maxVersions,
+      # final CompressionType compression, final boolean inMemory,
+      # final boolean blockCacheEnabled,
+      # final int maxValueLength, final int timeToLive,
+      # BloomFilterDescriptor bloomFilter)
+      name = arg[NAME]
+      raise ArgumentError.new("Column family " + arg + " must have a name") \
+        unless name
+      # Check the family name for colon.  Add it if missing.
+      index = name.index(':')
+      if not index
+        # Add a colon.  If already a colon, its in the right place,
+        # or an exception will come up out of the addFamily
+        name << ':'
+      end
+      # TODO: What encoding are Strings in jruby?
+      return HColumnDescriptor.new(name.to_java_bytes,
+        # JRuby uses longs for ints. Need to convert.  Also constants are String 
+        arg[MAX_VERSIONS]? arg[MAX_VERSIONS]: HColumnDescriptor::DEFAULT_MAX_VERSIONS,
+        arg[COMPRESSION]? HColumnDescriptor::CompressionType::valueOf(arg[COMPRESSION]):
+          HColumnDescriptor::DEFAULT_COMPRESSION,
+        arg[IN_MEMORY]? arg[IN_MEMORY]: HColumnDescriptor::DEFAULT_IN_MEMORY,
+        arg[BLOCKCACHE]? arg[BLOCKCACHE]: HColumnDescriptor::DEFAULT_BLOCKCACHE,
+        arg[MAX_LENGTH]? arg[MAX_LENGTH]: HColumnDescriptor::DEFAULT_MAX_LENGTH,
+        arg[TTL]? arg[TTL]: HColumnDescriptor::DEFAULT_TTL,
+        arg[BLOOMFILTER]? arg[BLOOMFILTER]: HColumnDescriptor::DEFAULT_BLOOMFILTER)
     end
   end
 

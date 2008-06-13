@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.InvalidColumnNameException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.HRegionInfo;
 
 /** Instantiated to modify an existing column family on a table */
@@ -47,7 +48,8 @@ class ModifyColumn extends ColumnOperation {
         i.getTableDesc().addFamily(descriptor);
         updateRegionInfo(server, m.getRegionName(), i);
       } else { // otherwise, we have an error.
-        throw new InvalidColumnNameException("Column family '" + columnName + 
+        throw new InvalidColumnNameException("Column family '" +
+          Bytes.toString(columnName) + 
           "' doesn't exist, so cannot be modified.");
       }
     }

@@ -55,43 +55,6 @@ public class HColumnDescriptor implements WritableComparable {
     /** Compress sequences of records together in blocks. */
     BLOCK
   }
-  
-  /**
-   * Default compression type.
-   */
-  public static final CompressionType DEFAULT_COMPRESSION_TYPE =
-    CompressionType.NONE;
-
-  /**
-   * Default number of versions of a record to keep.
-   */
-  public static final int DEFAULT_N_VERSIONS = 3;
-
-  /**
-   * Default setting for whether to serve from memory or not.
-   */
-  public static final boolean DEFAULT_IN_MEMORY = false;
-
-  /**
-   * Default setting for whether to use a block cache or not.
-   */
-  public static final boolean DEFAULT_BLOCK_CACHE_ENABLED = false;
-
-  /**
-   * Default maximum length of cell contents.
-   */
-  public static final int DEFAULT_MAX_VALUE_LENGTH = Integer.MAX_VALUE;
-
-  /**
-   * Default time to live of cell contents.
-   */
-  public static final int DEFAULT_TIME_TO_LIVE = HConstants.FOREVER;
-
-  /**
-   * Default bloom filter description.
-   */
-  public static final BloomFilterDescriptor DEFAULT_BLOOM_FILTER_DESCRIPTOR =
-    null;
 
   // Defines for jruby/shell
   public static final String NAME = "NAME";
@@ -104,24 +67,65 @@ public class HColumnDescriptor implements WritableComparable {
   public static final String BLOOMFILTER = "BLOOMFILTER";
   public static final String FOREVER = "FOREVER";
 
+  /**
+   * Default compression type.
+   */
+  public static final CompressionType DEFAULT_COMPRESSION =
+    CompressionType.NONE;
+
+  /**
+   * Default number of versions of a record to keep.
+   */
+  public static final int DEFAULT_MAX_VERSIONS = 3;
+
+  /**
+   * Default maximum cell length.
+   */
+  public static final int DEFAULT_MAX_LENGTH = Integer.MAX_VALUE;
+
+  /**
+   * Default setting for whether to serve from memory or not.
+   */
+  public static final boolean DEFAULT_IN_MEMORY = false;
+
+  /**
+   * Default setting for whether to use a block cache or not.
+   */
+  public static final boolean DEFAULT_BLOCKCACHE = false;
+
+  /**
+   * Default maximum length of cell contents.
+   */
+  public static final int DEFAULT_MAX_VALUE_LENGTH = Integer.MAX_VALUE;
+
+  /**
+   * Default time to live of cell contents.
+   */
+  public static final int DEFAULT_TTL = HConstants.FOREVER;
+
+  /**
+   * Default bloom filter description.
+   */
+  public static final BloomFilterDescriptor DEFAULT_BLOOMFILTER = null;
+
   // Column family name
   private byte [] name;
   // Number of versions to keep
-  private int maxVersions = DEFAULT_N_VERSIONS;
+  private int maxVersions = DEFAULT_MAX_VERSIONS;
   // Compression setting if any
-  private CompressionType compressionType = DEFAULT_COMPRESSION_TYPE;
+  private CompressionType compressionType = DEFAULT_COMPRESSION;
   // Serve reads from in-memory cache
   private boolean inMemory = DEFAULT_IN_MEMORY;
   // Serve reads from in-memory block cache
-  private boolean blockCacheEnabled = DEFAULT_BLOCK_CACHE_ENABLED;
+  private boolean blockCacheEnabled = DEFAULT_BLOCKCACHE;
   // Maximum value size
-  private int maxValueLength = Integer.MAX_VALUE;
+  private int maxValueLength = DEFAULT_MAX_LENGTH;
   // Time to live of cell contents, in seconds from last timestamp
-  private int timeToLive = HConstants.FOREVER;
+  private int timeToLive = DEFAULT_TTL;
   // True if bloom filter was specified
   private boolean bloomFilterSpecified = false;
   // Descriptor of bloom filter
-  private BloomFilterDescriptor bloomFilter = DEFAULT_BLOOM_FILTER_DESCRIPTOR;
+  private BloomFilterDescriptor bloomFilter = DEFAULT_BLOOMFILTER;
 
   /**
    * Default constructor. Must be present for Writable.
@@ -159,10 +163,10 @@ public class HColumnDescriptor implements WritableComparable {
   public HColumnDescriptor(final byte [] columnName) {
     this (columnName == null || columnName.length <= 0?
       HConstants.EMPTY_BYTE_ARRAY: columnName,
-      DEFAULT_N_VERSIONS, DEFAULT_COMPRESSION_TYPE, DEFAULT_IN_MEMORY,
-      DEFAULT_BLOCK_CACHE_ENABLED, 
-      Integer.MAX_VALUE, DEFAULT_TIME_TO_LIVE,
-      DEFAULT_BLOOM_FILTER_DESCRIPTOR);
+      DEFAULT_MAX_VERSIONS, DEFAULT_COMPRESSION, DEFAULT_IN_MEMORY,
+      DEFAULT_BLOCKCACHE, 
+      Integer.MAX_VALUE, DEFAULT_TTL,
+      DEFAULT_BLOOMFILTER);
   }
 
   /**
@@ -245,6 +249,13 @@ public class HColumnDescriptor implements WritableComparable {
     return name;
   }
 
+  /**
+   * @return Name of this column family
+   */
+  public String getNameAsString() {
+    return Bytes.toString(this.name);
+  }
+
   /** @return compression type being used for the column family */
   public CompressionType getCompression() {
     return this.compressionType;
@@ -302,8 +313,8 @@ public class HColumnDescriptor implements WritableComparable {
   public String toString() {
     return "{" + NAME + " => '" + Bytes.toString(name) +
       "', " + MAX_VERSIONS + " => " + maxVersions +
-      ", " + COMPRESSION + " => " + this.compressionType +
-      ", " + IN_MEMORY + " => " + inMemory +
+      ", " + COMPRESSION + " => '" + this.compressionType +
+      "', " + IN_MEMORY + " => " + inMemory +
       ", " + BLOCKCACHE + " => " + blockCacheEnabled +
       ", " + MAX_LENGTH + " => " + maxValueLength +
       ", " + TTL + " => " +
