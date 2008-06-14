@@ -296,6 +296,8 @@ Release 0.18.0 - Unreleased
     HADOOP-3096. Improves documentation about the Task Execution Environment in 
     the Map-Reduce tutorial. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-2984. Add forrest documentation for DistCp. (cdouglas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
