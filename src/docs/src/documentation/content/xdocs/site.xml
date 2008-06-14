@@ -40,6 +40,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <hdfs      label="HDFS Permissions Guide"    href="hdfs_permissions_guide.html" />
     <hdfs      label="HDFS Quotas Administrator Guide" href="hdfs_quota_admin_guide.html" />
     <fs        label="FS Shell Guide"     href="hdfs_shell.html" />
+    <distcp    label="DistCp Guide"       href="distcp.html" />
     <mapred    label="Map-Reduce Tutorial" href="mapred_tutorial.html" />
     <mapred    label="Native Hadoop Libraries" href="native_libraries.html" />
     <streaming label="Streaming"          href="streaming.html" />
