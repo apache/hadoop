@@ -37,7 +37,7 @@ public class TestDFSStorageStateRecovery extends TestCase {
  
   private static final Log LOG = LogFactory.getLog(
                                                    "org.apache.hadoop.dfs.TestDFSStorageStateRecovery");
-  private Configuration conf;
+  private Configuration conf = null;
   private int testCounter = 0;
   private MiniDFSCluster cluster = null;
   
@@ -197,8 +197,15 @@ public class TestDFSStorageStateRecovery extends TestCase {
           try {
             cluster = new MiniDFSCluster(conf, 0, StartupOption.REGULAR);
             throw new AssertionError("NameNode should have failed to start");
-          } catch (Exception expected) {
-            // expected
+          } catch (IOException expected) {
+            // the exception is expected
+            // check that the message says "not formatted" 
+            // when storage directory is empty (case #5)
+            if(!testCases[i][0] && !testCases[i][2] 
+                      && !testCases[i][1] && !testCases[i][3]) {
+              assertTrue(expected.getLocalizedMessage().contains(
+                  "NameNode is not formatted"));
+            }
           }
         }
         

@@ -562,9 +562,12 @@ class FSImage extends Storage {
 
   boolean isConversionNeeded(StorageDirectory sd) throws IOException {
     File oldImageDir = new File(sd.root, "image");
-    if (!oldImageDir.exists())
-      throw new InconsistentFSStateException(sd.root,
-          oldImageDir + " does not exist.");
+    if (!oldImageDir.exists()) {
+      if(sd.getVersionFile().exists())
+        throw new InconsistentFSStateException(sd.root,
+            oldImageDir + " does not exist.");
+      return false;
+    }
     // check the layout version inside the image file
     File oldF = new File(oldImageDir, "fsimage");
     RandomAccessFile oldFile = new RandomAccessFile(oldF, "rws");

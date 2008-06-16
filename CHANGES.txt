@@ -596,6 +596,8 @@ Release 0.18.0 - Unreleased
     HADOOP-3548. Fixes build.xml to copy all *.jar files to the dist.
     (Owen O'Malley via ddas)
 
+    HADOOP-3363. Fix unformatted storage detection in FSImage. (shv)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
