@@ -46,6 +46,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3523. Fixes auto-deallocation of cluster if job id is not found in
     Torque's job list (Hemanth Yamijala via ddas)
 
+    HADOOP-3531. Fixes a bug related to handling JobTracker failures because of
+    timing issues on slow nodes. (Hemanth Yamijala via ddas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
