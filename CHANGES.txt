@@ -601,6 +601,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3560. Fixes a problem to do with split creation in archives.
     (Mahadev Konar via ddas)
 
+    HADOOP-3545. Fixes a overflow problem in archives.
+    (Mahadev Konar via ddas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
