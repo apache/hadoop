@@ -52,6 +52,8 @@ Hbase Change Log
                (LN via Stack)
    HBASE-682   Unnecessary iteration in HMemcache.internalGet? got much better
                reading performance after break it (LN via Stack)
+   HBASE-686   MemcacheScanner didn't return the first row(if it exists),
+               because HScannerInterface's output incorrect (LN via Jim Kellerman)
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

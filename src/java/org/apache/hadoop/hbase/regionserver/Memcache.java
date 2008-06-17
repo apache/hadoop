@@ -421,8 +421,7 @@ class Memcache {
           // take note of the row of this candidate so that we'll know when
           // we cross the row boundary into the previous row.
           if (!HLogEdit.isDeleted(headMap.get(thisKey))) {
-            if (ttl == HConstants.FOREVER ||
-                    now < found_key.getTimestamp() + ttl) {
+            if (ttl == HConstants.FOREVER) {
               lastRowFound = thisKey.getRow();
               candidateKeys.put(stripTimestamp(thisKey), 
                 new Long(thisKey.getTimestamp()));
@@ -698,8 +697,7 @@ class Memcache {
       if (results.size() > 0) {
         results.clear();
       }
-      while (results.size() <= 0 &&
-          (this.currentRow = getNextRow(this.currentRow)) != null) {
+      while (results.size() <= 0 && this.currentRow != null) {
         if (deletes.size() > 0) {
           deletes.clear();
         }
@@ -727,6 +725,8 @@ class Memcache {
           }
           results.put(column, c.getValue());
         }
+        this.currentRow = getNextRow(this.currentRow);
+
       }
       return results.size() > 0;
     }

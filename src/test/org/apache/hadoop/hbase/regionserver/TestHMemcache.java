@@ -304,4 +304,42 @@ public class TestHMemcache extends TestCase {
   private HStoreKey getHSKForRow(byte [] row) {
     return new HStoreKey(row, Bytes.toBytes("test_col:"), HConstants.LATEST_TIMESTAMP);
   }
+
+  /**
+   * Test memcache scanner scanning cached rows, HBASE-686
+   * @throws IOException
+   */
+  public void testScanner_686() throws IOException {
+    addRows(this.hmemcache);
+    long timestamp = System.currentTimeMillis();
+    byte[][] cols = new byte[COLUMNS_COUNT * ROW_COUNT][];
+    for (int i = 0; i < ROW_COUNT; i++) {
+      for (int ii = 0; ii < COLUMNS_COUNT; ii++) {
+        cols[(ii + (i * COLUMNS_COUNT))] = getColumnName(i, ii);
+      }
+    }
+    //starting from each row, validate results should contain the starting row
+    for (int startRowId = 0; startRowId < ROW_COUNT; startRowId++) {
+      InternalScanner scanner = this.hmemcache.getScanner(timestamp,
+          cols, getRowName(startRowId));
+      HStoreKey key = new HStoreKey();
+      TreeMap<byte[], byte[]> results =
+        new TreeMap<byte[], byte[]>(Bytes.BYTES_COMPARATOR);
+      for (int i = 0; scanner.next(key, results); i++) {
+        int rowId = startRowId + i;
+        assertTrue("Row name",
+            key.toString().startsWith(Bytes.toString(getRowName(rowId))));
+        assertEquals("Count of columns", COLUMNS_COUNT, results.size());
+        TreeMap<byte[], Cell> row =
+          new TreeMap<byte[], Cell>(Bytes.BYTES_COMPARATOR);
+        for (Map.Entry<byte[], byte[]> e : results.entrySet()) {
+          row.put(e.getKey(),
+              new Cell(e.getValue(), HConstants.LATEST_TIMESTAMP));
+        }
+        isExpectedRow(rowId, row);
+        // Clear out set.  Otherwise row results accumulate.
+        results.clear();
+      }
+    }
+  }
 }
