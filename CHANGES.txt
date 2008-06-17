@@ -301,6 +301,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3406. Add forrest documentation for Profiling.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-2762. Add forrest documentation for controls of memory limits on 
+    hadoop daemons and Map-Reduce tasks. (Amareshwari Sriramadasu via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

@@ -1066,7 +1066,17 @@
         </p>
         
         <p>Users/admins can also specify the maximum virtual memory 
-        of the launched child-task using <code>mapred.child.ulimit</code>.</p>
+        of the launched child-task using <code>mapred.child.ulimit</code>.
+        The value for <code>mapred.child.ulimit</code> should be specified 
+        in kilo bytes (KB). And also the value must be greater than
+        or equal to the -Xmx passed to JavaVM, else the VM might not start. 
+        </p>
+        
+        <p>Note: <code>mapred.child.java.opts</code> are used only for 
+        configuring the launched child tasks from task tracker. Configuring 
+        the memory options for daemons is documented in 
+        <a href="cluster_setup.html#Configuring+the+Environment+of+the+Hadoop+Daemons">
+        cluster_setup.html </a></p>
         
         <p>The task tracker has local directory,
         <code> ${mapred.local.dir}/taskTracker/</code> to create localized

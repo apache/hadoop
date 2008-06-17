@@ -324,6 +324,45 @@ document.write("Last Published: " + document.lastModified);
 <p>At the very least you should specify the
           <span class="codefrag">JAVA_HOME</span> so that it is correctly defined on each
           remote node.</p>
+<p>Administrators can configure individual daemons using the
+          configuration options <span class="codefrag">HADOOP_*_OPTS</span>. Various options 
+          available are shown below in the table. </p>
+<table class="ForrestTable" cellspacing="1" cellpadding="4">
+          
+<tr>
+<th colspan="1" rowspan="1">Daemon</th><th colspan="1" rowspan="1">Configure Options</th>
+</tr>
+          
+<tr>
+<td colspan="1" rowspan="1">NameNode</td><td colspan="1" rowspan="1">HADOOP_NAMENODE_OPTS</td>
+</tr>
+          
+<tr>
+<td colspan="1" rowspan="1">DataNode</td><td colspan="1" rowspan="1">HADOOP_DATANODE_OPTS</td>
+</tr>
+          
+<tr>
+<td colspan="1" rowspan="1">SecondaryNamenode</td>
+              <td colspan="1" rowspan="1">HADOOP_SECONDARYNAMENODE_OPTS</td>
+</tr>
+          
+<tr>
+<td colspan="1" rowspan="1">JobTracker</td><td colspan="1" rowspan="1">HADOOP_JOBTRACKER_OPTS</td>
+</tr>
+          
+<tr>
+<td colspan="1" rowspan="1">TaskTracker</td><td colspan="1" rowspan="1">HADOOP_TASKTRACKER_OPTS</td>
+</tr>
+          
+</table>
+<p> For example, To configure Namenode to use parallelGC, the
+          following statement should be added in <span class="codefrag">hadoop-env.sh</span> :
+          <br>
+<span class="codefrag">
+          export HADOOP_NAMENODE_OPTS="-XX:+UseParallelGC ${HADOOP_NAMENODE_OPTS}"
+          </span>
+<br>
+</p>
 <p>Other useful configuration parameters that you can customize 
           include:</p>
 <ul>
@@ -338,11 +377,13 @@ document.write("Last Published: " + document.lastModified);
 <li>
               
 <span class="codefrag">HADOOP_HEAPSIZE</span> - The maximum amount of heapsize 
-              to use, in MB e.g. <span class="codefrag">2000MB</span>.
+              to use, in MB e.g. <span class="codefrag">1000MB</span>. This is used to 
+              configure the heap size for the hadoop daemon. By default,
+              the value is <span class="codefrag">1000MB</span>.
             </li>
           
 </ul>
-<a name="N100DD"></a><a name="Configuring+the+Hadoop+Daemons"></a>
+<a name="N10130"></a><a name="Configuring+the+Hadoop+Daemons"></a>
 <h4>Configuring the Hadoop Daemons</h4>
 <p>This section deals with important parameters to be specified in the
           <span class="codefrag">conf/hadoop-site.xml</span> for the Hadoop cluster.</p>
@@ -466,7 +507,7 @@ document.write("Last Published: " + document.lastModified);
           <a href="api/org/apache/hadoop/conf/Configuration.html#FinalParams">
           final</a> to ensure that they cannot be overriden by user-applications.
           </p>
-<a name="N101BC"></a><a name="Real-World+Cluster+Configurations"></a>
+<a name="N1020F"></a><a name="Real-World+Cluster+Configurations"></a>
 <h5>Real-World Cluster Configurations</h5>
 <p>This section lists some non-default configuration parameters which 
             have been used to run the <em>sort</em> benchmark on very large 
@@ -618,7 +659,7 @@ document.write("Last Published: " + document.lastModified);
                     
 <td colspan="1" rowspan="1">mapred.child.java.opts</td>
                     <td colspan="1" rowspan="1">-Xmx1024M</td>
-                    <td colspan="1" rowspan="1"></td>
+                    <td colspan="1" rowspan="1">Larger heap-size for child jvms of maps/reduces.</td>
                   
 </tr>
                 
@@ -627,7 +668,7 @@ document.write("Last Published: " + document.lastModified);
 </li>
             
 </ul>
-<a name="N102D9"></a><a name="Slaves"></a>
+<a name="N1032D"></a><a name="Slaves"></a>
 <h4>Slaves</h4>
 <p>Typically you choose one machine in the cluster to act as the 
           <span class="codefrag">NameNode</span> and one machine as to act as the 
@@ -636,14 +677,14 @@ document.write("Last Published: " + document.lastModified);
           referred to as <em>slaves</em>.</p>
 <p>List all slave hostnames or IP addresses in your 
           <span class="codefrag">conf/slaves</span> file, one per line.</p>
-<a name="N102F8"></a><a name="Logging"></a>
+<a name="N1034C"></a><a name="Logging"></a>
 <h4>Logging</h4>
 <p>Hadoop uses the <a href="http://logging.apache.org/log4j/">Apache 
           log4j</a> via the <a href="http://commons.apache.org/logging/">Apache 
           Commons Logging</a> framework for logging. Edit the 
           <span class="codefrag">conf/log4j.properties</span> file to customize the Hadoop 
           daemons' logging configuration (log-formats and so on).</p>
-<a name="N1030C"></a><a name="History+Logging"></a>
+<a name="N10360"></a><a name="History+Logging"></a>
 <h5>History Logging</h5>
 <p> The job history files are stored in central location 
             <span class="codefrag"> hadoop.job.history.location </span> which can be on DFS also,
@@ -677,7 +718,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N10344"></a><a name="Hadoop+Rack+Awareness"></a>
+<a name="N10398"></a><a name="Hadoop+Rack+Awareness"></a>
 <h2 class="h3">Hadoop Rack Awareness</h2>
 <div class="section">
 <p>The HDFS and the Map-Reduce components are rack-aware.</p>
@@ -700,7 +741,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N1036A"></a><a name="Hadoop+Startup"></a>
+<a name="N103BE"></a><a name="Hadoop+Startup"></a>
 <h2 class="h3">Hadoop Startup</h2>
 <div class="section">
 <p>To start a Hadoop cluster you will need to start both the HDFS and 
@@ -735,7 +776,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
     
     
-<a name="N103B0"></a><a name="Hadoop+Shutdown"></a>
+<a name="N10404"></a><a name="Hadoop+Shutdown"></a>
 <h2 class="h3">Hadoop Shutdown</h2>
 <div class="section">
 <p>

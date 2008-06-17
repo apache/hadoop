@@ -118,6 +118,25 @@
           <code>JAVA_HOME</code> so that it is correctly defined on each
           remote node.</p>
           
+          <p>Administrators can configure individual daemons using the
+          configuration options <code>HADOOP_*_OPTS</code>. Various options 
+          available are shown below in the table. </p>
+          <table>
+          <tr><th>Daemon</th><th>Configure Options</th></tr>
+          <tr><td>NameNode</td><td>HADOOP_NAMENODE_OPTS</td></tr>
+          <tr><td>DataNode</td><td>HADOOP_DATANODE_OPTS</td></tr>
+          <tr><td>SecondaryNamenode</td>
+              <td>HADOOP_SECONDARYNAMENODE_OPTS</td></tr>
+          <tr><td>JobTracker</td><td>HADOOP_JOBTRACKER_OPTS</td></tr>
+          <tr><td>TaskTracker</td><td>HADOOP_TASKTRACKER_OPTS</td></tr>
+          </table>
+          
+          <p> For example, To configure Namenode to use parallelGC, the
+          following statement should be added in <code>hadoop-env.sh</code> :
+          <br/><code>
+          export HADOOP_NAMENODE_OPTS="-XX:+UseParallelGC ${HADOOP_NAMENODE_OPTS}"
+          </code><br/></p>
+          
           <p>Other useful configuration parameters that you can customize 
           include:</p>
           <ul>
@@ -128,7 +147,9 @@
             </li>
             <li>
               <code>HADOOP_HEAPSIZE</code> - The maximum amount of heapsize 
-              to use, in MB e.g. <code>2000MB</code>.
+              to use, in MB e.g. <code>1000MB</code>. This is used to 
+              configure the heap size for the hadoop daemon. By default,
+              the value is <code>1000MB</code>.
             </li>
           </ul>
         </section>
@@ -335,7 +356,7 @@
                   <tr>
                     <td>mapred.child.java.opts</td>
                     <td>-Xmx1024M</td>
-                    <td></td>
+                    <td>Larger heap-size for child jvms of maps/reduces.</td>
                   </tr>
                 </table>
               </li>
