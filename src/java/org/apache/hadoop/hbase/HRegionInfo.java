@@ -339,7 +339,7 @@ public class HRegionInfo implements WritableComparable {
    */
   @Override
   public String toString() {
-    return "REGION => {" + HColumnDescriptor.NAME + " => '" +
+    return "REGION => {" + HConstants.NAME + " => '" +
       this.regionNameStr +
       "', STARTKEY => '" +
       Bytes.toString(this.startKey) + "', ENDKEY => '" +

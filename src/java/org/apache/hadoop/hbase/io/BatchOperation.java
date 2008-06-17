@@ -45,7 +45,7 @@ public class BatchOperation implements Writable {
    * Default constructor
    */
   public BatchOperation() {
-    this(null);
+    this((byte [])null);
   }
 
   /**
@@ -54,6 +54,23 @@ public class BatchOperation implements Writable {
    */
   public BatchOperation(final byte [] column) {
     this(column, null);
+  }
+
+  /**
+   * Creates a DELETE batch operation.
+   * @param column column name
+   */
+  public BatchOperation(final String column) {
+    this(Bytes.toBytes(column), null);
+  }
+
+  /**
+   * Create a batch operation.
+   * @param column column name
+   * @param value column value.  If non-null, this is a PUT operation.
+   */
+  public BatchOperation(final String column, String value) {
+    this(Bytes.toBytes(column), Bytes.toBytes(value));
   }
 
   /**

@@ -19,12 +19,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 
 /**
  * Thrown if request for nonexistent column family.
  */
-public class NoSuchColumnFamilyException extends IOException {
+public class NoSuchColumnFamilyException extends DoNotRetryIOException {
   public NoSuchColumnFamilyException() {
     super();
   }

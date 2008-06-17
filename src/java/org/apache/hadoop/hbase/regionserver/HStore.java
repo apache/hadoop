@@ -472,7 +472,7 @@ public class HStore implements HConstants {
       Path p = datfiles[i].getPath();
       // If does not have sympathetic info file, delete.
       if (!mapfiles.contains(fs.makeQualified(p))) {
-        fs.delete(p, false);
+        fs.delete(p, true);
       }
     }
     return results;

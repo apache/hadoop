@@ -1155,24 +1155,27 @@ public class HTable {
    *
    * @param row The row to operate on
    * @param family The column family to match
+   * @param timestamp Timestamp to match
    * @throws IOException
    */  
-  public void deleteFamily(final Text row, final Text family) throws IOException{
-    deleteFamily(row.getBytes(), family.getBytes(),
-      HConstants.LATEST_TIMESTAMP);
+  public void deleteFamily(final Text row, final Text family,
+      final long timestamp)
+  throws IOException{
+    deleteFamily(row.getBytes(), family.getBytes(), timestamp);
   }
-  
+
   /**
    * Delete all cells for a row with matching column family at all timestamps.
    *
    * @param row The row to operate on
    * @param family The column family to match
+   * @param timestamp Timestamp to match
    * @throws IOException
    */  
-  public void deleteFamily(final String row, final String family)
+  public void deleteFamily(final String row, final String family,
+      final long timestamp)
   throws IOException{
-    deleteFamily(Bytes.toBytes(row), Bytes.toBytes(family),
-      HConstants.LATEST_TIMESTAMP);
+    deleteFamily(Bytes.toBytes(row), Bytes.toBytes(family), timestamp);
   }
 
   /**

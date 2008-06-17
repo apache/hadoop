@@ -410,8 +410,7 @@ public class HConnectionManager implements HConstants {
             metaLocation.getRegionInfo().getRegionName(), metaKey);
 
           if (regionInfoRow == null) {
-            throw new TableNotFoundException("Table '" +
-              Bytes.toString(tableName) + "' does not exist.");
+            throw new TableNotFoundException(Bytes.toString(tableName));
           }
 
           Cell value = regionInfoRow.get(COL_REGIONINFO);
@@ -433,7 +432,7 @@ public class HConnectionManager implements HConstants {
 
           if (regionInfo.isOffline()) {
             throw new RegionOfflineException("region offline: " + 
-              regionInfo.getRegionName());
+              regionInfo.getRegionNameAsString());
           }
           
           String serverAddress = 

@@ -173,7 +173,7 @@ public class TestBloomFilters extends HBaseClusterTestCase {
             HColumnDescriptor.CompressionType.NONE,   // no compression
             HColumnDescriptor.DEFAULT_IN_MEMORY,      // not in memory
             HColumnDescriptor.DEFAULT_BLOCKCACHE,
-            HColumnDescriptor.DEFAULT_MAX_VALUE_LENGTH,
+            HColumnDescriptor.DEFAULT_LENGTH,
             HColumnDescriptor.DEFAULT_TTL,
             bloomFilter
         )
@@ -239,7 +239,7 @@ public class TestBloomFilters extends HBaseClusterTestCase {
             HColumnDescriptor.CompressionType.NONE,   // no compression
             HColumnDescriptor.DEFAULT_IN_MEMORY,      // not in memory
             HColumnDescriptor.DEFAULT_BLOCKCACHE,
-            HColumnDescriptor.DEFAULT_MAX_VALUE_LENGTH,
+            HColumnDescriptor.DEFAULT_LENGTH,
             HColumnDescriptor.DEFAULT_TTL,
             bloomFilter
         )

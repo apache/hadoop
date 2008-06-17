@@ -1,7 +1,8 @@
 # Results formatter
 module Formatter
+  # Base abstract class for results formatting.
   class Formatter
-    # Base abstract class for results formatting.
+    # Takes an output stream and a print width.
     def initialize(o, w = 80)
       raise TypeError.new("Type %s of parameter %s is not IO" % [o.class, o]) \
         unless o.instance_of? IO
@@ -9,15 +10,24 @@ module Formatter
       @maxWidth = w
       @rowCount = 0
     end
-    
+
+    attr_reader :rowCount
+
     def header(args = [])
-      row(args) if args.length > 0
+      row(args, false) if args.length > 0
       @rowCount = 0
     end
     
-    def row(args = [])
+    # Output a row.
+    # Inset is whether or not to offset row by a space.
+    def row(args = [], inset = true)
       if not args or args.length == 0
         # Print out nothing
+        return
+      end
+      if args.class == String
+        output(@maxWidth, args)
+        puts
         return
       end
       # TODO: Look at the type.  Is it RowResult?
@@ -35,8 +45,15 @@ module Formatter
         biggest = (splits2.length > splits1.length)? splits2.length: splits1.length
         index = 0
         while index < biggest
-          @out.print(" ")
+          if inset
+            # Inset by one space if inset is set.
+            @out.print(" ")
+          end
           output(col1width, splits1[index])
+          if not inset
+            # Add extra space so second column lines up w/ second column output
+            @out.print(" ")
+          end
           @out.print(" ")
           output(col2width, splits2[index])
           index += 1
@@ -68,6 +85,9 @@ module Formatter
 
     def dump(str)
       # Remove double-quotes added by 'dump'.
+      if str.instance_of? Fixnum
+          return
+      end
       return str.dump.slice(1, str.length)
     end
 
@@ -82,7 +102,7 @@ module Formatter
         return
       end
       # Only output elapsed time and row count if startTime passed
-      @out.puts("%d row(s) in %s seconds" % [@rowCount, Time.now - startTime])
+      @out.puts("%d row(s) in %.4f seconds" % [@rowCount, Time.now - startTime])
     end
   end
      

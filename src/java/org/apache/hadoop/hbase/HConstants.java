@@ -219,5 +219,7 @@ public interface HConstants {
   public static final String HBASE_CLIENT_RETRIES_NUMBER_KEY =
     "hbase.client.retries.number";
   public static final int DEFAULT_CLIENT_RETRIES = 5;
-  
+
+  public static final String NAME = "NAME";
+  public static final String VERSIONS = "VERSIONS";
 }

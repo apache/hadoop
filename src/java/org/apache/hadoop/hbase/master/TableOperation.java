@@ -124,7 +124,7 @@ abstract class TableOperation implements HConstants {
       }
 
       if (!tableExists) {
-        throw new TableNotFoundException(tableName + " does not exist");
+        throw new TableNotFoundException(Bytes.toString(tableName));
       }
 
       postProcessMeta(m, server);

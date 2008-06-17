@@ -8,17 +8,11 @@
 # has to time out.
 # TODO: Add support for listing and manipulating catalog tables, etc.
 # TODO: Fix 'irb: warn: can't alias help from irb_help.' in banner message
+# TODO: Encoding; need to know how to go from ruby String to UTF-8 bytes
 
 # Run the java magic include and import basic HBase types that will help ease
 # hbase hacking.
 include Java
-import org.apache.hadoop.hbase.HBaseConfiguration
-import org.apache.hadoop.hbase.client.HTable
-import org.apache.hadoop.hbase.client.HBaseAdmin
-import org.apache.hadoop.hbase.HColumnDescriptor
-import org.apache.hadoop.hbase.HConstants
-import org.apache.hadoop.hbase.HTableDescriptor
-import org.apache.hadoop.hbase.io.BatchUpdate
 
 # Some goodies for hirb. Should these be left up to the user's discretion?
 require 'irb/completion'
@@ -63,8 +57,12 @@ for arg in found
 end
 
 # Setup the HBase module.  Create a configuration.  If a master, set it.
-@configuration = HBaseConfiguration.new()
+# Turn off retries in hbase and ipc.  Human doesn't want to wait on N retries.
+@configuration = org.apache.hadoop.hbase.HBaseConfiguration.new()
 @configuration.set("hbase.master", master) if master
+@configuration.setInt("hbase.client.retries.number", 3)
+@configuration.setInt("ipc.client.connect.max.retries", 3)
+
 # Do lazy create of admin because if we are pointed at bad master, it will hang
 # shell on startup trying to connect.
 @admin = nil
@@ -81,8 +79,9 @@ def promoteConstants(constants)
     end
   end
 end
-promoteConstants(HColumnDescriptor.constants)
-promoteConstants(HTableDescriptor.constants)
+promoteConstants(org.apache.hadoop.hbase.HColumnDescriptor.constants)
+promoteConstants(org.apache.hadoop.hbase.HTableDescriptor.constants)
+promoteConstants(HBase.constants)
 
 # Start of the hbase shell commands.
 
@@ -96,48 +95,86 @@ def help
   # TODO: Add help to the commands themselves rather than keep it distinct
   h  = <<HERE
 HBASE SHELL COMMANDS:
- alter     Alter column family schema in a table.  Pass table name and a
-           dictionary specifying the new column family schema. Dictionaries
-           are described below in the GENERAL NOTES section.  Dictionary must
-           include name of column family to alter.  For example, to change
-           the 'f1' column family in table 't1' to have a MAX_VERSIONS of 5,
-           do:
+ alter     Alter column family schema;  pass table name and a dictionary
+           specifying new column family schema. Dictionaries are described
+           below in the GENERAL NOTES section.  Dictionary must include name
+           of column family to alter.  For example, to change the 'f1' column
+           family in table 't1' from defaults to instead keep a maximum of 5
+           cell VERSIONS, do:
 
-           hbase> alter 't1', {NAME => 'f1', MAX_VERSIONS => 5}
+           hbase> alter 't1', {NAME => 'f1', VERSIONS => 5}
 
- create    Create table; pass a table name, a dictionary of specifications per
-           column family, and optionally, named parameters of table options.
-           Dictionaries are described below in the GENERAL NOTES section. Named
-           parameters are like dictionary elements with uppercase names
-           (constants) as keys and a '=>' key/value delimiter.  Parameters are
-           comma-delimited.  For example, to create a table named 't1' with an
-           alternate maximum region size and a single family named 'f1' with an
-           alternate maximum number of cells and 'record' compression, type:
+ create    Create table; pass table name, a dictionary of specifications per
+           column family, and optionally a dictionary of table configuration.
+           Dictionaries are described below in the GENERAL NOTES section.
+           For example, to create a table named 't1' with a single family named
+           'f1' with an alternate maximum number of cells, type:
 
-           hbase> create 't1' {NAME => 'f1', MAX_VERSIONS => 5, \
-               COMPRESSION => 'RECORD'}, REGION_SIZE => 1024
+           hbase> create 't1' {NAME => 'f1', VERSIONS => 5}
 
-           For compression types, pass one of 'NONE', 'RECORD', or 'BLOCK'
+ describe  Describe the named table: e.g. "hbase> describe 't1'"
 
- describe  Describe the named table. Outputs the table and family descriptors
- drop      Drop the named table.  Table must first be disabled
- disable   Disable the named table: e.g. "disable 't1'<RETURN>"
+ delete    Put a delete cell value at specified table/row/column and optionally
+           timestamp coordinates.  Deletes must match the deleted cell's
+           coordinates exactly.  When scanning, a delete cell suppresses older
+           versions. Takes arguments like 'put' described below
+ 
+ deleteall Delete all cells; pass a table name, row and optionally, a column
+           and timestamp
+
+ deletefc  Delete all in the named column family.  Pass table name and family
+
+ drop      Drop the named table. Table must first be disabled
+
+ disable   Disable the named table: e.g. "hbase> disable 't1'"
+
  enable    Enable the named table
- exists    Does the named table exist? e.g. "exists 't1'<RETURN>"
- exit      Exit the shell
- list      List all tables
+
+ exists    Does the named table exist? e.g. "hbase> exists 't1'"
+
+ exit      Type "hbase> exit" to leave the HBase Shell
+
+ get       Get row or cell contents; pass table name, row, and optionally
+           a dictionary of column(s), timestamp and versions.  Examples:
+
+           hbase> get 't1', 'r1'
+           hbase> get 't1', 'r1', {COLUMN => 'c1'}
+           hbase> get 't1', 'r1', {COLUMN => ['c1', 'c2', 'c3']}
+           hbase> get 't1', 'r1', {TIMESTAMP => ts1, VERSIONS => 4}
+
+ list      List all tables in hbase
+
+ put       Put a cell value at specified table/row/column and optionally
+           timestamp coordinates.  To put a cell value into table 't1' at
+           row 'r1' under column 'c1' marked with the time 'ts1', do:
+
+           hbase> put 't1', 'r1', 'c1', ts1
+
+ scan      Scan a table; pass table name and an array of column names.
+           Optionally, pass a dictionary of options that includes one or more
+           of the following: LIMIT, FILTER, STARTROW, STOPROW, and TIMESTAMP.
+           For example, to scan column 'c1', and 'c2', in table 't1' returning
+           10 rows only:
+
+           hbase> scan 't1', ['c1', 'c2'], {LIMIT => 10}
+
  version   Output this HBase version
 
 GENERAL NOTES:
 Quote all names in the hbase shell such as table and column names.  Don't
-forget commas delimiting command parameters. Dictionaries of configuration used
-in the creation and alteration of tables are ruby-style Hashes. They look like
-this: { 'key1' => 'value1', 'key2' => 'value2', ...}.  They are opened and
-closed with curley-braces.  Key/values are delimited by the '=>' character
-combination.  Usually keys are predefined constants such as NAME, MAX_VERSIONS,
-COMPRESSION, MAX_LENGTH, TTL, etc.  Constants do not need to be quoted.  Type
+forget commas delimit command parameters.  Type <RETURN> after entering a
+command to run it.  Dictionaries of configuration used in the creation and
+alteration of tables are ruby Hashes. They look like this:
+
+  {'key1' => 'value1', 'key2' => 'value2', ...}
+
+They are opened and closed with curley-braces.  Key/values are delimited by
+the '=>' character combination.  Usually keys are predefined constants such as
+NAME, VERSIONS, COMPRESSION, etc.  Constants do not need to be quoted.  Type
 'Object.constants' to see a (messy) list of all constants in the environment.
-See http://wiki.apache.org/hadoop/Hbase/Shell for more on the HBase Shell.
+
+This HBase shell is the JRuby IRB with the above HBase-specific commands added.
+For more on the HBase Shell, see http://wiki.apache.org/hadoop/Hbase/Shell
 HERE
   puts h
 end
@@ -156,16 +193,21 @@ def admin()
   @admin
 end
 
-def create(table_name, *args)
-  admin().create(table_name, args)
+def table(table)
+  # Create new one each time
+  HBase::Table.new(@configuration, table, @formatter)
 end
 
-def drop(table_name)
-  admin().drop(table_name)
+def create(table, *args)
+  admin().create(table, args)
 end
 
-def alter(table_name, args)
-  admin().alter(table_name, args) 
+def drop(table)
+  admin().drop(table)
+end
+
+def alter(table, args)
+  admin().alter(table, args) 
 end
 
 # Administration
@@ -174,38 +216,48 @@ def list
   admin().list()
 end
 
-def describe(table_name)
-  admin().describe(table_name)
+def describe(table)
+  admin().describe(table)
 end
   
-def enable(table_name)
-  admin().enable(table_name)
+def enable(table)
+  admin().enable(table)
 end
 
-def disable(table_name)
-  admin().disable(table_name)
+def disable(table)
+  admin().disable(table)
 end
 
-def exists(table_name)
-  admin().exists(table_name)
+def exists(table)
+  admin().exists(table)
 end
   
 # CRUD
   
-def get(table_name, row_key, *args)
-  puts "Not implemented yet"
+def get(table, row, args = {})
+  table(table).get(row, args)
 end
 
-def put(table_name, row_key, *args)
-  puts "Not implemented yet"
+def put(table, row, column, value, timestamp = nil)
+  table(table).put(row, column, value, timestamp)
 end
   
-def scan(table_name, start_key, end_key, *args)
-  puts "Not implemented yet"
+def scan(table, columns, args = {})
+  table(table).scan(columns, args)
 end
   
-def delete(table_name, row_key, *args)
-  puts "Not implemented yet"
+def delete(table, row, *args)
+  table(table).get(row, args)
+end
+
+def deleteall(table, row, column = nil,
+    timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
+  table(table).get(row, column, timestamp)
+end
+
+def deletefc(table, row, column_family,
+    timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
+  table(table).get(row, column_family, timestamp)
 end
 
 # Output a banner message that tells users where to go for help
@@ -226,9 +278,9 @@ module IRB
     # @EXTEND_COMMANDS.each{|x| puts x if x[0] == :irb_help}
   end
 
+  # Subclass of IRB so can intercept methods
   class HIRB < Irb
-    # Subclass irb so can intercept methods
-
+    
     def output_value
       # Suppress output if last_value is 'nil'
       # Otherwise, when user types help, get ugly 'nil'

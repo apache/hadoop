@@ -41,7 +41,16 @@ public class Cell implements Writable {
     value = null;
     timestamp = 0;
   }
-  
+
+  /**
+   * Create a new Cell with a given value and timestamp. Used by HStore.
+   * @param value
+   * @param timestamp
+   */
+  public Cell(String value, long timestamp) {
+    this(Bytes.toBytes(value), timestamp);
+  }
+
   /**
    * Create a new Cell with a given value and timestamp. Used by HStore.
    * @param value
