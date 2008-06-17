@@ -1137,7 +1137,7 @@
    <taskdef resource="clovertasks"/>
    <mkdir dir="${clover.db.dir}"/>
    <clover-setup initString="${clover.db.dir}/hadoop_coverage.db">
-     <fileset dir="src/java"/>
+     <fileset dir="src" includes="core/**/* tools/**/* hdfs/**/* mapred/**/*"/>
    </clover-setup>
 </target>
 
