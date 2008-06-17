@@ -598,6 +598,9 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3363. Fix unformatted storage detection in FSImage. (shv)
 
+    HADOOP-3560. Fixes a problem to do with split creation in archives.
+    (Mahadev Konar via ddas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES

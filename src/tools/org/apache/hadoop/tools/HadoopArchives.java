@@ -328,6 +328,7 @@ public class HadoopArchives implements Tool {
     try {
       // write the top level dirs in first 
       writeTopLevelDirs(srcWriter, srcPaths);
+      srcWriter.sync();
       // these are the input paths passed 
       // from the command line
       // we do a recursive ls on these paths 
@@ -356,6 +357,7 @@ public class HadoopArchives implements Tool {
           }
           srcWriter.append(new LongWritable(len), new 
               Text(toWrite));
+          srcWriter.sync();
           numFiles++;
           totalSize += len;
         }
