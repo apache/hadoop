@@ -59,6 +59,7 @@ import org.apache.hadoop.mapred.lib.NullOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+
 /**
  * a archive creation utility.
  * This class provides methods that can be used 
@@ -78,7 +79,7 @@ public class HadoopArchives implements Tool {
   static final String DST_HAR_LABEL = NAME + ".archive.name";
   // size of each part file
   // its fixed for now.
-  static final long partSize = 2 * 1024 * 1024 * 1024;
+  static final long partSize = 2 * 1024 * 1024 * 1024l;
 
   private static final String usage = "archive"
   + " -archiveName NAME <src>* <dest>" +
@@ -91,7 +92,7 @@ public class HadoopArchives implements Tool {
     if (conf instanceof JobConf) {
       this.conf = (JobConf) conf;
     } else {
-      this.conf = new JobConf(conf);
+      this.conf = new JobConf(conf, HadoopArchives.class);
     }
   }
 
