@@ -288,6 +288,9 @@ document.write("Last Published: " + document.lastModified);
 <a href="#IsolationRunner">IsolationRunner</a>
 </li>
 <li>
+<a href="#Profiling">Profiling</a>
+</li>
+<li>
 <a href="#Debugging">Debugging</a>
 </li>
 <li>
@@ -304,7 +307,7 @@ document.write("Last Published: " + document.lastModified);
 <a href="#Example%3A+WordCount+v2.0">Example: WordCount v2.0</a>
 <ul class="minitoc">
 <li>
-<a href="#Source+Code-N10D60">Source Code</a>
+<a href="#Source+Code-N10D94">Source Code</a>
 </li>
 <li>
 <a href="#Sample+Runs">Sample Runs</a>
@@ -2085,7 +2088,40 @@ document.write("Last Published: " + document.lastModified);
 <p>
 <span class="codefrag">IsolationRunner</span> will run the failed task in a single 
           jvm, which can be in the debugger, over precisely the same input.</p>
-<a name="N10C83"></a><a name="Debugging"></a>
+<a name="N10C83"></a><a name="Profiling"></a>
+<h4>Profiling</h4>
+<p>Profiling is a utility to get a representative (2 or 3) sample
+          of built-in java profiler for a sample of maps and reduces. </p>
+<p>User can specify whether the system should collect profiler
+          information for some of the tasks in the job by setting the
+          configuration property <span class="codefrag">mapred.task.profile</span>. The
+          value can be set using the api 
+          <a href="api/org/apache/hadoop/mapred/JobConf.html#setProfileEnabled(boolean)">
+          JobConf.setProfileEnabled(boolean)</a>. If the value is set 
+          <span class="codefrag">true</span>, the task profiling is enabled. The profiler
+          information is stored in the the user log directory. By default, 
+          profiling is not enabled for the job.  </p>
+<p>Once user configures that profiling is needed, she/he can use
+          the configuration property 
+          <span class="codefrag">mapred.task.profile.{maps|reduces}</span> to set the ranges
+          of map/reduce tasks to profile. The value can be set using the api 
+          <a href="api/org/apache/hadoop/mapred/JobConf.html#setProfileTaskRange(boolean,%20java.lang.String)">
+          JobConf.setProfileTaskRange(boolean,String)</a>.
+          By default, the specified range is <span class="codefrag">0-2</span>.</p>
+<p>User can also specify the profiler configuration arguments by 
+          setting the configuration property 
+          <span class="codefrag">mapred.task.profile.params</span>. The value can be specified 
+          using the api
+          <a href="api/org/apache/hadoop/mapred/JobConf.html#setProfileParams(java.lang.String)">
+          JobConf.setProfileParams(String)</a>. If the string contains a 
+          <span class="codefrag">%s</span>, it will be replaced with the name of the profiling
+          output file when the task runs. These parameters are passed to the
+          task child JVM on the command line. The default value for 
+          the profiling parameters is 
+          <span class="codefrag">-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y,verbose=n,file=%s</span>
+          
+</p>
+<a name="N10CB7"></a><a name="Debugging"></a>
 <h4>Debugging</h4>
 <p>Map/Reduce framework provides a facility to run user-provided 
           scripts for debugging. When map/reduce task fails, user can run 
@@ -2096,7 +2132,7 @@ document.write("Last Published: " + document.lastModified);
 <p> In the following sections we discuss how to submit debug script
           along with the job. For submitting debug script, first it has to
           distributed. Then the script has to supplied in Configuration. </p>
-<a name="N10C8F"></a><a name="How+to+distribute+script+file%3A"></a>
+<a name="N10CC3"></a><a name="How+to+distribute+script+file%3A"></a>
 <h5> How to distribute script file: </h5>
 <p>
           To distribute  the debug script file, first copy the file to the dfs.
@@ -2119,7 +2155,7 @@ document.write("Last Published: " + document.lastModified);
           <a href="api/org/apache/hadoop/filecache/DistributedCache.html#createSymlink(org.apache.hadoop.conf.Configuration)">
           DistributedCache.createSymLink(Configuration) </a> api.
           </p>
-<a name="N10CA8"></a><a name="How+to+submit+script%3A"></a>
+<a name="N10CDC"></a><a name="How+to+submit+script%3A"></a>
 <h5> How to submit script: </h5>
 <p> A quick way to submit debug script is to set values for the 
           properties "mapred.map.task.debug.script" and 
@@ -2143,17 +2179,17 @@ document.write("Last Published: " + document.lastModified);
 <span class="codefrag">$script $stdout $stderr $syslog $jobconf $program </span>  
           
 </p>
-<a name="N10CCA"></a><a name="Default+Behavior%3A"></a>
+<a name="N10CFE"></a><a name="Default+Behavior%3A"></a>
 <h5> Default Behavior: </h5>
 <p> For pipes, a default script is run to process core dumps under
           gdb, prints stack trace and gives info about running threads. </p>
-<a name="N10CD5"></a><a name="JobControl"></a>
+<a name="N10D09"></a><a name="JobControl"></a>
 <h4>JobControl</h4>
 <p>
 <a href="api/org/apache/hadoop/mapred/jobcontrol/package-summary.html">
           JobControl</a> is a utility which encapsulates a set of Map-Reduce jobs
           and their dependencies.</p>
-<a name="N10CE2"></a><a name="Data+Compression"></a>
+<a name="N10D16"></a><a name="Data+Compression"></a>
 <h4>Data Compression</h4>
 <p>Hadoop Map-Reduce provides facilities for the application-writer to
           specify compression for both intermediate map-outputs and the
@@ -2167,7 +2203,7 @@ document.write("Last Published: " + document.lastModified);
           codecs for reasons of both performance (zlib) and non-availability of
           Java libraries (lzo). More details on their usage and availability are
           available <a href="native_libraries.html">here</a>.</p>
-<a name="N10D02"></a><a name="Intermediate+Outputs"></a>
+<a name="N10D36"></a><a name="Intermediate+Outputs"></a>
 <h5>Intermediate Outputs</h5>
 <p>Applications can control compression of intermediate map-outputs
             via the 
@@ -2176,7 +2212,7 @@ document.write("Last Published: " + document.lastModified);
             <span class="codefrag">CompressionCodec</span> to be used via the
             <a href="api/org/apache/hadoop/mapred/JobConf.html#setMapOutputCompressorClass(java.lang.Class)">
             JobConf.setMapOutputCompressorClass(Class)</a> api.</p>
-<a name="N10D17"></a><a name="Job+Outputs"></a>
+<a name="N10D4B"></a><a name="Job+Outputs"></a>
 <h5>Job Outputs</h5>
 <p>Applications can control compression of job-outputs via the
             <a href="api/org/apache/hadoop/mapred/OutputFormatBase.html#setCompressOutput(org.apache.hadoop.mapred.JobConf,%20boolean)">
@@ -2196,7 +2232,7 @@ document.write("Last Published: " + document.lastModified);
 </div>
 
     
-<a name="N10D46"></a><a name="Example%3A+WordCount+v2.0"></a>
+<a name="N10D7A"></a><a name="Example%3A+WordCount+v2.0"></a>
 <h2 class="h3">Example: WordCount v2.0</h2>
 <div class="section">
 <p>Here is a more complete <span class="codefrag">WordCount</span> which uses many of the
@@ -2206,7 +2242,7 @@ document.write("Last Published: " + document.lastModified);
       <a href="quickstart.html#SingleNodeSetup">pseudo-distributed</a> or
       <a href="quickstart.html#Fully-Distributed+Operation">fully-distributed</a> 
       Hadoop installation.</p>
-<a name="N10D60"></a><a name="Source+Code-N10D60"></a>
+<a name="N10D94"></a><a name="Source+Code-N10D94"></a>
 <h3 class="h4">Source Code</h3>
 <table class="ForrestTable" cellspacing="1" cellpadding="4">
           
@@ -3416,7 +3452,7 @@ document.write("Last Published: " + document.lastModified);
 </tr>
         
 </table>
-<a name="N114C2"></a><a name="Sample+Runs"></a>
+<a name="N114F6"></a><a name="Sample+Runs"></a>
 <h3 class="h4">Sample Runs</h3>
 <p>Sample text-files as input:</p>
 <p>
@@ -3584,7 +3620,7 @@ document.write("Last Published: " + document.lastModified);
 <br>
         
 </p>
-<a name="N11596"></a><a name="Highlights"></a>
+<a name="N115CA"></a><a name="Highlights"></a>
 <h3 class="h4">Highlights</h3>
 <p>The second version of <span class="codefrag">WordCount</span> improves upon the 
         previous one by using some features offered by the Map-Reduce framework:

@@ -166,6 +166,9 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <setjobendnotificationuri href="#setJobEndNotificationURI(java.lang.String)" />
                 <setcompressmapoutput href="#setCompressMapOutput(boolean)" />
                 <setmapoutputcompressorclass href="#setMapOutputCompressorClass(java.lang.Class)" />
+                <setprofileenabled href="#setProfileEnabled(boolean)" />
+                <setprofiletaskrange href="#setProfileTaskRange(boolean,%20java.lang.String)" />
+                <setprofileparams href="#setProfileParams(java.lang.String)" />
                 <getjoblocaldir href="#getJobLocalDir()" />
                 <getjar href="#getJar()" />
               </jobconf>

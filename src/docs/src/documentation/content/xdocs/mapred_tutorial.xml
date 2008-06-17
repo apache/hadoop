@@ -1562,6 +1562,43 @@
           <p><code>IsolationRunner</code> will run the failed task in a single 
           jvm, which can be in the debugger, over precisely the same input.</p>
         </section>
+
+        <section>
+          <title>Profiling</title>
+          <p>Profiling is a utility to get a representative (2 or 3) sample
+          of built-in java profiler for a sample of maps and reduces. </p>
+          
+          <p>User can specify whether the system should collect profiler
+          information for some of the tasks in the job by setting the
+          configuration property <code>mapred.task.profile</code>. The
+          value can be set using the api 
+          <a href="ext:api/org/apache/hadoop/mapred/jobconf/setprofileenabled">
+          JobConf.setProfileEnabled(boolean)</a>. If the value is set 
+          <code>true</code>, the task profiling is enabled. The profiler
+          information is stored in the the user log directory. By default, 
+          profiling is not enabled for the job.  </p>
+          
+          <p>Once user configures that profiling is needed, she/he can use
+          the configuration property 
+          <code>mapred.task.profile.{maps|reduces}</code> to set the ranges
+          of map/reduce tasks to profile. The value can be set using the api 
+          <a href="ext:api/org/apache/hadoop/mapred/jobconf/setprofiletaskrange">
+          JobConf.setProfileTaskRange(boolean,String)</a>.
+          By default, the specified range is <code>0-2</code>.</p>
+          
+          <p>User can also specify the profiler configuration arguments by 
+          setting the configuration property 
+          <code>mapred.task.profile.params</code>. The value can be specified 
+          using the api
+          <a href="ext:api/org/apache/hadoop/mapred/jobconf/setprofileparams">
+          JobConf.setProfileParams(String)</a>. If the string contains a 
+          <code>%s</code>, it will be replaced with the name of the profiling
+          output file when the task runs. These parameters are passed to the
+          task child JVM on the command line. The default value for 
+          the profiling parameters is 
+          <code>-agentlib:hprof=cpu=samples,heap=sites,force=n,thread=y,verbose=n,file=%s</code>
+          </p>
+        </section>
         
         <section>
           <title>Debugging</title>
