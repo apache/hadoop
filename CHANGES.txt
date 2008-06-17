@@ -304,6 +304,9 @@ Release 0.18.0 - Unreleased
     HADOOP-2762. Add forrest documentation for controls of memory limits on 
     hadoop daemons and Map-Reduce tasks. (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3535. Fix documentation and name of IOUtils.close to
+    reflect that it should only be used in cleanup contexts. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

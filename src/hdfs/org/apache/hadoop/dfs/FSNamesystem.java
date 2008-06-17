@@ -463,7 +463,7 @@ class FSNamesystem implements FSConstants, FSNamesystemMBean {
         }
       } catch (InterruptedException ie) {
       } finally {
-        IOUtils.close(LOG, dir);
+        IOUtils.cleanup(LOG, dir);
       }
     }
   }
