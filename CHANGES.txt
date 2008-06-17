@@ -298,6 +298,9 @@ Release 0.18.0 - Unreleased
 
     HADOOP-2984. Add forrest documentation for DistCp. (cdouglas)
 
+    HADOOP-3406. Add forrest documentation for Profiling.
+    (Amareshwari Sriramadasu via ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 
