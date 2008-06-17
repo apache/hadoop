@@ -610,6 +610,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3561. Prevent the trash from deleting its parent directories.
     (cdouglas)
 
+    HADOOP-3575. Fix the clover ant target after package refactoring.
+    (Nigel Daley via cdouglas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
