@@ -239,6 +239,22 @@ public class TestTrash extends TestCase {
         assertTrue(val == 0);
         checkTrash(fs, trashRoot, args[1]);
       }
+
+      // attempt to remove parent of trash
+      {
+        String[] args = new String[2];
+        args[0] = "-rmr";
+        args[1] = trashRoot.getParent().getParent().toString();
+        int val = -1;
+        try {
+          val = shell.run(args);
+        } catch (Exception e) {
+          System.err.println("Exception raised from Trash.run " +
+                             e.getLocalizedMessage()); 
+        }
+        assertTrue(val == -1);
+        assertTrue(fs.exists(trashRoot));
+      }
     } finally {
       try {
         fs.close();

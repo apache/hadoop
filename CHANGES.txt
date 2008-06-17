@@ -607,6 +607,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3545. Fixes a overflow problem in archives.
     (Mahadev Konar via ddas)
 
+    HADOOP-3561. Prevent the trash from deleting its parent directories.
+    (cdouglas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
