@@ -169,7 +169,10 @@ public interface Reducer<K2, V2, K3, V3> extends JobConfigurable, Closeable {
    * <p>The framework calls this method for each 
    * <code>&lt;key, (list of values)></code> pair in the grouped inputs.
    * Output values must be of the same type as input values.  Input keys must 
-   * not be altered.  Typically all values are combined into zero or one value.
+   * not be altered. The framework will <b>reuse</b> the key and value objects
+   * that are passed into the reduce, therefore the application should clone
+   * the objects they want to keep a copy of. In many cases, all values are 
+   * combined into zero or one value.
    * </p>
    *   
    * <p>Output pairs are collected with calls to  
