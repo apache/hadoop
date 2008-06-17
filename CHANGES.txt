@@ -630,6 +630,11 @@ Release 0.17.1 - Unreleased
     default, to clear the state of the serializer between objects.
     (tomwhite via omalley)
 
+  IMPROVEMENTS
+
+    HADOOP-3522. Improve documentation on reduce pointing out that
+    input keys and values will be reused. (omalley)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
