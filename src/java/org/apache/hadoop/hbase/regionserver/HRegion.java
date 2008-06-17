@@ -43,6 +43,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ColumnNameParseException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -1141,6 +1142,12 @@ public class HRegion implements HConstants {
   public Map<byte [], Cell> getFull(final byte [] row,
       final Set<byte []> columns, final long ts) 
   throws IOException {
+    // Check columns passed
+    if (columns != null) {
+      for (byte [] column: columns) {
+        checkColumn(column);
+      }
+    }
     HStoreKey key = new HStoreKey(row, ts);
     Integer lid = obtainRowLock(row);
     try {
@@ -1603,11 +1610,18 @@ public class HRegion implements HConstants {
    * @throws NoSuchColumnFamilyException
    */
   private void checkColumn(final byte [] columnName)
-  throws NoSuchColumnFamilyException {
+  throws NoSuchColumnFamilyException, ColumnNameParseException {
     if (columnName == null) {
       return;
     }
-    if (!regionInfo.getTableDesc().hasFamily(columnName)) {
+
+    int index = HStoreKey.getFamilyDelimiterIndex(columnName);
+    if (index <= 0) {
+      throw new ColumnNameParseException(Bytes.toString(columnName) +
+        " is missing column family delimiter '" +
+        HStoreKey.COLUMN_FAMILY_DELIMITER + "'");
+    }
+    if (!regionInfo.getTableDesc().hasFamily(columnName, index)) {
       throw new NoSuchColumnFamilyException("Column family on " +
         Bytes.toString(columnName) + " does not exist in region " + this
           + " in table " + regionInfo.getTableDesc());

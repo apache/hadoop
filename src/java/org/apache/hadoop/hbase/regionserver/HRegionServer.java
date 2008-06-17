@@ -993,8 +993,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
 
   /** {@inheritDoc} */
   public HRegionInfo getRegionInfo(final byte [] regionName)
-    throws NotServingRegionException {
-    
+  throws NotServingRegionException {
     requestCount.incrementAndGet();
     return getRegion(regionName).getRegionInfo();
   }
@@ -1006,7 +1005,7 @@ public class HRegionServer implements HConstants, HRegionInterface, Runnable {
     checkOpen();
     requestCount.incrementAndGet();
     try {
-      return getRegion(regionName).get(row, column);      
+      return getRegion(regionName).get(row, column);
     } catch (IOException e) {
       checkFileSystem();
       throw e;

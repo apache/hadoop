@@ -54,6 +54,7 @@ Hbase Change Log
                reading performance after break it (LN via Stack)
    HBASE-686   MemcacheScanner didn't return the first row(if it exists),
                because HScannerInterface's output incorrect (LN via Jim Kellerman)
+   HBASE-691   get* and getScanner are different in how they treat column parameter
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows

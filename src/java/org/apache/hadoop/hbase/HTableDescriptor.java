@@ -178,7 +178,16 @@ public class HTableDescriptor implements WritableComparable {
    * @return true if the table contains the specified family name
    */
   public boolean hasFamily(final byte [] c) {
-    int index = HStoreKey.getFamilyDelimiterIndex(c);
+    return hasFamily(c, HStoreKey.getFamilyDelimiterIndex(c));
+  }
+
+  /**
+   * Checks to see if this table contains the given column family
+   * @param c Family name or column name.
+   * @param index Index to column family delimiter
+   * @return true if the table contains the specified family name
+   */
+  public boolean hasFamily(final byte [] c, final int index) {
     // If index is -1, then presume we were passed a column family name minus
     // the colon delimiter.
     return families.containsKey(Bytes.mapKey(c, index == -1? c.length: index));
@@ -191,7 +200,7 @@ public class HTableDescriptor implements WritableComparable {
    */
   @Override
   public String toString() {
-    return HColumnDescriptor.NAME + " => '" + Bytes.toString(this.name) +
+    return HConstants.NAME + " => '" + Bytes.toString(this.name) +
       "', " + FAMILIES + " => " + this.families.values();
   }
   
