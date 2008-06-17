@@ -123,11 +123,12 @@ public class IOUtils {
   }
   
   /**
-   * Close the Closeable objects.
-   * Log {@link IOException} if there is any. 
+   * Close the Closeable objects and <b>ignore</b> any {@link IOException} or 
+   * null pointers. Must only be used for cleanup in exception handlers.
+   * @param log the log to record problems to at debug level. Can be null.
    * @param closeables the objects to close
    */
-  public static void close(Log log, java.io.Closeable... closeables) {
+  public static void cleanup(Log log, java.io.Closeable... closeables) {
     for(java.io.Closeable c : closeables) {
       if (c != null) {
         try {
@@ -142,11 +143,12 @@ public class IOUtils {
   }
 
   /**
-   * Closes the stream ignoring {@link IOException} 
+   * Closes the stream ignoring {@link IOException}.
+   * Must only be called in cleaning up from exception handlers.
    * @param stream the Stream to close
    */
   public static void closeStream( java.io.Closeable stream ) {
-    close(null, stream);
+    cleanup(null, stream);
   }
   
   /**
