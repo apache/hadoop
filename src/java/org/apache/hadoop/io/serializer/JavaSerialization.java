@@ -76,6 +76,7 @@ public class JavaSerialization implements Serialization<Serializable> {
     }
 
     public void serialize(Serializable object) throws IOException {
+      oos.reset(); // clear (class) back-references
       oos.writeObject(object);
     }
 
