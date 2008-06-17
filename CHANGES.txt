@@ -616,6 +616,14 @@ Release 0.18.0 - Unreleased
     HADOOP-3575. Fix the clover ant target after package refactoring.
     (Nigel Daley via cdouglas)
 
+Release 0.17.1 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+    HADOOP-3565. Fix the Java serialization, which is not enabled by
+    default, to clear the state of the serializer between objects.
+    (tomwhite via omalley)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
