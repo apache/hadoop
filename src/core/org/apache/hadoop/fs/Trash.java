@@ -84,8 +84,15 @@ public class Trash extends Configured {
     if (!fs.exists(path))                         // check that path exists
       throw new FileNotFoundException(path.toString());
 
-    if (path.makeQualified(fs).toString().startsWith(trash.toString())) {
+    String qpath = path.makeQualified(fs).toString();
+
+    if (qpath.startsWith(trash.toString())) {
       return false;                               // already in trash
+    }
+
+    if (trash.getParent().toString().startsWith(qpath)) {
+      throw new IOException("Cannot move \"" + path +
+                            "\" to the trash, as it contains the trash");
     }
 
     Path trashPath = new Path(current, path.getName());
