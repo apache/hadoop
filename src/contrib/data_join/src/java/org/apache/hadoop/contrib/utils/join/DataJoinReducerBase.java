@@ -24,6 +24,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
@@ -103,13 +104,13 @@ public abstract class DataJoinReducerBase extends JobBase {
       if (this.numOfValues > this.maxNumOfValuesPerGroup) {
         continue;
       }
-      Object tag = aRecord.getTag();
+      Text tag = new Text((Text)aRecord.getTag());
       ResetableIterator data = retv.get(tag);
       if (data == null) {
         data = createResetableIterator();
         retv.put(tag, data);
       }
-      data.add(aRecord);
+      data.add(WritableUtils.clone(aRecord, job));
     }
     if (this.numOfValues > this.largestNumOfValues) {
       this.largestNumOfValues = numOfValues;
