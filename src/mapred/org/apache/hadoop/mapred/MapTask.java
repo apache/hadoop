@@ -426,7 +426,7 @@ class MapTask extends Task {
           // serialize key bytes into buffer
         int keystart = bufindex;
         keySerializer.serialize(key);
-        if (bufindex < keystart) {
+        if (bufindex < keystart || bufindex == bufvoid) {
           // wrapped the key; reset required
           bb.reset();
           keystart = 0;
@@ -853,10 +853,11 @@ class MapTask extends Task {
      * deserialized value bytes. Should only be called during a spill.
      */
     private void getVBytesForOffset(int kvoff, InMemValBytes vbytes) {
-      final int nextindex = kvoff / ACCTSIZE == kvend - 1
+      final int nextindex = ((kvoff/ACCTSIZE) == 
+                             ((kvend - 1 + kvoffsets.length) % kvoffsets.length))
         ? bufend
         : kvindices[(kvoff + ACCTSIZE + KEYSTART) % kvindices.length];
-      int vallen = (nextindex > kvindices[kvoff + VALSTART])
+      int vallen = (nextindex >= kvindices[kvoff + VALSTART])
         ? nextindex - kvindices[kvoff + VALSTART]
         : (bufvoid - kvindices[kvoff + VALSTART]) + nextindex;
       vbytes.reset(kvbuffer, kvindices[kvoff + VALSTART], vallen);
