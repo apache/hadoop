@@ -167,9 +167,8 @@ public class NamenodeFsck {
           blocks.locatedBlockCount() + " block(s): ");
     }  else {
       out.print('.');
-      out.flush();
-      if (res.totalFiles % 100 == 0) { out.println(); }
     }
+    if (res.totalFiles % 100 == 0) { out.flush(); }
     int missing = 0;
     long missize = 0;
     int underReplicatedPerFile = 0;
@@ -242,7 +241,7 @@ public class NamenodeFsck {
     }
     if (missing > 0) {
       if (!showFiles) {
-        out.println("\n" + path + ": MISSING " + missing
+        out.print("\n" + path + ": MISSING " + missing
             + " blocks of total size " + missize + " B.");
       }
       res.corruptFiles++;
@@ -258,12 +257,12 @@ public class NamenodeFsck {
     }
     if (showFiles) {
       if (missing > 0) {
-        out.println(" MISSING " + missing + " blocks of total size " + missize + " B");
+        out.print(" MISSING " + missing + " blocks of total size " + missize + " B\n");
       }  else if (underReplicatedPerFile == 0 && misReplicatedPerFile == 0) {
-        out.println(" OK");
+        out.print(" OK\n");
       }
       if (showBlocks) {
-        out.println(report.toString());
+        out.print(report.toString() + "\n");
       }
     }
   }

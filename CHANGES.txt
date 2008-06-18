@@ -14,6 +14,11 @@ Release 0.17.1 - Unreleased
     HADOOP-3522. Improve documentation on reduce pointing out that
     input keys and values will be reused. (omalley)
 
+  BUG FIXES
+
+    HADOOP-1979. Speed up fsck by adding a buffered stream. (Lohit
+    Vijaya Renu via omalley)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
