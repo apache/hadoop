@@ -315,9 +315,6 @@ Release 0.18.0 - Unreleased
     HADOOP-3272. Remove redundant copy of Block object in BlocksMap.
     (Lohit Vjayarenu via shv)
 
-    HADOOP-1979. Speed up fsck by adding a buffered stream. (Lohit
-    Vijaya Renu via omalley)
-
     HADOOP-3164. Reduce DataNode CPU usage by using FileChannel.tranferTo().
     On Linux DataNode takes 5 times less CPU while serving data. Results may
     vary on other platforms. (rangadi)
@@ -643,6 +640,11 @@ Release 0.17.1 - Unreleased
 
     HADOOP-3522. Improve documentation on reduce pointing out that
     input keys and values will be reused. (omalley)
+
+  BUG FIXES
+
+    HADOOP-1979. Speed up fsck by adding a buffered stream. (Lohit
+    Vijaya Renu via omalley)
 
 Release 0.17.0 - 2008-05-18
 
