@@ -486,14 +486,8 @@ Release 0.18.0 - Unreleased
     HADOOP-3401. Update FileBench to set the new
     "mapred.work.output.dir" property to work post-3041. (cdouglas via omalley)
 
-    HADOOP-2159 Namenode stuck in safemode. The counter blockSafe should
-    not be decremented for invalid blocks. (hairong)
-
     HADOOP-2669. DFSClient locks pendingCreates appropriately. (dhruba)
  
-    HADOOP-3477. Fix build to not package contrib/*/bin twice in
-    distributions.  (Adam Heath via cutting)
-
     HADOOP-3410. Fix KFS implemenation to return correct file
     modification time.  (Sriram Rao via cutting)
 
@@ -507,9 +501,6 @@ Release 0.18.0 - Unreleased
     HADOOP-3471. Fix spurious errors from TestIndexedSort and add additional
     logging to let failures be reproducible. (cdouglas)
 
-    HADOOP-3475. Fix MapTask to correctly size the accounting allocation of
-    io.sort.mb. (cdouglas)
-
     HADOOP-3443. Avoid copying map output across partitions when renaming a
     single spill. (omalley via cdouglas)
 
@@ -522,9 +513,6 @@ Release 0.18.0 - Unreleased
     (Amareshwari Sriramadasu via ddas) 
 
     HADOOP-2132. Only RUNNING/PREP jobs can be killed. (Jothi Padmanabhan via ddas)
-
-    HADOOP-3472 MapFile.Reader getClosest() function returns incorrect results
-    when before is true (Todd Lipcon via Stack)
 
     HADOOP-3476. Code cleanup in fuse-dfs.
     (Peter Wyckoff via dhruba)
@@ -583,10 +571,6 @@ Release 0.18.0 - Unreleased
     HADOOP-3528. Metrics FilesCreated and files_deleted metrics
     do not match. (Lohit via Mahadev)
 
-    HADOOP-3442. Limit recursion depth on the stack for QuickSort to prevent
-    StackOverflowErrors. To avoid O(n*n) cases, when partitioning depth exceeds
-    a multiple of log(n), change to HeapSort. (cdouglas)
-
     HADOOP-3418. When a directory is deleted, any leases that point to files
     in the subdirectory are removed. ((Tsz Wo (Nicholas), SZE via dhruba)
 
@@ -622,12 +606,6 @@ Release 0.18.0 - Unreleased
     HADOOP-3520.  TestDFSUpgradeFromImage triggers a race condition in the
     Upgrade Manager. Fixed. (dhruba)
 
-    HADOOP-3550. Fix the serialization data structures in MapTask where the
-    value lengths are incorrectly calculated. (cdouglas)
-
-    HADOOP-3526. Fix contrib/data_join framework by cloning values retained
-    in the reduce. (Spyros Blanas via cdouglas)
-
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -642,6 +620,28 @@ Release 0.17.1 - Unreleased
     input keys and values will be reused. (omalley)
 
   BUG FIXES
+
+    HADOOP-2159 Namenode stuck in safemode. The counter blockSafe should
+    not be decremented for invalid blocks. (hairong)
+
+    HADOOP-3472 MapFile.Reader getClosest() function returns incorrect results
+    when before is true (Todd Lipcon via Stack)
+
+    HADOOP-3442. Limit recursion depth on the stack for QuickSort to prevent
+    StackOverflowErrors. To avoid O(n*n) cases, when partitioning depth exceeds
+    a multiple of log(n), change to HeapSort. (cdouglas)
+
+    HADOOP-3477. Fix build to not package contrib/*/bin twice in
+    distributions.  (Adam Heath via cutting)
+
+    HADOOP-3475. Fix MapTask to correctly size the accounting allocation of
+    io.sort.mb. (cdouglas)
+
+    HADOOP-3550. Fix the serialization data structures in MapTask where the
+    value lengths are incorrectly calculated. (cdouglas)
+
+    HADOOP-3526. Fix contrib/data_join framework by cloning values retained
+    in the reduce. (Spyros Blanas via cdouglas)
 
     HADOOP-1979. Speed up fsck by adding a buffered stream. (Lohit
     Vijaya Renu via omalley)
