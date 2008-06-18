@@ -277,6 +277,11 @@ class Hdfs(MasterSlave):
       if 'dfs.datanode.http.address' not in attrs:
         attrs['dfs.datanode.http.address'] = 'fillinhostport'
     
+    if self.version >= 18:
+      # After HADOOP-3283
+      # TODO: check for major as well as minor versions
+      attrs['dfs.datanode.ipc.address'] = 'fillinhostport'
+                    
     self._setWorkDirs(workDirs, envs, attrs, parentDirs, 'hdfs-dn')
 
     dict = { 'name' : 'datanode' }
