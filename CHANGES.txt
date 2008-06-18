@@ -622,6 +622,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3539.  Fix the tool path in the bin/hadoop script under
     cygwin. (Tsz Wo (Nicholas), Sze via omalley)
 
+    HADOOP-3520.  TestDFSUpgradeFromImage triggers a race condition in the
+    Upgrade Manager. Fixed. (dhruba)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
