@@ -628,6 +628,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3550. Fix the serialization data structures in MapTask where the
     value lengths are incorrectly calculated. (cdouglas)
 
+    HADOOP-3526. Fix contrib/data_join framework by cloning values retained
+    in the reduce. (Spyros Blanas via cdouglas)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
