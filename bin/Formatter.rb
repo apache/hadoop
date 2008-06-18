@@ -93,8 +93,8 @@ module Formatter
 
     def output(width, str)
       # Make up a spec for printf
-      spec = "%%-%d.%ds" % [width, width]
-      @out.printf(spec % str)
+      spec = "%%-%ds" % width
+      @out.printf(spec, str)
     end
 
     def footer(startTime = nil)
