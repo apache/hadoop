@@ -16,6 +16,8 @@ import org.apache.hadoop.hbase.io.Cell
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.HColumnDescriptor
 import org.apache.hadoop.hbase.HTableDescriptor
+import org.apache.hadoop.hbase.util.Bytes
+import org.apache.hadoop.hbase.util.Writables
 
 module HBase
   COLUMN = "COLUMN"
@@ -25,6 +27,7 @@ module HBase
   VERSIONS = HConstants::VERSIONS
   STOPROW = "STOPROW"
   STARTROW = "STARTROW"
+  ENDROW = STOPROW
   LIMIT = "LIMIT"
 
   # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
@@ -199,10 +202,25 @@ module HBase
       @formatter.footer(now)
     end
 
+    def getAllColumns
+       htd = @table.getMetadata()
+       result = []
+       for f in htd.getFamilies()
+         n = f.getNameAsString()
+         n << ':'
+         result << n
+       end
+       result
+    end
+
     def scan(columns, args = {})
       now = Time.now 
       if not columns or columns.length < 1
-        raise ArgumentError.new("Must supply an array of columns to scan")
+        # Make up list of columns.
+        columns = getAllColumns()
+      end
+      if columns.class == String
+        columns = [columns]
       end
       cs = columns.to_java(java.lang.String)
       limit = -1
@@ -221,15 +239,15 @@ module HBase
         end
       end 
       count = 0
-      @formatter.header(["Row", "Column+Cell"])
+      @formatter.header(["ROW", "COLUMN+CELL"])
       i = s.iterator()
       while i.hasNext()
         r = i.next()
         row = String.from_java_bytes r.getRow()
         for k, v in r
           column = String.from_java_bytes k
-          cell = v.toString()
-          @formatter.row([row, "column=%s, %s" % [column, v.toString()]])
+          cell = toString(column, v)
+          @formatter.row([row, "column=%s, %s" % [column, cell]])
         end
         count += 1
         if limit != -1 and count >= limit
@@ -251,6 +269,28 @@ module HBase
       @table.commit(bu)
       @formatter.header()
       @formatter.footer(now)
+    end
+
+    def isMetaTable()
+      tn = @table.getTableName()
+      return Bytes.equals(tn, HConstants::META_TABLE_NAME) or
+        Bytes.equals(tn, HConstants::META_TABLE_NAME)
+        
+    end
+
+    # Make a String of the passed cell.
+    # Intercept cells whose format we know such as the info:regioninfo in .META.
+    def toString(column, cell)
+      if isMetaTable()
+        if column == 'info:regioninfo'
+          hri = Writables.getHRegionInfoOrNull(cell.getValue())
+          return "timestamp=%d, value=%s" % [cell.getTimestamp(), hri.toString()]
+        elsif column == 'info:serverstartcode'
+          return "timestamp=%d, value=%s" % [cell.getTimestamp(), \
+            Bytes.toLong(cell.getValue())]
+        end
+      end
+      cell.toString()
     end
   
     # Get from table
@@ -293,12 +333,11 @@ module HBase
       h = nil
       if result.instance_of? RowResult
         h = String.from_java_bytes result.getRow()
-        @formatter.header(["Column", "Cell"])
+        @formatter.header(["COLUMN", "CELL"])
         if result
-          for column, cell in result
-            v = String.from_java_bytes cell.getValue()
-            ts = cell.getTimestamp()
-            @formatter.row([(String.from_java_bytes column), cell.toString()])
+          for k, v in result
+            column = String.from_java_bytes k
+            @formatter.row([column, toString(column, v)])
           end
         end
       else
@@ -314,8 +353,8 @@ module HBase
     end
   end
 
-  # Do a bit of testing.
-  # To run this test, do: ./bin/hbase org.jruby.Main bin/HBase.rb
+  # Testing. To run this test, there needs to be an hbase cluster up and
+  # running.  Then do: ${HBASE_HOME}/bin/hbase org.jruby.Main bin/HBase.rb
   if $0 == __FILE__
     # Add this directory to LOAD_PATH; presumption is that Formatter module
     # sits beside this one.  Then load it up.
@@ -326,7 +365,8 @@ module HBase
     # Now add in java and hbase classes
     configuration = HBaseConfiguration.new()
     admin = Admin.new(configuration, formatter)
-    # Create a table; drop old one if exists first.
+    # Drop old table.  If it does not exist, get an exception.  Catch and
+    # continue
     TESTTABLE = "HBase_rb_testtable"
     begin
       admin.disable(TESTTABLE)
@@ -338,13 +378,31 @@ module HBase
     # Presume it exists.  If it doesn't, next items will fail.
     table = Table.new(configuration, TESTTABLE, formatter) 
     for i in 1..10
-      table.put('x', 'x:%d' % i, 'x%d' % i)
+      table.put('x%d' % i, 'x:%d' % i, 'x%d' % i)
     end
-    table.get('x', {COLUMN => 'x:1'})
+    table.get('x1', {COLUMN => 'x:1'})
     if formatter.rowCount() != 1
       raise IOError.new("Failed first put")
     end
     table.scan(['x:'])
+    if formatter.rowCount() != 10
+      raise IOError.new("Failed scan of expected 10 rows")
+    end
+    # Verify that limit works.
+    table.scan(['x:'], {LIMIT => 3})
+    if formatter.rowCount() != 3
+      raise IOError.new("Failed scan of expected 3 rows")
+    end
+    # Should only be two rows if we start at 8 (Row x10 sorts beside x1).
+    table.scan(['x:'], {STARTROW => 'x8', LIMIT => 3})
+    if formatter.rowCount() != 2
+      raise IOError.new("Failed scan of expected 2 rows")
+    end
+    # Scan between two rows
+    table.scan(['x:'], {STARTROW => 'x5', ENDROW => 'x8'})
+    if formatter.rowCount() != 3
+      raise IOError.new("Failed endrow test")
+    end
     admin.disable(TESTTABLE)
     admin.drop(TESTTABLE)
   end

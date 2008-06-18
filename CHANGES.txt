@@ -100,6 +100,7 @@ Hbase Change Log
                region state (Jean-Daniel Cryans via Stack)
    HBASE-639   Add HBaseAdmin.getTableDescriptor function
    HBASE-533   Region Historian
+   HBASE-487   Replace hql w/ a hbase-friendly jirb or jython shell
    
 Release 0.1.2 - 05/13/2008
    

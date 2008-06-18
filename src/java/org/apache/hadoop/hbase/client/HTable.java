@@ -341,6 +341,7 @@ public class HTable {
    * @return table metadata 
    * @throws IOException
    */
+  // Why is this deprecated?  What should be used instead? St.Ack
   @Deprecated
   public HTableDescriptor getMetadata() throws IOException {
     return this.connection.getHTableDescriptor(this.tableName);

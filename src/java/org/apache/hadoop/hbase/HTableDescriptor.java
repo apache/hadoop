@@ -71,8 +71,7 @@ public class HTableDescriptor implements WritableComparable {
    */
   private HTableDescriptor(final byte [] name, HColumnDescriptor[] families) {
     this.name = name.clone();
-    this.rootregion = Bytes.equals(name, HConstants.ROOT_TABLE_NAME);
-    this.metaregion = true;
+    setMetaFlags(name);
     for(HColumnDescriptor descriptor : families) {
       this.families.put(Bytes.mapKey(descriptor.getName()), descriptor);
     }
@@ -108,8 +107,20 @@ public class HTableDescriptor implements WritableComparable {
    * @see <a href="HADOOP-1581">HADOOP-1581 HBASE: Un-openable tablename bug</a>
    */
   public HTableDescriptor(final byte [] name) {
-    this.name = isLegalTableName(name);
+    setMetaFlags(name);
+    this.name = this.metaregion? name: isLegalTableName(name);
     this.nameAsString = Bytes.toString(this.name);
+  }
+
+  /*
+   * Set meta flags on this table.
+   * Called by constructors.
+   * @param name
+   */
+  private void setMetaFlags(final byte [] name) {
+    this.rootregion = Bytes.equals(name, HConstants.ROOT_TABLE_NAME);
+    this.metaregion =
+      this.rootregion? true: Bytes.equals(name, HConstants.META_TABLE_NAME);
   }
   
   /**

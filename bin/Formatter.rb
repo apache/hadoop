@@ -3,7 +3,7 @@ module Formatter
   # Base abstract class for results formatting.
   class Formatter
     # Takes an output stream and a print width.
-    def initialize(o, w = 80)
+    def initialize(o, w = 100)
       raise TypeError.new("Type %s of parameter %s is not IO" % [o.class, o]) \
         unless o.instance_of? IO
       @out = o
@@ -38,8 +38,8 @@ module Formatter
           puts
         end
       elsif args.length == 2
-        col1width = 8
-        col2width = 70
+        col1width = @maxWidth / 4
+        col2width = @maxWidth - col1width - 2
         splits1 = split(col1width, dump(args[0]))
         splits2 = split(col2width, dump(args[1]))
         biggest = (splits2.length > splits1.length)? splits2.length: splits1.length

@@ -5,9 +5,10 @@
 # TODO: Add 'debug' support (client-side logs show in shell).  Add it as
 # command-line option and as command.
 # TODO: Interrupt a table creation or a connection to a bad master.  Currently
-# has to time out.
+# has to time out.  Below we've set down the retries for rpc and hbase but
+# still can be annoying (And there seem to be times when we'll retry for
+# ever regardless)
 # TODO: Add support for listing and manipulating catalog tables, etc.
-# TODO: Fix 'irb: warn: can't alias help from irb_help.' in banner message
 # TODO: Encoding; need to know how to go from ruby String to UTF-8 bytes
 
 # Run the java magic include and import basic HBase types that will help ease
@@ -28,12 +29,14 @@ require 'HBase'
 # so they don't go through to irb.  Output shell 'usage' if user types '--help'
 cmdline_help = <<HERE # HERE document output as shell usage
 HBase Shell command-line options:
- format  Formatter for outputting results: console | html. Default: console
- master  HBase master shell should connect to: e.g --master=example:60000
+ format        Formatter for outputting results: console | html. Default: console
+ format.width  Width of table outputs. Default: 110 characters.
+ master        HBase master shell should connect to: e.g --master=example:60000
 HERE
 master = nil
-@formatter = Formatter::Console.new(STDOUT)
 found = []
+format = 'console'
+format_width = 110
 for arg in ARGV
   if arg =~ /^--master=(.+)/i
     master = $1
@@ -41,12 +44,16 @@ for arg in ARGV
   elsif arg =~ /^--format=(.+)/i
     format = $1
     if format =~ /^html$/i
-      @formatter = Formatter::XHTML.new(STDOUT)
+      raise NoMethodError.new("Not yet implemented")
     elsif format =~ /^console$/i
       # This is default
     else
       raise ArgumentError.new("Unsupported format " + arg)
     end
+    found.push(arg)
+  elsif arg =~ /^--format-width=(.+)/i
+    format_width = $1.to_i
+    found.push(arg)
   elsif arg == '-h' || arg == '--help'
     puts cmdline_help
     exit
@@ -55,6 +62,9 @@ end
 for arg in found
   ARGV.delete(arg)
 end
+# Presume console format.
+@formatter = Formatter::Console.new(STDOUT, format_width)
+# TODO, etc.  @formatter = Formatter::XHTML.new(STDOUT)
 
 # Setup the HBase module.  Create a configuration.  If a master, set it.
 # Turn off retries in hbase and ipc.  Human doesn't want to wait on N retries.
@@ -150,13 +160,14 @@ HBASE SHELL COMMANDS:
 
            hbase> put 't1', 'r1', 'c1', ts1
 
- scan      Scan a table; pass table name and an array of column names.
-           Optionally, pass a dictionary of options that includes one or more
-           of the following: LIMIT, FILTER, STARTROW, STOPROW, and TIMESTAMP.
-           For example, to scan column 'c1', and 'c2', in table 't1' returning
-           10 rows only:
-
-           hbase> scan 't1', ['c1', 'c2'], {LIMIT => 10}
+ scan      Scan a table; pass table name and optionally an array of column
+           names and a dictionary of scanner specification that includes one
+           or more of following: LIMIT, FILTER, STARTROW, STOPROW, or TIMESTAMP.
+           Examples:
+           
+           hbase> scan '.META.'
+           hbase> scan '.META.', ['info:regioninfo']
+           hbase> scan 't1', ['c1', 'c2'], {LIMIT => 10, STARTROW => 'xyz'}
 
  version   Output this HBase version
 
@@ -242,7 +253,7 @@ def put(table, row, column, value, timestamp = nil)
   table(table).put(row, column, value, timestamp)
 end
   
-def scan(table, columns, args = {})
+def scan(table, columns = [], args = {})
   table(table).scan(columns, args)
 end
   
@@ -268,18 +279,27 @@ version
 
 require "irb"
 
-# IRB::ExtendCommandBundle.instance_variable_get("@EXTEND_COMMANDS").delete_if{|x| x.first == :irb_help}
-
 module IRB
-  module ExtendCommandBundle
-    # These are attempts at blocking the complaint about :irb_help on startup.
-    # @EXTEND_COMMANDS.delete_if{|x| x[0] == :irb_help}
-    # @EXTEND_COMMANDS.each{|x| x[3][1] = OVERRIDE_ALL if x[0] == :irb_help}
-    # @EXTEND_COMMANDS.each{|x| puts x if x[0] == :irb_help}
-  end
-
   # Subclass of IRB so can intercept methods
   class HIRB < Irb
+    def initialize
+      # This is ugly.  Our 'help' method above provokes the following message
+      # on irb construction: 'irb: warn: can't alias help from irb_help.'
+      # Below, we reset the output so its pointed at /dev/null during irb
+      # construction just so this message does not come out after we emit
+      # the banner.  Other attempts at playing with the hash of methods
+      # down in IRB didn't seem to work. I think the worst thing that can
+      # happen is the shell exiting because of failed IRB construction with
+      # no error (though we're not blanking STDERR)
+      begin
+        f = File.open("/dev/null", "w")
+        $stdout = f
+        super
+      ensure
+        f.close()
+        $stdout = STDOUT
+      end
+    end 
     
     def output_value
       # Suppress output if last_value is 'nil'
@@ -295,7 +315,8 @@ module IRB
     $0 = File::basename(ap_path, ".rb") if ap_path
 
     IRB.setup(ap_path)
-    @CONF[:IRB_NAME]="hbase"
+    @CONF[:IRB_NAME] = 'hbase'
+    @CONF[:AP_NAME] = 'hbase'
     
     if @CONF[:SCRIPT]
       hirb = HIRB.new(nil, @CONF[:SCRIPT])
