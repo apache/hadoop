@@ -18,7 +18,6 @@
 package org.apache.hadoop.dfs;
 
 import java.io.IOException;
-import java.net.SocketTimeoutException;
 
 import org.apache.hadoop.util.Daemon;
 
@@ -44,7 +43,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
     return FSConstants.NodeType.DATA_NODE;
   }
 
-  void initializeUpgrade(NamespaceInfo nsInfo) throws IOException {
+  synchronized void initializeUpgrade(NamespaceInfo nsInfo) throws IOException {
     if( ! super.initializeUpgrade())
       return; // distr upgrade is not needed
     DataNode.LOG.info("\n   Distributed upgrade for DataNode " 
