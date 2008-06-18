@@ -16,6 +16,28 @@ Release 0.17.1 - Unreleased
 
   BUG FIXES
 
+    HADOOP-2159 Namenode stuck in safemode. The counter blockSafe should
+    not be decremented for invalid blocks. (hairong)
+
+    HADOOP-3472 MapFile.Reader getClosest() function returns incorrect results
+    when before is true (Todd Lipcon via Stack)
+
+    HADOOP-3442. Limit recursion depth on the stack for QuickSort to prevent
+    StackOverflowErrors. To avoid O(n*n) cases, when partitioning depth exceeds
+    a multiple of log(n), change to HeapSort. (cdouglas)
+
+    HADOOP-3477. Fix build to not package contrib/*/bin twice in
+    distributions.  (Adam Heath via cutting)
+
+    HADOOP-3475. Fix MapTask to correctly size the accounting allocation of
+    io.sort.mb. (cdouglas)
+
+    HADOOP-3550. Fix the serialization data structures in MapTask where the
+    value lengths are incorrectly calculated. (cdouglas)
+
+    HADOOP-3526. Fix contrib/data_join framework by cloning values retained
+    in the reduce. (Spyros Blanas via cdouglas)
+
     HADOOP-1979. Speed up fsck by adding a buffered stream. (Lohit
     Vijaya Renu via omalley)
 
