@@ -154,6 +154,9 @@ public class TestMigrate extends HBaseTestCase {
         "changes before opening a scanner");
       waitOnStartCodeChange(retries);
       HTable t = new HTable(this.conf, TABLENAME);
+      // Force client to relocate the region now the start code has changed
+      t.getConnection().relocateRegion(Bytes.toBytes(TABLENAME),
+        HConstants.EMPTY_BYTE_ARRAY);
       int count = 0;
       LOG.info("OPENING SCANNER");
       Scanner s = t.getScanner(TABLENAME_COLUMNS);
