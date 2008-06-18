@@ -49,6 +49,10 @@ Release 0.18.0 - Unreleased
     HADOOP-3531. Fixes a bug related to handling JobTracker failures because of
     timing issues on slow nodes. (Hemanth Yamijala via ddas)
 
+    HADOOP-3564. HOD generates values for the parameter dfs.datanode.ipc.address
+    in the hadoop-site.xml created on datanodes. 
+    (Vinod Kumar Vavilapalli via ddas)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
