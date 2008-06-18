@@ -250,6 +250,71 @@ public class TestGet2 extends HBaseTestCase implements HConstants {
     }
   }
 
+  /** For HBASE-694 */
+  public void testGetClosestRowBefore2() throws IOException{
+
+    HRegion region = null;
+    BatchUpdate batchUpdate = null;
+    
+    try {
+      HTableDescriptor htd = createTableDescriptor(getName());
+      region = createNewHRegion(htd, null, null);
+     
+      // set up some test data
+      String t10 = "010";
+      String t20 = "020";
+      String t30 = "030";
+      String t40 = "040";
+      
+      batchUpdate = new BatchUpdate(t10);
+      batchUpdate.put(COLUMNS[0], "t10 bytes".getBytes());
+      region.batchUpdate(batchUpdate);
+      
+      batchUpdate = new BatchUpdate(t30);
+      batchUpdate.put(COLUMNS[0], "t30 bytes".getBytes());
+      region.batchUpdate(batchUpdate);
+      
+      batchUpdate = new BatchUpdate(t40);
+      batchUpdate.put(COLUMNS[0], "t40 bytes".getBytes());
+      region.batchUpdate(batchUpdate);
+
+      // try finding "035"
+      String t35 = "035";
+      Map<byte [], Cell> results = 
+        region.getClosestRowBefore(Bytes.toBytes(t35));
+      assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t30 bytes");
+
+      region.flushcache();
+
+      // try finding "035"
+      results = region.getClosestRowBefore(Bytes.toBytes(t35));
+      assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t30 bytes");
+
+      batchUpdate = new BatchUpdate(t20);
+      batchUpdate.put(COLUMNS[0], "t20 bytes".getBytes());
+      region.batchUpdate(batchUpdate);
+      
+      // try finding "035"
+      results = region.getClosestRowBefore(Bytes.toBytes(t35));
+      assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t30 bytes");
+      
+      region.flushcache();
+
+      // try finding "035"
+      results = region.getClosestRowBefore(Bytes.toBytes(t35));
+      assertEquals(new String(results.get(COLUMNS[0]).getValue()), "t30 bytes");
+    } finally {
+      if (region != null) {
+        try {
+          region.close();
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+        region.getLog().closeAndDelete();
+      }
+    }
+  }
+
   /**
    * For HBASE-40
    */

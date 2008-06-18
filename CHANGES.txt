@@ -55,6 +55,8 @@ Hbase Change Log
    HBASE-686   MemcacheScanner didn't return the first row(if it exists),
                because HScannerInterface's output incorrect (LN via Jim Kellerman)
    HBASE-691   get* and getScanner are different in how they treat column parameter
+   HBASE-694   HStore.rowAtOrBeforeFromMapFile() fails to locate the row if # of mapfiles >= 2
+               (Rong-En Fan via Bryan)
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
