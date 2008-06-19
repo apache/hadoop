@@ -799,6 +799,20 @@ public class JobConf extends Configuration {
   }
   
   /**
+   * If true, ensures the combiner is run once and only once on output from
+   * the map. Otherwise, combiner may be run zero or more times.
+   */
+  @Deprecated
+  public void setCombineOnceOnly(JobConf conf, boolean value) {
+    conf.setBoolean("mapred.combine.once", value);
+  }
+
+  @Deprecated
+  public boolean getCombineOnceOnly() {
+    return getBoolean("mapred.combine.once", false);
+  }
+
+  /**
    * Should speculative execution be used for this job? 
    * Defaults to <code>true</code>.
    * 

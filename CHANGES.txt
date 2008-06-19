@@ -617,6 +617,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3526. Fix contrib/data_join framework by cloning values retained
     in the reduce. (Spyros Blanas via cdouglas)
 
+    HADOOP-3586. Provide deprecated, backwards compatibile semantics for the
+    combiner to be run once and only once on each record. (cdouglas)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
