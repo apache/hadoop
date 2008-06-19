@@ -136,10 +136,12 @@ See http://forrest.apache.org/docs/linking.html for more info.
                  <setinputpathstring href="#setInputPaths(org.apache.hadoop.mapred.JobConf,%20java.lang.String)" />
                  <addinputpathstring href="#addInputPath(org.apache.hadoop.mapred.JobConf,%20java.lang.String)" />
               </fileinputformat>
-              <fileoutputformat href="FileInputFormat.html">
+              <fileoutputformat href="FileOutputFormat.html">
                 <getoutputpath href="#getOutputPath(org.apache.hadoop.mapred.JobConf)" />
                 <getworkoutputpath href="#getWorkOutputPath(org.apache.hadoop.mapred.JobConf)" />
                 <setoutputpath href="#setOutputPath(org.apache.hadoop.mapred.JobConf,%20org.apache.hadoop.fs.Path)" />
+                <setcompressoutput href="#setCompressOutput(org.apache.hadoop.mapred.JobConf,%20boolean)" />
+                <setoutputcompressorclass href="#setOutputCompressorClass(org.apache.hadoop.mapred.JobConf,%20java.lang.Class)" />
               </fileoutputformat>
               <filesplit href="FileSplit.html" />
               <inputformat href="InputFormat.html" />
@@ -200,7 +202,8 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <reduce href="#reduce(K2, java.util.Iterator, org.apache.hadoop.mapred.OutputCollector, org.apache.hadoop.mapred.Reporter)" />
               </reducer>
               <reporter href="Reporter.html">
-                <incrcounter href="#incrCounter(java.lang.Enum, long)" />
+                <incrcounterEnum href="#incrCounter(java.lang.Enum, long)" />
+                <incrcounterString href="#incrCounter(java.lang.String, java.lang.String, long amount)" />
               </reporter>
               <runningjob href="RunningJob.html" />
               <textinputformat href="TextInputFormat.html" />
