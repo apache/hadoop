@@ -24,7 +24,8 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.io.RowResult;
 
 /**
- * Interface for client-side scanning. 
+ * Interface for client-side scanning.
+ * Go to {@link HTable} to obtain instances.
  */
 public interface Scanner extends Closeable, Iterable<RowResult> {
   /**

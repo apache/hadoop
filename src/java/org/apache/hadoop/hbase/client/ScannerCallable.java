@@ -23,13 +23,13 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.filter.RowFilterInterface;
 import org.apache.hadoop.hbase.io.RowResult;
 
 
 /**
- * Retryable scanner
+ * Retries scanner operations such as create, next, etc.
+ * Used by {@link Scanner}s made by {@link HTable}.
  */
 public class ScannerCallable extends ServerCallable<RowResult> {
   private long scannerId = -1L;

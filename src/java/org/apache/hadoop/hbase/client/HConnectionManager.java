@@ -56,7 +56,9 @@ import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * A non-instantiable class that manages connections to multiple tables in
- * multiple HBase instances
+ * multiple HBase instances.
+ * 
+ * Used by {@link HTable} and {@link HBaseAdmin}
  */
 public class HConnectionManager implements HConstants {
   /*

@@ -18,10 +18,9 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase;
-import org.apache.hadoop.io.Text;
-
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 

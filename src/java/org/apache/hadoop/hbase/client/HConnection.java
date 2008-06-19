@@ -29,7 +29,8 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 
 /**
- * 
+ * Cluster connection.
+ * {@link HConnectionManager} manages instances of this class.
  */
 public interface HConnection {
   /**
