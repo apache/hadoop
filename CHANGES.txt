@@ -1,9 +1,6 @@
 Hadoop Change Log
 
 
-    HADOOP-3576. Fix NullPointerException when renaming a directory
-    to its subdirectory. (Tse Wo (Nicholas), SZE via hairong) 
-
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -641,6 +638,9 @@ Release 0.18.0 - Unreleased
 
     HADOOP-3546. TaskTracker re-initialization gets stuck in cleaning up.
     (Amareshwari Sriramadasu via ddas)
+
+    HADOOP-3576. Fix NullPointerException when renaming a directory
+    to its subdirectory. (Tse Wo (Nicholas), SZE via hairong)
 
 Release 0.17.1 - Unreleased
 
