@@ -15,6 +15,9 @@ Trunk (unreleased changes)
     HADOOP-3563.  Refactor the distributed upgrade code so that it is 
     easier to identify datanode and namenode related code. (dhruba)
 
+    HADOOP-3576. Fix NullPointerException when renaming a directory
+    to its subdirectory. (Tse Wo (Nicholas), SZE via hairong) 
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -670,9 +673,6 @@ Release 0.17.1 - Unreleased
 
     HADOOP-1979. Speed up fsck by adding a buffered stream. (Lohit
     Vijaya Renu via omalley)
-
-    HADOOP-3576. Fix NullPointerException when renaming a directory
-    to its subdirectory. (Tse Wo (Nicholas), SZE via hairong)
 
 Release 0.17.0 - 2008-05-18
 
