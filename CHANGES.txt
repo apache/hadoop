@@ -634,6 +634,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3569. KFS input stream read() now correctly reads 1 byte
     instead of 4. (Sriram Rao via omalley)
 
+    HADOOP-3599. Fix JobConf::setCombineOnceOnly to modify the instance rather
+    than a parameter. (Owen O'Malley via cdouglas)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
