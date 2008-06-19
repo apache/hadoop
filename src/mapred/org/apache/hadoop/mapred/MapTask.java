@@ -31,7 +31,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -826,11 +828,30 @@ class MapTask extends Task {
             writer = new IFile.Writer(job, out, keyClass, valClass, codec);
 
             if (i == partition) {
-              final long recordStart = out.getPos();
-              writer.append(key, value);
-              // Note that our map byte count will not be accurate with
-              // compression
-              mapOutputByteCounter.increment(out.getPos() - recordStart);
+              if (job.getCombineOnceOnly()) {
+                Reducer combiner =
+                  (Reducer)ReflectionUtils.newInstance(combinerClass, job);
+                combineCollector.setWriter(writer);
+                combiner.reduce(key, new Iterator<V>() {
+                    private boolean done = false;
+                    public boolean hasNext() { return !done; }
+                    public V next() {
+                      if (done)
+                        throw new NoSuchElementException();
+                      done = true;
+                      return value;
+                    }
+                    public void remove() {
+                      throw new UnsupportedOperationException();
+                    }
+                  }, combineCollector, reporter);
+              } else {
+                final long recordStart = out.getPos();
+                writer.append(key, value);
+                // Note that our map byte count will not be accurate with
+                // compression
+                mapOutputByteCounter.increment(out.getPos() - recordStart);
+              }
             }
             writer.close();
 
@@ -1030,7 +1051,8 @@ class MapTask extends Task {
           segmentStart = finalOut.getPos();
           Writer<K, V> writer = 
               new Writer<K, V>(job, finalOut, keyClass, valClass, codec);
-          if (null == combinerClass || numSpills < minSpillsForCombine) {
+          if (null == combinerClass || job.getCombineOnceOnly() ||
+              numSpills < minSpillsForCombine) {
             Merger.writeFile(kvIter, writer, reporter);
           } else {
             combineCollector.setWriter(writer);

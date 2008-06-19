@@ -606,6 +606,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3520.  TestDFSUpgradeFromImage triggers a race condition in the
     Upgrade Manager. Fixed. (dhruba)
 
+    HADOOP-3586. Provide deprecated, backwards compatibile semantics for the
+    combiner to be run once and only once on each record. (cdouglas)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES

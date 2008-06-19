@@ -1286,7 +1286,9 @@ class ReduceTask extends Task {
       this.numCopiers = conf.getInt("mapred.reduce.parallel.copies", 5);
       this.maxInFlight = 4 * numCopiers;
       this.maxBackoff = conf.getInt("mapred.reduce.copy.backoff", 300);
-      this.combinerClass = conf.getCombinerClass();
+      this.combinerClass = conf.getCombineOnceOnly()
+        ? null
+        : conf.getCombinerClass();
       combineCollector = (null != combinerClass)
         ? new CombineOutputCollector(reduceCombineOutputCounter)
         : null;
