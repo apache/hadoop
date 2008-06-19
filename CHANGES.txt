@@ -1,6 +1,9 @@
 Hadoop Change Log
 
 
+    HADOOP-3576. Fix NullPointerException when renaming a directory
+    to its subdirectory. (Tse Wo (Nicholas), SZE via hairong) 
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES
