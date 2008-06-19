@@ -45,36 +45,50 @@ public class TestDFSRename extends junit.framework.TestCase {
       FileSystem fs = cluster.getFileSystem();
       assertTrue(fs.mkdirs(dir));
       
-      Path a = new Path(dir, "a");
-      Path aa = new Path(dir, "aa");
-      Path b = new Path(dir, "b");
+      { //test lease
+        Path a = new Path(dir, "a");
+        Path aa = new Path(dir, "aa");
+        Path b = new Path(dir, "b");
+  
+        DataOutputStream a_out = fs.create(a);
+        a_out.writeBytes("something");
+        a_out.close();
+        
+        //should not have any lease
+        assertEquals(0, countLease(cluster)); 
+  
+        DataOutputStream aa_out = fs.create(aa);
+        aa_out.writeBytes("something");
+  
+        //should have 1 lease
+        assertEquals(1, countLease(cluster)); 
+        list(fs, "rename0");
+        fs.rename(a, b);
+        list(fs, "rename1");
+        aa_out.writeBytes(" more");
+        aa_out.close();
+        list(fs, "rename2");
+  
+        //should not have any lease
+        assertEquals(0, countLease(cluster));
+      }
 
-      DataOutputStream a_out = fs.create(a);
-      a_out.writeBytes("something");
-      a_out.close();
-      
-      //should not have any lease
-      assertEquals(0, countLease(cluster)); 
+      { // test non-existent destination
+        Path dstPath = new Path("/c/d");
+        assertFalse(fs.exists(dstPath));
+        assertFalse(fs.rename(dir, dstPath));
+      }
 
-      DataOutputStream aa_out = fs.create(aa);
-      aa_out.writeBytes("something");
+      { // test rename /a/b to /a/b/c
+        Path src = new Path("/a/b");
+        Path dst = new Path("/a/b/c");
 
-      //should have 1 lease
-      assertEquals(1, countLease(cluster)); 
-      list(fs, "rename0");
-      fs.rename(a, b);
-      list(fs, "rename1");
-      aa_out.writeBytes(" more");
-      aa_out.close();
-      list(fs, "rename2");
-
-      //should not have any lease
-      assertEquals(0, countLease(cluster)); 
-
-      // test non-existent destination
-      Path dstPath = new Path("/c/d");
-      assertFalse(fs.exists(dstPath));
-      assertFalse(fs.rename(dir, dstPath));
+        DataOutputStream a_out = fs.create(new Path(src, "foo"));
+        a_out.writeBytes("something");
+        a_out.close();
+        
+        assertFalse(fs.rename(src, dst));
+      }
       
       fs.delete(dir, true);
     } finally {

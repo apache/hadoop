@@ -15,6 +15,9 @@ Trunk (unreleased changes)
     HADOOP-3563.  Refactor the distributed upgrade code so that it is 
     easier to identify datanode and namenode related code. (dhruba)
 
+    HADOOP-3576. Fix NullPointerException when renaming a directory
+    to its subdirectory. (Tse Wo (Nicholas), SZE via hairong) 
+
 Release 0.18.0 - Unreleased
 
   INCOMPATIBLE CHANGES

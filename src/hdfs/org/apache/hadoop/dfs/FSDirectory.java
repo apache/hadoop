@@ -317,8 +317,7 @@ class FSDirectory implements FSConstants, Closeable {
   /**
    * @see #unprotectedRenameTo(String, String, long)
    */
-  public boolean renameTo(String src, String dst)
-  throws QuotaExceededException {
+  boolean renameTo(String src, String dst) throws QuotaExceededException {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.renameTo: "
                                   +src+" to "+dst);
@@ -359,23 +358,6 @@ class FSDirectory implements FSConstants, Closeable {
         dst += Path.SEPARATOR + new Path(src).getName();
       }
       
-      byte[][] dstComponents = INode.getPathComponents(dst);
-      INode[] dstInodes = new INode[dstComponents.length];
-      rootDir.getExistingPathINodes(dstComponents, dstInodes);
-      
-      // check the validity of the destination
-      if (dstInodes[dstInodes.length-1] != null) { //check if destination exists
-        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-                                     +"failed to rename "+src+" to "+dst+ 
-                                     " because destination exists");
-        return false;
-      } else if (dstInodes[dstInodes.length-2] == null) { // check if its parent exists
-        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
-            +"failed to rename "+src+" to "+dst+ 
-            " because destination's parent does not exists");
-        return false;
-      }
-      
       // remove source
       INode srcChild = null;
       try {
@@ -389,20 +371,37 @@ class FSDirectory implements FSConstants, Closeable {
         return false;
       }
 
-      // add to the destination
+      // check the validity of the destination
       INode dstChild = null;
       QuotaExceededException failureByQuota = null;
-      try {
-        // set the destination's name
+
+      byte[][] dstComponents = INode.getPathComponents(dst);
+      INode[] dstInodes = new INode[dstComponents.length];
+      rootDir.getExistingPathINodes(dstComponents, dstInodes);
+      if (dstInodes[dstInodes.length-1] != null) { //check if destination exists
+        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+                                     +"failed to rename "+src+" to "+dst+ 
+                                     " because destination exists");
+      } else if (dstInodes[dstInodes.length-2] == null) { // check if its parent exists
+        NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
+            +"failed to rename "+src+" to "+dst+ 
+            " because destination's parent does not exists");
+      }
+      else {
+        // add to the destination
         srcChild.setLocalName(dstComponents[dstInodes.length-1]);
-        // add it to the namespace
-        dstChild = addChild(dstInodes, dstInodes.length-1, srcChild, false);
-      } catch (QuotaExceededException qe) {
-        failureByQuota = qe;
+        try {
+          // add it to the namespace
+          dstChild = addChild(dstInodes, dstInodes.length-1, srcChild, false);
+        } catch (QuotaExceededException qe) {
+          failureByQuota = qe;
+        }
       }
       if (dstChild != null) {
-        NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedRenameTo: "
+        if (NameNode.stateChangeLog.isDebugEnabled()) {
+          NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedRenameTo: "
             +src+" is renamed to "+dst);
+        }
 
         // update modification time of dst and the parent of src
         srcInodes[srcInodes.length-2].setModificationTime(timestamp);
