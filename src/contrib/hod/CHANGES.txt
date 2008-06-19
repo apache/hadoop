@@ -53,6 +53,10 @@ Release 0.18.0 - Unreleased
     in the hadoop-site.xml created on datanodes. 
     (Vinod Kumar Vavilapalli via ddas)
 
+    HADOOP-3076. Fixes a bug related to a spurious message about the 
+    script.exitcode file when a cluster directory is specified as a relative
+    path. (Vinod Kumar Vavilapalli via yhemanth)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
