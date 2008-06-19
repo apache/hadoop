@@ -12,7 +12,7 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
-    HADOOP-2703.  Refactor the distributed upgrade code so that it is 
+    HADOOP-3563.  Refactor the distributed upgrade code so that it is 
     easier to identify datanode and namenode related code. (dhruba)
 
 Release 0.18.0 - Unreleased
