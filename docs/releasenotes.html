@@ -1,8 +1,34 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html><head>
-    <title>Hadoop 0.17.0 Release Notes</title></head>
+    <title>Hadoop 0.17.1 Release Notes</title></head>
 <body>
 <font face="sans-serif">
+    <h1>Hadoop 0.17.1 Release Notes</h1>
+The bug fixes are listed below.
+<ul><a name="changes">
+    <h2>Changes Since Hadoop 0.17.0</h2>
+<ul>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-2159'>HADOOP-2159</a>] -         Namenode stuck in safemode
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3442'>HADOOP-3442</a>] -         QuickSort may get into unbounded recursion
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3472'>HADOOP-3472</a>] -         MapFile.Reader getClosest() function returns incorrect results when before is true
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3475'>HADOOP-3475</a>] -         MapOutputBuffer allocates 4x as much space to record capacity as intended
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3477'>HADOOP-3477</a>] -         release tar.gz contains duplicate files
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3522'>HADOOP-3522</a>] -         ValuesIterator.next() doesn't return a new object, thus failing many equals() tests.
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3526'>HADOOP-3526</a>] -         contrib/data_join doesn't work
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3550'>HADOOP-3550</a>] -         Reduce tasks failing with OOM
+</li>
+<li>[<a href='https://issues.apache.org/jira/browse/HADOOP-3565'>HADOOP-3565</a>] -         JavaSerialization can throw java.io.StreamCorruptedException
+</li>
+</ul>
+</ul>
+
     <h1>Hadoop 0.17.0 Release Notes</h1>
 
 These release notes include new developer and user facing incompatibilities, features, and major improvements.  The table below is sorted by Component.

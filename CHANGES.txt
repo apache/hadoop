@@ -1,7 +1,7 @@
 Hadoop Change Log
 
 
-Release 0.17.1 - Unreleased
+Release 0.17.1 - 2008-06-23
 
   INCOMPATIBLE CHANGES
 

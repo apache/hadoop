@@ -36,7 +36,7 @@
     function collapse() {
       for (var i = 0; i < document.getElementsByTagName("ul").length; i++) {
         var list = document.getElementsByTagName("ul")[i];
-        if (list.id != 'release_0.17.0_-_2008-05-18_' && list.id != 'release_0.16.4_-_2008-05-05_') {
+        if (list.id != 'release_0.17.1_-_2008-06-23_' && list.id != 'release_0.17.0_-_2008-05-18_') {
           list.style.display = "none";
         }
       }
@@ -52,6 +52,46 @@
 <a href="http://hadoop.apache.org/core/"><img class="logoImage" alt="Hadoop" src="images/hadoop-logo.jpg" title="Scalable Computing Platform"></a>
 <h1>Hadoop Change Log</h1>
 
+<h2><a href="javascript:toggleList('release_0.17.1_-_2008-06-23_')">Release 0.17.1 - 2008-06-23
+</a></h2>
+<ul id="release_0.17.1_-_2008-06-23_">
+  <li><a href="javascript:toggleList('release_0.17.1_-_2008-06-23_._incompatible_changes_')">  INCOMPATIBLE CHANGES
+</a>&nbsp;&nbsp;&nbsp;(1)
+    <ol id="release_0.17.1_-_2008-06-23_._incompatible_changes_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3565">HADOOP-3565</a>. Fix the Java serialization, which is not enabled by
+default, to clear the state of the serializer between objects.<br />(tomwhite via omalley)</li>
+    </ol>
+  </li>
+  <li><a href="javascript:toggleList('release_0.17.1_-_2008-06-23_._improvements_')">  IMPROVEMENTS
+</a>&nbsp;&nbsp;&nbsp;(1)
+    <ol id="release_0.17.1_-_2008-06-23_._improvements_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3522">HADOOP-3522</a>. Improve documentation on reduce pointing out that
+input keys and values will be reused.<br />(omalley)</li>
+    </ol>
+  </li>
+  <li><a href="javascript:toggleList('release_0.17.1_-_2008-06-23_._bug_fixes_')">  BUG FIXES
+</a>&nbsp;&nbsp;&nbsp;(8)
+    <ol id="release_0.17.1_-_2008-06-23_._bug_fixes_">
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-2159">HADOOP-2159</a> Namenode stuck in safemode. The counter blockSafe should
+not be decremented for invalid blocks.<br />(hairong)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3472">HADOOP-3472</a> MapFile.Reader getClosest() function returns incorrect results
+when before is true<br />(Todd Lipcon via Stack)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3442">HADOOP-3442</a>. Limit recursion depth on the stack for QuickSort to prevent
+StackOverflowErrors. To avoid O(n*n) cases, when partitioning depth exceeds
+a multiple of log(n), change to HeapSort.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3477">HADOOP-3477</a>. Fix build to not package contrib/*/bin twice in
+distributions.<br />(Adam Heath via cutting)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3475">HADOOP-3475</a>. Fix MapTask to correctly size the accounting allocation of
+io.sort.mb.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3550">HADOOP-3550</a>. Fix the serialization data structures in MapTask where the
+value lengths are incorrectly calculated.<br />(cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-3526">HADOOP-3526</a>. Fix contrib/data_join framework by cloning values retained
+in the reduce.<br />(Spyros Blanas via cdouglas)</li>
+      <li><a href="http://issues.apache.org/jira/browse/HADOOP-1979">HADOOP-1979</a>. Speed up fsck by adding a buffered stream.<br />(Lohit
+Vijaya Renu via omalley)</li>
+    </ol>
+  </li>
+</ul>
 <h2><a href="javascript:toggleList('release_0.17.0_-_2008-05-18_')">Release 0.17.0 - 2008-05-18
 </a></h2>
 <ul id="release_0.17.0_-_2008-05-18_">
@@ -421,8 +461,10 @@ mukund)</li>
     </ol>
   </li>
 </ul>
-<h2><a href="javascript:toggleList('release_0.16.4_-_2008-05-05_')">Release 0.16.4 - 2008-05-05
-</a></h2>
+<h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
+<ul id="older">
+<h3><a href="javascript:toggleList('release_0.16.4_-_2008-05-05_')">Release 0.16.4 - 2008-05-05
+</a></h3>
 <ul id="release_0.16.4_-_2008-05-05_">
   <li><a href="javascript:toggleList('release_0.16.4_-_2008-05-05_._bug_fixes_')">  BUG FIXES
 </a>&nbsp;&nbsp;&nbsp;(3)
@@ -438,8 +480,6 @@ in HDFS. (Tsz Wo (Nicholas), SZE via mukund)
     </ol>
   </li>
 </ul>
-<h2><a href="javascript:toggleList('older')">Older Releases</a></h2>
-<ul id="older">
 <h3><a href="javascript:toggleList('release_0.16.3_-_2008-04-16_')">Release 0.16.3 - 2008-04-16
 </a></h3>
 <ul id="release_0.16.3_-_2008-04-16_">
