@@ -628,6 +628,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3580. Fixes a problem to do with specifying a har as an input to 
     a job. (Mahadev Konar via ddas)
 
+    HADOOP-3534. Log IOExceptions that happen in closing the name
+    system when the NameNode shuts down. (Tsz Wo (Nicholas) Sze via omalley)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
