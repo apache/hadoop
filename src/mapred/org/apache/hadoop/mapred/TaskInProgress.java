@@ -431,11 +431,15 @@ class TaskInProgress {
    * Indicate that one of the taskids in this TaskInProgress
    * has failed.
    */
-  public void incompleteSubTask(TaskAttemptID taskid, String trackerName, 
+  public void incompleteSubTask(TaskAttemptID taskid, 
+                                TaskTrackerStatus ttStatus,
                                 JobStatus jobStatus) {
     //
     // Note the failure and its location
     //
+    String trackerName = ttStatus.getTrackerName();
+    String trackerHostName = ttStatus.getHost();
+     
     TaskStatus status = taskStatuses.get(taskid);
     TaskStatus.State taskState = TaskStatus.State.FAILED;
     if (status != null) {
@@ -480,7 +484,7 @@ class TaskInProgress {
 
     if (taskState == TaskStatus.State.FAILED) {
       numTaskFailures++;
-      machinesWhereFailed.add(trackerName);
+      machinesWhereFailed.add(trackerHostName);
     } else {
       numKilledTasks++;
     }
@@ -722,21 +726,22 @@ class TaskInProgress {
     
   /**
    * Has this task already failed on this machine?
-   * @param tracker The task tracker name
+   * @param trackerHost The task tracker hostname
    * @return Has it failed?
    */
-  public boolean hasFailedOnMachine(String tracker) {
-    return machinesWhereFailed.contains(tracker);
+  public boolean hasFailedOnMachine(String trackerHost) {
+    return machinesWhereFailed.contains(trackerHost);
   }
     
   /**
    * Was this task ever scheduled to run on this machine?
-   * @param tracker The task tracker name
+   * @param trackerHost The task tracker hostname 
+   * @param trackerName The tracker name
    * @return Was task scheduled on the tracker?
    */
-  public boolean hasRunOnMachine(String tracker){
-    return this.activeTasks.values().contains(tracker) || 
-      hasFailedOnMachine(tracker);
+  public boolean hasRunOnMachine(String trackerHost, String trackerName) {
+    return this.activeTasks.values().contains(trackerName) || 
+      hasFailedOnMachine(trackerHost);
   }
   /**
    * Get the number of machines where this task has failed.
