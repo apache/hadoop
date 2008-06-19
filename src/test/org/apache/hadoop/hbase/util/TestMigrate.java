@@ -129,7 +129,7 @@ public class TestMigrate extends HBaseTestCase {
     // Delete any cached connections.  Need to do this because connection was
     // created earlier when no master was around.  The fact that there was no
     // master gets cached.  Need to delete so we go get master afresh.
-    HConnectionManager.deleteConnection(this.conf);
+    HConnectionManager.deleteConnectionInfo();
     
     LOG.info("Start a cluster against migrated FS");
     // Up number of retries.  Needed while cluster starts up. Its been set to 1
@@ -153,10 +153,9 @@ public class TestMigrate extends HBaseTestCase {
       LOG.info(TABLENAME + " exists.  Now waiting till startcode " +
         "changes before opening a scanner");
       waitOnStartCodeChange(retries);
+      // Delete again so we go get it all fresh.
+      HConnectionManager.deleteConnectionInfo();
       HTable t = new HTable(this.conf, TABLENAME);
-      // Force client to relocate the region now the start code has changed
-      t.getConnection().relocateRegion(Bytes.toBytes(TABLENAME),
-        HConstants.EMPTY_BYTE_ARRAY);
       int count = 0;
       LOG.info("OPENING SCANNER");
       Scanner s = t.getScanner(TABLENAME_COLUMNS);
@@ -175,6 +174,7 @@ public class TestMigrate extends HBaseTestCase {
         s.close();
       }
     } finally {
+      HConnectionManager.deleteConnectionInfo();
       cluster.shutdown();
     }
   }

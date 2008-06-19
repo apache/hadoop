@@ -332,7 +332,12 @@ public class HTable {
   public byte [] getTableName() {
     return this.tableName;
   }
-  
+
+  /**
+   * Used by unit tests and tools to do low-level manipulations.  Not for
+   * general use.
+   * @return An HConnection instance.
+   */
   public HConnection getConnection() {
     return this.connection;
   }

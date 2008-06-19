@@ -97,11 +97,21 @@ public class HConnectionManager implements HConstants {
    * Delete connection information for the instance specified by the configuration
    * @param conf
    */
-  public static void deleteConnection(HBaseConfiguration conf) {
+  public static void deleteConnectionInfo(HBaseConfiguration conf) {
     synchronized (HBASE_INSTANCES) {
       HBASE_INSTANCES.remove(conf.get(HBASE_DIR));
     }
   }
+
+  /**
+   * Clear the static map of connection info.
+   */
+  public static void deleteConnectionInfo() {
+    synchronized (HBASE_INSTANCES) {
+      HBASE_INSTANCES.clear();
+    }
+  }
+
   
   /* Encapsulates finding the servers for an HBase instance */
   private static class TableServers implements HConnection, HConstants {

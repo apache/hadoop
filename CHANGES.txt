@@ -60,6 +60,7 @@ Hbase Change Log
    HBASE-652   dropping table fails silently if table isn't disabled
    HBASE-683   can not get svn revision # at build time if locale is not english
                (Rong-En Fan via Stack)
+   HBASE-699   Fix TestMigrate up on Hudson
    
   IMPROVEMENTS
    HBASE-559   MR example job to count table rows
