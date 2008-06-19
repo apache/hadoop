@@ -116,7 +116,7 @@ public class TaskLog {
     }
   }
 
-  public static class Reader extends InputStream {
+  static class Reader extends InputStream {
     private long bytesRemaining;
     private FileInputStream file;
     /**

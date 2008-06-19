@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class MetricsIntValue {  
 
-  protected static final Log LOG =
+  private static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.metrics.util");
 
   private String name;

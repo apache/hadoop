@@ -79,7 +79,7 @@ public class Client {
   private int refCount = 1;
   
   final private static String PING_INTERVAL_NAME = "ipc.ping.interval";
-  final public static int DEFAULT_PING_INTERVAL = 60000; // 1 min
+  final static int DEFAULT_PING_INTERVAL = 60000; // 1 min
   final static int PING_CALL_ID = -1;
   
   /**

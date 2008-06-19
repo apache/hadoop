@@ -57,7 +57,6 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reducer;
-import org.apache.hadoop.mapred.TaskTracker;
 
 /**
  * This program executes a specified operation that applies load to 
@@ -79,7 +78,7 @@ import org.apache.hadoop.mapred.TaskTracker;
  */
 
 public class NNBench {
-  protected static final Log LOG = LogFactory.getLog(
+  private static final Log LOG = LogFactory.getLog(
           "org.apache.hadoop.dfs.NNBench");
   
   protected static String CONTROL_DIR_NAME = "control";
@@ -655,7 +654,7 @@ public class NNBench {
       
       // If the sleep time is greater than 0, then sleep and return
       if (sleepTime > 0) {
-        TaskTracker.LOG.info("Waiting in barrier for: " + sleepTime + " ms");
+        LOG.info("Waiting in barrier for: " + sleepTime + " ms");
       
         try {
           Thread.sleep(sleepTime);
@@ -773,7 +772,7 @@ public class NNBench {
 
             reporter.setStatus("Finish "+ l + " files");
           } catch (IOException e) {
-            TaskTracker.LOG.info("Exception recorded in op: " +
+            LOG.info("Exception recorded in op: " +
                     "Create/Write/Close");
  
             numOfExceptions++;
@@ -816,7 +815,7 @@ public class NNBench {
 
             reporter.setStatus("Finish "+ l + " files");
           } catch (IOException e) {
-            TaskTracker.LOG.info("Exception recorded in op: OpenRead " + e);
+            LOG.info("Exception recorded in op: OpenRead " + e);
             numOfExceptions++;
           }
         }
@@ -848,7 +847,7 @@ public class NNBench {
 
             reporter.setStatus("Finish "+ l + " files");
           } catch (IOException e) {
-            TaskTracker.LOG.info("Exception recorded in op: Rename");
+            LOG.info("Exception recorded in op: Rename");
 
             numOfExceptions++;
           }
@@ -879,7 +878,7 @@ public class NNBench {
 
             reporter.setStatus("Finish "+ l + " files");
           } catch (IOException e) {
-            TaskTracker.LOG.info("Exception in recorded op: Delete");
+            LOG.info("Exception in recorded op: Delete");
 
             numOfExceptions++;
           }
@@ -897,13 +896,13 @@ public class NNBench {
     protected String hostName;
 
     public NNBenchReducer () {
-      TaskTracker.LOG.info("Starting NNBenchReducer !!!");
+      LOG.info("Starting NNBenchReducer !!!");
       try {
         hostName = java.net.InetAddress.getLocalHost().getHostName();
       } catch(Exception e) {
         hostName = "localhost";
       }
-      TaskTracker.LOG.info("Starting NNBenchReducer on " + hostName);
+      LOG.info("Starting NNBenchReducer on " + hostName);
     }
 
     /**

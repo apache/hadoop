@@ -612,6 +612,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3586. Provide deprecated, backwards compatibile semantics for the
     combiner to be run once and only once on each record. (cdouglas)
 
+    HADOOP-3533. Add deprecated methods to provide API compatibility
+    between 0.18 and 0.17. Remove the deprecated methods in trunk. (omalley)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
