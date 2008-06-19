@@ -645,6 +645,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3320. Fix NullPointerException in NetworkTopology.getDistance().
     (hairong)
 
+    HADOOP-3569. KFS input stream read() now correctly reads 1 byte
+    instead of 4. (Sriram Rao via omalley)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
