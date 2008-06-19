@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -565,8 +566,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   //
   int totalMaps = 0;
   int totalReduces = 0;
-  private TreeMap<String, TaskTrackerStatus> taskTrackers =
-    new TreeMap<String, TaskTrackerStatus>();
+  private HashMap<String, TaskTrackerStatus> taskTrackers =
+    new HashMap<String, TaskTrackerStatus>();
+  HashMap<String,Integer>uniqueHostsMap = new HashMap<String, Integer>();
   List<JobInProgress> jobInitQueue = new ArrayList<JobInProgress>();
   ExpireTrackers expireTrackers = new ExpireTrackers();
   Thread expireTrackersThread = null;
@@ -1387,6 +1389,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       totalReduceTaskCapacity -= oldStatus.getMaxReduceTasks();
       if (status == null) {
         taskTrackers.remove(trackerName);
+        Integer numTaskTrackersInHost = 
+          uniqueHostsMap.get(oldStatus.getHost());
+        numTaskTrackersInHost --;
+        if (numTaskTrackersInHost > 0)  {
+          uniqueHostsMap.put(oldStatus.getHost(), numTaskTrackersInHost);
+        }
+        else {
+          uniqueHostsMap.remove(oldStatus.getHost());
+        }
       }
     }
     if (status != null) {
@@ -1394,7 +1405,21 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       totalReduces += status.countReduceTasks();
       totalMapTaskCapacity += status.getMaxMapTasks();
       totalReduceTaskCapacity += status.getMaxReduceTasks();
+      boolean alreadyPresent = false;
+      if (taskTrackers.containsKey(trackerName)) {
+        alreadyPresent = true;
+      }
       taskTrackers.put(trackerName, status);
+
+      if (!alreadyPresent)  {
+        Integer numTaskTrackersInHost = 
+          uniqueHostsMap.get(status.getHost());
+        if (numTaskTrackersInHost == null) {
+          numTaskTrackersInHost = 0;
+        }
+        numTaskTrackersInHost ++;
+        uniqueHostsMap.put(status.getHost(), numTaskTrackersInHost);
+      }
     }
     return oldStatus != null;
   }
@@ -1579,7 +1604,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
             continue;
           }
 
-          Task t = job.obtainNewMapTask(tts, numTaskTrackers);
+          Task t = job.obtainNewMapTask(tts, numTaskTrackers,
+                                        uniqueHostsMap.size());
           if (t != null) {
             expireLaunchingTasks.addNewTask(t.getTaskID());
             myMetrics.launchMap();
@@ -1616,7 +1642,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
             continue;
           }
 
-          Task t = job.obtainNewReduceTask(tts, numTaskTrackers);
+          Task t = job.obtainNewReduceTask(tts, numTaskTrackers, 
+                                           uniqueHostsMap.size());
           if (t != null) {
             expireLaunchingTasks.addNewTask(t.getTaskID());
             myMetrics.launchReduce();

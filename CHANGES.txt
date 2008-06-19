@@ -620,6 +620,11 @@ Release 0.18.0 - Unreleased
     HADOOP-3580. Fixes a problem to do with specifying a har as an input to 
     a job. (Mahadev Konar via ddas)
 
+    HADOOP-3333. Don't assign a task to a tasktracker that it failed to  
+    execute earlier (used to happen in the case of lost tasktrackers where
+    the tasktracker would reinitialize and bind to a different port). 
+    (Jothi Padmanabhan and Arun Murthy via ddas)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES

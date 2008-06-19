@@ -23,6 +23,7 @@ import java.util.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
@@ -360,8 +361,18 @@ public class MiniMRCluster {
       throw new IllegalArgumentException( "The length of hosts [" + hosts.length
           + "] is less than the number of tasktrackers [" + numTaskTrackers + "].");
     }
+     
+     //Generate rack names if required
+     if (racks == null) {
+       System.out.println("Generating rack names for tasktrackers");
+       racks = new String[numTaskTrackers];
+       for (int i=0; i < racks.length; ++i) {
+         racks[i] = NetworkTopology.DEFAULT_RACK;
+       }
+     }
+     
     //Generate some hostnames if required
-    if (racks != null && hosts == null) {
+    if (hosts == null) {
       System.out.println("Generating host names for tasktrackers");
       hosts = new String[numTaskTrackers];
       for (int i = 0; i < numTaskTrackers; i++) {
