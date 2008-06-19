@@ -625,6 +625,9 @@ Release 0.18.0 - Unreleased
     the tasktracker would reinitialize and bind to a different port). 
     (Jothi Padmanabhan and Arun Murthy via ddas)
 
+    HADOOP-3534. Log IOExceptions that happen in closing the name
+    system when the NameNode shuts down. (Tsz Wo (Nicholas) Sze via omalley)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
