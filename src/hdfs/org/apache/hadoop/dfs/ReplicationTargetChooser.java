@@ -449,10 +449,10 @@ class ReplicationTargetChooser {
         writer = nodes[0];
       }
       for(;index<nodes.length; index++) {
-        DatanodeDescriptor shortestNode = null;
-        int shortestDistance = Integer.MAX_VALUE;
+        DatanodeDescriptor shortestNode = nodes[index];
+        int shortestDistance = clusterMap.getDistance(writer, shortestNode);
         int shortestIndex = index;
-        for(int i=index; i<nodes.length; i++) {
+        for(int i=index+1; i<nodes.length; i++) {
           DatanodeDescriptor currentNode = nodes[i];
           int currentDistance = clusterMap.getDistance(writer, currentNode);
           if (shortestDistance>currentDistance) {

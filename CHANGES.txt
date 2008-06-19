@@ -674,6 +674,9 @@ Release 0.17.1 - Unreleased
     HADOOP-3576. Fix NullPointerException when renaming a directory
     to its subdirectory. (Tse Wo (Nicholas), SZE via hairong)
 
+    HADOOP-3320. Fix NullPointerException in NetworkTopology.getDistance().
+    (hairong)
+
 Release 0.17.0 - 2008-05-18
 
   INCOMPATIBLE CHANGES
