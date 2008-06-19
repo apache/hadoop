@@ -628,6 +628,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3534. Log IOExceptions that happen in closing the name
     system when the NameNode shuts down. (Tsz Wo (Nicholas) Sze via omalley)
 
+    HADOOP-3546. TaskTracker re-initialization gets stuck in cleaning up.
+    (Amareshwari Sriramadasu via ddas)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
