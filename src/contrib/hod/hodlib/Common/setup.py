@@ -748,8 +748,9 @@ class options(OptionParser, baseConfig):
             elif cmdstr == "script":
               clusterDir = getattr(self.__parsedOptions, 'hod.clusterdir')
               numNodes = getattr(self.__parsedOptions, 'hod.nodecount')
+              originalDir = getattr(self.__parsedOptions, 'hod.original-dir')
 
-              if clusterDir:
+              if originalDir and clusterDir:
                 self.remove_exit_code_file(originalDir, clusterDir)
 
               if not _script or not clusterDir or not numNodes:
@@ -800,7 +801,6 @@ class options(OptionParser, baseConfig):
         directory = os.path.abspath(directory)
 
         return directory
-
 
     def remove_exit_code_file(self, orig_dir, dir):
         try:
