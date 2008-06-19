@@ -222,6 +222,11 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
     }
     this.pos = start;
   }
+
+  @Deprecated
+  public LineRecordReader(InputStream in, long offset, long endOffset) {
+    this(in, offset, endOffset, Integer.MAX_VALUE);
+  }
   
   public LineRecordReader(InputStream in, long offset, long endOffset,
                           int maxLineLength) {

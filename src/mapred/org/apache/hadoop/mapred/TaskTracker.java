@@ -1986,6 +1986,12 @@ public class TaskTracker
   // ///////////////////////////////////////////////////////////////
   // TaskUmbilicalProtocol
   /////////////////////////////////////////////////////////////////
+  
+  @Deprecated
+  public Task getTask(String id) throws IOException {
+    return getTask(TaskAttemptID.forName(id));
+  }
+
   /**
    * Called upon startup by the child process, to fetch Task data.
    */
@@ -1996,6 +2002,12 @@ public class TaskTracker
     } else {
       return null;
     }
+  }
+
+  @Deprecated
+  public boolean statusUpdate(String taskid, 
+                              TaskStatus status) throws IOException {
+    return statusUpdate(TaskAttemptID.forName(taskid), status);
   }
 
   /**
@@ -2014,11 +2026,19 @@ public class TaskTracker
     }
   }
 
+  @Deprecated
+  public void reportDiagnosticInfo(String taskid, 
+                                   String info) throws IOException {
+    reportDiagnosticInfo(TaskAttemptID.forName(taskid), info);
+  }
+
   /**
    * Called when the task dies before completion, and we want to report back
    * diagnostic info
    */
-  public synchronized void reportDiagnosticInfo(TaskAttemptID taskid, String info) throws IOException {
+  public synchronized void reportDiagnosticInfo(TaskAttemptID taskid, 
+                                                String info
+                                                ) throws IOException {
     TaskInProgress tip = tasks.get(taskid);
     if (tip != null) {
       tip.reportDiagnosticInfo(info);
@@ -2027,9 +2047,19 @@ public class TaskTracker
     }
   }
 
+  @Deprecated
+  public boolean ping(String taskid) throws IOException {
+    return ping(TaskAttemptID.forName(taskid));
+  }
+
   /** Child checking to see if we're alive.  Normally does nothing.*/
   public synchronized boolean ping(TaskAttemptID taskid) throws IOException {
     return tasks.get(taskid) != null;
+  }
+
+  @Deprecated
+  public void done(String taskid, boolean shouldPromote) throws IOException {
+    done(TaskAttemptID.forName(taskid), shouldPromote);
   }
 
   /**
@@ -2045,6 +2075,10 @@ public class TaskTracker
     }
   }
 
+  @Deprecated 
+  public void shuffleError(String taskid, String msg) throws IOException {
+    shuffleError(TaskAttemptID.forName(taskid), msg);
+  }
 
   /** 
    * A reduce-task failed to shuffle the map-outputs. Kill the task.
@@ -2057,6 +2091,11 @@ public class TaskTracker
     purgeTask(tip, true);
   }
 
+  @Deprecated
+  public void fsError(String taskid, String msg) throws IOException {
+    fsError(TaskAttemptID.forName(taskid), msg);
+  }
+
   /** 
    * A child task had a local filesystem error. Kill the task.
    */  
@@ -2066,6 +2105,13 @@ public class TaskTracker
     TaskInProgress tip = runningTasks.get(taskId);
     tip.reportDiagnosticInfo("FSError: " + message);
     purgeTask(tip, true);
+  }
+
+  @Deprecated
+  public TaskCompletionEvent[] getMapCompletionEvents(String jobid, int fromid, 
+                                                      int maxlocs
+                                                     ) throws IOException {
+    return getMapCompletionEvents(JobID.forName(jobid), fromid, maxlocs);
   }
 
   public TaskCompletionEvent[] getMapCompletionEvents(JobID jobId
@@ -2107,6 +2153,11 @@ public class TaskTracker
     } else {
       LOG.warn("Unknown child task finshed: "+taskid+". Ignored.");
     }
+  }
+
+  @Deprecated
+  public void mapOutputLost(String taskid, String msg) throws IOException {
+    mapOutputLost(TaskAttemptID.forName(taskid), msg);
   }
 
   /**

@@ -20,13 +20,14 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 import java.util.Iterator;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.TaskTracker;
 
 /**
  * Reducer that accumulates values based on their type.
@@ -46,17 +47,18 @@ import org.apache.hadoop.mapred.TaskTracker;
  */
 public class AccumulatingReducer extends MapReduceBase
     implements Reducer<UTF8, UTF8, UTF8, UTF8> {
+  private static final Log LOG = LogFactory.getLog(AccumulatingReducer.class);
   
   protected String hostName;
   
   public AccumulatingReducer () {
-    TaskTracker.LOG.info("Starting AccumulatingReducer !!!");
+    LOG.info("Starting AccumulatingReducer !!!");
     try {
       hostName = java.net.InetAddress.getLocalHost().getHostName();
     } catch(Exception e) {
       hostName = "localhost";
     }
-    TaskTracker.LOG.info("Starting AccumulatingReducer on " + hostName);
+    LOG.info("Starting AccumulatingReducer on " + hostName);
   }
   
   public void reduce(UTF8 key, 

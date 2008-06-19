@@ -49,6 +49,11 @@ public class TaskLog {
     }
   }
 
+  @Deprecated
+  public static File getTaskLogFile(String taskid, LogName filter) {
+    return getTaskLogFile(TaskAttemptID.forName(taskid), filter);
+  }
+
   public static File getTaskLogFile(TaskAttemptID taskid, LogName filter) {
     return new File(new File(LOG_DIR, taskid.toString()), filter.toString());
   }
@@ -116,7 +121,7 @@ public class TaskLog {
     }
   }
 
-  public static class Reader extends InputStream {
+  static class Reader extends InputStream {
     private long bytesRemaining;
     private FileInputStream file;
     /**

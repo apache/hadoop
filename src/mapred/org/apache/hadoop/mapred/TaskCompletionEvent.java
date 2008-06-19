@@ -46,6 +46,18 @@ public class TaskCompletionEvent implements Writable{
    *
    */
   public TaskCompletionEvent(){}
+  
+  @Deprecated
+  public TaskCompletionEvent(int eventId, 
+                             String taskId,
+                             int idWithinJob,
+                             boolean isMap,
+                             Status status, 
+                             String taskTrackerHttp){
+    this(eventId, TaskAttemptID.forName(taskId), idWithinJob, isMap, status, 
+         taskTrackerHttp);
+  }
+
   /**
    * Constructor. eventId should be created externally and incremented
    * per event for each job. 

@@ -968,7 +968,15 @@ public abstract class Server {
     } catch (IOException e) {
     }
   }
-  
+
+  /**
+   * No longer used.
+   */
+  @Deprecated
+  public void setTimeout(int len) {
+    // NOTHING
+  }
+
   /** Sets the socket buffer size used for responding to RPCs */
   public void setSocketSendBufSize(int size) { this.socketSendBufferSize = size; }
 

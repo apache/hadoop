@@ -62,7 +62,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 public class JobHistory {
   
-  public static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobHistory");
+  private static final Log LOG = LogFactory.getLog("org.apache.hadoop.mapred.JobHistory");
   private static final String DELIMITER = " ";
   private static final String KEY = "(\\w+)";
   private static final String VALUE = "[[^\"]?]+"; // anything but a " in ""
@@ -338,7 +338,12 @@ public class JobHistory {
      * Returns all map and reduce tasks <taskid-Task>. 
      */
     public Map<String, Task> getAllTasks() { return allTasks; }
-    
+
+    @Deprecated
+    public static String getLocalJobFilePath(String jobid) {
+      return getLocalJobFilePath(JobID.forName(jobid));
+    }
+
     /**
      * Get the path of the locally stored job file
      * @param jobId id of the job
@@ -417,7 +422,14 @@ public class JobHistory {
       }
       return decodedFileName;
     }
-    
+
+    @Deprecated
+    public static void logSubmitted(String jobid, JobConf jobConf,
+                                    String jobConfPath, long submitTime
+                                   ) throws IOException {
+      logSubmitted(JobID.forName(jobid), jobConf, jobConfPath, submitTime);
+    }
+
     /**
      * Log job submitted event to history. Creates a new file in history 
      * for the job. if history file creation fails, it disables history 
@@ -576,6 +588,13 @@ public class JobHistory {
         }
       } 
     }
+
+    @Deprecated
+    public static void logStarted(String jobid, long startTime, int totalMaps,
+                                  int totalReduces) {
+      logStarted(JobID.forName(jobid), startTime, totalMaps, totalReduces);
+    }
+
     /**
      * Logs launch time of job. 
      * @param jobId job id, assigned by jobtracker. 
@@ -595,6 +614,16 @@ public class JobHistory {
         }
       }
     }
+    
+    @Deprecated
+    public static void logFinished(String jobId, long finishTime,
+                                   int finishedMaps, int finishedReduces,
+                                   int failedMaps, int failedReduces,
+                                   Counters counters) {
+      logFinished(JobID.forName(jobId), finishTime, finishedMaps,
+                  finishedReduces, failedMaps, failedReduces, counters);
+    }
+
     /**
      * Log job finished. closes the job file in history. 
      * @param jobId job id, assigned by jobtracker. 
@@ -637,6 +666,13 @@ public class JobHistory {
         historyCleaner.start(); 
       }
     }
+    
+    @Deprecated
+    public static void logFailed(String jobid, long timestamp, 
+                                 int finishedMaps, int finishedReduces) {
+      logFailed(JobID.forName(jobid), timestamp, finishedMaps, finishedReduces);
+    }
+
     /**
      * Logs job failed event. Closes the job history log file. 
      * @param jobid job id
@@ -670,6 +706,12 @@ public class JobHistory {
   public static class Task extends KeyValuePair{
     private Map <String, TaskAttempt> taskAttempts = new TreeMap<String, TaskAttempt>(); 
 
+    @Deprecated
+    public static void logStarted(String jobId, String taskId, String taskType,
+                                  long startTime) {
+      logStarted(TaskID.forName(taskId), taskType, startTime, "n/a");
+    }
+
     /**
      * Log start time of task (TIP).
      * @param taskId task id
@@ -692,6 +734,13 @@ public class JobHistory {
         }
       }
     }
+    
+    @Deprecated
+    public static void logFinished(String jobid, String taskid, String taskType,
+                                   long finishTime, Counters counters) {
+      logFinished(TaskID.forName(taskid), taskType, finishTime, counters);
+    }
+
     /**
      * Log finish time of task. 
      * @param taskId task id
@@ -715,6 +764,13 @@ public class JobHistory {
         }
       }
     }
+    
+    @Deprecated
+    public static void logFailed(String jobid, String taskid, String taskType,
+                                 long time, String error) {
+      logFailed(TaskID.forName(taskid), taskType, time, error);
+    }
+
     /**
      * Log job failed event.
      * @param taskId task id
@@ -753,6 +809,12 @@ public class JobHistory {
    * a Map Attempt on a node.
    */
   public static class MapAttempt extends TaskAttempt{
+    @Deprecated
+    public static void logStarted(String jobid, String taskid, String attemptid,
+                                  long startTime, String hostName) {
+      logStarted(TaskAttemptID.forName(attemptid), startTime, hostName);
+    }
+
     /**
      * Log start time of this map task attempt. 
      * @param taskAttemptId task attempt id
@@ -774,6 +836,13 @@ public class JobHistory {
         }
       }
     }
+    
+    @Deprecated
+    public static void logFinished(String jobid, String taskid, 
+                                   String attemptid, long time, String host) {
+      logFinished(TaskAttemptID.forName(attemptid), time, host);
+    }
+
     /**
      * Log finish time of map task attempt. 
      * @param taskAttemptId task attempt id 
@@ -796,6 +865,13 @@ public class JobHistory {
                                       String.valueOf(finishTime), hostName}); 
         }
       }
+    }
+
+    @Deprecated
+    public static void logFailed(String jobid, String taskid,
+                                 String attemptid, long timestamp, String host, 
+                                 String err) {
+      logFailed(TaskAttemptID.forName(attemptid), timestamp, host, err);
     }
 
     /**
@@ -821,6 +897,13 @@ public class JobHistory {
         }
       }
     }
+
+    @Deprecated
+    public static void logKilled(String jobid, String taskid, String attemptid,
+                                 long timestamp, String hostname, String error){
+      logKilled(TaskAttemptID.forName(attemptid), timestamp, hostname, error);
+    }
+
     /**
      * Log task attempt killed event.  
      * @param taskAttemptId task attempt id
@@ -850,6 +933,13 @@ public class JobHistory {
    * a Map Attempt on a node.
    */
   public static class ReduceAttempt extends TaskAttempt{
+    
+    @Deprecated
+    public static void logStarted(String jobid, String taskid, String attemptid,
+                                  long startTime, String hostName) {
+      logStarted(TaskAttemptID.forName(attemptid), startTime, hostName);
+    }
+
     /**
      * Log start time of  Reduce task attempt. 
      * @param taskAttemptId task attempt id
@@ -871,6 +961,15 @@ public class JobHistory {
         }
       }
     }
+    
+    @Deprecated
+    public static void logFinished(String jobid, String taskid, String attemptid,
+                                   long shuffleFinished, long sortFinished,
+                                   long finishTime, String hostname) {
+      logFinished(TaskAttemptID.forName(attemptid), shuffleFinished, 
+                  sortFinished, finishTime, hostname);
+    }
+
     /**
      * Log finished event of this task. 
      * @param taskAttemptId task attempt id
@@ -899,6 +998,13 @@ public class JobHistory {
         }
       }
     }
+
+    @Deprecated
+    public static void logFailed(String jobid, String taskid, String attemptid,
+                                 long timestamp, String hostname, String error){
+      logFailed(TaskAttemptID.forName(attemptid), timestamp, hostname, error);
+    }
+
     /**
      * Log failed reduce task attempt. 
      * @param taskAttemptId task attempt id
@@ -922,6 +1028,13 @@ public class JobHistory {
         }
       }
     }
+    
+    @Deprecated
+    public static void logKilled(String jobid, String taskid, String attemptid,
+                                 long timestamp, String hostname, String error){
+      logKilled(TaskAttemptID.forName(attemptid), timestamp, hostname, error);
+    }
+
     /**
      * Log killed reduce task attempt. 
      * @param taskAttemptId task attempt id

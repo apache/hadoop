@@ -79,7 +79,7 @@ public class Client {
   private int refCount = 1;
   
   final private static String PING_INTERVAL_NAME = "ipc.ping.interval";
-  final public static int DEFAULT_PING_INTERVAL = 60000; // 1 min
+  final static int DEFAULT_PING_INTERVAL = 60000; // 1 min
   final static int PING_CALL_ID = -1;
   
   /**
@@ -523,7 +523,15 @@ public class Client {
         notifyAll();
       }
     }
-    
+
+    /**
+     * No longer used.
+     */
+    @Deprecated
+    public void setTimeout(int len) {
+      // NOTHING
+    }
+
     /** Close the connection. */
     private synchronized void close() {
       if (!shouldCloseConnection.get()) {

@@ -58,6 +58,12 @@ public class JobStatus implements Writable {
   public JobStatus() {
   }
 
+  @Deprecated
+  public JobStatus(String jobid, float mapProgress, float reduceProgress, 
+                   int runState) {
+    this(JobID.forName(jobid), mapProgress, reduceProgress, runState);
+  }
+
   /**
    * Create a job status object for a given jobid.
    * @param jobid The jobid of the job

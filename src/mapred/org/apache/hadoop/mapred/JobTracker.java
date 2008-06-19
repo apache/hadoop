@@ -1728,6 +1728,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     return new JobID(getTrackerIdentifier(), nextJobId++);
   }
 
+  @Deprecated
+  public JobStatus submitJob(String jobid) throws IOException {
+    return submitJob(JobID.forName(jobid));
+  }
+
   /**
    * JobTracker.submitJob() kicks off a new job.  
    *
@@ -1800,10 +1805,20 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
                                state);          
     }
   }
-    
+
+  @Deprecated
+  public void killJob(String id) {
+    killJob(JobID.forName(id));
+  }
+
   public synchronized void killJob(JobID jobid) {
     JobInProgress job = jobs.get(jobid);
     job.kill();
+  }
+
+  @Deprecated
+  public JobProfile getJobProfile(String id) {
+    return getJobProfile(JobID.forName(id));
   }
 
   public synchronized JobProfile getJobProfile(JobID jobid) {
@@ -1814,6 +1829,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       return completedJobStatusStore.readJobProfile(jobid);
     }
   }
+  
+  @Deprecated
+  public JobStatus getJobStatus(String id) {
+    return getJobStatus(JobID.forName(id));
+  }
+
   public synchronized JobStatus getJobStatus(JobID jobid) {
     JobInProgress job = jobs.get(jobid);
     if (job != null) {
@@ -1822,6 +1843,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       return completedJobStatusStore.readJobStatus(jobid);
     }
   }
+
+  @Deprecated
+  public Counters getJobCounters(String id) {
+    return getJobCounters(JobID.forName(id));
+  }
+
   public synchronized Counters getJobCounters(JobID jobid) {
     JobInProgress job = jobs.get(jobid);
     if (job != null) {
@@ -1830,6 +1857,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       return completedJobStatusStore.readCounters(jobid);
     }
   }
+  
+  @Deprecated
+  public TaskReport[] getMapTaskReports(String jobid) {
+    return getMapTaskReports(JobID.forName(jobid));
+  }
+
   public synchronized TaskReport[] getMapTaskReports(JobID jobid) {
     JobInProgress job = jobs.get(jobid);
     if (job == null) {
@@ -1852,6 +1885,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
   }
 
+  @Deprecated
+  public TaskReport[] getReduceTaskReports(String jobid) {
+    return getReduceTaskReports(JobID.forName(jobid));
+  }
+
   public synchronized TaskReport[] getReduceTaskReports(JobID jobid) {
     JobInProgress job = jobs.get(jobid);
     if (job == null) {
@@ -1871,7 +1909,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       return reports.toArray(new TaskReport[reports.size()]);
     }
   }
-    
+
+  @Deprecated
+  public TaskCompletionEvent[] getTaskCompletionEvents(String jobid, int fromid, 
+                                                       int maxevents
+                                                      ) throws IOException {
+    return getTaskCompletionEvents(JobID.forName(jobid), fromid, maxevents);
+  }
+
   /* 
    * Returns a list of TaskCompletionEvent for the given job, 
    * starting from fromEventId.
@@ -1889,6 +1934,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       events = completedJobStatusStore.readJobTaskCompletionEvents(jobid, fromEventId, maxEvents);
     }
     return events;
+  }
+
+  @Deprecated
+  public String[] getTaskDiagnostics(String jobid, String tipid, 
+                                     String taskid) throws IOException {
+    return getTaskDiagnostics(TaskAttemptID.forName(taskid));
   }
 
   /**
@@ -1943,7 +1994,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     JobInProgress job = jobs.get(tipid.getJobID());
     return (job == null ? null : job.getTaskInProgress(tipid));
   }
-    
+
+  @Deprecated
+  public boolean killTask(String taskId, boolean shouldFail) throws IOException{
+    return killTask(TaskAttemptID.forName(taskId), shouldFail);
+  }
+
   /** Mark a Task to be killed */
   public synchronized boolean killTask(TaskAttemptID taskid, boolean shouldFail) throws IOException{
     TaskInProgress tip = taskidToTIPMap.get(taskid);
@@ -1955,7 +2011,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
       return false;
     }
   }
-  
+
+  @Deprecated
+  public String getAssignedTracker(String taskid) {
+    return getAssignedTracker(TaskAttemptID.forName(taskid));
+  }
+
   /**
    * Get tracker name for a given task id.
    * @param taskId the name of the task
@@ -2003,6 +2064,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
   ///////////////////////////////////////////////////////////////
   // JobTracker methods
   ///////////////////////////////////////////////////////////////
+  @Deprecated
+  public JobInProgress getJob(String jobid) {
+    return getJob(JobID.forName(jobid));
+  }
+
   public JobInProgress getJob(JobID jobid) {
     return jobs.get(jobid);
   }
@@ -2299,6 +2365,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol, JobSubmiss
     }
   }
   
+
+  @Deprecated
+  public String getLocalJobFilePath(String jobid) {
+    return getLocalJobFilePath(JobID.forName(jobid));
+  }
 
   /**
    * Get the localized job file path on the job trackers local file system
