@@ -343,8 +343,24 @@ public class HarFileSystem extends FilterFileSystem {
     }
     FileStatus fsFile = fs.getFileStatus(new Path(archivePath,
         harStatus.getPartName()));
-    return fs.getFileBlockLocations(fsFile, 
-        harStatus.getStartIndex(), harStatus.getLength());
+    BlockLocation[] rawBlocks = fs.getFileBlockLocations(fsFile, 
+        harStatus.getStartIndex() + start, len);
+    return fakeBlockLocations(rawBlocks, harStatus.getStartIndex());
+  }
+  
+  /**
+   * fake the rawblocks since map reduce uses the block offsets to 
+   * fo some computations regarding the blocks
+   * @param rawBlocks the raw blocks returned by the filesystem
+   * @return faked blocks with changed offsets.
+   */
+  private BlockLocation[] fakeBlockLocations(BlockLocation[] rawBlocks, 
+		  long startIndex) {
+	for (BlockLocation block : rawBlocks) {
+		long rawOffset = block.getOffset();
+		block.setOffset(rawOffset - startIndex);
+	}
+	return rawBlocks;
   }
   
   /**

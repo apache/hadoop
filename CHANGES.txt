@@ -617,6 +617,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3533. Add deprecated methods to provide API compatibility
     between 0.18 and 0.17. Remove the deprecated methods in trunk. (omalley)
 
+    HADOOP-3580. Fixes a problem to do with specifying a har as an input to 
+    a job. (Mahadev Konar via ddas)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES
