@@ -631,6 +631,9 @@ Release 0.18.0 - Unreleased
     HADOOP-3546. TaskTracker re-initialization gets stuck in cleaning up.
     (Amareshwari Sriramadasu via ddas)
 
+    HADOOP-3569. KFS input stream read() now correctly reads 1 byte
+    instead of 4. (Sriram Rao via omalley)
+
 Release 0.17.1 - Unreleased
 
   INCOMPATIBLE CHANGES

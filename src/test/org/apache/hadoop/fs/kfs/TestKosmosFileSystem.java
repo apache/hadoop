@@ -134,7 +134,10 @@ public class TestKosmosFileSystem extends TestCase {
         for (int i = 0; i < data.length; i++)
             data[i] = (byte) (i % 16);
 
-        // write an integer
+        // write 4 bytes and read them back; read API should return a byte per call
+        s1.write(32);
+        s1.write(32);
+        s1.write(32);
         s1.write(32);
         // write some data
         s1.write(data, 0, data.length);
@@ -145,6 +148,12 @@ public class TestKosmosFileSystem extends TestCase {
         FSDataInputStream s2 = kosmosFileSystem.open(file1, 4096);
         int v;
 
+        v = s2.read();
+        assertEquals(v, 32);
+        v = s2.read();
+        assertEquals(v, 32);
+        v = s2.read();
+        assertEquals(v, 32);
         v = s2.read();
         assertEquals(v, 32);
 

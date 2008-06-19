@@ -79,13 +79,13 @@ class KFSInputStream extends FSInputStream {
         if (kfsChannel == null) {
             throw new IOException("File closed");
         }
-        byte b[] = new byte[4];
-        int res = read(b, 0, 4);
-        if (res == 4) {
+        byte b[] = new byte[1];
+        int res = read(b, 0, 1);
+        if (res == 1) {
           if (statistics != null) {
             statistics.incrementBytesRead(1);
           }
-          return (b[0] + (b[1] << 8) + (b[2] << 16) + (b[3] << 24));          
+          return ((int) (b[0] & 0xff));
         }
         return -1;
     }
