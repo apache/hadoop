@@ -310,6 +310,8 @@ Release 0.18.0 - Unreleased
     HADOOP-3535. Fix documentation and name of IOUtils.close to
     reflect that it should only be used in cleanup contexts. (omalley)
 
+    HADOOP-3593. Updates the mapred tutorial. (ddas)
+
   OPTIMIZATIONS
 
     HADOOP-3274. The default constructor of BytesWritable creates empty 

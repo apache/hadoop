@@ -771,9 +771,9 @@
           transferred from the <code>Mapper</code> to the <code>Reducer</code>.
           </p>
  
-          <p>The intermediate, sorted outputs are always stored in files of 
-          <a href="ext:api/org/apache/hadoop/io/sequencefile">
-          SequenceFile</a> format. Applications can control if, and how, the 
+          <p>The intermediate, sorted outputs are always stored in a simple 
+          (key-len, key, value-len, value) format. 
+          Applications can control if, and how, the 
           intermediate outputs are to be compressed and the 
           <a href="ext:api/org/apache/hadoop/io/compress/compressioncodec">
           CompressionCodec</a> to be used via the <code>JobConf</code>.
@@ -1469,8 +1469,11 @@
           
           <p>Applications can define arbitrary <code>Counters</code> (of type 
           <code>Enum</code>) and update them via 
-          <a href="ext:api/org/apache/hadoop/mapred/reporter/incrcounter">
-          Reporter.incrCounter(Enum, long)</a> in the <code>map</code> and/or 
+          <a href="ext:api/org/apache/hadoop/mapred/reporter/incrcounterEnum">
+          Reporter.incrCounter(Enum, long)</a> or 
+          <a href="ext:api/org/apache/hadoop/mapred/reporter/incrcounterString">
+          Reporter.incrCounter(String, String, long)</a>
+          in the <code>map</code> and/or 
           <code>reduce</code> methods. These counters are then globally 
           aggregated by the framework.</p>
         </section>       
@@ -1486,8 +1489,8 @@
           Map-Reduce framework to cache files (text, archives, jars and so on) 
           needed by applications.</p>
  
-          <p>Applications specify the files to be cached via urls (hdfs:// or 
-          http://) in the <code>JobConf</code>. The <code>DistributedCache</code> 
+          <p>Applications specify the files to be cached via urls (hdfs://)
+          in the <code>JobConf</code>. The <code>DistributedCache</code> 
           assumes that the files specified via hdfs:// urls are already present 
           on the <code>FileSystem</code>.</p>
 
@@ -1719,11 +1722,11 @@
             <title>Job Outputs</title>
             
             <p>Applications can control compression of job-outputs via the
-            <a href="ext:api/org/apache/hadoop/mapred/outputformatbase/setcompressoutput">
-            OutputFormatBase.setCompressOutput(JobConf, boolean)</a> api and the 
+            <a href="ext:api/org/apache/hadoop/mapred/fileoutputformat/setcompressoutput">
+            FileOutputFormat.setCompressOutput(JobConf, boolean)</a> api and the 
             <code>CompressionCodec</code> to be used can be specified via the
-            <a href="ext:api/org/apache/hadoop/mapred/outputformatbase/setoutputcompressorclass">
-            OutputFormatBase.setOutputCompressorClass(JobConf, Class)</a> api.</p>
+            <a href="ext:api/org/apache/hadoop/mapred/fileoutputformat/setoutputcompressorclass">
+            FileOutputFormat.setOutputCompressorClass(JobConf, Class)</a> api.</p>
             
             <p>If the job outputs are to be stored in the 
             <a href="ext:api/org/apache/hadoop/mapred/sequencefileoutputformat">
