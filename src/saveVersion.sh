@@ -20,6 +20,8 @@
 # records the user, url, revision and timestamp.
 #
 # Copied from hadoop.
+unset LANG
+unset LC_CTYPE
 version=$1
 revision=`svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p'`
 url=`svn info | sed -n -e 's/URL: \(.*\)/\1/p'`
