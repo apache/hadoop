@@ -331,7 +331,7 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
         return i;
       }
     }
-    BlockLocation last = blkLocations[blkLocations.length];
+    BlockLocation last = blkLocations[blkLocations.length -1];
     long fileLength = last.getOffset() + last.getLength() -1;
     throw new IllegalArgumentException("Offset " + offset + 
                                        " is outside of file (0.." +
