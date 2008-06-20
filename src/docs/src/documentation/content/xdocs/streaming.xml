@@ -222,7 +222,8 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 The -jobconf mapred.reduce.tasks=2 in the above example specifies to use two reducers for the job.
 </p>
 <p>
-For more details on the jobconf parameters see: <a href="http://wiki.apache.org/hadoop/JobConfFile">http://wiki.apache.org/hadoop/JobConfFile</a></p>
+For more details on the jobconf parameters see:
+<a href="ext:hadoop-default">hadoop-default.html</a></p>
 </section>
 
 <section>
@@ -264,8 +265,9 @@ To specify additional local temp directories use:
    -jobconf mapred.temp.dir=/tmp/temp
 </source>
 <p>
-For more details on jobconf parameters see: <a href="http://wiki.apache.org/hadoop/JobConfFile">http://wiki.apache.org/hadoop/JobConfFile</a>
-</p><p>
+For more details on jobconf parameters see:
+<a href="ext:hadoop-default">hadoop-default.html</a></p>
+<p>
 To set an environment variable in a streaming command use:
 </p>
 <source>
@@ -362,7 +364,15 @@ Sorting within each partition for the reducer(all 4 fields used for sorting)</p>
 <section>
 <title>Working with the Hadoop Aggregate Package (the -reduce aggregate option) </title>
 <p>
-Hadoop has a library package called "Aggregate" (<a href="https://svn.apache.org/repos/asf/hadoop/core/trunk/src/java/org/apache/hadoop/mapred/lib/aggregate">https://svn.apache.org/repos/asf/hadoop/core/trunk/src/java/org/apache/hadoop/mapred/lib/aggregate</a>).  Aggregate provides a special reducer class and a special combiner class, and a list of simple aggregators that perform aggregations such as "sum", "max", "min" and so on  over a sequence of values. Aggregate allows you to define a mapper plugin class that is expected to generate "aggregatable items" for each input key/value pair of the mappers. The combiner/reducer will aggregate those aggregatable items by invoking the appropriate aggregators.
+Hadoop has a library package called "Aggregate" (
+<a href="https://svn.apache.org/repos/asf/hadoop/core/trunk/src/mapred/org/apache/hadoop/mapred/lib/aggregate">
+https://svn.apache.org/repos/asf/hadoop/core/trunk/src/mapred/org/apache/hadoop/mapred/lib/aggregate</a>).
+Aggregate provides a special reducer class and a special combiner class, and
+a list of simple aggregators that perform aggregations such as "sum", "max",
+"min" and so on  over a sequence of values. Aggregate allows you to define a
+mapper plugin class that is expected to generate "aggregatable items" for each
+input key/value pair of the mappers. The combiner/reducer will aggregate those
+aggregatable items by invoking the appropriate aggregators.
 </p><p>
 To use Aggregate, simply specify "-reducer aggregate":
 </p>
@@ -452,8 +462,8 @@ As an example, consider the problem of zipping (compressing) a set of files acro
 <li>The existing Hadoop Framework:<ul>
    <li>Add these commands to your main function:
 <source>
-       OutputFormatBase.setCompressOutput(conf, true);
-       OutputFormatBase.setOutputCompressorClass(conf, org.apache.hadoop.io.compress.GzipCodec.class);
+       FileOutputFormat.setCompressOutput(conf, true);
+       FileOutputFormat.setOutputCompressorClass(conf, org.apache.hadoop.io.compress.GzipCodec.class);
        conf.setOutputFormat(NonSplitableTextInputFormat.class);
        conf.setNumReduceTasks(0);
 </source></li>
@@ -474,7 +484,7 @@ As an example, consider the problem of zipping (compressing) a set of files acro
 <section>
 <title>How many reducers should I use? </title>
 <p>
-See the Hadoop Wiki for details: <a href="http://wiki.apache.org/hadoop/HowManyMapsAndReduces">http://wiki.apache.org/hadoop/HowManyMapsAndReduces</a>
+See the Hadoop Wiki for details: <a href="mapred_tutorial.html#Reducer">Reducer</a>
 </p>
 </section>
 
@@ -559,6 +569,25 @@ hadoop jar hadoop-streaming.jar -inputreader "StreamXmlRecord,begin=BEGIN_STRING
 Anything found between BEGIN_STRING and END_STRING would be treated as one record for map tasks.
 </p>
 </section>
+
+<section>
+<title>How do I update counters in streaming applications? </title>
+<p>
+A streaming process can use the stderr to emit counter information.
+<code>reporter:counter:&lt;group&gt;,&lt;counter&gt;,&lt;amount&gt;</code> 
+should be sent to stderr to update the counter.
+</p>
+</section>
+
+<section>
+<title>How do I update status in streaming applications? </title>
+<p>
+A streaming process can use the stderr to emit status information.
+To set a status, <code>reporter:status:&lt;message&gt;</code> should be sent 
+to stderr.
+</p>
+</section>
+
 </section>
 </body>
 </document>
