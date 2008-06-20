@@ -269,6 +269,12 @@ document.write("Last Published: " + document.lastModified);
 <li>
 <a href="#How+do+I+parse+XML+documents+using+streaming%3F">How do I parse XML documents using streaming? </a>
 </li>
+<li>
+<a href="#How+do+I+update+counters+in+streaming+applications%3F">How do I update counters in streaming applications? </a>
+</li>
+<li>
+<a href="#How+do+I+update+status+in+streaming+applications%3F">How do I update status in streaming applications? </a>
+</li>
 </ul>
 </li>
 </ul>
@@ -471,7 +477,8 @@ $HADOOP_HOME/bin/hadoop  jar $HADOOP_HOME/hadoop-streaming.jar \
 The -jobconf mapred.reduce.tasks=2 in the above example specifies to use two reducers for the job.
 </p>
 <p>
-For more details on the jobconf parameters see: <a href="http://wiki.apache.org/hadoop/JobConfFile">http://wiki.apache.org/hadoop/JobConfFile</a>
+For more details on the jobconf parameters see:
+<a href="http://hadoop.apache.org/core/docs/current/hadoop-default.html">hadoop-default.html</a>
 </p>
 <a name="N100D6"></a><a name="Other+Supported+Options"></a>
 <h3 class="h4">Other Supported Options </h3>
@@ -543,8 +550,8 @@ To specify additional local temp directories use:
    -jobconf mapred.temp.dir=/tmp/temp
 </pre>
 <p>
-For more details on jobconf parameters see: <a href="http://wiki.apache.org/hadoop/JobConfFile">http://wiki.apache.org/hadoop/JobConfFile</a>
-
+For more details on jobconf parameters see:
+<a href="http://hadoop.apache.org/core/docs/current/hadoop-default.html">hadoop-default.html</a>
 </p>
 <p>
 To set an environment variable in a streaming command use:
@@ -644,7 +651,15 @@ Sorting within each partition for the reducer(all 4 fields used for sorting)</p>
 <a name="N101E0"></a><a name="Working+with+the+Hadoop+Aggregate+Package+%28the+-reduce+aggregate+option%29"></a>
 <h3 class="h4">Working with the Hadoop Aggregate Package (the -reduce aggregate option) </h3>
 <p>
-Hadoop has a library package called "Aggregate" (<a href="https://svn.apache.org/repos/asf/hadoop/core/trunk/src/java/org/apache/hadoop/mapred/lib/aggregate">https://svn.apache.org/repos/asf/hadoop/core/trunk/src/java/org/apache/hadoop/mapred/lib/aggregate</a>).  Aggregate provides a special reducer class and a special combiner class, and a list of simple aggregators that perform aggregations such as "sum", "max", "min" and so on  over a sequence of values. Aggregate allows you to define a mapper plugin class that is expected to generate "aggregatable items" for each input key/value pair of the mappers. The combiner/reducer will aggregate those aggregatable items by invoking the appropriate aggregators.
+Hadoop has a library package called "Aggregate" (
+<a href="https://svn.apache.org/repos/asf/hadoop/core/trunk/src/mapred/org/apache/hadoop/mapred/lib/aggregate">
+https://svn.apache.org/repos/asf/hadoop/core/trunk/src/mapred/org/apache/hadoop/mapred/lib/aggregate</a>).
+Aggregate provides a special reducer class and a special combiner class, and
+a list of simple aggregators that perform aggregations such as "sum", "max",
+"min" and so on  over a sequence of values. Aggregate allows you to define a
+mapper plugin class that is expected to generate "aggregatable items" for each
+input key/value pair of the mappers. The combiner/reducer will aggregate those
+aggregatable items by invoking the appropriate aggregators.
 </p>
 <p>
 To use Aggregate, simply specify "-reducer aggregate":
@@ -739,8 +754,8 @@ As an example, consider the problem of zipping (compressing) a set of files acro
    
 <li>Add these commands to your main function:
 <pre class="code">
-       OutputFormatBase.setCompressOutput(conf, true);
-       OutputFormatBase.setOutputCompressorClass(conf, org.apache.hadoop.io.compress.GzipCodec.class);
+       FileOutputFormat.setCompressOutput(conf, true);
+       FileOutputFormat.setOutputCompressorClass(conf, org.apache.hadoop.io.compress.GzipCodec.class);
        conf.setOutputFormat(NonSplitableTextInputFormat.class);
        conf.setNumReduceTasks(0);
 </pre>
@@ -766,7 +781,7 @@ As an example, consider the problem of zipping (compressing) a set of files acro
 <a name="N1024A"></a><a name="How+many+reducers+should+I+use%3F"></a>
 <h3 class="h4">How many reducers should I use? </h3>
 <p>
-See the Hadoop Wiki for details: <a href="http://wiki.apache.org/hadoop/HowManyMapsAndReduces">http://wiki.apache.org/hadoop/HowManyMapsAndReduces</a>
+See the Hadoop Wiki for details: <a href="mapred_tutorial.html#Reducer">Reducer</a>
 
 </p>
 <a name="N10258"></a><a name="If+I+set+up+an+alias+in+my+shell+script%2C+will+that+work+after+-mapper%2C+i.e.+say+I+do%3A+alias+c1%3D%27cut+-f1%27.+Will+-mapper+%22c1%22+work%3F"></a>
@@ -837,6 +852,20 @@ hadoop jar hadoop-streaming.jar -inputreader "StreamXmlRecord,begin=BEGIN_STRING
 </pre>
 <p>
 Anything found between BEGIN_STRING and END_STRING would be treated as one record for map tasks.
+</p>
+<a name="N102B3"></a><a name="How+do+I+update+counters+in+streaming+applications%3F"></a>
+<h3 class="h4">How do I update counters in streaming applications? </h3>
+<p>
+A streaming process can use the stderr to emit counter information.
+<span class="codefrag">reporter:counter:&lt;group&gt;,&lt;counter&gt;,&lt;amount&gt;</span> 
+should be sent to stderr to update the counter.
+</p>
+<a name="N102C0"></a><a name="How+do+I+update+status+in+streaming+applications%3F"></a>
+<h3 class="h4">How do I update status in streaming applications? </h3>
+<p>
+A streaming process can use the stderr to emit status information.
+To set a status, <span class="codefrag">reporter:status:&lt;message&gt;</span> should be sent 
+to stderr.
 </p>
 </div>
 
